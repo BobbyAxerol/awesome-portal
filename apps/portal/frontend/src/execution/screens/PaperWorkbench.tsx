@@ -40,6 +40,7 @@ import type {
 import { AuthorityBadge, StatusChip } from "../components/badges";
 import { LifecycleRail, ObservationProgress, stageRail } from "../components/lifecycle";
 import { KeysetTable, type Column } from "../components/table";
+import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { Money, Qty, Stamp } from "../components/cells";
 import { capNotice, capPreserving } from "../components/cap";
@@ -296,7 +297,7 @@ export function PaperWorkbench({
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-paper">
-        <PanelState status={status} reason={reason ?? "This deployment could not be read."} />
+        <EmptyRecordFrame screen="paper-workbench" status={status} reason={reason ?? "This deployment could not be read."} />
       </ExecutionSurface>
     );
   }

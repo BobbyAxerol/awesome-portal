@@ -15,7 +15,7 @@ describe("what an absent record says about itself", () => {
   const kinds = Object.keys(RECORD_PRODUCERS) as RecordKind[];
 
   it("names a producer for every record kind a screen can be missing", () => {
-    expect(kinds).toEqual(["incident", "sandbox-certification", "canary-envelope", "governance-approval", "paper-exit-review"]);
+    expect(kinds).toEqual(["incident", "sandbox-certification", "canary-envelope", "governance-approval", "deployment", "paper-exit-review"]);
     for (const kind of kinds) {
       const sentence = producerSentence(kind);
       expect(sentence.length).toBeGreaterThan(30);
@@ -31,10 +31,22 @@ describe("what an absent record says about itself", () => {
     // The three operator-created kinds must NOT borrow that wording: saying a
     // record is unbuilt when an operator could create it today is its own lie.
     for (const kind of kinds.filter((item) => item !== "paper-exit-review")) {
-      expect(RECORD_PRODUCERS[kind].kind).toBe("OPERATOR");
       expect(producerSentence(kind)).not.toMatch(/nothing in the platform writes/);
+    }
+    /*
+     * `deployment` is the first SOURCE record: traced 2026-09-11, there is no
+     * INSERT INTO strategy_deployments and no create route in the Control API,
+     * so Portal reads and projects one it can never make. Its sentence must NOT
+     * say an operator creates it — that is the same lie as UNBUILT wording on
+     * an operator record, pointing the other way.
+     */
+    for (const kind of kinds.filter((item) => item !== "paper-exit-review" && item !== "deployment")) {
+      expect(RECORD_PRODUCERS[kind].kind).toBe("OPERATOR");
       expect(producerSentence(kind)).toMatch(/by an operator/);
     }
+    expect(RECORD_PRODUCERS.deployment.kind).toBe("SOURCE");
+    expect(producerSentence("deployment")).toMatch(/published by the Trading System/);
+    expect(producerSentence("deployment")).not.toMatch(/by an operator/);
   });
 
   it("keeps the contract's own code first, because that is what gets quoted", () => {

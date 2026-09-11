@@ -11,6 +11,7 @@ import { utcStamp } from "../time";
 import type { ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { SparkLine } from "../components/marketChart";
+import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { ExecutionWorkspace, shortDigest } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
@@ -18,7 +19,6 @@ import { blockerText, incidentRail, type IncidentCollection, type IncidentDetail
 import { hhmm, incidentSparkSeries, mmss } from "../clock";
 import type { GateRow, IncidentDemo, IncidentLive, OpRow } from "../incident.smoke";
 import { targetHrefFor } from "../idLinks";
-import { absenceReason } from "../components/recordProducer";
 
 const PANEL_TITLE: Record<string, string> = {
   findings: "Findings",
@@ -72,7 +72,6 @@ function GateLine({ g }: { g: GateRow }) {
 }
 
 /** The five panels an incident carries, and the two controls beside them. */
-const INCIDENT_PANELS = ["Timeline", "Operations taken", "Evidence", "Resolution gates", "Annotations"] as const;
 const INCIDENT_CONTROLS = ["Acknowledge", "Mark RESOLVED"] as const;
 
 export function IncidentDetailScreen({
@@ -129,27 +128,25 @@ export function IncidentDetailScreen({
     // Loading is not absence: a skeleton says "wait", while a frame of dead
     // controls says "there is nothing here", and during a read that is not
     // yet known. `PanelState` draws the skeleton on its own.
-    const refused = status === "denied";
     return (
       <ExecutionSurface kind="deployments" className="exec-inc">
-        <PanelState status={status} reason={why} />
-        {refused ? null : (
-          <div className="exec-inc2-actions" role="group" aria-label="Incident controls">
-            {INCIDENT_CONTROLS.map((label) => (
-              <button key={label} type="button" className="exec-inc2-btn" disabled title={why}>{label}</button>
-            ))}
-          </div>
-        )}
-        <p className="exec-disabled-reason">{refused ? why
-          : `No incident is published here, so there is nothing to acknowledge or resolve. ${absenceReason(why, "incident")}`}</p>
-        <div className="exec-inc2-grid">
-          {INCIDENT_PANELS.map((title) => (
-            <section className="exec-pf2-panel" key={title} aria-label={title}>
-              <header className="exec-pf2-head"><span className="exec-pf2-title">{title}</span></header>
-              <PanelState status="empty" reason="No incident is published, so this panel has nothing to show." />
-            </section>
-          ))}
-        </div>
+        <EmptyRecordFrame
+          screen="incident"
+          status={status}
+          reason={why}
+          controls={
+            <>
+              <div className="exec-inc2-actions" role="group" aria-label="Incident controls">
+                {INCIDENT_CONTROLS.map((label) => (
+                  <button key={label} type="button" className="exec-inc2-btn" disabled title={why}>{label}</button>
+                ))}
+              </div>
+              <p className="exec-disabled-reason">
+                No incident is published here, so there is nothing to acknowledge or resolve.
+              </p>
+            </>
+          }
+        />
       </ExecutionSurface>
     );
   }

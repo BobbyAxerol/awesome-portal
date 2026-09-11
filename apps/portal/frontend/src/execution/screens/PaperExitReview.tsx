@@ -25,12 +25,12 @@ import type { ApprovalId, DeploymentId, EvidenceMark, PanelStatus, Sla } from ".
 import { ConditionList, type TypedCondition } from "../components/conditions";
 import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { LifecycleRail, type RailStep } from "../components/lifecycle";
+import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { useState } from "react";
 import type { PaperDemo } from "../paper.smoke";
 import { ExecutionDecisionBar } from "../components/decisionBar";
 import { ExecutionSectionTitle } from "../components/typography";
-import { absenceReason } from "../components/recordProducer";
 import {
   ExecutionContextRail,
   ExecutionDecisionStrip,
@@ -139,7 +139,6 @@ const EXIT_DECISIONS = ["Approve promotion", "Extend observation +14d", "Reject 
 
 /** The evidence a published review shows. Named even when there is none, so an
  *  empty register reads as empty rather than as a screen that failed to load. */
-const EXIT_EVIDENCE_PANELS = ["Observation coverage", "Drift vs approved evidence", "Execution quality", "Risk and reconciliation"] as const;
 
 export function PaperExitReview({
   eligibility,
@@ -251,7 +250,6 @@ export function PaperExitReview({
     // Loading is not absence: a skeleton says "wait", while a frame of dead
     // controls says "there is nothing here", and during a read that is not
     // yet known. `PanelState` draws the skeleton on its own.
-    const refused = status === "denied";
     // Same class list as the ok path below. Without `exec-px` this frame
     // dropped the review room's whole type scale — the 22px/300 h1, the mono
     // panel heads, the lifecycle rail — and without `exec-gov` it lost the
@@ -260,28 +258,25 @@ export function PaperExitReview({
     return (
       <section className="exec-exit exec-px exec-gov" aria-label={`Paper exit review ${reviewId}`}>
         <div className="exec-gate-kicker">PAPER_EXIT · {reviewId}</div>
-        <PanelState status={status} reason={why} />
-        {refused ? null : (
-        <div className="exec-gate-decision" role="group" aria-label="Exit review decisions">
-          {EXIT_DECISIONS.map((label) => (
-            <button key={label} type="button" className="exec-role-control exec-btn-ghost" disabled title={why}>
-              {label}
-            </button>
-          ))}
-        </div>
-        )}
-        <p className="exec-disabled-reason">
-          {refused ? why
-            : `No decision can be taken on a review that is not published. ${absenceReason(why, "paper-exit-review")}`}
-        </p>
-        <div className="exec-px-grid" data-cols="auto">
-          {EXIT_EVIDENCE_PANELS.map((title) => (
-            <section className="exec-gate-panel" key={title} aria-label={title}>
-              <ExecutionSectionTitle>{title}</ExecutionSectionTitle>
-              <PanelState status="empty" reason="No review is published, so this panel has no evidence to show." />
-            </section>
-          ))}
-        </div>
+        <EmptyRecordFrame
+          screen="paper-exit-review"
+          status={status}
+          reason={why}
+          controls={
+            <>
+              <div className="exec-gate-decision" role="group" aria-label="Exit review decisions">
+                {EXIT_DECISIONS.map((label) => (
+                  <button key={label} type="button" className="exec-role-control exec-btn-ghost" disabled title={why}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="exec-disabled-reason">
+                No decision can be taken on a review that is not published.
+              </p>
+            </>
+          }
+        />
       </section>
     );
   }

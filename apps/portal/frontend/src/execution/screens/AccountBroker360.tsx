@@ -327,13 +327,13 @@ export function HeadroomBanner({
         * "not published" is not a number and must never be grouped.
         */}
       <p className="exec-360-headroomline">
-        <span className="exec-num" title={exactTitle(aggregate.virtualTotal)}>
+        <span className="exec-num" title={exactTitle("money", aggregate.virtualTotal)}>
           {aggregate.virtualLabel ?? "Σ virtual"} {formatExact(aggregate.virtualTotal, "money").display}
         </span> vs{" "}
-        <span className="exec-num" title={exactTitle(aggregate.physicalTotal)}>
+        <span className="exec-num" title={exactTitle("money", aggregate.physicalTotal)}>
           {aggregate.physicalLabel ?? "physical"} {formatExact(aggregate.physicalTotal, "money").display}
         </span> (
-        <span className="exec-num" title={exactTitle(aggregate.headroom)}>
+        <span className="exec-num" title={exactTitle("money", aggregate.headroom)}>
           Δ {formatExact(aggregate.headroom, "money").display}
         </span> {aggregate.currency})
       </p>

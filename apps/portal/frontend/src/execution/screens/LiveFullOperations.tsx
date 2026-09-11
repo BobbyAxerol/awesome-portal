@@ -13,6 +13,7 @@ import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { BarsChart } from "../components/marketChart";
 import type { LiveDemo } from "../live.smoke";
+import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
 import { CapGauges, DailyBarsChart, HistogramChart, PositionsTable, SparkTile } from "../components/visuals";
@@ -77,7 +78,7 @@ export function LiveFullOperationsScreen({
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-live">
-        <PanelState status={status} reason={reason} />
+        <EmptyRecordFrame screen="live-full-operations" status={status} reason={reason} />
       </ExecutionSurface>
     );
   }

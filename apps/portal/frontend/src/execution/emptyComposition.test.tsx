@@ -26,6 +26,12 @@ import { GateR2Review } from "./screens/GateR2Review";
 import { GateLiveReview } from "./screens/GateLiveReview";
 import { CanaryControlRoomScreen } from "./screens/CanaryControlRoom";
 import { SandboxCertificationScreen } from "./screens/SandboxCertification";
+import { IncidentDetailScreen } from "./screens/IncidentDetail";
+import { PaperExitReview } from "./screens/PaperExitReview";
+import { LiveFullOperationsScreen } from "./screens/LiveFullOperations";
+import { PaperWorkbench } from "./screens/PaperWorkbench";
+import { paperHandlers } from "./testHandlers";
+import { vnmWorkbench } from "./vnm.fixtures";
 
 afterEach(cleanup);
 
@@ -66,6 +72,29 @@ const RENDERERS: Record<EmptyRecordScreen, (status: "unavailable" | "denied") =>
   },
   "sandbox-certification": (status) => {
     render(<SandboxCertificationScreen certification={null} status={status} reason={NOT_FOUND} />);
+  },
+  /*
+   * The four below are here because `Record<EmptyRecordScreen, …>` refused to
+   * compile without them. That is the point: adding a screen to the registry
+   * and forgetting to prove it is not possible.
+   */
+  incident: (status) => {
+    render(<IncidentDetailScreen incident={null} onOpenOperation={() => undefined} status={status} reason={NOT_FOUND} />);
+  },
+  "paper-exit-review": (status) => {
+    render(
+      <PaperExitReview
+        reviewId="EX-771" deploymentId="dep_1" subject="Carry v3.2" promoteTo="SANDBOX"
+        gateMet={false} quorumMet={0} quorumRequired={2} panels={[]}
+        onCopyProvenance={() => undefined} status={status} reason={NOT_FOUND}
+      />,
+    );
+  },
+  "live-full-operations": (status) => {
+    render(<LiveFullOperationsScreen live={null} status={status} reason={NOT_FOUND} />);
+  },
+  "paper-workbench": (status) => {
+    render(<PaperWorkbench {...paperHandlers()} {...vnmWorkbench()} status={status} reason={NOT_FOUND} />);
   },
 };
 

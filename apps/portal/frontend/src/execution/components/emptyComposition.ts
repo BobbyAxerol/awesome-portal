@@ -43,7 +43,11 @@ export type EmptyRecordScreen =
   | "gate-r2"
   | "gate-live"
   | "canary-control-room"
-  | "sandbox-certification";
+  | "sandbox-certification"
+  | "incident"
+  | "paper-exit-review"
+  | "live-full-operations"
+  | "paper-workbench";
 
 export interface EmptyPanelSpec {
   /** Exactly the title the populated branch draws, minus any interpolated id. */
@@ -74,7 +78,7 @@ export interface EmptyPanelSpec {
 
 export interface EmptyCompositionSpec {
   /** Which `RECORD_PRODUCERS` entry supplies the screen-level sentence. */
-  readonly recordKind: "incident" | "sandbox-certification" | "canary-envelope" | "paper-exit-review" | "governance-approval";
+  readonly recordKind: "incident" | "sandbox-certification" | "canary-envelope" | "paper-exit-review" | "governance-approval" | "deployment";
   /** Panels that are scoped to the missing record, in reviewed order. */
   readonly panels: readonly EmptyPanelSpec[];
   /**
@@ -167,6 +171,71 @@ export const EMPTY_COMPOSITION: Record<EmptyRecordScreen, EmptyCompositionSpec> 
       {
         title: "Promotion plans",
         because: "it is scoped to the portfolio, not to this certification. Its content does not depend on the missing record and we hold no answer for it here.",
+      },
+    ],
+  },
+
+  /*
+   * Incident Detail and Paper Exit Review each solved this before the frame
+   * existed and each solved it in its own file. Three implementations of one
+   * idea is three places for it to drift, and neither copy went through the
+   * allowlist question, so neither had to say which of its panels would be
+   * dishonest when empty. They are registry entries now.
+   */
+  incident: {
+    recordKind: "incident",
+    panels: [
+      { title: "Timeline", missing: "No timeline", holds: "each event in the order the system recorded it" },
+      { title: "Operations taken", missing: "No operations", holds: "every operator action taken against this incident" },
+      { title: "Evidence", missing: "No evidence", holds: "the artefacts attached while the incident was open" },
+      { title: "Resolution gates", missing: "No gates", holds: "each condition that must hold before this can be resolved" },
+      { title: "Annotations", missing: "No annotations", holds: "notes reviewers left on this incident" },
+    ],
+    withheld: [],
+  },
+  "paper-exit-review": {
+    recordKind: "paper-exit-review",
+    panels: [
+      { title: "Observation coverage", missing: "No coverage", holds: "how much of the observation window this deployment actually ran" },
+      { title: "Drift vs approved evidence", missing: "No drift measurement", holds: "the divergence between paper behaviour and the evidence R1 approved" },
+      { title: "Execution quality", missing: "No execution evidence", holds: "fills, slippage and latency measured during the observation" },
+      { title: "Risk and reconciliation", missing: "No findings", holds: "risk breaches and reconciliation findings raised during paper" },
+    ],
+    withheld: [],
+  },
+  "live-full-operations": {
+    recordKind: "deployment",
+    panels: [
+      { title: "Open exposure & orders", missing: "No exposure", holds: "positions and working orders this deployment holds right now" },
+      { title: "Broker & reconciliation truth", missing: "No broker truth", holds: "the broker's own view beside Portal's projection" },
+      { title: "Broker mismatch", missing: "No mismatch", holds: "every field where the two views disagree" },
+      { title: "Guard rules", missing: "No guard rules", holds: "the guard rules armed against this deployment" },
+      { title: "Incidents & protective actions", missing: "No incidents", holds: "incidents raised and the protective actions taken" },
+    ],
+    withheld: [
+      {
+        title: "Contribution & edge evidence · 30d",
+        because: "it is a thirty-day window over the portfolio, not over this deployment record. With no deployment the window is not empty, it is unasked, and reporting it empty would claim a query we did not run.",
+      },
+    ],
+  },
+  "paper-workbench": {
+    recordKind: "deployment",
+    panels: [
+      { title: "Observation gate", missing: "No observation gate", holds: "each criterion the paper observation must meet before exit" },
+      { title: "Equity vs approved research evidence", missing: "No equity series", holds: "the paper equity curve beside the research evidence it was approved on" },
+      { title: "Drift vs approved evidence", missing: "No drift measurement", holds: "where paper behaviour has diverged from that evidence" },
+      { title: "Orders and fills overlay", missing: "No orders or fills", holds: "orders and fills laid over the same window" },
+      { title: "Portfolio contribution and rolling correlation", missing: "No contribution figures", holds: "what this deployment adds to its portfolio, and how it moves with the rest" },
+    ],
+    withheld: [
+      {
+        title: "Deployments in paper",
+        because: "it lists every other deployment running in paper. This screen never asked for that list, so an absent deployment here says nothing at all about it.",
+      },
+      {
+        title: "Observation report — preview",
+        because: "it is drawn only once an observation report can be produced. Naming it on an absent deployment promises a panel that a healthy screen draws only at the end of the window.",
       },
     ],
   },

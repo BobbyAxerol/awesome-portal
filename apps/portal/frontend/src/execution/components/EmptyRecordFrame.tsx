@@ -56,12 +56,11 @@ export function EmptyRecordFrame({
   const spec = EMPTY_COMPOSITION[screen];
   const why = reason ?? "This record cannot be shown.";
   if (!framesAbsence(status)) {
-    return (
-      <>
-        <PanelState status={status} reason={why} />
-        <p className="exec-disabled-reason">{why}</p>
-      </>
-    );
+    // `PanelState` already prints the reason. The first version printed it
+    // again underneath, so a refusal said the same sentence twice — the exact
+    // duplication this phase exists to remove, committed inside the component
+    // that removes it. Caught by an existing Paper Workbench test, not by me.
+    return <PanelState status={status} reason={why} />;
   }
   return (
     <>

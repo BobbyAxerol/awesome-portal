@@ -76,11 +76,24 @@ export function Published({ value, absent = "not published" }: { value: string |
  * Returns `undefined` when nothing was rounded or grouped, so a cell whose
  * display already IS the source does not carry a title that repeats it.
  */
-export function exactTitle(...values: readonly (string | null | undefined)[]): string | undefined {
+export function exactTitle(
+  /*
+   * The unit is required and first.
+   *
+   * The first version assumed "money" and took only values, which is right for
+   * every caller today and wrong the moment one is a quantity: the decision
+   * "was anything hidden?" is class-dependent, so a qty cell could have been
+   * rounded by its own class and still be judged unchanged by the money class,
+   * or the reverse. A title that disagrees with the figure above it is worse
+   * than no title.
+   */
+  unit: ExactUnit,
+  ...values: readonly (string | null | undefined)[]
+): string | undefined {
   const kept: string[] = [];
   for (const value of values) {
     if (value === null || value === undefined || value === "") continue;
-    if (formatExact(value, "money").display !== value) kept.push(value);
+    if (formatExact(value, unit).display !== value) kept.push(value);
   }
   return kept.length > 0 ? kept.join(" → ") : undefined;
 }

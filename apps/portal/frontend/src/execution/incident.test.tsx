@@ -257,8 +257,13 @@ describe("the container fetches through the port", () => {
         incidentId="inc_fixture_44"
       /></MemoryRouter>);
     const timeline = await screen.findByLabelText("Timeline");
-    expect(timeline.textContent).toMatch(/No incident is published/);
-    expect(screen.getAllByText(/no incident is published/i).length).toBeGreaterThan(0);
+    // The panel names its own absence and says what it would hold. It no
+    // longer repeats "no incident is published" — that sentence belongs to the
+    // screen and is said once, which is the Phase 8 rule.
+    expect(timeline.textContent).toMatch(/No timeline/);
+    expect(timeline.textContent).toMatch(/Holds each event/);
+    const said = screen.getAllByText(/Incidents are opened by an operator/i);
+    expect(said.length).toBe(1);
   });
 });
 

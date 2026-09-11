@@ -62,6 +62,16 @@ export const RECORD_PRODUCERS = {
     kind: "OPERATOR",
     sentence: "An approval request is opened by an operator from the Approval Inbox, and the R1, R2 and Live gates are stages of that one request. None is open at this reference.",
   },
+  /*
+   * Traced 2026-09-11: there is no INSERT INTO strategy_deployments and no
+   * create-deployment route anywhere in apps/control-api/src. Portal reads the
+   * relation from `manager.deployments` and projects it. So this is a SOURCE
+   * record, and the sentence must not imply an operator could make one here.
+   */
+  deployment: {
+    kind: "SOURCE",
+    sentence: "Deployments are published by the Trading System and projected by Portal, which never creates one. None is published at this reference in this environment.",
+  },
   "paper-exit-review": {
     kind: "UNBUILT",
     sentence: "No exit review can exist yet: Portal reads this record, but nothing in the platform writes one, so a Paper-exit decision cannot be started here.",

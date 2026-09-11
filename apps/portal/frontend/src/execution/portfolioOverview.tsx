@@ -245,9 +245,9 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
                         ? <span className="exec-blotter-note"> · {row.currency}</span>
                         : <span className="exec-blotter-note"> · currency not published</span>}
                     </th>
-                    <td className="exec-num" title={exactTitle(row.firstEquity)}>{formatExact(row.firstEquity, "money").display}</td>
-                    <td className="exec-num" title={exactTitle(row.lastEquity)}>{formatExact(row.lastEquity, "money").display}</td>
-                    <td className="exec-num" title={exactTitle(row.netPnl)}>{row.netPnl === null ? <span className="exec-blotter-note">net not published</span> : formatExact(row.netPnl, "money").display}</td>
+                    <td className="exec-num" title={exactTitle("money", row.firstEquity)}>{formatExact(row.firstEquity, "money").display}</td>
+                    <td className="exec-num" title={exactTitle("money", row.lastEquity)}>{formatExact(row.lastEquity, "money").display}</td>
+                    <td className="exec-num" title={exactTitle("money", row.netPnl)}>{row.netPnl === null ? <span className="exec-blotter-note">net not published</span> : formatExact(row.netPnl, "money").display}</td>
                     <td className="exec-num">{row.pointCount}</td>
                   </tr>
                 ))}
@@ -266,9 +266,9 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
               {standings.map((row) => (
                 <tr key={row.portfolioId} data-self={row.portfolioId === input.portfolioId ? "true" : undefined}>
                   <th scope="row">{row.portfolioId}{row.currency ? <span className="exec-blotter-note"> · {row.currency}</span> : null}</th>
-                  <td className="exec-num" title={exactTitle(row.firstText)}>{formatExact(row.firstText, "money").display}</td>
-                  <td className="exec-num" title={exactTitle(row.lastText)}>{formatExact(row.lastText, "money").display}</td>
-                  <td className="exec-num" title={exactTitle(row.netText)}>{row.netText === null ? <span className="exec-blotter-note">net not published</span> : formatExact(row.netText, "money").display}</td>
+                  <td className="exec-num" title={exactTitle("money", row.firstText)}>{formatExact(row.firstText, "money").display}</td>
+                  <td className="exec-num" title={exactTitle("money", row.lastText)}>{formatExact(row.lastText, "money").display}</td>
+                  <td className="exec-num" title={exactTitle("money", row.netText)}>{row.netText === null ? <span className="exec-blotter-note">net not published</span> : formatExact(row.netText, "money").display}</td>
                   <td className="exec-num">{row.points}</td>
                 </tr>
               ))}
@@ -303,13 +303,13 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
                     * zero, or as nothing, or as not-applicable, and settles
                     * none of the three.
                     */}
-                  <td className="exec-num" title={exactTitle(row.amount)}>
+                  <td className="exec-num" title={exactTitle("money", row.amount)}>
                     {row.amount === null
                       ? <span className="exec-blotter-note">amount not published</span>
                       : formatExact(row.amount, "money").display}
                     {row.currency ? <span className="exec-blotter-note"> {row.currency}</span> : null}
                   </td>
-                  <td className="exec-num" title={exactTitle(row.before, row.after)}>
+                  <td className="exec-num" title={exactTitle("money", row.before, row.after)}>
                     {row.before === null
                       ? <span className="exec-blotter-note">before not published</span>
                       : formatExact(row.before, "money").display}
