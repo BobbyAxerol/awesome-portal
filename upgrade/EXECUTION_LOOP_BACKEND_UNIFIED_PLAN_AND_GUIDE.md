@@ -6805,3 +6805,484 @@ state and visual tests after approval. Agree file ownership before editing
 shared hooks/schema/fixtures; preserve both agents' work and use one integrated
 feature head, not a new branch for each finding. New unrelated requests require
 an explicit scope amendment rather than silently adding a third phase.
+
+---
+
+## 19. R3 — Maximum Current Data, Efficient Inter-cell Read, and Product-release Closeout
+
+**Status:** `PLANNED_AWAITING_BOBBY_PHASE_APPROVAL` (2026-09-12).
+
+**Purpose:** close the remaining **Portal-owned** data, transport, realtime,
+governance-read and rich-screen integration work in four bounded phases before
+the next stable-release decision.  This is not a rewrite of N18–N29,
+EDS-01–12 or BE-R2-1–9: those phases remain historical evidence and their
+accepted contracts are reused.
+
+The four phases deliberately have a dependency graph rather than a serial
+queue.  `R3-1/BE` and `R3-3/FE` may begin in parallel on the one shared branch;
+`R3-2/BE` consumes the measured source/coverage result of R3-1; `R3-4/FE`
+consumes both backend deliveries and is the only phase that rebuilds the dev
+candidate for Bobby's final product review.
+
+```text
+R3-1 / BE  Maximum-current coverage + bounded inter-cell efficiency
+      └─────────────┐
+                    ├── R3-2 / BE  Qualification, realtime/DR, command readiness
+R3-3 / FE  Rich panel + workflow integration
+      └─────────────┘
+                    └── R3-4 / FE  Full product acceptance + exact dev rebuild
+                                         └── Bobby visual review → main/stable decision
+```
+
+### 19.1 Verified baseline and planning facts
+
+These are observations used to size R3, not permission to change the runtime:
+
+| Boundary | Verified fact | R3 consequence |
+| --- | --- | --- |
+| Protected dev | PR #64 merged as `1c4df686`; post-merge Portal CI run `34706028530` completed **success** | R3 starts from `origin/dev`; it does not reopen the CI/smoke repair. |
+| Current portal worktree | `feat/execution-loop-next` fast-forwarded to that merged dev commit; Bobby's dirty `e2e/el-v2-03-evidence/controls.json` remains untracked by this campaign | Every R3 commit stages explicit files only; the evidence file is never edited, reset, checked out or committed by Codex. |
+| HK Edge topology | Paper, Sandbox and Live each have an isolated healthy Edge, Source Proxy and projection-worker stack; all three Edge services currently use the same immutable image digest | A selected Portal profile must remain bound to the matching Edge identity/profile. No cross-profile fallback and no browser-facing Edge route. |
+| Current source plane | Manager-v2 exposes bounded current-page reads for 96 catalogue relations. The accepted handoff limits a Portal call to 200 rows/1 MiB and recommends no more than one concurrent named page for Paper/Sandbox and two for Live | R3 may consume every **current** published relation through named BFF operations, but cannot publish a browser-controlled relation/SQL browser or infer history/replay. |
+| Measured HK capacity | A read-only two-sample observation found the Paper projection worker stable at about 816 MiB of its 1 GiB limit, with no restart; CPU dropped from a momentary spike to near idle in the 20-second observation | This is a capacity warning, **not** evidence of a leak. R3-1 must add a measured budget/telemetry gate before increasing cadence, page depth, relation coverage or memory limits. |
+| Existing Portal read path | Browser → same-origin BFF → local PostgreSQL hot projection/shared-read cache → private HTTP/2 mTLS plus delegated read JWT → profile-bound HK Edge | R3 keeps this path. Portal must never read Trading System PostgreSQL, `live_data_executor`, Redis, broker, Source Proxy upstream or shell/CLI directly. |
+| Market Context | The Portal BFF and strict Paper qualifier exist, but the current Manager façade rejects the pinned `latest`/`candles` envelope. The Manager catalogue does not presently publish a qualified Market Context capability | Portal cannot fix this by scraping the Data Layer. R3-2 contains one narrow Edge/owner-compatible adapter path and preserves typed unavailability until its positive contract evidence exists. |
+| Commands | The Portal has a catalogue, task rail and Portal-owned governance capture paths; local R0 reads are distinct from Trading System command mutation | R3 never enables “all CLI”. Only an exact published, RBAC-protected, idempotent command may become connected after its own acceptance matrix. |
+
+### 19.2 R3 rules — binding on all four phases
+
+1. **One shared branch and explicit ownership.** Work only from the shared
+   `feat/execution-loop-next` head based on current `origin/dev`. Codex owns
+   server/contracts/transport/migrations/operational scripts; Claude owns rich
+   composition, interaction, visual baselines and browser tests. Neither side
+   overwrites the other's files without an agreed handoff.
+2. **Maximum current source, never a bypass.** Consume every useful existing
+   Manager-v2 relation only through named server-side BFF operations. A source
+   fact not in the current published contract becomes one named
+   `SOURCE_GAP_CONFIRMED` item with an owner/action; it is not replaced with
+   direct DB access, fixtures, guessed values or generic unavailability.
+3. **Profile and authority are part of every key.** Workspace, caller,
+   environment/profile, resource, contract/catalogue revision and query scope
+   participate in authorization, cache, cursor, projection and SSE identity.
+   `PAPER`, `SANDBOX`, `LIVE` and `CANARY` never borrow each other's facts.
+4. **Current-page is not replay.** Preserve availability, freshness,
+   completeness, `as_of_ms`, UTC milliseconds, exact decimal strings, source
+   revision and bounded coverage. Do not call current orders/fills/positions a
+   global ordered lifecycle, correction-aware replay or complete history.
+5. **Traffic is a release property.** Browser tabs, retries and replicas may
+   not multiply SGP→HK reads. Use existing lease/shared-read, response/page
+   caps, cancellation, ETag/revision comparison, coalescing and profile pacing.
+   No automatic increase in Edge memory, poll rate or page depth follows from a
+   single resource sample.
+6. **Rich UI stays rich.** A panel changes its contents/state, never an entire
+   approved screen into a generic envelope page. `LOADING`, `EMPTY`, `PARTIAL`,
+   `STALE`, `DENIED`, `UNAVAILABLE`, `INSUFFICIENT_DATA` and terminal states
+   remain visibly distinct.
+7. **No invented command authority.** Commands require an exact catalogue entry,
+   server-side policy/RBAC, CSRF/step-up where required, idempotency, immutable
+   audit and plan→apply→verify evidence. A disabled command must name why.
+8. **Commit and evidence discipline.** Each substantive change is committed
+   with regenerated contracts/types/fixtures where applicable, focused tests,
+   journal evidence and a rollback story. A phase cannot claim closeout while a
+   known internal regression is deferred unnamed. External source gaps remain
+   explicitly classified, not mislabelled as Portal debt.
+9. **No stable/main action in R3.** R3-4 may rebuild only the isolated dev stack
+   from an exact commit/image/config hash. Main merge, signed release and stable
+   rollout require Bobby's later explicit order.
+
+### 19.3 Phase index and parallel handoff
+
+| Order | Phase | Primary owner | May run with | Entry condition | Closeout artifact |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **R3-1 / BE** — Maximum-current coverage and bounded inter-cell efficiency | Codex/backend | R3-3 / FE | current dev CI green; E7/Manager manifest validation | source-to-panel coverage ledger, measured budget and named BFF completion report |
+| 3 | **R3-3 / FE** — Rich active-data panels and Portal workflow surfaces | Claude/frontend | R3-1 / BE | generated contracts at R3 baseline | real-reader matrix, rich-state browser suite and visual handoff |
+| 2 | **R3-2 / BE** — Qualification, realtime/DR and governed-command closure | Codex/backend + narrowly scoped Edge owner patch if needed | R3-3 finishing | R3-1 coverage ledger; exact identified source gaps only | profile qualification, multi-process/DR evidence and immutable dev candidate manifest |
+| 4 | **R3-4 / FE** — Cross-stack product acceptance and exact dev rebuild | Claude/frontend, Codex supports deployment evidence | none | R3-2 BFF/qualification outputs | full route/panel acceptance matrix, no-update visual run, exact dev image/config proof |
+
+---
+
+### R3-1 / BE — Maximum-current data coverage and bounded inter-cell efficiency
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`.
+
+**Goal:** make every existing useful current Manager-v2 fact reachable through
+one named, authorized Portal BFF/panel contract, while proving that source use
+is bounded per profile and cannot overload SGP, AWS-HK or browser tabs.
+
+**Why this phase exists:** the current source handoff already exposes 96
+catalogue relations and 22 direct/five Portal-derived mapped capabilities, but
+code/contract readiness alone does not prove that every rich screen panel is
+mapped, profile-correct, source-backed or efficient. The live HK observation
+also establishes that Paper's worker has limited memory headroom; widening
+coverage without a traffic/capacity ledger would be irresponsible.
+
+**Codex/backend scope:**
+
+1. **Freeze and compare the source baseline.** Run the checked-in E7 validator
+   and manifest verification before edits. Record the deployed Edge image,
+   catalogue digest/revision, profile activation state and non-secret
+   source/projection limits in a new versioned R3 source-truth ledger. A
+   handoff digest that differs from the live immutable image is a drift signal
+   to investigate, not a reason to trust either side blindly.
+2. **Create one machine-readable coverage ledger.** For every product
+   screen/panel/action that can read data, record:
+   `screen_id`, `panel_id`, named Portal operation, current Manager relation or
+   Portal derivation, profile/environment, field allowlist, authority,
+   `availability/freshness/completeness/as_of` propagation, source page bound,
+   cache/stream invalidation key, frontend consumer, test fixture and one of
+   `COVERED`, `EMPTY_AUTHORIZED`, `PARTIAL_AUTHORIZED`,
+   `SOURCE_GAP_CONFIRMED` or `NOT_APPLICABLE`.
+   The ledger consumes all currently useful E5 direct/derived mappings and any
+   additional catalogue relation required by an approved screen, but each new
+   relation must first gain a named DTO/operation—never a browser selector.
+3. **Complete current-source BFF seams.** Reproduce and either repair or
+   explicitly prove closed the historical seams that can still hide real data:
+   order-status vocabulary mapping with preserved source word/quarantine,
+   composite deployment/binding identifier normalization, exact-query/keyset
+   activation, relation-slot ordering, profile-specific resource resolution,
+   and all Alpha/Portfolio/Account/Binding/Paper/Sandbox/Live/Blotter/Ops
+   screen readers. `200` for an unknown resource must remain typed `404/409`,
+   never a fabricated source-backed panel.
+4. **Enforce one efficient read path.** Reuse the existing shared-read lease,
+   local projection, cache TTL, ETag/revision, abort and per-profile realtime
+   coordinator. Verify—not merely assume—that one/tens/hundreds of same-profile
+   browser consumers do not increase SGP→HK source requests. Respect the
+   handoff ceiling: at most one concurrent named page for Paper and Sandbox,
+   two for Live; 200 rows/1 MiB per source page; Portal response limits remain
+   independently enforced.
+5. **Add capacity and pacing observability.** Add non-secret metrics and a
+   runbook that correlate profile/relation reads, cache leader/follower/hit,
+   source status, source latency, page/byte consumption, retry/backoff,
+   queue depth, Edge-worker memory/CPU/restart count and local projection lag.
+   A 10-minute sustained `>=80%` Edge memory observation is a warning; `>=90%`,
+   restart/OOM, source `429`, cursor-cycle or source-error growth blocks a
+   cadence/page-depth expansion pending diagnosis. Do not raise memory limits
+   or cadence merely to make a test green.
+6. **Preserve the authority boundary.** No new direct connection to Trading
+   System DB, `live_data_executor`, Redis, broker, Source Proxy upstream or CLI;
+   no raw relation/cursor/JWT/mTLS input or source origin reaches the browser.
+
+**Claude/frontend parallel scope (R3-3 may start immediately):** use the
+current generated contracts and BFF doubles to bind real panels, but wait for
+the R3-1 ledger before treating an unmapped field as a frontend defect. Report
+any missing named operation/field as a single ledger row rather than creating a
+fixture fallback.
+
+**Required tests/evidence:**
+
+- E7 validator and imported manifest hashes pass before/after change; deployed
+  non-secret digest/profile evidence is recorded separately from source code.
+- Named BFF HTTP tests cover all `COVERED` rows: valid caller/profile/resource,
+  wrong workspace/profile/resource, `401/403/400/404/502/503`, authoritative
+  empty, partial, stale and exact decimal/UTC values.
+- Generated OpenAPI/schema/type/fixture parity; a test fails if a screen panel
+  reads a raw Manager relation or has no coverage-ledger entry.
+- Multi-subscriber and two-Control-API-process load test proves bounded source
+  request count, cache/profile isolation, cancellation and no cursor leak;
+  include slow/hidden tab and source `429/502/503` cases.
+- 10-minute read-only capacity observation for each profile and a 30-minute
+  Paper trace if the warning threshold is reached. Record rates and memory
+  slope; do not label a point-in-time RSS value a leak.
+- Full relevant Control API/PostgreSQL restore, contracts/generator, Rust
+  compatibility and focused same-origin frontend consumer gates.
+
+**Exit / technical-debt closure:**
+
+- Every existing rich screen panel is represented in the ledger; no unnamed
+  current-source/BFF gap remains.
+- Every useful currently published Manager relation needed by a product panel is
+  exposed only through a named, bounded BFF DTO with profile-safe cache/cursor
+  identity.
+- The source-read budget and capacity result are measured, alertable and
+  fail-closed; no browser/retry/replica amplification is possible in tested
+  scenarios.
+- Any source fact absent from the current contract is one explicit
+  `SOURCE_GAP_CONFIRMED` row with a narrow owner action, not an unbounded R3
+  backlog. No Portal-owned data/transport debt may remain unnamed.
+
+**Explicit non-scope:** Market Context activation, source-event replay claims,
+Trading System mutation/CLI activation, profile runtime rollout, memory-limit
+increase, stable release and UI redesign.
+
+**Next action after completion:** hand the coverage ledger and generated
+operation list to R3-2 and R3-4; Claude uses it to finish R3-3 without guessing
+what a panel may claim.
+
+---
+
+### R3-3 / FE — Rich active-data panels and Portal workflow surfaces
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; may run in parallel with R3-1.
+
+**Goal:** preserve Claude's approved execution-loop composition while making
+every product panel consume a named same-origin BFF contract, show truthful
+current data/state, and surface the Portal-owned review/capture workflow that
+BE-R2-8 already provides.
+
+**Claude/frontend scope:**
+
+1. **Bind rich screens, not replacement envelopes.** Convert all product routes
+   in Alpha Fleet/Alpha 360, Portfolio 360, Account/Broker 360, Binding Detail,
+   Paper Workbench/List/Exit Review, Sandbox, Canary/Live, Blotter, Command
+   Center, Operations, Governance and Admin Drawer to the named BFF consumers
+   listed in R3-1. Keep approved hierarchy, terminal look, tab layout, chart
+   composition, density and visual tokens.
+2. **Adopt one panel-state discipline.** A panel renders its own
+   `loading/ready/empty/partial/stale/denied/unavailable/insufficient_data/
+   terminal` state with source freshness, coverage and reason. It must not
+   blank the entire route, retain Alpha A data under Alpha B, turn a refusal
+   into empty, zero an exact decimal or fall back to fixture data on a product
+   route.
+3. **Finish Portal workflow entry points.** Add carefully scoped UI entries for
+   `review-capture-capabilities`, R2 capture, Paper Exit creation and Sandbox
+   note capture. Forms use same-origin session/CSRF, expected revision and
+   request-key semantics; they state **Portal-authored evidence** and never
+   impersonate broker/Trading System certification or promotion.
+4. **Complete Binding Detail as a real product screen.** Produce the missing
+   hifi/component specification and bind the existing named Binding/Broker
+   BFFs, exposure, sync, freshness and typed absence states. Do not invent an
+   account/binding data model or pull the first 200 fleet items as an eligibility
+   catalogue.
+5. **Keep charts evidence-led.** Wire financial series/tables/tooltips only to
+   published exact-decimal, UTC-bound BFF responses. Market chart shells may be
+   prepared, but `latest/candles`, benchmark, calendar and VNM panels remain
+   typed until R3-2 supplies the independently qualified capability.
+6. **Keep command truth narrow.** Show connected local R0 read tasks accurately;
+   mutation affordances use server-provided capability/policy/reason only. Do
+   not add a generic terminal, client-side policy inference, raw command form
+   or optimistic execution.
+
+**Codex/backend support:** provide generated DTOs/fixtures and answer only
+coverage-ledger entries. Backend does not change layout, typography, colors,
+baseline choice or composition in this phase.
+
+**Required tests/evidence:**
+
+- Unit/component tests for every panel-state branch and identity transition;
+  product route reads must use same-origin BFF only.
+- Route/tab/browser matrix covering each screen in normal data, exact empty,
+  partial, stale, denied, unavailable and error/recovery branches where the
+  contract admits them; no React/DOM warning or console error.
+- Form tests: CSRF, expected-revision conflict, same request-key retry,
+  changed-payload conflict and explicit server refusal. No test may seed a
+  workflow row then claim a user flow was tested.
+- Accessibility/contrast guard on dynamic controls and financial values;
+  visual snapshots are updated only after actual/expected/diff review, never by
+  a blanket update command. Non-Execution/QuantBT baselines stay untouched.
+- Consumer report maps every R3-1 `COVERED` ledger row to a named component or
+  names why it is intentionally not a user-facing panel.
+
+**Exit / technical-debt closure:**
+
+- All existing approved rich routes remain mounted and their data-bearing panels
+  have a real BFF consumer or a named typed source state.
+- Binding Detail and Portal review/capture entries are product-complete for the
+  contracts already supplied; no hidden fixture fallback or hard-coded
+  `unavailable` shell remains.
+- All outstanding UI-only defects are either fixed with visual evidence or
+  recorded as a deliberate, owner-visible product choice. Backend/source gaps
+  are passed to R3-2 by ID, not silently worked around.
+
+**Explicit non-scope:** new source relation/Edge routing, direct database reads,
+market-data fabrication, Trading System command activation, stable rollout and
+unreviewed global visual redesign.
+
+**Next action after completion:** deliver the real-reader and interaction
+matrix to R3-4; retain the rich composition while R3-2 qualifies source and
+realtime facts.
+
+---
+
+### R3-2 / BE — Profile qualification, realtime/DR and governed-command closure
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; begins after R3-1's ledger.
+
+**Goal:** close the remaining backend operational gaps: independently qualify
+the published profile capabilities, make realtime and degradation behavior
+provable across real processes, resolve the narrow Market Context adapter
+boundary if the source can publish it, and make command/governance authority
+precise rather than broadly disabled or broadly enabled.
+
+**Codex/backend scope:**
+
+1. **Profile qualification from current truth.** Consume R3-1's coverage ledger
+   to run explicit Paper, Sandbox and Live qualification matrices. A profile is
+   enabled only for its own successful named capability evidence; an authoritative
+   empty Live response remains `EMPTY`, not an error or copied Paper row. Record
+   mTLS/delegated-JWT positive and negative evidence, profile/audience/resource
+   binding, availability/freshness/completeness and catalogue revision.
+2. **Narrow Market Context compatibility resolution.** Compare the sealed
+   Portal Market Context envelope with the live Manager façade extension. If the
+   existing Data/Market service can supply the facts, implement a minimal
+   **Trading-System/Edge-owned** adapter that publishes only named `latest` and
+   bounded `candles` v1 envelopes through Manager-v2; include authority,
+   source revision, UTC milliseconds, exact decimals, range/coverage and page/
+   byte bounds. Portal remains only the server-side consumer. Qualify Paper
+   first; Sandbox/Live require their own evidence. If no compatible source
+   envelope exists, leave `PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION`
+   with the exact rejected contract/digest—no Data Layer scrape.
+3. **Prove realtime correctness at deployment shape.** Run an isolated dev-only
+   two-process Control API/one PostgreSQL test with real EventSource/DOM
+   consumers. Verify cursor/data-before-status ordering, replay of local
+   `Last-Event-ID`, subscriber membership revocation, route/profile abort,
+   hidden-tab coalescing, resume/gap/resnapshot, source `429/502/503`, Edge/JWT
+   refusal, worker restart and one-profile failure without cross-profile leak.
+   Measure PG commit → local journal → EventSource → DOM, source read count,
+   p95/p99 fan-out, local query time, queue depth and memory. The phase may tune
+   existing pacing/backoff/page budgets only when a measured bottleneck is
+   reproduced and the rate/capacity gates remain satisfied.
+4. **DR/rollback evidence.** Rehearse source-dark, stale-last-good, bounded
+   recovery and image-only rollback on disposable/dev resources. Migrations are
+   forward-only and additive; never delete projection/business/audit data or
+   run `down -v` to prove rollback.
+5. **Close governance and command ambiguity.** Inventory every Portal command
+   catalogue row and review/capture route. For each row publish exactly one:
+   `LOCAL_R0_READ_CONNECTED`, `READ_ONLY_SUPPORTED`,
+   `MUTATION_CONNECTED`, `POLICY_BLOCKED`, `SOURCE_NOT_COMMISSIONED` or
+   `NOT_APPLICABLE`, with actor role, step-up/CSRF, idempotency scope, audit
+   identity, plan/apply/verify semantics and reason. Activate only mutations
+   whose exact existing endpoint and full policy matrix pass; do not create a
+   generic CLI relay or infer Trading System permission. Portal-only R2/Paper
+   Exit/Sandbox-note workflow is completed and labeled Portal-authored; source
+   promotion/certification remains source-owned unless an existing exact command
+   is published.
+6. **Produce an immutable dev candidate.** Generate contracts/types/fixtures,
+   manifest, SBOM/provenance inputs, config hash and rollback pointer for R3-4.
+   This is a dev candidate handoff only; it does not merge main, issue a stable
+   tag or roll out stable.
+
+**Claude/frontend coordination:** R3-3 supplies the exact panels/forms to
+exercise. Claude must not enable a market chart or mutation merely because a
+route exists; R3-2's capability state and returned reason are the sole switch.
+
+**Required tests/evidence:**
+
+- Positive/negative mTLS + delegated-JWT matrix for each profile and named
+  operation; no business-row read in compatibility-only probes.
+- Market Context schema/fixture/contract validation, Paper positive latest and
+  candles, wrong symbol/interval/profile/range/limit negatives, no raw source
+  payload persistence and an independently signed/manifested Edge adapter if
+  one is delivered.
+- Two independent API processes plus PostgreSQL/real browser test prove source
+  calls do not scale with browser or replica count; document the exact measured
+  p95/p99 and capacity headroom. No SLO is claimed from a one-process synthetic
+  test.
+- Fault and rollback matrix: source `429/502/503`, cursor expiry/cycle,
+  mTLS/JWT denial, projection DB unavailable, worker restart, membership
+  revocation, profile isolation and image-only rollback all preserve truthful
+  state and no protected stale data leaks.
+- Command matrix tests prove RBAC, CSRF/step-up, idempotent retry,
+  changed-payload conflict, audit append, plan/apply/verify and fail-closed
+  refusal. No test invokes a broker/trading mutation except an exact command
+  separately approved and isolated for dev.
+- Full Control API/PostgreSQL restore, contracts/generator, Rust fmt/clippy/
+  relevant tests, existing workspace verifier and deployment-manifest validators.
+
+**Exit / technical-debt closure:**
+
+- Every active profile has a qualified named read matrix or a precise typed
+  reason; no global feature flag represents per-profile truth.
+- Local realtime has multi-process and DOM evidence, bounded source pacing and
+  a replay/DR boundary stated truthfully; current observation is never promoted
+  to authoritative source replay.
+- Market Context is either Paper-qualified through a minimal owner adapter, or
+  exactly recorded as a source contract gap with no Portal workaround. This is
+  the only valid closeout for a capability the current Manager does not publish.
+- Every command/governance entry has an exact authority state; no hidden broad
+  command path, no fake source certification and no untracked policy debt.
+- A reproducible immutable dev candidate/rollback package is ready for R3-4.
+
+**Explicit non-scope:** direct source database access, arbitrary TS CLI relay,
+unbounded historic export/replay, changes to V1/D4 behavior, production/stable
+rollout, synthetic broker/market values or a rewrite of the HK Edge topology.
+
+**Next action after completion:** hand the exact contracts, qualified capability
+matrix, image/config/rollback identifiers and error states to R3-4 for the last
+product acceptance rebuild.
+
+---
+
+### R3-4 / FE — Cross-stack product acceptance, visual integrity and exact dev rebuild
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; begins after R3-2 and R3-3.
+
+**Goal:** verify the exact integrated product—not fixtures, an old image or a
+single happy page—on `dev-portal.primusspark.com`, preserve the approved rich
+UI, and produce a release-ready owner packet for Bobby's eventual main/stable
+instruction.
+
+**Claude/frontend scope:**
+
+1. **Connect the final capability matrix.** Bind R3-2 profile and command
+   results to every screen/panel/action. Paper/Sandbox/Live/Canary display their
+   own facts; qualified Market Context drives charts, while unqualified source
+   panels retain their designed typed state without collapsing the screen.
+2. **Run full product-state acceptance.** Test every execution-loop route and
+   important tab/drawer against real same-origin BFF responses for current data,
+   authorized empty, partial, stale, recovering, denied, unavailable and
+   terminal/auth-expired. Include Alpha 360 Insight/Trade Replay, Portfolio
+   financial panels, Account/Binding, Paper/Sandbox/Live, Blotter, Operations,
+   Governance and Admin Action Drawer.
+3. **Exercise interaction truth.** Verify review/capture forms, filters,
+   pagination, profile/account changes, refresh/reconnect and every displayed
+   command state. An enabled action must reach its server-side plan/apply/verify
+   result; a disabled one must name the server reason. Never use a fake command,
+   auto-select an Alpha or seed workflow data to make a screen look populated.
+4. **Preserve visual quality.** Inspect actual/expected/diff before updating
+   snapshots; run accessibility/contrast and responsive layout checks at the
+   approved breakpoints. Fix only frontend presentation/interaction defects in
+   Claude's ownership; return BFF/authority mismatches to Codex with operation,
+   profile, resource, response and expected state.
+5. **Rebuild the isolated dev stack from the exact commit.** Codex performs the
+   release-safe build/deploy evidence using the existing dev project/volumes and
+   the R3-2 manifest. Confirm browser bundle hash, API build commit/image digest,
+   config hash, migration ledger, SGP read source and stable isolation. Do not
+   rebuild stable, run bootstrap, recreate dependencies or reuse an older `ux*`
+   image as acceptance evidence.
+
+**Joint final test matrix:**
+
+- Zero cross-origin application reads, raw relation selectors, source secrets,
+  cursors or direct Edge calls in browser traffic.
+- Same-origin network assertions cover every named BFF/stream/command consumer;
+  counts and source-profile values match R3-1 ledger exactly.
+- Full frontend unit/type/build, no-update visual baseline, browser journey,
+  Control API/PostgreSQL/restore, contracts/generator, Rust relevant gates and
+  workspace verification pass from the exact candidate.
+- A real authenticated dev review uses legitimate role/session flow; it neither
+  resets Bobby nor leaves a temporary account, active session, activation token
+  or workspace membership after cleanup.
+- Rebuild acceptance captures versioned image IDs/digests, migration numbers,
+  config hash, source capability matrix, rollback image pointer and a concise
+  per-screen owner verdict: `READY_WITH_DATA`, `AUTHORIZED_EMPTY`, `PARTIAL`,
+  `TYPED_UNAVAILABLE_SOURCE_GAP`, `POLICY_BLOCKED` or `NOT_APPLICABLE`.
+
+**Exit / release handoff:**
+
+- The dev URL serves the exact R3 candidate, not an old UI/API image; every
+  rich route stays present and is backed by the matrix above.
+- No known Portal-owned backend/frontend integration gap remains unnamed. Any
+  remaining item is a specific external Source/Trading System contract gap or
+  a consciously deferred product capability with owner/action/reason.
+- Deliver one immutable release-review packet: commit/branch, image digests,
+  SBOM/provenance inputs, config/manifest hash, migration/rollback evidence,
+  green gates, browser/visual report, capacity result, source/profile matrix and
+  exact command authority ledger.
+- **Do not** merge main or deploy stable in this phase. Bobby reviews the dev
+  product and separately authorizes the protected-main and stable-release step.
+
+**Explicit non-scope:** changing approved product hierarchy without Claude/Bobby
+review, hiding sparse truth with fixtures, broadening source/command authority,
+or making stable data/volumes share a dev deployment.
+
+### 19.4 Approval sequence
+
+1. Bobby approves **R3-1/BE** and **R3-3/FE** together; Codex and Claude work
+   in parallel on the shared branch with the file/contract handoff above.
+2. Codex reports R3-1 evidence and requests approval for **R3-2/BE**. Any
+   Edge-owned Market Context adapter/change window is presented as its own
+   exact, non-secret diff/rollback packet inside that phase—not silently made.
+3. After R3-2 and R3-3 are accepted, Bobby approves **R3-4/FE** for the single
+   exact dev rebuild and full product review.
+4. Only after Bobby reviews the R3-4 packet does a separate request merge to
+   protected main and replace the current stable release.
