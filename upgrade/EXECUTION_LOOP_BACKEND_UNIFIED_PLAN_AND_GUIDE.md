@@ -6665,6 +6665,84 @@ dirty `controls.json` remains untouched/uncommitted (Git blob
 `e2d15a61ebc0b54bf6f502ec666788da1b36b0b8`). Codex must fix any actual mapping or
 contract defect found in this review; Claude owns visual/interaction decisions.
 
+**Claude visual return — Bobby approved every question in this handoff (2026-09-12).**
+Candidate `ea77b90b` on `feat/execution-visual-rerecord`, a clean fast-forward
+from `origin/feat/execution-loop-next` (`101d130d`). Codex owns push, the PR into
+dev and CI repair; nothing here touches backend, mapping, contracts or copy.
+
+*Your four review groups, answered.* No backend semantics were changed: `Mine` /
+`All retained` are untouched, no fabricated candidates or command data were
+restored, and tolerance was **not** widened anywhere.
+
+**Correction to my own earlier reading.** I reported the ±1px groups as browser
+rounding. That was wrong and I withdraw it. Cropping `actual` against `expected`
+shows they are my own legibility floor from `4292f998`, which lifted five
+declarations off 9–10px to 11px. On `execution-account-broker-360-1g` — a screen
+whose TSX I never touched — the only visible difference on a 5,049px page is the
+`WF 1g` chip, unreadable at 9px and readable at 11px; CSS is global, so "files I
+edited" was the wrong evidence. `full-blotter-4c` is the time column at 8rem →
+11.5rem re-flowing the columns to its right. Your instruction not to widen
+tolerance was right, and is more right than I made it sound: these are product
+changes, not noise.
+
+**Two real defects found in this review, both mine, both CSS-only.**
+
+1. `.exec-gov .exec-inbox-filter` sets a background and nothing else, and sits
+   after `.exec-inbox-filter[data-active="true"]` at equal specificity, so the
+   selected chip kept `--accent-contrast` and lost `--accent-strong`. In the
+   light themes both tokens are `#ffffff`. The default `Mine` chip on
+   `/governance/approvals` rendered as an empty white box at **1.00:1**, and it
+   is present in the committed baseline — this has been shipping, it is not a
+   regression from this round.
+2. Removing the invented candidate list turned the three declared ids into
+   `<input>`, but only `select.exec-role-control` was ever skinned inside
+   `.exec-gov`. The fields had no border and no background, indistinguishable
+   from the static `gate` row beneath them.
+
+**New gate `EL-V2-10 · stateful control contrast`** scores WCAG AA on every
+selected/pressed/current control across all seventeen routes in `ROUTES`. The
+existing sweep in `execution-surface-audit` could not see defect 1 because it
+scores the fixture lab, where the Governance skin is not in the cascade. The new
+gate was verified by reintroducing the defect: it reported
+`exec-inbox-filter | 1.00:1 @11px | "Mine"`, then passed 17/17 once restored.
+
+**`el-v2-05-inbox` was not reproducible, and that is a gate defect, not a screen
+defect.** `useNow` is deliberately unfrozen on a product route and the Inbox
+prints its SLA age to the second, so the digit depended on settle time: two runs
+of one commit gave `22h 00m 00s` and `21h 59m 57s`. Not masked, not loosened —
+`freezeAges` pins `Date.now` back to `FROZEN_NOW` with timers still running so
+every age re-renders from a fixed origin. This is likely part of the 10-vs-13
+difference between your run and mine.
+
+**Baselines: 14 re-recorded, not 38.** `--update-snapshots=all` rewrote 38,
+including seven QuantBT/Planning frames unrelated to this work. I restored the 24
+that were not failing and re-ran the gate; they passed, which is what proves they
+were render noise. The 14 are the 13 you listed plus
+`execution-phase-1-approval-inbox-states-only-laptop`, which moved because of the
+contrast fix.
+
+**Gate state, stated honestly.** The screenshot set is green: the final full run
+was 323 passed / 16 skipped with one non-screenshot failure,
+`execution-preview.spec.ts › never leaves the origin`, which timed out because I
+committed while the gate was running and the pre-commit hook started a second
+root-owned Playwright suite against the same repo and preview ports. Re-run in
+isolation it passes 2/2. That hook behaviour is worth knowing for CI: it also
+left `apps/portal/frontend/dist` owned by root.
+
+**Two things for you, not me.** `apps/portal/frontend/e2e/el-v2-03-evidence/controls.json`
+is committed evidence still recording `no CLI form published` on 24 Admin Drawer
+rows — copy that no longer exists — and nothing regenerates it, since the spec now
+writes to `test-results/`. It is your artifact; I did not touch it. And
+`getAlphaFleet` suggestions stay unbuilt: I built the bounded picker, then backed
+it out before committing for exactly the reason you give — typed id, server
+validates, no first-200 eligibility list.
+
+Dev is rebuilt and serving this candidate at `dev-portal.primusspark.com`
+(`local/portal-portal-web:ux4`, running image id matches the tag, public host
+serves the same bundle hash as `127.0.0.1:8080`, and both fixes verified present
+in the delivered `screenContracts` CSS chunk). Binding Detail still has no design
+or spec and stays an owner decision, not code.
+
 **Closeout next:** Claude visual review/explicit baselines → clean browser gate;
 finish the separately identified multi-process/PG-to-DOM performance evidence;
 check actual [CI run](https://github.com/BobbyAxerol/awesome-portal/actions/runs/34681442501)
