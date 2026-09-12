@@ -9921,3 +9921,80 @@ khẳng định drawer có **0 nút** khi relay tắt — *vắng mặt*, không
 Lý do ghi ngay trong test: *"a disabled button advertises a capability that does
 not exist and teaches the operator that blockers are negotiable."* Không thêm gì;
 ghi lại để không ai tưởng còn nợ.
+
+---
+
+## A66. ADMIN ACTION DRAWER — MÀN TỰ MÂU THUẪN VỚI CHÍNH NÚT CỦA NÓ (12-09)
+
+Bobby hỏi màn này có đang active không, và bảo soi lại showcase. Đo được ba
+thứ, thứ ba là lỗi thật.
+
+### A66.1 Backend N27 **đã đi trước tài liệu**, và frontend **đã khai thác hết**
+
+`EX_BE_30_N27` (30-08) ghi `CONNECTED: 0`. Đo trên dev hôm nay:
+
+```
+GET /commands/tasks   → 24 task · 6 nhóm
+relay_state           = LOCAL_R0_ONLY
+classification_counts = CONNECTED 4 · SUPPORTED_BUT_INACTIVE 13 · SEMANTICALLY_INCOMPATIBLE 7
+GET /commands/catalog → 64 entry
+```
+
+Bốn task CONNECTED đều `mode=READ · risk=R0_READ · runtime_active=true`,
+`plan/apply=false`, `source_route=null` — **đọc cục bộ, chạy được ngay**.
+
+Frontend **không thiếu gì**: reader giữ cả `riskTier`, `stepUpRequired`,
+`twoManRule`, `typedConfirmWord`, `reasonCode`, `unlistedReason`, `params` kèm
+constraint; có `readOperatorTaskRunResult` (ràng `transport=SGP_LOCAL_PROJECTION`
+và `source_request_sent=false`); container nối `onRunTask`, authority, journal,
+staged activation, cross-evidence. Không có gap tiêu thụ.
+
+### A66.2 Lỗi: một nút chạy được, nằm dưới câu bảo không gì chạy được
+
+`AdminActionDrawer.tsx:376` vẽ nút **"Run local R0 read"** cho task CONNECTED.
+Ngay phía trên, dòng 613 in:
+
+> *"no task can be run from this Portal until the relay is opened"*
+
+Cả hai cùng đúng logic cũ — nhưng **relay chi phối mutation, không chi phối R0
+read**. Đo trên dev: `command_authority.state = UNCHANGED_FAIL_CLOSED`, relay
+`LOCAL_R0_ONLY`, 4 task `runtime_active`. Tức câu đó **sai ngay hôm nay**, và
+sai ngay cạnh bằng chứng ngược lại.
+
+Câu mới tách hai thứ, và đếm bằng **số của server**, không đếm dòng trên màn:
+
+> *"no task can change anything from this Portal until the relay is opened.
+> 4 R0 read tasks run locally against the Portal's own projection and send
+> nothing to the source; the rest of the catalogue is what would run."*
+
+Khi `counts.connected === 0` thì câu cũ giữ nguyên — nó vẫn đúng trong ca đó.
+
+**Đã chứng minh đỏ:** trả câu cũ về → đúng test *"does not say nothing can run
+while it is offering a control that runs"* đỏ; khôi phục → xanh.
+
+### A66.3 So với hi-fi: **bản hiện tại đúng hơn**, giữ nguyên
+
+Hi-fi `HiFi Admin Action Drawer.dc.html` vẽ bố cục **chạy được đầy đủ**:
+PLAN → APPLY → VERIFY, before/after, policy checks, gõ `CLOSE` để xác nhận,
+CLI tương đương, timeline *"202 — NOT success yet"*, VERIFIED.
+
+Đó là trạng thái **khi relay mở**. Hôm nay apply bị từ chối trước dispatch, nên
+vẽ bố cục đó là **quảng cáo một năng lực không tồn tại** — đúng thứ hi-fi
+không thể biết còn runtime thì biết. Bản hiện tại giữ nguyên phân cấp panel,
+liệt kê đủ 64 entry + 24 task, và **không** vẽ control không chạy được. Không
+đổi theo hi-fi.
+
+### A66.4 Không xem được bằng mắt phần có dữ liệu — và vì sao
+
+Trên probe, `/administration/actions` với tài khoản `claude-probe` cho **403**
+ở cả hai API và màn vẽ:
+
+> *"Withheld — The command catalogue is available to Admin operators only."*
+
+Đó là hành vi **đúng**: từ chối được vẽ là *withheld*, không phải *rỗng*. Nhưng
+nó cũng có nghĩa tôi **không thể** soi phần có dữ liệu: `portal_users` trên
+probe chỉ có **một** ADMIN là `bobby`, và tôi không đi tìm mật khẩu của owner.
+
+**Cần Bobby**: một phiên ADMIN trên probe (hoặc một tài khoản ADMIN dùng cho
+review) để soi 24 task, 6 nhóm và nút R0 bằng mắt. Đến lúc đó phần hình của màn
+này vẫn là **chưa nghiệm thu**, và tôi ghi đúng như vậy chứ không đánh dấu xong.

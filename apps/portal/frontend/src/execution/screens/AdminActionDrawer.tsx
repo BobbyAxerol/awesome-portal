@@ -610,7 +610,20 @@ export function AdminActionDrawerScreen({
                     {" — "}
                     {authority?.state === "OPEN"
                       ? "a CONNECTED task can be run through plan → apply → verify"
-                      : "no task can be run from this Portal until the relay is opened; the catalogue below is what would run"}
+                      /*
+                       * The relay governs *mutation*, and saying "no task can
+                       * be run" while the catalogue is CONNECTED contradicts
+                       * the button directly below it. Measured on dev: command
+                       * authority UNCHANGED_FAIL_CLOSED, relay LOCAL_R0_ONLY,
+                       * and four R0 read tasks with runtime_active true, each
+                       * of which this screen offers a "Run local R0 read"
+                       * control for. The sentence now separates what is shut
+                       * from what is open, and counts with the server's own
+                       * number rather than the rows on screen.
+                       */
+                      : (tasks.counts.connected ?? 0) > 0
+                        ? `no task can change anything from this Portal until the relay is opened. ${tasks.counts.connected} R0 read ${tasks.counts.connected === 1 ? "task runs" : "tasks run"} locally against the Portal's own projection and send nothing to the source; the rest of the catalogue is what would run.`
+                        : "no task can be run from this Portal until the relay is opened; the catalogue below is what would run"}
                   </p>
                   {activation ? (
                     <section className="exec-cli-activation" aria-label="Staged activation capabilities">

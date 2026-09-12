@@ -188,4 +188,29 @@ describe("Phase 3 controlled task drawer", () => {
     await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Source command sent: no"));
     expect(onRunTask).toHaveBeenCalledWith("projection.inspect", { environment: "paper" });
   });
+
+  /*
+   * Measured on dev: command authority UNCHANGED_FAIL_CLOSED, relay
+   * LOCAL_R0_ONLY, four CONNECTED tasks with runtime_active true — and the
+   * screen printed "no task can be run from this Portal" directly above the
+   * button that runs one. The relay governs mutation; it does not govern an
+   * R0 read. A screen may not contradict its own control.
+   */
+  it("does not say nothing can run while it is offering a control that runs", () => {
+    render(<AdminActionDrawerScreen catalogue={null} tasks={tasks} selected={null} onSelect={() => undefined} onRunTask={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /Inspect projection/ })).toBeTruthy();
+    expect(screen.queryByText(/no task can be run from this Portal/)).toBeNull();
+    // It still says what is shut, and counts with the server's number.
+    expect(screen.getByText(/no task can change anything from this Portal/)).toBeTruthy();
+    expect(screen.getByText(/1 R0 read task runs locally/)).toBeTruthy();
+    expect(screen.getByText(/sends? nothing to the source/)).toBeTruthy();
+  });
+
+  it("keeps the blunt sentence when the catalogue really has nothing connected", () => {
+    const none = { ...tasks, counts: { connected: 0, inactive: 1, incompatible: 0 },
+      tasks: [{ ...tasks.tasks[0], state: "SUPPORTED_BUT_INACTIVE" as const }] };
+    render(<AdminActionDrawerScreen catalogue={null} tasks={none} selected={null} onSelect={() => undefined} onRunTask={vi.fn()} />);
+    expect(screen.getByText(/no task can be run from this Portal/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Run local R0 read" })).toBeNull();
+  });
 });
