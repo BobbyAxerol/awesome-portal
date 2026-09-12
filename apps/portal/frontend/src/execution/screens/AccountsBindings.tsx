@@ -2,7 +2,7 @@
  * Accounts & Bindings — hi-fi list, entry screen for WF 1g. Reads
  * `accounts.smoke.ts` until BR-EX-52 publishes `bindings-list.v1`.
  */
-import { SourceFreshness } from "../components/SourceFreshness";
+import { SourceFreshness, authorityLabel } from "../components/SourceFreshness";
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
@@ -108,7 +108,7 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
               <span className="exec-af-wf">entry screen for WF 1g</span>
               <span className="exec-af-spacer" />
               <SourceFreshness
-                  label="BROKER"
+                  label={authorityLabel(list?.sourceAuthority, list?.recordAuthority)}
                   freshness={list?.freshness ?? null}
                   sourceAsOf={list?.sourceAsOf ?? null}
                   tierBasisAsOf={list?.projectionRefreshedAt ?? null}

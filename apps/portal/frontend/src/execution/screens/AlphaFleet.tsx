@@ -8,7 +8,7 @@
  * module is deleted and this screen reads the contract with the same shape.
  */
 import { ageFrom, ageLabel } from "../components/FreshnessBanner";
-import { budgetTitle, normaliseTier, tierTitle, tierTone } from "../components/SourceFreshness";
+import { budgetTitle, normaliseTier, tierTitle, tierTone, authorityLabel } from "../components/SourceFreshness";
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { SparkLine } from "../components/marketChart";
@@ -161,7 +161,7 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                     source published. The two are different clocks, and the
                     header used to print one beside a tier derived from the
                     other: "FRESH · 54s ago" against a 30-second budget. */}
-                <b>EXECUTION</b> · {reading
+                <b>{authorityLabel(list?.sourceAuthority, list?.recordAuthority)}</b> · {reading
                   ? <StatusChip label="READING" tone="mute" />
                   : <StatusChip label={normaliseTier(list?.freshness)} tone={tierTone[normaliseTier(list?.freshness)]}
                       title={budgetTitle(tierTitle[normaliseTier(list?.freshness)], list?.freshnessBudgetMs)} />} ·{" "}

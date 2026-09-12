@@ -14,6 +14,7 @@ import type { MirrorIntegrity } from "../mirrorIntegrity";
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
   OperatorTaskCatalogue, OperatorTaskRunResult, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
+  BindingDetailRead,
 } from "./profileRead";
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { StageDrift } from "../hifiInsight";
@@ -363,7 +364,7 @@ export interface ExecutionApi {
   /** `GET /broker-bindings` — BR-EX-72 bounded binding projection. */
   getBindings(query?: BindingListQuery): Promise<Result<ManagerListEnvelope<BindingItem>>>;
   /** `GET /broker-bindings/{id}` — narrow, non-secret binding detail. */
-  getBindingDetail(bindingId: string, environment?: "paper" | "sandbox" | "live"): Promise<Result<BindingItem>>;
+  getBindingDetail(bindingId: string, environment?: "paper" | "sandbox" | "live"): Promise<Result<BindingDetailRead>>;
 
   getWaivers(query?: WaiverQuery): Promise<Result<ConditionsPage>>;
   /** `GET /api/v1/execution/governance/approvals/{id}/r1` */

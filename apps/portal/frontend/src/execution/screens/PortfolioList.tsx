@@ -8,7 +8,7 @@
  * ExecutionWorkspace, PanelState, StatusChip and the `exec-af-*` table classes.
  * No new CSS, token or state word.
  */
-import { SourceFreshness } from "../components/SourceFreshness";
+import { SourceFreshness, authorityLabel } from "../components/SourceFreshness";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
@@ -70,7 +70,7 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
             <span className="exec-af-wf">entry screen for Portfolio 360°</span>
             <span className="exec-af-spacer" />
             <SourceFreshness
-              label="EXECUTION"
+              label={authorityLabel(list?.sourceAuthority, list?.recordAuthority)}
               freshness={list?.freshness ?? null}
               sourceAsOf={list?.sourceAsOf ?? null}
               nowMs={clock.getTime()}

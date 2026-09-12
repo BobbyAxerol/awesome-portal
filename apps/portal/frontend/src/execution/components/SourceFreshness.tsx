@@ -15,6 +15,7 @@
  */
 import type { JSX } from "react";
 import { StatusChip } from "./badges";
+import type { Authority } from "../contracts";
 import { ageFrom, ageLabel, type FreshnessTier } from "./FreshnessBanner";
 import type { FreshnessBudgetMs } from "../api/profileRead";
 
@@ -56,6 +57,43 @@ export function budgetTitle(base: string, budget: FreshnessBudgetMs | null | und
   if (!budget) return base;
   const seconds = (value: number) => `${Math.round(value / 1000)}s`;
   return `${base} FRESH under ${seconds(budget.freshMs)}, STALE past ${seconds(budget.staleMs)}.`;
+}
+
+/**
+ * R3-3 · the masthead names the authority the contract published.
+ *
+ * `recomposeContainers` already owned this lookup for `ProfileEnvelope`; it
+ * lives here now so the list and detail envelopes reach the same verdict
+ * instead of each screen hard-coding a word. Four did: Alpha Fleet and
+ * Portfolios printed `EXECUTION`, Bindings and Binding Detail printed
+ * `BROKER`. Only the source can say which it is, and when it says nothing we
+ * say that rather than picking the reassuring answer.
+ */
+export const AUTHORITY_LABEL: Readonly<Record<string, Authority>> = {
+  TRADING_SYSTEM: "EXECUTION",
+  PORTAL_PROJECTION: "PORTAL",
+  PORTAL_CONTROL: "PORTAL",
+  RESEARCH: "RESEARCH",
+  BROKER: "BROKER",
+  DERIVED: "DERIVED",
+  EXECUTION: "EXECUTION",
+  PORTAL: "PORTAL",
+};
+
+/**
+ * The source authority is the subject of the header — it says where the facts
+ * came from. The record authority is the fallback, because "who wrote this
+ * row" is still true when the upstream is unnamed. An unrecognised word is
+ * passed through verbatim: a new contract vocabulary must not silently render
+ * as `PORTAL`.
+ */
+export function authorityLabel(
+  sourceAuthority: string | null | undefined,
+  recordAuthority?: string | null,
+): string {
+  const published = sourceAuthority ?? recordAuthority ?? null;
+  if (!published) return "authority not stated";
+  return AUTHORITY_LABEL[published] ?? published;
 }
 
 export function SourceFreshness({ label, freshness, sourceAsOf, tierBasisAsOf, freshnessBudgetMs, nowMs, dot }: {

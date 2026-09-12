@@ -30,6 +30,7 @@ import { APPROVAL_ROWS, CONDITION_FIXTURES, EXIT_DETAIL, R1_DETAIL, R2_DETAIL, m
 import {
   readAlphaFleet, readBindingDetail, readBindings, readLiveReview, readPortfolioList,
   readOperatorTasks, readProfileEnvelope, readQueryAnalytics,
+  BindingDetailRead,
 } from "./profileRead";
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
@@ -538,8 +539,8 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const blocked = gate<ManagerListEnvelope<BindingItem>>("getBindings");
       return blocked ?? fixtureRead(BINDINGS_LIST, readBindings, "The bindings register");
     },
-    async getBindingDetail(bindingId: string, _environment = "paper"): Promise<Result<BindingItem>> {
-      const blocked = gate<BindingItem>("getBindingDetail");
+    async getBindingDetail(bindingId: string, _environment = "paper"): Promise<Result<BindingDetailRead>> {
+      const blocked = gate<BindingDetailRead>("getBindingDetail");
       return blocked ?? fixtureRead(
         { ...BINDING_DETAIL, item: { ...BINDING_DETAIL.item, binding_id: bindingId } },
         readBindingDetail,

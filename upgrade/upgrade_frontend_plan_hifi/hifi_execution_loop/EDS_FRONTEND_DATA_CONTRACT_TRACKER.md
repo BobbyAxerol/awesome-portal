@@ -10510,3 +10510,103 @@ bắt đầu đúng, không phải bịa một layout mới.
 
 **Trạng thái:** `NEEDS_OWNER_DESIGN_DECISION` cho cả 5. Không phải việc code, và
 không phải thứ tôi được tự ý vẽ ra — Bobby chốt để lên version sau.
+
+## A74. R3-3/FE · LÁT CẮT 1 — THẨM QUYỀN ĐÃ PUBLISH BỊ ĐÁNH RƠI RỒI THAY BẰNG CHỮ CỐ ĐỊNH (12-09)
+
+Bobby duyệt R3-3/FE. Vào theo đúng entry condition của plan §19.3: R3-1 ledger
+chưa tồn tại, nên tôi bind bằng generated contract hiện có và **ghi ledger row
+cho field còn thiếu** thay vì dựng fixture fallback (§19.2 rule 2, và scope
+"Claude/frontend parallel" của R3-1).
+
+### A74.1 Cách tôi đo trước khi sửa
+
+Không đọc màn rồi đoán. Đọc **schema** rồi đối chiếu với **reader**:
+
+1. Quét 60 response schema có field envelope trong `packages/contracts/schemas/`.
+2. Với mỗi field, đếm số file client thật sự đọc nó. `source_as_of`: **1 file**.
+   `projection_refreshed_at`: **1 file**. Đó là dấu hiệu đầu tiên.
+3. `execution.binding-detail.v1` **required 9 field**; `readBindingDetail` trả
+   về đúng `root.item` → **8 field bị parse rồi ném đi**.
+4. `readManagerEnvelope` và `readPortfolioList` **assert**
+   `record_authority === "PORTAL_PROJECTION"` rồi **không expose** nó.
+
+### A74.2 Lỗi thật: bốn masthead product in chữ cố định thay vì thẩm quyền đã publish
+
+| Màn | In ra | Contract publish |
+|---|---|---|
+| `AlphaFleet` | `<b>EXECUTION</b>` | `record_authority` + `source_authority` (alpha-fleet-list.v2) |
+| `PortfolioList` | `label="EXECUTION"` | portfolio-list.v1 |
+| `AccountsBindings` | `label="BROKER"` | bindings-list.v1 |
+| `BindingDetail` | `<b>BROKER</b>` | binding-detail.v1 |
+
+`BROKER` **không phải placeholder vô hại**. Các row này là *Portal projection*
+của một *Trading System read* — `record_authority: PORTAL_PROJECTION`,
+`source_authority: TRADING_SYSTEM`. **Không có broker nào chứng nhận chúng.**
+R3-3 mục 3 cấm màn hàm ý broker/Trading System certification; §3.3 cấm render
+một fact nguồn không nói. Một nhãn thẩm quyền hard-code phạm cả hai cùng lúc.
+
+### A74.3 Hai chỗ guard tìm ra mà tôi không ngờ
+
+**`GateR2Review` tự mâu thuẫn.** Chip in cố định `EXECUTION`, còn
+`<AuthorityBadge envelope={capitalEnvelope} />` **hai dòng bên dưới** in thẩm
+quyền thật. Test `execution.test.tsx` đã assert `getByText("DERIVED")` và **vẫn
+xanh** — vì nó chỉ tìm cái đúng, không kiểm cái sai bên cạnh. Sau khi sửa,
+`DERIVED` xuất hiện 2 lần và `EXECUTION` biến mất; test đổi thành
+`getAllByText("DERIVED").length === 2` + `queryByText("EXECUTION") === null`.
+Đây là bằng chứng thực nghiệm rằng chữ cố định cũ **sai sự thật**, không phải
+suy luận của tôi.
+
+**`LiveFullOperations` khẳng định thứ không ai publish.** Panel "Broker &
+reconciliation truth" in `<b>BROKER</b>` cạnh `brokerPanel.envelope.asOf`. Tôi
+tra `PanelEnvelope` trong generated contract: **không có field authority nào**.
+Nên đây **không phải lỗi frontend** — là ledger row (§A74.6). Sửa bằng cách
+**thôi khẳng định**: tiêu đề panel đã nêu chủ thể, dòng source chỉ còn nói đúng
+thứ envelope mang.
+
+### A74.4 `BindingDetail` — trả lời bug #2 của Bobby bằng contract
+
+Bobby báo: *"thiết kế không đúng chuẩn, k đẹp, k hiểu là luồng để làm gì"*.
+Nguyên nhân đo được, không phải cảm nhận:
+
+- Masthead in `BROKER · updated <item.updated_at>` — sai thẩm quyền, và **không
+  có** freshness tier, **không có** tuổi, **không có** `source_as_of` vs
+  `read_at`, **không có** environment, **không có** delivery profile. Tất cả
+  đều đã được publish.
+- Panel "Sync · policy" nói *"Broker sync ages ... are not published"* trong khi
+  `credential_state: SYNC_SYNCED` publish **chính xác điều đó**, và envelope
+  publish hai mốc thời gian để tính tuổi. **Khẳng định vắng mặt lên dữ liệu đã
+  về là cùng một lỗi với bịa dữ liệu chưa về**: người đọc mất tin vào chữ
+  "not published" ở mọi nơi khác. Giờ chỉ nửa *policy* tự nhận là vắng.
+
+Dùng lại `SourceFreshness` (component đã có, 5 màn dùng) chứ không viết header
+mới — §11 reuse.
+
+### A74.5 Guard `sourceAuthority.test.tsx` — và lần siết thứ hai
+
+12 test. Guard quét source **đỏ ngay lần đầu**: 10 hit. Nhưng 8 trong đó là
+nhánh `demo`/`smoke` hi-fi — **cast đóng băng ở demo clock, không phải source
+read**, và lab chính là nơi chứng minh hi-fi. Guard kêu oan thì sẽ bị bỏ qua.
+
+Tôi **không** dùng allowlist theo file/dòng — đó đúng là guard đã mục trong
+A62. Thay bằng discriminator có nghĩa: một literal thẩm quyền chỉ là lỗi khi
+**cùng dòng đó đọc envelope đã publish**. Nhánh demo đọc `smoke.`/`now`/
+`clockOf`; masthead product đọc `envelope`/`list?.`/`detail?.`. Sau khi siết,
+guard cô lập đúng **1** offender còn lại (`LiveFullOperations`), và tôi xử lý
+nó bằng ledger row chứ không bằng allowlist.
+
+### A74.6 Ledger row gửi R3-1/R3-2 — field còn thiếu, không phải nợ frontend
+
+| id | Field/operation | Nơi cần | Trạng thái |
+|---|---|---|---|
+| `R3-FE-01` | `PanelEnvelope` (`execution.contract-authority.v1`) không có `record_authority`/`source_authority` | mọi panel-level source line; cụ thể `LiveFullOperations` panel `broker` | `SOURCE_GAP_CONFIRMED` — panel không thể nêu thẩm quyền của chính nó; hiện chỉ nêu `as_of` |
+
+Không tạo fixture, không đoán giá trị, không để `unavailable` giả.
+
+### A74.7 Evidence
+
+- `tsc --noEmit`: sạch.
+- `vitest`: **146/146 file, 2351 pass / 1 skip, 0 fail**.
+- Guard mới: 12/12, và **đã đỏ đúng lỗi nó sinh ra để bắt** trước khi xanh.
+- Visual baseline: **chưa chạy lại** ở lát cắt này — masthead Binding Detail và
+  chip GateR2 đổi nội dung nên baseline sẽ đỏ có chủ đích; sẽ review
+  actual/expected/diff rồi mới re-record, không dùng lệnh update chung.

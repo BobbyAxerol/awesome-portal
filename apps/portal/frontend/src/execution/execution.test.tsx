@@ -2321,7 +2321,17 @@ describe("Gate R2 Review", () => {
     render(r2());
     expect(screen.getByText(/PLAN PREVIEW/)).toBeTruthy();
     expect(screen.getByText(/derived, not applied/)).toBeTruthy();
-    expect(screen.getByText("DERIVED")).toBeTruthy();
+    /*
+     * R3-3 · `DERIVED` now appears twice, and that is the fix.
+     *
+     * The AuthorityBadge always printed the envelope's real authority here —
+     * `DERIVED`. The chip beside it printed a hard-coded `EXECUTION`, so this
+     * panel stated two different authorities about the same figures, and this
+     * test passed anyway because it only looked for the correct one. The chip
+     * reads the envelope now, so both say DERIVED and nothing says EXECUTION.
+     */
+    expect(screen.getAllByText("DERIVED").length).toBe(2);
+    expect(screen.queryByText("EXECUTION")).toBeNull();
   });
 
   it("blocks approval when the preview breaches a policy ceiling", () => {

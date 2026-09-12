@@ -528,6 +528,20 @@ export interface ManagerListEnvelope<T> {
   environment: string;
   freshness: string;
   completeness: string;
+  /**
+   * R3-3 · who states the record, and who states the source behind it.
+   *
+   * Both are REQUIRED by `execution.bindings-list.v1`,
+   * `execution.alpha-fleet-list.v1/v2` and `execution.portfolio-list.v1`. The
+   * reader asserted `record_authority` and then dropped it, so four product
+   * mastheads printed a constant instead: Alpha Fleet and Portfolios said
+   * `EXECUTION`, Bindings said `BROKER`. `BROKER` was the wrong word — these
+   * rows are a Portal projection of a Trading System read, and no broker
+   * certified them. R3 rule 4 requires the source revision and authority to
+   * survive to the panel, and R3-3 forbids implying broker certification.
+   */
+  recordAuthority: string;
+  sourceAuthority: string | null;
   sourceAsOf: string | null;
   /**
    * PHASE 3 (round 2) · the instant `freshness` is computed from.
@@ -583,6 +597,10 @@ function readManagerEnvelope<T>(
   return { environment, freshness, completeness, sourceAsOf: str(root.source_as_of),
     projectionRefreshedAt: str(root.projection_refreshed_at),
     freshnessBudgetMs: readFreshnessBudget(root.freshness_budget_ms),
+    // Asserted just above, so it is a string by construction; published
+    // rather than merely checked, because the masthead has to name it.
+    recordAuthority: "PORTAL_PROJECTION",
+    sourceAuthority: str(root.source_authority),
     readAt, page, ...(parsedSummary ? { summary: parsedSummary } : {}) };
 }
 
@@ -713,6 +731,9 @@ export interface PortfolioListEnvelope {
   environment: string;
   freshness: string;
   completeness: string;
+  /** Required by the contract, asserted by the reader, and named on screen. */
+  recordAuthority: string;
+  sourceAuthority: string | null;
   /**
    * Here the tier and this instant come from the same clock: the source
    * declares both on the page it returns. There is no separate basis and no
@@ -765,6 +786,7 @@ export function readPortfolioList(raw: unknown): PortfolioListEnvelope | null {
   if (Object.keys(environmentBranches).length !== Object.keys(branchesRaw).length) return null;
   return {
     environment, freshness, completeness, sourceAsOf: str(root.source_as_of), readAt,
+    recordAuthority: "PORTAL_PROJECTION", sourceAuthority: str(root.source_authority),
     environmentBranches, totalPortfolios, truncated: root.truncated, items,
   };
 }
@@ -775,7 +797,48 @@ export const readAlphaFleet = (raw: unknown) =>
 export const readBindings = (raw: unknown) =>
   readManagerEnvelope(raw, "execution.bindings-list.v1", readBindingItem);
 
-export function readBindingDetail(raw: unknown): BindingItem | null {
+/**
+ * R3-3 · `execution.binding-detail.v1` is nine required fields, not one.
+ *
+ * The contract REQUIRES `record_authority`, `source_authority`,
+ * `delivery_profile`, `workspace_id`, `environment`, `read_at`,
+ * `source_as_of` and `freshness` beside `item`. The reader below returned
+ * `item` alone, so eight published facts were parsed and thrown away on the
+ * one screen whose whole subject is whether a binding is currently in sync —
+ * and the masthead printed a constant `BROKER` over them. That is the reverse
+ * of the truth: `record_authority` is `PORTAL_PROJECTION` and
+ * `source_authority` is `TRADING_SYSTEM`; no broker certified this row.
+ */
+export interface BindingDetailRead {
+  item: BindingItem;
+  recordAuthority: string;
+  sourceAuthority: string | null;
+  deliveryProfile: string | null;
+  workspaceId: string | null;
+  environment: string | null;
+  readAt: string | null;
+  sourceAsOf: string | null;
+  freshness: string | null;
+}
+
+export function readBindingDetail(raw: unknown): BindingDetailRead | null {
   const root = obj(raw);
-  return root?.schema_version === "execution.binding-detail.v1" ? readBindingItem(root.item) : null;
+  if (root?.schema_version !== "execution.binding-detail.v1") return null;
+  const item = readBindingItem(root.item);
+  if (!item) return null;
+  // `record_authority` is required by the schema; a response without it is not
+  // this contract, and guessing one would invent the provenance of the row.
+  const recordAuthority = str(root.record_authority);
+  if (!recordAuthority) return null;
+  return {
+    item,
+    recordAuthority,
+    sourceAuthority: str(root.source_authority),
+    deliveryProfile: str(root.delivery_profile),
+    workspaceId: str(root.workspace_id),
+    environment: str(root.environment),
+    readAt: str(root.read_at),
+    sourceAsOf: str(root.source_as_of),
+    freshness: str(root.freshness),
+  };
 }

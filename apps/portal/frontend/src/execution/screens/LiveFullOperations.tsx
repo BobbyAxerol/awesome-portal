@@ -304,7 +304,15 @@ export function LiveFullOperationsScreen({
               <header className="exec-pf2-head">
                 <span className="exec-pf2-title">Broker &amp; reconciliation truth</span>
                 <span className="exec-pf2-spacer" />
-                <span className="exec-a3-source"><b>BROKER</b> · {brokerPanel?.envelope.asOf ? `as_of ${brokerPanel.envelope.asOf}` : "no broker as_of published"}</span>
+                {/*
+                  * R3-3 · `PanelEnvelope` publishes no authority field (see
+                  * the R3-1 ledger row raised for it), so this line asserted
+                  * `BROKER` from nowhere — on the one panel whose job is to
+                  * say whether our view and the broker's agree. The panel
+                  * title already names the subject; the source line now says
+                  * only what the envelope actually carries.
+                  */}
+                <span className="exec-a3-source">{brokerPanel?.envelope.asOf ? `as_of ${brokerPanel.envelope.asOf}` : "no broker as_of published"}</span>
               </header>
               <div className="exec-lf-kv">
                 {/* While the mismatch banner is up it already states the state

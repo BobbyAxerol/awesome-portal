@@ -363,7 +363,15 @@ export function GateR2Review({
               <span className="exec-gov-paneltitle">Capital change preview — execution vocabulary</span>
               <span className="exec-gov-spacer" />
               <span className="exec-gate-policychip" data-inverse="true">
-                <b>EXECUTION</b> · PLAN PREVIEW{capitalEnvelope?.asOf ? ` · as_of ${utcStamp(capitalEnvelope.asOf)}` : ""} · derived, not applied
+                {/*
+                  * R3-3 · this chip printed a constant `EXECUTION` while the
+                  * AuthorityBadge two lines below printed
+                  * `capitalEnvelope.authority` — so whenever the preview was
+                  * DERIVED the same panel stated two different authorities.
+                  * A capital PLAN PREVIEW is derived by definition, which the
+                  * tail of this very line already admits.
+                  */}
+                <b>{capitalEnvelope?.authority ?? "authority not stated"}</b> · PLAN PREVIEW{capitalEnvelope?.asOf ? ` · as_of ${utcStamp(capitalEnvelope.asOf)}` : ""} · derived, not applied
               </span>
               {capitalEnvelope ? <AuthorityBadge envelope={capitalEnvelope} /> : null}
             </div>

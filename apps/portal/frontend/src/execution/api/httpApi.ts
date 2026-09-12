@@ -74,6 +74,7 @@ import { readApprovalCreated, readConditionsPage } from "./rows";
 import {
   readAlphaFleet, readBindingDetail, readBindings, readLiveReview,
   readOperatorTaskRunResult, readOperatorTasks, readPortfolioList, readProfileEnvelope, readQueryAnalytics,
+  BindingDetailRead,
 } from "./profileRead";
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
@@ -519,7 +520,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     readGet("/portfolios", readPortfolioList, "The portfolio register");
   const getBindings = (query: BindingListQuery = {}): Promise<Result<ManagerListEnvelope<BindingItem>>> =>
     readGet(`/broker-bindings${listParameters(query)}`, readBindings, "The bindings register");
-  const getBindingDetail = (bindingId: string, environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<BindingItem>> =>
+  const getBindingDetail = (bindingId: string, environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<BindingDetailRead>> =>
     readGet(`/broker-bindings/${encodeURIComponent(bindingId)}?environment=${environment}`, readBindingDetail, "The binding detail");
 
   const getWaivers = async (query: WaiverQuery = {}): Promise<Result<ConditionsPage>> => {

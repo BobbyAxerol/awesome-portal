@@ -20,7 +20,7 @@ import type {
   ProfileEnvelope,
   QueryAnalytics,
 } from "../api/profileRead";
-import { readAlphaFleetItem, readQueryAnalytics, type BindingItem } from "../api/profileRead";
+import { readAlphaFleetItem, readQueryAnalytics, type BindingDetailRead } from "../api/profileRead";
 import { formatExact } from "../formatExact";
 import { utcStamp } from "../time";
 import { pageOf } from "../api/profileRows";
@@ -85,6 +85,7 @@ import { PortfolioList } from "./PortfolioList";
 import { BindingDetail } from "./BindingDetail";
 import type { OrderFunnel } from "../analytics";
 import { useProfileRealtime, useProfilesRealtime } from "../profileRealtime";
+import { useNow } from "../listMotion";
 
 /* ── envelope → screen-vocabulary mappers ─────────────────────────────── */
 
@@ -2204,7 +2205,7 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
    * `freshness` and `source_as_of` only that route publishes. Same request
    * count, the documented route.
    */
-  const detailState = useApiRead<BindingItem | null>(
+  const detailState = useApiRead<BindingDetailRead | null>(
     (signal) => (bindingId ? scopedReadApi(api, signal).getBindingDetail(bindingId) : Promise.resolve({ ok: true as const, value: null })),
     [api, bindingId],
   );
@@ -2240,14 +2241,19 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
  * exposure that fails takes the panel unavailable and not the whole screen.
  */
 function BindingDetailWithExposure({ api, bindingId, detail, status, reason }: {
-  api: ExecutionApi; bindingId: string; detail: BindingItem | null;
+  api: ExecutionApi; bindingId: string; detail: BindingDetailRead | null;
   status: PanelStatus; reason?: string;
 }) {
   const exposureState = useAnalyticsRead(() => api.getBindingExposure(bindingId), [api, bindingId]);
+  // The masthead now shows how old the read is, so it needs a clock. Same
+  // hook the bindings register beside it already uses; the age is information,
+  // not decoration, so it is not gated on reduced motion.
+  const clock = useNow();
   return (
     <BindingDetail
       bindingId={bindingId}
       detail={detail}
+      nowMs={clock.getTime()}
       status={status}
       reason={reason}
       exposure={exposureState.value?.exposure ?? null}

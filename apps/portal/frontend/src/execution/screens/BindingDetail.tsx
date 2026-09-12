@@ -12,14 +12,24 @@ import { PanelState } from "../components/states";
 import { clockOfDate as clockOf } from "../clock";
 import { fmt0 } from "../liveFormat";
 import type { AccountsDemo, AccountsTick } from "../accounts.smoke";
-import type { BindingItem } from "../api/profileRead";
+import type { BindingDetailRead } from "../api/profileRead";
+import { SourceFreshness, authorityLabel } from "../components/SourceFreshness";
+import { StatusChip } from "../components/badges";
+import { sourceTone } from "../sourceTone";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 
 export interface BindingDetailProps {
   bindingId: string;
-  /** BR-EX-72 `GET /broker-bindings/{id}` — non-secret published facts. */
-  detail?: BindingItem | null;
+  /**
+   * BR-EX-72 `GET /broker-bindings/{id}` — the whole published envelope.
+   *
+   * R3-3: this was typed as the bare `item`, so the eight envelope facts the
+   * contract requires beside it never reached the screen.
+   */
+  detail?: BindingDetailRead | null;
+  /** The clock the age is measured against; the container owns it. */
+  nowMs?: number;
   status?: PanelStatus;
   reason?: string;
   /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
@@ -46,7 +56,7 @@ const absentFigure = (
 );
 
 export function BindingDetail({
-  bindingId, detail = null, status = "ok", reason, demo, demoTick,
+  bindingId, detail = null, status = "ok", reason, demo, demoTick, nowMs,
   exposure = null, exposureStatus = "unavailable", exposureReason,
 }: BindingDetailProps) {
   const smoke = demo && bindingId === demo.binding.id ? demo : null;
@@ -55,7 +65,7 @@ export function BindingDetail({
     // Product: the published, non-secret binding facts in the reviewed frame.
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !detail ? "unavailable" : null;
     const sourceReason = reason ?? (!detail ? `No binding detail was published for ${bindingId}.` : undefined);
-    const d = detail;
+    const d = detail?.item ?? null;
     return (
       <ExecutionSurface kind="deployments" className="exec-ab exec-a3 exec-bd" data-hifi-exact="binding-detail">
         <ExecutionWorkspace layout="dense">
@@ -63,7 +73,24 @@ export function BindingDetail({
             <span className="exec-bd-kind">BINDING</span>
             <h1 className="exec-a3-h1">{d?.bindingId ?? bindingId} <span className="exec-a3-id">— {d?.venue ?? "venue not published"}</span></h1>
             <span className="exec-a3-spacer" />
-            <span className="exec-a3-source"><b>BROKER</b> · updated {utcStamp(d?.updatedAt ?? null)}</span>
+            {/*
+              * R3-3 · this printed a constant `BROKER` over a Portal
+              * projection of a Trading System read. No broker certified this
+              * row, and the contract says so in two required fields. The
+              * shared header also carries the freshness tier and the age,
+              * both of which this screen published nowhere.
+              */}
+            {detail ? (
+              <SourceFreshness
+                label={authorityLabel(detail.sourceAuthority, detail.recordAuthority)}
+                freshness={detail.freshness}
+                sourceAsOf={detail.sourceAsOf}
+                tierBasisAsOf={detail.readAt}
+                nowMs={nowMs ?? Date.now()}
+              />
+            ) : (
+              <span className="exec-a3-source">authority not stated · no binding envelope was read</span>
+            )}
           </header>
           {sourceStatus ? <section className="exec-pf2-panel"><PanelState status={sourceStatus} reason={sourceReason} /></section> : null}
           <section className="exec-pf2-panel" aria-label="Binding facts">
@@ -77,6 +104,17 @@ export function BindingDetail({
               <span className="exec-gov-v">{d?.state.toUpperCase() ?? "NOT PUBLISHED"}</span>
               <span className="exec-gov-k">credential</span>
               <span className="exec-gov-v">{d ? `${d.credentialState.toUpperCase()} — state word only; credentials never leave the vault` : "not published"}</span>
+              {/*
+                * R3 rule 3: profile and environment are part of the read's
+                * identity, so the reader has to be able to see which one they
+                * are looking at. PAPER, SANDBOX and LIVE never borrow each
+                * other's facts, and a binding page that does not name its
+                * environment cannot be checked against that rule.
+                */}
+              <span className="exec-gov-k">environment</span>
+              <span className="exec-gov-v">{detail?.environment?.toUpperCase() ?? "not published"}</span>
+              <span className="exec-gov-k">delivery profile</span>
+              <span className="exec-gov-v">{detail?.deliveryProfile ?? "not published"}</span>
             </div>
           </section>
           <section className="exec-pf2-panel" aria-label="Capital invariant">
@@ -104,9 +142,30 @@ export function BindingDetail({
               : <PanelState status={exposureStatus} reason={exposureReason
                   ?? "Physical equity and the virtual-allocation ledger are not published on this projection (N28 exposure population)."} />}
           </section>
+          {/*
+            * R3-3 · this panel said broker sync was "not published" while
+            * `credential_state` published exactly that (`SYNC_SYNCED`) and the
+            * envelope published the two instants the age is computed from.
+            * Claiming absence over data that arrived is the same defect as
+            * inventing data that did not: the reader stops trusting the word.
+            * What is genuinely absent here is the per-venue POLICY verdict,
+            * so only that half states itself.
+            */}
           <section className="exec-pf2-panel" aria-label="Sync and policy">
             <header className="exec-pf2-head"><span className="exec-pf2-title">Sync · policy</span></header>
-            <PanelState status="unavailable" reason="Broker sync ages and per-venue policy verdicts are not published on this projection." />
+            <div className="exec-gov-kv" data-flush="true">
+              <span className="exec-gov-k">sync state</span>
+              <span className="exec-gov-v">{d
+                ? <StatusChip label={d.credentialState.toUpperCase()} tone={sourceTone(d.credentialState) ?? "mute"} />
+                : "not published"}</span>
+              <span className="exec-gov-k">source published</span>
+              <span className="exec-gov-v">{utcStamp(detail?.sourceAsOf ?? null)}</span>
+              <span className="exec-gov-k">projection read</span>
+              <span className="exec-gov-v">{utcStamp(detail?.readAt ?? null)}</span>
+              <span className="exec-gov-k">binding updated</span>
+              <span className="exec-gov-v">{utcStamp(d?.updatedAt ?? null)}</span>
+            </div>
+            <PanelState status="unavailable" reason="Per-venue policy verdicts are not published on this projection; the sync facts above are." />
           </section>
         </ExecutionWorkspace>
       </ExecutionSurface>

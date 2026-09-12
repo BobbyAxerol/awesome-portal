@@ -32,7 +32,28 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
   it("decodes only the canonical list/detail and Live Review fixtures", () => {
     expect(readAlphaFleet(ALPHA_FLEET)?.page.rows[0]).toMatchObject({ alphaId: "alpha_a", stage: "PAPER" });
     expect(readBindings(BINDINGS_LIST)?.page.rows[0]).toMatchObject({ bindingId: "acc_a@BINANCE" });
-    expect(readBindingDetail(BINDING_DETAIL)).toMatchObject({ accountId: "acc_a", credentialState: "SYNC_SYNCED" });
+    /*
+     * R3-3 · the detail read carries its envelope, not just its item.
+     *
+     * This asserted the flat item and passed for as long as the reader threw
+     * eight required fields away. Asserting the envelope is what makes the
+     * regression impossible: `record_authority` and `source_authority` are
+     * the two the Binding Detail masthead prints, and it used to print a
+     * constant `BROKER` over a PORTAL_PROJECTION of a TRADING_SYSTEM read.
+     */
+    expect(readBindingDetail(BINDING_DETAIL)).toMatchObject({
+      item: { accountId: "acc_a", credentialState: "SYNC_SYNCED", bindingId: "acc_a@BINANCE" },
+      recordAuthority: "PORTAL_PROJECTION",
+      sourceAuthority: "TRADING_SYSTEM",
+      deliveryProfile: "PAPER_BINANCE_USDM",
+      environment: "paper",
+      freshness: "FRESH",
+      sourceAsOf: "2026-08-31T10:00:00Z",
+      readAt: "2026-08-31T10:00:01Z",
+    });
+    // A response missing the required authority is not this contract; the
+    // reader must refuse it rather than invent the row's provenance.
+    expect(readBindingDetail({ ...BINDING_DETAIL, record_authority: undefined })).toBeNull();
     expect(readLiveReview(LIVE_REVIEW)).toMatchObject({ approvalId: "AP-R2-DETAIL", canaryDeploymentId: "dep_88" });
     expect(readBindings({ ...BINDINGS_LIST, page: { ...BINDINGS_LIST.page, rows: [{ credential_secret: "leak" }] } })).toBeNull();
   });
