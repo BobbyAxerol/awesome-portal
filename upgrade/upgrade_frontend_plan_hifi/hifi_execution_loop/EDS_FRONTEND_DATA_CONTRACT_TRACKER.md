@@ -9924,11 +9924,204 @@ ghi lại để không ai tưởng còn nợ.
 
 ---
 
-## A66. Codex independent Phase 8–11 audit — contract and truth closeout (12-09)
+## A66. ADMIN ACTION DRAWER — MÀN TỰ MÂU THUẪN VỚI CHÍNH NÚT CỦA NÓ (12-09)
 
-Audit này đối chiếu commit Phase 8–11, server producer, canonical contracts,
-generated consumer types và frontend readers. Chỉ debt tái hiện được mới được
-sửa; không đổi route product, source profile, command authority hay runtime.
+Bobby hỏi màn này có đang active không, và bảo soi lại showcase. Đo được ba
+thứ, thứ ba là lỗi thật.
+
+### A66.1 Backend N27 **đã đi trước tài liệu**, và frontend **đã khai thác hết**
+
+`EX_BE_30_N27` (30-08) ghi `CONNECTED: 0`. Đo trên dev hôm nay:
+
+```
+GET /commands/tasks   → 24 task · 6 nhóm
+relay_state           = LOCAL_R0_ONLY
+classification_counts = CONNECTED 4 · SUPPORTED_BUT_INACTIVE 13 · SEMANTICALLY_INCOMPATIBLE 7
+GET /commands/catalog → 64 entry
+```
+
+Bốn task CONNECTED đều `mode=READ · risk=R0_READ · runtime_active=true`,
+`plan/apply=false`, `source_route=null` — **đọc cục bộ, chạy được ngay**.
+
+Frontend **không thiếu gì**: reader giữ cả `riskTier`, `stepUpRequired`,
+`twoManRule`, `typedConfirmWord`, `reasonCode`, `unlistedReason`, `params` kèm
+constraint; có `readOperatorTaskRunResult` (ràng `transport=SGP_LOCAL_PROJECTION`
+và `source_request_sent=false`); container nối `onRunTask`, authority, journal,
+staged activation, cross-evidence. Không có gap tiêu thụ.
+
+### A66.2 Lỗi: một nút chạy được, nằm dưới câu bảo không gì chạy được
+
+`AdminActionDrawer.tsx:376` vẽ nút **"Run local R0 read"** cho task CONNECTED.
+Ngay phía trên, dòng 613 in:
+
+> *"no task can be run from this Portal until the relay is opened"*
+
+Cả hai cùng đúng logic cũ — nhưng **relay chi phối mutation, không chi phối R0
+read**. Đo trên dev: `command_authority.state = UNCHANGED_FAIL_CLOSED`, relay
+`LOCAL_R0_ONLY`, 4 task `runtime_active`. Tức câu đó **sai ngay hôm nay**, và
+sai ngay cạnh bằng chứng ngược lại.
+
+Câu mới tách hai thứ, và đếm bằng **số của server**, không đếm dòng trên màn:
+
+> *"no task can change anything from this Portal until the relay is opened.
+> 4 R0 read tasks run locally against the Portal's own projection and send
+> nothing to the source; the rest of the catalogue is what would run."*
+
+Khi `counts.connected === 0` thì câu cũ giữ nguyên — nó vẫn đúng trong ca đó.
+
+**Đã chứng minh đỏ:** trả câu cũ về → đúng test *"does not say nothing can run
+while it is offering a control that runs"* đỏ; khôi phục → xanh.
+
+### A66.3 So với hi-fi: **bản hiện tại đúng hơn**, giữ nguyên
+
+Hi-fi `HiFi Admin Action Drawer.dc.html` vẽ bố cục **chạy được đầy đủ**:
+PLAN → APPLY → VERIFY, before/after, policy checks, gõ `CLOSE` để xác nhận,
+CLI tương đương, timeline *"202 — NOT success yet"*, VERIFIED.
+
+Đó là trạng thái **khi relay mở**. Hôm nay apply bị từ chối trước dispatch, nên
+vẽ bố cục đó là **quảng cáo một năng lực không tồn tại** — đúng thứ hi-fi
+không thể biết còn runtime thì biết. Bản hiện tại giữ nguyên phân cấp panel,
+liệt kê đủ 64 entry + 24 task, và **không** vẽ control không chạy được. Không
+đổi theo hi-fi.
+
+### A66.4 Không xem được bằng mắt phần có dữ liệu — và vì sao
+
+Trên probe, `/administration/actions` với tài khoản `claude-probe` cho **403**
+ở cả hai API và màn vẽ:
+
+> *"Withheld — The command catalogue is available to Admin operators only."*
+
+Đó là hành vi **đúng**: từ chối được vẽ là *withheld*, không phải *rỗng*. Nhưng
+nó cũng có nghĩa tôi **không thể** soi phần có dữ liệu: `portal_users` trên
+probe chỉ có **một** ADMIN là `bobby`, và tôi không đi tìm mật khẩu của owner.
+
+**Cần Bobby**: một phiên ADMIN trên probe (hoặc một tài khoản ADMIN dùng cho
+review) để soi 24 task, 6 nhóm và nút R0 bằng mắt. Đến lúc đó phần hình của màn
+này vẫn là **chưa nghiệm thu**, và tôi ghi đúng như vậy chứ không đánh dấu xong.
+
+### A66.5 Đóng cả lớp, không chỉ một chỗ — và soi được hi-fi mà không cần admin
+
+Sửa xong câu trong drawer, chụp lại probe thì màn vẫn in *"no **command** can be
+run"*. Đó là **chỗ thứ hai**: component dùng chung `CommandAuthorityLine`
+(`components/CrossEvidence.tsx:28`) mang **cùng một over-claim**, và nó không
+nhận `counts` nên không đếm được task nào.
+
+Đúng lỗi "đóng 5 instance, không đóng cả lớp" của §A61. Đã sửa cả hai, mỗi câu
+nói đúng phần nó đứng được:
+
+| Nơi | Câu |
+| --- | --- |
+| Drawer, `connected > 0` | *no task can **change anything** … N R0 read tasks run locally … send nothing to the source* |
+| Drawer, `connected === 0` | *no task in this catalogue can be run — **none is CONNECTED**, and the relay is closed* (nêu **cả hai** lý do, vì nêu một sẽ khiến người đọc tưởng chỉ cần mở relay) |
+| `CommandAuthorityLine` (không có counts) | *no command can **change anything** …* — chỉ nói phần nó chứng minh được |
+
+**Guard cấp lớp**: quét source, cấm cụm *"no task/command can be run from this
+Portal"* xuất hiện lại ở chỗ thứ ba, kèm khẳng định quét phải tìm thấy dạng đã
+sửa (một lần quét không thấy gì không phải là pass).
+
+### A66.6 Soi hi-fi bằng mắt — **không cần admin**, và bản hiện tại khớp
+
+Case gallery `admin-action-drawer-1i` dùng `createFixtureApi()`, nên xem được
+toàn bộ bố cục mà không cần quyền ADMIN:
+
+- trái: task theo nhóm (`READ & INSPECT — NO PASSWORD, NO STEP-UP`, `PORTFOLIO &
+  CAPITAL`), mỗi dòng có tag `READ`/`MUTATION`, dòng CLI, scope bên phải;
+- phải: drawer `MUTATION` với **1 · PLAN / 2 · APPLY / 3 · VERIFY**, `TARGET &
+  PARAMETERS` ràng theo registry, `≤ R2 cap 100,000`, reason bắt buộc + audit.
+
+Khớp hi-fi. Và **hơn** hi-fi ở ba chỗ hi-fi không thể biết: banner `SMOKE DATA`
+nói rõ đây là fixture khai báo tới BR-EX-68; dòng *"not in published catalogue
+rev 2 under this name"*; và trạng thái relay in kèm. **Giữ nguyên, không đổi
+theo hi-fi.**
+
+Phần **chưa soi được**: 24 task N27 thật trên route sản phẩm — cần phiên ADMIN
+(§A66.4).
+
+---
+
+## A67. RÀ PHASE 8–11 VÀ BÀN GIAO CODEX (12-09)
+
+Bobby duyệt nâng quyền một tài khoản review **chỉ trên probe**. Đã nâng, soi,
+**hạ lại ngay** — `portal_users` giờ chỉ còn `bobby` là ADMIN, đã kiểm.
+
+### A67.1 Phiên ADMIN cho thấy hai thứ không test nào bắt được
+
+Route sản phẩm cuối cùng cũng hiện dữ liệu thật: **24 task · 6 nhóm**, số đếm
+khớp API **chính xác** (7+4+4+2+4+3), CONNECTED 4 / SUPPORTED 13 /
+INCOMPATIBLE 7 khớp `classification_counts`, **0 console error**.
+
+| Nhìn thấy | Vì sao là lỗi | Sửa |
+| --- | --- | --- |
+| Banner vàng kết bằng một **phủ định bao trùm**, nằm vài dòng trên 4 task `CONNECTED · LOCAL R0` và một nút **"Run local R0 read"** chạy được | Banner nói thay cho **catalogue CLI 64 entry**, không nói thay cho task N27. Hai banner ngược nhau cùng trên màn | banner chỉ nói *no published catalogue entry can be dispatched from here*; mỗi task tự nói sự thật của nó |
+| **24/24 dòng** in cùng một câu `no CLI form published` | Không dòng nào publish form, nên 24 dòng xám giống hệt, **không mang thông tin**, và đẩy dòng state — thứ *có* khác nhau — ra xa tiêu đề | in CLI form khi có, không in gì khi không; pane chi tiết vẫn nói rõ cho task đang mở |
+
+Đo sau khi sửa: `no CLI form published` **24 → 0**, câu phủ định **1 → 0**, số
+đếm giữ nguyên khớp API. Mỗi dòng còn **2 dòng thay vì 3** → hiện 11 task thay
+vì 8 trong cùng khoảng.
+
+### A67.2 Đóng cả lớp — và guard tự tìm ra site thứ tư
+
+Đây là **instance thứ ba** của cùng một over-claim. Guard commit trước chỉ cấm
+**một cách viết**, nên trượt. Mở rộng sang các biến thể, và nó **lập tức tìm ra
+site thứ tư**: fallback trong pane chi tiết nói *"nothing here can be run"* —
+đúng cho task đó nhưng đọc rộng hơn thực tế; giờ gọi tên task.
+
+Guard cũng bắt **chính comment của tôi** (tôi trích nguyên câu cũ để giải
+thích). Đã diễn đạt lại: một guard chặn tài liệu của nó sẽ dạy người ta đừng
+ghi chú.
+
+### A67.3 Trạng thái bốn phase
+
+| Phase | Trạng thái | Còn gì |
+| --- | --- | --- |
+| **8** rich empty composition | xong | — |
+| **9** presentation guards | xong | — |
+| **10** contract discipline | xong | — |
+| **11** named BFF consumer | **xong phần dựng được** | nghiệm thu runtime cho nhánh `EMPTY` §8.59 |
+
+Bốn lane Phase 11: §8.58 realtime recovery ✓ · §8.59 `read_truth` ✓ · Blotter ✓
+(đúng sẵn, đã thêm guard) · Admin Action Drawer ✓ (đã soi ADMIN, sửa 2 lỗi UX).
+
+**So hi-fi**: bố cục khớp — task theo nhóm kèm tag READ/MUTATION, ladder
+PLAN → APPLY → VERIFY, parameters ràng registry, `≤ R2 cap`, reason bắt buộc.
+Và **hơn** hi-fi ở ba chỗ hi-fi không thể biết: banner `SMOKE DATA`, dòng *"not
+in published catalogue rev 2"*, trạng thái relay in kèm. **Giữ nguyên.**
+
+### A67.4 Return packet cho codex (handoff §5)
+
+1. **Phase / SHA.** Round-2 Phase 8–11. `e1d30b54` `0be03c67` `4b9fb112`
+   `9e428e6a` `54d0e211` `5dfd5e6b` `329edafa` `7ba69d46` `36c9bd14`.
+2. **Operation BFF tiêu thụ.** `executionApprovalInbox`, approval history,
+   waivers, operations queue (`read_truth`); `/commands/tasks` +
+   `/commands/catalog`; profile realtime stream (`availability`/`recovery`).
+   Không thêm operation, không cursor thô, không fixture fallback trên route sản phẩm.
+3. **Ma trận state.** `EMPTY` chỉ khi server nói; im lặng → câu yếu hơn; **từ
+   chối không bao giờ thành rỗng** (guard 4 trạng thái, đã chứng minh đỏ).
+   403 trên drawer render **Withheld**, đã xác minh trên probe.
+4. **Gate.** 2 302 frontend tests · tsc 0 lỗi trong `src` · hook xanh mọi commit ·
+   0 console error trên probe · 4 bề mặt §8.59 + 2 endpoint N27 đã dò trên API thật.
+5. **Ảnh.** `scratchpad/p11shots/`: `probe-inbox`, `gallery-empty`,
+   `drawer-admin`, `drawer-connected` (trước/sau).
+6. **DTO gap.** G4 envelope khẳng định deployment không tồn tại · G8 realtime
+   envelope chưa có fixture canonical · G10 env dev nằm ngoài repo.
+7. **Xác nhận.** Không gọi source trực tiếp, không sửa tay file generated,
+   không thêm hành vi command. Nút R0 chỉ hiện khi **server** nói CONNECTED.
+
+### A67.5 Còn nợ, nói rõ
+
+- **Nghiệm thu runtime `EMPTY`**: dev/probe đều chạy control-api cũ hơn BE-R2-6.
+- **Quyền review**: mỗi lần soi màn ADMIN lại phải nâng/hạ tay. Nên có một tài
+  khoản review ADMIN cố định trên probe — quyết định của Bobby.
+
+---
+
+## A68. Codex independent Phase 8–11 audit — contract and truth closeout (12-09)
+
+Audit này được ghi sau khi tích hợp A66/A67: đối chiếu commit Phase 8–11,
+server producer, canonical contracts, generated consumer types và frontend
+readers. Chỉ debt tái hiện được mới được sửa; không đổi route product, source
+profile, command authority hay runtime. Các ghi chú G4/G8 trong return packet
+A67 là trạng thái tại thời điểm handoff; chúng được đóng ở đây.
 
 | Claim từ frontend review | Verdict | Resolution / evidence |
 | --- | --- | --- |
@@ -9942,9 +10135,7 @@ sửa; không đổi route product, source profile, command authority hay runtim
 | Migration `031`, retention/row evidence và runtime visual/probe evidence | **Operational evidence, không phải source debt** | Giữ fail-closed trong release evidence; không giả số liệu, không tạo migration/runtime change trong audit. |
 | Nine read-only governance tables | **Intentional product boundary** | Không tạo writer giả để “đóng debt”. Khi có owner-approved mutation workflow, nó phải là phase riêng cùng RBAC/idempotency/audit. |
 
-**Gate required before integration:** contract fixture/generator gate; focused
-Control API regression for Live source resolution; frontend unit/type/build and
-clean browser journey on the integrated branch. The four later frontend
-follow-up commits remain a separate integration input until their actual
-branch is merged deliberately; this audit does not silently fast-forward or
-rewrite them.
+**Gate required before push:** contract fixture/generator gate; focused Control API
+regression for Live source resolution; frontend unit/type/build and clean browser
+journey on this integrated branch. A66/A67's four later frontend follow-up commits
+are included by this merge; no history is rewritten.

@@ -253,7 +253,14 @@ function TaskRow({ task, selected, onPick }: { task: OperatorTask; selected: boo
         <span className="exec-cli-tag" data-tag={task.tag}>{task.tag}</span>
         <span className="exec-cli-rowscope">{task.scope}</span>
       </span>
-      <span className="exec-cli-rowcli">{task.cliForms[0] ?? "no CLI form published"}</span>
+      {/*
+        * Measured on probe with a real ADMIN session: all twenty-four rows
+        * printed "no CLI form published", because none of them publishes one.
+        * Twenty-four identical grey lines carry no information and push the
+        * state line — which does differ per row — further from its title. The
+        * detail pane still states it explicitly for the task in hand.
+        */}
+      {task.cliForms[0] ? <span className="exec-cli-rowcli">{task.cliForms[0]}</span> : null}
       <span className="exec-admin-scope" data-task-state={task.state}>
         {TASK_STATE_LABEL[task.state]}
         {task.reasonCode ? ` · ${task.reasonCode}` : ""}
@@ -314,7 +321,7 @@ function TaskDetail({
             <b>{TASK_STATE_LABEL[task.state]}</b>
             <span>
               {task.reasonCode ? <>reason <code>{task.reasonCode}</code> · </> : null}
-              {task.unlistedReason ?? "The server has not connected this task to a runnable route; nothing here can be run."}
+              {task.unlistedReason ?? "The server has not connected this task to a runnable route, so this task cannot be run."}
             </span>
           </div>
         ) : (
@@ -507,7 +514,15 @@ export function AdminActionDrawerScreen({
               The Portal&apos;s command relay is <b>disabled</b> for this catalogue
               {catalogue?.capabilityReason ? ` (${catalogue.capabilityReason})` : null}. The flow
               below is a declared demo of WF 1i — every published action is listed further down so
-              you know it exists, and none of them can be run from here.
+              you know it exists, and no published catalogue entry can be dispatched from here.
+              {/*
+               * It used to end with a blanket denial covering everything
+               * below it. On probe that sat a few
+               * lines above four tasks marked CONNECTED · LOCAL R0 and a "Run
+               * local R0 read" control. This banner speaks for the published
+               * CLI catalogue it names; the operator task list states its own
+               * truth per row.
+               */}
             </p>
           ) : null}
           {actionRef ? (
@@ -610,7 +625,23 @@ export function AdminActionDrawerScreen({
                     {" — "}
                     {authority?.state === "OPEN"
                       ? "a CONNECTED task can be run through plan → apply → verify"
-                      : "no task can be run from this Portal until the relay is opened; the catalogue below is what would run"}
+                      /*
+                       * The relay governs *mutation*, and saying "no task can
+                       * be run" while the catalogue is CONNECTED contradicts
+                       * the button directly below it. Measured on dev: command
+                       * authority UNCHANGED_FAIL_CLOSED, relay LOCAL_R0_ONLY,
+                       * and four R0 read tasks with runtime_active true, each
+                       * of which this screen offers a "Run local R0 read"
+                       * control for. The sentence now separates what is shut
+                       * from what is open, and counts with the server's own
+                       * number rather than the rows on screen.
+                       */
+                      : (tasks.counts.connected ?? 0) > 0
+                        ? `no task can change anything from this Portal until the relay is opened. ${tasks.counts.connected} R0 read ${tasks.counts.connected === 1 ? "task runs" : "tasks run"} locally against the Portal's own projection and send nothing to the source; the rest of the catalogue is what would run.`
+                        // Both reasons, not just the relay: nothing here is
+                        // CONNECTED either, and naming only one of them would
+                        // suggest opening the relay is all that is missing.
+                        : "no task in this catalogue can be run from this Portal — none is CONNECTED, and the relay is closed; what is listed is what would run"}
                   </p>
                   {activation ? (
                     <section className="exec-cli-activation" aria-label="Staged activation capabilities">

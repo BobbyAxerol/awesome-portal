@@ -7,6 +7,9 @@
  * catalogue through its error text, a source tier shown where the Portal's
  * belongs.
  */
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
@@ -293,5 +296,64 @@ describe("sixty-four entries need a way in, and the server provides it", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("Command detail").textContent).toContain("Pick an action"),
     );
+  });
+});
+
+/*
+ * The class, not the instance.
+ *
+ * Two components carried the same over-claim: the drawer said "no task can be
+ * run from this Portal until the relay is opened" and the shared
+ * CommandAuthorityLine said "no command can be run". Measured on dev, both were
+ * false — command authority UNCHANGED_FAIL_CLOSED, relay LOCAL_R0_ONLY, and
+ * four R0 read tasks runtime-active, one of which the drawer offers a control
+ * for. The relay governs change; it does not govern a read.
+ *
+ * This scans the source rather than a render, because the point is that no new
+ * copy may reintroduce the phrase in a third place.
+ */
+describe("a line every row repeats is not information", () => {
+  it("prints the CLI form only for a task that publishes one", () => {
+    const { container } = render(<Harness />);
+    // Measured on probe: 24 of 24 rows printed the same "no CLI form
+    // published". The absence is stated once, in the detail pane, for the task
+    // the operator actually opened.
+    expect(container.textContent).not.toMatch(/no CLI form published/);
+  });
+});
+
+describe("the relay governs change, and no screen may say otherwise", () => {
+  const SRC = join(__dirname, "..");
+  const files = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? files(join(dir, e.name))
+        : /\.(ts|tsx)$/.test(e.name) && !/\.(test|spec)\.tsx?$/.test(e.name) ? [join(dir, e.name)] : []);
+
+  const sources = files(SRC).map((f) => ({ f, text: readFileSync(f, "utf8") }));
+
+  it("scans a real number of files, so a broken walk cannot pass quietly", () => {
+    expect(sources.length).toBeGreaterThan(50);
+    // And the phrase it polices really is in the tree, in its corrected form.
+    expect(sources.some((s) => /can change anything from this Portal/.test(s.text))).toBe(true);
+  });
+
+  /*
+   * The wording, not one spelling of it. The first guard banned "no task can be
+   * run from this Portal" and a real ADMIN session on probe then showed the
+   * relay banner still saying "none of them can be run from here", a few lines
+   * above four CONNECTED tasks and a working control. A guard that polices one
+   * phrasing teaches the next author to pick another.
+   */
+  const BLANKET_DENIALS = [
+    /no (task|command) can be run from this Portal/,
+    /none of them can be run/,
+    /nothing (here )?can be run/,
+  ];
+
+  it("never says a task or command cannot be run while the relay is merely closed", () => {
+    const offenders = sources
+      .filter(({ text }) => BLANKET_DENIALS.some((re) => re.test(text)))
+      .map(({ f }) => f.slice(SRC.length + 1));
+    expect(offenders).toEqual([]);
   });
 });
