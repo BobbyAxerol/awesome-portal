@@ -2432,3 +2432,12 @@ and semantics to preserve are in the main BE-R2-9 deployed-candidate subsection.
 Do not revive old fabricated options/command states or discard backend changes
 to make the pictures match. Re-record only reviewed cases, then verify latest
 candidate without update. Codex has not changed styles/tokens or accepted images.
+
+**Concurrent update, 07:59 UTC:** PR63 was merged externally into dev at07:54;
+Claude `342cedb8` / merged `fd3fd5bb` are preserved in the local reconciliation.
+Dev now runs the concurrently built `ux3` images, not the `007d0960` images tested
+above. The three compiled backend realtime/projection/analytics modules match,
+but API build metadata still says `b61ad10c...`; next coordinated dev build must
+pin the actual source SHA. No Codex overwrite/restart of the new UX deployment.
+Keep Claude's loading, Blotter-time and breadcrumb fixes; visual review still
+belongs to Claude. Main BE-R2-9 journal records exact images and CI status.

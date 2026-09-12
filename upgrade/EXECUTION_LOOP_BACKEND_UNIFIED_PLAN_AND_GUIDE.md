@@ -6574,6 +6574,28 @@ explicit workflow scope and TS gaps remain accurately labelled, not hidden.
 
 #### BE-R2-9 deployed candidate / remaining acceptance (2026-09-12)
 
+**Latest concurrent-update reconciliation (07:59 UTC):** the checkpoint below
+records the Codex deployment/test of `007d0960`, not the subsequently replaced
+dev runtime. Re-fetch found Claude `342cedb8` plus merge `fd3fd5bb`, and GitHub
+confirms PR63 was merged externally at **07:54:04 UTC**; origin/dev and the shared
+feature now contain both agents' code. Codex did not perform that merge. The
+local documentation commit is merged with `fd3fd5bb` without discarding either
+parent. Claude's loading/absence distinction, millisecond Blotter display and
+binding breadcrumb are kept; none changes backend authority or poll cadence.
+Dev was concurrently replaced by `local/portal-{control-api,portal-web}:ux3`:
+API `sha256:88003160b620572697e0eed0b84ebcd73771b687838360cb86269606daa21902`,
+web `sha256:c095d45ac316fed6cbc54c91e035c83606dd386bff7454a2e04e936f979a786a`.
+Their stable counterparts are unchanged. Read-only comparison proves all three
+compiled realtime/projection/local-analytics modules byte-identical to the
+accepted `007d0960` API image. **Build provenance drift remains:** the new API
+environment reports old `PORTAL_BUILD_COMMIT=b61ad10c...`, while image revision
+labels are absent. Do not infer whole-image source identity from that stale
+marker or transfer the previous browser verdict to this new UI. Do not restart
+or overwrite the concurrent UX deployment to restore an old candidate; the next
+coordinated dev build must bind its actual commit/image/config explicitly.
+New source CI run: `34681903779`, in progress when checked. Historical checkpoint
+references to an unmerged PR below are superseded by this reconciliation.
+
 **Verdict: backend changes deployed and bounded dev checks passed; complete
 phase/release acceptance remains OPEN.** Do not describe the visual gate or
 remote CI as green before their real result. The optional approval suggestion

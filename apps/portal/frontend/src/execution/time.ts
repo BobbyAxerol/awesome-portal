@@ -24,6 +24,30 @@
  */
 import { formatUtcEpochMs, readUtcEpochMs } from "./screenDataContract";
 
+/**
+ * A published instant, to the millisecond, as a datetime rather than a wire
+ * string.
+ *
+ * `utcStamp` stops at the second, which is right for an as-of line and wrong
+ * for a blotter: two orders 0.27s apart would print the same time. The Blotter
+ * was printing the raw ISO instead — `2026-09-11T13:04:52.178632Z`, complete
+ * with the `T`, the `Z` and six decimals, wrapped over two lines in an 8rem
+ * column. This keeps the precision a reader can use and returns the untouched
+ * original for the title, so the microseconds are one hover away rather than
+ * gone.
+ */
+export function utcInstant(iso: string | null | undefined): { display: string; exact: string | null } {
+  if (!iso) return { display: "not published", exact: null };
+  const raw = iso.trim();
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:?\d{2})?$/.exec(raw);
+  if (!m) return { display: raw, exact: null };
+  const millis = (m[3] ?? "").padEnd(3, "0").slice(0, 3);
+  const zone = m[4] === undefined || m[4] === "Z" ? " UTC" : ` ${m[4]}`;
+  const display = `${m[1]} ${m[2]}.${millis}${zone}`;
+  // Only worth a title when it actually carries more than the display does.
+  return { display, exact: display.replace(" UTC", "Z").replace(" ", "T") === raw ? null : raw };
+}
+
 export function utcStamp(iso: string | number | null | undefined): string {
   if (typeof iso === "number") {
     const epoch = readUtcEpochMs(iso);

@@ -1948,3 +1948,9 @@ checks. PR63 targets dev. No stable/source/command activation. Visual gate remai
 10 failures requiring Claude review, not a reason to rewrite UI or relax checks;
 multi-process/PG→DOM evidence and actual remote CI remain separately tracked.
 Exact results and private evidence location are in the main BE-R2-9 journal.
+
+**07:59 UTC reconciliation:** external PR63 merge advanced dev/shared feature to
+`fd3fd5bb` with Claude `342cedb8`; local docs are integrated without code loss.
+Concurrent dev `ux3` replaces the earlier tested image pair. Three key compiled
+backend modules match; stale API build-SHA metadata is reported, not silently
+treated as provenance. Stable untouched; see the main journal before deployment.

@@ -10225,3 +10225,14 @@ không phục hồi fake candidates/command data để khớp ảnh cũ. Codex s
 logic; Claude quyết layout/typography/interaction và baseline sau review.
 Không gọi optional Fleet suggestions là approval eligibility. Bằng chứng tải
 hai OS replicas/PG commit→DOM và remote CI còn phải chốt, không nhận là đã xanh.
+
+### A71.2 — Đồng bộ thay đổi song song, 07:59 UTC
+
+PR63 đã được merge ngoài lượt thao tác Codex lúc07:54:04; dev/shared feature ở
+`fd3fd5bb`, gồm đầy đủ `342cedb8` của Claude. Codex giữ sửa loading/absence,
+Blotter milliseconds và binding breadcrumb, hợp nhất với commit tài liệu riêng;
+không sửa thiết kế. Dev vừa được build `ux3`, không còn image pair `007d0960`
+đã nghiệm thu ở A71.1. Ba module backend compiled khớp byte nhưng API vẫn báo
+build SHA cũ `b61ad10c...`: phải pin đúng ở lần build phối hợp tiếp theo, không
+gán nhầm evidence UI cũ cho image mới. Codex không restart/ghi đè rollout Claude;
+stable không đổi. Chi tiết image/CI và ảnh cần Claude review ở main BE-R2-9.
