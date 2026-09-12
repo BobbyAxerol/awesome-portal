@@ -312,6 +312,16 @@ describe("sixty-four entries need a way in, and the server provides it", () => {
  * This scans the source rather than a render, because the point is that no new
  * copy may reintroduce the phrase in a third place.
  */
+describe("a line every row repeats is not information", () => {
+  it("prints the CLI form only for a task that publishes one", () => {
+    const { container } = render(<Harness />);
+    // Measured on probe: 24 of 24 rows printed the same "no CLI form
+    // published". The absence is stated once, in the detail pane, for the task
+    // the operator actually opened.
+    expect(container.textContent).not.toMatch(/no CLI form published/);
+  });
+});
+
 describe("the relay governs change, and no screen may say otherwise", () => {
   const SRC = join(__dirname, "..");
   const files = (dir: string): string[] =>
@@ -327,9 +337,22 @@ describe("the relay governs change, and no screen may say otherwise", () => {
     expect(sources.some((s) => /can change anything from this Portal/.test(s.text))).toBe(true);
   });
 
+  /*
+   * The wording, not one spelling of it. The first guard banned "no task can be
+   * run from this Portal" and a real ADMIN session on probe then showed the
+   * relay banner still saying "none of them can be run from here", a few lines
+   * above four CONNECTED tasks and a working control. A guard that polices one
+   * phrasing teaches the next author to pick another.
+   */
+  const BLANKET_DENIALS = [
+    /no (task|command) can be run from this Portal/,
+    /none of them can be run/,
+    /nothing (here )?can be run/,
+  ];
+
   it("never says a task or command cannot be run while the relay is merely closed", () => {
     const offenders = sources
-      .filter(({ text }) => /no (task|command) can be run from this Portal/.test(text))
+      .filter(({ text }) => BLANKET_DENIALS.some((re) => re.test(text)))
       .map(({ f }) => f.slice(SRC.length + 1));
     expect(offenders).toEqual([]);
   });
