@@ -92,6 +92,13 @@ export const PROFILE_BANNER: Record<string, { title: string; line: string; detai
  * nothing is the breadcrumb defect one layer down — the screen would answer
  * confidently about a record the reader never asked for.
  */
+/** The alpha segment of a composite deployment id, or the id when it has none. */
+function shortDeployment(id: string | undefined): string | null {
+  if (!id) return null;
+  const head = id.split(":")[0];
+  return head.length > 0 ? head : id;
+}
+
 function MissingRouteId({ what }: { what: string }) {
   return <PanelState status="unavailable" reason={`This route named no ${what}, so there is nothing to open.`} />;
 }
@@ -230,8 +237,20 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
    */
   const entity = useMemo(() => {
     switch (screenId) {
-      case "EXECUTION_PAPER_WORKBENCH_SCREEN":
-      case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return params.deploymentId ?? null;
+      /*
+       * A paper deployment id is composite — `alpha:env:VENUE:account` — and
+       * printing all ninety-odd characters made the trail unreadable and
+       * repeated what the masthead below already shows in full. The leading
+       * segment is the alpha, which is the name the masthead itself puts in
+       * large type, so the crumb says that and nothing invented. The VN market
+       * view names itself, because it and the workbench are different screens
+       * on the same deployment and the trail is how a reader tells them apart.
+       */
+      case "EXECUTION_PAPER_WORKBENCH_SCREEN": return shortDeployment(params.deploymentId);
+      case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": {
+        const short = shortDeployment(params.deploymentId);
+        return short ? `${short} · VN market` : null;
+      }
       case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return params.deploymentId ? `${params.deploymentId} · certification` : null;
       // Live Full and Canary share an alpha; the crumb names the deployment and the room.
       case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return params.deploymentId ? `${params.deploymentId} · canary` : null;

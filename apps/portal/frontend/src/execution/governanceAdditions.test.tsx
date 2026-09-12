@@ -30,9 +30,17 @@ afterEach(() => {
 const summaryBox = () => screen.getByPlaceholderText(/What this alpha does/);
 const submitBtn = () => screen.getByRole("button", { name: /Submit for R1 review|Retry submit/ });
 
-async function fillAndSubmit(alpha?: string, run?: string) {
-  if (alpha) fireEvent.change(screen.getByLabelText("Alpha (from the alpha registry)"), { target: { value: alpha } });
-  if (run) fireEvent.change(screen.getByLabelText("Evidence run (from the run library)"), { target: { value: run } });
+/*
+ * Every id is typed now. The form used to open with a reviewed-cast alpha, run
+ * and claim already selected, so a test could submit having filled only the
+ * summary. Those defaults named records that do not exist on dev, and picking
+ * one for the operator is the part that had to go: the three ids are the
+ * request, and the screen no longer guesses them.
+ */
+async function fillAndSubmit(alpha = "carry", run = "run_5512", claim = "clm_31") {
+  fireEvent.change(screen.getByLabelText("Alpha (from the alpha registry)"), { target: { value: alpha } });
+  fireEvent.change(screen.getByLabelText("Evidence run (from the run library)"), { target: { value: run } });
+  fireEvent.change(screen.getByLabelText("Methodology claim"), { target: { value: claim } });
   fireEvent.change(summaryBox(), { target: { value: "Session momentum with venue-calendar guards." } });
   await act(async () => {
     fireEvent.click(submitBtn());
@@ -62,6 +70,8 @@ describe("loop entry — the create consumer", () => {
     const spy = vi.spyOn(api, "createApprovalRequest");
     render(<NewApprovalRequestContainer api={api} />);
     fireEvent.change(screen.getByLabelText("Alpha (from the alpha registry)"), { target: { value: "vnmomo" } });
+    fireEvent.change(screen.getByLabelText("Evidence run (from the run library)"), { target: { value: "run_5320" } });
+    fireEvent.change(screen.getByLabelText("Methodology claim"), { target: { value: "clm_29" } });
     fireEvent.change(summaryBox(), { target: { value: "Session momentum with venue-calendar guards." } });
     await act(async () => {
       const btn = submitBtn();
@@ -317,15 +327,30 @@ describe("phase 1 · a dead submit button carries its own reason", () => {
     expect(button.disabled).toBe(true);
     const describedBy = button.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
+    /*
+     * The blocker is whichever one is real. An empty form is blocked on its
+     * ids, not its summary — the screen used to open with a reviewed-cast alpha
+     * already chosen, so the summary was the only thing left to say.
+     */
+    expect(document.getElementById(describedBy!)?.textContent).toContain("name an alpha");
+    expect(button.getAttribute("title")).toContain("an alpha");
+
+    // With the ids named, the summary becomes the blocker and says so.
+    fireEvent.change(screen.getByLabelText("Alpha (from the alpha registry)"), { target: { value: "carry" } });
+    fireEvent.change(screen.getByLabelText("Evidence run (from the run library)"), { target: { value: "run_5512" } });
+    fireEvent.change(screen.getByLabelText("Methodology claim"), { target: { value: "clm_31" } });
     expect(document.getElementById(describedBy!)?.textContent).toContain("summary needs at least");
-    expect(button.getAttribute("title")).toContain("at least");
   });
 
-  it("drops the reason once the control is live", () => {
+  it("drops the reason once the control is live", async () => {
     render(<NewApprovalRequestContainer api={createFixtureApi()} />);
+    await act(async () => { await Promise.resolve(); });
     const summary = document.querySelector("textarea, input[type=text][name=summary]")
       ?? [...document.querySelectorAll("textarea")][0];
     fireEvent.change(summary as HTMLElement, { target: { value: "a summary long enough to submit" } });
+    fireEvent.change(screen.getByLabelText("Alpha (from the alpha registry)"), { target: { value: "carry" } });
+    fireEvent.change(screen.getByLabelText("Evidence run (from the run library)"), { target: { value: "run_5512" } });
+    fireEvent.change(screen.getByLabelText("Methodology claim"), { target: { value: "clm_31" } });
     const button = submitButton();
     expect(button.disabled).toBe(false);
     expect(button.getAttribute("aria-describedby")).toBeNull();
