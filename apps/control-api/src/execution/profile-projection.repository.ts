@@ -518,7 +518,7 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
     relationKey: string,
-    query: { from: string; valueField: string },
+    query: { from: string; valueField: string; strategyIds?: readonly string[] },
   ): Promise<Array<{ strategyId: string; accountId: string; day: string; value: string }>> {
     const result = await this.pool.query<{ strategy_id: string; account_id: string; day: string; value: string }>(
       `SELECT DISTINCT ON (fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts))
@@ -530,9 +530,10 @@ export class ExecutionProfileProjectionRepository {
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
           AND ts >= $5::timestamptz
           AND fields->>'strategy_id' IS NOT NULL AND fields->>'account_id' IS NOT NULL
+          AND ($7::text[] IS NULL OR fields->>'strategy_id' = ANY($7::text[]))
           AND fields->>($6) ~ '^-?[0-9]+(\\.[0-9]+)?$'
         ORDER BY fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts), ts DESC, row_id DESC`,
-      [workspaceId, environment, profileId, relationKey, query.from, query.valueField],
+      [workspaceId, environment, profileId, relationKey, query.from, query.valueField, query.strategyIds ?? null],
     );
     return result.rows.map((row) => ({
       strategyId: row.strategy_id, accountId: row.account_id, day: row.day, value: row.value,
@@ -806,6 +807,23 @@ export class ExecutionProfileProjectionRepository {
   }
 
   async snapshot(
+    workspaceId: string, environment: ProjectionEnvironment, profileId: string,
+    reader: Pick<PoolClient, "query"> = this.pool,
+  ): Promise<ProfileProjectionSnapshot | null> {
+    // Transactional review capture must read its own transaction, never a shared read.
+    if (reader !== this.pool) return this.readSnapshot(workspaceId, environment, profileId, reader);
+    const key = JSON.stringify([workspaceId,environment,profileId]);
+    const pending = this.snapshotFlights.get(key);
+    if (pending) return pending;
+    if (this.snapshotFlights.size >= 16) throw new Error("N31_LOCAL_READ_CAPACITY");
+    const read = this.readSnapshot(workspaceId,environment,profileId,reader);
+    this.snapshotFlights.set(key,read);
+    try { return await read; } finally { if (this.snapshotFlights.get(key) === read) this.snapshotFlights.delete(key); }
+  }
+
+  private readonly snapshotFlights = new Map<string, Promise<ProfileProjectionSnapshot | null>>();
+
+  private async readSnapshot(
     workspaceId: string,
     environment: ProjectionEnvironment,
     profileId: string,
@@ -832,6 +850,26 @@ export class ExecutionProfileProjectionRepository {
       completeness: row.completeness, projectionEpoch: row.projection_epoch,
       projectionSequence: Number(row.projection_sequence), payloadDigest: row.payload_digest,
       sourceCatalogueSha256: row.source_catalogue_sha256,
+    } : null;
+  }
+
+  /** Hot tail: scalar columns only. Never de-TOAST/decode the profile JSONB. */
+  async snapshotMetadata(workspaceId: string, environment: ProjectionEnvironment, profileId: string) {
+    const query = {
+      text: `SELECT source_as_of,received_at,last_successful_refresh_at,completeness,
+        projection_epoch::text,projection_sequence::text,payload_digest,source_catalogue_sha256
+        FROM execution_profile_projection_snapshots
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,
+      values: [workspaceId,environment,profileId], query_timeout: 2_000,
+    };
+    const result = await this.pool.query(query);
+    const row = result.rows[0];
+    return row ? {
+      sourceAsOf: row.source_as_of as Date | null, receivedAt: row.received_at as Date,
+      lastSuccessfulRefreshAt: row.last_successful_refresh_at as Date,
+      completeness: row.completeness as ProjectionCompleteness,
+      projectionEpoch: row.projection_epoch as string, projectionSequence: Number(row.projection_sequence),
+      payloadDigest: row.payload_digest as string, sourceCatalogueSha256: row.source_catalogue_sha256 as string | null,
     } : null;
   }
 

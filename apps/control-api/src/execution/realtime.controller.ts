@@ -138,6 +138,7 @@ export class ExecutionRealtimeController {
     @Param("environment") rawEnvironment: string,
     @Query("cursor") rawCursor?: unknown,
   ): Promise<void> {
+    let cleanup = () => undefined as void;
     try {
       const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
       await this.readAuthority.authorize(request, environment);
@@ -180,6 +181,7 @@ export class ExecutionRealtimeController {
         }
         return accepted;
       };
+      cleanup = close;
       const heartbeat = setInterval(() => send(
         this.localRealtime.heartbeat(workspaceId, environment, profileId),
       ), 15_000);
@@ -200,11 +202,19 @@ export class ExecutionRealtimeController {
       }, 5_000);
       leaseMonitor.unref();
       reply.raw.once("close", close);
-      unsubscribe = await this.localRealtime.subscribe(
-        workspaceId, environment, profileId, cursor, send,
-      );
+      try {
+        unsubscribe = await this.localRealtime.subscribe(
+          workspaceId, environment, profileId, cursor, send,
+        );
+      } catch {
+        send({ ...this.localRealtime.heartbeat(workspaceId, environment, profileId),
+          event_type: "projection.gap", terminal: true, reconnect_required: true,
+          payload: { reason_code: "N31_LOCAL_READ_FAILED" } });
+        close();
+      }
       if (closed) unsubscribe();
     } catch (error) {
+      cleanup();
       if (!reply.raw.headersSent) void reply.status(localStatus(error)).send(localErrorBody(error));
       else reply.raw.end();
     }

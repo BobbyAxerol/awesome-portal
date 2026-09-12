@@ -25,25 +25,25 @@ const MIN_SUMMARY = 8;
 const LOCK_REASON_ID = "new-approval-lock-reason";
 
 /**
- * Options mirror the ids the server-owned registries hold for the canonical
- * cast — a picks endpoint does not exist yet, and the POST is the validator:
- * an id the registry does not know is a typed 422, never a silent guess.
+ * This screen used to offer three alphas by name — "Carry v3.2", "Grid v2.1",
+ * "VnMomo v0.9" — with two evidence runs and two methodology claims beside
+ * them. They were the reviewed cast, and the comment here said a picks endpoint
+ * did not exist yet.
+ *
+ * On dev it does: the alpha fleet publishes 206 alphas, and not one of them is
+ * called any of those three. So the entry form to the whole governance loop was
+ * offering an operator a choice between records that do not exist, and the only
+ * way to find that out was to submit and be refused.
+ *
+ * The alpha list now comes from the fleet the server publishes. Runs and claims
+ * have no published candidate list, so they are typed rather than invented, and
+ * the screen says so — the POST remains the validator, which is what the old
+ * comment correctly promised and the fabricated options quietly undermined.
  */
-const REGISTRY_PICKS = {
-  alphas: [
-    { id: "carry", label: "Carry v3.2 — research complete · run_5512" },
-    { id: "grid", label: "Grid v2.1 — already in loop (dep_94 canary)", warn: "Grid v2.1 is already in the loop (dep_94, canary). A second R1 for the same alpha opens a RE-REVIEW of its evidence — it never creates a parallel lane." },
-    { id: "vnmomo", label: "VnMomo v0.9 — research complete · run_5320 · DNSE" },
-  ],
-  runs: [
-    { id: "run_5512", label: "run_5512 · 2019-01 → 2026-06 · 1h · fees 4bp" },
-    { id: "run_5320", label: "run_5320 · 2021-03 → 2026-06 · session · VN" },
-  ],
-  claims: [
-    { id: "clm_31", label: "clm_31 · window roles IS/OOS/holdout fixed" },
-    { id: "clm_29", label: "clm_29 · session-buckets, no overnight" },
-  ],
-} as const;
+export interface ApprovalAlphaOption {
+  id: string;
+  label: string;
+}
 
 function mintKey(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -56,20 +56,43 @@ export function NewApprovalRequestScreen({
   outcome,
   submitting,
   onReset,
+  alphaOptions = [],
+  alphaOptionsReason = null,
 }: {
   /** The container's port call. The screen never touches fetch. */
   onSubmit: (fields: { alphaId: string; evidenceRunId: string; methodologyClaimId: string; summary: string }) => void;
   outcome: ApprovalCreateOutcome | null;
   submitting: boolean;
   onReset: () => void;
+  /** The alphas the fleet actually publishes. Empty means the screen asks for an id instead of offering one. */
+  alphaOptions?: readonly ApprovalAlphaOption[];
+  /** Why the list is empty, in the server's words, shown where the list would have been. */
+  alphaOptionsReason?: string | null;
 }) {
-  const [alphaId, setAlphaId] = useState<string>(REGISTRY_PICKS.alphas[0].id);
-  const [runId, setRunId] = useState<string>(REGISTRY_PICKS.runs[0].id);
-  const [claimId, setClaimId] = useState<string>(REGISTRY_PICKS.claims[0].id);
+  const [alphaId, setAlphaId] = useState<string>("");
+  const [runId, setRunId] = useState<string>("");
+  const [claimId, setClaimId] = useState<string>("");
   const [summary, setSummary] = useState("");
 
-  const alpha = REGISTRY_PICKS.alphas.find((a) => a.id === alphaId)!;
-  const ready = summary.trim().length >= MIN_SUMMARY;
+  const alpha = alphaOptions.find((a) => a.id === alphaId) ?? null;
+  // Every field the server needs, and none of them guessed on the reader's behalf.
+  const ready = summary.trim().length >= MIN_SUMMARY
+    && alphaId.trim().length > 0 && runId.trim().length > 0 && claimId.trim().length > 0;
+
+  /*
+   * §3.5: the button names the blocker it actually has. Adding the three ids to
+   * `ready` without this would have left it saying "summary needs at least …"
+   * while the real obstacle was an empty alpha — a dead control explaining the
+   * wrong thing is worse than one explaining nothing.
+   */
+  const missing = [
+    alphaId.trim() ? null : "an alpha",
+    runId.trim() ? null : "an evidence run",
+    claimId.trim() ? null : "a methodology claim",
+  ].filter(Boolean) as string[];
+  const blocker = missing.length > 0
+    ? `name ${missing.join(", ")} — the request is those ids`
+    : `summary needs at least ${MIN_SUMMARY} characters — it is the reviewer's first sentence`;
   const settled = outcome !== null && (outcome.kind === "created" || outcome.kind === "replayed");
 
   return (
@@ -125,34 +148,37 @@ export function NewApprovalRequestScreen({
             <div className="exec-gov-kv">
               <span className="exec-gov-k">alpha</span>
               <span className="exec-gov-v">
-                <select className="exec-role-control" value={alphaId} onChange={(e) => setAlphaId(e.target.value)} aria-label="Alpha (from the alpha registry)" disabled={submitting}>
-                  {REGISTRY_PICKS.alphas.map((a) => (
-                    <option key={a.id} value={a.id}>{a.label}</option>
-                  ))}
-                </select>
+                {alphaOptions.length > 0 ? (
+                  <select className="exec-role-control" value={alphaId} onChange={(e) => setAlphaId(e.target.value)} aria-label="Alpha (from the alpha registry)" disabled={submitting}
+                    title={submitting ? "The request is in flight." : undefined}>
+                    <option value="">— pick an alpha —</option>
+                    {alphaOptions.map((a) => (
+                      <option key={a.id} value={a.id}>{a.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input className="exec-role-control" value={alphaId} onChange={(e) => setAlphaId(e.target.value)} aria-label="Alpha (from the alpha registry)" disabled={submitting}
+                    placeholder={alphaOptionsReason ?? "no candidate list is published — type the id"} />
+                )}
               </span>
               <span className="exec-gov-k">evidence run</span>
               <span className="exec-gov-v">
-                <select className="exec-role-control" value={runId} onChange={(e) => setRunId(e.target.value)} aria-label="Evidence run (from the run library)" disabled={submitting}>
-                  {REGISTRY_PICKS.runs.map((r) => (
-                    <option key={r.id} value={r.id}>{r.label}</option>
-                  ))}
-                </select>
+                {/* No candidate list is published for this; the id is typed and the POST validates it. */}
+                <input className="exec-role-control" value={runId} onChange={(e) => setRunId(e.target.value)} aria-label="Evidence run (from the run library)" disabled={submitting}
+                  placeholder="no candidate list is published — type the id" />
               </span>
               <span className="exec-gov-k">methodology claim</span>
               <span className="exec-gov-v">
-                <select className="exec-role-control" value={claimId} onChange={(e) => setClaimId(e.target.value)} aria-label="Methodology claim" disabled={submitting}>
-                  {REGISTRY_PICKS.claims.map((c) => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
-                  ))}
-                </select>
+                {/* No candidate list is published for this; the id is typed and the POST validates it. */}
+                <input className="exec-role-control" value={claimId} onChange={(e) => setClaimId(e.target.value)} aria-label="Methodology claim" disabled={submitting}
+                  placeholder="no candidate list is published — type the id" />
               </span>
               <span className="exec-gov-k">gate</span>
               <span className="exec-gov-v">R1 — research evidence. R2 (capital) requires an approved R1 and opens from its decision.</span>
             </div>
             <div className="exec-gov-kvfoot">
-            {"warn" in alpha && alpha.warn ? (
-              <p className="exec-gate-note" data-tone="warn" role="note">! {alpha.warn}</p>
+            {alpha && alpha.label.includes("already in the loop") ? (
+              <p className="exec-gate-note" data-tone="warn" role="note">! {alpha.label}</p>
             ) : null}
             <p className="exec-gate-note">
               ids picked from registries — never free-typed · an id the server registry does not know
@@ -227,7 +253,7 @@ export function NewApprovalRequestScreen({
               ? "submitting — the button stays down so a double-click cannot create two approvals"
               : ready
                 ? "submit opens a PENDING R1 row — the reviewer, not you, decides"
-                : `summary needs at least ${MIN_SUMMARY} characters — it is the reviewer's first sentence`,
+                : blocker,
         ]}
         actions={
           settled ? (
@@ -250,7 +276,7 @@ export function NewApprovalRequestScreen({
                 ? "Submitting — the button stays down so a double-click cannot create two approvals."
                 : ready
                   ? undefined
-                  : `The summary needs at least ${MIN_SUMMARY} characters before this can be submitted.`}
+                  : `${blocker[0].toUpperCase()}${blocker.slice(1)}.`}
               onClick={() => onSubmit({ alphaId, evidenceRunId: runId, methodologyClaimId: claimId, summary: summary.trim() })}
             >
               {outcome?.kind === "failed" ? "Retry submit" : "Submit for R1 review"}

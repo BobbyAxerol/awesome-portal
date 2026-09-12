@@ -1928,3 +1928,11 @@ change. See the single [main phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PL
 for exact routes, gates and remaining action-level product boundaries.
 No runtime deployment, source connection, push, PR, merge or main/stable change.
 BE-R2-9 and the later BE-R2-7 operational gate are not silently marked complete.
+
+**2026-09-12 BE-R2-9 approved/in progress:** metadata-only bounded shared tails,
+data-before-status and subscriber cursor correctness, failure cleanup, exact
+statistics work, ref-counted GET/SSE cancellation and unchanged rich UI are now
+implemented. Current-source runtime flags remain unchanged at this checkpoint.
+See the [main phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance)
+for measured evidence, Claude integration, dev-only procedure and remaining
+gate status. Feature push/PR/CI repair are approved; merge/main/stable are not.

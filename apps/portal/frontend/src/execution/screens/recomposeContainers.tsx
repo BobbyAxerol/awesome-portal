@@ -26,7 +26,7 @@ import { utcStamp } from "../time";
 import { pageOf } from "../api/profileRows";
 import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { useParamState } from "../routeState";
-import { type Loaded, useApiRead } from "./profileContainers";
+import { type Loaded, useApiRead, scopedReadApi } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
 import { type ReplaySource, TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
@@ -276,11 +276,11 @@ function combinedFacts(resource: QueryAnalytics | null, additive: QueryAnalytics
 /* ── stage overviews ──────────────────────────────────────────────────── */
 
 export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
-  const realtime = useProfileRealtime("paper");
+  const realtime = useProfileRealtime("paper", "PAPER_TRADING_SCREEN");
   // The realtime channel bumps `refreshKey`; without `keepValue` every bump
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getScreenProfile("paper"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
   /*
    * Phase 4: `/derivations/source-health` answered 200 for weeks with no
    * caller. Command Center gets the same facts inside its composition, so a
@@ -289,7 +289,7 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
    * loop. The read is shared for the session by `useApiRead`'s own memo per
    * container, one request per visit.
    */
-  const health = useApiRead(() => api.getSourceHealthRead(), [api]);
+  const health = useApiRead((signal) => scopedReadApi(api, signal).getSourceHealthRead(), [api, realtime.source.state, realtime.source.reasonCode]);
   const paper = health.value?.profiles.find((row) => row.environment === "paper") ?? null;
   return (
     <PaperOverview
@@ -318,11 +318,11 @@ export const SANDBOX_RELATIONS = {
 } as const;
 
 export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
-  const realtime = useProfileRealtime("sandbox");
+  const realtime = useProfileRealtime("sandbox", "SANDBOX_TRADING_SCREEN");
   // The realtime channel bumps `refreshKey`; without `keepValue` every bump
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("sandbox"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getScreenProfile("sandbox"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
   const relations = useRelationFacts(api, "sandbox", state.status !== "loading", SANDBOX_RELATIONS);
   const panels = sandboxPanels({
     relations: relations.value,
@@ -333,29 +333,29 @@ export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
 }
 
 export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
-  const realtime = useProfileRealtime("live");
+  const realtime = useProfileRealtime("live", "LIVE_OPERATIONS_SCREEN");
   // The realtime channel bumps `refreshKey`; without `keepValue` every bump
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getScreenProfile("live"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
   return <LiveOverview envelope={state.value} status={state.status} reason={state.reason} realtimePhase={realtime.phase} sourceRecovery={realtime.source} />;
 }
 
 /* ── paper workbench ──────────────────────────────────────────────────── */
 
 export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "paper" }: { api: ExecutionApi; deploymentId: string; variant?: "paper" | "vnm" }) {
-  const realtime = useProfileRealtime("paper");
+  const realtime = useProfileRealtime("paper", variant === "vnm" ? "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN" : "EXECUTION_PAPER_WORKBENCH_SCREEN");
   // `keepValue` matters more here than anywhere else on the surface: this
   // profile is 7.4 MB on dev and takes ~6s to answer, and the realtime channel
   // bumps `refreshKey` shortly after it connects. Without it the second read
   // tore the whole workbench back down to a skeleton, so the screen showed
   // "Loading" for ~20s — two full fetches — before it ever painted.
   const state = useApiRead<ProfileEnvelope>(
-    () => api.getPaperWorkbenchProfile(deploymentId, variant),
+    (signal) => scopedReadApi(api, signal).getPaperWorkbenchProfile(deploymentId, variant),
     [api, deploymentId, variant, realtime.refreshKey],
     { keepValue: true, identity: [api, deploymentId, variant] },
   );
-  const qualityState = useApiRead<DeploymentQuality>(() => api.getDeploymentQuality(deploymentId, "paper"), [api, deploymentId, realtime.refreshKey], { keepValue: true, identity: [api, deploymentId] });
+  const qualityState = useApiRead<DeploymentQuality>((signal) => scopedReadApi(api, signal).getDeploymentQuality(deploymentId, "paper"), [api, deploymentId, realtime.refreshKey], { keepValue: true, identity: [api, deploymentId] });
   const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
   const navigate = useNavigate();
   const profile = state.value;
@@ -463,8 +463,8 @@ function blotterRowOf(row: Record<string, unknown>): BlotterRow {
 export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
   const [filter, setFilter] = useParamState<BlotterFilter>("filter", BLOTTER_FILTERS, "ALL");
   const [cursor, setCursor] = useState<string | null>(null);
-  const realtime = useProfileRealtime("paper");
-  const state = useApiRead<ProfileEnvelope>(() => api.getBlotterProfile({
+  const realtime = useProfileRealtime("paper", "EXECUTION_FULL_BLOTTER_SCREEN");
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getBlotterProfile({
     limit: 50,
     ...(cursor ? { after: cursor } : {}),
     ...(filter === "ALL" ? {} : { status_bucket: filter }),
@@ -486,8 +486,8 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
     [blotterGroups],
   );
   const conditionalGroup = useApiRead(
-    () => (conditionalGroupId
-      ? api.getConditionalGroup(conditionalGroupId, "paper")
+    (signal) => (conditionalGroupId
+      ? scopedReadApi(api, signal).getConditionalGroup(conditionalGroupId, "paper")
       : Promise.resolve({ ok: true as const, value: null })),
     [api, conditionalGroupId],
   );
@@ -1395,9 +1395,9 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
   // the finding, not a rendering problem to smooth over. The footer names
   // whichever one was drawn.
   const context = useApiRead<MarketContextCandles>(
-    () => !activeSymbol || !range || !venue || !environment
+    (signal) => !activeSymbol || !range || !venue || !environment
       ? Promise.resolve(unavailable("No symbol, range or environment to read the Trading System's candles for."))
-      : api.getMarketContextCandles({
+      : scopedReadApi(api, signal).getMarketContextCandles({
           environment,
           venue,
           instrument: activeSymbol,
@@ -1410,11 +1410,11 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
     { keepValue: true },
   );
   const market = useApiRead<MarketCandlesPayload>(
-    () => !activeSymbol || !range
+    (signal) => !activeSymbol || !range
       ? Promise.resolve(unavailable("No symbol among this alpha's events to read candles for."))
       : venue === null
         ? Promise.resolve(unavailable(`No public klines for venue ${events.venue ?? "(not published)"} — MARKET_CANDLES_VENUE_UNSUPPORTED.`))
-        : api.getMarketCandles({ environment: relationValue?.environment ?? "paper", venue, symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit }),
+        : scopedReadApi(api, signal).getMarketCandles({ environment: relationValue?.environment ?? "paper", venue, symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit }),
     [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue, relationValue?.environment],
     { keepValue: true },
   );
@@ -1533,8 +1533,8 @@ export function ObservedTimelineLive({ api, environment, environments, subjectKi
    * has no tiles to feed.
    */
   const own = useApiRead<ObservedTimeline>(
-    () => (preloaded === undefined
-      ? api.getObservedTimeline({ environment: env, subjectKind, subjectId, limit: 100 })
+    (signal) => (preloaded === undefined
+      ? scopedReadApi(api, signal).getObservedTimeline({ environment: env, subjectKind, subjectId, limit: 100 })
       : Promise.resolve({ ok: false as const, status: "empty" as const, reason: "read by the screen" })),
     [api, env, subjectKind, subjectId, refreshKey, tick, preloaded === undefined],
     { keepValue: true, identity: [api, env, subjectKind, subjectId, preloaded === undefined] },
@@ -1623,22 +1623,22 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   // EDS-04: exact resource identity and all current source rows arrive through
   // one named server BFF. Fleet remains the root register only; a detail route
   // never searches its first bounded page in the browser.
-  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true, identity: [api, alphaId] });
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"], "EXECUTION_ALPHA_360_SCREEN");
+  const resourceState = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true, identity: [api, alphaId] });
   // Tile 10 compares the stages this alpha actually runs in, on one calendar.
-  const stageDrift = useApiRead(() => api.getStageDrift(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true, identity: [api, alphaId] });
+  const stageDrift = useApiRead((signal) => scopedReadApi(api, signal).getStageDrift(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true, identity: [api, alphaId] });
   // EDS-05: the rollup is read in the environment the resource resolved to; paper until it says otherwise.
   const activityEnv = resourceState.value?.selectedEnvironment ?? "paper";
   // G8: the observed timeline reads where the alpha is deployed; selected_environment is only the resolver default.
   const observedEnvs = deployedEnvironments(resourceState.value?.panels);
   const factsEnv: ObservedEnvironment = observedEnvs.includes(activityEnv) ? activityEnv : observedEnvs[0] ?? activityEnv;
-  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId, { sourceFacts: false, environment: factsEnv }), [api, alphaId, factsEnv, realtime.refreshKey], { keepValue: true, identity: [api, alphaId, factsEnv] });
+  const analyticsState = useApiRead<QueryAnalytics>((signal) => scopedReadApi(api, signal).getQueryAnalytics("alphas", alphaId, { sourceFacts: false, environment: factsEnv }), [api, alphaId, factsEnv, realtime.refreshKey], { keepValue: true, identity: [api, alphaId, factsEnv] });
   // One read of the observed timeline for the whole screen: the panel renders
   // it, and the Observed timeline and Mark context tiles draw from the same
   // page. Neither waits on the other's tab being open.
   const observedTick = usePollTick(PROJECTION_POLL_MS);
   const observedState = useApiRead<ObservedTimeline>(
-    () => api.getObservedTimeline({ environment: factsEnv, subjectKind: "alpha", subjectId: alphaId, limit: 100 }),
+    (signal) => scopedReadApi(api, signal).getObservedTimeline({ environment: factsEnv, subjectKind: "alpha", subjectId: alphaId, limit: 100 }),
     [api, factsEnv, alphaId, realtime.refreshKey, observedTick],
     { keepValue: true, identity: [api, factsEnv, alphaId] },
   );
@@ -1646,7 +1646,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   // G9 (EDS-11R1): the replay and the order funnel read the drained relation page set of the alpha's environment
   // Drains once the resource read has answered — ok or not: a subject whose resource is denied or absent still has its rows in the page set (env falls back to the rollup default)
   const relations = useSubjectActivityFacts(api, factsEnv, { kind: "alpha", id: alphaId }, resourceState.status !== "loading", realtime.refreshKey);
-  const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true, identity: [api, alphaId, activityEnv] });
+  const activityState = useApiRead<AlphaActivity>((signal) => scopedReadApi(api, signal).getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true, identity: [api, alphaId, activityEnv] });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   // deep link from the Blotter / a shared URL: `?tab=Trade%20Replay&focus=order:123` (or fill:…)
   const focus = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("focus") : null;
@@ -1788,8 +1788,8 @@ export function PortfolioListRichContainer({ api }: { api: ExecutionApi }) {
   // P4-A / BR-EX-76: the /deployments/portfolios root is the real portfolio
   // register. The default portfolio is whatever the data holds — the route
   // never invents an id.
-  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const state = useApiRead(() => api.listPortfolios(), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"], "EXECUTION_PORTFOLIO_360_SCREEN");
+  const state = useApiRead((signal) => scopedReadApi(api, signal).listPortfolios(), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
   const navigate = useNavigate();
   const status: PanelStatus = state.status === "ok" && state.value?.completeness === "PARTIAL" ? "partial" : state.status;
   return (
@@ -1807,19 +1807,19 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   // EDS-04 resolves the portfolio identity and its exact deployment membership
   // on the server.  The browser does not fetch a Fleet page and re-create the
   // former portfolio/alpha join.
-  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const resourceState = useApiRead<ProfileEnvelope>(() => api.getPortfolio360Resource(portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"], "EXECUTION_PORTFOLIO_360_SCREEN");
+  const resourceState = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getPortfolio360Resource(portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
   const portfolioEnvironment = resourceState.value?.selectedEnvironment ?? "paper";
-  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId, { sourceFacts: false, environment: portfolioEnvironment }), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
-  const correlationState = useApiRead(() => api.getCorrelation(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
-  const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
-  const crossEquityState = useApiRead(() => api.getCrossEquity(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
+  const analyticsState = useApiRead<QueryAnalytics>((signal) => scopedReadApi(api, signal).getQueryAnalytics("portfolios", portfolioId, { sourceFacts: false, environment: portfolioEnvironment }), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
+  const correlationState = useApiRead((signal) => scopedReadApi(api, signal).getCorrelation(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
+  const ledgerState = useApiRead((signal) => scopedReadApi(api, signal).getCapitalLedger(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
+  const crossEquityState = useApiRead((signal) => scopedReadApi(api, signal).getCrossEquity(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
   // EDS-05 capital is a separate book per environment; all three are read and
   // shown as partitions, never folded (the resource's selected environment
   // alone would hide a paper book behind an empty live one).
-  const capitalPaper = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "paper"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
-  const capitalSandbox = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "sandbox"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
-  const capitalLive = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "live"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
+  const capitalPaper = useApiRead<PortfolioCapital>((signal) => scopedReadApi(api, signal).getPortfolioCapital(portfolioId, "paper"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
+  const capitalSandbox = useApiRead<PortfolioCapital>((signal) => scopedReadApi(api, signal).getPortfolioCapital(portfolioId, "sandbox"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
+  const capitalLive = useApiRead<PortfolioCapital>((signal) => scopedReadApi(api, signal).getPortfolioCapital(portfolioId, "live"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
   const portfolioRelations = useRelationFacts(api, portfolioEnvironment, true, PORTFOLIO_RELATIONS);
   // Goal 10: the equity panel drew whatever the relation drain happened to
   // carry — 134 points here — while the EDS-07 route answers the same portfolio
@@ -1828,7 +1828,7 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const [pfRange, setPfRange] = useState<{ fromMs: number; toMs: number } | null>(null);
   const [pfPreset, setPfPreset] = useState<RangePreset | null>("ALL");
   const pfChartState = useApiRead<FinancialChartPayload>(
-    () => api.getFinancialChart({
+    (signal) => scopedReadApi(api, signal).getFinancialChart({
       environment: portfolioEnvironment,
       subjectKind: "portfolio",
       subjectId: portfolioId,
@@ -1942,8 +1942,8 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
 /* ── account/broker 360 ───────────────────────────────────────────────── */
 
 export function AccountBroker360RichContainer({ api, accountId }: { api: ExecutionApi; accountId: string }) {
-  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const state = useApiRead<ProfileEnvelope>(() => api.getAccount360Resource(accountId), [api, accountId, realtime.refreshKey], { keepValue: true, identity: [api, accountId] });
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"], "EXECUTION_ACCOUNT_BROKER_360_SCREEN");
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getAccount360Resource(accountId), [api, accountId, realtime.refreshKey], { keepValue: true, identity: [api, accountId] });
   // EDS-07: the chart is read for the environment and projection workspace the
   // resource resolved to; the server rejects any other workspace, so the id is
   // never guessed here. Viewport = the window width, clamped by the path builder.
@@ -1960,7 +1960,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
     return ids.size === 1 ? [...ids][0]! : null;
   }, [state.value]);
   const accountAnalytics = useApiRead<QueryAnalytics>(
-    () => (accountStrategy ? api.getQueryAnalytics("alphas", accountStrategy, { environment: chartEnv, accountId }) : Promise.resolve(unavailable("The account is not deployed for exactly one strategy; no additive facts."))),
+    (signal) => (accountStrategy ? scopedReadApi(api, signal).getQueryAnalytics("alphas", accountStrategy, { environment: chartEnv, accountId }) : Promise.resolve(unavailable("The account is not deployed for exactly one strategy; no additive facts."))),
     [api, accountId, accountStrategy, chartEnv, realtime.refreshKey],
     { keepValue: true, identity: [api, accountId, accountStrategy, chartEnv] },
   );
@@ -1971,7 +1971,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
   const [chartRange, setChartRange] = useState<{ fromMs: number; toMs: number } | null>(null);
   const [chartPreset, setChartPreset] = useState<RangePreset | null>("ALL");
   const chartState = useApiRead<FinancialChartPayload>(
-    () => api.getFinancialChart({
+    (signal) => scopedReadApi(api, signal).getFinancialChart({
       environment: chartEnv,
       subjectKind: "account",
       subjectId: accountId,
@@ -2128,8 +2128,8 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
   const [filter, setFilter] = useState<FleetFilter>("all");
   // P4-C: the Fleet spans all three profiles; any projection delta revalidates
   // the list in place (coalesced to at most one re-read per second).
-  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const state = useApiRead(() => api.getAlphaFleet(query), [api, query, realtime.refreshKey], { keepValue: true, identity: [api, query] });
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"], "EXECUTION_ALPHA_FLEET_LIST_SCREEN");
+  const state = useApiRead((signal) => scopedReadApi(api, signal).getAlphaFleet(query), [api, query, realtime.refreshKey], { keepValue: true, identity: [api, query] });
   // P0-5: one equity series per alpha is one request per alpha. The row asks
   // for its own when it is expanded and the answer is kept, so a fleet of 48
   // costs nothing until someone looks — and each series is the published one,
@@ -2144,7 +2144,7 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
    * inline at the cost of a single request.
    */
   const sparklines = useApiRead(
-    () => api.getEquitySparklines("paper"),
+    (signal) => scopedReadApi(api, signal).getEquitySparklines("paper"),
     [api, realtime.refreshKey],
     { keepValue: true, identity: [api] },
   );
@@ -2191,8 +2191,8 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
   // is the union of the three streams, the same rule the Fleet and the
   // portfolio register follow. This was the last of the ten list screens with
   // no subscription at all: it re-read only when the operator changed a filter.
-  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const listState = useApiRead(() => api.getBindings(query), [api, query, realtime.refreshKey],
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"], "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN");
+  const listState = useApiRead((signal) => scopedReadApi(api, signal).getBindings(query), [api, query, realtime.refreshKey],
     // The subscription added today ticks this key; the register must not
     // blank itself every time one of the three projections advances.
     { keepValue: true, identity: [api, query] });
@@ -2205,7 +2205,7 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
    * count, the documented route.
    */
   const detailState = useApiRead<BindingItem | null>(
-    () => (bindingId ? api.getBindingDetail(bindingId) : Promise.resolve({ ok: true as const, value: null })),
+    (signal) => (bindingId ? scopedReadApi(api, signal).getBindingDetail(bindingId) : Promise.resolve({ ok: true as const, value: null })),
     [api, bindingId],
   );
   if (bindingId) {

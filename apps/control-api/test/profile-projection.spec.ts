@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { monitorEventLoopDelay, performance } from "node:perf_hooks";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
 import { buildPool } from "../src/db/pool";
@@ -63,6 +64,177 @@ beforeEach(async () => truncateAll(pool));
 afterAll(async () => pool.end());
 
 describe("Phase 1 SGP-local profile projection", () => {
+  it.each(["missing", "journal", "metadata", "health"])("BE-R2-9 terminates %s failure and cleans its tail", async failure => {
+    await commit(document("first"), "one");
+    const realtime = new ExecutionProfileRealtimeService(config, repository);
+    const events: Array<{ event_type: string; terminal: boolean }> = [];
+    await realtime.subscribe(workspaceId,"paper",profileId,undefined,e => { events.push(e); return true; });
+    try {
+      if (failure === "missing") vi.spyOn(repository,"snapshotMetadata").mockResolvedValue(null);
+      if (failure === "metadata") vi.spyOn(repository,"snapshotMetadata").mockRejectedValue(new Error("PG unavailable"));
+      if (failure === "journal") {
+        await commit(document("second"),"two");
+        vi.spyOn(repository,"journalAfter").mockRejectedValue(new Error("PG journal unavailable"));
+      }
+      if (failure === "health") {
+        for (const g of (realtime as any).groups.values()) g.nextHealthCheckAt = 0;
+        vi.spyOn(repository,"refreshHealth").mockRejectedValue(new Error("PG health unavailable"));
+      }
+      await (realtime as any).tick();
+      expect(events.at(-1)).toMatchObject({event_type:"projection.gap",terminal:true});
+      expect(realtime.diagnostics()).toMatchObject({active_scope_groups:0,active_subscribers:0});
+      expect((realtime as any).timer).toBeNull();
+    } finally { vi.restoreAllMocks(); realtime.onApplicationShutdown(); }
+  });
+
+  it("BE-R2-9 delivers data before status and preserves an existing subscriber during a join", async () => {
+    await commit(document("first"),"one");
+    const realtime = new ExecutionProfileRealtimeService(config,repository);
+    const first: any[] = [], second: any[] = [];
+    try {
+      await realtime.subscribe(workspaceId,"paper",profileId,undefined,e => { first.push(e); return true; });
+      await commit(document("second"),"two");
+      await repository.deferRefresh(workspaceId,"paper",profileId,{
+        reasonCode:"TEST_SOURCE_BACKOFF",failedAt:new Date(),retryNotBefore:new Date(Date.now()+30000),
+      });
+      for (const g of (realtime as any).groups.values()) g.nextHealthCheckAt = 0;
+      await realtime.subscribe(workspaceId,"paper",profileId,undefined,e => { second.push(e); return true; });
+      expect(first.map(e=>e.event_type)).toEqual(["snapshot","delta","snapshot"]);
+      expect(first[1].projection_sequence).toBe(2);
+      expect(first[2].payload.snapshot_mode).toBe("STATUS_ONLY");
+      expect(second).toHaveLength(1);
+      expect(second[0].projection_sequence).toBe(2);
+      await (realtime as any).tick();
+      expect(second).toHaveLength(1);
+      // Fan-out retains provenance only, not the business JSONB rows.
+      for (const g of (realtime as any).groups.values()) expect(g.snapshot.document.relations[relationKey].items).toEqual([]);
+    } finally { realtime.onApplicationShutdown(); }
+  });
+
+  it("BE-R2-9 tolerates a commit during journal replay and isolates a throwing subscriber", async () => {
+    const initial = await commit(document("first"),"one");
+    const realtime = new ExecutionProfileRealtimeService(config,repository);
+    const events: any[]=[];
+    try {
+      await realtime.subscribe(workspaceId,"paper",profileId,`${initial.projectionEpoch}:1`,()=>{throw new Error("client disconnected");});
+      await realtime.subscribe(workspaceId,"paper",profileId,`${initial.projectionEpoch}:1`,e=>{events.push(e);return true;});
+      await commit(document("second"),"two");
+      const journal=repository.journalAfter.bind(repository);
+      const spy=vi.spyOn(repository,"journalAfter").mockImplementationOnce(async(...args)=>{
+        await commit(document("third"),"three");return journal(...args);
+      });
+      await (realtime as any).tick();
+      spy.mockRestore();
+      expect(events.filter(e=>e.event_type==="delta").map(e=>e.projection_sequence)).toEqual([2]);
+      await (realtime as any).tick();
+      expect(events.filter(e=>e.event_type==="delta").map(e=>e.projection_sequence)).toEqual([2,3]);
+      expect(realtime.diagnostics()).toMatchObject({active_subscribers:1,counters:{slowReaderDrops:1}});
+    } finally {vi.restoreAllMocks();realtime.onApplicationShutdown();}
+  });
+
+  it("BE-R2-9 slow Paper IO does not serialize a healthy Live tail behind it", async () => {
+    await commit(document("paper"),"one");
+    const live=document("live");live.environment="live";live.profile_id="LIVE_BINANCE_USDM";
+    live.relations[relationKey].items[0].lineage.profile_id=live.profile_id;
+    await commit(live,"live-one");
+    const realtime = new ExecutionProfileRealtimeService(config,repository);
+    const events:any[]=[];
+    let release!:(value:any)=>void;
+    try {
+      await realtime.subscribe(workspaceId,"paper",profileId,undefined,()=>true);
+      await realtime.subscribe(workspaceId,"live",live.profile_id,undefined,e=>{events.push(e);return true;});
+      live.relations[relationKey].items[0].fields.name="changed";
+      await commit(live,"live-two");
+      const metadata=repository.snapshotMetadata.bind(repository);
+      vi.spyOn(repository,"snapshotMetadata").mockImplementation((ws,env,profile)=>env==="paper"
+        ? new Promise(done=>{release=done;}) : metadata(ws,env,profile));
+      const pending=(realtime as any).tick();
+      try {
+        await vi.waitFor(()=>expect(events.some(e=>e.event_type==="delta")).toBe(true),{timeout:1000});
+      } finally {release(await metadata(workspaceId,"paper",profileId));await pending;}
+    } finally {vi.restoreAllMocks();realtime.onApplicationShutdown();}
+  });
+
+  it("BE-R2-9 shares identical snapshot reads without sharing transaction captures or identities", async () => {
+    await commit(document("shared"),"one");
+    const query = vi.spyOn(pool,"query");
+    try {
+      const a = repository.snapshot(workspaceId,"paper",profileId);
+      const b = repository.snapshot(workspaceId,"paper",profileId);
+      const [one,two] = await Promise.all([a,b]);
+      expect(one).toBe(two);
+      expect(query).toHaveBeenCalledTimes(1);
+      await repository.snapshot(workspaceId,"paper",profileId);
+      expect(query).toHaveBeenCalledTimes(2); // no result cache
+      await repository.snapshot(workspaceId,"live","LIVE_BINANCE_USDM");
+      expect(query).toHaveBeenCalledTimes(3);
+    } finally { query.mockRestore(); }
+  });
+
+  it("BE-R2-9 real 60s three-profile/two-replica fan-out has zero unchanged full-payload tail reads", async () => {
+    const replicas = [new ExecutionProfileRealtimeService(config,repository),new ExecutionProfileRealtimeService(config,new ExecutionProfileProjectionRepository(pool))];
+    const profiles = ["paper","sandbox","live"] as const;
+    const make = (env: typeof profiles[number], id: string) => {
+      const value = document(id); value.environment = env; value.profile_id = `${env.toUpperCase()}_BINANCE_USDM`;
+      for (const rel of Object.values(value.relations)) for (const item of rel.items) item.lineage.profile_id = value.profile_id;
+      return value;
+    };
+    const events: Array<{ event_type: string; received_at: string }> = [];
+    const stops: Array<() => void> = [];
+    const payloadRead = vi.spyOn(repository,"snapshot");
+    const eventLoop = monitorEventLoopDelay({resolution:20}); eventLoop.enable();
+    try {
+      for (const env of profiles) await commit(make(env,"initial"),`test-${env}`);
+      for (const count of [1,10,50]) {
+        for (const replica of replicas) for (const env of profiles) {
+          for (let i=0;i<count;i++) stops.push(await replica.subscribe(workspaceId,env,`${env.toUpperCase()}_BINANCE_USDM`,undefined,e => { events.push(e); return true; }));
+        }
+        if (count !== 50) { stops.splice(0).forEach(stop=>stop()); }
+      }
+      let fullReads = 0, metadataReads = 0, queryBytes = 0;
+      const queryMs: number[] = [];
+      const original = pool.query.bind(pool);
+      const query = vi.spyOn(pool,"query").mockImplementation(((...args: any[]) => {
+        const sql = typeof args[0] === "string" ? args[0] : args[0].text;
+        if (/SELECT[\s\S]*FROM execution_profile_projection_snapshots/i.test(sql)) {
+          if (/\bpayload\b/.test(sql)) fullReads++; else metadataReads++;
+        }
+        const start = performance.now();
+        return (original as any)(...args).then((result: any) => {
+          queryMs.push(performance.now()-start); queryBytes += Buffer.byteLength(JSON.stringify(result.rows)); return result;
+        });
+      }) as any);
+      const start = performance.now();
+      await new Promise(done=>setTimeout(done,60_000));
+      expect(fullReads).toBe(0);
+      expect(metadataReads).toBeGreaterThan(1000);
+      expect(metadataReads).toBeLessThanOrEqual(6*241);
+      const latencies: number[] = [];
+      for (let i=0;i<6;i++) {
+        const env = profiles[i%3];
+        events.length = 0;
+        await commit(make(env,`revision-${i}`),`revision-${i}`);
+        const committed = performance.now();
+        while (events.filter(e=>e.event_type === "delta").length < 100 && performance.now()-committed<2000) {
+          await new Promise(done=>setTimeout(done,10));
+        }
+        expect(events.filter(e=>e.event_type === "delta")).toHaveLength(100);
+        latencies.push(performance.now()-committed);
+      }
+      const p95 = (values: number[]) => [...values].sort((a,b)=>a-b)[Math.ceil(values.length*.95)-1];
+      expect(p95(latencies)).toBeLessThanOrEqual(2000);
+      console.log("BE_R2_9_ISOLATED_COST",JSON.stringify({duration_ms:Math.round(performance.now()-start),
+        replicas:2,profiles:3,subscribers_per_scope:50,unchanged_full_payload_reads:0,metadata_reads:metadataReads,
+        total_query_bytes:queryBytes,pg_query_p95_ms:p95(queryMs),commit_to_fanout_p95_ms:p95(latencies),
+        event_loop_p95_ms:eventLoop.percentile(95)/1e6,rss_bytes:process.memoryUsage().rss,
+        diagnostics:replicas.map(r=>r.diagnostics())}));
+      query.mockRestore();
+    } finally {
+      eventLoop.disable(); stops.forEach(stop=>stop()); replicas.forEach(r=>r.onApplicationShutdown());
+      payloadRead.mockRestore(); vi.restoreAllMocks();
+    }
+  },90_000);
+
   it("allows only one active writer lease per workspace/profile", async () => {
     expect(await repository.tryAcquireLease(workspaceId, "paper", profileId, "replica-a", 60_000))
       .toBe(true);

@@ -395,7 +395,7 @@ def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
     ]:
         require(token in service, f"BR-EX-76 portfolio service boundary missing: {token}")
     require("PortfolioListQuerySchema" in controller, "BR-EX-76 portfolio route validation missing")
-    for token in ["PortfolioListRichContainer", "api.listPortfolios()"]:
+    for token in ["PortfolioListRichContainer", "scopedReadApi(api, signal).listPortfolios()"]:
         require(token in recompose, f"BR-EX-76 portfolio register consumer missing: {token}")
     require(acceptance["accepted_scope"]["br_ex_72"]["status"] == "COMPLETE", "BR-EX-72 acceptance state drifted")
     require({item["blocker_id"] for item in debt["resolved_delivery_gates"]} == {"N29-FE-01", "N29-BE-72"}, "BR-EX-72 resolved gate missing")

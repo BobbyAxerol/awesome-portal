@@ -10191,3 +10191,20 @@ boundary” nay được thay bằng writer/invariant cụ thể, không còn al
 Gates/counts nằm trong main journal; route/table machine inventories được cập nhật
 cho source mới, **không** thay các row count runtime đã quan sát trước đây bằng số
 test. Browser chạy ở bản sao dùng riêng, giữ nguyên evidence dirty của Claude.
+
+## A71 — BE-R2-9 integration checkpoint (2026-09-12, Codex)
+
+Bobby đã duyệt implementation, dev-only acceptance, feature push/PR và sửa CI;
+không merge/deploy main hoặc stable. Xem [main journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance)
+và [handoff §8.61](../../../../apps/portal/registry/FRONTEND_HANDOFF.md#861-be-r2-9-shared-realtimeread-lifecycle-2026-09-12).
+
+- Giữ composition, tokens và các commit Claude; không thay rich UI bằng envelope.
+- Metadata tail, cursor ordering/failure cleanup, exact statistics scope; shared
+  GET/SSE, abort lifecycle và invalidation đúng named screen đã được sửa cùng
+  test. Heartbeat không biến source RECOVERING thành HEALTHY.
+- Fresh-PG 527 tests/restore và FE 2330 pass/1 skip là checkpoint thực; final
+  combined Rust/browser/CI và deployed-session review được ghi riêng sau đó.
+- Không dùng cookie hết hạn hay nâng quyền user để chụp ảnh; không lấy fixture
+  bằng chứng thay cho dev current-source. Không mở TS command/Live mutation.
+- Claude nên review màu/độ rộng/tab/empty-partial của các route hiện có sau
+  rollout; giữ signal cancellation và screen invalidation khi sửa consumer.

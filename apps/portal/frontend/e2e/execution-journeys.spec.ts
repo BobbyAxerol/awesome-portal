@@ -319,7 +319,7 @@ async function auditRouteControls(page: Page, route: string): Promise<ControlRec
   return records;
 }
 
-test("structural: no enabled control on any preview route is a no-op", async ({ browser }) => {
+test("structural: no enabled control on any preview route is a no-op", async ({ browser }, testInfo) => {
   test.setTimeout(900_000);
   const records: ControlRecord[] = [];
   // A route remains isolated per page/control as before, but four independent
@@ -340,8 +340,10 @@ test("structural: no enabled control on any preview route is a no-op", async ({ 
     records.push(...batch.flat());
   }
   records.sort((left, right) => left.route.localeCompare(right.route) || left.index - right.index);
-  mkdirSync("e2e/el-v2-03-evidence", { recursive: true });
-  writeFileSync("e2e/el-v2-03-evidence/controls.json", JSON.stringify(records, null, 1));
+  const evidencePath = testInfo.outputPath("controls.json");
+  mkdirSync(testInfo.outputDir, { recursive: true });
+  writeFileSync(evidencePath, JSON.stringify(records, null, 1));
+  await testInfo.attach("control-audit", { path: evidencePath, contentType: "application/json" });
   const noops = records.filter((r) => r.verdict === "NO-OP");
   expect(records.length).toBeGreaterThan(100);
   expect(noops.map((r) => `${r.route} #${r.index} ${r.tag} "${r.text}" ${r.detail ?? ""}`)).toEqual([]);

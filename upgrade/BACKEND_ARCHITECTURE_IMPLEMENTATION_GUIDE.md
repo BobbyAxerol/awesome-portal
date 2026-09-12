@@ -2154,3 +2154,17 @@ The authoritative implementation/test/remaining-action record is the
 Fresh-PG tests/restore and networkless frontend/contract/browser tests are not
 runtime evidence. BE-R2-9 remains separately proposed; main/stable, deploy,
 source access, command relay and TS runtime are unchanged.
+
+### 14.1.7 BE-R2-9 authorized integration checkpoint (2026-09-12)
+
+Bobby approved realtime/local-cost repairs, dev-only acceptance, feature PR and
+CI repair. The [single phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance)
+records per-scope metadata tails, serialized cursor delivery, bounded failure
+and cleanup, exact statistics SQL, ref-counted browser streams/GETs, identity
+cancellation, targeted invalidations and ignored browser-run reports. Claude's
+rich composition and newer breadcrumb/approval/empty-row fixes are retained.
+Fresh-PG/restore and frontend gates passed at the checkpoint; final combined
+browser/Rust/CI and legitimate-session dev review are tracked separately, not
+fabricated from fixture evidence. No new Trading System capability or command
+authority is needed. This supersedes the old “BE-R2-9 proposed” state above;
+main/stable rollout and merge remain excluded.

@@ -115,8 +115,11 @@ export class LocalQueryAnalyticsService {
     const depth = await this.subjectDepth(
       context.snapshot, context.workspaceId, environment, context.profileId, subjectKind, subjectId, options.accountId,
     );
-    const statistics = await this.portfolioStatistics(
+    const selectedStrategies = selectSubject(sourceFacts(context.snapshot), subjectKind, subjectId)
+      .strategies.flatMap(row => typeof row.strategy_id === "string" ? [row.strategy_id] : []);
+    const statistics = options.accountId || !selectedStrategies.length ? null : await this.portfolioStatistics(
       context.workspaceId, environment, context.profileId, projectionVersion(context.snapshot),
+      selectedStrategies,
     );
     if (statistics && depth) depth.queries += 1;
     return composeAnalytics(context.snapshot, context.workspaceId, subjectKind, subjectId, depth, statistics, options);
@@ -328,20 +331,20 @@ export class LocalQueryAnalyticsService {
    * history" tiles compute locally the moment two alphas overlap ten days.
    */
   /**
-   * Fleet-wide correlation and drawdown overlap, memoised per projection version.
+   * Exact-scope correlation and drawdown overlap, memoised per projection version.
    *
-   * These are a pure function of one projection's 90-day daily closes: the
-   * subject does not enter the computation at all, so every deployment's
+   * Previously the subject did not enter the computation, so every deployment's
    * workbench and every alpha's 360 recomputed the same 43-alpha, 903-pair
    * result. Measured on dev 2026-09-08 it was 3.1s of a 4.6s workbench read.
    *
    * The key is the projection's own epoch and sequence, so this is not a
    * time-based cache that can serve a figure older than the data: a refreshed
-   * projection has a new sequence and misses. Only the newest version is kept
-   * — an operator moving between deployments reads one projection, and holding
-   * older ones would be memory spent on answers nobody will ask for again.
+   * projection has a new sequence and misses. BE-R2-9 also keys by exact
+   * strategy set/workspace/profile, pushes strategy filtering into SQL and
+   * bounds the cache to 12 entries/60s, with at most eight in-flight reads.
    */
-  private statisticsCache: { key: string; value: PortfolioStatistics | null } | null = null;
+  private readonly statisticsCache = new Map<string, { until: number; value: PortfolioStatistics | null }>();
+  private readonly statisticsFlights = new Map<string, Promise<PortfolioStatistics | null>>();
 
   /**
    * What Portfolio 360 needs from the local projection in one read: the
@@ -374,9 +377,9 @@ export class LocalQueryAnalyticsService {
       if (typeof strategyId === "string" && strategyId.length > 0) strategies.add(strategyId);
     }
     const version = projectionVersion(context.snapshot);
-    const statistics = await this.portfolioStatistics(
-      context.workspaceId, environment, context.profileId, version,
-    );
+    const statistics = strategies.size ? await this.portfolioStatistics(
+      context.workspaceId, environment, context.profileId, version, [...strategies],
+    ) : null;
     return {
       statistics, strategies: [...strategies], version,
       inputAsOf: context.snapshot.sourceAsOf?.toISOString() ?? null,
@@ -546,18 +549,35 @@ export class LocalQueryAnalyticsService {
     environment: ProjectionEnvironment,
     profileId: string,
     version: string,
+    strategyIds?: readonly string[],
   ): Promise<PortfolioStatistics | null> {
     if (typeof this.repository.timeSeriesDailyCloses !== "function") return null;
-    const key = `${workspaceId}:${environment}:${profileId}:${version}`;
-    if (this.statisticsCache?.key === key) return this.statisticsCache.value;
+    const key = JSON.stringify([workspaceId,environment,profileId,version,strategyIds?.slice().sort() ?? null]);
+    const cached = this.statisticsCache.get(key);
+    if (cached && cached.until > Date.now()) return cached.value;
+    const pending = this.statisticsFlights.get(key);
+    if (pending) return pending;
+    if (this.statisticsFlights.size >= 8) return null;
+    const read = this.loadStatistics(workspaceId,environment,profileId,strategyIds).then(value => {
+      if (value) {
+        if (this.statisticsCache.size >= 12) this.statisticsCache.delete(this.statisticsCache.keys().next().value!);
+        this.statisticsCache.set(key,{until:Date.now()+60_000,value});
+      }
+      return value;
+    });
+    this.statisticsFlights.set(key,read);
+    try { return await read; } finally { this.statisticsFlights.delete(key); }
+  }
+
+  private async loadStatistics(workspaceId: string, environment: ProjectionEnvironment, profileId: string,
+    strategyIds?: readonly string[]): Promise<PortfolioStatistics | null> {
     try {
       const closes = await this.repository.timeSeriesDailyCloses(
         workspaceId, environment, profileId,
         "manager.performance:account_equity_snapshots",
-        { from: new Date(Date.now() - 90 * 86_400_000).toISOString(), valueField: "equity" },
+        { from: new Date(Date.now() - 90 * 86_400_000).toISOString(), valueField: "equity", strategyIds },
       );
       const value = computePortfolioStatistics(closes);
-      this.statisticsCache = { key, value };
       return value;
     } catch {
       // A failure is not cached: the next read should try again rather than

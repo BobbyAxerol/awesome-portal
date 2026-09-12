@@ -15,6 +15,7 @@
  * mapping. The transport, the error mapping and the policy gate are done.
  */
 import { readMirrorIntegrity } from "../mirrorIntegrity";
+import { sharedRead } from "./sharedRead";
 import { normaliseScreenBody, SCREEN_CONTRACT_MISMATCH, SCREEN_V2_MEDIA_TYPE } from "./screenV2";
 import {
   panelStatusForHttp,
@@ -101,7 +102,7 @@ type CapitalPreviewRequest = components["schemas"]["CapitalPreviewRequest"];
 const BASE = "/api/v1/execution";
 
 /** Same-origin only. The browser never talks to the AWS edge (master plan §9.1). */
-async function get(path: string, signal?: AbortSignal): Promise<Response> {
+async function rawGet(path: string, signal?: AbortSignal): Promise<Response> {
   // Screen operations negotiate V2, which sends each collection once. Every
   // other read keeps the plain JSON accept it has always had.
   const accept = path.startsWith("/screens/")
@@ -203,9 +204,12 @@ export interface HttpApiOptions {
   /** Registry revision 4 policy for the screen this client serves. */
   policy: DeliveryPolicy | null;
   signal?: AbortSignal;
+  readScope?: object;
 }
 
-export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi {
+export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions): ExecutionApi {
+  const get = (path: string, currentSignal = signal) => sharedRead(readScope, path, currentSignal,
+    (sharedSignal) => rawGet(path, sharedSignal));
   /**
    * N29-FE-01: reads never pre-block on registry metadata. The server is the
    * enforcer — a refusal arrives as its own typed status and is rendered
@@ -566,6 +570,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
 
   return {
     createApprovalRequest,
+    withReadSignal: (child: AbortSignal) => createHttpApi({ policy, signal: signal ? AbortSignal.any([signal,child]) : child, readScope }),
     async getReviewCaptureCapabilities(workspaceId: string) {
       const response = await get(`/governance/review-capture-capabilities?workspace_id=${encodeURIComponent(workspaceId)}`,signal);
       if (!response.ok) return problem(response);

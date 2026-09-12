@@ -277,6 +277,8 @@ export interface BlotterQuery {
 }
 
 export interface ExecutionApi {
+  /** Optional on fixtures; real clients share only in-flight GETs in this scope. */
+  withReadSignal?(signal: AbortSignal): ExecutionApi;
   getReviewCaptureCapabilities(workspaceId: string): Promise<Result<import("./reviewCapture").ReviewCaptureCapabilities>>;
   captureR2(input: import("./reviewCapture").R2CaptureInput): Promise<Result<import("./reviewCapture").ReviewCapture>>;
   createPaperExit(input: import("./reviewCapture").PaperExitCreateInput): Promise<Result<import("./reviewCapture").ReviewCapture>>;

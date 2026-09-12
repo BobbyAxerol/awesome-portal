@@ -5475,7 +5475,7 @@ System PostgreSQL, Redis, broker, Source Proxy upstream or shell.
 | BE-R2-6 | governance, V1 compatibility and idempotency closeout — **code complete; runtime unchanged** | Gate/Approval empty shells and workflow verification | BE-R2-3 |
 | BE-R2-7 | immutable release/provenance and product acceptance | final authenticated route/network/visual matrix | accepted BE-R2-1 through BE-R2-6 scope |
 | BE-R2-8 — implemented, source/test closeout | exact read authority, source truth and screen/workflow contract repair | Existing consumer alignment included; new capture form composition remains explicitly unclaimed | Bobby approved §18.6 scope including Portal review/capture; see implementation/gate journal |
-| BE-R2-9 — proposed | realtime correctness, bounded local cost and dev acceptance | Claude: source/transport recovery, cancellation, targeted refresh, unchanged rich UI | accepted BE-R2-8; owner approves the named dev acceptance scope |
+| BE-R2-9 — approved, implementation/gates in progress | realtime correctness, bounded local cost and dev acceptance | Shared hooks integrated; Claude rich composition preserved | Owner approved dev-only acceptance, feature push/PR and CI repair; no main/stable merge |
 
 The proposed execution order is **BE-R2-8 → BE-R2-9 → the existing BE-R2-7
 release gate**. Numbering preserves the earlier journals; it does not create
@@ -6420,8 +6420,10 @@ deployment; new replay authority; rewriting QuantBT or frontend design.
 
 ### BE-R2-9 — Realtime correctness, bounded local cost and dev acceptance
 
-**Status:** `PROPOSED_AWAITING_OWNER_APPROVAL`. **Priority:** second;
-AR-08–11 and the transport/performance half of AR-05/07.
+**Status:** `IN_PROGRESS_OWNER_APPROVED` (2026-09-12). Bobby approved
+implementation, bounded dev acceptance, integration of Claude's commits,
+feature push/PR into dev and CI repair. No main/stable merge or rollout.
+**Priority:** second; AR-08–11 and the transport/performance half of AR-05/07.
 **Goal:** current data remains correct and responsive across refresh, source/PG
 failure, reconnect, tabs and replicas; the exact integrated build is reviewable
 on dev with honest evidence, without affecting main/stable.
@@ -6493,14 +6495,71 @@ deployment workflow is required by the measured defects.
 | Truth and dev runtime | Exact candidate image/build flag/migration031 and current ledger; EMPTY/PARTIAL/DENIED/read_truth/source-recovery + R0 receipt parity on actual dev routes with a legitimate session. No role elevation of another user for screenshots; use a disposable isolated review identity for seeded scenarios. |
 | Regression/release readiness | Full existing Control API fresh-PG/restore, contract/generator, Rust, FE unit/type/build and clean browser gates; same-origin network and zero unexpected React/DOM warnings. No tracked file changes from no-update evidence runs; dev/stable volume/port/image separation and bounded rollback rehearsal. |
 
-**Done so far:** nine audit reproductions only, no fixes/deploys. **Technical
+**Execution slices (2026-09-12):** (1) integrate Claude `61ff826d`, `739dfaad`,
+`edd19496` and merge ancestry; preserve local evidence dirty file, recompute
+combined source digests rather than choose one parent's manifest; (2) metadata
+tail, per-scope serialized bootstrap/replay and explicit bounded failures;
+(3) consumer cancellation, shared in-flight reads and source-state separation;
+(4) isolated protocol/load/cost/browser gates; (5) exact dev image/volume/config
+and migration acceptance with rollback; (6) feature PR and actual CI checks.
+UI layout/token changes are not part of this slice. Latest Claude fixes for
+empty-row fit, resource breadcrumbs and real approval selection remain intact.
+
+**Done so far (2026-09-12 implementation checkpoint):**
+
+- Per-scope serialized bootstrap/tail, subscriber cursor, data-before-status;
+  bounded failures terminate canonically. One slow scope cannot serialize all
+  profiles. Tail reads metadata only when the revision is unchanged; retained
+  fan-out state contains no business row payload. Bounds: 16 scopes, 256
+  subscribers/scope, 32 pending jobs/scope and 2s local IO wait.
+- Exact strategy-set/workspace/profile/revision SQL and statistics coalescing
+  replace repeated whole-fleet work (12 entries/60s, eight in-flight reads).
+  Repository snapshot sharing is in-flight only; transaction captures bypass it.
+- Real React consumers share a per-profile stream and per-client/session GETs,
+  cancel obsolete requests, retain same-identity stale panels and clear other
+  identities. GETs bound 64 flights, 32MiB/body, 64MiB concurrent buffered input,
+  30s; no result cache. Heartbeat/status never advances a data cursor or initiates
+  full-profile refresh. Screen-bound deltas, hidden-tab aggregation and retry
+  deadlines are explicit; VNM uses its own named workbench invalidation.
+- Fixed rejected-relation slot shifting (fills were being interpreted as orders).
+  Runtime browser reports now use ignored Playwright output, not tracked
+  controls/baselines. Explicit no-update is the default, including missing images.
+- Full fresh-PG Control API **527 tests + restore** and frontend **2330 pass,
+  one pre-existing skip** passed before the final counter/backoff refinement.
+  Refined focused gate passes; final combined gates remain required below.
+- Real 60s local PG probe: zero unchanged full-payload tail reads, 300 synthetic
+  subscribers across three profiles/two independent service instances in **one
+  Node process**. Commit→fan-out p95 **247.6ms**, PG query (including pool wait)
+  p95 **3.09ms**, event loop p95 **20.71ms**, RSS **137.7MB**, no drops/read failures.
+  This is not two OS replicas or a PG→browser render latency measurement. The
+  actual producer→React hook→DOM protocol test is a separate synthetic-IO lane.
+- Claude commits through `edd19496` are integrated without dropping history;
+  later `0135e3c7` was discovered during re-fetch and must also be merged before
+  push. Its shorter approval placeholders/truthful registry copy are compatible.
+  No layout/token rewrite by Codex. No dev/stable runtime verdict at checkpoint.
+
+**Dev procedure:** use `./scripts/portal current-source-projection` with the
+existing private base/profile files plus the last-layer inputs documented in
+`deploy/.env.dev-execution-review.example` through `COMPOSE_ENV_FILES`. It uses
+the same four existing Compose files, not a new deployment workflow. Capture
+current image IDs/volume names/config hash, back up dev PG, build exact clean
+candidate, run only `control-api-migrate`, then `up -d --no-deps --no-build
+control-api portal-web`. Keep old image IDs for an image-only rollback; migration
+032 is additive and must not be rolled down/deleted during image rollback.
+Never run bootstrap, `down -v`, or recreate dependencies. Project `portal`,
+loopback8080 and dev domain are distinct from stable project/18081/volumes.
+Existing expired review cookies are not authority to forge sessions or reset
+Bobby; actual authenticated dev visual acceptance requires a legitimate session.
+
+**Technical
 debt exit:** every AR-08–11 and delegated AR-05/07 item has a normal regression
 test and measured acceptance result, including errors and cleanup. Phase8's
 explicit workflow scope and TS gaps remain accurately labelled, not hidden.
 
 **Next / release boundary:** return the exact candidate SHA, manifest inputs,
-gates and dev review URLs to Bobby. Push/PR/merge and main/stable rollout remain
-separate owner decisions. The existing BE-R2-7 pipeline then supplies signed
+gates and dev review URLs to Bobby. Feature push/PR and CI repair are approved
+in this request; merge and main/stable rollout remain separate owner decisions.
+The existing BE-R2-7 pipeline then supplies signed
 images/SBOM/provenance and independently collected runtime-binding markers;
 **BE-R2-9 dev acceptance is not `PRODUCT_ACTIVE` for a new stable release**.
 
@@ -6510,7 +6569,7 @@ images/SBOM/provenance and independently collected runtime-binding markers;
    capture paths in AR-06. Do not ask again. Implementation and source-only
    acceptance are recorded above; unavailable source verdicts and unbuilt new
    visual capture forms remain explicit, not claimed as delivered promotion.
-2. Approve **BE-R2-9** after phase8, including bounded dev-only integration,
+2. **BE-R2-9 approved 2026-09-12**, including bounded dev-only integration,
    migration/test/rollback scope above. Main/stable and TS command mutation
    remain excluded; no new infrastructure or TS owner request is needed for
    the verified Portal defects.

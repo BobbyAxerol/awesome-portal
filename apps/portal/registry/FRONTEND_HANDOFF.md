@@ -2389,3 +2389,24 @@ No frontend fixture is injected into shared dev/stable. Canonical R1, five SSE
 events and three capture responses are exercised by actual readers; schema/type
 generation remains mandatory. Do not overwrite the existing dirty
 `e2e/el-v2-03-evidence/controls.json` during browser verification.
+
+### 8.61 BE-R2-9 shared realtime/read lifecycle (2026-09-12)
+
+Codex integrated the frozen consumer changes, not a redesign: one ref-counted
+stream per needed profile, per-screen invalidations, shared in-flight same-origin
+GETs bound to their client/session, abort on identity change/unmount, and stable
+last-good panels while recovering. Status-only/heartbeat is not a new data cursor
+or reason to refresh; source recovery remains visible. Hidden tabs accumulate one
+bounded invalidation. Server retry deadlines are honoured, never capped earlier.
+Failed relation reads keep their original slot: fills cannot become orders.
+
+Claude's empty-row sizing, real resource breadcrumbs and approval selection are
+kept. Please preserve the `screenId` on realtime hooks and `scopedReadApi(api,
+signal)` in `useApiRead`; a new panel should reuse these boundaries, not add its
+own full-profile polling/stream. New capture forms from §8.60 remain separately
+unclaimed, and no source promotion/command is enabled. Review rich routes and
+sub-tabs on actual dev with Bobby's legitimate session after exact rollout;
+fixture screenshots cannot prove current data/auth acceptance. Run reports now
+go to ignored Playwright output, and missing baselines fail without an explicit
+reviewed update. Current gate/provenance status is maintained in the
+[BE-R2-9 journal](../../../upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance).
