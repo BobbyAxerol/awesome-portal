@@ -1718,7 +1718,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
         // extra branches numbered after them, so tile 8 stays tile 8. A branch
         // that already has a hi-fi tile is not repeated further down.
         ? [
-            ...hifiInsightTiles({ analytics: scopedFacts, relations: relations.value, asOf: scopedFacts.asOf, window: scope.window, analyticsUnavailable: analyticsState.status === "ok" ? null : analyticsReason, published: analytics, stageDrift: stageDrift.value }),
+            ...hifiInsightTiles({ analytics: scopedFacts, relations: relations.value, asOf: scopedFacts.asOf, window: scope.window, analyticsUnavailable: analyticsState.status === "ok" || analyticsState.status === "loading" ? null : analyticsReason, analyticsLoading: analyticsState.status === "loading", published: analytics, stageDrift: stageDrift.value }),
             ...analyticsTiles(scopedFacts, scopedFacts.asOf, observedForTiles)
               .filter((tile) => !HIFI_COVERED_TITLES.has(tile.title))
               .map((tile, index) => ({ ...tile, index: HIFI_TILES.length + index + 1 })),

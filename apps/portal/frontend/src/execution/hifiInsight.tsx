@@ -110,6 +110,16 @@ export interface HifiInsightInput {
    */
   analyticsUnavailable?: string | null;
   /**
+   * The analytics read is in flight and the tiles have no answer yet.
+   *
+   * Kept apart from `analyticsUnavailable` because they are different facts: a
+   * read that failed has an answer — "no" — and a read still running has none.
+   * Scrolling the fleet fast used to turn every tile `unavailable` while its
+   * data was on the way, which is a screen telling the reader something is
+   * missing when it is merely late.
+   */
+  analyticsLoading?: boolean;
+  /**
    * The analytics envelope as the server sent it, before the resource's own
    * scoped facts were merged over it. The contribution tile reads its
    * performance rows from here: that branch belongs to the analytics read, and
@@ -477,9 +487,15 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
   };
 
   return HIFI_TILES.map((tile) => {
-    const result = input.analyticsUnavailable
+    const settled = input.analyticsUnavailable
       ? { state: "unavailable" as const, reason: input.analyticsUnavailable }
       : outcome(tile.index);
+    // While the read is running, a tile that cannot answer yet waits visibly
+    // instead of reporting an absence it has not established. A tile that can
+    // answer from what is already here keeps answering.
+    const result = input.analyticsLoading && settled.state !== "ok"
+      ? { ...settled, state: "loading" as const, reason: null }
+      : settled;
     return {
       index: tile.index,
       title: tile.title,

@@ -260,6 +260,13 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       // List route (no id) carries no entity; the id is never invented (P4-A).
       case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? null;
       case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return params.accountId ?? search.get("binding") ?? null;
+      /*
+       * A binding opens on the register's own route with `?binding=`, so the
+       * trail said "Deployments / Accounts & Bindings" over a page about one
+       * binding and named nothing. Same rule as every other detail route: the
+       * tail is the record the URL opened.
+       */
+      case "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN": return search.get("binding");
       case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       case "EXECUTION_GATE_R2_REVIEW_SCREEN":
       case "EXECUTION_GATE_LIVE_REVIEW_SCREEN": return params.approvalId ?? null;
