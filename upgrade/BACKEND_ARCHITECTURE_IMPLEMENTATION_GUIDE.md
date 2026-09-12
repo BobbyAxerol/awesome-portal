@@ -2180,3 +2180,35 @@ expiry review. Stable unchanged. PR63 exists, not merged. Main BE-R2-9 journal
 records exact image IDs,527 backend/395 Rust/2331 frontend tests,10 visual failures,
 and the still-unclaimed multi-process/PG→DOM measurement. Full phase/release is
 not marked complete merely because the backend candidate is deployed.
+
+### 14.1.8 PR #64 release-evidence hygiene repair (2026-09-12)
+
+Protected CI correctly stopped before the remaining backend suite completed
+because BAR-05 freeze digests no longer matched four intentionally changed
+frozen artifacts (`compose.yaml`, `.env.example`, Nginx configuration and the
+Control API package manifest).  The canonical BAR-05 and BAR-16 exporters are
+therefore rerun together in the repair commit; they remain generated evidence,
+not hand-edited release claims.
+
+The BAR-16 tracked-source hygiene scan also treated a literal password-shaped
+value in `apps/control-api/test` as runtime source.  It now excludes the named
+test-only directory classes `test`, `tests`, `__tests__` and `e2e`, with a
+regression proving a planted source-root secret is still detected.  This closes
+the false positive without weakening production-source scanning.  Required
+gates are the focused BAR-05/BAR-16 tests followed by the same full Portal
+backend and workspace verification used by CI.  No UI composition, command
+authority, external source, runtime flag, deploy or stable state changes in
+this repair.
+
+### 14.1.9 PR #64 composed-smoke image reliability repair (2026-09-12)
+
+The final CI smoke failure was isolated to composition bootstrap, not product
+logic or the visual application. Docker Hub no longer resolves the historical
+MinIO image, while the immutable identical OCI index remains available from
+Quay. Local/CI and the future stable overlay pin that index by digest. The
+smoke script now builds each owned producer image before `up --no-build`; this
+prevents `quant-worker-py`, which correctly shares the API image but has no
+independent build stanza, from racing an unavailable CI-only image pull. A
+focused static test locks both invariants. The stable overlay source change is
+not a deploy or restart, and no frontend, command or external-source authority
+changes in this repair.

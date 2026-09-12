@@ -11,7 +11,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 import { stubExecutionBff } from "./bffDouble";
-import { freezeClock, settle, stubPortalApi, usePreferences } from "./fixtures";
+import { FROZEN_NOW, freezeClock, settle, stubPortalApi, usePreferences } from "./fixtures";
 
 async function open(page: Page, route: string) {
   await freezeClock(page);
@@ -26,6 +26,30 @@ async function open(page: Page, route: string) {
   // double emits one finite heartbeat, so network-idle is the exact stable
   // boundary for this controlled browser corpus.
   await page.waitForLoadState("networkidle");
+  await settle(page);
+}
+
+/**
+ * Pin every displayed age back to the frozen origin before the shutter opens.
+ *
+ * `useNow` is deliberately NOT frozen on a product route — an age that stops
+ * ticking tells an operator the deadline is further away than it is. The
+ * Approval Inbox prints that age to the SECOND, so the digit in the frame is
+ * decided by how long the page took to settle, which is machine load rather
+ * than product truth: two runs of identical code recorded `21h 59m 58s` and
+ * `21h 59m 57s`, and the baseline itself was recorded at `22h 00m 00s`.
+ *
+ * `setFixedTime` puts `Date.now()` back on FROZEN_NOW while leaving the timers
+ * running, and one `runFor` lets the live interval fire once so every age
+ * re-renders from that fixed origin — `useAgeTick` then floors to zero and the
+ * shutter sees the same second on every machine. The ticking behaviour itself
+ * is a unit concern (`listMotion.test.ts`), not something a screenshot can
+ * assert without becoming flaky. This is the same determinism `pollAllowed()`
+ * already gives the fixture lab, applied where the lab rule does not reach.
+ */
+async function freezeAges(page: Page) {
+  await page.clock.setFixedTime(FROZEN_NOW);
+  await page.clock.runFor(1_100);
   await settle(page);
 }
 
@@ -395,6 +419,7 @@ test.describe("EL-V2-04 · Paper reference slice", () => {
       await open(page, route);
       // paper-vnm: 9/9 green in isolation (2026-08-26); under a full-suite load
       // its charts occasionally paint a frame late. Tolerance scoped to it.
+      await freezeAges(page);
       await expect(page).toHaveScreenshot(`el-v2-04-${name}.png`, { fullPage: true, animations: "disabled", ...(name === "paper-vnm" ? { maxDiffPixelRatio: 0.02 } : {}) });
     });
   }
@@ -456,6 +481,7 @@ test.describe("EL-V2-05 · governance chain", () => {
   ] as const) {
     test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
       await open(page, route);
+      await freezeAges(page);
       await expect(page).toHaveScreenshot(`el-v2-05-${name}.png`, { fullPage: true, animations: "disabled" });
     });
   }
@@ -501,6 +527,7 @@ test.describe("EL-V2-06 · stage workbenches", () => {
 
     test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
       await open(page, route);
+      await freezeAges(page);
       await expect(page).toHaveScreenshot(`el-v2-06-${name}.png`, {
         fullPage: true,
         animations: "disabled",
@@ -531,6 +558,7 @@ test.describe("EL-V2-06 · stage workbenches", () => {
 
   test("paper-vnm shell-visible baseline · 1440×900", async ({ page }) => {
     await open(page, "/deployments/paper/dep_vnm/vn-market");
+    await freezeAges(page);
     await expect(page).toHaveScreenshot("el-v2-06-paper-vnm.png", { fullPage: true, animations: "disabled" });
   });
 });
@@ -601,6 +629,7 @@ test.describe("EL-V2-07 · operations workflow", () => {
       // reviewed operator frame is unchanged. This is a *shell-visible*
       // baseline, so capture its specified 1440×900 operator viewport rather
       // than making an inert trailing pixel band release-significant.
+      await freezeAges(page);
       await expect(page).toHaveScreenshot(`el-v2-07-${name}.png`, {
         ...(name === "admin-actions" ? {} : { fullPage: true }),
         animations: "disabled",
@@ -655,7 +684,72 @@ test.describe("EL-V2-08 · analytical surfaces", () => {
       // alpha-tiles: twelve canvases on one page; under a full-suite load one
       // canvas occasionally paints a frame late (3/3 green in isolation,
       // measured 2026-08-25). Tolerance scoped to that one baseline.
+      await freezeAges(page);
       await expect(page).toHaveScreenshot(`el-v2-08-${name}.png`, { fullPage: true, animations: "disabled", ...(name === "alpha-tiles" ? { maxDiffPixelRatio: 0.02 } : {}) });
+    });
+  }
+});
+
+// ── EL-V2-10 · the selected control has to be readable on the product route ──
+/**
+ * `execution-surface-audit` already scores WCAG AA, but it scores the FIXTURE
+ * LAB, where the Governance room's scoped skin is not in the cascade. That
+ * blind spot shipped a white-on-white control: `.exec-gov .exec-inbox-filter`
+ * set a background after the active pairing at equal specificity, so the
+ * selected chip kept `--accent-contrast` text and lost its `--accent-strong`
+ * fill — and in the light themes both tokens are #ffffff. The default "Mine"
+ * chip on `/governance/approvals` rendered as an empty box at 1.00:1.
+ *
+ * The defect class is a scoped override that restates one half of a
+ * foreground/background pair, and it only exists where the scope does: on the
+ * product route. So this sweeps the selected/pressed/current controls of every
+ * route in ROUTES, not one lab page.
+ */
+test.describe("EL-V2-10 · stateful control contrast", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+  for (const route of ROUTES) {
+    test(`the selected control is readable · ${route}`, async ({ page }) => {
+      await open(page, route);
+      const failures = await page.evaluate(() => {
+        const lum = (c: string) => {
+          const [r, g, b] = (c.match(/[\d.]+/g) ?? ["0", "0", "0"]).map(Number);
+          const f = (v: number) => {
+            const x = v / 255;
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+        };
+        const bgOf = (n: HTMLElement): string => {
+          let cur: HTMLElement | null = n;
+          while (cur) {
+            const bg = getComputedStyle(cur).backgroundColor;
+            if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) return bg;
+            cur = cur.parentElement;
+          }
+          return "rgb(0, 0, 0)";
+        };
+        const selected =
+          "[data-active='true'], [aria-pressed='true'], [aria-selected='true'], [aria-current='page']";
+        const out: string[] = [];
+        for (const n of document.querySelectorAll<HTMLElement>(selected)) {
+          const text = (n.textContent ?? "").trim();
+          if (text.length < 2) continue;
+          const s = getComputedStyle(n);
+          if (s.visibility === "hidden" || s.display === "none" || Number(s.opacity) < 0.9) continue;
+          const ratio = (() => {
+            const a = lum(s.color);
+            const b = lum(bgOf(n));
+            return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+          })();
+          const px = parseFloat(s.fontSize);
+          const large = px >= 24 || (px >= 18.66 && Number(s.fontWeight) >= 700);
+          if (ratio < (large ? 3 : 4.5)) {
+            out.push(`${n.className} | ${ratio.toFixed(2)}:1 @${px}px | "${text.slice(0, 40)}"`);
+          }
+        }
+        return [...new Set(out)];
+      });
+      expect(failures).toEqual([]);
     });
   }
 });
