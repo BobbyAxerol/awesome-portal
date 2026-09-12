@@ -44,9 +44,11 @@ SCAN_EXCLUDE = {
     "package-lock.json",
     "*.min.js",
 }
+SCAN_TEST_DIRS = {"test", "tests", "__tests__", "e2e"}
 SCAN_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".json", ".yaml", ".yml", ".sh", ".md", ".sql", ".toml", ".conf", ".example"}
-# Test fixtures and the security-marker allowlists themselves are expected to
-# contain literal secret-shaped strings and are excluded from the scan.
+# Test-only directories, fixtures and the security-marker allowlists themselves
+# may intentionally contain literal secret-shaped strings.  The release gate
+# scans shipped source, not test inputs; production paths remain in scope.
 SCAN_ALLOWLIST = {
     "apps/portal/backend/src/portal_api/repositories/portal_registry.py",
     "apps/portal/backend/src/portal_api/repositories/portal_links.py",
@@ -83,7 +85,7 @@ def hygiene_scan() -> list[dict[str, Any]]:
             continue
         if any(part in SCAN_EXCLUDE for part in relative.parts):
             continue
-        if "tests" in relative.parts:
+        if any(part in SCAN_TEST_DIRS for part in relative.parts):
             continue
         if path.suffix not in SCAN_SUFFIXES:
             continue

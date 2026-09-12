@@ -11,8 +11,10 @@ S3-compatible API (MinIO local/CI) and leaves the production provider open.
 
 ## Decision
 
-- Local/CI: **MinIO** (`minio/minio`) as the private compose service with a
-  dev credential pair; layout mirrors the S3 bucket path one-to-one.
+- Local/CI: **MinIO** (`quay.io/minio/minio@sha256:cd04ea408e185cb50076ea1c3988d444119b19aaae15aab45387ccf14b2a2f86`)
+  as the private compose service with a dev credential pair; layout mirrors
+  the S3 bucket path one-to-one. This is the immutable OCI index previously
+  published under the retired Docker Hub `minio/minio` reference.
 - Production: provider selected by the owner (Cloudflare R2 vs VPS-local
   MinIO vs managed S3) before the first U11 release; the application talks
   only the S3 API and signed object URLs, never provider SDK specifics.

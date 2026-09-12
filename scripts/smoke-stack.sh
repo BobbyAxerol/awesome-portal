@@ -55,7 +55,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"${COMPOSE[@]}" up --detach --build
+# Build the four locally-owned images before starting the composition.
+# `quant-worker-py` intentionally shares `portal-api`'s image but has no
+# `build:` stanza of its own. A one-shot `up --build` lets Compose resolve
+# that shared image concurrently and may try to pull a CI-only tag before its
+# producer build has completed. Separating build from start preserves the
+# shared-image design while making smoke startup deterministic.
+"${COMPOSE[@]}" build portal-api roadmap-task-board-api portal-web control-api
+"${COMPOSE[@]}" up --detach --no-build
 
 health_url="http://127.0.0.1:${PORTAL_HTTP_PORT}/api/health"
 health_ready=false

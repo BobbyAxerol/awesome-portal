@@ -262,7 +262,9 @@ services:
   # U11 local/CI immutable object storage (S3-compatible). The production
   # provider stays ADR-004 owner decision.
   portal-minio:
-    image: minio/minio:RELEASE.2024-09-13T20-26-02Z
+    # Docker Hub no longer distributes this historical MinIO image. Quay
+    # serves the same OCI index, pinned here by its immutable digest.
+    image: quay.io/minio/minio@sha256:cd04ea408e185cb50076ea1c3988d444119b19aaae15aab45387ccf14b2a2f86
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:

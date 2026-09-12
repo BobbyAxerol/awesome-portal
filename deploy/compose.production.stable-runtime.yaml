@@ -57,7 +57,9 @@ services:
       start_period: 10s
 
   portal-minio:
-    image: minio/minio:RELEASE.2024-09-13T20-26-02Z
+    # Keep future stable restarts on the same immutable MinIO OCI index used
+    # by local/CI. Editing this overlay does not restart a stable service.
+    image: quay.io/minio/minio@sha256:cd04ea408e185cb50076ea1c3988d444119b19aaae15aab45387ccf14b2a2f86
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:

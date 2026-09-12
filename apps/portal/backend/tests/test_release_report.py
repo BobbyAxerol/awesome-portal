@@ -60,6 +60,12 @@ def test_hygiene_scan_is_clean_and_detects_planted_secrets(tmp_path: Path) -> No
 
     planted = tmp_path / "leak.py"
     planted.write_text("api_key = \"sk-live-1234567890abcdefghij\"\n", encoding="utf-8")
+    test_fixture = tmp_path / "test" / "local-read-authority.spec.ts"
+    test_fixture.parent.mkdir()
+    test_fixture.write_text(
+        "const password = \"river-falcon-lantern-cloud-morning\";\n",
+        encoding="utf-8",
+    )
     prose = tmp_path / "safe.md"
     prose.write_text("paper order-risk-order-fill-position-PnL path\n", encoding="utf-8")
     original = module.REPO_ROOT
@@ -69,6 +75,7 @@ def test_hygiene_scan_is_clean_and_detects_planted_secrets(tmp_path: Path) -> No
     finally:
         module.REPO_ROOT = original
     assert any("leak.py" in finding["path"] for finding in findings)
+    assert not any("test/local-read-authority.spec.ts" in finding["path"] for finding in findings)
     assert not any("safe.md" in finding["path"] for finding in findings)
 
 
