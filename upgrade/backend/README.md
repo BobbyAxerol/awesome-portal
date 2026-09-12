@@ -1964,3 +1964,12 @@ test-only directories while retaining its scan of shipped source.  Regression
 coverage proves a planted root-source secret is still found and a test fixture
 is not.  This is release-hygiene only: no Portal UI/UX, source authority,
 command, runtime or deployment behaviour changes.
+
+**2026-09-12 PR #64 composed-smoke reliability repair:** Docker Hub no longer
+serves the historical MinIO image used by the isolated smoke stack. Local/CI
+and the future stable overlay therefore pin Quay's byte-identical immutable OCI
+index. The smoke script also builds the four owned producer images before
+starting services without a build pass; this prevents the image-only Python
+worker from racing its shared `portal-api` producer in clean CI. This changes
+neither a running stable service nor any frontend, execution-source or command
+authority.

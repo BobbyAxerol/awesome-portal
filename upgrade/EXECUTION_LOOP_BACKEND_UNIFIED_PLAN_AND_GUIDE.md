@@ -6769,6 +6769,25 @@ Portal backend/workspace gate and a fresh PR CI run.  No BFF mapping, rich UI,
 source activation, command, runtime or release promotion is authorized or
 claimed by this amendment.
 
+#### PR #64 composed-smoke reliability amendment (2026-09-12)
+
+**Goal:** make the isolated CI smoke stack reproducible after retirement of
+the historical Docker Hub MinIO distribution, without changing product code or
+starting a deployed stack.
+
+**Implementation:** pin the byte-identical Quay OCI index in local/CI and the
+future stable-runtime overlay; build the four owned images before starting the
+composition with `--no-build`, so the image-only quant worker cannot race the
+shared API image's producer build.
+
+**Acceptance:** static regression checks both pinned compose references and the
+explicit build/start ordering; BAR-05/BAR-16 generated evidence is refreshed;
+the protected CI smoke job completes from a clean runner.
+
+**Boundary:** this does not modify UI/UX, Manager-v2/Trading System source
+access, runtime flags, commands, the current stable deployment or a release
+promotion.
+
 #### 18.6.4 Decisions requested before implementation
 
 1. **BE-R2-8 approval received 2026-09-12**, including Portal-only creation/
