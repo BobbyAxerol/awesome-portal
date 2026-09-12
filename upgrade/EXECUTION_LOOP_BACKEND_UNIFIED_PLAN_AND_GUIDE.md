@@ -6551,6 +6551,22 @@ loopback8080 and dev domain are distinct from stable project/18081/volumes.
 Existing expired review cookies are not authority to forge sessions or reset
 Bobby; actual authenticated dev visual acceptance requires a legitimate session.
 
+**Owner clarification / integration review (2026-09-12):** Bobby explicitly
+authorized a temporary dev review account, including the required review role.
+Use the normal activation/password/session flow; disable the new account,
+revoke its sessions and activation credentials, remove only its temporary
+workspace membership, and report cleanup. Do not reset Bobby or use stable.
+Codex owns backend, port/mapping and business-logic corrections; Claude owns
+visual design and interaction changes. Integrate Claude `0135e3c7` intact.
+The approval form's optional Alpha picker currently has no container loader.
+Do **not** wire the first 200 Fleet rows as an exhaustive approval-eligibility
+registry: Fleet is current execution scope, while the POST checks the evidence
+run/alpha/claim linkage. The existing typed-ID submission is valid and remains
+usable. Claude should add bounded, explicitly non-exhaustive suggestions with
+manual-ID fallback if desired; no invented candidate, auto-selection or new
+eligibility authority. Screenshot-only layout/copy differences are a Claude
+review item, not permission to rewrite the rich UI or silently accept baselines.
+
 **Technical
 debt exit:** every AR-08–11 and delegated AR-05/07 item has a normal regression
 test and measured acceptance result, including errors and cleanup. Phase8's

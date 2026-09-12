@@ -1936,3 +1936,8 @@ implemented. Current-source runtime flags remain unchanged at this checkpoint.
 See the [main phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance)
 for measured evidence, Claude integration, dev-only procedure and remaining
 gate status. Feature push/PR/CI repair are approved; merge/main/stable are not.
+
+Latest integration includes Claude `0135e3c7`; Bobby authorized a disposable
+dev reviewer with disable/session-revoke cleanup. Approval suggestion UX and
+visual-only baseline differences stay with Claude; see §8.61 handoff. No new
+approval eligibility is inferred from the current Fleet page.

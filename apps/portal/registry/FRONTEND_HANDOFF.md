@@ -2410,3 +2410,14 @@ fixture screenshots cannot prove current data/auth acceptance. Run reports now
 go to ignored Playwright output, and missing baselines fail without an explicit
 reviewed update. Current gate/provenance status is maintained in the
 [BE-R2-9 journal](../../../upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance).
+
+Bobby clarified ownership: Codex fixes backend/port wiring and business logic;
+Claude reviews UI layout, typography, visual differences and interaction design.
+`0135e3c7` is integrated intact. Follow-up for Claude: `NewApprovalRequestScreen`
+accepts `alphaOptions`, but its container does not load suggestions. Existing
+typed-ID submit remains valid. If adding suggestions, use bounded
+`ExecutionApi.getAlphaFleet` as **non-exhaustive current Fleet suggestions**, not
+an approval-eligibility registry; keep manual entry for off-page/research ids.
+Run/alpha/claim eligibility remains server-validated by the existing POST.
+Do not replace manual entry with a first-page-only mandatory select. Codex has
+not changed that visual interaction or re-recorded screenshot baselines.

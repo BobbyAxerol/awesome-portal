@@ -2168,3 +2168,8 @@ browser/Rust/CI and legitimate-session dev review are tracked separately, not
 fabricated from fixture evidence. No new Trading System capability or command
 authority is needed. This supersedes the old “BE-R2-9 proposed” state above;
 main/stable rollout and merge remain excluded.
+
+Integration follow-up: retain Claude `0135e3c7` and its typed-ID form. Fleet
+suggestions are not approval eligibility; optional non-exhaustive picker UX is
+handed back to Claude in §8.61. Bobby authorized a disposable dev reviewer,
+normal authentication and mandatory disable/revoke/membership cleanup.
