@@ -1197,7 +1197,7 @@
 /* This Governance skin set a background and nothing else, and it sits after
    the active pairing at the same specificity — so the selected chip kept
    `--accent-contrast` text and lost its `--accent-strong` fill. In the light
-   themes both tokens are #ffffff: the default "Mine" chip rendered as an
+   themes both tokens resolve to white: the default "Mine" chip rendered as an
    empty white box at 1.00:1. A scoped override of one half of a foreground/
    background pair has to restate the other half. */
 .exec-gov .exec-inbox-filter[data-active="true"] {
