@@ -10036,3 +10036,79 @@ theo hi-fi.**
 
 Phần **chưa soi được**: 24 task N27 thật trên route sản phẩm — cần phiên ADMIN
 (§A66.4).
+
+---
+
+## A67. RÀ PHASE 8–11 VÀ BÀN GIAO CODEX (12-09)
+
+Bobby duyệt nâng quyền một tài khoản review **chỉ trên probe**. Đã nâng, soi,
+**hạ lại ngay** — `portal_users` giờ chỉ còn `bobby` là ADMIN, đã kiểm.
+
+### A67.1 Phiên ADMIN cho thấy hai thứ không test nào bắt được
+
+Route sản phẩm cuối cùng cũng hiện dữ liệu thật: **24 task · 6 nhóm**, số đếm
+khớp API **chính xác** (7+4+4+2+4+3), CONNECTED 4 / SUPPORTED 13 /
+INCOMPATIBLE 7 khớp `classification_counts`, **0 console error**.
+
+| Nhìn thấy | Vì sao là lỗi | Sửa |
+| --- | --- | --- |
+| Banner vàng kết bằng một **phủ định bao trùm**, nằm vài dòng trên 4 task `CONNECTED · LOCAL R0` và một nút **"Run local R0 read"** chạy được | Banner nói thay cho **catalogue CLI 64 entry**, không nói thay cho task N27. Hai banner ngược nhau cùng trên màn | banner chỉ nói *no published catalogue entry can be dispatched from here*; mỗi task tự nói sự thật của nó |
+| **24/24 dòng** in cùng một câu `no CLI form published` | Không dòng nào publish form, nên 24 dòng xám giống hệt, **không mang thông tin**, và đẩy dòng state — thứ *có* khác nhau — ra xa tiêu đề | in CLI form khi có, không in gì khi không; pane chi tiết vẫn nói rõ cho task đang mở |
+
+Đo sau khi sửa: `no CLI form published` **24 → 0**, câu phủ định **1 → 0**, số
+đếm giữ nguyên khớp API. Mỗi dòng còn **2 dòng thay vì 3** → hiện 11 task thay
+vì 8 trong cùng khoảng.
+
+### A67.2 Đóng cả lớp — và guard tự tìm ra site thứ tư
+
+Đây là **instance thứ ba** của cùng một over-claim. Guard commit trước chỉ cấm
+**một cách viết**, nên trượt. Mở rộng sang các biến thể, và nó **lập tức tìm ra
+site thứ tư**: fallback trong pane chi tiết nói *"nothing here can be run"* —
+đúng cho task đó nhưng đọc rộng hơn thực tế; giờ gọi tên task.
+
+Guard cũng bắt **chính comment của tôi** (tôi trích nguyên câu cũ để giải
+thích). Đã diễn đạt lại: một guard chặn tài liệu của nó sẽ dạy người ta đừng
+ghi chú.
+
+### A67.3 Trạng thái bốn phase
+
+| Phase | Trạng thái | Còn gì |
+| --- | --- | --- |
+| **8** rich empty composition | xong | — |
+| **9** presentation guards | xong | — |
+| **10** contract discipline | xong | — |
+| **11** named BFF consumer | **xong phần dựng được** | nghiệm thu runtime cho nhánh `EMPTY` §8.59 |
+
+Bốn lane Phase 11: §8.58 realtime recovery ✓ · §8.59 `read_truth` ✓ · Blotter ✓
+(đúng sẵn, đã thêm guard) · Admin Action Drawer ✓ (đã soi ADMIN, sửa 2 lỗi UX).
+
+**So hi-fi**: bố cục khớp — task theo nhóm kèm tag READ/MUTATION, ladder
+PLAN → APPLY → VERIFY, parameters ràng registry, `≤ R2 cap`, reason bắt buộc.
+Và **hơn** hi-fi ở ba chỗ hi-fi không thể biết: banner `SMOKE DATA`, dòng *"not
+in published catalogue rev 2"*, trạng thái relay in kèm. **Giữ nguyên.**
+
+### A67.4 Return packet cho codex (handoff §5)
+
+1. **Phase / SHA.** Round-2 Phase 8–11. `e1d30b54` `0be03c67` `4b9fb112`
+   `9e428e6a` `54d0e211` `5dfd5e6b` `329edafa` `7ba69d46` `36c9bd14`.
+2. **Operation BFF tiêu thụ.** `executionApprovalInbox`, approval history,
+   waivers, operations queue (`read_truth`); `/commands/tasks` +
+   `/commands/catalog`; profile realtime stream (`availability`/`recovery`).
+   Không thêm operation, không cursor thô, không fixture fallback trên route sản phẩm.
+3. **Ma trận state.** `EMPTY` chỉ khi server nói; im lặng → câu yếu hơn; **từ
+   chối không bao giờ thành rỗng** (guard 4 trạng thái, đã chứng minh đỏ).
+   403 trên drawer render **Withheld**, đã xác minh trên probe.
+4. **Gate.** 2 302 frontend tests · tsc 0 lỗi trong `src` · hook xanh mọi commit ·
+   0 console error trên probe · 4 bề mặt §8.59 + 2 endpoint N27 đã dò trên API thật.
+5. **Ảnh.** `scratchpad/p11shots/`: `probe-inbox`, `gallery-empty`,
+   `drawer-admin`, `drawer-connected` (trước/sau).
+6. **DTO gap.** G4 envelope khẳng định deployment không tồn tại · G8 realtime
+   envelope chưa có fixture canonical · G10 env dev nằm ngoài repo.
+7. **Xác nhận.** Không gọi source trực tiếp, không sửa tay file generated,
+   không thêm hành vi command. Nút R0 chỉ hiện khi **server** nói CONNECTED.
+
+### A67.5 Còn nợ, nói rõ
+
+- **Nghiệm thu runtime `EMPTY`**: dev/probe đều chạy control-api cũ hơn BE-R2-6.
+- **Quyền review**: mỗi lần soi màn ADMIN lại phải nâng/hạ tay. Nên có một tài
+  khoản review ADMIN cố định trên probe — quyết định của Bobby.
