@@ -6810,7 +6810,8 @@ an explicit scope amendment rather than silently adding a third phase.
 
 ## 19. R3 — Maximum Current Data, Efficient Inter-cell Read, and Product-release Closeout
 
-**Status:** `PLANNED_AWAITING_BOBBY_PHASE_APPROVAL` (2026-09-12).
+**Status:** `IN_PROGRESS` (2026-09-12): R3-1/BE is complete; R3-2/BE and the
+frontend-owned R3-3/R3-4 remain separately approved/controlled work.
 
 **Purpose:** close the remaining **Portal-owned** data, transport, realtime,
 governance-read and rich-screen integration work in four bounded phases before
@@ -6894,7 +6895,7 @@ These are observations used to size R3, not permission to change the runtime:
 
 | Order | Phase | Primary owner | May run with | Entry condition | Closeout artifact |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **R3-1 / BE** — Maximum-current coverage and bounded inter-cell efficiency | Codex/backend | R3-3 / FE | current dev CI green; E7/Manager manifest validation | source-to-panel coverage ledger, measured budget and named BFF completion report |
+| 1 | **R3-1 / BE** — Maximum-current coverage and bounded inter-cell efficiency | Codex/backend | R3-3 / FE | current dev CI green; E7/Manager manifest validation | **COMPLETE** — coverage ledger, profile-wide admission correction and measured budget: `upgrade/backend/R3_1_MAXIMUM_CURRENT_COVERAGE_AND_BOUNDED_INTERCELL_EFFICIENCY.md` |
 | 3 | **R3-3 / FE** — Rich active-data panels and Portal workflow surfaces | Claude/frontend | R3-1 / BE | generated contracts at R3 baseline | real-reader matrix, rich-state browser suite and visual handoff |
 | 2 | **R3-2 / BE** — Qualification, realtime/DR and governed-command closure | Codex/backend + narrowly scoped Edge owner patch if needed | R3-3 finishing | R3-1 coverage ledger; exact identified source gaps only | profile qualification, multi-process/DR evidence and immutable dev candidate manifest |
 | 4 | **R3-4 / FE** — Cross-stack product acceptance and exact dev rebuild | Claude/frontend, Codex supports deployment evidence | none | R3-2 BFF/qualification outputs | full route/panel acceptance matrix, no-update visual run, exact dev image/config proof |
@@ -6903,7 +6904,8 @@ These are observations used to size R3, not permission to change the runtime:
 
 ### R3-1 / BE — Maximum-current data coverage and bounded inter-cell efficiency
 
-**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`.
+**Status:** `COMPLETE` (2026-09-12; code/test/documentation closeout only; no
+profile activation, deployment, main or stable action).
 
 **Goal:** make every existing useful current Manager-v2 fact reachable through
 one named, authorized Portal BFF/panel contract, while proving that source use
@@ -7007,6 +7009,43 @@ increase, stable release and UI redesign.
 **Next action after completion:** hand the coverage ledger and generated
 operation list to R3-2 and R3-4; Claude uses it to finish R3-3 without guessing
 what a panel may claim.
+
+**Implementation journal — 2026-09-12, `feat/execution-loop-next`:**
+
+- Added the server-only, generated `R3_CURRENT_SOURCE_COVERAGE_LEDGER`. It
+  maps all 25 frozen product screens/panels/actions and the full 96-relation
+  Manager catalogue. Fifty-four screen-bound relations are reachable only via
+  static named operations; sixteen projection inputs remain server-side; the
+  remaining twenty-six audit/internal relations are explicitly non-browser.
+  Browser runtime metadata contains only a digest/count/bounds evidence block.
+- Corrected a genuine N21 profile-admission defect: `PROFILE` state now keys
+  by profile rather than `source:profile`, so Paper/Sandbox one-page and Live
+  two-page limits apply across different named operations and Control API
+  replicas. The forward migration clears only obsolete ephemeral state and
+  adds an expiry index; it does not affect business/projection/command/source
+  data.
+- Added source byte/page/latency/status telemetry and cross-replica
+  profile-admission inventory, redacted of relation/path/cursor/identity/JWT/
+  mTLS data. A read-only 10-minute HK observation found no restart or OOM;
+  Paper remained 76.54–80.32% of its 1 GiB limit with only a non-sustained
+  `>=80%` sample. R3 therefore adds a warning/block rule and does not increase
+  pacing, page depth or memory.
+- E7 validation, every imported maximum-data manifest hash, N20/N21 static
+  gates and the isolated Control API build/full Vitest/PostgreSQL
+  migration+restore gate passed. Full details and rollback/handoff are in
+  `upgrade/backend/R3_1_MAXIMUM_CURRENT_COVERAGE_AND_BOUNDED_INTERCELL_EFFICIENCY.md`.
+- The isolated `./scripts/execution-edge-test.sh` gate also passed through the
+  full Rust Edge test/fmt/Clippy/temporary-PostgreSQL restore path. It removed
+  only its disposable test target/cache; no Portal or AWS-HK runtime was
+  changed.
+- Re-pinned the affected N29 and EDS-12 immutable evidence inputs/manifests in
+  the same commit after the source-boundary implementation changed. Both
+  fail-closed static qualification gates pass; product release remains `NO_GO`,
+  `PRODUCT_ACTIVE` remains false and no runtime authority changed.
+- Deployment transition rule: the profile-wide admission migration requires a
+  bounded all-replica Control API replacement from one immutable image. An old
+  per-operation binary must not remain in a long-running mixed fleet with the
+  new profile-wide binary, because it cannot observe the global profile key.
 
 ---
 

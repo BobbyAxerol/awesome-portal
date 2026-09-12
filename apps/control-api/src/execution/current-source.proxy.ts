@@ -561,6 +561,23 @@ interface CurrentSourceProxyCounters {
   sourceRateLimited: number;
   sourceUnavailable: number;
   sourceRejected: number;
+  adaptivePageReductions: number;
+  sourceResponseBytes: number;
+  sourceLatencyMsTotal: number;
+  sourceLatencyMsMaximum: number;
+  sourcePageItems: number;
+  sourcePageItemsUnknown: number;
+  sourceStatus2xx: number;
+  sourceStatus4xx: number;
+  sourceStatus429: number;
+  sourceStatus5xx: number;
+  sourceStatusOther: number;
+}
+
+interface CurrentSourceTransportResponse {
+  readonly body: unknown;
+  readonly responseBytes: number;
+  readonly itemCount: number | null;
 }
 
 /** Process-local FIFO admission bound instantiated independently per profile. */
@@ -688,6 +705,12 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
   private readonly bulkheads = new Map<string, CurrentSourceBulkhead>();
   private readonly rateLimiters = new Map<string, CurrentSourceRateLimiter>();
   private readonly counters = new Map<string, CurrentSourceProxyCounters>();
+  /**
+   * Static named Portal operation IDs only. This gives R3-1 relation-level
+   * observability without exporting a Manager relation, source path, cursor,
+   * user identity, cache key or transport credential to a browser.
+   */
+  private readonly operationCounters = new Map<string, Map<string, CurrentSourceProxyCounters>>();
 
   private constructor(
     private readonly config: ControlApiConfig,
@@ -706,6 +729,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS,
       ));
       this.counters.set(profile.profileId, emptyCurrentSourceCounters());
+      this.operationCounters.set(profile.profileId, new Map());
     }
   }
 
@@ -922,10 +946,17 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
    * rows, paths, source cursors, cache keys, user identity, or relation names;
    * it measures only the bounded gateway that already exists.
    */
-  diagnostics(): Record<string, unknown> {
+  async diagnostics(): Promise<Record<string, unknown>> {
+    const crossReplica = await this.sharedReads.admissionInventory(
+      [...this.profiles.values()].map((profile) => profile.profileId),
+    );
+    const crossReplicaByProfile = new Map(
+      crossReplica.profiles.map((profile) => [profile.profileId, profile]),
+    );
     return {
       schema_version: "portal.execution.current-source-admission-metrics.v1",
       source_request_retry_policy: "NO_TRANSPORT_RETRY_EXCEPT_BOUNDED_RESPONSE_SIZE_REDUCTION",
+      captured_at: crossReplica.capturedAt,
       profiles: [...this.profiles.values()].map((profile) => ({
         environment: profile.environment,
         admission: {
@@ -942,6 +973,22 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
           maximumPaceWaitMs: this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS,
         },
         counters: { ...(this.counters.get(profile.profileId) ?? emptyCurrentSourceCounters()) },
+        cross_replica_profile_admission: crossReplicaByProfile.get(profile.profileId) ?? {
+          profileId: profile.profileId,
+          activeLeases: 0,
+          activeOperationCount: 0,
+          oldestLeaseAt: null,
+          maximumRequestsPerSecond: null,
+          maximumConcurrency: null,
+          nextPermitAt: null,
+          updatedAt: null,
+        },
+        named_operation_metrics: [...(this.operationCounters.get(profile.profileId)?.entries() ?? [])]
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([operationId, counters]) => ({
+            operation_id: operationId,
+            counters: { ...counters },
+          })),
       })),
     };
   }
@@ -981,16 +1028,17 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         },
       } : {}),
     };
+    const telemetryOperationId = operationPolicy?.operationId ?? `screen:${screenId}`;
     const shared = await this.sharedReads.begin(scope);
     if (shared.kind === "CACHE_HIT") {
-      this.increment(profile.profileId, "cacheHits");
+      this.increment(profile.profileId, "cacheHits", telemetryOperationId);
       return this.composedResponse(
         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
         shared.value, "HIT", gatewayContext,
       );
     }
     if (shared.kind === "FOLLOWER") {
-      this.increment(profile.profileId, "coalescedFollowers");
+      this.increment(profile.profileId, "coalescedFollowers", telemetryOperationId);
       const value = await this.sharedReads.waitForLeader(scope, shared.cacheKey);
       if (!value) {
         throw new CurrentSourceProxyError("N21_COALESCED_SOURCE_UNAVAILABLE", 503, {
@@ -1003,13 +1051,13 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       );
     }
     if (shared.kind === "DENIED") {
-      this.increment(profile.profileId, "admissionDenied");
+      this.increment(profile.profileId, "admissionDenied", telemetryOperationId);
       throw new CurrentSourceProxyError(shared.reasonCode, 503, {
         availability: "DEGRADED", retryable: false,
       });
     }
     let sharedCompleted = false;
-    this.increment(profile.profileId, "leaders");
+    this.increment(profile.profileId, "leaders", telemetryOperationId);
     const bulkhead = this.bulkheads.get(profile.profileId);
     const rateLimiter = this.rateLimiters.get(profile.profileId);
     if (!bulkhead || !rateLimiter) {
@@ -1042,23 +1090,36 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       let source: unknown;
       let candidatePath = path;
       for (let attempt = 0; ; attempt += 1) {
-        this.increment(profile.profileId, "sourceRequests");
+        const sourceStartedAt = Date.now();
+        this.increment(profile.profileId, "sourceRequests", telemetryOperationId);
         try {
-          source = await this.sendRequest(
+          const response = await this.sendRequest(
             session,
             assertion,
             candidatePath,
             operationPolicy?.maximumResponseBytes,
             operationPolicy ? "EDS01_RESPONSE_TOO_LARGE" : "N13B_RESPONSE_TOO_LARGE",
           );
-          this.increment(profile.profileId, "sourceSuccesses");
+          this.recordSourceSuccess(
+            profile.profileId,
+            telemetryOperationId,
+            Math.max(0, Date.now() - sourceStartedAt),
+            response,
+          );
+          source = response.body;
           break;
         } catch (error) {
-          this.recordSourceFailure(profile.profileId, error);
+          this.recordSourceFailure(
+            profile.profileId,
+            telemetryOperationId,
+            error,
+            Math.max(0, Date.now() - sourceStartedAt),
+          );
           const reducedPath = operationPolicy && attempt < MAXIMUM_ADAPTIVE_MANAGER_PAGE_ATTEMPTS
             ? nextAdaptiveManagerRelationPagePath(candidatePath, error)
             : null;
           if (!reducedPath) throw error;
+          this.increment(profile.profileId, "adaptivePageReductions", telemetryOperationId);
           candidatePath = reducedPath;
         }
       }
@@ -1142,7 +1203,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     path: string,
     maximumResponseBytes = this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES,
     responseTooLargeCode = "N13B_RESPONSE_TOO_LARGE",
-  ): Promise<unknown> {
+  ): Promise<CurrentSourceTransportResponse> {
     return new Promise((resolve, reject) => {
       const stream = session.request({
         ":method": "GET",
@@ -1155,12 +1216,19 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       let status = 502;
       let responseIsJson = false;
       let settled = false;
-      const settle = (error?: CurrentSourceProxyError, value?: unknown): void => {
+      const settle = (error?: CurrentSourceProxyError, value?: CurrentSourceTransportResponse): void => {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
-        if (error) reject(error);
-        else resolve(value);
+        if (error) {
+          reject(error);
+          return;
+        }
+        if (!value) {
+          reject(new CurrentSourceProxyError("N13B_UPSTREAM_CONTRACT_INVALID", 502));
+          return;
+        }
+        resolve(value);
       };
       const timeout = setTimeout(() => {
         settle(new CurrentSourceProxyError("N13B_UPSTREAM_TIMEOUT", 504));
@@ -1202,7 +1270,12 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
           return;
         }
         try {
-          settle(undefined, JSON.parse(body.toString("utf8")));
+          const parsed = JSON.parse(body.toString("utf8"));
+          settle(undefined, {
+            body: parsed,
+            responseBytes: size,
+            itemCount: sourcePageItemCount(parsed),
+          });
         } catch {
           settle(new CurrentSourceProxyError("N13B_UPSTREAM_CONTRACT_INVALID", 502));
         }
@@ -1211,22 +1284,76 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     });
   }
 
-  private increment(profileId: string, field: keyof CurrentSourceProxyCounters): void {
-    const counters = this.counters.get(profileId) ?? emptyCurrentSourceCounters();
-    counters[field] += 1;
-    this.counters.set(profileId, counters);
+  private increment(
+    profileId: string,
+    field: keyof CurrentSourceProxyCounters,
+    operationId?: string,
+    amount = 1,
+  ): void {
+    incrementCurrentSourceCounter(this.counters, profileId, field, amount);
+    if (!operationId) return;
+    const operations = this.operationCounters.get(profileId) ?? new Map<string, CurrentSourceProxyCounters>();
+    incrementCurrentSourceCounter(operations, operationId, field, amount);
+    this.operationCounters.set(profileId, operations);
   }
 
-  private recordSourceFailure(profileId: string, error: unknown): void {
-    if (error instanceof CurrentSourceProxyError && error.code === "N17B_SOURCE_RATE_LIMITED") {
-      this.increment(profileId, "sourceRateLimited");
+  private recordSourceSuccess(
+    profileId: string,
+    operationId: string,
+    latencyMs: number,
+    response: CurrentSourceTransportResponse,
+  ): void {
+    this.increment(profileId, "sourceSuccesses", operationId);
+    this.increment(profileId, "sourceStatus2xx", operationId);
+    this.increment(profileId, "sourceResponseBytes", operationId, response.responseBytes);
+    this.increment(profileId, "sourceLatencyMsTotal", operationId, latencyMs);
+    this.maximum(profileId, "sourceLatencyMsMaximum", operationId, latencyMs);
+    if (response.itemCount === null) {
+      this.increment(profileId, "sourcePageItemsUnknown", operationId);
+    } else {
+      this.increment(profileId, "sourcePageItems", operationId, response.itemCount);
+    }
+  }
+
+  private recordSourceFailure(
+    profileId: string,
+    operationId: string,
+    error: unknown,
+    latencyMs: number,
+  ): void {
+    this.increment(profileId, "sourceLatencyMsTotal", operationId, latencyMs);
+    this.maximum(profileId, "sourceLatencyMsMaximum", operationId, latencyMs);
+    const isSourceRateLimited = error instanceof CurrentSourceProxyError && error.code === "N17B_SOURCE_RATE_LIMITED";
+    const status = isSourceRateLimited ? 429 : error instanceof CurrentSourceProxyError ? error.status : 0;
+    if (status === 429) this.increment(profileId, "sourceStatus429", operationId);
+    else if (status >= 400 && status < 500) this.increment(profileId, "sourceStatus4xx", operationId);
+    else if (status >= 500 && status < 600) this.increment(profileId, "sourceStatus5xx", operationId);
+    else this.increment(profileId, "sourceStatusOther", operationId);
+    if (isSourceRateLimited) {
+      this.increment(profileId, "sourceRateLimited", operationId);
       return;
     }
     if (error instanceof CurrentSourceProxyError && [502, 503, 504].includes(error.status)) {
-      this.increment(profileId, "sourceUnavailable");
+      this.increment(profileId, "sourceUnavailable", operationId);
       return;
     }
-    this.increment(profileId, "sourceRejected");
+    this.increment(profileId, "sourceRejected", operationId);
+  }
+
+  private maximum(
+    profileId: string,
+    field: "sourceLatencyMsMaximum",
+    operationId: string,
+    value: number,
+  ): void {
+    const aggregate = this.counters.get(profileId) ?? emptyCurrentSourceCounters();
+    aggregate[field] = Math.max(aggregate[field], value);
+    this.counters.set(profileId, aggregate);
+    const operations = this.operationCounters.get(profileId) ?? new Map<string, CurrentSourceProxyCounters>();
+    const operation = operations.get(operationId) ?? emptyCurrentSourceCounters();
+    operation[field] = Math.max(operation[field], value);
+    operations.set(operationId, operation);
+    this.operationCounters.set(profileId, operations);
   }
 
   private async getSession(profile: ProfileTransport): Promise<ClientHttp2Session> {
@@ -1912,7 +2039,43 @@ function emptyCurrentSourceCounters(): CurrentSourceProxyCounters {
     sourceRateLimited: 0,
     sourceUnavailable: 0,
     sourceRejected: 0,
+    adaptivePageReductions: 0,
+    sourceResponseBytes: 0,
+    sourceLatencyMsTotal: 0,
+    sourceLatencyMsMaximum: 0,
+    sourcePageItems: 0,
+    sourcePageItemsUnknown: 0,
+    sourceStatus2xx: 0,
+    sourceStatus4xx: 0,
+    sourceStatus429: 0,
+    sourceStatus5xx: 0,
+    sourceStatusOther: 0,
   };
+}
+
+function incrementCurrentSourceCounter(
+  countersByKey: Map<string, CurrentSourceProxyCounters>,
+  key: string,
+  field: keyof CurrentSourceProxyCounters,
+  amount: number,
+): void {
+  if (!Number.isSafeInteger(amount) || amount < 0) {
+    throw new Error("current-source telemetry increment is invalid");
+  }
+  const counters = countersByKey.get(key) ?? emptyCurrentSourceCounters();
+  // All values are bounded source responses/latencies, but a long-lived
+  // process must not silently wrap a diagnostic counter.
+  counters[field] = Math.min(Number.MAX_SAFE_INTEGER, counters[field] + amount);
+  countersByKey.set(key, counters);
+}
+
+/** Extracts only a count from the Manager-shaped page; it never retains rows. */
+function sourcePageItemCount(value: unknown): number | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const data = (value as Record<string, unknown>).data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const items = (data as Record<string, unknown>).items;
+  return Array.isArray(items) ? items.length : null;
 }
 
 function enabledProfileConfigurations(config: ControlApiConfig): Array<{

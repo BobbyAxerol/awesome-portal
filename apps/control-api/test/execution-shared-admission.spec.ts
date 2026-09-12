@@ -215,6 +215,96 @@ describe("N21 PostgreSQL shared admission, coalescing and freshness", () => {
     }
   });
 
+  it("enforces the Paper/Sandbox/Live cap across distinct named operations and exposes only profile-safe aggregate telemetry", async () => {
+    // Separate instances model separate Control API replicas.  The profile
+    // cap must stay global even when each named BFF operation is handled by a
+    // different process.
+    const repositoryA = new ExecutionSharedReadRepository(pool, config());
+    const repositoryB = new ExecutionSharedReadRepository(pool, config());
+    const paperOrders: SharedReadScope = {
+      ...scope,
+      sourceId: "manager.orders",
+      adapterRevision: "PORTAL_EDS11R_MANAGER_RELATION_V1",
+      requestPath: "/internal/v2/manager/relations/public/orders?limit=100",
+      admission: { sourceMaximumConcurrency: 4, profileMaximumConcurrency: 1 },
+    };
+    const paperFills: SharedReadScope = {
+      ...paperOrders,
+      sourceId: "manager.fills",
+      requestPath: "/internal/v2/manager/relations/public/fills?limit=100",
+    };
+    const paperLeader = await repositoryA.begin(paperOrders);
+    expect(paperLeader.kind).toBe("LEADER");
+    await expect(repositoryB.begin(paperFills)).resolves.toMatchObject({
+      kind: "DENIED",
+      reasonCode: "N21_SHARED_CONCURRENCY_EXHAUSTED",
+    });
+
+    const liveOrders: SharedReadScope = {
+      ...paperOrders,
+      profileId: "LIVE_BINANCE_USDM",
+      admission: { sourceMaximumConcurrency: 4, profileMaximumConcurrency: 2 },
+    };
+    const liveFills: SharedReadScope = {
+      ...paperFills,
+      profileId: "LIVE_BINANCE_USDM",
+      admission: { sourceMaximumConcurrency: 4, profileMaximumConcurrency: 2 },
+    };
+    const livePositions: SharedReadScope = {
+      ...liveOrders,
+      sourceId: "manager.positions",
+      requestPath: "/internal/v2/manager/relations/public/positions_v2?limit=100",
+    };
+    const liveOne = await repositoryA.begin(liveOrders);
+    const liveTwo = await repositoryB.begin(liveFills);
+    expect(liveOne.kind).toBe("LEADER");
+    expect(liveTwo.kind).toBe("LEADER");
+    await expect(repositoryA.begin(livePositions)).resolves.toMatchObject({
+      kind: "DENIED",
+      reasonCode: "N21_SHARED_CONCURRENCY_EXHAUSTED",
+    });
+
+    const inventory = await repositoryB.admissionInventory([
+      "PAPER_BINANCE_USDM",
+      "SANDBOX_BINANCE_USDM",
+      "LIVE_BINANCE_USDM",
+    ]);
+    expect(inventory.profiles).toEqual([
+      expect.objectContaining({
+        profileId: "LIVE_BINANCE_USDM",
+        activeLeases: 2,
+        activeOperationCount: 2,
+        maximumConcurrency: 2,
+        maximumRequestsPerSecond: 15,
+      }),
+      expect.objectContaining({
+        profileId: "PAPER_BINANCE_USDM",
+        activeLeases: 1,
+        activeOperationCount: 1,
+        maximumConcurrency: 1,
+        maximumRequestsPerSecond: 15,
+      }),
+      expect.objectContaining({
+        profileId: "SANDBOX_BINANCE_USDM",
+        activeLeases: 0,
+        activeOperationCount: 0,
+        maximumConcurrency: null,
+        maximumRequestsPerSecond: null,
+      }),
+    ]);
+    const storedProfileKeys = await pool.query<{ scope_key: string }>(
+      "SELECT scope_key FROM execution_shared_admission_state WHERE scope_kind='PROFILE' ORDER BY scope_key ASC",
+    );
+    expect(storedProfileKeys.rows.map((row) => row.scope_key)).toEqual([
+      "LIVE_BINANCE_USDM",
+      "PAPER_BINANCE_USDM",
+    ]);
+
+    if (paperLeader.kind === "LEADER") await repositoryA.fail(paperLeader);
+    if (liveOne.kind === "LEADER") await repositoryA.fail(liveOne);
+    if (liveTwo.kind === "LEADER") await repositoryB.fail(liveTwo);
+  });
+
   it("recovers an abandoned leader and permit only after bounded lease expiry", async () => {
     const repositoryA = new ExecutionSharedReadRepository(pool, config({
       EXECUTION_EDGE_CURRENT_SOURCE_LEASE_TTL_MS: "500",

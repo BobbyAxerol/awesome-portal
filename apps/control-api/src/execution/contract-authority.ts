@@ -168,6 +168,42 @@ interface ActionCoverageRow {
   owner: string;
 }
 
+/**
+ * Server-only lineage used to build operational coverage evidence. It must
+ * never be returned by the browser contract-authority endpoint because it
+ * includes source-relation names that are deliberately hidden from product
+ * clients. Values remain metadata only: no rows, cursors, paths, origins or
+ * credentials are represented here.
+ */
+export interface ExecutionContractAuthorityInternalPanelCoverage {
+  readonly screenId: string;
+  readonly panelId: string;
+  readonly fieldId: string;
+  readonly dataOperationId: string;
+  readonly frontendFieldPath: string;
+  readonly sourceSystem: string;
+  readonly sourceRelationOrOperation: string;
+  readonly authority: string;
+  readonly currentStatus: string;
+  readonly ownerStatus: string;
+  readonly portalCanProceed: boolean;
+  readonly sourceProfiles: readonly string[];
+  readonly sourceHistorySemantics: string;
+  readonly freshnessRequirement: string;
+  readonly runtimeDeliveryState: string;
+  readonly runtimeImplementation: string;
+}
+
+export interface ExecutionContractAuthorityInternalActionCoverage {
+  readonly screenId: string;
+  readonly actionId: string;
+  readonly capabilityId: string;
+  readonly actionKind: string;
+  readonly currentAvailability: string;
+  readonly disabledReason: string;
+  readonly owner: string;
+}
+
 interface GeneratedSource {
   schema_version: string;
   input_digests: Record<string, string>;
@@ -423,6 +459,43 @@ function buildStaticAuthority() {
     actionsByScreen.set(action.screen_id, rows);
   }
 
+  const internalPanelCoverageRows: readonly ExecutionContractAuthorityInternalPanelCoverage[] = Object.freeze(
+    SCREEN_BFF_CATALOGUE.flatMap((screen) => (coverageByScreen.get(screen.screenId) ?? []).map((coverage) => {
+      const field = fieldsByKey.get(`${coverage.panel_id}|${coverage.capability_id}|${coverage.source_relation_or_operation}`)!;
+      const owner = ownerByField.get(field.field_id)!;
+      const publication = publicationByField.get(field.field_id)!;
+      return Object.freeze({
+        screenId: screen.screenId,
+        panelId: coverage.panel_id,
+        fieldId: field.field_id,
+        dataOperationId: screen.dataApi.operationId,
+        frontendFieldPath: coverage.frontend_field_path,
+        sourceSystem: coverage.source_system,
+        sourceRelationOrOperation: coverage.source_relation_or_operation,
+        authority: coverage.authority,
+        currentStatus: coverage.current_status,
+        ownerStatus: owner.status,
+        portalCanProceed: owner.portal_can_proceed,
+        sourceProfiles: Object.freeze([...owner.profiles]),
+        sourceHistorySemantics: coverage.history_requirement,
+        freshnessRequirement: coverage.freshness_requirement,
+        runtimeDeliveryState: publication.publication_state,
+        runtimeImplementation: publication.implementation,
+      } satisfies ExecutionContractAuthorityInternalPanelCoverage);
+    })),
+  );
+  const internalActionCoverageRows: readonly ExecutionContractAuthorityInternalActionCoverage[] = Object.freeze(
+    source.action_capability_coverage.map((action) => Object.freeze({
+      screenId: action.screen_id,
+      actionId: action.action_id,
+      capabilityId: action.capability_id,
+      actionKind: action.action_kind,
+      currentAvailability: action.current_availability,
+      disabledReason: action.disabled_reason,
+      owner: action.owner,
+    } satisfies ExecutionContractAuthorityInternalActionCoverage)),
+  );
+
   const screens = SCREEN_BFF_CATALOGUE.map((screen) => {
     const e3 = e3Screens.get(screen.screenId);
     const extension = CURRENT_PORTAL_SCREEN_EXTENSIONS[screen.screenId];
@@ -523,6 +596,8 @@ function buildStaticAuthority() {
   return {
     screenDataManifest,
     actionManifest,
+    internalPanelCoverageRows,
+    internalActionCoverageRows,
     generatedDigests: {
       screen_data_manifest: digest(screenDataManifest),
       action_manifest: digest(actionManifest),
@@ -541,6 +616,17 @@ export function executionContractAuthorityEvidence() {
     screen_count: STATIC_AUTHORITY.screenDataManifest.screen_count,
     field_definition_count: STATIC_AUTHORITY.screenDataManifest.field_definition_count,
     action_count: STATIC_AUTHORITY.actionManifest.action_count,
+  };
+}
+
+/**
+ * R3-1 uses this only while building server-side coverage evidence. Keep the
+ * internal source lineage out of every controller/runtime-manifest response.
+ */
+export function executionContractAuthorityInternalCoverage() {
+  return {
+    panels: STATIC_AUTHORITY.internalPanelCoverageRows,
+    actions: STATIC_AUTHORITY.internalActionCoverageRows,
   };
 }
 

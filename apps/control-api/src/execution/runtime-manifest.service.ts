@@ -4,6 +4,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { executionContractAuthorityEvidence } from "./contract-authority";
 import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
 import { environmentParity } from "./environment-parity";
+import { r3CurrentSourceCoverageEvidence } from "./r3-current-source-coverage-ledger";
 
 /**
  * The browser-visible boundary is intentionally metadata-only.  It records
@@ -54,6 +55,10 @@ export class ExecutionRuntimeManifestService {
         })),
       },
       contract_authority: executionContractAuthorityEvidence(),
+      // R3-1 publishes an auditable coverage digest only. The full ledger is
+      // server-side because it contains Manager relation provenance that must
+      // not become a browser selector or source-introspection endpoint.
+      r3_current_source_coverage: r3CurrentSourceCoverageEvidence(),
       source_semantics: {
         manager_read: intake.semantics.managerRead,
         global_event_ordering: intake.semantics.globalEventOrdering,
