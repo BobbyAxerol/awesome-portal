@@ -2441,3 +2441,31 @@ but API build metadata still says `b61ad10c...`; next coordinated dev build must
 pin the actual source SHA. No Codex overwrite/restart of the new UX deployment.
 Keep Claude's loading, Blotter-time and breadcrumb fixes; visual review still
 belongs to Claude. Main BE-R2-9 journal records exact images and CI status.
+
+### 8.62 EL-V2-10 · selected-control contrast on product routes (2026-09-12)
+
+A new Playwright gate, `EL-V2-10 · stateful control contrast`, runs the WCAG AA
+ratio over every `[data-active="true"] / [aria-pressed="true"] /
+[aria-selected="true"] / [aria-current="page"]` control on all seventeen routes
+in `ROUTES`. It is not a duplicate of the audit in `execution-surface-audit`:
+that one scores the **fixture lab**, where the Governance room's scoped skin is
+not in the cascade, and the blind spot shipped a real defect.
+
+`.exec-gov .exec-inbox-filter` set a background and nothing else, and it sits
+after `.exec-inbox-filter[data-active="true"]` at equal specificity — so the
+selected chip kept `--accent-contrast` text and lost its `--accent-strong` fill.
+In the light themes both tokens are `#ffffff`, so the default "Mine" chip on
+`/governance/approvals` rendered as an empty white box. Measured **1.00:1** by
+reintroducing the defect and running the new gate, which reported
+`exec-inbox-filter | 1.00:1 @11px | "Mine"` before the fix restored the pairing.
+The rule is general: a scoped override that restates one half of a
+foreground/background pair must restate the other half.
+
+Second fix in the same pass: removing the fabricated candidate list turned the
+three declared ids on `/governance/approvals/new` from `<select>` into `<input>`,
+but only `select.exec-role-control` was ever skinned inside `.exec-gov`. The
+fields rendered with no border and no background, indistinguishable from the
+static `gate` row beneath them. `input.exec-role-control` now takes the same
+field skin, with a fainter placeholder so a hint cannot read as a typed id.
+
+Both are CSS-only; no contract, mapping or copy changed. Codex owns nothing here.

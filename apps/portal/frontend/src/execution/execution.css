@@ -1194,7 +1194,18 @@
 .exec-gov .exec-inbox-strip { font: 400 10px/14px var(--font-mono); padding: 9px 14px; gap: 4px 18px; }
 .exec-gov .exec-inbox-decided .exec-chip { font: 600 11px/16px var(--font-mono); border-color: transparent; padding: 1px 8px; letter-spacing: 0; }
 .exec-gov .exec-inbox-filter { font: 400 11px/16px var(--font-mono); background: var(--paper-raised); }
-.exec-gov .exec-inbox-filter[data-active="true"] { font-weight: 600; }
+/* This Governance skin set a background and nothing else, and it sits after
+   the active pairing at the same specificity — so the selected chip kept
+   `--accent-contrast` text and lost its `--accent-strong` fill. In the light
+   themes both tokens are #ffffff: the default "Mine" chip rendered as an
+   empty white box at 1.00:1. A scoped override of one half of a foreground/
+   background pair has to restate the other half. */
+.exec-gov .exec-inbox-filter[data-active="true"] {
+  font-weight: 600;
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
+}
 /* The hi-fi's empty register is its own bordered block, centred, with the
    outcome as the largest words on the page — "Inbox zero" is a result, and
    the reader should be able to read it from across a desk. This is an explicit
@@ -6759,7 +6770,19 @@ p.exec-oq-emptyrow { margin: var(--space-3) 0 0; font: 400 10px/14px var(--font-
    lacks is added here. */
 .exec-gov-headlink { font: 400 11px/1.6 var(--font-mono); color: var(--accent); text-decoration: none; }
 .exec-gov-headlink:hover { text-decoration: underline; }
-.exec-gov .exec-role-control select, .exec-gov select.exec-role-control { width: 100%; max-width: 100%; background: var(--paper-sunken); color: var(--ink); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 4px 8px; font: 400 12px/1.5 var(--font-mono); }
+/* The three declared ids used to be pickers, so only `select` was ever given
+   a field skin. Removing the invented candidate lists turned them into text
+   inputs, and an unskinned input in this key/value grid is indistinguishable
+   from the static `gate` row beneath it: the screen stopped looking editable.
+   Same field skin for both controls, and the placeholder is deliberately
+   fainter than a typed value so a hint can never be read as an id. */
+.exec-gov .exec-role-control select,
+.exec-gov select.exec-role-control,
+.exec-gov input.exec-role-control { width: 100%; max-width: 100%; box-sizing: border-box; background: var(--paper-sunken); color: var(--ink); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 4px 8px; font: 400 12px/1.5 var(--font-mono); }
+.exec-gov input.exec-role-control::placeholder { color: var(--ink-faint); opacity: 1; }
+.exec-gov select.exec-role-control:focus-visible,
+.exec-gov input.exec-role-control:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.exec-gov input.exec-role-control:disabled { color: var(--ink-mute); background: var(--paper); }
 .exec-gate-wvtable th[scope="row"] { overflow-wrap: anywhere; text-transform: none; letter-spacing: 0; font: 400 12px/1.6 var(--font-mono); color: var(--ink); }
 .exec-gate-wvtable td[data-tone="warn"] { color: var(--warn); }
 .exec-gate-wvtable td[data-tone="bad"] { color: var(--bad); }

@@ -10294,3 +10294,137 @@ codex nêu. Không có gì phải sửa ở đây.
 (tuần này tôi đã gặp hai lần). Đã loại được ba nhóm ±1px. Còn **4 ảnh route sản
 phẩm 1440×900** phải mở actual/expected/diff từng cái để phân biệt *đổi nội dung
 có chủ đích* với *chữ bị cắt*, rồi mới re-record.
+
+## A72. GATE ẢNH — ĐÍNH CHÍNH CHẨN ĐOÁN, HAI LỖI THẬT, VÀ MỘT GUARD MỚI (12-09)
+
+Bobby duyệt toàn bộ thắc mắc ở A68 và giao: quyết định UI/UX cho hợp lý, giữ
+nguyên thứ đã duyệt ngoài showcase, fix nhanh rồi bàn giao codex push + mở PR
+vào dev. Phần này là kết quả.
+
+### A72.1 Đính chính: ±1px **không phải** rounding — là fix chữ nhỏ của chính tôi
+
+Ở A68.2 tôi kết luận ba nhóm lệch ±1px là "rounding của trình duyệt". **Sai, và
+tôi tự bắt được trước khi re-record.** Cách bắt: crop `actual`/`expected` rồi
+nhìn, thay vì suy từ con số chiều cao.
+
+`4292f998` (của tôi) nâng năm chỗ khỏi sàn 9–10px lên 11px:
+`.exec-chip[data-axis="stage"]`, `.exec-env`/`.exec-stage`,
+`.exec-pw .exec-rail-step`, `.exec-cli-wf` (9px → 11px), `.exec-cli-hint`.
+
+| Snapshot | Trước | Sau | Nguyên nhân thật |
+|---|---|---|---|
+| `account-broker-360-1g` laptop | 5048 | 5049 | chip `WF 1g` — 9px đọc không ra, 11px đọc được. Khác biệt **nhìn thấy được duy nhất** trên cả trang cao 5 000px |
+| `paper-workbench…4h` laptop | 10987 | 10986 | rail step 10px → 11px |
+| `full-blotter-4c` laptop | 1533 | 1534 | cột time 8rem → 11.5rem, đẩy lại mọi cột bên phải |
+
+Tại sao tôi tưởng là rounding: `account-broker-360-1g` là màn tôi **không sửa
+một dòng TSX nào** — nên tôi kết luận theo file đã chạm, không theo pixel. Nhưng
+CSS là **toàn cục**: một token chữ đổi thì mọi màn dùng token đó đổi theo. §A56.3
+nói phải chứng minh phép đo trước khi kết luận; lần này tôi kết luận trước.
+
+Hệ quả **không đổi**: codex dặn **không nới tolerance toàn cục** — vẫn đúng, và
+càng đúng hơn, vì đây là thay đổi sản phẩm thật chứ không phải nhiễu.
+
+### A72.2 Hai lỗi thật, cả hai của tôi, cả hai lọt mọi guard đang có
+
+**(1) Chip filter đang chọn ở Approval Inbox: chữ trắng trên nền trắng — 1.00:1.**
+
+`.exec-gov .exec-inbox-filter` đặt `background: var(--paper-raised)` và **không
+đặt lại `color`**. Nó nằm **sau** `.exec-inbox-filter[data-active="true"]` ở
+**cùng specificity (0,2,0)** — nên chip được chọn giữ `color: var(--accent-contrast)`
+nhưng **mất** `background: var(--accent-strong)`. Ở theme sáng
+`--accent-contrast: #ffffff` và `--paper-raised: #ffffff`.
+
+Chip `INBOX` là filter **mặc định**, nên mở `/governance/approvals` là thấy ngay
+một nút trắng trơn. Nó **đã có trong baseline cũ** — tức là đang chạy như thế từ
+lâu, không phải regression đợt này.
+
+**(2) Ba ô nhập id ở `/governance/approvals/new` không có viền, không có nền.**
+
+Khi bỏ picker bịa (`edd19496`), tôi đổi `<select>` → `<input>`. Nhưng trong
+`.exec-gov` chỉ có rule cho `select.exec-role-control`; **không có rule nào cho
+`input`**. Ba ô nhập render thành chữ trơn, nhìn y hệt dòng `gate` tĩnh ngay
+dưới — màn nhập liệu **không còn trông như nhập được**.
+
+Cả hai đều CSS-only: không đổi contract, mapping, hay copy.
+
+### A72.3 Guard mới `EL-V2-10`, và tại sao guard cũ không bắt được
+
+Guard WCAG đã có (`execution-surface-audit` → *"text meets WCAG AA against what
+is actually behind it"*) **vẫn xanh** trong khi lỗi 1.00:1 đang tồn tại. Lý do:
+nó chấm điểm **trang lab fixture**, nơi skin `.exec-gov` không nằm trong cascade.
+Lỗi chỉ tồn tại ở **route sản phẩm**, nên guard lab không thể thấy.
+
+`EL-V2-10 · stateful control contrast` quét tỉ lệ WCAG AA trên mọi control
+`[data-active="true"] / [aria-pressed="true"] / [aria-selected="true"] /
+[aria-current="page"]` của **cả 17 route** trong `ROUTES`.
+
+**Guard đã được chứng minh, không phải chỉ xanh.** Tôi bỏ fix ra, chạy lại, nó
+báo đúng:
+
+```
+exec-inbox-filter | 1.00:1 @11px | "Mine"
+```
+
+rồi mới trả fix về (17/17 pass). Đây là bài học từ "hai guard không guard" ở
+A62: một guard chưa từng đỏ vì đúng lỗi nó sinh ra để bắt thì chưa phải guard.
+
+**Luật rút ra:** một override có scope mà chỉ viết lại **một nửa** của cặp
+foreground/background thì phải viết lại **nửa kia**.
+
+### A72.4 Re-record: `--update-snapshots=all` ghi thừa 25 ảnh, và cách tôi lọc
+
+Chạy `scripts/portal-web-visual.sh --update` xong: 324 pass / 16 skip / exit 0 —
+nhưng `git status` cho **38 ảnh đổi**, trong đó **bảy ảnh QuantBT/Planning**
+(`auth-login`, `new-run`, `planning-board`, `planning-roadmap-print`,
+`users-access`) là màn tôi không liên quan gì.
+
+`--update-snapshots=all` ghi đè **tất cả**, kể cả drift dưới ngưỡng 0.2%. Ghi đè
+một baseline ngoài phạm vi bằng một frame chưa ai xem là **đúng thứ codex dặn
+phải review trước khi re-record**.
+
+Cách lọc — bằng bằng chứng, không bằng phán đoán: giữ 13 ảnh **thực sự đỏ** ở
+lần compare, `git checkout` 25 ảnh còn lại, rồi **chạy lại gate**. Ảnh nào đỏ
+tiếp là ảnh thật sự cần cập nhật; ảnh nào xanh thì baseline cũ vẫn đúng và
+không cần đụng.
+
+Kết quả lọc: đúng như thiết kế, các lab group Governance có chip filter
+(`phase-1-approval-inbox-states-only`, `phase-3-gate-r2-review-states-only`, …)
+đỏ trở lại — **vì fix contrast của tôi**, hợp lệ; bảy ảnh QuantBT/Planning thì
+**không** đỏ, xác nhận chúng chỉ là nhiễu và đã được trả về đúng.
+
+### A72.5 Ảnh `el-v2-05-inbox` **không deterministic** — lỗi của gate, không phải của màn
+
+Sau khi lọc còn 13 ảnh, chạy lại gate vẫn đỏ 3 cái. Mở diff ra thì lệch đúng
+**một giây**:
+
+| | baseline | lần chạy sau |
+|---|---|---|
+| tuổi dòng AP-352 | `26h 00m 00s` | `26h 00m 03s` |
+| next SLA breach | `22h 00m 00s` | `21h 59m 57s` |
+
+Cùng một commit, hai lần chạy, khác nhau một giây — đây là **bằng chứng kết
+luận** rằng ảnh này không lặp lại được, và nó có từ trước đợt này (số failure
+của codex là 10, của tôi là 13, chênh lệch một phần là do đúng thứ này).
+
+Nguyên nhân: `useNow` (`listMotion.ts`) **cố tình không bị đóng băng** trên
+route sản phẩm — comment trong source nói thẳng lý do: *"a queue that freezes
+its ages at first paint tells an operator the incident is younger than it is"*.
+`pollAllowed()` chỉ đóng băng trang **lab fixture**. Approval Inbox lại in tuổi
+**tới từng giây**, nên chữ số trong ảnh phụ thuộc vào **trang settle mất bao
+lâu** — tức là tải máy, không phải sự thật sản phẩm.
+
+**Không sửa bằng cách nới tolerance, cũng không mask cột SLA** (mask cột đó là
+tự bịt mắt trước regression layout thật ở đúng cột quan trọng nhất màn hình).
+Sửa bằng cách bỏ tính bất định: `freezeAges(page)` gọi
+`page.clock.setFixedTime(FROZEN_NOW)` — `Date.now()` về lại mốc đóng băng nhưng
+**timer vẫn chạy** — rồi `runFor(1_100)` cho interval bắn đúng một nhịp để mọi
+tuổi render lại từ mốc cố định. `useAgeTick` khi đó floor về 0, và màn trập
+thấy cùng một giây trên mọi máy. Gọi trước cả 6 điểm `toHaveScreenshot`.
+
+Hành vi tick vẫn được kiểm ở nơi kiểm được: `listMotion.test.ts`. Một ảnh chụp
+không thể assert một cái đồng hồ mà không tự biến thành flaky.
+
+Kết quả lọc cuối: **38 ảnh → 14 ảnh**, đúng 13 ảnh đỏ thật + `phase-1-approval-
+inbox-states-only-laptop` (đổi vì fix contrast của tôi). Bảy ảnh QuantBT/Planning
+đã được trả về nguyên trạng.
