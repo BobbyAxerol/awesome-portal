@@ -35,7 +35,14 @@ export function CommandAuthorityLine({ authority, relayState }: { authority: Com
       {" — "}
       {open
         ? "a CONNECTED task can be run through plan → apply → verify"
-        : "no command can be run from this Portal until the relay is opened; what is listed is what would run"}
+        /*
+         * "no command can be run" was too wide, and the Admin Action Drawer
+         * proved it: the relay was closed while four R0 read tasks were
+         * runtime-active, and that screen offered a control that ran one. The
+         * relay governs *change*, not reading. This line has no task counts of
+         * its own, so it says only the part it can stand behind.
+         */
+        : "no command can change anything from this Portal until the relay is opened; what is listed is what would run"}
     </p>
   );
 }

@@ -199,7 +199,7 @@ describe("Phase 3 controlled task drawer", () => {
   it("does not say nothing can run while it is offering a control that runs", () => {
     render(<AdminActionDrawerScreen catalogue={null} tasks={tasks} selected={null} onSelect={() => undefined} onRunTask={vi.fn()} />);
     expect(screen.getByRole("button", { name: /Inspect projection/ })).toBeTruthy();
-    expect(screen.queryByText(/no task can be run from this Portal/)).toBeNull();
+    expect(screen.queryByText(/none is CONNECTED/)).toBeNull();
     // It still says what is shut, and counts with the server's number.
     expect(screen.getByText(/no task can change anything from this Portal/)).toBeTruthy();
     expect(screen.getByText(/1 R0 read task runs locally/)).toBeTruthy();
@@ -210,7 +210,7 @@ describe("Phase 3 controlled task drawer", () => {
     const none = { ...tasks, counts: { connected: 0, inactive: 1, incompatible: 0 },
       tasks: [{ ...tasks.tasks[0], state: "SUPPORTED_BUT_INACTIVE" as const }] };
     render(<AdminActionDrawerScreen catalogue={null} tasks={none} selected={null} onSelect={() => undefined} onRunTask={vi.fn()} />);
-    expect(screen.getByText(/no task can be run from this Portal/)).toBeTruthy();
+    expect(screen.getByText(/none is CONNECTED, and the relay is closed/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Run local R0 read" })).toBeNull();
   });
 });

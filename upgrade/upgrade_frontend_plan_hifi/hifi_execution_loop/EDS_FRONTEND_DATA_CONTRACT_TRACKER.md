@@ -9998,3 +9998,41 @@ probe chỉ có **một** ADMIN là `bobby`, và tôi không đi tìm mật kh�
 **Cần Bobby**: một phiên ADMIN trên probe (hoặc một tài khoản ADMIN dùng cho
 review) để soi 24 task, 6 nhóm và nút R0 bằng mắt. Đến lúc đó phần hình của màn
 này vẫn là **chưa nghiệm thu**, và tôi ghi đúng như vậy chứ không đánh dấu xong.
+
+### A66.5 Đóng cả lớp, không chỉ một chỗ — và soi được hi-fi mà không cần admin
+
+Sửa xong câu trong drawer, chụp lại probe thì màn vẫn in *"no **command** can be
+run"*. Đó là **chỗ thứ hai**: component dùng chung `CommandAuthorityLine`
+(`components/CrossEvidence.tsx:28`) mang **cùng một over-claim**, và nó không
+nhận `counts` nên không đếm được task nào.
+
+Đúng lỗi "đóng 5 instance, không đóng cả lớp" của §A61. Đã sửa cả hai, mỗi câu
+nói đúng phần nó đứng được:
+
+| Nơi | Câu |
+| --- | --- |
+| Drawer, `connected > 0` | *no task can **change anything** … N R0 read tasks run locally … send nothing to the source* |
+| Drawer, `connected === 0` | *no task in this catalogue can be run — **none is CONNECTED**, and the relay is closed* (nêu **cả hai** lý do, vì nêu một sẽ khiến người đọc tưởng chỉ cần mở relay) |
+| `CommandAuthorityLine` (không có counts) | *no command can **change anything** …* — chỉ nói phần nó chứng minh được |
+
+**Guard cấp lớp**: quét source, cấm cụm *"no task/command can be run from this
+Portal"* xuất hiện lại ở chỗ thứ ba, kèm khẳng định quét phải tìm thấy dạng đã
+sửa (một lần quét không thấy gì không phải là pass).
+
+### A66.6 Soi hi-fi bằng mắt — **không cần admin**, và bản hiện tại khớp
+
+Case gallery `admin-action-drawer-1i` dùng `createFixtureApi()`, nên xem được
+toàn bộ bố cục mà không cần quyền ADMIN:
+
+- trái: task theo nhóm (`READ & INSPECT — NO PASSWORD, NO STEP-UP`, `PORTFOLIO &
+  CAPITAL`), mỗi dòng có tag `READ`/`MUTATION`, dòng CLI, scope bên phải;
+- phải: drawer `MUTATION` với **1 · PLAN / 2 · APPLY / 3 · VERIFY**, `TARGET &
+  PARAMETERS` ràng theo registry, `≤ R2 cap 100,000`, reason bắt buộc + audit.
+
+Khớp hi-fi. Và **hơn** hi-fi ở ba chỗ hi-fi không thể biết: banner `SMOKE DATA`
+nói rõ đây là fixture khai báo tới BR-EX-68; dòng *"not in published catalogue
+rev 2 under this name"*; và trạng thái relay in kèm. **Giữ nguyên, không đổi
+theo hi-fi.**
+
+Phần **chưa soi được**: 24 task N27 thật trên route sản phẩm — cần phiên ADMIN
+(§A66.4).

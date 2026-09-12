@@ -623,7 +623,10 @@ export function AdminActionDrawerScreen({
                        */
                       : (tasks.counts.connected ?? 0) > 0
                         ? `no task can change anything from this Portal until the relay is opened. ${tasks.counts.connected} R0 read ${tasks.counts.connected === 1 ? "task runs" : "tasks run"} locally against the Portal's own projection and send nothing to the source; the rest of the catalogue is what would run.`
-                        : "no task can be run from this Portal until the relay is opened; the catalogue below is what would run"}
+                        // Both reasons, not just the relay: nothing here is
+                        // CONNECTED either, and naming only one of them would
+                        // suggest opening the relay is all that is missing.
+                        : "no task in this catalogue can be run from this Portal — none is CONNECTED, and the relay is closed; what is listed is what would run"}
                   </p>
                   {activation ? (
                     <section className="exec-cli-activation" aria-label="Staged activation capabilities">
