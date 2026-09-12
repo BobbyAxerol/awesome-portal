@@ -1,0 +1,65 @@
+{
+  "schema_version": "portal.execution.profile-realtime.v1",
+  "event_type": "delta",
+  "terminal": false,
+  "reconnect_required": false,
+  "workspace_id": "workspace_execution",
+  "environment": "paper",
+  "profile_id": "PAPER_BINANCE_USDM",
+  "cursor": "018f0df0-9568-7cc2-babc-76a14ab55d2a:43",
+  "projection_epoch": "018f0df0-9568-7cc2-babc-76a14ab55d2a",
+  "projection_sequence": 43,
+  "payload_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "source_as_of": "2026-09-12T10:00:01.000Z",
+  "received_at": "2026-09-12T10:00:01.100Z",
+  "last_successful_refresh_at": "2026-09-12T10:00:01.100Z",
+  "availability": "AVAILABLE",
+  "freshness": "FRESH",
+  "completeness": "PARTIAL",
+  "recovery": { "state": "HEALTHY", "reason_code": null, "retry_not_before": null },
+  "observation": {
+    "authority": "PORTAL_OBSERVATION",
+    "semantics": "BOUNDED_CURRENT_PAGE",
+    "derived": false,
+    "operation_id": "EXECUTION_PROFILE_OBSERVATION_REVISION",
+    "scope": {
+      "workspace_id": "workspace_execution",
+      "environment": "paper",
+      "profile_id": "PAPER_BINANCE_USDM",
+      "resource_kind": "PROFILE",
+      "resource_id": "PAPER_BINANCE_USDM",
+      "venue": null
+    },
+    "source": {
+      "contract_revision": "manager-v2-current-page.v1",
+      "catalogue_revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "as_of_ms": 1789207201000,
+      "received_at_ms": 1789207201100
+    },
+    "coverage": { "kind": "CURRENT_PROFILE_PROJECTION", "relation_count": null }
+  },
+  "payload": {
+    "schema_version": "portal.execution.observation-revision.v1",
+    "observation_authority": "PORTAL_OBSERVATION",
+    "observation_semantics": "BOUNDED_CURRENT_PAGE",
+    "operation_id": "EXECUTION_PROFILE_OBSERVATION_REVISION",
+    "affected_screen_ids": ["EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
+    "revalidation": {
+      "schema_version": "portal.execution.observation-revalidation.v1",
+      "mode": "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+      "profile_scope": "CURRENT_STREAM_PROFILE_ONLY",
+      "affected_screen_ids": ["EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
+      "affected_operation_ids": ["executionAlphaFleetListV2"],
+      "revision_tick": {
+        "projection_epoch": "018f0df0-9568-7cc2-babc-76a14ab55d2a",
+        "projection_sequence": 43,
+        "payload_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "redaction": {
+        "raw_source_relation": "WITHHELD",
+        "source_cursor": "WITHHELD",
+        "resource_selector": "WITHHELD"
+      }
+    }
+  }
+}

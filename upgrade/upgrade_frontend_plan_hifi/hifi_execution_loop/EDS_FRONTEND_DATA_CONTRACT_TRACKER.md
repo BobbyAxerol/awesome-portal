@@ -9921,3 +9921,30 @@ khẳng định drawer có **0 nút** khi relay tắt — *vắng mặt*, không
 Lý do ghi ngay trong test: *"a disabled button advertises a capability that does
 not exist and teaches the operator that blockers are negotiable."* Không thêm gì;
 ghi lại để không ai tưởng còn nợ.
+
+---
+
+## A66. Codex independent Phase 8–11 audit — contract and truth closeout (12-09)
+
+Audit này đối chiếu commit Phase 8–11, server producer, canonical contracts,
+generated consumer types và frontend readers. Chỉ debt tái hiện được mới được
+sửa; không đổi route product, source profile, command authority hay runtime.
+
+| Claim từ frontend review | Verdict | Resolution / evidence |
+| --- | --- | --- |
+| **G1** — R1 evidence producer có `display_value`, `verification`, provenance nhưng public schema/type không mô tả | **Lỗi thật** | `af096e82` bổ sung `EvidenceManifestEntry`, fixture R1 đầy đủ, generated governance type và Control API assertion. `readPassportEntry` nay đọc đúng `display_value`; fallback legacy `value` chỉ giữ compatibility. |
+| **G4** — Live detail có thể trả `200 SOURCE_BACKED` cho deployment Manager xác nhận không tồn tại | **Lỗi thật** | `af096e82` trả typed `404 LIVE_DEPLOYMENT_NOT_FOUND` cho `resource_resolution.EMPTY`; `PARTIAL`/malformed scope trả typed `409 LIVE_DEPLOYMENT_SCOPE_UNRESOLVED`, không dựng facts từ URL. |
+| **G8** — local `portal.execution.profile-realtime.v1` có producer/consumer nhưng thiếu canonical public contract and fixtures | **Lỗi thật** | Contract lane bổ sung schema, snapshot/delta/heartbeat/auth-expired/gap fixtures, OpenAPI, generated types and generator/snapshot guard. Nó định danh đây là **Portal-local observation**, không phải source replay hay browser-to-Edge route. |
+| Local maintainer hook có Docker-less shell nhưng verifier gọi Compose trực tiếp | **Lỗi CI thật** | `verify-workspace.sh` tự phát hiện Docker socket không truy cập được và re-exec một lần qua passwordless sudo, giữ UID/GID để test container vẫn unprivileged. Không mở Docker socket cho user, không chạy runtime Compose. |
+| **C1'** — `pinned_watchlist` V1 bị bỏ | **Không còn mở** | Đã được khôi phục như compatibility `deprecated`, regenerated từ canonical OpenAPI và có empty authoritative object. Không reintroduce table/write path. |
+| **B6** — `useFreshnessPoll` là dead export | **Bác bỏ bằng code** | Nó có consumer thực ở subject/relation/profile/recompose containers; bounded refresh budget là đang dùng, không phải export mồ côi. |
+| **G9** — Operations fixture drift | **Không còn mở** | Canonical Operations fixture đã được cập nhật và contract test bảo vệ; không có sửa backend mới cần thiết. |
+| Migration `031`, retention/row evidence và runtime visual/probe evidence | **Operational evidence, không phải source debt** | Giữ fail-closed trong release evidence; không giả số liệu, không tạo migration/runtime change trong audit. |
+| Nine read-only governance tables | **Intentional product boundary** | Không tạo writer giả để “đóng debt”. Khi có owner-approved mutation workflow, nó phải là phase riêng cùng RBAC/idempotency/audit. |
+
+**Gate required before integration:** contract fixture/generator gate; focused
+Control API regression for Live source resolution; frontend unit/type/build and
+clean browser journey on the integrated branch. The four later frontend
+follow-up commits remain a separate integration input until their actual
+branch is merged deliberately; this audit does not silently fast-forward or
+rewrite them.

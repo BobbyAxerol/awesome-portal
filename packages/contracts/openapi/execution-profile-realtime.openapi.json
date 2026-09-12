@@ -1,0 +1,137 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Primus Portal local profile realtime API",
+    "version": "1.0.0",
+    "description": "N31 same-origin, session-guarded projection observation transport. This contract describes Portal-local cursor/revision metadata only. Browsers never receive Manager relation selectors, source cursors, delegated JWTs, mTLS material, or a route to Execution Edge."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/execution/profiles/{environment}/realtime-snapshot": {
+      "get": {
+        "operationId": "executionProfileRealtimeSnapshotV1",
+        "description": "Pins the current Portal-local projection revision before a stream opens. It does not return the profile document and does not perform a browser-to-Execution-Edge read.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProfileEnvironment" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current local profile observation snapshot.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Snapshot" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/profiles/{environment}/stream": {
+      "get": {
+        "operationId": "executionProfileRealtimeStreamV1",
+        "description": "Streams Portal-local snapshot, delta, heartbeat, auth-expired and terminal projection-gap envelopes. Cursor resume is scoped to the selected Portal profile; Last-Event-ID takes precedence over the initial cursor query. A terminal gap requires a bounded resnapshot through the same-origin snapshot route, never a direct source call.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ProfileEnvironment" },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Initial Portal-local opaque projection cursor. Required only when Last-Event-ID is absent.",
+            "schema": { "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Cursor" }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "description": "Last delivered Portal-local cursor. It takes precedence over cursor on EventSource reconnect.",
+            "schema": { "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Cursor" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream; each SSE data frame is one versioned Portal-local observation envelope.",
+            "content": {
+              "text/event-stream": {
+                "schema": { "type": "string" },
+                "x-sse-events": {
+                  "snapshot": { "$ref": "#/components/schemas/ProfileRealtimeSnapshot" },
+                  "delta": { "$ref": "#/components/schemas/ProfileRealtimeDelta" },
+                  "heartbeat": { "$ref": "#/components/schemas/ProfileRealtimeHeartbeat" },
+                  "auth.expired": { "$ref": "#/components/schemas/ProfileRealtimeAuthExpired" },
+                  "projection.gap": { "$ref": "#/components/schemas/ProfileRealtimeProjectionGap" }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+    },
+    "parameters": {
+      "ProfileEnvironment": {
+        "name": "environment",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "enum": ["paper", "sandbox", "live"] }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed Portal-local transport refusal",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ProfileRealtimeSnapshot": {
+        "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Snapshot"
+      },
+      "ProfileRealtimeDelta": {
+        "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Delta"
+      },
+      "ProfileRealtimeHeartbeat": {
+        "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/Heartbeat"
+      },
+      "ProfileRealtimeAuthExpired": {
+        "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/AuthExpired"
+      },
+      "ProfileRealtimeProjectionGap": {
+        "$ref": "../schemas/execution-profile-realtime.v1.schema.json#/$defs/ProjectionGap"
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "minLength": 1, "maxLength": 191 },
+              "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

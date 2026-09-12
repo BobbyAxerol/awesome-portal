@@ -1,0 +1,47 @@
+{
+  "schema_version": "portal.execution.profile-realtime.v1",
+  "event_type": "snapshot",
+  "terminal": false,
+  "reconnect_required": false,
+  "workspace_id": "workspace_execution",
+  "environment": "paper",
+  "profile_id": "PAPER_BINANCE_USDM",
+  "cursor": "018f0df0-9568-7cc2-babc-76a14ab55d2a:42",
+  "projection_epoch": "018f0df0-9568-7cc2-babc-76a14ab55d2a",
+  "projection_sequence": 42,
+  "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_as_of": "2026-09-12T10:00:00.000Z",
+  "received_at": "2026-09-12T10:00:00.100Z",
+  "last_successful_refresh_at": "2026-09-12T10:00:00.100Z",
+  "availability": "AVAILABLE",
+  "freshness": "FRESH",
+  "completeness": "COMPLETE",
+  "recovery": { "state": "HEALTHY", "reason_code": null, "retry_not_before": null },
+  "observation": {
+    "authority": "PORTAL_OBSERVATION",
+    "semantics": "BOUNDED_CURRENT_PAGE",
+    "derived": false,
+    "operation_id": "EXECUTION_PROFILE_OBSERVATION_REVISION",
+    "scope": {
+      "workspace_id": "workspace_execution",
+      "environment": "paper",
+      "profile_id": "PAPER_BINANCE_USDM",
+      "resource_kind": "PROFILE",
+      "resource_id": "PAPER_BINANCE_USDM",
+      "venue": null
+    },
+    "source": {
+      "contract_revision": "manager-v2-current-page.v1",
+      "catalogue_revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "as_of_ms": 1789207200000,
+      "received_at_ms": 1789207200100
+    },
+    "coverage": { "kind": "CURRENT_PROFILE_PROJECTION", "relation_count": 23 }
+  },
+  "payload": {
+    "snapshot_mode": "CURSOR_ONLY",
+    "relation_count": 23,
+    "source_contract_revision": "manager-v2-current-page.v1",
+    "source_catalogue_sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

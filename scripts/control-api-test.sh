@@ -23,6 +23,18 @@ NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501d
 POSTGRES_IMAGE="postgres@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
 DEPS_DIR="$(mktemp -d)"
 WORK_DIR="${DEPS_DIR}/work"
+RUN_UID="${HOST_UID:-$(id -u)}"
+RUN_GID="${HOST_GID:-$(id -g)}"
+
+# The test cell is commonly invoked via passwordless sudo solely to reach the
+# Docker daemon.  Its Node process stays unprivileged, so the root-created
+# temporary parent must be owned by that mapped UID before npm creates its
+# dependency tree.  This is test-cell plumbing only; repository source remains
+# copied into the disposable mount and runtime containers are never touched.
+chmod 755 "${DEPS_DIR}"
+if [ "$(id -u)" -eq 0 ]; then
+  chown "${RUN_UID}:${RUN_GID}" "${DEPS_DIR}"
+fi
 
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required.\n' >&2; exit 1; }
 DOCKER=(docker)
@@ -47,7 +59,7 @@ trap cleanup EXIT
 # node_modules tree becomes read-only in the internal test cell below.
 cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
-  -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
+  -u "${RUN_UID}:${RUN_GID}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
   -w /deps -e HOME=/tmp -e npm_config_cache=/tmp/.npm \
@@ -62,6 +74,12 @@ test -f "${EDS11R_MANAGER_CENSUS_PACK}/manager-surface-census.v1.json"
 # disposable test cell instead: the repository stays untouched and read-only
 # rootfs/network isolation remain intact.
 mkdir -p "${WORK_DIR}"
+# `mkdir` is executed by the caller (often root through sudo), while the Node
+# test process deliberately remains unprivileged.  It must be able to create
+# its disposable `dist/` tree below this staged source directory.
+if [ "$(id -u)" -eq 0 ]; then
+  chown "${RUN_UID}:${RUN_GID}" "${WORK_DIR}"
+fi
 cp -a \
   "${APP_DIR}/migrations" \
   "${APP_DIR}/src" \
@@ -101,7 +119,7 @@ if [[ "${ready}" != true ]]; then
 fi
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" --read-only \
-  -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
+  -u "${RUN_UID}:${RUN_GID}" \
   -v "${DEPS_DIR}:/cell" \
   -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
   -v "${EDS08_SOURCE_CONTINUITY_PACK}:/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1:ro" \

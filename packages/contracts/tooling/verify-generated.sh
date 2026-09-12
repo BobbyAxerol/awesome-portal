@@ -19,6 +19,7 @@ generate_and_compare openapi/execution-query-analytics.openapi.json generated/ex
 generate_and_compare openapi/execution-analytics-series.openapi.json generated/execution-analytics-series.d.ts
 generate_and_compare openapi/execution-governance.openapi.json generated/execution-governance.d.ts
 generate_and_compare openapi/execution-realtime.openapi.json generated/execution-realtime.d.ts
+generate_and_compare openapi/execution-profile-realtime.openapi.json generated/execution-profile-realtime.d.ts
 generate_and_compare openapi/execution-command-center.openapi.json generated/execution-command-center.d.ts
 generate_and_compare openapi/execution-operations.openapi.json generated/execution-operations.d.ts
 generate_and_compare openapi/execution-canary.openapi.json generated/execution-canary.d.ts

@@ -80,6 +80,16 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
   "execution-manager-realtime.live-empty.valid.json":
     "https://schemas.primusspark.com/portal/execution-manager-realtime.v2.schema.json",
+  "execution-profile-realtime.snapshot.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-realtime.v1.schema.json",
+  "execution-profile-realtime.delta.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-realtime.v1.schema.json",
+  "execution-profile-realtime.heartbeat.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-realtime.v1.schema.json",
+  "execution-profile-realtime.auth-expired.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-realtime.v1.schema.json",
+  "execution-profile-realtime.projection-gap.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-realtime.v1.schema.json",
   "execution-realtime.projection-gap.valid.json":
     "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
   "execution-governance.r2-review.valid.json":
@@ -1220,6 +1230,12 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(realtime).toContain('"/api/v1/execution/command-center/stream"');
     expect(realtime).toContain("AuthExpiringEvent");
     expect(realtime).toContain("expires_at");
+
+    const profileRealtime = readFileSync(join(ROOT, "generated", "execution-profile-realtime.d.ts"), "utf8");
+    expect(profileRealtime).toContain('"/api/v1/execution/profiles/{environment}/realtime-snapshot"');
+    expect(profileRealtime).toContain('"/api/v1/execution/profiles/{environment}/stream"');
+    expect(profileRealtime).toContain("executionProfileRealtimeSnapshotV1");
+    expect(profileRealtime).toContain("portal.execution.profile-realtime.v1");
   });
 
   it("keeps the Canary source-dark and preserves protective/scale asymmetry", () => {

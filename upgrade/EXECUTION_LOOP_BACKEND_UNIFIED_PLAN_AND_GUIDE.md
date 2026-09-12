@@ -6087,6 +6087,31 @@ and one sanitized AWS-HK marker that bind to that exact candidate. Until all
 three are supplied and verified, release truth remains `NO_GO` and runtime
 authority remains fail-closed.
 
+#### Phase 8–11 audit amendment — truth and contract closure (2026-09-12)
+
+The independent audit confirmed and closed exactly three source-level gaps:
+
+- R1 immutable evidence response fields were richer than its published schema;
+  the canonical schema, R1 fixture, generated type and producer test now share
+  the same `display_value`/verification/provenance shape.
+- Live current-source fallback could treat a Manager-confirmed absent or
+  unresolved deployment as a URL-derived `SOURCE_BACKED` detail; it now emits
+  typed `404` or `409` and never manufactures a resource.
+- N31 local profile SSE had a working producer and consumer but no canonical
+  contract corpus; its schema, five event fixtures, same-origin OpenAPI and
+  generated type now make recovery/terminal semantics reviewable without
+  exposing Edge selectors or claiming source replay.
+- The maintainer pre-commit verifier now detects an intentionally
+  non-Docker-group workstation and re-executes its isolated checks through
+  passwordless `sudo`, retaining the caller UID/GID for unprivileged test
+  cells. This fixes a real CI-repeatability defect without granting the login
+  user Docker socket access or changing any runtime Compose behavior.
+
+No runtime activation, source request, command, migration or deployment is
+part of this amendment. Runtime migration/retention/deployed-evidence work
+remains explicitly operational and fail-closed, rather than being recast as a
+source-code completion claim.
+
 ### 18.5 Claude handoff and phase ownership
 
 Claude owns visual composition and frontend consumer work. Codex owns all

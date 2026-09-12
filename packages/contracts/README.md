@@ -134,6 +134,15 @@ flags. A valid Live profile with zero rows is `empty`, while source loss is
 not a Trading System mode: `governance-live-review.v1` joins the existing
 Portal governance backbone to `LIVE_BINANCE_USDM` facts and remains read-only.
 
+N31 publishes the matching Portal-local profile observation transport at
+`execution-profile-realtime.openapi.json`, generated as
+`generated/execution-profile-realtime.d.ts`. Its canonical envelope and five
+fixtures distinguish a cursor-only snapshot, named-BFF revision delta,
+heartbeat, terminal session expiry and terminal projection gap. It preserves
+profile isolation, UTC timestamps and exact local projection revision metadata,
+but expressly does not claim Trading System replay, source ordering or direct
+browser access to Execution Edge.
+
 N25 adds the source-backed Query and analytics plane at
 `execution-query-analytics.openapi.json`, generated as
 `generated/execution-query-analytics.d.ts`. Four session-bound BFF routes map
@@ -206,6 +215,7 @@ packages/contracts/
     execution-intercell-gateway.v1.schema.json
     execution-paper-read.v1.schema.json
     execution-profile-read.v1.schema.json
+    execution-profile-realtime.v1.schema.json
     execution-market-context.v1.schema.json
     governance-live-review.v1.schema.json
   fixtures/
@@ -227,6 +237,7 @@ packages/contracts/
     execution-governance.paper-exit-review.valid.json
     execution-realtime.auth-expiring.valid.json
     execution-realtime.projection-gap.valid.json
+    execution-profile-realtime.{snapshot,delta,heartbeat,auth-expired,projection-gap}.valid.json
     execution-command-center.{busy,empty,partial,stale,unavailable}.valid.json
     execution-command-{catalog,plan,operation,relay-denied}.valid.json
     execution-staged-activation.{capabilities,plan-blocked,states}.valid.json
@@ -246,6 +257,7 @@ packages/contracts/
     execution-query-analytics.openapi.json
     execution-governance.openapi.json
     execution-realtime.openapi.json
+    execution-profile-realtime.openapi.json
     execution-command-center.openapi.json
     execution-operations.openapi.json
     execution-staged-activation.openapi.json
@@ -261,6 +273,7 @@ packages/contracts/
     execution-query-analytics.d.ts
     execution-governance.d.ts
     execution-realtime.d.ts
+    execution-profile-realtime.d.ts
     execution-command-center.d.ts
     execution-operations.d.ts
     execution-staged-activation.d.ts

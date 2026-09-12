@@ -8,6 +8,16 @@ NODE_CONTAINER="contracts-test-node"
 NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
 DEPS_DIR="$(mktemp -d)"
 WORKSPACE_DIR="${DEPS_DIR}/workspace"
+RUN_UID="${HOST_UID:-$(id -u)}"
+RUN_GID="${HOST_GID:-$(id -g)}"
+# This script may be invoked through passwordless sudo when Docker is not
+# directly accessible.  Keep the temporary parent traversable by the mapped
+# unprivileged Node UID; individual source files remain copied with their
+# normal permissions and the container only receives the staged workspace.
+chmod 755 "${DEPS_DIR}"
+if [ "$(id -u)" -eq 0 ]; then
+  chown "${RUN_UID}:${RUN_GID}" "${DEPS_DIR}"
+fi
 
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required.\n' >&2; exit 1; }
 DOCKER=(docker)
@@ -30,7 +40,7 @@ trap cleanup EXIT
 # application source are mounted later, read-only, in a networkless container.
 cp "${CONTRACTS_DIR}/package.json" "${CONTRACTS_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
-  -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
+  -u "${RUN_UID}:${RUN_GID}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
   -w /deps -e HOME=/tmp -e npm_config_cache=/tmp/.npm \
@@ -73,7 +83,7 @@ mv "${DEPS_DIR}/node_modules" "${WORKSPACE_DIR}/node_modules"
 ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network none --read-only \
-  -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
+  -u "${RUN_UID}:${RUN_GID}" \
   -v "${WORKSPACE_DIR}:/repo" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
   -w /repo/packages/contracts \
