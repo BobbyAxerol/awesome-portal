@@ -2173,3 +2173,10 @@ Integration follow-up: retain Claude `0135e3c7` and its typed-ID form. Fleet
 suggestions are not approval eligibility; optional non-exhaustive picker UX is
 handed back to Claude in §8.61. Bobby authorized a disposable dev reviewer,
 normal authentication and mandatory disable/revoke/membership cleanup.
+
+Dev checkpoint: candidate `007d0960` built from clean export, ledger34→35
+(migration032), passed image rollback/return, read/R0/CSRF/auth
+expiry review. Stable unchanged. PR63 exists, not merged. Main BE-R2-9 journal
+records exact image IDs,527 backend/395 Rust/2331 frontend tests,10 visual failures,
+and the still-unclaimed multi-process/PG→DOM measurement. Full phase/release is
+not marked complete merely because the backend candidate is deployed.

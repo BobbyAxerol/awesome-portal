@@ -1941,3 +1941,10 @@ Latest integration includes Claude `0135e3c7`; Bobby authorized a disposable
 dev reviewer with disable/session-revoke cleanup. Approval suggestion UX and
 visual-only baseline differences stay with Claude; see §8.61 handoff. No new
 approval eligibility is inferred from the current Fleet page.
+
+**BE-R2-9 dev checkpoint:** `007d0960` deployed only to dev; forward migration032,
+healthy image rollback/return and authenticated read/local-R0/session-expiry
+checks. PR63 targets dev. No stable/source/command activation. Visual gate remains
+10 failures requiring Claude review, not a reason to rewrite UI or relax checks;
+multi-process/PG→DOM evidence and actual remote CI remain separately tracked.
+Exact results and private evidence location are in the main BE-R2-9 journal.

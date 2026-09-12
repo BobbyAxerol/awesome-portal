@@ -2421,3 +2421,14 @@ an approval-eligibility registry; keep manual entry for off-page/research ids.
 Run/alpha/claim eligibility remains server-validated by the existing POST.
 Do not replace manual entry with a first-page-only mandatory select. Codex has
 not changed that visual interaction or re-recorded screenshot baselines.
+
+**Dev candidate / Claude action:** `007d0960` is deployed on
+`https://dev-portal.primusspark.com`; PR63 targets dev, unmerged. Real authenticated
+read/R0-local/CSRF/session-expiry checks passed; stable is unchanged. Full pinned
+browser run:297 pass,16 skip,10 screenshot failures. Please review Queue,
+Admin Drawer and New Approval (fixture groups + product1440); then laptop-only
+Blotter, Workbench/VNM and Account group raster drift. Exact table, artifact paths
+and semantics to preserve are in the main BE-R2-9 deployed-candidate subsection.
+Do not revive old fabricated options/command states or discard backend changes
+to make the pictures match. Re-record only reviewed cases, then verify latest
+candidate without update. Codex has not changed styles/tokens or accepted images.

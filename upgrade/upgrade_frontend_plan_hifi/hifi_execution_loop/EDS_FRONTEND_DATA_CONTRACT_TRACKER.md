@@ -10208,3 +10208,20 @@ và [handoff §8.61](../../../../apps/portal/registry/FRONTEND_HANDOFF.md#861-be
   bằng chứng thay cho dev current-source. Không mở TS command/Live mutation.
 - Claude nên review màu/độ rộng/tab/empty-partial của các route hiện có sau
   rollout; giữ signal cancellation và screen invalidation khi sửa consumer.
+
+### A71.1 — Dev candidate và phân việc đúng ranh giới
+
+`007d0960` đã lên đúng dev-portal, giữ đủ Claude đến `0135e3c7`; PR63 vào dev,
+chưa merge. Migration032 ledger34→35, rollback image cũ rồi về candidate đều
+healthy; stable không đổi. Đã test auth thật,13 BFF,14 route,10 Alpha tabs,
+6 Portfolio tabs, R0 local inspect/CSRF403/logout→SSE auth.expired→snapshot401.
+Test frontend candidate2331 pass/1 skip; backend527 + restore; Rust395 + Clippy.
+
+**Chưa full GO:** browser pinned297 pass/16 skip/**10 ảnh lệch**, không re-record.
+Claude nhận Queue/Admin Drawer/New Approval ở product1440 + fixture groups;
+Blotter, Workbench/VNM, Account ở laptop fixture. Xem bảng chi tiết/artifacts trong
+main BE-R2-9 deployed-candidate subsection. Giữ nghiệp vụ `Mine` và `All retained`,
+không phục hồi fake candidates/command data để khớp ảnh cũ. Codex sửa BFF/mapping/
+logic; Claude quyết layout/typography/interaction và baseline sau review.
+Không gọi optional Fleet suggestions là approval eligibility. Bằng chứng tải
+hai OS replicas/PG commit→DOM và remote CI còn phải chốt, không nhận là đã xanh.
