@@ -10428,3 +10428,85 @@ không thể assert một cái đồng hồ mà không tự biến thành flaky.
 Kết quả lọc cuối: **38 ảnh → 14 ảnh**, đúng 13 ảnh đỏ thật + `phase-1-approval-
 inbox-states-only-laptop` (đổi vì fix contrast của tôi). Bảy ảnh QuantBT/Planning
 đã được trả về nguyên trạng.
+
+## A73. SAU KHI CODEX MERGE VÀO DEV — KIỂM MẤT MÁT, VÀ NĂM MÀN CHƯA CÓ HI-FI (12-09)
+
+codex báo đã chạy CI và merge vào `dev` remote. Bobby yêu cầu kiểm lại xem phía
+frontend/UIUX có mất hay thiếu gì. Đây là kết quả kiểm, không phải cảm nhận.
+
+### A73.1 Kiểm mất mát — không mất gì
+
+`origin/dev` = `1c4df686` (Merge PR #64). Cả hai commit của tôi là **ancestor**
+của nó: `ea77b90b` và `9e473a58`.
+
+Nhưng "commit có mặt" **không** đồng nghĩa "nội dung còn sống" — một merge sau đó
+vẫn có thể lấy phía bên kia, và với **file nhị phân thì nó lấy im lặng, không
+conflict**. Nên tôi kiểm bằng nội dung thật trên `origin/dev`:
+
+- **21 kiểm nội dung**, tất cả PASS: breadcrumb (`shortDeployment`,
+  `MissingRouteId`, không còn fallback `AP-201`), approval (`type the id`, không
+  còn `REGISTRY_PICKS`), `utcInstant` + cột time 11.5rem, `analyticsLoading` cả ở
+  `hifiInsight` và container, `exec-oq-emptyrow`, drawer `cliForms[0] ?`,
+  `readTruthCopy`, `prominentEmpty`, `EL-V2-10`, `freezeAges`, hai rule CSS vừa
+  sửa, handoff §8.62, A72, phần trả lời codex, guard `snapshot.py`.
+- **5 file test** của tôi còn đủ: `castLeak`, `uxRound3`, `readTruth`,
+  `sourceRecovery`, `emptyComposition`.
+- **14 baseline PNG**: so **blob hash** giữa `9e473a58` và `origin/dev` →
+  **identical 14/14, 0 mismatch**. Đây là phép kiểm quan trọng nhất, vì đúng chỗ
+  này là chỗ mất mát sẽ không kêu.
+- **Digest pin** trên chính `origin/dev` (không phải worktree của tôi):
+  `frontend_execution_journeys`, `frontend_product_route`,
+  `frontend_same_origin_bff_double`, `screen_bff_catalogue` → **0 drift**.
+
+**Một thay đổi duy nhất vào file của tôi sau commit:** `f3c1e20a`
+*"test(execution): keep color-token gate comment-safe"* đổi `#ffffff` thành
+"white" **trong comment** của tôi, vì gate màu bắt hex literal kể cả trong
+comment. Rule CSS không bị sửa. Đây đúng là cách xử lý đúng — sửa comment chứ
+không nới gate — giống hệt việc tôi đã làm ở A62 khi guard bắt chính comment của
+tôi. **Không phản đối.**
+
+### A73.2 CI: chưa được gọi là xanh
+
+Run `#34706028530` trên `dev` cho `1c4df686` **đang chạy** lúc viết mục này
+(đang ở bước *Test Rust execution edge*). Chưa có kết luận, nên chưa ghi là xanh.
+
+Điều đáng nói: run trước đó trên `dev` (`101d130d`) fail **đúng một job** —
+*Validate Portal monorepo stack*, và **đúng một bước**: **`Portal web visual
+baseline`**. Đó chính là gate tôi vừa sửa. Tất cả run trên `dev` trong ngày đều
+đỏ vì bước này. Nếu run hiện tại xanh thì nguyên nhân đỏ suốt ngày là baseline
+ảnh mốc, và nó đã được đóng.
+
+### A73.3 Năm màn đã route nhưng **chưa có hi-fi** — Bobby dặn nốt lại
+
+Corpus hi-fi là **một artboard cho một màn**: 17 file `HiFi <tên>.dc.html`.
+Đối chiếu với 22 `EXECUTION_*_SCREEN` đang thực sự route trong
+`ExecutionPreviewRoute.tsx` → **5 màn không có artboard nào**:
+
+| Màn đang chạy | Route | Ghi chú |
+|---|---|---|
+| `EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN` | `/deployments/accounts` + `?binding=` | **Chính là bug #2 Bobby báo.** Binding detail là query param trên cùng màn, không phải màn riêng |
+| `EXECUTION_ALPHA_FLEET_LIST_SCREEN` | `/deployments/alphas` | |
+| `EXECUTION_NEW_APPROVAL_REQUEST_SCREEN` | `/governance/approvals/new` | Màn tôi vừa sửa hai lỗi — và nó **chưa từng có hi-fi** |
+| `EXECUTION_GATE_LIVE_REVIEW_SCREEN` | `/governance/approvals/:id/live` | |
+| `EXECUTION_WAIVERS_REGISTER_SCREEN` | `/governance/waivers` | |
+
+**Trả lời dứt điểm câu hỏi Binding của Bobby.** Không phải tôi làm thiếu UI/UX.
+Trong `Execution Wireframes.dc.html`, binding **chỉ tồn tại như một dòng bên
+trong màn khác**, nguyên văn:
+
+> `Broker Binding — external_account_ref binance_main_01` ·
+> `credential alias BIN-01 · VALID · secret never shown`
+
+Danh sách banner tên màn trong wireframe (`ACCOUNT`, `APPROVAL`, `BLOTTER`,
+`COMMAND CENTER`, `GOVERNANCE`, `INCIDENT`, `OPERATION`, `SANDBOX`,
+`LIVE·CANARY`, `VN MARKET`, …) **không có banner nào cho BINDING, FLEET hay
+WAIVER**. Nên luồng "mở từng binding ra xem gì" chưa bao giờ được thiết kế —
+đúng như Bobby đoán: *"hay do tôi chưa có design và spec cho luồng đó"*.
+
+Cái wireframe **có** cho binding là ngữ nghĩa của một dòng: định danh bằng
+`external_account_ref`, alias credential, trạng thái hiệu lực, và
+**"secret never shown"**. Nếu được giao thiết kế Binding Detail thì đó là điểm
+bắt đầu đúng, không phải bịa một layout mới.
+
+**Trạng thái:** `NEEDS_OWNER_DESIGN_DECISION` cho cả 5. Không phải việc code, và
+không phải thứ tôi được tự ý vẽ ra — Bobby chốt để lên version sau.
