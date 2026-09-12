@@ -158,20 +158,20 @@ export function NewApprovalRequestScreen({
                   </select>
                 ) : (
                   <input className="exec-role-control" value={alphaId} onChange={(e) => setAlphaId(e.target.value)} aria-label="Alpha (from the alpha registry)" disabled={submitting}
-                    placeholder={alphaOptionsReason ?? "no candidate list is published — type the id"} />
+                    placeholder={alphaOptionsReason ?? "type the id"} />
                 )}
               </span>
               <span className="exec-gov-k">evidence run</span>
               <span className="exec-gov-v">
                 {/* No candidate list is published for this; the id is typed and the POST validates it. */}
                 <input className="exec-role-control" value={runId} onChange={(e) => setRunId(e.target.value)} aria-label="Evidence run (from the run library)" disabled={submitting}
-                  placeholder="no candidate list is published — type the id" />
+                  placeholder="type the id" />
               </span>
               <span className="exec-gov-k">methodology claim</span>
               <span className="exec-gov-v">
                 {/* No candidate list is published for this; the id is typed and the POST validates it. */}
                 <input className="exec-role-control" value={claimId} onChange={(e) => setClaimId(e.target.value)} aria-label="Methodology claim" disabled={submitting}
-                  placeholder="no candidate list is published — type the id" />
+                  placeholder="type the id" />
               </span>
               <span className="exec-gov-k">gate</span>
               <span className="exec-gov-v">R1 — research evidence. R2 (capital) requires an approved R1 and opens from its decision.</span>
@@ -181,8 +181,15 @@ export function NewApprovalRequestScreen({
               <p className="exec-gate-note" data-tone="warn" role="note">! {alpha.label}</p>
             ) : null}
             <p className="exec-gate-note">
-              ids picked from registries — never free-typed · an id the server registry does not know
-              is a typed 422, never a silent guess
+              {/*
+                * This said "ids picked from registries — never free-typed",
+                * which stopped being true the moment the invented picker was
+                * removed. Seen on the screen it sat directly under three text
+                * fields and contradicted them. The second half was always the
+                * real guarantee, and it still holds.
+                */}
+              no candidate list is published for these, so each id is typed · an id the server
+              registry does not know is a typed 422, never a silent guess
             </p>
             <label className="exec-px-note">
               <span className="exec-px-notelabel">Summary (required — the reviewer&apos;s first sentence)</span>
