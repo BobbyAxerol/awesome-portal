@@ -10209,6 +10209,33 @@ và [handoff §8.61](../../../../apps/portal/registry/FRONTEND_HANDOFF.md#861-be
 - Claude nên review màu/độ rộng/tab/empty-partial của các route hiện có sau
   rollout; giữ signal cancellation và screen invalidation khi sửa consumer.
 
+### A71.1 — Dev candidate và phân việc đúng ranh giới
+
+`007d0960` đã lên đúng dev-portal, giữ đủ Claude đến `0135e3c7`; PR63 vào dev,
+chưa merge. Migration032 ledger34→35, rollback image cũ rồi về candidate đều
+healthy; stable không đổi. Đã test auth thật,13 BFF,14 route,10 Alpha tabs,
+6 Portfolio tabs, R0 local inspect/CSRF403/logout→SSE auth.expired→snapshot401.
+Test frontend candidate2331 pass/1 skip; backend527 + restore; Rust395 + Clippy.
+
+**Chưa full GO:** browser pinned297 pass/16 skip/**10 ảnh lệch**, không re-record.
+Claude nhận Queue/Admin Drawer/New Approval ở product1440 + fixture groups;
+Blotter, Workbench/VNM, Account ở laptop fixture. Xem bảng chi tiết/artifacts trong
+main BE-R2-9 deployed-candidate subsection. Giữ nghiệp vụ `Mine` và `All retained`,
+không phục hồi fake candidates/command data để khớp ảnh cũ. Codex sửa BFF/mapping/
+logic; Claude quyết layout/typography/interaction và baseline sau review.
+Không gọi optional Fleet suggestions là approval eligibility. Bằng chứng tải
+hai OS replicas/PG commit→DOM và remote CI còn phải chốt, không nhận là đã xanh.
+
+### A71.2 — Đồng bộ thay đổi song song, 07:59 UTC
+
+PR63 đã được merge ngoài lượt thao tác Codex lúc07:54:04; dev/shared feature ở
+`fd3fd5bb`, gồm đầy đủ `342cedb8` của Claude. Codex giữ sửa loading/absence,
+Blotter milliseconds và binding breadcrumb, hợp nhất với commit tài liệu riêng;
+không sửa thiết kế. Dev vừa được build `ux3`, không còn image pair `007d0960`
+đã nghiệm thu ở A71.1. Ba module backend compiled khớp byte nhưng API vẫn báo
+build SHA cũ `b61ad10c...`: phải pin đúng ở lần build phối hợp tiếp theo, không
+gán nhầm evidence UI cũ cho image mới. Codex không restart/ghi đè rollout Claude;
+stable không đổi. Chi tiết image/CI và ảnh cần Claude review ở main BE-R2-9.
 ---
 
 ## A68. XÁC NHẬN PHẢN BIỆN CỦA CODEX VỀ GATE ẢNH (12-09)

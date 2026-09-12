@@ -6572,6 +6572,105 @@ debt exit:** every AR-08–11 and delegated AR-05/07 item has a normal regressio
 test and measured acceptance result, including errors and cleanup. Phase8's
 explicit workflow scope and TS gaps remain accurately labelled, not hidden.
 
+#### BE-R2-9 deployed candidate / remaining acceptance (2026-09-12)
+
+**Latest concurrent-update reconciliation (07:59 UTC):** the checkpoint below
+records the Codex deployment/test of `007d0960`, not the subsequently replaced
+dev runtime. Re-fetch found Claude `342cedb8` plus merge `fd3fd5bb`, and GitHub
+confirms PR63 was merged externally at **07:54:04 UTC**; origin/dev and the shared
+feature now contain both agents' code. Codex did not perform that merge. The
+local documentation commit is merged with `fd3fd5bb` without discarding either
+parent. Claude's loading/absence distinction, millisecond Blotter display and
+binding breadcrumb are kept; none changes backend authority or poll cadence.
+Dev was concurrently replaced by `local/portal-{control-api,portal-web}:ux3`:
+API `sha256:88003160b620572697e0eed0b84ebcd73771b687838360cb86269606daa21902`,
+web `sha256:c095d45ac316fed6cbc54c91e035c83606dd386bff7454a2e04e936f979a786a`.
+Their stable counterparts are unchanged. Read-only comparison proves all three
+compiled realtime/projection/local-analytics modules byte-identical to the
+accepted `007d0960` API image. **Build provenance drift remains:** the new API
+environment reports old `PORTAL_BUILD_COMMIT=b61ad10c...`, while image revision
+labels are absent. Do not infer whole-image source identity from that stale
+marker or transfer the previous browser verdict to this new UI. Do not restart
+or overwrite the concurrent UX deployment to restore an old candidate; the next
+coordinated dev build must bind its actual commit/image/config explicitly.
+New source CI run: `34681903779`, in progress when checked. Historical checkpoint
+references to an unmerged PR below are superseded by this reconciliation.
+
+**Verdict: backend changes deployed and bounded dev checks passed; complete
+phase/release acceptance remains OPEN.** Do not describe the visual gate or
+remote CI as green before their real result. The optional approval suggestion
+interaction remains a Claude follow-up, not an invented backend registry.
+
+- Code candidate `007d09600ea16b285d2513c446c560db27b86e08` includes BE-R2-8,
+  BE-R2-9 and every Claude commit through `0135e3c7`, with ancestry preserved.
+  Pushed to `origin/feat/execution-loop-next`; [PR #63](https://github.com/BobbyAxerol/awesome-portal/pull/63)
+  targets dev. No dev/main merge. The initial PR API attempt returned403
+  (`pull_requests=write` absent); PR63 subsequently appeared and was verified.
+- Clean `git archive` build, all four existing overlays, project `portal`,
+  `https://dev-portal.primusspark.com`, loopback8080 and
+  `portal_portal-postgres-data`. Existing execution/source flags matched exactly.
+  API image `sha256:52e83167c8e1925ded126195c7825ce7400be68ce7505381313e5d6c8477df98`;
+  web `sha256:1a17f6a3ab43078720edd8c68adc4baa12e14cfe892357eccbf8226feb7c8d12`.
+  This is an explicitly approved local **dev** candidate, not a signed release.
+- Private dev backup completed before rollout. Forward migration032 moved the
+  ledger **34→35**. Both candidate services became healthy; old dev images were
+  restored and proved healthy on the additive schema, then the candidate was
+  restored and proved healthy. No bootstrap/dependency recreation or down-volume.
+  Stable container IDs/images remained identical. No TS/AWS runtime was changed.
+- Gates with real exit0: Control API **527 tests + fresh-PG restore**; contracts
+  **130 tests and generated-type parity**; Rust **395 tests, fmt, Clippy and PG
+  restore**; frontend exact candidate **144 files / 2331 pass / one pre-existing
+  skip**; both image builds and complete workspace hooks. N29/EDS12 source pins
+  stay verified; no historical authority/verdict was promoted.
+- Repeated real-PG 60s probe: unchanged tail full-payload SELECTs **0**; latest
+  commit→fan-out p95 **249.7ms**, PG-query p95 **4.14ms**, event-loop p95 **20.91ms**,
+  RSS **137.9MB**, no slow drops/read failures. Two independent service instances
+  share one Node process; this is **not** two OS replicas or committed-PG→visible
+  browser p95. Those stronger load/latency criteria remain unclaimed/open.
+- Real authenticated dev: normal activation→password→login, **13 named BFF200
+  probes**, Fleet count206 / Bindings139, **14 product routes**, all ten Alpha
+  tabs and six Portfolio tabs opened. Rich frames remained mounted. R0 `inspect`
+  returned `SGP_LOCAL_PROJECTION`, `source_request_sent=false`; invalid CSRF403.
+  Own-session logout produced terminal `auth.expired`, then snapshot401. There
+  were211 observed API responses:204 HTTP200, six401 during intentional logout,
+  one503; this is not a claim that every panel has available source data.
+  Current private `/market/candles` is intentionally not enabled; adjacent review
+  access logs also recorded a `portfolio-capital-ledger`503. Do not relabel either
+  as business-empty or invent source evidence. Commands/Live mutation stay off.
+- Zero unexpected React/DOM warnings and zero cross-origin **Portal application**
+  requests. The harness blocked14 Cloudflare-injected telemetry-script requests;
+  it did not call them same-origin. No fixture response was injected on dev.
+- Five disposable dev reviewer accounts were created over harness retries;
+  an independent SQL check verified **all five DISABLED, usable activation
+  credentials0, active sessions0 and workspace memberships0**. Normal audit rows/local R0 read
+  receipts remain for traceability; Bobby's credentials/role were untouched.
+  Private evidence/backup: `/home/bobby/secure/portal-be-r2-9-acceptance.uey7cx/`.
+
+**Claude visual handoff — keep backend semantics, review before re-record:**
+
+| Group / product route | Failing no-update snapshots | What to review |
+|---|---|---|
+| Operations Queue `/execution/operations` | laptop/workstation fixture groups; 1440×900 product | BE-R2-8 `Mine` now has real `assigned_to=me`; “All retained” no longer claims an unimplemented24h filter. Keep those semantics; review copy/spacing and the new expected frame. |
+| Admin Drawer `/administration/actions` | laptop/workstation fixture groups; 1440×900 product | Current R0/task availability and shorter typed explanations change the lab frame height. Verify every state/rail; do not reintroduce fabricated command execution to match an old image. |
+| Approval entry `/governance/approvals/new` | 1440×900 product | Claude's fake candidate removal and copy commits remain byte-identical to origin/dev. Review actual typed-ID screen; bounded suggestions need manual fallback, never a first200-only eligibility picker. |
+| Blotter, Paper Workbench/VNM, Account360 | laptop fixture group only | Observed clipping/raster height differences include 1px shifts on the long shared fixture page. Inspect actual/expected/diff and repeat in pinned Chromium; do not increase tolerance globally. |
+
+The full isolated pinned-browser run finished **297 pass /16 skip /10 screenshot
+failures**, exit1, no update flag. It used the integrated code before the final
+backoff/counter refinement and `0135e3c7`; after Claude's reviewed changes a clean
+run of the latest candidate is still mandatory. Reports:
+`/tmp/portal-be-r2-9-browser.jQRTx2/apps/portal/frontend/test-results/` and
+`/tmp/portal-be-r2-9-browser.log`. No baseline was rewritten and the pre-existing
+dirty `controls.json` remains untouched/uncommitted (Git blob
+`e2d15a61ebc0b54bf6f502ec666788da1b36b0b8`). Codex must fix any actual mapping or
+contract defect found in this review; Claude owns visual/interaction decisions.
+
+**Closeout next:** Claude visual review/explicit baselines → clean browser gate;
+finish the separately identified multi-process/PG-to-DOM performance evidence;
+check actual [CI run](https://github.com/BobbyAxerol/awesome-portal/actions/runs/34681442501)
+and repair code/infra failures. Do not merge or promote while these gates are
+open. No new architecture/source campaign or generic owner reapproval is needed.
+
 **Next / release boundary:** return the exact candidate SHA, manifest inputs,
 gates and dev review URLs to Bobby. Feature push/PR and CI repair are approved
 in this request; merge and main/stable rollout remain separate owner decisions.
