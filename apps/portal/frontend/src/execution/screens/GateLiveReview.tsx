@@ -129,7 +129,7 @@ export function GateLiveReview({
       {smoke ? (
         <div className="exec-gov-grid2" data-ratio="1.15">
           <div className="exec-gov-panel" data-smoke="true">
-            <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Canary record — {canaryDeploymentId ?? "dep_88"}</span></div>
+            <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Canary record — {canaryDeploymentId ?? "no deployment published"}</span></div>
             <div className="exec-gov-kv">
               {smoke.kpis.map((row) => (
                 <Fragment key={row.k}>

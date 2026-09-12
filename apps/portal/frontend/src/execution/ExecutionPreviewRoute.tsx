@@ -27,6 +27,7 @@ import {
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
+import { PanelState } from "./components/states";
 
 import { createHttpApi } from "./api/httpApi";
 import { contractFor, useExecutionRuntime } from "./useExecutionRuntime";
@@ -84,6 +85,17 @@ export const PROFILE_BANNER: Record<string, { title: string; line: string; detai
     detail: "Values are read from the promoted projection served by the Portal boundary (SGP). The browser never contacts AWS-HK or the Trading System; command relay stays disabled unless a later authority contract enables it.",
   },
 };
+/**
+ * A route that needs an identifier and did not get one.
+ *
+ * Never a fixture id in its place: presenting `dep_88` because the URL named
+ * nothing is the breadcrumb defect one layer down — the screen would answer
+ * confidently about a record the reader never asked for.
+ */
+function MissingRouteId({ what }: { what: string }) {
+  return <PanelState status="unavailable" reason={`This route named no ${what}, so there is nothing to open.`} />;
+}
+
 export function PreviewBanner({ profile, screenId, registryWord }: { profile: string | null | undefined; screenId?: string; registryWord?: string | null }) {
   const key = profile && PROFILE_BANNER[profile] ? profile : profile ? "unknown" : "http";
   const copy = PROFILE_BANNER[key] ?? {
@@ -175,8 +187,17 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   const contract = contractFor(runtime, screenId);
 
   const { setEntityLabel } = usePresentation();
-  const approvalId = params.approvalId ?? (screenId.includes("R2") ? "AP-352" : "AP-201");
-  const deploymentId = params.deploymentId ?? (screenId.includes("SANDBOX") ? "dep_77" : "dep_88");
+  /*
+   * These fell back to reviewed-cast ids — `AP-201`/`AP-352` and
+   * `dep_88`/`dep_77` — so a route reached without its own id would have
+   * fetched a fixture record and presented it as the one asked for. Every
+   * template that uses them (`/deployments/paper/:deploymentId`,
+   * `…/vn-market`, `…/canary`, the three gate routes) requires the id, so the
+   * fallback was unreachable; it was a landmine waiting for a fourth route,
+   * not a feature. Absent now means absent, and the branches below say so.
+   */
+  const approvalId = params.approvalId ?? null;
+  const deploymentId = params.deploymentId ?? null;
   /*
    * No identifier in the URL means no subject — not a showcase one.
    *
@@ -189,25 +210,40 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   const reviewId = params.reviewId ?? null;
   const incidentId = params.incidentId ?? null;
 
-  // The breadcrumb tail (§4.3): the entity this preview resolved, by the name
-  // an operator uses. Only set where the fixture cast has one — an invented
-  // name would be a second feature model.
+  /*
+   * The breadcrumb tail (§4.3): the entity this route opened, named by its own
+   * identifier.
+   *
+   * It used to name the reviewed fixture cast — any paper deployment became
+   * "Carry v3.2", the VNM workbench was always "VnMomo v0.9", and alpha
+   * `av_2041` became "Grid v2.1". On the showcase those were the records on
+   * screen. On dev the owner opened
+   * `adaptive_hma_cpp_00115m` and the crumb read "Deployments / Paper Trading /
+   * Carry v3.2" — the trail naming a deployment that was not the one open.
+   *
+   * The shell cannot know a display name, and the comment here already said an
+   * invented one would be a second feature model; the mistake was treating the
+   * cast as if it were not invented. The identifier is what this route
+   * resolved, and it matches the masthead the reader is looking at. The
+   * fixture-id fallbacks (`dep_88`, `AP-201`) are deliberately not used here
+   * either: a crumb must never name a record the URL did not.
+   */
   const entity = useMemo(() => {
     switch (screenId) {
-      case "EXECUTION_PAPER_WORKBENCH_SCREEN": return params.deploymentId ? "Carry v3.2" : null;
-      case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return "VnMomo v0.9";
+      case "EXECUTION_PAPER_WORKBENCH_SCREEN":
+      case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return params.deploymentId ?? null;
       case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return params.deploymentId ? `${params.deploymentId} · certification` : null;
       // Live Full and Canary share an alpha; the crumb names the deployment and the room.
-      case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return `${deploymentId} · canary`;
+      case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return params.deploymentId ? `${params.deploymentId} · canary` : null;
       case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return params.deploymentId ? `${params.deploymentId} · live full` : null;
       // List routes (no id) carry no entity; a 360 names the entity it resolved.
-      case "EXECUTION_ALPHA_360_SCREEN": return params.alphaId ? (params.alphaId === "av_2041" ? "Grid v2.1" : params.alphaId) : null;
+      case "EXECUTION_ALPHA_360_SCREEN": return params.alphaId ?? null;
       // List route (no id) carries no entity; the id is never invented (P4-A).
       case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? null;
       case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return params.accountId ?? search.get("binding") ?? null;
       case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       case "EXECUTION_GATE_R2_REVIEW_SCREEN":
-      case "EXECUTION_GATE_LIVE_REVIEW_SCREEN": return approvalId;
+      case "EXECUTION_GATE_LIVE_REVIEW_SCREEN": return params.approvalId ?? null;
       case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN": return reviewId;
       case "EXECUTION_INCIDENT_DETAIL_SCREEN": return incidentId;
       default: return null;
@@ -242,43 +278,43 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = <NewApprovalRequestContainer api={api} />;
       break;
     case "EXECUTION_GATE_LIVE_REVIEW_SCREEN":
-      content = <GateLiveReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} />;
+      content = approvalId ? <GateLiveReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
       break;
     case "EXECUTION_WAIVERS_REGISTER_SCREEN":
       content = <WaiversRegisterContainer api={api} />;
       break;
     case "EXECUTION_GATE_R1_REVIEW_SCREEN":
-      content = <GateR1ReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} />;
+      content = approvalId ? <GateR1ReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
       break;
     case "EXECUTION_GATE_R2_REVIEW_SCREEN":
-      content = <GateR2ReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} />;
+      content = approvalId ? <GateR2ReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} /> : <MissingRouteId what="approval" />;
       break;
     case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN":
       content = <PaperExitReviewContainer api={api} reviewId={reviewId} />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
-      content = <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} variant="vnm" />;
+      content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} variant="vnm" /> : <MissingRouteId what="deployment" />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_SCREEN":
       // Feature canonical route (/deployments/paper) = the paper list, entry
       // of WF 1c; /:deploymentId opens that deployment's workbench. The
       // sidebar must never land an operator inside one alpha unasked.
-      content = params.deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} /> : <PaperOverviewRichContainer api={api} />;
+      content = deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} /> : <PaperOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       // Feature canonical route (/deployments/sandbox) = the sandbox overview,
       // entry screen of WF 1d; /:deploymentId opens that certification.
-      content = params.deploymentId
+      content = deploymentId
         ? <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
         : <SandboxOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN":
-      content = <CanaryControlRoomContainer api={api} deploymentId={deploymentId} />;
+      content = deploymentId ? <CanaryControlRoomContainer api={api} deploymentId={deploymentId} /> : <MissingRouteId what="deployment" />;
       break;
     case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN":
       // Feature canonical route (/deployments/live) = the live overview, entry
       // screen of WF 1f/1e; /:deploymentId opens that deployment's workbench.
-      content = params.deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <LiveOverviewRichContainer api={api} />;
+      content = deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <LiveOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       content = <FullBlotterRichContainer api={api} />;
