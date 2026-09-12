@@ -163,7 +163,31 @@
       "properties": {
         "manifest_hash": { "$ref": "#/$defs/Hash" },
         "complete": { "type": "boolean" },
-        "entries": { "type": "array", "maxItems": 128, "items": { "type": "object" } }
+        "entries": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/EvidenceManifestEntry" } }
+      }
+    },
+    "EvidenceManifestEntry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_id", "ordinal", "kind", "label", "display_value", "sha256", "schema_version", "source_authority", "required", "captured_at", "retention_class", "access_policy"],
+      "properties": {
+        "evidence_id": { "$ref": "#/$defs/Identifier" },
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "kind": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "display_value": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "note": { "type": ["string", "null"], "maxLength": 2000 },
+        "verification": { "type": ["string", "null"], "maxLength": 128 },
+        "artifact_id": { "type": ["string", "null"], "maxLength": 191 },
+        "sha256": { "$ref": "#/$defs/Hash" },
+        "size_bytes": { "type": ["string", "null"], "pattern": "^(0|[1-9][0-9]{0,18})$" },
+        "media_type": { "type": ["string", "null"], "maxLength": 191 },
+        "schema_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "source_authority": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "source_reference": { "type": ["string", "null"], "maxLength": 512 },
+        "required": { "type": "boolean" },
+        "captured_at": { "$ref": "#/$defs/Timestamp" },
+        "retention_class": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "access_policy": { "type": "string", "minLength": 1, "maxLength": 256 }
       }
     },
     "ApprovalHistoryResponse": {

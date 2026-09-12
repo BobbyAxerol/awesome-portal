@@ -501,6 +501,22 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
     expect(foreignWorkspace.json().error.code).toBe("WORKSPACE_NOT_FOUND");
   });
 
+  it("does not fabricate a source-backed Live detail when Manager confirms the deployment is absent", async () => {
+    const profileReads = ctx.app.get(ProfileReadService);
+    vi.spyOn(profileReads, "snapshot").mockResolvedValueOnce({
+      state: "empty",
+      resource_resolution: { state: "EMPTY", reason_code: "EDS03_DEPLOYMENT_NOT_FOUND" },
+    } as never);
+
+    const response = await inject(
+      reader,
+      `/api/v1/execution/deployments/dep_absent_at_manager/live?workspace_id=${workspaceId}`,
+    );
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe("LIVE_DEPLOYMENT_NOT_FOUND");
+  });
+
   it("replays equal requests, rejects drift and appends an exact predecessor revision", async () => {
     const lineage = await seedApprovedLineage("revision");
     const firstPayload = payload(lineage, "canary-revision-one");

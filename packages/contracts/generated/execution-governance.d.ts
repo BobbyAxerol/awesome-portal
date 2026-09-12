@@ -498,10 +498,30 @@ export interface components {
             statement: string;
             expires_at: components["schemas"]["NullableTimestamp"];
         };
+        EvidenceManifestEntry: {
+            evidence_id: components["schemas"]["$defs-Identifier"];
+            ordinal: number;
+            kind: string;
+            label: string;
+            display_value: string;
+            note?: string | null;
+            verification?: string | null;
+            artifact_id?: string | null;
+            sha256: components["schemas"]["Hash"];
+            size_bytes?: string | null;
+            media_type?: string | null;
+            schema_version: string;
+            source_authority: string;
+            source_reference?: string | null;
+            required: boolean;
+            captured_at: components["schemas"]["Timestamp"];
+            retention_class: string;
+            access_policy: string;
+        };
         EvidenceManifest: {
             manifest_hash: components["schemas"]["Hash"];
             complete: boolean;
-            entries: Record<string, never>[];
+            entries: components["schemas"]["EvidenceManifestEntry"][];
         };
         R1ReviewResponse: {
             /** @constant */

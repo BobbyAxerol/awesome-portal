@@ -421,6 +421,19 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     const body = response.json();
     expect(body.data.approval.evidence_set_hash).toBe(seeded.manifestHash);
     expect(body.data.evidence_manifest.entries).toHaveLength(2);
+    expect(body.data.evidence_manifest.entries[0]).toMatchObject({
+      evidence_id: "AP-DETAIL-ev-1",
+      ordinal: 0,
+      label: "alpha version",
+      display_value: "av_2041",
+      verification: "verified",
+      artifact_id: "artifact_2041",
+      size_bytes: "2048",
+      source_reference: "run_5512",
+      required: true,
+      retention_class: "GOVERNANCE_LONG_TERM",
+      access_policy: "WORKSPACE_APPROVER",
+    });
     expect(body.data.checklist.map((item: { outcome: string }) => item.outcome)).toEqual(["pass", "watch"]);
     expect(body.data.known_limitations).toMatchObject([{
       limitation_id: "limit-ap-detail-1",

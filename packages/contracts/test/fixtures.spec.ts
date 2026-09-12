@@ -1197,6 +1197,8 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(governance).toContain("executionApprovalInbox");
     expect(governance).toContain("ApprovalInboxResponse");
     expect(governance).toContain("NO_MATCHING_PORTAL_GOVERNANCE_RECORDS");
+    expect(governance).toContain("EvidenceManifestEntry");
+    expect(governance).toContain("display_value");
     expect(governance).toContain('"/api/v1/execution/governance/approvals/{approval_id}/r2"');
     expect(governance).toContain("R2ReviewResponse");
     expect(governance).toContain("portfolio_id");

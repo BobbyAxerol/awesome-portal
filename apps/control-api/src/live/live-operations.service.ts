@@ -28,6 +28,21 @@ function isReadableCurrentSource(source: Record<string, unknown>): boolean {
     source.state === "partial" || source.state === "stale";
 }
 
+/**
+ * `ProfileReadService` omits this member for a resolved deployment and
+ * publishes it only when Manager-v2 could not establish an exact deployment
+ * scope.  A source-only Live detail is safe only for the former: otherwise
+ * `sourceOnlyDetail` would have no deployment row and could accidentally
+ * manufacture a SOURCE_BACKED screen from the request path.
+ */
+function unresolvedDeploymentResolution(source: Record<string, unknown>): "EMPTY" | "PARTIAL" | "UNKNOWN" | null {
+  const value = source.resource_resolution;
+  if (value === undefined) return null;
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return "UNKNOWN";
+  const state = (value as Record<string, unknown>).state;
+  return state === "EMPTY" || state === "PARTIAL" ? state : "UNKNOWN";
+}
+
 @Injectable()
 export class LiveOperationsService {
   constructor(
@@ -52,8 +67,21 @@ export class LiveOperationsService {
           deploymentId,
         );
         // Replace an absent Portal governance record only with a readable
-        // source envelope. A failed source read retains the typed 404.
+        // and exact-scoped source envelope. A failed/ambiguous source read
+        // retains a typed absence instead of composing a fabricated
+        // SOURCE_BACKED deployment from the URL alone.
         if (!isReadableCurrentSource(currentSource)) throw error;
+        const resolution = unresolvedDeploymentResolution(currentSource);
+        if (resolution === "EMPTY") {
+          throw new GovernanceError("LIVE_DEPLOYMENT_NOT_FOUND", "Live deployment not found.", 404);
+        }
+        if (resolution !== null) {
+          throw new GovernanceError(
+            "LIVE_DEPLOYMENT_SCOPE_UNRESOLVED",
+            "Live deployment scope could not be resolved.",
+            409,
+          );
+        }
         return this.sourceOnlyDetail(user, deploymentId, currentSource);
       }
       throw error;
