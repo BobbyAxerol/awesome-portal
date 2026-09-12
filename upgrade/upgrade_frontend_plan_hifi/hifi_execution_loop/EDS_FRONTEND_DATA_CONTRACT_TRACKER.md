@@ -10208,3 +10208,62 @@ và [handoff §8.61](../../../../apps/portal/registry/FRONTEND_HANDOFF.md#861-be
   bằng chứng thay cho dev current-source. Không mở TS command/Live mutation.
 - Claude nên review màu/độ rộng/tab/empty-partial của các route hiện có sau
   rollout; giữ signal cancellation và screen invalidation khi sửa consumer.
+
+---
+
+## A68. XÁC NHẬN PHẢN BIỆN CỦA CODEX VỀ GATE ẢNH (12-09)
+
+codex review xong, báo **10 snapshot đỏ** và giao lại cho tôi quyết định phần
+hình. Bobby hỏi: **có phải lỗi của tôi không?** Chạy lại gate trên HEAD hiện
+tại rồi mới trả lời.
+
+### A68.1 Số đo
+
+| Lần chạy | Kết quả |
+| --- | --- |
+| Tôi, tại `94ccf412` | **216 pass · 0 đỏ · exit 0** |
+| codex, trước `0135e3c7` | 297 pass · **10 đỏ** |
+| Tôi, tại `fd3fd5bb` (HEAD) | 294 pass · **13 đỏ** |
+
+13 > 10 vì ba commit hình ảnh sau của tôi. Gate **đang đỏ**, không cờ update.
+
+### A68.2 Quy trách nhiệm bằng kích thước ảnh, không bằng phỏng đoán
+
+| Snapshot | actual vs expected | Kết luận |
+| --- | --- | --- |
+| `admin-action-drawer-1i` | 6523 vs 6914 → **−391px** | **của tôi**, cố ý: bỏ dòng `no CLI form published` lặp 24 lần (24 × ~16px ≈ 384px) |
+| `full-blotter-4c` | 1534 vs 1533 → **+1px** | raster rounding |
+| `paper-workbench…4h` | 10986 vs 10987 → **−1px** | raster rounding |
+| `account-broker-360-1g` | 5049 vs 5048 → **+1px** | raster rounding — và là màn **tôi chưa từng chạm** |
+| 4 route sản phẩm 1440×900 | cùng kích thước | khác **nội dung**, không phải layout vỡ |
+
+Ba nhóm lệch **đúng ±1 pixel** trên trang cao 1 500–11 000px. Một trong ba là
+màn tôi không sửa dòng nào — nên đó là **rounding của trình duyệt**, đúng như
+codex viết, và đúng như codex dặn: **không được nới tolerance toàn cục**.
+
+### A68.3 Lỗi thật của tôi — và nó không phải mấy cái ảnh
+
+Các ảnh đỏ **không phải màn hỏng**. Chúng là baseline không còn khớp màn đã
+đổi, mà phần lớn là đổi **theo yêu cầu của Bobby**: datetime cho Blotter, bỏ
+dòng lặp 24 lần ở Drawer, bỏ ba alpha bịa ở form approval.
+
+Cái **đúng là lỗi của tôi**: tôi chạy gate ảnh tại `94ccf412` (216 pass, exit 0)
+rồi **giao tiếp bốn commit hình ảnh nữa mà không chạy lại**. codex phát hiện
+gate đỏ trước tôi. Baseline mốc dưới tay tôi là **miss của tôi**, và là mục duy
+nhất ở đây tôi gọi là lỗi.
+
+### A68.4 Phản biện của codex về picker — **tôi đồng ý, và tôi đã làm đúng thế**
+
+> *"bounded suggestions need manual fallback, never a first-200-only eligibility picker"*
+
+Tôi **đã dựng** `getAlphaFleet({ limit: 200 })` rồi **tự rút lại** trước khi
+commit, vì nó vừa là picker giới hạn 200 vừa kéo một read bất đồng bộ vào một
+form nhập liệu. Bản đang chạy là **gõ id, server xác thực** — đúng ràng buộc
+codex nêu. Không có gì phải sửa ở đây.
+
+### A68.5 Việc còn lại trước khi ghi lại baseline
+
+**Không ghi đè mù.** codex cảnh báo có thể có clipping, mà clipping là lỗi thật
+(tuần này tôi đã gặp hai lần). Đã loại được ba nhóm ±1px. Còn **4 ảnh route sản
+phẩm 1440×900** phải mở actual/expected/diff từng cái để phân biệt *đổi nội dung
+có chủ đích* với *chữ bị cắt*, rồi mới re-record.
