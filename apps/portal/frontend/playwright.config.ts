@@ -23,6 +23,8 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
+  // Missing baselines are failures too; only explicit e2e:update may write them.
+  updateSnapshots: "none",
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   // A visual diff is meaningless if it trips on one antialiased pixel, and

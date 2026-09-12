@@ -453,7 +453,8 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
         expectedApprovalVersion: detail.expectedVersion,
         // Keyed by the intent, so a DENY after an APPROVE is a new command and
         // not an idempotent replay of the one before it (BR-EX-18).
-        requestKey: intentKey(decisionRef.current.requestKey, approvalId, verdict, reason),
+        requestKey: intentKey(decisionRef.current.requestKey, approvalId, verdict,
+          JSON.stringify([workspaceId, detail.expectedVersion, reason, verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : []])),
       });
       if (!planned.ok) {
         dispatch(
@@ -652,7 +653,8 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
         // DENY makes the second call an idempotent replay of the first: the
         // server answers with the original operation and the reviewer is told
         // their refusal succeeded when what was recorded was an approval.
-        requestKey: intentKey(ref.current.requestKey, subjectId, verdict, reason),
+        requestKey: intentKey(ref.current.requestKey, subjectId, verdict,
+          JSON.stringify([target, expectedApprovalVersion, reason, verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : []])),
       });
       if (!planned.ok) {
         dispatch(
@@ -1174,8 +1176,9 @@ export function OperationsQueueContainer({
         after: cursor.after,
         before: cursor.before,
         triage_state: triageState,
+        assigned_to: filter === "MINE" ? "me" : undefined,
       }),
-    [api, workspaceId, cursor.after, cursor.before, triageState, tick],
+    [api, workspaceId, cursor.after, cursor.before, triageState, filter, tick],
     // Goal 6 put a 15-second tick in these dependencies. Without this the queue
     // collapsed to a skeleton and rebuilt itself four times a minute.
     { keepValue: true },
@@ -1267,7 +1270,7 @@ export function OperationsQueueContainer({
               api.acknowledgeOperation({
                 operationId: row.operationId,
                 workspaceId,
-                requestKey: requestKey.current,
+                requestKey: intentKey(requestKey.current, row.operationId, "ACKNOWLEDGE", JSON.stringify([workspaceId, row.workflowVersion ?? 0])),
                 expectedWorkflowVersion: row.workflowVersion ?? 0,
               }),
             )
@@ -1278,7 +1281,7 @@ export function OperationsQueueContainer({
               api.resolveOperation({
                 operationId: row.operationId,
                 workspaceId,
-                requestKey: requestKey.current,
+                requestKey: intentKey(requestKey.current, row.operationId, "RESOLVE", JSON.stringify([workspaceId, row.workflowVersion ?? 0, reason, evidenceHash])),
                 expectedWorkflowVersion: row.workflowVersion ?? 0,
                 reason,
                 evidenceHash,

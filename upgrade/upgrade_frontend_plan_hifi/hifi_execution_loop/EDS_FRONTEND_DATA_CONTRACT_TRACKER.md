@@ -10139,3 +10139,72 @@ A67 là trạng thái tại thời điểm handoff; chúng được đóng ở �
 regression for Live source resolution; frontend unit/type/build and clean browser
 journey on this integrated branch. A66/A67's four later frontend follow-up commits
 are included by this merge; no history is rewritten.
+
+## A69. Astra pre-PR audit — hai phase sửa được đề xuất, chờ Bobby duyệt (12-09)
+
+Baseline `bbd45d38` đã bao gồm phần Codex và bốn commit follow-up của Claude.
+Toàn bộ finding, bằng chứng, phạm vi và test được tập trung tại
+[markdown chính §18.6](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#186-astra-pre-pr-audit--frozen-findings-and-approval-packet-2026-09-12),
+không mở một backlog frontend/backend song song khác.
+
+- **BE-R2-8:** Codex sửa authority/workspace, typed truth, exact decimal và
+  profile/resource contracts. Claude nối panel theo đúng environment/subject,
+  Mine/24h, giữ rich UI và dùng canonical fixture mới. Chín bảng thiếu writer
+  cần quyết định workflow thật; không gọi chúng hoàn thiện chỉ vì EMPTY đúng.
+- **BE-R2-9:** Codex sửa local SSE/tail/recovery và đo chi phí; Claude sửa
+  heartbeat/source-state, cancellation, refresh cùng identity/panel và kiểm
+  toàn bộ route/tab trên đúng dev candidate. Không đổi thiết kế đã duyệt.
+- **Đính chính:** G1/G4 đã có source fix; G8 đã có corpus nhưng consumer tests
+  chưa dùng hết. G10 đã được Claude rút lại ở A65.6; chỉ còn reproducibility/
+  runtime-binding cần nghiệm thu. Local R0 vẫn khác TS command mutation.
+
+**Trạng thái:** `PROPOSED_AWAITING_OWNER_APPROVAL`, chưa giao triển khai.
+Audit tái hiện 9 vấn đề/chi phí bằng module/hook thật với mock synthetic trong
+container không network; không sửa source, không đọc business rows, không
+deploy hoặc đụng main/stable. Sau khi Bobby duyệt, chia đúng file ownership;
+Claude không sửa backend/proxy/Edge, Codex không ghi đè composition của Claude.
+
+## A70. BE-R2-8 — Codex implementation and consumer alignment (12-09)
+
+Bobby đã duyệt triển khai BE-R2-8, gồm Portal-only review/capture. Chi tiết duy
+nhất ở [main plan BE-R2-8](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-8--exact-read-authority-and-complete-screen-contract-alignment).
+Không ghi đè A68/A69: đó là lịch sử audit; nhận định chín bảng “intentional
+boundary” nay được thay bằng writer/invariant cụ thể, không còn allowlist che gap.
+
+- Codex đã nối environment/account vào analytics và Portfolio helpers; sửa
+  join nhầm Alpha qua shared account; dữ liệu số dùng exact decimal và freshness
+  của input; workspace membership áp dụng cả ADMIN và bị thu hồi khi stream còn mở.
+- Consumer hiện hữu giữ rich shell: Mine hoạt động, All được ghi **All retained**,
+  refresh không giữ dữ liệu identity cũ, canonical R1/SSE được chạy qua reader thật.
+- Chín bảng đã có đường tạo từ public Portal API; journal migration032 lưu
+  idempotency bất biến và audit trong cùng transaction. Fresh-PG acceptance không
+  seed các workflow row rồi tự đọc lại. Note do Portal tạo không phải broker proof.
+- Thêm bốn typed client operations ở handoff §8.60. **Chưa tạo form UI capture mới**;
+  Claude có thể bổ sung entry point trong bố cục đã duyệt khi được giao. Không sửa
+  backend/proxy/Edge, không tự mở promote/certify hay command.
+- Ba giới hạn action được giữ thật: R2 execution decision chưa commissioned,
+  accepted Paper Exit policy evaluation và Sandbox step evidence chưa có accepted
+  producer cho workflow này. Không gọi đây là “đã hoàn thiện toàn bộ promotion”.
+- BE-R2-9 vẫn là phase riêng cho SSE sequence/recovery, cancel/coalesce, bounded
+  local cost và dev acceptance. Không deploy, push/merge hay thay stable trong R2-8.
+
+Gates/counts nằm trong main journal; route/table machine inventories được cập nhật
+cho source mới, **không** thay các row count runtime đã quan sát trước đây bằng số
+test. Browser chạy ở bản sao dùng riêng, giữ nguyên evidence dirty của Claude.
+
+## A71 — BE-R2-9 integration checkpoint (2026-09-12, Codex)
+
+Bobby đã duyệt implementation, dev-only acceptance, feature push/PR và sửa CI;
+không merge/deploy main hoặc stable. Xem [main journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance)
+và [handoff §8.61](../../../../apps/portal/registry/FRONTEND_HANDOFF.md#861-be-r2-9-shared-realtimeread-lifecycle-2026-09-12).
+
+- Giữ composition, tokens và các commit Claude; không thay rich UI bằng envelope.
+- Metadata tail, cursor ordering/failure cleanup, exact statistics scope; shared
+  GET/SSE, abort lifecycle và invalidation đúng named screen đã được sửa cùng
+  test. Heartbeat không biến source RECOVERING thành HEALTHY.
+- Fresh-PG 527 tests/restore và FE 2330 pass/1 skip là checkpoint thực; final
+  combined Rust/browser/CI và deployed-session review được ghi riêng sau đó.
+- Không dùng cookie hết hạn hay nâng quyền user để chụp ảnh; không lấy fixture
+  bằng chứng thay cho dev current-source. Không mở TS command/Live mutation.
+- Claude nên review màu/độ rộng/tab/empty-partial của các route hiện có sau
+  rollout; giữ signal cancellation và screen invalidation khi sửa consumer.

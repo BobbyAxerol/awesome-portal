@@ -7,7 +7,7 @@
  * test walks.
  */
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi, Result } from "../api/ports";
 import type {
@@ -30,35 +30,52 @@ import { utcStamp } from "../time";
 
 export type Loaded<T> =
   | { status: "ok"; reason?: undefined; value: T }
+  | { status: "stale"; reason: string; value: T }
   | { status: Exclude<PanelStatus, "ok">; reason?: string; value: null };
 
+export const scopedReadApi = (api: ExecutionApi, signal: AbortSignal): ExecutionApi => api.withReadSignal?.(signal) ?? api;
+
 export function useApiRead<T>(
-  run: () => Promise<Result<T>>,
+  run: (signal: AbortSignal) => Promise<Result<T>>,
   deps: readonly unknown[],
-  options?: { keepValue?: boolean },
+  options?: { keepValue?: boolean; identity?: readonly unknown[] },
 ): Loaded<T> {
   const [state, setState] = useState<Loaded<T>>({ status: "loading", value: null });
   const keepValue = options?.keepValue === true;
+  // Retention is opt-in for a named identity. Unclassified dependencies are
+  // conservatively an identity change, never another subject's last-good data.
+  const identity = options?.identity ?? deps;
+  const stateIdentity = useRef<readonly unknown[] | null>(null);
+  const sameIdentity = stateIdentity.current !== null && identity.length === stateIdentity.current.length &&
+    identity.every((value, i) => Object.is(value, stateIdentity.current![i]));
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     // P4-C: a realtime revalidation refreshes the existing rich panel tree in
     // place — flashing the whole screen to loading once per delta would make
     // live data feel broken. Only the very first read shows loading.
-    setState((current) => keepValue && current.value !== null ? current : { status: "loading", value: null });
-    void run().then((result) => {
+    const retain = keepValue && sameIdentity;
+    stateIdentity.current = [...identity];
+    setState((current) => retain && current.value !== null ? current : { status: "loading", value: null });
+    void run(controller.signal).then((result) => {
       if (cancelled) return;
-      setState(
-        result.ok
-          ? { status: "ok", value: result.value }
-          : { status: result.status, reason: result.reason, value: null },
-      );
+      setState((current) => result.ok ? { status: "ok", value: result.value }
+        : retain && current.value !== null && /(?:502|503|TIMEOUT|UPSTREAM_UNAVAILABLE|REFRESH_FAILED)/.test(result.reason) &&
+          !/(?:401|403|FORBIDDEN|DENIED|AUTH|WORKSPACE)/.test(result.reason)
+          ? { status: "stale", reason: result.reason, value: current.value }
+          : { status: result.status, reason: result.reason, value: null });
+    }).catch(() => {
+      if (!cancelled) setState({ status: "unavailable", reason: "PORTAL_READ_FAILED", value: null });
     });
     return () => {
       cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
-  return state;
+  // Hide old values during render too; waiting for an effect leaks one frame
+  // of Alpha A beneath Alpha B's heading.
+  return sameIdentity ? state : { status: "loading", value: null };
 }
 
 const COMMAND_CENTER_REALTIME_SNAPSHOT = "/api/v1/execution/command-center/realtime-snapshot";
@@ -130,11 +147,11 @@ export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: Execu
   // command authority that explains why every control here is dark. It
   // replaces the standalone read rather than joining it, so the screen still
   // issues exactly one request for its snapshot.
-  const state = useApiRead(() => api.getOperationalComposition("command-center"), [api, tick], { keepValue: true });
+  const state = useApiRead((signal) => scopedReadApi(api, signal).getOperationalComposition("command-center"), [api, tick], { keepValue: true, identity: [api] });
   const composition = state.value ?? null;
   // The promotion pipeline is the Fleet register read once per visit (BR-EX-72
   // bounded page, 50 alphas); a failed read simply leaves the panel out.
-  const fleet = useApiRead(() => api.getAlphaFleet({ limit: 50 }), [api]);
+  const fleet = useApiRead((signal) => scopedReadApi(api, signal).getAlphaFleet({ limit: 50 }), [api]);
   // P4-H: the product route passes a live factory; the hook still refuses to
   // open anything unless the server publishes stream_available. Memoized —
   // a fresh function identity per render would cycle the stream effect.
@@ -191,9 +208,9 @@ export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: Execu
  * PARTIAL is still attributable to the read that said it.
  */
 export function SourceHealthLiveTiles({ api }: { api: ExecutionApi }) {
-  const paper = useApiRead<SourceHealth>(() => api.getSourceHealth("paper"), [api]);
-  const sandbox = useApiRead<SourceHealth>(() => api.getSourceHealth("sandbox"), [api]);
-  const live = useApiRead<SourceHealth>(() => api.getSourceHealth("live"), [api]);
+  const paper = useApiRead<SourceHealth>((signal) => scopedReadApi(api, signal).getSourceHealth("paper"), [api]);
+  const sandbox = useApiRead<SourceHealth>((signal) => scopedReadApi(api, signal).getSourceHealth("sandbox"), [api]);
+  const live = useApiRead<SourceHealth>((signal) => scopedReadApi(api, signal).getSourceHealth("live"), [api]);
   return (
     <SourceHealthBoard
       reads={[
@@ -213,7 +230,7 @@ const OVERVIEW_TITLE = {
 } as const;
 
 export function StageOverviewContainer({ api, screen }: { api: ExecutionApi; screen: "paper" | "sandbox" | "live" | "blotter" }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile(screen), [api, screen]);
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getScreenProfile(screen), [api, screen]);
   /*
    * Phase 4: `/derivations/source-health` had answered 200 for weeks with no
    * caller. Command Center gets the same facts inside its composition, so
@@ -221,7 +238,7 @@ export function StageOverviewContainer({ api, screen }: { api: ExecutionApi; scr
    * composition and said nothing at all about the profile feeding it. This is
    * the screen where the read is new information rather than a second copy.
    */
-  const health = useApiRead(() => api.getSourceHealthRead(), [api]);
+  const health = useApiRead((signal) => scopedReadApi(api, signal).getSourceHealthRead(), [api]);
   const profile = health.value?.profiles.find((row) => row.environment === screen) ?? null;
   return (
     <ProfileEnvelopeScreen
@@ -251,7 +268,7 @@ export function StageOverviewContainer({ api, screen }: { api: ExecutionApi; scr
 }
 
 export function PaperWorkbenchContainer({ api, deploymentId, variant = "paper" }: { api: ExecutionApi; deploymentId: string; variant?: "paper" | "vnm" }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getPaperWorkbenchProfile(deploymentId, variant), [api, deploymentId, variant]);
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getPaperWorkbenchProfile(deploymentId, variant), [api, deploymentId, variant]);
   return (
     <ProfileEnvelopeScreen
       title={variant === "vnm" ? `Paper Workbench · ${deploymentId} · VN market` : `Paper Workbench · ${deploymentId}`}
@@ -263,7 +280,7 @@ export function PaperWorkbenchContainer({ api, deploymentId, variant = "paper" }
 }
 
 export function QueryAnalyticsContainer({ api, subject, subjectId }: { api: ExecutionApi; subject: "alphas" | "portfolios"; subjectId: string }) {
-  const state = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics(subject, subjectId), [api, subject, subjectId]);
+  const state = useApiRead<QueryAnalytics>((signal) => scopedReadApi(api, signal).getQueryAnalytics(subject, subjectId), [api, subject, subjectId]);
   return (
     <QueryAnalyticsScreen
       title={`${subject === "alphas" ? "Alpha" : "Portfolio"} 360 · ${subjectId}`}
@@ -275,7 +292,7 @@ export function QueryAnalyticsContainer({ api, subject, subjectId }: { api: Exec
 }
 
 export function AccountBroker360Container({ api, accountId }: { api: ExecutionApi; accountId: string }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getAccount360Resource(accountId), [api, accountId]);
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getAccount360Resource(accountId), [api, accountId]);
   if (state.status === "loading") {
     return (
       <section className="exec-envelope" aria-label="Account 360">
@@ -327,7 +344,7 @@ function ManagerListPager({
 
 export function AlphaFleetContainer({ api }: { api: ExecutionApi }) {
   const [query, setQuery] = useState<AlphaFleetQuery>({ limit: 50 });
-  const state = useApiRead<ManagerListEnvelope<AlphaFleetItem>>(() => api.getAlphaFleet(query), [api, query]);
+  const state = useApiRead<ManagerListEnvelope<AlphaFleetItem>>((signal) => scopedReadApi(api, signal).getAlphaFleet(query), [api, query]);
   if (state.status !== "ok" || !state.value) {
     return <section className="exec-envelope" aria-label="Alpha Fleet"><h1 className="exec-role-h1">Alpha Fleet</h1><PanelState status={state.status} reason={state.reason} /></section>;
   }
@@ -374,10 +391,10 @@ function BindingFacts({ item }: { item: BindingItem }) {
 export function AccountsBindingsContainer({ api, bindingId }: { api: ExecutionApi; bindingId?: string | null }) {
   const [query, setQuery] = useState<BindingListQuery>({ limit: 50 });
   const detail = useApiRead<ProfileEnvelope | null>(
-    () => bindingId ? api.getBindingResource(bindingId) : Promise.resolve({ ok: false as const, status: "empty" as const, reason: "list" }),
+    (signal) => bindingId ? scopedReadApi(api, signal).getBindingResource(bindingId) : Promise.resolve({ ok: false as const, status: "empty" as const, reason: "list" }),
     [api, bindingId],
   );
-  const list = useApiRead<ManagerListEnvelope<BindingItem>>(() => api.getBindings(query), [api, query]);
+  const list = useApiRead<ManagerListEnvelope<BindingItem>>((signal) => scopedReadApi(api, signal).getBindings(query), [api, query]);
   if (bindingId) {
     const item = detail.value ? readBindingItem(detail.value.objects.binding) : null;
     return (

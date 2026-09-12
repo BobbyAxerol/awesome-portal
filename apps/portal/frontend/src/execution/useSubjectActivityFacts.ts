@@ -40,7 +40,7 @@ function drained(page: SubjectActivityPage): Drained {
   };
 }
 
-function factsFor(environment: RelationEnvironment, pages: readonly SubjectActivityPage[]): RelationFacts {
+function factsFor(environment: RelationEnvironment, pages: readonly (SubjectActivityPage | null)[]): RelationFacts {
   const facts: Record<string, readonly Record<string, unknown>[]> = {};
   const coverage: Record<string, Drained> = {};
   const reasons: string[] = [];
@@ -98,6 +98,8 @@ export function useSubjectActivityFacts(
   const on = armed.current;
   const cadence = usePollTick(RELATION_REFRESH_MS, on);
   const [state, setState] = useState<RelationFactsState>({ status: "loading", value: null, refreshing: false });
+  const identity = `${environment}:${target.kind}:${target.id}`;
+  const lastIdentity = useRef({ api, identity });
   useEffect(() => {
     // Phase 3: subject screens never touch `useRelationFacts`, so without this
     // the manifest was never read on Alpha 360 or Account 360 — measured on
@@ -105,13 +107,18 @@ export function useSubjectActivityFacts(
     void loadExecutionRuntime(api);
     if (!on) return undefined;
     let cancelled = false;
-    setState((current) => current.value ? { ...current, refreshing: true } : { status: "loading", value: null, refreshing: false });
+    const abort = new AbortController();
+    const reader = api.withReadSignal?.(abort.signal) ?? api;
+    const sameIdentity = lastIdentity.current.api === api && lastIdentity.current.identity === identity;
+    lastIdentity.current = { api, identity };
+    setState((current) => sameIdentity && current.value ? { ...current, refreshing: true } : { status: "loading", value: null, refreshing: false });
     void Promise.all([
-      api.getSubjectActivity({ environment, subjectKind: target.kind, subjectId: target.id, relation: "orders", limit: 500 }),
-      api.getSubjectActivity({ environment, subjectKind: target.kind, subjectId: target.id, relation: "fills", limit: 500 }),
+      reader.getSubjectActivity({ environment, subjectKind: target.kind, subjectId: target.id, relation: "orders", limit: 500 }),
+      reader.getSubjectActivity({ environment, subjectKind: target.kind, subjectId: target.id, relation: "fills", limit: 500 }),
     ]).then((results) => {
       if (cancelled) return;
-      const values = results.flatMap((result) => result.ok ? [result.value] : []);
+      // Preserve relation slots: a failed orders read must never relabel fills.
+      const values = results.map((result) => result.ok ? result.value : null);
       const facts = factsFor(environment, values);
       const failed = results.flatMap((result, index) => result.ok ? [] : [`${index === 0 ? "orders" : "fills"}: ${result.reason}`]);
       const value = failed.length > 0 ? { ...facts, reasons: [...facts.reasons, ...failed], state: facts.state === "POPULATED" ? "PARTIAL" as const : facts.state } : facts;
@@ -122,7 +129,8 @@ export function useSubjectActivityFacts(
       setState({ status: "unavailable", value: null, refreshing: false });
       void reason;
     });
-    return () => { cancelled = true; };
-  }, [api, environment, target.kind, target.id, on, cadence, revisionKey]);
-  return state;
+    return () => { cancelled = true; abort.abort(); };
+  }, [api, environment, target.kind, target.id, identity, on, cadence, revisionKey]);
+  return lastIdentity.current.api === api && lastIdentity.current.identity === identity
+    ? state : { status: "loading", value: null, refreshing: false };
 }

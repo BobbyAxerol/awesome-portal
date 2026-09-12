@@ -49,22 +49,16 @@ export type QueueFilter = (typeof QUEUE_FILTERS)[number];
 const FILTER_LABEL: Record<QueueFilter, string> = {
   NEEDS_ATTENTION: "Needs attention",
   MINE: "Mine",
-  ALL_24H: "All (24h)",
+  ALL_24H: "All retained",
 };
 
 /**
- * Chips the server cannot honour yet.
- *
- * `GET /operations` publishes no actor, assignee or owner parameter, so "Mine"
- * would send exactly what "All (24h)" sends and return exactly the same rows.
- * A chip labelled Mine that shows everybody's operations is worse than a chip
- * that is visibly unavailable: the first is a filter the operator trusts, and
- * the second is a gap they can see. Kept visible and disabled, with the reason,
- * rather than deleted — a missing chip reads as a design choice.
+ * All retained has no invented 24h restriction; Mine is assigned_to=me on
+ * the server, including counts and continuation scope.
  */
 export const UNSUPPORTED_FILTERS: Record<QueueFilter, string | null> = {
   NEEDS_ATTENTION: null,
-  MINE: "The operations endpoint publishes no actor filter, so this cannot narrow to your own work yet.",
+  MINE: null,
   ALL_24H: null,
 };
 

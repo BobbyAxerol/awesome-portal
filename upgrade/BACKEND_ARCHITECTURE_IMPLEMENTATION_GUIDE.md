@@ -2115,3 +2115,61 @@ key/payload, while changed payload and distinct work remain typed conflicts.
 The isolated Control API Docker/PostgreSQL gate is the review-data proof; it
 does not seed shared dev/stable state or touch Trading System/Edge/runtime
 resources.  See the [BE-R2-6 closeout record](backend/BE_R2_6_GOVERNANCE_READ_TRUTH_V1_IDEMPOTENCY_CLOSEOUT.md).
+
+### 14.1.5 Astra pre-PR audit and two proposed repair phases (2026-09-12)
+
+Source baseline `bbd45d38` includes the backend and Claude Phase 8–11 merge.
+Read-truth/schema fixes already delivered are not reopened wholesale. The
+independent audit confirmed local workspace/typed-state/exact-value and SSE
+integration defects; nine synthetic reproductions used actual modules with
+network disabled. This is not a runtime security/availability incident claim.
+
+The single detailed repair ledger, decisions, frontend assignment and tests
+live in [Execution unified plan §18.6](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#186-astra-pre-pr-audit--frozen-findings-and-approval-packet-2026-09-12):
+BE-R2-8 read/screen contract alignment, then BE-R2-9 realtime/local cost/dev
+acceptance, then the existing BE-R2-7 signed-release gate. Both new phases are
+`PROPOSED_AWAITING_OWNER_APPROVAL`. This slice changes documentation only;
+no code fix, source call, migration, deployment, push, PR or merge is performed.
+
+### 14.1.6 BE-R2-8 authorized implementation (2026-09-12)
+
+Bobby approved AR-01–07, including Portal-owned review/capture. Implementation
+now binds local reads to the configured execution workspace plus actual
+membership/profile, closes unavailable/empty and decimal/freshness errors,
+and aligns Alpha/Portfolio/Account/Operations consumers without replacing rich
+UI. Stream authorization leases include membership revocation. Legacy raw
+adapter/history aliases are explicitly deprecated; product uses named BFFs.
+
+Governance migration 032 and four named API routes provide real R2/Paper Exit
+review creation and Sandbox note capture with immutable lineage, revision,
+idempotency, atomic audit and readback. The nine-table no-writer allowlist is
+empty; this does not turn Portal-authored insufficient/unavailable evidence
+into a source PASS or authorize promotion/commands. Canonical schemas, generated
+types, fixtures and frontend readers are delivered together. New visual capture
+forms are not claimed: typed client operations are ready for Claude, while the
+existing rich screens remain intact.
+
+The authoritative implementation/test/remaining-action record is the
+[BE-R2-8 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-8--exact-read-authority-and-complete-screen-contract-alignment).
+Fresh-PG tests/restore and networkless frontend/contract/browser tests are not
+runtime evidence. BE-R2-9 remains separately proposed; main/stable, deploy,
+source access, command relay and TS runtime are unchanged.
+
+### 14.1.7 BE-R2-9 authorized integration checkpoint (2026-09-12)
+
+Bobby approved realtime/local-cost repairs, dev-only acceptance, feature PR and
+CI repair. The [single phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance)
+records per-scope metadata tails, serialized cursor delivery, bounded failure
+and cleanup, exact statistics SQL, ref-counted browser streams/GETs, identity
+cancellation, targeted invalidations and ignored browser-run reports. Claude's
+rich composition and newer breadcrumb/approval/empty-row fixes are retained.
+Fresh-PG/restore and frontend gates passed at the checkpoint; final combined
+browser/Rust/CI and legitimate-session dev review are tracked separately, not
+fabricated from fixture evidence. No new Trading System capability or command
+authority is needed. This supersedes the old “BE-R2-9 proposed” state above;
+main/stable rollout and merge remain excluded.
+
+Integration follow-up: retain Claude `0135e3c7` and its typed-ID form. Fleet
+suggestions are not approval eligibility; optional non-exhaustive picker UX is
+handed back to Claude in §8.61. Bobby authorized a disposable dev reviewer,
+normal authentication and mandatory disable/revoke/membership cleanup.

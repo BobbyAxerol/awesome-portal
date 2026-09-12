@@ -7,6 +7,7 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "governance_review_captures",
   "execution_financial_query_cursors",
   "execution_durable_mirror_conflicts",
   "execution_durable_mirror_gaps",

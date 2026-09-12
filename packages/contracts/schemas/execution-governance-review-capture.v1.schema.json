@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://portal.primusspark.com/contracts/execution-governance-review-capture.v1.schema.json",
+  "title": "Portal-owned review capture; never execution evidence or a source verdict",
+  "$defs": {
+    "R2CaptureRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_id",
+        "request_key",
+        "summary",
+        "r1_approval_id",
+        "expected_r1_version",
+        "portfolio_id",
+        "currency",
+        "deployment_id",
+        "risk_grant_id",
+        "expected_projection_digest"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "request_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 1000
+        },
+        "r1_approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "expected_r1_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "portfolio_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]{1,128}$"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z0-9]{2,12}$"
+        },
+        "deployment_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "risk_grant_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "expected_projection_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "PaperExitCreateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_id",
+        "request_key",
+        "summary",
+        "r2_approval_id",
+        "expected_r2_version",
+        "deployment_id",
+        "expected_projection_digest"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "request_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 1000
+        },
+        "r2_approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "expected_r2_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "deployment_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "expected_projection_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "SandboxNoteRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_id",
+        "request_key",
+        "summary",
+        "certification_id",
+        "expected_workflow_version"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "request_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 1000
+        },
+        "certification_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "expected_workflow_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "CaptureResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "authority",
+        "workspace_id",
+        "action",
+        "replayed",
+        "source_side_effect_requested",
+        "aggregate_id",
+        "workflow_version",
+        "source_verdict",
+        "decision_reason_code",
+        "read_path"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.review-capture.v1"
+        },
+        "authority": {
+          "const": "PORTAL"
+        },
+        "workspace_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "action": {
+          "enum": [
+            "R2_CREATE",
+            "PAPER_EXIT_CREATE",
+            "SANDBOX_NOTE"
+          ]
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        },
+        "aggregate_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "review_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "certification_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "workflow_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "read_path": {
+          "type": "string",
+          "pattern": "^/api/v1/execution/(governance/|deployments/)"
+        },
+        "captured_projection_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "source_verdict": {
+          "const": "NOT_ASSERTED"
+        },
+        "decision_reason_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deployment_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "R2_CREATE"
+              }
+            }
+          },
+          "then": {
+            "properties": { "approval_id": {}, "captured_projection_digest": {} },
+            "required": [
+              "approval_id",
+              "captured_projection_digest"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "PAPER_EXIT_CREATE"
+              }
+            }
+          },
+          "then": {
+            "properties": { "review_id": {}, "captured_projection_digest": {} },
+            "required": [
+              "review_id",
+              "captured_projection_digest"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "SANDBOX_NOTE"
+              }
+            }
+          },
+          "then": {
+            "properties": { "certification_id": {}, "deployment_id": {} },
+            "required": [
+              "certification_id",
+              "deployment_id"
+            ]
+          }
+        }
+      ]
+    },
+    "Capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "authority",
+        "source_side_effect_requested",
+        "actions"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.review-capture-capabilities.v1"
+        },
+        "authority": {
+          "const": "PORTAL"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        },
+        "actions": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "state"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "R2_CREATE",
+                  "PAPER_EXIT_CREATE",
+                  "SANDBOX_NOTE",
+                  "R2_EXECUTION_GRANT",
+                  "PAPER_EXIT_PROMOTE",
+                  "SANDBOX_CERTIFY_SOURCE"
+                ]
+              },
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "UNAVAILABLE"
+                ]
+              },
+              "inputs": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string",
+                "pattern": "^/api/v1/execution/governance/"
+              },
+              "reason_code": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

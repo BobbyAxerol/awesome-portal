@@ -30,21 +30,29 @@ export function useRelationFacts(api: ExecutionApi, environment: RelationEnviron
   const on = armed.current;
   const tick = usePollTick(RELATION_REFRESH_MS, on);
   const [state, setState] = useState<RelationFactsState>({ status: "loading", value: null, refreshing: false });
+  const lastIdentity = useRef({ api, environment, routes });
   useEffect(() => {
     if (!on) return undefined;
     let cancelled = false;
+    const abort = new AbortController();
+    const reader = api.withReadSignal?.(abort.signal) ?? api;
+    const sameIdentity = lastIdentity.current.api === api && lastIdentity.current.environment === environment && lastIdentity.current.routes === routes;
+    lastIdentity.current = { api, environment, routes };
     // Bounds first, and only once per page load: a drain that starts before
     // the manifest answers uses the labelled default, which is what it used to
     // use always.
     void loadExecutionRuntime(api);
-    setState((current) => (current.value ? { ...current, refreshing: true } : { status: "loading", value: null, refreshing: false }));
+    setState((current) => (sameIdentity && current.value ? { ...current, refreshing: true } : { status: "loading", value: null, refreshing: false }));
     // A superseded walk stops before its next page; its result is discarded.
-    void drainRelations((q) => api.getManagerRelationPage(q), environment, routes, 40, () => cancelled).then((facts) => {
+    void drainRelations((q) => reader.getManagerRelationPage(q), environment, routes, 40, () => cancelled).then((facts) => {
       if (cancelled) return;
       setState({ status: facts.state === "UNAVAILABLE" ? "unavailable" : "ok", value: facts, refreshing: false });
+    }).catch(() => {
+      if (!cancelled) setState({ status: "unavailable", value: null, refreshing: false });
     });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; abort.abort(); };
     // routes is a module constant by default; a caller passing its own must memoize it
   }, [api, environment, on, routes, tick]);
-  return state;
+  return lastIdentity.current.api === api && lastIdentity.current.environment === environment && lastIdentity.current.routes === routes
+    ? state : { status: "loading", value: null, refreshing: false };
 }

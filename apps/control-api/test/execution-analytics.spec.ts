@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../src/config";
 import {
   AnalyticsBulkhead,
@@ -16,6 +16,25 @@ import { ExecutionProfileProjectionRepository } from "../src/execution/profile-p
 import observedTimelinePanelStates from "./fixtures/eds10-observed-timeline-panel-states.v1.json";
 
 describe("EX-BE-07b analytics screen boundary", () => {
+  it("BE-R2-9 coalesces exact statistics work without mixing scope/version or caching failures", async () => {
+    const config=loadConfig({DATABASE_URL:"postgres://portal:portal@localhost/portal",PORTAL_ENV:"local",AUTH_MODE:"dev"});
+    let complete!:(v:[])=>void;
+    const first=new Promise<[]>(done=>{complete=done;});
+    const read=vi.fn().mockReturnValueOnce(first).mockResolvedValue([]);
+    const service=new LocalQueryAnalyticsService(config,{timeSeriesDailyCloses:read} as unknown as ExecutionProfileProjectionRepository);
+    const stats=(...args:unknown[])=>(service as any).portfolioStatistics(...args);
+    const a=stats("ws","paper","PAPER","epoch:1",["a"]);
+    const b=stats("ws","paper","PAPER","epoch:1",["a"]);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(read.mock.calls[0][4]).toMatchObject({strategyIds:["a"]});
+    await stats("ws","live","LIVE","epoch:1",["a"]);
+    await stats("ws","paper","PAPER","epoch:1",["b"]);
+    await stats("ws","paper","PAPER","epoch:2",["a"]);
+    expect(read).toHaveBeenCalledTimes(4);
+    complete([]);await Promise.all([a,b]);
+    await stats("ws","paper","PAPER","epoch:1",["a"]);
+    expect(read).toHaveBeenCalledTimes(5); // empty/failed work is not permanent missing history
+  });
   const base = {
     DATABASE_URL: "postgres://portal:portal@localhost/portal",
     PORTAL_ENV: "local",

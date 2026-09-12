@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-10",
- "route_count": 123,
+ "route_count": 127,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1254,7 +1254,48 @@
    "evidence": "Phase 2B (round 2) published it; the Operations Queue reads it on page load.",
    "owner": "claude",
    "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/governance/review-capture-capabilities",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "BE-R2-8: authenticated HTTP + fresh-PG writer/readback + canonical schema/FE reader tests. Typed client exists; no product capture form is claimed or deployed.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/r2/capture",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "BE-R2-8: authenticated HTTP + fresh-PG writer/readback + canonical schema/FE reader tests. Typed client exists; no product capture form is claimed or deployed.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/paper-exit/create",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "BE-R2-8: authenticated HTTP + fresh-PG writer/readback + canonical schema/FE reader tests. Typed client exists; no product capture form is claimed or deployed.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/sandbox/capture-note",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "BE-R2-8: authenticated HTTP + fresh-PG writer/readback + canonical schema/FE reader tests. Typed client exists; no product capture form is claimed or deployed.",
+   "owner": "codex",
+   "test_owner": "codex"
   }
  ],
- "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database."
+ "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",
+ "code_inventory_updated_at": "2026-09-12"
 }

@@ -103,10 +103,9 @@ describe("the source's own resnapshot backoff (Goal 7 · G11)", () => {
     expect(resnapshotDelayMs("not a time", now, 1000)).toBe(1000);
   });
 
-  it("caps a far-future stamp rather than parking the stream for ever", () => {
-    // The cap guards against a malformed value; it is not a second opinion
-    // about the backoff.
+  it("never retries before the server's deadline, including long backoff", () => {
     const now = Date.parse("2026-09-08T12:00:00Z");
-    expect(resnapshotDelayMs("2030-01-01T00:00:00Z", now, 1000)).toBe(60_000);
+    expect(resnapshotDelayMs("2026-09-08T12:02:00Z", now, 1000)).toBe(120_000);
+    expect(resnapshotDelayMs("2030-01-01T00:00:00Z", now, 1000)).toBe(Infinity);
   });
 });

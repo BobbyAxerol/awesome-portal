@@ -2,6 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
+import { projectionDigest } from "../src/execution/profile-projection.repository";
+import { assertCaptureContract } from "./contract-validator";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
 const DATABASE_URL =
@@ -75,7 +77,7 @@ describe("N29 governance product closeout", () => {
 
   beforeEach(async () => {
     await ctx.pool.query(
-      `TRUNCATE governance_approval_decisions, governance_decision_plans,
+      `TRUNCATE governance_review_captures, governance_approval_decisions, governance_decision_plans,
                 governance_approval_known_limitations, governance_approval_findings,
                 governance_approval_evidence, governance_approval_requests,
                 run_read_models, outbox_messages, product_audit_events CASCADE`,
@@ -241,6 +243,96 @@ describe("N29 governance product closeout", () => {
         event_type: "governance.r1_request.created",
       }),
     ]);
+  });
+
+  it("BE-R2-8 creates R2 and Paper Exit through authenticated routes, then rejects safely without fabricating source evidence", async () => {
+    const created = await mutation(stan,"/api/v1/execution/governance/approvals",createPayload("ar06-r1"));
+    expect(created.statusCode,JSON.stringify(created.json())).toBe(201);
+    const r1Id=created.json().approval.approval_id;
+    const planned=await mutation(lan,"/api/v1/execution/commands/plans",{
+      schema_version:"governance.r1-decision-plan-request.v1",workspace_id:workspaceId,request_key:"ar06-r1-plan",
+      command_type:"GOVERNANCE_R1_DECISION",command_version:1,target:{ approval_id:r1Id },expected_approval_version:1,
+      payload:{ decision:"APPROVE",reason:"Independent accepted research evidence review.",evidence_hashes:[ARTIFACT_HASH] },
+    });
+    expect(planned.statusCode,JSON.stringify(planned.json())).toBe(201);
+    expect(planned.json().blockers).toEqual([]);
+    const applied=await mutation(lan,`/api/v1/execution/operations/${planned.json().operation_id}/apply`,{
+      schema_version:"governance.r1-decision-apply-request.v1",workspace_id:workspaceId,apply_token:planned.json().apply_token,
+    });
+    expect(applied.statusCode,JSON.stringify(applied.json())).toBe(202);
+
+    // Trusted fixture input is an admitted source projection, not INSERTs of
+    // governance workflow rows. Every review/finding/lineage is produced by HTTP.
+    const relation=(fields:Record<string,string>[])=>({ availability:"AVAILABLE",freshness:"FRESH",completeness:"COMPLETE",
+      as_of:new Date().toISOString(),items:fields.map(fields=>({ fields,lineage:{ workspace_id:workspaceId,profile_id:"PAPER_BINANCE_USDM",source_contract_revision:"accepted-test-v1" } })) });
+    const document={ schema_version:"portal.execution.profile-projection.v1",workspace_id:workspaceId,environment:"paper",
+      profile_id:"PAPER_BINANCE_USDM",source_contract_revision:"accepted-test-v1",relations:{
+        "manager.deployments:strategy_deployments":relation([{ deployment_id:"dep_ar06",strategy_id:"alpha_n29",portfolio_id:"pf_ar06",account_id:"acc_ar06",venue:"BINANCE" }]),
+        "manager.risk:risk_grants":relation([{ risk_grant_id:"risk_ar06",strategy_id:"alpha_n29",account_id:"acc_ar06" }]),
+        "manager.portfolios:portfolios":relation([{ portfolio_id:"pf_ar06" }]),
+      } };
+    const digest=projectionDigest(document);
+    Object.assign(ctx.config,{ FEATURE_EXECUTION_LOCAL_PROJECTION:"true",FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:"true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:workspaceId,EXECUTION_EDGE_PAPER_PROFILE_ID:"PAPER_BINANCE_USDM" });
+    await ctx.pool.query(`INSERT INTO execution_profile_projection_snapshots
+      (workspace_id,environment,profile_id,source_contract_revision,source_epoch,source_cursor,source_as_of,received_at,last_successful_refresh_at,
+       completeness,projection_epoch,projection_sequence,payload_digest,payload)
+      VALUES ($1,'paper','PAPER_BINANCE_USDM','accepted-test-v1','epoch','cursor',now(),now(),now(),'COMPLETE',
+       '00000000-0000-4000-8000-000000000086',1,$2,$3)`,[workspaceId,digest,JSON.stringify(document)]);
+    const r2Input={ workspace_id:workspaceId,request_key:"ar06-r2",summary:"Capture Portal review; no source verdict asserted.",
+      r1_approval_id:r1Id,expected_r1_version:2,portfolio_id:"pf_ar06",currency:"USDT",deployment_id:"dep_ar06",risk_grant_id:"risk_ar06",expected_projection_digest:digest };
+    expect((await mutation(stan,"/api/v1/execution/governance/r2/capture",r2Input)).statusCode).toBe(403);
+    expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,workspace_id:"no-access" })).statusCode).toBe(404);
+    expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,risk_grant_id:"wrong-account" })).statusCode).toBe(422);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM governance_review_captures")).rows[0].n).toBe(0);
+    // A late audit failure must roll back the review and every child row,
+    // leaving the same idempotency key usable for the successful retry.
+    await ctx.pool.query(`CREATE FUNCTION test_capture_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.event_type='governance.review.captured' THEN RAISE EXCEPTION 'test audit unavailable'; END IF;
+      RETURN NEW; END; $$;
+      CREATE TRIGGER test_capture_audit_failure BEFORE INSERT ON product_audit_events
+      FOR EACH ROW EXECUTE FUNCTION test_capture_audit_failure()`);
+    try {
+      expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",r2Input)).statusCode).toBe(500);
+      expect((await ctx.pool.query("SELECT count(*)::int n FROM governance_approval_requests WHERE gate='R2'")).rows[0].n).toBe(0);
+      expect((await ctx.pool.query("SELECT count(*)::int n FROM governance_review_captures")).rows[0].n).toBe(0);
+      expect((await ctx.pool.query("SELECT count(*)::int n FROM governance_r2_lineage")).rows[0].n).toBe(0);
+    } finally {
+      await ctx.pool.query("DROP TRIGGER test_capture_audit_failure ON product_audit_events; DROP FUNCTION test_capture_audit_failure()");
+    }
+    const parallel=await Promise.all(Array.from({ length:4 },()=>mutation(bobby,"/api/v1/execution/governance/r2/capture",r2Input)));
+    for (const result of parallel) expect(result.statusCode,JSON.stringify(result.json())).toBe(201);
+    expect(new Set(parallel.map(item=>item.json().approval_id)).size).toBe(1);
+    expect(parallel.filter(item=>!item.json().replayed)).toHaveLength(1);
+    const r2=parallel[0].json();
+    assertCaptureContract(r2);
+    expect((await request(bobby,`${r2.read_path}?workspace_id=${workspaceId}`)).statusCode).toBe(200);
+    expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,summary:"Changed intent must not replay previous result." })).statusCode).toBe(409);
+    const exitInput={ workspace_id:workspaceId,request_key:"ar06-exit",summary:"Insufficient accepted source evidence; record review, not promotion.",
+      r2_approval_id:r2.approval_id,expected_r2_version:1,deployment_id:"dep_ar06",expected_projection_digest:digest };
+    const exit=await mutation(bobby,"/api/v1/execution/governance/paper-exit/create",exitInput);
+    expect(exit.statusCode,JSON.stringify(exit.json())).toBe(201);
+    assertCaptureContract(exit.json());
+    const review=await request(lan,`${exit.json().read_path}?workspace_id=${workspaceId}`);
+    expect(review.statusCode,JSON.stringify(review.json())).toBe(200);
+    expect(review.json().data.gate_met).toBe(false);
+    expect(review.json().data.evaluation_state).toBe("UNAVAILABLE");
+    expect(review.json().data.eligibility.can_approve).toBe(false);
+    const reject=await mutation(lan,"/api/v1/execution/commands/plans",{
+      schema_version:"governance.paper-exit-decision-plan-request.v1",workspace_id:workspaceId,request_key:"ar06-exit-reject",
+      command_type:"GOVERNANCE_PAPER_EXIT_DECISION",command_version:1,target:{ review_id:exit.json().review_id },expected_review_version:1,
+      payload:{ decision:"REJECT",reason:"Do not promote without accepted source policy evidence.",evidence_hashes:[ARTIFACT_HASH] },
+    });
+    expect(reject.statusCode,JSON.stringify(reject.json())).toBe(201);
+    expect(reject.json().blockers).toEqual([]);
+    const rejected=await mutation(lan,`/api/v1/execution/operations/${reject.json().operation_id}/apply`,{
+      schema_version:"governance.paper-exit-decision-apply-request.v1",workspace_id:workspaceId,apply_token:reject.json().apply_token,
+    });
+    expect(rejected.statusCode,JSON.stringify(rejected.json())).toBe(202);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM governance_promotion_authority_grants")).rows[0].n).toBe(0);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM product_audit_events WHERE event_type='governance.review.captured'")).rows[0].n).toBe(2);
+    await expect(ctx.pool.query("UPDATE governance_paper_exit_lineage SET label='tamper'")).rejects.toMatchObject({ code:"55000" });
+    Object.assign(ctx.config,{ FEATURE_EXECUTION_LOCAL_PROJECTION:"false",FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:"false" });
   });
 
   it("fails closed for missing/ineligible evidence and workspace scope", async () => {

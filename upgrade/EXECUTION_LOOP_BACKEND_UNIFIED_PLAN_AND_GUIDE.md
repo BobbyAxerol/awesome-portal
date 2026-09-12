@@ -5379,12 +5379,18 @@ operations.
 **Status:** `BE_R2_1_COMPLETE_DEV_LIFECYCLE_ACTIVE` +
 `BE_R2_2_COMPLETE_D3_GET_ONLY_EVIDENCE` +
 `BE_R2_5_CODE_COMPLETE_RUNTIME_UNCHANGED`.
-Bobby approved every decision in §18.1 on 2026-09-11 and named **BE-R2-1**.
-BE-R2-1 is now complete in the named dev namespace: its Portal-only
-implementation, isolated PostgreSQL test gate, staged drain and ongoing bounded
-lifecycle worker are evidenced below. BE-R2-2 is separately complete as a D3
-GET-only observation/evidence scope. BE-R2-3 through BE-R2-7 remain planning
-only and authorize no source call, command, restart or deployment.
+Bobby approved every decision in §18.1 on 2026-09-11. The journals below record
+BE-R2-1 dev lifecycle evidence, BE-R2-2 GET-only evidence and BE-R2-3 through
+BE-R2-6 source implementation. BE-R2-7 has candidate-binding code, but its
+accepted-runtime/release evidence is still a separate gate. The former claim
+that BE-R2-3 through BE-R2-7 were all planning-only was stale.
+
+**2026-09-12 audit amendment:** source integration at `bbd45d38` does not mean
+every integration defect is closed. §18.6 records the independently verified
+residuals and exactly two proposed repair phases, **BE-R2-8 / BE-R2-9**. Both
+are `PROPOSED_AWAITING_OWNER_APPROVAL`; only audit and documentation are
+authorized now. Historical runtime observations below have not been re-measured
+by this audit and are not evidence that the current candidate is deployed.
 
 **Why this is a separate closeout sequence:** the EDS/N29 work established a
 safe current-data path, but a read-only audit found a finite set of operational
@@ -5468,6 +5474,12 @@ System PostgreSQL, Redis, broker, Source Proxy upstream or shell.
 | BE-R2-5 | local realtime/resilience hardening | realtime state/motion and virtualized list checks | BE-R2-1 through BE-R2-3 |
 | BE-R2-6 | governance, V1 compatibility and idempotency closeout — **code complete; runtime unchanged** | Gate/Approval empty shells and workflow verification | BE-R2-3 |
 | BE-R2-7 | immutable release/provenance and product acceptance | final authenticated route/network/visual matrix | accepted BE-R2-1 through BE-R2-6 scope |
+| BE-R2-8 — implemented, source/test closeout | exact read authority, source truth and screen/workflow contract repair | Existing consumer alignment included; new capture form composition remains explicitly unclaimed | Bobby approved §18.6 scope including Portal review/capture; see implementation/gate journal |
+| BE-R2-9 — approved, implementation/gates in progress | realtime correctness, bounded local cost and dev acceptance | Shared hooks integrated; Claude rich composition preserved | Owner approved dev-only acceptance, feature push/PR and CI repair; no main/stable merge |
+
+The proposed execution order is **BE-R2-8 → BE-R2-9 → the existing BE-R2-7
+release gate**. Numbering preserves the earlier journals; it does not create
+a second release pipeline or authorize another merge/deploy now.
 
 ### BE-R2-1 — Bounded cache lifecycle, retention and cleanup
 
@@ -6133,3 +6145,454 @@ for a backend feature flag:
 Before a frontend slice claims completion, it must run its existing TypeScript,
 unit, browser/DOM warning and representative authenticated network/visual
 evidence; it must also confirm that every browser request remains same-origin.
+
+### 18.6 Astra pre-PR audit — frozen findings and approval packet (2026-09-12)
+
+**Baseline:** `/home/bobby/portal-integration`, `feat/execution-loop-next`,
+`bbd45d38d81f303e708e0530dc75d50784fdb793`. This includes both backend audit
+commits `af096e82` / `1495b236` and the merge of Claude's four follow-up commits
+ending at `94ccf412`. No branch was moved, no source fix implemented, and no
+runtime/TS/secret/command was changed during this audit. The pre-existing dirty
+`apps/portal/frontend/e2e/el-v2-03-evidence/controls.json` is preserved, not
+included as newly accepted evidence.
+
+**Authority/read order for these two phases:** §18.1–18.3 above; the existing
+[dual-cell boundary](RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md),
+[Paper-to-Live model](PAPER_TO_LIVE_EXECUTION_PORTAL_BACKEND_UIUX_ADJUSTMENT_SPEC_v0.6_vi.md),
+[DB identity/financial grain guide](DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md),
+then the current producer, canonical schemas/fixtures and consumer. Claude's
+[tracker A59–A68](upgrade_frontend_plan_hifi/hifi_execution_loop/EDS_FRONTEND_DATA_CONTRACT_TRACKER.md)
+is historical handoff evidence, not a substitute for tracing the current code.
+Keep the approved carbon/rich compositions; these are integration repairs, not
+a redesign, new TS campaign or migration to another datastore.
+
+#### 18.6.1 Corrections to the previous handoff
+
+| Previous item | Audit disposition |
+|---|---|
+| G1 R1 evidence manifest and G4 absent Live deployment | Source fixes are present. Keep their regressions; do not implement the same fix again. Runtime acceptance still must use the candidate image. |
+| G8 missing canonical local SSE contract | Schema, OpenAPI, generated type and five fixtures exist at `1495b236`. However, FE `sourceRecovery.test.tsx` still says no fixture exists and scans service text; adoption and cross-boundary event tests remain below. |
+| B6 allegedly unused `useFreshnessPoll` | Retracted: it has real consumers. Freshness budget is not a promise that values cannot change, nor automatically a polling cadence. Audit redundant refreshes instead of deleting the hook. |
+| G9 Operations inline-fixture drift / observed `EDS05_QUERY_INVALID` | Fixture drift was fixed; current composition route uses `PrincipalOnlySchema` and the queue's own schema. Do not claim the old runtime error is reproduced on this HEAD; verify the actual deployed route in BE-R2-9. |
+| G10 “dev cannot redeploy from repo” | Claude explicitly retracts it in A65.6. The remaining task is reproducible, private operator configuration and correct image/build-flag binding, not redesigning Compose. |
+| V1 `pinned_watchlist` | Deprecated authoritative-empty compatibility field, not a delivered persistent watchlist. Preserve V1, do not revive a table merely for appearance. |
+| Nine governance tables without product writers | Read-truth closeout is real, but calling all nine an “intentional product boundary” is insufficient to claim the workflow is usable. AR-06 below names the missing creation/evidence paths and the owner decision. |
+| N27 Admin Drawer | Current local R0 reads and the disabled TS mutation catalogue are different authorities. Preserve Claude's corrected banners and working local reads. No blanket CLI enablement is part of these phases. |
+
+#### 18.6.2 Verified residual work — one finite ledger
+
+`P1` means correctness/access/recovery must be repaired before promoting this
+candidate; `P2` is product completeness/performance/evidence work in the same
+two phases. “Trace” means verified in source, not a fresh production incident.
+
+| ID / priority | Finding and concrete source | Assigned phase / required result |
+|---|---|---|
+| **AR-01 / P1** | Local scope enforcement is inconsistent. [Realtime controller](../apps/control-api/src/execution/realtime.controller.ts) resolves the configured workspace without checking membership; [history controller](../apps/control-api/src/execution/profile-history.controller.ts) passes no actor at all. [Local analytics](../apps/control-api/src/execution/local-query-analytics.service.ts) reads configured scope while some responses label the caller's personal workspace. `SessionGuard` only authenticates and creates/resolves a personal workspace; it does not authorize the execution workspace. | **8:** one common authorized local-read principal; apply it to local realtime, history, adapters, analytics, Portfolio helpers and their callable aliases. Enforce actual workspace membership and the accepted environment/read capability. Preserve authorized internal reads, do not require ADMIN for every read. |
+| **AR-02 / P1** | [Profile read adapter](../apps/control-api/src/execution/profile-read-adapter.service.ts), `read()`, maps a present relation with `availability=UNAVAILABLE`, no rows and `SOURCE_DENIED` to `EMPTY`, losing the reason. Legacy [history service](../apps/control-api/src/execution/profile-history.service.ts) declares availability from whole-relation coverage rather than the exact requested range/filter and exposes legacy relation/cursor vocabulary. | **8:** preserve unavailable/denied/partial reasons and exact scope; map any still-used legacy alias onto the existing named DTO boundary, or explicitly deprecate an unused alias after a caller inventory. No generic source API or silent breaking removal. |
+| **AR-03 / P1** | [Portfolio local service](../apps/control-api/src/execution/portfolio360-local.service.ts), `capitalLedger()`, computes direction with `Number(after) - Number(before)` before exact summation. A `+0.01` change at `9007199254740992.00` becomes `UNCHANGED` and contributes zero increase. Its envelope also hardcodes `input_freshness_floor=OK` and uses read time as `input_as_of`. | **8:** exact decimal comparison end-to-end; propagate actual input freshness/as-of/coverage, separating read time and derived results. Currency partitions and partial population remain explicit. |
+| **AR-04 / P1** | [Local analytics `query()`](../apps/control-api/src/execution/local-query-analytics.service.ts) selects Paper for every subject except `live-gate`. [Portfolio helpers](../apps/control-api/src/execution/portfolio360-local.service.ts) and [Portfolio rich container](../apps/portal/frontend/src/execution/screens/recomposeContainers.tsx) hardcode Paper for several charts/relations while the resource screen spans all profiles. Account analytics is fetched through its alpha without its account/profile filter. | **8:** additive environment/subject contract binding and honest profile partitions; never silently answer a Sandbox/Live-only resource with Paper analytics. Retain safe compatibility for existing explicitly Paper consumers. |
+| **AR-05 / P2** | FE/API integration remains incomplete: [Operations screen](../apps/portal/frontend/src/execution/screens/OperationsQueue.tsx) disables Mine claiming no API filter, although [queue schema/service](../apps/control-api/src/operations/contracts.ts) and `workflow.service.ts` support `assigned_to=me`. All (24h) has no matching time-bound query in the current container. Portfolio correlation/ledger/cross-equity are fetched only on mount/id change. [useApiRead](../apps/portal/frontend/src/execution/screens/profileContainers.tsx) has a cancellation boolean, not HTTP abort; `keepValue` also retains old subject data during an identity change. | **8:** wire supported filter, make the 24h label/query truthful, scope retained UI values by subject/profile and define per-panel refresh keys. **9** implements transport cancellation/coalescing and proves bounded refresh cost. |
+| **AR-06 / P2, product scope decision** | [Read-without-write guard](../apps/control-api/test/table-write-path.spec.ts) explicitly allowlists nine tables. Paper Exit needs a review before `detail/plan` can operate but has no product creation path. R1/R2 findings/analytics scope/R2 lineage and Sandbox findings/step evidence also lack corresponding writers in the checked source. Test inserts cannot demonstrate a real workflow. | **8:** classify all nine by actual writer/owner/input and implement approved Portal-owned creation/capture paths from accepted facts; genuinely unpublished TS evidence remains typed with one owner record. No fake writers, test seeds or auto-approvals. See approval decision below. |
+| **AR-07 / P2** | [Source recovery tests](../apps/portal/frontend/src/execution/sourceRecovery.test.tsx) search producer strings and use inline envelopes despite the new canonical corpus; [passport reader tests](../apps/portal/frontend/src/execution/passportReader.test.ts) primarily consume R2 plus a manually captured R1 shape. Contract existence alone did not catch the event-sequence/heartbeat defects below. | **8:** producer → schema → actual reader fixtures for R1 and all five profile events, plus request/filter/profile parity tests. **9:** exercise complete event sequences with real producer and hook, not two independent hand-written mocks. |
+| **AR-08 / P1** | Four reproduced recovery defects span [realtime service](../apps/control-api/src/execution/profile-realtime.service.ts) and [FE hook](../apps/portal/frontend/src/execution/profileRealtime.ts): missing snapshot removes a group without notifying subscribers; `journalAfter` failure rejects `tick()` while the scheduled `void tick()` has no catch; a status snapshot can advance to sequence N before delta N, causing a false gap; heartbeat overwrites RECOVERING with UNKNOWN. A fifth race opens an EventSource when snapshot JSON resolves after unmount. | **9:** terminal/recovering/error state machine, cursor-safe status-only events, source-health retention independent of heartbeat and cancellation after every await. Add subscriber-join/concurrent-commit and cleanup drills, not just the five observed instances. |
+| **AR-09 / P2, measured code cost** | Every unchanged SSE scope tick calls `repository.snapshot()` at 250ms; [repository](../apps/control-api/src/execution/profile-projection.repository.ts) selects and decodes the entire JSONB `payload`. This is four full snapshot reads/sec/scope/process even with no delta. It is local PG work, **not four AWS calls/sec**. Browser parallel polling/SSE refresh and per-alpha fleet statistics can add separate local work; their runtime cost has not been measured in this audit. | **9:** metadata-only tail reads, bounded batch/notification hints if justified, query single-flight and explicit query/bytes/concurrency budgets. Measure amplification before adding any new cache or Rust migration. |
+| **AR-10 / P1 acceptance gate, not a new runtime finding** | Claude A65 measured dev without the execution build flag while probe8090 showed the rich routes. Current [PortalRoutes](../apps/portal/frontend/src/app/PortalRoutes.tsx) still needs `EXECUTION_PREVIEW_ENABLED`; [Compose](../compose.yaml) defaults it false. That does not prove today's dev is still wrong. Migration031, read_truth, recovery and exact candidate runtime-binding have only earlier observations here. | **9:** prove the actual dev domain, correct reviewed source/image/build flag and DB/migration scope together. Keep stable/main unchanged; do not confuse HTTP200 shell with rendering working screens. Existing **7** owns signed production release. |
+| **AR-11 / P2** | [Browser journey test](../apps/portal/frontend/e2e/execution-journeys.spec.ts) unconditionally writes tracked `e2e/el-v2-03-evidence/controls.json`, including on a no-update gate; [visual runner](../scripts/portal-web-visual.sh) mounts the source writable. Main §18 header and backend index also had stale “planning-only” claims after implementation. | **9:** write run evidence to ignored output; only explicit baseline updates change tracked files. Distinguish source tests, isolated integration, dev runtime and signed release evidence; await actual command completion and preserve other agents' changes. Planning status drift is corrected in this documentation slice. |
+
+#### 18.6.3 Audit evidence and limits
+
+Nine assertions reproduced current behavior using the **actual TypeScript
+modules and React hook**, with synthetic repositories/EventSource/fetch in an
+ephemeral `--network none` Node container, repository mounted read-only:
+
+1. Realtime snapshot dispatches to the configured workspace for a nonmember
+   principal without a membership check in that controller.
+2. An unavailable relation becomes EMPTY and drops its reason in N32.
+3. The exact capital change above is classified UNCHANGED with zero increase.
+4. Missing snapshot removes the tail group without a terminal event and leaves
+   its timer until downstream cleanup.
+5. Journal failure propagates out of `tick()`; the timer callback does not catch it.
+6. Four unchanged ticks perform four full snapshot reads.
+7. A real server heartbeat clears a preceding RECOVERING state in the hook.
+8. Real producer STATUS_ONLY sequence2 followed by delta2 causes
+   `REALTIME_SEQUENCE_GAP` in the hook.
+9. Resolving bootstrap JSON after unmount creates an open unowned EventSource.
+
+**Result:** 9/9 defect/cost reproductions confirmed on `bbd45d38`, not nine
+fixed regressions and not product acceptance. The scratch probe is
+`/tmp/portal-astra-audit-06dId6ty/reproduce.cjs`; it is disposable, synthetic,
+not a runtime input or permanent test dependency. Its cases must become normal
+repository regression tests when the two phases are approved. Dependencies
+were staged outside the worktree; no TS/Edge call, real business-row read,
+SQL mutation, Docker rollout or source modification was used. No new full
+Control API/Rust/browser/production certification is claimed from this probe.
+
+Other ledger findings are code traces. In particular, no production data leak,
+host OOM or present-day dev outage is claimed without runtime evidence. Rust
+Manager client inspection retains its versioned/private TLS origin, redirect
+rejection, timeout, semaphore and body bounds; nothing here justifies replacing
+it or asking Trading System for another implementation campaign.
+
+### BE-R2-8 — Exact read authority and complete screen contract alignment
+
+**Status:** `IMPLEMENTED_TESTED_SOURCE_ONLY` (2026-09-12). Bobby approved this
+phase including AR-06 Portal-owned creation/capture. AR-01–07 source, existing
+consumer alignment and isolated evidence gates are complete as recorded below.
+This is not deployed acceptance or a claim that new visual capture forms exist.
+BE-R2-9 and runtime deployment are not authorized by this phase.
+**Priority:** first; AR-01–07.
+**Goal:** every current-data read has the right authorized workspace,
+environment, resource, value and typed state, and every approved screen/action
+consumes that same contract without discarding Claude's rich UI.
+
+**Description / index:** use §18.6 ledger for evidence and linked source;
+§18.1 for existing owner decisions; BE-R2-3/4/6 journals for working code to
+reuse. This phase does not rewrite the architecture guides or mark prior
+source work nonexistent.
+
+**Backend TODO (Codex):**
+
+1. Inventory all public local-read routes and aliases, including history,
+   adapters, analytics, Portfolio helpers and SSE. Resolve a single principal
+   against the configured execution workspace plus real membership/capability;
+   pass it through repositories and cursor/cache identity. A caller's personal
+   workspace is not an authorization substitute or a label for someone else's
+   projection. A long-lived stream must also respond to membership revocation.
+2. Repair unavailable/empty/partial propagation and exact scope coverage in
+   N32/history. Keep accepted field/row/byte limits and legacy compatibility;
+   consume named financial/history BFFs instead of exposing raw selectors.
+   Denied reads must perform zero protected projection/source reads.
+3. Reuse existing exact-decimal primitives for capital direction/totals.
+   Preserve mixed-currency separation, UTC timestamps, coverage and input
+   freshness; approximate correlation may remain explicitly statistical, never
+   be used to round a financial ledger value or infer a missing source fact.
+4. Add the smallest version-compatible environment/account/subject binding
+   required by existing Alpha/Portfolio/Account/Binding/Blotter panels. Separate
+   Paper/Sandbox/Live results, selected environment and Canary governance stage.
+   Refresh/cache/cursor keys include that binding. Cover source-valid composite
+   ids (including binding refs containing `@`) without opening arbitrary paths.
+5. Publish/verify supported Operations Mine filter and a truthful time window:
+   implement a bounded server 24h query if retaining that chip; otherwise use
+   the actual supported label. Never filter a single returned page as a total.
+   Resolve idempotency keys per intended workflow action/payload, retaining the
+   same key only for a retry of that action; audit local triage versus TS command.
+6. Close the **nine-table writer inventory** with an explicit owner verdict
+   per table. Proposed scope to approve: Portal-only Paper Exit creation and
+   R2/evidence capture where accepted immutable inputs exist, with atomic
+   lineage, RBAC, expected revision, idempotency and audit. If a required TS
+   evidence producer is genuinely absent, expose the named unsupported reason
+   and disable that exact action. Do not call it mere empty user data or wait
+   for a TS upgrade. Do not invent findings or certify Sandbox from a row count.
+   The frozen table set is `governance_paper_exit_reviews`,
+   `governance_paper_exit_findings`, `governance_paper_exit_lineage`,
+   `governance_paper_exit_panels`, `governance_approval_findings`,
+   `governance_approval_analytics_scopes`, `governance_r2_lineage`,
+   `governance_sandbox_findings`, `governance_sandbox_step_evidence`.
+   Label user-entered review findings as Portal-authored, never as TS/broker
+   evidence. An absent accepted producer may block a decision, not the rest
+   of the read screen.
+7. Regenerate canonical schema/OpenAPI/types/fixtures through existing tools;
+   change consumers and shared test corpus in the same reviewed slice. No
+   hand-edited generated files, broad fixture factory or new source endpoint.
+
+**Frontend TODO (Claude, after owner approval and contract agreement):**
+
+- Keep all approved rich shells, tabs, drawers, chart controls and tokens.
+  Bind the selected environment/account to each panel; a Paper-only panel
+  must explicitly say Paper rather than present it as consolidated Live truth.
+- Consume Mine/24h and typed errors from the BFF; keep blocked actions visible
+  with an accurate reason. No client-inferred authority or fixture fallback.
+- Separate **identity change** from **refresh of the same identity**: never
+  display Alpha A's retained values under Alpha B's heading. Keep last-good
+  values only for the same subject/profile and explicitly mark stale/error;
+  clear protected values on 401/403/workspace revocation. Define refresh keys
+  for Portfolio correlation/ledger/cross-equity alongside the other panels.
+- Consume the new canonical R1 and profile-SSE fixtures, removing the obsolete
+  “no fixture exists” explanation and producer-string-only contract checks.
+  No backend/Edge/proxy/config edits in Claude's lane.
+
+**Tests / completion evidence:**
+
+- Actual authenticated HTTP routes, not service mocks alone: member/nonmember,
+  revoked membership, ADMIN and normal reader, each environment flag and
+  unknown resource/profile. Negative cases assert zero protected repo/Edge calls.
+- Producer → canonical validator → generated/real FE reader across
+  available/empty/partial/stale/denied/error; old V1 contract stays compatible.
+- Exact decimal high-magnitude/sub-cent/negative/scaled-equal cases; no
+  cross-currency sum; stale input does not become OK at the new read time.
+- Sandbox-only/Live-only/same-id-different-profile resource, scoped Account
+  analytics, composite Binding id, filter+cursor+count+aggregate parity, Mine and
+  actual 24h boundary. Each rich screen's named panels must be accounted for.
+- For approved writers: fresh isolated PG → public create/capture → read →
+  plan → approved Portal-only decision, without test INSERTs of workflow rows;
+  concurrent replay, changed payload409, rollback and no TS side effect.
+  Uncommissioned evidence is tested as unavailable, never fabricated.
+- Full existing contracts/generator and Control API/PostgreSQL/restore gates;
+  FE type/unit/build and focused integration/browser state tests; relevant Rust
+  compatibility tests only if its code/contract actually changes.
+
+**Implementation journal — 2026-09-12, `feat/execution-loop-next`:**
+
+| Finding | Delivered code and consumer behavior | Regression evidence |
+| --- | --- | --- |
+| AR-01 | `ExecutionLocalReadAuthority` binds configured execution workspace, actual membership and enabled environment. ADMIN is not an implicit cross-workspace read bypass; member USER may read. Local analytics, Portfolio helpers, adapters, history, snapshot/stream and protected diagnostics use it. Dark diagnostics do not read projection rows. SSE checks both session and membership every 5s and releases the subscription on denial. | `local-read-authority.spec.ts`: 14 route/alias negatives with zero protected reads, USER success, disabled Live and revoked membership. `execution-realtime.spec.ts`: active local stream closes and clears timers/subscription on membership loss. |
+| AR-02 | N32 preserves denied/unavailable and partial-empty state, hides refused retained rows, validates adapter membership/limits, and caps serialized output at 1 MiB. Legacy history coverage/count is for the exact requested range/entity, independent of cursor, with bounded rows/bytes and safe continuation after the last transmitted row. No product caller uses these generic aliases; both remain deprecated with successor links to named screen/financial BFFs. | `local-contract-alignment.spec.ts`, `profile-projection.spec.ts`: denied vs empty, prototype/limit/query negatives, SQL range coverage, empty requested interval and byte-limited resume. |
+| AR-03 | Capital direction uses exact string/BigInt comparison. Totals use the validated bounded population, currencies remain separate, partial walks/rejected rows are declared. Display is bounded to the newest 250 validated entries; totals do not pretend that page is the complete source. Actual input freshness/as-of/coverage replaces read-time-as-fresh evidence. OpenAPI publishes the existing local variants separately from upstream authority. | Actual producer validated against canonical LocalCapitalLedgerResponse; high-magnitude/sub-cent/negative/scaled-equal decimal cases, mixed currencies and stale metadata in `local-contract-alignment.spec.ts`. |
+| AR-04 | Named analytics/Portfolio helper contracts accept environment; account panels additionally bind account_id. Subject selection prioritizes explicit strategy/deployment over shared account joins. The same id in Paper/Sandbox/Live cannot silently resolve to Paper. FE Alpha/Portfolio/Account panels send the selected binding. Binding refs containing `@` retain the already-correct source-compatible route guard. | Three-profile and shared-account regression; wrong-account negative; named HTTP request tests; existing nine `phase2-binding-and-integrity.spec.ts` cases retained. |
+| AR-05 | Mine calls the supported server `assigned_to=me`; unbounded All (24h) is truthfully labeled **All retained** (not a new client-side time filter). Portfolio correlation/ledger/cross-equity respond to profile/id/realtime refresh. Last-good values are scoped to identity: changed subject/profile clears immediately, same-identity transient failures are visibly stale, denied scope clears. Workflow intent keys include payload/revision/actor session and are stable only for an exact retry. | Operations component/container tests, HTTP consumer tests, `localReadIdentity.test.tsx`; existing public triage/idempotency tests. Transport cancellation and coalescing remain the expressly separate BE-R2-9 scope. |
+| AR-06 | Four new named routes below create/capture actual Portal reviews with authenticated membership, ADMIN+CSRF, expected parent/workflow/projection revisions, immutable accepted evidence copies, bounded transactions, concurrent idempotency and atomic product audit. Migration 032 creates only the immutable review-capture journal and admits `PORTAL` finding authority; no source tables or command authority change. | Fresh PG public R1 request → independent R1 approval → four concurrent R2 captures → Paper Exit creation/read → Portal REJECT. Sandbox note capture/read/replay; late audit-failure rollback; changed-key-payload409; role/workspace negatives; immutable lineage. Workflow rows are not inserted by the new acceptance path. Trusted research/projection fixtures remain explicitly test inputs. |
+| AR-07 | Real FE readers consume canonical R1 plus all five local SSE fixtures. New governance response fixtures pass strict canonical schema and actual FE readers. Generator owns all types; no manual generated edits. Route/table inventories are updated without fabricating new runtime row counts. | Canonical fixture/type parity, Control API producer-schema checks, FE full tests/build and focused same-origin browser journeys. |
+
+**Named Portal review/capture API — additive, no TS call:**
+
+| Method/path (prefix `/api/v1/execution`) | Input and result |
+| --- | --- |
+| GET `/governance/review-capture-capabilities?workspace_id=…` | Member-scoped capability catalogue; explicitly distinguishes creating a review from authorizing execution/promotion. |
+| POST `/governance/r2/capture` | Approved R1 + expected R1 version + exact Paper deployment/portfolio/existing risk-grant + expected projection digest + requested currency + Portal note. Creates a pending R2 review, not a new execution grant. |
+| POST `/governance/paper-exit/create` | Existing pending/approved R2 lineage + expected R2 version + exact deployment/projection digest + Portal note. Creates a readable review; no fabricated accepted policy evaluation. |
+| POST `/governance/sandbox/capture-note` | Existing DRAFT certification id + expected workflow version + Portal note. Returns its named deployment certification read path; never certifies source steps. |
+
+Every mutation also supplies `workspace_id` and caller-owned `request_key`;
+same payload retries return the original response, changed intent with that key
+returns409. Schemas and generated types are in
+`execution-governance-review-capture.v1.schema.json` / governance OpenAPI;
+`ExecutionApi` exposes `getReviewCaptureCapabilities`, `captureR2`,
+`createPaperExit`, `captureSandboxNote` with actual response readers and
+same-origin session/CSRF handling. The additive client port is delivered;
+**a new visual capture form has not been added or deployed**. Claude owns that
+entry-point composition if requested; existing rich screens are retained.
+
+**Nine-table ownership closure:** all nine now have reachable Portal writers,
+not merely an allowlist or test seed. The machine inventory is
+`r2_ledger/persistence-ownership.v1.json` (original runtime counts remain dated).
+
+| Tables | Writer/input authority |
+| --- | --- |
+| `governance_approval_findings`, `governance_approval_analytics_scopes`, `governance_r2_lineage` | R2 capture from immutable approved R1 and exact accepted current Paper facts. Findings are labeled Portal-authored/INSUFFICIENT; existing grant reference is not a grant issuance. |
+| `governance_paper_exit_reviews`, `governance_paper_exit_findings`, `governance_paper_exit_lineage`, `governance_paper_exit_panels` | Atomic Paper Exit creation; verified artifact/R1/R2/evidence refs and explicitly Portal-owned no-promotion policy. Missing accepted evaluation produces typed unavailable panels, never invented metrics or verdicts. |
+| `governance_sandbox_findings`, `governance_sandbox_step_evidence` | Actor-authored review note and only missing-step UNAVAILABLE markers on an existing DRAFT. Existing accepted evidence is not overwritten. |
+
+**Exact remaining product boundaries, not a fake zero-debt claim:**
+`R2_EXECUTION_DECISION_NOT_COMMISSIONED`,
+`ACCEPTED_EXIT_POLICY_EVALUATION_UNAVAILABLE`, and
+`ACCEPTED_SANDBOX_STEP_EVIDENCE_UNAVAILABLE` remain named action-level refusals.
+This phase closes review creation/read/Portal reject and evidence attribution,
+**not** full R2 execution authorization, Paper promotion or Sandbox source
+certification. It does not downgrade accepted source facts or request a TS
+upgrade. No runtime flags, source data, credentials, main/stable, push/PR or
+deployment are changed. Forward migration/restore is tested only on disposable
+PostgreSQL; immutable audit rows are never deleted to roll back a product action.
+
+**Final gate record — isolated, 2026-09-12:**
+
+| Gate | Result and evidence boundary |
+| --- | --- |
+| Full Control API | **517/517**, 60 test files, TypeScript build, fresh PostgreSQL migration and restore drill passed. Includes real authenticated HTTP create/capture/read/decision paths, not mocks alone. |
+| Canonical contracts | **130/130**, generator and 157-file snapshot parity passed; actual backend producers and frontend readers validate the same capture/analytics contracts. |
+| Frontend | **2,319 passed, 1 pre-existing skip**, 140 test files; typecheck and production build passed. Existing Vite large-chunk warning remains a performance observation, not a silently waived failure. |
+| Browser | **18/18 selected functional journeys**, same-origin BFF doubles and no snapshot-update flag; includes product routing, governance, Alpha/Account and Operations Mine request. This is not a live AWS/data or complete visual acceptance run. |
+| Related Rust | `product-acceptance` **4/4**, `eds12-qualification` **3/3**, clippy `-D warnings` passed offline. No claim of rerunning the entire unrelated Rust workspace. |
+| Repository gate | `./scripts/verify-workspace.sh` passed, including source-bound N29/EDS-12 checks, full Control API/restore, tracking and product-boundary gates. |
+
+Gate logs are local disposable `/tmp/portal-be-r2-8-{control-final,contract-final,frontend-final,browser-final,rust-final,workspace}.log`;
+permanent regressions are the repository test files linked in the table above.
+The browser run used a disposable tracked-source copy because its existing
+evidence writer mutates `e2e/el-v2-03-evidence/controls.json`; Bobby/Claude's
+pre-existing dirty copy was preserved byte-for-byte and is not part of this
+commit. Fixing that browser artifact lifecycle belongs to BE-R2-9.
+
+**Additional gate drift closed:** the baseline N29 JSON already contained
+39 evidence entries (including both BR-EX-76 pins), while its Rust verifier
+expected 38. Corrected the exact count, added missing/extra-pin and forbidden
+authority regression tests. Refreshed only the actual changed source digests
+and dependent N29/EDS-12 manifests; release/source/command authority and
+historical verdicts were not promoted. Static historical candidate metadata
+must not be read as present-day production evidence.
+
+**Next:** BE-R2-9 is still a separately proposed phase (complete SSE event
+sequence/recovery, cancellation/coalescing, local query cost and dev acceptance),
+then BE-R2-7 release evidence. Do not reuse this phase's isolated test results
+as deployed evidence or a grant to activate commands.
+
+**Non-scope:** TS DB/Redis/broker/CLI access; TS execution mutation; runtime
+deployment; new replay authority; rewriting QuantBT or frontend design.
+**Next:** BE-R2-9, after this phase's exact contract/fixture head is frozen.
+
+### BE-R2-9 — Realtime correctness, bounded local cost and dev acceptance
+
+**Status:** `IN_PROGRESS_OWNER_APPROVED` (2026-09-12). Bobby approved
+implementation, bounded dev acceptance, integration of Claude's commits,
+feature push/PR into dev and CI repair. No main/stable merge or rollout.
+**Priority:** second; AR-08–11 and the transport/performance half of AR-05/07.
+**Goal:** current data remains correct and responsive across refresh, source/PG
+failure, reconnect, tabs and replicas; the exact integrated build is reviewable
+on dev with honest evidence, without affecting main/stable.
+
+**Description / index:** reuse BE-R2-5 local observation semantics, BE-R2-1
+admission/retention, BE-R2-7/EDS-12 existing release tools and §18.6 probes.
+No new event authority, Kafka/NATS service, Parquet/DuckDB hot store or second
+deployment workflow is required by the measured defects.
+
+**Backend TODO (Codex):**
+
+1. Correct the shared SSE state machine: status-only updates must not advance
+   the consumer's data cursor past an undelivered delta; serialize subscription
+   bootstrap with tail delivery or maintain per-subscriber cursor protection.
+   A snapshot/journal/read failure must yield bounded recovery/terminal output,
+   not a detached heartbeat-only connection or unhandled rejected Promise.
+   Reconcile sequence/epoch, retention gap and cleanup for every exit path.
+2. Tail **metadata**, not full JSONB, while the revision is unchanged. Reuse
+   the existing PG notification as an optional wake-up hint, with bounded poll
+   fallback; do not depend on notification durability. Read the journal/data
+   only when needed. Bound subscribers, per-scope work and concurrent PG reads;
+   a slow/broken scope cannot monopolize the other profiles indefinitely.
+3. Measure existing snapshot/statistics/relation walks before optimizing. Reuse
+   exact local projection/revision, query scope and existing admission keys;
+   coalesce identical local work, target affected named panels and avoid a
+   whole-fleet statistics query for every alpha when unnecessary. No extra AWS
+   traffic, new global unbounded cache or speculative wholesale Rust rewrite.
+4. Prove the integrated candidate in the **named dev stack only** after this
+   phase is approved: resolve the actual worktree/project/image set first,
+   preserve dev volumes, render the exact existing overlays, apply only the
+   candidate's forward dev migrations, and verify execution routes/build flags.
+   Store private operator inputs in the established private runtime location,
+   not Git or an undocumented `/tmp` file; version only non-secret templates.
+5. Keep enabled current Paper/Sandbox/Live reads and qualified Market Context
+   scoped to their existing accepted capability set. Maintain local R0 tasks;
+   TS command relay/Live mutation remain off. No new AWS deployment/identity,
+   host cleanup, business-data deletion or permanent ADMIN account is implied.
+6. Move browser-run evidence out of tracked baseline paths; explicit reviewed
+   re-record only. Wait for each test process's real exit code, record its exact
+   SHA/image/config/test mode, and do not relabel an old or synthetic result
+   as deployed evidence. Preserve unrelated dirty files and all Claude commits.
+
+**Frontend TODO (Claude, coordinated on the same frozen contract):**
+
+- Heartbeat updates transport liveness only; retain source recovery/freshness
+  until a source-status/data event changes it. Do not turn UNKNOWN into HEALTHY.
+- Abort bootstrap/fetch on route/profile change/unmount, check disposal after
+  body parsing and before opening EventSource, and cancel timers. One active
+  subscription per needed profile; no reconnect-after401 loop.
+- Keep same-subject last-good panels during transient recovery, visibly stale.
+  Fetch only affected panels; coalesce overlapping SSE/fallback polls. Market,
+  financial and relation panels must not each redrain the same population.
+- Follow explicit retry/cadence hints; freshness budget measures age, not a
+  guarantee that data cannot change. Offscreen/hidden-tab behavior must be
+  bounded without inventing animation or source progress.
+- Review the actual dev domain's rich Alpha/Portfolio/Account/Binding/Blotter,
+  stage/Gate/Ops/Drawer routes, sub-tabs and resource transitions. A green lab
+  fixture screenshot or HTTP200 app shell is not the live-route evidence.
+
+**Tests / proposed fixed acceptance budgets:**
+
+| Test lane | Exit condition |
+|---|---|
+| Protocol/recovery | Canonical producer+real hook test snapshot→delta; heartbeat after RECOVERING; status and delta in one tick; subscriber joins concurrent commit; duplicate/gap/epoch change/retention eviction; malformed event; auth/membership revoke; source and PG loss/recovery; slow consumer; delayed JSON after unmount. No false cursor advance, leaked stream/timer or unhandled rejection. |
+| Local cost | 60s unchanged-profile probe: **zero full payload SELECTs by the tail after bootstrap**; metadata reads bounded by declared scope cadence. Separately count bootstrap and actual revision reads. |
+| Fan-out | 1/10/50 synthetic subscribers across three profiles and two isolated Control API replicas; source acquisitions depend on existing refresh/admission policy, not subscriber count. Isolated slow consumers do not delay healthy profile delivery. |
+| Browser load | At most one in-flight read per identical authorized query key, at most one coalesced data refresh/sec/profile as the existing ceiling, no duplicated snapshot bootstrap; cancellation stops obsolete work. No idle full-profile refresh driven by heartbeat/status-only. |
+| End-to-end latency | Proposed local-only target: committed PG revision → visible affected panel p95 ≤2s under the declared isolated load. Record PG wait, JSON bytes, RSS, event-loop delay and dropped/recovered counts separately; WAN/source cadence is a different metric. If target is not met, fix or report the measured bottleneck here, not invent a source freshness guarantee. |
+| Truth and dev runtime | Exact candidate image/build flag/migration031 and current ledger; EMPTY/PARTIAL/DENIED/read_truth/source-recovery + R0 receipt parity on actual dev routes with a legitimate session. No role elevation of another user for screenshots; use a disposable isolated review identity for seeded scenarios. |
+| Regression/release readiness | Full existing Control API fresh-PG/restore, contract/generator, Rust, FE unit/type/build and clean browser gates; same-origin network and zero unexpected React/DOM warnings. No tracked file changes from no-update evidence runs; dev/stable volume/port/image separation and bounded rollback rehearsal. |
+
+**Execution slices (2026-09-12):** (1) integrate Claude `61ff826d`, `739dfaad`,
+`edd19496` and merge ancestry; preserve local evidence dirty file, recompute
+combined source digests rather than choose one parent's manifest; (2) metadata
+tail, per-scope serialized bootstrap/replay and explicit bounded failures;
+(3) consumer cancellation, shared in-flight reads and source-state separation;
+(4) isolated protocol/load/cost/browser gates; (5) exact dev image/volume/config
+and migration acceptance with rollback; (6) feature PR and actual CI checks.
+UI layout/token changes are not part of this slice. Latest Claude fixes for
+empty-row fit, resource breadcrumbs and real approval selection remain intact.
+
+**Done so far (2026-09-12 implementation checkpoint):**
+
+- Per-scope serialized bootstrap/tail, subscriber cursor, data-before-status;
+  bounded failures terminate canonically. One slow scope cannot serialize all
+  profiles. Tail reads metadata only when the revision is unchanged; retained
+  fan-out state contains no business row payload. Bounds: 16 scopes, 256
+  subscribers/scope, 32 pending jobs/scope and 2s local IO wait.
+- Exact strategy-set/workspace/profile/revision SQL and statistics coalescing
+  replace repeated whole-fleet work (12 entries/60s, eight in-flight reads).
+  Repository snapshot sharing is in-flight only; transaction captures bypass it.
+- Real React consumers share a per-profile stream and per-client/session GETs,
+  cancel obsolete requests, retain same-identity stale panels and clear other
+  identities. GETs bound 64 flights, 32MiB/body, 64MiB concurrent buffered input,
+  30s; no result cache. Heartbeat/status never advances a data cursor or initiates
+  full-profile refresh. Screen-bound deltas, hidden-tab aggregation and retry
+  deadlines are explicit; VNM uses its own named workbench invalidation.
+- Fixed rejected-relation slot shifting (fills were being interpreted as orders).
+  Runtime browser reports now use ignored Playwright output, not tracked
+  controls/baselines. Explicit no-update is the default, including missing images.
+- Full fresh-PG Control API **527 tests + restore** and frontend **2330 pass,
+  one pre-existing skip** passed before the final counter/backoff refinement.
+  Refined focused gate passes; final combined gates remain required below.
+- Real 60s local PG probe: zero unchanged full-payload tail reads, 300 synthetic
+  subscribers across three profiles/two independent service instances in **one
+  Node process**. Commit→fan-out p95 **247.6ms**, PG query (including pool wait)
+  p95 **3.09ms**, event loop p95 **20.71ms**, RSS **137.7MB**, no drops/read failures.
+  This is not two OS replicas or a PG→browser render latency measurement. The
+  actual producer→React hook→DOM protocol test is a separate synthetic-IO lane.
+- Claude commits through `edd19496` are integrated without dropping history;
+  later `0135e3c7` was discovered during re-fetch and must also be merged before
+  push. Its shorter approval placeholders/truthful registry copy are compatible.
+  No layout/token rewrite by Codex. No dev/stable runtime verdict at checkpoint.
+
+**Dev procedure:** use `./scripts/portal current-source-projection` with the
+existing private base/profile files plus the last-layer inputs documented in
+`deploy/.env.dev-execution-review.example` through `COMPOSE_ENV_FILES`. It uses
+the same four existing Compose files, not a new deployment workflow. Capture
+current image IDs/volume names/config hash, back up dev PG, build exact clean
+candidate, run only `control-api-migrate`, then `up -d --no-deps --no-build
+control-api portal-web`. Keep old image IDs for an image-only rollback; migration
+032 is additive and must not be rolled down/deleted during image rollback.
+Never run bootstrap, `down -v`, or recreate dependencies. Project `portal`,
+loopback8080 and dev domain are distinct from stable project/18081/volumes.
+Existing expired review cookies are not authority to forge sessions or reset
+Bobby; actual authenticated dev visual acceptance requires a legitimate session.
+
+**Owner clarification / integration review (2026-09-12):** Bobby explicitly
+authorized a temporary dev review account, including the required review role.
+Use the normal activation/password/session flow; disable the new account,
+revoke its sessions and activation credentials, remove only its temporary
+workspace membership, and report cleanup. Do not reset Bobby or use stable.
+Codex owns backend, port/mapping and business-logic corrections; Claude owns
+visual design and interaction changes. Integrate Claude `0135e3c7` intact.
+The approval form's optional Alpha picker currently has no container loader.
+Do **not** wire the first 200 Fleet rows as an exhaustive approval-eligibility
+registry: Fleet is current execution scope, while the POST checks the evidence
+run/alpha/claim linkage. The existing typed-ID submission is valid and remains
+usable. Claude should add bounded, explicitly non-exhaustive suggestions with
+manual-ID fallback if desired; no invented candidate, auto-selection or new
+eligibility authority. Screenshot-only layout/copy differences are a Claude
+review item, not permission to rewrite the rich UI or silently accept baselines.
+
+**Technical
+debt exit:** every AR-08–11 and delegated AR-05/07 item has a normal regression
+test and measured acceptance result, including errors and cleanup. Phase8's
+explicit workflow scope and TS gaps remain accurately labelled, not hidden.
+
+**Next / release boundary:** return the exact candidate SHA, manifest inputs,
+gates and dev review URLs to Bobby. Feature push/PR and CI repair are approved
+in this request; merge and main/stable rollout remain separate owner decisions.
+The existing BE-R2-7 pipeline then supplies signed
+images/SBOM/provenance and independently collected runtime-binding markers;
+**BE-R2-9 dev acceptance is not `PRODUCT_ACTIVE` for a new stable release**.
+
+#### 18.6.4 Decisions requested before implementation
+
+1. **BE-R2-8 approval received 2026-09-12**, including Portal-only creation/
+   capture paths in AR-06. Do not ask again. Implementation and source-only
+   acceptance are recorded above; unavailable source verdicts and unbuilt new
+   visual capture forms remain explicit, not claimed as delivered promotion.
+2. **BE-R2-9 approved 2026-09-12**, including bounded dev-only integration,
+   migration/test/rollback scope above. Main/stable and TS command mutation
+   remain excluded; no new infrastructure or TS owner request is needed for
+   the verified Portal defects.
+
+This approval packet is the **single repair plan**. The other trackers only
+link here. Codex owns contracts/server/infra; Claude owns the listed consumer,
+state and visual tests after approval. Agree file ownership before editing
+shared hooks/schema/fixtures; preserve both agents' work and use one integrated
+feature head, not a new branch for each finding. New unrelated requests require
+an explicit scope amendment rather than silently adding a third phase.

@@ -407,6 +407,10 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
 
   return {
     /* N29-FE-01 lab/test port — serves the canonical contract fixtures. */
+    async getReviewCaptureCapabilities() { return unavailable("PORTAL_REVIEW_CAPTURE_REQUIRES_AUTHENTICATED_BFF"); },
+    async captureR2() { return unavailable("PORTAL_REVIEW_CAPTURE_REQUIRES_AUTHENTICATED_BFF"); },
+    async createPaperExit() { return unavailable("PORTAL_REVIEW_CAPTURE_REQUIRES_AUTHENTICATED_BFF"); },
+    async captureSandboxNote() { return unavailable("PORTAL_REVIEW_CAPTURE_REQUIRES_AUTHENTICATED_BFF"); },
     /**
      * Goal 9: the four screens now read their payload through the composition,
      * so the fixture surface has to serve it too — from the same fixtures the

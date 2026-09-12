@@ -87,7 +87,7 @@ describe("Operations Queue — the rail follows the selected row; ack ≠ resolv
     expect(screen.getByRole("button", { name: "Acknowledge" })).toBeTruthy();
     // Resolve stays locked until acknowledged — different records.
     expect(screen.getByRole("button", { name: "Resolve" })).toHaveProperty("disabled", true);
-    fireEvent.click(screen.getByRole("button", { name: /All \(24h\)/ }));
+    fireEvent.click(screen.getByRole("button", { name: /All retained/ }));
     expect(await screen.findByText("Select an operation")).toBeTruthy();
   });
   it("the screen's rail changes with the selection, not with the table", () => {

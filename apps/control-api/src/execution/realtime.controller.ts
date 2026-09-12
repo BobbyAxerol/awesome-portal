@@ -29,6 +29,7 @@ import {
   RealtimeProxyError,
 } from "./realtime.proxy";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
+import { ExecutionLocalReadAuthority } from "./local-read-authority";
 
 interface RealtimeRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -46,6 +47,7 @@ export class ExecutionRealtimeController {
     @Inject(ExecutionCurrentSourceProxy) private readonly currentSource: ExecutionCurrentSourceProxy,
     @Inject(ExecutionProfileProjectionRepository) private readonly projectionRepository: ExecutionProfileProjectionRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Inject(ExecutionLocalReadAuthority) private readonly readAuthority: ExecutionLocalReadAuthority,
   ) {}
 
   /**
@@ -60,9 +62,12 @@ export class ExecutionRealtimeController {
       throw new LocalRealtimeError("N31_REALTIME_DIAGNOSTICS_FORBIDDEN", 403);
     }
     const readAt = new Date();
+    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true") {
+      await this.readAuthority.authorize(request);
+    }
     const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
-    const profiles = workspaceId
-      ? await Promise.all(diagnosticProfiles(this.config).map(async ({ environment, profileId }) => {
+    const profiles = workspaceId && this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true"
+      ? await Promise.all(diagnosticProfiles(this.config).filter(({ environment }) => this.readAuthority.profileEnabled(environment)).map(async ({ environment, profileId }) => {
         const [snapshot, health] = await Promise.all([
           this.projectionRepository.snapshot(workspaceId, environment, profileId),
           this.projectionRepository.refreshHealth(workspaceId, environment, profileId),
@@ -118,6 +123,7 @@ export class ExecutionRealtimeController {
     @Param("environment") rawEnvironment: string,
   ) {
     const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
+    await this.readAuthority.authorize(request, environment);
     try {
       return await this.localRealtime.snapshot(workspaceId, environment, profileId);
     } catch (error) {
@@ -132,8 +138,10 @@ export class ExecutionRealtimeController {
     @Param("environment") rawEnvironment: string,
     @Query("cursor") rawCursor?: unknown,
   ): Promise<void> {
+    let cleanup = () => undefined as void;
     try {
       const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
+      await this.readAuthority.authorize(request, environment);
       const cursor = singleHeader(request.headers["last-event-id"]) ?? singleValue(rawCursor);
       reply.hijack();
       reply.raw.writeHead(200, {
@@ -173,6 +181,7 @@ export class ExecutionRealtimeController {
         }
         return accepted;
       };
+      cleanup = close;
       const heartbeat = setInterval(() => send(
         this.localRealtime.heartbeat(workspaceId, environment, profileId),
       ), 15_000);
@@ -183,7 +192,7 @@ export class ExecutionRealtimeController {
           request.portalSession.userId,
           request.portalSession.sessionVersion,
           new Date(),
-        ).then((active) => {
+        ).then(async (active) => active && await this.readAuthority.remainsAuthorized(request, environment)).then((active) => {
           if (active || closed) return;
           send(this.localRealtime.authExpired(workspaceId, environment, profileId));
         }).catch(() => {
@@ -193,11 +202,19 @@ export class ExecutionRealtimeController {
       }, 5_000);
       leaseMonitor.unref();
       reply.raw.once("close", close);
-      unsubscribe = await this.localRealtime.subscribe(
-        workspaceId, environment, profileId, cursor, send,
-      );
+      try {
+        unsubscribe = await this.localRealtime.subscribe(
+          workspaceId, environment, profileId, cursor, send,
+        );
+      } catch {
+        send({ ...this.localRealtime.heartbeat(workspaceId, environment, profileId),
+          event_type: "projection.gap", terminal: true, reconnect_required: true,
+          payload: { reason_code: "N31_LOCAL_READ_FAILED" } });
+        close();
+      }
       if (closed) unsubscribe();
     } catch (error) {
+      cleanup();
       if (!reply.raw.headersSent) void reply.status(localStatus(error)).send(localErrorBody(error));
       else reply.raw.end();
     }
@@ -371,10 +388,11 @@ function sse(event: LocalRealtimeEnvelope): string {
 }
 
 function localStatus(error: unknown): number {
-  return error instanceof LocalRealtimeError ? error.status : 500;
+  return error instanceof HttpException ? error.getStatus() : error instanceof LocalRealtimeError ? error.status : 500;
 }
 
 function localErrorBody(error: unknown) {
+  if (error instanceof HttpException) return error.getResponse();
   return {
     error: {
       code: error instanceof LocalRealtimeError ? error.code : "N31_LOCAL_REALTIME_FAILED",
@@ -383,6 +401,7 @@ function localErrorBody(error: unknown) {
   };
 }
 
-function localHttpError(error: unknown): HttpException {
+function localHttpError(error: unknown): Error {
+  if (error instanceof LocalRealtimeError) return error;
   return new HttpException(localErrorBody(error), localStatus(error));
 }

@@ -43,6 +43,8 @@ import {
 } from "./contracts";
 import { GovernanceError, GovernanceService } from "./governance.service";
 import { PaperExitService } from "./paper-exit.service";
+import { GovernanceReviewCaptureService } from "./review-capture.service";
+import { R2CaptureSchema, PaperExitCreateSchema, SandboxReviewNoteSchema } from "./review-capture.contracts";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -56,11 +58,45 @@ export class GovernanceController {
   constructor(
     @Inject(GovernanceService) private readonly governance: GovernanceService,
     @Inject(PaperExitService) private readonly paperExit: PaperExitService,
+    @Inject(GovernanceReviewCaptureService) private readonly captures: GovernanceReviewCaptureService,
     @Inject(ExecutionOperationsService) private readonly operations: ExecutionOperationsService,
     @Inject(OperationsWorkflowService) private readonly operationWorkflow: OperationsWorkflowService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
+
+  @Get("/governance/review-capture-capabilities")
+  async captureCapabilities(@Req() request: GovernanceRequest, @Query("workspace_id") workspace?: string) {
+    await this.workspace(request, workspace);
+    return this.captures.capabilities(request.portalUser);
+  }
+
+  @Post("/governance/r2/capture")
+  async captureR2(@Req() request: GovernanceRequest, @Body() body: unknown) {
+    this.assertMutationSecurity(request);
+    const input = R2CaptureSchema.safeParse(body);
+    if (!input.success) throw new GovernanceError("REVIEW_CAPTURE_INPUT_INVALID", "Invalid review capture.", 400);
+    await this.workspace(request, input.data.workspace_id);
+    return this.captures.createR2(request.portalUser, input.data, this.requestId(request));
+  }
+
+  @Post("/governance/paper-exit/create")
+  async createPaperExit(@Req() request: GovernanceRequest, @Body() body: unknown) {
+    this.assertMutationSecurity(request);
+    const input = PaperExitCreateSchema.safeParse(body);
+    if (!input.success) throw new GovernanceError("REVIEW_CAPTURE_INPUT_INVALID", "Invalid review capture.", 400);
+    await this.workspace(request, input.data.workspace_id);
+    return this.captures.createPaperExit(request.portalUser, input.data, this.requestId(request));
+  }
+
+  @Post("/governance/sandbox/capture-note")
+  async captureSandboxNote(@Req() request: GovernanceRequest, @Body() body: unknown) {
+    this.assertMutationSecurity(request);
+    const input = SandboxReviewNoteSchema.safeParse(body);
+    if (!input.success) throw new GovernanceError("REVIEW_CAPTURE_INPUT_INVALID", "Invalid review capture.", 400);
+    await this.workspace(request, input.data.workspace_id);
+    return this.captures.sandboxNote(request.portalUser, input.data, this.requestId(request));
+  }
 
   @Get("/operations")
   async operationsQueue(

@@ -1,5 +1,6 @@
 import { ResearchRunSyncService } from "./facade/run-sync.service";
 import { ExecutionDurableMirrorIntegrityController } from "./execution/durable-mirror-integrity.controller";
+import { ExecutionLocalReadAuthority } from "./execution/local-read-authority";
 import { DynamicModule, Module } from "@nestjs/common";
 import { Pool } from "pg";
 import { AuthController } from "./auth/auth.controller";
@@ -23,6 +24,7 @@ import { GovernanceRepository } from "./governance/governance.repository";
 import { GovernanceService } from "./governance/governance.service";
 import { PaperExitRepository } from "./governance/paper-exit.repository";
 import { PaperExitService } from "./governance/paper-exit.service";
+import { GovernanceReviewCaptureService } from "./governance/review-capture.service";
 import { ExecutionRealtimeController } from "./execution/realtime.controller";
 import { ExecutionRealtimeProxy } from "./execution/realtime.proxy";
 import { ExecutionAnalyticsController } from "./execution/analytics.controller";
@@ -137,6 +139,7 @@ export class AppModule {
         ExecutionMarketCandlesController,
       ],
       providers: [
+        ExecutionLocalReadAuthority,
         { provide: CONTROL_API_CONFIG, useValue: config },
         { provide: CONTROL_API_POOL, useValue: pool },
         {
@@ -168,6 +171,7 @@ export class AppModule {
         GovernanceService,
         PaperExitRepository,
         PaperExitService,
+        GovernanceReviewCaptureService,
         CommandCenterRepository,
         CommandCenterService,
         ExecutionOperationsRepository,

@@ -4,6 +4,74 @@
  */
 
 export interface paths {
+    "/api/v1/execution/governance/review-capture-capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Workspace-member read; captures require ADMIN, accepted references and optimistic revisions. Unsupported source verdicts remain named and disabled. */
+        get: operations["executionReviewCaptureCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/r2/capture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADMIN + workspace membership + CSRF. Atomic Portal-only capture/journal/audit, same intent retry replays, changed intent key returns 409. Does not execute, approve a source verdict or promote. */
+        post: operations["executionCaptureR2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/paper-exit/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADMIN + workspace membership + CSRF. Atomic Portal-only capture/journal/audit, same intent retry replays, changed intent key returns 409. Does not execute, approve a source verdict or promote. */
+        post: operations["executionCreatePaperExit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/sandbox/capture-note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADMIN + workspace membership + CSRF. Atomic Portal-only capture/journal/audit, same intent retry replays, changed intent key returns 409. Does not execute, approve a source verdict or promote. */
+        post: operations["executionCaptureSandboxNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/governance/approvals": {
         parameters: {
             query?: never;
@@ -302,6 +370,74 @@ export interface components {
                 message: string;
             };
             request_id: string;
+        };
+        Capabilities: {
+            /** @constant */
+            schema_version: "governance.review-capture-capabilities.v1";
+            /** @constant */
+            authority: "PORTAL";
+            /** @constant */
+            source_side_effect_requested: false;
+            actions: {
+                /** @enum {unknown} */
+                id: "R2_CREATE" | "PAPER_EXIT_CREATE" | "SANDBOX_NOTE" | "R2_EXECUTION_GRANT" | "PAPER_EXIT_PROMOTE" | "SANDBOX_CERTIFY_SOURCE";
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "UNAVAILABLE";
+                inputs?: string;
+                path?: string;
+                reason_code?: string;
+            }[];
+        };
+        R2CaptureRequest: {
+            workspace_id: string;
+            request_key: string;
+            summary: string;
+            r1_approval_id: string;
+            expected_r1_version: number;
+            portfolio_id: string;
+            currency: string;
+            deployment_id: string;
+            risk_grant_id: string;
+            expected_projection_digest: string;
+        };
+        CaptureResponse: {
+            /** @constant */
+            schema_version: "governance.review-capture.v1";
+            /** @constant */
+            authority: "PORTAL";
+            workspace_id: string;
+            /** @enum {unknown} */
+            action: "R2_CREATE" | "PAPER_EXIT_CREATE" | "SANDBOX_NOTE";
+            replayed: boolean;
+            /** @constant */
+            source_side_effect_requested: false;
+            aggregate_id: string;
+            approval_id?: string;
+            review_id?: string;
+            certification_id?: string;
+            workflow_version: number;
+            read_path: string;
+            captured_projection_digest?: string;
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            decision_reason_code: string;
+            deployment_id?: string;
+        } & (unknown & unknown & unknown);
+        PaperExitCreateRequest: {
+            workspace_id: string;
+            request_key: string;
+            summary: string;
+            r2_approval_id: string;
+            expected_r2_version: number;
+            deployment_id: string;
+            expected_projection_digest: string;
+        };
+        SandboxNoteRequest: {
+            workspace_id: string;
+            request_key: string;
+            summary: string;
+            certification_id: string;
+            expected_workflow_version: number;
         };
         "$defs-Identifier": string;
         /** Format: date-time */
@@ -1326,7 +1462,7 @@ export interface components {
                 /** @enum {unknown} */
                 severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
                 /** @enum {unknown} */
-                source_authority: "EXECUTION" | "BROKER" | "DERIVED";
+                source_authority: "PORTAL" | "EXECUTION" | "BROKER" | "DERIVED";
                 finding_code: string;
                 summary: string;
                 blocking: boolean;
@@ -1487,6 +1623,104 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionReviewCaptureCapabilities: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor-scoped Portal capture actions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Capabilities"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionCaptureR2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["R2CaptureRequest"];
+            };
+        };
+        responses: {
+            /** @description Created or idempotently replayed review capture; source verdict NOT_ASSERTED */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionCreatePaperExit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaperExitCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created or idempotently replayed review capture; source verdict NOT_ASSERTED */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionCaptureSandboxNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SandboxNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Created or idempotently replayed review capture; source verdict NOT_ASSERTED */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     executionApprovalInbox: {
         parameters: {
             query?: {

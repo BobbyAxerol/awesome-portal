@@ -47,6 +47,8 @@ export interface ProfileRealtimeState {
   reason: string | null;
   /** What the source coordinator says about itself; never derived from `phase`. */
   source: SourceRecovery;
+  /** Named-screen invalidations; wildcard is reserved for resnapshot/legacy hints. */
+  screenRefreshKeys?: Readonly<Record<string, number>>;
 }
 
 interface RealtimeEnvelope {
@@ -112,15 +114,48 @@ export function readProfileRealtime(raw: unknown): RealtimeEnvelope | null {
   };
 }
 
-export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | null): ProfileRealtimeState {
-  const [state, setState] = useState<ProfileRealtimeState>(INITIAL);
+type Environment = "paper" | "sandbox" | "live";
+type StateUpdate = ProfileRealtimeState | ((current: ProfileRealtimeState) => ProfileRealtimeState);
+type RealtimeHub = { state: ProfileRealtimeState; listeners: Set<(state: ProfileRealtimeState) => void>; stop: () => void };
+const realtimeHubs = new Map<Environment, RealtimeHub>();
 
+/** One connection/bootstrap per profile per tab; destroyed when its last reader leaves. */
+export function useProfileRealtime(environment: Environment | null, screenId?: string): ProfileRealtimeState {
+  const [bound, setBound] = useState<{ environment: Environment | null; state: ProfileRealtimeState }>({ environment: null, state: INITIAL });
   useEffect(() => {
     if (!environment || typeof EventSource === "undefined") {
-      setState(INITIAL);
-      return;
+      setBound({ environment, state: INITIAL }); return;
     }
+    let hub = realtimeHubs.get(environment);
+    if (!hub) {
+      hub = { state: INITIAL, listeners: new Set(), stop: () => undefined };
+      realtimeHubs.set(environment, hub);
+    }
+    const active = hub;
+    const listener = (state: ProfileRealtimeState) => {
+      const visible = screenId ? { ...state, refreshKey: (state.screenRefreshKeys?.[screenId] ?? 0) + (state.screenRefreshKeys?.["*"] ?? 0) } : state;
+      setBound(previous => previous.environment === environment && previous.state.phase === visible.phase &&
+        previous.state.refreshKey === visible.refreshKey && previous.state.reason === visible.reason &&
+        JSON.stringify(previous.state.source) === JSON.stringify(visible.source)
+        ? previous : { environment, state: visible });
+    };
+    active.listeners.add(listener);
+    listener(active.state);
+    if (active.listeners.size === 1) active.stop = startProfileRealtime(environment, update => {
+      active.state = typeof update === "function" ? update(active.state) : update;
+      for (const notify of active.listeners) notify(active.state);
+    });
+    return () => {
+      active.listeners.delete(listener);
+      if (!active.listeners.size) { active.stop(); if (realtimeHubs.get(environment) === active) realtimeHubs.delete(environment); }
+    };
+  }, [environment, screenId]);
+  return bound.environment === environment ? bound.state : INITIAL;
+}
+
+function startProfileRealtime(environment: Environment, setState: (update: StateUpdate) => void): () => void {
     let disposed = false;
+    const bootstrapAbort = new AbortController();
     let resnapshotNotBefore: string | null = null;
     let source: EventSource | null = null;
     let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -134,23 +169,37 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
     // per event under a burst is a self-inflicted stampede.
     let lastBumpAtMs = 0;
     let bumpTimer: ReturnType<typeof setTimeout> | null = null;
+    const affected = new Set<string>();
+    const flushRefresh = () => {
+      if (disposed || document.visibilityState === "hidden") return;
+      const screens = [...affected]; affected.clear();
+      if (!screens.length) return;
+      setState(current => {
+        const screenRefreshKeys = { ...current.screenRefreshKeys };
+        for (const id of screens) screenRefreshKeys[id] = (screenRefreshKeys[id] ?? 0) + 1;
+        return { ...current, refreshKey: current.refreshKey + 1, screenRefreshKeys };
+      });
+    };
 
     const close = () => {
+      if (bumpTimer) { clearTimeout(bumpTimer); bumpTimer = null; }
       source?.close();
       source = null;
     };
-    const bumpRefresh = () => {
+    const bumpRefresh = (screens?: string[]) => {
+      for (const id of (screens ?? ["*"])) if (affected.size < 128) affected.add(id);
+      if (document.visibilityState === "hidden") return;
       const elapsed = Date.now() - lastBumpAtMs;
       if (elapsed >= REALTIME_COALESCE_MS) {
         lastBumpAtMs = Date.now();
-        setState((current) => ({ ...current, refreshKey: current.refreshKey + 1 }));
+        flushRefresh();
         return;
       }
       if (bumpTimer) return;
       bumpTimer = setTimeout(() => {
         bumpTimer = null;
         lastBumpAtMs = Date.now();
-        if (!disposed) setState((current) => ({ ...current, refreshKey: current.refreshKey + 1 }));
+        flushRefresh();
       }, REALTIME_COALESCE_MS - elapsed);
     };
     /**
@@ -169,12 +218,21 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
      * changed while the stream was down.
      */
     const updateFrom = (event: RealtimeEnvelope, refresh = true) => {
-      if (event.projection_epoch !== null) epoch = event.projection_epoch;
-      if (event.projection_sequence !== null) sequence = event.projection_sequence;
+      if (disposed) return;
+      if (event.event_type === "heartbeat") {
+        setState(current => ({ ...current, phase: "live" }));
+        return;
+      }
+      const statusOnly = event.payload?.snapshot_mode === "STATUS_ONLY";
+      if (!statusOnly) {
+        if (event.projection_epoch !== null) epoch = event.projection_epoch;
+        if (event.projection_sequence !== null) sequence = event.projection_sequence;
+      }
       setState((current) => ({
+        ...current,
         phase: "live",
         refreshKey: current.refreshKey,
-        cursor: event.cursor ?? current.cursor,
+        cursor: statusOnly ? current.cursor : event.cursor ?? current.cursor,
         reason: null,
         source: event.source,
       }));
@@ -187,8 +245,9 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
       // read, and the status that prompted it is already on this envelope. The
       // panel keeps its last-good values and changes its indicator instead,
       // which is what the handoff asks for.
-      const statusOnly = event.payload?.snapshot_mode === "STATUS_ONLY";
-      if (refresh && event.event_type !== "heartbeat" && !statusOnly) bumpRefresh();
+      if (refresh && !statusOnly) bumpRefresh(Array.isArray(event.payload?.affected_screen_ids)
+        ? event.payload.affected_screen_ids.filter((id): id is string => typeof id === "string" && /^[A-Z0-9_]{3,128}$/.test(id)).slice(0,128)
+        : undefined);
     };
     const decode = (message: MessageEvent<string>): RealtimeEnvelope | null => {
       try { return readProfileRealtime(JSON.parse(message.data)); } catch { return null; }
@@ -200,15 +259,15 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
       let response: Response;
       try {
         response = await fetch(`/api/v1/execution/profiles/${environment}/realtime-snapshot`, {
-          credentials: "same-origin", headers: { accept: "application/json" },
+          credentials: "same-origin", headers: { accept: "application/json" }, signal: bootstrapAbort.signal,
         });
       } catch {
         if (!disposed) setState((current) => ({ ...current, phase: "closed", reason: "REALTIME_SNAPSHOT_NETWORK_ERROR" }));
         return;
       }
       if (disposed) return;
-      if (response.status === 401) {
-        setState((current) => ({ ...current, phase: "auth_expired", reason: "SESSION_EXPIRED" }));
+      if (response.status === 401 || response.status === 403) {
+        setState((current) => ({ ...current, phase: "auth_expired", reason: "SESSION_EXPIRED", source: SOURCE_UNKNOWN }));
         return;
       }
       if (!response.ok) {
@@ -216,6 +275,7 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
         return;
       }
       const snapshot = readProfileRealtime(await response.json().catch(() => null));
+      if (disposed || bootstrapAbort.signal.aborted) return;
       if (!snapshot || snapshot.event_type !== "snapshot" || !snapshot.cursor) {
         setState((current) => ({ ...current, phase: "closed", reason: "REALTIME_SNAPSHOT_INVALID" }));
         return;
@@ -241,12 +301,18 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
         // preceded this gap. Waiting a hardcoded second regardless was the
         // client deciding for itself how hard to push a source that had just
         // said when to come back.
+        const delay = resnapshotDelayMs(resnapshotNotBefore, Date.now(), RECOVERY_FALLBACK_MS);
+        if (!Number.isFinite(delay)) {
+          setState(current => ({ ...current, phase: "closed", reason: "REALTIME_RETRY_DEFERRED" }));
+          return;
+        }
         recoveryTimer = setTimeout(
           () => { if (!disposed) void bootstrap(true); },
-          resnapshotDelayMs(resnapshotNotBefore, Date.now(), RECOVERY_FALLBACK_MS),
+          delay,
         );
       };
       const ordinary = (message: MessageEvent<string>) => {
+        if (disposed || source !== stream) return;
         const event = decode(message);
         if (!event) {
           close();
@@ -264,6 +330,8 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
           }));
           return;
         }
+        if (event.event_type === "delta" && sequence !== null && event.projection_epoch === epoch &&
+            event.projection_sequence !== null && event.projection_sequence <= sequence) return;
         if (event.event_type === "delta" && sequence !== null && event.projection_sequence !== sequence + 1) {
           terminalGap("REALTIME_SEQUENCE_GAP");
           return;
@@ -272,20 +340,26 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
           terminalGap("REALTIME_EPOCH_CHANGED");
           return;
         }
+        if (typeof event.payload?.resnapshot_not_before === "string") resnapshotNotBefore = event.payload.resnapshot_not_before;
+        else if (event.source.retryNotBefore) resnapshotNotBefore = event.source.retryNotBefore;
         updateFrom(event);
       };
       stream.addEventListener("snapshot", ordinary as EventListener);
       stream.addEventListener("delta", ordinary as EventListener);
       stream.addEventListener("heartbeat", ordinary as EventListener);
       stream.addEventListener("projection.gap", ((message: MessageEvent<string>) => {
+        if (disposed || source !== stream) return;
         const event = decode(message);
+        if (event?.source.retryNotBefore) resnapshotNotBefore = event.source.retryNotBefore;
         terminalGap(typeof event?.payload?.reason_code === "string" ? event.payload.reason_code : "PROJECTION_GAP");
       }) as EventListener);
       stream.addEventListener("auth.expired", (() => {
+        if (disposed || source !== stream) return;
         close();
         setState((current) => ({ ...current, phase: "auth_expired", reason: "SESSION_EXPIRED" }));
       }) as EventListener);
       stream.onerror = () => {
+        if (disposed || source !== stream) return;
         // Critical loop breaker: native EventSource must never retry a dead
         // session every few seconds for the lifetime of the browser tab.
         close();
@@ -293,16 +367,17 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
       };
     };
 
+    const visibility = () => { if (document.visibilityState !== "hidden" && affected.size) bumpRefresh([]); };
+    document.addEventListener("visibilitychange",visibility);
     void bootstrap(false);
     return () => {
       disposed = true;
+      bootstrapAbort.abort();
+      document.removeEventListener("visibilitychange",visibility);
       close();
       if (recoveryTimer) clearTimeout(recoveryTimer);
       if (bumpTimer) clearTimeout(bumpTimer);
     };
-  }, [environment]);
-
-  return state;
 }
 
 /** One re-read per second is the ceiling a delta burst can ask of a screen. */
@@ -313,15 +388,14 @@ export const RECOVERY_FALLBACK_MS = 1_000;
  * How long to wait before resnapshotting, given the source's own instruction.
  *
  * `null` or a time already past means "now"; a future time is honoured to the
- * millisecond. Capped at a minute so a malformed far-future stamp cannot park
- * the stream for ever — the cap guards against a bad value, it is not a second
- * opinion about the backoff.
+ * millisecond. A far-future value closes automatic recovery instead of retrying
+ * earlier than the server allowed or overflowing the browser timer.
  */
 export function resnapshotDelayMs(notBefore: string | null, now: number, fallbackMs: number): number {
   if (!notBefore) return fallbackMs;
   const at = Date.parse(notBefore);
   if (!Number.isFinite(at)) return fallbackMs;
-  return Math.max(0, Math.min(60_000, at - now));
+  return at - now > 2_147_483_647 ? Infinity : Math.max(0, at - now);
 }
 
 export const REALTIME_COALESCE_MS = 1_000;
@@ -340,10 +414,11 @@ export interface ProfilesRealtimeState {
  */
 export function useProfilesRealtime(
   environments: readonly ("paper" | "sandbox" | "live")[],
+  screenId?: string,
 ): ProfilesRealtimeState {
-  const paper = useProfileRealtime(environments.includes("paper") ? "paper" : null);
-  const sandbox = useProfileRealtime(environments.includes("sandbox") ? "sandbox" : null);
-  const live = useProfileRealtime(environments.includes("live") ? "live" : null);
+  const paper = useProfileRealtime(environments.includes("paper") ? "paper" : null, screenId);
+  const sandbox = useProfileRealtime(environments.includes("sandbox") ? "sandbox" : null, screenId);
+  const live = useProfileRealtime(environments.includes("live") ? "live" : null, screenId);
   return {
     refreshKey: paper.refreshKey + sandbox.refreshKey + live.refreshKey,
     states: { paper, sandbox, live },

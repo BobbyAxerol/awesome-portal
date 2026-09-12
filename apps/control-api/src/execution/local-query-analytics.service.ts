@@ -101,7 +101,7 @@ export class LocalQueryAnalyticsService {
     principal: AnalyticsPrincipal,
     subjectKind: QueryAnalyticsSubjectKind,
     subjectId: string,
-    options: { sourceFacts?: boolean } = {},
+    options: { sourceFacts?: boolean; environment?: ProjectionEnvironment; accountId?: string } = {},
   ): Promise<Record<string, unknown>> {
     // Composite deployment ids are colon-joined by the source
     // (strategy:mode:venue:account — finding F13); the id never leaves this
@@ -110,16 +110,19 @@ export class LocalQueryAnalyticsService {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
-    const environment: ProjectionEnvironment = subjectKind === "live-gate" ? "live" : "paper";
+    const environment: ProjectionEnvironment = options.environment ?? (subjectKind === "live-gate" ? "live" : "paper");
     const context = await this.localContext(environment);
     const depth = await this.subjectDepth(
-      context.snapshot, context.workspaceId, environment, context.profileId, subjectKind, subjectId,
+      context.snapshot, context.workspaceId, environment, context.profileId, subjectKind, subjectId, options.accountId,
     );
-    const statistics = await this.portfolioStatistics(
+    const selectedStrategies = selectSubject(sourceFacts(context.snapshot), subjectKind, subjectId)
+      .strategies.flatMap(row => typeof row.strategy_id === "string" ? [row.strategy_id] : []);
+    const statistics = options.accountId || !selectedStrategies.length ? null : await this.portfolioStatistics(
       context.workspaceId, environment, context.profileId, projectionVersion(context.snapshot),
+      selectedStrategies,
     );
     if (statistics && depth) depth.queries += 1;
-    return composeAnalytics(context.snapshot, principal.workspaceId, subjectKind, subjectId, depth, statistics, options);
+    return composeAnalytics(context.snapshot, context.workspaceId, subjectKind, subjectId, depth, statistics, options);
   }
 
   /**
@@ -199,6 +202,9 @@ export class LocalQueryAnalyticsService {
   }
 
   private async localContext(environment: ProjectionEnvironment): Promise<LocalAnalyticsContext> {
+    if (!profileFeatureEnabled(this.config, environment)) {
+      throw new AnalyticsProxyError("EXECUTION_PROFILE_READ_DISABLED", 404);
+    }
     const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     const profileId = profile(this.config, environment);
     if (!workspaceId || !profileId) {
@@ -277,10 +283,11 @@ export class LocalQueryAnalyticsService {
     profileId: string,
     subjectKind: QueryAnalyticsSubjectKind,
     subjectId: string,
+    accountId?: string,
   ): Promise<SubjectDepth | null> {
     if (subjectKind !== "deployment" && subjectKind !== "alpha") return null;
     if (typeof this.repository.timeSeriesHistoryDownsampled !== "function") return null;
-    const entity = subjectKind === "deployment"
+    const entity = accountId ? { field: "account_id", value: accountId } : subjectKind === "deployment"
       ? { field: "deployment_id", value: subjectId }
       : { field: "strategy_id", value: resolveStrategyId(snapshot, subjectId) };
     const from = new Date(Date.now() - 30 * 86_400_000).toISOString();
@@ -324,20 +331,20 @@ export class LocalQueryAnalyticsService {
    * history" tiles compute locally the moment two alphas overlap ten days.
    */
   /**
-   * Fleet-wide correlation and drawdown overlap, memoised per projection version.
+   * Exact-scope correlation and drawdown overlap, memoised per projection version.
    *
-   * These are a pure function of one projection's 90-day daily closes: the
-   * subject does not enter the computation at all, so every deployment's
+   * Previously the subject did not enter the computation, so every deployment's
    * workbench and every alpha's 360 recomputed the same 43-alpha, 903-pair
    * result. Measured on dev 2026-09-08 it was 3.1s of a 4.6s workbench read.
    *
    * The key is the projection's own epoch and sequence, so this is not a
    * time-based cache that can serve a figure older than the data: a refreshed
-   * projection has a new sequence and misses. Only the newest version is kept
-   * — an operator moving between deployments reads one projection, and holding
-   * older ones would be memory spent on answers nobody will ask for again.
+   * projection has a new sequence and misses. BE-R2-9 also keys by exact
+   * strategy set/workspace/profile, pushes strategy filtering into SQL and
+   * bounds the cache to 12 entries/60s, with at most eight in-flight reads.
    */
-  private statisticsCache: { key: string; value: PortfolioStatistics | null } | null = null;
+  private readonly statisticsCache = new Map<string, { until: number; value: PortfolioStatistics | null }>();
+  private readonly statisticsFlights = new Map<string, Promise<PortfolioStatistics | null>>();
 
   /**
    * What Portfolio 360 needs from the local projection in one read: the
@@ -351,24 +358,37 @@ export class LocalQueryAnalyticsService {
   async portfolioView(
     principal: { workspaceId: string },
     portfolioId: string,
-  ): Promise<{ statistics: PortfolioStatistics | null; strategies: string[]; version: string }> {
+    environment: ProjectionEnvironment = "paper",
+  ) {
     void principal;
     if (!/^[A-Za-z0-9._:-]{1,192}$/.test(portfolioId)) {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
-    const context = await this.localContext("paper");
+    const context = await this.localContext(environment);
     const strategies = new Set<string>();
-    for (const row of context.snapshot.document.relations[SOURCE.deployments]?.items ?? []) {
-      if (row.fields.portfolio_id !== portfolioId) continue;
-      const strategyId = row.fields.strategy_id;
+    if (!facts(context.snapshot, SOURCE.portfolios).some(row => row.portfolio_id === portfolioId) &&
+      !facts(context.snapshot, SOURCE.deployments).some(row => row.portfolio_id === portfolioId)) {
+      throw new AnalyticsProxyError("ANALYTICS_SUBJECT_NOT_FOUND", 404);
+    }
+    for (const row of facts(context.snapshot, SOURCE.deployments)) {
+      if (row.portfolio_id !== portfolioId) continue;
+      const strategyId = row.strategy_id;
       if (typeof strategyId === "string" && strategyId.length > 0) strategies.add(strategyId);
     }
     const version = projectionVersion(context.snapshot);
-    const statistics = await this.portfolioStatistics(
-      context.workspaceId, "paper", context.profileId, version,
-    );
-    return { statistics, strategies: [...strategies], version };
+    const statistics = strategies.size ? await this.portfolioStatistics(
+      context.workspaceId, environment, context.profileId, version, [...strategies],
+    ) : null;
+    return {
+      statistics, strategies: [...strategies], version,
+      inputAsOf: context.snapshot.sourceAsOf?.toISOString() ?? null,
+      inputFreshness: Date.now() - context.snapshot.lastSuccessfulRefreshAt.valueOf() >
+        this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS * 2 ||
+        Object.values(context.snapshot.document.relations).some(relation => relation.freshness === "STALE") ? "STALE"
+        : Object.values(context.snapshot.document.relations).some(relation => relation.freshness === "UNKNOWN" || relation.availability === "UNAVAILABLE") ? "UNKNOWN" : "OK",
+      inputCompleteness: context.snapshot.completeness,
+    };
   }
 
   /**
@@ -529,18 +549,35 @@ export class LocalQueryAnalyticsService {
     environment: ProjectionEnvironment,
     profileId: string,
     version: string,
+    strategyIds?: readonly string[],
   ): Promise<PortfolioStatistics | null> {
     if (typeof this.repository.timeSeriesDailyCloses !== "function") return null;
-    const key = `${workspaceId}:${environment}:${profileId}:${version}`;
-    if (this.statisticsCache?.key === key) return this.statisticsCache.value;
+    const key = JSON.stringify([workspaceId,environment,profileId,version,strategyIds?.slice().sort() ?? null]);
+    const cached = this.statisticsCache.get(key);
+    if (cached && cached.until > Date.now()) return cached.value;
+    const pending = this.statisticsFlights.get(key);
+    if (pending) return pending;
+    if (this.statisticsFlights.size >= 8) return null;
+    const read = this.loadStatistics(workspaceId,environment,profileId,strategyIds).then(value => {
+      if (value) {
+        if (this.statisticsCache.size >= 12) this.statisticsCache.delete(this.statisticsCache.keys().next().value!);
+        this.statisticsCache.set(key,{until:Date.now()+60_000,value});
+      }
+      return value;
+    });
+    this.statisticsFlights.set(key,read);
+    try { return await read; } finally { this.statisticsFlights.delete(key); }
+  }
+
+  private async loadStatistics(workspaceId: string, environment: ProjectionEnvironment, profileId: string,
+    strategyIds?: readonly string[]): Promise<PortfolioStatistics | null> {
     try {
       const closes = await this.repository.timeSeriesDailyCloses(
         workspaceId, environment, profileId,
         "manager.performance:account_equity_snapshots",
-        { from: new Date(Date.now() - 90 * 86_400_000).toISOString(), valueField: "equity" },
+        { from: new Date(Date.now() - 90 * 86_400_000).toISOString(), valueField: "equity", strategyIds },
       );
       const value = computePortfolioStatistics(closes);
-      this.statisticsCache = { key, value };
       return value;
     } catch {
       // A failure is not cached: the next read should try again rather than
@@ -582,7 +619,7 @@ function composeAnalytics(
   subjectId: string,
   depth: SubjectDepth | null = null,
   statistics: PortfolioStatistics | null = null,
-  options: { sourceFacts?: boolean } = {},
+  options: { sourceFacts?: boolean; accountId?: string } = {},
 ): Record<string, unknown> {
   const all = sourceFacts(snapshot);
   // The mirror rows carry the same ids the snapshot rows do, so the subject
@@ -591,6 +628,30 @@ function composeAnalytics(
   if (depth && depth.accountEquity.length > 0) all.accountEquity = depth.accountEquity;
   if (depth && depth.performance.length > 0) all.performance = depth.performance;
   const selected = selectSubject(all, subjectKind, subjectId);
+  if (options.accountId) {
+    if (!selected.accounts.some((row) => text(row, "account_id") === options.accountId) &&
+        !selected.deployments.some((row) => text(row, "account_id") === options.accountId)) {
+      throw new AnalyticsProxyError("ANALYTICS_ACCOUNT_SCOPE_NOT_FOUND", 404);
+    }
+    for (const key of Object.keys(selected) as Array<keyof typeof selected>) {
+      // Parent registry labels remain metadata; account facts never inherit
+      // another account merely because it shares a strategy or portfolio.
+      if (key === "strategies" || key === "portfolios") continue;
+      selected[key] = selected[key].filter((row) => text(row, "account_id") === options.accountId);
+    }
+  }
+  // Fleet-wide statistics may be cached, but never published as another
+  // portfolio/account's analysis. The account variant lacks this aggregate.
+  if (options.accountId) statistics = null;
+  else if (statistics) {
+    const ids = new Set(selected.deployments.map(row => text(row,"strategy_id")).filter(Boolean));
+    statistics = { ...statistics,
+      correlation: {alphaIds:statistics.correlation.alphaIds.filter(id=>ids.has(id)),
+        pairs:statistics.correlation.pairs.filter(pair=>ids.has(pair.left_alpha)&&ids.has(pair.right_alpha))},
+      drawdownOverlap: {alphas:statistics.drawdownOverlap.alphas.filter(alpha=>ids.has(alpha.alpha_id)),
+        overlaps:statistics.drawdownOverlap.overlaps.filter(overlap=>overlap.alpha_ids.every(id=>ids.has(id)))},
+    };
+  }
   // `equity` is a derived view over the three canonical equity relations. Keep
   // it out of source evidence so counts and digests never double-count facts.
   const sourceFactGroups = {
@@ -628,27 +689,30 @@ function composeAnalytics(
     source_relations: sourceRelations, reason_code: reasonCode,
   });
   const complete = snapshot.completeness === "COMPLETE";
-  const factsState = (rows: readonly Fact[]) => rows.length > 0 ? (complete ? "AVAILABLE" : "PARTIAL") : "EMPTY";
+  const factsState = (rows: readonly Fact[], keys: readonly (keyof typeof SOURCE)[]) => {
+    const relations = keys.map(key => snapshot.document.relations[SOURCE[key]]);
+    if (relations.every(r => !r || r.availability === "UNAVAILABLE")) return "UNAVAILABLE";
+    if (!complete || relations.some(r => !r || r.availability !== "AVAILABLE" || r.completeness !== "COMPLETE")) return "PARTIAL";
+    return rows.length ? "AVAILABLE" : "EMPTY";
+  };
   const capabilities = [
-    capability("exact-query", "AVAILABLE", "DERIVED", "exact_aggregate.v1",
+    capability("exact-query", factsState([...selected.orders, ...selected.fills, ...selected.positions], ["orders", "fills", "positions"]), "DERIVED", "exact_aggregate.v1",
       ["public.orders", "public.fills", "public.positions_v2"]),
-    capability("position-exposure", factsState(selected.positions), "DERIVED", "position_exposure.v1", ["public.positions_v2"]),
-    capability("stage-equity", chartSeries.length > 0 ? factsState(selected.equity) : "EMPTY", "DERIVED", "equity_projection.v1",
+    capability("position-exposure", factsState(selected.positions, ["positions"]), "DERIVED", "position_exposure.v1", ["public.positions_v2"]),
+    capability("stage-equity", factsState(chartSeries.length ? selected.equity : [], ["performance", "accountEquity", "portfolioEquity"]), "DERIVED", "equity_projection.v1",
       ["public.performance_snapshots", "public.account_equity_snapshots", "public.portfolio_equity_snapshots"]),
-    capability("execution-quality", "AVAILABLE", "DERIVED", "execution_quality.v1", ["public.execution_sessions"]),
-    capability("contribution", factsState(selected.fills), "DERIVED", "contribution.v1", ["public.fills"]),
-    capability("order-funnel", factsState(selected.orders), "DERIVED", "order_funnel.v1", ["public.orders"]),
+    capability("execution-quality", factsState(selected.sessions, ["sessions"]), "DERIVED", "execution_quality.v1", ["public.execution_sessions"]),
+    capability("contribution", factsState(selected.fills, ["fills"]), "DERIVED", "contribution.v1", ["public.fills"]),
+    capability("order-funnel", factsState(selected.orders, ["orders"]), "DERIVED", "order_funnel.v1", ["public.orders"]),
     // EDS-09 owner return confirms that neither a lifecycle Event stream nor
     // a replayable journal exists.  A bounded current page may still be
     // useful as an EDS-10b observed timeline, but it must never light this
     // authoritative replay capability.
     capability("replay-journal", "UNAVAILABLE", "EXECUTION", null, [],
       "EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED"),
-    capability("observed-timeline", selected.orders.length + selected.fills.length + selected.sessions.length + selected.journal.length > 0
-      ? factsState([...selected.orders, ...selected.fills, ...selected.sessions, ...selected.journal]) : "EMPTY",
+    capability("observed-timeline", factsState([...selected.orders, ...selected.fills, ...selected.sessions, ...selected.journal], ["orders", "fills", "sessions", "journal"]),
     "DERIVED", "observed-timeline.v1", ["public.orders", "public.fills", "public.execution_sessions", "public.command_journal"]),
-    capability("derived-mark-context", selected.positions.length + selected.equity.length > 0
-      ? factsState([...selected.positions, ...selected.equity]) : "EMPTY",
+    capability("derived-mark-context", factsState([...selected.positions, ...selected.equity], ["positions", "accountEquity", "performance"]),
     "DERIVED", "derived-mark-context.v1", ["public.positions_v2", "public.account_equity_snapshots", "public.performance_snapshots"]),
     capability("market-candles", "UNAVAILABLE", "EXECUTION", null, [], "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED"),
     capability("portfolio-drawdown-overlap",
@@ -774,29 +838,41 @@ function selectSubject(
     const strategyId = text(deployment, "strategy_id");
     const portfolioId = text(deployment, "portfolio_id");
     const accountId = text(deployment, "account_id");
-    const selected = deploymentIds.has(deploymentId ?? "") || strategyIds.has(strategyId ?? "") ||
-      portfolioIds.has(portfolioId ?? "") || accountIds.has(accountId ?? "");
+    const selected = kind === "deployment" ? deploymentId === id
+      : kind === "alpha" ? strategyIds.has(strategyId ?? "")
+        : kind === "portfolio" ? portfolioId === id : kind === "account" ? accountId === id : false;
     if (!selected) continue;
     if (deploymentId) deploymentIds.add(deploymentId);
     if (strategyId) strategyIds.add(strategyId);
     if (portfolioId) portfolioIds.add(portfolioId);
     if (accountId) accountIds.add(accountId);
   }
-  const matches = (row: Fact) =>
-    deploymentIds.has(text(row, "deployment_id") ?? "") ||
-    strategyIds.has(text(row, "strategy_id") ?? "") ||
-    portfolioIds.has(text(row, "portfolio_id") ?? "") ||
-    accountIds.has(text(row, "account_id") ?? "");
+  const matches = (row: Fact) => {
+    const account = text(row, "account_id");
+    const deployment = text(row, "deployment_id");
+    const strategy = text(row, "strategy_id");
+    const portfolio = text(row, "portfolio_id");
+    if (kind === "account") return account === id;
+    // An explicit narrower foreign key wins over a shared account. Otherwise
+    // alpha A inherited alpha B's orders when both deployed into one account.
+    if (kind === "alpha" && strategy) return strategyIds.has(strategy) && (!deployment || deploymentIds.has(deployment));
+    if (kind === "portfolio" && portfolio) return portfolio === id && (!deployment || deploymentIds.has(deployment));
+    if (deployment) return deploymentIds.has(deployment);
+    if (account) return accountIds.has(account);
+    return deploymentIds.has(deployment ?? "") ||
+      (kind === "alpha" && strategyIds.has(text(row, "strategy_id") ?? "")) ||
+      (kind === "portfolio" && text(row, "portfolio_id") === id);
+  };
   const choose = (rows: Fact[]) => kind === "live-gate" ? [] : rows.filter(matches);
   const performance = choose(all.performance);
   const accountEquity = choose(all.accountEquity);
   const portfolioEquity = choose(all.portfolioEquity);
   return {
-    strategies: choose(all.strategies),
+    strategies: all.strategies.filter((row) => strategyIds.has(text(row, "strategy_id") ?? "")),
     deployments: choose(all.deployments),
     accounts: choose(all.accounts),
     balances: choose(all.balances),
-    portfolios: choose(all.portfolios),
+    portfolios: all.portfolios.filter((row) => portfolioIds.has(text(row, "portfolio_id") ?? "")),
     allocations: choose(all.allocations),
     positions: choose(all.positions),
     reconciliation: choose(all.reconciliation),
@@ -812,7 +888,8 @@ function selectSubject(
 }
 
 function facts(snapshot: ProfileProjectionSnapshot, key: string): Fact[] {
-  return (snapshot.document.relations[key]?.items ?? []).map((row) => row.fields);
+  const relation = snapshot.document.relations[key];
+  return relation?.availability === "AVAILABLE" ? relation.items.map((row) => row.fields) : [];
 }
 
 function profile(config: ControlApiConfig, environment: ProjectionEnvironment): string | undefined {
@@ -1556,7 +1633,7 @@ function addDecimal(left: string, right: string): string {
   return `${negative && (whole !== "0" || fraction) ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
 }
 
-function compareDecimal(left: string, right: string): number {
+export function compareDecimal(left: string, right: string): number {
   const delta = addDecimal(left, right.startsWith("-") ? right.slice(1) : `-${right}`);
   return delta.startsWith("-") ? -1 : /^0(?:\.0+)?$/.test(delta) ? 0 : 1;
 }

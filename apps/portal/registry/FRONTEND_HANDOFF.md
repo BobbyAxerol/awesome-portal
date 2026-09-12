@@ -2358,3 +2358,66 @@ policy rewrite.
 
 Claude may wire this consumer behavior in the frontend branch with the normal
 TypeScript, unit, DOM-warning and authenticated same-origin browser evidence.
+
+### 8.60 BE-R2-8 exact scope and review-capture handoff (2026-09-12)
+
+The owner-approved backend phase also delivers the minimal existing-consumer
+alignment: Alpha/Account analytics carry environment/account, Portfolio helpers
+carry environment and refresh identity, Mine sends `assigned_to=me`, and All is
+truthfully **All retained**. Rich composition/tokens/layout are not replaced.
+`useApiRead` retains last-good only for the same explicit identity; switching
+subject/profile clears immediately, transient failures are stale, denial clears.
+HTTP cancellation/coalescing and the complete source/heartbeat state machine
+remain BE-R2-9, not a claimed result of this phase.
+
+Claude can use the generated governance types through the four new `ExecutionApi`
+operations: `getReviewCaptureCapabilities(workspaceId)`, `captureR2(input)`,
+`createPaperExit(input)`, `captureSandboxNote(input)`. They use same-origin
+session/CSRF, validate response authority/target, and preserve typed403/409.
+The result is an actor-authored **Portal review**, always `NOT_ASSERTED` for
+source verdict and `source_side_effect_requested=false`. Navigate with its
+named `read_path` plus the selected `workspace_id` (Sandbox is deployment-bound).
+Keep a request key for one exact retry; edits to note/input/revision are a new
+intent. Server capability/eligibility controls the action, not UI heuristics.
+
+New capture **forms have not been added**. If assigned, place them in the existing
+R2/Exit/Sandbox hierarchy; never replace a rich route with a raw form or JSON.
+Review/capture is available without pretending R2 execution grant, Paper promote
+or source Sandbox certification is available. Their three typed reasons and
+exact input rules are in the [main phase journal](../../../upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-8--exact-read-authority-and-complete-screen-contract-alignment).
+No frontend fixture is injected into shared dev/stable. Canonical R1, five SSE
+events and three capture responses are exercised by actual readers; schema/type
+generation remains mandatory. Do not overwrite the existing dirty
+`e2e/el-v2-03-evidence/controls.json` during browser verification.
+
+### 8.61 BE-R2-9 shared realtime/read lifecycle (2026-09-12)
+
+Codex integrated the frozen consumer changes, not a redesign: one ref-counted
+stream per needed profile, per-screen invalidations, shared in-flight same-origin
+GETs bound to their client/session, abort on identity change/unmount, and stable
+last-good panels while recovering. Status-only/heartbeat is not a new data cursor
+or reason to refresh; source recovery remains visible. Hidden tabs accumulate one
+bounded invalidation. Server retry deadlines are honoured, never capped earlier.
+Failed relation reads keep their original slot: fills cannot become orders.
+
+Claude's empty-row sizing, real resource breadcrumbs and approval selection are
+kept. Please preserve the `screenId` on realtime hooks and `scopedReadApi(api,
+signal)` in `useApiRead`; a new panel should reuse these boundaries, not add its
+own full-profile polling/stream. New capture forms from §8.60 remain separately
+unclaimed, and no source promotion/command is enabled. Review rich routes and
+sub-tabs on actual dev with Bobby's legitimate session after exact rollout;
+fixture screenshots cannot prove current data/auth acceptance. Run reports now
+go to ignored Playwright output, and missing baselines fail without an explicit
+reviewed update. Current gate/provenance status is maintained in the
+[BE-R2-9 journal](../../../upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-9--realtime-correctness-bounded-local-cost-and-dev-acceptance).
+
+Bobby clarified ownership: Codex fixes backend/port wiring and business logic;
+Claude reviews UI layout, typography, visual differences and interaction design.
+`0135e3c7` is integrated intact. Follow-up for Claude: `NewApprovalRequestScreen`
+accepts `alphaOptions`, but its container does not load suggestions. Existing
+typed-ID submit remains valid. If adding suggestions, use bounded
+`ExecutionApi.getAlphaFleet` as **non-exhaustive current Fleet suggestions**, not
+an approval-eligibility registry; keep manual entry for off-page/research ids.
+Run/alpha/claim eligibility remains server-validated by the existing POST.
+Do not replace manual entry with a first-page-only mandatory select. Codex has
+not changed that visual interaction or re-recorded screenshot baselines.

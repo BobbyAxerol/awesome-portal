@@ -11,6 +11,10 @@ CURRENT_SOURCE_REALTIME_COMPOSE=(
   "${CURRENT_SOURCE_COMPOSE[@]}"
   -f "${ROOT_DIR}/deploy/compose.execution-manager-realtime.yaml"
 )
+CURRENT_SOURCE_PROJECTION_COMPOSE=(
+  "${CURRENT_SOURCE_REALTIME_COMPOSE[@]}"
+  -f "${ROOT_DIR}/deploy/compose.execution-local-projection.yaml"
+)
 
 usage() {
   cat <<'EOF'
@@ -35,6 +39,9 @@ Commands:
            Build/start current-source reads plus the exact Paper Command Center SSE overlay.
   current-source-realtime-config
            Render current-source reads plus the exact Paper Command Center SSE overlay.
+  current-source-projection <config|build|run|up|ps>
+           Use all four reviewed current-source/realtime/local-projection Compose files.
+           Supply existing private inputs through COMPOSE_ENV_FILES; no flags are enabled here.
 EOF
 }
 
@@ -124,6 +131,16 @@ case "${command}" in
   current-source-realtime-config)
     require_docker_cli
     exec "${CURRENT_SOURCE_REALTIME_COMPOSE[@]}" config "$@"
+    ;;
+  current-source-projection)
+    action="${1:-}"
+    case "${action}" in
+      config) require_docker_cli ;;
+      build|run|up|ps) require_docker_access ;;
+      *) printf 'Expected config, build, run, up or ps.\n' >&2; exit 2 ;;
+    esac
+    shift
+    exec "${CURRENT_SOURCE_PROJECTION_COMPOSE[@]}" "${action}" "$@"
     ;;
   help|-h|--help)
     usage

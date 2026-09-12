@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/execution/portfolios/{portfolioId}/cross-equity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Retained local comparison, partitioned by portfolio and currency in the requested environment. Not an FX-converted consolidated portfolio. */
+        get: operations["executionPortfolioCrossEquity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/approvals/{approvalId}/capital-preview": {
         parameters: {
             query?: never;
@@ -121,6 +138,80 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        LocalCrossEquityResponse: components["schemas"]["LocalPortfolioMetadata"] & {
+            analytics: components["schemas"]["DerivedMetadata"] & {
+                data: components["schemas"]["CrossEquityData"];
+            };
+        };
+        LocalCapitalLedgerResponse: components["schemas"]["LocalPortfolioMetadata"] & {
+            analytics: components["schemas"]["DerivedMetadata"] & {
+                data: components["schemas"]["LocalCapitalLedgerData"];
+            };
+        };
+        LocalCorrelationResponse: components["schemas"]["LocalPortfolioMetadata"] & {
+            analytics: components["schemas"]["DerivedMetadata"] & {
+                data: components["schemas"]["CorrelationData"];
+            };
+        };
+        CrossEquityData: {
+            portfolio_id: components["schemas"]["Identifier"];
+            rows: {
+                portfolio_id: components["schemas"]["Identifier"];
+                currency: components["schemas"]["Currency"];
+                first_equity: components["schemas"]["Decimal"];
+                last_equity: components["schemas"]["Decimal"];
+                net_pnl: components["schemas"]["Decimal"] | null;
+                point_count: number;
+                first_at: components["schemas"]["NullableDateTime"];
+                last_at: components["schemas"]["NullableDateTime"];
+                is_self: boolean;
+            }[];
+            row_count: number;
+        };
+        LocalCapitalLedgerData: {
+            portfolio_id: components["schemas"]["Identifier"];
+            entry_count: number;
+            returned_entry_count: number;
+            has_more: boolean;
+            /** @constant */
+            window: "LATEST";
+            buckets: components["schemas"]["LocalCapitalLedgerBucket"][];
+            rejected_row_count?: number;
+            reason_code?: string | null;
+        };
+        LocalCapitalLedgerBucket: {
+            currency: components["schemas"]["Currency"];
+            gross_increase: components["schemas"]["Decimal"];
+            gross_decrease: components["schemas"]["Decimal"];
+            entries: components["schemas"]["LocalCapitalLedgerEntry"][];
+        };
+        LocalCapitalLedgerEntry: {
+            ledger_id: components["schemas"]["Identifier"];
+            allocation_id: components["schemas"]["Identifier"] | null;
+            account_id: components["schemas"]["Identifier"];
+            /** @enum {string} */
+            movement_type: "INITIAL_ALLOCATE" | "ALLOCATE" | "WITHDRAW" | "REBALANCE" | "ADJUST";
+            /** @enum {string} */
+            direction: "INCREASE" | "DECREASE" | "UNCHANGED";
+            amount: components["schemas"]["Decimal"];
+            before_allocated: components["schemas"]["Decimal"];
+            after_allocated: components["schemas"]["Decimal"];
+            occurred_at: components["schemas"]["NullableDateTime"];
+        };
+        LocalPortfolioMetadata: {
+            /** @constant */
+            schema_version: "portal.execution.portfolio-360-local.v1";
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            epoch_id: string;
+            source_snapshot_id: string;
+            capability_snapshot_id: string;
+            /** @constant */
+            source_profile: "PORTAL_LOCAL_PROJECTION";
+            projection_sequence: number;
+            freshness_policy_version: string;
+            read_at: components["schemas"]["DateTime"];
+        };
         Identifier: string;
         Decimal: string;
         Currency: string;
@@ -490,6 +581,31 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionPortfolioCrossEquity: {
+        parameters: {
+            query?: {
+                environment?: "paper" | "sandbox" | "live";
+            };
+            header?: never;
+            path: {
+                portfolioId: components["parameters"]["PortfolioId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Local cross-equity comparison */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocalCrossEquityResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     executionCapitalPreview: {
         parameters: {
             query?: never;
@@ -569,7 +685,9 @@ export interface operations {
     };
     executionPortfolioCorrelation: {
         parameters: {
-            query?: never;
+            query?: {
+                environment?: "paper" | "sandbox" | "live";
+            };
             header?: never;
             path: {
                 portfolioId: components["parameters"]["PortfolioId"];
@@ -584,7 +702,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CorrelationResponse"];
+                    "application/json": components["schemas"]["CorrelationResponse"] | components["schemas"]["LocalCorrelationResponse"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -592,7 +710,9 @@ export interface operations {
     };
     executionCapitalLedger: {
         parameters: {
-            query?: never;
+            query?: {
+                environment?: "paper" | "sandbox" | "live";
+            };
             header?: never;
             path: {
                 portfolioId: components["parameters"]["PortfolioId"];
@@ -607,7 +727,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CapitalLedgerResponse"];
+                    "application/json": components["schemas"]["CapitalLedgerResponse"] | components["schemas"]["LocalCapitalLedgerResponse"];
                 };
             };
             default: components["responses"]["Problem"];
