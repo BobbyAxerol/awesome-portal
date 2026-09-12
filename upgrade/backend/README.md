@@ -1954,3 +1954,13 @@ Exact results and private evidence location are in the main BE-R2-9 journal.
 Concurrent dev `ux3` replaces the earlier tested image pair. Three key compiled
 backend modules match; stale API build-SHA metadata is reported, not silently
 treated as provenance. Stable untouched; see the main journal before deployment.
+
+**2026-09-12 PR #64 CI evidence repair:** a protected CI run found stale,
+generated BAR-05/BAR-16 release evidence after legitimate compose, environment,
+nginx and Control API package changes, plus a hygiene false-positive in the
+non-runtime `apps/control-api/test` tree.  The canonical exporters regenerate
+the two evidence artifacts; the scanner now consistently excludes named
+test-only directories while retaining its scan of shipped source.  Regression
+coverage proves a planted root-source secret is still found and a test fixture
+is not.  This is release-hygiene only: no Portal UI/UX, source authority,
+command, runtime or deployment behaviour changes.

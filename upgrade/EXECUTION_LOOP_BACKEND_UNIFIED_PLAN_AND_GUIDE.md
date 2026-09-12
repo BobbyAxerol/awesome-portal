@@ -6756,6 +6756,19 @@ The existing BE-R2-7 pipeline then supplies signed
 images/SBOM/provenance and independently collected runtime-binding markers;
 **BE-R2-9 dev acceptance is not `PRODUCT_ACTIVE` for a new stable release**.
 
+#### PR #64 CI evidence-hygiene amendment (2026-09-12)
+
+The protected PR run correctly rejected stale generated BAR-05 freeze evidence
+after four frozen deployment/control artifacts changed, and correctly exposed a
+scanner policy gap that classified `apps/control-api/test` as shipped source.
+This amendment is deliberately narrow: regenerate BAR-05 and BAR-16 through
+their canonical exporters; classify `test`, `tests`, `__tests__` and `e2e` as
+test-only for the hygiene scan; add a regression that still detects a planted
+source-root secret.  The exit gate is the focused evidence suite plus the full
+Portal backend/workspace gate and a fresh PR CI run.  No BFF mapping, rich UI,
+source activation, command, runtime or release promotion is authorized or
+claimed by this amendment.
+
 #### 18.6.4 Decisions requested before implementation
 
 1. **BE-R2-8 approval received 2026-09-12**, including Portal-only creation/

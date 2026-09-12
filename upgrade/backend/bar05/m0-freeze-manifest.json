@@ -5,19 +5,19 @@
     "portal_producer": "portal-api"
   },
   "file_digests": {
-    "compose": "sha256:d724d8b18f79a5b1ae9d22fda3ff6f879db3c9e87f90ebfff4c1fa7bd5260379",
+    "compose": "sha256:fa291140863f50ab88b8cdb86cedeaf5bde4605aae29ddbed4776a1497bb8179",
     "compose_production": "sha256:0174e5dd1f71807fe3f6904e12f26a8c27066da016b69a0e22ed1596854a9f9e",
     "constraints_portal": "sha256:a16dcc4c1a3ded5c03a742ce38f351f8d13e738255518a6629da42ad65b900b2",
     "control_api_migrations": "sha256:7af62e52e20e1340882c50f033ab0cd690de99231c3cc4dbd150b2a2f0a000b8",
-    "control_api_package": "sha256:2cbd8d82096a7066f430bcc02e01c6b15ec672b924601d4a87667da4d230ee3e",
+    "control_api_package": "sha256:f3d07f919b8d515bb2f28120cbe9b8cb1f25234eaca72dd1becc6b557caafed4",
     "control_api_package_lock": "sha256:f33d9fe854d6b0d89376c6dac2a647a8d474e350c7fc089905238680f921eeb5",
     "control_api_tsconfig": "sha256:505f416ac474f249e52523f39a227669a2be931f491d39d67aa76f657de71200",
-    "env_template": "sha256:813f2e965d30b8ddbd35f02b2fc0916e8f0b04853d906670627a00a1344dca48",
+    "env_template": "sha256:13ea290d32b6f3ce2bf5ef39d01e00323cbbf96b772e73b80fdcdad81aff6455",
     "golden_market": "sha256:16131e4d930bc78b8375ad3fb14584b5d5b8191d7f89bec29ce502470e4646ae",
     "golden_metadata": "sha256:13128530dc74744e2bf5dc562eb3792d49b2e942a8579dcd01fb1b74b7c9a725",
     "golden_signals": "sha256:5a24f1b35566b9755b4f3c2a4f863c0e12541ecb173a5e6cec24ca32fd293c0c",
     "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
-    "nginx_portal_conf": "sha256:a53c1e990d887fdf19e5f05fb28b320b2000dce820bf1bedaf5f26214e7b9c0f",
+    "nginx_portal_conf": "sha256:c1be0f3e214122c4e5e380c3b0ef61fb96dc6b37c3b39552a7b561fce6eb6885",
     "openapi_planning_snapshot": "sha256:5c03e4311582f3ae5beb07d5d3f588b78ea9a1689f78712c062a25182bd5a9cf",
     "openapi_portal": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
     "openapi_portal_snapshot": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
@@ -33,7 +33,7 @@
     "registry_source": "sha256:8fdc342c79a8ad6a48830b860fbcc4206866c7afbe195d14d9e3d5fbe561df57",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "dd58dab38067c2c15e3e3674d962e14c79b67d17",
+  "frozen_at_commit": "f3c1e20a59aed29800495dcec0f132a88961290c",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
