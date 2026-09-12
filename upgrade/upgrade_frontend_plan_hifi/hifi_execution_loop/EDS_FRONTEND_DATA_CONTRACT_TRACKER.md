@@ -10139,3 +10139,27 @@ A67 là trạng thái tại thời điểm handoff; chúng được đóng ở �
 regression for Live source resolution; frontend unit/type/build and clean browser
 journey on this integrated branch. A66/A67's four later frontend follow-up commits
 are included by this merge; no history is rewritten.
+
+## A69. Astra pre-PR audit — hai phase sửa được đề xuất, chờ Bobby duyệt (12-09)
+
+Baseline `bbd45d38` đã bao gồm phần Codex và bốn commit follow-up của Claude.
+Toàn bộ finding, bằng chứng, phạm vi và test được tập trung tại
+[markdown chính §18.6](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#186-astra-pre-pr-audit--frozen-findings-and-approval-packet-2026-09-12),
+không mở một backlog frontend/backend song song khác.
+
+- **BE-R2-8:** Codex sửa authority/workspace, typed truth, exact decimal và
+  profile/resource contracts. Claude nối panel theo đúng environment/subject,
+  Mine/24h, giữ rich UI và dùng canonical fixture mới. Chín bảng thiếu writer
+  cần quyết định workflow thật; không gọi chúng hoàn thiện chỉ vì EMPTY đúng.
+- **BE-R2-9:** Codex sửa local SSE/tail/recovery và đo chi phí; Claude sửa
+  heartbeat/source-state, cancellation, refresh cùng identity/panel và kiểm
+  toàn bộ route/tab trên đúng dev candidate. Không đổi thiết kế đã duyệt.
+- **Đính chính:** G1/G4 đã có source fix; G8 đã có corpus nhưng consumer tests
+  chưa dùng hết. G10 đã được Claude rút lại ở A65.6; chỉ còn reproducibility/
+  runtime-binding cần nghiệm thu. Local R0 vẫn khác TS command mutation.
+
+**Trạng thái:** `PROPOSED_AWAITING_OWNER_APPROVAL`, chưa giao triển khai.
+Audit tái hiện 9 vấn đề/chi phí bằng module/hook thật với mock synthetic trong
+container không network; không sửa source, không đọc business rows, không
+deploy hoặc đụng main/stable. Sau khi Bobby duyệt, chia đúng file ownership;
+Claude không sửa backend/proxy/Edge, Codex không ghi đè composition của Claude.

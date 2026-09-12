@@ -2115,3 +2115,18 @@ key/payload, while changed payload and distinct work remain typed conflicts.
 The isolated Control API Docker/PostgreSQL gate is the review-data proof; it
 does not seed shared dev/stable state or touch Trading System/Edge/runtime
 resources.  See the [BE-R2-6 closeout record](backend/BE_R2_6_GOVERNANCE_READ_TRUTH_V1_IDEMPOTENCY_CLOSEOUT.md).
+
+### 14.1.5 Astra pre-PR audit and two proposed repair phases (2026-09-12)
+
+Source baseline `bbd45d38` includes the backend and Claude Phase 8–11 merge.
+Read-truth/schema fixes already delivered are not reopened wholesale. The
+independent audit confirmed local workspace/typed-state/exact-value and SSE
+integration defects; nine synthetic reproductions used actual modules with
+network disabled. This is not a runtime security/availability incident claim.
+
+The single detailed repair ledger, decisions, frontend assignment and tests
+live in [Execution unified plan §18.6](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#186-astra-pre-pr-audit--frozen-findings-and-approval-packet-2026-09-12):
+BE-R2-8 read/screen contract alignment, then BE-R2-9 realtime/local cost/dev
+acceptance, then the existing BE-R2-7 signed-release gate. Both new phases are
+`PROPOSED_AWAITING_OWNER_APPROVAL`. This slice changes documentation only;
+no code fix, source call, migration, deployment, push, PR or merge is performed.

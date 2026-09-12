@@ -1894,8 +1894,10 @@ durable run/attempt events. Detailed evidence:
   `pinned_watchlist`, and concurrent approval idempotency are closed without
   fake shared runtime data.  See
   [BE-R2-6 closeout](BE_R2_6_GOVERNANCE_READ_TRUTH_V1_IDEMPOTENCY_CLOSEOUT.md).
-  **BE-R2-7 alone remains planned:** immutable release/provenance and accepted
-  runtime evidence.
+  **BE-R2-7 has candidate-binding implementation; runtime/release evidence
+  remains pending.** The 2026-09-12 pre-PR audit adds two proposed repair
+  phases, BE-R2-8/9, before that existing release gate; it does not authorize
+  deployment or supersede the read-only command boundary.
 - Bobby locked six guardrails: staged expired-cache deletion only; D3 remains
   GET-only; Market Context qualifies Paper first; no direct
   `live_data_executor` access; deprecated V1 `pinned_watchlist` compatibility
@@ -1907,3 +1909,10 @@ durable run/attempt events. Detailed evidence:
 
 See [Execution Loop unified plan §18](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--active-named-work-2026-09-11)
 for phase exits, tests, rollback and the frontend handoff.
+
+**2026-09-12 Astra audit, source `bbd45d38`:** nine isolated defect/cost
+reproductions and the remaining code-trace findings are recorded once in
+[the main plan §18.6](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#186-astra-pre-pr-audit--frozen-findings-and-approval-packet-2026-09-12).
+BE-R2-8 owns read authority/truth/financial/profile/workflow contracts;
+BE-R2-9 owns realtime/cancellation/local cost/dev evidence. Both are
+`PROPOSED_AWAITING_OWNER_APPROVAL`. No fixes or runtime actions have started.
