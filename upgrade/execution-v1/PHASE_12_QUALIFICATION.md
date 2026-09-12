@@ -69,8 +69,31 @@ After the normal protected-main workflow publishes signed images, SBOM and
 provenance, create a sanitized evidence object outside Git and run:
 
 ```bash
+# The protected SGP deploy writes/uploads this marker automatically.  For a
+# manual audit, collect it from only release metadata, Docker labels/digests
+# and health; this command does not call a source or inspect secret mounts.
+sudo -n python3 ./scripts/collect-eds12-runtime-binding.py sgp \
+  --release-manifest /srv/portal/releases/<commit>/release-manifest.json \
+  --deployment-state /srv/portal/deployed-release.env \
+  --output /secure/portal-sgp-runtime-binding.env
+
+# Run on AWS-HK only after all Paper/Sandbox/Live Edge and Source Proxy
+# projects have received the same exact candidate.  The collector rejects a
+# mixed release rather than collapsing one profile's health into all three.
+sudo -n python3 ./scripts/collect-eds12-runtime-binding.py aws-hk \
+  --release-manifest /srv/primus/portal/releases/<commit>/release-manifest.json \
+  --output /secure/portal-aws-hk-runtime-binding.json
+
 python3 ./scripts/execution-eds12-qualification.py verify-deployed \
   --evidence /secure/portal-execution-eds12-deployed-evidence.json
+
+# The prior command is semantic-only. PRODUCT_ACTIVE is only permitted after
+# the signed candidate and both deployed cells bind to the exact same digest.
+python3 ./scripts/execution-eds12-qualification.py verify-runtime-binding \
+  --evidence /secure/portal-execution-eds12-deployed-evidence.json \
+  --release-pack /secure/portal-release-candidate/<release-id> \
+  --sgp-runtime-marker /secure/portal-sgp-runtime-binding.env \
+  --aws-hk-runtime-marker /secure/portal-aws-hk-runtime-binding.json
 ```
 
 The evidence must bind:

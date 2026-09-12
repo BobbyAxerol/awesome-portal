@@ -1,0 +1,22 @@
+{
+  "schema_version": "portal.execution.profile-realtime.v1",
+  "event_type": "heartbeat",
+  "terminal": false,
+  "reconnect_required": false,
+  "workspace_id": "workspace_execution",
+  "environment": "sandbox",
+  "profile_id": "SANDBOX_BINANCE_USDM",
+  "cursor": null,
+  "projection_epoch": null,
+  "projection_sequence": null,
+  "payload_digest": null,
+  "source_as_of": null,
+  "received_at": "2026-09-12T10:00:02.000Z",
+  "last_successful_refresh_at": null,
+  "availability": "UNKNOWN",
+  "freshness": "UNKNOWN",
+  "completeness": "UNKNOWN",
+  "recovery": null,
+  "observation": null,
+  "payload": {}
+}

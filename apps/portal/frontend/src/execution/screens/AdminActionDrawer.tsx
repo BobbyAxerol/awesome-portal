@@ -680,24 +680,26 @@ export function AdminActionDrawerScreen({
                           {activation.read.capabilities.length === 0 ? (
                             <PanelState status="empty" reason="the server published no capability row" />
                           ) : (
-                            <table className="exec-360-sync">
-                              <caption className="exec-blotter-note">
-                                what each capability is doing now, and the first reason it is not live
-                              </caption>
-                              <thead>
-                                <tr><th scope="col">capability</th><th scope="col">effective</th><th scope="col">desired</th><th scope="col">state</th></tr>
-                              </thead>
-                              <tbody>
-                                {activation.read.capabilities.map((capability) => (
-                                  <tr key={capability.capabilityKey}>
-                                    <th scope="row">{capability.capabilityKey}</th>
-                                    <td>{capability.effectiveProfile ?? <span className="exec-blotter-note">not published</span>}</td>
-                                    <td>{capability.desiredProfile ?? <span className="exec-blotter-note">not published</span>}</td>
-                                    <td data-tone={capability.killSwitchEngaged ? "warn" : undefined}>{activationSentence(capability)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                            <div className="exec-scroll-x">
+                              <table className="exec-360-sync">
+                                <caption className="exec-blotter-note">
+                                  what each capability is doing now, and the first reason it is not live
+                                </caption>
+                                <thead>
+                                  <tr><th scope="col">capability</th><th scope="col">effective</th><th scope="col">desired</th><th scope="col">state</th></tr>
+                                </thead>
+                                <tbody>
+                                  {activation.read.capabilities.map((capability) => (
+                                    <tr key={capability.capabilityKey}>
+                                      <th scope="row">{capability.capabilityKey}</th>
+                                      <td>{capability.effectiveProfile ?? <span className="exec-blotter-note">not published</span>}</td>
+                                      <td>{capability.desiredProfile ?? <span className="exec-blotter-note">not published</span>}</td>
+                                      <td data-tone={capability.killSwitchEngaged ? "warn" : undefined}>{activationSentence(capability)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           )}
                         </>
                       )}

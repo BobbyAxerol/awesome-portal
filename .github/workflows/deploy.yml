@@ -222,11 +222,13 @@ jobs:
               "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose/${compose_file##*/}"
           done
           scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
-            -P "${DEPLOY_PORT}" scripts/prepare-stable-release-takeover.py \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py"
+            -P "${DEPLOY_PORT}" \
+            scripts/prepare-stable-release-takeover.py \
+            scripts/collect-eds12-runtime-binding.py \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/scripts/"
           ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
             -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "chmod 0750 '${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py'"
+            "chmod 0750 '${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py' '${DEPLOY_PATH}/scripts/collect-eds12-runtime-binding.py'"
           scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
             -P "${DEPLOY_PORT}" -r release-pack/. \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/"
@@ -393,5 +395,43 @@ jobs:
             printf 'DEPLOYED_AT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > "${marker_next}"
           mv "${marker_next}" "${DEPLOY_PATH}/deployed-release.env"
+          # This collector sees only the exact accepted manifest, Docker
+          # labels/image digests/health and the non-secret deployment marker.
+          # It cannot contact a source or start a service.  The generated
+          # marker is evidence for the later two-cell EDS-12 verifier, not a
+          # PRODUCT_ACTIVE assertion by this workflow.
+          sgp_runtime_marker="${next_release_dir}/portal-sgp-runtime-binding.env"
+          collector_replace=()
+          if [[ -e "${sgp_runtime_marker}" ]]; then
+            [[ "${RESUME_PARTIAL_RUNTIME}" == "true" ]] || {
+              echo 'A runtime marker already exists for this release without an authorized resume.' >&2
+              exit 1
+            }
+            collector_replace+=(--replace)
+          fi
+          sudo -n python3 "${DEPLOY_PATH}/scripts/collect-eds12-runtime-binding.py" sgp \
+            --release-manifest "${next_release_dir}/release-manifest.json" \
+            --deployment-state "${DEPLOY_PATH}/deployed-release.env" \
+            --output "${sgp_runtime_marker}" \
+            "${collector_replace[@]}"
+          sudo -n test -s "${sgp_runtime_marker}"
           compose_next ps
           REMOTE
+
+      - name: Fetch sanitized SGP runtime-binding evidence
+        run: |
+          install -d -m 0700 runtime-evidence
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "sudo -n cat '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/portal-sgp-runtime-binding.env'" \
+            > runtime-evidence/portal-sgp-runtime-binding.env
+          test -s runtime-evidence/portal-sgp-runtime-binding.env
+          chmod 0600 runtime-evidence/portal-sgp-runtime-binding.env
+
+      - name: Upload sanitized SGP runtime-binding evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: portal-sgp-runtime-binding-${{ env.SOURCE_COMMIT }}
+          path: runtime-evidence/portal-sgp-runtime-binding.env
+          if-no-files-found: error
+          retention-days: 30

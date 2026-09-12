@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-profile-realtime.v1.schema.json",
+  "title": "Portal-local execution profile realtime envelope v1",
+  "description": "A same-origin Portal observation stream. It is not a Trading System event, source replay cursor, or instruction for the browser to contact Execution Edge.",
+  "oneOf": [
+    { "$ref": "#/$defs/Snapshot" },
+    { "$ref": "#/$defs/Delta" },
+    { "$ref": "#/$defs/Heartbeat" },
+    { "$ref": "#/$defs/AuthExpired" },
+    { "$ref": "#/$defs/ProjectionGap" }
+  ],
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+    },
+    "ProfileId": {
+      "type": "string",
+      "pattern": "^(PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$"
+    },
+    "UtcDateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "Epoch": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Cursor": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9]+$",
+      "maxLength": 80
+    },
+    "Sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "NullableUtcDateTime": {
+      "oneOf": [{ "$ref": "#/$defs/UtcDateTime" }, { "type": "null" }]
+    },
+    "NullableEpoch": {
+      "oneOf": [{ "$ref": "#/$defs/Epoch" }, { "type": "null" }]
+    },
+    "NullableCursor": {
+      "oneOf": [{ "$ref": "#/$defs/Cursor" }, { "type": "null" }]
+    },
+    "NullableSha256": {
+      "oneOf": [{ "$ref": "#/$defs/Sha256" }, { "type": "null" }]
+    },
+    "Recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason_code", "retry_not_before"],
+      "properties": {
+        "state": { "enum": ["HEALTHY", "RECOVERING"] },
+        "reason_code": { "type": ["string", "null"], "minLength": 1, "maxLength": 191 },
+        "retry_not_before": { "$ref": "#/$defs/NullableUtcDateTime" }
+      }
+    },
+    "Observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "semantics", "derived", "operation_id", "scope", "source", "coverage"],
+      "properties": {
+        "authority": { "const": "PORTAL_OBSERVATION" },
+        "semantics": { "const": "BOUNDED_CURRENT_PAGE" },
+        "derived": { "const": false },
+        "operation_id": { "const": "EXECUTION_PROFILE_OBSERVATION_REVISION" },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["workspace_id", "environment", "profile_id", "resource_kind", "resource_id", "venue"],
+          "properties": {
+            "workspace_id": { "$ref": "#/$defs/Identifier" },
+            "environment": { "enum": ["paper", "sandbox", "live"] },
+            "profile_id": { "$ref": "#/$defs/ProfileId" },
+            "resource_kind": { "const": "PROFILE" },
+            "resource_id": { "$ref": "#/$defs/ProfileId" },
+            "venue": { "type": "null" }
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contract_revision", "catalogue_revision", "as_of_ms", "received_at_ms"],
+          "properties": {
+            "contract_revision": { "type": ["string", "null"], "minLength": 1, "maxLength": 191 },
+            "catalogue_revision": { "$ref": "#/$defs/NullableSha256" },
+            "as_of_ms": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991 },
+            "received_at_ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "relation_count"],
+          "properties": {
+            "kind": { "const": "CURRENT_PROFILE_PROJECTION" },
+            "relation_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 96 }
+          }
+        }
+      }
+    },
+    "Payload": {
+      "type": "object",
+      "maxProperties": 16,
+      "propertyNames": {
+        "not": { "pattern": "(^|_)(raw|secret|credential|password|token|dsn)(_|$)" }
+      },
+      "additionalProperties": true
+    },
+    "Base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "event_type", "terminal", "reconnect_required", "workspace_id", "environment", "profile_id",
+        "cursor", "projection_epoch", "projection_sequence", "payload_digest", "source_as_of", "received_at",
+        "last_successful_refresh_at", "availability", "freshness", "completeness", "recovery", "observation", "payload"
+      ],
+      "properties": {
+        "schema_version": { "const": "portal.execution.profile-realtime.v1" },
+        "event_type": { "enum": ["snapshot", "delta", "heartbeat", "auth.expired", "projection.gap"] },
+        "terminal": { "type": "boolean" },
+        "reconnect_required": { "type": "boolean" },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "environment": { "enum": ["paper", "sandbox", "live"] },
+        "profile_id": { "$ref": "#/$defs/ProfileId" },
+        "cursor": { "$ref": "#/$defs/NullableCursor" },
+        "projection_epoch": { "$ref": "#/$defs/NullableEpoch" },
+        "projection_sequence": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991 },
+        "payload_digest": { "$ref": "#/$defs/NullableSha256" },
+        "source_as_of": { "$ref": "#/$defs/NullableUtcDateTime" },
+        "received_at": { "$ref": "#/$defs/UtcDateTime" },
+        "last_successful_refresh_at": { "$ref": "#/$defs/NullableUtcDateTime" },
+        "availability": { "enum": ["AVAILABLE", "DEGRADED", "UNKNOWN"] },
+        "freshness": { "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] },
+        "completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+        "recovery": { "oneOf": [{ "$ref": "#/$defs/Recovery" }, { "type": "null" }] },
+        "observation": { "oneOf": [{ "$ref": "#/$defs/Observation" }, { "type": "null" }] },
+        "payload": { "$ref": "#/$defs/Payload" }
+      }
+    },
+    "CurrentProjection": {
+      "type": "object",
+      "properties": {
+        "cursor": { "$ref": "#/$defs/Cursor" },
+        "projection_epoch": { "$ref": "#/$defs/Epoch" },
+        "projection_sequence": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "payload_digest": { "$ref": "#/$defs/Sha256" },
+        "last_successful_refresh_at": { "$ref": "#/$defs/UtcDateTime" },
+        "availability": { "enum": ["AVAILABLE", "DEGRADED"] },
+        "freshness": { "enum": ["FRESH", "AGING", "STALE"] },
+        "completeness": { "enum": ["COMPLETE", "PARTIAL"] },
+        "recovery": { "$ref": "#/$defs/Recovery" },
+        "observation": { "$ref": "#/$defs/Observation" }
+      }
+    },
+    "Snapshot": {
+      "allOf": [
+        { "$ref": "#/$defs/Base" },
+        { "$ref": "#/$defs/CurrentProjection" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "snapshot" },
+            "terminal": { "const": false },
+            "reconnect_required": { "const": false },
+            "payload": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["snapshot_mode", "relation_count", "source_contract_revision", "source_catalogue_sha256"],
+                  "properties": {
+                    "snapshot_mode": { "const": "CURSOR_ONLY" },
+                    "relation_count": { "type": "integer", "minimum": 0, "maximum": 96 },
+                    "source_contract_revision": { "type": ["string", "null"], "minLength": 1, "maxLength": 191 },
+                    "source_catalogue_sha256": { "$ref": "#/$defs/NullableSha256" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["snapshot_mode", "reason_code", "resnapshot_not_before"],
+                  "properties": {
+                    "snapshot_mode": { "const": "STATUS_ONLY" },
+                    "reason_code": { "type": ["string", "null"], "minLength": 1, "maxLength": 191 },
+                    "resnapshot_not_before": { "$ref": "#/$defs/NullableUtcDateTime" }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "Delta": {
+      "allOf": [
+        { "$ref": "#/$defs/Base" },
+        { "$ref": "#/$defs/CurrentProjection" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "delta" },
+            "terminal": { "const": false },
+            "reconnect_required": { "const": false },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["schema_version", "observation_authority", "observation_semantics", "operation_id", "affected_screen_ids", "revalidation"],
+              "properties": {
+                "schema_version": { "const": "portal.execution.observation-revision.v1" },
+                "observation_authority": { "const": "PORTAL_OBSERVATION" },
+                "observation_semantics": { "const": "BOUNDED_CURRENT_PAGE" },
+                "operation_id": { "const": "EXECUTION_PROFILE_OBSERVATION_REVISION" },
+                "affected_screen_ids": { "type": "array", "maxItems": 25, "items": { "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" } },
+                "revalidation": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["schema_version", "mode", "profile_scope", "affected_screen_ids", "affected_operation_ids", "revision_tick", "redaction"],
+                  "properties": {
+                    "schema_version": { "const": "portal.execution.observation-revalidation.v1" },
+                    "mode": { "const": "REFETCH_CURRENT_ROUTE_NAMED_BFF" },
+                    "profile_scope": { "const": "CURRENT_STREAM_PROFILE_ONLY" },
+                    "affected_screen_ids": { "type": "array", "maxItems": 25, "items": { "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" } },
+                    "affected_operation_ids": { "type": "array", "maxItems": 25, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]{2,191}$" } },
+                    "revision_tick": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["projection_epoch", "projection_sequence", "payload_digest"],
+                      "properties": {
+                        "projection_epoch": { "$ref": "#/$defs/Epoch" },
+                        "projection_sequence": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+                        "payload_digest": { "$ref": "#/$defs/Sha256" }
+                      }
+                    },
+                    "redaction": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["raw_source_relation", "source_cursor", "resource_selector"],
+                      "properties": {
+                        "raw_source_relation": { "const": "WITHHELD" },
+                        "source_cursor": { "const": "WITHHELD" },
+                        "resource_selector": { "const": "WITHHELD" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Heartbeat": {
+      "allOf": [
+        { "$ref": "#/$defs/Base" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "heartbeat" },
+            "terminal": { "const": false },
+            "reconnect_required": { "const": false },
+            "cursor": { "const": null },
+            "projection_epoch": { "const": null },
+            "projection_sequence": { "const": null },
+            "payload_digest": { "const": null },
+            "source_as_of": { "const": null },
+            "last_successful_refresh_at": { "const": null },
+            "availability": { "const": "UNKNOWN" },
+            "freshness": { "const": "UNKNOWN" },
+            "completeness": { "const": "UNKNOWN" },
+            "recovery": { "const": null },
+            "observation": { "const": null },
+            "payload": { "type": "object", "maxProperties": 0 }
+          }
+        }
+      ]
+    },
+    "AuthExpired": {
+      "allOf": [
+        { "$ref": "#/$defs/Base" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "auth.expired" },
+            "terminal": { "const": true },
+            "reconnect_required": { "const": false },
+            "cursor": { "const": null },
+            "projection_epoch": { "const": null },
+            "projection_sequence": { "const": null },
+            "payload_digest": { "const": null },
+            "source_as_of": { "const": null },
+            "last_successful_refresh_at": { "const": null },
+            "availability": { "const": "UNKNOWN" },
+            "freshness": { "const": "UNKNOWN" },
+            "completeness": { "const": "UNKNOWN" },
+            "recovery": { "const": null },
+            "observation": { "const": null },
+            "payload": { "type": "object", "maxProperties": 0 }
+          }
+        }
+      ]
+    },
+    "ProjectionGap": {
+      "allOf": [
+        { "$ref": "#/$defs/Base" },
+        { "$ref": "#/$defs/CurrentProjection" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "projection.gap" },
+            "terminal": { "const": true },
+            "reconnect_required": { "const": true },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["reason_code"],
+              "properties": {
+                "reason_code": { "type": "string", "minLength": 1, "maxLength": 191 }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

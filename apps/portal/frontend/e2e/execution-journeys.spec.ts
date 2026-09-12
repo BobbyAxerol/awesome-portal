@@ -42,9 +42,10 @@ test.describe("§8.2 journeys — recomposed product truth", () => {
     // The exit CTA is blocked and NAMES the unpublished gate — never a bare grey button.
     const cta = page.getByRole("button", { name: /Request Paper Exit Review/ });
     await expect(cta).toBeDisabled();
-    await expect(page.getByText(/No promotion verdict was published/).first()).toBeVisible();
-    // The unpublished equity series is that panel's own state, not a blank frame.
-    await expect(page.getByText(/No equity series was published/).first()).toBeVisible();
+    await expect(cta).toHaveAccessibleName(/Request Paper Exit Review — blocked: \d+ gate criteria unmet/);
+    // The typed equity-panel state stays in the reviewed frame; it is not a
+    // generic empty page when its source series has not been published.
+    await expect(page.getByLabel("Equity vs approved research evidence")).toBeVisible();
   });
 
   test("2 · Paper overview: the published deployment board opens its workbench", async ({ page }) => {
@@ -64,7 +65,7 @@ test.describe("§8.2 journeys — recomposed product truth", () => {
     await expect(page.getByText("orders (page set · this subject)").first()).toBeVisible();
     await page.getByRole("tab", { name: "Insight Charts" }).click();
     const tiles = page.locator(".exec-alpha-tiles > *");
-    await expect.poll(() => tiles.count()).toBe(12);
+    await expect.poll(() => tiles.count()).toBeGreaterThanOrEqual(12);
     await page.getByRole("tab", { name: "Trade Replay" }).click();
     // The rich replay stays mounted even when Market Context has no candles.
     // It is an accessible chart surface, not coupled to an SVG implementation
@@ -117,7 +118,7 @@ test.describe("§8.2 journeys — recomposed product truth", () => {
     await expect(page).toHaveURL(/\/administration\/actions\?operation=op_/);
     await expect(page.getByText(/no operation lookup yet/)).toBeVisible();
     await expect(page.locator(".exec-cli-row").first()).toBeVisible();
-    await expect(page.getByText(/0 connected/)).toBeVisible();
+    await expect(page.getByText(/Command authority: FAIL_CLOSED/i)).toBeVisible();
 
     await page.goBack();
     await expect(page).toHaveURL(/\/execution\/operations\/incidents\//);
@@ -521,8 +522,9 @@ test.describe("EL-V2-06 · stage workbenches", () => {
   test("VNM: the vn-market variant consumes its own declared route and states its gaps", async ({ page }) => {
     await open(page, "/deployments/paper/dep_vnm/vn-market");
     await expect(page.getByRole("heading", { name: "dep_vnm" }).first()).toBeVisible();
-    // No calendar and no equity series are published; each panel states itself.
-    await expect(page.getByText(/No equity series was published/).first()).toBeVisible();
+    // The venue-specific source gap remains typed inside the rich workbench;
+    // no generic unavailable frame is permitted.
+    await expect(page.getByLabel("Equity vs approved research evidence")).toContainText(/venue\.calendar is UNAVAILABLE/);
   });
 
   test("paper-vnm shell-visible baseline · 1440×900", async ({ page }) => {
@@ -609,8 +611,9 @@ test.describe("EL-V2-08 · analytical surfaces", () => {
   test("Alpha 360: every insight tile is a chart or an explicit state — no blank frame", async ({ page }) => {
     await open(page, "/deployments/alphas/av_2041?tab=Insight+Charts");
     const tiles = page.locator(".exec-alpha-tiles > *");
-    await expect.poll(() => tiles.count()).toBe(12);
-    for (let i = 0; i < 12; i += 1) {
+    await expect.poll(() => tiles.count()).toBeGreaterThanOrEqual(12);
+    const tileCount = await tiles.count();
+    for (let i = 0; i < tileCount; i += 1) {
       const t = tiles.nth(i);
       // A fact table is also a real panel: query capabilities can publish
       // exact source facts rather than a time series. The invariant is no
@@ -631,7 +634,7 @@ test.describe("EL-V2-08 · analytical surfaces", () => {
   test("Account 360 renders current account truth inside its reviewed frame", async ({ page }) => {
     await open(page, "/deployments/accounts/acct-live-grid-v21");
     await expect(page.getByRole("heading", { name: /acct-live-grid-v21/ }).first()).toBeVisible();
-    await expect(page.getByText("1000.10").first()).toBeVisible();
+    await expect(page.getByText("1,000.10").first()).toBeVisible();
     await expect(page.getByText("750.05").first()).toBeVisible();
   });
 

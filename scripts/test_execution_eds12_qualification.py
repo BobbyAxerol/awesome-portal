@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import pathlib
+import tempfile
 
 
 MODULE_PATH = pathlib.Path(__file__).with_name("execution-eds12-qualification.py")
@@ -81,10 +83,68 @@ def deployed_evidence() -> dict:
             "commands_enabled": False,
             "live_mutation_enabled": False,
             "direct_source_access": False,
-            "product_active": True,
-            "operations_qualified": True,
+            "product_active": False,
+            "operations_qualified": False,
         },
     }
+
+
+def runtime_binding_inputs(
+    evidence: dict,
+    directory: pathlib.Path,
+) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path, dict, dict]:
+    """Create non-secret two-cell marker fixtures bound to the exact test pack."""
+    release_pack = directory / "release-pack"
+    release_pack.mkdir()
+    candidate = {
+        "source_ref": evidence["release_manifest"]["source_ref"],
+        "source_commit": evidence["release_manifest"]["source_commit"],
+        "image_tag": evidence["release_manifest"]["image_tag"],
+        "deployment_compose_bundle": {"sha256": "sha256:" + "f" * 64},
+    }
+    manifest_path = release_pack / "release-manifest.json"
+    manifest_path.write_text(json.dumps(candidate), encoding="utf-8")
+    evidence["release_manifest"]["manifest_sha256"] = MODULE.digest(manifest_path)
+    candidate_images = {row["service_id"]: {"image_digest": row["image_digest"]} for row in evidence["images"]}
+
+    image_by_service = {row["service_id"]: row["image_digest"] for row in evidence["images"]}
+    sgp = directory / "sgp-runtime-binding.env"
+    sgp.write_text(
+        "\n".join([
+            "SCHEMA_VERSION=portal.sgp-runtime-binding.v1",
+            f"SOURCE_COMMIT={candidate['source_commit']}",
+            f"IMAGE_TAG={candidate['image_tag']}",
+            f"RELEASE_MANIFEST_SHA256={evidence['release_manifest']['manifest_sha256']}",
+            f"DEPLOYMENT_COMPOSE_BUNDLE_SHA256={candidate['deployment_compose_bundle']['sha256']}",
+            f"PORTAL_API_IMAGE=example.invalid/portal-api@{image_by_service['portal-api']}",
+            f"PORTAL_WEB_IMAGE=example.invalid/portal-web@{image_by_service['portal-web']}",
+            f"PORTAL_CONTROL_API_IMAGE=example.invalid/control-api@{image_by_service['control-api']}",
+            f"PORTAL_ROADMAP_API_IMAGE=example.invalid/roadmap-api@{image_by_service['roadmap-task-board-api']}",
+            "COMMANDS_ENABLED=false",
+            "LIVE_MUTATION_ENABLED=false",
+            "DIRECT_SOURCE_ACCESS=false",
+            "HEALTH=HEALTHY",
+            "",
+        ]),
+        encoding="utf-8",
+    )
+    aws = directory / "aws-hk-runtime-binding.json"
+    aws.write_text(json.dumps({
+        "schema_version": "portal.execution-edge-runtime-binding.v1",
+        "source_commit": candidate["source_commit"],
+        "image_tag": candidate["image_tag"],
+        "release_manifest_sha256": evidence["release_manifest"]["manifest_sha256"],
+        "deployment_compose_bundle_sha256": candidate["deployment_compose_bundle"]["sha256"],
+        "services": [
+            {"service_id": service_id, "image_digest": image_by_service[service_id], "health": "HEALTHY"}
+            for service_id in sorted(MODULE.AWS_SERVICE_IDS)
+        ],
+        "command_relay_enabled": False,
+        "live_mutation_enabled": False,
+        "direct_source_access": False,
+        "health": "HEALTHY",
+    }), encoding="utf-8")
+    return release_pack, sgp, aws, candidate, candidate_images
 
 
 def main() -> None:
@@ -118,8 +178,9 @@ def main() -> None:
 
     evidence = deployed_evidence()
     deployed_result = MODULE.validate_deployed_payload(evidence)
-    assert deployed_result["product_active"] is True
-    assert deployed_result["operations_qualified"] is True
+    assert deployed_result["decision"] == "EDS12_DEPLOYED_EVIDENCE_SEMANTICALLY_VALID_RUNTIME_BINDING_PENDING"
+    assert deployed_result["product_active"] is False
+    assert deployed_result["operations_qualified"] is False
 
     direct_access = copy.deepcopy(evidence)
     direct_access["authority"]["direct_source_access"] = True
@@ -133,7 +194,44 @@ def main() -> None:
     unaccepted_extension["source_extensions"][1]["accepted"] = False
     expect_failure(lambda: MODULE.validate_deployed_payload(unaccepted_extension), "unaccepted BR-EX-81")
 
-    print("EDS-12 qualification mutation tests passed (9 fail-closed cases).")
+    original_candidate_validator = MODULE.validate_candidate_pack
+    try:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = pathlib.Path(temporary)
+            runtime_evidence = copy.deepcopy(evidence)
+            release_pack, sgp_marker, aws_marker, candidate, candidate_images = runtime_binding_inputs(runtime_evidence, directory)
+            MODULE.validate_candidate_pack = lambda _pack: (candidate, candidate_images)
+            runtime_evidence_path = directory / "evidence.json"
+            runtime_evidence_path.write_text(json.dumps(runtime_evidence), encoding="utf-8")
+            runtime_result = MODULE.validate_runtime_binding(runtime_evidence_path, release_pack, sgp_marker, aws_marker)
+            assert runtime_result["decision"] == "PRODUCT_ACTIVE"
+            assert runtime_result["product_active"] is True
+
+            good_sgp = sgp_marker.read_text(encoding="utf-8")
+            bad_sgp = "\n".join(
+                "PORTAL_API_IMAGE=example.invalid/portal-api@sha256:" + "0" * 64
+                if line.startswith("PORTAL_API_IMAGE=") else line
+                for line in sgp_marker.read_text(encoding="utf-8").splitlines()
+            ) + "\n"
+            sgp_marker.write_text(bad_sgp, encoding="utf-8")
+            expect_failure(
+                lambda: MODULE.validate_runtime_binding(runtime_evidence_path, release_pack, sgp_marker, aws_marker),
+                "SGP runtime image mismatch",
+            )
+            # Restore the Portal marker and prove the Edge-side marker cannot
+            # silently widen authority after an otherwise valid bind.
+            sgp_marker.write_text(good_sgp, encoding="utf-8")
+            aws_payload = json.loads(aws_marker.read_text(encoding="utf-8"))
+            aws_payload["command_relay_enabled"] = True
+            aws_marker.write_text(json.dumps(aws_payload), encoding="utf-8")
+            expect_failure(
+                lambda: MODULE.validate_runtime_binding(runtime_evidence_path, release_pack, sgp_marker, aws_marker),
+                "AWS-HK command relay enabled",
+            )
+    finally:
+        MODULE.validate_candidate_pack = original_candidate_validator
+
+    print("EDS-12 qualification mutation tests passed (11 fail-closed cases).")
 
 
 if __name__ == "__main__":

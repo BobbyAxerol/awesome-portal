@@ -5985,6 +5985,133 @@ empty, partial and externally missing. No BE-R2 item remains as an unnamed
 technical debt; any later source work is a single explicit owner contract, not
 a Portal workaround.
 
+#### BE-R2-7 implementation journal — candidate binding hardening (2026-09-11)
+
+**Status: `CODE_COMPLETE_RUNTIME_EVIDENCE_PENDING`; not `PRODUCT_ACTIVE`.**
+
+- The browser's same-origin BFF double now covers every named current product
+  read that the rich execution routes consume.  Its Manager relation allowlist
+  remains exact and unknown relation ids return typed `501`; the Paper
+  workbench fixture also binds its resource id to the URL, so one subject's
+  deterministic fixture cannot silently render under another subject's route.
+- The reviewed rich Paper, VNM, Alpha, Portfolio, Account, Blotter and
+  governance visual corpus was re-recorded only after direct visual inspection.
+  Journey assertions now prove the current blocked/typed states rather than
+  stale text, and the shared Playwright settle helper is navigation-safe under
+  parallel rendering.  A clean browser run must pass without an update flag.
+- Governance empty-state hierarchy is now explicit rather than accidental:
+  only the primary Approval Inbox result may opt into the prominent empty
+  treatment; secondary history/evidence panels remain compact inside their
+  reviewed rich shells.  The staged-activation grid in the Admin Action Drawer
+  is reachable through an explicit bounded horizontal scroll surface at narrow
+  widths.  This is presentation-only: no availability, RBAC, command or source
+  state is inferred by the browser.
+- The pinned Playwright image completed the clean no-update acceptance run on
+  2026-09-11 with **307 passed / 16 intentionally skipped** checks.  The suite
+  includes the same-origin BFF boundary, rich-route journeys, responsive
+  mobile-to-workstation surface audit, locked type scale, contrast, keyboard
+  labels, horizontal-overflow/clipping and DOM-budget assertions.  The one
+  earlier R2 laptop timeout was reproduced in isolation after concurrent build
+  writers stopped and passed at both laptop and workstation sizes; it was test
+  infrastructure contention, not a product-state or visual regression.
+- EDS-12 now separates **semantic deployed evidence** from the final runtime
+  decision. `verify-deployed` can only return
+  `EDS12_DEPLOYED_EVIDENCE_SEMANTICALLY_VALID_RUNTIME_BINDING_PENDING`.
+  `verify-runtime-binding` is the sole path to `PRODUCT_ACTIVE`, and requires
+  the same digest-pinned N14A candidate pack, SGP's four service images,
+  AWS-HK Edge/Source-Proxy images, source commit, image tag and Compose bundle
+  hash. It rejects unhealthy/missing services and any command, Live-mutation
+  or direct-source widening.
+- The two runtime markers are non-secret deployment artifacts kept outside
+  Git. They do not contain DSNs, mTLS material, delegated JWTs, records or
+  browser-facing cursors. `root:root/0600` is the operational convention; the
+  verifier additionally rejects symlinks, malformed fields and secret-shaped
+  content.
+- Local completion evidence is: N29 static acceptance, EDS-12 static/
+  mutation gate, and the isolated Rust `eds12-qualification` crate. No source
+  call, source profile, command relay, Live mutation, container or deployment
+  changed during this closeout.
+- On 2026-09-11, the immutable-image trust-chain static gate passed without
+  publishing an image.  The full N29 + Control API gate also passed with the
+  declared `503` checks, including its isolated PostgreSQL restore drill;
+  EDS-12's official offline-DR suite passed the source-dark, WAL/PITR,
+  encrypted logical-restore, deterministic-projection-rebuild and eight
+  rotation/rollback scenarios.  The Rust `eds12-qualification` crate passed
+  its three focused tests from a read-only source mount with temporary Cargo
+  state only.  These are local/offline evidence records, not substituted
+  deployed evidence.
+- The evidence order is intentionally fixed: publish the protected-main
+  candidate and obtain its signed/SBOM/provenance artifacts; construct the
+  sanitized deployed-evidence record; collect independently generated SGP and
+  AWS-HK runtime-binding markers; then run `verify-runtime-binding` against
+  all three.  A missing, mismatched or unhealthy marker is a release `NO_GO`;
+  it cannot be bypassed by a static, browser, database or Rust test.
+- Release isolation was also independently rehearsed on 2026-09-11: the N14A
+  source-dark authority test proved separate dev/stable volumes plus
+  backup/restore and expand/forward-fix behavior; the N14B current-source
+  candidate rendered and rolled back without starting a container or calling a
+  source; N23 independently verified the Sandbox/Live profile set and its
+  per-profile rollback.  The Buildx attestation parser's four test cases also
+  passed.  These checks bound the release procedure and prevent release-path
+  regression, while intentionally preserving the same deployed-evidence gate.
+- Remote read-only release audit on 2026-09-11 found the then-protected `main`
+  CI blocked specifically at the Portal web visual-baseline step; image
+  publication therefore stopped at its commit-bound CI wait and never reached
+  build, signing or candidate generation.  The reviewed candidate branch's
+  pinned visual gate passes locally, but a fresh protected-main CI run remains
+  required evidence rather than an assumption from that local result.
+- Both deployed cells were healthy at audit time, with read/query/realtime
+  flags and command relay disabled as expected, but their runtime source labels
+  predated the candidate that this phase would promote.  Neither cell contained
+  a sanitized EDS-12 evidence file or runtime-binding marker.  Health alone
+  does not bind a release digest, so these are correctly excluded from
+  `PRODUCT_ACTIVE` until the exact candidate is deployed and independently
+  marked.
+- The protected SGP deploy workflow now invokes the pinned
+  `collect-eds12-runtime-binding.py` only after its immutable Compose rollout
+  is healthy, then uploads a root-owned, non-secret marker as a bounded
+  workflow artifact.  The same collector must run on AWS-HK after its
+  companion rollout and verifies all Paper, Sandbox and Live Edge/Source Proxy
+  projects before it emits one marker.  It reads only the accepted manifest,
+  non-secret SGP deployment state and Docker metadata (labels, repo digests,
+  health); it cannot contact a source, inspect secret mounts, start/restart a
+  container or widen command/Live authority.  The collector, its focused
+  fail-closed tests, the deploy workflow and the CI qualification gate are
+  digest-pinned by the EDS-12 pack.  This closes the prior source-level marker
+  collection gap, but does not conceal the currently observed SGP/AWS-HK
+  provenance mismatch or assert runtime activation.
+
+**Only remaining release evidence (not a technical-debt placeholder):** a
+protected-main signed/SBOM/provenance candidate plus one sanitized SGP marker
+and one sanitized AWS-HK marker that bind to that exact candidate. Until all
+three are supplied and verified, release truth remains `NO_GO` and runtime
+authority remains fail-closed.
+
+#### Phase 8–11 audit amendment — truth and contract closure (2026-09-12)
+
+The independent audit confirmed and closed exactly three source-level gaps:
+
+- R1 immutable evidence response fields were richer than its published schema;
+  the canonical schema, R1 fixture, generated type and producer test now share
+  the same `display_value`/verification/provenance shape.
+- Live current-source fallback could treat a Manager-confirmed absent or
+  unresolved deployment as a URL-derived `SOURCE_BACKED` detail; it now emits
+  typed `404` or `409` and never manufactures a resource.
+- N31 local profile SSE had a working producer and consumer but no canonical
+  contract corpus; its schema, five event fixtures, same-origin OpenAPI and
+  generated type now make recovery/terminal semantics reviewable without
+  exposing Edge selectors or claiming source replay.
+- The maintainer pre-commit verifier now detects an intentionally
+  non-Docker-group workstation and re-executes its isolated checks through
+  passwordless `sudo`, retaining the caller UID/GID for unprivileged test
+  cells. This fixes a real CI-repeatability defect without granting the login
+  user Docker socket access or changing any runtime Compose behavior.
+
+No runtime activation, source request, command, migration or deployment is
+part of this amendment. Runtime migration/retention/deployed-evidence work
+remains explicitly operational and fail-closed, rather than being recast as a
+source-code completion claim.
+
 ### 18.5 Claude handoff and phase ownership
 
 Claude owns visual composition and frontend consumer work. Codex owns all

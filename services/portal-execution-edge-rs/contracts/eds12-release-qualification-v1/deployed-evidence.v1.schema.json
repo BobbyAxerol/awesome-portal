@@ -28,6 +28,23 @@
     "source_extensions": {"type": "array", "minItems": 3, "maxItems": 3},
     "p0_p1_open": {"const": 0},
     "owner_visual_data_action_parity": {"const": true},
-    "authority": {"type": "object"}
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commands_enabled",
+        "live_mutation_enabled",
+        "direct_source_access",
+        "product_active",
+        "operations_qualified"
+      ],
+      "properties": {
+        "commands_enabled": {"const": false},
+        "live_mutation_enabled": {"const": false},
+        "direct_source_access": {"const": false},
+        "product_active": {"const": false},
+        "operations_qualified": {"const": false}
+      }
+    }
   }
 }

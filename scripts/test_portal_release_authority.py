@@ -267,6 +267,7 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
             "N14_RELEASE_MANIFEST_SHA256", "N14_RELEASE_DECISION_SHA256",
             "publication-workflow-run.json", ".github/workflows/publish-images.yml",
             "deployment-compose-bundle.json", "prepare-stable-release-takeover.py",
+            "collect-eds12-runtime-binding.py", "portal-sgp-runtime-binding.env",
             "-o ServerAliveInterval=20", "-o ServerAliveCountMax=30",
             "-o ConnectTimeout=20",
             "release_failure_diagnostics()", "compose_next logs --tail 120",
@@ -282,9 +283,9 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
         # long enough for a network device to reap an idle SSH TCP flow.
         # Keepalives apply to each transfer and the rollout channel without
         # relaxing pinned host verification or retrying a failed deployment.
-        self.assertEqual(workflow.count("-o ServerAliveInterval=20"), 6)
-        self.assertEqual(workflow.count("-o ServerAliveCountMax=30"), 6)
-        self.assertEqual(workflow.count("-o ConnectTimeout=20"), 6)
+        self.assertEqual(workflow.count("-o ServerAliveInterval=20"), 7)
+        self.assertEqual(workflow.count("-o ServerAliveCountMax=30"), 7)
+        self.assertEqual(workflow.count("-o ConnectTimeout=20"), 7)
         self.assertIn("trap 'release_failure_diagnostics \"$?\"' ERR", workflow)
         self.assertIn("compose_up_status=$?", workflow)
         compose_next = workflow.split("compose_next() {", 1)[1].split(
@@ -303,6 +304,9 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
             ("PORTAL_ROADMAP_API_IMAGE", "PORTAL_ROADMAP_API_IMAGE"),
         ):
             self.assertIn(f'{destination}="${{{source}}}"', compose_next)
+        self.assertIn('sudo -n python3 "${DEPLOY_PATH}/scripts/collect-eds12-runtime-binding.py" sgp', workflow)
+        self.assertIn('"${collector_replace[@]}"', workflow)
+        self.assertIn("sudo -n cat '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/portal-sgp-runtime-binding.env'", workflow)
 
 
 if __name__ == "__main__":

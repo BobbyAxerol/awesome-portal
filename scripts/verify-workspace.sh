@@ -842,6 +842,28 @@ command -v docker >/dev/null 2>&1 || {
   exit 1
 }
 
+# The maintainer workstation intentionally does not grant the login user direct
+# access to the Docker socket.  Pre-commit must nevertheless run the exact
+# same isolated verification as CI, rather than failing mid-way through an
+# opaque Compose interpolation.  Re-exec the *read-only verifier* once through
+# passwordless sudo when Docker is otherwise unreachable; preserve the calling
+# UID/GID so disposable Node cells remain unprivileged.  Runtime deployment is
+# never invoked here, and an environment without either Docker access mode
+# still fails closed with an actionable diagnostic.
+if ! docker info >/dev/null 2>&1; then
+  if [[ "${PORTAL_VERIFY_DOCKER_ESCALATED:-false}" == "true" ]] || ! sudo -n docker info >/dev/null 2>&1; then
+    printf 'Docker daemon is not accessible by the current user and passwordless sudo is unavailable for verification.\n' >&2
+    exit 1
+  fi
+  caller_uid="$(id -u)"
+  caller_gid="$(id -g)"
+  exec sudo -n env \
+    PORTAL_VERIFY_DOCKER_ESCALATED=true \
+    HOST_UID="${caller_uid}" \
+    HOST_GID="${caller_gid}" \
+    "$0" "$@"
+fi
+
 if nested_git="$(find "${ROOT_DIR}/apps" "${ROOT_DIR}/features" -name .git -print -quit)"; [[ -n "${nested_git}" ]]; then
   printf 'Nested Git metadata is not allowed in the Portal monorepo: %s\n' "${nested_git}" >&2
   exit 1

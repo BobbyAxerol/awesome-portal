@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/schemas/portal-execution-edge-runtime-binding.v1.schema.json",
+  "title": "Sanitized AWS-HK Execution Edge runtime binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_commit",
+    "image_tag",
+    "release_manifest_sha256",
+    "deployment_compose_bundle_sha256",
+    "services",
+    "command_relay_enabled",
+    "live_mutation_enabled",
+    "direct_source_access",
+    "health"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.execution-edge-runtime-binding.v1"},
+    "source_commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "image_tag": {"type": "string", "pattern": "^sha-[a-f0-9]{40}$"},
+    "release_manifest_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "deployment_compose_bundle_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "services": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service_id", "image_digest", "health"],
+        "properties": {
+          "service_id": {"enum": ["execution-edge", "source-proxy"]},
+          "image_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+          "health": {"const": "HEALTHY"}
+        }
+      }
+    },
+    "command_relay_enabled": {"const": false},
+    "live_mutation_enabled": {"const": false},
+    "direct_source_access": {"const": false},
+    "health": {"const": "HEALTHY"}
+  }
+}

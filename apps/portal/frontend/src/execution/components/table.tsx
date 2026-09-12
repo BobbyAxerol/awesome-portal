@@ -102,6 +102,12 @@ export interface KeysetTableProps<T> {
    *  shared vocabulary — the inbox says "Inbox zero", which is an outcome
    *  rather than an absence. */
   emptyTitle?: string;
+  /**
+   * Give the empty result the primary-result treatment. This is intentionally
+   * opt-in: a generic panel inside a dense screen must retain the compact
+   * state treatment even when its query returns no rows.
+   */
+  prominentEmpty?: boolean;
   /** DS §8 keeps a minimum width so columns do not collapse; the panel scrolls. */
   minWidth?: number;
   /** Test seam and escape hatch for environments that report no height. */
@@ -145,6 +151,7 @@ export function KeysetTable<T>({
   rowEmphasis,
   skeletonRows = 6,
   emptyTitle,
+  prominentEmpty = false,
   minWidth = 880,
   viewportRows,
   notice,
@@ -219,10 +226,18 @@ export function KeysetTable<T>({
           status={page.retention ? "unavailable" : "empty"}
           title={page.retention ? undefined : emptyTitle}
           reason={reason ?? retentionReason(page.retention) ?? undefined}
+          prominentEmpty={!page.retention && prominentEmpty}
         />
       );
     }
-    return <PanelState status="empty" title={emptyTitle} reason={reason ?? "No rows match this filter."} />;
+    return (
+      <PanelState
+        status="empty"
+        title={emptyTitle}
+        reason={reason ?? "No rows match this filter."}
+        prominentEmpty={prominentEmpty}
+      />
+    );
   }
 
   const virtualized = !neverVirtualize && rows.length > VIRTUALIZE_ABOVE;
