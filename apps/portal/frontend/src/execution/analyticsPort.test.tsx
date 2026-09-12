@@ -68,6 +68,11 @@ const fixtureDoc = async (name: string) => {
 };
 
 describe("each read issues the route its OpenAPI operation declares", () => {
+  it.each(["paper","sandbox","live"] as const)("binds portfolio helper reads to %s",async(environment)=>{
+    const calls=serving(await fixtureDoc("correlation"));
+    await createHttpApi({policy:OPEN}).getCorrelation("PF-1",environment);
+    expect(calls[0].url).toBe(`/api/v1/execution/portfolios/PF-1/correlation?environment=${environment}`);
+  });
   it("GET the order funnel", async () => {
     const calls = serving(await fixtureDoc("order-funnel"));
     const result = await createHttpApi({ policy: OPEN }).getOrderFunnel("order 1/2");

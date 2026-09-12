@@ -2130,3 +2130,27 @@ BE-R2-8 read/screen contract alignment, then BE-R2-9 realtime/local cost/dev
 acceptance, then the existing BE-R2-7 signed-release gate. Both new phases are
 `PROPOSED_AWAITING_OWNER_APPROVAL`. This slice changes documentation only;
 no code fix, source call, migration, deployment, push, PR or merge is performed.
+
+### 14.1.6 BE-R2-8 authorized implementation (2026-09-12)
+
+Bobby approved AR-01–07, including Portal-owned review/capture. Implementation
+now binds local reads to the configured execution workspace plus actual
+membership/profile, closes unavailable/empty and decimal/freshness errors,
+and aligns Alpha/Portfolio/Account/Operations consumers without replacing rich
+UI. Stream authorization leases include membership revocation. Legacy raw
+adapter/history aliases are explicitly deprecated; product uses named BFFs.
+
+Governance migration 032 and four named API routes provide real R2/Paper Exit
+review creation and Sandbox note capture with immutable lineage, revision,
+idempotency, atomic audit and readback. The nine-table no-writer allowlist is
+empty; this does not turn Portal-authored insufficient/unavailable evidence
+into a source PASS or authorize promotion/commands. Canonical schemas, generated
+types, fixtures and frontend readers are delivered together. New visual capture
+forms are not claimed: typed client operations are ready for Claude, while the
+existing rich screens remain intact.
+
+The authoritative implementation/test/remaining-action record is the
+[BE-R2-8 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-8--exact-read-authority-and-complete-screen-contract-alignment).
+Fresh-PG tests/restore and networkless frontend/contract/browser tests are not
+runtime evidence. BE-R2-9 remains separately proposed; main/stable, deploy,
+source access, command relay and TS runtime are unchanged.

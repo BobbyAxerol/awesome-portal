@@ -2358,3 +2358,34 @@ policy rewrite.
 
 Claude may wire this consumer behavior in the frontend branch with the normal
 TypeScript, unit, DOM-warning and authenticated same-origin browser evidence.
+
+### 8.60 BE-R2-8 exact scope and review-capture handoff (2026-09-12)
+
+The owner-approved backend phase also delivers the minimal existing-consumer
+alignment: Alpha/Account analytics carry environment/account, Portfolio helpers
+carry environment and refresh identity, Mine sends `assigned_to=me`, and All is
+truthfully **All retained**. Rich composition/tokens/layout are not replaced.
+`useApiRead` retains last-good only for the same explicit identity; switching
+subject/profile clears immediately, transient failures are stale, denial clears.
+HTTP cancellation/coalescing and the complete source/heartbeat state machine
+remain BE-R2-9, not a claimed result of this phase.
+
+Claude can use the generated governance types through the four new `ExecutionApi`
+operations: `getReviewCaptureCapabilities(workspaceId)`, `captureR2(input)`,
+`createPaperExit(input)`, `captureSandboxNote(input)`. They use same-origin
+session/CSRF, validate response authority/target, and preserve typed403/409.
+The result is an actor-authored **Portal review**, always `NOT_ASSERTED` for
+source verdict and `source_side_effect_requested=false`. Navigate with its
+named `read_path` plus the selected `workspace_id` (Sandbox is deployment-bound).
+Keep a request key for one exact retry; edits to note/input/revision are a new
+intent. Server capability/eligibility controls the action, not UI heuristics.
+
+New capture **forms have not been added**. If assigned, place them in the existing
+R2/Exit/Sandbox hierarchy; never replace a rich route with a raw form or JSON.
+Review/capture is available without pretending R2 execution grant, Paper promote
+or source Sandbox certification is available. Their three typed reasons and
+exact input rules are in the [main phase journal](../../../upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-8--exact-read-authority-and-complete-screen-contract-alignment).
+No frontend fixture is injected into shared dev/stable. Canonical R1, five SSE
+events and three capture responses are exercised by actual readers; schema/type
+generation remains mandatory. Do not overwrite the existing dirty
+`e2e/el-v2-03-evidence/controls.json` during browser verification.

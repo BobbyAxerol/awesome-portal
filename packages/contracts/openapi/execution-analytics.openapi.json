@@ -8,6 +8,7 @@
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
   "paths": {
+    "/api/v1/execution/portfolios/{portfolioId}/cross-equity": {"get":{"operationId":"executionPortfolioCrossEquity","description":"Retained local comparison, partitioned by portfolio and currency in the requested environment. Not an FX-converted consolidated portfolio.","parameters":[{"$ref":"#/components/parameters/PortfolioId"},{"name":"environment","in":"query","schema":{"type":"string","enum":["paper","sandbox","live"],"default":"paper"}}],"responses":{"200":{"description":"Local cross-equity comparison","content":{"application/json":{"schema":{"$ref":"#/components/schemas/LocalCrossEquityResponse"}}}},"default":{"$ref":"#/components/responses/Problem"}}}},
     "/api/v1/execution/approvals/{approvalId}/capital-preview": {
       "post": {
         "operationId": "executionCapitalPreview",
@@ -34,15 +35,15 @@
     "/api/v1/execution/portfolios/{portfolioId}/correlation": {
       "get": {
         "operationId": "executionPortfolioCorrelation",
-        "parameters": [{ "$ref": "#/components/parameters/PortfolioId" }],
-        "responses": { "200": { "description": "Adaptive portfolio correlation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CorrelationResponse" } } } }, "default": { "$ref": "#/components/responses/Problem" } }
+        "parameters": [{ "$ref": "#/components/parameters/PortfolioId" }, { "name": "environment", "in": "query", "schema": { "type": "string", "enum": ["paper", "sandbox", "live"], "default": "paper" } }],
+        "responses": { "200": { "description": "Adaptive portfolio correlation", "content": { "application/json": { "schema": { "oneOf": [{ "$ref": "#/components/schemas/CorrelationResponse" }, { "$ref": "#/components/schemas/LocalCorrelationResponse" }] } } } }, "default": { "$ref": "#/components/responses/Problem" } }
       }
     },
     "/api/v1/execution/portfolios/{portfolioId}/capital-ledger": {
       "get": {
         "operationId": "executionCapitalLedger",
-        "parameters": [{ "$ref": "#/components/parameters/PortfolioId" }],
-        "responses": { "200": { "description": "Currency-isolated capital ledger", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CapitalLedgerResponse" } } } }, "default": { "$ref": "#/components/responses/Problem" } }
+        "parameters": [{ "$ref": "#/components/parameters/PortfolioId" }, { "name": "environment", "in": "query", "schema": { "type": "string", "enum": ["paper", "sandbox", "live"], "default": "paper" } }],
+        "responses": { "200": { "description": "Currency-isolated capital ledger", "content": { "application/json": { "schema": { "oneOf": [{ "$ref": "#/components/schemas/CapitalLedgerResponse" }, { "$ref": "#/components/schemas/LocalCapitalLedgerResponse" }] } } } }, "default": { "$ref": "#/components/responses/Problem" } }
       }
     },
     "/api/v1/execution/broker-bindings/{bindingId}/exposure": {
@@ -87,6 +88,14 @@
       "Problem": { "description": "Typed fail-closed error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
     },
     "schemas": {
+      "LocalCrossEquityResponse": {"allOf":[{"$ref":"#/components/schemas/LocalPortfolioMetadata"},{"type":"object","required":["analytics"],"properties":{"analytics":{"allOf":[{"$ref":"#/components/schemas/DerivedMetadata"},{"type":"object","required":["data"],"properties":{"data":{"$ref":"#/components/schemas/CrossEquityData"}}}]}}}]},
+      "LocalCapitalLedgerResponse": {"allOf":[{"$ref":"#/components/schemas/LocalPortfolioMetadata"},{"type":"object","required":["analytics"],"properties":{"analytics":{"allOf":[{"$ref":"#/components/schemas/DerivedMetadata"},{"type":"object","required":["data"],"properties":{"data":{"$ref":"#/components/schemas/LocalCapitalLedgerData"}}}]}}}]},
+      "LocalCorrelationResponse": {"allOf":[{"$ref":"#/components/schemas/LocalPortfolioMetadata"},{"type":"object","required":["analytics"],"properties":{"analytics":{"allOf":[{"$ref":"#/components/schemas/DerivedMetadata"},{"type":"object","required":["data"],"properties":{"data":{"$ref":"#/components/schemas/CorrelationData"}}}]}}}]},
+      "CrossEquityData": {"type":"object","required":["portfolio_id","rows","row_count"],"properties":{"portfolio_id":{"$ref":"#/components/schemas/Identifier"},"rows":{"type":"array","items":{"type":"object","required":["portfolio_id","currency","first_equity","last_equity","net_pnl","point_count","first_at","last_at","is_self"],"properties":{"portfolio_id":{"$ref":"#/components/schemas/Identifier"},"currency":{"$ref":"#/components/schemas/Currency"},"first_equity":{"$ref":"#/components/schemas/Decimal"},"last_equity":{"$ref":"#/components/schemas/Decimal"},"net_pnl":{"oneOf":[{"$ref":"#/components/schemas/Decimal"},{"type":"null"}]},"point_count":{"type":"integer","minimum":0},"first_at":{"$ref":"#/components/schemas/NullableDateTime"},"last_at":{"$ref":"#/components/schemas/NullableDateTime"},"is_self":{"type":"boolean"}}}},"row_count":{"type":"integer","minimum":0}}},
+      "LocalCapitalLedgerData": {"type":"object","required":["portfolio_id","entry_count","returned_entry_count","has_more","window","buckets"],"properties":{"portfolio_id":{"$ref":"#/components/schemas/Identifier"},"entry_count":{"type":"integer","minimum":0},"returned_entry_count":{"type":"integer","minimum":0,"maximum":250},"has_more":{"type":"boolean"},"window":{"type":"string","const":"LATEST"},"buckets":{"type":"array","items":{"$ref":"#/components/schemas/LocalCapitalLedgerBucket"}},"rejected_row_count":{"type":"integer","minimum":0},"reason_code":{"type":["string","null"]}}},
+      "LocalCapitalLedgerBucket": {"type":"object","required":["currency","gross_increase","gross_decrease","entries"],"properties":{"currency":{"$ref":"#/components/schemas/Currency"},"gross_increase":{"$ref":"#/components/schemas/Decimal"},"gross_decrease":{"$ref":"#/components/schemas/Decimal"},"entries":{"type":"array","maxItems":250,"items":{"$ref":"#/components/schemas/LocalCapitalLedgerEntry"}}}},
+      "LocalCapitalLedgerEntry": {"type":"object","required":["ledger_id","allocation_id","account_id","movement_type","direction","amount","before_allocated","after_allocated","occurred_at"],"properties":{"ledger_id":{"$ref":"#/components/schemas/Identifier"},"allocation_id":{"oneOf":[{"$ref":"#/components/schemas/Identifier"},{"type":"null"}]},"account_id":{"$ref":"#/components/schemas/Identifier"},"movement_type":{"type":"string","enum":["INITIAL_ALLOCATE","ALLOCATE","WITHDRAW","REBALANCE","ADJUST"]},"direction":{"type":"string","enum":["INCREASE","DECREASE","UNCHANGED"]},"amount":{"$ref":"#/components/schemas/Decimal"},"before_allocated":{"$ref":"#/components/schemas/Decimal"},"after_allocated":{"$ref":"#/components/schemas/Decimal"},"occurred_at":{"$ref":"#/components/schemas/NullableDateTime"}}},
+      "LocalPortfolioMetadata": {"type":"object","required":["schema_version","environment","epoch_id","source_snapshot_id","capability_snapshot_id","source_profile","projection_sequence","freshness_policy_version","read_at"],"properties":{"schema_version":{"const":"portal.execution.portfolio-360-local.v1"},"environment":{"enum":["paper","sandbox","live"]},"epoch_id":{"type":"string"},"source_snapshot_id":{"type":"string"},"capability_snapshot_id":{"type":"string"},"source_profile":{"const":"PORTAL_LOCAL_PROJECTION"},"projection_sequence":{"type":"integer","minimum":1},"freshness_policy_version":{"type":"string"},"read_at":{"$ref":"#/components/schemas/DateTime"}}},
       "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
       "Decimal": { "type": "string", "pattern": "^[+-]?[0-9]+([.][0-9]+)?$" },
       "Currency": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" },

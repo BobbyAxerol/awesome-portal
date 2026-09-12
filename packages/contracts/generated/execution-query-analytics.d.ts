@@ -525,6 +525,12 @@ export interface components {
     };
     parameters: {
         SubjectId: string;
+        /** @description Local profile. Defaults Paper except live-gate Live. Unsupported remote fallback fails typed, never silently switches profile. */
+        Environment: "paper" | "sandbox" | "live";
+        /** @description Narrow the selected subject to this account. A nonmember account returns 404. */
+        AccountId: string;
+        /** @description False omits broad source fact groups; derived result stays scoped. */
+        SourceFacts: boolean;
     };
     requestBodies: never;
     headers: never;
@@ -534,7 +540,14 @@ export type $defs = Record<string, never>;
 export interface operations {
     executionDeploymentQueryAnalytics: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Local profile. Defaults Paper except live-gate Live. Unsupported remote fallback fails typed, never silently switches profile. */
+                environment?: components["parameters"]["Environment"];
+                /** @description Narrow the selected subject to this account. A nonmember account returns 404. */
+                account_id?: components["parameters"]["AccountId"];
+                /** @description False omits broad source fact groups; derived result stays scoped. */
+                source_facts?: components["parameters"]["SourceFacts"];
+            };
             header?: never;
             path: {
                 subjectId: components["parameters"]["SubjectId"];
@@ -549,7 +562,14 @@ export interface operations {
     };
     executionAlphaQueryAnalytics: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Local profile. Defaults Paper except live-gate Live. Unsupported remote fallback fails typed, never silently switches profile. */
+                environment?: components["parameters"]["Environment"];
+                /** @description Narrow the selected subject to this account. A nonmember account returns 404. */
+                account_id?: components["parameters"]["AccountId"];
+                /** @description False omits broad source fact groups; derived result stays scoped. */
+                source_facts?: components["parameters"]["SourceFacts"];
+            };
             header?: never;
             path: {
                 subjectId: components["parameters"]["SubjectId"];
@@ -564,7 +584,14 @@ export interface operations {
     };
     executionPortfolioQueryAnalytics: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Local profile. Defaults Paper except live-gate Live. Unsupported remote fallback fails typed, never silently switches profile. */
+                environment?: components["parameters"]["Environment"];
+                /** @description Narrow the selected subject to this account. A nonmember account returns 404. */
+                account_id?: components["parameters"]["AccountId"];
+                /** @description False omits broad source fact groups; derived result stays scoped. */
+                source_facts?: components["parameters"]["SourceFacts"];
+            };
             header?: never;
             path: {
                 subjectId: components["parameters"]["SubjectId"];
@@ -579,7 +606,14 @@ export interface operations {
     };
     executionLiveGateQueryAnalytics: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Local profile. Defaults Paper except live-gate Live. Unsupported remote fallback fails typed, never silently switches profile. */
+                environment?: components["parameters"]["Environment"];
+                /** @description Narrow the selected subject to this account. A nonmember account returns 404. */
+                account_id?: components["parameters"]["AccountId"];
+                /** @description False omits broad source fact groups; derived result stays scoped. */
+                source_facts?: components["parameters"]["SourceFacts"];
+            };
             header?: never;
             path: {
                 subjectId: components["parameters"]["SubjectId"];

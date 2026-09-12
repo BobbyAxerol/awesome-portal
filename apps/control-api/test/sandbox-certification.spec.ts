@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
+import { assertCaptureContract } from "./contract-validator";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
 import { SANDBOX_CERTIFICATION_STEPS, SandboxCertificationStep } from "../src/sandbox/contracts";
@@ -72,7 +73,7 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
 
   beforeEach(async () => {
     await ctx.pool.query(
-      `TRUNCATE governance_sandbox_promotion_plans,
+      `TRUNCATE governance_review_captures, governance_sandbox_promotion_plans,
                 governance_sandbox_certification_events,
                 governance_sandbox_findings,
                 governance_sandbox_step_evidence,
@@ -150,6 +151,33 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
     });
     return { userId: portalUser!.userId, username, cookie: cookies(loggedIn), csrf: csrfCookie(loggedIn) };
   }
+
+  it("BE-R2-8 captures an actor-authored note without asserting Sandbox certification", async () => {
+    const grant = await seedGrant("ar06-note");
+    const created = await mutation(bobby, "/api/v1/execution/governance/sandbox-certifications", createPayload(grant,"ar06-note-create"));
+    expect(created.statusCode).toBe(201);
+    const certificationId = created.json().certification.certification_id;
+    const payload = { workspace_id:workspaceId,request_key:"ar06-note",certification_id:certificationId,
+      expected_workflow_version:1,summary:"Operator review note, not accepted broker evidence." };
+    const route = "/api/v1/execution/governance/sandbox/capture-note";
+    expect((await mutation(reader,route,payload)).statusCode).toBe(403);
+    const captured = await mutation(bobby,route,payload);
+    expect(captured.statusCode,JSON.stringify(captured.json())).toBe(201);
+    assertCaptureContract(captured.json());
+    expect(captured.json()).toMatchObject({ source_verdict:"NOT_ASSERTED",source_side_effect_requested:false,workflow_version:2 });
+    expect((await mutation(bobby,route,payload)).json().replayed).toBe(true);
+    expect((await mutation(bobby,route,{...payload,summary:"Another independent reviewer note."})).statusCode).toBe(409);
+    expect((await mutation(bobby,route,{...payload,request_key:"ar06-stale-note"})).statusCode).toBe(409);
+    const read = await inject(bobby,`${captured.json().read_path}?workspace_id=${workspaceId}`);
+    expect(read.statusCode,JSON.stringify(read.json())).toBe(200);
+    expect(read.json().progress).toMatchObject({passed_count:0,eligible:false});
+    expect(read.json().findings.rows).toEqual([expect.objectContaining({ source_authority:"PORTAL",finding_code:"PORTAL_REVIEW_NOTE" })]);
+    expect((await ctx.pool.query("SELECT count(*)::int n FROM governance_sandbox_step_evidence WHERE certification_id=$1 AND evaluation_state='UNAVAILABLE'",[certificationId])).rows[0].n).toBe(7);
+    expect((await ctx.pool.query("SELECT count(*)::int n FROM product_audit_events WHERE event_type='governance.review.captured'")).rows[0].n).toBe(1);
+    const caps = await inject(reader,`/api/v1/execution/governance/review-capture-capabilities?workspace_id=${workspaceId}`);
+    assertCaptureContract(caps.json(),"Capabilities");
+    expect(caps.json().actions.every((a:{state:string})=>a.state==="UNAVAILABLE")).toBe(true);
+  });
 
   async function seedGrant(suffix: string) {
     const reviewId = `PX-${suffix}`;

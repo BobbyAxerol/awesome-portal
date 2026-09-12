@@ -5474,7 +5474,7 @@ System PostgreSQL, Redis, broker, Source Proxy upstream or shell.
 | BE-R2-5 | local realtime/resilience hardening | realtime state/motion and virtualized list checks | BE-R2-1 through BE-R2-3 |
 | BE-R2-6 | governance, V1 compatibility and idempotency closeout — **code complete; runtime unchanged** | Gate/Approval empty shells and workflow verification | BE-R2-3 |
 | BE-R2-7 | immutable release/provenance and product acceptance | final authenticated route/network/visual matrix | accepted BE-R2-1 through BE-R2-6 scope |
-| BE-R2-8 — proposed | exact read authority, source truth and screen/workflow contract repair | Claude: environment-scoped 360 panels, Operations filters, canonical fixture consumption | owner approves §18.6 scope; no new TS contract required |
+| BE-R2-8 — implemented, source/test closeout | exact read authority, source truth and screen/workflow contract repair | Existing consumer alignment included; new capture form composition remains explicitly unclaimed | Bobby approved §18.6 scope including Portal review/capture; see implementation/gate journal |
 | BE-R2-9 — proposed | realtime correctness, bounded local cost and dev acceptance | Claude: source/transport recovery, cancellation, targeted refresh, unchanged rich UI | accepted BE-R2-8; owner approves the named dev acceptance scope |
 
 The proposed execution order is **BE-R2-8 → BE-R2-9 → the existing BE-R2-7
@@ -6235,7 +6235,12 @@ it or asking Trading System for another implementation campaign.
 
 ### BE-R2-8 — Exact read authority and complete screen contract alignment
 
-**Status:** `PROPOSED_AWAITING_OWNER_APPROVAL`. **Priority:** first; AR-01–07.
+**Status:** `IMPLEMENTED_TESTED_SOURCE_ONLY` (2026-09-12). Bobby approved this
+phase including AR-06 Portal-owned creation/capture. AR-01–07 source, existing
+consumer alignment and isolated evidence gates are complete as recorded below.
+This is not deployed acceptance or a claim that new visual capture forms exist.
+BE-R2-9 and runtime deployment are not authorized by this phase.
+**Priority:** first; AR-01–07.
 **Goal:** every current-data read has the right authorized workspace,
 environment, resource, value and typed state, and every approved screen/action
 consumes that same contract without discarding Claude's rich UI.
@@ -6326,11 +6331,88 @@ source work nonexistent.
   FE type/unit/build and focused integration/browser state tests; relevant Rust
   compatibility tests only if its code/contract actually changes.
 
-**Done so far:** audit and planning only. **Technical debt exit:** AR-01–07
-have code/test/consumer evidence, except an owner-explicitly deferred product
-workflow remains visibly `NOT_COMMISSIONED`, with named input/owner/reason. Such
-a deferral is not “zero debt” or a completed Paper Exit workflow. Before this
-phase starts, approval must resolve the writer scope below; no unnamed follow-up.
+**Implementation journal — 2026-09-12, `feat/execution-loop-next`:**
+
+| Finding | Delivered code and consumer behavior | Regression evidence |
+| --- | --- | --- |
+| AR-01 | `ExecutionLocalReadAuthority` binds configured execution workspace, actual membership and enabled environment. ADMIN is not an implicit cross-workspace read bypass; member USER may read. Local analytics, Portfolio helpers, adapters, history, snapshot/stream and protected diagnostics use it. Dark diagnostics do not read projection rows. SSE checks both session and membership every 5s and releases the subscription on denial. | `local-read-authority.spec.ts`: 14 route/alias negatives with zero protected reads, USER success, disabled Live and revoked membership. `execution-realtime.spec.ts`: active local stream closes and clears timers/subscription on membership loss. |
+| AR-02 | N32 preserves denied/unavailable and partial-empty state, hides refused retained rows, validates adapter membership/limits, and caps serialized output at 1 MiB. Legacy history coverage/count is for the exact requested range/entity, independent of cursor, with bounded rows/bytes and safe continuation after the last transmitted row. No product caller uses these generic aliases; both remain deprecated with successor links to named screen/financial BFFs. | `local-contract-alignment.spec.ts`, `profile-projection.spec.ts`: denied vs empty, prototype/limit/query negatives, SQL range coverage, empty requested interval and byte-limited resume. |
+| AR-03 | Capital direction uses exact string/BigInt comparison. Totals use the validated bounded population, currencies remain separate, partial walks/rejected rows are declared. Display is bounded to the newest 250 validated entries; totals do not pretend that page is the complete source. Actual input freshness/as-of/coverage replaces read-time-as-fresh evidence. OpenAPI publishes the existing local variants separately from upstream authority. | Actual producer validated against canonical LocalCapitalLedgerResponse; high-magnitude/sub-cent/negative/scaled-equal decimal cases, mixed currencies and stale metadata in `local-contract-alignment.spec.ts`. |
+| AR-04 | Named analytics/Portfolio helper contracts accept environment; account panels additionally bind account_id. Subject selection prioritizes explicit strategy/deployment over shared account joins. The same id in Paper/Sandbox/Live cannot silently resolve to Paper. FE Alpha/Portfolio/Account panels send the selected binding. Binding refs containing `@` retain the already-correct source-compatible route guard. | Three-profile and shared-account regression; wrong-account negative; named HTTP request tests; existing nine `phase2-binding-and-integrity.spec.ts` cases retained. |
+| AR-05 | Mine calls the supported server `assigned_to=me`; unbounded All (24h) is truthfully labeled **All retained** (not a new client-side time filter). Portfolio correlation/ledger/cross-equity respond to profile/id/realtime refresh. Last-good values are scoped to identity: changed subject/profile clears immediately, same-identity transient failures are visibly stale, denied scope clears. Workflow intent keys include payload/revision/actor session and are stable only for an exact retry. | Operations component/container tests, HTTP consumer tests, `localReadIdentity.test.tsx`; existing public triage/idempotency tests. Transport cancellation and coalescing remain the expressly separate BE-R2-9 scope. |
+| AR-06 | Four new named routes below create/capture actual Portal reviews with authenticated membership, ADMIN+CSRF, expected parent/workflow/projection revisions, immutable accepted evidence copies, bounded transactions, concurrent idempotency and atomic product audit. Migration 032 creates only the immutable review-capture journal and admits `PORTAL` finding authority; no source tables or command authority change. | Fresh PG public R1 request → independent R1 approval → four concurrent R2 captures → Paper Exit creation/read → Portal REJECT. Sandbox note capture/read/replay; late audit-failure rollback; changed-key-payload409; role/workspace negatives; immutable lineage. Workflow rows are not inserted by the new acceptance path. Trusted research/projection fixtures remain explicitly test inputs. |
+| AR-07 | Real FE readers consume canonical R1 plus all five local SSE fixtures. New governance response fixtures pass strict canonical schema and actual FE readers. Generator owns all types; no manual generated edits. Route/table inventories are updated without fabricating new runtime row counts. | Canonical fixture/type parity, Control API producer-schema checks, FE full tests/build and focused same-origin browser journeys. |
+
+**Named Portal review/capture API — additive, no TS call:**
+
+| Method/path (prefix `/api/v1/execution`) | Input and result |
+| --- | --- |
+| GET `/governance/review-capture-capabilities?workspace_id=…` | Member-scoped capability catalogue; explicitly distinguishes creating a review from authorizing execution/promotion. |
+| POST `/governance/r2/capture` | Approved R1 + expected R1 version + exact Paper deployment/portfolio/existing risk-grant + expected projection digest + requested currency + Portal note. Creates a pending R2 review, not a new execution grant. |
+| POST `/governance/paper-exit/create` | Existing pending/approved R2 lineage + expected R2 version + exact deployment/projection digest + Portal note. Creates a readable review; no fabricated accepted policy evaluation. |
+| POST `/governance/sandbox/capture-note` | Existing DRAFT certification id + expected workflow version + Portal note. Returns its named deployment certification read path; never certifies source steps. |
+
+Every mutation also supplies `workspace_id` and caller-owned `request_key`;
+same payload retries return the original response, changed intent with that key
+returns409. Schemas and generated types are in
+`execution-governance-review-capture.v1.schema.json` / governance OpenAPI;
+`ExecutionApi` exposes `getReviewCaptureCapabilities`, `captureR2`,
+`createPaperExit`, `captureSandboxNote` with actual response readers and
+same-origin session/CSRF handling. The additive client port is delivered;
+**a new visual capture form has not been added or deployed**. Claude owns that
+entry-point composition if requested; existing rich screens are retained.
+
+**Nine-table ownership closure:** all nine now have reachable Portal writers,
+not merely an allowlist or test seed. The machine inventory is
+`r2_ledger/persistence-ownership.v1.json` (original runtime counts remain dated).
+
+| Tables | Writer/input authority |
+| --- | --- |
+| `governance_approval_findings`, `governance_approval_analytics_scopes`, `governance_r2_lineage` | R2 capture from immutable approved R1 and exact accepted current Paper facts. Findings are labeled Portal-authored/INSUFFICIENT; existing grant reference is not a grant issuance. |
+| `governance_paper_exit_reviews`, `governance_paper_exit_findings`, `governance_paper_exit_lineage`, `governance_paper_exit_panels` | Atomic Paper Exit creation; verified artifact/R1/R2/evidence refs and explicitly Portal-owned no-promotion policy. Missing accepted evaluation produces typed unavailable panels, never invented metrics or verdicts. |
+| `governance_sandbox_findings`, `governance_sandbox_step_evidence` | Actor-authored review note and only missing-step UNAVAILABLE markers on an existing DRAFT. Existing accepted evidence is not overwritten. |
+
+**Exact remaining product boundaries, not a fake zero-debt claim:**
+`R2_EXECUTION_DECISION_NOT_COMMISSIONED`,
+`ACCEPTED_EXIT_POLICY_EVALUATION_UNAVAILABLE`, and
+`ACCEPTED_SANDBOX_STEP_EVIDENCE_UNAVAILABLE` remain named action-level refusals.
+This phase closes review creation/read/Portal reject and evidence attribution,
+**not** full R2 execution authorization, Paper promotion or Sandbox source
+certification. It does not downgrade accepted source facts or request a TS
+upgrade. No runtime flags, source data, credentials, main/stable, push/PR or
+deployment are changed. Forward migration/restore is tested only on disposable
+PostgreSQL; immutable audit rows are never deleted to roll back a product action.
+
+**Final gate record — isolated, 2026-09-12:**
+
+| Gate | Result and evidence boundary |
+| --- | --- |
+| Full Control API | **517/517**, 60 test files, TypeScript build, fresh PostgreSQL migration and restore drill passed. Includes real authenticated HTTP create/capture/read/decision paths, not mocks alone. |
+| Canonical contracts | **130/130**, generator and 157-file snapshot parity passed; actual backend producers and frontend readers validate the same capture/analytics contracts. |
+| Frontend | **2,319 passed, 1 pre-existing skip**, 140 test files; typecheck and production build passed. Existing Vite large-chunk warning remains a performance observation, not a silently waived failure. |
+| Browser | **18/18 selected functional journeys**, same-origin BFF doubles and no snapshot-update flag; includes product routing, governance, Alpha/Account and Operations Mine request. This is not a live AWS/data or complete visual acceptance run. |
+| Related Rust | `product-acceptance` **4/4**, `eds12-qualification` **3/3**, clippy `-D warnings` passed offline. No claim of rerunning the entire unrelated Rust workspace. |
+| Repository gate | `./scripts/verify-workspace.sh` passed, including source-bound N29/EDS-12 checks, full Control API/restore, tracking and product-boundary gates. |
+
+Gate logs are local disposable `/tmp/portal-be-r2-8-{control-final,contract-final,frontend-final,browser-final,rust-final,workspace}.log`;
+permanent regressions are the repository test files linked in the table above.
+The browser run used a disposable tracked-source copy because its existing
+evidence writer mutates `e2e/el-v2-03-evidence/controls.json`; Bobby/Claude's
+pre-existing dirty copy was preserved byte-for-byte and is not part of this
+commit. Fixing that browser artifact lifecycle belongs to BE-R2-9.
+
+**Additional gate drift closed:** the baseline N29 JSON already contained
+39 evidence entries (including both BR-EX-76 pins), while its Rust verifier
+expected 38. Corrected the exact count, added missing/extra-pin and forbidden
+authority regression tests. Refreshed only the actual changed source digests
+and dependent N29/EDS-12 manifests; release/source/command authority and
+historical verdicts were not promoted. Static historical candidate metadata
+must not be read as present-day production evidence.
+
+**Next:** BE-R2-9 is still a separately proposed phase (complete SSE event
+sequence/recovery, cancellation/coalescing, local query cost and dev acceptance),
+then BE-R2-7 release evidence. Do not reuse this phase's isolated test results
+as deployed evidence or a grant to activate commands.
 
 **Non-scope:** TS DB/Redis/broker/CLI access; TS execution mutation; runtime
 deployment; new replay authority; rewriting QuantBT or frontend design.
@@ -6424,11 +6506,10 @@ images/SBOM/provenance and independently collected runtime-binding markers;
 
 #### 18.6.4 Decisions requested before implementation
 
-1. Approve **BE-R2-8**, including the proposed Portal-only creation/capture
-   paths in AR-06, or explicitly choose a read-only release with those exact
-   workflows labelled NOT_COMMISSIONED. Recommendation: implement the real
-   Portal-owned paths that can consume already accepted facts; do not ask TS
-   to manufacture evidence or silently call an unreachable flow complete.
+1. **BE-R2-8 approval received 2026-09-12**, including Portal-only creation/
+   capture paths in AR-06. Do not ask again. Implementation and source-only
+   acceptance are recorded above; unavailable source verdicts and unbuilt new
+   visual capture forms remain explicit, not claimed as delivered promotion.
 2. Approve **BE-R2-9** after phase8, including bounded dev-only integration,
    migration/test/rollback scope above. Main/stable and TS command mutation
    remain excluded; no new infrastructure or TS owner request is needed for

@@ -53,29 +53,17 @@ describe("the artifact passport reader reads what is published", () => {
     }
   });
 
-  /* The exact payload the running control-api returned for approval
-     apr_06G6ANQZ032XWF1SF63024XJP1 on probe, 2026-09-11 — trimmed, not
-     invented. This is the shape that was being dropped. */
-  const LIVE = {
-    evidence_id: "ev_06G6ANQZ036X846N5WW61RX245",
-    ordinal: 0,
-    kind: "ALPHA_ARTIFACT",
-    label: "Pinned research artifact",
-    display_value: "d734e2c443d14a92",
-    note: "R1 gate entry for delta-rsi-polynomial-alpha on the completed three_window_decay run d734e2c443d14a92.",
-    verification: "SERVER_PINNED",
-    artifact_id: "d734e2c443d14a92",
-    sha256: "sha256:c652df982779b390083d2787147ffbea8926dd3723e2af8689da543a46863a48",
-    source_authority: "RESEARCH",
-    captured_at: "2026-09-03T03:36:35.324Z",
-  };
-
-  it("prefers the server's own display value over the digest", () => {
-    const entry = readPassportEntry(LIVE);
-    expect(entry).not.toBeNull();
-    expect(entry?.value).toBe("d734e2c443d14a92");
-    expect(entry?.verification).toBe("SERVER_PINNED");
-    expect(entry?.note).toContain("three_window_decay");
+  it("reads every R1 canonical entry with the server's display/verification fields", () => {
+    const r1 = JSON.parse(readFileSync(join(here, "../../../../../packages/contracts/fixtures/execution-governance.r1-review.valid.json"), "utf8"));
+    const published = manifestEntries(r1);
+    expect(published.length).toBeGreaterThan(0);
+    for (const raw of published) {
+      const entry = readPassportEntry(raw);
+      expect(entry).not.toBeNull();
+      expect(entry?.value).toBe(raw.display_value ?? raw.sha256);
+      expect(entry?.verification).toBe(raw.verification);
+      expect(entry?.note ?? null).toBe(raw.note ?? null);
+    }
   });
 
   it("still drops an entry with no label and no value of any spelling", () => {

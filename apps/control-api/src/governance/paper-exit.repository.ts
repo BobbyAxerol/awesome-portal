@@ -341,10 +341,10 @@ function plan(row: PlanRow): PaperExitPlanRecord {
 export class PaperExitRepository {
   constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
 
-  async detail(workspaceId: string, reviewId: string): Promise<PaperExitSnapshot | null> {
-    const client = await this.pool.connect();
+  async detail(workspaceId: string, reviewId: string, transaction?: PoolClient): Promise<PaperExitSnapshot | null> {
+    const client = transaction ?? await this.pool.connect();
     try {
-      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      if (!transaction) await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       const approvalResult = await client.query<ApprovalRow>(
         `SELECT approval_id, workspace_id, requester_user_id, requester_username,
                 artifact_creator_user_id, artifact_creator_username, status, policy_version,
@@ -359,7 +359,7 @@ export class PaperExitRepository {
         [workspaceId, reviewId],
       );
       if (!approvalResult.rows[0] || !reviewResult.rows[0]) {
-        await client.query("COMMIT");
+        if (!transaction) await client.query("COMMIT");
         return null;
       }
       // A pg client is a single ordered protocol stream. Keep this snapshot
@@ -389,7 +389,7 @@ export class PaperExitRepository {
         `SELECT * FROM governance_promotion_authority_grants WHERE review_id = $1`,
         [reviewId],
       );
-      await client.query("COMMIT");
+      if (!transaction) await client.query("COMMIT");
       return {
         approval: approval(approvalResult.rows[0]), review: review(reviewResult.rows[0]),
         evidence: evidenceRows.rows.map(evidence), lineage: lineageRows.rows.map(lineage),
@@ -398,10 +398,10 @@ export class PaperExitRepository {
         promotionGrant: grantRows.rows[0] ? grant(grantRows.rows[0]) : null,
       };
     } catch (error) {
-      await client.query("ROLLBACK").catch(() => undefined);
+      if (!transaction) await client.query("ROLLBACK").catch(() => undefined);
       throw error;
     } finally {
-      client.release();
+      if (!transaction) client.release();
     }
   }
 

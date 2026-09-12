@@ -25,26 +25,12 @@ const SRC = resolve(ROOT, "src");
 const TEST = resolve(ROOT, "test");
 
 /**
- * Tables read by `src` whose only writer is a test, each with the reason it is
- * tolerated and who has to resolve it. Measured 2026-09-10; every entry was
- * traced through the migrations, `src`, and the Rust cells under `services/`.
- *
- * These are not waivers of the rule. They are the list of places the rule is
- * already broken, written down so the number can only go down: a new one fails
- * this test on the commit that introduces it.
+ * BE-R2-8 closes the nine legacy entries with reachable Portal review/capture
+ * writers. Their unavailable source-evidence markers are not certifications.
+ * Fresh-PG HTTP tests verify reachability/rollback; this scan prevents new
+ * read-without-create regressions, but does not by itself prove a workflow.
  */
-const KNOWN_READ_WITHOUT_WRITE: Readonly<Record<string, string>> = {
-  governance_paper_exit_reviews:
-    "Blocks the whole Paper-exit flow: paper-exit.service requires a review before a decision can be planned, and nothing creates one. Owner decision — build the creation route or retire the feature.",
-  governance_paper_exit_findings: "Child of governance_paper_exit_reviews; empty until that record can exist.",
-  governance_paper_exit_lineage: "Child of governance_paper_exit_reviews; empty until that record can exist.",
-  governance_paper_exit_panels: "Child of governance_paper_exit_reviews; empty until that record can exist.",
-  governance_approval_findings: "Read by governance.repository for the R1/R2 gate screens; no writer traced. Owner decision.",
-  governance_approval_analytics_scopes: "Read by governance.repository; no writer traced. Owner decision.",
-  governance_r2_lineage: "Read by governance.repository for R2 provenance; no writer traced. Owner decision.",
-  governance_sandbox_findings: "Read by sandbox-certification.repository; no writer traced anywhere — not src, not test, not the Rust cells. Owner decision.",
-  governance_sandbox_step_evidence: "Read by sandbox-certification.repository; no writer traced. Owner decision.",
-};
+const KNOWN_READ_WITHOUT_WRITE: Readonly<Record<string, string>> = {};
 
 function sqlFiles(directory: string): string[] {
   const out: string[] = [];
@@ -90,10 +76,9 @@ function corpus(directory: string): string {
  * Can anything here bring a row of this table into existence?
  *
  * Deliberately not UPDATE or DELETE. `governance_paper_exit_reviews` has both
- * in `src` and is still unreachable, because an UPDATE needs a row that
- * something else created and nothing else does. Counting an UPDATE as a write
- * path is how this gap stayed invisible: the code looks like it maintains the
- * record, and no code can ever produce one.
+ * in the old `src` yet was unreachable until BE-R2-8 added creation. An UPDATE
+ * needs a row that something else created. Counting UPDATE as creation would
+ * hide that regression again.
  */
 function creates(text: string, table: string): boolean {
   return new RegExp(
@@ -140,19 +125,13 @@ describe("every table the product reads can have a row created by the product", 
     }
   });
 
-  it("would fail on a new offender, not merely on the ones already listed", () => {
-    // The guard proved against a table that really is in this state today.
-    const proof = "governance_paper_exit_reviews";
-    expect(reads(src, proof)).toBe(true);
-    expect(creates(src, proof)).toBe(false);
-    // Its INSERT lives only here, under test/ — the alibi, not the defect.
-    expect(creates(tests, proof)).toBe(true);
-    // And one the tests do not write either, which the first version missed.
-    expect(reads(src, "governance_sandbox_findings")).toBe(true);
-    expect(creates(src, "governance_sandbox_findings")).toBe(false);
-    expect(creates(tests, "governance_sandbox_findings")).toBe(false);
-    // And a table with a real writer is not flagged, so the rule is a rule and
-    // not a way of failing everything.
+  it("would fail when a real creation path is removed", () => {
+    const table = "governance_paper_exit_reviews";
+    expect(reads(src, table)).toBe(true);
+    expect(creates(src, table)).toBe(true);
+    const broken = src.replaceAll(/INSERT\s+INTO\s+governance_paper_exit_reviews/gi, "REMOVED_WRITE_PATH");
+    expect(reads(broken, table)).toBe(true);
+    expect(creates(broken, table)).toBe(false);
     expect(creates(src, "execution_incidents")).toBe(true);
   });
 });

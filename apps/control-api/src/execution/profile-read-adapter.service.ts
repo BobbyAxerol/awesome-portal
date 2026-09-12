@@ -91,7 +91,7 @@ const PUBLIC_GROUP_ID = Object.freeze({
 } as const);
 
 interface AdapterGroup {
-  readonly state: "AVAILABLE" | "EMPTY" | "UNAVAILABLE";
+  readonly state: "AVAILABLE" | "EMPTY" | "UNAVAILABLE" | "PARTIAL";
   readonly freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
   readonly completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
   readonly as_of: string | null;
@@ -115,13 +115,17 @@ export class ExecutionProfileReadAdapterService {
     capabilityId: string,
     rawFilters: Record<string, unknown> = {},
   ) {
-    if (!(capabilityId in ADAPTERS)) {
+    if (!Object.hasOwn(ADAPTERS, capabilityId)) {
       throw new ProjectionAdapterError("N32_ADAPTER_NOT_ACCEPTED", 404);
     }
     const adapterId = capabilityId as AdapterId;
     const adapter = ADAPTERS[adapterId];
     const filters = projectionFilters(adapterId, rawFilters);
     const limit = typeof rawFilters.limit === "number" ? rawFilters.limit : MAXIMUM_ROWS_PER_RELATION;
+    if ((rawFilters.limit !== undefined && typeof rawFilters.limit !== "number") ||
+      !Number.isInteger(limit) || limit < 1 || limit > MAXIMUM_ROWS_PER_RELATION) {
+      throw new ProjectionAdapterError("N32_ADAPTER_LIMIT_INVALID", 400);
+    }
     if (!(adapter.profiles as readonly string[]).includes(environment)) {
       throw new ProjectionAdapterError("N32_ADAPTER_PROFILE_NOT_ACCEPTED", 404);
     }
@@ -140,13 +144,15 @@ export class ExecutionProfileReadAdapterService {
       const selected = relation?.items.filter((row) => matchesFilters(row.fields, filters)) ?? [];
       const groupId = publicGroupId(key);
       relations[groupId] = relation ? {
-        state: selected.length > 0 ? "AVAILABLE" : "EMPTY",
+        state: relation.availability === "UNAVAILABLE" ? "UNAVAILABLE"
+          : relation.completeness !== "COMPLETE" ? "PARTIAL" : selected.length > 0 ? "AVAILABLE" : "EMPTY",
         freshness: relation.freshness,
         completeness: relation.completeness,
         as_of: relation.as_of,
-        items: selected.slice(0, limit).map((row) => row.fields),
-        returned_count: Math.min(selected.length, limit),
-        truncated: selected.length > limit,
+        items: relation.availability === "UNAVAILABLE" ? [] : selected.slice(0, limit).map((row) => row.fields),
+        returned_count: relation.availability === "UNAVAILABLE" ? 0 : Math.min(selected.length, limit),
+        truncated: relation.availability !== "UNAVAILABLE" && selected.length > limit,
+        ...(relation.reason_code ? { reason_code: relation.reason_code } : {}),
       } : {
         state: "UNAVAILABLE", freshness: "UNKNOWN", completeness: "UNKNOWN",
         as_of: null, items: [], returned_count: 0, truncated: false,
@@ -154,7 +160,7 @@ export class ExecutionProfileReadAdapterService {
       };
     }
     const states = Object.values(relations).map((relation) => relation.state);
-    return {
+    const response = {
       schema_version: "portal.execution.profile-read-adapter.v1",
       capability_id: capabilityId,
       adapter_revision: adapter.revision,
@@ -164,7 +170,8 @@ export class ExecutionProfileReadAdapterService {
       environment,
       profile_id: profileId,
       state: states.every((state) => state === "EMPTY") ? "EMPTY"
-        : states.some((state) => state === "UNAVAILABLE") ? "PARTIAL" : "AVAILABLE",
+        : states.every((state) => state === "UNAVAILABLE") ? "UNAVAILABLE"
+          : states.some((state) => state === "UNAVAILABLE" || state === "PARTIAL") ? "PARTIAL" : "AVAILABLE",
       projection: {
         epoch: snapshot.projectionEpoch,
         sequence: snapshot.projectionSequence,
@@ -180,6 +187,10 @@ export class ExecutionProfileReadAdapterService {
       },
       relations,
     };
+    if (Buffer.byteLength(JSON.stringify(response), "utf8") > 1024 * 1024) {
+      throw new ProjectionAdapterError("N32_ADAPTER_RESPONSE_TOO_LARGE", 503);
+    }
+    return response;
   }
 }
 

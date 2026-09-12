@@ -18,10 +18,11 @@ pub const DEBT_REVISION: &str = "portal.execution.product-debt-register.v1";
 // BR-EX-72 evidence package.  Keep these values exact instead of silently
 // accepting an arbitrary later expansion of the frozen release candidate.
 const N29_SCREEN_CONTRACT_COUNT: u64 = 25;
-// The committed N29 verifier binds 38 exact evidence artifacts.  Keep this
+// The committed N29 verifier binds 39 exact evidence artifacts, including
+// both BR-EX-76 schema and fixture pins. Keep this
 // Rust guard in lockstep so a valid closeout cannot be rejected merely because
 // the redundant immutable inventory lagged the checked-in contract.
-const N29_EVIDENCE_COUNT: usize = 38;
+const N29_EVIDENCE_COUNT: usize = 39;
 
 const ACCEPTANCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -67,28 +68,35 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         serde_json::from_str(ACCEPTANCE).map_err(|_| AcceptanceError::Malformed)?;
     let debt: Value = serde_json::from_str(DEBT).map_err(|_| AcceptanceError::Malformed)?;
 
-    if text(&acceptance, "/schema_version") != Some(ACCEPTANCE_REVISION)
-        || text(&acceptance, "/phase") != Some("N29")
-        || text(&acceptance, "/decision")
+    validate_acceptance(&acceptance, &debt)
+}
+
+fn validate_acceptance(
+    acceptance: &Value,
+    debt: &Value,
+) -> Result<AcceptanceSummary, AcceptanceError> {
+    if text(acceptance, "/schema_version") != Some(ACCEPTANCE_REVISION)
+        || text(acceptance, "/phase") != Some("N29")
+        || text(acceptance, "/decision")
             != Some("RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING")
-        || text(&acceptance, "/release_channel") != Some("PROTECTED_MAIN_CANDIDATE")
-        || text(&acceptance, "/runtime_effect") != Some("NONE")
+        || text(acceptance, "/release_channel") != Some("PROTECTED_MAIN_CANDIDATE")
+        || text(acceptance, "/runtime_effect") != Some("NONE")
     {
         return Err(AcceptanceError::InventoryDrift);
     }
 
     let summary = AcceptanceSummary {
-        relation_count: number(&acceptance, "/accepted_scope/relations/total")?,
+        relation_count: number(acceptance, "/accepted_scope/relations/total")?,
         commissioned_request_count: number(
-            &acceptance,
+            acceptance,
             "/accepted_scope/commissioned_requests/total",
         )?,
-        portal_read_count: number(&acceptance, "/accepted_scope/portal_reads/total")?,
-        requested_command_count: number(&acceptance, "/accepted_scope/requested_commands/total")?,
-        screen_contract_count: number(&acceptance, "/accepted_scope/screen_contracts/total")?,
-        typed_owner_gap_count: number(&acceptance, "/accepted_scope/n28/owner_gaps")?,
-        release_blocker_count: array(&debt, "/release_blockers")?.len(),
-        product_release_authorized: boolean(&acceptance, "/authority/product_release_authorized")?,
+        portal_read_count: number(acceptance, "/accepted_scope/portal_reads/total")?,
+        requested_command_count: number(acceptance, "/accepted_scope/requested_commands/total")?,
+        screen_contract_count: number(acceptance, "/accepted_scope/screen_contracts/total")?,
+        typed_owner_gap_count: number(acceptance, "/accepted_scope/n28/owner_gaps")?,
+        release_blocker_count: array(debt, "/release_blockers")?.len(),
+        product_release_authorized: boolean(acceptance, "/authority/product_release_authorized")?,
     };
     if summary.relation_count != 96
         || summary.commissioned_request_count != 31
@@ -103,7 +111,7 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
     }
 
     let unavailable = array(
-        &acceptance,
+        acceptance,
         "/accepted_scope/screen_contracts/typed_unavailable_screen_ids",
     )?;
     let actual: BTreeSet<_> = unavailable.iter().filter_map(Value::as_str).collect();
@@ -136,15 +144,15 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         "/authority/live_mutation_authorized",
         "/authority/trading_system_change_authorized",
     ] {
-        if boolean(&acceptance, pointer)? {
+        if boolean(acceptance, pointer)? {
             return Err(AcceptanceError::AuthorityWidened);
         }
     }
-    if !boolean(&acceptance, "/authority/portal_release_candidate")? {
+    if !boolean(acceptance, "/authority/portal_release_candidate")? {
         return Err(AcceptanceError::AuthorityWidened);
     }
 
-    validate_debt_register(&debt)?;
+    validate_debt_register(debt)?;
     Ok(summary)
 }
 
@@ -236,5 +244,49 @@ mod tests {
         assert!(!is_sha256(&format!("sha256:{}", "A".repeat(64))));
         assert!(!is_sha256(&format!("sha256:{}", "a".repeat(63))));
         assert!(!is_sha256(&"a".repeat(64)));
+    }
+
+    #[test]
+    fn evidence_inventory_rejects_missing_and_extra_pins() {
+        let accepted: Value = serde_json::from_str(ACCEPTANCE).unwrap();
+        let debt: Value = serde_json::from_str(DEBT).unwrap();
+        assert!(accepted["evidence"].get("br76_schema_sha256").is_some());
+        assert!(accepted["evidence"].get("br76_fixture_sha256").is_some());
+        let mut missing = accepted.clone();
+        missing["evidence"]
+            .as_object_mut()
+            .unwrap()
+            .remove("br76_fixture_sha256");
+        assert_eq!(
+            validate_acceptance(&missing, &debt),
+            Err(AcceptanceError::InventoryDrift)
+        );
+        let mut extra = accepted;
+        extra["evidence"]["uncommissioned_sha256"] =
+            Value::String(format!("sha256:{}", "a".repeat(64)));
+        assert_eq!(
+            validate_acceptance(&extra, &debt),
+            Err(AcceptanceError::InventoryDrift)
+        );
+    }
+
+    #[test]
+    fn inventory_fix_does_not_authorize_runtime_or_commands() {
+        let accepted: Value = serde_json::from_str(ACCEPTANCE).unwrap();
+        let debt: Value = serde_json::from_str(DEBT).unwrap();
+        for name in [
+            "stable_deployment_authorized",
+            "source_activation_authorized",
+            "command_activation_authorized",
+            "live_mutation_authorized",
+            "trading_system_change_authorized",
+        ] {
+            let mut widened = accepted.clone();
+            widened["authority"][name] = Value::Bool(true);
+            assert_eq!(
+                validate_acceptance(&widened, &debt),
+                Err(AcceptanceError::AuthorityWidened)
+            );
+        }
     }
 }

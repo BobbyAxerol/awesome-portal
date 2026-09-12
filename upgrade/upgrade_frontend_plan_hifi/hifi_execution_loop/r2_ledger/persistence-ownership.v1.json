@@ -844,10 +844,10 @@
     },
     {
       "table": "governance_approval_analytics_scopes",
-      "writer_owner": "RETIRED_PENDING_REMOVAL",
-      "ingress": "NO_WRITE_SQL",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 0,
         "delete": 0,
         "read": 2
@@ -855,10 +855,10 @@
       "readers": 2,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-      "reached_via": "-"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: R2 scope uses exact alpha/portfolio/account/deployment of the pinned Paper projection.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "governance_approval_decisions",
@@ -898,10 +898,10 @@
     },
     {
       "table": "governance_approval_findings",
-      "writer_owner": "RETIRED_PENDING_REMOVAL",
-      "ingress": "NO_WRITE_SQL",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 0,
         "delete": 0,
         "read": 1
@@ -909,10 +909,10 @@
       "readers": 1,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-      "reached_via": "-"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: Portal-authored blocking review note; source evidence remains separately verified.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "governance_approval_history",
@@ -1084,10 +1084,10 @@
     },
     {
       "table": "governance_paper_exit_findings",
-      "writer_owner": "RETIRED_PENDING_REMOVAL",
-      "ingress": "NO_WRITE_SQL",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 0,
         "delete": 0,
         "read": 1
@@ -1095,17 +1095,17 @@
       "readers": 1,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-      "reached_via": "-"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: Portal-authored INSUFFICIENT findings only; accepted observation-policy evaluation is not fabricated.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "governance_paper_exit_lineage",
-      "writer_owner": "RETIRED_PENDING_REMOVAL",
-      "ingress": "NO_WRITE_SQL",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 0,
         "delete": 0,
         "read": 1
@@ -1113,17 +1113,17 @@
       "readers": 1,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-      "reached_via": "-"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: Atomic immutable R1/R2/artifact/policy/evidence references copied and verified on review creation.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "governance_paper_exit_panels",
-      "writer_owner": "RETIRED_PENDING_REMOVAL",
-      "ingress": "NO_WRITE_SQL",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 0,
         "delete": 0,
         "read": 1
@@ -1131,17 +1131,17 @@
       "readers": 1,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-      "reached_via": "-"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: Explicit unavailable policy-evaluation panels, not empty metrics or fabricated PASS.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "governance_paper_exit_reviews",
-      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "writer_owner": "PORTAL_WORKFLOW",
       "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 1,
         "delete": 0,
         "read": 3
@@ -1149,10 +1149,10 @@
       "readers": 3,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "UPDATE/DELETE only, no INSERT: rows can be modified but never created",
-      "reached_via": "activation.controller.ts,governance.controller.ts"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: Portal creates PENDING review from immutable R1/R2 evidence and a pinned Paper deployment; no automatic promotion.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "governance_promotion_authority_grants",
@@ -1174,10 +1174,10 @@
     },
     {
       "table": "governance_r2_lineage",
-      "writer_owner": "RETIRED_PENDING_REMOVAL",
-      "ingress": "NO_WRITE_SQL",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 0,
         "delete": 0,
         "read": 1
@@ -1185,10 +1185,10 @@
       "readers": 1,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-      "reached_via": "-"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: Observed existing risk grant and approved R1 reference, not creation of an execution grant.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "governance_sandbox_certification_events",
@@ -1228,10 +1228,10 @@
     },
     {
       "table": "governance_sandbox_findings",
-      "writer_owner": "RETIRED_PENDING_REMOVAL",
-      "ingress": "NO_WRITE_SQL",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 0,
         "delete": 0,
         "read": 2
@@ -1239,10 +1239,10 @@
       "readers": 2,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-      "reached_via": "-"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: Actor-authored PORTAL note on existing DRAFT certification, never broker/TS evidence.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "governance_sandbox_promotion_plans",
@@ -1282,10 +1282,10 @@
     },
     {
       "table": "governance_sandbox_step_evidence",
-      "writer_owner": "RETIRED_PENDING_REMOVAL",
-      "ingress": "NO_WRITE_SQL",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
       "verbs": {
-        "insert": 0,
+        "insert": 1,
         "update": 0,
         "delete": 0,
         "read": 1
@@ -1293,10 +1293,10 @@
       "readers": 1,
       "rows_dev": 0,
       "rows_stable": 0,
-      "retention": "UNDECLARED",
-      "disposal_decision": "PENDING_OWNER",
-      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-      "reached_via": "-"
+      "retention": "RETAIN_WITH_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: Only missing steps get PORTAL/UNAVAILABLE markers; no accepted step is overwritten or certified.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
       "table": "outbox_messages",
@@ -1441,7 +1441,27 @@
       "disposal_decision": "PENDING_OWNER",
       "note": "write method exists but the call graph does not reach a controller or worker",
       "reached_via": "-"
+    },
+    {
+      "table": "governance_review_captures",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "IMMUTABLE_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: append-only idempotency response journal, atomic with review rows and product audit; immutable trigger. Not a projection/cache/TS table.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService.capture"
     }
   ],
-  "views_note": "PostgreSQL reports four views in public. They are read by the control-api, so they are listed; a view never has its own writer."
+  "views_note": "PostgreSQL reports four views in public. They are read by the control-api, so they are listed; a view never has its own writer.",
+  "code_inventory_updated_at": "2026-09-12",
+  "runtime_counts_note": "rows_dev/rows_stable remain the 2026-09-10 observations, not a deployment claim for BE-R2-8. New tables have null counts until deployment."
 }

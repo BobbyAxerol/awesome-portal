@@ -1,0 +1,15 @@
+{
+  "schema_version": "governance.review-capture.v1",
+  "authority": "PORTAL",
+  "workspace_id": "ws_fixture",
+  "action": "SANDBOX_NOTE",
+  "replayed": false,
+  "source_side_effect_requested": false,
+  "aggregate_id": "sc_capture",
+  "workflow_version": 1,
+  "source_verdict": "NOT_ASSERTED",
+  "certification_id": "sc_capture",
+  "deployment_id": "dep_fixture",
+  "read_path": "/api/v1/execution/deployments/dep_fixture/certification",
+  "decision_reason_code": "ACCEPTED_SANDBOX_STEP_EVIDENCE_UNAVAILABLE"
+}

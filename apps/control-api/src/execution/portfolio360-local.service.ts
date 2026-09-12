@@ -33,13 +33,13 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 import { AnalyticsProxyError } from "./analytics.proxy";
 import {
   LocalQueryAnalyticsService,
-  type PortfolioStatistics,
+  compareDecimal,
 } from "./local-query-analytics.service";
 import {
   MaximumDataOperationError,
   MaximumDataOperationService,
 } from "./maximum-data-operation.service";
-import { ExecutionProfileProjectionRepository } from "./profile-projection.repository";
+import { ExecutionProfileProjectionRepository, ProjectionEnvironment } from "./profile-projection.repository";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
@@ -63,8 +63,8 @@ const DECIMAL = /^-?\d+(\.\d+)?$/;
 
 /** A published decimal, or null. Never coerced: a value we cannot read is absent. */
 const decimalOf = (row: Row, key: string): string | null => {
-  const raw = text(row, key);
-  return raw !== null && DECIMAL.test(raw) ? raw : null;
+  const raw = row[key];
+  return typeof raw === "string" && raw.length <= 128 && DECIMAL.test(raw) ? raw : null;
 };
 
 const millis = (row: Row, key: string): number | null => {
@@ -129,8 +129,9 @@ export class Portfolio360LocalService {
    * than two strategies with overlapping history has no pair to show, and says
    * so as an empty ranked set rather than an error.
    */
-  async correlation(principal: Portfolio360Principal, portfolioId: string): Promise<Record<string, unknown>> {
-    const { statistics, strategies, version, readAt } = await this.portfolioContext(principal, portfolioId);
+  async correlation(principal: Portfolio360Principal, portfolioId: string, environment: ProjectionEnvironment = "paper"): Promise<Record<string, unknown>> {
+    const context = await this.portfolioContext(principal, portfolioId, environment);
+    const { statistics, strategies, version, readAt } = context;
     const mine = new Set(strategies);
     const pairs = (statistics?.correlation.pairs ?? [])
       .filter((pair) => mine.has(pair.left_alpha) && mine.has(pair.right_alpha))
@@ -145,6 +146,8 @@ export class Portfolio360LocalService {
 
     return this.envelope({
       formulaVersion: "portfolio-correlation-returns.v1",
+      ...context,
+      environment,
       panelState: pairs.length > 0 ? "ok" : "empty",
       version,
       readAt,
@@ -175,18 +178,22 @@ export class Portfolio360LocalService {
    * publishes a USDT and a VND series on dev, and a per-portfolio row would
    * pair a first equity in one currency with a last equity in the other.
    */
-  async crossEquity(principal: Portfolio360Principal, portfolioId: string): Promise<Record<string, unknown>> {
-    const { version, readAt } = await this.portfolioContext(principal, portfolioId);
+  async crossEquity(principal: Portfolio360Principal, portfolioId: string, environment: ProjectionEnvironment = "paper"): Promise<Record<string, unknown>> {
+    const context = await this.portfolioContext(principal, portfolioId, environment);
+    const { version, readAt } = context;
     const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
-    const profileId = this.config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+    const profileId = environment === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID
+      : environment === "sandbox" ? this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
     if (!workspaceId || !profileId) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED", 503);
     }
     const standings = await this.projections.portfolioEquityStandings(
-      workspaceId, "paper", profileId, PORTFOLIO_EQUITY_RELATION,
+      workspaceId, environment, profileId, PORTFOLIO_EQUITY_RELATION,
     );
     return this.envelope({
       formulaVersion: "portfolio-cross-equity.v1",
+      ...context,
+      environment,
       panelState: standings.length > 0 ? "ok" : "empty",
       version,
       readAt,
@@ -215,9 +222,10 @@ export class Portfolio360LocalService {
    * The portfolio's capital movements, bucketed by the currency they were
    * moved in — never summed across currencies.
    */
-  async capitalLedger(principal: Portfolio360Principal, portfolioId: string): Promise<Record<string, unknown>> {
-    const { version, readAt } = await this.portfolioContext(principal, portfolioId);
-    const { rows, hasMore } = await this.ledgerRows(principal, portfolioId);
+  async capitalLedger(principal: Portfolio360Principal, portfolioId: string, environment: ProjectionEnvironment = "paper"): Promise<Record<string, unknown>> {
+    const context = await this.portfolioContext(principal, portfolioId, environment);
+    const { version, readAt } = context;
+    const { rows, hasMore, freshness, asOf, complete, reason } = await this.ledgerRows(principal, portfolioId, environment);
 
     const buckets = new Map<string, {
       entries: Record<string, unknown>[];
@@ -237,7 +245,7 @@ export class Portfolio360LocalService {
 
       // Direction from the two published allocations, never from the amount's
       // sign: a withdrawal and a deposit can both carry a positive amount.
-      const delta = Number(after) - Number(before);
+      const delta = compareDecimal(after, before);
       const direction = delta > 0 ? "INCREASE" : delta < 0 ? "DECREASE" : "UNCHANGED";
 
       const bucket = buckets.get(currency) ?? { entries: [], grossIncrease: "0", grossDecrease: "0" };
@@ -260,8 +268,17 @@ export class Portfolio360LocalService {
     }
 
     const entryCount = [...buckets.values()].reduce((total, bucket) => total + bucket.entries.length, 0);
+    const visibleIds = new Set([...buckets.values()].flatMap(bucket => bucket.entries)
+      .sort((left,right) => String(right.occurred_at ?? "").localeCompare(String(left.occurred_at ?? "")) ||
+        String(left.ledger_id).localeCompare(String(right.ledger_id)))
+      .slice(0,250).map(entry=>entry.ledger_id));
     return this.envelope({
       formulaVersion: "portfolio-capital-ledger.v1",
+      ...context,
+      environment,
+      inputAsOf: asOf,
+      inputFreshness: freshness,
+      inputCompleteness: complete && entryCount === rows.length ? "COMPLETE" : "PARTIAL",
       panelState: entryCount > 0 ? "ok" : "empty",
       version,
       readAt,
@@ -276,12 +293,15 @@ export class Portfolio360LocalService {
             gross_increase: bucket.grossIncrease,
             gross_decrease: bucket.grossDecrease,
             // Newest first: an operator asking what changed reads downwards.
-            entries: [...bucket.entries].sort((left, right) =>
+            entries: bucket.entries.filter(entry=>visibleIds.has(entry.ledger_id)).sort((left, right) =>
               String(right.occurred_at ?? "").localeCompare(String(left.occurred_at ?? ""))),
           })),
         entry_count: entryCount,
-        returned_entry_count: entryCount,
-        has_more: hasMore,
+        returned_entry_count: visibleIds.size,
+        has_more: hasMore || entryCount > visibleIds.size,
+        window: "LATEST",
+        rejected_row_count: rows.length - entryCount,
+        reason_code: reason,
       },
     });
   }
@@ -290,9 +310,15 @@ export class Portfolio360LocalService {
   private async ledgerRows(
     principal: Portfolio360Principal,
     portfolioId: string,
-  ): Promise<{ rows: Row[]; hasMore: boolean }> {
-    if (!this.operations) return { rows: [], hasMore: false };
+    environment: ProjectionEnvironment,
+  ) {
+    if (!this.operations) throw new AnalyticsProxyError("ANALYTICS_LEDGER_NOT_CONFIGURED", 503);
     const rows: Row[] = [];
+    let freshness = "OK";
+    let asOf: string | null = null;
+    let complete = true;
+    let reason: string | null = null;
+    const result = (hasMore: boolean) => ({ rows, hasMore, freshness, asOf, complete: complete && !hasMore, reason });
     let cursor: string | undefined;
     for (let page = 0; page < LEDGER_MAX_PAGES; page += 1) {
       let response: Record<string, unknown>;
@@ -300,15 +326,29 @@ export class Portfolio360LocalService {
         response = await this.operations.relationPage(
           principal,
           "portfolio-capital-ledger",
-          { environment: "paper", limit: LEDGER_PAGE, ...(cursor ? { cursor } : {}) },
+          { environment, limit: LEDGER_PAGE, ...(cursor ? { cursor } : {}) },
         ) as Record<string, unknown>;
       } catch (error) {
         // A refused page is not an empty ledger. Rows already read are kept and
         // reported as incomplete; nothing is invented for the pages we lost.
-        if (error instanceof MaximumDataOperationError) return { rows, hasMore: true };
+        if (error instanceof MaximumDataOperationError) {
+          if (rows.length === 0) throw new AnalyticsProxyError("ANALYTICS_LEDGER_SOURCE_UNAVAILABLE", 503);
+          reason = "ANALYTICS_LEDGER_PAGE_UNAVAILABLE";
+          freshness = "UNKNOWN";
+          return result(true);
+        }
         throw error;
       }
       const records = Array.isArray(response.records) ? response.records : [];
+      const metadata = (response.source_health ?? {}) as Record<string, unknown>;
+      if (metadata.freshness === "STALE") freshness = "STALE";
+      else if (metadata.freshness !== "FRESH" && metadata.freshness !== "AGING" && freshness !== "STALE") freshness = "UNKNOWN";
+      complete = complete && metadata.completeness === "COMPLETE";
+      const stamp = metadata.as_of_ms;
+      if (typeof stamp === "number" && Number.isSafeInteger(stamp) && Math.abs(stamp) <= 8.64e15) {
+        const value = new Date(stamp).toISOString();
+        if (asOf === null || value < asOf) asOf = value;
+      } else { complete = false; freshness = freshness === "STALE" ? freshness : "UNKNOWN"; }
       for (const record of records) {
         const values = (record as Record<string, unknown> | null)?.values;
         if (typeof values !== "object" || values === null) continue;
@@ -317,21 +357,18 @@ export class Portfolio360LocalService {
       }
       const pageInfo = (response.page ?? {}) as Record<string, unknown>;
       const next = typeof pageInfo.next_cursor === "string" ? pageInfo.next_cursor : null;
-      if (pageInfo.has_more !== true || !next) return { rows, hasMore: false };
+      if (pageInfo.has_more !== true) return result(false);
+      if (!next || next === cursor) { reason = "ANALYTICS_LEDGER_CONTINUATION_MISSING"; return result(true); }
       cursor = next;
     }
-    return { rows, hasMore: true };
+    reason = "ANALYTICS_LEDGER_BOUNDED_POPULATION";
+    return result(true);
   }
 
   /** The portfolio's strategies and the fleet statistics, from one snapshot read. */
-  private async portfolioContext(principal: Portfolio360Principal, portfolioId: string): Promise<{
-    statistics: PortfolioStatistics | null;
-    strategies: string[];
-    version: string;
-    readAt: string;
-  }> {
+  private async portfolioContext(principal: Portfolio360Principal, portfolioId: string, environment: ProjectionEnvironment) {
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
-    const view = await this.analytics.portfolioView({ workspaceId: principal.workspaceId }, portfolioId);
+    const view = await this.analytics.portfolioView({ workspaceId: principal.workspaceId }, portfolioId, environment);
     return { ...view, readAt: new Date().toISOString() };
   }
 
@@ -343,10 +380,15 @@ export class Portfolio360LocalService {
     readAt: string;
     windowDays: number | null;
     data: Record<string, unknown>;
+    environment: ProjectionEnvironment;
+    inputAsOf: string | null;
+    inputFreshness: string;
+    inputCompleteness: string;
   }): Record<string, unknown> {
     const [epoch, sequence] = input.version.split(":");
     return {
       schema_version: "portal.execution.portfolio-360-local.v1",
+      environment: input.environment,
       epoch_id: epoch ?? null,
       source_snapshot_id: input.version,
       capability_snapshot_id: input.version,
@@ -357,12 +399,13 @@ export class Portfolio360LocalService {
       freshness_policy_version: "portal.execution.local-projection.v1",
       read_at: input.readAt,
       analytics: {
+        schema_version: "execution.analytics.v1",
         formula_version: input.formulaVersion,
         source_authority: "DERIVED",
-        input_freshness_floor: "OK",
+        input_freshness_floor: input.inputFreshness,
         panel_state: input.panelState,
-        input_completeness: "PARTIAL",
-        input_as_of: input.readAt,
+        input_completeness: input.inputCompleteness === "COMPLETE" && input.data.has_more !== true ? "COMPLETE" : "PARTIAL",
+        input_as_of: input.inputAsOf,
         ...(input.windowDays === null ? {} : { window: `${input.windowDays}d` }),
         warnings: [],
         data: input.data,

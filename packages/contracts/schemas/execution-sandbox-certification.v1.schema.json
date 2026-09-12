@@ -240,7 +240,7 @@
             "properties": {
               "finding_id": { "$ref": "#/$defs/Identifier" },
               "severity": { "enum": ["INFO", "WARNING", "ERROR", "CRITICAL"] },
-              "source_authority": { "enum": ["EXECUTION", "BROKER", "DERIVED"] },
+              "source_authority": { "enum": ["PORTAL", "EXECUTION", "BROKER", "DERIVED"] },
               "finding_code": { "type": "string", "minLength": 1 },
               "summary": { "type": "string", "minLength": 8 },
               "blocking": { "type": "boolean" },

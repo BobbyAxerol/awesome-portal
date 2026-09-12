@@ -539,7 +539,10 @@ test.describe("EL-V2-07 · operations workflow", () => {
 
   test("Queue: the rail follows the selected row", async ({ page }) => {
     await open(page, "/execution/operations");
-    await page.getByRole("button", { name: /All \(24h\)/ }).click();
+    const mine = page.waitForRequest(request => new URL(request.url()).searchParams.get("assigned_to") === "me");
+    await page.getByRole("button", { name: /^Mine/ }).click();
+    expect(new URL((await mine).url()).origin).toBe(new URL(page.url()).origin);
+    await page.getByRole("button", { name: /All retained/ }).click();
     const links = page.locator("tbody .exec-linkbtn");
     const first = (await links.nth(0).textContent())!.trim();
     await expect(page.locator(".exec-context-rail")).toContainText("Select an operation");

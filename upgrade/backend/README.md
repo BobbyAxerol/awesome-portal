@@ -1916,3 +1916,15 @@ reproductions and the remaining code-trace findings are recorded once in
 BE-R2-8 owns read authority/truth/financial/profile/workflow contracts;
 BE-R2-9 owns realtime/cancellation/local cost/dev evidence. Both are
 `PROPOSED_AWAITING_OWNER_APPROVAL`. No fixes or runtime actions have started.
+
+**2026-09-12 BE-R2-8 update (supersedes the approval state above only for 8):**
+Bobby approved AR-01–07. Implemented shared local-read authority, exact scoped
+truth/value/profile contracts, safe FE identity retention and Operations filter
+alignment. Portal review-capture APIs and forward migration032 close the nine
+missing writer paths with atomic audit/immutable lineage; missing source verdicts
+stay explicitly unavailable and do not open commands or promotion. Generated
+contracts/readers and actual public create/read/decision tests accompany the
+change. See the single [main phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-8--exact-read-authority-and-complete-screen-contract-alignment)
+for exact routes, gates and remaining action-level product boundaries.
+No runtime deployment, source connection, push, PR, merge or main/stable change.
+BE-R2-9 and the later BE-R2-7 operational gate are not silently marked complete.

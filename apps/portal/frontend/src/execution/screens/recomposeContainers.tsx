@@ -280,7 +280,7 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
   // The realtime channel bumps `refreshKey`; without `keepValue` every bump
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api, realtime.refreshKey], { keepValue: true });
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
   /*
    * Phase 4: `/derivations/source-health` answered 200 for weeks with no
    * caller. Command Center gets the same facts inside its composition, so a
@@ -322,7 +322,7 @@ export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
   // The realtime channel bumps `refreshKey`; without `keepValue` every bump
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("sandbox"), [api, realtime.refreshKey], { keepValue: true });
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("sandbox"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
   const relations = useRelationFacts(api, "sandbox", state.status !== "loading", SANDBOX_RELATIONS);
   const panels = sandboxPanels({
     relations: relations.value,
@@ -337,7 +337,7 @@ export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
   // The realtime channel bumps `refreshKey`; without `keepValue` every bump
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api, realtime.refreshKey], { keepValue: true });
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
   return <LiveOverview envelope={state.value} status={state.status} reason={state.reason} realtimePhase={realtime.phase} sourceRecovery={realtime.source} />;
 }
 
@@ -353,9 +353,9 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
   const state = useApiRead<ProfileEnvelope>(
     () => api.getPaperWorkbenchProfile(deploymentId, variant),
     [api, deploymentId, variant, realtime.refreshKey],
-    { keepValue: true },
+    { keepValue: true, identity: [api, deploymentId, variant] },
   );
-  const qualityState = useApiRead<DeploymentQuality>(() => api.getDeploymentQuality(deploymentId, "paper"), [api, deploymentId, realtime.refreshKey], { keepValue: true });
+  const qualityState = useApiRead<DeploymentQuality>(() => api.getDeploymentQuality(deploymentId, "paper"), [api, deploymentId, realtime.refreshKey], { keepValue: true, identity: [api, deploymentId] });
   const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
   const navigate = useNavigate();
   const profile = state.value;
@@ -471,7 +471,7 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
   }), [api, cursor, filter, realtime.refreshKey],
     // The paper stream ticks this key; without keepValue the blotter emptied
     // itself on every delta and re-drew, which reads as the table failing.
-    { keepValue: true });
+    { keepValue: true, identity: [api, cursor, filter] });
   const blotterGroups = useBlotterGroups(api, "paper");
   /*
    * Phase 5 · the conditional-group drill.
@@ -1537,7 +1537,7 @@ export function ObservedTimelineLive({ api, environment, environments, subjectKi
       ? api.getObservedTimeline({ environment: env, subjectKind, subjectId, limit: 100 })
       : Promise.resolve({ ok: false as const, status: "empty" as const, reason: "read by the screen" })),
     [api, env, subjectKind, subjectId, refreshKey, tick, preloaded === undefined],
-    { keepValue: true },
+    { keepValue: true, identity: [api, env, subjectKind, subjectId, preloaded === undefined] },
   );
   const state = preloaded ?? own;
   const latest = useRef(onLoaded);
@@ -1624,15 +1624,15 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   // one named server BFF. Fleet remains the root register only; a detail route
   // never searches its first bounded page in the browser.
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
-  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId, { sourceFacts: false }), [api, alphaId, realtime.refreshKey], { keepValue: true });
+  const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true, identity: [api, alphaId] });
   // Tile 10 compares the stages this alpha actually runs in, on one calendar.
-  const stageDrift = useApiRead(() => api.getStageDrift(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
+  const stageDrift = useApiRead(() => api.getStageDrift(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true, identity: [api, alphaId] });
   // EDS-05: the rollup is read in the environment the resource resolved to; paper until it says otherwise.
   const activityEnv = resourceState.value?.selectedEnvironment ?? "paper";
   // G8: the observed timeline reads where the alpha is deployed; selected_environment is only the resolver default.
   const observedEnvs = deployedEnvironments(resourceState.value?.panels);
   const factsEnv: ObservedEnvironment = observedEnvs.includes(activityEnv) ? activityEnv : observedEnvs[0] ?? activityEnv;
+  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId, { sourceFacts: false, environment: factsEnv }), [api, alphaId, factsEnv, realtime.refreshKey], { keepValue: true, identity: [api, alphaId, factsEnv] });
   // One read of the observed timeline for the whole screen: the panel renders
   // it, and the Observed timeline and Mark context tiles draw from the same
   // page. Neither waits on the other's tab being open.
@@ -1640,13 +1640,13 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const observedState = useApiRead<ObservedTimeline>(
     () => api.getObservedTimeline({ environment: factsEnv, subjectKind: "alpha", subjectId: alphaId, limit: 100 }),
     [api, factsEnv, alphaId, realtime.refreshKey, observedTick],
-    { keepValue: true },
+    { keepValue: true, identity: [api, factsEnv, alphaId] },
   );
   const observedForTiles = observedState.value;
   // G9 (EDS-11R1): the replay and the order funnel read the drained relation page set of the alpha's environment
   // Drains once the resource read has answered — ok or not: a subject whose resource is denied or absent still has its rows in the page set (env falls back to the rollup default)
   const relations = useSubjectActivityFacts(api, factsEnv, { kind: "alpha", id: alphaId }, resourceState.status !== "loading", realtime.refreshKey);
-  const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true });
+  const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true, identity: [api, alphaId, activityEnv] });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   // deep link from the Blotter / a shared URL: `?tab=Trade%20Replay&focus=order:123` (or fill:…)
   const focus = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("focus") : null;
@@ -1789,7 +1789,7 @@ export function PortfolioListRichContainer({ api }: { api: ExecutionApi }) {
   // register. The default portfolio is whatever the data holds — the route
   // never invents an id.
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const state = useApiRead(() => api.listPortfolios(), [api, realtime.refreshKey], { keepValue: true });
+  const state = useApiRead(() => api.listPortfolios(), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
   const navigate = useNavigate();
   const status: PanelStatus = state.status === "ok" && state.value?.completeness === "PARTIAL" ? "partial" : state.status;
   return (
@@ -1808,18 +1808,19 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   // on the server.  The browser does not fetch a Fleet page and re-create the
   // former portfolio/alpha join.
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const resourceState = useApiRead<ProfileEnvelope>(() => api.getPortfolio360Resource(portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
-  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId, { sourceFacts: false }), [api, portfolioId, realtime.refreshKey], { keepValue: true });
-  const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
-  const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
-  const crossEquityState = useApiRead(() => api.getCrossEquity(portfolioId), [api, portfolioId]);
+  const resourceState = useApiRead<ProfileEnvelope>(() => api.getPortfolio360Resource(portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
+  const portfolioEnvironment = resourceState.value?.selectedEnvironment ?? "paper";
+  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId, { sourceFacts: false, environment: portfolioEnvironment }), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
+  const correlationState = useApiRead(() => api.getCorrelation(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
+  const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
+  const crossEquityState = useApiRead(() => api.getCrossEquity(portfolioId, portfolioEnvironment), [api, portfolioId, portfolioEnvironment, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId, portfolioEnvironment] });
   // EDS-05 capital is a separate book per environment; all three are read and
   // shown as partitions, never folded (the resource's selected environment
   // alone would hide a paper book behind an empty live one).
-  const capitalPaper = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "paper"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
-  const capitalSandbox = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "sandbox"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
-  const capitalLive = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "live"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
-  const portfolioRelations = useRelationFacts(api, "paper", true, PORTFOLIO_RELATIONS);
+  const capitalPaper = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "paper"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
+  const capitalSandbox = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "sandbox"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
+  const capitalLive = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "live"), [api, portfolioId, realtime.refreshKey], { keepValue: true, identity: [api, portfolioId] });
+  const portfolioRelations = useRelationFacts(api, portfolioEnvironment, true, PORTFOLIO_RELATIONS);
   // Goal 10: the equity panel drew whatever the relation drain happened to
   // carry — 134 points here — while the EDS-07 route answers the same portfolio
   // with 1,278 from 4,592 source rows. The relation stays for the
@@ -1828,15 +1829,15 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const [pfPreset, setPfPreset] = useState<RangePreset | null>("ALL");
   const pfChartState = useApiRead<FinancialChartPayload>(
     () => api.getFinancialChart({
-      environment: "paper",
+      environment: portfolioEnvironment,
       subjectKind: "portfolio",
       subjectId: portfolioId,
       metric: "equity",
       viewportPx: typeof window !== "undefined" ? window.innerWidth : undefined,
       ...(pfRange ? { fromMs: pfRange.fromMs, toMs: pfRange.toMs } : {}),
     }),
-    [api, portfolioId, pfRange?.fromMs, pfRange?.toMs, realtime.refreshKey],
-    { keepValue: true },
+    [api, portfolioId, portfolioEnvironment, pfRange?.fromMs, pfRange?.toMs, realtime.refreshKey],
+    { keepValue: true, identity: [api, portfolioId, portfolioEnvironment, pfRange?.fromMs, pfRange?.toMs] },
   );
   const pfChart = pfChartState.value ? financialChartView(pfChartState.value) : null;
   const pfExtent = useRetainedExtent(pfChart, pfRange !== null);
@@ -1942,7 +1943,7 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
 
 export function AccountBroker360RichContainer({ api, accountId }: { api: ExecutionApi; accountId: string }) {
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const state = useApiRead<ProfileEnvelope>(() => api.getAccount360Resource(accountId), [api, accountId, realtime.refreshKey], { keepValue: true });
+  const state = useApiRead<ProfileEnvelope>(() => api.getAccount360Resource(accountId), [api, accountId, realtime.refreshKey], { keepValue: true, identity: [api, accountId] });
   // EDS-07: the chart is read for the environment and projection workspace the
   // resource resolved to; the server rejects any other workspace, so the id is
   // never guessed here. Viewport = the window width, clamped by the path builder.
@@ -1959,9 +1960,9 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
     return ids.size === 1 ? [...ids][0]! : null;
   }, [state.value]);
   const accountAnalytics = useApiRead<QueryAnalytics>(
-    () => (accountStrategy ? api.getQueryAnalytics("alphas", accountStrategy) : Promise.resolve(unavailable("The account is not deployed for exactly one strategy; no additive facts."))),
-    [api, accountStrategy, realtime.refreshKey],
-    { keepValue: true },
+    () => (accountStrategy ? api.getQueryAnalytics("alphas", accountStrategy, { environment: chartEnv, accountId }) : Promise.resolve(unavailable("The account is not deployed for exactly one strategy; no additive facts."))),
+    [api, accountId, accountStrategy, chartEnv, realtime.refreshKey],
+    { keepValue: true, identity: [api, accountId, accountStrategy, chartEnv] },
   );
   // Goal 10: the window preset is a server query, not a crop of what was
   // already downloaded. Asking the server for one week returns that week's real
@@ -1980,9 +1981,8 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
       ...(chartRange ? { fromMs: chartRange.fromMs, toMs: chartRange.toMs } : {}),
     }),
     [api, accountId, chartEnv, chartWorkspace, realtime.refreshKey, chartRange?.fromMs, chartRange?.toMs],
-    // Without this the chart tears down to a skeleton on every window change,
-    // which reads as a failure rather than a narrower question.
-    { keepValue: true },
+    // Retain on refresh only; a different account/profile/range is new data.
+    { keepValue: true, identity: [api, accountId, chartEnv, chartWorkspace, chartRange?.fromMs, chartRange?.toMs] },
   );
   const chart = chartState.value ? financialChartView(chartState.value) : null;
   const chartExtent = useRetainedExtent(chart, chartRange !== null);
@@ -2129,7 +2129,7 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
   // P4-C: the Fleet spans all three profiles; any projection delta revalidates
   // the list in place (coalesced to at most one re-read per second).
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const state = useApiRead(() => api.getAlphaFleet(query), [api, query, realtime.refreshKey], { keepValue: true });
+  const state = useApiRead(() => api.getAlphaFleet(query), [api, query, realtime.refreshKey], { keepValue: true, identity: [api, query] });
   // P0-5: one equity series per alpha is one request per alpha. The row asks
   // for its own when it is expanded and the answer is kept, so a fleet of 48
   // costs nothing until someone looks — and each series is the published one,
@@ -2146,7 +2146,7 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
   const sparklines = useApiRead(
     () => api.getEquitySparklines("paper"),
     [api, realtime.refreshKey],
-    { keepValue: true },
+    { keepValue: true, identity: [api] },
   );
   const equity = useMemo(() => {
     const out: Record<string, readonly number[] | "loading" | null> = {};
@@ -2195,7 +2195,7 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
   const listState = useApiRead(() => api.getBindings(query), [api, query, realtime.refreshKey],
     // The subscription added today ticks this key; the register must not
     // blank itself every time one of the three projections advances.
-    { keepValue: true });
+    { keepValue: true, identity: [api, query] });
   /*
    * Phase 4: the screen's own prop says these facts come from
    * `GET /broker-bindings/{id}` (BR-EX-72), and they did not — the container

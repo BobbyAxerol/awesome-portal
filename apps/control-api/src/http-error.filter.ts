@@ -27,6 +27,7 @@ import { DurableFinancialReadError } from "./execution/durable-financial.reposit
 import { FinancialQueryCursorError } from "./execution/financial-query-cursor.repository";
 import { FinancialChartError } from "./execution/financial-chart.service";
 import { MarketContextError } from "./execution/market-context.service";
+import { LocalRealtimeError } from "./execution/profile-realtime.service";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -60,7 +61,8 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof DurableFinancialReadError ||
       exception instanceof FinancialQueryCursorError ||
       exception instanceof FinancialChartError ||
-      exception instanceof MarketContextError
+      exception instanceof MarketContextError ||
+      exception instanceof LocalRealtimeError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

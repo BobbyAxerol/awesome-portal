@@ -7,7 +7,7 @@
  * test walks.
  */
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi, Result } from "../api/ports";
 import type {
@@ -30,35 +30,48 @@ import { utcStamp } from "../time";
 
 export type Loaded<T> =
   | { status: "ok"; reason?: undefined; value: T }
+  | { status: "stale"; reason: string; value: T }
   | { status: Exclude<PanelStatus, "ok">; reason?: string; value: null };
 
 export function useApiRead<T>(
   run: () => Promise<Result<T>>,
   deps: readonly unknown[],
-  options?: { keepValue?: boolean },
+  options?: { keepValue?: boolean; identity?: readonly unknown[] },
 ): Loaded<T> {
   const [state, setState] = useState<Loaded<T>>({ status: "loading", value: null });
   const keepValue = options?.keepValue === true;
+  // Retention is opt-in for a named identity. Unclassified dependencies are
+  // conservatively an identity change, never another subject's last-good data.
+  const identity = options?.identity ?? deps;
+  const stateIdentity = useRef<readonly unknown[] | null>(null);
+  const sameIdentity = stateIdentity.current !== null && identity.length === stateIdentity.current.length &&
+    identity.every((value, i) => Object.is(value, stateIdentity.current![i]));
   useEffect(() => {
     let cancelled = false;
     // P4-C: a realtime revalidation refreshes the existing rich panel tree in
     // place — flashing the whole screen to loading once per delta would make
     // live data feel broken. Only the very first read shows loading.
-    setState((current) => keepValue && current.value !== null ? current : { status: "loading", value: null });
+    const retain = keepValue && sameIdentity;
+    stateIdentity.current = [...identity];
+    setState((current) => retain && current.value !== null ? current : { status: "loading", value: null });
     void run().then((result) => {
       if (cancelled) return;
-      setState(
-        result.ok
-          ? { status: "ok", value: result.value }
-          : { status: result.status, reason: result.reason, value: null },
-      );
+      setState((current) => result.ok ? { status: "ok", value: result.value }
+        : retain && current.value !== null && /(?:502|503|TIMEOUT|UPSTREAM_UNAVAILABLE|REFRESH_FAILED)/.test(result.reason) &&
+          !/(?:401|403|FORBIDDEN|DENIED|AUTH|WORKSPACE)/.test(result.reason)
+          ? { status: "stale", reason: result.reason, value: current.value }
+          : { status: result.status, reason: result.reason, value: null });
+    }).catch(() => {
+      if (!cancelled) setState({ status: "unavailable", reason: "PORTAL_READ_FAILED", value: null });
     });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
-  return state;
+  // Hide old values during render too; waiting for an effect leaks one frame
+  // of Alpha A beneath Alpha B's heading.
+  return sameIdentity ? state : { status: "loading", value: null };
 }
 
 const COMMAND_CENTER_REALTIME_SNAPSHOT = "/api/v1/execution/command-center/realtime-snapshot";
@@ -130,7 +143,7 @@ export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: Execu
   // command authority that explains why every control here is dark. It
   // replaces the standalone read rather than joining it, so the screen still
   // issues exactly one request for its snapshot.
-  const state = useApiRead(() => api.getOperationalComposition("command-center"), [api, tick], { keepValue: true });
+  const state = useApiRead(() => api.getOperationalComposition("command-center"), [api, tick], { keepValue: true, identity: [api] });
   const composition = state.value ?? null;
   // The promotion pipeline is the Fleet register read once per visit (BR-EX-72
   // bounded page, 50 alphas); a failed read simply leaves the panel out.

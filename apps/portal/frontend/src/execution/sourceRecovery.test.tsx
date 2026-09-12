@@ -2,12 +2,8 @@
  * BE-R2-5 consumer (`FRONTEND_HANDOFF.md` §8.58): the source coordinator's own
  * health, which the browser had been dropping on the floor.
  *
- * No canonical fixture publishes this envelope yet, so instead of retyping the
- * shape and hoping, these tests bind to the file that emits it. That is the
- * `readPassportEntry` lesson: a fail-closed reader whose field names never
- * matched the producer returns "nothing here" forever and every suite stays
- * green. If codex renames one of these, this goes red rather than the screen
- * quietly reporting UNKNOWN for the rest of its life.
+ * BE-R2-8: consume the shared canonical corpus validated by the producer gate,
+ * not a string search of the implementation or a hand-built positive envelope.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,40 +12,27 @@ import { describe, expect, it } from "vitest";
 import { readProfileRealtime, readSourceRecovery, SOURCE_UNKNOWN } from "./profileRealtime";
 import { liveDot, sourceRecoveryNote } from "./sourceTone";
 
-const SERVICE = readFileSync(
-  join(__dirname, "../../../../../apps/control-api/src/execution/profile-realtime.service.ts"),
-  "utf8",
-);
+const canonical = (event: string) => JSON.parse(readFileSync(join(__dirname,
+  `../../../../../packages/contracts/fixtures/execution-profile-realtime.${event}.valid.json`), "utf8"));
 
 const envelope = (over: Record<string, unknown> = {}) => ({
-  schema_version: "portal.execution.profile-realtime.v1",
-  event_type: "snapshot",
-  terminal: false,
-  reconnect_required: false,
-  cursor: "cur_1",
-  projection_epoch: "ep_1",
-  projection_sequence: 4,
+  ...canonical("snapshot"),
   availability: "DEGRADED",
   freshness: "STALE",
   recovery: { state: "RECOVERING", reason_code: "N31_SOURCE_REFRESH_FAILED", retry_not_before: "2026-09-11T18:00:00.000Z" },
-  payload: {},
   ...over,
 });
 
-describe("§8.58 · the names this reader depends on are the names the server emits", () => {
-  it("finds every field on the producer, so a rename cannot pass silently", () => {
-    // A scan that finds nothing is not a pass.
-    expect(SERVICE.length).toBeGreaterThan(1_000);
-    for (const name of [
-      "availability", "freshness", "recovery", "reason_code", "retry_not_before",
-      "snapshot_mode", "STATUS_ONLY", "RECOVERING", "HEALTHY", "DEGRADED",
-    ]) {
-      expect(SERVICE, name).toContain(name);
-    }
-  });
-
-  it("agrees with the server that a recovering coordinator is never labelled fresh", () => {
-    expect(SERVICE).toMatch(/if \(health\.state === "RECOVERING"\) return "STALE"/);
+describe("§8.58 · canonical producer contract → real consumer", () => {
+  it.each(["snapshot", "delta", "heartbeat", "auth-expired", "projection-gap"])("reads %s without dropping wire state", (name) => {
+    const wire = canonical(name);
+    const parsed = readProfileRealtime(wire);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.event_type).toBe(wire.event_type);
+    expect(parsed?.terminal).toBe(wire.terminal);
+    expect(parsed?.reconnect_required).toBe(wire.reconnect_required);
+    expect(parsed?.projection_sequence).toBe(wire.projection_sequence);
+    expect(parsed?.source).toEqual(readSourceRecovery(wire));
   });
 });
 

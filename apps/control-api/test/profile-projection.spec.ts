@@ -1421,6 +1421,10 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
 
     const ranged = await service.read("paper", equityKey, { from: "2026-07-15T00:00:00.000Z", to: "2026-08-15T00:00:00.000Z" });
     expect(ranged.items.map((item: Record<string, unknown>) => item.id)).toEqual(["eq_2"]);
+    expect(ranged.coverage).toMatchObject({row_count:1,oldest_ts:"2026-08-01T00:00:00.000Z",newest_ts:"2026-08-01T00:00:00.000Z"});
+    const noRowsInRange = await service.read("paper",equityKey,{from:"2026-07-15T00:00:00.000Z",to:"2026-08-15T00:00:00.000Z",account_id:"acc_a"});
+    expect(noRowsInRange).toMatchObject({state:"EMPTY",coverage:{row_count:0},items:[]});
+    expect((await service.read("paper",equityKey,{limit:1,after_ts:"2026-10-01T00:00:00.000Z",after_id:"end"})).coverage.row_count).toBe(3);
 
     const filtered = await service.read("paper", equityKey, { account_id: "acc_a" });
     expect(filtered.items.map((item: Record<string, unknown>) => item.id)).toEqual(["eq_1", "eq_3"]);

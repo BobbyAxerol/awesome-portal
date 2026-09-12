@@ -10163,3 +10163,31 @@ Audit tái hiện 9 vấn đề/chi phí bằng module/hook thật với mock sy
 container không network; không sửa source, không đọc business rows, không
 deploy hoặc đụng main/stable. Sau khi Bobby duyệt, chia đúng file ownership;
 Claude không sửa backend/proxy/Edge, Codex không ghi đè composition của Claude.
+
+## A70. BE-R2-8 — Codex implementation and consumer alignment (12-09)
+
+Bobby đã duyệt triển khai BE-R2-8, gồm Portal-only review/capture. Chi tiết duy
+nhất ở [main plan BE-R2-8](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-8--exact-read-authority-and-complete-screen-contract-alignment).
+Không ghi đè A68/A69: đó là lịch sử audit; nhận định chín bảng “intentional
+boundary” nay được thay bằng writer/invariant cụ thể, không còn allowlist che gap.
+
+- Codex đã nối environment/account vào analytics và Portfolio helpers; sửa
+  join nhầm Alpha qua shared account; dữ liệu số dùng exact decimal và freshness
+  của input; workspace membership áp dụng cả ADMIN và bị thu hồi khi stream còn mở.
+- Consumer hiện hữu giữ rich shell: Mine hoạt động, All được ghi **All retained**,
+  refresh không giữ dữ liệu identity cũ, canonical R1/SSE được chạy qua reader thật.
+- Chín bảng đã có đường tạo từ public Portal API; journal migration032 lưu
+  idempotency bất biến và audit trong cùng transaction. Fresh-PG acceptance không
+  seed các workflow row rồi tự đọc lại. Note do Portal tạo không phải broker proof.
+- Thêm bốn typed client operations ở handoff §8.60. **Chưa tạo form UI capture mới**;
+  Claude có thể bổ sung entry point trong bố cục đã duyệt khi được giao. Không sửa
+  backend/proxy/Edge, không tự mở promote/certify hay command.
+- Ba giới hạn action được giữ thật: R2 execution decision chưa commissioned,
+  accepted Paper Exit policy evaluation và Sandbox step evidence chưa có accepted
+  producer cho workflow này. Không gọi đây là “đã hoàn thiện toàn bộ promotion”.
+- BE-R2-9 vẫn là phase riêng cho SSE sequence/recovery, cancel/coalesce, bounded
+  local cost và dev acceptance. Không deploy, push/merge hay thay stable trong R2-8.
+
+Gates/counts nằm trong main journal; route/table machine inventories được cập nhật
+cho source mới, **không** thay các row count runtime đã quan sát trước đây bằng số
+test. Browser chạy ở bản sao dùng riêng, giữ nguyên evidence dirty của Claude.

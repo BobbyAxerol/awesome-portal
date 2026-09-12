@@ -381,14 +381,12 @@ describe("#8 — keyboard and narrow viewport", () => {
 });
 
 describe("a chip the server cannot honour says so", () => {
-  it("disables Mine, because the endpoint publishes no actor filter", () => {
+  it("enables Mine, because the composition accepts assigned_to=me", () => {
     render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} onFilterChange={() => {}} />);
     const mine = screen.getByRole("button", { name: /^Mine$/ });
-    // Visible and disabled, not deleted: a missing chip reads as a design
-    // choice, and one that silently returns everybody's work is worse than
-    // both.
-    expect(mine.hasAttribute("disabled")).toBe(true);
-    expect(screen.getByText(/publishes no actor filter/)).toBeTruthy();
+    expect(mine.hasAttribute("disabled")).toBe(false);
+    expect(screen.queryByText(/publishes no actor filter/)).toBeNull();
+    expect(screen.getByRole("button", { name: "All retained" })).toBeTruthy();
   });
 
   it("leaves the two the server does honour enabled", () => {
@@ -396,7 +394,7 @@ describe("a chip the server cannot honour says so", () => {
     expect(
       screen.getByRole("button", { name: /Needs attention/ }).hasAttribute("disabled"),
     ).toBe(false);
-    expect(screen.getByRole("button", { name: /All \(24h\)/ }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: /All retained/ }).hasAttribute("disabled")).toBe(false);
   });
 
   it("matches the parameters the endpoint actually declares", () => {

@@ -1,0 +1,15 @@
+{
+  "schema_version": "governance.review-capture.v1",
+  "authority": "PORTAL",
+  "workspace_id": "ws_fixture",
+  "action": "PAPER_EXIT_CREATE",
+  "replayed": false,
+  "source_side_effect_requested": false,
+  "aggregate_id": "pexit_capture",
+  "workflow_version": 1,
+  "source_verdict": "NOT_ASSERTED",
+  "review_id": "pexit_capture",
+  "read_path": "/api/v1/execution/governance/exit-reviews/pexit_capture",
+  "captured_projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "decision_reason_code": "ACCEPTED_EXIT_POLICY_EVALUATION_UNAVAILABLE"
+}

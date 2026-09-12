@@ -622,9 +622,12 @@ export class ExecutionProfileProjectionRepository {
     profileId: string,
     relationKey: string,
     entity: { field: string; value: string } | null = null,
+    range: { from?: string | null; to?: string | null } = {},
   ): Promise<{ rowCount: number; oldestTs: string | null; newestTs: string | null }> {
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     const values: unknown[] = [workspaceId, environment, profileId, relationKey];
+    if (range.from) { values.push(range.from); conditions.push(`ts >= $${values.length}::timestamptz`); }
+    if (range.to) { values.push(range.to); conditions.push(`ts <= $${values.length}::timestamptz`); }
     if (entity) {
       values.push(entity.field, entity.value);
       conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
@@ -806,8 +809,9 @@ export class ExecutionProfileProjectionRepository {
     workspaceId: string,
     environment: ProjectionEnvironment,
     profileId: string,
+    reader: Pick<PoolClient, "query"> = this.pool,
   ): Promise<ProfileProjectionSnapshot | null> {
-    const result = await this.pool.query<{
+    const result = await reader.query<{
       payload: ProfileProjectionDocument; source_epoch: string; source_cursor: string;
       source_as_of: Date | null; received_at: Date; last_successful_refresh_at: Date;
       completeness: ProjectionCompleteness; projection_epoch: string;

@@ -19,6 +19,7 @@ import {
   type ObservedTimelineRequest,
 } from "./local-query-analytics.service";
 import { Portfolio360LocalService } from "./portfolio360-local.service";
+import { ExecutionLocalReadAuthority } from "./local-read-authority";
 
 interface AnalyticsRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -34,6 +35,7 @@ export class ExecutionAnalyticsController {
     @Inject(ExecutionAnalyticsProxy) private readonly proxy: ExecutionAnalyticsProxy,
     @Inject(GovernanceRepository) private readonly governance: GovernanceRepository,
     @Inject(LocalQueryAnalyticsService) private readonly localAnalytics: LocalQueryAnalyticsService,
+    @Inject(ExecutionLocalReadAuthority) private readonly readAuthority: ExecutionLocalReadAuthority,
     @Optional()
     @Inject(Portfolio360LocalService)
     private readonly portfolio360?: Portfolio360LocalService,
@@ -85,38 +87,46 @@ export class ExecutionAnalyticsController {
    * the column inline instead of one request per row on expand.
    */
   @Get("/alphas/equity-sparklines")
-  equitySparklines(@Req() request: AnalyticsRequest, @Query() raw: unknown) {
+  async equitySparklines(@Req() request: AnalyticsRequest, @Query() raw: unknown) {
     const query = SparklineQuerySchema.safeParse(raw);
     if (!query.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+    const authorized = await this.readAuthority.authorize(request, query.data.environment ?? "paper");
     return this.invoke(() => this.localAnalytics.equitySparklines(
-      { workspaceId: request.portalWorkspaceId }, query.data.environment ?? "paper", query.data.days ?? 30,
+      authorized, query.data.environment ?? "paper", query.data.days ?? 30,
     ));
   }
 
   /** One alpha's equity in every stage it runs in, on one calendar. */
   @Get("/alphas/:alphaId/stage-drift")
-  stageDrift(@Req() request: AnalyticsRequest, @Param("alphaId") id: string, @Query() raw: unknown) {
-    const query = SparklineQuerySchema.safeParse(raw);
+  async stageDrift(@Req() request: AnalyticsRequest, @Param("alphaId") id: string, @Query() raw: unknown) {
+    const query = SparklineQuerySchema.omit({ environment: true }).safeParse(raw);
     if (!query.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
     // No `days` means everything the mirror holds: the charts default to All.
+    const authorized = await this.readAuthority.authorize(request);
     return this.invoke(() => this.localAnalytics.stageDrift(
-      { workspaceId: request.portalWorkspaceId }, id, query.data.days,
+      authorized, id, query.data.days,
     ));
   }
 
   @Get("/portfolios/:portfolioId/correlation")
-  portfolioCorrelation(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string) {
+  async portfolioCorrelation(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string, @Query() raw: unknown = {}) {
+    const environment = panelEnvironment(raw);
     if (this.portfolio360?.enabled()) {
-      return this.invoke(() => this.portfolio360!.correlation(local(request), id));
+      const authorized = await this.readAuthority.authorize(request, environment);
+      return this.invoke(() => this.portfolio360!.correlation(authorized, id, environment));
     }
+    if (environment !== "paper") throw new AnalyticsProxyError("ANALYTICS_PROFILE_NOT_SUPPORTED", 404);
     return this.invoke(() => this.proxy.portfolioCorrelation(principal(request), id));
   }
 
   @Get("/portfolios/:portfolioId/capital-ledger")
-  capitalLedger(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string) {
+  async capitalLedger(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string, @Query() raw: unknown = {}) {
+    const environment = panelEnvironment(raw);
     if (this.portfolio360?.enabled()) {
-      return this.invoke(() => this.portfolio360!.capitalLedger(local(request), id));
+      const authorized = await this.readAuthority.authorize(request, environment);
+      return this.invoke(() => this.portfolio360!.capitalLedger(authorized, id, environment));
     }
+    if (environment !== "paper") throw new AnalyticsProxyError("ANALYTICS_PROFILE_NOT_SUPPORTED", 404);
     return this.invoke(() => this.proxy.capitalLedger(principal(request), id));
   }
 
@@ -127,11 +137,13 @@ export class ExecutionAnalyticsController {
    * rather than proxying a request the cell has never accepted.
    */
   @Get("/portfolios/:portfolioId/cross-equity")
-  portfolioCrossEquity(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string) {
+  async portfolioCrossEquity(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string, @Query() raw: unknown = {}) {
+    const environment = panelEnvironment(raw);
     if (!this.portfolio360?.enabled()) {
       return this.invoke(() => Promise.reject(new AnalyticsProxyError("ANALYTICS_DISABLED", 404)));
     }
-    return this.invoke(() => this.portfolio360!.crossEquity(local(request), id));
+    const authorized = await this.readAuthority.authorize(request, environment);
+    return this.invoke(() => this.portfolio360!.crossEquity(authorized, id, environment));
   }
 
   @Get("/broker-bindings/:bindingId/exposure")
@@ -174,7 +186,7 @@ export class ExecutionAnalyticsController {
    * can never receive or submit a source cursor.
    */
   @Get("/views/observed-timeline")
-  observedTimeline(@Req() request: AnalyticsRequest, @Query() rawQuery: unknown) {
+  async observedTimeline(@Req() request: AnalyticsRequest, @Query() rawQuery: unknown) {
     const parsed = ObservedTimelineQuerySchema.safeParse(rawQuery);
     if (!parsed.success) throw new AnalyticsProxyError("EDS10_OBSERVED_TIMELINE_QUERY_INVALID", 400);
     const query: ObservedTimelineRequest = {
@@ -184,7 +196,8 @@ export class ExecutionAnalyticsController {
       ...(parsed.data.limit === undefined ? {} : { limit: parsed.data.limit }),
       ...(parsed.data.after === undefined ? {} : { after: parsed.data.after }),
     };
-    return this.invoke(() => this.localAnalytics.observedTimeline(principal(request), query));
+    const authorized = await this.readAuthority.authorize(request, query.environment);
+    return this.invoke(() => this.localAnalytics.observedTimeline(authorized, query));
   }
 
   @Get("/deployments/paper/:deploymentId/projection/:panel")
@@ -232,7 +245,7 @@ export class ExecutionAnalyticsController {
    * The default is unchanged: `source_facts` omitted means the full form, so
    * no existing caller sees a different answer.
    */
-  private queryAnalytics(
+  private async queryAnalytics(
     request: AnalyticsRequest,
     subjectKind: QueryAnalyticsSubjectKind,
     subjectId: string,
@@ -243,20 +256,23 @@ export class ExecutionAnalyticsController {
       return this.invoke(() => Promise.reject(new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400)));
     }
     if (this.localAnalytics.enabled()) {
+      const environment = query.data.environment ?? (subjectKind === "live-gate" ? "live" : "paper");
+      if (subjectKind === "live-gate" && environment !== "live") {
+        throw new AnalyticsProxyError("ANALYTICS_PROFILE_MISMATCH", 400);
+      }
+      const authorized = await this.readAuthority.authorize(request, environment);
       return this.invoke(() => this.localAnalytics.query(
-        principal(request), subjectKind, subjectId,
-        { sourceFacts: query.data.source_facts !== false },
+        authorized, subjectKind, subjectId,
+        { sourceFacts: query.data.source_facts !== false, environment, accountId: query.data.account_id },
       ));
+    }
+    if (query.data.account_id || (query.data.environment && query.data.environment !== (subjectKind === "live-gate" ? "live" : "paper"))) {
+      throw new AnalyticsProxyError("ANALYTICS_PROFILE_NOT_SUPPORTED", 404);
     }
     return this.invoke(() =>
       this.proxy.managerQueryAnalytics(principal(request), subjectKind, subjectId),
     );
   }
-}
-
-/** The workspace-scoped principal the local Portfolio 360 reads take. */
-function local(request: AnalyticsRequest) {
-  return { user: request.portalUser, session: request.portalSession, workspaceId: request.portalWorkspaceId };
 }
 
 /**
@@ -267,7 +283,15 @@ function local(request: AnalyticsRequest) {
  */
 const QueryAnalyticsQuerySchema = z.object({
   source_facts: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
+  environment: z.enum(["paper", "sandbox", "live"]).optional(),
+  account_id: z.string().regex(/^[A-Za-z0-9._:-]{1,192}$/).optional(),
 }).strict();
+
+function panelEnvironment(raw: unknown) {
+  const parsed = z.object({ environment: z.enum(["paper", "sandbox", "live"]).default("paper") }).strict().safeParse(raw ?? {});
+  if (!parsed.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+  return parsed.data.environment;
+}
 
 const SparklineQuerySchema = z.object({
   environment: z.enum(["paper", "sandbox", "live"]).optional(),

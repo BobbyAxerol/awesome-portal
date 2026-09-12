@@ -277,6 +277,10 @@ export interface BlotterQuery {
 }
 
 export interface ExecutionApi {
+  getReviewCaptureCapabilities(workspaceId: string): Promise<Result<import("./reviewCapture").ReviewCaptureCapabilities>>;
+  captureR2(input: import("./reviewCapture").R2CaptureInput): Promise<Result<import("./reviewCapture").ReviewCapture>>;
+  createPaperExit(input: import("./reviewCapture").PaperExitCreateInput): Promise<Result<import("./reviewCapture").ReviewCapture>>;
+  captureSandboxNote(input: import("./reviewCapture").SandboxNoteInput): Promise<Result<import("./reviewCapture").ReviewCapture>>;
   /** `GET /api/v1/execution/governance/approvals` */
   listApprovals(query: InboxQuery): Promise<Result<InboxResult>>;
   createApprovalRequest(input: ApprovalCreateInput): Promise<ApprovalCreateOutcome>;
@@ -304,7 +308,7 @@ export interface ExecutionApi {
   getQueryAnalytics(
     subject: "alphas" | "portfolios" | "deployments",
     subjectId: string,
-    options?: { sourceFacts?: boolean },
+    options?: { sourceFacts?: boolean; environment?: FinancialEnvironment; accountId?: string },
   ): Promise<Result<QueryAnalytics>>;
   /** `GET /commands/tasks` — the N27 operator task catalogue. */
   getOperatorTasks(): Promise<Result<OperatorTaskCatalogue>>;
@@ -478,10 +482,12 @@ export interface ExecutionApi {
   /** `GET /api/v1/execution/portfolios/{portfolioId}/correlation` */
   getCorrelation(
     portfolioId: string,
+    environment?: FinancialEnvironment,
   ): Promise<Result<{ correlation: Correlation; envelope: AnalyticsEnvelope }>>;
   /** `GET /api/v1/execution/portfolios/{portfolioId}/capital-ledger` */
   getCapitalLedger(
     portfolioId: string,
+    environment?: FinancialEnvironment,
   ): Promise<Result<{ ledger: CapitalLedger; envelope: AnalyticsEnvelope }>>;
   /**
    * `GET /api/v1/execution/runtime-manifest`
@@ -522,6 +528,7 @@ export interface ExecutionApi {
    */
   getCrossEquity(
     portfolioId: string,
+    environment?: FinancialEnvironment,
   ): Promise<Result<{ crossEquity: CrossEquity; envelope: AnalyticsEnvelope }>>;
   /** `GET /durable-mirror/integrity` — the mirror's own gap and conflict aggregate. */
   getMirrorIntegrity(environment: "paper" | "sandbox" | "live"): Promise<Result<MirrorIntegrity>>;

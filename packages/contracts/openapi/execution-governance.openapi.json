@@ -2,12 +2,131 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Governance Review API",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "Same-origin, session-guarded Portal governance boundaries for R1/R2 review, immutable approval history, R1 request creation, conditions/waivers, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
   "paths": {
+    "/api/v1/execution/governance/review-capture-capabilities": {
+      "get": {
+        "operationId": "executionReviewCaptureCapabilities",
+        "description": "Workspace-member read; captures require ADMIN, accepted references and optimistic revisions. Unsupported source verdicts remain named and disabled.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Actor-scoped Portal capture actions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-governance-review-capture.v1.schema.json#/$defs/Capabilities"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/governance/r2/capture": {
+      "post": {
+        "operationId": "executionCaptureR2",
+        "description": "ADMIN + workspace membership + CSRF. Atomic Portal-only capture/journal/audit, same intent retry replays, changed intent key returns 409. Does not execute, approve a source verdict or promote.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "../schemas/execution-governance-review-capture.v1.schema.json#/$defs/R2CaptureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created or idempotently replayed review capture; source verdict NOT_ASSERTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/governance/paper-exit/create": {
+      "post": {
+        "operationId": "executionCreatePaperExit",
+        "description": "ADMIN + workspace membership + CSRF. Atomic Portal-only capture/journal/audit, same intent retry replays, changed intent key returns 409. Does not execute, approve a source verdict or promote.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "../schemas/execution-governance-review-capture.v1.schema.json#/$defs/PaperExitCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created or idempotently replayed review capture; source verdict NOT_ASSERTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/governance/sandbox/capture-note": {
+      "post": {
+        "operationId": "executionCaptureSandboxNote",
+        "description": "ADMIN + workspace membership + CSRF. Atomic Portal-only capture/journal/audit, same intent retry replays, changed intent key returns 409. Does not execute, approve a source verdict or promote.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "../schemas/execution-governance-review-capture.v1.schema.json#/$defs/SandboxNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created or idempotently replayed review capture; source verdict NOT_ASSERTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/execution/governance/approvals": {
       "get": {
         "operationId": "executionApprovalInbox",

@@ -1,12 +1,36 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import { loadConfig } from "../src/config";
-import { bindRealtimeLifecycle } from "../src/execution/realtime.controller";
+import { bindRealtimeLifecycle, ExecutionRealtimeController } from "../src/execution/realtime.controller";
 import { parseRealtimeSnapshot, resolveResumeCursor } from "../src/execution/realtime.proxy";
 
 const CURSOR = "018f0df0-9568-7cc2-babc-76a14ab55d2a:1842";
 
 describe("EX-BE-06 same-origin realtime boundary", () => {
+  it("BE-R2-8 closes an active local stream within its authorization lease after membership revocation", async () => {
+    vi.useFakeTimers();
+    const raw = Object.assign(new EventEmitter(), { writeHead:vi.fn(),write:vi.fn(()=>true),end:vi.fn() });
+    const unsubscribe=vi.fn();
+    const auth={sessions:{isActiveLease:vi.fn().mockResolvedValue(true)}};
+    const authority={authorize:vi.fn().mockResolvedValue({workspaceId:"ws"}),
+      remainsAuthorized:vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false)};
+    const local={subscribe:vi.fn().mockResolvedValue(unsubscribe),heartbeat:vi.fn(),
+      authExpired:vi.fn(()=>({ event_type:"auth.expired",terminal:true,cursor:null,payload:{} }))};
+    const config={EXECUTION_EDGE_PAPER_PROFILE_ID:"PAPER_BINANCE_USDM",EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:"ws"};
+    const controller=new ExecutionRealtimeController({} as never,auth as never,local as never,{} as never,{} as never,config as never,authority as never);
+    try {
+      await controller.profileStream({portalSession:{sessionId:"s",userId:"u",sessionVersion:1},headers:{}} as never,
+        {raw,hijack:vi.fn()} as never,"paper");
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(raw.end).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(raw.write).toHaveBeenCalledWith(expect.stringContaining("event: auth.expired"));
+      expect(raw.end).toHaveBeenCalledOnce();
+      expect(unsubscribe).toHaveBeenCalledOnce();
+      expect(raw.listenerCount("close")).toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { raw.emit("close"); vi.useRealTimers(); }
+  });
   it("uses Last-Event-ID when a native EventSource reconnect retains its original URL cursor", () => {
     expect(resolveResumeCursor(undefined, CURSOR)).toBe(CURSOR);
     expect(resolveResumeCursor(CURSOR, undefined)).toBe(CURSOR);

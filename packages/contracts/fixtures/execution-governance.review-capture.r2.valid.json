@@ -1,0 +1,15 @@
+{
+  "schema_version": "governance.review-capture.v1",
+  "authority": "PORTAL",
+  "workspace_id": "ws_fixture",
+  "action": "R2_CREATE",
+  "replayed": false,
+  "source_side_effect_requested": false,
+  "aggregate_id": "apr_capture",
+  "workflow_version": 1,
+  "source_verdict": "NOT_ASSERTED",
+  "approval_id": "apr_capture",
+  "read_path": "/api/v1/execution/governance/approvals/apr_capture/r2",
+  "captured_projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "decision_reason_code": "R2_EXECUTION_DECISION_NOT_COMMISSIONED"
+}

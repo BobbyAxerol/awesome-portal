@@ -62,7 +62,7 @@ export interface SandboxStepEvidenceRow extends Record<string, unknown> {
 export interface SandboxFindingRow extends Record<string, unknown> {
   finding_id: string;
   severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
-  source_authority: "EXECUTION" | "BROKER" | "DERIVED";
+  source_authority: "PORTAL" | "EXECUTION" | "BROKER" | "DERIVED";
   finding_code: string;
   summary: string;
   blocking: boolean;

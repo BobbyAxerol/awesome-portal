@@ -91,6 +91,7 @@ import { readScreenContracts, type ScreenContract } from "../screenContracts";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
+import { readReviewCapture, readReviewCaptureCapabilities, type R2CaptureInput, type PaperExitCreateInput, type SandboxNoteInput } from "./reviewCapture";
 
 type PaperExitPlanRequest = GovernanceComponents["schemas"]["PaperExitDecisionPlanRequest"];
 type InsightBatchRequest = components["schemas"]["InsightBatchRequest"];
@@ -327,10 +328,16 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
   const getQueryAnalytics = (
     subject: "alphas" | "portfolios" | "deployments",
     subjectId: string,
-    options: { sourceFacts?: boolean } = {},
+    options: { sourceFacts?: boolean; environment?: FinancialEnvironment; accountId?: string } = {},
   ): Promise<Result<QueryAnalytics>> =>
     readGet(
-      `/${subject}/${encodeURIComponent(subjectId)}/query-analytics${options.sourceFacts === false ? "?source_facts=false" : ""}`,
+      `/${subject}/${encodeURIComponent(subjectId)}/query-analytics${(() => {
+        const query = new URLSearchParams();
+        if (options.sourceFacts === false) query.set("source_facts", "false");
+        if (options.environment) query.set("environment", options.environment);
+        if (options.accountId) query.set("account_id", options.accountId);
+        return query.size ? `?${query}` : "";
+      })()}`,
       readQueryAnalytics,
       "The query-analytics envelope",
     );
@@ -559,6 +566,33 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
 
   return {
     createApprovalRequest,
+    async getReviewCaptureCapabilities(workspaceId: string) {
+      const response = await get(`/governance/review-capture-capabilities?workspace_id=${encodeURIComponent(workspaceId)}`,signal);
+      if (!response.ok) return problem(response);
+      const value = readReviewCaptureCapabilities(await response.json());
+      return value ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+    },
+    async captureR2(input: R2CaptureInput) {
+      const response = await post("/governance/r2/capture",input,signal);
+      if (!response.ok) return problem(response);
+      const value = readReviewCapture(await response.json());
+      return value?.action === "R2_CREATE" && value.workspace_id === input.workspace_id
+        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+    },
+    async createPaperExit(input: PaperExitCreateInput) {
+      const response = await post("/governance/paper-exit/create",input,signal);
+      if (!response.ok) return problem(response);
+      const value = readReviewCapture(await response.json());
+      return value?.action === "PAPER_EXIT_CREATE" && value.workspace_id === input.workspace_id
+        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+    },
+    async captureSandboxNote(input: SandboxNoteInput) {
+      const response = await post("/governance/sandbox/capture-note",input,signal);
+      if (!response.ok) return problem(response);
+      const value = readReviewCapture(await response.json());
+      return value?.action === "SANDBOX_NOTE" && value.workspace_id === input.workspace_id && value.certification_id === input.certification_id
+        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+    },
     getWaivers,
     getCommandCenterSnapshot,
     getScreenProfile,
@@ -952,11 +986,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         : unavailable("The insight batch response could not be read.");
     },
 
-    async getCorrelation(portfolioId: string) {
+    async getCorrelation(portfolioId: string, environment?: FinancialEnvironment) {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
       const response = await get(
-        `/portfolios/${encodeURIComponent(portfolioId)}/correlation`,
+        `/portfolios/${encodeURIComponent(portfolioId)}/correlation${environment ? `?environment=${environment}` : ""}`,
         signal,
       );
       if (!response.ok) return analyticsProblem(response);
@@ -968,11 +1002,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         : unavailable("The correlation response could not be read.");
     },
 
-    async getCapitalLedger(portfolioId: string) {
+    async getCapitalLedger(portfolioId: string, environment?: FinancialEnvironment) {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
       const response = await get(
-        `/portfolios/${encodeURIComponent(portfolioId)}/capital-ledger`,
+        `/portfolios/${encodeURIComponent(portfolioId)}/capital-ledger${environment ? `?environment=${environment}` : ""}`,
         signal,
       );
       if (!response.ok) return analyticsProblem(response);
@@ -1006,11 +1040,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         : unavailable("The screen contract catalogue could not be read.");
     },
 
-    async getCrossEquity(portfolioId: string) {
+    async getCrossEquity(portfolioId: string, environment?: FinancialEnvironment) {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
       const response = await get(
-        `/portfolios/${encodeURIComponent(portfolioId)}/cross-equity`,
+        `/portfolios/${encodeURIComponent(portfolioId)}/cross-equity${environment ? `?environment=${environment}` : ""}`,
         signal,
       );
       if (!response.ok) return analyticsProblem(response);
