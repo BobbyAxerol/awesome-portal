@@ -5341,6 +5341,9 @@
 .exec-oq-filterreason { flex-basis: 100%; margin-left: 0; }
 .exec-oq-three { white-space: normal; }
 .exec-oq-emptyrow td { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+/* The empty message is a paragraph beside the table now, not a row inside
+   its horizontal scroller; it keeps the same voice and wraps to the panel. */
+p.exec-oq-emptyrow { margin: var(--space-3) 0 0; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
 .exec-oq-railsmoke { color: var(--warn); }
 /* Hi-fi pages are bounded by their host, never by their widest table: width 100% so the inner scroll boxes do the scrolling. */
 .exec-cc-page, .exec-inc2-page, .exec-oq-page, .exec-oq-layout { width: 100%; box-sizing: border-box; }

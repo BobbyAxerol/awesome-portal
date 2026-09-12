@@ -415,12 +415,24 @@ export function OperationsQueueScreen({
                       <tbody>
                         {smokeRows.map((item) => <SmokeRow key={item.row.operationId} item={item} elapsed={elapsed} sub={sub} onOpen={onOpen} selected={item.row.operationId === selectedId} />)}
                         {rows.map((row) => <ContractRow key={row.operationId} row={row} now={at} onOpen={onOpen} selected={row.operationId === selectedId} arrived={arrivals.has(row.operationId)} />)}
-                        {rows.length === 0 ? (
-                          <tr className="exec-oq-emptyrow"><td colSpan={7}>{smokeRows.length > 0 ? "published rows: none — " : ""}{emptyScopeLine(page?.readTruth, "this view", null, "operation")}</td></tr>
-                        ) : null}
                       </tbody>
                     </table>
                   </div>
+                  {/*
+                    * Measured on dev-portal: as a `colSpan` row this sentence
+                    * wrapped to three lines across the table's full 920px while
+                    * the scroller showing it is 746px, so the right 174px of
+                    * every line sat in the horizontally scrolled-off region —
+                    * the reader saw "…are part of the reque". An empty-state
+                    * message has no columns to align with anyway, so it sits
+                    * outside the scroller and wraps to what is actually visible.
+                    */}
+                  {rows.length === 0 ? (
+                    <p className="exec-oq-emptyrow">
+                      {smokeRows.length > 0 ? "published rows: none — " : ""}
+                      {emptyScopeLine(page?.readTruth, "this view", null, "operation")}
+                    </p>
+                  ) : null}
                   <footer className="exec-oq-foot">
                     <span>one row = one operation_id from plan → apply → verify · nothing ages silently — PARTIAL &gt;15m auto-escalates</span>
                     <span className="exec-oq-spacer" />
