@@ -11,7 +11,8 @@ python3 - \
   "${root_dir}/deploy/images/execution-edge.Dockerfile" \
   "${root_dir}/deploy/images/source-proxy.Dockerfile" \
   "${root_dir}/deploy/images/control-api.Dockerfile" \
-  "${root_dir}/deploy/compose.signed-images.yaml" <<'PY'
+  "${root_dir}/deploy/compose.signed-images.yaml" \
+  "${root_dir}/.github/workflows/ci.yml" <<'PY'
 import pathlib
 import re
 import sys
@@ -24,9 +25,13 @@ edge_dockerfile = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
 proxy_dockerfile = pathlib.Path(sys.argv[3]).read_text(encoding="utf-8")
 control_dockerfile = pathlib.Path(sys.argv[4]).read_text(encoding="utf-8")
 signed_overlay = pathlib.Path(sys.argv[5]).read_text(encoding="utf-8")
+ci_workflow = pathlib.Path(sys.argv[6])
 document = yaml.safe_load(raw)
 if not isinstance(document, dict):
     raise SystemExit("Image publication workflow is not a YAML object.")
+ci_document = yaml.safe_load(ci_workflow.read_text(encoding="utf-8"))
+if not isinstance(ci_document, dict):
+    raise SystemExit("Portal CI workflow is not a YAML object.")
 if "pull_request_target" in raw:
     raise SystemExit("Image publication must never run with pull_request_target authority.")
 if "COSIGN_PRIVATE_KEY" in raw:
@@ -117,12 +122,77 @@ by_name = {
 
 release_gate = by_name.get("Wait for commit-bound Portal CI release gates", {}).get("run", "")
 for required in (
-    'select(.name == "Validate Portal monorepo stack"',
-    "and .head_sha == env.GITHUB_SHA)",
-    'and .conclusion == "success")',
+    '"Validate Portal monorepo stack"',
+    '"Portal web visual baseline"',
+    '"Validate Portal application build and browser flows"',
+    "required_check_names=(",
+    "and .head_sha == env.GITHUB_SHA",
+    'sort_by(.started_at // .created_at // "")',
+    'if [[ "${all_green}" == true ]]; then',
 ):
     if required not in release_gate:
-        raise SystemExit("Publication must select the Portal CI gate for the exact commit only.")
+        raise SystemExit("Publication must require every exact-commit Portal CI release gate.")
+
+poll_match = re.search(r"(?m)^\s*ci_gate_poll_seconds=(\d+)\s*$", release_gate)
+attempt_match = re.search(r"(?m)^\s*ci_gate_max_attempts=(\d+)\s*$", release_gate)
+if poll_match is None or attempt_match is None:
+    raise SystemExit("Publication must declare a bounded CI-gate polling budget.")
+ci_gate_poll_seconds = int(poll_match.group(1))
+ci_gate_max_attempts = int(attempt_match.group(1))
+if ci_gate_poll_seconds != 30 or ci_gate_max_attempts != 300:
+    raise SystemExit("Publication CI-gate polling budget drifted from the reviewed 150-minute bound.")
+if 'for attempt in $(seq 1 "${ci_gate_max_attempts}"); do' not in release_gate:
+    raise SystemExit("Publication must consume its declared CI-gate polling bound.")
+if 'if [[ "${attempt}" == "${ci_gate_max_attempts}" ]]; then' not in release_gate:
+    raise SystemExit("Publication must fail closed at its declared CI-gate polling bound.")
+if 'sleep "${ci_gate_poll_seconds}"' not in release_gate:
+    raise SystemExit("Publication must use its declared CI-gate polling interval.")
+
+publish_timeout_minutes = int(job.get("timeout-minutes", 0))
+if publish_timeout_minutes < 210:
+    raise SystemExit("Publication timeout must reserve the reviewed CI gate and publication budget.")
+
+ci_jobs = ci_document.get("jobs")
+if not isinstance(ci_jobs, dict):
+    raise SystemExit("Portal CI jobs are missing.")
+expected_ci_jobs = {
+    "integration": ("Validate Portal monorepo stack", None, 60),
+    "visual-baseline": ("Portal web visual baseline", "integration", 60),
+    "application-verification": (
+        "Validate Portal application build and browser flows",
+        "integration",
+        75,
+    ),
+}
+for job_id, (name, needs, minimum_timeout) in expected_ci_jobs.items():
+    ci_job = ci_jobs.get(job_id)
+    if not isinstance(ci_job, dict) or ci_job.get("name") != name:
+        raise SystemExit(f"Portal CI release job drifted: {job_id}.")
+    if ci_job.get("needs") != needs:
+        raise SystemExit(f"Portal CI dependency drifted: {job_id}.")
+    if int(ci_job.get("timeout-minutes", 0)) < minimum_timeout:
+        raise SystemExit(f"Portal CI timeout budget drifted: {job_id}.")
+
+# The longest release-critical CI path is the authority job followed by the
+# longest dependent job.  The publisher must retain 15 minutes for scheduling
+# variance and 60 minutes after the gate for building/signing/evidence.
+ci_path_minutes = int(ci_jobs["integration"]["timeout-minutes"]) + max(
+    int(ci_jobs["visual-baseline"]["timeout-minutes"]),
+    int(ci_jobs["application-verification"]["timeout-minutes"]),
+)
+ci_gate_wait_minutes = ci_gate_poll_seconds * ci_gate_max_attempts / 60
+if ci_gate_wait_minutes < ci_path_minutes + 15:
+    raise SystemExit("Publication CI-gate wait is shorter than the declared CI dependency path.")
+if publish_timeout_minutes < ci_gate_wait_minutes + 60:
+    raise SystemExit("Publication timeout does not retain a bounded immutable-publication budget.")
+
+integration_steps = {
+    step.get("name")
+    for step in ci_jobs["integration"].get("steps", [])
+    if isinstance(step, dict)
+}
+if {"Portal web visual baseline", "Set up Python"} & integration_steps:
+    raise SystemExit("Portal CI must not serialize visual/application suites into the authority job.")
 
 edge_build = by_name.get("Build and publish execution edge image", {})
 proxy_build = by_name.get("Build and publish source proxy image", {})

@@ -18,6 +18,8 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/collect-eds12-runtime-binding.py" \
   "${ROOT_DIR}/scripts/test_collect_eds12_runtime_binding.py"
 python3 "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py"
+python3 "${ROOT_DIR}/scripts/execution-eds12-qualification.py" \
+  refresh-static-input-digests
 python3 "${ROOT_DIR}/scripts/execution-eds12-qualification.py" verify-static
 python3 "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py"
 python3 "${ROOT_DIR}/scripts/test_collect_eds12_runtime_binding.py"

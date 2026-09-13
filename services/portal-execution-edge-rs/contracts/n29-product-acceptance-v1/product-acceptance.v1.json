@@ -76,7 +76,7 @@
     "frontend_same_origin_bff_contract_test_sha256": "sha256:1159c8525b83811f7939f09c352981675583c64a6dbd6cbddb153e2fd59452ed",
     "frontend_execution_journeys_sha256": "sha256:207a4021333dadb04e9a0e65b940c0e0370f8c24024172537ce44877458633d8",
     "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",
-    "release_workflow_sha256": "sha256:d820535230e0d5da6462ef23f8445de143666e16ac30d9a7127443638a75e9e8",
+    "release_workflow_sha256": "sha256:71f84f79028fc67be395a33a2310dcedb7d30b4ceb1c9ef7d24165a0faacec8c",
     "recovery_runbook_sha256": "sha256:483773e344f032f6c4b044671c0d202d9c041d3390da275243556b4397cd00dc",
     "governance_product_migration_sha256": "sha256:e9193e9baaa1886dd882d1e6b806dd117b6f6a08d0862bc386ac20c81c679383",
     "governance_product_schema_sha256": "sha256:68cd5e901b7199d867ebfbf0edbacb24f97b6b387f31ece8e660d48bbf4ffbb9",
@@ -92,6 +92,8 @@
     "br72_controller_sha256": "sha256:b59109c8eacefc740900194ab8531733ec01e34d337ffbb1febc8ebf84cc11b9",
     "br72_test_sha256": "sha256:5a11834480310405e4057d308d1f2bb07629819617460a9ff9f62810b9b38c3f",
     "br72_source_boundary_sha256": "sha256:267cdab04f3d3f7b85396c9b4acf6f06d43b08367cb9dd80ea30457da886a796",
+    "br76_schema_sha256": "sha256:ef90f2844cd9e92818e6921271c4fd5b5ec2f8b5d7f5cd71ce99df4a546b8244",
+    "br76_fixture_sha256": "sha256:23db8c70822e109af7ca54be9ee21a900adc1dec550191eea2f0a40125bc1961",
     "br72_source_boundary_test_sha256": "sha256:16e575a8ffd082afa249b9665df91f91eb22a9b5958513ebc052ef7bb5d6a1fd",
     "br72_live_review_fixture_sha256": "sha256:9fc9fddd082533e02d1b856492d0f80513e19726598bcb7a3978ab6ad68ae15e",
     "br72_registry_source_sha256": "sha256:8fdc342c79a8ad6a48830b860fbcc4206866c7afbe195d14d9e3d5fbe561df57",
@@ -100,9 +102,7 @@
     "br72_frontend_containers_sha256": "sha256:a78b235bf75762ca2136be20e0ac457af774cc8eea020bbeaa9701a9384c12eb",
     "br72_frontend_alpha_fleet_sha256": "sha256:09179cea55180b8527ecd4a02aff1e365397645ebeca29b76ac0c1b74e38c801",
     "br72_frontend_recompose_sha256": "sha256:150012d24a9012a1a39d3be76ed72bbcd0d4129ac9fc90a7ddbab01cdcd94287",
-    "br72_frontend_registry_sha256": "sha256:5cdce2394aa31e7f68ed556bfe831c90d6a027e368ee8ddb54a282458b527b2e",
-    "br76_schema_sha256": "sha256:ef90f2844cd9e92818e6921271c4fd5b5ec2f8b5d7f5cd71ce99df4a546b8244",
-    "br76_fixture_sha256": "sha256:23db8c70822e109af7ca54be9ee21a900adc1dec550191eea2f0a40125bc1961"
+    "br72_frontend_registry_sha256": "sha256:5cdce2394aa31e7f68ed556bfe831c90d6a027e368ee8ddb54a282458b527b2e"
   },
   "rehearsals": {
     "multi_replica_admission": "PASS_N21",

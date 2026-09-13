@@ -8,6 +8,7 @@ until protected-main image publication has returned evidence.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import pathlib
@@ -95,13 +96,15 @@ def require(condition: bool, message: str) -> None:
         raise AcceptanceError(message)
 
 
-def validate_manifest() -> None:
+def read_manifest_rows() -> tuple[dict[str, str], list[str]]:
     rows: dict[str, str] = {}
+    names: list[str] = []
     for line in MANIFEST.read_text(encoding="utf-8").splitlines():
         expected, name = line.split("  ", 1)
         require(name not in rows, "duplicate manifest path")
         require("/" not in name and ".." not in name, "unsafe manifest path")
         rows[name] = expected
+        names.append(name)
     expected_names = {
         "README.md",
         "debt-register.v1.json",
@@ -109,7 +112,14 @@ def validate_manifest() -> None:
         "product-acceptance.v1.schema.json",
     }
     require(set(rows) == expected_names, "N29 manifest file set drifted")
+    return rows, names
+
+
+def validate_manifest(*, allow_acceptance_drift: bool = False) -> None:
+    rows, _names = read_manifest_rows()
     for name, expected in rows.items():
+        if allow_acceptance_drift and name == "product-acceptance.v1.json":
+            continue
         actual = hashlib.sha256((PACK / name).read_bytes()).hexdigest()
         require(actual == expected, f"N29 manifest digest mismatch: {name}")
 
@@ -401,9 +411,24 @@ def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
     require({item["blocker_id"] for item in debt["resolved_delivery_gates"]} == {"N29-FE-01", "N29-BE-72"}, "BR-EX-72 resolved gate missing")
 
 
-def validate_release_authority(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
-    for key, path in EVIDENCE_PATHS.items():
-        require(acceptance["evidence"][key] == digest(path), f"evidence digest drifted: {key}")
+def validate_evidence_layout(acceptance: dict[str, Any]) -> None:
+    evidence = acceptance.get("evidence")
+    require(isinstance(evidence, dict), "N29 evidence ledger is not an object")
+    require(set(evidence) == set(EVIDENCE_PATHS), "N29 evidence input set drifted")
+    for key, value in evidence.items():
+        require(
+            isinstance(value, str) and re.fullmatch(r"sha256:[a-f0-9]{64}", value) is not None,
+            f"N29 evidence digest shape drifted: {key}",
+        )
+
+
+def validate_release_authority(
+    acceptance: dict[str, Any], debt: dict[str, Any], *, verify_evidence: bool = True,
+) -> None:
+    validate_evidence_layout(acceptance)
+    if verify_evidence:
+        for key, path in EVIDENCE_PATHS.items():
+            require(acceptance["evidence"][key] == digest(path), f"evidence digest drifted: {key}")
     workflow = EVIDENCE_PATHS["release_workflow_sha256"].read_text(encoding="utf-8")
     for token in [
         "branches: [main]",
@@ -446,23 +471,25 @@ def validate_no_sensitive_material() -> None:
         require(SENSITIVE.search(path.read_text(encoding="utf-8")) is None, f"secret-shaped N29 content: {path}")
 
 
-def main() -> int:
-    try:
-        acceptance = read_json(ACCEPTANCE)
-        debt = read_json(DEBT)
-        require(acceptance["schema_version"] == "portal.execution.product-acceptance.v1", "acceptance revision drifted")
-        require(acceptance["decision"] == "RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING", "acceptance verdict drifted")
-        require(debt["decision"] == "NO_UNNAMED_DEBT", "debt decision drifted")
-        validate_manifest()
-        validate_inventory(acceptance)
-        validate_screen_and_ui(acceptance)
-        validate_governance_product()
-        validate_br_ex_72(acceptance, debt)
-        validate_release_authority(acceptance, debt)
-        validate_no_sensitive_material()
-    except (AcceptanceError, OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
-        print(f"N29 acceptance rejected: {error}", file=sys.stderr)
-        return 1
+def validate_acceptance(
+    acceptance: dict[str, Any], debt: dict[str, Any], *, verify_evidence: bool,
+) -> None:
+    require(acceptance["schema_version"] == "portal.execution.product-acceptance.v1", "acceptance revision drifted")
+    require(acceptance["decision"] == "RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING", "acceptance verdict drifted")
+    require(debt["decision"] == "NO_UNNAMED_DEBT", "debt decision drifted")
+    validate_inventory(acceptance)
+    validate_screen_and_ui(acceptance)
+    validate_governance_product()
+    validate_br_ex_72(acceptance, debt)
+    validate_release_authority(acceptance, debt, verify_evidence=verify_evidence)
+    validate_no_sensitive_material()
+
+
+def validate_current_acceptance() -> dict[str, Any]:
+    validate_manifest()
+    acceptance = read_json(ACCEPTANCE)
+    debt = read_json(DEBT)
+    validate_acceptance(acceptance, debt, verify_evidence=True)
     print(json.dumps({
         "phase": "N29",
         "backend_decision": "RELEASE_CANDIDATE_READY",
@@ -477,6 +504,68 @@ def main() -> int:
         "internal_technical_debt": 0,
         "release_blockers": ["N29-REL-01"],
     }, sort_keys=True))
+    return acceptance
+
+
+def refresh_evidence(*, write: bool) -> dict[str, Any]:
+    """Refresh only N29's generated non-secret evidence ledger and manifest."""
+    validate_manifest(allow_acceptance_drift=True)
+    acceptance = read_json(ACCEPTANCE)
+    debt = read_json(DEBT)
+    validate_acceptance(acceptance, debt, verify_evidence=False)
+    acceptance["evidence"] = {
+        key: digest(path) for key, path in EVIDENCE_PATHS.items()
+    }
+    acceptance_bytes = (json.dumps(acceptance, indent=2) + "\n").encode("utf-8")
+    manifest_rows, manifest_names = read_manifest_rows()
+    manifest_rows["product-acceptance.v1.json"] = hashlib.sha256(acceptance_bytes).hexdigest()
+    manifest_bytes = "".join(
+        f"{manifest_rows[name]}  {name}\n" for name in manifest_names
+    ).encode("utf-8")
+    changed = (
+        ACCEPTANCE.read_bytes() != acceptance_bytes
+        or MANIFEST.read_bytes() != manifest_bytes
+    )
+    if changed and not write:
+        raise AcceptanceError(
+            "N29 evidence ledger is stale; run --refresh-evidence --write"
+        )
+    if write and changed:
+        ACCEPTANCE.write_bytes(acceptance_bytes)
+        MANIFEST.write_bytes(manifest_bytes)
+    return {
+        "phase": "N29",
+        "evidence_input_count": len(EVIDENCE_PATHS),
+        "changed": changed,
+        "written": bool(write and changed),
+        "runtime_effect": "NONE",
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--refresh-evidence",
+        action="store_true",
+        help="refresh only the generated non-secret N29 evidence ledger",
+    )
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help="write a requested evidence refresh after semantic validation",
+    )
+    args = parser.parse_args()
+    if args.write and not args.refresh_evidence:
+        parser.error("--write requires --refresh-evidence")
+    try:
+        if args.refresh_evidence:
+            result = refresh_evidence(write=args.write)
+            print(json.dumps(result, sort_keys=True))
+        else:
+            validate_current_acceptance()
+    except (AcceptanceError, OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        print(f"N29 acceptance rejected: {error}", file=sys.stderr)
+        return 1
     return 0
 
 

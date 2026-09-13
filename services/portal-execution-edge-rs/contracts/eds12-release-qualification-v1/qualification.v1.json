@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:5b4159f1870c43574f1958cae9a9ab755b6577d6ddb97e3ad86853394ac9a6a7"
+      "sha256": "sha256:11639e79566f87debf14073cd239e6ad9c335b9f0f1c432a28028607049302e6"
     },
     {
       "id": "n29_debt",
@@ -90,7 +90,7 @@
     {
       "id": "protected_release_workflow",
       "file": ".github/workflows/publish-images.yml",
-      "sha256": "sha256:d820535230e0d5da6462ef23f8445de143666e16ac30d9a7127443638a75e9e8"
+      "sha256": "sha256:71f84f79028fc67be395a33a2310dcedb7d30b4ceb1c9ef7d24165a0faacec8c"
     },
     {
       "id": "protected_deploy_workflow",
@@ -100,7 +100,7 @@
     {
       "id": "ci_qualification_gate",
       "file": ".github/workflows/ci.yml",
-      "sha256": "sha256:8ca64475c1ac4c52179f4961b7e87c8232c49ac55c2982c868e82596610a1394"
+      "sha256": "sha256:1a018e8381b7a0868c9d37e041ba2cccb556bc3e702d15beb32f349e61d4a960"
     },
     {
       "id": "cosign_signature_adapter",
@@ -110,12 +110,17 @@
     {
       "id": "image_publication_gate",
       "file": "scripts/execution-image-publication-test.sh",
-      "sha256": "sha256:90c2d2f6404a4c8dd697bc4de91b64ff92925ca9a2203a91f2f4ba26e130f600"
+      "sha256": "sha256:535d2b958ef9de77326cbe77245d9500eac4d9092f0fd3bbb4975ec8e727610a"
     },
     {
       "id": "release_authority_workflow_test",
       "file": "scripts/test_portal_release_authority.py",
       "sha256": "sha256:28abbc01b8cf6a3003193e265e5e745f8e7bee40e95cbfb855d376159ab4f251"
+    },
+    {
+      "id": "release_integrity_ledger_refresh",
+      "file": "scripts/refresh-release-integrity-ledgers.sh",
+      "sha256": "sha256:5de29bff3b78a5521cea27537d5c4655c2358125e353f61648baa794f3bebcd9"
     },
     {
       "id": "current_source_compose",
@@ -220,12 +225,12 @@
     {
       "id": "qualification_verifier",
       "file": "scripts/execution-eds12-qualification.py",
-      "sha256": "sha256:d010fff2d10dc7fcbdd7d89e592747b972c9f59c0046073d8cac14a06945a6c9"
+      "sha256": "sha256:ebd6e54b9aed60cec2b804f5d90562e2fa13f2232fa2afa52825a87fe052f310"
     },
     {
       "id": "qualification_mutation_test",
       "file": "scripts/test_execution_eds12_qualification.py",
-      "sha256": "sha256:2f1e5226ba6bc1ff4a054b561656a91c1ba3b5dd100dd90e392805498567198a"
+      "sha256": "sha256:1035cbba3d8a1aaa43b38273d5f6b04b21597d30fb095af0e998ed976c79b64e"
     },
     {
       "id": "runtime_binding_collector",
@@ -240,7 +245,7 @@
     {
       "id": "qualification_test_runner",
       "file": "scripts/execution-eds12-qualification-test.sh",
-      "sha256": "sha256:620dd789dc892ccc19879d96b2d5771a0c3e230b97167f7bf535d2a6d3655cfe"
+      "sha256": "sha256:10ee2c8cdefd7a93f2650c0d1968ffdee034c0c5af82af5abad28c625a2f955d"
     },
     {
       "id": "phase12_qualification",
