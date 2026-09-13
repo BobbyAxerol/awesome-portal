@@ -72,7 +72,7 @@
     "frontend_product_boundary_test_sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795",
     "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
     "frontend_consumer_evidence_sha256": "sha256:05509658533aff6460b9ddc152200515a9d7ece2d52a7f863bd13eb8fc666785",
-    "frontend_same_origin_bff_double_sha256": "sha256:b0b538974a0e3f0e4d2429e91b7bc57d6b5dd31a54a5c98caef5d94e6ded55a0",
+    "frontend_same_origin_bff_double_sha256": "sha256:bf386dea6692ca0f6f04ed06ad2ecf66eea92dcbf82dd95b02aec45456a359f6",
     "frontend_same_origin_bff_contract_test_sha256": "sha256:1159c8525b83811f7939f09c352981675583c64a6dbd6cbddb153e2fd59452ed",
     "frontend_execution_journeys_sha256": "sha256:207a4021333dadb04e9a0e65b940c0e0370f8c24024172537ce44877458633d8",
     "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",

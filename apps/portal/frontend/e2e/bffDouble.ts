@@ -41,6 +41,7 @@ const ALPHA_FLEET = canonical("execution-alpha-fleet-list.v2.valid.json") as Rec
 const PORTFOLIO_LIST = canonical("execution-portfolio-list.valid.json") as Record<string, unknown>;
 const BINDINGS_LIST = canonical("execution-bindings-list.valid.json") as Record<string, unknown>;
 const BINDING_DETAIL = canonical("execution-binding-detail.valid.json") as Record<string, unknown>;
+const SANDBOX_NOTE_CAPTURE = canonical("execution-governance.review-capture.sandbox-note.valid.json") as Record<string, unknown>;
 const LIVE_REVIEW = canonical("governance-live-review.valid.json") as Record<string, unknown>;
 const ACCOUNT_BROKER_READY = canonical("execution-account-broker-360.ready.valid.json") as Record<string, unknown>;
 
@@ -902,6 +903,29 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
   const seg = path.split("/").filter(Boolean);
 
   if (method === "GET") {
+    /*
+     * R3-3 · the Portal review capture BE-R2-8 published.
+     *
+     * The capabilities list must carry all six actions the contract names, and
+     * the three source-owned ones stay UNAVAILABLE with their reason: this
+     * double must not be the place a grant or promotion quietly becomes
+     * offerable. The capture response is the canonical fixture, loaded.
+     */
+    if (path === "/governance/review-capture-capabilities") {
+      return ok({
+        schema_version: "governance.review-capture-capabilities.v1",
+        authority: "PORTAL",
+        source_side_effect_requested: false,
+        actions: [
+          { id: "SANDBOX_NOTE", state: "AVAILABLE", inputs: "certification_id,expected_workflow_version", path: "/api/v1/execution/governance/sandbox/capture-note" },
+          { id: "R2_CREATE", state: "UNAVAILABLE", reason_code: "R2_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE" },
+          { id: "PAPER_EXIT_CREATE", state: "UNAVAILABLE", reason_code: "PAPER_EXIT_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE" },
+          { id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "SOURCE_OWNED_NOT_PORTAL_AUTHORED" },
+          { id: "PAPER_EXIT_PROMOTE", state: "UNAVAILABLE", reason_code: "SOURCE_OWNED_NOT_PORTAL_AUTHORED" },
+          { id: "SANDBOX_CERTIFY_SOURCE", state: "UNAVAILABLE", reason_code: "SOURCE_OWNED_NOT_PORTAL_AUTHORED" },
+        ],
+      });
+    }
     if (path === "/runtime-manifest") return ok(RUNTIME_MANIFEST);
     if (path === "/screen-contracts") return ok(SCREEN_CONTRACTS);
     if (path === "/activation/capabilities") return ok(ACTIVATION_CAPABILITIES);
@@ -1052,6 +1076,8 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
 
   if (method === "POST") {
     if (path === "/governance/approvals") return { status: 201, body: APPROVAL_CREATED };
+    // R3-3 · the canonical capture response, loaded rather than restated.
+    if (path === "/governance/sandbox/capture-note") return { status: 201, body: SANDBOX_NOTE_CAPTURE };
     if (path === "/commands/plans") return ok(COMMAND_PLAN_FIXTURE);
     if (seg[0] === "approvals" && seg[2] === "capital-preview") return ok(CAPITAL_PREVIEW);
     if (seg[0] === "alphas" && seg[2] === "insight-previews") return ok(INSIGHT_BATCH);

@@ -10747,3 +10747,97 @@ source gap — không được gộp chung với 13 row `SOURCE_GAP_CONFIRMED` �
 3. lối vào Waivers record + 4 capture — **chưa**
 4. `r3_governed_command` / `r3_realtime_dr` bind vào UI — **chưa**
 5. visual baseline chạy lại sau khi review diff — **chưa**
+
+## A77. R3-3/FE · ĐÓNG PHASE — CAPTURE UI, VÀ MỘT ĐÍNH CHÍNH CHO CHÍNH §A76.4 (13-09)
+
+### A77.1 Đính chính §A76.4 — tôi kết luận sai, tự bắt được khi đi làm
+
+Ở §A76.4 tôi viết: *"server đã mở workflow `conditions.waiver.record` (...)
+Đây là **nợ frontend của tôi**"*. **Sai.**
+
+Tôi kết luận từ **classification của ledger** (`COVERED` /
+`PORTAL_WORKFLOW_CURRENTLY_AVAILABLE`) mà **không kiểm có operation HTTP nào
+được publish hay không**. Kiểm rồi thì:
+
+- `packages/contracts/openapi/execution-governance.openapi.json` chỉ có
+  `GET /api/v1/execution/governance/waivers`. **Không có POST nào.**
+- Action tồn tại trong action manifest (`eds02-contract-source.generated.ts`)
+  với `plan_apply_verify_contract: portal-control:conditions-waiver-v1`, owner
+  `portal_control_owner` — nhưng **không có named operation cho browser gọi**.
+
+Frontend **không thể** gọi thứ không được publish. Đây là **ledger row cho
+codex**, không phải nợ của tôi. Lại đúng bài học §A56.3: chứng minh phép đo
+trước khi kết luận — lần này là "đọc classification" thay vì "kiểm route".
+
+### A77.2 Đã dựng: `ReviewCapturePanel` — một component cho cả ba capture
+
+BE-R2-8 publish 4 operation và **0 màn gọi**. Route thông suốt OpenAPI →
+`httpApi` (`r2/capture`, `paper-exit/create`, `sandbox/capture-note`,
+`review-capture-capabilities`); chỉ thiếu lối vào.
+
+Ba điều component này sinh ra để làm đúng:
+
+1. **Ghi nhận review, không cấp phép.** Contract pin `source_verdict:
+   NOT_ASSERTED` và `source_side_effect_requested: false`. Capabilities còn
+   liệt kê `R2_EXECUTION_GRANT`, `PAPER_EXIT_PROMOTE`,
+   `SANDBOX_CERTIFY_SOURCE` — component **không bao giờ** hiện ba cái đó, và
+   nói thẳng trên màn rằng đây không phải pass/certification/promotion.
+2. **Identity là của record, không phải của người gõ.** `expected_*_version` và
+   `expected_projection_digest` là optimistic concurrency. Bắt người gõ digest
+   là mời họ bịa; gõ sai version thì thành conflict họ không giải thích được.
+   Chúng hiện **read-only** để reviewer thấy đúng thứ sắp được ghi; chỉ có
+   **summary** là do người viết.
+3. **Retry thì replay, sửa thì không.** Request key sinh **một lần mỗi form
+   mở**: bấm submit hai lần → `replayed: true`, không nhân bản; sửa summary rồi
+   submit lại dưới cùng key → server từ chối, và **từ chối đó được hiện**.
+
+Thêm: capabilities đọc hỏng → **không** coi là AVAILABLE (đó là cách để một
+control bị server từ chối vẫn hiện ra). Field identity thiếu → chặn và **gọi
+tên field**, không thay bằng số.
+
+### A77.3 Wire được gì, và không wire được gì — theo field thật
+
+| Capture | Field cần | Kết quả |
+|---|---|---|
+| `SANDBOX_NOTE` | `certification_id`, `expected_workflow_version` | ✅ **Đã wire** — `SandboxCertification` publish đủ cả hai |
+| `PAPER_EXIT_CREATE` | + `r2_approval_id`, `expected_r2_version`, `expected_projection_digest` | ❌ read R2 **không publish** version lẫn digest |
+| `R2_CREATE` | + `portfolio_id`, `currency`, `risk_grant_id`, `expected_projection_digest`, `expected_r1_version` | ❌ read R1 **không publish** năm field này |
+
+Không bịa, không fixture fallback. Hai dòng ledger dưới đây.
+
+### A77.4 Ledger rows gửi codex (R3-4 / phase sau)
+
+| id | Thiếu gì | Chặn cái gì |
+|---|---|---|
+| `R3-FE-01` | `PanelEnvelope` không có `record_authority`/`source_authority` | panel-level source line không nêu được thẩm quyền |
+| `R3-FE-02` | `governance.r1-review.v1` không publish `expected_r1_version`, `portfolio_id`, `currency`, `risk_grant_id`, `expected_projection_digest` | **R2_CREATE capture** không có lối vào |
+| `R3-FE-03` | `governance.r2-review.v1` không publish `expected_r2_version`, `expected_projection_digest` | **PAPER_EXIT_CREATE capture** không có lối vào |
+| `R3-FE-04` | `conditions.waiver.record` khai `AVAILABLE` trong action manifest nhưng **không có operation HTTP publish** | Waivers record không có lối vào — **đính chính §A76.4** |
+
+### A77.5 Quyết định UIUX: `r3_governed_command` và `r3_realtime_dr` **cố ý không render**
+
+Plan cho phép map một row sang component **hoặc** nêu lý do nó cố ý không phải
+panel cho người dùng. Tôi chọn vế sau, và đây là lý do:
+
+- `r3_governed_command.invariants` = `{genericCliRelay:false,
+  sourceCommandDispatched:false, unclassifiedRows:false}` — **evidence cho
+  certification**, không phải thông tin vận hành. Operator không cần nhìn
+  `unclassifiedRows: false`. Ba sự thật đó Admin Drawer **đã nói** bằng câu
+  người đọc được, ở đúng chỗ họ định bấm.
+- `r3_realtime_dr` = `scenario_count`, `contract_sha256`,
+  `deployment_candidate` — thuộc manifest release, không thuộc màn vận hành.
+
+Đổ số liệu chứng nhận lên màn vận hành làm loãng đúng thứ operator cần đọc
+nhanh. Chúng vẫn ở trong manifest cho R3-4 dùng làm evidence.
+
+### A77.6 Evidence
+
+- `tsc --noEmit` sạch · `vitest` **148/148 file, 2371 pass / 1 skip, 0 fail** ·
+  `npm run build` xanh
+- `reviewCapture.ui.test.tsx` 12/12 — phủ đúng danh sách test bắt buộc của
+  R3-3: server refusal, expected-revision conflict, same-key retry, key mới sau
+  success, replay, capabilities đọc hỏng, identity thiếu. **Không test nào seed
+  một workflow row rồi nhận là đã test luồng người dùng.**
+- CSRF **cố ý không test lại** ở tầng component: `post()` đã gắn token cho mọi
+  mutation và bỏ header khi không có cookie, có coverage riêng — assert lại qua
+  component là đang test cái double.

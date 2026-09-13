@@ -43,6 +43,8 @@ import {
 } from "./OperationsQueue";
 import { IncidentDetailScreen } from "./IncidentDetail";
 import { SandboxCertificationScreen } from "./SandboxCertification";
+import { ReviewCapturePanel, captureCapability } from "../components/ReviewCapture";
+import { useExecutionRuntime } from "../useExecutionRuntime";
 import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
 import type { StageVisuals } from "../stage.types";
@@ -1345,6 +1347,20 @@ export function SandboxCertificationContainer({
     () => api.getSandboxCertification(deploymentId),
     [api, deploymentId],
   );
+  /*
+   * R3-3 item 3 · the Portal review capture BE-R2-8 published and nobody
+   * called. It rides in as a child so the reviewed certification layout above
+   * it is untouched; the capture is an addition to the screen, not a redesign
+   * of it.
+   */
+  const runtime = useExecutionRuntime(api);
+  const capabilities = useAnalyticsRead(
+    () => (runtime?.manifest?.workspaceId
+      ? api.getReviewCaptureCapabilities(runtime.manifest.workspaceId)
+      : Promise.resolve({ ok: false as const, status: "unavailable" as const, reason: "The runtime manifest published no workspace, so capture capabilities cannot be asked for." })),
+    [api, runtime?.manifest?.workspaceId],
+  );
+  const certification = state.value;
   return (
     <SandboxCertificationScreen
       certification={state.value}
@@ -1352,7 +1368,38 @@ export function SandboxCertificationContainer({
       status={state.status}
       reason={state.reason}
       visuals={visuals}
-    />
+    >
+      <ReviewCapturePanel
+        action="SANDBOX_NOTE"
+        title="Record a sandbox review note"
+        capability={captureCapability(capabilities.value, "SANDBOX_NOTE")}
+        capabilityReason={capabilities.reason}
+        identity={[
+          { label: "certification", value: certification?.certificationId ?? null },
+          { label: "workflow version", value: certification?.workflowVersion === null || certification?.workflowVersion === undefined
+            ? null : String(certification.workflowVersion) },
+          { label: "deployment", value: certification?.deploymentId ?? deploymentId },
+        ]}
+        onCapture={async (summary, requestKey) => {
+          const workspaceId = runtime?.manifest?.workspaceId;
+          // Guarded rather than defaulted: a capture written into the wrong
+          // workspace is worse than one that did not happen.
+          if (!workspaceId || !certification?.certificationId || certification.workflowVersion === null) {
+            return { kind: "failed" as const, reason: "The workspace or the certification identity was not published for this read." };
+          }
+          const result = await api.captureSandboxNote({
+            workspace_id: workspaceId,
+            request_key: requestKey,
+            summary,
+            certification_id: certification.certificationId,
+            expected_workflow_version: certification.workflowVersion,
+          });
+          return result.ok
+            ? { kind: "captured" as const, capture: result.value }
+            : { kind: "failed" as const, reason: result.reason };
+        }}
+      />
+    </SandboxCertificationScreen>
   );
 }
 

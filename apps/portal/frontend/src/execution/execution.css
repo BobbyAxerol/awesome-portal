@@ -4756,6 +4756,19 @@
   .exec-guard-pair .exec-pf2-grid[data-ratio] { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* ── R3-3 · Portal review capture ───────────────────────────────────────
+   Existing panel chrome; only the provenance line and the outcome are new,
+   and both are deliberately quiet — a capture is evidence, not an alarm. */
+.exec-rc-authority { font: 400 11px/16px var(--font-mono); color: var(--ink-mute); letter-spacing: 0.04em; }
+.exec-rc-provenance { font: 400 12px/1.6 var(--font-body); color: var(--ink-soft); margin: 0 0 var(--space-3); }
+.exec-rc-provenance b { color: var(--ink); }
+/* The capture identity is three short ids, not prose: a 40% key column
+   left a gap wide enough to read as an unfinished row. */
+.exec-rc .exec-gov-kv { grid-template-columns: minmax(72px, 12rem) minmax(0, 1fr); }
+.exec-rc-foot { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-3); }
+.exec-rc-blocked { font: 400 11px/16px var(--font-mono); color: var(--ink-mute); overflow-wrap: anywhere; }
+.exec-rc-outcome { font: 400 12px/1.6 var(--font-body); color: var(--ink-soft); margin: var(--space-3) 0 0; overflow-wrap: anywhere; }
+
 /* ── EL-V2-07 · operations workflow ─────────────────────────────────── */
 .exec-cc-rows { display: flex; flex-direction: column; gap: 4px; }
 .exec-cc-row { display: grid; grid-template-columns: 28px 96px 1fr auto auto; align-items: center; gap: var(--space-2); width: 100%; text-align: left; padding: 6px var(--space-2); background: var(--surface-3); border: 1px solid var(--line); color: inherit; }
