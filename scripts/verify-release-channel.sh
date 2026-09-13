@@ -74,8 +74,19 @@ fi
 }
 
 read_setting() {
-  local key="$1"
-  sed -n "s/^${key}=//p" "${env_file}" | tail -n 1
+  local key="$1" raw
+  raw="$(sed -n "s/^${key}=//p" "${env_file}" | tail -n 1)"
+
+  # `prepare-stable-release-takeover.py` writes every host-only dotenv value
+  # as a single-quoted Compose literal.  Compose consumes that form correctly,
+  # but this verifier must compare the decoded scalar rather than treating the
+  # quote characters as part of the setting.  Decode only the documented
+  # single-quote escape; never evaluate dotenv content as shell code.
+  if [[ "${raw}" == \'*\' && ${#raw} -ge 2 ]]; then
+    raw="${raw:1:${#raw}-2}"
+    raw="${raw//\\\'/\'}"
+  fi
+  printf '%s\n' "${raw}"
 }
 
 stack_name="$(read_setting PORTAL_STACK_NAME)"
