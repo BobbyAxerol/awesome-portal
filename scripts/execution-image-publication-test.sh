@@ -133,6 +133,25 @@ for required in (
     if required not in release_gate:
         raise SystemExit("Publication must require every exact-commit Portal CI release gate.")
 
+poll_match = re.search(r"(?m)^\s*ci_gate_poll_seconds=(\d+)\s*$", release_gate)
+attempt_match = re.search(r"(?m)^\s*ci_gate_max_attempts=(\d+)\s*$", release_gate)
+if poll_match is None or attempt_match is None:
+    raise SystemExit("Publication must declare a bounded CI-gate polling budget.")
+ci_gate_poll_seconds = int(poll_match.group(1))
+ci_gate_max_attempts = int(attempt_match.group(1))
+if ci_gate_poll_seconds != 30 or ci_gate_max_attempts != 300:
+    raise SystemExit("Publication CI-gate polling budget drifted from the reviewed 150-minute bound.")
+if 'for attempt in $(seq 1 "${ci_gate_max_attempts}"); do' not in release_gate:
+    raise SystemExit("Publication must consume its declared CI-gate polling bound.")
+if 'if [[ "${attempt}" == "${ci_gate_max_attempts}" ]]; then' not in release_gate:
+    raise SystemExit("Publication must fail closed at its declared CI-gate polling bound.")
+if 'sleep "${ci_gate_poll_seconds}"' not in release_gate:
+    raise SystemExit("Publication must use its declared CI-gate polling interval.")
+
+publish_timeout_minutes = int(job.get("timeout-minutes", 0))
+if publish_timeout_minutes < 210:
+    raise SystemExit("Publication timeout must reserve the reviewed CI gate and publication budget.")
+
 ci_jobs = ci_document.get("jobs")
 if not isinstance(ci_jobs, dict):
     raise SystemExit("Portal CI jobs are missing.")
@@ -153,6 +172,19 @@ for job_id, (name, needs, minimum_timeout) in expected_ci_jobs.items():
         raise SystemExit(f"Portal CI dependency drifted: {job_id}.")
     if int(ci_job.get("timeout-minutes", 0)) < minimum_timeout:
         raise SystemExit(f"Portal CI timeout budget drifted: {job_id}.")
+
+# The longest release-critical CI path is the authority job followed by the
+# longest dependent job.  The publisher must retain 15 minutes for scheduling
+# variance and 60 minutes after the gate for building/signing/evidence.
+ci_path_minutes = int(ci_jobs["integration"]["timeout-minutes"]) + max(
+    int(ci_jobs["visual-baseline"]["timeout-minutes"]),
+    int(ci_jobs["application-verification"]["timeout-minutes"]),
+)
+ci_gate_wait_minutes = ci_gate_poll_seconds * ci_gate_max_attempts / 60
+if ci_gate_wait_minutes < ci_path_minutes + 15:
+    raise SystemExit("Publication CI-gate wait is shorter than the declared CI dependency path.")
+if publish_timeout_minutes < ci_gate_wait_minutes + 60:
+    raise SystemExit("Publication timeout does not retain a bounded immutable-publication budget.")
 
 integration_steps = {
     step.get("name")

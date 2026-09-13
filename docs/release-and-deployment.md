@@ -47,6 +47,11 @@ published compatibility contract.
    Rust Execution Edge and Source Proxy. Every image receives SBOM/SLSA
    provenance, Trivy evidence and a keyless signature. A `v*` tag additionally
    receives a release tag.
+   The publication gate itself is bounded at 150 minutes: the declared
+   60-minute authority job plus the 75-minute dependent browser path and a
+   15-minute scheduling margin. Its 210-minute job budget leaves 60 minutes
+   for immutable image build, signing and evidence. Change the CI graph and
+   this tested bound together; never replace it with an unbounded wait.
 5. Review the uploaded `portal-release-candidate-<commit>` artifact and its
    manifest SHA-256. It binds all six image digests, migration chain,
    compatibility/profile matrix and rollback contract. A CRITICAL finding

@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:6ce706f44dd4c07c0cd2c5a40e4ec30d603fdb76202524c33a15961da12ee2c4"
+      "sha256": "sha256:11639e79566f87debf14073cd239e6ad9c335b9f0f1c432a28028607049302e6"
     },
     {
       "id": "n29_debt",
@@ -90,7 +90,7 @@
     {
       "id": "protected_release_workflow",
       "file": ".github/workflows/publish-images.yml",
-      "sha256": "sha256:ad763c45c4489dbcbeb263e535ded5ffa9f8e3eda79a7ad05834e5cfbb17face"
+      "sha256": "sha256:71f84f79028fc67be395a33a2310dcedb7d30b4ceb1c9ef7d24165a0faacec8c"
     },
     {
       "id": "protected_deploy_workflow",
@@ -110,7 +110,7 @@
     {
       "id": "image_publication_gate",
       "file": "scripts/execution-image-publication-test.sh",
-      "sha256": "sha256:bf0718417007d625eeb2df057f0c39146055cf413d5964ff95b4c826911bb81f"
+      "sha256": "sha256:535d2b958ef9de77326cbe77245d9500eac4d9092f0fd3bbb4975ec8e727610a"
     },
     {
       "id": "release_authority_workflow_test",

@@ -33,7 +33,10 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 105
+    # CI permits a 60-minute authority job followed by a 75-minute browser
+    # verification job.  Reserve a bounded 150-minute gate window (including
+    # runner scheduling margin), then retain 60 minutes for build/sign/evidence.
+    timeout-minutes: 210
 
     steps:
       - name: Check out Portal source
@@ -56,12 +59,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p release-gates
+          ci_gate_poll_seconds=30
+          ci_gate_max_attempts=300
           required_check_names=(
             "Validate Portal monorepo stack"
             "Portal web visual baseline"
             "Validate Portal application build and browser flows"
           )
-          for attempt in $(seq 1 90); do
+          for attempt in $(seq 1 "${ci_gate_max_attempts}"); do
             gh api \
               -H 'Accept: application/vnd.github+json' \
               "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
@@ -98,12 +103,12 @@ jobs:
                 "${GITHUB_SHA}"
               break
             fi
-            if [[ "${attempt}" == "90" ]]; then
-              printf 'Timed out waiting for all Portal CI release gates on %s.\n' \
-                "${GITHUB_SHA}" >&2
+            if [[ "${attempt}" == "${ci_gate_max_attempts}" ]]; then
+              printf 'Timed out after bounded %d-minute wait for all Portal CI release gates on %s.\n' \
+                "$((ci_gate_poll_seconds * ci_gate_max_attempts / 60))" "${GITHUB_SHA}" >&2
               exit 1
             fi
-            sleep 30
+            sleep "${ci_gate_poll_seconds}"
           done
 
       - name: Derive lowercase image prefix
