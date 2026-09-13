@@ -15,6 +15,8 @@ python3 -m json.tool \
 python3 -m json.tool \
   "${ROOT_DIR}/deploy/execution-manager-v2/product-dashboard.v1.json" >/dev/null
 
+python3 "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py" \
+  --refresh-evidence
 python3 "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py"
 
 printf '%s\n' 'N29 complete-surface, no-unnamed-debt and fail-closed product release gates passed.'

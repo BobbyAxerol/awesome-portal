@@ -152,6 +152,10 @@ def main() -> None:
     assert result["decision"] == "EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING"
     assert result["failure_scenarios"] == 10
     assert result["product_active"] is False
+    refreshed = MODULE.refresh_static_input_digests(write=False)
+    assert refreshed["changed"] is False
+    assert refreshed["written"] is False
+    assert refreshed["runtime_effect"] == "NONE"
 
     qualification = MODULE.read_json(MODULE.QUALIFICATION_PATH)
     failure = MODULE.read_json(MODULE.FAILURE_PATH)

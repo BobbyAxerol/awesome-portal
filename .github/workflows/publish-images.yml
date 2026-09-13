@@ -56,37 +56,55 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p release-gates
+          required_check_names=(
+            "Validate Portal monorepo stack"
+            "Portal web visual baseline"
+            "Validate Portal application build and browser flows"
+          )
           for attempt in $(seq 1 90); do
             gh api \
               -H 'Accept: application/vnd.github+json' \
               "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
               > release-gates/portal-ci-check-runs.json
-            conclusion="$(jq -r '
-              [.check_runs[]
-                | select(.name == "Validate Portal monorepo stack"
-                         and .head_sha == env.GITHUB_SHA)
-                | .conclusion] | last // "pending"
-            ' release-gates/portal-ci-check-runs.json)"
-            if [[ "${conclusion}" == "success" ]]; then
-              break
-            fi
-            if [[ "${conclusion}" =~ ^(failure|cancelled|timed_out|action_required|stale)$ ]]; then
+
+            all_green=true
+            failed_checks=()
+            for required_name in "${required_check_names[@]}"; do
+              # A re-run can leave multiple checks with the same name on the
+              # commit.  Only the newest exact-SHA execution is authoritative.
+              conclusion="$(jq -r --arg name "${required_name}" '
+                [.check_runs[]
+                  | select(.name == $name and .head_sha == env.GITHUB_SHA)]
+                | sort_by(.started_at // .created_at // "")
+                | last
+                | .conclusion // "pending"
+              ' release-gates/portal-ci-check-runs.json)"
+              if [[ "${conclusion}" == "success" ]]; then
+                continue
+              fi
+              all_green=false
+              if [[ "${conclusion}" =~ ^(failure|cancelled|timed_out|action_required|stale)$ ]]; then
+                failed_checks+=("${required_name}=${conclusion}")
+              fi
+            done
+
+            if ((${#failed_checks[@]} > 0)); then
               printf 'Portal CI rejected release commit %s: %s\n' \
-                "${GITHUB_SHA}" "${conclusion}" >&2
+                "${GITHUB_SHA}" "${failed_checks[*]}" >&2
               exit 1
             fi
+            if [[ "${all_green}" == true ]]; then
+              printf 'All commit-bound Portal CI release gates passed for %s.\n' \
+                "${GITHUB_SHA}"
+              break
+            fi
             if [[ "${attempt}" == "90" ]]; then
-              printf 'Timed out waiting for Portal CI on %s.\n' "${GITHUB_SHA}" >&2
+              printf 'Timed out waiting for all Portal CI release gates on %s.\n' \
+                "${GITHUB_SHA}" >&2
               exit 1
             fi
             sleep 30
           done
-          jq -e '
-            .check_runs
-            | any(.name == "Validate Portal monorepo stack"
-                and .head_sha == env.GITHUB_SHA
-                and .conclusion == "success")
-          ' release-gates/portal-ci-check-runs.json >/dev/null
 
       - name: Derive lowercase image prefix
         id: image-prefix

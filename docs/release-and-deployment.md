@@ -38,11 +38,15 @@ published compatibility contract.
    `./scripts/portal smoke`.
 3. Open a Portal pull request into `dev`. Root CI validates tracked monorepo
    source directly, including the composed stack.
-4. Promote reviewed, stable `dev` to `main`. Publication waits for successful
-   Portal CI on that same commit, then builds six immutable images: Portal API,
-   Portal web, Control API, Roadmap API, Rust Execution Edge and Source Proxy.
-   Every image receives SBOM/SLSA provenance, Trivy evidence and a keyless
-   signature. A `v*` tag additionally receives a release tag.
+4. Promote reviewed, stable `dev` to `main`. Publication waits for **all three**
+   successful, same-commit Portal CI gates: `Validate Portal monorepo stack`,
+   `Portal web visual baseline`, and `Validate Portal application build and
+   browser flows`. The checks run in independently bounded jobs, but no one
+   green check authorizes publication by itself. Only then does the publisher
+   build six immutable images: Portal API, Portal web, Control API, Roadmap API,
+   Rust Execution Edge and Source Proxy. Every image receives SBOM/SLSA
+   provenance, Trivy evidence and a keyless signature. A `v*` tag additionally
+   receives a release tag.
 5. Review the uploaded `portal-release-candidate-<commit>` artifact and its
    manifest SHA-256. It binds all six image digests, migration chain,
    compatibility/profile matrix and rollback contract. A CRITICAL finding
@@ -53,6 +57,20 @@ present in their base branch. Manual image publication and production deploys
 must be dispatched from `main`. Production accepts only `sha-<40-hex>` image
 tags whose commit is reachable from main, allowing a reviewed older-main image
 for rollback without permitting a feature/dev image.
+
+When a tracked EDS-12 release input changes (including CI, publisher or its
+static verifier), refresh the derived qualification ledger before opening the
+pull request:
+
+```bash
+./scripts/refresh-release-integrity-ledgers.sh --write
+```
+
+Commit the resulting N29 and EDS-12 evidence/manifest files together with the
+source change. The helper refreshes N29 before EDS-12, validates the fixed
+input lists and writes only non-secret SHA-256 bindings; it cannot authorize a
+runtime, command, mutation or deployment. Run it with `--check` in CI or when
+reviewing a diff. Never hand-edit those hashes.
 
 There is no child source lock or separate source promotion step. The Portal
 commit is the reproducible release definition. Roadmap's UI is compiled into the
@@ -72,8 +90,9 @@ recoverable.
 
 1. Merge the approved release into `main`; do not build Stable from `dev`, a
    feature branch, or a local worktree. Confirm the exact `origin/main` SHA and
-   wait for **Portal CI** and **Build and publish Portal images** for that same
-   SHA to pass.
+   wait for all three named **Portal CI** checks and **Build and publish Portal
+   images** for that same SHA to pass. A cancelled, timed-out or stale check is
+   a release failure, never a reason to accept an earlier green check.
 2. Inspect `portal-release-candidate-<commit>` from the successful publication
    run. Record its exact `sha256:...` release-manifest digest. The candidate
    binds the six image digests, migration chain, compatibility matrix and
