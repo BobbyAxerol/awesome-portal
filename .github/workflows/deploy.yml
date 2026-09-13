@@ -324,7 +324,7 @@ jobs:
           }
           trap 'release_failure_diagnostics "$?"' ERR
 
-          compose_next config -q
+          compose_next config -q < /dev/null
 
           timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
           backup_dir="${DEPLOY_PATH}/backups/${timestamp}-${IMAGE_TAG}"
@@ -364,22 +364,31 @@ jobs:
           # NATS, MinIO and PostgreSQL are the already-running stable
           # companions; preserving their local image bytes prevents a mutable
           # tag refresh during an otherwise signed application rollout.
+          # The deployment program is supplied over the SSH stdin stream.
+          # Compose must never inherit that stream: some Compose versions
+          # consume it during `up`, silently dropping the marker/evidence tail
+          # after an otherwise successful rollout.
           compose_next pull \
             portal-api roadmap-task-board-api portal-web \
-            control-api control-api-migrate control-api-bootstrap quant-worker-py
+            control-api control-api-migrate control-api-bootstrap quant-worker-py \
+            < /dev/null
           set +e
-          compose_next up -d --remove-orphans --wait --wait-timeout 180 --pull never
+          compose_next up -d --remove-orphans --wait --wait-timeout 180 --pull never \
+            < /dev/null
           compose_up_status=$?
           set -e
           if (( compose_up_status != 0 )); then
             release_failure_diagnostics "${compose_up_status}"
           fi
           compose_next exec -T control-api node -e \
-            "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+            "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" \
+            < /dev/null
           compose_next exec -T portal-api python -c \
-            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
+            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)" \
+            < /dev/null
           compose_next exec -T roadmap-task-board-api python -c \
-            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
+            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)" \
+            < /dev/null
 
           marker_next="${DEPLOY_PATH}/.deployed-release.env.next"
           umask 077
@@ -419,7 +428,7 @@ jobs:
             --output "${sgp_runtime_marker}" \
             "${collector_replace[@]}"
           sudo -n test -s "${sgp_runtime_marker}"
-          compose_next ps
+          compose_next ps < /dev/null
           REMOTE
 
       - name: Fetch sanitized SGP runtime-binding evidence

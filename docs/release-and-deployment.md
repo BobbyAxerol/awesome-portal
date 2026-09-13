@@ -64,6 +64,61 @@ backup/restore dry-run and browser UAT. Start local deployments with the
 local-first flag and make the V1 rollout an explicit reviewed configuration
 change.
 
+## Fast stable release runbook (main only)
+
+This is the sole repeatable path for a stable version. It deliberately makes
+the source promotion fast while keeping the data transition explicit and
+recoverable.
+
+1. Merge the approved release into `main`; do not build Stable from `dev`, a
+   feature branch, or a local worktree. Confirm the exact `origin/main` SHA and
+   wait for **Portal CI** and **Build and publish Portal images** for that same
+   SHA to pass.
+2. Inspect `portal-release-candidate-<commit>` from the successful publication
+   run. Record its exact `sha256:...` release-manifest digest. The candidate
+   binds the six image digests, migration chain, compatibility matrix and
+   signed provenance; an image tag alone is not sufficient.
+3. In GitHub Actions, dispatch **Deploy Portal stack** from `main` using only
+   the candidate's immutable `sha-<40-hex>` tag, publication run ID and
+   release-manifest digest. Explicitly accept the candidate's vulnerability
+   evidence. Do not run `docker compose up` manually on the established stable
+   host.
+4. Let the protected workflow perform its ordered transition: prove the stable
+   project/volume identity, create a PostgreSQL custom dump and a Roadmap/Task
+   Board SQLite online backup, checksum them, pull images by digest, run
+   append-only forward migrations, wait for health, and atomically write the
+   deployed release marker. The workflow has a bounded 60-minute window so a
+   large valid PostgreSQL backup finishes before any migration begins. Compose is
+   deliberately detached from the SSH script's stdin, so it cannot consume the
+   post-start marker/evidence steps; a missing marker is a release failure, not
+   a reason to guess deployment state.
+5. Verify the deployment marker, all stable service health checks, loopback
+   `HTTP 200`, and the public Access boundary. Stable must remain at
+   `portal.primusspark.com`; `dev-portal.primusspark.com` remains the separate
+   development route. The workflow neither edits Cloudflare Tunnel/Access nor
+   creates users, resets passwords, changes account data, replaces named
+   volumes, or contacts the Trading System.
+6. Fast-forward `dev` from the deployed `main` SHA only after the protected
+   rollout passes, so the next campaign starts from one source baseline.
+
+If runtime rollback is required, dispatch the same protected workflow with a
+previously verified, signed candidate whose source commit is reachable from
+`main`. Never reverse a migration in place and never copy a dev database into
+Stable. Use the timestamped pre-rollout backups for isolated restore validation
+or data recovery, not as a shortcut around a forward schema transition.
+
+### Stable invariants
+
+- `portal.primusspark.com` keeps the established Stable Docker project,
+  loopback port, named volumes, Cloudflare Tunnel and Zero Trust Access policy.
+- Existing Portal accounts, sessions and Roadmap/Task Board records stay in
+  their persistent volumes; release code changes only add approved forward
+  schema migrations.
+- `dev-portal.primusspark.com` is never a source of production code, volumes
+  or data.
+- A failed backup or migration is fail-closed: no image recreation occurs
+  before a valid, checksummed backup exists.
+
 ## Prepare a deployment host
 
 1. Install Docker Engine and the Docker Compose plugin.
