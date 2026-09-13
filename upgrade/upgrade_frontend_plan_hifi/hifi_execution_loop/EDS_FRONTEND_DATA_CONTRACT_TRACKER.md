@@ -10679,3 +10679,71 @@ câu cho cả hai là nói sai với ít nhất một profile.
 mục 6 (lý do disable của command) và panel DR. Bốn operation capture
 (`getReviewCaptureCapabilities`, `captureR2`, `createPaperExit`,
 `captureSandboxNote`) vẫn **0 UI caller**. Visual baseline chưa chạy lại.
+
+## A76. R3-3/FE · CONSUMER REPORT — CHẠY THẬT LEDGER R3-1, KHÔNG ĐỌC BẰNG MẮT (13-09)
+
+R3-3 yêu cầu: *"Consumer report maps every R3-1 `COVERED` ledger row to a named
+component or names why it is intentionally not a user-facing panel."* Đây là
+artifact đóng phase, và là input cho certification.
+
+**Cách lấy số:** ledger là TypeScript trong control-api và `node_modules` không
+có sẵn, nên tôi **thực thi nó** bằng `tsx` trong container (mount repo read-write,
+không cài gì vào cây) rồi dump `panelCoverage`/`actionCoverage`. Không đọc bằng
+mắt, không ước lượng.
+
+### A76.1 Ledger thật
+
+| | |
+|---|---|
+| panel rows | **139** trên **25 màn** |
+| classification | `PARTIAL_AUTHORIZED` 96 · `COVERED` 30 · `SOURCE_GAP_CONFIRMED` 13 |
+| action rows | **12** — `COVERED` 5 · `NOT_APPLICABLE` 5 · `SOURCE_GAP_CONFIRMED` 2 |
+| relations | 96 |
+| named operation | **25** |
+
+### A76.2 Kết quả đối chiếu: **25/25 named operation đều có consumer frontend — 0 thiếu**
+
+Mỗi `namedPortalOperationId` trong ledger được grep ngược vào
+`apps/portal/frontend/src` + `e2e` (loại file test). Không operation nào không
+có người đọc. Đây là điều kiện exit đầu tiên của R3-3 và nó **đạt**.
+
+### A76.3 13 panel `SOURCE_GAP_CONFIRMED` — đều là typed state có tên, không phải màn trắng
+
+Chúng tập trung vào đúng ba nhóm plan đã nêu là chờ R3-2, và **R3-2 xác nhận
+vẫn chưa qualify** (xem A75):
+
+- `market_context/market_candles` — Alpha 360, Paper Workbench, Paper VNM
+- `market_context/market_latest` — Canary Control Room, Live Full Operations
+- `market_calendar/venue_calendar` + `vnm_constraints` — Paper VNM
+- `trade_replay` — Full Blotter, Incident Detail
+- `research_lineage/research_artifact` — Alpha 360, Gate R1
+- `canary_drift` — Canary Control Room, Command Center
+
+Sau A75, nhóm market giờ in **verdict per-profile của server** thay vì một câu
+client. Đó chính là "khai thác tối đa" phần R3-2 vừa giao.
+
+### A76.4 Lỗ thật còn lại của R3-3 — ledger nói `COVERED` nhưng UI **không có lối vào**
+
+| Action trong ledger | Phân loại | Lối vào UI |
+|---|---|---|
+| `EXECUTION_NEW_APPROVAL_REQUEST_SCREEN/approval.create` | COVERED | ✅ `NewApprovalRequest` |
+| `EXECUTION_GATE_R1_REVIEW_SCREEN/approval.review.r1` | COVERED | ✅ (19 affordance) |
+| `EXECUTION_GATE_R2_REVIEW_SCREEN/approval.review.r2` | COVERED | ✅ (9) |
+| `EXECUTION_GATE_LIVE_REVIEW_SCREEN/approval.review.live` | COVERED | ⚠️ chỉ 2 affordance — mỏng, cần rà |
+| `EXECUTION_WAIVERS_REGISTER_SCREEN/conditions.waiver.record` | **COVERED** | ❌ **KHÔNG CÓ** — `WaiversRegisterScreen` chỉ nhận `page/counts/filter/onNext/onPrev`, hoàn toàn read-only |
+
+Và bốn operation capture của R3-3 mục 3 vẫn **0 UI caller**:
+`getReviewCaptureCapabilities`, `captureR2`, `createPaperExit`,
+`captureSandboxNote`.
+
+**Nói thẳng:** server đã mở workflow `conditions.waiver.record` và bốn đường
+capture; frontend chưa dựng lối vào. Đây là **nợ frontend của tôi**, không phải
+source gap — không được gộp chung với 13 row `SOURCE_GAP_CONFIRMED` ở trên.
+
+### A76.5 Điều kiện đóng R3-3, kiểm được
+
+1. ~~mọi named operation có consumer~~ — **xong, 25/25**
+2. ~~market panel dùng verdict server per-profile~~ — **xong (A75)**
+3. lối vào Waivers record + 4 capture — **chưa**
+4. `r3_governed_command` / `r3_realtime_dr` bind vào UI — **chưa**
+5. visual baseline chạy lại sau khi review diff — **chưa**
