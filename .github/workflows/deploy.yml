@@ -44,7 +44,11 @@ jobs:
   deploy:
     name: Deploy production image
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # A verified stable rollout first produces a complete PostgreSQL backup.
+    # The Control DB may legitimately exceed the old 20-minute envelope; keep
+    # the job bounded, but leave enough time for backup, immutable image pull,
+    # forward-only migration, readiness, and evidence collection.
+    timeout-minutes: 60
     environment: production
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}

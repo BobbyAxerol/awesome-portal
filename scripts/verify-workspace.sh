@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Verification may execute Python both on the host and in disposable Docker
+# containers.  Do not leave interpreter bytecode in the shared checkout: a
+# container UID could otherwise make a later maintainer verification fail on
+# an unwriteable __pycache__ directory.  This affects only test artifacts.
+export PYTHONDONTWRITEBYTECODE=1
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
@@ -863,10 +869,26 @@ if ! docker info >/dev/null 2>&1; then
   caller_gid="$(id -g)"
   exec sudo -n env \
     PORTAL_VERIFY_DOCKER_ESCALATED=true \
+    PYTHONDONTWRITEBYTECODE=1 \
     HOST_UID="${caller_uid}" \
     HOST_GID="${caller_gid}" \
     "$0" "$@"
 fi
+
+# `python -m py_compile` intentionally writes bytecode even when
+# PYTHONDONTWRITEBYTECODE is set.  The verifier can be re-exec'd through sudo
+# above, so writing those files beside source would leave an unwriteable
+# `scripts/__pycache__` owned by the Docker/root namespace.  Keep explicit
+# compilation artifacts in one short-lived, world-writable directory instead;
+# nested sudo checks can use it too, and the exact mktemp path is removed on
+# every normal verifier exit.
+verify_pycache_prefix="$(mktemp -d "${TMPDIR:-/tmp}/portal-verify-pycache.XXXXXX")"
+chmod 0777 "${verify_pycache_prefix}"
+cleanup_verify_pycache_prefix() {
+  rm -rf -- "${verify_pycache_prefix}"
+}
+trap cleanup_verify_pycache_prefix EXIT
+export PYTHONPYCACHEPREFIX="${verify_pycache_prefix}"
 
 if nested_git="$(find "${ROOT_DIR}/apps" "${ROOT_DIR}/features" -name .git -print -quit)"; [[ -n "${nested_git}" ]]; then
   printf 'Nested Git metadata is not allowed in the Portal monorepo: %s\n' "${nested_git}" >&2
