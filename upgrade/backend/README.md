@@ -1973,3 +1973,11 @@ starting services without a build pass; this prevents the image-only Python
 worker from racing its shared `portal-api` producer in clean CI. This changes
 neither a running stable service nor any frontend, execution-source or command
 authority.
+
+**2026-09-13 Stable SPA asset-delivery hardening:** Portal and embedded
+Roadmap entry HTML are explicitly non-storable, while Vite content-hashed
+assets are immutable and missing hashes return a real `404` rather than the
+SPA HTML fallback. This closes the blank-page failure caused by a browser
+holding a previous release entry document. The scoped Nginx regression test and
+loopback-TLS header probe are required before promotion; no API, data, command,
+Cloudflare Access or database behavior changes.

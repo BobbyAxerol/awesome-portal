@@ -367,3 +367,28 @@ def test_gateway_forward_correlates_and_preserves_sse() -> None:
     assert "proxy_cache off;" in conf
     assert "proxy_set_header Connection '';" in conf
     assert "proxy_read_timeout 3600s;" in conf
+
+
+def _nginx_location_block(conf: str, location: str) -> str:
+    marker = f"location {location} {{"
+    return conf.split(marker, 1)[1].split("\n    }", 1)[0]
+
+
+def test_spa_shells_do_not_cache_html_or_fallback_missing_hashed_assets() -> None:
+    """A stale HTML shell must not turn a missing JS module into HTML/200."""
+
+    conf = NGINX_CONF.read_text(encoding="utf-8")
+
+    for document in ("= /index.html", "= /roadmap-task-board/index.html"):
+        block = _nginx_location_block(conf, document)
+        assert 'add_header Cache-Control "no-store, max-age=0" always;' in block
+        assert 'add_header X-Content-Type-Options "nosniff" always;' in block
+
+    for assets in ("^~ /assets/", "^~ /roadmap-task-board/assets/"):
+        block = _nginx_location_block(conf, assets)
+        assert "try_files $uri =404;" in block
+        assert (
+            'add_header Cache-Control "public, max-age=31536000, immutable";'
+            in block
+        )
+        assert 'add_header X-Content-Type-Options "nosniff" always;' in block
