@@ -73,9 +73,9 @@ fi
   exit 1
 }
 
-read_setting() {
-  local key="$1" raw
-  raw="$(sed -n "s/^${key}=//p" "${env_file}" | tail -n 1)"
+read_setting_from() {
+  local file="$1" key="$2" raw
+  raw="$(sed -n "s/^${key}=//p" "${file}" | tail -n 1)"
 
   # `prepare-stable-release-takeover.py` writes every host-only dotenv value
   # as a single-quoted Compose literal.  Compose consumes that form correctly,
@@ -89,12 +89,28 @@ read_setting() {
   printf '%s\n' "${raw}"
 }
 
+read_setting() {
+  read_setting_from "${env_file}" "$1"
+}
+
 stack_name="$(read_setting PORTAL_STACK_NAME)"
 http_port="$(read_setting PORTAL_HTTP_PORT)"
 image_tag="$(read_setting PORTAL_IMAGE_TAG)"
 public_origin="$(read_setting PORTAL_PUBLIC_ORIGIN)"
 notification_channels="$(read_setting PORTAL_NOTIFY_CHANNELS)"
 notification_channels_compact="${notification_channels//[[:space:]]/}"
+
+# The protected deployment workflow passes the candidate tag as an immutable
+# process environment value rather than persisting it in the host-only dotenv
+# file.  Its atomic deployed-release marker is therefore the stable source of
+# truth after a successful rollout.  Supporting that documented shape keeps
+# preflight useful on the established stack without accepting a mutable tag.
+if [[ "${channel}" == "stable" && -z "${image_tag}" ]]; then
+  deployed_marker="$(dirname "${env_file}")/deployed-release.env"
+  if [[ -f "${deployed_marker}" ]]; then
+    image_tag="$(read_setting_from "${deployed_marker}" IMAGE_TAG)"
+  fi
+fi
 
 if [[ ",${notification_channels_compact}," == *,lark,* ]]; then
   lark_webhook_url="$(read_setting LARK_WEBHOOK_URL)"
