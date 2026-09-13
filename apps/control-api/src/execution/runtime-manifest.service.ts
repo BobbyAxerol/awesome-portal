@@ -4,6 +4,10 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { executionContractAuthorityEvidence } from "./contract-authority";
 import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
 import { environmentParity } from "./environment-parity";
+import { r3CurrentSourceCoverageEvidence } from "./r3-current-source-coverage-ledger";
+import { r3GovernedCommandEvidence } from "./r3-governed-command-ledger";
+import { r3ProfileQualificationEvidence } from "./r3-profile-qualification-ledger";
+import { r3RealtimeDrEvidence } from "./r3-realtime-dr-contract";
 
 /**
  * The browser-visible boundary is intentionally metadata-only.  It records
@@ -54,6 +58,17 @@ export class ExecutionRuntimeManifestService {
         })),
       },
       contract_authority: executionContractAuthorityEvidence(),
+      // R3-1 publishes an auditable coverage digest only. The full ledger is
+      // server-side because it contains Manager relation provenance that must
+      // not become a browser selector or source-introspection endpoint.
+      r3_current_source_coverage: r3CurrentSourceCoverageEvidence(),
+      // R3-2 is likewise metadata only. It carries per-profile qualification
+      // state, local-observation/DR boundary and governed-command census; no
+      // read, source activation, command dispatch or private handle occurs
+      // while this manifest is assembled.
+      r3_profile_qualification: r3ProfileQualificationEvidence(),
+      r3_realtime_dr: r3RealtimeDrEvidence(),
+      r3_governed_command: r3GovernedCommandEvidence(),
       source_semantics: {
         manager_read: intake.semantics.managerRead,
         global_event_ordering: intake.semantics.globalEventOrdering,

@@ -10610,3 +10610,72 @@ Không tạo fixture, không đoán giá trị, không để `unavailable` giả
 - Visual baseline: **chưa chạy lại** ở lát cắt này — masthead Binding Detail và
   chip GateR2 đổi nội dung nên baseline sẽ đỏ có chủ đích; sẽ review
   actual/expected/diff rồi mới re-record, không dùng lệnh update chung.
+
+## A75. R3-3/FE · LÁT CẮT 2 — KHAI THÁC R3-1 + R3-2 CỦA CODEX (13-09)
+
+codex đóng R3-1 (`d09e6b59`) và R3-2 (`4f098c7a`). Binding Detail đã được Bobby
+chuyển sang version sau — không hỏi lại.
+
+### A75.1 Thứ codex vừa mở ra mà browser đọc được ngay
+
+Coverage ledger R3-1 là **server-only** (chỉ digest/counts ra ngoài, không lộ
+tên Manager relation) — nên nó là input cho consumer report của tôi, không phải
+thứ để render.
+
+Nhưng R3-2 đẩy **ba khối evidence mới vào runtime manifest**, mà frontend **đã
+có sẵn** named operation `getRuntimeManifest()` để đọc:
+
+| Khối | Nội dung |
+|---|---|
+| `r3_profile_qualification` | verdict per-profile: `current_page_read`, `market_context`, `market_context_reason` |
+| `r3_governed_command` | census 100 action + `state_counts` + invariants |
+| `r3_realtime_dr` | ranh giới local-observation/DR |
+
+`readRuntimeManifest` phía client đọc `bounds`, `source_semantics`,
+`external_gates` — và **bỏ cả ba khối mới**. Cùng đúng lớp lỗi với A74: server
+publish, client vứt.
+
+### A75.2 Hai sự thật khác nhau đang bị gộp thành một câu
+
+Đây mới là phần đáng giá. R3-2 qualify market context **riêng cho từng profile**
+— comment trong ledger nói thẳng: *"a Paper proof cannot enable Sandbox or
+Live"*:
+
+| Profile | `market_context` | `market_context_reason` | Nghĩa thật |
+|---|---|---|---|
+| PAPER | `PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION` | `MANAGER_V2_SOURCE_CONTRACT_REJECTED` | Route **có thật**, đã tới được Manager qua mTLS với assertion hợp lệ; image đang chạy **cũ hơn** handler nên từ chối contract. **Sẽ requalify.** |
+| SANDBOX / LIVE | `PROFILE_NOT_QUALIFIED` | `NO_INDEPENDENT_MARKET_CONTEXT_PROFILE_QUALIFICATION` | **Chưa ai qualify.** Không có gì đang chờ. |
+
+UI trước đó in **một câu duy nhất** cho cả ba: *"Market candles are not
+published for this deployment."* — **"quay lại sau" và "chưa bao giờ được
+chứng minh cho profile của bạn" là hai sự thật vận hành khác nhau**, và in một
+câu cho cả hai là nói sai với ít nhất một profile.
+
+### A75.3 Đã làm
+
+- `runtimeManifest.ts`: đọc `r3_profile_qualification` (+ digest), thêm
+  `marketContextVerdict(manifest, environment)` — trả `null` khi server **không
+  nói gì** cho environment đó. **Im lặng không phải verdict**, và list rỗng
+  tuyệt đối không được đọc thành "đã qualify".
+- `useExecutionRuntime.ts`: mang cả manifest theo `ExecutionRuntime` — đọc
+  **một lần/page load** như bounds bên cạnh, không fetch thêm mỗi màn.
+- `recomposeContainers.tsx`: chuỗi lý do của panel market giờ là
+  **verdict server per-profile → capability reason → câu client**. Reason code
+  giữ **nguyên văn** để operator báo lỗi trích đúng chuỗi backend đang giữ.
+- Double dùng chung mirror đúng shape server, **cố ý bỏ `ledger_sha256`**:
+  digest tồn tại để buộc evidence vào một build server thật, nên một digest giả
+  trong double là đúng field dễ bị nhầm thành provenance thật nhất.
+
+### A75.4 Evidence
+
+- `tsc --noEmit`: sạch
+- `vitest`: **147/147 file, 2359 pass / 1 skip, 0 fail**
+- Test mới `profileQualification.test.ts`: 8/8, gồm case **server cũ hơn R3-2**
+  (xoá hẳn khối) → phải trả `[]` và `null`, không được nhận là qualified.
+
+### A75.5 Còn lại của R3-3
+
+`r3_governed_command` và `r3_realtime_dr` **chưa bind** — hai khối này phục vụ
+mục 6 (lý do disable của command) và panel DR. Bốn operation capture
+(`getReviewCaptureCapabilities`, `captureR2`, `createPaperExit`,
+`captureSandboxNote`) vẫn **0 UI caller**. Visual baseline chưa chạy lại.

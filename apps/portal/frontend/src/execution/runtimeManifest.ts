@@ -22,6 +22,33 @@ export interface PageBounds {
   maximumCursorBytes: number;
 }
 
+/**
+ * R3-2 · what the server independently qualified, per profile.
+ *
+ * A global flag is deliberately not a qualification result: the ledger's own
+ * words are "a Paper proof cannot enable Sandbox or Live". Before this, every
+ * profile's market panels printed one client sentence, so an operator could
+ * not tell apart the two genuinely different situations the server now
+ * distinguishes:
+ *
+ *  - Paper: `PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION` /
+ *    `MANAGER_V2_SOURCE_CONTRACT_REJECTED` — the route exists and was reached
+ *    over mTLS with a valid assertion; the running Manager image is older than
+ *    the handler, so the contract was rejected. This is expected to requalify.
+ *  - Sandbox and Live: `PROFILE_NOT_QUALIFIED` /
+ *    `NO_INDEPENDENT_MARKET_CONTEXT_PROFILE_QUALIFICATION` — nobody has
+ *    qualified it at all. Nothing is pending.
+ *
+ * "Try again later" and "this was never proved for your profile" are different
+ * facts, and only the server can tell them apart.
+ */
+export interface ProfileQualification {
+  environment: string;
+  currentPageRead: string;
+  marketContext: string;
+  marketContextReason: string | null;
+}
+
 export interface RuntimeManifest {
   workspaceId: string;
   readAtMs: number;
@@ -30,6 +57,10 @@ export interface RuntimeManifest {
   semantics: Readonly<Record<string, string>>;
   /** Requirements the owner still has to close, named by the server. */
   externalGates: readonly { requirementId: string; status: string }[];
+  /** R3-2 per-profile qualification; empty when the server published none. */
+  profileQualification: readonly ProfileQualification[];
+  /** The ledger digest, so evidence can be tied to an exact server build. */
+  profileQualificationDigest: string | null;
 }
 
 /**
@@ -68,6 +99,7 @@ export function readRuntimeManifest(raw: unknown): RuntimeManifest | null {
   // back to the default here would hide the server's silence behind our guess.
   if (maximumPageRows === null || maximumResponseBytes === null || maximumCursorBytes === null) return null;
   const semantics = obj(body.source_semantics) ?? {};
+  const qualification = obj(body.r3_profile_qualification);
   const gates = Array.isArray(body.external_gates) ? body.external_gates : [];
   return {
     workspaceId,
@@ -85,6 +117,45 @@ export function readRuntimeManifest(raw: unknown): RuntimeManifest | null {
       const status = gate && str(gate.status);
       return requirementId && status ? [{ requirementId, status }] : [];
     }),
+    // Absent on a server older than R3-2. An empty list means "the server said
+    // nothing", which screens must treat as "no verdict", never as "qualified".
+    profileQualification: (Array.isArray(qualification?.profiles) ? qualification.profiles : []).flatMap((entry) => {
+      const row = obj(entry);
+      const environment = row && str(row.environment);
+      const currentPageRead = row && str(row.current_page_read);
+      const marketContext = row && str(row.market_context);
+      return environment && currentPageRead && marketContext
+        ? [{ environment, currentPageRead, marketContext, marketContextReason: str(row.market_context_reason) }]
+        : [];
+    }),
+    profileQualificationDigest: qualification ? str(qualification.ledger_sha256) : null,
+  };
+}
+
+/**
+ * The sentence a market panel shows, built only from what the server stated.
+ *
+ * Returns `null` when the server published no verdict for this environment —
+ * in which case the panel keeps whatever reason its own read gave it. Silence
+ * from the manifest is not a verdict, and must never be rendered as one.
+ */
+export function marketContextVerdict(
+  manifest: RuntimeManifest | null,
+  environment: string | null | undefined,
+): { state: string; reason: string; pending: boolean } | null {
+  if (!manifest || !environment) return null;
+  const row = manifest.profileQualification.find((entry) => entry.environment === environment.toLowerCase());
+  if (!row) return null;
+  const pending = row.marketContext === "PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION";
+  // The reason code is the server's, and it is kept verbatim: an operator who
+  // reports it must be quoting the same string the backend ledger holds.
+  const code = row.marketContextReason ?? row.marketContext;
+  return {
+    state: row.marketContext,
+    pending,
+    reason: pending
+      ? `${code} — the source route was reached and the running Manager image rejected the contract, so this is pending requalification, not a missing feature.`
+      : `${code} — market context has not been independently qualified for ${environment.toUpperCase()}; a proof on another profile does not enable this one.`,
   };
 }
 

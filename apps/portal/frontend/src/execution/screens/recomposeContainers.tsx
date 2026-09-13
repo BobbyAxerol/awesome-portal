@@ -86,6 +86,8 @@ import { BindingDetail } from "./BindingDetail";
 import type { OrderFunnel } from "../analytics";
 import { useProfileRealtime, useProfilesRealtime } from "../profileRealtime";
 import { useNow } from "../listMotion";
+import { useExecutionRuntime } from "../useExecutionRuntime";
+import { marketContextVerdict } from "../runtimeManifest";
 
 /* ── envelope → screen-vocabulary mappers ─────────────────────────────── */
 
@@ -345,6 +347,9 @@ export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
 /* ── paper workbench ──────────────────────────────────────────────────── */
 
 export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "paper" }: { api: ExecutionApi; deploymentId: string; variant?: "paper" | "vnm" }) {
+  // Session-wide, read once per page load; this is the shared hook, not a
+  // second manifest fetch per screen.
+  const runtime = useExecutionRuntime(api);
   const realtime = useProfileRealtime("paper", variant === "vnm" ? "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN" : "EXECUTION_PAPER_WORKBENCH_SCREEN");
   // `keepValue` matters more here than anywhere else on the surface: this
   // profile is 7.4 MB on dev and takes ~6s to answer, and the realtime channel
@@ -391,7 +396,22 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
       />
     );
   }
-  const candlesReason = capabilityReason(profile.capabilities, "market.candles") ?? capabilityReason(profile.capabilities, "venue.calendar");
+  /*
+   * R3-3 item 5 · the market verdict is the server's, per profile.
+   *
+   * R3-2 qualifies market context separately for PAPER, SANDBOX and LIVE and
+   * publishes the result in the runtime manifest. Paper's route was reached
+   * over mTLS with a valid assertion and the running Manager image rejected
+   * the contract — pending requalification. Sandbox and Live were never
+   * independently qualified at all. Both used to print the same client
+   * sentence, which told an operator the wrong thing about at least one of
+   * them. The per-branch capability reason stays as the narrower answer when
+   * the manifest has no verdict for this environment.
+   */
+  const marketVerdict = marketContextVerdict(runtime?.manifest ?? null, profile.selectedEnvironment);
+  const candlesReason = marketVerdict?.reason
+    ?? capabilityReason(profile.capabilities, "market.candles")
+    ?? capabilityReason(profile.capabilities, "venue.calendar");
   const analytics = profile.objects.query_analytics ? readQueryAnalytics(profile.objects.query_analytics) : null;
   /*
    * One derivation, in `paperWorkbenchData`, rather than the hand-rolled set

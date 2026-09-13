@@ -91,6 +91,27 @@ export interface SharedReadCacheSweepBatch {
   profiles: SharedReadCacheSweepProfile[];
 }
 
+/**
+ * Cross-replica, metadata-only view of the actual profile-wide admission
+ * boundary.  This does not contain cache keys, request paths, principal
+ * identities, source rows, cursors, or credentials.
+ */
+export interface SharedReadAdmissionProfileInventory {
+  profileId: string;
+  activeLeases: number;
+  activeOperationCount: number;
+  oldestLeaseAt: string | null;
+  maximumRequestsPerSecond: number | null;
+  maximumConcurrency: number | null;
+  nextPermitAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface SharedReadAdmissionInventory {
+  capturedAt: string;
+  profiles: SharedReadAdmissionProfileInventory[];
+}
+
 export type SharedReadAdmission =
   | { kind: "CACHE_HIT"; cacheKey: string; value: SharedReadCacheValue }
   | { kind: "FOLLOWER"; cacheKey: string }
@@ -456,6 +477,79 @@ export class ExecutionSharedReadRepository {
     };
   }
 
+  /**
+   * Returns the aggregate admission state for the explicit active profiles.
+   * The `PROFILE` state key is exactly `profile_id`, so this inventory proves
+   * that the limit applies across distinct named Manager operations and across
+   * Control API replicas.  It intentionally never emits per-user/cache/path
+   * telemetry; the caller can correlate only profile-level pressure.
+   */
+  async admissionInventory(profileIds: readonly string[]): Promise<SharedReadAdmissionInventory> {
+    const uniqueProfileIds = [...new Set(profileIds)].sort();
+    if (uniqueProfileIds.length > 3 || uniqueProfileIds.some((profileId) => !PROFILE_ID.test(profileId))) {
+      throw new Error("shared-read admission inventory profile scope is invalid");
+    }
+    if (uniqueProfileIds.length === 0) {
+      return { capturedAt: new Date().toISOString(), profiles: [] };
+    }
+    const result = await this.pool.query<{
+      captured_at: Date;
+      profile_id: string;
+      active_leases: number;
+      active_operation_count: number;
+      oldest_lease_at: Date | null;
+      maximum_rps: number | null;
+      maximum_concurrency: number | null;
+      next_permit_at: Date | null;
+      updated_at: Date | null;
+    }>(
+      `WITH reference AS MATERIALIZED (
+         SELECT clock_timestamp() AS now
+       ), requested AS (
+         SELECT unnest($1::text[]) AS profile_id
+       ), active AS (
+         SELECT lease.profile_id,
+                count(*)::integer AS active_leases,
+                count(DISTINCT lease.source_id)::integer AS active_operation_count,
+                min(lease.acquired_at) AS oldest_lease_at
+         FROM execution_shared_admission_leases AS lease
+         CROSS JOIN reference
+         WHERE lease.expires_at > reference.now
+           AND lease.profile_id = ANY($1::text[])
+         GROUP BY lease.profile_id
+       )
+       SELECT reference.now AS captured_at,
+              requested.profile_id,
+              coalesce(active.active_leases, 0)::integer AS active_leases,
+              coalesce(active.active_operation_count, 0)::integer AS active_operation_count,
+              active.oldest_lease_at,
+              state.maximum_rps,
+              state.maximum_concurrency,
+              state.next_permit_at,
+              state.updated_at
+       FROM requested
+       CROSS JOIN reference
+       LEFT JOIN active ON active.profile_id = requested.profile_id
+       LEFT JOIN execution_shared_admission_state AS state
+         ON state.scope_kind = 'PROFILE' AND state.scope_key = requested.profile_id
+       ORDER BY requested.profile_id ASC`,
+      [uniqueProfileIds],
+    );
+    return {
+      capturedAt: result.rows[0]?.captured_at.toISOString() ?? new Date().toISOString(),
+      profiles: result.rows.map((row) => ({
+        profileId: row.profile_id,
+        activeLeases: row.active_leases,
+        activeOperationCount: row.active_operation_count,
+        oldestLeaseAt: row.oldest_lease_at?.toISOString() ?? null,
+        maximumRequestsPerSecond: row.maximum_rps,
+        maximumConcurrency: row.maximum_concurrency,
+        nextPermitAt: row.next_permit_at?.toISOString() ?? null,
+        updatedAt: row.updated_at?.toISOString() ?? null,
+      })),
+    };
+  }
+
   private async acquireQuota(
     client: PoolClient,
     scope: SharedReadScope,
@@ -466,9 +560,14 @@ export class ExecutionSharedReadRepository {
     const defaultMaximumConcurrency = this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY;
     const sourceMaximumConcurrency = scope.admission?.sourceMaximumConcurrency ?? defaultMaximumConcurrency;
     const profileMaximumConcurrency = scope.admission?.profileMaximumConcurrency ?? defaultMaximumConcurrency;
+    // `SOURCE` is the fixed logical operation boundary. `PROFILE` is the
+    // actual AWS-HK Edge budget: it deliberately has *only* the profile ID as
+    // its key.  The former N21 key `${sourceId}:${profileId}` accidentally
+    // made a Paper/Sandbox cap apply once per operation, permitting a fan-out
+    // of distinct operations to exceed the published one-page profile budget.
     const scopes: Array<["SOURCE" | "PROFILE", string, number]> = [
       ["SOURCE", scope.sourceId, sourceMaximumConcurrency],
-      ["PROFILE", `${scope.sourceId}:${scope.profileId}`, profileMaximumConcurrency],
+      ["PROFILE", scope.profileId, profileMaximumConcurrency],
     ];
     for (const [kind, key, maximumConcurrency] of scopes) {
       await client.query(
@@ -488,7 +587,7 @@ export class ExecutionSharedReadRepository {
        WHERE (scope_kind='SOURCE' AND scope_key=$1)
           OR (scope_kind='PROFILE' AND scope_key=$2)
        ORDER BY scope_kind,scope_key FOR UPDATE`,
-      [scope.sourceId, `${scope.sourceId}:${scope.profileId}`],
+      [scope.sourceId, scope.profileId],
     );
     if (locked.rows.length !== 2) throw new Error("N21 shared quota state incomplete");
     await client.query(
@@ -497,7 +596,7 @@ export class ExecutionSharedReadRepository {
     const counts = await client.query<{ source_count: number; profile_count: number }>(
       `SELECT
          count(*) FILTER (WHERE source_id=$1)::integer AS source_count,
-         count(*) FILTER (WHERE source_id=$1 AND profile_id=$2)::integer AS profile_count
+         count(*) FILTER (WHERE profile_id=$2)::integer AS profile_count
        FROM execution_shared_admission_leases`,
       [scope.sourceId, scope.profileId],
     );
@@ -520,7 +619,7 @@ export class ExecutionSharedReadRepository {
            updated_at=clock_timestamp()
        WHERE (scope_kind='SOURCE' AND scope_key=$1)
           OR (scope_kind='PROFILE' AND scope_key=$2)`,
-      [scope.sourceId, `${scope.sourceId}:${scope.profileId}`, new Date(scheduledAt), intervalMs],
+      [scope.sourceId, scope.profileId, new Date(scheduledAt), intervalMs],
     );
     await client.query(
       `INSERT INTO execution_shared_admission_leases

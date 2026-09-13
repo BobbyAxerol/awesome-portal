@@ -6810,7 +6810,8 @@ an explicit scope amendment rather than silently adding a third phase.
 
 ## 19. R3 — Maximum Current Data, Efficient Inter-cell Read, and Product-release Closeout
 
-**Status:** `PLANNED_AWAITING_BOBBY_PHASE_APPROVAL` (2026-09-12).
+**Status:** `IN_PROGRESS` (2026-09-12): R3-1/BE is complete; R3-2/BE and the
+frontend-owned R3-3/R3-4 remain separately approved/controlled work.
 
 **Purpose:** close the remaining **Portal-owned** data, transport, realtime,
 governance-read and rich-screen integration work in four bounded phases before
@@ -6894,7 +6895,7 @@ These are observations used to size R3, not permission to change the runtime:
 
 | Order | Phase | Primary owner | May run with | Entry condition | Closeout artifact |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **R3-1 / BE** — Maximum-current coverage and bounded inter-cell efficiency | Codex/backend | R3-3 / FE | current dev CI green; E7/Manager manifest validation | source-to-panel coverage ledger, measured budget and named BFF completion report |
+| 1 | **R3-1 / BE** — Maximum-current coverage and bounded inter-cell efficiency | Codex/backend | R3-3 / FE | current dev CI green; E7/Manager manifest validation | **COMPLETE** — coverage ledger, profile-wide admission correction and measured budget: `upgrade/backend/R3_1_MAXIMUM_CURRENT_COVERAGE_AND_BOUNDED_INTERCELL_EFFICIENCY.md` |
 | 3 | **R3-3 / FE** — Rich active-data panels and Portal workflow surfaces | Claude/frontend | R3-1 / BE | generated contracts at R3 baseline | real-reader matrix, rich-state browser suite and visual handoff |
 | 2 | **R3-2 / BE** — Qualification, realtime/DR and governed-command closure | Codex/backend + narrowly scoped Edge owner patch if needed | R3-3 finishing | R3-1 coverage ledger; exact identified source gaps only | profile qualification, multi-process/DR evidence and immutable dev candidate manifest |
 | 4 | **R3-4 / FE** — Cross-stack product acceptance and exact dev rebuild | Claude/frontend, Codex supports deployment evidence | none | R3-2 BFF/qualification outputs | full route/panel acceptance matrix, no-update visual run, exact dev image/config proof |
@@ -6903,7 +6904,8 @@ These are observations used to size R3, not permission to change the runtime:
 
 ### R3-1 / BE — Maximum-current data coverage and bounded inter-cell efficiency
 
-**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`.
+**Status:** `COMPLETE` (2026-09-12; code/test/documentation closeout only; no
+profile activation, deployment, main or stable action).
 
 **Goal:** make every existing useful current Manager-v2 fact reachable through
 one named, authorized Portal BFF/panel contract, while proving that source use
@@ -7008,6 +7010,43 @@ increase, stable release and UI redesign.
 operation list to R3-2 and R3-4; Claude uses it to finish R3-3 without guessing
 what a panel may claim.
 
+**Implementation journal — 2026-09-12, `feat/execution-loop-next`:**
+
+- Added the server-only, generated `R3_CURRENT_SOURCE_COVERAGE_LEDGER`. It
+  maps all 25 frozen product screens/panels/actions and the full 96-relation
+  Manager catalogue. Fifty-four screen-bound relations are reachable only via
+  static named operations; sixteen projection inputs remain server-side; the
+  remaining twenty-six audit/internal relations are explicitly non-browser.
+  Browser runtime metadata contains only a digest/count/bounds evidence block.
+- Corrected a genuine N21 profile-admission defect: `PROFILE` state now keys
+  by profile rather than `source:profile`, so Paper/Sandbox one-page and Live
+  two-page limits apply across different named operations and Control API
+  replicas. The forward migration clears only obsolete ephemeral state and
+  adds an expiry index; it does not affect business/projection/command/source
+  data.
+- Added source byte/page/latency/status telemetry and cross-replica
+  profile-admission inventory, redacted of relation/path/cursor/identity/JWT/
+  mTLS data. A read-only 10-minute HK observation found no restart or OOM;
+  Paper remained 76.54–80.32% of its 1 GiB limit with only a non-sustained
+  `>=80%` sample. R3 therefore adds a warning/block rule and does not increase
+  pacing, page depth or memory.
+- E7 validation, every imported maximum-data manifest hash, N20/N21 static
+  gates and the isolated Control API build/full Vitest/PostgreSQL
+  migration+restore gate passed. Full details and rollback/handoff are in
+  `upgrade/backend/R3_1_MAXIMUM_CURRENT_COVERAGE_AND_BOUNDED_INTERCELL_EFFICIENCY.md`.
+- The isolated `./scripts/execution-edge-test.sh` gate also passed through the
+  full Rust Edge test/fmt/Clippy/temporary-PostgreSQL restore path. It removed
+  only its disposable test target/cache; no Portal or AWS-HK runtime was
+  changed.
+- Re-pinned the affected N29 and EDS-12 immutable evidence inputs/manifests in
+  the same commit after the source-boundary implementation changed. Both
+  fail-closed static qualification gates pass; product release remains `NO_GO`,
+  `PRODUCT_ACTIVE` remains false and no runtime authority changed.
+- Deployment transition rule: the profile-wide admission migration requires a
+  bounded all-replica Control API replacement from one immutable image. An old
+  per-operation binary must not remain in a long-running mixed fleet with the
+  new profile-wide binary, because it cannot observe the global profile key.
+
 ---
 
 ### R3-3 / FE — Rich active-data panels and Portal workflow surfaces
@@ -7095,7 +7134,12 @@ realtime facts.
 
 ### R3-2 / BE — Profile qualification, realtime/DR and governed-command closure
 
-**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; begins after R3-1's ledger.
+**Status:** `CODE_COMPLETE_DEV_CANDIDATE_READY_FOR_R3_4` (2026-09-13).
+R3-2 is implemented with a fresh three-profile D3 metadata-only transport
+matrix, explicit profile/Market-Context/command ledgers and a reproducible dev
+candidate/rollback packet. It does **not** claim the deployment-shaped
+two-OS-process + browser acceptance that belongs to R3-4, and it does not
+pretend the currently rejected Market Context Manager route is available.
 
 **Goal:** close the remaining backend operational gaps: independently qualify
 the published profile capabilities, make realtime and degradation behavior
@@ -7191,6 +7235,40 @@ route exists; R3-2's capability state and returned reason are the sole switch.
 - Every command/governance entry has an exact authority state; no hidden broad
   command path, no fake source certification and no untracked policy debt.
 - A reproducible immutable dev candidate/rollback package is ready for R3-4.
+
+**Completion record (2026-09-13):**
+
+- A new sealed `D3-AUDIT-20260913-R3-2` run accepted Paper, Sandbox and Live
+  independently. Each used TLS 1.3 mTLS, HTTP/2 and the exact
+  `execution:manager-v2:read` delegated-resource matrix; every profile
+  returned the pinned 96-relation catalogue and five published metadata
+  capabilities. The 13 JWT negatives and the two TLS-identity negatives were
+  rejected per profile. Its three private, `0600` evidence files are bound by
+  SHA-256 in the R3-2 candidate manifest; no business row was requested or
+  retained.
+- `r3-profile-qualification-ledger.ts` makes the current-page truth explicit:
+  Paper and Sandbox are independently qualified for current-page BFF reads;
+  Live is independently qualified for authoritative empty responses. A
+  profile cannot inherit another profile's proof.
+- The live Paper Market Context probe remains the precise typed source fact:
+  valid mTLS/JWT reaches Manager but gets
+  `MANAGER_V2_SOURCE_CONTRACT_REJECTED` (`502`). The currently deployed
+  Manager image/config does not contain the newer owner adapter handler, so
+  the Portal correctly retains
+  `PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION`; it does not scrape the
+  Data Layer, call a database or fabricate a chart.
+- `r3-realtime-dr-contract.ts` records all 12 bounded local-observation / DR
+  scenarios and their evidence lanes. Existing PostgreSQL replica and
+  browser-domain tests remain valid evidence, while R3-4 is deliberately the
+  only phase allowed to declare a rendered two-OS-process dev image result.
+- `r3-governed-command-ledger.ts` classifies all Portal actions, operator
+  tasks and current source catalogue rows exactly once. It exposes no source
+  route, payload or credential and sends no Trading System command. The
+  candidate and rollback packet is
+  [`R3_2_PROFILE_QUALIFICATION_REALTIME_DR_AND_GOVERNED_COMMAND_CLOSURE.md`](backend/R3_2_PROFILE_QUALIFICATION_REALTIME_DR_AND_GOVERNED_COMMAND_CLOSURE.md),
+  [`execution-r3-2-dev-candidate.v1.json`](../deploy/manifests/execution-r3-2-dev-candidate.v1.json)
+  and
+  [`execution-r3-2-dev-candidate-and-rollback.md`](../deploy/runbooks/execution-r3-2-dev-candidate-and-rollback.md).
 
 **Explicit non-scope:** direct source database access, arbitrary TS CLI relay,
 unbounded historic export/replay, changes to V1/D4 behavior, production/stable

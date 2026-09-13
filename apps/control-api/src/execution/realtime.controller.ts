@@ -112,7 +112,7 @@ export class ExecutionRealtimeController {
       },
       profiles,
       local_realtime: this.localRealtime.diagnostics(),
-      source_admission: this.currentSource.diagnostics(),
+      source_admission: await this.currentSource.diagnostics(),
       browser_to_edge_or_source: "FORBIDDEN",
     };
   }

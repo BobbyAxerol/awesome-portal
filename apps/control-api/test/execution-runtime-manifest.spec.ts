@@ -77,6 +77,21 @@ describe("EDS-00 runtime manifest intake", () => {
         field_definition_count: 34,
         action_count: 12,
       },
+      r3_profile_qualification: {
+        schema_version: "portal.execution.r3.profile-qualification-ledger.v1",
+        profiles: expect.arrayContaining([
+          expect.objectContaining({ environment: "paper", current_page_read: "QUALIFIED_CURRENT_PAGE_READ" }),
+          expect.objectContaining({ environment: "live", current_page_read: "QUALIFIED_CURRENT_PAGE_READ_WITH_EMPTY_AUTHORITY" }),
+        ]),
+      },
+      r3_realtime_dr: {
+        schema_version: "portal.execution.r3.realtime-dr-contract.v1",
+        scenario_count: 12,
+      },
+      r3_governed_command: {
+        schema_version: "portal.execution.r3.governed-command-ledger.v1",
+        invariants: { genericCliRelay: false, sourceCommandDispatched: false },
+      },
     });
     expect(manifest.read_at_ms).toEqual(expect.any(Number));
     expect(manifest.runtime_delivery.profiles.map((profile: Record<string, unknown>) => profile.portal_bff_delivery))

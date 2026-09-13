@@ -10,6 +10,7 @@ import {
   assertN15bCurrentQueryAccepted,
   CurrentSourceBulkhead,
   CurrentSourceProxyError,
+  ExecutionCurrentSourceProxy,
   CurrentSourceRateLimiter,
   BR72_MANAGER_LIST_ACCEPTANCE,
   EDS07_RETAINED_FINANCIAL_READ_ACCEPTANCE,
@@ -269,6 +270,87 @@ describe("N13B current-source BFF boundary", () => {
       status: 503,
       details: expect.objectContaining({ retryable: false }),
     });
+  });
+
+  it("reports R3-1 bounded operation telemetry without relation, path, cursor or credential leakage", async () => {
+    const proxy = Object.create(ExecutionCurrentSourceProxy.prototype) as ExecutionCurrentSourceProxy;
+    Object.assign(proxy as unknown as Record<string, unknown>, {
+      config: {
+        EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY: 4,
+        EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_QUEUE: 16,
+        EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND: 15,
+        EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS: 1_000,
+      },
+      profiles: new Map([["paper", {
+        environment: "paper",
+        profileId: "PAPER_BINANCE_USDM",
+      }]]),
+      bulkheads: new Map([["PAPER_BINANCE_USDM", new CurrentSourceBulkhead(4, 16, 1_000)]]),
+      rateLimiters: new Map([["PAPER_BINANCE_USDM", new CurrentSourceRateLimiter(15, 1_000)]]),
+      counters: new Map(),
+      operationCounters: new Map([["PAPER_BINANCE_USDM", new Map()]]),
+      sharedReads: {
+        admissionInventory: async () => ({
+          capturedAt: "2026-09-12T00:00:00.000Z",
+          profiles: [{
+            profileId: "PAPER_BINANCE_USDM",
+            activeLeases: 1,
+            activeOperationCount: 1,
+            oldestLeaseAt: "2026-09-12T00:00:00.000Z",
+            maximumRequestsPerSecond: 15,
+            maximumConcurrency: 1,
+            nextPermitAt: "2026-09-12T00:00:00.067Z",
+            updatedAt: "2026-09-12T00:00:00.000Z",
+          }],
+        }),
+      },
+    });
+    const privateProxy = proxy as unknown as {
+      increment(profileId: string, field: string, operationId?: string, amount?: number): void;
+      recordSourceSuccess(profileId: string, operationId: string, latencyMs: number, response: unknown): void;
+    };
+    privateProxy.increment("PAPER_BINANCE_USDM", "leaders", "managerAccountBalancesPageV1");
+    privateProxy.increment("PAPER_BINANCE_USDM", "sourceRequests", "managerAccountBalancesPageV1");
+    privateProxy.recordSourceSuccess("PAPER_BINANCE_USDM", "managerAccountBalancesPageV1", 17, {
+      responseBytes: 512,
+      itemCount: 2,
+      body: { never: "serialized" },
+    });
+
+    const diagnostics = await proxy.diagnostics();
+    expect(diagnostics).toMatchObject({
+      schema_version: "portal.execution.current-source-admission-metrics.v1",
+      profiles: [expect.objectContaining({
+        environment: "paper",
+        cross_replica_profile_admission: expect.objectContaining({
+          activeLeases: 1,
+          activeOperationCount: 1,
+          maximumConcurrency: 1,
+        }),
+        named_operation_metrics: [expect.objectContaining({
+          operation_id: "managerAccountBalancesPageV1",
+          counters: expect.objectContaining({
+            leaders: 1,
+            sourceRequests: 1,
+            sourceSuccesses: 1,
+            sourceResponseBytes: 512,
+            sourceLatencyMsTotal: 17,
+            sourceLatencyMsMaximum: 17,
+            sourcePageItems: 2,
+            sourceStatus2xx: 1,
+          }),
+        })],
+      })],
+    });
+    const browserSafeDiagnosticValues = JSON.stringify({
+      schema_version: diagnostics.schema_version,
+      source_request_retry_policy: diagnostics.source_request_retry_policy,
+      captured_at: diagnostics.captured_at,
+      profiles: diagnostics.profiles,
+    }).toLowerCase();
+    for (const forbidden of ["public.", "/internal/", "bearer ", "private key", "never"]) {
+      expect(browserSafeDiagnosticValues).not.toContain(forbidden);
+    }
   });
 });
 

@@ -497,6 +497,38 @@ export const RUNTIME_MANIFEST = {
     { requirement_id: "CROSS_CELL_SGP_INGEST", status: "OWNER_ACTION_REQUIRED" },
     { requirement_id: "ONE_FIVE_THIRTY_MINUTE_SOURCE_OUTAGE", status: "OWNER_ACTION_REQUIRED" },
   ],
+  /*
+   * R3-2 per-profile qualification, mirroring
+   * `r3ProfileQualificationEvidence()` in the Control API.
+   *
+   * `ledger_sha256` is deliberately ABSENT here. The digest exists to bind
+   * evidence to one exact server build; a plausible-looking digest invented
+   * for a double is the one field that could be mistaken for real provenance,
+   * and the reader already treats its absence as "not published".
+   */
+  r3_profile_qualification: {
+    schema_version: "portal.execution.r3.profile-qualification-ledger.v1",
+    profiles: [
+      {
+        environment: "paper",
+        current_page_read: "QUALIFIED_CURRENT_PAGE_READ_WITH_EMPTY_AUTHORITY",
+        market_context: "PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION",
+        market_context_reason: "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+      },
+      {
+        environment: "sandbox",
+        current_page_read: "QUALIFIED_CURRENT_PAGE_READ",
+        market_context: "PROFILE_NOT_QUALIFIED",
+        market_context_reason: "NO_INDEPENDENT_MARKET_CONTEXT_PROFILE_QUALIFICATION",
+      },
+      {
+        environment: "live",
+        current_page_read: "QUALIFIED_CURRENT_PAGE_READ",
+        market_context: "PROFILE_NOT_QUALIFIED",
+        market_context_reason: "NO_INDEPENDENT_MARKET_CONTEXT_PROFILE_QUALIFICATION",
+      },
+    ],
+  },
 };
 
 /**

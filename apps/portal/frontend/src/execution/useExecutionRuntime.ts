@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 
 import type { ExecutionApi } from "./api/ports";
-import { boundsOf, type BoundsSource, type PageBounds } from "./runtimeManifest";
+import { boundsOf, type BoundsSource, type PageBounds, type RuntimeManifest } from "./runtimeManifest";
 import { setDeclaredPageBound } from "./api/managerRelations";
 import type { ScreenContract } from "./screenContracts";
 
@@ -22,6 +22,12 @@ export interface ExecutionRuntime {
   bounds: PageBounds;
   boundsSource: BoundsSource;
   contracts: readonly ScreenContract[] | null;
+  /**
+   * R3-2 · the whole manifest, so a panel can ask the server's per-profile
+   * qualification verdict instead of printing a client sentence. Session-wide
+   * and read once, exactly like the bounds beside it.
+   */
+  manifest: RuntimeManifest | null;
 }
 
 let session: Promise<ExecutionRuntime> | null = null;
@@ -40,6 +46,7 @@ export function loadExecutionRuntime(api: ExecutionApi): Promise<ExecutionRuntim
       bounds: answer.bounds,
       boundsSource: answer.source,
       contracts: contracts && contracts.ok ? contracts.value : null,
+      manifest: manifest && manifest.ok ? manifest.value : null,
     };
   })();
   return session;
