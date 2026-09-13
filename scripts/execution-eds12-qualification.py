@@ -54,6 +54,7 @@ INPUTS = (
     ("cosign_signature_adapter", "scripts/verify-cosign-signature.py"),
     ("image_publication_gate", "scripts/execution-image-publication-test.sh"),
     ("release_authority_workflow_test", "scripts/test_portal_release_authority.py"),
+    ("release_integrity_ledger_refresh", "scripts/refresh-release-integrity-ledgers.sh"),
     ("current_source_compose", "deploy/compose.execution-current-source.yaml"),
     ("profile_runtime_prepare", "scripts/execution-profile-runtime-prepare.sh"),
     ("market_context_static_gate", "scripts/execution-market-context-data-layer-adapter-test.sh"),
@@ -206,6 +207,30 @@ def digest(path: pathlib.Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def read_manifest_rows() -> tuple[dict[str, str], list[str]]:
+    """Read the fixed EDS-12 pack manifest without trusting its contents."""
+    safe_file(MANIFEST_PATH)
+    rows: dict[str, str] = {}
+    names: list[str] = []
+    for line in MANIFEST_PATH.read_text(encoding="utf-8").splitlines():
+        expected, name = line.split("  ", 1)
+        require(name not in rows, "duplicate EDS-12 manifest path")
+        require("/" not in name and ".." not in name, "unsafe EDS-12 manifest path")
+        require(re.fullmatch(r"[0-9a-f]{64}", expected) is not None, "invalid EDS-12 manifest digest")
+        rows[name] = expected
+        names.append(name)
+    expected_names = {
+        "README.md",
+        "qualification.v1.schema.json",
+        "qualification.v1.json",
+        "failure-matrix.v1.json",
+        "deployed-evidence.v1.schema.json",
+        "runtime-binding.v1.schema.json",
+    }
+    require(set(rows) == expected_names, "EDS-12 manifest file set drifted")
+    return rows, names
+
+
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise QualificationError(message)
@@ -226,25 +251,11 @@ def image_digest(value: Any) -> str:
     return match.group(1)
 
 
-def validate_manifest() -> None:
-    safe_file(MANIFEST_PATH)
-    rows: dict[str, str] = {}
-    for line in MANIFEST_PATH.read_text(encoding="utf-8").splitlines():
-        expected, name = line.split("  ", 1)
-        require(name not in rows, "duplicate EDS-12 manifest path")
-        require("/" not in name and ".." not in name, "unsafe EDS-12 manifest path")
-        require(re.fullmatch(r"[0-9a-f]{64}", expected) is not None, "invalid EDS-12 manifest digest")
-        rows[name] = expected
-    expected_names = {
-        "README.md",
-        "qualification.v1.schema.json",
-        "qualification.v1.json",
-        "failure-matrix.v1.json",
-        "deployed-evidence.v1.schema.json",
-        "runtime-binding.v1.schema.json",
-    }
-    require(set(rows) == expected_names, "EDS-12 manifest file set drifted")
+def validate_manifest(*, allow_qualification_drift: bool = False) -> None:
+    rows, _names = read_manifest_rows()
     for name, expected in rows.items():
+        if allow_qualification_drift and name == "qualification.v1.json":
+            continue
         require(hashlib.sha256((PACK / name).read_bytes()).hexdigest() == expected, f"EDS-12 manifest digest drifted: {name}")
 
 
@@ -312,9 +323,11 @@ def validate_failure_matrix(qualification: dict[str, Any], failure: dict[str, An
     require(actual == FAILURE_IDS, "failure scenario set drifted")
 
 
-def validate_inputs(qualification: dict[str, Any]) -> None:
+def validate_input_layout(
+    qualification: dict[str, Any], *, allow_missing_expected: bool = False,
+) -> dict[str, dict[str, Any]]:
     rows = qualification["evidence_inputs"]
-    require(isinstance(rows, list) and len(rows) == len(INPUTS), "EDS-12 evidence input count drifted")
+    require(isinstance(rows, list), "EDS-12 evidence inputs must be a list")
     expected = {identifier: path for identifier, path in INPUTS}
     actual: dict[str, dict[str, Any]] = {}
     for row in rows:
@@ -324,10 +337,28 @@ def validate_inputs(qualification: dict[str, Any]) -> None:
         require(identifier not in actual and identifier in expected, "unexpected EDS-12 evidence input")
         actual[identifier] = row
         require(row["file"] == expected[identifier], f"evidence path drifted: {identifier}")
+    if allow_missing_expected:
+        require(set(actual).issubset(expected), "EDS-12 evidence input set drifted")
+    else:
+        require(set(actual) == set(expected), "EDS-12 evidence input set drifted")
+    return actual
+
+
+def canonical_evidence_inputs() -> list[dict[str, str]]:
+    """Generate the exact non-secret input ledger from the declared authority."""
+    rows: list[dict[str, str]] = []
+    for identifier, relative in INPUTS:
+        target = safe_file(ROOT / relative)
+        rows.append({"id": identifier, "file": relative, "sha256": digest(target)})
+    return rows
+
+
+def validate_inputs(qualification: dict[str, Any]) -> None:
+    actual = validate_input_layout(qualification)
+    for identifier, row in actual.items():
         target = ROOT / row["file"]
         safe_file(target)
         require(sha256(row["sha256"]) and row["sha256"] == digest(target), f"evidence digest drifted: {identifier}")
-    require(set(actual) == set(expected), "EDS-12 evidence input set drifted")
 
 
 def validate_source_extensions(qualification: dict[str, Any]) -> None:
@@ -403,10 +434,14 @@ def validate_docs_and_workspace() -> None:
     require("validate_embedded_qualification" in rust and "forbid(unsafe_code)" in rust, "EDS-12 Rust authority drifted")
 
 
-def validate_static() -> dict[str, Any]:
-    validate_manifest()
-    qualification = read_json(QUALIFICATION_PATH)
-    failure = read_json(FAILURE_PATH)
+def validate_static_shape(
+    qualification: dict[str, Any],
+    failure: dict[str, Any],
+    *,
+    verify_input_digests: bool,
+    allow_missing_expected_inputs: bool = False,
+) -> None:
+    """Validate every immutable semantic field before a ledger refresh."""
     exact(qualification, {
         "schema_version", "phase", "decision", "runtime_effect", "baseline", "profiles",
         "failure_matrix", "evidence_inputs", "source_extensions", "release_gates",
@@ -419,10 +454,72 @@ def validate_static() -> dict[str, Any]:
     validate_baseline(qualification)
     validate_profiles(qualification)
     validate_failure_matrix(qualification, failure)
-    validate_inputs(qualification)
+    if verify_input_digests:
+        validate_inputs(qualification)
+    else:
+        validate_input_layout(
+            qualification,
+            allow_missing_expected=allow_missing_expected_inputs,
+        )
     validate_source_extensions(qualification)
     validate_release_and_authority(qualification)
     validate_docs_and_workspace()
+
+
+def refresh_static_input_digests(*, write: bool) -> dict[str, Any]:
+    """Refresh only EDS-12's generated non-secret input ledger and manifest.
+
+    This is deliberately separate from validation: a changed release/CI source
+    remains fail-closed until the caller explicitly records the new bytes with
+    ``--write``.  The command cannot alter semantic authority, profiles,
+    deployed evidence, runtime inputs, or any secret.
+    """
+    validate_manifest(allow_qualification_drift=True)
+    qualification = read_json(QUALIFICATION_PATH)
+    failure = read_json(FAILURE_PATH)
+    validate_static_shape(
+        qualification,
+        failure,
+        verify_input_digests=False,
+        allow_missing_expected_inputs=True,
+    )
+
+    qualification["evidence_inputs"] = canonical_evidence_inputs()
+    qualification_bytes = (json.dumps(qualification, indent=2) + "\n").encode("utf-8")
+    manifest_rows, manifest_names = read_manifest_rows()
+    manifest_rows["qualification.v1.json"] = hashlib.sha256(qualification_bytes).hexdigest()
+    manifest_bytes = (
+        "".join(f"{manifest_rows[name]}  {name}\n" for name in manifest_names)
+    ).encode("utf-8")
+
+    changed = (
+        QUALIFICATION_PATH.read_bytes() != qualification_bytes
+        or MANIFEST_PATH.read_bytes() != manifest_bytes
+    )
+    if changed and not write:
+        raise QualificationError(
+            "EDS-12 input ledger is stale; run "
+            "refresh-static-input-digests --write"
+        )
+    if write and changed:
+        # Both targets were accepted as regular, non-symlink tracked files
+        # above.  This command intentionally writes only their derived bytes.
+        QUALIFICATION_PATH.write_bytes(qualification_bytes)
+        MANIFEST_PATH.write_bytes(manifest_bytes)
+    return {
+        "phase": "EDS-12",
+        "input_count": len(INPUTS),
+        "changed": changed,
+        "written": bool(write and changed),
+        "runtime_effect": "NONE",
+    }
+
+
+def validate_static() -> dict[str, Any]:
+    validate_manifest()
+    qualification = read_json(QUALIFICATION_PATH)
+    failure = read_json(FAILURE_PATH)
+    validate_static_shape(qualification, failure, verify_input_digests=True)
     return {
         "phase": "EDS-12",
         "decision": qualification["decision"],
@@ -662,6 +759,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("verify-static")
+    refresh = subcommands.add_parser(
+        "refresh-static-input-digests",
+        help="refresh only the generated non-secret EDS-12 input ledger",
+    )
+    refresh.add_argument(
+        "--write",
+        action="store_true",
+        help="write refreshed qualification and manifest bytes after validation",
+    )
     deployed = subcommands.add_parser("verify-deployed")
     deployed.add_argument("--evidence", required=True, type=pathlib.Path)
     runtime = subcommands.add_parser("verify-runtime-binding")
@@ -673,6 +779,8 @@ def main() -> int:
     try:
         if args.command == "verify-static":
             result = validate_static()
+        elif args.command == "refresh-static-input-digests":
+            result = refresh_static_input_digests(write=args.write)
         elif args.command == "verify-deployed":
             result = validate_deployed(args.evidence)
         else:
