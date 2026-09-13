@@ -10,13 +10,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  # CodeQL records workflow-run metadata after analysis.  In a private repo,
-  # omitting this read-only scope lets both language scans complete and then
-  # fails the post-processing upload with "Resource not accessible by
-  # integration".  Keep the token least-privileged: no workflow write access.
+  # CodeQL reads workflow-run metadata during analysis. Keep the token
+  # least-privileged: no workflow write access or repository mutation.
   actions: read
   contents: read
-  security-events: write
+  security-events: read
 
 jobs:
   codeql:
@@ -42,3 +40,20 @@ jobs:
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
+        with:
+          # This private repository does not currently have GitHub Code
+          # Security enabled. Analyse every supported language nevertheless,
+          # but retain SARIF as a private Actions artifact instead of failing
+          # on an unavailable Code Scanning upload. When Code Security is
+          # enabled, change this to `always` in the same reviewed PR.
+          upload: never
+          output: ${{ runner.temp }}/portal-codeql-results/${{ matrix.language }}
+
+      - name: Archive private CodeQL SARIF evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: portal-codeql-${{ matrix.language }}-${{ github.sha }}
+          path: ${{ runner.temp }}/portal-codeql-results/${{ matrix.language }}
+          if-no-files-found: error
+          retention-days: 30
