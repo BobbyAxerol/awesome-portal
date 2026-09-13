@@ -187,6 +187,21 @@ the Compose stack supervised by systemd.
 
 ## GitHub production deployment workflow
 
+### GitHub API identity and release metadata
+
+The deployment host may use a separate fine-grained PAT for GitHub REST API
+operations. It does not need a public repository and it is not a deployment
+credential. Its selected-repository scope is `BobbyAxerol/awesome-portal`;
+`Contents: write` is required to create a GitHub Release, while Actions,
+Pull requests and Workflows permissions are granted only as documented in
+[GitHub Automation Access](github-automation-access.md).
+
+Create the GitHub Release only after the matching commit has passed Portal CI,
+security analysis and immutable-image publication. Record the deployed tag,
+source commit and hashes of the private release manifest/decision. Keep the
+full runtime manifest in the private deployment store unless an explicitly
+reviewed redaction is approved for publication.
+
 The manual workflow requires the GitHub `production` environment and these
 environment secrets:
 

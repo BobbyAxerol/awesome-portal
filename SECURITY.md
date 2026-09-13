@@ -22,4 +22,10 @@ affected service/image tag and any mitigation already applied.
   interactively in CI.
 - Protect the GitHub `production` environment with reviewers before enabling
   the deployment workflow.
+- Keep host-side GitHub API tokens in an owner-only file outside the
+  repository. Use a fine-grained, selected-repository token and the minimum
+  permissions documented in [GitHub Automation Access](docs/github-automation-access.md);
+  do not compensate for a missing permission by making the repository public.
+- Treat the deployed runtime manifest as private operational metadata. Record
+  its SHA-256 in GitHub Release notes instead of uploading the unredacted file.
 - Rotate a credential immediately if it reaches a commit, CI log or image.
