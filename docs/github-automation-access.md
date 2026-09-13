@@ -113,3 +113,19 @@ organization-owned repository) required SSO/token approval.
 
 Revoke the PAT immediately if it is exposed, then replace the value in the
 owner-only file. Do not attempt to recover by making the repository public.
+
+## CodeQL in the private repository
+
+CodeQL can analyse this private repository without exposing it. Uploading its
+SARIF to GitHub's **Code Scanning** product is a separate entitlement: GitHub
+Code Security must first be enabled for this repository. Until Bobby enables
+that product, the tracked security workflow runs both Python and
+JavaScript/TypeScript scans with CodeQL upload set to `never`, then stores the
+resulting SARIF as a 30-day private Actions artifact named
+`portal-codeql-<language>-<commit>`.
+
+This is intentionally not a skipped scan or a green-on-error workaround. The
+analysis and query evaluation still run; only the unavailable Code Scanning
+upload is replaced by private evidence retention. If GitHub Code Security is
+enabled later, change `upload` back to `always` in the same reviewed PR and
+preserve the artifact step for operator evidence.
