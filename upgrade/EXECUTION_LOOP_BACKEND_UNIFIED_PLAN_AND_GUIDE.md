@@ -7134,7 +7134,12 @@ realtime facts.
 
 ### R3-2 / BE — Profile qualification, realtime/DR and governed-command closure
 
-**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; begins after R3-1's ledger.
+**Status:** `CODE_COMPLETE_DEV_CANDIDATE_READY_FOR_R3_4` (2026-09-13).
+R3-2 is implemented with a fresh three-profile D3 metadata-only transport
+matrix, explicit profile/Market-Context/command ledgers and a reproducible dev
+candidate/rollback packet. It does **not** claim the deployment-shaped
+two-OS-process + browser acceptance that belongs to R3-4, and it does not
+pretend the currently rejected Market Context Manager route is available.
 
 **Goal:** close the remaining backend operational gaps: independently qualify
 the published profile capabilities, make realtime and degradation behavior
@@ -7230,6 +7235,40 @@ route exists; R3-2's capability state and returned reason are the sole switch.
 - Every command/governance entry has an exact authority state; no hidden broad
   command path, no fake source certification and no untracked policy debt.
 - A reproducible immutable dev candidate/rollback package is ready for R3-4.
+
+**Completion record (2026-09-13):**
+
+- A new sealed `D3-AUDIT-20260913-R3-2` run accepted Paper, Sandbox and Live
+  independently. Each used TLS 1.3 mTLS, HTTP/2 and the exact
+  `execution:manager-v2:read` delegated-resource matrix; every profile
+  returned the pinned 96-relation catalogue and five published metadata
+  capabilities. The 13 JWT negatives and the two TLS-identity negatives were
+  rejected per profile. Its three private, `0600` evidence files are bound by
+  SHA-256 in the R3-2 candidate manifest; no business row was requested or
+  retained.
+- `r3-profile-qualification-ledger.ts` makes the current-page truth explicit:
+  Paper and Sandbox are independently qualified for current-page BFF reads;
+  Live is independently qualified for authoritative empty responses. A
+  profile cannot inherit another profile's proof.
+- The live Paper Market Context probe remains the precise typed source fact:
+  valid mTLS/JWT reaches Manager but gets
+  `MANAGER_V2_SOURCE_CONTRACT_REJECTED` (`502`). The currently deployed
+  Manager image/config does not contain the newer owner adapter handler, so
+  the Portal correctly retains
+  `PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION`; it does not scrape the
+  Data Layer, call a database or fabricate a chart.
+- `r3-realtime-dr-contract.ts` records all 12 bounded local-observation / DR
+  scenarios and their evidence lanes. Existing PostgreSQL replica and
+  browser-domain tests remain valid evidence, while R3-4 is deliberately the
+  only phase allowed to declare a rendered two-OS-process dev image result.
+- `r3-governed-command-ledger.ts` classifies all Portal actions, operator
+  tasks and current source catalogue rows exactly once. It exposes no source
+  route, payload or credential and sends no Trading System command. The
+  candidate and rollback packet is
+  [`R3_2_PROFILE_QUALIFICATION_REALTIME_DR_AND_GOVERNED_COMMAND_CLOSURE.md`](backend/R3_2_PROFILE_QUALIFICATION_REALTIME_DR_AND_GOVERNED_COMMAND_CLOSURE.md),
+  [`execution-r3-2-dev-candidate.v1.json`](../deploy/manifests/execution-r3-2-dev-candidate.v1.json)
+  and
+  [`execution-r3-2-dev-candidate-and-rollback.md`](../deploy/runbooks/execution-r3-2-dev-candidate-and-rollback.md).
 
 **Explicit non-scope:** direct source database access, arbitrary TS CLI relay,
 unbounded historic export/replay, changes to V1/D4 behavior, production/stable

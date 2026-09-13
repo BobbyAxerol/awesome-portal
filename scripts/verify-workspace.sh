@@ -613,6 +613,10 @@ for required in \
   "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py" \
   "${ROOT_DIR}/scripts/execution-eds12-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh" \
+  "${ROOT_DIR}/scripts/execution-r3-2-closure-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/R3_2_PROFILE_QUALIFICATION_REALTIME_DR_AND_GOVERNED_COMMAND_CLOSURE.md" \
+  "${ROOT_DIR}/deploy/manifests/execution-r3-2-dev-candidate.v1.json" \
+  "${ROOT_DIR}/deploy/runbooks/execution-r3-2-dev-candidate-and-rollback.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md" \
@@ -1506,6 +1510,10 @@ for tracked_source in \
   scripts/test_execution_eds12_qualification.py \
   scripts/execution-eds12-qualification-test.sh \
   scripts/execution-phase2-screen-command-test.sh \
+  scripts/execution-r3-2-closure-test.sh \
+  upgrade/backend/R3_2_PROFILE_QUALIFICATION_REALTIME_DR_AND_GOVERNED_COMMAND_CLOSURE.md \
+  deploy/manifests/execution-r3-2-dev-candidate.v1.json \
+  deploy/runbooks/execution-r3-2-dev-candidate-and-rollback.md \
   upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md \
   upgrade/backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md \
@@ -1719,6 +1727,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/execution-eds12-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh" \
+  "${ROOT_DIR}/scripts/execution-r3-2-closure-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1861,8 +1870,9 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh"
 "${ROOT_DIR}/scripts/execution-n26-n27-test.sh"
 "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh"
-"${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh"
-"${ROOT_DIR}/scripts/execution-eds12-qualification-test.sh"
-"${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh"
-"${ROOT_DIR}/scripts/execution-tracking-test.sh"
+  "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh"
+  "${ROOT_DIR}/scripts/execution-eds12-qualification-test.sh"
+  "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh"
+  "${ROOT_DIR}/scripts/execution-r3-2-closure-test.sh"
+  "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

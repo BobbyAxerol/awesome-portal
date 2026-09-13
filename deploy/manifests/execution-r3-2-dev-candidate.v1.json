@@ -1,0 +1,116 @@
+{
+  "schema_version": "portal.execution.r3-2.dev-candidate.v1",
+  "phase": "R3-2",
+  "status": "DEV_CANDIDATE_READY_FOR_R3_4",
+  "observed_at": "2026-09-13T00:00:00Z",
+  "scope": {
+    "runtime_mutation": false,
+    "stable_or_main_rollout": false,
+    "browser_direct_edge_or_source_access": false,
+    "direct_trading_system_database_or_redis_access": false,
+    "source_command_dispatched": false,
+    "business_rows_read_by_d3_audit": false
+  },
+  "source_contract": {
+    "manager_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+    "catalogue_sha256": "sha256:0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44",
+    "catalogue_relation_count": 96,
+    "screen_bound_named_operation_count": 54,
+    "source_page_bounds": {
+      "maximum_rows": 200,
+      "maximum_response_bytes": 1048576
+    }
+  },
+  "profile_qualification": {
+    "audit_window_id": "D3-AUDIT-20260913-R3-2",
+    "transport": "TLS_1_3_HTTP_2_MTLS_DELEGATED_JWT",
+    "delegated_resource": "execution:manager-v2:read",
+    "private_evidence_sha256": {
+      "paper": "sha256:8c73626aa8964df241946fa4d243b00fff198686fd4371381bb35485067fe987",
+      "sandbox": "sha256:f77687888d14c2349c412d243f44de38e8c72cac6fe85c0b87f4d9ff5e4c8a65",
+      "live": "sha256:4d982bb73abeee55e7b716f72713ad8b19a33f82b6696a9914da52390acc7257"
+    },
+    "profiles": [
+      {
+        "environment": "paper",
+        "current_page_read": "QUALIFIED_CURRENT_PAGE_READ",
+        "catalogue_relation_count": 96,
+        "published_metadata_capability_count": 5,
+        "jwt_negative_case_count": 13
+      },
+      {
+        "environment": "sandbox",
+        "current_page_read": "QUALIFIED_CURRENT_PAGE_READ",
+        "catalogue_relation_count": 96,
+        "published_metadata_capability_count": 5,
+        "jwt_negative_case_count": 13
+      },
+      {
+        "environment": "live",
+        "current_page_read": "QUALIFIED_CURRENT_PAGE_READ_WITH_EMPTY_AUTHORITY",
+        "catalogue_relation_count": 96,
+        "published_metadata_capability_count": 5,
+        "jwt_negative_case_count": 13
+      }
+    ]
+  },
+  "market_context": {
+    "paper_state": "PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION",
+    "paper_reason": "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+    "sandbox_live_state": "PROFILE_NOT_QUALIFIED",
+    "portal_fallback_forbidden": true,
+    "runtime_activation": false
+  },
+  "realtime_dr": {
+    "authority": "PORTAL_LOCAL_POSTGRES_PROJECTION_JOURNAL",
+    "scenario_count": 12,
+    "source_replay_or_global_ordering_claimed": false,
+    "r3_4_required_evidence": [
+      "TWO_OS_PROCESS",
+      "BROWSER_DOM",
+      "DEPLOYED_IMAGE_DIGEST"
+    ]
+  },
+  "governed_commands": {
+    "row_count": 100,
+    "state_counts": {
+      "LOCAL_R0_READ_CONNECTED": 4,
+      "READ_ONLY_SUPPORTED": 2,
+      "MUTATION_CONNECTED": 5,
+      "POLICY_BLOCKED": 51,
+      "SOURCE_NOT_COMMISSIONED": 35,
+      "NOT_APPLICABLE": 3
+    },
+    "generic_cli_relay": false,
+    "source_command_dispatched": false
+  },
+  "tracked_contract_inputs": {
+    "apps/control-api/src/execution/r3-governed-command-ledger.ts": "sha256:b1d68ee2ec5d11cdecca1629aacbbc4881ff9a2e78fa6f479fb5e366ee2b38bf",
+    "apps/control-api/src/execution/r3-profile-qualification-ledger.ts": "sha256:2bda6d10cdd9f76e49007d31bc9f93ed9b6cbff01a25e8b8f9da3403b6e0465c",
+    "apps/control-api/src/execution/r3-realtime-dr-contract.ts": "sha256:1d2ac1d0f64f531dc6989e3c7b21aa1a1aeca9d3ad5fe633aa6699a5752cfc5b"
+  },
+  "tracked_config_inputs": {
+    "deploy/.env.execution-edge.example": "sha256:5e820f154b3d48f4c2a1d95b193a4f4fa7853a31066d90e6a1ec3ff25adccdde",
+    "deploy/compose.execution-current-source.yaml": "sha256:ffd873cf6571ec94bffac59d1c4c0c68b5742584519916200bf64fcc47bfca04",
+    "deploy/compose.execution-local-projection.yaml": "sha256:26e8c0681fa2041bfac11ebe87b7c6969f85bcd1efe426e118deddbab3bd3ee5",
+    "deploy/compose.execution-manager-realtime.yaml": "sha256:6b8ba7f2a3c66cc449a95ed31e93dfa1358f71c4a8930b673e02b2d030b9cc26"
+  },
+  "tracked_configuration_sha256": "sha256:de33b2b0e433a4c0b02bc767b6bfc10073d765156fccf96b317bd2fd67085cc5",
+  "immutable_release_inputs": {
+    "state": "R3_4_GENERATION_REQUIRED",
+    "required": [
+      "protected_commit",
+      "image_digest",
+      "sbom",
+      "provenance",
+      "rendered_config_sha256",
+      "rollback_image_pointer"
+    ],
+    "present_in_r3_2": []
+  },
+  "rollback": {
+    "mode": "IMAGE_AND_CONFIG_POINTER_ONLY",
+    "database_rule": "FORWARD_ONLY_ADDITIVE_MIGRATIONS_NO_DATA_OR_VOLUME_DELETE",
+    "source_runtime_mutation": false
+  }
+}

@@ -202,6 +202,14 @@ export interface ExecutionContractAuthorityInternalActionCoverage {
   readonly currentAvailability: string;
   readonly disabledReason: string;
   readonly owner: string;
+  /**
+   * This lineage stays server-only.  R3-2 uses it to inventory governance
+   * authority without turning the browser contract into a command router.
+   */
+  readonly requiredResourceIdentity: string;
+  readonly sourcePreconditions: string;
+  readonly planApplyVerifyContract: string;
+  readonly terminalEvidenceTarget: string;
 }
 
 interface GeneratedSource {
@@ -493,6 +501,10 @@ function buildStaticAuthority() {
       currentAvailability: action.current_availability,
       disabledReason: action.disabled_reason,
       owner: action.owner,
+      requiredResourceIdentity: action.required_resource_identity,
+      sourcePreconditions: action.source_preconditions,
+      planApplyVerifyContract: action.plan_apply_verify_contract,
+      terminalEvidenceTarget: action.terminal_evidence_target,
     } satisfies ExecutionContractAuthorityInternalActionCoverage)),
   );
 
