@@ -1,0 +1,205 @@
+name: Apply production execution feature profile
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Exact currently deployed 40-hex Portal source commit
+        required: true
+        type: string
+      release_manifest_sha256:
+        description: Exact sha256 of that deployed release-manifest.json
+        required: true
+        type: string
+      profile:
+        description: Reviewed allowlisted runtime profile
+        required: true
+        type: choice
+        options:
+          - execution-public-panels-v1
+          - execution-read-baseline-v1
+      confirm_profile:
+        description: Owner confirms this exact config-only production change
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portal-production
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply reviewed runtime profile
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      EXPECTED_RELEASE_MANIFEST_SHA256: ${{ inputs.release_manifest_sha256 }}
+      FEATURE_PROFILE: ${{ inputs.profile }}
+      CONFIRM_PROFILE: ${{ inputs.confirm_profile }}
+      DEPLOY_PATH: /srv/portal
+
+    steps:
+      - name: Check out protected deployment definition
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Validate immutable release binding and request
+        run: |
+          set -euo pipefail
+          for required in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_PRIVATE_KEY DEPLOY_KNOWN_HOSTS; do
+            [[ -n "${!required}" ]] || { echo "Missing production secret: ${required}" >&2; exit 1; }
+          done
+          [[ "${GITHUB_REF}" == "refs/heads/main" ]] || { echo 'Must dispatch from main.' >&2; exit 1; }
+          [[ "${CONFIRM_PROFILE}" == "true" ]] || { echo 'Owner confirmation is required.' >&2; exit 1; }
+          [[ "${SOURCE_COMMIT}" =~ ^[0-9a-f]{40}$ ]] || { echo 'source_commit is invalid.' >&2; exit 1; }
+          [[ "${EXPECTED_RELEASE_MANIFEST_SHA256}" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'release_manifest_sha256 is invalid.' >&2; exit 1; }
+          case "${FEATURE_PROFILE}" in
+            execution-public-panels-v1|execution-read-baseline-v1) ;;
+            *) echo 'Unknown reviewed profile.' >&2; exit 1 ;;
+          esac
+          git cat-file -e "${SOURCE_COMMIT}^{commit}"
+          git merge-base --is-ancestor "${SOURCE_COMMIT}" HEAD
+
+      - name: Configure pinned SSH access
+        run: |
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
+          chmod 0600 ~/.ssh/id_ed25519
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 0600 ~/.ssh/known_hosts
+
+      - name: Transfer reviewed feature-profile applicator
+        run: |
+          scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -P "${DEPLOY_PORT}" scripts/apply-production-execution-feature-profile.py \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py"
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "chmod 0750 '${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py'"
+
+      - name: Atomically apply profile and recreate only Control API
+        run: |
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "SOURCE_COMMIT='${SOURCE_COMMIT}' EXPECTED_RELEASE_MANIFEST_SHA256='${EXPECTED_RELEASE_MANIFEST_SHA256}' FEATURE_PROFILE='${FEATURE_PROFILE}' DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "${DEPLOY_PATH}"
+          release_dir="${DEPLOY_PATH}/releases/${SOURCE_COMMIT}"
+          compose_files=(
+            "${release_dir}/compose/compose.production.yaml"
+            "${release_dir}/compose/compose.production.stable-runtime.yaml"
+            "${release_dir}/compose/compose.execution-current-source.yaml"
+            "${release_dir}/compose/compose.execution-local-projection.yaml"
+            "${release_dir}/compose/compose.execution-manager-analytics.yaml"
+            "${release_dir}/compose/compose.execution-manager-realtime.yaml"
+          )
+          for compose_file in "${compose_files[@]}"; do test -f "${compose_file}"; done
+          [[ "$(sed -n 's/^SOURCE_COMMIT=//p' deployed-release.env | tail -n 1)" == "${SOURCE_COMMIT}" ]] || {
+            echo 'Host marker does not match the requested immutable release.' >&2
+            exit 1
+          }
+          [[ "$(sed -n 's/^PORTAL_STACK_NAME=//p' .env.production | tail -n 1 | tr -d "\"'")" == "portal-stable-v1-0-1" ]] || {
+            echo 'Host environment does not name the verified stable project.' >&2
+            exit 1
+          }
+          [[ "$(sed -n 's/^PORTAL_HTTP_PORT=//p' .env.production | tail -n 1 | tr -d "\"'")" == "18081" ]] || {
+            echo 'Host environment does not name the verified stable loopback port.' >&2
+            exit 1
+          }
+          pre_control="$(sudo -n docker ps -q --filter label=com.docker.compose.project=portal-stable-v1-0-1 --filter label=com.docker.compose.service=control-api)"
+          [[ -n "${pre_control}" ]] || { echo 'Stable Control API is not running before config transition.' >&2; exit 1; }
+          [[ "$(sudo -n docker inspect -f '{{.State.Health.Status}}' "${pre_control}")" == "healthy" ]] || {
+            echo 'Stable Control API is not healthy before config transition.' >&2
+            exit 1
+          }
+          actual_manifest="sha256:$(sha256sum "${release_dir}/release-manifest.json" | cut -d' ' -f1)"
+          [[ "${actual_manifest}" == "${EXPECTED_RELEASE_MANIFEST_SHA256}" ]] || {
+            echo 'Host release manifest digest does not match the reviewed value.' >&2
+            exit 1
+          }
+          result_file="$(mktemp)"
+          sudo -n python3 "${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py" \
+            --deployment-path "${DEPLOY_PATH}" \
+            --source-commit "${SOURCE_COMMIT}" \
+            --release-manifest-sha256 "${EXPECTED_RELEASE_MANIFEST_SHA256}" \
+            --profile "${FEATURE_PROFILE}" > "${result_file}"
+          backup_path="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rollback_backup_path"] or "")' "${result_file}")"
+          compose_next() {
+            local -a args=()
+            local file
+            for file in "${compose_files[@]}"; do args+=(-f "${file}"); done
+            sudo -n docker compose --env-file .env.production "${args[@]}" "$@"
+          }
+          rollback() {
+            local status="$?"
+            set +e
+            if [[ -n "${backup_path}" ]]; then
+              sudo -n python3 "${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py" \
+                --deployment-path "${DEPLOY_PATH}" \
+                --source-commit "${SOURCE_COMMIT}" \
+                --release-manifest-sha256 "${EXPECTED_RELEASE_MANIFEST_SHA256}" \
+                --restore-backup "${backup_path}" >/dev/null
+              compose_next up -d --no-deps --force-recreate --wait --wait-timeout 120 control-api < /dev/null || true
+            fi
+            exit "${status}"
+          }
+          trap rollback ERR
+          compose_next config -q < /dev/null
+          compose_next up -d --no-deps --force-recreate --wait --wait-timeout 120 control-api < /dev/null
+          compose_next exec -T control-api node -e \
+            "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" < /dev/null
+          control_id="$(sudo -n docker ps -q --filter label=com.docker.compose.project=portal-stable-v1-0-1 --filter label=com.docker.compose.service=control-api)"
+          [[ -n "${control_id}" ]] || { echo 'Control API identity is missing.' >&2; exit 1; }
+          expected=(
+            'FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=true'
+            'FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT=true'
+            'FEATURE_EXECUTION_DURABLE_MIRROR=false'
+            'FEATURE_EXECUTION_DURABLE_MIRROR_READS=false'
+            'FEATURE_EXECUTION_MARKET_CONTEXT=false'
+          )
+          if [[ "${FEATURE_PROFILE}" == "execution-read-baseline-v1" ]]; then
+            expected=(
+              'FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=false'
+              'FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT=false'
+              'FEATURE_EXECUTION_DURABLE_MIRROR=false'
+              'FEATURE_EXECUTION_DURABLE_MIRROR_READS=false'
+              'FEATURE_EXECUTION_MARKET_CONTEXT=false'
+            )
+          fi
+          runtime_env="$(sudo -n docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${control_id}")"
+          for item in "${expected[@]}"; do grep -Fx -- "${item}" <<<"${runtime_env}" >/dev/null; done
+          evidence_path="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["evidence_path"])' "${result_file}")"
+          sudo -n install -m 0600 "${result_file}" "${DEPLOY_PATH}/transition/last-feature-profile-result.json"
+          printf 'FEATURE_PROFILE_EVIDENCE=%s\n' "${evidence_path}"
+          REMOTE
+
+      - name: Fetch non-secret feature-profile evidence
+        run: |
+          install -d -m 0700 runtime-evidence
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "sudo -n cat '${DEPLOY_PATH}/transition/last-feature-profile-result.json'" \
+            > runtime-evidence/feature-profile-result.json
+          chmod 0600 runtime-evidence/feature-profile-result.json
+
+      - name: Upload non-secret feature-profile evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: portal-production-feature-profile-${{ env.SOURCE_COMMIT }}-${{ env.FEATURE_PROFILE }}
+          path: runtime-evidence/feature-profile-result.json
+          if-no-files-found: error
+          retention-days: 30
