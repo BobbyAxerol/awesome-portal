@@ -76,7 +76,7 @@
     "frontend_same_origin_bff_contract_test_sha256": "sha256:1159c8525b83811f7939f09c352981675583c64a6dbd6cbddb153e2fd59452ed",
     "frontend_execution_journeys_sha256": "sha256:207a4021333dadb04e9a0e65b940c0e0370f8c24024172537ce44877458633d8",
     "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",
-    "release_workflow_sha256": "sha256:71f84f79028fc67be395a33a2310dcedb7d30b4ceb1c9ef7d24165a0faacec8c",
+    "release_workflow_sha256": "sha256:04acb0ec9f5976eb6a7f44108eeb06538eed1163fb1efa879fc65dc7675ae15a",
     "recovery_runbook_sha256": "sha256:483773e344f032f6c4b044671c0d202d9c041d3390da275243556b4397cd00dc",
     "governance_product_migration_sha256": "sha256:e9193e9baaa1886dd882d1e6b806dd117b6f6a08d0862bc386ac20c81c679383",
     "governance_product_schema_sha256": "sha256:68cd5e901b7199d867ebfbf0edbacb24f97b6b387f31ece8e660d48bbf4ffbb9",
@@ -102,7 +102,7 @@
     "br72_frontend_containers_sha256": "sha256:a78b235bf75762ca2136be20e0ac457af774cc8eea020bbeaa9701a9384c12eb",
     "br72_frontend_alpha_fleet_sha256": "sha256:09179cea55180b8527ecd4a02aff1e365397645ebeca29b76ac0c1b74e38c801",
     "br72_frontend_recompose_sha256": "sha256:150012d24a9012a1a39d3be76ed72bbcd0d4129ac9fc90a7ddbab01cdcd94287",
-    "br72_frontend_registry_sha256": "sha256:5cdce2394aa31e7f68ed556bfe831c90d6a027e368ee8ddb54a282458b527b2e"
+    "br72_frontend_registry_sha256": "sha256:66e6fbf3b9dfcfe8b915e1b6b4b88ab17305290b74f100af4d95a29fd17b33f0"
   },
   "rehearsals": {
     "multi_replica_admission": "PASS_N21",

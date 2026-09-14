@@ -11,6 +11,7 @@ python3 - \
   "${root_dir}/deploy/images/execution-edge.Dockerfile" \
   "${root_dir}/deploy/images/source-proxy.Dockerfile" \
   "${root_dir}/deploy/images/control-api.Dockerfile" \
+  "${root_dir}/deploy/images/portal-web.Dockerfile" \
   "${root_dir}/deploy/compose.signed-images.yaml" \
   "${root_dir}/.github/workflows/ci.yml" <<'PY'
 import pathlib
@@ -24,8 +25,9 @@ raw = path.read_text(encoding="utf-8")
 edge_dockerfile = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
 proxy_dockerfile = pathlib.Path(sys.argv[3]).read_text(encoding="utf-8")
 control_dockerfile = pathlib.Path(sys.argv[4]).read_text(encoding="utf-8")
-signed_overlay = pathlib.Path(sys.argv[5]).read_text(encoding="utf-8")
-ci_workflow = pathlib.Path(sys.argv[6])
+web_dockerfile = pathlib.Path(sys.argv[5]).read_text(encoding="utf-8")
+signed_overlay = pathlib.Path(sys.argv[6]).read_text(encoding="utf-8")
+ci_workflow = pathlib.Path(sys.argv[7])
 document = yaml.safe_load(raw)
 if not isinstance(document, dict):
     raise SystemExit("Image publication workflow is not a YAML object.")
@@ -215,6 +217,17 @@ if (
     or control_options.get("sbom") is not True
 ):
     raise SystemExit("D3 Control API requires push, maximum provenance and SBOM attestations.")
+
+# The rich Execution product routes are compiled by Vite. A container env value
+# after image construction cannot change them, so the protected main publisher
+# must pass the reviewed build input explicitly. The Dockerfile deliberately
+# retains `false` as the safe default for unreviewed local builds.
+web_build = by_name.get("Build and publish web image", {})
+web_options = web_build.get("with")
+if not isinstance(web_options, dict) or web_options.get("build-args") != "EXECUTION_PREVIEW_ENABLED=true\n":
+    raise SystemExit("Main Portal web publication must compile the reviewed Execution product routes.")
+if "ARG EXECUTION_PREVIEW_ENABLED=false" not in web_dockerfile:
+    raise SystemExit("Portal web Dockerfile must retain its safe local Execution-route default.")
 
 release_candidate = by_name.get("Verify all release images and generate N14A candidate", {}).get("run", "")
 for required in (
