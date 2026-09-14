@@ -131,21 +131,44 @@ jobs:
             echo 'Host release manifest digest does not match the reviewed value.' >&2
             exit 1
           }
-          result_file="$(mktemp)"
-          sudo -n python3 "${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py" \
-            --deployment-path "${DEPLOY_PATH}" \
-            --source-commit "${SOURCE_COMMIT}" \
-            --release-manifest-sha256 "${EXPECTED_RELEASE_MANIFEST_SHA256}" \
-            --profile "${FEATURE_PROFILE}" > "${result_file}"
-          backup_path="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rollback_backup_path"] or "")' "${result_file}")"
+          marker_image() {
+            local key="$1"
+            local value
+            value="$(sed -n "s/^${key}=//p" deployed-release.env | tail -n 1)"
+            [[ "${value}" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$ ]] || {
+              echo "Deployment marker does not contain a valid immutable ${key}." >&2
+              exit 1
+            }
+            printf '%s' "${value}"
+          }
+          # The host's protected .env.production deliberately contains runtime
+          # settings and secrets only. Immutable image coordinates live in the
+          # signed deployment marker and must be passed explicitly because
+          # sudo's env_reset would otherwise leave Compose unable to render.
+          portal_api_image="$(marker_image PORTAL_API_IMAGE)"
+          portal_web_image="$(marker_image PORTAL_WEB_IMAGE)"
+          portal_control_api_image="$(marker_image PORTAL_CONTROL_API_IMAGE)"
+          portal_roadmap_api_image="$(marker_image PORTAL_ROADMAP_API_IMAGE)"
           compose_next() {
             local -a args=()
             local file
             for file in "${compose_files[@]}"; do args+=(-f "${file}"); done
-            sudo -n docker compose --env-file .env.production "${args[@]}" "$@"
+            sudo -n env \
+              PORTAL_API_IMAGE="${portal_api_image}" \
+              PORTAL_WEB_IMAGE="${portal_web_image}" \
+              PORTAL_CONTROL_API_IMAGE="${portal_control_api_image}" \
+              PORTAL_ROADMAP_API_IMAGE="${portal_roadmap_api_image}" \
+              docker compose --env-file .env.production "${args[@]}" "$@"
           }
+          # Compose interpolation is a pure preflight.  It must pass before
+          # the profile editor can touch the protected host environment: a
+          # missing image pin or invalid compose graph is therefore a no-op.
+          compose_next config -q < /dev/null
+          result_file="$(mktemp)"
+          backup_path=""
           rollback() {
-            local status="$?"
+            local status="${1:-1}"
+            trap - ERR
             set +e
             if [[ -n "${backup_path}" ]]; then
               sudo -n python3 "${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py" \
@@ -155,10 +178,16 @@ jobs:
                 --restore-backup "${backup_path}" >/dev/null
               compose_next up -d --no-deps --force-recreate --wait --wait-timeout 120 control-api < /dev/null || true
             fi
+            rm -f "${result_file}" || true
             exit "${status}"
           }
-          trap rollback ERR
-          compose_next config -q < /dev/null
+          trap 'rollback "$?"' ERR
+          sudo -n python3 "${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py" \
+            --deployment-path "${DEPLOY_PATH}" \
+            --source-commit "${SOURCE_COMMIT}" \
+            --release-manifest-sha256 "${EXPECTED_RELEASE_MANIFEST_SHA256}" \
+            --profile "${FEATURE_PROFILE}" > "${result_file}"
+          backup_path="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rollback_backup_path"] or "")' "${result_file}")"
           compose_next up -d --no-deps --force-recreate --wait --wait-timeout 120 control-api < /dev/null
           compose_next exec -T control-api node -e \
             "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" < /dev/null
@@ -185,6 +214,8 @@ jobs:
           evidence_path="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["evidence_path"])' "${result_file}")"
           sudo -n install -m 0600 "${result_file}" "${DEPLOY_PATH}/transition/last-feature-profile-result.json"
           printf 'FEATURE_PROFILE_EVIDENCE=%s\n' "${evidence_path}"
+          trap - ERR
+          rm -f "${result_file}"
           REMOTE
 
       - name: Fetch non-secret feature-profile evidence

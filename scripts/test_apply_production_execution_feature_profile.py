@@ -10,6 +10,7 @@ import unittest
 
 
 ROOT = pathlib.Path(__file__).resolve().parent
+REPOSITORY_ROOT = ROOT.parent
 SPEC = importlib.util.spec_from_file_location("feature_profile", ROOT / "apply-production-execution-feature-profile.py")
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -17,6 +18,29 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FeatureProfileTests(unittest.TestCase):
+    def test_production_workflow_supplies_marker_pinned_images_to_compose(self) -> None:
+        workflow = (REPOSITORY_ROOT / ".github/workflows/production-feature-profile.yml").read_text(encoding="utf-8")
+        self.assertIn("marker_image()", workflow)
+        for key in (
+            "PORTAL_API_IMAGE",
+            "PORTAL_WEB_IMAGE",
+            "PORTAL_CONTROL_API_IMAGE",
+            "PORTAL_ROADMAP_API_IMAGE",
+        ):
+            self.assertIn(f'$(marker_image {key})', workflow)
+            self.assertIn(f'{key}="${{{key.lower()}}}"', workflow)
+
+        # A failed Compose render must be a no-op: it is intentionally placed
+        # before the temporary result file and the profile editor invocation.
+        self.assertLess(
+            workflow.index("compose_next config -q < /dev/null"),
+            workflow.index('result_file="$(mktemp)"'),
+        )
+        self.assertLess(
+            workflow.index("trap 'rollback \"$?\"' ERR"),
+            workflow.rindex('sudo -n python3 "${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py"'),
+        )
+
     def test_public_panels_profile_preserves_unknown_secret_and_closes_mirror(self) -> None:
         original = "# host-only\nPORTAL_CONTROL_DB_PASSWORD='keep-me'\nCONTROL_API_FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=false\nCONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT=true\nOTHER_FLAG=value\n"
         rewritten = MODULE.rewrite_dotenv(original, MODULE.PROFILES["execution-public-panels-v1"])
