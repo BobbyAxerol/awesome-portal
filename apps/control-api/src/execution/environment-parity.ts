@@ -2,18 +2,23 @@
  * PHASE 3A (round 2) · a stack states what it is running, so a comparison is a
  * diff and not an argument.
  *
- * Dev and stable run eight different feature values, and one of them —
- * `FEATURE_EXECUTION_DURABLE_MIRROR` — does not toggle a view: it chooses
- * which table every history read comes from. Each stack keeps its own table
- * fresh and lets the other rot, so flipping the flag would put days-old rows on
- * screen with nothing to say so.
+ * Dev and stable run different feature values. The durable mirror is a staged
+ * transition: its write flag starts a dual-write warm-up, while its read flag
+ * independently selects the table every history read comes from. A report must
+ * show both facts so an operator never mistakes a filling mirror for an active
+ * reader.
  *
  * This block is read-only evidence. It flips nothing and backfills nothing; it
  * exists so the decision can be made against measured facts (A38.7 item 1).
  */
 import type { ControlApiConfig } from "../config";
+import {
+  durableMirrorMode,
+  durableMirrorReadEnabled,
+  durableMirrorWriteEnabled,
+} from "./durable-mirror-mode";
 
-/** The two tables `historyTable()` chooses between, named once. */
+/** The two tables the qualified read cutover chooses between, named once. */
 export const DURABLE_MIRROR_HISTORY_TABLE = "execution_durable_mirror_range_rows";
 export const TIMESERIES_HISTORY_TABLE = "execution_timeseries_history";
 
@@ -93,6 +98,9 @@ export interface EnvironmentParity {
     readonly table: string;
     readonly selected_by: string;
     readonly flag_enabled: boolean;
+    readonly writer_enabled: boolean;
+    readonly reader_enabled: boolean;
+    readonly mode: "LEGACY_ONLY" | "DUAL_WRITE_WARMUP" | "MIRROR_READ_ACTIVE";
     readonly unselected_table: string;
     readonly note: string;
   };
@@ -111,7 +119,8 @@ export interface EnvironmentParity {
 }
 
 export function environmentParity(config: ControlApiConfig): EnvironmentParity {
-  const mirrorEnabled = config.FEATURE_EXECUTION_DURABLE_MIRROR === "true";
+  const mirrorWriterEnabled = durableMirrorWriteEnabled(config);
+  const mirrorReaderEnabled = durableMirrorReadEnabled(config);
   const flags: Record<string, string | null> = {};
   for (const flag of BEHAVIOUR_FLAGS) {
     const value = (config as unknown as Record<string, unknown>)[flag];
@@ -120,13 +129,18 @@ export function environmentParity(config: ControlApiConfig): EnvironmentParity {
   return {
     schema_version: "portal.execution.environment-parity.v1",
     history_source: {
-      table: mirrorEnabled ? DURABLE_MIRROR_HISTORY_TABLE : TIMESERIES_HISTORY_TABLE,
-      selected_by: "FEATURE_EXECUTION_DURABLE_MIRROR",
-      flag_enabled: mirrorEnabled,
-      unselected_table: mirrorEnabled ? TIMESERIES_HISTORY_TABLE : DURABLE_MIRROR_HISTORY_TABLE,
-      note: "The unselected table receives no writes on this stack, so its rows"
-        + " age from the moment the flag was set. Flipping the flag without a"
-        + " backfill would serve those rows as current.",
+      table: mirrorReaderEnabled ? DURABLE_MIRROR_HISTORY_TABLE : TIMESERIES_HISTORY_TABLE,
+      selected_by: "FEATURE_EXECUTION_DURABLE_MIRROR && FEATURE_EXECUTION_DURABLE_MIRROR_READS",
+      flag_enabled: mirrorReaderEnabled,
+      writer_enabled: mirrorWriterEnabled,
+      reader_enabled: mirrorReaderEnabled,
+      mode: durableMirrorMode(config),
+      unselected_table: mirrorReaderEnabled ? TIMESERIES_HISTORY_TABLE : DURABLE_MIRROR_HISTORY_TABLE,
+      note: mirrorWriterEnabled && !mirrorReaderEnabled
+        ? "Mirror warm-up is dual-write. Compatible history remains the active reader until aggregate backfill, freshness and parity qualification pass."
+        : mirrorReaderEnabled
+          ? "Mirror reads are active only after an explicit qualified cutover. Reverting reads requires the named warm-up profile, not an unreviewed table switch."
+          : "Legacy history is the active writer and reader. The mirror is not collecting rows.",
     },
     behaviour_flags: flags,
     profiles: [
