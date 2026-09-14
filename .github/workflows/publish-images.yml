@@ -240,6 +240,12 @@ jobs:
         with:
           context: .
           file: deploy/images/portal-web.Dockerfile
+          # This is a Vite build-time contract, not a mutable container setting.
+          # Main releases promote the reviewed Execution product routes; without
+          # this input the Dockerfile's safe local default renders legacy
+          # registry previews even when the source contains the rich screens.
+          build-args: |
+            EXECUTION_PREVIEW_ENABLED=true
           push: true
           tags: ${{ steps.web-meta.outputs.tags }}
           labels: ${{ steps.web-meta.outputs.labels }}
