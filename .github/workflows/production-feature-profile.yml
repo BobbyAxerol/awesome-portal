@@ -17,9 +17,14 @@ on:
         type: choice
         options:
           - execution-public-panels-v1
+          - execution-durable-mirror-write-only-v1
           - execution-read-baseline-v1
+      backfill_run_id:
+        description: Required only for durable-mirror writer warm-up; 8-96 safe identifier characters
+        required: false
+        type: string
       confirm_profile:
-        description: Owner confirms this exact config-only production change
+        description: Owner confirms this exact reviewed production change
         required: true
         default: false
         type: boolean
@@ -46,6 +51,7 @@ jobs:
       SOURCE_COMMIT: ${{ inputs.source_commit }}
       EXPECTED_RELEASE_MANIFEST_SHA256: ${{ inputs.release_manifest_sha256 }}
       FEATURE_PROFILE: ${{ inputs.profile }}
+      BACKFILL_RUN_ID: ${{ inputs.backfill_run_id }}
       CONFIRM_PROFILE: ${{ inputs.confirm_profile }}
       DEPLOY_PATH: /srv/portal
 
@@ -68,9 +74,18 @@ jobs:
           [[ "${SOURCE_COMMIT}" =~ ^[0-9a-f]{40}$ ]] || { echo 'source_commit is invalid.' >&2; exit 1; }
           [[ "${EXPECTED_RELEASE_MANIFEST_SHA256}" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'release_manifest_sha256 is invalid.' >&2; exit 1; }
           case "${FEATURE_PROFILE}" in
-            execution-public-panels-v1|execution-read-baseline-v1) ;;
+            execution-public-panels-v1|execution-durable-mirror-write-only-v1|execution-read-baseline-v1) ;;
             *) echo 'Unknown reviewed profile.' >&2; exit 1 ;;
           esac
+          if [[ "${FEATURE_PROFILE}" == "execution-durable-mirror-write-only-v1" ]]; then
+            [[ "${BACKFILL_RUN_ID}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{7,95}$ ]] || {
+              echo 'durable-mirror writer warm-up requires a safe backfill_run_id.' >&2; exit 1;
+            }
+          else
+            [[ -z "${BACKFILL_RUN_ID}" ]] || {
+              echo 'backfill_run_id is valid only for durable-mirror writer warm-up.' >&2; exit 1;
+            }
+          fi
           git cat-file -e "${SOURCE_COMMIT}^{commit}"
           git merge-base --is-ancestor "${SOURCE_COMMIT}" HEAD
 
@@ -95,7 +110,7 @@ jobs:
         run: |
           ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
             -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "SOURCE_COMMIT='${SOURCE_COMMIT}' EXPECTED_RELEASE_MANIFEST_SHA256='${EXPECTED_RELEASE_MANIFEST_SHA256}' FEATURE_PROFILE='${FEATURE_PROFILE}' DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'REMOTE'
+            "SOURCE_COMMIT='${SOURCE_COMMIT}' EXPECTED_RELEASE_MANIFEST_SHA256='${EXPECTED_RELEASE_MANIFEST_SHA256}' FEATURE_PROFILE='${FEATURE_PROFILE}' BACKFILL_RUN_ID='${BACKFILL_RUN_ID}' DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "${DEPLOY_PATH}"
           release_dir="${DEPLOY_PATH}/releases/${SOURCE_COMMIT}"
@@ -165,6 +180,7 @@ jobs:
           # missing image pin or invalid compose graph is therefore a no-op.
           compose_next config -q < /dev/null
           result_file="$(mktemp)"
+          reseed_file=""
           backup_path=""
           rollback() {
             local status="${1:-1}"
@@ -176,9 +192,10 @@ jobs:
                 --source-commit "${SOURCE_COMMIT}" \
                 --release-manifest-sha256 "${EXPECTED_RELEASE_MANIFEST_SHA256}" \
                 --restore-backup "${backup_path}" >/dev/null
-              compose_next up -d --no-deps --force-recreate --wait --wait-timeout 120 control-api < /dev/null || true
             fi
+            compose_next up -d --no-deps --force-recreate --wait --wait-timeout 120 control-api < /dev/null || true
             rm -f "${result_file}" || true
+            if [[ -n "${reseed_file}" ]]; then rm -f "${reseed_file}" || true; fi
             exit "${status}"
           }
           trap 'rollback "$?"' ERR
@@ -188,27 +205,59 @@ jobs:
             --release-manifest-sha256 "${EXPECTED_RELEASE_MANIFEST_SHA256}" \
             --profile "${FEATURE_PROFILE}" > "${result_file}"
           backup_path="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["rollback_backup_path"] or "")' "${result_file}")"
+          if [[ "${FEATURE_PROFILE}" == "execution-durable-mirror-write-only-v1" ]]; then
+            # The worker must be stopped before its Portal-owned cursors are
+            # reset. The one-shot CLI only writes those cursor checkpoints;
+            # source reads begin later through the normal paced worker.
+            compose_next stop control-api < /dev/null
+            reseed_file="$(mktemp)"
+            compose_next run --rm --no-deps control-api \
+              node dist/cli/execution-durable-mirror-reseed.js --apply --run-id "${BACKFILL_RUN_ID}" \
+              > "${reseed_file}"
+            python3 - "${reseed_file}" "${BACKFILL_RUN_ID}" <<'PY'
+          import json, sys
+          value = json.load(open(sys.argv[1], encoding="utf-8"))
+          if value.get("mode") != "APPLY" or value.get("run_id") != sys.argv[2]:
+              raise SystemExit("durable-mirror reseed evidence is invalid")
+          if value.get("source_read_performed") is not False or value.get("business_rows_emitted") is not False:
+              raise SystemExit("durable-mirror reseed attempted an invalid source or business-data operation")
+          PY
+            sudo -n install -m 0600 "${reseed_file}" "${DEPLOY_PATH}/transition/last-durable-mirror-reseed.json"
+          fi
           compose_next up -d --no-deps --force-recreate --wait --wait-timeout 120 control-api < /dev/null
           compose_next exec -T control-api node -e \
             "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" < /dev/null
           control_id="$(sudo -n docker ps -q --filter label=com.docker.compose.project=portal-stable-v1-0-1 --filter label=com.docker.compose.service=control-api)"
           [[ -n "${control_id}" ]] || { echo 'Control API identity is missing.' >&2; exit 1; }
-          expected=(
-            'FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=true'
-            'FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT=true'
-            'FEATURE_EXECUTION_DURABLE_MIRROR=false'
-            'FEATURE_EXECUTION_DURABLE_MIRROR_READS=false'
-            'FEATURE_EXECUTION_MARKET_CONTEXT=false'
-          )
-          if [[ "${FEATURE_PROFILE}" == "execution-read-baseline-v1" ]]; then
-            expected=(
+          case "${FEATURE_PROFILE}" in
+            execution-public-panels-v1)
+              expected=(
+                'FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=true'
+                'FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT=true'
+                'FEATURE_EXECUTION_DURABLE_MIRROR=false'
+                'FEATURE_EXECUTION_DURABLE_MIRROR_READS=false'
+                'FEATURE_EXECUTION_MARKET_CONTEXT=false'
+              )
+              ;;
+            execution-durable-mirror-write-only-v1)
+              expected=(
+                'FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=true'
+                'FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT=true'
+                'FEATURE_EXECUTION_DURABLE_MIRROR=true'
+                'FEATURE_EXECUTION_DURABLE_MIRROR_READS=false'
+                'FEATURE_EXECUTION_MARKET_CONTEXT=false'
+              )
+              ;;
+            execution-read-baseline-v1)
+              expected=(
               'FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=false'
               'FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT=false'
               'FEATURE_EXECUTION_DURABLE_MIRROR=false'
               'FEATURE_EXECUTION_DURABLE_MIRROR_READS=false'
               'FEATURE_EXECUTION_MARKET_CONTEXT=false'
-            )
-          fi
+              )
+              ;;
+          esac
           runtime_env="$(sudo -n docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${control_id}")"
           for item in "${expected[@]}"; do grep -Fx -- "${item}" <<<"${runtime_env}" >/dev/null; done
           evidence_path="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["evidence_path"])' "${result_file}")"
@@ -216,6 +265,7 @@ jobs:
           printf 'FEATURE_PROFILE_EVIDENCE=%s\n' "${evidence_path}"
           trap - ERR
           rm -f "${result_file}"
+          if [[ -n "${reseed_file}" ]]; then rm -f "${reseed_file}"; fi
           REMOTE
 
       - name: Fetch non-secret feature-profile evidence
@@ -226,6 +276,13 @@ jobs:
             "sudo -n cat '${DEPLOY_PATH}/transition/last-feature-profile-result.json'" \
             > runtime-evidence/feature-profile-result.json
           chmod 0600 runtime-evidence/feature-profile-result.json
+          if [[ "${FEATURE_PROFILE}" == "execution-durable-mirror-write-only-v1" ]]; then
+            ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+              -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+              "sudo -n cat '${DEPLOY_PATH}/transition/last-durable-mirror-reseed.json'" \
+              > runtime-evidence/durable-mirror-reseed.json
+            chmod 0600 runtime-evidence/durable-mirror-reseed.json
+          fi
 
       - name: Upload non-secret feature-profile evidence
         uses: actions/upload-artifact@v7

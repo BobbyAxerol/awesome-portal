@@ -41,6 +41,15 @@ class FeatureProfileTests(unittest.TestCase):
             workflow.rindex('sudo -n python3 "${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py"'),
         )
 
+        self.assertIn("execution-durable-mirror-write-only-v1", workflow)
+        self.assertIn("BACKFILL_RUN_ID", workflow)
+        self.assertIn("compose_next stop control-api", workflow)
+        self.assertIn("execution-durable-mirror-reseed.js --apply", workflow)
+        self.assertLess(
+            workflow.index("compose_next stop control-api"),
+            workflow.index("execution-durable-mirror-reseed.js --apply"),
+        )
+
     def test_public_panels_profile_preserves_unknown_secret_and_closes_mirror(self) -> None:
         original = "# host-only\nPORTAL_CONTROL_DB_PASSWORD='keep-me'\nCONTROL_API_FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=false\nCONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT=true\nOTHER_FLAG=value\n"
         rewritten = MODULE.rewrite_dotenv(original, MODULE.PROFILES["execution-public-panels-v1"])
@@ -51,6 +60,30 @@ class FeatureProfileTests(unittest.TestCase):
         self.assertIn("CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR=false", rewritten)
         self.assertIn("CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR_READS=false", rewritten)
         self.assertIn("CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT=false", rewritten)
+
+    def test_writer_only_profile_starts_mirror_without_read_cutover(self) -> None:
+        rewritten = MODULE.rewrite_dotenv(
+            "CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR=false\n"
+            "CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR_READS=false\n",
+            MODULE.PROFILES["execution-durable-mirror-write-only-v1"],
+        )
+        self.assertIn("CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR=true", rewritten)
+        self.assertIn("CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR_READS=false", rewritten)
+        self.assertIn("CONTROL_API_FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=true", rewritten)
+        self.assertIn("CONTROL_API_FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT=true", rewritten)
+
+    def test_profile_cannot_turn_off_an_active_mirror_writer(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            env_path = root / ".env.production"
+            env_path.write_text(
+                "CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR=true\n"
+                "CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR_READS=false\n",
+                encoding="utf-8",
+            )
+            env_path.chmod(0o600)
+            with self.assertRaisesRegex(MODULE.ProfileError, "writer is active"):
+                MODULE.backup_and_apply(env_path, root / "transition", "execution-public-panels-v1", "a" * 40)
 
     def test_apply_creates_private_backup_and_restore_is_exact(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

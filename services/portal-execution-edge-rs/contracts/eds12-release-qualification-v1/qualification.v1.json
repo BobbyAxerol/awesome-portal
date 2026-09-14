@@ -170,7 +170,7 @@
     {
       "id": "subject_activity_bff",
       "file": "apps/control-api/src/execution/subject-activity.service.ts",
-      "sha256": "sha256:a5dfa221b1e195c3792da30c1ecaaa6c95c6afdf07f17e063a4cac95e1f172fc"
+      "sha256": "sha256:011830994cb622709b76bbd633865e68102568349d00f0d110f69dd0b1a1917a"
     },
     {
       "id": "subject_activity_ui",
@@ -185,12 +185,12 @@
     {
       "id": "projection_worker",
       "file": "apps/control-api/src/execution/profile-projection.worker.ts",
-      "sha256": "sha256:be10243d554b3e2232d7237fbf02e7a3cae6cdcbbe4642041118980832ab8c62"
+      "sha256": "sha256:88673cf4f360d0c49dac76e79f57607d5c657b7a6ca3d60e556fa316916ce28d"
     },
     {
       "id": "projection_repository",
       "file": "apps/control-api/src/execution/profile-projection.repository.ts",
-      "sha256": "sha256:c7575969151a59fab3479d3cedc1f6417e5faab415f3eb3c07a13d96574bcfd9"
+      "sha256": "sha256:a8359036bbe213c0d683ba1313d35f620249ef1350ef7dbd7a27328c83f92c14"
     },
     {
       "id": "market_context_intake",

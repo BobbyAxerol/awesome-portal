@@ -230,6 +230,10 @@ image, user, command relay, source profile or Trading System service.
 
 The profile definitions and current cleanup/retention plan live in
 [Production execution feature profile and cleanup](production-feature-profile-and-cleanup.md).
+`execution-durable-mirror-write-only-v1` is a special staged profile: it
+requires a unique backfill run ID, reseeds only Portal-owned cursor checkpoints
+while Control API is stopped, and starts a dual-write warm-up. It never enables
+durable-mirror reads; a later evidence-gated read cutover is a separate change.
 
 ### GitHub API identity and release metadata
 

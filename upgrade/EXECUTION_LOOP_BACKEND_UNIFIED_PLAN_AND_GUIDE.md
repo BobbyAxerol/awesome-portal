@@ -7364,3 +7364,74 @@ or making stable data/volumes share a dev deployment.
    exact dev rebuild and full product review.
 4. Only after Bobby reviews the R3-4 packet does a separate request merge to
    protected main and replace the current stable release.
+
+---
+
+## 20. Production durable-history transition — legacy reader to qualified mirror
+
+**Status:** `IMPLEMENTATION_READY_NOT_DEPLOYED` (2026-09-14).
+
+Production measurements showed a deliberate split: the legacy
+`execution_timeseries_history` reader is fresh while
+`execution_durable_mirror_range_rows` is about five days behind. The mirror is
+behind because its writer was disabled; enabling both mirror flags together
+would replace fresh product reads with stale rows. This section is therefore a
+three-stage production transition, not a feature-flag flip.
+
+### 20.1 Invariants
+
+1. `FEATURE_EXECUTION_DURABLE_MIRROR` controls the writer. It must never by
+   itself select a product read table.
+2. `FEATURE_EXECUTION_DURABLE_MIRROR_READS` controls the reader and is valid
+   only when the writer is on and a production qualification has passed.
+3. During writer-only warm-up, the Portal worker dual-writes legacy history and
+   the mirror. All existing product reads remain on legacy history.
+4. Backfill uses only the existing, bounded, mTLS-backed Manager drain. Portal
+   resets its own ladder cursor checkpoints while its worker is stopped; it does
+   not query a Trading System database, Source Proxy, broker or CLI, and it
+   never deletes a business or mirror row.
+5. Dev freshness never substitutes for production evidence. Market Context is
+   unrelated to this transition and remains disabled until its independent
+   Manager contract is accepted.
+
+### 20.2 Stage A — writer-only warm-up and Portal-owned reseed
+
+**Preconditions:** deploy a signed release containing the dual-write semantics
+and `execution-durable-mirror-reseed` CLI; preserve the currently deployed
+release/manifest evidence; generate a unique safe run ID.
+
+Dispatch only the protected
+`execution-durable-mirror-write-only-v1` profile. It sets writer `true`, reads
+`false`, retains Public Candles and Command Center Snapshot, and keeps Market
+Context `false`. The workflow stops only Control API, takes its private
+transaction backup, resets only non-secret Portal cursor checkpoints, starts
+Control API and writes aggregate-only reseed evidence. The normal worker then
+performs its existing paced range drain. No browser, source command or direct
+source data access occurs in the one-shot step.
+
+**Stage-A exit:** legacy history remains fresh; mirror has advancing aggregate
+watermarks and relation coverage; cursor/restart evidence shows bounded resume;
+no content conflict is detected. A failure restores the exact transaction
+backup and recreates only Control API.
+
+### 20.3 Stage B — production qualification
+
+Run aggregate-only production probes per active profile and ladder relation:
+row count, oldest/newest UTC millisecond timestamp, missing-row count against
+legacy history, content-conflict count, freshness age, profile scope and
+restart/resume continuity. Run at least one real same-origin financial BFF
+probe while reads remain legacy. If source retention cannot supply a missing
+range, record a bounded coverage caption and keep the reader false; a permanent
+silent hole is not accepted.
+
+### 20.4 Stage C — separately approved read cutover
+
+Only after Stage B passes may a separate reviewed reader profile be introduced
+and dispatched. It must preserve the writer, change only `_READS=true`, check
+the runtime environment plus a post-cutover product BFF response, and retain a
+reviewed reader-to-warm-up rollback path. No current code or workflow may set
+both flags as its first operation.
+
+**Closure:** Stage A has code and tests, but is not deployed. Stage B/C remain
+blocked on real Stage-A production evidence, deliberately—not on a new Trading
+System capability.

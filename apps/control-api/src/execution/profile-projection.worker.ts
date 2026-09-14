@@ -18,6 +18,7 @@ import {
   managerRelationOperationByRelation,
   managerRelationOperationPolicy,
 } from "./eds11r-manager-relation.registry";
+import { legacyHistoryWriteEnabled } from "./durable-mirror-mode";
 
 const SOURCE_CONTRACT_REVISION = MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision;
 const SOURCE_CATALOGUE_SHA256 = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
@@ -239,11 +240,11 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           fields,
         }))]];
       }));
-      // The old history table remains a compatible rollback read while EDS-06
-      // is dark. Once the mirror is explicitly enabled, raw accepted range
-      // rows move through repository.commit() in the same transaction as the
-      // snapshot, revision, and server-only cursor checkpoints.
-      if (this.config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true") {
+      // During the explicit writer-only warm-up both durable stores receive
+      // the same accepted rows. Product reads remain on the compatible history
+      // table until the independently qualified READS cutover, so a backfill
+      // cannot silently make existing panels stale.
+      if (legacyHistoryWriteEnabled(this.config)) {
         for (const item of isolated) {
           const binding = item.spec.binding;
           if (!binding.ladder || !item.page) continue;

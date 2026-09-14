@@ -2,10 +2,9 @@
  * PHASE 3 (round 2) · a stack states what it runs, and a tier comes from a
  * declared policy.
  *
- * Dev and stable differ by eight feature values, and one of them chooses which
- * table every history read comes from. Each stack keeps its own table fresh and
- * lets the other rot, so the flag is not a view toggle — it is a source switch,
- * and flipping it without a backfill would serve days-old rows as current.
+ * Dev and stable differ by feature values. The mirror write and read flags are
+ * distinct: a writer-only warm-up must keep legacy reads in place, then the
+ * named read cutover can choose the mirror only after qualification.
  *
  * These tests pin the two things that make that safe to reason about: the
  * manifest says which table is live and which is not, and no age nobody
@@ -42,28 +41,44 @@ const base = {
 };
 
 /** One config for the database-backed checks below. */
-const config = testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true" });
+const config = testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true", FEATURE_EXECUTION_DURABLE_MIRROR_READS: "true" });
 
 describe("the environment manifest", () => {
-  it("names the table history is read from, and the one that is not", () => {
-    const withMirror = environmentParity(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true" }));
+  it("separates the writer warm-up from the history reader", () => {
+    const writeOnly = environmentParity(testConfig({
+      ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true", FEATURE_EXECUTION_DURABLE_MIRROR_READS: "false",
+    }));
+    expect(writeOnly.history_source.table).toBe(TIMESERIES_HISTORY_TABLE);
+    expect(writeOnly.history_source.unselected_table).toBe(DURABLE_MIRROR_HISTORY_TABLE);
+    expect(writeOnly.history_source.writer_enabled).toBe(true);
+    expect(writeOnly.history_source.reader_enabled).toBe(false);
+    expect(writeOnly.history_source.mode).toBe("DUAL_WRITE_WARMUP");
+
+    const withMirror = environmentParity(testConfig({
+      ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true", FEATURE_EXECUTION_DURABLE_MIRROR_READS: "true",
+    }));
     expect(withMirror.history_source.table).toBe(DURABLE_MIRROR_HISTORY_TABLE);
     expect(withMirror.history_source.unselected_table).toBe(TIMESERIES_HISTORY_TABLE);
     expect(withMirror.history_source.flag_enabled).toBe(true);
+    expect(withMirror.history_source.mode).toBe("MIRROR_READ_ACTIVE");
 
-    const withoutMirror = environmentParity(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "false" }));
+    const withoutMirror = environmentParity(testConfig({
+      ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "false", FEATURE_EXECUTION_DURABLE_MIRROR_READS: "false",
+    }));
     expect(withoutMirror.history_source.table).toBe(TIMESERIES_HISTORY_TABLE);
     expect(withoutMirror.history_source.unselected_table).toBe(DURABLE_MIRROR_HISTORY_TABLE);
   });
 
-  it("says why the unselected table cannot simply be switched to", () => {
-    const parity = environmentParity(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true" }));
-    expect(parity.history_source.note).toMatch(/receives no writes/i);
+  it("states the qualification condition for the warm-up store", () => {
+    const parity = environmentParity(testConfig({
+      ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true", FEATURE_EXECUTION_DURABLE_MIRROR_READS: "false",
+    }));
+    expect(parity.history_source.note).toMatch(/dual-write/i);
     expect(parity.history_source.note).toMatch(/backfill/i);
   });
 
   it("reports every behaviour flag, so a comparison is a diff and not an argument", () => {
-    const parity = environmentParity(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true" }));
+    const parity = environmentParity(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true", FEATURE_EXECUTION_DURABLE_MIRROR_READS: "true" }));
     for (const flag of BEHAVIOUR_FLAGS) {
       expect(Object.keys(parity.behaviour_flags), flag).toContain(flag);
     }
@@ -82,7 +97,7 @@ describe("the environment manifest", () => {
 
 describe("the freshness policy", () => {
   it("derives stale-after from the declared interval, not from a chosen number", () => {
-    const [policy] = freshnessPolicies(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true" }));
+    const [policy] = freshnessPolicies(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true", FEATURE_EXECUTION_DURABLE_MIRROR_READS: "true" }));
     expect(policy.declared_poll_interval_ms).toBe(15_000);
     expect(policy.missed_cycles_allowed).toBeGreaterThanOrEqual(3);
     // stale-after >= 3 x interval + jitter, and it shows its working.

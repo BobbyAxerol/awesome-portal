@@ -10,6 +10,7 @@ import {
   type ProjectionScalar,
 } from "./profile-projection.repository";
 import { ExecutionDurableMirrorRepository } from "./durable-mirror.repository";
+import { durableMirrorReadEnabled } from "./durable-mirror-mode";
 
 const SUBJECT_ID = /^[A-Za-z0-9._:@-]{1,191}$/;
 /**
@@ -163,8 +164,7 @@ export class ExecutionSubjectActivityService {
   private assertEnabled(environment: ProjectionEnvironment): void {
     if (
       this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" ||
-      this.config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true" ||
-      this.config.FEATURE_EXECUTION_DURABLE_MIRROR_READS !== "true" ||
+      !durableMirrorReadEnabled(this.config) ||
       !profileEnabled(this.config, environment)
     ) {
       throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED", 404);

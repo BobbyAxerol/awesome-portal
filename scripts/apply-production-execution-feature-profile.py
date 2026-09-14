@@ -42,8 +42,20 @@ PROFILES: Final[Mapping[str, Mapping[str, str]]] = {
         "CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR_READS": "false",
         "CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT": "false",
     },
-    # Exact config-only rollback; it does not touch source profiles, command
-    # relay, projections, users, databases, images, or release directories.
+    # Stage 1 of the durable-history transition. The application keeps the
+    # legacy reader and writer alive during this warm-up; the protected caller
+    # also reseeds only Portal-owned ladder cursors before Control API starts.
+    # It is intentionally not a generic read cutover.
+    "execution-durable-mirror-write-only-v1": {
+        "CONTROL_API_FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES": "true",
+        "CONTROL_API_FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT": "true",
+        "CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR": "true",
+        "CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR_READS": "false",
+        "CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT": "false",
+    },
+    # Initial legacy-only profile. It is safe before durable-mirror warm-up;
+    # after the writer starts, only the protected transaction backup or the
+    # reviewed write-only profile may be used to avoid splitting history.
     "execution-read-baseline-v1": {
         "CONTROL_API_FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES": "false",
         "CONTROL_API_FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT": "false",
@@ -209,6 +221,16 @@ def backup_and_apply(
         fail("unknown production feature profile")
     require_regular_private_file(env_path, "production environment")
     original = env_path.read_text(encoding="utf-8")
+    current_values = read_scalar_dotenv(env_path)
+    # Once the mirror writer has begun its controlled warm-up, sending a named
+    # profile back to legacy-only would split the two retained stores again.
+    # A failed in-flight transaction still restores its exact private backup
+    # through `--restore-backup`; a normal profile transition must not do it.
+    if (
+        current_values.get("CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR") == "true"
+        and PROFILES[profile]["CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR"] != "true"
+    ):
+        fail("durable mirror writer is active; use the exact transaction rollback or a reviewed read rollback profile")
     before_sha256 = sha256_file(env_path)
     next_text = rewrite_dotenv(original, PROFILES[profile])
     backup: pathlib.Path | None = None
@@ -226,7 +248,6 @@ def backup_and_apply(
         # Compute this against the reviewed target before replacing the file.
         # Comparing the just-created backup with the still-current environment
         # would always (and incorrectly) report an empty change set.
-        current_values = read_scalar_dotenv(env_path)
         changed_keys = [
             key
             for key in FEATURE_KEYS
