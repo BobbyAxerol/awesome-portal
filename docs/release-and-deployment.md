@@ -46,7 +46,14 @@ published compatibility contract.
    build six immutable images: Portal API, Portal web, Control API, Roadmap API,
    Rust Execution Edge and Source Proxy. Every image receives SBOM/SLSA
    provenance, Trivy evidence and a keyless signature. A `v*` tag additionally
-   receives a release tag.
+   receives a release tag. The signed `main` Portal web image explicitly
+   compiles the reviewed Execution product routes
+   (`EXECUTION_PREVIEW_ENABLED=true`). This is a **build-time** Vite input:
+   setting an environment variable after an immutable image is published cannot
+   enable the routes. The Dockerfile still defaults it to `false` for an
+   unreviewed local build, while
+   `scripts/execution-image-publication-test.sh` guards the main-publisher
+   override against a silent regression to legacy feature previews.
    The publication gate itself is bounded at 150 minutes: the declared
    60-minute authority job plus the 75-minute dependent browser path and a
    15-minute scheduling margin. Its 210-minute job budget leaves 60 minutes
