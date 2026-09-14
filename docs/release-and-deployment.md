@@ -218,6 +218,19 @@ the Compose stack supervised by systemd.
 
 ## GitHub production deployment workflow
 
+### Runtime feature profiles (config-only)
+
+Do not edit a release bundle or hand-edit `.env.production` to toggle an
+Execution feature. Dispatch **Apply production execution feature profile** from
+`main` instead. It accepts only a reviewed named profile, binds it to the
+already-deployed source commit and release-manifest SHA-256, creates a
+root-only rollback copy, recreates only `control-api`, verifies readiness and
+uploads non-secret evidence. It does not run migrations or change a volume,
+image, user, command relay, source profile or Trading System service.
+
+The profile definitions and current cleanup/retention plan live in
+[Production execution feature profile and cleanup](production-feature-profile-and-cleanup.md).
+
 ### GitHub API identity and release metadata
 
 The deployment host may use a separate fine-grained PAT for GitHub REST API
