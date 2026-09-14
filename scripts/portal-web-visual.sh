@@ -47,15 +47,42 @@ docker run --rm \
   "${IMAGE}" \
   sh -lc "
     set -e
+    npm_ci_with_network_retry() {
+      package_dir=\"\$1\"
+      attempt=1
+      max_attempts=3
+      while true; do
+        if npm ci --prefix \"\${package_dir}\" --no-audit --no-fund; then
+          return 0
+        fi
+        if [ \"\${attempt}\" -ge \"\${max_attempts}\" ]; then
+          printf 'npm ci failed after %s attempts in %s\\n' \
+            \"\${attempt}\" \"\${package_dir}\" >&2
+          return 1
+        fi
+        delay_seconds=\$((attempt * 5))
+        printf 'Transient npm install failure in %s; retrying in %ss (%s/%s)\\n' \
+          \"\${package_dir}\" \"\${delay_seconds}\" \"\${attempt}\" \"\${max_attempts}\" >&2
+        sleep \"\${delay_seconds}\"
+        attempt=\$((attempt + 1))
+      done
+    }
+
+    # GitHub-hosted runners occasionally reset an npm registry download.  Retry
+    # only dependency acquisition, in a bounded way; test and snapshot failures
+    # still fail immediately and can never be masked by this helper.
+    export npm_config_fetch_retries=5
+    export npm_config_fetch_retry_mintimeout=2000
+    export npm_config_fetch_retry_maxtimeout=10000
     # Portal compiles the embedded Planning source in-place. In a clean
     # checkout TypeScript resolves that source's React/Mermaid imports from
     # Planning's own node_modules, so both package graphs must exist before
     # Playwright starts its production-build web server.
     if [ ! -d /repo/features/roadmap-task-board/frontend/node_modules ]; then
-      npm ci --prefix /repo/features/roadmap-task-board/frontend --no-audit --no-fund
+      npm_ci_with_network_retry /repo/features/roadmap-task-board/frontend
     fi
     if [ ! -d node_modules ]; then
-      npm ci --no-audit --no-fund
+      npm_ci_with_network_retry .
     fi
     npm run ${NPM_SCRIPT} -- ${*:-}
   "
