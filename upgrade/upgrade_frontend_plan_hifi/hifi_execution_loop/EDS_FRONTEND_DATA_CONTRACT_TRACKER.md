@@ -10946,3 +10946,90 @@ Panel CONFIGURATION LOG vì thế đang nói **đúng sự thật**. → `R3-FE-
 - Guard mới `portfolioEquityCurrency.test.ts` 8 test, phủ cả hai hàm
 - Soi bằng mắt 13 route product; Portfolio 360 xác nhận sau mỗi lần sửa:
   bảng **267/267/266** giờ khớp caption biểu đồ **267**
+
+---
+
+## A79 — A4-1: shell hỏi server nó được làm gì, thay vì tự đọc role (2026-09-15)
+
+Commit `b588fe46` (backend) · `62a98d4e` (frontend). Phase A4-1 của §20 trong
+`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`; hồ sơ thi hành đầy đủ ở
+**§20.7** của chính file đó. Mục này chỉ ghi phần frontend.
+
+### A79.1 Nguồn quyền cũ là một lời nói dối tiện tay
+
+`session.tsx` tính `isAdmin: principal?.role === "ADMIN"` — trong trình duyệt,
+từ một giá trị server gửi **để hiển thị**. §20.2 luật 1 nói quyền sở hữu là sự
+thật phía server; luật 3 nói chỉ owner quản trị truy cập. Một role mà **mọi
+administrator đều có** không phải cả hai thứ đó.
+
+Câu hỏi đã đổi: không còn là "người này role gì", mà là "người này được làm gì",
+và trả lời bởi chính server sẽ cưỡng chế nó — `GET /api/admin/access/self`
+(`portal.owner-access.v1`), đã đăng ký ở `r2_ledger/capability-inventory.v1.json`
+(127 → 128 route).
+
+### A79.2 Ba trạng thái, không phải một boolean
+
+`OwnerAccessState` = `loading` | `ready` | `unavailable`. **Không dùng boolean**:
+boolean buộc phải gộp hai trong ba thứ đó vào `false`, và gộp kiểu nào cũng
+thành nói dối ở một màn nào đó (§3.4).
+
+`UsersAccess` từ **1 màn thành 4**:
+
+| Trạng thái | Màn |
+|---|---|
+| `loading` | "Checking your Portal access…" |
+| `unavailable` | không đọc được — kèm request id + retry, **không phải** từ chối |
+| `ready` + `NOT_OWNER` | "A role is not ownership" |
+| `ready` + `OWNER_ANCHOR_UNCLAIMED` | chưa ai là owner trên deployment này |
+
+Cái quan trọng nhất là ô thứ hai: trước đây "không hỏi được" bị vẽ thành "anh
+không có quyền". Một cái bảo người ta thử lại; cái kia đẩy họ đi xin quyền họ
+đang có sẵn.
+
+`is_owner` phải là **literal `true`** — một proxy đổi body thành `"true"` không
+cấp quyền gì.
+
+### A79.3 Màn recovery — ngõ cụt thì nói là ngõ cụt
+
+`ACTIVATION_RECOVERY_REQUIRED` vào frame 01D, là trạng thái **duy nhất không có
+hành động nào** (có test khẳng định `queryByRole("button")` và `("link")` đều
+null). "Retry" sẽ chạy lại một phép kiểm tra mà câu trả lời không thể đổi;
+"Sign in again" sẽ đẩy người đọc về một form không credential nào thỏa mãn. Cả
+hai đọc ra thành hy vọng.
+
+Không nêu username, không nêu owner, và **không nêu** activation đã hết hạn,
+bị thu hồi hay đã dùng — phía server đó là ba sự thật khác nhau, với người cầm
+nó là một, và khác biệt đó chỉ tiết lộ **có ai đó vừa tác động lên tài khoản
+của họ**.
+
+### A79.4 23 baseline lỗi — và vì sao tôi KHÔNG ghi đè
+
+Gate visual lần đầu: **305 pass / 23 fail**. 20 ảnh Research/Planning ở
+mobile+tablet lệch 3px chiều cao, 2 ảnh `users-access`, 1 test console với 29
+lỗi 501.
+
+Nguyên nhân **không phải** trôi thiết kế: stub e2e chưa trả lời
+`/api/admin/access/self`, nên principal trong baseline thành "không phải owner"
+và icon owner rời top bar. Ghi đè baseline sẽ **đóng dấu một lỗ hổng fixture
+thành một thay đổi thiết kế** — và chạm baseline Research/Planning, thứ §0 cấm
+đổi khi chưa hỏi Bobby.
+
+Sửa ở fixture, chạy lại ở chế độ **kiểm tra** (không `--update`):
+**328 pass / 0 fail**. Không ảnh cũ nào bị ghi đè.
+
+### A79.5 Evidence
+
+- Control API: **66 file, 582/582** + pg_dump/pg_restore drill
+- Frontend: **149 file, 2386 pass / 1 skip**; build xanh
+- Visual: **328 pass / 0 fail**, thêm 4 baseline mới cho màn recovery
+  (2 theme × 2 breakpoint)
+
+### A79.6 Còn treo cho A4-2 (đã ghi ở §20.7.4, không phải nợ ngầm)
+
+- `A4-FE-BE-GAP-01`: façade write path (`/api/runs`, `/api/v1/alphas`,
+  `/api/config/options`) **không kiểm Origin lẫn CSRF**. Bật kiểm tra mà không
+  sửa `apps/portal/frontend/src/lib/api.ts` (file này **không** gửi
+  `x-portal-csrf`) sẽ làm hỏng cancel run và import alpha. `lib/api.ts` phục vụ
+  QuantBT Research → **cần Bobby duyệt** vì chạm scope lock §0.
+- `A4-FE-BE-GAP-02`: login là timing oracle (argon2 chỉ chạy cho user có
+  password).
