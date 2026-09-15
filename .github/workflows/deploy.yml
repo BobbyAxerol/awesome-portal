@@ -43,7 +43,11 @@ concurrency:
 jobs:
   deploy:
     name: Deploy production image
-    runs-on: ubuntu-latest
+    # Production deployment deliberately uses a dedicated, non-root runner on
+    # the SGP control host.  It avoids GitHub-hosted runner quota while
+    # retaining the signed-candidate, environment-secret and evidence gates
+    # below.  Build, test and image publication remain GitHub-hosted.
+    runs-on: [self-hosted, linux, x64, portal-deploy]
     # A verified stable rollout first produces a complete PostgreSQL backup.
     # The Control DB may legitimately exceed the old 20-minute envelope; keep
     # the job bounded, but leave enough time for backup, immutable image pull,
@@ -64,6 +68,28 @@ jobs:
       RESUME_PARTIAL_RUNTIME: ${{ inputs.resume_partial_runtime }}
 
     steps:
+      - name: Assert dedicated deployment-runner boundary
+        run: |
+          [[ "${RUNNER_NAME}" == "portal-deploy-sgp1" ]] || {
+            printf 'Unexpected self-hosted runner: %s\n' "${RUNNER_NAME}" >&2
+            exit 1
+          }
+          [[ "${RUNNER_OS}" == "Linux" && "$(id -u)" != "0" ]] || {
+            echo 'Deployment runner must be non-root Linux.' >&2
+            exit 1
+          }
+          [[ "${HOME}" == "/srv/portal-gh-runner" ]] || {
+            printf 'Unexpected deployment runner home: %s\n' "${HOME}" >&2
+            exit 1
+          }
+          case "${RUNNER_TEMP}" in
+            "${HOME}"/actions-runner/_work/_temp) ;;
+            *)
+              printf 'Unexpected deployment runner temp path: %s\n' "${RUNNER_TEMP}" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Check out deployment definition
         uses: actions/checkout@v7
         with:
@@ -138,16 +164,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api \
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
             -H 'Accept: application/vnd.github+json' \
-            "repos/${GITHUB_REPOSITORY}/actions/runs/${PUBLICATION_RUN_ID}" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${PUBLICATION_RUN_ID}" \
             > release-pack/publication-workflow-run.json
-          jq -e '
-            .head_sha == env.SOURCE_COMMIT
-            and .head_branch == "main"
-            and .path == ".github/workflows/publish-images.yml"
-            and .conclusion == "success"
-          ' release-pack/publication-workflow-run.json >/dev/null || {
+          python3 - "${SOURCE_COMMIT}" release-pack/publication-workflow-run.json <<'PY' || {
+          import json
+          import sys
+
+          source_commit, path = sys.argv[1:]
+          with open(path, encoding="utf-8") as handle:
+              run = json.load(handle)
+          assert run.get("head_sha") == source_commit
+          assert run.get("head_branch") == "main"
+          assert run.get("path") == ".github/workflows/publish-images.yml"
+          assert run.get("conclusion") == "success"
+          PY
             echo 'Candidate artifact did not come from the successful protected-main publication workflow.' >&2
             exit 1
           }
@@ -159,7 +192,15 @@ jobs:
               "${EXPECTED_RELEASE_MANIFEST_SHA256}" "${actual_manifest_sha256}" >&2
             exit 1
           }
-          [[ "$(jq -r .source_commit release-pack/release-manifest.json)" == "${SOURCE_COMMIT}" ]] || {
+          manifest_source_commit="$(python3 - release-pack/release-manifest.json <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              print(json.load(handle)["source_commit"])
+          PY
+          )"
+          [[ "${manifest_source_commit}" == "${SOURCE_COMMIT}" ]] || {
             echo 'Release manifest source commit does not match image_tag.' >&2
             exit 1
           }
@@ -187,9 +228,18 @@ jobs:
             --certificate-issuer "${issuer}"
 
           image_for() {
-            jq -er --arg service "$1" \
-              '.services[] | select(.service_id == $service) | .image' \
-              release-pack/release-manifest.json
+            python3 - "$1" release-pack/release-manifest.json <<'PY'
+          import json
+          import sys
+
+          service_id, manifest_path = sys.argv[1:]
+          with open(manifest_path, encoding="utf-8") as handle:
+              manifest = json.load(handle)
+          matches = [item["image"] for item in manifest["services"] if item["service_id"] == service_id]
+          if len(matches) != 1:
+              raise SystemExit(f"expected exactly one image for {service_id}, found {len(matches)}")
+          print(matches[0])
+          PY
           }
           {
             printf 'PORTAL_API_IMAGE=%s\n' "$(image_for portal-api)"
@@ -203,16 +253,29 @@ jobs:
 
       - name: Configure pinned SSH access
         run: |
-          install -d -m 0700 ~/.ssh
-          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
-          chmod 0600 ~/.ssh/id_ed25519
-          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > ~/.ssh/known_hosts
-          chmod 0600 ~/.ssh/known_hosts
+          deploy_ssh_dir="${RUNNER_TEMP}/portal-deploy-ssh"
+          install -d -m 0700 "${deploy_ssh_dir}"
+          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${deploy_ssh_dir}/id_ed25519"
+          chmod 0600 "${deploy_ssh_dir}/id_ed25519"
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${deploy_ssh_dir}/known_hosts"
+          chmod 0600 "${deploy_ssh_dir}/known_hosts"
+          printf 'DEPLOY_SSH_DIR=%s\n' "${deploy_ssh_dir}" >> "${GITHUB_ENV}"
 
       - name: Transfer immutable production Compose bundle
         run: |
-          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
-            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          ssh_deploy() {
+            ssh -i "${DEPLOY_SSH_DIR}/id_ed25519" \
+              -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 "$@"
+          }
+          scp_deploy() {
+            scp -i "${DEPLOY_SSH_DIR}/id_ed25519" \
+              -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 "$@"
+          }
+          ssh_deploy -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "install -d -m 0750 '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose' '${DEPLOY_PATH}/scripts'"
           for compose_file in \
             deploy/compose.production.yaml \
@@ -221,19 +284,18 @@ jobs:
             deploy/compose.execution-local-projection.yaml \
             deploy/compose.execution-manager-analytics.yaml \
             deploy/compose.execution-manager-realtime.yaml; do
-            scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            scp_deploy \
               -P "${DEPLOY_PORT}" "${compose_file}" \
               "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose/${compose_file##*/}"
           done
-          scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+          scp_deploy \
             -P "${DEPLOY_PORT}" \
             scripts/prepare-stable-release-takeover.py \
             scripts/collect-eds12-runtime-binding.py \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/scripts/"
-          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
-            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          ssh_deploy -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "chmod 0750 '${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py' '${DEPLOY_PATH}/scripts/collect-eds12-runtime-binding.py'"
-          scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+          scp_deploy \
             -P "${DEPLOY_PORT}" -r release-pack/. \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/"
 
@@ -242,7 +304,10 @@ jobs:
           # Pulling digest-pinned images and Compose readiness can be silent
           # for minutes. Keep the pinned SSH channel alive, but fail closed
           # after a bounded ten-minute no-response window.
-          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+          ssh -i "${DEPLOY_SSH_DIR}/id_ed25519" \
+            -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
+            -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
             -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' PORTAL_API_IMAGE='${PORTAL_API_IMAGE}' PORTAL_WEB_IMAGE='${PORTAL_WEB_IMAGE}' PORTAL_CONTROL_API_IMAGE='${PORTAL_CONTROL_API_IMAGE}' PORTAL_ROADMAP_API_IMAGE='${PORTAL_ROADMAP_API_IMAGE}' N14_RELEASE_MANIFEST_SHA256='${N14_RELEASE_MANIFEST_SHA256}' N14_RELEASE_DECISION_SHA256='${N14_RELEASE_DECISION_SHA256}' RESUME_PARTIAL_RUNTIME='${RESUME_PARTIAL_RUNTIME}' bash -s" <<'REMOTE'
           set -euo pipefail
@@ -434,7 +499,10 @@ jobs:
       - name: Fetch sanitized SGP runtime-binding evidence
         run: |
           install -d -m 0700 runtime-evidence
-          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+          ssh -i "${DEPLOY_SSH_DIR}/id_ed25519" \
+            -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
+            -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
             -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "sudo -n cat '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/portal-sgp-runtime-binding.env'" \
             > runtime-evidence/portal-sgp-runtime-binding.env
@@ -448,3 +516,14 @@ jobs:
           path: runtime-evidence/portal-sgp-runtime-binding.env
           if-no-files-found: error
           retention-days: 30
+
+      - name: Remove deployment SSH material
+        if: always()
+        run: |
+          expected_ssh_dir="${RUNNER_TEMP}/portal-deploy-ssh"
+          [[ "${DEPLOY_SSH_DIR:-}" == "${expected_ssh_dir}" ]] || exit 0
+          for key_file in id_ed25519 known_hosts; do
+            target="${DEPLOY_SSH_DIR}/${key_file}"
+            [[ ! -e "${target}" ]] || shred -u -- "${target}"
+          done
+          rmdir -- "${DEPLOY_SSH_DIR}" 2>/dev/null || true

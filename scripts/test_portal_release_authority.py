@@ -283,9 +283,20 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
         # long enough for a network device to reap an idle SSH TCP flow.
         # Keepalives apply to each transfer and the rollout channel without
         # relaxing pinned host verification or retrying a failed deployment.
-        self.assertEqual(workflow.count("-o ServerAliveInterval=20"), 7)
-        self.assertEqual(workflow.count("-o ServerAliveCountMax=30"), 7)
-        self.assertEqual(workflow.count("-o ConnectTimeout=20"), 7)
+        # The deploy workflow centralises transfer options in the two reviewed
+        # helpers, rather than duplicating them at every call site.  Count the
+        # helper definitions plus the two long-lived direct channels, and make
+        # sure all keepalive controls remain coupled.
+        keepalive_count = workflow.count("-o ServerAliveInterval=20")
+        self.assertEqual(keepalive_count, 4)
+        self.assertEqual(workflow.count("-o ServerAliveCountMax=30"), keepalive_count)
+        self.assertEqual(workflow.count("-o ConnectTimeout=20"), keepalive_count)
+        self.assertIn("ssh_deploy() {", workflow)
+        self.assertIn("scp_deploy() {", workflow)
+        self.assertIn('UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts"', workflow)
+        self.assertIn("StrictHostKeyChecking=yes", workflow)
+        self.assertNotIn("~/.ssh", workflow)
+        self.assertIn("Remove deployment SSH material", workflow)
         self.assertIn("trap 'release_failure_diagnostics \"$?\"' ERR", workflow)
         self.assertIn("compose_up_status=$?", workflow)
         compose_next = workflow.split("compose_next() {", 1)[1].split(

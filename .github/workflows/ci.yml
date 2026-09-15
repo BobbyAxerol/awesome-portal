@@ -52,6 +52,9 @@ jobs:
       - name: Rehearse N14A source-dark release authority
         run: ./scripts/portal-release-authority-test.sh
 
+      - name: Validate self-hosted production deployment runner contract
+        run: python3 ./scripts/test_self_hosted_deploy_runner.py
+
       - name: Validate production execution feature-profile deployment
         run: python3 ./scripts/test_apply_production_execution_feature_profile.py
 

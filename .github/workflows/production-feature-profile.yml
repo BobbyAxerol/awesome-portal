@@ -39,7 +39,7 @@ concurrency:
 jobs:
   apply:
     name: Apply reviewed runtime profile
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, portal-deploy]
     timeout-minutes: 20
     environment: production
     env:
@@ -62,6 +62,26 @@ jobs:
           ref: main
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Verify dedicated deployment runner boundary
+        run: |
+          set -euo pipefail
+          [[ "${RUNNER_NAME}" == "portal-deploy-sgp1" ]] || {
+            echo 'Unexpected self-hosted runner identity.' >&2
+            exit 1
+          }
+          [[ "$(uname -s)" == "Linux" && "$(id -u)" != "0" ]] || {
+            echo 'Deployment runner must be a non-root Linux host.' >&2
+            exit 1
+          }
+          [[ "${HOME}" == "/srv/portal-gh-runner" ]] || {
+            echo 'Deployment runner HOME does not match the isolated service account.' >&2
+            exit 1
+          }
+          [[ "${RUNNER_TEMP}" == "/srv/portal-gh-runner/actions-runner/_work/_temp" ]] || {
+            echo 'Deployment runner temporary path is not the reviewed isolated path.' >&2
+            exit 1
+          }
 
       - name: Validate immutable release binding and request
         run: |
@@ -91,24 +111,44 @@ jobs:
 
       - name: Configure pinned SSH access
         run: |
-          install -d -m 0700 ~/.ssh
-          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
-          chmod 0600 ~/.ssh/id_ed25519
-          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > ~/.ssh/known_hosts
-          chmod 0600 ~/.ssh/known_hosts
+          deploy_ssh_dir="${RUNNER_TEMP}/portal-deploy-ssh"
+          install -d -m 0700 "${deploy_ssh_dir}"
+          printf '%s\n' "${DEPLOY_SSH_PRIVATE_KEY}" > "${deploy_ssh_dir}/id_ed25519"
+          chmod 0600 "${deploy_ssh_dir}/id_ed25519"
+          printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > "${deploy_ssh_dir}/known_hosts"
+          chmod 0600 "${deploy_ssh_dir}/known_hosts"
+          printf 'DEPLOY_SSH_DIR=%s\n' "${deploy_ssh_dir}" >> "${GITHUB_ENV}"
 
       - name: Transfer reviewed feature-profile applicator
         run: |
-          scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+          ssh_deploy() {
+            ssh -i "${DEPLOY_SSH_DIR}/id_ed25519" \
+              -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 "$@"
+          }
+          scp_deploy() {
+            scp -i "${DEPLOY_SSH_DIR}/id_ed25519" \
+              -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 "$@"
+          }
+          scp_deploy \
             -P "${DEPLOY_PORT}" scripts/apply-production-execution-feature-profile.py \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py"
-          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+          ssh_deploy \
             -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "chmod 0750 '${DEPLOY_PATH}/scripts/apply-production-execution-feature-profile.py'"
 
       - name: Atomically apply profile and recreate only Control API
         run: |
-          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+          ssh_deploy() {
+            ssh -i "${DEPLOY_SSH_DIR}/id_ed25519" \
+              -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 "$@"
+          }
+          ssh_deploy \
             -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "SOURCE_COMMIT='${SOURCE_COMMIT}' EXPECTED_RELEASE_MANIFEST_SHA256='${EXPECTED_RELEASE_MANIFEST_SHA256}' FEATURE_PROFILE='${FEATURE_PROFILE}' BACKFILL_RUN_ID='${BACKFILL_RUN_ID}' DEPLOY_PATH='${DEPLOY_PATH}' bash -s" <<'REMOTE'
           set -euo pipefail
@@ -270,14 +310,20 @@ jobs:
 
       - name: Fetch non-secret feature-profile evidence
         run: |
+          ssh_deploy() {
+            ssh -i "${DEPLOY_SSH_DIR}/id_ed25519" \
+              -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 "$@"
+          }
           install -d -m 0700 runtime-evidence
-          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+          ssh_deploy \
             -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "sudo -n cat '${DEPLOY_PATH}/transition/last-feature-profile-result.json'" \
             > runtime-evidence/feature-profile-result.json
           chmod 0600 runtime-evidence/feature-profile-result.json
           if [[ "${FEATURE_PROFILE}" == "execution-durable-mirror-write-only-v1" ]]; then
-            ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            ssh_deploy \
               -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
               "sudo -n cat '${DEPLOY_PATH}/transition/last-durable-mirror-reseed.json'" \
               > runtime-evidence/durable-mirror-reseed.json
@@ -291,3 +337,14 @@ jobs:
           path: runtime-evidence/feature-profile-result.json
           if-no-files-found: error
           retention-days: 30
+
+      - name: Remove deployment SSH material
+        if: always()
+        run: |
+          expected_ssh_dir="${RUNNER_TEMP}/portal-deploy-ssh"
+          [[ "${DEPLOY_SSH_DIR:-}" == "${expected_ssh_dir}" ]] || exit 0
+          for key_file in id_ed25519 known_hosts; do
+            target="${DEPLOY_SSH_DIR}/${key_file}"
+            [[ ! -e "${target}" ]] || shred -u -- "${target}"
+          done
+          rmdir -- "${DEPLOY_SSH_DIR}" 2>/dev/null || true
