@@ -7364,3 +7364,606 @@ or making stable data/volumes share a dev deployment.
    exact dev rebuild and full product review.
 4. Only after Bobby reviews the R3-4 packet does a separate request merge to
    protected main and replace the current stable release.
+
+---
+
+## 20. A4 — Owner Administration, delegated Governance and auth-recovery closeout
+
+**Status:** `PLANNED_FOR_CLAUDE_IMPLEMENTATION_AWAITING_BOBBY_APPROVAL` (2026-09-15). This is one small
+four-phase campaign after the v1.1.0 release. It does not widen Trading System,
+broker, Edge, CLI or direct-database authority. It makes the Portal's own
+identity, access and Governance authority usable, observable and safe.
+
+**Why this campaign exists:** the production review and the source audit found
+real Portal-owned gaps. They are not reasons to rebuild Execution Loop or the
+Trading System; they are reasons to finish the Portal control plane before the
+next release.
+
+### 20.1 Consolidated production findings
+
+| ID | Verified fact | Correct disposition in A4 |
+|---|---|---|
+| A4-F01 | Portfolio 360's production data was present on both dev and stable, but five frontend composition defects hid/miscombined it. Claude fixed relation selection, route-error precedence, per-currency charting, standings keying and empty fallback on the visual branch. | Preserve the fixes, consume the same named BFFs, and visually re-accept them in A4-4. This is not a source, flag or database problem. |
+| A4-F02 | `portfolio_capital_ledger` is absent from the current local projection on both stacks even though the current source ledger classifies its named Manager operation as covered. | Keep the Configuration Log panel truthful and typed until the named projection ingestion is available. Do not scrape Trading System DB or fabricate ledger rows. This does not block access administration. |
+| A4-F03 | `thanhvuong` is `ACTIVE` and has a verified Cloudflare binding, but a credential reset on 2026-08-25 set `must_change_password=true`; every activation credential is now used, revoked or expired. The latest audited attempts are genuine `INVALID_CREDENTIAL` failures. | Add a bound-identity recovery state and owner recovery controls. A fresh activation credential is an explicit owner action, not a migration side effect. |
+| A4-F04 | `stan` is `ACTIVE`, has an active password credential, a verified Cloudflare binding and no current lock. No login request has reached the Portal account path since 2026-08-25. | Do not reset Stan blindly. A4 emits safe correlation/error state so a real browser attempt is diagnosable without exposing credentials. |
+| A4-F05 | The existing frontend sends `x-portal-csrf` for `/api/admin/*`, but the current server-side `AdminGuard` checks only `ADMIN`; it does not itself enforce Origin plus CSRF on these production account mutations. | Fix first, on the server. Client behaviour is never a security boundary. |
+| A4-F06 | Existing `ADMIN` is a broad two-value role. There is no server-side Bobby-owner fact, no Profile & Access product route, and no per-gate R1/R2/Canary/Live delegation model. | Introduce an owner anchor plus explicit Portal governance grants; do not overload `ADMIN`, hard-code a browser username, or turn a UI-hidden link into an authority boundary. |
+| A4-F07 | `LOGIN_LOCK_SECONDS` is configurable but current failed-login SQL hard-codes 15 minutes. An expired-reset user also retains the previous failed-login count. | Make the configured lock duration authoritative and clear the counter during an owner credential reset. |
+
+**Confirmed non-cause:** v1.1.0 retained
+`portal-stable-v1-0-1_portal-postgres-data`; the deployed forward migration
+chain does not update `portal_users`, `password_credentials`, activation rows
+or Cloudflare bindings. The idempotent bootstrap path skips existing accounts.
+The account failure above is therefore a recoverability/control-plane defect,
+not loss or replacement of the stable v1.0.1 database.
+
+### 20.2 Non-negotiable product and security rules
+
+1. **Bobby-only is a server fact.** The product must anchor one owner by stable
+   `user_id` in Portal-owned protected state. The browser receives only an
+   effective capability set. A username comparison, a hidden nav item, an email
+   value or an `ADMIN` badge alone must never authorize a write.
+2. **No direct browser/database path.** All account, permission and Governance
+   writes go through same-origin Control API endpoints, authenticated Portal
+   session, exact server authorization, allowed Origin, CSRF and audit. Browser,
+   Portal, Edge and Trading System never receive SQL credentials or a direct
+   PostgreSQL route.
+3. **Only the owner manages access.** Bobby may manage account lifecycle and
+   Governance grants. A non-owner `ADMIN` may not see the access-management
+   navigation, list accounts, mint activation credentials, alter grants or
+   assign itself authority. The server returns a typed 403 even for guessed
+   URLs.
+4. **Least privilege has two dimensions.** A grant distinguishes a person who
+   may read a Governance gate from one who may record its Portal decision. A
+   grant never bypasses evidence, segregation-of-duties, quorum, expected
+   revision, CSRF, idempotency or a source-owned promotion gate.
+5. **A Portal decision is not a Trading System side effect.** R1/R2/Canary/Live
+   delegation may record an immutable Portal governance decision only. It does
+   not send broker/CLI/Trading System commands, promote capital or override an
+   unpublished source operation. Any later external command remains an exact
+   separately-approved command catalogue item.
+6. **Access changes are consequential and reversible where safe.** Reset,
+   disable, enable, session revoke and grant changes are explicit named actions,
+   need confirmation/step-up, are audited, invalidate applicable authorization
+   immediately, and show a truthful outcome. “Delete” in the UI means archived
+   access: hard deletion of users/audit/evidence rows is forbidden in this
+   campaign.
+7. **Secrets are one-view and no-store.** Passwords are never admin-set or
+   returned. A generated activation credential is delivered once over a
+   no-store response, never logged, persisted in browser storage, copied to an
+   audit row or replayed by idempotency.
+8. **No migration ambiguity.** A migration may add Portal-owned authorization
+   tables and a single owner anchor, but may not alter an existing password
+   hash, Cloudflare binding, role, account status or user record merely to make
+   the UI convenient. Owner/recovery actions are explicit audited API actions.
+9. **One branch, one release candidate.** Claude implements this entire
+   campaign on `feat/execution-loop-next`; no stable/runtime directory is
+   edited by hand. A4-4 is the only phase allowed to request a dev
+   rebuild/release candidate. Codex may perform an independent review only if
+   Bobby asks; it is not a second implementation stream.
+
+### 20.3 Target authority model
+
+The existing `ADMIN` / `USER` role remains a coarse product role for backwards
+compatibility. It is not the new ownership or per-gate permission model.
+
+| Server-side fact | Meaning | Initial assignment |
+|---|---|---|
+| `PORTAL_OWNER` | Exactly one immutable owner principal; may manage users, access grants and owner-only administration. | Existing Bobby `user_id`, established through a protected bootstrap/migration claim and never inferred from a browser-supplied username. |
+| `administration.users.manage` | Account lifecycle actions listed in A4-2. | Owner only in A4. |
+| `administration.profile_access.manage` | Create/revoke/review Governance grants and the owner policy view. | Owner only in A4. |
+| `governance.r1.read` / `.decide` | Read R1 and record an eligible Portal R1 decision. | Owner; Bobby may grant Stan explicitly. |
+| `governance.r2.read` / `.decide` | Read R2 and record an eligible Portal R2 decision. | Owner; delegated only by Bobby. |
+| `governance.canary.read` / `.decide` | Read Canary review and record an eligible Portal Canary decision. | Owner; delegated only by Bobby. |
+| `governance.live.read` / `.decide` | Read Live review and record an eligible Portal Live decision. | Owner; delegated only by Bobby. |
+
+`*.decide` implies the matching `*.read` for server evaluation, but the response
+still lists both effective capabilities so UI state is explainable. The policy
+model is deliberately restricted to Governance and Profile & Access in A4; it
+does not become an unrestricted per-route RBAC framework.
+
+For gates without a currently published source-side mutation, the decision is
+an immutable **Portal-authored review decision** with exact evidence/revision
+references. The UI must say that it did not promote or execute anything. This
+lets Bobby delegate legitimate review work without fabricating a Trading System
+operation.
+
+### 20.4 Phase order and ownership
+
+| Phase | Primary owner | May run alongside | Exit artifact |
+|---|---|---|---|
+| **A4-1** — Authorization foundation and recovery safety | Claude/full-stack | visual exploration only; no invented contract | sealed owner/capability contract plus auth-recovery regression suite |
+| **A4-2** — Owner account lifecycle control plane | Claude/full-stack | A4-3 design work only after A4-1 DTO freeze | authenticated owner-only account API and lifecycle evidence |
+| **A4-3** — Delegated Governance gates and Profile & Access | Claude/full-stack | none unless it does not touch A4-2 files/contracts | per-gate enforcement and immutable audit/idempotency evidence |
+| **A4-4** — UI/UX integration, acceptance and candidate release | Claude/full-stack | none; integration freeze | full visual/product packet and one dev candidate ready for Bobby review |
+
+A4-2 and A4-3 begin only after A4-1 freezes shared owner, capability,
+mutation-security and audit semantics. Claude may prepare non-overlapping work
+in parallel, but must serialize contract/migration edits and merge through one
+integration commit; neither deploys independently.
+
+---
+
+### A4-1 — Authorization foundation and activation-recovery safety
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`.
+
+**Goal:** close the current account-recovery and server mutation-security hole
+without changing a live user as an implicit migration side effect.
+
+**Claude mandatory backend delivery:**
+
+1. Define an additive, generated `owner-access.v1` contract: effective
+   capabilities, owner status, mutation requirements, no secret fields and
+   typed states. Add a singleton Portal owner anchor bound to a stable existing
+   owner `user_id`; enforce cardinality one and fail closed if the anchor is
+   absent/ambiguous. Fresh test/bootstrap environments must establish the owner
+   only from protected bootstrap input, never a public API.
+2. Add one reusable `OwnerAccessGuard` / authorization service used by every
+   new and legacy administration mutation. It verifies active current session,
+   owner anchor, Origin, CSRF cookie/header/session hash and a short-lived
+   session-bound step-up grant for destructive actions. It does not trust a
+   frontend role flag.
+3. Harden current `/api/admin/*` in place before adding any new functionality:
+   server-side Origin+CSRF enforcement, `Cache-Control: no-store` on sensitive
+   responses, typed 401/403/409/422 errors and auditable correlation IDs. The
+   current frontend CSRF header remains compatible but is no longer the only
+   protection.
+4. Add the activation recovery state. After Cloudflare identity and matching
+   Portal binding are verified, a `must_change_password` account with no usable
+   activation becomes `ACTIVATION_RECOVERY_REQUIRED`, not a generic impossible
+   password loop. The state reveals no token, password, other account or
+   binding. An unbound/unknown identity remains generic.
+5. Correct lock/reset semantics: use configured `LOGIN_LOCK_SECONDS`; owner
+   reset clears failed-login state and active lock in the same transaction,
+   revokes prior activation/session material, then creates exactly one new
+   activation hash. No plaintext activation is stored.
+6. Record `ACTIVATION_RECOVERY_REQUIRED`, owner-step-up, reset/lock lifecycle
+   and authorization-denial audit events without password, activation value,
+   JWT, email, source IP or browser payload.
+
+**Claude mandatory frontend delivery and freedom:**
+
+- Design the recovery page/state as a calm explicit dead end: “the activation
+  credential is no longer usable; contact the Portal owner.” Do not make a fake
+  reset button for non-owners and do not reveal whether an arbitrary username
+  exists.
+- Consume `/api/admin/access/self` (or final named equivalent) as the only
+  UI authority. Hide owner pages/menu for non-owner capability, but render a
+  typed denied state if a bookmarked route is reached.
+- Claude owns layout, copy, responsive hierarchy, confirmation affordances,
+  visual tests, semantic DTOs and server enforcement. The backend contract must
+  be frozen before the product route consumes it.
+
+**Required evidence:**
+
+- Fresh PostgreSQL migration/restore proves existing Bobby/Stan/Thanh rows,
+  password metadata and Cloudflare binding are unchanged by schema migration.
+- Owner/non-owner ADMIN/USER, stale session, disabled account, forged role,
+  bad Origin, missing/wrong CSRF, expired step-up and self-escalation negatives
+  all deny before any mutation.
+- Expired activation produces only the bound recovery state; valid activation
+  preserves login → change password → rotated session; reset clears a lock and
+  makes only the new activation usable.
+- Auth unit/controller, generated contract, browser auth-state and no-secret
+  logging tests pass.
+
+**Exit:** no account is changed in production by migration; legacy admin
+endpoints are server-hardened; a reviewer can prove Bobby-only authority is a
+backend decision.
+
+---
+
+### A4-2 — Owner account lifecycle and Users & Access control plane
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; begins after A4-1 contract
+freeze.
+
+**Goal:** turn `/administration/users` into a deliberate owner-only operations
+surface backed by a complete, bounded account lifecycle—not a raw DB editor.
+
+**Claude mandatory backend delivery:**
+
+1. Publish named same-origin owner endpoints and generated DTOs for:
+   account list/detail; create invited account; update display/base role where
+   allowed; issue/reset activation; revoke sessions; disable; enable with
+   mandatory fresh activation; archive access; and current action/audit status.
+   Existing account IDs remain opaque. List data excludes hashes, tokens,
+   Cloudflare subject/email, session IDs and audit internals.
+2. Make every consequential action an exact operation with target user,
+   expected account revision, step-up requirement, CSRF/Origin enforcement and
+   immutable owner audit. Ordinary lifecycle writes use idempotency keys and
+   request/payload fingerprints. Activation issuance is intentionally
+   non-replayable: a repeated request returns a typed “already issued; explicitly
+   reissue to revoke it” result rather than leaking/replaying plaintext.
+3. Preserve audit integrity. “Delete” in product language is **Archive access**:
+   disable, revoke sessions/grants and retain account/audit/evidence lineage.
+   Physical deletion/purge is not exposed. Enable never silently revives an old
+   password; it starts a fresh activation journey.
+4. Add the owner-only step-up flow and no-store activation reveal. The server
+   never lets Bobby set/read another user's password. A token is delivered once,
+   with copy/download only in transient client memory and a required explicit
+   acknowledgement before the UI hides it.
+5. Add a safe, explicit recovery path for Thanhvuong only when Bobby requests
+   it through this control plane. No background job resets Stan, Thanhvuong or
+   Bobby; each action has a pre/post state record and a rollback description.
+
+**Claude mandatory frontend delivery and freedom:**
+
+- Redesign **Users & Access** as a small institutional account-control desk:
+  searchable account roster, clear lifecycle badges, action history/impact,
+  intentional danger zone and an activation one-view handoff state. Claude may
+  change all composition/copy/visual hierarchy but must retain exact action
+  consequences supplied by server responses.
+- Do not use `window.confirm` as the final product interaction. Claude may use
+  a reviewed modal/drawer/typed confirmation pattern; it must display target,
+  consequence, step-up state and server error/replay outcome.
+- Only owner capability shows this page in navigation. Non-owner UI never
+  receives account rows or activation material.
+
+**Required evidence:**
+
+- Full lifecycle matrix: create → invite/activate → password set → active;
+  reset; revoke; disable; enable+fresh activation; archive. Test duplicate,
+  stale revision, concurrent reset, expired step-up and refresh-after-write.
+- Owner can manage another account; regular ADMIN cannot read or mutate;
+  non-owner cannot grant itself owner/admin/governance authority; owner cannot
+  archive/demote its own final owner anchor.
+- Production-shaped sanitized migration/rollback proves no old v1.0.1 user or
+  Roadmap data is removed. Browser tests prove token is neither logged nor
+  persisted after acknowledgement/unmount.
+
+**Exit:** Bobby has a safe owner-only account lifecycle screen and API. The old
+limited Users & Access table, bootstrap-only provisioning claim and unsafely
+client-only CSRF assumption are retired.
+
+---
+
+### A4-3 — Delegated Governance gates and Profile & Access authority
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; can be developed in parallel
+with A4-2 after A4-1, but integrates only after both are accepted.
+
+**Goal:** allow Bobby to delegate exactly who can see and who can make a
+Portal-authored decision for R1, R2, Canary and Live—without turning `ADMIN`
+into blanket execution authority.
+
+**Claude mandatory backend delivery:**
+
+1. Add Portal-owned governance access-grant tables/contract with grantee,
+   capability, optional workspace scope, grant state, expected revision,
+   issuer, timestamps and immutable audit lineage. Enforce uniqueness and
+   authorization at query time; grant updates take effect immediately for
+   HTTP/SSE and invalidate any relevant authorization cache/session view.
+2. Publish owner-only grant-management endpoints plus a safe effective-access
+   read. Bobby can list, grant, update and revoke only the finite capability
+   namespace in §20.3. No free-form route, SQL, role or command string is
+   accepted.
+3. Apply one governance authorization adapter to all named R1/R2/Canary/Live
+   read and decision surfaces. It evaluates workspace membership plus the gate
+   read/decide capability, then preserves current evidence/quorum/version/self-
+   approval restrictions. Existing `ADMIN` checks are narrowed to the new
+   capability where the action is Governance-only; they remain in force where
+   an endpoint is truly administration/command authority.
+4. For R1/R2/Canary/Live lacking a published external mutation, implement only
+   a Portal-authored immutable review decision with exact expected revision,
+   evidence references, idempotency and audit. Its response explicitly says
+   `external_effect=NONE`. It must not call Edge, Trading System, broker,
+   command relay or CLI. A later source command requires a new exact catalogue
+   row and its own approval.
+5. Make grant mutation owner-step-up, Origin/CSRF and idempotency protected;
+   reject self-grant, owner removal, duplicate/conflicting grant, cross-
+   workspace grant and stale revision without a partial write. Keep historic
+   decisions readable under their original authorization/audit record, while
+   new actions use current grants.
+
+**Claude mandatory frontend delivery and freedom:**
+
+- Build **Profile & Access** at `/administration/profile-access` as Bobby's
+  policy surface: account selector, concise governance gate matrix, separate
+  View/Decide affordances, scope/effective-access explanation, safe revoke and
+  immutable activity trail. It is not a generic RBAC editor.
+- Recompose Governance navigation and each R1/R2/Canary/Live screen from the
+  effective server capability. A delegated Stan sees only granted gates and
+  only receives decision affordances the server says are eligible. Denied,
+  evidence-blocked, already-decided and no-external-operation states remain
+  visibly distinct.
+- Claude controls information design and visual language. Do not fake a
+  “promotion successful” toast when a Portal decision has no external effect.
+
+**Required evidence:**
+
+- Matrix for Bobby owner, delegated Stan, ungranted USER and non-owner ADMIN
+  across each R1/R2/Canary/Live read/decision route, including workspace
+  membership removal while a page/stream is active.
+- Quorum, self-approval, stale evidence/version, duplicate idempotency key,
+  grant revocation race, two concurrent owner changes and external-effect-none
+  decisions are deterministic and audited.
+- Contract generator/OpenAPI, fresh PostgreSQL migration/restore, service and
+  authenticated browser tests prove no grant creates a Trading System command
+  or changes source data.
+
+**Exit:** Bobby can explicitly delegate Stan (or another existing user) per
+Governance gate; the server—not a menu—enforces every resulting permission.
+
+---
+
+### A4-4 — Claude UI/UX integration, production defect sweep and release candidate
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; begins only when A4-1 through
+A4-3 are integrated and all server contracts are frozen.
+
+**Goal:** deliver one coherent owner/admin/governance experience, retain the
+approved rich Execution UI and conduct the final production-shaped acceptance
+before Bobby decides on a new signed stable version.
+
+**Claude mandatory frontend delivery:**
+
+1. Finish the visual redesign of `/administration/users` and create
+   `/administration/profile-access`; add owner-aware navigation, bookmarked
+   route states and a Profile & Access governance matrix. Maintain the existing
+   Carbon/institutional design system, responsive density and accessibility;
+   Claude chooses exact layout, controls and copy.
+2. Integrate all A4 named BFFs only through same-origin consumers. No fixture
+   fallback in product routes, no browser side permission inference, no direct
+   database/Edge call and no stored secret/token. Use server typed states for
+   recovery, denied, no step-up, stale revision, policy/evidence block and
+   external-effect-none decision.
+3. Preserve and re-verify Claude's Portfolio 360 correction set. Bind
+   per-currency equity chart/table/standing values together; ensure source
+   error precedence is correct; retain `portfolio_capital_ledger` as a typed
+   unavailable Configuration Log until the named projection is published.
+4. Perform an eye-reviewed sweep of every affected route: sign-in/recovery;
+   Users & Access; Profile & Access; Approval Inbox; R1, R2, Canary and Live
+   review routes; Portfolio 360. Inspect actual/expected/diff before snapshot
+   update, fix React/DOM/console warnings and retain rich UI around empty or
+   denied panels.
+
+**Claude mandatory backend/release-candidate verification:**
+
+- Verify the final route-to-operation matrix, role/capability negative matrix,
+  generated types, API contracts, migration/restore, audit no-secret test and
+  all control-api gates against the identical commit Claude builds.
+- Build one isolated dev candidate from the exact branch/commit. Capture image
+  digests, config/manifest hash, migration ledger, stable-volume isolation,
+  frontend bundle hash and rollback pointer. Do not touch stable during visual
+  acceptance.
+- Run only relevant non-redundant release gates already defined by this plan;
+  record reused green evidence rather than rerunning unrelated expensive
+  historical suites.
+
+**Release exit / owner review:**
+
+- Owner UI and APIs are capability-gated end-to-end; regular users never see
+  protected account/grant data, and guessed routes/API calls are denied.
+- Every new mutable action has a clear server response, owner audit, CSRF/
+  Origin/step-up/idempotency proof and no secret leak.
+- Portfolio visual fixes survive the exact candidate build; all remaining
+  `SOURCE_GAP` panels have a named source owner/action rather than a hidden
+  fixture or blank collapse.
+- Claude returns one compact visual, server and release-candidate packet. Bobby
+  alone decides whether to merge protected main and issue the next signed
+  stable release. No deployment is implied by A4 implementation.
+
+### 20.5 Claude mandatory full-stack execution brief
+
+Claude is the sole implementation owner for A4. Treat it as **one
+owner-control product**, not two disconnected settings pages or a frontend
+mock-up. Backend and frontend rules are equally binding:
+
+1. Read §20.1–20.4 before editing. Implement in phase order. Do not start an
+   A4-2/A4-3 migration or mutable endpoint before A4-1 freezes the owner,
+   capability, audit, Origin/CSRF and step-up contract.
+2. Define generated same-origin DTOs and server enforcement first, then consume
+   those exact DTOs in product routes. Do not invent REST fields, roles,
+   permission decisions or fixture fallbacks. Record a missing source/product
+   field as `A4-FE-BE-GAP` with route, operation, current payload and required
+   typed state.
+3. Treat the browser as untrusted: no direct PostgreSQL/Edge/Trading-System
+   route, no client-only role or username check, no browser-stored activation
+   token, and no secret in logs, telemetry, DOM snapshots or audit data. Every
+   production database mutation goes through the named Control API transaction
+   with session, owner/capability evaluation, Origin, CSRF, step-up, expected
+   revision, idempotency and audit.
+4. Keep Bobby-only as a stable server-side owner anchor; do not hard-code a
+   display name, email or route visibility. Preserve coarse roles only for
+   compatibility and use the finite A4 capability set for Governance. No grant
+   may create a Trading System, broker, Edge, CLI or capital side effect.
+5. Keep the human meaning of every state visible: owner-only, delegated view,
+   delegated decision, evidence blocked, external-effect-none, recovery
+   required, disabled, archived, stale revision and activation one-view.
+6. Preserve approved rich Execution UI. A permission/data error changes only
+   the affected panel/action state; it must not replace an entire screen with a
+   bare envelope. Claude is free to choose the Carbon-consistent layout,
+   hierarchy, copy, responsive behaviour and accessible confirmation flow.
+7. Use additive, reversible migrations only. Never mutate existing Bobby,
+   Stan, Thanhvuong or other production identities/bindings/passwords during a
+   migration, seed, fixture run or deployment. Archive rather than hard-delete.
+   Do not dispatch production, edit a release directory or reveal a real
+   activation credential during implementation.
+8. For every phase, run the focused server authorization/negative matrix,
+   migration/restore, generated-contract/type, frontend unit/build, browser
+   network/console and visual evidence appropriate to that phase. Reuse valid
+   green evidence for unrelated expensive gates rather than performing ritual
+   reruns.
+9. At phase exit, append an **A4 execution record** to this same plan: commit
+   IDs, migration/contract changes, exact tests/evidence, known typed source
+   gaps, and the next phase precondition. A discovered unresolved defect blocks
+   the next phase until recorded and explicitly dispositioned; it may not be
+   silently deferred as technical debt.
+10. Return one coherent commit series from A4-1 through A4-4. Keep all work on
+    `feat/execution-loop-next`, rebase carefully before integration, preserve
+    unrelated dirty work, and request Bobby review before protected-main merge
+    or any release workflow.
+
+### 20.6 Acceptance and release discipline
+
+No A4 phase is “done” merely because a control appears. Each phase closes only
+when its server authority, negative security matrix, frontend state and
+documented evidence agree. Any request to reset Thanhvuong, modify Stan,
+delegate a gate or change a live account is a named owner operation during A4-2
+or A4-3—not a migration, fixture seed or deployment side effect.
+
+---
+
+## 20.7 A4 execution record — A4-1 (Claude, 2026-09-15)
+
+**Phase:** A4-1 — Authorization foundation and activation-recovery safety.
+**Status:** implementation complete, gates green, awaiting Bobby's acceptance.
+**Branch:** `feat/execution-visual-rerecord` (see *Branch discrepancy* below).
+**Commits:** `b588fe46` (backend: owner anchor, mutation security, recovery state, audit, twelve fixes) · `62a98d4e` (frontend: `/access/self` as the only UI authority, recovery frame, four new visual baselines)
+
+### 20.7.1 What A4-1 froze
+
+| Contract | Value |
+|---|---|
+| Owner anchor | `portal_owner_anchor`, one CHECK-constrained row, written only by the protected bootstrap CLI |
+| Capability namespace | the finite §20.3 list of ten, `*.decide` implies `*.read`, both listed |
+| Owner-access DTO | `portal.owner-access.v1` on `GET /api/admin/access/self`, `no-store` |
+| Mutation security | one shared `mutationSecurityDenial` (Origin present **and** allowed, CSRF header↔cookie↔session-hash), HTTP 403 |
+| Audit | `SECURITY_AUDIT_EVENTS` + `recordSecurityDecision`, which structurally has no parameter for IP, access subject or user agent |
+| Recovery state | `ACTIVATION_RECOVERY_REQUIRED`, reported only to a Cloudflare-verified identity bound to that same account |
+
+### 20.7.2 Migration
+
+`1723680000034_a4-portal-owner-anchor.sql` — additive, one new table, no data
+write, reversible. It alters no existing password hash, binding, role or
+status; the Bobby / Stan / Thanhvuong rows are untouched by construction
+because the migration contains no `UPDATE` at all. `portal_capability_grants`
+was deliberately **not** created here: A4-1 has no writer for it, and the
+repository's own `table-write-path` gate correctly rejects a table that src
+reads and cannot write. It belongs to A4-3, where the endpoints that write it
+are specified.
+
+### 20.7.3 Defects found and fixed inside A4-1
+
+The plan listed six items. Implementing them surfaced twelve defects that were
+already in the product; all are fixed and covered by a regression test. Four
+(A4-F05 to A4-F07, A4-F16) came from reading the plan against the code; eight
+(A4-F08 to A4-F15) from a six-lens adversarial review of the A4-1 surface —
+guard bypass, Origin/CSRF defeat, anchor manipulation, information leak,
+session lifecycle, lock weaponisation — in which seventeen candidate findings
+each had to survive an independent attempt to refute them. Thirteen survived;
+four were refuted and dropped. I re-verified every surviving one against the
+code myself before changing anything.
+
+| # | Defect | Consequence before the fix |
+|---|---|---|
+| A4-F05 | `/api/admin/*` had no server-side Origin or CSRF check, while seven other controllers each carried a hand-copied one | the frontend's header was doing all the work; client behaviour is not a boundary |
+| A4-F06 | authority was `role === "ADMIN"`, a coarse role every administrator shares | any ADMIN could administer every account |
+| A4-F07 | `LOGIN_LOCK_SECONDS` was read by nothing (the duration was a SQL literal), and `resetLoginCounters` was wired only to a **successful** login | an owner reset handed a locked-out user an activation the account could not use |
+| A4-F08 | `OwnerAccessGuard` omitted the `mustChangePassword` check `SessionGuard` enforces | a session minted from a one-time activation string held full owner authority over every account **before any password existed** |
+| A4-F09 | `changePassword` wrote `status: "ACTIVE"` unconditionally, clearing `disabled_at` | a holder of a live session whose account was disabled could restore their own access by setting a password |
+| A4-F10 | nothing stopped the owner disabling the owner | the anchor cannot move and the guard admits only an ACTIVE owner, so one mis-click ended account administration permanently |
+| A4-F11 | `failed_login_count` was a lifetime total that only a successful login cleared | a locked account parked at the threshold; one wrong guess after expiry bought another full window, so **one request every fifteen minutes** locked the sole owner out forever |
+| A4-F12 | login answered `error.code = "ACCOUNT_LOCKED"` | a username-existence and lock-state oracle that told an attacker their lockout campaign was working |
+| A4-F13 | four admin routes returned `error instanceof Error ? error.message : …` | the guarded branch was the leaking one — a driver `Error` carries connection strings and constraint names, labelled 404 |
+| A4-F14 | `clearSessionCookies` omitted `Secure`, which a `__Host-` cookie requires | logout's deletion was silently rejected by the browser; the cookies survived sign-out |
+| A4-F15 | the bootstrap parser ignored the key name in `- <key>: <value>` | `- role: ADMIN` created a user named "ADMIN" and swallowed the next entry's `owner: true`, permanently anchoring the Portal to an unintended account |
+| A4-F16 | `changePassword` revoked activations **before** clearing `must_change_password`, in four un-transacted writes | a crash in that window left a usable password, no activation and `must_change_password` still true — a permanently unauthenticable account |
+
+### 20.7.4 Defects found, recorded, NOT fixed in A4-1
+
+Per rule 9 these are dispositioned, not deferred silently.
+
+1. **`A4-FE-BE-GAP-01` — the façade write path enforces neither Origin nor
+   CSRF.** `facade.controller.ts` `@All` accepts POST/PUT/PATCH/DELETE for
+   `/api/runs`, `/api/strategies`, `/api/v1/alphas` and `/api/config/options`
+   behind `SessionGuard` with only a `role !== "ADMIN"` check. Confirmed real.
+   Partially mitigated: the session cookie is `SameSite=Lax`, which browsers do
+   not send on a cross-site POST.
+   **Why not now:** the frontend client for these routes
+   (`apps/portal/frontend/src/lib/api.ts`) does not send `x-portal-csrf` —
+   only `adminApi.ts` and `execution/api/httpApi.ts` do. Turning the check on
+   without the paired frontend change breaks run cancellation, alpha import and
+   config editing, and `lib/api.ts` serves QuantBT Research, which CLAUDE.md §0
+   puts outside this campaign's scope lock.
+   **Disposition:** A4-2, as one paired change; needs Bobby's sign-off to touch
+   the Research client.
+
+2. **`A4-FE-BE-GAP-02` — login is a timing oracle.** argon2 runs only for an
+   existing user that holds a password, so response time distinguishes "no such
+   user", "activation pending" and "wrong password".
+   **Why not now:** the fix is a dummy argon2 verify on every miss path, which
+   changes login latency for every caller and deserves its own measurement
+   rather than being bundled into an authorization phase.
+   **Disposition:** A4-2.
+
+3. **Sustained login flooding can still hold an account locked.** A4-F11 removed
+   the *permanent* lockout; an attacker who sustains ten attempts per lock
+   window can still keep a known username locked while the flood runs, and the
+   account frees itself as soon as it stops.
+   **Why not now:** the mitigation is per-route rate limiting.
+   `@fastify/rate-limit` is registered with `global: false` and no route opts
+   in, and keying it correctly behind Cloudflare requires settling
+   `trustProxy` semantics against the production edge — which I will not verify
+   by touching the production stack.
+   **Disposition:** A4-2, together with the `trustProxy` decision.
+
+### 20.7.5 Evidence
+
+| Gate | Command | Result |
+|---|---|---|
+| Control API + PostgreSQL + restore drill | `sudo CONTROL_API_TEST_RUN_SUFFIX=a41u bash scripts/control-api-test.sh` | **66 files, 582/582 passed**, pg_dump/pg_restore drill passed |
+| Frontend unit | `npx vitest run` (node:22-bookworm, worktree at `/repo`) | **149 files, 2386 passed, 1 skipped** |
+| Frontend build | `npm run build` | built |
+| Visual baseline | `scripts/portal-web-visual.sh` (no `--update`) | **328 passed / 0 failed**, no pre-existing snapshot rewritten |
+| New visual baselines | `--update -g "auth-activation-recovery"` | 4 recorded (2 themes × 2 breakpoints) |
+
+Negative matrix now covered by test: non-owner ADMIN denied every admin route ·
+unclaimed anchor is its own state · anchor refuses reassignment · a second
+anchor row is impossible at the schema · database error reads as not-owner ·
+stale `session_version` denied · REVOKED/EXPIRED session denied · disabled
+account denied · pending-password-change owner denied **and admitted once the
+password exists** · missing Origin denied · Origin mismatch denied · missing
+CSRF denied · header↔cookie mismatch denied · cookie↔session-hash mismatch
+denied · disable-the-owner refused · disable-anyone-else still works ·
+change-password cannot re-activate a disabled account · change-password still
+promotes an INVITED one · lock duration honours config · reset clears the lock ·
+expired lock does not re-lock on the next guess · locked response is
+byte-identical to an unknown-username response · admin routes never echo an
+error they did not write · bootstrap refuses a non-`username` entry.
+
+No-secret evidence: the recovery audit row asserts `source_ip`,
+`access_subject` and `user_agent_hash` are NULL and that neither the activation
+token nor the email appears anywhere in the row; `redactAuditMetadata` is
+tested by key, by value shape, nested, and end-to-end through a real write.
+The recovery frame is asserted to contain none of "expired", "revoked",
+"already used", a username or a subject.
+
+### 20.7.6 Frontend
+
+- `session.tsx` no longer derives authority from `principal.role`. It reads
+  `/api/admin/access/self` and exposes a three-state value — `loading`,
+  `ready`, `unavailable` — because a boolean would have to fold two of those
+  into `false` and every choice of which is a lie on some screen.
+- `UsersAccess` renders four distinct screens where it rendered one: loading,
+  unavailable (with the request id and a retry), denied-not-owner, and
+  denied-anchor-unclaimed. Only `ready && is_owner === true` opens it, and
+  `is_owner` must be the literal `true`.
+- `TopBar` offers the owner link only on that same answer.
+- `AccessProblemScreen` gains `ACTIVATION_RECOVERY_REQUIRED` as the one frame
+  with **no action at all** — asserted by a test — because "Retry" would re-run
+  a check whose answer cannot change and "Sign in again" would return the
+  reader to a form no credential satisfies.
+- `GET /api/admin/access/self` registered in `r2_ledger/capability-inventory.v1.json`.
+
+### 20.7.7 Branch discrepancy (needs Bobby's decision)
+
+§20.5 rule 10 requires all A4 work on `feat/execution-loop-next`. This work is
+committed on `feat/execution-visual-rerecord` in the
+`/home/bobby/portal-visual-baseline` worktree, which is where the session was
+directed to work and where the preceding R3-3 visual re-record already sits.
+`git push` has been refused by the permission classifier throughout, so nothing
+has left the machine. Moving or rebasing onto `feat/execution-loop-next` would
+touch a branch codex is actively working on in `/home/bobby/portal-integration`,
+so I have not done it unilaterally. **Bobby to decide** whether to cherry-pick,
+rebase, or have codex integrate.
+
+### 20.7.8 Precondition for A4-2
+
+A4-2 may begin once Bobby accepts the contracts in 20.7.1 as frozen. A4-2 owns
+`A4-FE-BE-GAP-01` (façade Origin/CSRF, paired with the Research client),
+`A4-FE-BE-GAP-02` (login timing) and the login rate-limit/`trustProxy`
+decision. No A4-2 migration or mutable endpoint has been started.
