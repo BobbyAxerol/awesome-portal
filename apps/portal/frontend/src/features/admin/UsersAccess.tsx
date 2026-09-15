@@ -1,5 +1,5 @@
 /**
- * Users & Access (ADMIN).
+ * Users & Access (Portal owner only).
  *
  * Everything here changes someone's ability to get in, so the screen is built
  * around consequence rather than convenience:
@@ -13,15 +13,19 @@
  *  - the caller's own row is marked, because demoting or disabling yourself is
  *    the one mistake with no undo from this screen.
  *
- * Hiding this screen from a non-ADMIN is a courtesy. The boundary is the gateway,
- * and a 403 is surfaced as such rather than pre-empted.
+ * Who may open it is the server's answer, read from `/api/admin/access/self`
+ * and nothing else — A4-1 retired the `role === "ADMIN"` check the shell used
+ * to make for itself, because every administrator shares that role and §20.2
+ * gives account administration to the owner alone. Hiding the screen is still
+ * only a courtesy: the boundary is `OwnerAccessGuard`, and a 403 is surfaced
+ * as such rather than pre-empted.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, LogOut, ShieldOff } from "lucide-react";
 import { useState } from "react";
 
 import { AuthRequestError } from "../../auth/authApi";
-import { useSession } from "../../auth/session";
+import { isOwnerAccess, useSession } from "../../auth/session";
 import { Callout, Panel, SectionHeading } from "../../components/surface";
 import { StateView } from "../../components/ui";
 import {
@@ -48,18 +52,21 @@ function StatusCell({ user }: { user: AdminUser }) {
 }
 
 export function UsersAccess() {
-  const { principal, isAdmin } = useSession();
+  const { principal, access } = useSession();
+  const owner = isOwnerAccess(access);
   const queryClient = useQueryClient();
   const [issuedToken, setIssuedToken] = useState<{ username: string; token: string } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
 
-  // Not enabled for a non-ADMIN: the gateway would answer 403, and asking anyway
-  // would put a forbidden request in the log for every reader who lands here.
+  // Not enabled until the server has said this caller is the owner: the
+  // gateway would answer 403, and asking anyway would put a forbidden request
+  // in the log for every reader who lands here. `loading` and `unavailable`
+  // both leave it disabled — neither is a yes.
   const users = useQuery({
     queryKey: ["admin-users"],
     queryFn: listUsers,
-    enabled: isAdmin,
+    enabled: owner,
     retry: 1,
   });
   const rows = users.data ?? [];
@@ -99,13 +106,50 @@ export function UsersAccess() {
     onError: report,
   });
 
-  if (!isAdmin) {
+  /*
+   * A4-1 · a bookmarked owner URL gets a typed answer, not a blank screen.
+   *
+   * These three branches were one `!isAdmin` before, which meant a reader who
+   * arrived while the access read was still in flight — or whose Portal could
+   * not answer at all — was told they lacked permission. Two of those are
+   * false, and the false one sends somebody to ask for access they already
+   * have. §3.4: loading ≠ denied ≠ unavailable.
+   */
+  if (access.kind === "loading") {
+    return (
+      <div className="space-y-4">
+        <SectionHeading title="Users & Access" />
+        <StateView kind="loading" message="Checking your Portal access…" />
+      </div>
+    );
+  }
+
+  if (access.kind === "unavailable") {
+    return (
+      <div className="space-y-4">
+        <SectionHeading title="Users & Access" />
+        <StateView
+          kind="unavailable"
+          code={access.requestId ?? undefined}
+          message="Your Portal access could not be read, so this screen cannot say what you may do. This is not a refusal — try again, and quote the request ID if it persists."
+          onRetry={() => window.location.reload()}
+        />
+      </div>
+    );
+  }
+
+  if (!access.access.isOwner) {
     return (
       <div className="space-y-4">
         <SectionHeading title="Users & Access" />
         <StateView
           kind="denied"
-          message="This screen is ADMIN-only. If you need access, ask the owner — the Portal never elevates a role on its own."
+          code={access.access.ownerState}
+          message={
+            access.access.ownerState === "OWNER_ANCHOR_UNCLAIMED"
+              ? "No Portal owner has been established on this deployment, so account administration is closed to everyone. An operator claims the owner during bootstrap; it cannot be granted from this screen."
+              : "Account administration belongs to the Portal owner. A role is not ownership, so no change to your role would open this screen — ask the owner directly."
+          }
         />
       </div>
     );

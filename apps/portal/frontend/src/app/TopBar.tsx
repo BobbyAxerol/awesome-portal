@@ -9,7 +9,7 @@
 import { Menu, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { useSession } from "../auth/session";
+import { isOwnerAccess, useSession } from "../auth/session";
 import { EnvironmentBadge } from "../components/semantic";
 import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
@@ -30,7 +30,7 @@ export function TopBar({
 }) {
   const preferences = usePreferences();
   const { mode: presentationMode, entityLabel, chrome } = usePresentation();
-  const { isAdmin } = useSession();
+  const { access } = useSession();
 
   return (
     <header className="portal-topbar">
@@ -156,9 +156,14 @@ export function TopBar({
       </label>
 
       {/* Account administration, next to the other session controls rather than
-          in the registry-driven nav. Hidden for a non-ADMIN as a courtesy — the
-          gateway is the boundary and the screen itself says `denied`. */}
-      {isAdmin ? (
+          in the registry-driven nav. Shown only once the server has answered
+          that this caller is the Portal owner — never from the role in the
+          session, which every administrator shares. While the answer is
+          loading, or if it could not be read, the link stays absent: the cost
+          of a missing icon is one navigation, the cost of an offered one is a
+          click into a refusal. The gateway is still the boundary and the
+          screen itself renders a typed denial for a bookmarked URL. */}
+      {isOwnerAccess(access) ? (
         <Link className="portal-icon-btn" to={ADMIN_USERS_ROUTE} title="Users & Access" aria-label="Users & Access">
           <Users size={15} />
         </Link>

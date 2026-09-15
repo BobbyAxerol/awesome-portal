@@ -130,6 +130,7 @@ export type AuthStubState =
   | "AUTHENTICATED"
   | "APP_LOGIN_REQUIRED"
   | "PASSWORD_CHANGE_REQUIRED"
+  | "ACTIVATION_RECOVERY_REQUIRED"
   | "ACCESS_REQUIRED"
   | "ACCOUNT_DISABLED";
 
@@ -204,6 +205,47 @@ export async function stubPortalApi(
             }
           : null,
       access_identity: { sub: "access-sub-baseline", email: "name@azdag.com" },
+    }),
+  );
+
+  /*
+   * A4-1 · what the signed-in baseline principal may do.
+   *
+   * The shell stopped deriving authority from `principal.role` and now asks
+   * the server. Without this route the baseline principal is "not the owner",
+   * the owner link leaves the top bar, and twenty-three Research and Planning
+   * snapshots shift at the narrow breakpoints — a fixture gap that would read
+   * as a design change. The baseline has always depicted the administrator's
+   * view, so the stub answers for the same person the `principal` above
+   * describes.
+   */
+  await page.route("**/api/admin/access/self", (route) =>
+    void json(route, {
+      schema_version: "portal.owner-access.v1",
+      record_authority: "PORTAL_CONTROL",
+      user_id: "principal-visual-baseline",
+      is_owner: authState === "AUTHENTICATED",
+      owner_state: authState === "AUTHENTICATED" ? "OWNER" : "NOT_OWNER",
+      capabilities:
+        authState === "AUTHENTICATED"
+          ? [
+              "administration.profile_access.manage",
+              "administration.users.manage",
+              "governance.canary.decide",
+              "governance.canary.read",
+              "governance.live.decide",
+              "governance.live.read",
+              "governance.r1.decide",
+              "governance.r1.read",
+              "governance.r2.decide",
+              "governance.r2.read",
+            ]
+          : [],
+      mutation_requirements: {
+        origin: "REQUIRED",
+        csrf: "REQUIRED",
+        step_up: "REQUIRED_FOR_DESTRUCTIVE",
+      },
     }),
   );
 }
