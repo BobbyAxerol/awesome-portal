@@ -10841,3 +10841,108 @@ nhanh. Chúng vẫn ở trong manifest cho R3-4 dùng làm evidence.
 - CSRF **cố ý không test lại** ở tầng component: `post()` đã gắn token cho mọi
   mutation và bỏ header khi không có cookie, có coverage riêng — assert lại qua
   component là đang test cái double.
+
+## A78. PORTFOLIO 360 — BA PANEL ĐỎ, BỐN LỖI, KHÔNG CÁI NÀO LÀ LỖI PRODUCTION (15-09)
+
+Bobby báo Portfolio 360 trên production hiện ba panel unavailable. Tôi đo, và
+**không có lỗi nào thuộc về production hay về cờ**.
+
+### A78.1 Đo trước: dev và production giống hệt nhau
+
+| | dev | production |
+|---|---|---|
+| `portfolio_equity_snapshots` | 2000 items | 2000 items |
+| `portfolio_allocations` | 42 | 42 |
+| `portfolio_capital_ledger` | **vắng** | **vắng** |
+
+Projection production **HEALTHY** cả ba profile, snapshot tươi **7–32 giây**.
+Không phải worker chết, không phải cờ. Và dữ liệu **có thật**: đúng portfolio
+Bobby mở, equity 22.220.000 USDT, net_pnl 26.135,72.
+
+### A78.2 Lỗi 1 — màn không hỏi thứ chính nó đọc
+
+```ts
+const PORTFOLIO_RELATIONS = { portfolio_capital_ledger: "portfolio-capital-ledger" };
+```
+
+`portfolioOverview` đọc `facts.portfolio_equity_snapshots`, nhưng relation đó
+**chưa bao giờ được xin** → luôn `undefined` → hai panel rơi thẳng vào
+unavailable, in ra `PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE` **trong khi
+projection giữ 2000 dòng**.
+
+Vì sao thành thế: khi equity chart chuyển sang route EDS-07, comment ngay cạnh
+viết *"The relation stays for the cross-portfolio standings"* — nhưng relation
+sau đó bị thu lại còn mỗi capital ledger, cắt đúng nguồn mà standings cần.
+
+Ledger R3-1 xác nhận đây là lỗ frontend: cả hai relation đều `COVERED` /
+`NAMED_PORTAL_OPERATION`.
+
+### A78.3 Lỗi 2 — panel đổ lỗi cho read khác
+
+`equityChart` chỉ được truyền khi route EDS-07 trả lời. Route hỏng → panel in
+lý do về **snapshots**, tức chỉ sai người. Operator truy
+`PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE` sẽ tìm nhầm chỗ. Giờ lý do của route
+được truyền xuống và **outrank** câu chung.
+
+### A78.4 Lỗi 3 — trộn hai đơn vị tiền vào một chuỗi
+
+Sau khi sửa lỗi 1, biểu đồ hiện ra **một khối xanh đặc, trục Y tới 50 tỷ** cho
+một portfolio 22 triệu. Đo trên chính DB production:
+
+| currency | dòng | equity |
+|---|---|---|
+| USDT | 667 | 22.220.000 |
+| VND | 667 | **50.000.000.000** |
+
+`equitySeriesOf` nhồi cả hai vào **một** chuỗi và dán nhãn bằng currency gặp
+trước. Panel ngay dưới thì ghi đúng luật mà panel trên vừa phá: *"each
+portfolio in its own base currency · never summed across currencies"*.
+
+Sửa: **một chart cho mỗi denomination**, trục riêng, nhãn riêng. Không lọc bỏ
+currency kia (giấu dữ liệu đã publish), không chọn bừa một cái (cần base
+currency mà relation này không mang).
+
+### A78.5 Lỗi 4 — bảng standings gom hai currency làm một dòng
+
+Soi tiếp thì biểu đồ ghi **667 snapshots USDT** còn bảng ghi **1334** cho cùng
+portfolio+USDT. `crossPortfolioStandings` key **chỉ theo `portfolioId`**. Tệ
+hơn cái count: `first` và `last equity` có thể lấy từ **hai currency khác
+nhau**, khiến cột `net` bên cạnh là so sánh hai thứ khác loại.
+
+Sửa: key theo `portfolioId + currency`. Bảng vốn đã in "portfolio · currency",
+tức nó **luôn được thiết kế** để mỗi dòng là một denomination.
+
+### A78.6 Lỗi 5 — nhánh fallback là code chết
+
+`served = input.crossEquity ?? null`, mà container **luôn** truyền object →
+`served` luôn truthy → nhánh `standings` không bao giờ chạy. Route trả 0 dòng
+thì màn khẳng định *"the store retains no equity snapshot for any portfolio"* —
+một tuyên bố về **toàn bộ store** — trong khi relation bên cạnh vừa chứng minh
+ngược lại.
+
+Sửa: served thắng khi **có dòng**, hoặc khi không có gì để fallback (để lý do
+từ chối thật của route vẫn hiện).
+
+### A78.7 Lỗi 6 — nhãn lặp, và một cái bẫy tôi tự sập
+
+Scope bar in **"Benchmark benchmark not published"** vì container truyền
+`benchmark="benchmark not published"` rồi chip ghép thêm nhãn `Benchmark`. Sửa:
+`benchmark: string | null`, vắng mặt render **như vắng mặt**.
+
+Lần sửa đầu tôi để tiêu đề là `ρ(NAV, —)`. **Guard `absentValues` bắt ngay**:
+một dấu gạch không phải là sự vắng mặt (§3.3). Tôi **không nới trần guard** —
+tôi bỏ dấu gạch: khi không có benchmark thì tiêu đề là
+`Correlation vs benchmark · 30d`, không giả vờ có một cái.
+
+### A78.8 Còn lại cho codex
+
+`portfolio_capital_ledger` **vắng khỏi projection ở cả dev lẫn production**,
+trong khi ledger R3-1 xếp nó `COVERED` với operation `managerPortfolioCapitalLedgerPageV1`.
+Panel CONFIGURATION LOG vì thế đang nói **đúng sự thật**. → `R3-FE-05`.
+
+### A78.9 Evidence
+
+- `tsc` sạch · `vitest` **149/149 file, 2379 pass / 1 skip, 0 fail**
+- Guard mới `portfolioEquityCurrency.test.ts` 8 test, phủ cả hai hàm
+- Soi bằng mắt 13 route product; Portfolio 360 xác nhận sau mỗi lần sửa:
+  bảng **267/267/266** giờ khớp caption biểu đồ **267**

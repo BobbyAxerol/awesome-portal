@@ -101,7 +101,7 @@
     "br72_frontend_test_sha256": "sha256:adfcb239d2f7aba5ccf5ec1f83132267cf813031e1761d487b01172d5c11257a",
     "br72_frontend_containers_sha256": "sha256:a78b235bf75762ca2136be20e0ac457af774cc8eea020bbeaa9701a9384c12eb",
     "br72_frontend_alpha_fleet_sha256": "sha256:09179cea55180b8527ecd4a02aff1e365397645ebeca29b76ac0c1b74e38c801",
-    "br72_frontend_recompose_sha256": "sha256:150012d24a9012a1a39d3be76ed72bbcd0d4129ac9fc90a7ddbab01cdcd94287",
+    "br72_frontend_recompose_sha256": "sha256:142d28f5ef7cc8a7d67f2ee7af22c735efb293d399d9975d758de392d19a3699",
     "br72_frontend_registry_sha256": "sha256:66e6fbf3b9dfcfe8b915e1b6b4b88ab17305290b74f100af4d95a29fd17b33f0"
   },
   "rehearsals": {
