@@ -125,12 +125,25 @@ describe("cloudflare access security matrix", () => {
     );
   });
 
-  const inject = (path: string, options: Record<string, unknown> = {}) =>
-    ctx.app.getHttpAdapter().getInstance().inject({
+  const inject = (path: string, options: Record<string, unknown> = {}) => {
+    const headers = { ...((options.headers as Record<string, string>) ?? {}) };
+    /*
+     * A browser attaches `Origin` to every non-GET request, so the harness
+     * does too. A test that wants it genuinely ABSENT passes `origin: ""` —
+     * the non-browser caller `originDenial` exists to refuse, and the exact
+     * shape `originAllowed` used to wave through.
+     */
+    const method = String(options.method ?? "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && !("origin" in headers)) {
+      headers.origin = ctx.config.PORTAL_PUBLIC_ORIGIN;
+    }
+    return ctx.app.getHttpAdapter().getInstance().inject({
       method: "GET",
       url: path,
       ...options,
+      headers,
     });
+  };
 
   function cookies(response: { headers: Record<string, unknown> }): string {
     const setCookie = response.headers["set-cookie"];

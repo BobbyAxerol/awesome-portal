@@ -129,6 +129,7 @@ printf 'Smoke: activate bootstrap administrator\n'
 curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/login" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header 'x-dev-access-email: bobby@azdag.com' \
   --data "{\"username\":\"bobby\",\"credential\":\"${activation_token}\"}" >/dev/null
 csrf_token="$(awk '$6 == "__Host-portal_csrf" { print $7; exit }' "${cookie_file}")"
@@ -140,6 +141,7 @@ printf 'Smoke: rotate bootstrap credential before protected façade access\n'
 curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/change-password" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header 'x-dev-access-email: bobby@azdag.com' \
   --header "x-portal-csrf: ${csrf_token}" \
   --data "{\"current_password\":\"${activation_token}\",\"new_password\":\"${smoke_credential}\"}" >/dev/null
@@ -149,6 +151,7 @@ printf 'Smoke: authenticate with rotated credential\n'
 curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/login" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header 'x-dev-access-email: bobby@azdag.com' \
   --data "{\"username\":\"bobby\",\"credential\":\"${smoke_credential}\"}" >/dev/null
 unset smoke_credential

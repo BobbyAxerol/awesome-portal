@@ -98,6 +98,11 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
   async function rawInject(url: string, options: Record<string, unknown> = {}) {
     const headers = { ...((options.headers as Record<string, string>) ?? {}) };
     if (!("x-dev-access-email" in headers)) headers["x-dev-access-email"] = "dev@azdag.com";
+    // A browser attaches `Origin` to every non-GET request; so does this.
+    const requestMethod = String(options.method ?? "GET").toUpperCase();
+    if (requestMethod !== "GET" && requestMethod !== "HEAD" && !("origin" in headers)) {
+      headers.origin = ctx.config.PORTAL_PUBLIC_ORIGIN;
+    }
     return ctx.app.getHttpAdapter().getInstance().inject({ method: "GET", url, ...options, headers });
   }
 

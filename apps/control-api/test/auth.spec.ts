@@ -60,6 +60,16 @@ describe("auth flows (dev mode)", () => {
     if (!("x-dev-access-email" in headers)) {
       headers["x-dev-access-email"] = "dev@azdag.com";
     }
+    /*
+     * A browser attaches `Origin` to every non-GET request, so the harness
+     * does too. A test that wants it genuinely ABSENT passes `origin: ""` —
+     * the non-browser caller `originDenial` exists to refuse, and the exact
+     * shape `originAllowed` used to wave through.
+     */
+    const method = String(options.method ?? "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && !("origin" in headers)) {
+      headers.origin = ctx.config.PORTAL_PUBLIC_ORIGIN;
+    }
     return ctx.app.getHttpAdapter().getInstance().inject({
       method: "GET",
       url: path,
@@ -519,5 +529,88 @@ describe("auth flows (dev mode)", () => {
       (await inject("/api/auth/context", { headers: { cookie: activeSession } })).json()
         .state,
     ).toBe("APP_LOGIN_REQUIRED");
+  });
+
+  /*
+   * A4-FE-BE-GAP-03 · the three auth routes now use the shared decision.
+   *
+   * All three called `originAllowed` bare, and that helper answers TRUE for a
+   * request carrying no Origin header at all — so anything that simply omitted
+   * it walked past the gate. `change-password` carried a second drift: it
+   * compared the CSRF header only against the session's stored hash, never
+   * against the `__Host-portal_csrf` cookie, which is the half that makes
+   * double-submit mean anything.
+   */
+  describe("A4-FE-BE-GAP-03 · auth routes refuse a missing Origin", () => {
+    it("refuses a login that carries no Origin at all", async () => {
+      const response = await inject("/api/auth/login", {
+        method: "POST",
+        headers: { "x-dev-access-email": "bobby@azdag.com", origin: "" },
+        payload: { username: "bobby", credential: "anything" },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("ORIGIN_MISSING");
+    });
+
+    it("refuses a login from a foreign Origin", async () => {
+      const response = await inject("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "x-dev-access-email": "bobby@azdag.com",
+          origin: "https://dev-portal.primusspark.com",
+        },
+        payload: { username: "bobby", credential: "anything" },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("ORIGIN_DENIED");
+    });
+
+    it("refuses a logout from a foreign Origin", async () => {
+      const response = await inject("/api/auth/logout", {
+        method: "POST",
+        headers: { origin: "https://dev-portal.primusspark.com" },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("ORIGIN_DENIED");
+    });
+
+    it("refuses a password change whose CSRF header has no matching cookie", async () => {
+      /*
+       * The second drift, isolated. The header is the RIGHT value — it hashes
+       * to the session's stored secret — but no `__Host-portal_csrf` cookie
+       * accompanies it. Before this change that passed, which meant the proof
+       * was "knows the token" rather than "is a script on this origin that can
+       * read the cookie". They are not the same claim.
+       */
+      await admin.createUser({ username: "gap03", displayName: "Gap", role: "USER" });
+      const user = await auth.users.findByUsername("gap03");
+      const { activationToken } = await admin.resetCredential(user!.userId);
+      const login = await inject("/api/auth/login", {
+        method: "POST",
+        headers: { "x-dev-access-email": "gap03@azdag.com" },
+        payload: { username: "gap03", credential: activationToken },
+      });
+      expect(login.statusCode).toBe(201);
+      const csrf = csrfFrom(login);
+      const sessionOnly = (login.headers["set-cookie"] as string[])
+        .map((value) => value.split(";")[0])
+        .find((value) => value.startsWith("__Host-portal_session="))!;
+
+      const response = await inject("/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          // The session cookie only — the CSRF cookie is deliberately absent.
+          cookie: sessionOnly,
+          "x-portal-csrf": csrf,
+          "x-dev-access-email": "gap03@azdag.com",
+        },
+        payload: {
+          current_password: activationToken,
+          new_password: "a-correct-horse-battery-staple-42",
+        },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("CSRF_MISSING");
+    });
   });
 });

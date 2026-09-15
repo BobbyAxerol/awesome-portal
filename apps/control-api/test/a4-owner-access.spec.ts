@@ -178,13 +178,20 @@ describe("A4-1 owner anchor, capabilities and mutation hardening", () => {
    * "the right person hears it" or "nobody else does".
    */
   describe("A4-1 · the activation dead end", () => {
-    const inject = (path: string, options: Record<string, unknown> = {}) =>
-      ctx.app.getHttpAdapter().getInstance().inject({
+    const inject = (path: string, options: Record<string, unknown> = {}) => {
+      const headers = { ...((options.headers as Record<string, string>) ?? {}) };
+      // A browser attaches `Origin` to every non-GET request; so does this.
+      const method = String(options.method ?? "GET").toUpperCase();
+      if (method !== "GET" && method !== "HEAD" && !("origin" in headers)) {
+        headers.origin = ctx.config.PORTAL_PUBLIC_ORIGIN;
+      }
+      return ctx.app.getHttpAdapter().getInstance().inject({
         method: "GET",
         url: path,
         ...options,
-        headers: (options.headers as Record<string, string>) ?? {},
+        headers,
       });
+    };
 
     /** Binds the identity dev mode will actually present for this email. */
     async function boundUser(prefix: string) {
@@ -513,7 +520,12 @@ describe("A4-1 owner anchor, capabilities and mutation hardening", () => {
         const login = await http.inject({
           method: "POST",
           url: "/api/auth/login",
-          headers: { "x-dev-access-email": email },
+          headers: {
+            "x-dev-access-email": email,
+            // Login now requires a present, allowed Origin — a browser always
+            // sends one, and `originAllowed` used to pass a request with none.
+            origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+          },
           payload: { username: owner.username, credential },
         });
         expect(login.statusCode).toBe(201);
@@ -652,6 +664,62 @@ describe("A4-1 owner anchor, capabilities and mutation hardening", () => {
       expect(cleared.rowCount).toBe(1);
       expect(cleared.rows[0].reason_code).toBe("OWNER_CREDENTIAL_RESET");
       expect(cleared.rows[0].result).toBe("SUCCESS");
+    });
+
+    it("lets the real holder in during a lock, and clears it", async () => {
+      /*
+       * The permanent denial-of-service this removes: anyone who knew a
+       * username could hold that account shut by failing logins against it,
+       * and against the sole Portal owner there was no one left who could
+       * lift it. A correct credential is not a guess.
+       */
+      const user = await freshUser("lock-bypass-real");
+      const { activationToken } = await admin.resetCredential(user.userId);
+      await auth.users.recordFailedLogin(user.userId, 1, 900);
+      expect((await auth.users.findById(user.userId))?.lockedUntil).not.toBeNull();
+
+      const session = await auth.login({
+        assertion: undefined,
+        devEmail: `${user.username}@azdag.com`,
+        username: user.username,
+        credential: activationToken,
+      });
+      expect(session.token).toBeTruthy();
+
+      const after = await auth.users.findById(user.userId);
+      expect(after?.lockedUntil).toBeNull();
+      expect(after?.failedLoginCount).toBe(0);
+
+      const audited = await ctx.pool.query(
+        `SELECT reason_code FROM auth_audit_events
+          WHERE event_type = 'account_lock_cleared' AND target_user_id = $1`,
+        [user.userId],
+      );
+      expect(
+        audited.rows.some((row) => row.reason_code === "CORRECT_CREDENTIAL_DURING_LOCK"),
+      ).toBe(true);
+    });
+
+    it("still refuses a WRONG credential during a lock, without extending it", async () => {
+      // The lock must keep doing its job against guessing, and must not renew
+      // itself on every attempt — that is what made it self-sustaining.
+      const user = await freshUser("lock-bypass-wrong");
+      await admin.resetCredential(user.userId);
+      await auth.users.recordFailedLogin(user.userId, 1, 900);
+      const before = await auth.users.findById(user.userId);
+
+      await expect(
+        auth.login({
+          assertion: undefined,
+          devEmail: `${user.username}@azdag.com`,
+          username: user.username,
+          credential: "not-the-activation-token",
+        }),
+      ).rejects.toThrow();
+
+      const after = await auth.users.findById(user.userId);
+      expect(after?.lockedUntil?.getTime()).toBe(before?.lockedUntil?.getTime());
+      expect(after?.failedLoginCount).toBe(before?.failedLoginCount);
     });
 
     it("does not claim to have cleared a lock that was never set", async () => {

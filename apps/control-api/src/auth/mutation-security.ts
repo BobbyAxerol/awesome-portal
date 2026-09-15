@@ -6,17 +6,31 @@
  * one surface that mutates real accounts, `/api/admin/*`, carried none of them
  * (finding A4-F05). Copies drift, and two already had:
  *
- *  - `planning.controller` omits the header/cookie double-submit entirely and
- *    compares only `sha256(header)` against the session hash.
- *  - `planning.controller` also calls `originAllowed` bare, and that helper
- *    returns TRUE when the Origin header is absent. The other six wrap it with
- *    `typeof origin !== "string"` so a missing Origin is a denial. Bare, a
- *    request carrying no Origin at all passes the check.
+ *  - the copy omits the header/cookie double-submit entirely and compares only
+ *    `sha256(header)` against the session hash.
+ *  - the copy also calls `originAllowed` bare, and that helper returns TRUE
+ *    when the Origin header is absent, so a request carrying no Origin at all
+ *    passes the check.
  *
- * This module takes the strictest of the seven as the single definition:
- * Origin must be PRESENT and allowed, the CSRF header must equal the CSRF
- * cookie, and its digest must equal the session's stored secret hash. All
- * comparisons are constant-time.
+ * This module takes the strictest reading as the single definition: Origin
+ * must be PRESENT and allowed, the CSRF header must equal the CSRF cookie, and
+ * its digest must equal the session's stored secret hash. All comparisons are
+ * constant-time.
+ *
+ * SWEEP STATUS — stated precisely, because a docstring that overclaims is how
+ * the next reader stops checking. `/api/admin/*`, the facade proxy and
+ * `planning.controller` now call this function. `auth.controller` does NOT: its
+ * three routes still call `originAllowed` bare, and `change-password`
+ * additionally compares the header only against the session hash, never
+ * against the cookie — the same pair of drifts named above. It is left alone
+ * deliberately, not overlooked: none of the three is reachable by the attack
+ * this closes (a cross-origin page cannot read a `__Host-` cookie, so it can
+ * never produce the header), `login` has no session and therefore no CSRF
+ * secret to compare against, and `scripts/smoke-stack.sh` drives all three by
+ * curl with no Origin header — so tightening them requires that script to know
+ * the deployment's exact `PORTAL_PUBLIC_ORIGIN`, which is a loopback address
+ * in the smoke stack and a hostname everywhere else. Recorded as its own item;
+ * see A4-FE-BE-GAP-03.
  *
  * §20.2 rule 2: client behaviour is never a security boundary. The frontend
  * already sends `x-portal-csrf`; that is a convenience, and this is the
@@ -73,6 +87,26 @@ export function mutationSecurityDenial(
 
 /** Every denial is a 403: the caller is authenticated but the request is not. */
 export const MUTATION_SECURITY_STATUS = 403;
+
+/**
+ * The Origin half alone, for a mutation that has no session yet.
+ *
+ * `login` is the case: there is no CSRF secret to compare against until a
+ * session exists, so the full decision cannot apply. What still applies is
+ * that an Origin must be PRESENT and allowed — `originAllowed` on its own
+ * answers `true` for a request carrying no Origin header, which is the drift
+ * this module exists to end. Kept here rather than re-implemented at the call
+ * site so there is exactly one definition of "an acceptable Origin".
+ */
+export function originDenial(
+  request: FastifyRequest,
+  allowedOrigin: string,
+): Extract<MutationSecurityDenial, "ORIGIN_MISSING" | "ORIGIN_DENIED"> | null {
+  const origin = request.headers.origin;
+  if (typeof origin !== "string" || origin.length === 0) return "ORIGIN_MISSING";
+  if (!originAllowed(request, allowedOrigin)) return "ORIGIN_DENIED";
+  return null;
+}
 
 export const MUTATION_SECURITY_MESSAGE: Readonly<Record<MutationSecurityDenial, string>> = {
   ORIGIN_MISSING: "Request origin is required.",

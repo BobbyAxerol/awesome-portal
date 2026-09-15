@@ -254,6 +254,13 @@ export class AuthService {
 
     const user = await this.users.findByUsername(input.username.trim());
     if (!user || user.status === "DISABLED") {
+      /*
+       * A4-FE-BE-GAP-02 · pay the argon2 cost even though there is nothing to
+       * check. Returning here immediately made "no such user" measurably
+       * faster than a wrong password, which is a username oracle anyone can
+       * read with one request and a stopwatch.
+       */
+      await this.argon2.verifyAgainstDecoy();
       await this.audit.record({
         eventType: "login_failed_unknown_user",
         targetUserId: user?.userId ?? null,
@@ -263,30 +270,6 @@ export class AuthService {
         requestId: input.requestId,
         sourceIp: input.sourceIp,
       });
-      throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
-    }
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      await this.audit.record({
-        eventType: "login_denied_locked",
-        targetUserId: user.userId,
-        accessSubject: identity.sub,
-        result: "DENIED",
-        reasonCode: "ACCOUNT_LOCKED",
-        requestId: input.requestId,
-        sourceIp: input.sourceIp,
-      });
-      /*
-       * A4-1 · the code said what the message was careful not to.
-       *
-       * The message here has always been the generic one, but the response
-       * also carries `error.code`, and `ACCOUNT_LOCKED` appears for exactly
-       * one username at a time. That answers two questions a stranger should
-       * not be able to ask — does this account exist, and is it currently
-       * locked — and the second is what tells an attacker their own lockout
-       * campaign is working. Indistinguishable on the wire; the reason lives
-       * in the `login_denied_locked` audit row, where the owner can read it
-       * and nobody else can.
-       */
       throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
     }
 
@@ -324,6 +307,53 @@ export class AuthService {
     }
 
     const credentialProof = await this.verifyCredential(user, input.credential);
+    const locked = user.lockedUntil !== null && user.lockedUntil > new Date();
+
+    /*
+     * A4-1 · the lock stops guessing; it does not stop the account's owner.
+     *
+     * The lock used to be checked BEFORE the credential, so anyone who knew a
+     * username could hold that account shut by failing logins against it: ten
+     * wrong guesses, and the real holder was refused for the whole window no
+     * matter what they typed. Against the single Portal owner — the only
+     * account that can administer anything, and the only one who could lift
+     * the lock — that is a denial of service with no way out from inside the
+     * product.
+     *
+     * Deciding after the credential is known removes it. A correct credential
+     * is not a guess, so it is admitted and the lock is cleared with the
+     * counters below. A wrong one is still refused, and still without
+     * incrementing — extending the window on every attempt is what made the
+     * old lock self-renewing (A4-F11).
+     *
+     * This gives up almost nothing: an attacker who already holds the correct
+     * credential was only ever delayed by the lock, never stopped, and a
+     * guesser gains nothing because guessing correctly is the hard part. What
+     * it takes away is the ability to lock someone else out on purpose.
+     */
+    if (!credentialProof && locked) {
+      await this.audit.record({
+        eventType: "login_denied_locked",
+        targetUserId: user.userId,
+        accessSubject: identity.sub,
+        result: "DENIED",
+        reasonCode: "ACCOUNT_LOCKED",
+        requestId: input.requestId,
+        sourceIp: input.sourceIp,
+      });
+      throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
+    }
+    if (credentialProof && locked) {
+      await this.audit.recordSecurityDecision({
+        eventType: "account_lock_cleared",
+        actorUserId: user.userId,
+        targetUserId: user.userId,
+        result: "SUCCESS",
+        reasonCode: "CORRECT_CREDENTIAL_DURING_LOCK",
+        requestId: input.requestId,
+        metadata: { failedLoginCount: user.failedLoginCount },
+      });
+    }
     if (!credentialProof) {
       const attempts = await this.users.recordFailedLogin(
         user.userId,
@@ -429,6 +459,16 @@ export class AuthService {
     );
   }
 
+  /**
+   * A4-FE-BE-GAP-02 · every path through this function costs one argon2.
+   *
+   * It used to reach argon2 only for a user who exists, is ACTIVE and holds a
+   * password. So the activation path (a sha256 compare), the not-yet-active
+   * path and the no-password path all returned in microseconds while a real
+   * wrong password took the full hash — separating, by timing alone, "this
+   * account is still awaiting its first sign-in" from "this password is
+   * wrong". Neither is a stranger's business.
+   */
   private async verifyCredential(
     user: PortalUser,
     credential: string,
@@ -438,13 +478,22 @@ export class AuthService {
         user.userId,
         sha256(credential),
       );
+      // Burned on BOTH branches: spending it only on failure would make a
+      // successful activation login the fast one instead.
+      await this.argon2.verifyAgainstDecoy();
       return activation
         ? { kind: "ACTIVATION", activationId: activation.activationId }
         : null;
     }
-    if (user.status !== "ACTIVE") return null;
+    if (user.status !== "ACTIVE") {
+      await this.argon2.verifyAgainstDecoy();
+      return null;
+    }
     const password = await this.credentials.findPassword(user.userId);
-    if (!password) return null;
+    if (!password) {
+      await this.argon2.verifyAgainstDecoy();
+      return null;
+    }
     return (await this.argon2.verify(password.passwordHash, credential))
       ? { kind: "PASSWORD", activationId: null }
       : null;

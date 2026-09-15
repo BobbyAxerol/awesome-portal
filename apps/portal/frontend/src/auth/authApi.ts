@@ -72,7 +72,8 @@ export class AuthRequestError extends Error {
 }
 
 const CSRF_COOKIE = "__Host-portal_csrf";
-const CSRF_HEADER = "x-portal-csrf";
+/** The double-submit header every Portal mutation carries. */
+export const CSRF_HEADER = "x-portal-csrf";
 
 /**
  * Dev-mode Access identity.
