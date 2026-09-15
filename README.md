@@ -67,3 +67,14 @@ before changing runtime boundaries. Backend and cross-service phases also use
 the [Backend Architecture Implementation Guide](upgrade/BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md)
 as their staged architecture runway. The history-preserving source migration
 is recorded in [the monorepo migration note](docs/migrations/2026-08-13-monorepo-foundation.md).
+
+## Private repository and approved automation
+
+`awesome-portal` stays private. Approved worktrees use SSH for Git transport;
+the host-side fine-grained PAT is only for authenticated GitHub API operations
+such as inspecting CI, opening pull requests, dispatching approved workflows
+and recording GitHub Release metadata. See
+[GitHub Automation Access](docs/github-automation-access.md) for the exact
+least-privilege permission matrix, storage location and token-rotation process.
+Neither access path replaces protected branches, production environment review,
+Cloudflare Access, or the immutable Stable release workflow.

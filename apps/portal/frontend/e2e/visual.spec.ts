@@ -245,6 +245,14 @@ const AUTH_FRAMES = [
   { name: "password-change", state: "PASSWORD_CHANGE_REQUIRED", ready: "password-change-screen" },
   { name: "access-denied", state: "ACCESS_REQUIRED", ready: "access-problem-screen" },
   { name: "account-disabled", state: "ACCOUNT_DISABLED", ready: "access-problem-screen" },
+  // A4-1. Baselined because it is the one frame with no action at all: a
+  // regression that adds a button here would read as a way out that does not
+  // exist, and no unit test notices a button that merely looks clickable.
+  {
+    name: "activation-recovery",
+    state: "ACTIVATION_RECOVERY_REQUIRED",
+    ready: "access-problem-screen",
+  },
 ] as const;
 
 for (const theme of THEMES) {

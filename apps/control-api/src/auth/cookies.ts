@@ -39,9 +39,34 @@ export function setSessionCookies(
   });
 }
 
+/**
+ * A4-1 · a `__Host-` cookie is only deletable on the terms it was set.
+ *
+ * `clearCookie` deletes by re-setting the cookie with an expiry in the past,
+ * so the browser applies the same validation it applied to the original. The
+ * `__Host-` prefix REQUIRES `Secure` and `Path=/` and forbids `Domain`; sent
+ * without `Secure`, the deletion is silently rejected and the session and CSRF
+ * cookies survive logout in the browser. The session row is revoked either
+ * way, so this was not an authentication hole — but it left a dead cookie pair
+ * on a shared machine and made "sign out" visibly untrue in devtools.
+ *
+ * The attributes below mirror `setSessionCookies` exactly, which is the actual
+ * requirement: a deletion that does not match the original set is not a
+ * deletion.
+ */
 export function clearSessionCookies(reply: FastifyReply): void {
-  reply.clearCookie(SESSION_COOKIE, { path: "/" });
-  reply.clearCookie(CSRF_COOKIE, { path: "/" });
+  reply.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+  });
+  reply.clearCookie(CSRF_COOKIE, {
+    httpOnly: false,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+  });
 }
 
 export function originAllowed(

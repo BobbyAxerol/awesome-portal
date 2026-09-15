@@ -16,7 +16,17 @@ export function pfDemo() {
   return pfSmoke();
 }
 
-export function pfDemoPanels(portfolioId: string, benchmark: string, asOf: string | null): NonNullable<PortfolioThreeSixtyProps["demoPanels"]> {
+/**
+ * The reviewed cast names its own benchmark.
+ *
+ * `benchmark` is nullable on the product screen — nothing publishes one yet —
+ * but the lab is where the hi-fi is proved, and a correlation chart labelled
+ * against "—" proves nothing. The cast's own name is used when the caller has
+ * none, which is exactly the demo/product split everywhere else on this
+ * surface.
+ */
+export function pfDemoPanels(portfolioId: string, benchmark: string | null, asOf: string | null): NonNullable<PortfolioThreeSixtyProps["demoPanels"]> {
+  const benchmarkName = benchmark ?? "BTC-PERP";
   return {
     liveStrip: <PfLiveStrip />,
     eraChart: <PfEraChart />,
@@ -39,12 +49,12 @@ export function pfDemoPanels(portfolioId: string, benchmark: string, asOf: strin
       <>
       <LinesChart
         height={210}
-        series={[{ name: `ρ vs ${benchmark}`, tone: "accent", width: 2, points: PF_CHARTS.rho.points }]}
+        series={[{ name: `ρ vs ${benchmarkName}`, tone: "accent", width: 2, points: PF_CHARTS.rho.points }]}
         thresholdLine={{ y: PF_CHARTS.rho.threshold, label: `threshold ${PF_CHARTS.rho.threshold}`, tone: "warn" }}
         annotation={{ t: PF_CHARTS.rho.breach.from, v: PF_CHARTS.rho.breach.peak, label: `breach ${PF_CHARTS.rho.breach.from.slice(5)}→${PF_CHARTS.rho.breach.to.slice(5)}`, tone: "warn" }}
         yFormatter={(v) => v.toFixed(2)}
         provenance={{ authority: "DERIVED", asOf: asOf ?? "—", formula: "corr.v1 · rho_timeline" }}
-        ariaLabel={`Rolling correlation of NAV against ${benchmark} with the ${PF_CHARTS.rho.threshold} threshold`}
+        ariaLabel={`Rolling correlation of NAV against ${benchmarkName} with the ${PF_CHARTS.rho.threshold} threshold`}
       />
       <footer className="exec-pf2-foot">{PF_CHARTS.rho.foot}</footer>
       </>

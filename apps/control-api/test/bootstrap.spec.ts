@@ -107,4 +107,35 @@ describe("parseBootstrapUsers", () => {
       { username: "stan", role: "USER" },
     ]);
   });
+
+  it("refuses an entry that does not begin with username", () => {
+    /*
+     * A4-1 · the key name used to be ignored entirely.
+     *
+     * `- role: ADMIN` opened a user literally named "ADMIN" and swallowed the
+     * lines meant for the next entry — including `owner: true`. Since
+     * `claimOwner` refuses to move an anchor once claimed, one mis-indented
+     * line permanently assigned the Portal to an account nobody meant to
+     * create. Failing loudly is the difference between fixing a typo and
+     * rebuilding a database.
+     */
+    const raw = ["users:", "  - role: ADMIN", "    username: bobby", "    owner: true"].join("\n");
+    expect(() => parseBootstrapUsers(raw)).toThrow(/must begin with "username:"/);
+  });
+
+  it("claims the owner only for the entry that actually declares it", () => {
+    const raw = [
+      "users:",
+      "  - username: bobby",
+      "    role: ADMIN",
+      "    owner: true",
+      "  - username: stan",
+      "    role: USER",
+    ].join("\n");
+    const parsed = parseBootstrapUsers(raw);
+    expect(parsed).toEqual([
+      { username: "bobby", role: "ADMIN", owner: true },
+      { username: "stan", role: "USER" },
+    ]);
+  });
 });

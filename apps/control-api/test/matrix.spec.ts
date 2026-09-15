@@ -2,6 +2,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
 import { createServer, Server } from "http";
 import { generateKeyPair, exportJWK, SignJWT, KeyLike } from "jose";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { PrincipalService } from "../src/auth/principal";
 import { AuthService } from "../src/auth/auth.service";
 import { Argon2CredentialService } from "../src/auth/argon";
@@ -282,23 +283,81 @@ describe("cloudflare access security matrix", () => {
     const users = await inject("/api/admin/users", {
       headers: { cookie: session.cookie },
     });
-    expect(users.statusCode).toBe(401);
+    // A4-1: 403, not 401. The caller IS authenticated; what they lack is
+    // authority. The old 401 said "who are you?" to someone the server had
+    // just identified, and A4-1 item 3 requires typed 401/403 that mean what
+    // they say. The no-leak assertion is unchanged and still the point.
+    expect(users.statusCode).toBe(403);
     expect(JSON.stringify(users.json())).not.toContain("bobby");
 
     const disable = await inject(`/api/admin/users/${stan.userId}/disable`, {
       method: "POST",
       headers: { cookie: session.cookie },
     });
-    expect(disable.statusCode).toBe(401);
+    expect(disable.statusCode).toBe(403);
   });
 
-  it("ADMIN sessions can administer users and audit events are recorded", async () => {
+  it("a non-owner ADMIN is denied every admin route (role is not ownership)", async () => {
+    // Finding A4-F06, as a test. Before A4-1 this user could administer every
+    // account in the Portal purely because `role = 'ADMIN'`.
+    await ctx.pool.query("DELETE FROM portal_owner_anchor");
+    const owner = await seedActiveUser("owner-bobby", "ADMIN");
+    const otherAdmin = await seedActiveUser("second-admin", "ADMIN");
+    await new OwnerAccessRepository(ctx.pool).claimOwner({
+      userId: owner.userId,
+      claimedBy: "test",
+    });
+    const session = await loginSession("second-admin", otherAdmin.password);
+
+    const list = await inject("/api/admin/users", { headers: { cookie: session.cookie } });
+    expect(list.statusCode).toBe(403);
+
+    const reset = await inject(`/api/admin/users/${owner.userId}/reset-credential`, {
+      method: "POST",
+      headers: {
+        cookie: session.cookie,
+        "x-portal-csrf": session.csrf,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+      },
+    });
+    // Denied even with a perfectly valid CSRF pair and Origin: authorization
+    // is decided before mutation security, so a forged token buys nothing.
+    expect(reset.statusCode).toBe(403);
+    expect(JSON.stringify(reset.json())).not.toContain("activation_token");
+
+    // And the owner's account was not touched by the attempt.
+    const target = await auth.users.findById(owner.userId);
+    expect(target?.mustChangePassword).toBe(false);
+  });
+
+  it("the OWNER administers users, and every mutation needs Origin + CSRF", async () => {
+    await ctx.pool.query("DELETE FROM portal_owner_anchor");
     const bobby = await seedActiveUser("bobby", "ADMIN");
+    // A4-1: ADMIN alone is no longer enough. The anchor is what grants this.
+    await new OwnerAccessRepository(ctx.pool).claimOwner({
+      userId: bobby.userId,
+      claimedBy: "test",
+    });
     const session = await loginSession("bobby", bobby.password);
+
+    // The same owner, the same route, WITHOUT the mutation-security headers:
+    // refused. Finding A4-F05 — these six routes had no server-side Origin or
+    // CSRF check at all, and the browser's header was doing all the work.
+    const unprotected = await inject("/api/admin/users", {
+      method: "POST",
+      headers: { cookie: session.cookie },
+      payload: { username: "nope", display_name: "Nope", role: "USER" },
+    });
+    expect(unprotected.statusCode).toBe(403);
+    expect(await auth.users.findByUsername("nope")).toBeNull();
 
     const created = await inject("/api/admin/users", {
       method: "POST",
-      headers: { cookie: session.cookie },
+      headers: {
+        cookie: session.cookie,
+        "x-portal-csrf": session.csrf,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+      },
       payload: { username: "erin", display_name: "Erin", role: "USER" },
     });
     expect(created.statusCode).toBe(201);

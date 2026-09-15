@@ -9,6 +9,9 @@ import { Argon2CredentialService } from "./auth/argon";
 import { AdminController } from "./admin/admin.controller";
 import { AdminService } from "./admin/admin.service";
 import { AdminGuard } from "./admin/rbac.guard";
+import { OwnerAccessController } from "./admin/owner-access.controller";
+import { OwnerAccessGuard } from "./admin/owner-access.guard";
+import { OwnerAccessService } from "./auth/owner-access.service";
 import { HealthController } from "./health/health.controller";
 import { ControlApiConfig } from "./config";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DURABLE_MIRROR_WRITER } from "./tokens";
@@ -108,6 +111,7 @@ export class AppModule {
         HealthController,
         AuthController,
         AdminController,
+        OwnerAccessController,
         FacadeController,
         PlanningFacadeController,
         GovernanceController,
@@ -263,6 +267,8 @@ export class AppModule {
           inject: [AuthService, WorkspacesRepository],
         },
         AdminGuard,
+        OwnerAccessGuard,
+        OwnerAccessService,
       ],
     };
   }

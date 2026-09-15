@@ -10841,3 +10841,195 @@ nhanh. Chúng vẫn ở trong manifest cho R3-4 dùng làm evidence.
 - CSRF **cố ý không test lại** ở tầng component: `post()` đã gắn token cho mọi
   mutation và bỏ header khi không có cookie, có coverage riêng — assert lại qua
   component là đang test cái double.
+
+## A78. PORTFOLIO 360 — BA PANEL ĐỎ, BỐN LỖI, KHÔNG CÁI NÀO LÀ LỖI PRODUCTION (15-09)
+
+Bobby báo Portfolio 360 trên production hiện ba panel unavailable. Tôi đo, và
+**không có lỗi nào thuộc về production hay về cờ**.
+
+### A78.1 Đo trước: dev và production giống hệt nhau
+
+| | dev | production |
+|---|---|---|
+| `portfolio_equity_snapshots` | 2000 items | 2000 items |
+| `portfolio_allocations` | 42 | 42 |
+| `portfolio_capital_ledger` | **vắng** | **vắng** |
+
+Projection production **HEALTHY** cả ba profile, snapshot tươi **7–32 giây**.
+Không phải worker chết, không phải cờ. Và dữ liệu **có thật**: đúng portfolio
+Bobby mở, equity 22.220.000 USDT, net_pnl 26.135,72.
+
+### A78.2 Lỗi 1 — màn không hỏi thứ chính nó đọc
+
+```ts
+const PORTFOLIO_RELATIONS = { portfolio_capital_ledger: "portfolio-capital-ledger" };
+```
+
+`portfolioOverview` đọc `facts.portfolio_equity_snapshots`, nhưng relation đó
+**chưa bao giờ được xin** → luôn `undefined` → hai panel rơi thẳng vào
+unavailable, in ra `PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE` **trong khi
+projection giữ 2000 dòng**.
+
+Vì sao thành thế: khi equity chart chuyển sang route EDS-07, comment ngay cạnh
+viết *"The relation stays for the cross-portfolio standings"* — nhưng relation
+sau đó bị thu lại còn mỗi capital ledger, cắt đúng nguồn mà standings cần.
+
+Ledger R3-1 xác nhận đây là lỗ frontend: cả hai relation đều `COVERED` /
+`NAMED_PORTAL_OPERATION`.
+
+### A78.3 Lỗi 2 — panel đổ lỗi cho read khác
+
+`equityChart` chỉ được truyền khi route EDS-07 trả lời. Route hỏng → panel in
+lý do về **snapshots**, tức chỉ sai người. Operator truy
+`PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE` sẽ tìm nhầm chỗ. Giờ lý do của route
+được truyền xuống và **outrank** câu chung.
+
+### A78.4 Lỗi 3 — trộn hai đơn vị tiền vào một chuỗi
+
+Sau khi sửa lỗi 1, biểu đồ hiện ra **một khối xanh đặc, trục Y tới 50 tỷ** cho
+một portfolio 22 triệu. Đo trên chính DB production:
+
+| currency | dòng | equity |
+|---|---|---|
+| USDT | 667 | 22.220.000 |
+| VND | 667 | **50.000.000.000** |
+
+`equitySeriesOf` nhồi cả hai vào **một** chuỗi và dán nhãn bằng currency gặp
+trước. Panel ngay dưới thì ghi đúng luật mà panel trên vừa phá: *"each
+portfolio in its own base currency · never summed across currencies"*.
+
+Sửa: **một chart cho mỗi denomination**, trục riêng, nhãn riêng. Không lọc bỏ
+currency kia (giấu dữ liệu đã publish), không chọn bừa một cái (cần base
+currency mà relation này không mang).
+
+### A78.5 Lỗi 4 — bảng standings gom hai currency làm một dòng
+
+Soi tiếp thì biểu đồ ghi **667 snapshots USDT** còn bảng ghi **1334** cho cùng
+portfolio+USDT. `crossPortfolioStandings` key **chỉ theo `portfolioId`**. Tệ
+hơn cái count: `first` và `last equity` có thể lấy từ **hai currency khác
+nhau**, khiến cột `net` bên cạnh là so sánh hai thứ khác loại.
+
+Sửa: key theo `portfolioId + currency`. Bảng vốn đã in "portfolio · currency",
+tức nó **luôn được thiết kế** để mỗi dòng là một denomination.
+
+### A78.6 Lỗi 5 — nhánh fallback là code chết
+
+`served = input.crossEquity ?? null`, mà container **luôn** truyền object →
+`served` luôn truthy → nhánh `standings` không bao giờ chạy. Route trả 0 dòng
+thì màn khẳng định *"the store retains no equity snapshot for any portfolio"* —
+một tuyên bố về **toàn bộ store** — trong khi relation bên cạnh vừa chứng minh
+ngược lại.
+
+Sửa: served thắng khi **có dòng**, hoặc khi không có gì để fallback (để lý do
+từ chối thật của route vẫn hiện).
+
+### A78.7 Lỗi 6 — nhãn lặp, và một cái bẫy tôi tự sập
+
+Scope bar in **"Benchmark benchmark not published"** vì container truyền
+`benchmark="benchmark not published"` rồi chip ghép thêm nhãn `Benchmark`. Sửa:
+`benchmark: string | null`, vắng mặt render **như vắng mặt**.
+
+Lần sửa đầu tôi để tiêu đề là `ρ(NAV, —)`. **Guard `absentValues` bắt ngay**:
+một dấu gạch không phải là sự vắng mặt (§3.3). Tôi **không nới trần guard** —
+tôi bỏ dấu gạch: khi không có benchmark thì tiêu đề là
+`Correlation vs benchmark · 30d`, không giả vờ có một cái.
+
+### A78.8 Còn lại cho codex
+
+`portfolio_capital_ledger` **vắng khỏi projection ở cả dev lẫn production**,
+trong khi ledger R3-1 xếp nó `COVERED` với operation `managerPortfolioCapitalLedgerPageV1`.
+Panel CONFIGURATION LOG vì thế đang nói **đúng sự thật**. → `R3-FE-05`.
+
+### A78.9 Evidence
+
+- `tsc` sạch · `vitest` **149/149 file, 2379 pass / 1 skip, 0 fail**
+- Guard mới `portfolioEquityCurrency.test.ts` 8 test, phủ cả hai hàm
+- Soi bằng mắt 13 route product; Portfolio 360 xác nhận sau mỗi lần sửa:
+  bảng **267/267/266** giờ khớp caption biểu đồ **267**
+
+---
+
+## A79 — A4-1: shell hỏi server nó được làm gì, thay vì tự đọc role (2026-09-15)
+
+Commit `b588fe46` (backend) · `62a98d4e` (frontend). Phase A4-1 của §20 trong
+`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`; hồ sơ thi hành đầy đủ ở
+**§20.7** của chính file đó. Mục này chỉ ghi phần frontend.
+
+### A79.1 Nguồn quyền cũ là một lời nói dối tiện tay
+
+`session.tsx` tính `isAdmin: principal?.role === "ADMIN"` — trong trình duyệt,
+từ một giá trị server gửi **để hiển thị**. §20.2 luật 1 nói quyền sở hữu là sự
+thật phía server; luật 3 nói chỉ owner quản trị truy cập. Một role mà **mọi
+administrator đều có** không phải cả hai thứ đó.
+
+Câu hỏi đã đổi: không còn là "người này role gì", mà là "người này được làm gì",
+và trả lời bởi chính server sẽ cưỡng chế nó — `GET /api/admin/access/self`
+(`portal.owner-access.v1`), đã đăng ký ở `r2_ledger/capability-inventory.v1.json`
+(127 → 128 route).
+
+### A79.2 Ba trạng thái, không phải một boolean
+
+`OwnerAccessState` = `loading` | `ready` | `unavailable`. **Không dùng boolean**:
+boolean buộc phải gộp hai trong ba thứ đó vào `false`, và gộp kiểu nào cũng
+thành nói dối ở một màn nào đó (§3.4).
+
+`UsersAccess` từ **1 màn thành 4**:
+
+| Trạng thái | Màn |
+|---|---|
+| `loading` | "Checking your Portal access…" |
+| `unavailable` | không đọc được — kèm request id + retry, **không phải** từ chối |
+| `ready` + `NOT_OWNER` | "A role is not ownership" |
+| `ready` + `OWNER_ANCHOR_UNCLAIMED` | chưa ai là owner trên deployment này |
+
+Cái quan trọng nhất là ô thứ hai: trước đây "không hỏi được" bị vẽ thành "anh
+không có quyền". Một cái bảo người ta thử lại; cái kia đẩy họ đi xin quyền họ
+đang có sẵn.
+
+`is_owner` phải là **literal `true`** — một proxy đổi body thành `"true"` không
+cấp quyền gì.
+
+### A79.3 Màn recovery — ngõ cụt thì nói là ngõ cụt
+
+`ACTIVATION_RECOVERY_REQUIRED` vào frame 01D, là trạng thái **duy nhất không có
+hành động nào** (có test khẳng định `queryByRole("button")` và `("link")` đều
+null). "Retry" sẽ chạy lại một phép kiểm tra mà câu trả lời không thể đổi;
+"Sign in again" sẽ đẩy người đọc về một form không credential nào thỏa mãn. Cả
+hai đọc ra thành hy vọng.
+
+Không nêu username, không nêu owner, và **không nêu** activation đã hết hạn,
+bị thu hồi hay đã dùng — phía server đó là ba sự thật khác nhau, với người cầm
+nó là một, và khác biệt đó chỉ tiết lộ **có ai đó vừa tác động lên tài khoản
+của họ**.
+
+### A79.4 23 baseline lỗi — và vì sao tôi KHÔNG ghi đè
+
+Gate visual lần đầu: **305 pass / 23 fail**. 20 ảnh Research/Planning ở
+mobile+tablet lệch 3px chiều cao, 2 ảnh `users-access`, 1 test console với 29
+lỗi 501.
+
+Nguyên nhân **không phải** trôi thiết kế: stub e2e chưa trả lời
+`/api/admin/access/self`, nên principal trong baseline thành "không phải owner"
+và icon owner rời top bar. Ghi đè baseline sẽ **đóng dấu một lỗ hổng fixture
+thành một thay đổi thiết kế** — và chạm baseline Research/Planning, thứ §0 cấm
+đổi khi chưa hỏi Bobby.
+
+Sửa ở fixture, chạy lại ở chế độ **kiểm tra** (không `--update`):
+**328 pass / 0 fail**. Không ảnh cũ nào bị ghi đè.
+
+### A79.5 Evidence
+
+- Control API: **66 file, 582/582** + pg_dump/pg_restore drill
+- Frontend: **149 file, 2386 pass / 1 skip**; build xanh
+- Visual: **328 pass / 0 fail**, thêm 4 baseline mới cho màn recovery
+  (2 theme × 2 breakpoint)
+
+### A79.6 Còn treo cho A4-2 (đã ghi ở §20.7.4, không phải nợ ngầm)
+
+- `A4-FE-BE-GAP-01`: façade write path (`/api/runs`, `/api/v1/alphas`,
+  `/api/config/options`) **không kiểm Origin lẫn CSRF**. Bật kiểm tra mà không
+  sửa `apps/portal/frontend/src/lib/api.ts` (file này **không** gửi
+  `x-portal-csrf`) sẽ làm hỏng cancel run và import alpha. `lib/api.ts` phục vụ
+  QuantBT Research → **cần Bobby duyệt** vì chạm scope lock §0.
+- `A4-FE-BE-GAP-02`: login là timing oracle (argon2 chỉ chạy cho user có
+  password).

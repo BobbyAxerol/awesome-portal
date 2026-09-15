@@ -18,7 +18,11 @@ jobs:
   integration:
     name: Validate Portal monorepo stack
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Keep the authoritative source/contract/Rust gate independently bounded.
+    # Browser visual and application suites have their own runners below: one
+    # serialized 45-minute job previously reached its timeout while tests were
+    # still green, leaving a valid release commit permanently unpublishable.
+    timeout-minutes: 60
 
     steps:
       - name: Check out Portal source
@@ -95,8 +99,40 @@ jobs:
       - name: Test Rust execution edge
         run: ./scripts/execution-edge-test.sh
 
+  visual-baseline:
+    # This is a release gate, not an optional presentation check.  It runs in
+    # parallel with the application suite only after the shared contracts and
+    # Rust edge have passed, avoiding a single timeout budget for all work.
+    name: Portal web visual baseline
+    needs: integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out Portal source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
       - name: Portal web visual baseline
         run: ./scripts/portal-web-visual.sh
+
+  application-verification:
+    # Python, Node, browser and composed-stack checks are intentionally kept
+    # together because they reuse installed dependencies.  They still run
+    # concurrently with the visual baseline after the source authority gate.
+    name: Validate Portal application build and browser flows
+    needs: integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    steps:
+      - name: Check out Portal source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v7

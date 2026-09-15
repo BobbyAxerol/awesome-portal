@@ -299,7 +299,60 @@ describe("auth flows (dev mode)", () => {
       payload: { username: "thanhvuong", credential: "anything-at-all-1" },
     });
     expect(locked.statusCode).toBe(401);
-    expect(locked.json().error.code).toBe("ACCOUNT_LOCKED");
+    /*
+     * A4-1 · the lock must be invisible from outside.
+     *
+     * This asserted `ACCOUNT_LOCKED`, which is the oracle: the code appears
+     * for exactly one username at a time, so it answered both "does this
+     * account exist" and "is my lockout campaign working". The lock is now
+     * proved where it actually matters — in the row the owner reads — and the
+     * wire is asserted to be identical to an ordinary wrong guess.
+     */
+    const unknown = await inject("/api/auth/login", {
+      method: "POST",
+      headers: { "x-dev-access-email": "thanhvuong@azdag.com" },
+      payload: { username: "no-such-account-at-all", credential: "anything-at-all-1" },
+    });
+    expect(locked.json().error.code).toBe(unknown.json().error.code);
+    expect(locked.json().error.message).toBe(unknown.json().error.message);
+    expect(locked.statusCode).toBe(unknown.statusCode);
+
+    const audited = await ctx.pool.query(
+      `SELECT reason_code FROM auth_audit_events
+        WHERE event_type = 'login_denied_locked' AND target_user_id = $1`,
+      [user!.userId],
+    );
+    expect(audited.rowCount).toBeGreaterThan(0);
+    expect(audited.rows[0].reason_code).toBe("ACCOUNT_LOCKED");
+  });
+
+  it("an expired lock does not re-lock on the very next wrong guess", async () => {
+    /*
+     * A4-1 · the counter is a run, not a lifetime total.
+     *
+     * Before this, a locked account parked at the threshold and one wrong
+     * guess after the lock aged out bought a whole new lock window. Against
+     * the single Portal owner — the only account that can administer anything
+     * — that is a permanent lockout for one request every fifteen minutes,
+     * with nobody left who could undo it.
+     */
+    const user = await auth.users.findByUsername("thanhvuong");
+    await auth.users.resetLoginCounters(user!.userId);
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await auth.users.recordFailedLogin(user!.userId, 10, 900);
+    }
+    expect((await auth.users.findById(user!.userId))?.lockedUntil).not.toBeNull();
+
+    // Age the lock out rather than waiting for it.
+    await ctx.pool.query(
+      `UPDATE portal_users SET locked_until = now() - interval '1 second' WHERE user_id = $1`,
+      [user!.userId],
+    );
+
+    const attempts = await auth.users.recordFailedLogin(user!.userId, 10, 900);
+    expect(attempts).toBe(1);
+    const after = await auth.users.findById(user!.userId);
+    expect(after?.lockedUntil).toBeNull();
   });
 
   it("requires CSRF on mutations and rejects mismatches", async () => {
@@ -406,6 +459,26 @@ describe("auth flows (dev mode)", () => {
       headers: { cookie: session2 },
     });
     expect(afterLogout.json().state).toBe("APP_LOGIN_REQUIRED");
+
+    /*
+     * A4-1 · the browser has to accept the deletion, not just receive it.
+     *
+     * `clearCookie` deletes by re-setting with a past expiry, so the browser
+     * re-validates the attributes. A `__Host-` cookie REQUIRES `Secure`, and
+     * the deletion was sent without it — silently rejected, leaving both
+     * cookies in place on a shared machine while the server-side row was
+     * genuinely revoked. Asserting the header is the only way to see this: the
+     * server behaves identically either way.
+     */
+    const cleared = logout.headers["set-cookie"] as string[];
+    const names = ["__Host-portal_session", "__Host-portal_csrf"];
+    for (const name of names) {
+      const header = cleared.find((value) => value.startsWith(`${name}=`));
+      expect(header, name).toBeTruthy();
+      expect(header, name).toContain("Secure");
+      expect(header, name).toContain("Path=/");
+      expect(header, name).not.toContain("Domain=");
+    }
   });
 
   it("admin session revocation invalidates active sessions", async () => {

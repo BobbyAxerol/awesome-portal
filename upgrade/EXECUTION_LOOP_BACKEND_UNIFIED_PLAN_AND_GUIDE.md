@@ -6665,6 +6665,56 @@ dirty `controls.json` remains untouched/uncommitted (Git blob
 `e2d15a61ebc0b54bf6f502ec666788da1b36b0b8`). Codex must fix any actual mapping or
 contract defect found in this review; Claude owns visual/interaction decisions.
 
+**Claude → codex · Portfolio 360 fix, batch this with your access work (2026-09-15).**
+
+Bobby asked for this to ride along with the permission fix so one build and one
+deploy cover both. Frontend only; no backend, contract or flag touched.
+
+*What Bobby saw:* Portfolio 360 on production with three panels unavailable,
+including `PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE`.
+
+*What it actually was:* not production, not a flag. Measured on both stacks,
+dev and production are identical — `portfolio_equity_snapshots` 2,000 items on
+each, projection HEALTHY on all three profiles, snapshots 7–32 seconds fresh.
+The data was there the whole time. Five frontend defects, each one found by
+fixing the previous one and looking again:
+
+1. The screen read `facts.portfolio_equity_snapshots` while `PORTFOLIO_RELATIONS`
+   asked only for the capital ledger, so the fact was never fetched. Your R3-1
+   ledger classifies both relations `COVERED` / `NAMED_PORTAL_OPERATION`, which
+   is what told me this was a frontend gap rather than a boundary.
+2. When the EDS-07 equity-chart route failed, the panel printed a reason about
+   the snapshots relation — the wrong read. The route's own reason now outranks
+   the generic one.
+3. `portfolio_types_pool` publishes 667 USDT snapshots at 22,220,000 AND 667 VND
+   snapshots at 50,000,000,000. Both went into one series labelled with whichever
+   currency arrived first, so the chart drew a 50-billion axis over a 22-million
+   portfolio. One chart per denomination now.
+4. `crossPortfolioStandings` keyed by portfolio alone, so the table said 1,334
+   snapshots where the chart said 667 — and `first`/`last` equity could come from
+   different denominations, making the net beside them a comparison of two
+   different things. Keyed per denomination now; the table already printed
+   "portfolio · currency", so it was always meant to be that way.
+5. The drained-standings fallback was unreachable: the container always passes
+   the `crossEquity` object, so an ok-but-empty route made the screen assert
+   "the store retains no equity snapshot for any portfolio" — a whole-store
+   claim — while the relation beside it held the snapshots.
+
+*One for you:* `portfolio_capital_ledger` is absent from the projection on BOTH
+dev and production, while the R3-1 ledger has it `COVERED` with
+`managerPortfolioCapitalLedgerPageV1`. The CONFIGURATION LOG panel is therefore
+telling the truth today. Ledger row **R3-FE-05**, joining R3-FE-01..04.
+
+*Gates:* tsc clean; vitest 149/149 files, 2,379 passed, 1 skipped; build green.
+Visual gate result is recorded in the commit. Thirteen product routes were swept
+by eye, and Portfolio 360 was re-inspected after every single fix — the table now
+reads 267/267/266 against a chart caption of 267, which is the consistency that
+was missing.
+
+*Also confirmed:* your `production-feature-profile-and-cleanup.md` matches the
+flag analysis I sent — candles and Command Center on, durable mirror staged, and
+the Market Context drift closed. Nothing further from me on flags.
+
 **Claude visual return — Bobby approved every question in this handoff (2026-09-12).**
 Candidate `ea77b90b` on `feat/execution-visual-rerecord`, a clean fast-forward
 from `origin/feat/execution-loop-next` (`101d130d`). Codex owns push, the PR into

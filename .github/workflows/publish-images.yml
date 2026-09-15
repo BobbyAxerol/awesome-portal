@@ -33,7 +33,10 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 105
+    # CI permits a 60-minute authority job followed by a 75-minute browser
+    # verification job.  Reserve a bounded 150-minute gate window (including
+    # runner scheduling margin), then retain 60 minutes for build/sign/evidence.
+    timeout-minutes: 210
 
     steps:
       - name: Check out Portal source
@@ -56,37 +59,57 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p release-gates
-          for attempt in $(seq 1 90); do
+          ci_gate_poll_seconds=30
+          ci_gate_max_attempts=300
+          required_check_names=(
+            "Validate Portal monorepo stack"
+            "Portal web visual baseline"
+            "Validate Portal application build and browser flows"
+          )
+          for attempt in $(seq 1 "${ci_gate_max_attempts}"); do
             gh api \
               -H 'Accept: application/vnd.github+json' \
               "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
               > release-gates/portal-ci-check-runs.json
-            conclusion="$(jq -r '
-              [.check_runs[]
-                | select(.name == "Validate Portal monorepo stack"
-                         and .head_sha == env.GITHUB_SHA)
-                | .conclusion] | last // "pending"
-            ' release-gates/portal-ci-check-runs.json)"
-            if [[ "${conclusion}" == "success" ]]; then
+
+            all_green=true
+            failed_checks=()
+            for required_name in "${required_check_names[@]}"; do
+              # A re-run can leave multiple checks with the same name on the
+              # commit.  Only the newest exact-SHA execution is authoritative.
+              conclusion="$(jq -r --arg name "${required_name}" '
+                [.check_runs[]
+                  | select(.name == $name and .head_sha == env.GITHUB_SHA)]
+                | sort_by(.started_at // .created_at // "")
+                | last
+                | .conclusion // "pending"
+              ' release-gates/portal-ci-check-runs.json)"
+              if [[ "${conclusion}" == "success" ]]; then
+                continue
+              fi
+              all_green=false
+              if [[ "${conclusion}" =~ ^(failure|cancelled|timed_out|action_required|stale)$ ]]; then
+                failed_checks+=("${required_name}=${conclusion}")
+              fi
+            done
+
+            if ((${#failed_checks[@]} > 0)); then
+              printf 'Portal CI rejected release commit %s: %s\n' \
+                "${GITHUB_SHA}" "${failed_checks[*]}" >&2
+              exit 1
+            fi
+            if [[ "${all_green}" == true ]]; then
+              printf 'All commit-bound Portal CI release gates passed for %s.\n' \
+                "${GITHUB_SHA}"
               break
             fi
-            if [[ "${conclusion}" =~ ^(failure|cancelled|timed_out|action_required|stale)$ ]]; then
-              printf 'Portal CI rejected release commit %s: %s\n' \
-                "${GITHUB_SHA}" "${conclusion}" >&2
+            if [[ "${attempt}" == "${ci_gate_max_attempts}" ]]; then
+              printf 'Timed out after bounded %d-minute wait for all Portal CI release gates on %s.\n' \
+                "$((ci_gate_poll_seconds * ci_gate_max_attempts / 60))" "${GITHUB_SHA}" >&2
               exit 1
             fi
-            if [[ "${attempt}" == "90" ]]; then
-              printf 'Timed out waiting for Portal CI on %s.\n' "${GITHUB_SHA}" >&2
-              exit 1
-            fi
-            sleep 30
+            sleep "${ci_gate_poll_seconds}"
           done
-          jq -e '
-            .check_runs
-            | any(.name == "Validate Portal monorepo stack"
-                and .head_sha == env.GITHUB_SHA
-                and .conclusion == "success")
-          ' release-gates/portal-ci-check-runs.json >/dev/null
 
       - name: Derive lowercase image prefix
         id: image-prefix
@@ -217,6 +240,12 @@ jobs:
         with:
           context: .
           file: deploy/images/portal-web.Dockerfile
+          # This is a Vite build-time contract, not a mutable container setting.
+          # Main releases promote the reviewed Execution product routes; without
+          # this input the Dockerfile's safe local default renders legacy
+          # registry previews even when the source contains the rich screens.
+          build-args: |
+            EXECUTION_PREVIEW_ENABLED=true
           push: true
           tags: ${{ steps.web-meta.outputs.tags }}
           labels: ${{ steps.web-meta.outputs.labels }}

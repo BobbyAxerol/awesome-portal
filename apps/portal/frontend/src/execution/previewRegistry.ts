@@ -1,10 +1,11 @@
 /**
- * Dev-only Execution integration-preview routing contract.
+ * Build-gated Execution product-route contract.
  *
  * The Feature Registry remains the authority for routes and delivery policy.
- * This file only answers whether a screen already has a reviewed component
- * that can be mounted against the local fixture port. It grants no query,
- * projection, stream or command capability.
+ * An unreviewed local Docker build defaults this flag to false; the protected
+ * main publisher explicitly compiles the reviewed product routes. This file
+ * only answers whether a screen already has a reviewed component. It grants no
+ * query, projection, stream or command capability.
  */
 
 export const EXECUTION_PREVIEW_ENABLED =

@@ -2212,3 +2212,20 @@ independent build stanza, from racing an unavailable CI-only image pull. A
 focused static test locks both invariants. The stable overlay source change is
 not a deploy or restart, and no frontend, command or external-source authority
 changes in this repair.
+
+### 14.1.10 Stable SPA asset-delivery hardening (2026-09-13)
+
+Stable `v1.1.0` exposed a deployment-cache failure mode: a stale Vite HTML
+entry could request a retired content hash, while the generic SPA fallback
+returned the current `index.html` with HTTP 200 and `text/html` instead of a
+real asset 404. A browser then rejects the response as a JavaScript module and
+renders an empty root. The application, Control API, data volumes, Cloudflare
+Access boundary and upstream routing are not involved in that failure mode.
+
+`deploy/nginx/portal.conf` now keeps both Portal and embedded Roadmap HTML
+entry documents `no-store`, gives only content-hashed asset paths a long
+immutable cache policy, and makes either missing asset path return `404` with
+`nosniff`. The regression test locks all four locations. The release procedure
+must validate these headers through the loopback TLS proxy before a signed web
+image is promoted; it does not require a database migration or a change to any
+execution/data/command authority.

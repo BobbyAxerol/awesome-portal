@@ -17,7 +17,7 @@
     "golden_metadata": "sha256:13128530dc74744e2bf5dc562eb3792d49b2e942a8579dcd01fb1b74b7c9a725",
     "golden_signals": "sha256:5a24f1b35566b9755b4f3c2a4f863c0e12541ecb173a5e6cec24ca32fd293c0c",
     "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
-    "nginx_portal_conf": "sha256:c1be0f3e214122c4e5e380c3b0ef61fb96dc6b37c3b39552a7b561fce6eb6885",
+    "nginx_portal_conf": "sha256:7673a0b298254b977c08c2ef19fc4d8a9ee43db4893a186cb2401afc722d91c1",
     "openapi_planning_snapshot": "sha256:5c03e4311582f3ae5beb07d5d3f588b78ea9a1689f78712c062a25182bd5a9cf",
     "openapi_portal": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
     "openapi_portal_snapshot": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
@@ -33,7 +33,7 @@
     "registry_source": "sha256:8fdc342c79a8ad6a48830b860fbcc4206866c7afbe195d14d9e3d5fbe561df57",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "092342f3e4c9e71712080849819a234e7519149c",
+  "frozen_at_commit": "5158e475167408030775bd267a9bbea39238b895",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,

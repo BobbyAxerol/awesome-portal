@@ -178,6 +178,44 @@ export class AuthService {
         accessIdentity: { sub: identity.sub, email: identity.email },
       };
     }
+    /*
+     * A4-1 item 4 · the activation dead end.
+     *
+     * Everything above has already been proved: Cloudflare Access verified
+     * this identity, and the binding says this identity IS this Portal user.
+     * Only here — never before — is it safe to say more than the generic
+     * answer, because the only person who can read it is the account's own
+     * holder asking about their own account.
+     *
+     * The condition is narrow on purpose. `must_change_password` means login
+     * accepts an activation credential and nothing else (`verifyCredential`);
+     * no usable activation therefore means no possible credential, not a wrong
+     * one. Reported as APP_LOGIN_REQUIRED, that account is invited to retype a
+     * credential that cannot exist, forever, while each attempt walks it
+     * closer to a lockout.
+     *
+     * Deliberately NOT reached when a live session exists: a first-login user
+     * mid-change-password has already CONSUMED their activation, so they have
+     * no usable one by definition. That branch returns PASSWORD_CHANGE_REQUIRED
+     * above and must keep doing so — testing recovery there would divert every
+     * legitimate first login into a dead end.
+     */
+    if (
+      user.mustChangePassword &&
+      !(await this.credentials.hasUsableActivation(user.userId))
+    ) {
+      await this.audit.recordSecurityDecision({
+        eventType: "activation_recovery_required",
+        targetUserId: user.userId,
+        result: "DENIED",
+        reasonCode: "NO_USABLE_ACTIVATION",
+      });
+      return {
+        state: "ACTIVATION_RECOVERY_REQUIRED",
+        principal: null,
+        accessIdentity: { sub: identity.sub, email: identity.email },
+      };
+    }
     // Without a Portal session the user must complete 01B first: the
     // activation/password login creates the session (and its CSRF secret)
     // that PASSWORD_CHANGE_REQUIRED's change-password call depends on.
@@ -237,7 +275,19 @@ export class AuthService {
         requestId: input.requestId,
         sourceIp: input.sourceIp,
       });
-      throw new AuthError("ACCOUNT_LOCKED", GENERIC_LOGIN_ERROR, 401);
+      /*
+       * A4-1 · the code said what the message was careful not to.
+       *
+       * The message here has always been the generic one, but the response
+       * also carries `error.code`, and `ACCOUNT_LOCKED` appears for exactly
+       * one username at a time. That answers two questions a stranger should
+       * not be able to ask — does this account exist, and is it currently
+       * locked — and the second is what tells an attacker their own lockout
+       * campaign is working. Indistinguishable on the wire; the reason lives
+       * in the `login_denied_locked` audit row, where the owner can read it
+       * and nobody else can.
+       */
+      throw new AuthError("INVALID_CREDENTIALS", GENERIC_LOGIN_ERROR, 401);
     }
 
     const binding = await this.bindings.findByProviderIdentity(
@@ -278,6 +328,9 @@ export class AuthService {
       const attempts = await this.users.recordFailedLogin(
         user.userId,
         this.config.LOGIN_LOCK_ATTEMPTS,
+        // A4-F07: this value was declared and never read. The lock duration
+        // was a hard-coded SQL interval, so the environment variable was inert.
+        this.config.LOGIN_LOCK_SECONDS,
       );
       await this.audit.record({
         eventType: "login_failed_credential",
@@ -289,6 +342,46 @@ export class AuthService {
         sourceIp: input.sourceIp,
         metadata: { failedLoginCount: attempts },
       });
+      /*
+       * A4-1 item 6 · the lock lifecycle, recorded where it happens.
+       *
+       * `recordFailedLogin` sets `locked_until` in the same UPDATE that
+       * increments the counter, so the lock had no event of its own: the only
+       * trace was a counter that happened to cross a threshold. An owner
+       * asking "why can this account not log in" had to re-derive the rule.
+       */
+      if (attempts >= this.config.LOGIN_LOCK_ATTEMPTS) {
+        await this.audit.recordSecurityDecision({
+          eventType: "account_locked",
+          targetUserId: user.userId,
+          result: "DENIED",
+          reasonCode: "FAILED_LOGIN_THRESHOLD",
+          requestId: input.requestId,
+          metadata: {
+            failedLoginCount: attempts,
+            lockSeconds: this.config.LOGIN_LOCK_SECONDS,
+          },
+        });
+      }
+      /*
+       * The response stays generic — this row is the only place the truth is
+       * said. An account whose every activation is spent cannot succeed at
+       * this prompt no matter what it types, and without this event the owner
+       * sees a user who "keeps getting the password wrong" rather than a user
+       * who needs a new activation.
+       */
+      if (
+        user.mustChangePassword &&
+        !(await this.credentials.hasUsableActivation(user.userId))
+      ) {
+        await this.audit.recordSecurityDecision({
+          eventType: "login_denied_activation_unusable",
+          targetUserId: user.userId,
+          result: "DENIED",
+          reasonCode: "NO_USABLE_ACTIVATION",
+          requestId: input.requestId,
+        });
+      }
       if (attempts >= this.config.LOGIN_FAILED_DELAY_ATTEMPTS) {
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
@@ -466,6 +559,27 @@ export class AuthService {
     if (!user) {
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
+    /*
+     * A4-1 · a disabled account performs no credential operations.
+     *
+     * `AdminService.disable` revokes sessions a moment after it writes the
+     * status, and a request already in flight lands in that gap. Letting it
+     * through meant a terminated account could still set a password — and,
+     * before the status write below was narrowed, write itself back to ACTIVE
+     * and clear `disabled_at` with it. Checked here as well as there because
+     * the refusal is the real rule; the narrowed write is what stops any
+     * future caller from undoing a revocation by accident.
+     */
+    if (user.status === "DISABLED") {
+      await this.audit.record({
+        eventType: "password_change_denied",
+        actorUserId: user.userId,
+        result: "DENIED",
+        reasonCode: "ACCOUNT_DISABLED",
+        requestId: input.requestId,
+      });
+      throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
+    }
     const currentCredentialMatches = session.activationId
       ? await this.credentials.matchesConsumedActivation({
           activationId: session.activationId,
@@ -502,12 +616,39 @@ export class AuthService {
       passwordHash: hash,
       parametersJson,
     });
-    await this.credentials.revokeActivationCredentials(user.userId);
+    /*
+     * A4-1 · order these two so a crash cannot strand the account.
+     *
+     * These four writes are not one transaction. With the revoke first, a
+     * process death between it and the update left: a usable new password, no
+     * activation, and `must_change_password` still true — an account that
+     * login will only accept an activation for, and that has none. Permanent,
+     * and only an owner reset could undo it.
+     *
+     * Clearing the flag first inverts the failure: a crash in the new window
+     * leaves a spent activation row behind (already `used_at IS NOT NULL`, so
+     * useless for login) while the user simply signs in with the password they
+     * just set. Same happy path, recoverable failure instead of a dead end.
+     */
     await this.users.update({
       userId: user.userId,
-      status: "ACTIVE",
+      /*
+       * A4-1 · setting a password completes an invitation; it never reverses a
+       * revocation.
+       *
+       * This wrote `ACTIVE` unconditionally, which is right for the INVITED
+       * user it was built for and wrong for everyone else: a holder of a live
+       * session whose account was disabled mid-request could call
+       * change-password and write their own status back to ACTIVE, clearing
+       * `disabled_at` with it. Revoking access is the owner's decision under
+       * §20.2 rule 3, and a self-service form must not be able to undo it. An
+       * INVITED account is promoted; any other status is left exactly as the
+       * owner set it.
+       */
+      status: user.status === "INVITED" ? "ACTIVE" : undefined,
       mustChangePassword: false,
     });
+    await this.credentials.revokeActivationCredentials(user.userId);
     await this.users.bumpSessionVersion(user.userId);
     await this.sessions.revokeAllForUser(user.userId, "password_change");
     await this.audit.record({

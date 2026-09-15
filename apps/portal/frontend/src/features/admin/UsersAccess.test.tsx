@@ -1,11 +1,13 @@
 /**
  * Users & Access tests.
  *
- * The claims worth defending are all about authority and consequence:
- * a non-ADMIN session sees denied rather than an empty table; every destructive
- * action asks first and sends nothing when declined; a write carries the session
- * CSRF header; the one-time credential is shown once and never persisted; and a
- * server 403 is reported as the server's answer instead of being swallowed.
+ * The claims worth defending are all about authority and consequence: the
+ * server's own answer decides who sees the screen (A4-1 — a session role never
+ * does, and loading, unavailable and denied stay three different screens);
+ * every destructive action asks first and sends nothing when declined; a write
+ * carries the session CSRF header; the one-time credential is shown once and
+ * never persisted; and a server 403 is reported as the server's answer instead
+ * of being swallowed.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -61,14 +63,39 @@ const calls: { url: string; method: string; csrf: string | undefined }[] = [];
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
+const ACCESS_SELF = "/api/admin/access/self";
+
+/** The server's answer for an owner; the only thing that opens this screen. */
+const OWNER_ACCESS = {
+  schema_version: "portal.owner-access.v1",
+  user_id: "u-1",
+  is_owner: true,
+  owner_state: "OWNER",
+  capabilities: ["administration.users.manage"],
+};
+
+const NOT_OWNER_ACCESS = {
+  schema_version: "portal.owner-access.v1",
+  user_id: "u-2",
+  is_owner: false,
+  owner_state: "NOT_OWNER",
+  capabilities: [],
+};
+
 function mount(
   principal: AuthPrincipal | null,
   handler: (url: string, init?: RequestInit) => Response | Promise<Response> = () =>
     json({ users: [BOBBY, ANALYST] }),
+  access: unknown = OWNER_ACCESS,
 ) {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const headers = (init?.headers ?? {}) as Record<string, string>;
     calls.push({ url: String(input), method: init?.method ?? "GET", csrf: headers["x-portal-csrf"] });
+    // `/access/self` is answered here rather than by each test's handler: it is
+    // the shell's question, not this screen's, and every test needs it.
+    if (String(input) === ACCESS_SELF) {
+      return access instanceof Response ? access.clone() : json(access);
+    }
     return handler(String(input), init);
   }) as typeof fetch;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -95,17 +122,54 @@ afterEach(() => {
 });
 
 describe("authority", () => {
-  it("shows denied to a USER session instead of an empty table", async () => {
-    mount(USER_PRINCIPAL);
-    expect(await screen.findByText(/This screen is ADMIN-only/)).toBeTruthy();
+  it("shows denied to a non-owner instead of an empty table", async () => {
+    mount(USER_PRINCIPAL, undefined, NOT_OWNER_ACCESS);
+    expect(await screen.findByText(/Account administration belongs to the Portal owner/)).toBeTruthy();
     expect(screen.queryByTestId("admin-users")).toBeNull();
-    // Nothing is even asked for: an unauthorised reader does not probe the route.
-    expect(calls).toHaveLength(0);
+    // The account list is never probed: the only request is the shell asking
+    // what this caller may do.
+    expect(calls.filter((call) => call.url.includes("/api/admin/users"))).toHaveLength(0);
   });
 
-  it("treats an absent session as not ADMIN", async () => {
+  it("denies an ADMIN role that is not the owner — a role is not ownership", async () => {
+    // The regression this locks: the screen used to open for anyone whose
+    // session said ADMIN. A4-F06. The principal below says ADMIN and the
+    // server says not the owner; the server wins.
+    mount(ADMIN_PRINCIPAL, undefined, NOT_OWNER_ACCESS);
+    expect(await screen.findByText(/A role is not ownership/)).toBeTruthy();
+    expect(calls.filter((call) => call.url.includes("/api/admin/users"))).toHaveLength(0);
+  });
+
+  it("names an unclaimed anchor as its own state, not as a refusal of this person", async () => {
+    mount(ADMIN_PRINCIPAL, undefined, {
+      user_id: "u-1",
+      is_owner: false,
+      owner_state: "OWNER_ANCHOR_UNCLAIMED",
+      capabilities: [],
+    });
+    expect(await screen.findByText(/No Portal owner has been established/)).toBeTruthy();
+  });
+
+  it("says unavailable, not denied, when the access read fails", async () => {
+    // The distinction that matters: "we could not ask" must never be rendered
+    // as "you may not". One tells the reader to retry; the other sends them to
+    // ask for access they may already have.
+    mount(ADMIN_PRINCIPAL, undefined, json({ error: { request_id: "req-42" } }, 500));
+    expect(await screen.findByText(/could not be read/)).toBeTruthy();
+    expect(screen.queryByText(/belongs to the Portal owner/)).toBeNull();
+    expect(screen.getByText("req-42")).toBeTruthy();
+  });
+
+  it("treats an absent session as not the owner", async () => {
     mount(null);
-    expect(await screen.findByText(/This screen is ADMIN-only/)).toBeTruthy();
+    expect(await screen.findByText(/could not be read/)).toBeTruthy();
+    expect(calls.filter((call) => call.url.includes("/api/admin/users"))).toHaveLength(0);
+  });
+
+  it("never reads ownership out of a truthy-but-not-true flag", async () => {
+    // A proxy that reshapes the body into `"true"` must not become permission.
+    mount(ADMIN_PRINCIPAL, undefined, { user_id: "u-1", is_owner: "true", capabilities: [] });
+    expect(await screen.findByText(/belongs to the Portal owner/)).toBeTruthy();
   });
 
   it("marks the caller's own row, the one change with no undo here", async () => {

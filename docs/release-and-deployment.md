@@ -38,11 +38,27 @@ published compatibility contract.
    `./scripts/portal smoke`.
 3. Open a Portal pull request into `dev`. Root CI validates tracked monorepo
    source directly, including the composed stack.
-4. Promote reviewed, stable `dev` to `main`. Publication waits for successful
-   Portal CI on that same commit, then builds six immutable images: Portal API,
-   Portal web, Control API, Roadmap API, Rust Execution Edge and Source Proxy.
-   Every image receives SBOM/SLSA provenance, Trivy evidence and a keyless
-   signature. A `v*` tag additionally receives a release tag.
+4. Promote reviewed, stable `dev` to `main`. Publication waits for **all three**
+   successful, same-commit Portal CI gates: `Validate Portal monorepo stack`,
+   `Portal web visual baseline`, and `Validate Portal application build and
+   browser flows`. The checks run in independently bounded jobs, but no one
+   green check authorizes publication by itself. Only then does the publisher
+   build six immutable images: Portal API, Portal web, Control API, Roadmap API,
+   Rust Execution Edge and Source Proxy. Every image receives SBOM/SLSA
+   provenance, Trivy evidence and a keyless signature. A `v*` tag additionally
+   receives a release tag. The signed `main` Portal web image explicitly
+   compiles the reviewed Execution product routes
+   (`EXECUTION_PREVIEW_ENABLED=true`). This is a **build-time** Vite input:
+   setting an environment variable after an immutable image is published cannot
+   enable the routes. The Dockerfile still defaults it to `false` for an
+   unreviewed local build, while
+   `scripts/execution-image-publication-test.sh` guards the main-publisher
+   override against a silent regression to legacy feature previews.
+   The publication gate itself is bounded at 150 minutes: the declared
+   60-minute authority job plus the 75-minute dependent browser path and a
+   15-minute scheduling margin. Its 210-minute job budget leaves 60 minutes
+   for immutable image build, signing and evidence. Change the CI graph and
+   this tested bound together; never replace it with an unbounded wait.
 5. Review the uploaded `portal-release-candidate-<commit>` artifact and its
    manifest SHA-256. It binds all six image digests, migration chain,
    compatibility/profile matrix and rollback contract. A CRITICAL finding
@@ -54,6 +70,20 @@ must be dispatched from `main`. Production accepts only `sha-<40-hex>` image
 tags whose commit is reachable from main, allowing a reviewed older-main image
 for rollback without permitting a feature/dev image.
 
+When a tracked EDS-12 release input changes (including CI, publisher or its
+static verifier), refresh the derived qualification ledger before opening the
+pull request:
+
+```bash
+./scripts/refresh-release-integrity-ledgers.sh --write
+```
+
+Commit the resulting N29 and EDS-12 evidence/manifest files together with the
+source change. The helper refreshes N29 before EDS-12, validates the fixed
+input lists and writes only non-secret SHA-256 bindings; it cannot authorize a
+runtime, command, mutation or deployment. Run it with `--check` in CI or when
+reviewing a diff. Never hand-edit those hashes.
+
 There is no child source lock or separate source promotion step. The Portal
 commit is the reproducible release definition. Roadmap's UI is compiled into the
 public web image; its stateful API remains a private companion image and volume.
@@ -63,6 +93,62 @@ Before enabling Roadmap V1 persistence for a shared workspace, complete its
 backup/restore dry-run and browser UAT. Start local deployments with the
 local-first flag and make the V1 rollout an explicit reviewed configuration
 change.
+
+## Fast stable release runbook (main only)
+
+This is the sole repeatable path for a stable version. It deliberately makes
+the source promotion fast while keeping the data transition explicit and
+recoverable.
+
+1. Merge the approved release into `main`; do not build Stable from `dev`, a
+   feature branch, or a local worktree. Confirm the exact `origin/main` SHA and
+   wait for all three named **Portal CI** checks and **Build and publish Portal
+   images** for that same SHA to pass. A cancelled, timed-out or stale check is
+   a release failure, never a reason to accept an earlier green check.
+2. Inspect `portal-release-candidate-<commit>` from the successful publication
+   run. Record its exact `sha256:...` release-manifest digest. The candidate
+   binds the six image digests, migration chain, compatibility matrix and
+   signed provenance; an image tag alone is not sufficient.
+3. In GitHub Actions, dispatch **Deploy Portal stack** from `main` using only
+   the candidate's immutable `sha-<40-hex>` tag, publication run ID and
+   release-manifest digest. Explicitly accept the candidate's vulnerability
+   evidence. Do not run `docker compose up` manually on the established stable
+   host.
+4. Let the protected workflow perform its ordered transition: prove the stable
+   project/volume identity, create a PostgreSQL custom dump and a Roadmap/Task
+   Board SQLite online backup, checksum them, pull images by digest, run
+   append-only forward migrations, wait for health, and atomically write the
+   deployed release marker. The workflow has a bounded 60-minute window so a
+   large valid PostgreSQL backup finishes before any migration begins. Compose is
+   deliberately detached from the SSH script's stdin, so it cannot consume the
+   post-start marker/evidence steps; a missing marker is a release failure, not
+   a reason to guess deployment state.
+5. Verify the deployment marker, all stable service health checks, loopback
+   `HTTP 200`, and the public Access boundary. Stable must remain at
+   `portal.primusspark.com`; `dev-portal.primusspark.com` remains the separate
+   development route. The workflow neither edits Cloudflare Tunnel/Access nor
+   creates users, resets passwords, changes account data, replaces named
+   volumes, or contacts the Trading System.
+6. Fast-forward `dev` from the deployed `main` SHA only after the protected
+   rollout passes, so the next campaign starts from one source baseline.
+
+If runtime rollback is required, dispatch the same protected workflow with a
+previously verified, signed candidate whose source commit is reachable from
+`main`. Never reverse a migration in place and never copy a dev database into
+Stable. Use the timestamped pre-rollout backups for isolated restore validation
+or data recovery, not as a shortcut around a forward schema transition.
+
+### Stable invariants
+
+- `portal.primusspark.com` keeps the established Stable Docker project,
+  loopback port, named volumes, Cloudflare Tunnel and Zero Trust Access policy.
+- Existing Portal accounts, sessions and Roadmap/Task Board records stay in
+  their persistent volumes; release code changes only add approved forward
+  schema migrations.
+- `dev-portal.primusspark.com` is never a source of production code, volumes
+  or data.
+- A failed backup or migration is fail-closed: no image recreation occurs
+  before a valid, checksummed backup exists.
 
 ## Prepare a deployment host
 
@@ -131,6 +217,21 @@ reader wheel and accepted release without loading bars:
 the Compose stack supervised by systemd.
 
 ## GitHub production deployment workflow
+
+### GitHub API identity and release metadata
+
+The deployment host may use a separate fine-grained PAT for GitHub REST API
+operations. It does not need a public repository and it is not a deployment
+credential. Its selected-repository scope is `BobbyAxerol/awesome-portal`;
+`Contents: write` is required to create a GitHub Release, while Actions,
+Pull requests and Workflows permissions are granted only as documented in
+[GitHub Automation Access](github-automation-access.md).
+
+Create the GitHub Release only after the matching commit has passed Portal CI,
+security analysis and immutable-image publication. Record the deployed tag,
+source commit and hashes of the private release manifest/decision. Keep the
+full runtime manifest in the private deployment store unless an explicitly
+reviewed redaction is approved for publication.
 
 The manual workflow requires the GitHub `production` environment and these
 environment secrets:

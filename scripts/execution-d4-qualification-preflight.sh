@@ -3,6 +3,11 @@
 # source credential, opens no socket, starts no service and changes no state.
 set -euo pipefail
 
+# This script is intentionally run under sudo by the synthetic readiness
+# gate.  Keep its Python checks from leaving root-owned bytecode in the shared
+# checkout, which would make a later non-root verification fail.
+export PYTHONDONTWRITEBYTECODE=1
+
 usage() {
   printf 'Usage: %s --edge-env PATH --qualifier-env PATH --owner-input PATH --mode template|readiness\n' "$0" >&2
   exit 2

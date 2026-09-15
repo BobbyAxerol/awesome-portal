@@ -117,15 +117,60 @@ export class UsersRepository {
     return result.rows[0] ? toUser(result.rows[0]) : null;
   }
 
-  async recordFailedLogin(userId: string, lockAtAttempts: number): Promise<number> {
+  /**
+   * A4-F07 · the lock duration is the configured one.
+   *
+   * `LOGIN_LOCK_SECONDS` existed in the config schema and was read by nothing:
+   * a repo-wide search found exactly one occurrence, its own declaration. The
+   * duration was the SQL literal `interval '15 minutes'` here, which happens
+   * to equal the default — so setting the environment variable changed
+   * nothing, silently. The sibling `LOGIN_LOCK_ATTEMPTS` was already honoured
+   * as a bind parameter, which is why the mismatch was easy to miss.
+   *
+   * This repository has no access to config (its constructor takes only a
+   * Pool), so the duration arrives the same way the threshold does — as a bind
+   * parameter supplied by the caller that does hold config.
+   */
+  async recordFailedLogin(
+    userId: string,
+    lockAtAttempts: number,
+    lockSeconds: number,
+  ): Promise<number> {
+    /*
+     * A4-1 · the counter is a run of failures, not a lifetime total.
+     *
+     * It used to be a lifetime total that nothing but a successful login could
+     * reset, and the lock check returns before the increment — so a locked
+     * account parked at exactly the threshold. Once the lock aged out, ONE
+     * further wrong guess satisfied `count + 1 >= threshold` again and bought
+     * another full lock window. Against the single Portal owner that is a
+     * permanent lockout for the price of one request every fifteen minutes,
+     * and with owner-only administration there is no one left who can undo it.
+     *
+     * An expired lock now ends the run: the count restarts at 1 and
+     * `locked_until` is cleared, so re-locking costs the whole threshold
+     * again. The account still locks exactly as before within a single run.
+     */
     const result = await this.pool.query<{ failed_login_count: number }>(
-      `UPDATE portal_users
-         SET failed_login_count = failed_login_count + 1,
-             updated_at = now(),
-             locked_until = CASE WHEN failed_login_count + 1 >= $2 THEN now() + interval '15 minutes' ELSE locked_until END
-       WHERE user_id = $1
-       RETURNING failed_login_count`,
-      [userId, lockAtAttempts],
+      `UPDATE portal_users AS u
+          SET failed_login_count = run.attempts,
+              updated_at = now(),
+              locked_until = CASE
+                WHEN run.attempts >= $2 THEN now() + make_interval(secs => $3)
+                WHEN u.locked_until IS NOT NULL AND u.locked_until <= now() THEN NULL
+                ELSE u.locked_until
+              END
+         FROM (
+           SELECT user_id,
+                  CASE WHEN locked_until IS NOT NULL AND locked_until <= now()
+                       THEN 1
+                       ELSE failed_login_count + 1 END AS attempts
+             FROM portal_users
+            WHERE user_id = $1
+         ) AS run
+        WHERE u.user_id = run.user_id
+       RETURNING u.failed_login_count`,
+      [userId, lockAtAttempts, lockSeconds],
     );
     return result.rows[0]?.failed_login_count ?? 0;
   }

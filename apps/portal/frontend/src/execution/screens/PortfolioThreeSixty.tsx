@@ -174,7 +174,15 @@ export interface PortfolioThreeSixtyProps {
   portfolioName: string;
   envelope: Envelope;
   scopeWindow: string;
-  benchmark: string;
+  /**
+   * The benchmark's NAME, or `null` when none is published.
+   *
+   * It used to be a string carrying the sentence "benchmark not published",
+   * which the chip then prefixed with its own label: "Benchmark benchmark not
+   * published". An absence belongs in the value slot as an absence, not as a
+   * sentence smuggled through a field that is supposed to hold a name.
+   */
+  benchmark: string | null;
   benchmarkId: string;
   tab: PortfolioTab;
   onTabChange: (tab: PortfolioTab) => void;
@@ -896,7 +904,11 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         <span className="exec-pf2-chip">Window {scopeWindow} ▾</span>
         <span className="exec-pf2-chip">Mode All ▾</span>
         <span className="exec-pf2-chip">Venue All ▾</span>
-        <span className="exec-pf2-chip">Benchmark {benchmark} ▾ <span className="exec-pf2-dim">{benchmarkId}</span></span>
+        <span className="exec-pf2-chip">
+          {benchmark
+            ? <>Benchmark {benchmark} ▾ <span className="exec-pf2-dim">{benchmarkId}</span></>
+            : <>Benchmark <span className="exec-pf2-dim">not published</span></>}
+        </span>
         <span className="exec-a3-scopenote">every panel below obeys this scope</span>
       </div>
 
@@ -1060,7 +1072,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             ) : null}
             <div className="exec-alpha-tiles">
               <section className="exec-pf2-panel" aria-label="Correlation timeline vs benchmark">
-                <header className="exec-pf2-head"><span className="exec-pf2-title">ρ(NAV, {benchmark}) · 30d</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">corr.v1</span></header>
+                <header className="exec-pf2-head"><span className="exec-pf2-title">{benchmark ? `ρ(NAV, ${benchmark}) · 30d` : "Correlation vs benchmark · 30d"}</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">corr.v1</span></header>
                 <div className="exec-pw-chartplot">
                   {demoPanels?.rhoChart ?? <PanelState status="unavailable" reason="The ρ timeline series is not published yet (BR-EX-65); the matrix above is the published correlation." />}
                 </div>
