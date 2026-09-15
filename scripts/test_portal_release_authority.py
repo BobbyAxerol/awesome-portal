@@ -293,6 +293,8 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
         self.assertEqual(workflow.count("-o ConnectTimeout=20"), keepalive_count)
         self.assertIn("ssh_deploy() {", workflow)
         self.assertIn("scp_deploy() {", workflow)
+        self.assertIn("tar -C release-pack -cf - . | ssh_deploy", workflow)
+        self.assertNotIn('-P "${DEPLOY_PORT}" -r release-pack/.', workflow)
         self.assertIn('UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts"', workflow)
         self.assertIn("StrictHostKeyChecking=yes", workflow)
         self.assertNotIn("~/.ssh", workflow)

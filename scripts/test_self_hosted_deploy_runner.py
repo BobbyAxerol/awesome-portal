@@ -43,6 +43,14 @@ def main() -> int:
         require(marker in workflow, f"missing runner hardening marker: {marker}")
     require("~/.ssh" not in workflow, "persistent runner home must not receive SSH material")
     require("gh api" not in workflow and "jq " not in workflow, "runner must not require gh or jq")
+    require(
+        "tar -C release-pack -cf - . | ssh_deploy" in workflow,
+        "candidate artifact transfer must avoid target-incompatible recursive scp dot path",
+    )
+    require(
+        '-P "${DEPLOY_PORT}" -r release-pack/.' not in workflow,
+        "candidate artifact transfer must not use the rejected recursive scp source path",
+    )
 
     require(
         "runs-on: [self-hosted, linux, x64, portal-deploy]" in profile_workflow,

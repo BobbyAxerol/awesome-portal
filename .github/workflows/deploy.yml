@@ -263,6 +263,7 @@ jobs:
 
       - name: Transfer immutable production Compose bundle
         run: |
+          set -euo pipefail
           ssh_deploy() {
             ssh -i "${DEPLOY_SSH_DIR}/id_ed25519" \
               -o UserKnownHostsFile="${DEPLOY_SSH_DIR}/known_hosts" \
@@ -295,9 +296,14 @@ jobs:
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/scripts/"
           ssh_deploy -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "chmod 0750 '${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py' '${DEPLOY_PATH}/scripts/collect-eds12-runtime-binding.py'"
-          scp_deploy \
-            -P "${DEPLOY_PORT}" -r release-pack/. \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/"
+          # OpenSSH 9 uses SFTP by default.  Its recursive mode rejects a
+          # trailing `/.` source on this target, so stream the already
+          # verified immutable candidate as one bounded tar archive instead.
+          # `pipefail` above makes either archive or pinned SSH failure a
+          # hard stop before the rollout step.
+          tar -C release-pack -cf - . | ssh_deploy \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "tar -C '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}' --no-same-owner --no-same-permissions -xf -"
 
       - name: Back up, migrate and start immutable images
         run: |

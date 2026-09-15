@@ -95,7 +95,7 @@
     {
       "id": "protected_deploy_workflow",
       "file": ".github/workflows/deploy.yml",
-      "sha256": "sha256:067487267d7912fb15152b0989d189eca59ef10218f2a2c5a5d746181d7ca46e"
+      "sha256": "sha256:0f626f68f0b14a7ef5c38e948f15002bf091090428df1b8eef180ac8372b61b9"
     },
     {
       "id": "ci_qualification_gate",
@@ -115,7 +115,7 @@
     {
       "id": "release_authority_workflow_test",
       "file": "scripts/test_portal_release_authority.py",
-      "sha256": "sha256:edd8fd4983ffce53b208eaaf11c0c3fe0d07bf06c7e7bedb30ebee0842178c4b"
+      "sha256": "sha256:c108f7d98fb2447e00b840ff3da0c3989a8e6c8bd1ba4ca4c5f3b48562763044"
     },
     {
       "id": "release_integrity_ledger_refresh",
