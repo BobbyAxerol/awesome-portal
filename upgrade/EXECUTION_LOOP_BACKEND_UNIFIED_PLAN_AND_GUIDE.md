@@ -7862,7 +7862,17 @@ or A4-3—not a migration, fixture seed or deployment side effect.
 **Phase:** A4-1 — Authorization foundation and activation-recovery safety.
 **Status:** implementation complete, gates green, awaiting Bobby's acceptance.
 **Branch:** `feat/execution-visual-rerecord` (see *Branch discrepancy* below).
-**Commits:** `b588fe46` (backend: owner anchor, mutation security, recovery state, audit, twelve fixes) · `62a98d4e` (frontend: `/access/self` as the only UI authority, recovery frame, four new visual baselines)
+**Commits, in order:**
+
+| Commit | What |
+|---|---|
+| `b588fe46` | backend: owner anchor, mutation security, recovery state, audit, twelve fixes |
+| `62a98d4e` | frontend: `/access/self` as the only UI authority, recovery frame, four new visual baselines |
+| `d5e634a6` | frontend tracker §A79 |
+| `9ea31c9c` | **this plan, which had never been committed** — see 20.7.7 |
+| `2483bb23` | merge onto `feat/execution-loop-next` |
+| `cca74942` | the façade analysis Bobby needed in order to decide |
+| `1b0f7651` | the last four defects closed: façade, auth drift, login timing, lockout |
 
 ### 20.7.1 What A4-1 froze
 
@@ -7913,9 +7923,10 @@ code myself before changing anything.
 | A4-F15 | the bootstrap parser ignored the key name in `- <key>: <value>` | `- role: ADMIN` created a user named "ADMIN" and swallowed the next entry's `owner: true`, permanently anchoring the Portal to an unintended account |
 | A4-F16 | `changePassword` revoked activations **before** clearing `must_change_password`, in four un-transacted writes | a crash in that window left a usable password, no activation and `must_change_password` still true — a permanently unauthenticable account |
 
-### 20.7.4 Defects found, recorded, NOT fixed in A4-1
+### 20.7.4 Defects found beyond the plan's list — all four now closed
 
-Per rule 9 these are dispositioned, not deferred silently.
+Recorded first, then fixed on the owner's instruction that A4-1 closes with no
+outstanding defect. Nothing here is deferred.
 
 1. **`A4-FE-BE-GAP-01` — the façade write path enforces neither Origin nor
    CSRF.** `facade.controller.ts` `@All` accepts POST/PUT/PATCH/DELETE for
@@ -8020,39 +8031,116 @@ Per rule 9 these are dispositioned, not deferred silently.
    enforcement. Each step is independently verifiable and independently
    reversible, which "enforce everywhere at once" is not.
 
-   **Disposition:** A4-2, as one paired change; needs Bobby's sign-off to touch
-   the Research client. The infrastructure finding — dev-portal published
-   same-site without an Access policy — is an owner/infra decision that stands
-   on its own regardless of this code change.
+   **Disposition — CLOSED 2026-09-15, Bobby approved.** Implemented in the
+   order recommended above. Backend: `facade.controller.ts` now calls
+   `mutationSecurityDenial` on every write, after the role check so the error
+   cannot become an oracle; `planning.controller.ts`'s drifted hand-copy was
+   replaced by the same call. Frontend: `lib/api.ts` attaches the header
+   centrally in `request()`, so the four writes and any future one are covered
+   by one chokepoint.
 
-2. **`A4-FE-BE-GAP-02` — login is a timing oracle.** argon2 runs only for an
-   existing user that holds a password, so response time distinguishes "no such
-   user", "activation pending" and "wrong password".
-   **Why not now:** the fix is a dummy argon2 verify on every miss path, which
-   changes login latency for every caller and deserves its own measurement
-   rather than being bundled into an authorization phase.
-   **Disposition:** A4-2.
+   Bobby declined an Access policy for `dev-portal.primusspark.com` — it is the
+   fast preview channel and stays open. That is a deliberate decision, and it
+   means the same-site vector is permanent rather than temporary: this CSRF
+   check is now the only thing standing between a page on that hostname and a
+   cancelled production backtest. Recorded here so the next reader understands
+   why this control may not be relaxed.
 
-3. **Sustained login flooding can still hold an account locked.** A4-F11 removed
-   the *permanent* lockout; an attacker who sustains ten attempts per lock
-   window can still keep a known username locked while the flood runs, and the
-   account frees itself as soon as it stops.
-   **Why not now:** the mitigation is per-route rate limiting.
-   `@fastify/rate-limit` is registered with `global: false` and no route opts
-   in, and keying it correctly behind Cloudflare requires settling
-   `trustProxy` semantics against the production edge — which I will not verify
-   by touching the production stack.
-   **Disposition:** A4-2, together with the `trustProxy` decision.
+   Evidence: Control API **590/590** with the pg_dump/pg_restore drill;
+   frontend **150 files / 2390 passed**; `tsc --noEmit` and build clean;
+   visual baseline **328 passed / 0 failed** in verify mode with no snapshot
+   rewritten.
+
+   Seven regression tests, each asserting the refusal REASON and that the
+   write never reached upstream — a denial test that checks only the status
+   code would stay green if the gate were moved below `handleWrite`, while the
+   backtest was genuinely cancelled. Four frontend tests cover the header
+   itself, which until they were written was executed by no test at all: jsdom
+   starts with an empty `document.cookie`, so every existing write test ran the
+   no-token path.
+
+2. **`A4-FE-BE-GAP-03` — `auth.controller` carried both drifts. CLOSED.**
+   All three routes called `originAllowed` bare, and that helper answers TRUE
+   for a request with no Origin header at all; `change-password` additionally
+   compared the CSRF header only against the session's stored hash, never
+   against the `__Host-portal_csrf` cookie — so the proof was "knows the
+   token" rather than "is script on this origin that can read the cookie".
+
+   I first recorded this as un-fixable in this phase because
+   `scripts/smoke-stack.sh` drives all three by curl with no Origin and I said
+   its `PORTAL_PUBLIC_ORIGIN` was unknowable. **That was wrong, and it was
+   wrong because I had not read the script**: line 27 sets
+   `PORTAL_PUBLIC_ORIGIN="http://127.0.0.1:${PORTAL_HTTP_PORT}"` itself, and
+   lines 241 and 251 already send `--header "Origin: ${PORTAL_PUBLIC_ORIGIN}"`
+   for execution commands. The value was never unknown; the script defines it.
+
+   Fixed: `login` and `logout` use the new `originDenial` (Origin present and
+   allowed — login has no session and therefore no CSRF secret to compare
+   against, and logout must keep working for someone whose session is already
+   dead, or the people who most need to sign out cannot). `change-password`
+   uses the full `mutationSecurityDenial`. The three smoke curls now send the
+   Origin the script already defines. Measured rather than assumed: curl does
+   send a `Secure`-marked cookie over plain http to 127.0.0.1, so the smoke
+   run supplies the CSRF cookie the full decision now requires.
+
+   Only requests with NO Origin change behaviour. A browser always sends one
+   on a non-GET, and a browser sending the WRONG one was already refused by
+   `originAllowed`. So this reaches non-browser callers only.
+
+3. **`A4-FE-BE-GAP-02` — login was a timing oracle. CLOSED.**
+   Argon2 is deliberately expensive and that expense is observable. Login
+   reached it only for a user who exists, is ACTIVE and holds a password;
+   every other outcome returned in microseconds. One timed request therefore
+   separated three facts a stranger has no right to — whether the username
+   exists, whether the account is still awaiting its first password, and
+   whether it is locked — however carefully the body and error code were made
+   identical.
+
+   `Argon2CredentialService.verifyAgainstDecoy()` burns one verify against a
+   lazily built decoy hash, and every miss path now calls it: unknown or
+   disabled user, non-ACTIVE status, no password row, and both branches of the
+   activation path — both, because spending it only on failure would simply
+   invert the oracle. Proved by counting verifies rather than by timing a
+   clock: a wall-time assertion on a hashing function is flaky on a loaded
+   machine, and a flaky security test is one that gets deleted.
+
+4. **Sustained login flooding could hold an account locked. CLOSED — at the
+   cause, not with a rate limit.** A4-F11 had already removed the *permanent*
+   lockout, leaving a flood able to keep a known username shut while it ran.
+   The reflex fix is per-route rate limiting, which needs `trustProxy`
+   semantics settled against the production edge — and would still be a
+   throttle standing between an attacker and a victim.
+
+   The cause was the ORDER. The lock was checked before the credential, so ten
+   wrong guesses shut the account to everyone including the person holding the
+   right password. Deciding the lock *after* the credential is known removes
+   the attack outright: a correct credential is not a guess, so it is admitted
+   and the lock is cleared with the counters; a wrong one is still refused,
+   and still without incrementing, so the window cannot renew itself.
+
+   This gives up almost nothing. An attacker already holding the credential
+   was only ever delayed by the lock, never stopped; a guesser gains nothing,
+   because guessing correctly is the hard part. What it removes is the ability
+   to lock somebody else out on purpose — which, against the sole owner, had
+   no in-product remedy at all.
+
+   Rate limiting is therefore no longer a security necessity here, only a
+   resource-abuse measure. The `trustProxy` question is recorded for whenever
+   that is wanted; nothing depends on it.
 
 ### 20.7.5 Evidence
 
 | Gate | Command | Result |
 |---|---|---|
-| Control API + PostgreSQL + restore drill | `sudo CONTROL_API_TEST_RUN_SUFFIX=a41u bash scripts/control-api-test.sh` | **66 files, 582/582 passed**, pg_dump/pg_restore drill passed |
-| Frontend unit | `npx vitest run` (node:22-bookworm, worktree at `/repo`) | **149 files, 2386 passed, 1 skipped** |
-| Frontend build | `npm run build` | built |
+| Control API + PostgreSQL + restore drill | `sudo bash scripts/control-api-test.sh` | **67 files, 602/602 passed**, pg_dump/pg_restore drill passed |
+| Frontend unit | `npx vitest run` (node:22-bookworm, worktree at `/repo`) | **150 files, 2390 passed, 1 skipped** |
+| Frontend typecheck + build | `npx tsc --noEmit`, `npm run build` | clean |
 | Visual baseline | `scripts/portal-web-visual.sh` (no `--update`) | **328 passed / 0 failed**, no pre-existing snapshot rewritten |
 | New visual baselines | `--update -g "auth-activation-recovery"` | 4 recorded (2 themes × 2 breakpoints) |
+
+The Control API suite went from **558** at the start of A4-1 to **602**:
+forty-four tests added, every one of them a named defect that a green suite had
+not been catching.
 
 Negative matrix now covered by test: non-owner ADMIN denied every admin route ·
 unclaimed anchor is its own state · anchor refuses reassignment · a second
@@ -8092,21 +8180,66 @@ The recovery frame is asserted to contain none of "expired", "revoked",
   reader to a form no credential satisfies.
 - `GET /api/admin/access/self` registered in `r2_ledger/capability-inventory.v1.json`.
 
-### 20.7.7 Branch discrepancy (needs Bobby's decision)
+### 20.7.7 Branch — resolved
 
-§20.5 rule 10 requires all A4 work on `feat/execution-loop-next`. This work is
-committed on `feat/execution-visual-rerecord` in the
-`/home/bobby/portal-visual-baseline` worktree, which is where the session was
-directed to work and where the preceding R3-3 visual re-record already sits.
-`git push` has been refused by the permission classifier throughout, so nothing
-has left the machine. Moving or rebasing onto `feat/execution-loop-next` would
-touch a branch codex is actively working on in `/home/bobby/portal-integration`,
-so I have not done it unilaterally. **Bobby to decide** whether to cherry-pick,
-rebase, or have codex integrate.
+§20.5 rule 10 requires all A4 work on `feat/execution-loop-next`. Codex paused
+and handed over all four phases, and Bobby directed the merge, so the work moved
+there on 2026-09-15 (merge `2483bb23`).
+
+Two facts worth keeping, because neither matched the expectation going in:
+
+1. **It was 22 commits, not 3.** Eighteen were the release and CI history
+   already on `main` (`7665cf91` is main's tip) — this branch was eighteen
+   commits behind it. No codex commit was lost: `3ffe1333` was already an
+   ancestor of the merged branch, and codex's R3-2 work (`4f098c7a`) is in
+   that history, verified with `merge-base --is-ancestor`.
+
+2. **This plan itself had never been committed.** `git log --all -S"## 20. A4"`
+   on this file returned nothing: §20.1 through §20.6 — the document assigning
+   all four phases and every rule they are built against — existed only as an
+   uncommitted working-tree file in `/home/bobby/portal-integration`. One
+   `git checkout`, `reset --hard` or stray stash would have destroyed it with
+   nothing recording that it had ever existed. Committed verbatim as `9ea31c9c`
+   before anything else was touched.
+
+`apps/portal/frontend/e2e/el-v2-03-evidence/controls.json` was deliberately left
+dirty and uncommitted at blob `e2d15a61ebc0b54bf6f502ec666788da1b36b0b8`, as §19
+requires, and its blob was re-verified after the merge. Codex's two stashes were
+not touched.
 
 ### 20.7.8 Precondition for A4-2
 
-A4-2 may begin once Bobby accepts the contracts in 20.7.1 as frozen. A4-2 owns
-`A4-FE-BE-GAP-01` (façade Origin/CSRF, paired with the Research client),
-`A4-FE-BE-GAP-02` (login timing) and the login rate-limit/`trustProxy`
-decision. No A4-2 migration or mutable endpoint has been started.
+A4-2 may begin once Bobby accepts the contracts in 20.7.1 as frozen. **No A4-1
+defect remains open**: all four items in 20.7.4 are closed with tests, and the
+twelve in 20.7.3 were closed when they were found. A4-2 inherits no security
+debt from this phase.
+
+One non-blocking item is carried forward as a preference rather than a defect:
+per-route rate limiting on `/api/auth/login`, which needs the `trustProxy`
+question settled against the production edge. It is no longer a security
+necessity — item 4 above removed the attack it would have mitigated — so it can
+be taken up whenever resource-abuse limits are wanted.
+
+No A4-2 migration or mutable endpoint has been started.
+
+### 20.7.9 What this phase changed about how I work
+
+Three habits earned their place, and are written down because each one caught
+something a passing test suite did not:
+
+1. **Attack the work before reporting it.** A4-1 itself opened a hole — moving
+   `/api/admin/*` onto `OwnerAccessGuard`, I omitted the one line `SessionGuard`
+   has, `mustChangePassword`, so a session minted from a one-time activation
+   string held full owner authority before any password existed. The suite was
+   green. A six-lens adversarial pass found it.
+
+2. **Prove the measurement before blaming the product.** Twenty-three visual
+   baselines failed after the authority change. Re-recording them would have
+   stamped a *fixture gap* as a *design change* across Research and Planning
+   screens that §0 puts out of scope. The cause was one unstubbed route.
+
+3. **Read the thing before declaring it unknowable.** I recorded
+   `A4-FE-BE-GAP-03` as un-fixable because `scripts/smoke-stack.sh` calls the
+   auth routes by curl and I said its `PORTAL_PUBLIC_ORIGIN` could not be
+   known. Line 27 of that script sets it, and lines 241 and 251 already send
+   it. The blocker was my not having opened the file.

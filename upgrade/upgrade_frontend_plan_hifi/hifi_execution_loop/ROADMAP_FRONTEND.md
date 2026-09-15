@@ -1007,17 +1007,39 @@ Control API **582/582** + restore drill trên cây đã merge, frontend
 **2386 pass**, visual **328 pass / 0 fail**. Hồ sơ thi hành ở **§20.7** của
 `upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`.
 
-## D1. (a) Bobby quyết — chỉ một việc
+## D1. (a) Bobby quyết — đã quyết 2026-09-15
 
-**Cho phép sửa `apps/portal/frontend/src/lib/api.ts` (client của QuantBT
-Research) để nó gửi header `x-portal-csrf` trên 4 lệnh ghi?**
+**Duyệt:** sửa `lib/api.ts` để gửi `x-portal-csrf`. Đã làm, gate xanh.
+**Từ chối:** đặt Access policy cho `dev-portal.primusspark.com` — đó là kênh
+xem nhanh khi phát triển, giữ mở.
 
-Đó là toàn bộ nội dung quyết định. Mọi thứ còn lại của bản vá là cơ học và đã
-chứng minh an toàn. Chi tiết đầy đủ ở §20.7.4 mục 1.
+Hệ quả của quyết định thứ hai, ghi lại để người sau hiểu: vector same-site
+**tồn tại lâu dài** chứ không phải tạm thời. Header CSRF vừa bật giờ là thứ
+**duy nhất** đứng giữa một trang trên hostname đó và một backtest production bị
+hủy. Không được nới control này.
 
 ## D2. (b) Claude làm không cần chờ ai
 
-Không còn. A4-1 đã đóng.
+Không còn. A4-1 đóng với **không một lỗi nào còn treo** — Bobby yêu cầu sửa hết
+trước khi vào A4-2, nên cả bốn mục ở §20.7.4 đã bịt kèm test:
+
+| Mục | Trạng thái |
+|---|---|
+| `A4-FE-BE-GAP-01` façade không kiểm Origin/CSRF | **đóng** |
+| `A4-FE-BE-GAP-03` `auth.controller` mang cả hai lỗi trôi | **đóng** |
+| `A4-FE-BE-GAP-02` login là timing oracle | **đóng** |
+| Flood login giữ tài khoản bị khóa | **đóng** — sửa ở gốc, không phải bằng rate limit |
+
+Mục cuối đáng nói: phản xạ là thêm rate limit, nhưng nguyên nhân là **thứ tự**.
+Lock được kiểm **trước** credential, nên mười lần đoán sai đóng cửa tài khoản
+với cả người cầm đúng mật khẩu. Chuyển quyết định lock xuống **sau** khi biết
+credential là xoá hẳn đòn tấn công: credential đúng không phải là đoán, nên được
+vào và lock được gỡ; credential sai vẫn bị từ chối và vẫn không tăng bộ đếm.
+
+Và một chỗ tôi đã kết luận sai rồi phải tự sửa, ghi lại để không lặp: tôi báo
+`GAP-03` không sửa được vì `smoke-stack.sh` gọi bằng curl không kèm Origin và
+"không biết `PORTAL_PUBLIC_ORIGIN` của stack smoke". **Sai — vì tôi chưa đọc
+script.** Dòng 27 của chính nó đặt biến đó, và dòng 241/251 đã gửi Origin sẵn.
 
 ## D3. (c) Đang chờ codex
 
