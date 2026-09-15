@@ -7919,18 +7919,111 @@ Per rule 9 these are dispositioned, not deferred silently.
 
 1. **`A4-FE-BE-GAP-01` — the façade write path enforces neither Origin nor
    CSRF.** `facade.controller.ts` `@All` accepts POST/PUT/PATCH/DELETE for
-   `/api/runs`, `/api/strategies`, `/api/v1/alphas` and `/api/config/options`
-   behind `SessionGuard` with only a `role !== "ADMIN"` check. Confirmed real.
-   Partially mitigated: the session cookie is `SameSite=Lax`, which browsers do
-   not send on a cross-site POST.
-   **Why not now:** the frontend client for these routes
-   (`apps/portal/frontend/src/lib/api.ts`) does not send `x-portal-csrf` —
-   only `adminApi.ts` and `execution/api/httpApi.ts` do. Turning the check on
-   without the paired frontend change breaks run cancellation, alpha import and
-   config editing, and `lib/api.ts` serves QuantBT Research, which CLAUDE.md §0
-   puts outside this campaign's scope lock.
+   `/api/runs*`, `/api/strategies*`, `/api/datasets`, `/api/config/options`,
+   `/api/v1/alphas*` and `/api/v1/portal/*` behind `SessionGuard` with only a
+   `role !== "ADMIN"` check. Established by a five-question review, each answer
+   then attacked by two independent challengers; what follows is what survived,
+   with the challengers' corrections applied.
+
+   **Is it exploitable today? — a defence-in-depth gap with one real same-site
+   hole, not a live cross-site CSRF hole.**
+   The session cookie is `__Host-portal_session` with an *explicit*
+   `SameSite=Lax` (`cookies.ts:26-32`), so no browser sends it on a cross-site
+   POST, and the explicit attribute also forecloses Chrome's two-minute
+   "Lax+POST" grace window. Lax does allow a cross-site top-level GET, but no
+   write is reachable by GET: all four upstream mutating handlers are
+   `@router.post`, and there is no method-override shim. Cross-origin `fetch`
+   dies at the preflight — no CORS plugin is registered anywhere in
+   `createControlApiApp`.
+
+   What remains is **same-site, cross-origin**. `SameSite` is site-scoped, and
+   `deploy/cloudflared/config.example.yml` publishes
+   `dev-portal.primusspark.com` on the same registrable domain **deliberately
+   without an Access policy**, while `portal.primusspark.com` carries
+   `access.required: true`. A page on dev-portal is cross-origin but same-site,
+   so its requests to production carry the session cookie.
+
+   The first reviewer judged that harmless because a form-encodable body dies
+   on content type. **The challenger refuted that, correctly:**
+
+       # apps/portal/backend/src/portal_api/api/routes_runs.py:385
+       @router.post("/{run_id}/cancel")
+       async def cancel_run(run_id: str, request: Request) -> dict:
+           cancelled = _manager(request).cancel(run_id)
+
+   `cancel_run` takes **no body**. The content-type wall protects the other
+   three writes and not this one. A plain `<form method="POST"
+   enctype="text/plain">` on a same-site page is a simple request, carries the
+   cookie, and cancels a running backtest. Preconditions: a foothold serving
+   HTML on dev-portal (none found — no XSS sink, nginx only does `try_files`),
+   the victim holding an ADMIN session, and the 64-bit `run_id`. Narrow, but a
+   **real state change**, not residue. Cloudflare Access is not a CSRF control:
+   CSRF rides the victim's own browser, which holds the Access cookie too.
+
+   **Blast radius — local Portal/QuantBT only.** The proxy origin is pinned
+   (`buildPortalUpstreamUrl` throws `UPSTREAM_ORIGIN_MISMATCH`), the Execution
+   surfaces are a disjoint `/api/v1/execution` prefix on different controllers,
+   and `portal-api` has exactly four mutating handlers and **zero** `delete`,
+   `put` or `patch` anywhere. Nothing reaches the Trading System, a broker,
+   capital or an Edge cell, so §20.2's "a Portal decision is not a Trading
+   System side effect" is **not** violated. Worst realistic consequences, in
+   order: cancel a running backtest (hours of WFO compute); flood
+   `POST /api/runs` (`max_workers=1`, unbounded queue, a run directory per
+   submission); burn CPU on `preflight`; junk quarantine records from
+   `alphas/import`. A further nuisance: `handleWrite` commits the outbox and
+   product-audit rows **before** proxying, so even a forged write that 405s
+   upstream costs two DB rows and can poison an auto-derived idempotency key.
+
+   **What enabling it breaks — exactly four callers, one file, three screens.**
+   `apps/portal/frontend/src/lib/api.ts` funnels every write through one
+   `request()` helper that passes only `Content-Type`. The four are
+   `importAlpha`, `preflight`, `createRun`, `cancelRun`, driving
+   `/research/quantbt/new` (Validate, Run backtest),
+   `/research/quantbt/imports` (alpha import), and the Cancel button on the run
+   library row and progress header. Outside the frontend there are **zero**
+   callers: no script, CI job, smoke test or Rust crate. Two write tests in
+   `apps/control-api/test/facade.spec.ts` would flip to 403.
+
+   The hard break is `CSRF_MISSING`, **not** `ORIGIN_MISSING` — browsers always
+   attach `Origin` to a non-GET fetch. And the Origin config risk is now
+   measured, not assumed: `PORTAL_PUBLIC_ORIGIN` is
+   `https://dev-portal.primusspark.com` on dev and
+   `https://portal.primusspark.com` on stable, both an exact match for the
+   browser's Origin with no trailing slash or port.
+
+   **Is the scope lock really touched? — in letter, not in substance.**
+   All 28 importers of `lib/api.ts` are QuantBT Research features; **zero**
+   Execution Loop files import it, and Planning does not either (its
+   `@/lib/api` resolves through the vite alias to a different file entirely).
+   It renders nothing — a `fetch` wrapper plus types, no JSX, no CSS, no token
+   — so §0's trigger ("a shared component or token that changes a Research or
+   Planning screen") is not met. No pixel can move: the visual baseline
+   fulfils every `**/api/**` request from fixtures and never inspects headers,
+   and no screenshot test triggers a write at all. The real risk is
+   **behavioural and it is on Research**: if enforcement is wrong, Research
+   writes 403. That is what needs the owner's sign-off, not the pixels.
+
+   **The fix is ~14 lines of backend and ~12 of frontend, and the pattern
+   already exists in the same module.** `PlanningFacadeController`
+   (`facade/planning.controller.ts:63-80`) stands behind the same
+   `SessionGuard` and already enforces Origin + CSRF using
+   `request.portalSession.csrfSecretHash`. `SessionGuard` already attaches
+   `portalSession`, and `toSession` already carries `csrfSecretHash`; the only
+   gap in `facade.controller.ts` is that its `PortalRequest` interface omits
+   the field the guard is already setting. On the frontend,
+   `execution/api/httpApi.ts` already exports a working cookie reader that
+   `lib/api.ts` can reuse.
+
+   **Recommended order — send before enforce.** Ship the frontend header
+   first: it is inert while nothing checks it, so there is no window in which
+   the UI is broken. Confirm on dev that the header arrives. Only then turn on
+   enforcement. Each step is independently verifiable and independently
+   reversible, which "enforce everywhere at once" is not.
+
    **Disposition:** A4-2, as one paired change; needs Bobby's sign-off to touch
-   the Research client.
+   the Research client. The infrastructure finding — dev-portal published
+   same-site without an Access policy — is an owner/infra decision that stands
+   on its own regardless of this code change.
 
 2. **`A4-FE-BE-GAP-02` — login is a timing oracle.** argon2 runs only for an
    existing user that holds a password, so response time distinguishes "no such

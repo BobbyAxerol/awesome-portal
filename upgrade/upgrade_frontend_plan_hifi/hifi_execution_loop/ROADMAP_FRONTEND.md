@@ -997,3 +997,50 @@ của tôi), nên dev-portal không phải chỗ đo được gì lúc này.
 codex vừa sửa cả hai trong `b61ad10c`. Tránh để merge không sinh conflict ở chỗ
 không đáng. Việc ngoài phạm vi plan sẽ ghi tạm vào file này, chuyển sang
 `FRONTEND_HANDOFF.md` §8 sau khi merge.
+
+---
+
+# D. A4-1 đóng — một quyết định duy nhất đang chờ Bobby (2026-09-15)
+
+Nhánh `feat/execution-loop-next`, merge `2483bb23`. A4-1 xanh toàn bộ:
+Control API **582/582** + restore drill trên cây đã merge, frontend
+**2386 pass**, visual **328 pass / 0 fail**. Hồ sơ thi hành ở **§20.7** của
+`upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`.
+
+## D1. (a) Bobby quyết — chỉ một việc
+
+**Cho phép sửa `apps/portal/frontend/src/lib/api.ts` (client của QuantBT
+Research) để nó gửi header `x-portal-csrf` trên 4 lệnh ghi?**
+
+Đó là toàn bộ nội dung quyết định. Mọi thứ còn lại của bản vá là cơ học và đã
+chứng minh an toàn. Chi tiết đầy đủ ở §20.7.4 mục 1.
+
+## D2. (b) Claude làm không cần chờ ai
+
+Không còn. A4-1 đã đóng.
+
+## D3. (c) Đang chờ codex
+
+Không còn — codex tạm dừng, đã giao lại cả bốn phase.
+
+## D4. Hai phát hiện hạ tầng, không phải code — Bobby nên biết
+
+1. **`dev-portal.primusspark.com` cố ý không có Cloudflare Access policy**
+   (`deploy/cloudflared/config.example.yml`, chính comment trong file ghi vậy),
+   trong khi `portal.primusspark.com` có `access.required: true`. Hai hostname
+   **cùng registrable domain**, mà `SameSite` tính theo *site* chứ không theo
+   *origin* — nên một trang chạy trên dev-portal gửi request sang production
+   **vẫn kèm cookie phiên**. Đây chính là thứ làm vector same-site tồn tại.
+   Hiện chưa tìm được điểm chèn HTML/script nào trên dev-portal, nên nó còn là
+   lý thuyết — nhưng nó là *lý do* bản vá façade đáng làm.
+
+2. **`portal_owner_anchor` và §20 từng chỉ tồn tại ngoài git.** §20 đã được
+   commit (`9ea31c9c`). Bài học vận hành: một tài liệu điều phối chưa commit
+   thì không tồn tại.
+
+## D5. Đã đo, không phải phỏng đoán
+
+`PORTAL_PUBLIC_ORIGIN` khớp chính xác trên **cả hai** stack — dev
+`https://dev-portal.primusspark.com`, stable `https://portal.primusspark.com`.
+Không dấu `/` thừa, không port. Nên nửa Origin của bản vá sẽ **không** làm hỏng
+gì; rủi ro cấu hình mà tôi lo ban đầu đã bị loại bỏ bằng đo đạc.
