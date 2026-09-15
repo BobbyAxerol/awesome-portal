@@ -27,6 +27,7 @@ export const TEST_TABLES = [
   "execution_manager_projection_snapshots",
   "execution_alpha_fleet_projection",
   "execution_binding_projection",
+  "portal_owner_anchor",
   "auth_audit_events",
   "auth_sessions",
   "activation_credentials",
