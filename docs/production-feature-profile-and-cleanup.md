@@ -134,3 +134,24 @@ caption; `_READS` stays false.
    `live_data_executor` and Portal projection workers.
 2. Add host swap or increase capacity only through a separate owner-approved
    infrastructure change; do not disguise it as a Docker cleanup.
+
+### C6 — Self-hosted CI/publication runner lifecycle
+
+1. Keep `portal-ci-publish-sgp1` distinct from `portal-deploy-sgp1`: CI,
+   browser tests, CodeQL and image publication run only on the former's
+   rootless Docker daemon. The deployment runner must retain its narrow
+   deployment label and never receive a general CI job.
+2. The CI runner completion hook clears only its completed workspace, stopped
+   rootless containers/networks after 24 hours, rootless images/Buildx cache
+   after seven days, orphaned temp paths after one day and unused Playwright
+   revisions after 30 days. It never prunes a volume, rootful Docker resource,
+   `/srv/portal`, database, backup, release evidence or execution service.
+3. Before an owner-approved runner retirement, cancel/finish active GitHub
+   jobs and remove its labels from workflows. Then remove only the exact
+   runner service, rootless daemon, helper directory and
+   `/srv/portal-ci-runner`; do not treat a runner cleanup as a Portal runtime
+   cleanup.
+4. Every future CI/publish phase must use the checked-in runner assertion and
+   the locked bootstrap. Do not add generic `self-hosted` routing, host Docker
+   access, sudo, SSH deployment credentials or a persistent registry token to
+   the CI runner.

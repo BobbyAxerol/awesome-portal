@@ -14,6 +14,12 @@ There are deliberately two separate identities:
 | `GITHUB_TOKEN` | GitHub Actions jobs | Scoped to the workflow run; publishes CI artifacts and immutable images. |
 | Production environment secrets | Protected deploy workflow only | Host connection and registry/deployment material; never copied to a worktree or PAT file. |
 
+For self-hosted compute, the fine-grained owner token is used only to mint a
+one-time runner registration token. It is never installed as a runner
+environment variable or workflow secret. See
+[the isolated CI/publication runner guide](../deploy/self-hosted-ci-runner/README.md)
+for the separate CI/publication and deployment boundaries.
+
 The PAT is not a substitute for SSH, environment protection, Cloudflare Access,
 or the Stable release workflow. It is only for authenticated GitHub API work.
 

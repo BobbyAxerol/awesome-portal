@@ -124,6 +124,19 @@ Rules for these agents:
   `upgrade/backend/README.md` (codex's tracking), so both agents read the
   same current status without re-deriving it.
 
+## Self-hosted CI/publication runner hygiene
+
+- `portal-ci-publish-sgp1` is a separate, non-root, rootless-Docker runner for
+  CI, browser tests, CodeQL and image publication. It must never receive the
+  deployment label, deployment SSH credentials, host Docker socket, Portal
+  volumes, database credentials or a generic `self-hosted` workflow selector.
+- `portal-deploy-sgp1` remains deployment-only. Do not route CI, security or
+  publication to it merely because GitHub-hosted minutes are unavailable.
+- Preserve the checked-in completion-cleanup contract: clean only the finished
+  CI workspace and bounded cache owned by `/srv/portal-ci-runner`; never
+  delete Docker volumes, rootful Docker resources, `/srv/portal`, backups,
+  evidence, data or an execution runtime as part of build cleanup.
+
 ## Owner-authorized phase closeout
 
 - An explicit Bobby approval to promote a named phase/scope is the owner

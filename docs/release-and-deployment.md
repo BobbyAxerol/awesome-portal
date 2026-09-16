@@ -235,6 +235,16 @@ requires a unique backfill run ID, reseeds only Portal-owned cursor checkpoints
 while Control API is stopped, and starts a dual-write warm-up. It never enables
 durable-mirror reads; a later evidence-gated read cutover is a separate change.
 
+## Self-hosted CI/publication capacity
+
+When GitHub-hosted Actions capacity is unavailable, CI, browser verification,
+CodeQL and signed image publication run on the dedicated rootless
+`portal-ci-publish-sgp1` runner. Deployment remains exclusively on
+`portal-deploy-sgp1`; the two runner roles must not be combined. The
+checksum-pinned bootstrap, explicit workflow labels and bounded completion
+cleanup are documented in
+[the isolated CI/publication runner guide](../deploy/self-hosted-ci-runner/README.md).
+
 ### GitHub API identity and release metadata
 
 The deployment host may use a separate fine-grained PAT for GitHub REST API

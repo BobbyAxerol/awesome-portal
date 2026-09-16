@@ -1,0 +1,11 @@
+[Unit]
+Description=Resource envelope for the isolated Portal CI and publication runner
+
+[Slice]
+# Reserve two cores and roughly one third of RAM for the stable Portal, SSH and
+# the operating system.  The rootless Docker daemon and runner share this one
+# envelope, so their limits cannot add up to an accidental host OOM.
+CPUQuota=600%
+MemoryMax=20G
+MemorySwapMax=0
+TasksMax=8192

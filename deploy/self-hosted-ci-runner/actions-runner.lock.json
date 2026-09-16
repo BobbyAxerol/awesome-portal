@@ -1,0 +1,19 @@
+{
+  "schema_version": "portal.self-hosted-ci-publish-runner-lock.v1",
+  "runner_version": "2.337.0",
+  "asset_name": "actions-runner-linux-x64-2.337.0.tar.gz",
+  "asset_url": "https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz",
+  "asset_sha256": "70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613",
+  "runner_name": "portal-ci-publish-sgp1",
+  "runner_labels": [
+    "portal-ci",
+    "portal-publish"
+  ],
+  "runner_user": "portal-ci-runner",
+  "runner_home": "/srv/portal-ci-runner",
+  "runner_directory": "/srv/portal-ci-runner/actions-runner",
+  "runtime_directory": "/srv/portal-ci-runner/runtime",
+  "docker_service_name": "portal-ci-rootless-docker.service",
+  "runner_service_name": "portal-gh-ci-publish-runner.service",
+  "slice_name": "portal-ci-publish.slice"
+}

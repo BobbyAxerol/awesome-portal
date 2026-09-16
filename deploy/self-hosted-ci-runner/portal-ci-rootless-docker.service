@@ -1,0 +1,46 @@
+[Unit]
+Description=Rootless Docker daemon for the isolated Portal CI/publication runner
+Documentation=https://github.com/BobbyAxerol/awesome-portal/blob/main/deploy/self-hosted-ci-runner/README.md
+After=network-online.target
+Wants=network-online.target
+Before=portal-gh-ci-publish-runner.service
+
+[Service]
+Type=simple
+User=portal-ci-runner
+Group=portal-ci-runner
+Slice=portal-ci-publish.slice
+WorkingDirectory=/srv/portal-ci-runner
+Environment=HOME=/srv/portal-ci-runner
+Environment=XDG_RUNTIME_DIR=/srv/portal-ci-runner/runtime
+Environment=DOCKER_HOST=unix:///srv/portal-ci-runner/runtime/docker.sock
+Environment=DOCKERD_ROOTLESS_ROOTLESSKIT_NET=slirp4netns
+Environment=DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=builtin
+ExecStart=/usr/bin/dockerd-rootless.sh --host=unix:///srv/portal-ci-runner/runtime/docker.sock
+Restart=always
+RestartSec=5
+TimeoutStopSec=180
+KillMode=mixed
+Delegate=yes
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+ReadWritePaths=/srv/portal-ci-runner
+
+[Install]
+WantedBy=multi-user.target

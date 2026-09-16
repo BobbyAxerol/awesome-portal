@@ -8991,3 +8991,49 @@ both flags as its first operation.
 **Closure:** Stage A has code and tests, but is not deployed. Stage B/C remain
 blocked on real Stage-A production evidence, deliberately—not on a new Trading
 System capability.
+
+---
+
+## 22. Isolated self-hosted CI/publication compute
+
+**Status:** `IMPLEMENTATION_READY_NOT_BOOTSTRAPPED` (2026-09-16).
+
+GitHub-hosted compute is no longer assumed available for this private
+repository. The replacement is intentionally two-runner, not a widening of
+the existing deploy runner:
+
+| Plane | Runner / labels | Authority | Resource and cleanup boundary |
+| --- | --- | --- | --- |
+| CI + publication | `portal-ci-publish-sgp1` / `portal-ci`, `portal-publish` | checkout, tests, browser evidence, CodeQL, GHCR publication, SBOM/provenance and OIDC Cosign only | dedicated non-login user, rootless Docker, 6 CPU / 20 GiB / no swap slice; job-completion cleanup touches only its own workspaces and bounded rootless cache |
+| deploy | `portal-deploy-sgp1` / `portal-deploy` | reviewed deploy and feature-profile workflow only | existing narrow deployment environment authority; never receives general CI or image publication |
+
+### 22.1 Required invariants
+
+1. CI/publication workflows must select explicit custom labels and immediately
+   assert runner name, non-root identity, private rootless Docker socket and
+   rootless Docker security mode.
+2. The CI runner receives no deployment SSH key, deployment environment secret,
+   rootful Docker socket, Portal volume, database credential or direct
+   Execution/Trading-System access. It does not need a “data sync”: GitHub
+   provides short-lived workflow credentials and OIDC identity per job.
+3. Runner installation is checksum-pinned, consumes a one-time registration
+   token only, and fails rather than reusing an unknown user/path/service.
+4. Cleanup is mandatory after every job but never uses volume prune, global
+   system prune, rootful Docker, `/srv/portal`, business data, backup, evidence
+   or execution-service deletion. Retain image/Buildx cache seven days and
+   browser revisions thirty days; retain the reusable runner itself.
+5. A runner failure can delay CI/publishing but cannot mutate stable Portal
+   data or deployment state. Deployment remains independent and is not
+   restarted as runner recovery.
+
+### 22.2 Exit evidence
+
+- static runner-contract test, workflow lint and existing deployment-runner
+  contract test pass from the reviewed commit;
+- GitHub lists the new runner online with both exact labels while the existing
+  deployment runner remains online with only `portal-deploy`;
+- one same-repository CI workflow runs on `portal-ci`, proves rootless Docker
+  and completion cleanup; then publication proves GHCR/SBOM/provenance/OIDC
+  without a persistent registry secret;
+- stable services, named volumes and deployment runner show no restart or data
+  change throughout bootstrap and test execution.
