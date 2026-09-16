@@ -848,7 +848,7 @@
       "concern_ids": [
         "CONCERN_PORTAL_AUTHORIZATION"
       ],
-      "data_mode": "REAL",
+      "data_mode": "NONE",
       "default_task_id": "SEC-001",
       "description": "Who may see a Governance gate, and who may record its Portal decision.",
       "environments": [
@@ -2064,19 +2064,9 @@
         "CONCERN_PORTAL_AUTHORIZATION"
       ],
       "contract_revision": 2,
-      "data_mode": "STATIC_PREVIEW",
-      "delivery_policy": {
-        "governance_write_enabled": false,
-        "live_protective_commands_enabled": false,
-        "live_risk_increasing_commands_enabled": false,
-        "paper_commands_enabled": false,
-        "policy_revision": 2,
-        "projection_ingestion_enabled": false,
-        "query_enabled": false,
-        "sandbox_commands_enabled": false,
-        "sse_enabled": false
-      },
-      "delivery_profile": "fixture",
+      "data_mode": "NONE",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "PROFILE_ACCESS",
       "inputs": [],
       "maturity": "AVAILABLE",

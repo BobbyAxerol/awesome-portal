@@ -8761,3 +8761,90 @@ migration without the bootstrap step is not.
 `claimOwner` is idempotent and refuses to move a held anchor, so re-running
 bootstrap on an environment that already has an owner changes nothing.
 
+---
+
+## 20.12 A4-D16 — the registry A4-4 wrote did not satisfy its own schema
+
+**Severity: would have killed the stack at boot.** **Found by:** the dev
+rebuild Bobby asked for — nothing else in this campaign could have found it.
+
+`portal-api` refused to start:
+
+```
+PortalRegistryLoadError: REGISTRY_SOURCE_INVALID: registry contract rejected at
+features.12.permissions.0: 'administration.profile_access.manage' is not one of
+[...]
+```
+
+A4-4 promoted `PROFILE_ACCESS` from `COMMISSIONED/STATIC_PREVIEW` to
+`AVAILABLE/REAL` and renamed its permission to the A4 capability. Six schema
+violations followed, and **no gate in this campaign validates that file**: the
+validator is the Python `portal-api`, which no A4 gate ever started. The Control
+API gate, the frontend suite and the visual baseline all pass with a registry
+that cannot be loaded.
+
+| Violation | Resolution |
+|---|---|
+| `permissions.0` not in the schema enum (feature and screen) | **Enum extended.** Not reverted to `profile.read`: the string is functional now — `navigation.ts:79` `ENFORCED_CAPABILITIES` hides the entry unless the server says the caller holds that capability, so reverting would break owner-only navigation. |
+| `data_mode: REAL` requires `source_module` and `summary_source_ids` ≥ 1 | **`data_mode: NONE`.** |
+| `delivery_profile` / `delivery_policy` must be null unless the screen is `COMMISSIONED`/`BLOCKED` | Both set to `null`. |
+
+### 20.12.1 Why `NONE` and not `REAL`, which is what the screen actually is
+
+This was the one real decision, and the honest answer is uncomfortable: **the
+registry has no vocabulary for a screen that is built and real but served by the
+Control API rather than the portal summary pipeline.**
+
+`data_mode: REAL` requires at least one `summary_source_ids` entry, and the
+summary document contains exactly two sources — `planning_current` and
+`quantbt_current`. Neither feeds Profile & Access. Naming one to satisfy the
+schema would be inventing a data lineage, which §3.3 forbids more strongly than
+any inconvenience justifies.
+
+`NONE` was chosen only after checking what it costs. `dataModeBanner()` renders
+"No data contract yet — see the dependency brief" for `NONE`, which would be a
+lie on a working screen — but `ProfileAccess.tsx` renders `SectionHeading`, not
+`ModuleHeader`, so that banner never appears on this screen. It does appear on
+the Portal Map stage brief, where "no *portal data* contract" is literally true.
+
+**Recorded as a contract gap for codex, not silently absorbed:** the registry
+should be able to say "built, real, served by the Control API". Users & Access
+avoids the question only by not being in the registry at all, which is why A4-2
+never hit this.
+
+### 20.12.2 A pinned ledger that did its job
+
+`test_portal_registry_contract.py:423` asserts the exact AVAILABLE set:
+
+```python
+assert available == {"QUANTBT_RESEARCH", "PLANNING"}
+```
+
+That assertion exists so promoting a feature cannot be silent. It was updated to
+include `PROFILE_ACCESS`, with the reason written next to it. The `real` set is
+untouched, because `data_mode` is now `NONE`.
+
+### 20.12.3 Evidence, including the first real deployment of A4
+
+| Gate | Result |
+|---|---|
+| Registry + public fixture vs their schemas | **0 errors** (was 6 and 7) |
+| `test_portal_registry_contract.py` | **14 passed** |
+| Frontend unit | **151 files, 2410 passed** |
+| Dev stack `compose up --build` | **all services healthy** |
+| `portal-api` registry load failures | **0** |
+
+The dev stack is the evidence that matters, because it is the first time A4 ran
+anywhere but a test cell:
+
+- migrations `…034`, `…035`, `…036` applied to the live dev database, which had
+  been sitting at `…033`;
+- `control-api-bootstrap` reported `owner anchor already held by bobby` and
+  `user bobby already exists; skipped` — **A4-D15's fix, working**, additive, and
+  touching no existing credential, role or status;
+- `portal_owner_anchor` now names `bobby`, `claimed_by = bootstrap`.
+
+Had A4-D15 not been found first, this rebuild would have produced a Portal whose
+owner screens were closed to everyone. Had A4-D16 not been found here, the
+production deploy would have failed at container start.
+

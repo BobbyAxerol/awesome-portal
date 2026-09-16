@@ -669,7 +669,7 @@
       "canonical_route": "/administration/profile-access",
       "legacy_routes": [],
       "maturity": "AVAILABLE",
-      "data_mode": "REAL",
+      "data_mode": "NONE",
       "permissions": [
         "administration.profile_access.manage"
       ],
@@ -1756,19 +1756,9 @@
       "contract_revision": 2,
       "feature_id": "PROFILE_ACCESS",
       "maturity": "AVAILABLE",
-      "data_mode": "STATIC_PREVIEW",
-      "delivery_profile": "fixture",
-      "delivery_policy": {
-        "policy_revision": 2,
-        "query_enabled": false,
-        "projection_ingestion_enabled": false,
-        "sse_enabled": false,
-        "governance_write_enabled": false,
-        "paper_commands_enabled": false,
-        "sandbox_commands_enabled": false,
-        "live_protective_commands_enabled": false,
-        "live_risk_increasing_commands_enabled": false
-      },
+      "data_mode": "NONE",
+      "delivery_profile": null,
+      "delivery_policy": null,
       "route": "/administration/profile-access",
       "primary_persona": "portal_owner",
       "primary_decision": "Who may see each Governance gate, and who may decide it?",
