@@ -301,6 +301,7 @@ printf 'Smoke: create Planning task through authenticated gateway\n'
 created_task="$(curl --fail-with-body --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks" \
   --cookie "${cookie_file}" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header "x-portal-csrf: ${csrf_token}" \
   --header 'X-Portal-Actor: forged-browser-actor' \
   --data '{"id":"SMOKE-PHASE5","title":"Phase 5 gateway smoke","workstream":"Portal","phase":"P5","owner":"smoke"}')"
@@ -313,6 +314,7 @@ printf 'Smoke: transition Planning task through authenticated gateway\n'
 transitioned_task="$(curl --fail-with-body --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/transition" \
   --cookie "${cookie_file}" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header "x-portal-csrf: ${csrf_token}" \
   --header 'X-Portal-Actor: forged-browser-actor' \
   --data '{"status":"Done","expected_version":1}')"
@@ -333,6 +335,7 @@ printf 'Smoke: delete Planning task without a request body through authenticated
 deleted_task="$(curl --fail-with-body --silent --show-error --request DELETE \
   "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5?expected_version=2" \
   --cookie "${cookie_file}" \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header "x-portal-csrf: ${csrf_token}")"
 [[ "${deleted_task}" == *'"id":"SMOKE-PHASE5"'* && "${deleted_task}" == *'"version":3'* && "${deleted_task}" == *'"deleted_at":'* ]] || {
   printf 'Roadmap task delete response was unexpected: %s\n' "${deleted_task}" >&2
