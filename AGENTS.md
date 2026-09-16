@@ -136,6 +136,10 @@ Rules for these agents:
   CI workspace and bounded cache owned by `/srv/portal-ci-runner`; never
   delete Docker volumes, rootful Docker resources, `/srv/portal`, backups,
   evidence, data or an execution runtime as part of build cleanup.
+- Never restart a self-hosted runner while GitHub reports an active job. Check
+  that the job is terminal and no `Runner.Worker` remains; use the supplied
+  `runsvc.sh` systemd wrapper, then verify exactly one listener and one online
+  GitHub registration before returning the runner to service.
 
 ## Owner-authorized phase closeout
 

@@ -155,3 +155,8 @@ caption; `_READS` stays false.
    the locked bootstrap. Do not add generic `self-hosted` routing, host Docker
    access, sudo, SSH deployment credentials or a persistent registry token to
    the CI runner.
+5. Before any runner restart, confirm its GitHub job is terminal and its
+   worker count is zero. The systemd service must invoke the runner-supplied
+   `runsvc.sh` wrapper (not `run.sh` directly), then be checked for exactly one
+   listener and one online GitHub registration. This prevents restart loops,
+   duplicate sessions and avoidable RAM growth.

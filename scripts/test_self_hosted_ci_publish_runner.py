@@ -113,8 +113,18 @@ def main() -> int:
     require("TemporaryFileSystem=/var/tmp:mode=1777" in runner_unit, "Actions runner must materialize its private /var/tmp")
     require("MemoryMax=20G" in slice_unit and "CPUQuota=600%" in slice_unit and "MemorySwapMax=0" in slice_unit, "resource envelope drifted")
     require("ACTIONS_RUNNER_HOOK_JOB_COMPLETED" in runner_unit, "completion cleanup hook must remain wired")
+    require(
+        "ExecStart=/srv/portal-ci-runner/actions-runner/bin/runsvc.sh" in runner_unit,
+        "CI runner must use the supplied service wrapper for graceful lifecycle handling",
+    )
+    require(
+        "ExecStart=/srv/portal-ci-runner/actions-runner/run.sh" not in runner_unit,
+        "CI runner must not use run.sh directly under systemd",
+    )
+    require("KillSignal=SIGTERM" in runner_unit and "KillMode=process" in runner_unit, "CI runner graceful stop contract drifted")
 
     require("realpath -e" in cleanup, "cleanup must resolve exact paths before deletion")
+    require('cd "${runner_home}"' in cleanup, "cleanup must be independent of its caller working directory")
     require("container prune" in cleanup and "network prune" in cleanup, "bounded rootless cleanup missing")
     require("image prune --all" in cleanup and "buildx prune" in cleanup, "bounded image/cache cleanup missing")
     require("volume prune" not in cleanup and "system prune" not in cleanup, "cleanup must never prune volumes or global Docker state")
@@ -149,6 +159,10 @@ def main() -> int:
         text = read(test_cell)
         require("CONTAINER_USER" in text and "name=rootless" in text, f"{test_cell.name} must map rootless test cells safely")
         require("CONTAINER_USER='0:0'" in text, f"{test_cell.name} must use the namespace-root mapping only for rootless Docker")
+    visual = read(ROOT / "scripts" / "portal-web-visual.sh")
+    require("CONTAINER_USER" in visual and "name=rootless" in visual, "visual gate must map rootless Docker safely")
+    require("CONTAINER_USER='0:0'" in visual, "visual gate must use namespace-root mapping for rootless Docker")
+    require('-u "${CONTAINER_USER}"' in visual, "visual gate must use the resolved container user")
     require("gh api" not in publish and "jq -r" not in publish, "publication must not depend on uninstalled gh/jq")
     require("curl --fail-with-body" in publish and "python3 - \"${required_name}\"" in publish, "publication CI gate poll must use portable tools")
     require("runs-on: [self-hosted, linux, x64, portal-deploy]" in deploy, "deploy runner routing drifted")

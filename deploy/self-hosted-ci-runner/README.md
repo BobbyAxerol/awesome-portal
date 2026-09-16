@@ -139,6 +139,12 @@ sudo -u portal-ci-runner \
 Do not run `docker system prune` against the host rootful Docker daemon as a
 CI cleanup shortcut.
 
+The service deliberately invokes the runner-supplied `runsvc.sh` wrapper.
+That wrapper forwards a controlled systemd stop to the active listener and
+prevents a stale listener from retaining the GitHub session after a restart.
+Never restart the service while a job is active: cancel or let the GitHub job
+finish first, then confirm one listener and one online runner before restart.
+
 ## Recovery and removal
 
 If a job is stuck, cancel it from GitHub first. Then inspect the two dedicated

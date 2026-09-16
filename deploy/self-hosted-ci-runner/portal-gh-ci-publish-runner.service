@@ -18,10 +18,14 @@ Environment=DOCKER_CONFIG=/srv/portal-ci-runner/.docker
 Environment=RUNNER_ALLOW_RUNASROOT=0
 Environment=ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/lib/portal-ci-runner/job-completed-cleanup.sh
 ExecStartPre=/usr/local/lib/portal-ci-runner/wait-for-rootless-docker.sh
-ExecStart=/srv/portal-ci-runner/actions-runner/run.sh
+# Use the runner-supplied service wrapper, not run.sh.  runsvc.sh translates
+# systemd SIGTERM into SIGINT for the listener; run.sh does not, and a restart
+# can otherwise leave an orphaned listener holding the GitHub runner session.
+ExecStart=/srv/portal-ci-runner/actions-runner/bin/runsvc.sh
 Restart=always
 RestartSec=5
-TimeoutStopSec=180
+KillSignal=SIGTERM
+TimeoutStopSec=5min
 KillMode=process
 UMask=0077
 NoNewPrivileges=yes

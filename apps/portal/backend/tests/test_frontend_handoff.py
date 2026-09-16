@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -444,9 +445,12 @@ def test_export_script_regenerates_identical_artifacts(tmp_path: Path) -> None:
         (target / "fixtures" / name).unlink()
     (target / "openapi" / "portal-api.openapi.json").unlink()
 
-    env = {
-        "PYTHONPATH": f"{PORTAL_ROOT / 'backend' / 'src'}:{PORTAL_ROOT}",
-    }
+    # Keep the interpreter's runtime linker environment.  actions/setup-python
+    # supplies a relocatable CPython whose libpython location is conveyed via
+    # LD_LIBRARY_PATH; replacing the entire environment makes the exact same
+    # executable fail on a self-hosted runner even though pytest itself ran.
+    env = os.environ.copy()
+    env["PYTHONPATH"] = f"{PORTAL_ROOT / 'backend' / 'src'}:{PORTAL_ROOT}"
     result = subprocess.run(
         [sys.executable, str(EXPORT_SCRIPT), "--registry-root", str(target)],
         capture_output=True,

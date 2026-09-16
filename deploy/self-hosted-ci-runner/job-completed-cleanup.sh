@@ -14,6 +14,12 @@ readonly docker_host="unix://${runtime_dir}/docker.sock"
 [[ "${HOME:-}" == "${runner_home}" ]] || exit 0
 [[ "${DOCKER_HOST:-}" == "${docker_host}" ]] || exit 0
 
+# The hook is normally invoked from the Actions workspace, but an owner may
+# also run it manually from an arbitrary directory.  Enter the runner-owned
+# root before any `find` so an inaccessible caller cwd can never make cleanup
+# fail partway through its bounded routine.
+cd "${runner_home}"
+
 safe_clear_workspace() {
   local workspace_root workspace
   [[ -n "${GITHUB_WORKSPACE:-}" && -d "${GITHUB_WORKSPACE}" ]] || return 0
