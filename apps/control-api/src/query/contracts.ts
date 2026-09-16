@@ -112,6 +112,17 @@ export interface PostgresListResource<TRow extends Record<string, unknown>, TIte
   sorts: Readonly<Record<string, SortDefinition>>;
   defaultSort: readonly AppliedSort[];
   allowedRoles: readonly Role[];
+  /**
+   * Server-computed row visibility, applied to every count/page/cursor query.
+   *
+   * This is deliberately not a client filter: it is used for finite policy
+   * domains such as Governance gates, where a caller may have workspace access
+   * but not authority to learn rows for an ungranted gate.
+   */
+  rowVisibility?: {
+    column: string;
+    allowedValues: readonly QueryScalar[];
+  };
   statementTimeoutMs?: number;
   maxFilters?: number;
   mapRow: (row: TRow) => TItem;

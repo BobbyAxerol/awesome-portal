@@ -71,12 +71,7 @@ describe("A4-3 delegated Governance gates", () => {
     grants = new GovernanceGrantsRepository(ctx.pool);
     ownerAccess = new OwnerAccessService(ctx.pool as never);
     lifecycle = new AccountLifecycleRepository(ctx.pool);
-    service = new GovernanceGrantsService(
-      ctx.pool,
-      auth,
-      ownerAccess,
-      new WorkspacesRepository(ctx.pool as never),
-    );
+    service = new GovernanceGrantsService(ctx.pool, auth, ownerAccess);
 
     await ctx.pool.query("DELETE FROM portal_owner_anchor");
     bobby = await freshUser("deleg-owner", "ADMIN");
@@ -207,6 +202,39 @@ describe("A4-3 delegated Governance gates", () => {
       expect(
         governanceDenial({ access, gate: "r1", mode: "decide", workspaceId }),
       ).toBe("GOVERNANCE_CAPABILITY_REQUIRED");
+    });
+
+    it("serializes concurrent retries of one grant into one event and one replay", async () => {
+      const key = randomId("same-grant-key");
+      const request = ownerRequest({
+        idempotencyKey: key,
+        action: "GRANT",
+        granteeUserId: outsider.userId,
+        capability: "governance.canary.read",
+        workspaceId: null,
+      });
+      const [first, second] = await Promise.all([
+        service.execute(request),
+        service.execute({ ...request }),
+      ]);
+      expect([first.outcome, second.outcome].sort()).toEqual(["APPLIED", "REPLAYED"]);
+      expect(
+        Number(
+          (await ctx.pool.query(
+            `SELECT count(*) FROM portal_capability_grant_events WHERE idempotency_key = $1`,
+            [key],
+          )).rows[0].count,
+        ),
+      ).toBe(1);
+      expect(
+        Number(
+          (await ctx.pool.query(
+            `SELECT count(*) FROM portal_capability_grants
+              WHERE grantee_user_id = $1 AND capability = 'governance.canary.read' AND state = 'ACTIVE'`,
+            [outsider.userId],
+          )).rows[0].count,
+        ),
+      ).toBe(1);
     });
   });
 

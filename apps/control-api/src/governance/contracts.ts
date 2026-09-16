@@ -46,7 +46,9 @@ export interface ApprovalHistoryRow extends QueryResultRow {
   approval_version_after: number;
 }
 
-export function approvalHistoryResource(): PostgresListResource<ApprovalHistoryRow, Record<string, unknown>> {
+export function approvalHistoryResource(
+  visibleGates: readonly ApprovalGate[] = APPROVAL_GATES,
+): PostgresListResource<ApprovalHistoryRow, Record<string, unknown>> {
   return {
     resourceId: "governance.approval-history",
     table: "governance_approval_history",
@@ -67,6 +69,7 @@ export function approvalHistoryResource(): PostgresListResource<ApprovalHistoryR
     },
     defaultSort: [{ field: "decided_at", direction: "desc" }],
     allowedRoles: ["ADMIN", "USER"],
+    rowVisibility: { column: "gate", allowedValues: visibleGates },
     statementTimeoutMs: 2_000,
     mapRow: (row) => ({
       id: row.history_id,
@@ -175,6 +178,7 @@ export type MayDecideApproval = (gate: ApprovalGate) => boolean;
 export function approvalInboxResource(
   actor: PortalUser,
   mayDecide: MayDecideApproval,
+  visibleGates: readonly ApprovalGate[] = APPROVAL_GATES,
   now = new Date(),
 ): PostgresListResource<ApprovalInboxRow, ApprovalInboxItem> {
   return {
@@ -269,6 +273,7 @@ export function approvalInboxResource(
     },
     defaultSort: [{ field: "sla_due_at", direction: "asc" }],
     allowedRoles: ["ADMIN", "USER"],
+    rowVisibility: { column: "gate", allowedValues: visibleGates },
     statementTimeoutMs: 2_000,
     mapRow: (row) => {
       const self =
@@ -439,7 +444,9 @@ interface ConditionRegisterRow extends QueryResultRow {
   policy_version: string;
 }
 
-export function governanceConditionsResource(): PostgresListResource<ConditionRegisterRow, Record<string, unknown>> {
+export function governanceConditionsResource(
+  visibleGates: readonly ApprovalGate[] = APPROVAL_GATES,
+): PostgresListResource<ConditionRegisterRow, Record<string, unknown>> {
   return {
     resourceId: "governance.conditions-register",
     table: "governance_conditions_register",
@@ -468,6 +475,7 @@ export function governanceConditionsResource(): PostgresListResource<ConditionRe
     },
     defaultSort: [{ field: "updated_at", direction: "desc" }],
     allowedRoles: ["ADMIN", "USER"],
+    rowVisibility: { column: "gate", allowedValues: visibleGates },
     statementTimeoutMs: 2_000,
     mapRow: (row) => ({
       condition_id: row.condition_id,

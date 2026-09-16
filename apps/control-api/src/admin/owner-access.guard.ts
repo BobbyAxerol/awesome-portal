@@ -152,19 +152,12 @@ export class OwnerAccessGuard implements CanActivate {
         throw new ForbiddenException(MUTATION_SECURITY_MESSAGE[denial]);
       }
       /*
-       * Granted is recorded for mutations only. A step-up is what authorizes a
-       * CHANGE; recording one for every owner page load would bury the six
-       * rows that matter under a stream of reads, and an audit trail nobody
-       * can read is not an audit trail.
+       * Do not emit `owner_step_up_granted` here. This guard proves the
+       * owner/session/CSRF boundary, not a fresh password proof; emitting the
+       * event for every admitted mutation made the audit trail say a step-up
+       * happened when it did not. AccountLifecycleService.stepUp records the
+       * sole success event after the password is actually verified.
        */
-      await this.auth.audit.recordSecurityDecision({
-        eventType: "owner_step_up_granted",
-        actorUserId: user.userId,
-        result: "SUCCESS",
-        reasonCode: "OWNER_ANCHOR_MATCHED",
-        requestId,
-        metadata: { method: request.method },
-      });
     }
 
     const state = request as unknown as {

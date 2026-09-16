@@ -185,9 +185,8 @@ export class AppModule {
             db: Pool,
             auth: AuthService,
             ownerAccess: OwnerAccessService,
-            workspaces: WorkspacesRepository,
-          ) => new GovernanceGrantsService(db, auth, ownerAccess, workspaces),
-          inject: [CONTROL_API_POOL, AuthService, OwnerAccessService, WorkspacesRepository],
+          ) => new GovernanceGrantsService(db, auth, ownerAccess),
+          inject: [CONTROL_API_POOL, AuthService, OwnerAccessService],
         },
         {
           provide: AccountLifecycleService,

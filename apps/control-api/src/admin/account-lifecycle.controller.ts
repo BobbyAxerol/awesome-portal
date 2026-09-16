@@ -42,16 +42,19 @@ import { OwnerAccessGuard } from "./owner-access.guard";
  */
 
 const CreateAccountSchema = z.object({
-  username: z.string().min(2).max(64),
-  display_name: z.string().min(1).max(120).optional(),
+  username: z.string().trim().min(2).max(64),
+  display_name: z.string().trim().min(1).max(120).optional(),
   role: z.enum(["ADMIN", "USER"]).optional(),
 });
 
 const UpdateAccountSchema = z.object({
   expected_revision: z.number().int().nonnegative(),
-  display_name: z.string().min(1).max(120).optional(),
+  display_name: z.string().trim().min(1).max(120).optional(),
   role: z.enum(["ADMIN", "USER"]).optional(),
-});
+}).refine(
+  (value) => value.display_name !== undefined || value.role !== undefined,
+  { message: "Provide a display name or role change." },
+);
 
 const ActionSchema = z.object({
   expected_revision: z.number().int().nonnegative(),

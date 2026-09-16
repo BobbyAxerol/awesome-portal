@@ -320,6 +320,40 @@ describe("A4-2 owner account lifecycle control plane", () => {
       expect(usable).not.toBeNull();
     });
 
+    it("serializes concurrent retries of the same key into one mutation and one replay", async () => {
+      await stepUp(ownerSession);
+      const target = await activeAccount("same-key-target");
+      const key = "same-key-issue";
+      const revision = await revisionOf(target.userId);
+      const path = `/api/admin/accounts/${target.userId}/activation`;
+
+      const [left, right] = await Promise.all([
+        inject(path, {
+          method: "POST",
+          headers: owned(ownerSession, key),
+          payload: { expected_revision: revision },
+        }),
+        inject(path, {
+          method: "POST",
+          headers: owned(ownerSession, key),
+          payload: { expected_revision: revision },
+        }),
+      ]);
+
+      expect([left.statusCode, right.statusCode]).toEqual([201, 201]);
+      const bodies = [left.json(), right.json()];
+      expect(bodies.map((body) => body.outcome).sort()).toEqual(["APPLIED", "REPLAYED"]);
+      expect(bodies.filter((body) => body.activation?.token).map((body) => body.outcome)).toEqual(["APPLIED"]);
+      expect(
+        Number(
+          (await ctx.pool.query(
+            `SELECT count(*) FROM account_lifecycle_operations WHERE idempotency_key = $1`,
+            [key],
+          )).rows[0].count,
+        ),
+      ).toBe(1);
+    });
+
     it("refuses a reused idempotency key that carries a different request", async () => {
       await stepUp(ownerSession);
       const target = await activeAccount("dup-conflict");
@@ -414,6 +448,52 @@ describe("A4-2 owner account lifecycle control plane", () => {
         headers: { cookie: ownerSession.cookie },
       });
       expect(status.json().state).toBe("REQUIRED");
+    });
+
+    it("requires step-up before creating an account or changing a role", async () => {
+      await ctx.pool.query(`UPDATE owner_step_up_grants SET expires_at = now() - interval '1 second'`);
+
+      const create = await inject("/api/admin/accounts", {
+        method: "POST",
+        headers: owned(ownerSession, "create-needs-step-up"),
+        payload: { username: "stepup-new-user", display_name: "Stepup New User", role: "USER" },
+      });
+      expect(create.statusCode).toBe(403);
+      expect(create.json().error.code).toBe("STEP_UP_REQUIRED");
+      expect(await auth.users.findByUsername("stepup-new-user")).toBeNull();
+
+      const target = await activeAccount("role-needs-stepup");
+      const role = await inject(`/api/admin/accounts/${target.userId}`, {
+        method: "PATCH",
+        headers: owned(ownerSession, "role-needs-step-up"),
+        payload: { expected_revision: await revisionOf(target.userId), role: "ADMIN" },
+      });
+      expect(role.statusCode).toBe(403);
+      expect(role.json().error.code).toBe("STEP_UP_REQUIRED");
+      expect((await auth.users.findById(target.userId))!.role).toBe("USER");
+    });
+
+    it("refuses a profile no-op without consuming an account revision", async () => {
+      await stepUp(ownerSession);
+      const target = await activeAccount("profile-noop");
+      const revision = await revisionOf(target.userId);
+      const response = await inject(`/api/admin/accounts/${target.userId}`, {
+        method: "PATCH",
+        headers: owned(ownerSession, "profile-noop"),
+        payload: {
+          expected_revision: revision,
+          display_name: target.username,
+          role: "USER",
+        },
+      });
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error.code).toBe("PROFILE_UNCHANGED");
+      expect(await revisionOf(target.userId)).toBe(revision);
+      const operation = await ctx.pool.query(
+        `SELECT outcome, reason_code FROM account_lifecycle_operations WHERE idempotency_key = $1`,
+        ["profile-noop"],
+      );
+      expect(operation.rows).toEqual([{ outcome: "DENIED", reason_code: "PROFILE_UNCHANGED" }]);
     });
 
     it("reads back the new revision immediately after a write", async () => {

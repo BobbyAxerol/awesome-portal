@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { PortalUser, Role, UserStatus } from "../domain";
 
 interface UserRow {
@@ -38,7 +38,7 @@ function toUser(row: UserRow): PortalUser {
 }
 
 export class UsersRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool | PoolClient) {}
 
   async findByUsername(username: string): Promise<PortalUser | null> {
     const result = await this.pool.query<UserRow>(
@@ -140,6 +140,28 @@ export class UsersRepository {
       [input.userId, input.username, input.displayName, input.role],
     );
     return toUser(result.rows[0]);
+  }
+
+  /**
+   * Transaction-safe invitation creation.  A concurrent owner request for the
+   * same username is a normal `USERNAME_TAKEN` result for the caller, not a
+   * PostgreSQL error that leaves the surrounding operation transaction
+   * aborted before it can form a truthful response.
+   */
+  async createIfAbsent(input: {
+    userId: string;
+    username: string;
+    displayName: string;
+    role: Role;
+  }): Promise<PortalUser | null> {
+    const result = await this.pool.query<UserRow>(
+      `INSERT INTO portal_users (user_id, username, display_name, role, status, must_change_password)
+       VALUES ($1, $2, $3, $4, 'INVITED', true)
+       ON CONFLICT DO NOTHING
+       RETURNING *`,
+      [input.userId, input.username, input.displayName, input.role],
+    );
+    return result.rows[0] ? toUser(result.rows[0]) : null;
   }
 
   async update(input: {

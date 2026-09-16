@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 
 import { PortalCapability, isPortalCapability } from "./owner-access";
 
@@ -126,7 +126,8 @@ function toEvent(row: EventRow): GrantEvent {
 }
 
 export class GovernanceGrantsRepository {
-  constructor(private readonly pool: Pool) {}
+  /** See AccountLifecycleRepository: mutation services pass a transaction client. */
+  constructor(private readonly pool: Pool | PoolClient) {}
 
   // ------------------------------------------------------------- reading
 
@@ -211,6 +212,32 @@ export class GovernanceGrantsRepository {
       [input.grantId, input.granteeUserId, input.capability, input.workspaceId, input.issuedBy],
     );
     return toGrant(result.rows[0]);
+  }
+
+  /**
+   * The transaction-safe sibling of `insertGrant`.
+   *
+   * An active-grant uniqueness race must be a normal typed refusal, not a
+   * driver error that aborts the transaction after unrelated work has started.
+   * `ON CONFLICT DO NOTHING` leaves the transaction usable so the caller can
+   * append its immutable refusal event in that same commit.
+   */
+  async insertGrantIfAbsent(input: {
+    grantId: string;
+    granteeUserId: string;
+    capability: PortalCapability;
+    workspaceId: string | null;
+    issuedBy: string;
+  }): Promise<CapabilityGrant | null> {
+    const result = await this.pool.query<GrantRow>(
+      `INSERT INTO portal_capability_grants
+         (grant_id, grantee_user_id, capability, workspace_id, state, issued_by)
+       VALUES ($1, $2, $3, $4, 'ACTIVE', $5)
+       ON CONFLICT DO NOTHING
+       RETURNING *`,
+      [input.grantId, input.granteeUserId, input.capability, input.workspaceId, input.issuedBy],
+    );
+    return result.rows[0] ? toGrant(result.rows[0]) : null;
   }
 
   /**

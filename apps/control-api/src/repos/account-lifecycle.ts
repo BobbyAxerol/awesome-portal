@@ -128,7 +128,13 @@ function toOperation(row: OperationRow): LifecycleOperationRecord {
 }
 
 export class AccountLifecycleRepository {
-  constructor(private readonly pool: Pool) {}
+  /**
+   * A pool for ordinary work, or the caller's client while a named owner
+   * operation is being committed.  Keeping repositories transaction-aware is
+   * what prevents an account/grant state change from becoming visible without
+   * its idempotency and audit lineage.
+   */
+  constructor(private readonly pool: Pool | PoolClient) {}
 
   // ------------------------------------------------------------- step-up
 

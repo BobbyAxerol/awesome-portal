@@ -7,6 +7,7 @@ import { buildPool } from "../src/db/pool";
 import { AuthService } from "../src/auth/auth.service";
 import { AdminService } from "../src/admin/admin.service";
 import { Argon2CredentialService } from "../src/auth/argon";
+import { OwnerAccessRepository } from "../src/repos/owner-access";
 import {
   runBootstrap,
   parseBootstrapUsers,
@@ -20,7 +21,7 @@ let auth: AuthService;
 let admin: AdminService;
 
 function deps() {
-  return { auth, admin };
+  return { auth, admin, ownerAccess: new OwnerAccessRepository(pool) };
 }
 
 beforeAll(async () => {
@@ -93,6 +94,60 @@ describe("bootstrap credential handover", () => {
     await runBootstrap(USERS, io, { printOneTime: false }, deps());
     expect(lines.some((l) => l.includes("already exists; skipped"))).toBe(true);
   });
+
+  it("strict production bootstrap refuses before creating or claiming anything", async () => {
+    const existing = await admin.createUser({
+      username: `strict-existing-${Date.now()}`,
+      displayName: "Strict Existing",
+      role: "ADMIN",
+    });
+    const missingUsername = `strict-missing-${Date.now()}`;
+    const beforeUsers = await auth.users.list();
+    const beforeAnchor = await new OwnerAccessRepository(pool).ownerAnchor();
+    await expect(
+      runBootstrap(
+        [
+          { username: existing.username, role: "ADMIN", owner: true },
+          { username: missingUsername, role: "USER" },
+        ],
+        capture().io,
+        { printOneTime: false, requireExistingUsers: true },
+        deps(),
+      ),
+    ).rejects.toThrow(/strict bootstrap refuses to create production users/);
+    expect(await auth.users.findByUsername(missingUsername)).toBeNull();
+    expect((await auth.users.list()).map((user) => user.userId)).toEqual(
+      beforeUsers.map((user) => user.userId),
+    );
+    expect(await new OwnerAccessRepository(pool).ownerAnchor()).toEqual(beforeAnchor);
+  });
+
+  it("never lets a strict production bootstrap reset existing credentials", async () => {
+    const userId = (await auth.users.findByUsername("bobby"))!.userId;
+    const before = await pool.query<{ activation_id: string; token_hash: string; revoked_at: Date | null }>(
+      `SELECT activation_id, token_hash, revoked_at
+         FROM activation_credentials
+        WHERE user_id = $1
+        ORDER BY activation_id`,
+      [userId],
+    );
+    await expect(
+      runBootstrap(
+        [{ username: "bobby", role: "ADMIN", owner: true }],
+        capture().io,
+        { printOneTime: true, requireExistingUsers: true },
+        deps(),
+      ),
+    ).rejects.toThrow(/strict bootstrap forbids one-time credential output/);
+    const after = await pool.query<{ activation_id: string; token_hash: string; revoked_at: Date | null }>(
+      `SELECT activation_id, token_hash, revoked_at
+         FROM activation_credentials
+        WHERE user_id = $1
+        ORDER BY activation_id`,
+      [userId],
+    );
+    expect(after.rows).toEqual(before.rows);
+  });
 });
 
 describe("parseBootstrapUsers", () => {
@@ -119,6 +174,12 @@ describe("parseBootstrapUsers", () => {
     const candidates = [
       join(here, "../deploy/control-api/bootstrap-users.yaml"),
       join(here, "../../../deploy/control-api/bootstrap-users.yaml"),
+      // The disposable package test cell mounts deployment input alongside the
+      // package, while a monorepo checkout resolves one of the two paths
+      // above.  All candidates name the same canonical file; none is a copied
+      // inline fixture that can drift from the release artifact.
+      join(process.cwd(), "../deploy/control-api/bootstrap-users.yaml"),
+      join(process.cwd(), "../../deploy/control-api/bootstrap-users.yaml"),
     ];
     const file = candidates.find((path) => existsSync(path));
     expect(file, `bootstrap input not found at any of ${candidates.join(", ")}`).toBeTruthy();

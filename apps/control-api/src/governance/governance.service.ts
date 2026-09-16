@@ -19,6 +19,8 @@ import { GovernanceApplyTokenSigner } from "./apply-token";
 import {
   approvalHistoryResource,
   approvalInboxResource,
+  APPROVAL_GATES,
+  type ApprovalGate,
   type MayDecideApproval,
   governanceConditionsResource,
   R1Decision,
@@ -190,13 +192,14 @@ export class GovernanceService {
      */
     const access = await this.ownerAccess.effectiveAccess(user.userId);
     const mayDecide = approvalDecisionPredicate(user, access, workspaceId);
+    const visibleGates = approvalReadGates(user, access, workspaceId);
     const [page, counts] = await Promise.all([
-      this.query.list(approvalInboxResource(user, mayDecide), {
+      this.query.list(approvalInboxResource(user, mayDecide, visibleGates), {
         actorId: user.userId,
         workspaceId,
         role: user.role,
       }, raw),
-      this.repository.counts(workspaceId),
+      this.repository.counts(workspaceId, visibleGates),
     ]);
     return {
       schema_version: "governance.approval-inbox.v1",
@@ -223,8 +226,10 @@ export class GovernanceService {
   }
 
   async history(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const visibleGates = approvalReadGates(user, access, workspaceId);
     const page = await this.query.list(
-      approvalHistoryResource(),
+      approvalHistoryResource(visibleGates),
       { actorId: user.userId, workspaceId, role: user.role },
       raw,
     );
@@ -240,8 +245,10 @@ export class GovernanceService {
   }
 
   async conditions(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const visibleGates = approvalReadGates(user, access, workspaceId);
     const page = await this.query.list(
-      governanceConditionsResource(),
+      governanceConditionsResource(visibleGates),
       { actorId: user.userId, workspaceId, role: user.role },
       raw,
     );
@@ -1009,4 +1016,29 @@ function approvalDecisionPredicate(
         return false;
     }
   };
+}
+
+/**
+ * The Inbox, history and conditions register are reads, so their visibility
+ * follows the matching `*.read` grant rather than the stronger decision
+ * affordance.  This is evaluated before the SQL page/count/cursor is built;
+ * it is not a cosmetic row filter after data has reached the process.
+ *
+ * PAPER_EXIT remains the one documented legacy exception: its published
+ * service is still role-gated and A4 intentionally did not invent a new
+ * capability for it.  SANDBOX_EXIT has no published reader/decision contract,
+ * so only the Portal owner can inspect its historical rows until one exists.
+ */
+function approvalReadGates(
+  user: PortalUser,
+  access: EffectiveAccess,
+  workspaceId: string,
+): ApprovalGate[] {
+  if (access.isOwner) return [...APPROVAL_GATES];
+  const gates: ApprovalGate[] = [];
+  if (mayGovern({ access, gate: "r1", mode: "read", workspaceId })) gates.push("R1");
+  if (mayGovern({ access, gate: "r2", mode: "read", workspaceId })) gates.push("R2");
+  if (mayGovern({ access, gate: "live", mode: "read", workspaceId })) gates.push("LIVE_GATE");
+  if (user.role === "ADMIN") gates.push("PAPER_EXIT");
+  return gates;
 }

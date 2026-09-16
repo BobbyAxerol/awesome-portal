@@ -19,18 +19,10 @@
  *
  * SWEEP STATUS — stated precisely, because a docstring that overclaims is how
  * the next reader stops checking. `/api/admin/*`, the facade proxy and
- * `planning.controller` now call this function. `auth.controller` does NOT: its
- * three routes still call `originAllowed` bare, and `change-password`
- * additionally compares the header only against the session hash, never
- * against the cookie — the same pair of drifts named above. It is left alone
- * deliberately, not overlooked: none of the three is reachable by the attack
- * this closes (a cross-origin page cannot read a `__Host-` cookie, so it can
- * never produce the header), `login` has no session and therefore no CSRF
- * secret to compare against, and `scripts/smoke-stack.sh` drives all three by
- * curl with no Origin header — so tightening them requires that script to know
- * the deployment's exact `PORTAL_PUBLIC_ORIGIN`, which is a loopback address
- * in the smoke stack and a hostname everywhere else. Recorded as its own item;
- * see A4-FE-BE-GAP-03.
+ * `planning.controller` call the full decision. `auth.controller` uses
+ * `originDenial` for login/logout (those paths have no usable session CSRF
+ * proof at their first step) and the full decision for change-password. Smoke
+ * callers must therefore send the deployment's exact public Origin on writes.
  *
  * §20.2 rule 2: client behaviour is never a security boundary. The frontend
  * already sends `x-portal-csrf`; that is a convenience, and this is the

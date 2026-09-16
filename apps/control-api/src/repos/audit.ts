@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { randomId } from "../domain";
 
 export type AuditResult = "SUCCESS" | "FAILURE" | "DENIED";
@@ -17,7 +17,7 @@ export const SECURITY_AUDIT_EVENTS = [
   "activation_recovery_required",
   /** A login attempt against such an account — the response stays generic; this row is why. */
   "login_denied_activation_unusable",
-  /** An owner-only route admitted the owner (the step-up that authorized a mutation). */
+  /** The owner re-authenticated with their own password for a short-lived step-up. */
   "owner_step_up_granted",
   /** An owner-only route refused a caller, with the stage that refused. */
   "owner_step_up_denied",
@@ -99,7 +99,7 @@ export function redactAuditMetadata(
 }
 
 export class AuditRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool | PoolClient) {}
 
   async record(input: {
     eventType: string;

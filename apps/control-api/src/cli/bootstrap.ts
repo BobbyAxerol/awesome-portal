@@ -47,12 +47,48 @@ export interface BootstrapDeps {
 export async function runBootstrap(
   users: BootstrapUser[],
   io: BootstrapIO,
-  options: { printOneTime: boolean },
+  options: { printOneTime: boolean; requireExistingUsers?: boolean },
   deps: BootstrapDeps,
 ): Promise<void> {
   const owners = users.filter((entry) => entry.owner === true);
   if (owners.length > 1) {
     throw new Error("bootstrap names more than one owner; there is exactly one Portal owner");
+  }
+
+  /*
+   * `--print-one-time-credentials` is an explicit local handover mechanism,
+   * not a production recovery channel.  In strict production mode it would
+   * reset every configured account merely because a one-shot deployment job
+   * was invoked with the wrong flag, bypassing the audited owner control
+   * plane.  Production recovery therefore goes only through the named owner
+   * API; fresh/local cells retain the deliberate handover option.
+   */
+  if (options.requireExistingUsers && options.printOneTime) {
+    throw new Error(
+      "strict bootstrap forbids one-time credential output; use the owner account lifecycle API",
+    );
+  }
+
+  /*
+   * Production never treats a release bootstrap file as a provisioning
+   * request.  The stable database is authoritative for Bobby/Stan/Thanh and
+   * an omitted/misspelled row must fail the one-shot job before it creates a
+   * look-alike account or claims the owner anchor for it.  Local/fresh test
+   * cells retain the useful permissive bootstrap behavior.
+   */
+  if (options.requireExistingUsers) {
+    if (owners.length !== 1) {
+      throw new Error("strict bootstrap must name exactly one existing Portal owner");
+    }
+    const missing: string[] = [];
+    for (const entry of users) {
+      if (!(await deps.auth.users.findByUsername(entry.username))) missing.push(entry.username);
+    }
+    if (missing.length > 0) {
+      throw new Error(
+        `strict bootstrap refuses to create production users: ${missing.join(", ")}`,
+      );
+    }
   }
 
   for (const entry of users) {
@@ -172,7 +208,10 @@ async function main(): Promise<void> {
   await runBootstrap(
     users,
     { log: (line) => console.log(line) },
-    { printOneTime: args.includes("--print-one-time-credentials") },
+    {
+      printOneTime: args.includes("--print-one-time-credentials"),
+      requireExistingUsers: args.includes("--require-existing-users"),
+    },
     { auth, admin, ownerAccess },
   );
   await pool.end();

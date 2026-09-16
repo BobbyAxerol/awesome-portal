@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 
 export interface PasswordCredential {
   credentialId: string;
@@ -39,7 +39,7 @@ interface ActivationRow {
 }
 
 export class CredentialsRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool | PoolClient) {}
 
   async findPassword(userId: string): Promise<PasswordCredential | null> {
     const result = await this.pool.query<PasswordRow>(

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { CONTROL_API_POOL } from "../tokens";
 
 export interface Workspace {
@@ -18,7 +18,7 @@ interface WorkspaceRow {
 
 @Injectable()
 export class WorkspacesRepository {
-  constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
+  constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool | PoolClient) {}
 
   async findByMembership(userId: string): Promise<Workspace[]> {
     const result = await this.pool.query<WorkspaceRow>(

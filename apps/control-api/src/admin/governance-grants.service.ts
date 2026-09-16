@@ -12,6 +12,7 @@ import {
 import { OwnerAccessRepository, isPortalCapability, type PortalCapability } from "../repos/owner-access";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { AccountLifecycleRepository } from "../repos/account-lifecycle";
+import { UsersRepository } from "../repos/users";
 
 /**
  * A4-3 · the owner's policy surface.
@@ -69,20 +70,26 @@ export interface GrantResult {
   grant: CapabilityGrant | null;
 }
 
+/** Transaction-bound repositories for an exact authority mutation. */
+interface GrantMutationRepositories {
+  grants: GovernanceGrantsRepository;
+  anchor: OwnerAccessRepository;
+  lifecycle: AccountLifecycleRepository;
+  users: UsersRepository;
+  workspaces: WorkspacesRepository;
+}
+
+type GrantExecution = GrantResult | { denial: GrantDeniedError };
+
 export class GovernanceGrantsService {
   private readonly grants: GovernanceGrantsRepository;
-  private readonly anchor: OwnerAccessRepository;
-  private readonly lifecycle: AccountLifecycleRepository;
 
   constructor(
     private readonly pool: Pool,
     private readonly auth: AuthService,
     private readonly ownerAccess: OwnerAccessService,
-    private readonly workspaces: WorkspacesRepository,
   ) {
     this.grants = new GovernanceGrantsRepository(pool);
-    this.anchor = new OwnerAccessRepository(pool);
-    this.lifecycle = new AccountLifecycleRepository(pool);
   }
 
   // ------------------------------------------------------------------ read
@@ -137,41 +144,52 @@ export class GovernanceGrantsService {
 
   async execute(request: GrantRequest): Promise<GrantResult> {
     const fingerprint = fingerprintOf(request);
-
-    const prior = await this.grants.findEventByKey(request.idempotencyKey);
-    if (prior) {
-      if (prior.requestFingerprint !== fingerprint) {
-        throw new GrantDeniedError(
-          "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",
-          "That idempotency key was used for a different request. Use a new key.",
-        );
+    const output = await this.withTransaction<GrantExecution>(request.idempotencyKey, async (tx) => {
+      const prior = await tx.grants.findEventByKey(request.idempotencyKey);
+      if (prior) {
+        if (prior.requestFingerprint !== fingerprint) {
+          return {
+            denial: new GrantDeniedError(
+              "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",
+              "That idempotency key was used for a different request. Use a new key.",
+            ),
+          };
+        }
+        return {
+          outcome: "REPLAYED",
+          event: prior,
+          grant: prior.grantId ? await tx.grants.findById(prior.grantId) : null,
+        };
       }
-      return {
-        outcome: "REPLAYED",
-        event: prior,
-        grant: prior.grantId ? await this.grants.findById(prior.grantId) : null,
-      };
-    }
 
-    /*
-     * A grant change is as consequential as an account change, so it carries
-     * the same proof: the owner re-authenticated in THIS session, recently.
-     */
-    const steppedUp = (await this.lifecycle.activeStepUpExpiry(request.sessionId)) !== null;
-    if (!steppedUp) {
-      throw new GrantDeniedError(
-        "STEP_UP_REQUIRED",
-        "Re-enter your password to change who may decide a Governance gate.",
-        403,
-      );
-    }
+      /*
+       * A grant change is as consequential as an account change, so it carries
+       * the same proof: the owner re-authenticated in THIS session, recently.
+       */
+      const steppedUp = (await tx.lifecycle.activeStepUpExpiry(request.sessionId)) !== null;
+      if (!steppedUp) {
+        return {
+          denial: new GrantDeniedError(
+            "STEP_UP_REQUIRED",
+            "Re-enter your password to change who may decide a Governance gate.",
+            403,
+          ),
+        };
+      }
 
-    return request.action === "GRANT"
-      ? this.grant(request, fingerprint)
-      : this.revoke(request, fingerprint);
+      return request.action === "GRANT"
+        ? this.grant(request, fingerprint, tx)
+        : this.revoke(request, fingerprint, tx);
+    });
+    if ("denial" in output) throw output.denial;
+    return output;
   }
 
-  private async grant(request: GrantRequest, fingerprint: string): Promise<GrantResult> {
+  private async grant(
+    request: GrantRequest,
+    fingerprint: string,
+    tx: GrantMutationRepositories,
+  ): Promise<GrantExecution> {
     const capability = request.capability ?? "";
     if (!isPortalCapability(capability)) {
       // §20.5 item 2: only the finite §20.3 namespace. No free-form route, SQL,
@@ -184,47 +202,70 @@ export class GovernanceGrantsService {
       );
     }
     const granteeUserId = request.granteeUserId ?? "";
-    const grantee = await this.auth.users.findById(granteeUserId);
+    const grantee = await tx.users.findById(granteeUserId);
     if (!grantee) {
       throw new GrantDeniedError("ACCOUNT_NOT_FOUND", "No such account.", 404);
     }
 
-    const refusal = await this.refuseImpossibleGrant(request, grantee, capability);
+    const refusal = await this.refuseImpossibleGrant(request, grantee, capability, tx);
     if (refusal) {
-      await this.record(request, fingerprint, null, "DENIED", refusal.reasonCode, granteeUserId, capability);
-      throw refusal;
+      await this.record(tx, request, fingerprint, null, "DENIED", refusal.reasonCode, granteeUserId, capability);
+      return { denial: refusal };
     }
 
-    const existing = await this.grants.findActive({
+    const existing = await tx.grants.findActive({
       granteeUserId,
       capability,
       workspaceId: request.workspaceId ?? null,
     });
     if (existing) {
       await this.record(
-        request, fingerprint, existing, "DENIED", "GRANT_ALREADY_ACTIVE", granteeUserId, capability,
+        tx, request, fingerprint, existing, "DENIED", "GRANT_ALREADY_ACTIVE", granteeUserId, capability,
       );
-      throw new GrantDeniedError(
-        "GRANT_ALREADY_ACTIVE",
-        `${grantee.username} already holds ${capability} in that scope.`,
-      );
+      return {
+        denial: new GrantDeniedError(
+          "GRANT_ALREADY_ACTIVE",
+          `${grantee.username} already holds ${capability} in that scope.`,
+        ),
+      };
     }
 
-    const created = await this.grants.insertGrant({
+    const created = await tx.grants.insertGrantIfAbsent({
       grantId: randomId("grn"),
       granteeUserId,
       capability,
       workspaceId: request.workspaceId ?? null,
       issuedBy: request.actor.userId,
     });
+    if (!created) {
+      /* A different idempotency key won the unique active-grant race. */
+      const concurrent = await tx.grants.findActive({
+        granteeUserId,
+        capability,
+        workspaceId: request.workspaceId ?? null,
+      });
+      await this.record(
+        tx, request, fingerprint, concurrent, "DENIED", "GRANT_ALREADY_ACTIVE", granteeUserId, capability,
+      );
+      return {
+        denial: new GrantDeniedError(
+          "GRANT_ALREADY_ACTIVE",
+          `${grantee.username} already holds ${capability} in that scope.`,
+        ),
+      };
+    }
     const event = await this.record(
-      request, fingerprint, created, "APPLIED", null, granteeUserId, capability,
+      tx, request, fingerprint, created, "APPLIED", null, granteeUserId, capability,
     );
     return { outcome: "APPLIED", event, grant: created };
   }
 
-  private async revoke(request: GrantRequest, fingerprint: string): Promise<GrantResult> {
-    const existing = request.grantId ? await this.grants.findById(request.grantId) : null;
+  private async revoke(
+    request: GrantRequest,
+    fingerprint: string,
+    tx: GrantMutationRepositories,
+  ): Promise<GrantExecution> {
+    const existing = request.grantId ? await tx.grants.findById(request.grantId) : null;
     if (!existing) {
       throw new GrantDeniedError("GRANT_NOT_FOUND", "No such grant.", 404);
     }
@@ -232,29 +273,33 @@ export class GovernanceGrantsService {
       // Not an error worth a conflict: the owner wanted it gone and it is gone.
       // Recorded so the attempt is still visible in the lineage.
       await this.record(
-        request, fingerprint, existing, "DENIED", "GRANT_ALREADY_REVOKED",
+        tx, request, fingerprint, existing, "DENIED", "GRANT_ALREADY_REVOKED",
         existing.granteeUserId, existing.capability,
       );
-      throw new GrantDeniedError(
-        "GRANT_ALREADY_REVOKED",
-        "That grant has already been revoked.",
-      );
+      return {
+        denial: new GrantDeniedError(
+          "GRANT_ALREADY_REVOKED",
+          "That grant has already been revoked.",
+        ),
+      };
     }
 
-    const revoked = await this.grants.revokeGrant({
+    const revoked = await tx.grants.revokeGrant({
       grantId: existing.grantId,
       expectedRevision: request.expectedRevision ?? -1,
       revokedBy: request.actor.userId,
     });
     if (!revoked) {
       await this.record(
-        request, fingerprint, existing, "CONFLICT", "STALE_GRANT_REVISION",
+        tx, request, fingerprint, existing, "CONFLICT", "STALE_GRANT_REVISION",
         existing.granteeUserId, existing.capability,
       );
-      throw new GrantDeniedError(
-        "STALE_GRANT_REVISION",
-        `This grant has changed since you loaded it (now revision ${existing.grantRevision}). Refresh and try again.`,
-      );
+      return {
+        denial: new GrantDeniedError(
+          "STALE_GRANT_REVISION",
+          `This grant has changed since you loaded it (now revision ${existing.grantRevision}). Refresh and try again.`,
+        ),
+      };
     }
 
     /*
@@ -265,10 +310,10 @@ export class GovernanceGrantsService {
      * the step-up the grantee may hold, because a revoked decider should not
      * keep a pre-authorized window open on a destructive action.
      */
-    await this.lifecycle.revokeStepUpsForUser(existing.granteeUserId);
+    await tx.lifecycle.revokeStepUpsForUser(existing.granteeUserId);
 
     const event = await this.record(
-      request, fingerprint, revoked, "APPLIED", null,
+      tx, request, fingerprint, revoked, "APPLIED", null,
       existing.granteeUserId, existing.capability,
     );
     return { outcome: "APPLIED", event, grant: revoked };
@@ -279,6 +324,7 @@ export class GovernanceGrantsService {
     request: GrantRequest,
     grantee: PortalUser,
     capability: PortalCapability,
+    tx: GrantMutationRepositories,
   ): Promise<GrantDeniedError | null> {
     if (grantee.userId === request.actor.userId) {
       return new GrantDeniedError(
@@ -287,7 +333,8 @@ export class GovernanceGrantsService {
       );
     }
 
-    const ownerUserId = await this.ownerAccess.ownerUserId();
+    const anchor = await tx.anchor.ownerAnchor();
+    const ownerUserId = anchor?.userId ?? null;
     if (ownerUserId !== null && grantee.userId === ownerUserId) {
       return new GrantDeniedError(
         "OWNER_ANCHOR_PROTECTED",
@@ -303,7 +350,7 @@ export class GovernanceGrantsService {
     }
 
     const workspaceId = request.workspaceId ?? null;
-    if (workspaceId !== null && !(await this.workspaces.isMember(workspaceId, grantee.userId))) {
+    if (workspaceId !== null && !(await tx.workspaces.isMember(workspaceId, grantee.userId))) {
       return new GrantDeniedError(
         "GRANTEE_NOT_IN_WORKSPACE",
         `${grantee.username} is not a member of that workspace. A grant says what somebody may do, never where they may go.`,
@@ -322,6 +369,7 @@ export class GovernanceGrantsService {
   }
 
   private record(
+    tx: GrantMutationRepositories,
     request: GrantRequest,
     fingerprint: string,
     grant: CapabilityGrant | null,
@@ -330,7 +378,7 @@ export class GovernanceGrantsService {
     granteeUserId: string,
     capability: string,
   ): Promise<GrantEvent> {
-    return this.grants.recordEvent({
+    return tx.grants.recordEvent({
       eventId: randomId("gre"),
       idempotencyKey: request.idempotencyKey,
       grantId: grant?.grantId ?? null,
@@ -353,6 +401,43 @@ export class GovernanceGrantsService {
       requestId: request.requestId,
       stepUpUsed: true,
     });
+  }
+
+  /** One atomic authority change, including its idempotency lineage. */
+  private async withTransaction<T>(
+    idempotencyKey: string,
+    operation: (tx: GrantMutationRepositories) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
+    let begun = false;
+    try {
+      await client.query("BEGIN");
+      begun = true;
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+        `governance-grant:${idempotencyKey}`,
+      ]);
+      const result = await operation({
+        grants: new GovernanceGrantsRepository(client),
+        anchor: new OwnerAccessRepository(client),
+        lifecycle: new AccountLifecycleRepository(client),
+        users: new UsersRepository(client),
+        workspaces: new WorkspacesRepository(client),
+      });
+      await client.query("COMMIT");
+      begun = false;
+      return result;
+    } catch (error) {
+      if (begun) {
+        try {
+          await client.query("ROLLBACK");
+        } catch {
+          // Preserve the original application/database error.
+        }
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 

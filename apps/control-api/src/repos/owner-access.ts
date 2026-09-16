@@ -60,7 +60,7 @@ export interface OwnerAnchor {
 }
 
 export class OwnerAccessRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool | PoolClient) {}
 
   /**
    * The single owner, or `null` when there is not exactly one.

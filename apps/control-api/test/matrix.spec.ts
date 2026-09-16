@@ -367,6 +367,24 @@ describe("cloudflare access security matrix", () => {
     expect(unprotected.statusCode).toBe(403);
     expect(await auth.users.findByUsername("nope")).toBeNull();
 
+    /*
+     * A4 deliberately makes account creation a stepped-up owner action.  The
+     * matrix is exercising the successful, browser-shaped path below, so it
+     * must establish that short-lived proof rather than accidentally testing
+     * the older ADMIN-only contract.
+     */
+    const steppedUp = await inject("/api/admin/step-up", {
+      method: "POST",
+      headers: {
+        cookie: session.cookie,
+        "x-portal-csrf": session.csrf,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-idempotency-key": "matrix-owner-step-up",
+      },
+      payload: { password: bobby.password },
+    });
+    expect(steppedUp.statusCode).toBe(201);
+
     const created = await inject("/api/admin/accounts", {
       method: "POST",
       headers: {

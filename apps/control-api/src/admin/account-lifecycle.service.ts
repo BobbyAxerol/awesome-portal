@@ -6,6 +6,10 @@ import { AuthService } from "../auth/auth.service";
 import { randomToken, sha256 } from "../auth/argon";
 import { PortalUser, Role, accountStateOf, randomId } from "../domain";
 import { OwnerAccessRepository } from "../repos/owner-access";
+import { UsersRepository } from "../repos/users";
+import { CredentialsRepository } from "../repos/credentials";
+import { SessionsRepository } from "../repos/sessions";
+import { AuditRepository } from "../repos/audit";
 import {
   AccountLifecycleRepository,
   LifecycleAction,
@@ -76,6 +80,26 @@ export interface LifecycleResult {
   activationToken?: string;
 }
 
+/**
+ * The only repositories a lifecycle mutation may use after `BEGIN`.
+ *
+ * Using these transaction-bound instances rather than the long-lived
+ * AuthService repositories makes account state, activation/session side
+ * effects, operation lineage and security audit one database commit.  A
+ * failed write therefore cannot strand a changed account without the record
+ * that explains and safely retries it.
+ */
+interface LifecycleMutationRepositories {
+  users: UsersRepository;
+  credentials: CredentialsRepository;
+  sessions: SessionsRepository;
+  lifecycle: AccountLifecycleRepository;
+  ownerAccess: OwnerAccessRepository;
+  audit: AuditRepository;
+}
+
+type LifecycleExecution = LifecycleResult | { denial: LifecycleDeniedError };
+
 /** What each action undoes, written for a human reading the log in an incident. */
 const ROLLBACK: Record<LifecycleAction, string> = {
   CREATE_INVITED:
@@ -139,17 +163,24 @@ export class AccountLifecycleService {
         403,
       );
     }
-    const expiresAt = await this.lifecycle.grantStepUp({
-      stepUpId: randomId("stp"),
-      sessionId: input.sessionId,
-      userId: input.actor.userId,
-      ttlSeconds: this.config.OWNER_STEP_UP_TTL_SECONDS,
-    });
-    await this.auth.audit.recordSecurityDecision({
-      eventType: "owner_step_up_granted",
-      actorUserId: input.actor.userId,
-      result: "SUCCESS",
-      reasonCode: "STEP_UP_PASSWORD_VERIFIED",
+    const expiresAt = await this.withTransaction(null, async (tx) => {
+      const granted = await tx.lifecycle.grantStepUp({
+        stepUpId: randomId("stp"),
+        sessionId: input.sessionId,
+        userId: input.actor.userId,
+        ttlSeconds: this.config.OWNER_STEP_UP_TTL_SECONDS,
+      });
+      // This is the only success event called "step up granted": the
+      // password was actually verified above.  OwnerAccessGuard records
+      // denials, but must not manufacture this event merely for admitting a
+      // later mutation.
+      await tx.audit.recordSecurityDecision({
+        eventType: "owner_step_up_granted",
+        actorUserId: input.actor.userId,
+        result: "SUCCESS",
+        reasonCode: "STEP_UP_PASSWORD_VERIFIED",
+      });
+      return granted;
     });
     return { expiresAt };
   }
@@ -188,45 +219,47 @@ export class AccountLifecycleService {
 
   async execute(request: LifecycleRequest): Promise<LifecycleResult> {
     const fingerprint = fingerprintOf(request);
-
-    /*
-     * Idempotency first, before any check that could change state.
-     *
-     * A replay must answer with what happened the first time, not run again —
-     * a retried DISABLE that re-executes is harmless, a retried
-     * ISSUE_ACTIVATION that re-executes silently invalidates the credential
-     * the owner is in the middle of reading out. The replay deliberately
-     * carries no `activationToken`: the one view has already happened.
-     */
-    const prior = await this.lifecycle.findByIdempotencyKey(request.idempotencyKey);
-    if (prior) {
-      if (prior.requestFingerprint !== fingerprint) {
-        throw new LifecycleDeniedError(
-          "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",
-          "That idempotency key was used for a different request. Use a new key.",
-        );
+    const output = await this.withTransaction<LifecycleExecution>(request.idempotencyKey, async (tx) => {
+      /*
+       * The advisory transaction lock serializes only a shared idempotency
+       * key.  It closes the read-then-insert race without serializing unrelated
+       * owner operations, and the operation row/audit/state all commit together.
+       */
+      const prior = await tx.lifecycle.findByIdempotencyKey(request.idempotencyKey);
+      if (prior) {
+        if (prior.requestFingerprint !== fingerprint) {
+          return {
+            denial: new LifecycleDeniedError(
+              "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",
+              "That idempotency key was used for a different request. Use a new key.",
+            ),
+          };
+        }
+        const account = await tx.users.findById(prior.targetUserId);
+        if (!account) {
+          return { denial: new LifecycleDeniedError("ACCOUNT_NOT_FOUND", "No such account.", 404) };
+        }
+        return { outcome: "REPLAYED", operation: prior, account };
       }
-      const account = await this.auth.users.findById(prior.targetUserId);
-      if (!account) {
-        throw new LifecycleDeniedError("ACCOUNT_NOT_FOUND", "No such account.", 404);
+
+      const steppedUp = (await tx.lifecycle.activeStepUpExpiry(request.sessionId)) !== null;
+      if (requiresStepUp(request) && !steppedUp) {
+        return {
+          denial: new LifecycleDeniedError(
+            "STEP_UP_REQUIRED",
+            "Re-enter your password to confirm this action.",
+            403,
+          ),
+        };
       }
-      return { outcome: "REPLAYED", operation: prior, account };
-    }
 
-    const stepUpExpiry = await this.lifecycle.activeStepUpExpiry(request.sessionId);
-    const steppedUp = stepUpExpiry !== null;
-    if (STEP_UP_ACTIONS.has(request.action) && !steppedUp) {
-      throw new LifecycleDeniedError(
-        "STEP_UP_REQUIRED",
-        "Re-enter your password to confirm this action.",
-        403,
-      );
-    }
-
-    if (request.action === "CREATE_INVITED") {
-      return this.createInvited(request, fingerprint, steppedUp);
-    }
-    return this.applyToExisting(request, fingerprint, steppedUp);
+      if (request.action === "CREATE_INVITED") {
+        return this.createInvited(request, fingerprint, steppedUp, tx);
+      }
+      return this.applyToExisting(request, fingerprint, steppedUp, tx);
+    });
+    if ("denial" in output) throw output.denial;
+    return output;
   }
 
   // ------------------------------------------------------------- create
@@ -235,6 +268,7 @@ export class AccountLifecycleService {
     request: LifecycleRequest,
     fingerprint: string,
     steppedUp: boolean,
+    tx: LifecycleMutationRepositories,
   ): Promise<LifecycleResult> {
     const username = (request.username ?? "").trim();
     if (!/^[a-z][a-z0-9._-]{1,63}$/.test(username)) {
@@ -244,18 +278,27 @@ export class AccountLifecycleService {
         422,
       );
     }
-    if (await this.auth.users.findByUsername(username)) {
+    if (await tx.users.findByUsername(username)) {
       throw new LifecycleDeniedError(
         "USERNAME_TAKEN",
         "That username already belongs to an account.",
       );
     }
-    const created = await this.auth.users.create({
+    const created = await tx.users.createIfAbsent({
       userId: randomId("usr"),
       username,
       displayName: request.displayName?.trim() || username,
       role: request.role ?? "USER",
     });
+    if (!created) {
+      // Another request won the username race after the preflight read.  No
+      // state in this transaction was changed, and the caller gets the same
+      // useful typed outcome as a non-racing duplicate.
+      throw new LifecycleDeniedError(
+        "USERNAME_TAKEN",
+        "That username already belongs to an account.",
+      );
+    }
     /*
      * Created WITHOUT an activation, deliberately.
      *
@@ -265,7 +308,7 @@ export class AccountLifecycleService {
      * action, so the one view happens when the owner asks for it.
      */
     const after = projectAccount(created);
-    const operation = await this.lifecycle.record({
+    const operation = await tx.lifecycle.record({
       operationId: randomId("alo"),
       idempotencyKey: request.idempotencyKey,
       action: "CREATE_INVITED",
@@ -290,7 +333,7 @@ export class AccountLifecycleService {
       requestId: request.requestId,
       stepUpUsed: steppedUp,
     });
-    await this.auditOperation("CREATE_INVITED", request, created.userId, "SUCCESS", "APPLIED");
+    await this.auditOperation(tx, "CREATE_INVITED", request, created.userId, "SUCCESS", "APPLIED");
     return { outcome: "APPLIED", operation, account: created };
   }
 
@@ -300,7 +343,8 @@ export class AccountLifecycleService {
     request: LifecycleRequest,
     fingerprint: string,
     steppedUp: boolean,
-  ): Promise<LifecycleResult> {
+    tx: LifecycleMutationRepositories,
+  ): Promise<LifecycleExecution> {
     if (!request.targetUserId || request.expectedRevision === undefined) {
       throw new LifecycleDeniedError(
         "TARGET_REQUIRED",
@@ -308,7 +352,7 @@ export class AccountLifecycleService {
         422,
       );
     }
-    const before = await this.auth.users.findById(request.targetUserId);
+    const before = await tx.users.findById(request.targetUserId);
     if (!before) {
       // Not recorded: the operation log references portal_users, and an
       // operation against an account that does not exist has nothing to be
@@ -316,12 +360,33 @@ export class AccountLifecycleService {
       throw new LifecycleDeniedError("ACCOUNT_NOT_FOUND", "No such account.", 404);
     }
 
-    const anchor = await this.ownerAccess.ownerAnchor();
+    const anchor = await tx.ownerAccess.ownerAnchor();
     const targetIsOwner = anchor?.userId === before.userId;
     const guard = ownerSelfProtection(request, targetIsOwner);
     if (guard) {
-      await this.recordRefusal(request, before, fingerprint, steppedUp, "DENIED", guard.reasonCode);
-      throw guard;
+      await this.recordRefusal(tx, request, before, fingerprint, steppedUp, "DENIED", guard.reasonCode);
+      return { denial: guard };
+    }
+
+    /*
+     * A submitted form with the exact current name/role is not a lifecycle
+     * transition.  Treating it as one would consume a revision and, for a
+     * role-shaped request, revoke active sessions despite changing nothing.
+     * Refusing it explicitly keeps the audit truthful and prevents a stale
+     * browser tab from manufacturing meaningless history.
+     */
+    if (
+      request.action === "UPDATE_PROFILE" &&
+      (request.displayName === undefined || request.displayName.trim() === before.displayName) &&
+      (request.role === undefined || request.role === before.role)
+    ) {
+      await this.recordRefusal(tx, request, before, fingerprint, steppedUp, "DENIED", "PROFILE_UNCHANGED");
+      return {
+        denial: new LifecycleDeniedError(
+          "PROFILE_UNCHANGED",
+          "That account already has those profile values.",
+        ),
+      };
     }
 
     /*
@@ -331,19 +396,21 @@ export class AccountLifecycleService {
      * is stale".
      */
     if (request.action === "ISSUE_ACTIVATION" && !request.reissue) {
-      if (await this.auth.credentials.hasUsableActivation(before.userId)) {
+      if (await tx.credentials.hasUsableActivation(before.userId)) {
         await this.recordRefusal(
-          request, before, fingerprint, steppedUp, "DENIED", "ACTIVATION_ALREADY_ISSUED",
+          tx, request, before, fingerprint, steppedUp, "DENIED", "ACTIVATION_ALREADY_ISSUED",
         );
-        throw new LifecycleDeniedError(
-          "ACTIVATION_ALREADY_ISSUED",
-          "An activation credential is already live for this account. Reissue to revoke it and issue another.",
-        );
+        return {
+          denial: new LifecycleDeniedError(
+            "ACTIVATION_ALREADY_ISSUED",
+            "An activation credential is already live for this account. Reissue to revoke it and issue another.",
+          ),
+        };
       }
     }
 
     const change = changeFor(request);
-    const after = await this.auth.users.applyLifecycleChange({
+    const after = await tx.users.applyLifecycleChange({
       userId: before.userId,
       expectedRevision: request.expectedRevision,
       ...change,
@@ -356,18 +423,20 @@ export class AccountLifecycleService {
        * looking at it" is exactly the thing an owner needs to be able to read
        * back afterwards.
        */
-      const current = await this.auth.users.findById(before.userId);
+      const current = await tx.users.findById(before.userId);
       await this.recordRefusal(
-        request, before, fingerprint, steppedUp, "CONFLICT", "STALE_ACCOUNT_REVISION",
+        tx, request, before, fingerprint, steppedUp, "CONFLICT", "STALE_ACCOUNT_REVISION",
       );
-      throw new LifecycleDeniedError(
-        "STALE_ACCOUNT_REVISION",
-        `This account has changed since you loaded it (now revision ${current?.accountRevision ?? "unknown"}). Refresh and try again.`,
-      );
+      return {
+        denial: new LifecycleDeniedError(
+          "STALE_ACCOUNT_REVISION",
+          `This account has changed since you loaded it (now revision ${current?.accountRevision ?? "unknown"}). Refresh and try again.`,
+        ),
+      };
     }
 
-    const activationToken = await this.applySideEffects(request, after);
-    const operation = await this.lifecycle.record({
+    const activationToken = await this.applySideEffects(tx, request, after);
+    const operation = await tx.lifecycle.record({
       operationId: randomId("alo"),
       idempotencyKey: request.idempotencyKey,
       action: request.action,
@@ -383,7 +452,7 @@ export class AccountLifecycleService {
       requestId: request.requestId,
       stepUpUsed: steppedUp,
     });
-    await this.auditOperation(request.action, request, after.userId, "SUCCESS", "APPLIED");
+    await this.auditOperation(tx, request.action, request, after.userId, "SUCCESS", "APPLIED");
     return activationToken
       ? { outcome: "APPLIED", operation, account: after, activationToken }
       : { outcome: "APPLIED", operation, account: after };
@@ -397,6 +466,7 @@ export class AccountLifecycleService {
    * straight back to the caller and stored nowhere.
    */
   private async applySideEffects(
+    tx: LifecycleMutationRepositories,
     request: LifecycleRequest,
     account: PortalUser,
   ): Promise<string | undefined> {
@@ -404,22 +474,22 @@ export class AccountLifecycleService {
       case "UPDATE_PROFILE":
         // A role change alters what the session is allowed to do, so the
         // session must be re-established rather than carry the old answer.
-        if (request.role !== undefined) await this.invalidateAccess(account.userId);
+        if (request.role !== undefined) await this.invalidateAccess(tx, account.userId);
         return undefined;
 
       case "REVOKE_SESSIONS":
-        await this.invalidateAccess(account.userId);
+        await this.invalidateAccess(tx, account.userId);
         return undefined;
 
       case "DISABLE":
       case "ARCHIVE":
-        await this.auth.credentials.revokeActivationCredentials(account.userId);
-        await this.invalidateAccess(account.userId);
+        await tx.credentials.revokeActivationCredentials(account.userId);
+        await this.invalidateAccess(tx, account.userId);
         return undefined;
 
       case "ISSUE_ACTIVATION":
       case "ENABLE":
-        return this.mintActivation(account);
+        return this.mintActivation(tx, account);
 
       default:
         return undefined;
@@ -433,16 +503,19 @@ export class AccountLifecycleService {
    * the sessions that exist, and the bump means a cookie that somehow survives
    * is refused by `OwnerAccessGuard`'s version comparison.
    */
-  private async invalidateAccess(userId: string): Promise<void> {
-    await this.auth.users.bumpSessionVersion(userId);
-    await this.auth.sessions.revokeAllForUser(userId, "owner_lifecycle_action");
-    await this.lifecycle.revokeStepUpsForUser(userId);
+  private async invalidateAccess(tx: LifecycleMutationRepositories, userId: string): Promise<void> {
+    await tx.users.bumpSessionVersion(userId);
+    await tx.sessions.revokeAllForUser(userId, "owner_lifecycle_action");
+    await tx.lifecycle.revokeStepUpsForUser(userId);
   }
 
-  private async mintActivation(account: PortalUser): Promise<string> {
+  private async mintActivation(
+    tx: LifecycleMutationRepositories,
+    account: PortalUser,
+  ): Promise<string> {
     const token = randomToken(24);
-    await this.auth.credentials.revokeActivationCredentials(account.userId);
-    await this.auth.credentials.createActivation({
+    await tx.credentials.revokeActivationCredentials(account.userId);
+    await tx.credentials.createActivation({
       activationId: randomId("act"),
       userId: account.userId,
       tokenHash: sha256(token),
@@ -453,12 +526,13 @@ export class AccountLifecycleService {
      * A4-1 finding A4-F07: an owner reset that leaves the lock in place hands
      * out a credential the account cannot use until the lock ages out.
      */
-    await this.auth.users.resetLoginCounters(account.userId);
-    await this.invalidateAccess(account.userId);
+    await tx.users.resetLoginCounters(account.userId);
+    await this.invalidateAccess(tx, account.userId);
     return token;
   }
 
   private async recordRefusal(
+    tx: LifecycleMutationRepositories,
     request: LifecycleRequest,
     before: PortalUser,
     fingerprint: string,
@@ -466,7 +540,7 @@ export class AccountLifecycleService {
     outcome: "DENIED" | "CONFLICT",
     reasonCode: string,
   ): Promise<void> {
-    await this.lifecycle.record({
+    await tx.lifecycle.record({
       operationId: randomId("alo"),
       idempotencyKey: request.idempotencyKey,
       action: request.action,
@@ -484,6 +558,7 @@ export class AccountLifecycleService {
       stepUpUsed: steppedUp,
     });
     await this.auditOperation(
+      tx,
       request.action,
       request,
       before.userId,
@@ -501,13 +576,14 @@ export class AccountLifecycleService {
    * an address, an access subject or a user agent, which is the point.
    */
   private async auditOperation(
+    tx: LifecycleMutationRepositories,
     action: LifecycleAction,
     request: LifecycleRequest,
     targetUserId: string,
     result: "SUCCESS" | "DENIED" | "FAILURE",
     reasonCode: string,
   ): Promise<void> {
-    await this.auth.audit.recordSecurityDecision({
+    await tx.audit.recordSecurityDecision({
       eventType: result === "SUCCESS" ? "account_lifecycle_applied" : "account_lifecycle_refused",
       actorUserId: request.actor.userId,
       targetUserId,
@@ -515,6 +591,46 @@ export class AccountLifecycleService {
       reasonCode: `${action}:${reasonCode}`,
       requestId: request.requestId,
     });
+  }
+
+  /** Execute an exact owner operation as one atomic database commit. */
+  private async withTransaction<T>(
+    idempotencyKey: string | null,
+    operation: (tx: LifecycleMutationRepositories) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
+    let begun = false;
+    try {
+      await client.query("BEGIN");
+      begun = true;
+      if (idempotencyKey !== null) {
+        await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+          `account-lifecycle:${idempotencyKey}`,
+        ]);
+      }
+      const result = await operation({
+        users: new UsersRepository(client),
+        credentials: new CredentialsRepository(client),
+        sessions: new SessionsRepository(client),
+        lifecycle: new AccountLifecycleRepository(client),
+        ownerAccess: new OwnerAccessRepository(client),
+        audit: new AuditRepository(client),
+      });
+      await client.query("COMMIT");
+      begun = false;
+      return result;
+    } catch (error) {
+      if (begun) {
+        try {
+          await client.query("ROLLBACK");
+        } catch {
+          // Preserve the original application/database error.
+        }
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 
@@ -552,6 +668,23 @@ function ownerSelfProtection(
     );
   }
   return null;
+}
+
+/**
+ * A profile rename is harmless enough to avoid a ritual password prompt, but
+ * every operation that can create or broaden operational authority is not.
+ *
+ * In particular, creating an invited ADMIN and changing a role are authority
+ * changes even though they are not in the original destructive-action set.
+ * Treating only the UI's "danger" styling as a step-up signal would make the
+ * final owner control plane weaker than its own contract.
+ */
+function requiresStepUp(request: LifecycleRequest): boolean {
+  return (
+    STEP_UP_ACTIONS.has(request.action) ||
+    request.action === "CREATE_INVITED" ||
+    (request.action === "UPDATE_PROFILE" && request.role !== undefined)
+  );
 }
 
 /** The column change each action makes, if any. */

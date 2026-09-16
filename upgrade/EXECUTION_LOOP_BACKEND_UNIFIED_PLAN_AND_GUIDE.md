@@ -8848,3 +8848,75 @@ Had A4-D15 not been found first, this rebuild would have produced a Portal whose
 owner screens were closed to everyone. Had A4-D16 not been found here, the
 production deploy would have failed at container start.
 
+---
+
+## 20.13 Independent backend audit amendment — atomic control plane and exact visibility (Codex, 2026-09-16)
+
+This amendment is the final backend review of Claude's A4 implementation before
+the normal `feature → dev → main → signed release → protected deployment`
+transition. It does **not** authorize an in-place change to a release directory,
+the stable PostgreSQL volume, the AWS-HK Execution Edge, Trading System, or any
+command/source feature flag.
+
+### 20.13.1 Findings closed in the same change set
+
+| Finding | Closure |
+|---|---|
+| An account lifecycle request could persist account, credential, session or audit fragments separately if an intermediate write failed. | `AccountLifecycleService` now owns one PostgreSQL transaction and a transaction-scoped advisory lock keyed by the idempotency key. Account state, credential/session revocation, lifecycle record, operation record and audit event commit together or roll back together. |
+| Concurrent governance grant requests could race on their idempotency record or leave a partial grant/audit trail. | `GovernanceGrantsService` now uses the same transaction discipline and an operation-key advisory lock; inserts are conflict-safe and the denial/audit result is durable with the decision. |
+| Creating an account or changing a base role did not require a fresh owner step-up; a no-op profile update could create a misleading revision and revoke sessions. | Create and role-changing operations require an actual password-backed step-up; display-only profile edits remain low-risk; no-op updates return `PROFILE_UNCHANGED` without changing revision or sessions. |
+| `OwnerAccessGuard` could write an `owner_step_up_granted` audit event merely after session/CSRF admission. | Guard-side false-success audit logging was removed. Only successful password verification in the lifecycle step-up operation records that event. |
+| Bootstrap could create a lookalike owner/user from a typo or emit/reset a credential on a production release path. | Production compose invokes bootstrap with `--require-existing-users`. Strict mode verifies exactly one configured owner and every configured user before any loop, rejects one-time credential output, and can only claim an existing anchor. |
+| Any ordinary workspace member could enumerate/count/history-read all governance gates, even if they could not decide them. | Governance list, count, edge/page, condition and history reads now carry server-calculated row visibility; the cursor fingerprint includes that visibility. A stale or copied cursor after grant/revoke fails `CURSOR_CONTEXT_MISMATCH`. |
+
+The retained authority rule is exact: Bobby as the held owner anchor sees the
+full governed set; delegated grants expose only their matching R1/R2/Live rows;
+legacy `PAPER_EXIT` remains ADMIN-only; `SANDBOX_EXIT` remains fail-closed until
+there is an actual source-owned workflow. No browser-supplied role, capability,
+cursor, relation or Edge credential is trusted.
+
+### 20.13.2 Verification evidence
+
+All evidence below was run against disposable test infrastructure, not a dev or
+stable database:
+
+| Gate | Result |
+|---|---|
+| Focused A4 lifecycle/governance/bootstrap suite | **80 / 80 passed** |
+| Auth/owner matrix | **11 / 11 passed** |
+| EDS-08 source-continuity artifact check | **3 / 3 passed** with the repository's pinned artifact paths |
+| Control API TypeScript build | passed |
+| Full Control API suite | **69 files, 653 / 653 passed** |
+| `git diff --check` | clean |
+
+The test database was named solely for this audit and is separate from both
+`portal_control` and the stable database. The frontend evidence baseline in
+`apps/portal/frontend/e2e/el-v2-03-evidence/controls.json` is preserved as
+Claude's review artifact; this audit did not rewrite UI source, routes, styles
+or Execution Loop composition.
+
+### 20.13.3 Release and data-safety conditions
+
+1. Commit the audit as a separable change, then merge through `dev` and protected
+   `main`; publish/deploy only the signed image generated from the resulting
+   main commit.
+2. The production workflow must keep the existing stable project and named
+   volumes, execute migrations forward, run strict bootstrap after migration,
+   health-check, and leave a marker. It must not use `down -v`, restore a test
+   database, or manually edit `/srv/primus/portal/releases/...`.
+3. A strict bootstrap failure is an intentional deployment stop, not a reason to
+   create a replacement Bobby/Stan/Thanhvuong account. Recovery is through the
+   owner-admin API after the existing owner has authenticated and stepped up.
+4. Execution Edge, mTLS/delegated identity, current-source reads, command
+   policy, source profiles and data retention remain exactly as in the signed
+   prior release. A4 adds Portal-local governance/account administration only.
+
+### 20.13.4 Scope closeout
+
+The A4 owner/governance/account-control scope is closed with no known untested
+mutation, visibility or bootstrap gap. The following are intentionally outside
+this release rather than hidden as A4 debt: the registry's missing vocabulary
+for a real Control-API-backed screen, the source-owned Sandbox exit workflow,
+and the pre-existing shared `.btn-ghost` design-system cleanup recorded in
+§20.9.5. None changes account authority or deployment safety, and none is
+needed to deploy A4.
