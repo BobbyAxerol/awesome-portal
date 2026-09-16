@@ -420,7 +420,12 @@ def test_only_current_real_capabilities_are_marked_available() -> None:
         feature["id"] for feature in source["features"] if feature["maturity"] == "AVAILABLE"
     }
     real = {feature["id"] for feature in source["features"] if feature["data_mode"] == "REAL"}
-    assert available == {"QUANTBT_RESEARCH", "PLANNING"}
+    # A4-4 added PROFILE_ACCESS: an owner surface that is genuinely built, so
+    # AVAILABLE — but served by the Control API rather than the portal summary
+    # pipeline, so `data_mode` is NONE and it declares no summary source. This
+    # set is a reviewed ledger, not an accident; the entry is here so the next
+    # promotion is a deliberate edit rather than a silent one.
+    assert available == {"QUANTBT_RESEARCH", "PLANNING", "PROFILE_ACCESS"}
     # v0.4 P0.6: the Command Center aggregates real counts while the screen
     # itself is still PROTOTYPE — REAL data mode under PROTOTYPE maturity.
     assert real == {

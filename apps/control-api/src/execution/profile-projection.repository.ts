@@ -13,6 +13,7 @@ import {
   profileObservationAffectedScreens,
   profileObservationRevalidation,
 } from "./profile-projection.catalog";
+import { durableMirrorReadEnabled } from "./durable-mirror-mode";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
 export type ProjectionCompleteness = "COMPLETE" | "PARTIAL" | "UNKNOWN";
@@ -149,28 +150,30 @@ export class ExecutionProfileProjectionRepository {
     @Optional() @Inject(EXECUTION_DURABLE_MIRROR_WRITER)
     private readonly durableMirror?: DurableMirrorWriter,
     @Optional() @Inject(CONTROL_API_CONFIG)
-    private readonly config?: Pick<ControlApiConfig, "FEATURE_EXECUTION_DURABLE_MIRROR">,
+    private readonly config?: Pick<
+      ControlApiConfig,
+      "FEATURE_EXECUTION_DURABLE_MIRROR" | "FEATURE_EXECUTION_DURABLE_MIRROR_READS"
+    >,
   ) {}
 
   /**
-   * The one place that decides which store a retained-history read comes from —
-   * DR-01's absorb answer.
+   * The one place that decides which store a retained-history read comes from.
    *
    * EDS-06 introduced the mirror while `execution_timeseries_history` was still
-   * live, and nothing declared which one wins. The worker resolved it in
-   * practice: it stops writing the history table the moment
-   * `FEATURE_EXECUTION_DURABLE_MIRROR` is on. Readers were never told, so on dev
-   * the history table froze on 2026-09-05 while the mirror kept moving, and the
-   * subject reads returned empty against a store nobody writes (§A23).
+   * live, and nothing declared which one wins. The two cutovers must not be
+   * conflated: `FEATURE_EXECUTION_DURABLE_MIRROR` begins the writer path, while
+   * `FEATURE_EXECUTION_DURABLE_MIRROR_READS` is the separately qualified read
+   * cutover. In between, the worker dual-writes and this repository continues
+   * to read the compatible history table.
    *
    * Both tables carry the same columns for every predicate these reads use
    * (`workspace_id, environment, profile_id, relation_key, row_id, ts, fields`),
-   * so the store is a name, chosen once, and every reader follows it. Relations
-   * the mirror keeps as current entities are not range rows in either store, so
-   * this swap adds no row a caller could not already see.
+   * so the read switch is a name, chosen once, and every history reader follows
+   * it. Relations the mirror keeps as current entities are not range rows in
+   * either store, so this swap adds no row a caller could not already see.
    */
   private historyTable(): string {
-    return this.config?.FEATURE_EXECUTION_DURABLE_MIRROR === "true"
+    return this.config && durableMirrorReadEnabled(this.config)
       ? "execution_durable_mirror_range_rows"
       : "execution_timeseries_history";
   }

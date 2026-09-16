@@ -609,7 +609,29 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
  * `loading` behind it. The standings now come from `/cross-equity`, which the
  * store aggregates in one query, and the ledger resolves on its first page.
  */
-const PORTFOLIO_RELATIONS = { portfolio_capital_ledger: "portfolio-capital-ledger" } as const;
+/*
+ * Portfolio 360 reads TWO relations, and for a while it asked for one.
+ *
+ * `portfolioOverview` reads `facts.portfolio_equity_snapshots` for the equity
+ * series and for the cross-portfolio standings. This set had been narrowed to
+ * the capital ledger alone when the equity CHART moved to the richer EDS-07
+ * route — but the standings need every portfolio's snapshots and have no other
+ * source, so they asked a fact nobody fetched and got `undefined` forever.
+ *
+ * The screen then reported `PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE` and "the
+ * store retains no equity snapshot for any portfolio" while the projection
+ * held 2,000 of them on both dev and production. Saying "not readable" over
+ * data that is sitting there is the same failure as inventing data that is
+ * not: either way the reader stops believing the words.
+ *
+ * The R3-1 ledger classifies both relations `COVERED` /
+ * `NAMED_PORTAL_OPERATION`, so this is a browser-admissible read, not a
+ * boundary being crossed.
+ */
+const PORTFOLIO_RELATIONS = {
+  portfolio_capital_ledger: "portfolio-capital-ledger",
+  portfolio_equity_snapshots: "portfolio-equity-snapshots",
+} as const;
 
 const BLOTTER_GROUP_RELATIONS = { order_brackets: "order-brackets", conditional_order_group_legs: "conditional-order-group-legs" } as const;
 
@@ -1898,6 +1920,10 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
           reason: crossEquityState.status === "ok" ? null : crossEquityState.reason ?? null,
         },
         asOf: analytics?.asOf ?? resource?.asOf ?? null,
+        // A route that refused names itself; without this the panel blamed the
+        // snapshots relation for a chart-route failure and sent the reader to
+        // the wrong read.
+        equityChartReason: pfChartState.status === "ok" ? null : pfChartState.reason ?? null,
         // Only when the route actually answered; a failed read falls back to
         // the drained series rather than replacing a short chart with none.
         ...(pfChart?.series ? {
@@ -1922,7 +1948,9 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       portfolioName={text(portfolio?.name) ?? portfolioId}
       envelope={envelope}
       scopeWindow={resource?.completeness ?? analytics?.completeness ?? "window not published"}
-      benchmark="benchmark not published"
+      // No benchmark series is published yet (BENCHMARK_SERIES_NOT_PUBLISHED);
+      // null is the absence, and the chip renders it as one.
+      benchmark={null}
       benchmarkId=""
       tab={tab}
       onTabChange={setTab}

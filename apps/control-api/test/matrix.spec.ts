@@ -2,6 +2,7 @@ import { beforeAll, afterAll, afterEach, describe, expect, it } from "vitest";
 import { createServer, Server } from "http";
 import { generateKeyPair, exportJWK, SignJWT, KeyLike } from "jose";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { PrincipalService } from "../src/auth/principal";
 import { AuthService } from "../src/auth/auth.service";
 import { Argon2CredentialService } from "../src/auth/argon";
@@ -124,12 +125,25 @@ describe("cloudflare access security matrix", () => {
     );
   });
 
-  const inject = (path: string, options: Record<string, unknown> = {}) =>
-    ctx.app.getHttpAdapter().getInstance().inject({
+  const inject = (path: string, options: Record<string, unknown> = {}) => {
+    const headers = { ...((options.headers as Record<string, string>) ?? {}) };
+    /*
+     * A browser attaches `Origin` to every non-GET request, so the harness
+     * does too. A test that wants it genuinely ABSENT passes `origin: ""` —
+     * the non-browser caller `originDenial` exists to refuse, and the exact
+     * shape `originAllowed` used to wave through.
+     */
+    const method = String(options.method ?? "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && !("origin" in headers)) {
+      headers.origin = ctx.config.PORTAL_PUBLIC_ORIGIN;
+    }
+    return ctx.app.getHttpAdapter().getInstance().inject({
       method: "GET",
       url: path,
       ...options,
+      headers,
     });
+  };
 
   function cookies(response: { headers: Record<string, unknown> }): string {
     const setCookie = response.headers["set-cookie"];
@@ -279,44 +293,133 @@ describe("cloudflare access security matrix", () => {
     const stan = await seedActiveUser("stan", "USER");
     const session = await loginSession("stan", stan.password);
 
-    const users = await inject("/api/admin/users", {
+    const users = await inject("/api/admin/accounts", {
       headers: { cookie: session.cookie },
     });
-    expect(users.statusCode).toBe(401);
+    // A4-1: 403, not 401. The caller IS authenticated; what they lack is
+    // authority. The old 401 said "who are you?" to someone the server had
+    // just identified, and A4-1 item 3 requires typed 401/403 that mean what
+    // they say. The no-leak assertion is unchanged and still the point.
+    expect(users.statusCode).toBe(403);
     expect(JSON.stringify(users.json())).not.toContain("bobby");
 
-    const disable = await inject(`/api/admin/users/${stan.userId}/disable`, {
+    const disable = await inject(`/api/admin/accounts/${stan.userId}/disable`, {
       method: "POST",
       headers: { cookie: session.cookie },
+      payload: { expected_revision: 1 },
     });
-    expect(disable.statusCode).toBe(401);
+    expect(disable.statusCode).toBe(403);
   });
 
-  it("ADMIN sessions can administer users and audit events are recorded", async () => {
+  it("a non-owner ADMIN is denied every admin route (role is not ownership)", async () => {
+    // Finding A4-F06, as a test. Before A4-1 this user could administer every
+    // account in the Portal purely because `role = 'ADMIN'`.
+    await ctx.pool.query("DELETE FROM portal_owner_anchor");
+    const owner = await seedActiveUser("owner-bobby", "ADMIN");
+    const otherAdmin = await seedActiveUser("second-admin", "ADMIN");
+    await new OwnerAccessRepository(ctx.pool).claimOwner({
+      userId: owner.userId,
+      claimedBy: "test",
+    });
+    const session = await loginSession("second-admin", otherAdmin.password);
+
+    const list = await inject("/api/admin/accounts", { headers: { cookie: session.cookie } });
+    expect(list.statusCode).toBe(403);
+
+    const reset = await inject(`/api/admin/accounts/${owner.userId}/activation`, {
+      method: "POST",
+      headers: {
+        cookie: session.cookie,
+        "x-portal-csrf": session.csrf,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-idempotency-key": "matrix-nonowner-activation",
+      },
+      payload: { expected_revision: 1 },
+    });
+    // Denied even with a perfectly valid CSRF pair and Origin: authorization
+    // is decided before mutation security, so a forged token buys nothing.
+    expect(reset.statusCode).toBe(403);
+    expect(JSON.stringify(reset.json())).not.toContain("token");
+
+    // And the owner's account was not touched by the attempt.
+    const target = await auth.users.findById(owner.userId);
+    expect(target?.mustChangePassword).toBe(false);
+  });
+
+  it("the OWNER administers users, and every mutation needs Origin + CSRF", async () => {
+    await ctx.pool.query("DELETE FROM portal_owner_anchor");
     const bobby = await seedActiveUser("bobby", "ADMIN");
+    // A4-1: ADMIN alone is no longer enough. The anchor is what grants this.
+    await new OwnerAccessRepository(ctx.pool).claimOwner({
+      userId: bobby.userId,
+      claimedBy: "test",
+    });
     const session = await loginSession("bobby", bobby.password);
 
-    const created = await inject("/api/admin/users", {
+    // The same owner, the same route, WITHOUT the mutation-security headers:
+    // refused. Finding A4-F05 — these six routes had no server-side Origin or
+    // CSRF check at all, and the browser's header was doing all the work.
+    const unprotected = await inject("/api/admin/accounts", {
       method: "POST",
-      headers: { cookie: session.cookie },
+      headers: { cookie: session.cookie, "x-portal-idempotency-key": "matrix-nope" },
+      payload: { username: "nope", display_name: "Nope", role: "USER" },
+    });
+    expect(unprotected.statusCode).toBe(403);
+    expect(await auth.users.findByUsername("nope")).toBeNull();
+
+    /*
+     * A4 deliberately makes account creation a stepped-up owner action.  The
+     * matrix is exercising the successful, browser-shaped path below, so it
+     * must establish that short-lived proof rather than accidentally testing
+     * the older ADMIN-only contract.
+     */
+    const steppedUp = await inject("/api/admin/step-up", {
+      method: "POST",
+      headers: {
+        cookie: session.cookie,
+        "x-portal-csrf": session.csrf,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-idempotency-key": "matrix-owner-step-up",
+      },
+      payload: { password: bobby.password },
+    });
+    expect(steppedUp.statusCode).toBe(201);
+
+    const created = await inject("/api/admin/accounts", {
+      method: "POST",
+      headers: {
+        cookie: session.cookie,
+        "x-portal-csrf": session.csrf,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-idempotency-key": "matrix-create-erin",
+      },
       payload: { username: "erin", display_name: "Erin", role: "USER" },
     });
     expect(created.statusCode).toBe(201);
-    expect(created.json().username).toBe("erin");
+    expect(created.json().account.username).toBe("erin");
+    // A4-2: creating an account never mints a credential. The one view happens
+    // when the owner asks for it, not mid-form.
+    expect(created.json().activation).toBeUndefined();
 
-    const users = await inject("/api/admin/users", {
+    const users = await inject("/api/admin/accounts", {
       headers: { cookie: session.cookie },
     });
     expect(users.statusCode).toBe(200);
-    expect(users.json().users.map((u: { username: string }) => u.username)).toContain("erin");
-    expect(JSON.stringify(users.json())).not.toContain("password_hash");
-    expect(JSON.stringify(users.json())).not.toContain("token_hash");
+    expect(
+      users.json().accounts.map((u: { username: string }) => u.username),
+    ).toContain("erin");
+    const roster = JSON.stringify(users.json());
+    // §20.5 item 1: the roster excludes hashes, tokens, the Cloudflare subject
+    // and email, session ids and audit internals.
+    for (const forbidden of ["password_hash", "token_hash", "access_subject", "session_id", "csrf"]) {
+      expect(roster, forbidden).not.toContain(forbidden);
+    }
 
     const events = await ctx.pool.query(
       `SELECT event_type FROM auth_audit_events ORDER BY occurred_at`,
     );
     expect(events.rows.map((r: { event_type: string }) => r.event_type)).toContain(
-      "user_created",
+      "account_lifecycle_applied",
     );
   });
 

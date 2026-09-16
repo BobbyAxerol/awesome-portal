@@ -75,6 +75,38 @@ describe("state machine", () => {
     expect(frame.dataset.problem).toBe("ACCOUNT_DISABLED");
   });
 
+  it("shows the recovery dead end for ACTIVATION_RECOVERY_REQUIRED", async () => {
+    mount(() => context("ACTIVATION_RECOVERY_REQUIRED"));
+    const frame = await screen.findByTestId("access-problem-screen");
+    expect(frame.dataset.problem).toBe("ACTIVATION_RECOVERY_REQUIRED");
+    expect(screen.queryByTestId("login-screen")).toBeNull();
+    expect(screen.queryByTestId("shell")).toBeNull();
+  });
+
+  it("offers the recovery frame no way out, because there is none", async () => {
+    // A4-1. Every other frame on 01D ends in an action; this one must not.
+    // "Retry" would re-run a check whose answer cannot change and "Sign in
+    // again" would return the reader to a form no credential satisfies — both
+    // read as hope, and the only real route forward is the Portal owner.
+    mount(() => context("ACTIVATION_RECOVERY_REQUIRED"));
+    await screen.findByTestId("access-problem-screen");
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText(/Contact the Portal owner/)).toBeTruthy();
+  });
+
+  it("names nothing in the recovery frame that the holder should not learn", async () => {
+    // It says the credential is unusable, never which of expired, revoked or
+    // already-spent it was, and never a username: one would tell the reader
+    // that somebody acted on their account, the other identifies an account.
+    mount(() => context("ACTIVATION_RECOVERY_REQUIRED"));
+    const frame = await screen.findByTestId("access-problem-screen");
+    const copy = frame.textContent ?? "";
+    for (const leak of ["expired", "revoked", "bobby", "sub-1", "already used"]) {
+      expect(copy.toLowerCase()).not.toContain(leak.toLowerCase());
+    }
+  });
+
   it("treats an unrecognised state as the most restrictive one, never as authenticated", async () => {
     // A backend that grows a state must not accidentally open the shell.
     mount(() => context("SOMETHING_NEW"));

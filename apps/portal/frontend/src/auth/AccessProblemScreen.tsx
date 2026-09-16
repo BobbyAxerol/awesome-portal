@@ -13,6 +13,7 @@ import { ACCESS_LOGOUT_PATH, type AuthState } from "./authApi";
 export type AccessProblem =
   | "ACCESS_REQUIRED"
   | "ACCOUNT_DISABLED"
+  | "ACTIVATION_RECOVERY_REQUIRED"
   | "SESSION_EXPIRED"
   | "IDENTITY_UNAVAILABLE";
 
@@ -34,6 +35,26 @@ const PRESENTATION: Record<AccessProblem, Presentation> = {
     body: "This account's access to the Portal has been revoked. Contact an admin for details.",
     action: { kind: "access-logout", label: "Sign out" },
   },
+  /*
+   * A4-1 · a dead end, stated as one.
+   *
+   * Deliberately `none`: this is the one state on this frame that the person
+   * reading it cannot act their way out of. A "Retry" would re-run a check
+   * whose answer cannot change, and a "Sign in again" would send them back to
+   * a form no credential satisfies — both would read as hope. The one route
+   * forward is a person, so the copy names that route and stops.
+   *
+   * It names no username, no owner, no expiry time and no reason the
+   * credential stopped working. Expired, revoked and already-used are
+   * different facts server-side; to the holder they are the same fact, and the
+   * difference would only tell them whether somebody acted on their account.
+   */
+  ACTIVATION_RECOVERY_REQUIRED: {
+    title: "Activation credential no longer usable",
+    body:
+      "Your identity is verified, but the one-time activation credential for this account can no longer be used. Nothing you enter here will work until a new one is issued. Contact the Portal owner to have your access reset.",
+    action: { kind: "none", label: "" },
+  },
   SESSION_EXPIRED: {
     title: "Portal session expired",
     body: "Your session has expired. Sign in again to continue.",
@@ -51,6 +72,7 @@ const PRESENTATION: Record<AccessProblem, Presentation> = {
 export function problemForState(state: AuthState): AccessProblem | null {
   if (state === "ACCESS_REQUIRED") return "ACCESS_REQUIRED";
   if (state === "ACCOUNT_DISABLED") return "ACCOUNT_DISABLED";
+  if (state === "ACTIVATION_RECOVERY_REQUIRED") return "ACTIVATION_RECOVERY_REQUIRED";
   return null;
 }
 

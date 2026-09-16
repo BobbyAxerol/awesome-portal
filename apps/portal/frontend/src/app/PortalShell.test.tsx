@@ -106,11 +106,26 @@ describe("bootstrap", () => {
 });
 
 describe("registry-driven sidebar", () => {
-  it("renders every sidebar feature the registry declares", async () => {
+  it("renders every sidebar feature the registry declares, except the capability-gated ones", async () => {
+    /*
+     * A4-4 · navigation is owner-aware. A feature whose registry permissions
+     * name a capability A4 actually enforces is listed only for somebody the
+     * SERVER says holds it, and this harness mounts without an owner answer —
+     * so those entries are correctly absent. Everything else is unchanged.
+     */
+    const ENFORCED = [
+      "administration.users.manage",
+      "administration.profile_access.manage",
+    ];
     mount();
     const nav = await screen.findByRole("navigation", { name: "Primary navigation" });
     for (const feature of registry.features.filter((f) => f.navigation.show_in_sidebar)) {
-      expect(within(nav).getByText(feature.label)).toBeTruthy();
+      const gated = feature.permissions.some((p: string) => ENFORCED.includes(p));
+      if (gated) {
+        expect(within(nav).queryByText(feature.label), feature.id).toBeNull();
+      } else {
+        expect(within(nav).getByText(feature.label), feature.id).toBeTruthy();
+      }
     }
   });
 

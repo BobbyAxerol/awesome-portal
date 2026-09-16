@@ -47,6 +47,9 @@ const PlanningModule = lazy(() =>
 const UsersAccess = lazy(() =>
   import("../features/admin/UsersAccess").then((m) => ({ default: m.UsersAccess })),
 );
+const ProfileAccess = lazy(() =>
+  import("../features/admin/ProfileAccess").then((m) => ({ default: m.ProfileAccess })),
+);
 const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
 const ExecutionPreviewRoute = lazy(() =>
   import("../execution/ExecutionPreviewRoute").then((m) => ({
@@ -61,6 +64,18 @@ const ExecutionPreviewRoute = lazy(() =>
  */
 const MODULES: Record<string, { component: ComponentType; wildcard?: boolean }> = {
   COMMAND_CENTER: { component: CommandCenter },
+  /*
+   * A4-3/A4-4 · Profile & Access is now a real feature, so it is mapped here
+   * rather than routed beside the registry.
+   *
+   * The comment below on ADMIN_USERS_ROUTE explains why it was NOT mapped
+   * before: the registry called it COMMISSIONED, and rendering a working
+   * screen behind a "not built yet" badge would make the badge lie. A4-3 built
+   * it, so the registry now says AVAILABLE and the mapping is the honest one —
+   * and, more importantly, it keeps ONE feature model (§3.2) instead of a
+   * screen that exists in the router and not in the product's own map.
+   */
+  PROFILE_ACCESS: { component: ProfileAccess },
   PORTAL_MAP: { component: PortalMap },
   QUANTBT_RESEARCH: { component: QuantBTModule, wildcard: true },
   PLANNING: { component: PlanningModule, wildcard: true },
@@ -69,10 +84,11 @@ const MODULES: Record<string, { component: ComponentType; wildcard?: boolean }> 
 /**
  * Account administration route (`ADMIN_USERS_ROUTE`).
  *
- * This is deliberately *not* mapped onto PROFILE_ACCESS. That feature is
- * COMMISSIONED in the registry, and rendering a working screen behind a
- * commissioned badge would make the badge lie — the same reason Alpha 360° lives
- * under QuantBT instead of on the ALPHA_POOL route.
+ * This is deliberately *not* mapped onto a registry feature. Users & Access has
+ * no registry entry at all: the registry is the product feature model for every
+ * user, and owner account administration is not a product feature for every
+ * user. (PROFILE_ACCESS is different — it IS a registry feature, and A4-3 built
+ * it, so it is mapped in FEATURE_COMPONENTS above.)
  *
  * It is also not a second feature model: nothing here appears in nav, preview or
  * task links built from the registry. It is a session-scoped account action,
@@ -81,6 +97,17 @@ const MODULES: Record<string, { component: ComponentType; wildcard?: boolean }> 
  * would prefer to have.
  */
 export const ADMIN_USERS_ROUTE = "/administration/users";
+
+/**
+ * A4-3/A4-4 · the owner's Governance policy surface.
+ *
+ * Reached from the top bar rather than the registry-driven sidebar, the same
+ * way Users & Access is: the registry is the product feature model for every
+ * user, and owner administration is not a product feature for every user. The
+ * screen itself renders a typed denial for a guessed URL, so the link is a
+ * courtesy and never the boundary.
+ */
+export const ADMIN_PROFILE_ACCESS_ROUTE = "/administration/profile-access";
 
 /**
  * Execution Loop component fixtures (`EXECUTION_FIXTURES_ROUTE`).

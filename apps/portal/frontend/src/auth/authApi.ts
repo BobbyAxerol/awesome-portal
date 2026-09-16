@@ -19,6 +19,16 @@ export type AuthState =
   | "AUTHENTICATED"
   | "APP_LOGIN_REQUIRED"
   | "PASSWORD_CHANGE_REQUIRED"
+  /**
+   * A4-1 · the account's activation credential is gone, not wrong.
+   *
+   * The server reports this only to a Cloudflare-verified identity that is
+   * bound to the account in question, so it is the holder hearing about their
+   * own account and nobody else's. The frontend must render it as a dead end
+   * with no retry: there is no credential this person could type that would
+   * work, and a "try again" button would be a lie.
+   */
+  | "ACTIVATION_RECOVERY_REQUIRED"
   | "ACCESS_REQUIRED"
   | "ACCOUNT_DISABLED";
 
@@ -62,7 +72,8 @@ export class AuthRequestError extends Error {
 }
 
 const CSRF_COOKIE = "__Host-portal_csrf";
-const CSRF_HEADER = "x-portal-csrf";
+/** The double-submit header every Portal mutation carries. */
+export const CSRF_HEADER = "x-portal-csrf";
 
 /**
  * Dev-mode Access identity.
@@ -138,6 +149,7 @@ const KNOWN_STATES = new Set<AuthState>([
   "AUTHENTICATED",
   "APP_LOGIN_REQUIRED",
   "PASSWORD_CHANGE_REQUIRED",
+  "ACTIVATION_RECOVERY_REQUIRED",
   "ACCESS_REQUIRED",
   "ACCOUNT_DISABLED",
 ]);

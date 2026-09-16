@@ -16,11 +16,14 @@ import {
   CSRF_HEADER,
   clearSessionCookies,
   csrfCookieFrom,
-  originAllowed,
   sessionTokenFrom,
   setSessionCookies,
 } from "./cookies";
-import { sha256, constantTimeEqual } from "./argon";
+import {
+  MUTATION_SECURITY_MESSAGE,
+  mutationSecurityDenial,
+  originDenial,
+} from "./mutation-security";
 
 const LoginSchema = z.object({
   username: z.string().min(1).max(64),
@@ -63,8 +66,18 @@ export class AuthController {
     @Res({ passthrough: true }) reply: FastifyReply,
     @Body() body: unknown,
   ) {
-    if (!originAllowed(request, this.auth.config.PORTAL_PUBLIC_ORIGIN)) {
-      throw new AuthError("ORIGIN_DENIED", "Origin not allowed.", 403);
+    /*
+     * A4-FE-BE-GAP-03 · a missing Origin is a denial here too.
+     *
+     * `originAllowed` on its own returns TRUE for a request that carries no
+     * Origin header at all, so anything that simply omitted it walked past
+     * this gate. Login has no session yet and therefore no CSRF secret to
+     * compare against, so the Origin half is the whole of what can apply —
+     * but it now applies properly.
+     */
+    const originRefusal = originDenial(request, this.auth.config.PORTAL_PUBLIC_ORIGIN);
+    if (originRefusal) {
+      throw new AuthError(originRefusal, MUTATION_SECURITY_MESSAGE[originRefusal], 403);
     }
     const parsed = LoginSchema.safeParse(body);
     if (!parsed.success) {
@@ -98,9 +111,6 @@ export class AuthController {
     @Res({ passthrough: true }) reply: FastifyReply,
     @Body() body: unknown,
   ) {
-    if (!originAllowed(request, this.auth.config.PORTAL_PUBLIC_ORIGIN)) {
-      throw new AuthError("ORIGIN_DENIED", "Origin not allowed.", 403);
-    }
     const parsed = ChangePasswordSchema.safeParse(body);
     if (!parsed.success) {
       throw new AuthError("INVALID_REQUEST", "Invalid data.", 400);
@@ -109,16 +119,41 @@ export class AuthController {
     if (!sessionToken) {
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
-    const csrfHeader = request.headers[CSRF_HEADER] as string | undefined;
-    if (!csrfHeader) {
-      throw new AuthError("CSRF_REQUIRED", "CSRF token is missing.", 403);
-    }
     const session = await this.auth.sessionFromToken(sessionToken);
     if (!session || session.state !== "ACTIVE") {
       throw new AuthError("SESSION_REQUIRED", "Invalid session.", 401);
     }
-    if (!constantTimeEqual(sha256(csrfHeader), session.csrfSecretHash)) {
-      throw new AuthError("CSRF_INVALID", "CSRF token is invalid.", 403);
+    /*
+     * A4-FE-BE-GAP-03 · the full shared decision, not the drifted pair.
+     *
+     * This route carried both omissions the shared module was written to end:
+     * `originAllowed` bare, so a request with no Origin passed; and a CSRF
+     * header compared ONLY against the session's stored hash, never against
+     * the `__Host-portal_csrf` cookie. The cookie comparison is what makes
+     * double-submit mean anything — without it the header alone is the proof,
+     * and the whole point is that it must be a header a form cannot set AND a
+     * value only same-origin script can read.
+     *
+     * Of every route in this controller this is the one that most deserves it:
+     * it replaces a credential.
+     */
+    const csrfHeader = request.headers[CSRF_HEADER] as string | undefined;
+    const denial = mutationSecurityDenial(request, {
+      csrfSecretHash: session.csrfSecretHash,
+      allowedOrigin: this.auth.config.PORTAL_PUBLIC_ORIGIN,
+    });
+    if (denial) {
+      throw new AuthError(denial, MUTATION_SECURITY_MESSAGE[denial], 403);
+    }
+    if (!csrfHeader) {
+      // Unreachable: the decision above returns CSRF_MISSING for an absent
+      // header. Written out so the guarantee lives in the type system and not
+      // only in a comment a refactor can outlive.
+      throw new AuthError(
+        "CSRF_MISSING",
+        MUTATION_SECURITY_MESSAGE.CSRF_MISSING,
+        403,
+      );
     }
     await this.auth.changePassword({
       sessionToken,
@@ -136,8 +171,18 @@ export class AuthController {
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    if (!originAllowed(request, this.auth.config.PORTAL_PUBLIC_ORIGIN)) {
-      throw new AuthError("ORIGIN_DENIED", "Origin not allowed.", 403);
+    /*
+     * A4-FE-BE-GAP-03 · Origin only, deliberately.
+     *
+     * A cross-origin page sends its own Origin, so this alone stops a forced
+     * logout. CSRF is NOT required: this route clears the cookies even when
+     * the session is already dead, and a user holding a dead session has no
+     * usable CSRF secret to present. Demanding one would leave exactly the
+     * people who most need to sign out unable to.
+     */
+    const originRefusal = originDenial(request, this.auth.config.PORTAL_PUBLIC_ORIGIN);
+    if (originRefusal) {
+      throw new AuthError(originRefusal, MUTATION_SECURITY_MESSAGE[originRefusal], 403);
     }
     await this.auth.logout(
       sessionTokenFrom(request),

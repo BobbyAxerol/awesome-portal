@@ -9,6 +9,10 @@ import type {
   RowEnvelope,
 } from "../portal/contracts";
 
+// The CSRF token belongs to the session, so it is read from the module that
+// owns the session — not re-derived here where it could drift.
+import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
+
 export interface DatasetDescriptor {
   dataset_id: string;
   symbol: string | null;
@@ -204,8 +208,70 @@ export class PortalApiError extends Error {
   }
 }
 
+/** Methods the Control API facade treats as writes. */
+const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/**
+ * Attaches the double-submit CSRF header to every write.
+ *
+ * Why this exists: the facade proxy (`/api/runs`, `/api/strategies`,
+ * `/api/v1/alphas`, `/api/config/options`) is cookie-authenticated, and a
+ * browser attaches that cookie by itself — an attacker never needs to read it,
+ * only to make the browser send it. `SameSite=Lax` stops the classic
+ * cross-SITE post, but SameSite is scoped to the site, not the origin, and
+ * `dev-portal.primusspark.com` shares a registrable domain with production.
+ * A page there is cross-origin but same-site, so its requests do carry the
+ * session cookie. `POST /api/runs/{id}/cancel` takes no request body, so the
+ * content-type strictness that turns the other three writes into 422s does not
+ * protect it: a plain HTML form on such a page would cancel a running
+ * backtest.
+ *
+ * A header is what closes that, because of two limits the attacker cannot get
+ * around: an HTML form cannot set one at all, and a page on another origin
+ * cannot read this origin's cookie to learn its value. So a header equal to
+ * the cookie proves same-origin script issued the request. The server checks
+ * the pair AND `sha256(header)` against the session's stored secret, so a
+ * forged cookie alone is worth nothing.
+ *
+ * It sends the header when there is one and does not invent an error when
+ * there is not: an absent cookie means an absent session, which the server
+ * already answers for. The boundary is the server, never this file.
+ */
+/**
+ * Normalises any `HeadersInit` into a plain record.
+ *
+ * `RequestInit.headers` may be an object, a `Headers`, or an array of pairs,
+ * and spreading the last two silently loses everything: `Headers` has no own
+ * enumerable properties, so `{...new Headers({...})}` is `{}`. A caller that
+ * passed `new Headers({ "Content-Type": "application/json" })` would have had
+ * its content type dropped here, the facade would forward `undefined`, and
+ * FastAPI would answer 422 on a body it refuses to parse — with no type error
+ * and no failing test. Today every call site passes an object literal; this
+ * exists so that staying correct does not depend on that continuing.
+ */
+function headerRecord(init?: HeadersInit): Record<string, string> {
+  const out: Record<string, string> = {};
+  new Headers(init).forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
+}
+
+function withMutationSecurity(init?: RequestInit): RequestInit | undefined {
+  if (!WRITE_METHODS.has((init?.method ?? "GET").toUpperCase())) return init;
+  const csrf = csrfTokenFromCookie();
+  if (!csrf) return init;
+  return {
+    ...init,
+    // Explicit rather than relying on the fetch default, so the intent is
+    // readable next to the header it pairs with.
+    credentials: "same-origin",
+    headers: { ...headerRecord(init?.headers), [CSRF_HEADER]: csrf },
+  };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, init);
+  const response = await fetch(path, withMutationSecurity(init));
   if (!response.ok) {
     let detail = `${response.status} ${response.statusText}`;
     let code: string | null = null;

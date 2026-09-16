@@ -6,9 +6,16 @@ import { Pool } from "pg";
 import { AuthController } from "./auth/auth.controller";
 import { AuthService } from "./auth/auth.service";
 import { Argon2CredentialService } from "./auth/argon";
-import { AdminController } from "./admin/admin.controller";
 import { AdminService } from "./admin/admin.service";
 import { AdminGuard } from "./admin/rbac.guard";
+import { OwnerAccessController } from "./admin/owner-access.controller";
+import { AccountLifecycleController } from "./admin/account-lifecycle.controller";
+import { OwnerStepUpController } from "./admin/owner-step-up.controller";
+import { GovernanceGrantsController } from "./admin/governance-grants.controller";
+import { GovernanceGrantsService } from "./admin/governance-grants.service";
+import { AccountLifecycleService } from "./admin/account-lifecycle.service";
+import { OwnerAccessGuard } from "./admin/owner-access.guard";
+import { OwnerAccessService } from "./auth/owner-access.service";
 import { HealthController } from "./health/health.controller";
 import { ControlApiConfig } from "./config";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DURABLE_MIRROR_WRITER } from "./tokens";
@@ -107,7 +114,14 @@ export class AppModule {
       controllers: [
         HealthController,
         AuthController,
-        AdminController,
+        // A4-2 retired the six /api/admin/users* routes. They mutated
+        // accounts with no expected revision, no idempotency, no step-up and
+        // no operation record, so leaving them mounted beside the control
+        // plane would leave a way around every control it adds.
+        AccountLifecycleController,
+        OwnerStepUpController,
+        GovernanceGrantsController,
+        OwnerAccessController,
         FacadeController,
         PlanningFacadeController,
         GovernanceController,
@@ -157,9 +171,27 @@ export class AppModule {
           inject: [CONTROL_API_CONFIG, CONTROL_API_POOL],
         },
         {
+          // Retained as an internal service: bootstrap and the test harness
+          // create and activate accounts through it. It no longer has an HTTP
+          // surface of its own.
           provide: AdminService,
           useFactory: (cfg: ControlApiConfig, db: Pool, auth: AuthService) =>
             new AdminService(db, cfg, auth),
+          inject: [CONTROL_API_CONFIG, CONTROL_API_POOL, AuthService],
+        },
+        {
+          provide: GovernanceGrantsService,
+          useFactory: (
+            db: Pool,
+            auth: AuthService,
+            ownerAccess: OwnerAccessService,
+          ) => new GovernanceGrantsService(db, auth, ownerAccess),
+          inject: [CONTROL_API_POOL, AuthService, OwnerAccessService],
+        },
+        {
+          provide: AccountLifecycleService,
+          useFactory: (cfg: ControlApiConfig, db: Pool, auth: AuthService) =>
+            new AccountLifecycleService(db, cfg, auth),
           inject: [CONTROL_API_CONFIG, CONTROL_API_POOL, AuthService],
         },
         WorkspacesRepository,
@@ -263,6 +295,8 @@ export class AppModule {
           inject: [AuthService, WorkspacesRepository],
         },
         AdminGuard,
+        OwnerAccessGuard,
+        OwnerAccessService,
       ],
     };
   }

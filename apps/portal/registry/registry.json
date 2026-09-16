@@ -665,13 +665,13 @@
       "id": "PROFILE_ACCESS",
       "group": "administration",
       "label": "Profile & Access",
-      "description": "Verified identity, session and access information.",
+      "description": "Who may see a Governance gate, and who may record its Portal decision.",
       "canonical_route": "/administration/profile-access",
       "legacy_routes": [],
-      "maturity": "COMMISSIONED",
-      "data_mode": "STATIC_PREVIEW",
+      "maturity": "AVAILABLE",
+      "data_mode": "NONE",
       "permissions": [
-        "profile.read"
+        "administration.profile_access.manage"
       ],
       "environments": [
         "local",
@@ -1755,26 +1755,16 @@
       "screen_id": "PROFILE_ACCESS_SCREEN",
       "contract_revision": 2,
       "feature_id": "PROFILE_ACCESS",
-      "maturity": "COMMISSIONED",
-      "data_mode": "STATIC_PREVIEW",
-      "delivery_profile": "fixture",
-      "delivery_policy": {
-        "policy_revision": 2,
-        "query_enabled": false,
-        "projection_ingestion_enabled": false,
-        "sse_enabled": false,
-        "governance_write_enabled": false,
-        "paper_commands_enabled": false,
-        "sandbox_commands_enabled": false,
-        "live_protective_commands_enabled": false,
-        "live_risk_increasing_commands_enabled": false
-      },
+      "maturity": "AVAILABLE",
+      "data_mode": "NONE",
+      "delivery_profile": null,
+      "delivery_policy": null,
       "route": "/administration/profile-access",
-      "primary_persona": "portal_user",
-      "primary_decision": "Which verified identity, session and role currently applies?",
-      "primary_action": null,
+      "primary_persona": "portal_owner",
+      "primary_decision": "Who may see each Governance gate, and who may decide it?",
+      "primary_action": "Grant or revoke one capability from the finite A4 namespace.",
       "permissions": [
-        "profile.read"
+        "administration.profile_access.manage"
       ],
       "inputs": [],
       "backend_dependency_ids": [],

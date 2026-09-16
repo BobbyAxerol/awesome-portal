@@ -66,12 +66,17 @@ export function queryFingerprint(input: {
   limit: number;
   filters: readonly NormalizedFilter[];
   sort: readonly AppliedSort[];
+  /** A server-owned row-policy must bind cursors as tightly as client filters. */
+  rowVisibility?: { column: string; allowedValues: readonly QueryScalar[] } | null;
 }): string {
   const normalized = {
     resource_id: input.resourceId,
     limit: input.limit,
     filters: input.filters.map(({ field, op, values }) => ({ field, op, values })),
     sort: input.sort,
+    row_visibility: input.rowVisibility
+      ? { column: input.rowVisibility.column, allowed_values: [...input.rowVisibility.allowedValues] }
+      : null,
   };
   return createHash("sha256").update(canonical(normalized)).digest("base64url");
 }

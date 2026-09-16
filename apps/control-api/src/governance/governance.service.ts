@@ -19,6 +19,9 @@ import { GovernanceApplyTokenSigner } from "./apply-token";
 import {
   approvalHistoryResource,
   approvalInboxResource,
+  APPROVAL_GATES,
+  type ApprovalGate,
+  type MayDecideApproval,
   governanceConditionsResource,
   R1Decision,
 } from "./contracts";
@@ -28,6 +31,12 @@ import {
   EvidenceRecord,
   GovernanceRepository,
 } from "./governance.repository";
+import { OwnerAccessService, type EffectiveAccess } from "../auth/owner-access.service";
+import {
+  GOVERNANCE_DENIAL_MESSAGE,
+  governanceDenial,
+  mayGovern,
+} from "../auth/governance-access";
 
 export class GovernanceError extends Error {
   constructor(
@@ -156,6 +165,7 @@ export class GovernanceService {
     @Inject(GovernanceRepository) private readonly repository: GovernanceRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
+    @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
     @Optional() @Inject(ResearchRunSyncService) private readonly runSync?: ResearchRunSyncService,
   ) {
     const keys = querySigningKeys(config);
@@ -174,13 +184,22 @@ export class GovernanceService {
   }
 
   async list(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+    /*
+     * A4-D14 · read the caller's real authority before building the page.
+     *
+     * Read at request time like every other A4-3 decision — there is no cache,
+     * so a grant made a second ago is already reflected in this list.
+     */
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const mayDecide = approvalDecisionPredicate(user, access, workspaceId);
+    const visibleGates = approvalReadGates(user, access, workspaceId);
     const [page, counts] = await Promise.all([
-      this.query.list(approvalInboxResource(user), {
+      this.query.list(approvalInboxResource(user, mayDecide, visibleGates), {
         actorId: user.userId,
         workspaceId,
         role: user.role,
       }, raw),
-      this.repository.counts(workspaceId),
+      this.repository.counts(workspaceId, visibleGates),
     ]);
     return {
       schema_version: "governance.approval-inbox.v1",
@@ -207,8 +226,10 @@ export class GovernanceService {
   }
 
   async history(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const visibleGates = approvalReadGates(user, access, workspaceId);
     const page = await this.query.list(
-      approvalHistoryResource(),
+      approvalHistoryResource(visibleGates),
       { actorId: user.userId, workspaceId, role: user.role },
       raw,
     );
@@ -224,8 +245,10 @@ export class GovernanceService {
   }
 
   async conditions(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const visibleGates = approvalReadGates(user, access, workspaceId);
     const page = await this.query.list(
-      governanceConditionsResource(),
+      governanceConditionsResource(visibleGates),
       { actorId: user.userId, workspaceId, role: user.role },
       raw,
     );
@@ -238,6 +261,40 @@ export class GovernanceService {
       read_truth: exactPageReadTruth(page, "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS"),
       page,
     };
+  }
+
+  /*
+   * A4-3 · the R1/R2 gates, decided from a capability rather than a role.
+   *
+   * `role === "ADMIN"` meant every administrator could read and decide every
+   * approval in every workspace. §20.2 rule 3 narrows that to the owner plus
+   * whoever the owner explicitly delegated, and §20.2 rule 4 keeps the two
+   * halves apart: a person granted `governance.r1.read` sees the review and
+   * gets no decision affordance at all.
+   *
+   * Everything the gate already enforced still runs AFTER this — evidence
+   * completeness, quorum, expiry, self-approval, already-decided. A grant says
+   * who may be in the room; it never says the decision is allowed.
+   */
+  private async governance(
+    user: PortalUser,
+    gate: "r1" | "r2" | "canary" | "live",
+    mode: "read" | "decide",
+    workspaceId: string | null,
+  ): Promise<boolean> {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    return mayGovern({ access, gate, mode, workspaceId });
+  }
+
+  private async assertGovernance(
+    user: PortalUser,
+    gate: "r1" | "r2" | "canary" | "live",
+    mode: "read" | "decide",
+    workspaceId: string | null,
+  ): Promise<void> {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const denial = governanceDenial({ access, gate, mode, workspaceId });
+    if (denial) throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
   }
 
   async createApproval(user: PortalUser, input: CreateApprovalInput, requestId: string) {
@@ -389,6 +446,7 @@ export class GovernanceService {
   }
 
   async detail(user: PortalUser, workspaceId: string, approvalId: string) {
+    await this.assertGovernance(user, "r1", "read", workspaceId);
     const snapshot = await this.repository.detail(workspaceId, approvalId);
     if (!snapshot || snapshot.approval.gate !== "R1") {
       throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
@@ -410,7 +468,8 @@ export class GovernanceService {
     if (self) locks.push("SELF_APPROVAL");
     if (blocking.length > 0 || !approval.evidenceComplete) locks.push("BLOCKING_FINDINGS");
     if (expired) locks.push("EXPIRED");
-    if (user.role !== "ADMIN" || alreadyDecided) locks.push("NOT_ELIGIBLE");
+    const mayDecideR1 = await this.governance(user, "r1", "decide", workspaceId);
+    if (!mayDecideR1 || alreadyDecided) locks.push("NOT_ELIGIBLE");
 
     return {
       schema_version: "governance.r1-review.v1",
@@ -424,9 +483,9 @@ export class GovernanceService {
         eligibility: {
           can_approve: approval.status === "PENDING" && locks.length === 0,
           can_approve_with_condition: approval.status === "PENDING" && locks.length === 0,
-          can_deny: approval.status === "PENDING" && !expired && user.role === "ADMIN" && !alreadyDecided,
+          can_deny: approval.status === "PENDING" && !expired && mayDecideR1 && !alreadyDecided,
           can_request_changes:
-            approval.status === "PENDING" && !expired && user.role === "ADMIN" && !alreadyDecided && !self,
+            approval.status === "PENDING" && !expired && mayDecideR1 && !alreadyDecided && !self,
           locks,
           separation_of_duties: self ? "VIOLATION" : "OK",
         },
@@ -506,6 +565,20 @@ export class GovernanceService {
    * or execution authorization.
    */
   async r2Detail(user: PortalUser, workspaceId: string, approvalId: string) {
+    await this.assertGovernance(user, "r2", "read", workspaceId);
+    return this.r2Payload(user, workspaceId, approvalId);
+  }
+
+  /*
+   * A4-3 · the R2 payload without the R2 authorization.
+   *
+   * The Live review is built on top of the R2 backbone, and before this split
+   * that meant a Live reader also had to hold `governance.r2.read` — so
+   * delegating Live alone silently did not work. §20.3 gives each gate its own
+   * capability; the gate that is being read is the gate that must be granted,
+   * and the caller above asserts it.
+   */
+  private async r2Payload(user: PortalUser, workspaceId: string, approvalId: string) {
     const detail = await this.repository.r2Detail(workspaceId, approvalId);
     if (!detail) {
       throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
@@ -521,10 +594,11 @@ export class GovernanceService {
     const self = approval.requesterUserId === user.userId || approval.artifactCreatorUserId === user.userId;
     const alreadyDecided = approval.decisionActorIds.includes(user.userId);
     const expired = approval.expiresAt <= new Date();
+    const mayDecideR2 = await this.governance(user, "r2", "decide", workspaceId);
     const locks = [
       ...(self ? ["SELF_APPROVAL"] : []),
       ...(expired ? ["EXPIRED"] : []),
-      ...(user.role !== "ADMIN" || alreadyDecided ? ["NOT_ELIGIBLE"] : []),
+      ...(!mayDecideR2 || alreadyDecided ? ["NOT_ELIGIBLE"] : []),
       ...(lineage === null ? ["R1_LINEAGE_UNPUBLISHED"] : []),
       ...(lineage !== null && !["APPROVED", "APPROVED_WITH_CONDITION"].includes(lineage.r1Status)
         ? ["R1_NOT_APPROVED"]
@@ -578,9 +652,9 @@ export class GovernanceService {
         eligibility: {
           can_approve: approval.status === "PENDING" && locks.length === 0,
           can_approve_with_condition: approval.status === "PENDING" && locks.length === 0,
-          can_deny: approval.status === "PENDING" && !expired && user.role === "ADMIN" && !alreadyDecided,
+          can_deny: approval.status === "PENDING" && !expired && mayDecideR2 && !alreadyDecided,
           can_request_changes:
-            approval.status === "PENDING" && !expired && user.role === "ADMIN" && !alreadyDecided && !self,
+            approval.status === "PENDING" && !expired && mayDecideR2 && !alreadyDecided && !self,
           locks,
           separation_of_duties: self ? "VIOLATION" : "OK",
         },
@@ -594,7 +668,8 @@ export class GovernanceService {
     workspaceId: string,
     approvalId: string,
   ) {
-    const backbone = await this.r2Detail(user, workspaceId, approvalId) as Record<string, unknown>;
+    await this.assertGovernance(user, "live", "read", workspaceId);
+    const backbone = await this.r2Payload(user, workspaceId, approvalId) as Record<string, unknown>;
     const data = backbone.data as { approval?: { subject_id?: unknown } } | undefined;
     const subjectId = data?.approval?.subject_id;
     if (typeof subjectId !== "string" || subjectId.length < 1 || subjectId.length > 191) {
@@ -643,9 +718,9 @@ export class GovernanceService {
   }
 
   async plan(user: PortalUser, input: PlanInput, requestId: string) {
-    if (user.role !== "ADMIN") {
-      await this.rejected(user, input, requestId, "APPROVER_ROLE_REQUIRED", "DENIED");
-      throw new GovernanceError("APPROVER_ROLE_REQUIRED", "Access denied.", 403);
+    if (!(await this.governance(user, "r1", "decide", input.workspaceId))) {
+      await this.rejected(user, input, requestId, "GOVERNANCE_CAPABILITY_REQUIRED", "DENIED");
+      throw new GovernanceError("GOVERNANCE_CAPABILITY_REQUIRED", "Access denied.", 403);
     }
     const snapshot = await this.repository.detail(input.workspaceId, input.approvalId);
     if (!snapshot || snapshot.approval.gate !== "R1") {
@@ -751,9 +826,7 @@ export class GovernanceService {
   }
 
   async apply(user: PortalUser, workspaceId: string, operationId: string, applyToken: string, requestId: string) {
-    if (user.role !== "ADMIN") {
-      throw new GovernanceError("APPROVER_ROLE_REQUIRED", "Access denied.", 403);
-    }
+    await this.assertGovernance(user, "r1", "decide", workspaceId);
     const plan = await this.repository.findPlan(workspaceId, user.userId, operationId);
     if (!plan) throw new GovernanceError("OPERATION_NOT_FOUND", "Operation not found.", 404);
     const tokenHash = createHash("sha256").update(applyToken, "utf8").digest("hex");
@@ -899,4 +972,73 @@ export class GovernanceService {
       reasonCode: code,
     });
   }
+}
+
+/**
+ * A4-D14 · which inbox rows this caller could actually decide.
+ *
+ * One entry per gate in `APPROVAL_GATES`, each mirroring the authority that
+ * gate's own decision path enforces — measured, not assumed:
+ *
+ *  - `R1` / `R2` / `LIVE_GATE` — `governance.service` guards their detail and
+ *    decision paths with `assertGovernance(user, "r1" | "r2" | "live", ...)`,
+ *    so the matching `*.decide` capability is the honest predicate. `LIVE_GATE`
+ *    is `live`, not `r2`: it has its own route (`/approvals/:id/live`) and its
+ *    own capability, even though Command Center links it at the R2 screen.
+ *  - `PAPER_EXIT` — still role-gated. `paper-exit.service.ts` throws
+ *    `APPROVER_ROLE_REQUIRED` for a non-`ADMIN`, so for these rows `ADMIN` is
+ *    the correct answer and a capability check would be the wrong one.
+ *  - `SANDBOX_EXIT` — no decision path exists. The gate is legal in the schema
+ *    but nothing in the product creates such an approval, so nobody can decide
+ *    one. Fails closed: telling somebody a row needs them when no action can be
+ *    taken on it is exactly the kind of claim §3.3 forbids.
+ *
+ * Deliberately NOT a capability lookup for all five. The §20.3 namespace was
+ * frozen in A4-1 and does not cover the exit gates; inventing entries for them
+ * here would create authority the owner never granted.
+ */
+function approvalDecisionPredicate(
+  user: PortalUser,
+  access: EffectiveAccess,
+  workspaceId: string | null,
+): MayDecideApproval {
+  return (gate) => {
+    switch (gate) {
+      case "R1":
+        return mayGovern({ access, gate: "r1", mode: "decide", workspaceId });
+      case "R2":
+        return mayGovern({ access, gate: "r2", mode: "decide", workspaceId });
+      case "LIVE_GATE":
+        return mayGovern({ access, gate: "live", mode: "decide", workspaceId });
+      case "PAPER_EXIT":
+        return user.role === "ADMIN";
+      case "SANDBOX_EXIT":
+        return false;
+    }
+  };
+}
+
+/**
+ * The Inbox, history and conditions register are reads, so their visibility
+ * follows the matching `*.read` grant rather than the stronger decision
+ * affordance.  This is evaluated before the SQL page/count/cursor is built;
+ * it is not a cosmetic row filter after data has reached the process.
+ *
+ * PAPER_EXIT remains the one documented legacy exception: its published
+ * service is still role-gated and A4 intentionally did not invent a new
+ * capability for it.  SANDBOX_EXIT has no published reader/decision contract,
+ * so only the Portal owner can inspect its historical rows until one exists.
+ */
+function approvalReadGates(
+  user: PortalUser,
+  access: EffectiveAccess,
+  workspaceId: string,
+): ApprovalGate[] {
+  if (access.isOwner) return [...APPROVAL_GATES];
+  const gates: ApprovalGate[] = [];
+  if (mayGovern({ access, gate: "r1", mode: "read", workspaceId })) gates.push("R1");
+  if (mayGovern({ access, gate: "r2", mode: "read", workspaceId })) gates.push("R2");
+  if (mayGovern({ access, gate: "live", mode: "read", workspaceId })) gates.push("LIVE_GATE");
+  if (user.role === "ADMIN") gates.push("PAPER_EXIT");
+  return gates;
 }

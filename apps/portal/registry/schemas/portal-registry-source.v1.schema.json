@@ -116,7 +116,8 @@
         "paper.read",
         "sandbox.read",
         "live.read",
-        "profile.read"
+        "profile.read",
+        "administration.profile_access.manage"
       ]
     },
     "route": {

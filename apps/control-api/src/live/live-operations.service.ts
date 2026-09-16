@@ -12,6 +12,11 @@ import {
   ProfileScreenSource,
 } from "../execution/profile-screen-composer";
 import { GovernanceError } from "../governance/governance.service";
+import { OwnerAccessService } from "../auth/owner-access.service";
+import {
+  GOVERNANCE_DENIAL_MESSAGE,
+  governanceDenial,
+} from "../auth/governance-access";
 
 function decimal(value: string): string {
   const [whole, fraction = ""] = value.split(".");
@@ -49,9 +54,23 @@ export class LiveOperationsService {
     @Inject(CanaryRepository) private readonly canaries: CanaryRepository,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
   ) {}
 
   async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+    /*
+     * A4-3 · the Live gate, decided from a capability.
+     *
+     * Live Full Operations shows real positions, exposure and session P&L for
+     * a running deployment. Before this, any authenticated session that could
+     * reach the workspace could read it; §20.3 makes it `governance.live.read`,
+     * which the owner holds and anybody else holds only by explicit grant.
+     */
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const denial = governanceDenial({ access, gate: "live", mode: "read", workspaceId });
+    if (denial) {
+      throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
+    }
     let canary: CanaryEnvelopeRow;
     try {
       canary = await this.canaries.latestByDeployment(workspaceId, deploymentId);

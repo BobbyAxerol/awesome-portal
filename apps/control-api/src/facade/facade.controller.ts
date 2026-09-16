@@ -17,12 +17,22 @@ import { PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { RunsRepository } from "../repos/runs";
 import { WorkspacesRepository } from "../repos/workspaces";
+import {
+  MUTATION_SECURITY_MESSAGE,
+  mutationSecurityDenial,
+} from "../auth/mutation-security";
 import { FacadeError, PortalProxyService } from "./proxy.service";
 import { SessionGuard } from "./session.guard";
 
 interface PortalRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  /*
+   * `SessionGuard` has always attached this; only the type omitted it, which
+   * is why the CSRF secret was out of reach here while the sibling
+   * `PlanningFacadeController` — same module, same guard — could use it.
+   */
+  portalSession: { csrfSecretHash: string };
 }
 
 @UseGuards(SessionGuard)
@@ -209,6 +219,39 @@ export class FacadeController {
     // available as a convenience but are no longer the only read path.
     if (write && user.role !== "ADMIN") {
       throw new FacadeError("PERMISSION_DENIED", "Access denied.", 403);
+    }
+    /*
+     * A4-FE-BE-GAP-01 · the last cookie-authenticated write path with no
+     * Origin or CSRF check.
+     *
+     * A role check answers "may this person write", never "did this person
+     * ask". The browser attaches the session cookie by itself, so an attacker
+     * needs no secret — only a page the victim visits. `SameSite=Lax` stops
+     * the cross-SITE form post, but SameSite is scoped to the site rather than
+     * the origin, and `dev-portal.primusspark.com` shares a registrable domain
+     * with production while deliberately carrying no Access policy. A page
+     * there is cross-origin and same-site, so its requests do arrive with the
+     * cookie.
+     *
+     * Three of the four upstream writes then die on content type, because
+     * FastAPI will not parse a Pydantic body that is not JSON. The fourth does
+     * not: `POST /api/runs/{run_id}/cancel` declares no body at all, so the
+     * bytes are ignored and a plain `enctype="text/plain"` form cancels a
+     * running backtest — hours of walk-forward compute, from a page the owner
+     * merely opened.
+     *
+     * Ordered AFTER the role check so a non-ADMIN sees the same refusal
+     * whether or not they forged a CSRF token; reversing the two would let the
+     * CSRF error say "you would have been allowed".
+     */
+    if (write) {
+      const denial = mutationSecurityDenial(request, {
+        csrfSecretHash: request.portalSession.csrfSecretHash,
+        allowedOrigin: this.config.PORTAL_PUBLIC_ORIGIN,
+      });
+      if (denial) {
+        throw new FacadeError(denial, MUTATION_SECURITY_MESSAGE[denial], 403);
+      }
     }
     const requestId =
       (request.headers["x-request-id"] as string | undefined) ?? newUlid("req");

@@ -8,12 +8,14 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { constantTimeEqual, sha256 } from "../auth/argon";
-import { CSRF_HEADER, originAllowed } from "../auth/cookies";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { CONTROL_API_CONFIG } from "../tokens";
+import {
+  MUTATION_SECURITY_MESSAGE,
+  mutationSecurityDenial,
+} from "../auth/mutation-security";
 import { FacadeError, PortalProxyService } from "./proxy.service";
 import { SessionGuard } from "./session.guard";
 
@@ -67,15 +69,25 @@ export class PlanningFacadeController {
       ) {
         throw new FacadeError("PERMISSION_DENIED", "Access denied.", 403);
       }
-      if (!originAllowed(request, this.config.PORTAL_PUBLIC_ORIGIN)) {
-        throw new FacadeError("ORIGIN_DENIED", "Origin not allowed.", 403);
-      }
-      const csrf = request.headers[CSRF_HEADER] as string | undefined;
-      if (!csrf) {
-        throw new FacadeError("CSRF_REQUIRED", "CSRF token is missing.", 403);
-      }
-      if (!constantTimeEqual(sha256(csrf), request.portalSession.csrfSecretHash)) {
-        throw new FacadeError("CSRF_INVALID", "CSRF token is invalid.", 403);
+      /*
+       * A4-1 · the shared decision, not a seventh hand-copy.
+       *
+       * This copy had drifted twice from what it was meant to be. It called
+       * `originAllowed` bare, and that helper answers `true` for a REQUEST
+       * WITH NO ORIGIN HEADER at all — so anything that simply omitted the
+       * header passed the origin gate. And it compared the header only to the
+       * session's stored hash, never to the `__Host-portal_csrf` cookie, which
+       * is the half that makes double-submit mean anything.
+       *
+       * `mutationSecurityDenial` is strictly stricter on both counts and is
+       * now the single place either rule can be changed.
+       */
+      const denial = mutationSecurityDenial(request, {
+        csrfSecretHash: request.portalSession.csrfSecretHash,
+        allowedOrigin: this.config.PORTAL_PUBLIC_ORIGIN,
+      });
+      if (denial) {
+        throw new FacadeError(denial, MUTATION_SECURITY_MESSAGE[denial], 403);
       }
     }
 

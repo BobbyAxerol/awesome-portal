@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:1f355710d7f0b0a20c2a97d930cd0d7abc44b04ac21856ca375b4e66c2fe1215"
+      "sha256": "sha256:6c0df8287e2dc905f8fe686fb55dd181bb2667da312dd17f4226d7a5b5317612"
     },
     {
       "id": "n29_debt",
@@ -95,12 +95,12 @@
     {
       "id": "protected_deploy_workflow",
       "file": ".github/workflows/deploy.yml",
-      "sha256": "sha256:1523586c8b529779407fa3a2b562c82d5bb512b57df8067e813d29c3e242554c"
+      "sha256": "sha256:0f626f68f0b14a7ef5c38e948f15002bf091090428df1b8eef180ac8372b61b9"
     },
     {
       "id": "ci_qualification_gate",
       "file": ".github/workflows/ci.yml",
-      "sha256": "sha256:1a018e8381b7a0868c9d37e041ba2cccb556bc3e702d15beb32f349e61d4a960"
+      "sha256": "sha256:d577365a4c7a3fcedf1036997ba22a737b128dd6279d7f2164c6129a83025703"
     },
     {
       "id": "cosign_signature_adapter",
@@ -115,7 +115,7 @@
     {
       "id": "release_authority_workflow_test",
       "file": "scripts/test_portal_release_authority.py",
-      "sha256": "sha256:28abbc01b8cf6a3003193e265e5e745f8e7bee40e95cbfb855d376159ab4f251"
+      "sha256": "sha256:c108f7d98fb2447e00b840ff3da0c3989a8e6c8bd1ba4ca4c5f3b48562763044"
     },
     {
       "id": "release_integrity_ledger_refresh",
@@ -170,7 +170,7 @@
     {
       "id": "subject_activity_bff",
       "file": "apps/control-api/src/execution/subject-activity.service.ts",
-      "sha256": "sha256:a5dfa221b1e195c3792da30c1ecaaa6c95c6afdf07f17e063a4cac95e1f172fc"
+      "sha256": "sha256:011830994cb622709b76bbd633865e68102568349d00f0d110f69dd0b1a1917a"
     },
     {
       "id": "subject_activity_ui",
@@ -185,12 +185,12 @@
     {
       "id": "projection_worker",
       "file": "apps/control-api/src/execution/profile-projection.worker.ts",
-      "sha256": "sha256:be10243d554b3e2232d7237fbf02e7a3cae6cdcbbe4642041118980832ab8c62"
+      "sha256": "sha256:88673cf4f360d0c49dac76e79f57607d5c657b7a6ca3d60e556fa316916ce28d"
     },
     {
       "id": "projection_repository",
       "file": "apps/control-api/src/execution/profile-projection.repository.ts",
-      "sha256": "sha256:c7575969151a59fab3479d3cedc1f6417e5faab415f3eb3c07a13d96574bcfd9"
+      "sha256": "sha256:a8359036bbe213c0d683ba1313d35f620249ef1350ef7dbd7a27328c83f92c14"
     },
     {
       "id": "market_context_intake",

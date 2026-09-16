@@ -34,6 +34,20 @@ export interface NavOptions {
   environment?: PortalEnvironment | null;
   /** User preference: hide COMMISSIONED/BLOCKED entries (v0.4 §P0.7). */
   showCommissioned?: boolean;
+  /**
+   * A4-4 · the capability set the SERVER computed for this caller.
+   *
+   * Navigation is owner-aware from here, not from a role: a feature whose
+   * registry `permissions` name an A4 capability is listed only for somebody
+   * the server says holds it. Absent (the unwired-BFF case) means "no
+   * capabilities", so a protected entry is hidden rather than optimistically
+   * shown — the screen behind it would refuse anyway, and an entry that always
+   * refuses is worse than no entry.
+   *
+   * This is a courtesy, never the boundary. `OwnerAccessGuard` refuses the API
+   * regardless of what the sidebar happens to render.
+   */
+  capabilities?: readonly string[];
 }
 
 /** Maturities that actually have a runtime in some environment. */
@@ -55,8 +69,27 @@ const RUNTIME_MATURITIES = new Set(["AVAILABLE", "PROTOTYPE", "DEPRECATED"]);
  * runs" or "where it is listed" is not stated in the registry schema. This
  * reading is the one that satisfies §P0.7; see the Backend request.
  */
+/**
+ * Registry permissions that A4 turned into real server-side capabilities.
+ *
+ * Everything else in `permissions` stays descriptive, exactly as §3.5 says —
+ * this set is the short list the server actually enforces, so it is the only
+ * one navigation is allowed to act on.
+ */
+const ENFORCED_CAPABILITIES = new Set([
+  "administration.users.manage",
+  "administration.profile_access.manage",
+]);
+
 function isNavigable(feature: PortalFeatureDefinition, options: NavOptions): boolean {
   if (feature.maturity === "HIDDEN") return false;
+  const enforced = feature.permissions.filter((permission) =>
+    ENFORCED_CAPABILITIES.has(permission),
+  );
+  if (enforced.length > 0) {
+    const held = options.capabilities ?? [];
+    if (!enforced.every((permission) => held.includes(permission))) return false;
+  }
   if (options.showCommissioned === false) {
     if (feature.maturity === "COMMISSIONED" || feature.maturity === "BLOCKED") return false;
   }

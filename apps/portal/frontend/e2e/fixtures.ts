@@ -130,6 +130,7 @@ export type AuthStubState =
   | "AUTHENTICATED"
   | "APP_LOGIN_REQUIRED"
   | "PASSWORD_CHANGE_REQUIRED"
+  | "ACTIVATION_RECOVERY_REQUIRED"
   | "ACCESS_REQUIRED"
   | "ACCOUNT_DISABLED";
 
@@ -204,6 +205,226 @@ export async function stubPortalApi(
             }
           : null,
       access_identity: { sub: "access-sub-baseline", email: "name@azdag.com" },
+    }),
+  );
+
+  /*
+   * A4-1 · what the signed-in baseline principal may do.
+   *
+   * The shell stopped deriving authority from `principal.role` and now asks
+   * the server. Without this route the baseline principal is "not the owner",
+   * the owner link leaves the top bar, and twenty-three Research and Planning
+   * snapshots shift at the narrow breakpoints — a fixture gap that would read
+   * as a design change. The baseline has always depicted the administrator's
+   * view, so the stub answers for the same person the `principal` above
+   * describes.
+   */
+  /*
+   * A4-2 · the owner account control desk.
+   *
+   * Stubbed here for the same reason `/access/self` is: the shell asks for
+   * these on the Users & Access route, and an unstubbed route falls to the 501
+   * catch-all — which shifts the layout and floods the zero-console-error
+   * test, so a fixture gap would read as a design change.
+   *
+   * The roster is pinned, not generated: a baseline whose rows move is not a
+   * baseline. Step-up is REQUIRED so the recorded screen shows the state an
+   * owner actually arrives in.
+   */
+  await page.route("**/api/admin/accounts", (route) =>
+    void json(route, {
+      schema_version: "portal.account-roster.v1",
+      record_authority: "PORTAL_CONTROL",
+      accounts: [
+        {
+          user_id: "usr_baseline_bobby",
+          username: "bobby",
+          display_name: "Bobby",
+          role: "ADMIN",
+          account_state: "ACTIVE",
+          must_change_password: false,
+          account_revision: 12,
+          locked: false,
+        },
+        {
+          user_id: "usr_baseline_stan",
+          username: "stan",
+          display_name: "Stan",
+          role: "USER",
+          account_state: "ACTIVE",
+          must_change_password: false,
+          account_revision: 7,
+          locked: false,
+        },
+        {
+          user_id: "usr_baseline_thanh",
+          username: "thanhvuong",
+          display_name: "Thanh Vuong",
+          role: "USER",
+          account_state: "DISABLED",
+          must_change_password: true,
+          account_revision: 4,
+          locked: true,
+        },
+        {
+          user_id: "usr_baseline_former",
+          username: "former-analyst",
+          display_name: "Former Analyst",
+          role: "USER",
+          account_state: "ARCHIVED",
+          must_change_password: false,
+          account_revision: 21,
+          locked: false,
+        },
+      ],
+    }),
+  );
+
+  /*
+   * A4-D13 · one account's detail, served for the expanded-row baseline.
+   *
+   * Registered after the roster route so the more specific pattern is the one
+   * that answers `/accounts/<id>`; without it that read falls to the 501
+   * catch-all, the history panel renders its failure state, and a fixture gap
+   * would photograph as a design regression.
+   */
+  await page.route("**/api/admin/accounts/*", (route) =>
+    void json(route, {
+      schema_version: "portal.account-detail.v1",
+      record_authority: "PORTAL_CONTROL",
+      account: {
+        user_id: "usr_baseline_stan",
+        username: "stan",
+        display_name: "Stan",
+        role: "USER",
+        account_state: "ACTIVE",
+        must_change_password: false,
+        account_revision: 7,
+        locked: false,
+      },
+      history: [
+        {
+          operation_id: "alo_baseline_2",
+          action: "REVOKE_SESSIONS",
+          outcome: "APPLIED",
+          reason_code: null,
+          expected_revision: 6,
+          resulting_revision: 7,
+          rollback_description: "Sessions cannot be restored; the account signs in again.",
+          step_up_used: true,
+          occurred_at: "2026-09-15T04:12:00Z",
+        },
+        {
+          operation_id: "alo_baseline_1",
+          action: "ISSUE_ACTIVATION",
+          outcome: "APPLIED",
+          reason_code: null,
+          expected_revision: 5,
+          resulting_revision: 6,
+          rollback_description: "Reissue to revoke this credential and issue another.",
+          step_up_used: true,
+          occurred_at: "2026-09-14T09:30:00Z",
+        },
+      ],
+    }),
+  );
+
+  /*
+   * A4-3 · the Governance policy matrix.
+   *
+   * Pinned rather than generated, and deliberately showing all three cell
+   * states the grid can be in: a direct grant, the read implied by a decide,
+   * and an account with no Portal access at all. A baseline that only shows
+   * the empty grid proves nothing about the thing this screen exists to say.
+   */
+  await page.route("**/api/admin/profile-access", (route) =>
+    void json(route, {
+      schema_version: "portal.profile-access.v1",
+      record_authority: "PORTAL_CONTROL",
+      accounts: [
+        {
+          user_id: "usr_baseline_bobby",
+          username: "bobby",
+          display_name: "Bobby",
+          is_owner: true,
+          account_state: "ACTIVE",
+          capabilities: [],
+        },
+        {
+          user_id: "usr_baseline_stan",
+          username: "stan",
+          display_name: "Stan",
+          is_owner: false,
+          account_state: "ACTIVE",
+          capabilities: [
+            { capability: "governance.r1.read", grant_id: "grn_1", workspace_id: null, grant_revision: 1 },
+            { capability: "governance.r2.decide", grant_id: "grn_2", workspace_id: null, grant_revision: 2 },
+          ],
+        },
+        {
+          user_id: "usr_baseline_thanh",
+          username: "thanhvuong",
+          display_name: "Thanh Vuong",
+          is_owner: false,
+          account_state: "ACTIVE",
+          capabilities: [
+            { capability: "governance.canary.read", grant_id: "grn_3", workspace_id: null, grant_revision: 1 },
+          ],
+        },
+        {
+          user_id: "usr_baseline_former",
+          username: "former-analyst",
+          display_name: "Former Analyst",
+          is_owner: false,
+          account_state: "ARCHIVED",
+          capabilities: [],
+        },
+      ],
+    }),
+  );
+
+  await page.route("**/api/admin/profile-access/activity**", (route) =>
+    void json(route, {
+      schema_version: "portal.profile-access-activity.v1",
+      activity: [],
+    }),
+  );
+
+  await page.route("**/api/admin/step-up", (route) =>
+    void json(route, {
+      schema_version: "portal.owner-step-up.v1",
+      state: "REQUIRED",
+      expires_at: null,
+    }),
+  );
+
+  await page.route("**/api/admin/access/self", (route) =>
+    void json(route, {
+      schema_version: "portal.owner-access.v1",
+      record_authority: "PORTAL_CONTROL",
+      user_id: "principal-visual-baseline",
+      is_owner: authState === "AUTHENTICATED",
+      owner_state: authState === "AUTHENTICATED" ? "OWNER" : "NOT_OWNER",
+      capabilities:
+        authState === "AUTHENTICATED"
+          ? [
+              "administration.profile_access.manage",
+              "administration.users.manage",
+              "governance.canary.decide",
+              "governance.canary.read",
+              "governance.live.decide",
+              "governance.live.read",
+              "governance.r1.decide",
+              "governance.r1.read",
+              "governance.r2.decide",
+              "governance.r2.read",
+            ]
+          : [],
+      mutation_requirements: {
+        origin: "REQUIRED",
+        csrf: "REQUIRED",
+        step_up: "REQUIRED_FOR_DESTRUCTIVE",
+      },
     }),
   );
 }

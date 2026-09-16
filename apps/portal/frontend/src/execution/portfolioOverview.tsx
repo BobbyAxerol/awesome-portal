@@ -49,19 +49,47 @@ const ms = (value: unknown): number | null => {
 export interface EquityPoint { t: number; equity: number }
 
 /** One portfolio's equity snapshots, oldest first, one currency at a time. */
-export function equitySeriesOf(rows: readonly Row[], portfolioId: string): { points: EquityPoint[]; currency: string | null } {
-  const points: EquityPoint[] = [];
-  let currency: string | null = null;
+/**
+ * One series per currency — never one series across them.
+ *
+ * `portfolio_types_pool` publishes 667 USDT snapshots at 22,220,000 and 667
+ * VND snapshots at 50,000,000,000. This used to push both into a single
+ * series and label it with whichever currency it happened to see first, so
+ * the chart drew a 50-billion axis over a 22-million portfolio and called the
+ * whole thing USDT. The cross-portfolio panel directly beneath it states the
+ * rule that broke: "each portfolio in its own base currency · never summed
+ * across currencies."
+ *
+ * Splitting rather than filtering to a base currency, because dropping the
+ * other currency's snapshots would hide published data, and picking one would
+ * need a base-currency fact this relation does not carry.
+ */
+export function equitySeriesOf(rows: readonly Row[], portfolioId: string): {
+  byCurrency: readonly { currency: string | null; points: EquityPoint[] }[];
+  points: EquityPoint[];
+  currency: string | null;
+} {
+  const buckets = new Map<string, { currency: string | null; points: EquityPoint[] }>();
   for (const row of rows) {
     if (text(row.portfolio_id) !== portfolioId) continue;
     const at = ms(row.ts ?? row.created_at);
     const equity = decimal(row.equity);
     if (at === null || equity === null) continue;
-    currency ??= text(row.currency);
-    points.push({ t: at, equity });
+    const currency = text(row.currency);
+    // A snapshot with no currency is its own bucket: merging it into a named
+    // one would assert a denomination the source did not publish.
+    const key = currency ?? "\u0000unstated";
+    const bucket = buckets.get(key) ?? { currency, points: [] };
+    bucket.points.push({ t: at, equity });
+    buckets.set(key, bucket);
   }
-  points.sort((left, right) => left.t - right.t);
-  return { points, currency };
+  const byCurrency = [...buckets.values()]
+    .map((bucket) => ({ ...bucket, points: [...bucket.points].sort((a, b) => a.t - b.t) }))
+    .sort((a, b) => (a.currency ?? "").localeCompare(b.currency ?? ""));
+  const first = byCurrency[0] ?? null;
+  // Kept for callers that want the single-denomination view; it is one
+  // currency's points, never a mixture of several.
+  return { byCurrency, points: first?.points ?? [], currency: first?.currency ?? null };
 }
 
 export interface PortfolioStanding {
@@ -85,17 +113,31 @@ export interface PortfolioStanding {
  * snapshot already carries `net_pnl`, so there is nothing to derive.
  */
 export function crossPortfolioStandings(rows: readonly Row[]): PortfolioStanding[] {
-  const byPortfolio = new Map<string, { firstAt: number; lastAt: number; firstText: string; lastText: string; netText: string | null; currency: string | null; count: number }>();
+  /*
+   * Keyed by portfolio AND currency.
+   *
+   * Keyed by portfolio alone, `portfolio_types_pool` collapsed its 667 USDT
+   * and 667 VND snapshots into one row of 1,334 — a count the chart above it
+   * contradicted — labelled with whichever currency arrived first. Worse than
+   * the count: `first` and `last` equity could come from different
+   * denominations, which makes the net beside them a comparison of two
+   * different things. The table already prints "portfolio · currency", so the
+   * row was always meant to be per denomination.
+   */
+  const byPortfolio = new Map<string, { portfolioId: string; firstAt: number; lastAt: number; firstText: string; lastText: string; netText: string | null; currency: string | null; count: number }>();
   for (const row of rows) {
     const portfolioId = text(row.portfolio_id);
     const at = ms(row.ts ?? row.created_at);
     const equityText = text(row.equity);
     if (!portfolioId || at === null || equityText === null) continue;
-    const existing = byPortfolio.get(portfolioId);
+    const currency = text(row.currency);
+    const key = `${portfolioId}\u0000${currency ?? ""}`;
+    const existing = byPortfolio.get(key);
     if (!existing) {
-      byPortfolio.set(portfolioId, {
+      byPortfolio.set(key, {
+        portfolioId,
         firstAt: at, lastAt: at, firstText: equityText, lastText: equityText,
-        netText: text(row.net_pnl), currency: text(row.currency), count: 1,
+        netText: text(row.net_pnl), currency, count: 1,
       });
       continue;
     }
@@ -103,9 +145,9 @@ export function crossPortfolioStandings(rows: readonly Row[]): PortfolioStanding
     if (at > existing.lastAt) { existing.lastAt = at; existing.lastText = equityText; existing.netText = text(row.net_pnl); }
     existing.count += 1;
   }
-  return [...byPortfolio.entries()]
-    .map(([portfolioId, value]) => ({
-      portfolioId,
+  return [...byPortfolio.values()]
+    .map((value) => ({
+      portfolioId: value.portfolioId,
       firstText: value.firstText,
       lastText: value.lastText,
       netText: value.netText,
@@ -182,6 +224,13 @@ export interface PortfolioOverviewInput {
     status: Exclude<PanelStatus, "ok">;
     reason: string | null;
   } | null;
+  /**
+   * Why the EDS-07 equity-chart route could not answer, when it could not.
+   *
+   * Absent when the route answered or was never the failing read; present it
+   * verbatim so the reason names the read that actually failed.
+   */
+  equityChartReason?: string | null;
 }
 
 /** The three Overview panels, or honest states in their place. */
@@ -192,34 +241,72 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
 } {
   const snapshots = input.relations?.facts.portfolio_equity_snapshots;
   const ledger = input.relations?.facts.portfolio_capital_ledger;
+  /*
+   * When the equity CHART route is the thing that failed, say so.
+   *
+   * `equityChart` is only passed when the EDS-07 route answered, and the
+   * fallback below then blamed the snapshots relation — a sentence about a
+   * different read than the one that actually failed. An operator chasing
+   * `PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE` would be looking in the wrong
+   * place. The route's own reason outranks the generic one.
+   */
   const reason = input.loading
     ? "the portfolio relations are still draining"
-    : "Soon · PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE";
+    : input.equityChartReason
+      ? input.equityChartReason
+      : "Soon · PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE";
   const status = input.loading ? "loading" as const : "unavailable" as const;
 
-  // A served answer replaces the drained one outright: mixing the two would
-  // put a page-sized standing beside a whole-store one in the same table.
-  const served = input.crossEquity ?? null;
+  /*
+   * A served answer replaces the drained one outright — mixing the two would
+   * put a page-sized standing beside a whole-store one in the same table.
+   *
+   * But "replaces" only holds when the route actually returned rows. The
+   * container always passes this object, so an ok-but-empty route made the
+   * drained branch unreachable and the panel asserted "the store retains no
+   * equity snapshot for any portfolio" while the relation beside it held
+   * 1,334 of them. An empty served answer is not evidence of an empty store;
+   * it is one read that came back empty, and the drained standings are then
+   * the better answer rather than a contradicted one.
+   */
+  const servedInput = input.crossEquity ?? null;
   const equity = snapshots ? equitySeriesOf(snapshots, input.portfolioId) : null;
+  // A single point draws no line; a denomination with one snapshot says so
+  // through the state panel rather than through an empty frame.
+  const drawable = (equity?.byCurrency ?? []).filter((bucket) => bucket.points.length > 1);
   const standings = snapshots ? crossPortfolioStandings(snapshots) : [];
+  // Keep the served answer when it has rows, or when there is nothing drained
+  // to fall back to — so the served reason still shows on a genuine refusal.
+  const served = servedInput && (servedInput.rows.length > 0 || standings.length === 0)
+    ? servedInput
+    : null;
   const movements = ledger ? configurationLogOf(ledger, input.portfolioId) : [];
 
   return {
     equityVsBenchmark: (
       <section className="exec-gate-panel" aria-label="Equity vs benchmark">
         <h3 className="exec-section-title">Equity vs benchmark</h3>
-        {input.equityChart ? input.equityChart : equity && equity.points.length > 1 ? (
+        {input.equityChart ? input.equityChart : drawable.length > 0 ? (
           <>
-            <LinesChart
-              series={[{ name: `portfolio equity${equity.currency ? ` · ${equity.currency}` : ""}`, tone: "good", points: equity.points.map((point) => [new Date(point.t).toISOString(), point.equity] as const) }]}
-              height={170}
-              yFormatter={money}
-              provenance={{ authority: "EXECUTION", asOf: input.asOf, formula: "portfolio_equity_snapshots" }}
-              ariaLabel="Portfolio equity over the drained snapshot window"
-            />
-            <p className="exec-blotter-note">
-              {equity.points.length} published snapshots · benchmark line: Soon · BENCHMARK_SERIES_NOT_PUBLISHED
-            </p>
+            {/*
+              * One chart per currency. A shared y-axis across denominations
+              * would put a 50-billion VND line over a 22-million USDT one and
+              * make both unreadable, and the axis would belong to neither.
+              */}
+            {drawable.map((bucket) => (
+              <div key={bucket.currency ?? "unstated"}>
+                <LinesChart
+                  series={[{ name: `portfolio equity${bucket.currency ? ` · ${bucket.currency}` : " · currency not published"}`, tone: "good", points: bucket.points.map((point) => [new Date(point.t).toISOString(), point.equity] as const) }]}
+                  height={170}
+                  yFormatter={money}
+                  provenance={{ authority: "EXECUTION", asOf: input.asOf, formula: "portfolio_equity_snapshots" }}
+                  ariaLabel={`Portfolio equity in ${bucket.currency ?? "an unpublished currency"} over the drained snapshot window`}
+                />
+                <p className="exec-blotter-note">
+                  {bucket.points.length} published snapshots{bucket.currency ? ` · ${bucket.currency}` : ""} · benchmark line: Soon · BENCHMARK_SERIES_NOT_PUBLISHED
+                </p>
+              </div>
+            ))}
           </>
         ) : (
           <PanelState status={status} reason={equity ? "the source published fewer than two equity snapshots for this portfolio" : reason} />

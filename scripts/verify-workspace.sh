@@ -812,7 +812,11 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/auth/principal.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/cookies.ts" \
   "${ROOT_DIR}/apps/control-api/src/admin/admin.service.ts" \
-  "${ROOT_DIR}/apps/control-api/src/admin/admin.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/admin/account-lifecycle.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/admin/account-lifecycle.service.ts" \
+  "${ROOT_DIR}/apps/control-api/src/admin/owner-step-up.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/admin/owner-access.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/admin/owner-access.guard.ts" \
   "${ROOT_DIR}/apps/control-api/src/admin/rbac.guard.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/users.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/bindings.ts" \
@@ -1457,7 +1461,11 @@ for tracked_source in \
   apps/control-api/src/auth/principal.ts \
   apps/control-api/src/auth/cookies.ts \
   apps/control-api/src/admin/admin.service.ts \
-  apps/control-api/src/admin/admin.controller.ts \
+  apps/control-api/src/admin/account-lifecycle.controller.ts \
+  apps/control-api/src/admin/account-lifecycle.service.ts \
+  apps/control-api/src/admin/owner-step-up.controller.ts \
+  apps/control-api/src/admin/owner-access.controller.ts \
+  apps/control-api/src/admin/owner-access.guard.ts \
   apps/control-api/src/admin/rbac.guard.ts \
   apps/control-api/src/repos/users.ts \
   apps/control-api/src/repos/bindings.ts \

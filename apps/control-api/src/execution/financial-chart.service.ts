@@ -23,6 +23,7 @@ import {
   ExecutionFinancialQueryCursorRepository,
   type FinancialQueryCursorScope,
 } from "./financial-query-cursor.repository";
+import { durableMirrorReadEnabled } from "./durable-mirror-mode";
 import type { ProjectionEnvironment, ProjectionScalar } from "./profile-projection.repository";
 
 export const EDS07_FINANCIAL_METRICS = [
@@ -607,7 +608,7 @@ function profileIdFor(config: ControlApiConfig, environment: ProjectionEnvironme
 }
 
 function durableMirrorReadDisabled(config: ControlApiConfig): boolean {
-  return config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true" || config.FEATURE_EXECUTION_DURABLE_MIRROR_READS !== "true";
+  return !durableMirrorReadEnabled(config);
 }
 
 function clocks(observation: DurableFinancialObservation | { asOf: Date | null; receivedAt: Date | null } | null) {

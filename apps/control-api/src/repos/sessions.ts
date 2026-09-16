@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { AuthSession } from "../domain";
 
 interface SessionRow {
@@ -49,7 +49,7 @@ function toSession(row: SessionRow): AuthSession & {
 }
 
 export class SessionsRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool | PoolClient) {}
 
   async create(input: {
     sessionId: string;
