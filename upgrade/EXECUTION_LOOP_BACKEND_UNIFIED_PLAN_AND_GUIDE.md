@@ -9020,6 +9020,13 @@ runner campaign is accepted.  The CI/security/publication workflows also bind
 honours it.  That supplies a deterministic disposable path even during a host
 unit reload window; it is not an alternate host-temp escape hatch.
 
+The CI runner also never receives sudo only to emulate production ownership.
+Its D4 qualifier gate runs template parsing plus static enforcement checks;
+real file-owner/mode readiness is explicitly a separate
+`execution-d4-qualification-preflight-test.sh --require-root` deployment or
+workstation drill.  This preserves the proof without granting the build plane
+production-style privileges.
+
 ### 22.1 Required invariants
 
 1. CI/publication workflows must select explicit custom labels and immediately

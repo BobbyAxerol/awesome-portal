@@ -4,9 +4,33 @@ set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 preflight="${root_dir}/scripts/execution-d4-qualification-preflight.sh"
+require_root=false
+if [[ "${1:-}" == "--require-root" ]]; then
+  require_root=true
+  shift
+elif [[ $# -ne 0 ]]; then
+  printf 'Usage: %s [--require-root]\n' "$0" >&2
+  exit 2
+fi
 tmp_dir="$(mktemp -d)"
-cleanup() { sudo -n rm -rf -- "${tmp_dir}"; }
+cleanup() { rm -rf -- "${tmp_dir}"; }
 trap cleanup EXIT
+
+# CI/publication uses a deliberately non-privileged user and must never obtain
+# sudo merely to emulate production file ownership.  A workstation or a
+# deployment-only drill can request the stronger real-ownership branch.
+root_command=()
+root_readiness=false
+if [[ "${EUID}" == 0 ]]; then
+  root_readiness=true
+elif sudo -n true >/dev/null 2>&1; then
+  root_command=(sudo -n)
+  root_readiness=true
+fi
+if [[ "${require_root}" == true && "${root_readiness}" != true ]]; then
+  printf 'D4 qualifier privileged readiness was requested but root is unavailable.\n' >&2
+  exit 1
+fi
 
 runtime_gid="$(id -g)"
 if [[ "${runtime_gid}" == 0 ]]; then
@@ -115,27 +139,60 @@ printf '%s\n' \
   'postgresql://portal_projection_runtime:synthetic@projection-postgres:5432/portal_projection?sslmode=require' \
   > "${secret_dir}/projection-runtime-database-url"
 
-sudo -n chown root:root "${edge_env}" "${owner_input}" \
-  "${qualifier_env}" "${bad_qualifier_env}"
-sudo -n chmod 0600 "${edge_env}" "${owner_input}" \
-  "${qualifier_env}" "${bad_qualifier_env}"
-sudo -n chown root:70 "${projection_init}"
-sudo -n chmod 0550 "${projection_init}"
-sudo -n chown root:"${runtime_gid}" "${secret_dir}"
-sudo -n chmod 0750 "${secret_dir}"
-sudo -n chown root:"${runtime_gid}" "${secret_dir}/"*
-sudo -n chmod 0644 "${secret_dir}/source-proxy-ca.crt"
-sudo -n chmod 0640 "${secret_dir}/d4-source-proxy-client.pem" \
-  "${secret_dir}/projection-runtime-database-url"
+if [[ "${root_readiness}" == true ]]; then
+  "${root_command[@]}" chown root:root "${edge_env}" "${owner_input}" \
+    "${qualifier_env}" "${bad_qualifier_env}"
+  "${root_command[@]}" chmod 0600 "${edge_env}" "${owner_input}" \
+    "${qualifier_env}" "${bad_qualifier_env}"
+  "${root_command[@]}" chown root:70 "${projection_init}"
+  "${root_command[@]}" chmod 0550 "${projection_init}"
+  "${root_command[@]}" chown root:"${runtime_gid}" "${secret_dir}"
+  "${root_command[@]}" chmod 0750 "${secret_dir}"
+  "${root_command[@]}" chown root:"${runtime_gid}" "${secret_dir}/"*
+  "${root_command[@]}" chmod 0644 "${secret_dir}/source-proxy-ca.crt"
+  "${root_command[@]}" chmod 0640 "${secret_dir}/d4-source-proxy-client.pem" \
+    "${secret_dir}/projection-runtime-database-url"
 
-sudo -n "${preflight}" --edge-env "${edge_env}" \
-  --qualifier-env "${qualifier_env}" --owner-input "${owner_input}" \
-  --mode readiness >/dev/null
-if sudo -n "${preflight}" --edge-env "${edge_env}" \
-  --qualifier-env "${bad_qualifier_env}" --owner-input "${owner_input}" \
-  --mode readiness >/dev/null 2>&1; then
-  printf 'D4 qualifier negative evidence-drift fixture unexpectedly passed.\n' >&2
-  exit 1
+  "${root_command[@]}" "${preflight}" --edge-env "${edge_env}" \
+    --qualifier-env "${qualifier_env}" --owner-input "${owner_input}" \
+    --mode readiness >/dev/null
+  if "${root_command[@]}" "${preflight}" --edge-env "${edge_env}" \
+    --qualifier-env "${bad_qualifier_env}" --owner-input "${owner_input}" \
+    --mode readiness >/dev/null 2>&1; then
+    printf 'D4 qualifier negative evidence-drift fixture unexpectedly passed.\n' >&2
+    exit 1
+  fi
+  printf 'D4 qualifier privileged readiness and evidence-drift gates passed. No network or service started.\n'
+  exit 0
 fi
 
-printf 'D4 qualifier synthetic readiness and evidence-drift gates passed. No network or service started.\n'
+# This branch is the appropriate CI proof: it exercises the non-secret
+# template parser and confirms that the production script still contains the
+# root/owner/mode/evidence requirements.  It intentionally cannot claim a
+# privileged readiness drill.
+template_owner_input="${tmp_dir}/owner-input-template.env"
+template_qualifier_env="${tmp_dir}/qualifier-template.env"
+sed 's/^D4_AUTHORIZED=true$/D4_AUTHORIZED=false/' "${owner_input}" > "${template_owner_input}"
+template_owner_digest="sha256:$(sha256sum "${template_owner_input}" | cut -d' ' -f1)"
+sed \
+  -e "s#^D4_OWNER_INPUT_FILE=.*#D4_OWNER_INPUT_FILE=${template_owner_input}#" \
+  -e "s#^D4_AUTHORIZATION_EVIDENCE_SHA256=.*#D4_AUTHORIZATION_EVIDENCE_SHA256=${template_owner_digest}#" \
+  "${qualifier_env}" > "${template_qualifier_env}"
+"${preflight}" --edge-env "${edge_env}" \
+  --qualifier-env "${template_qualifier_env}" --owner-input "${template_owner_input}" \
+  --mode template >/dev/null
+template_bad_qualifier_env="${tmp_dir}/qualifier-template-bad.env"
+sed 's/^D4_AUTHORIZATION_EVIDENCE_SHA256=.*/D4_AUTHORIZATION_EVIDENCE_SHA256=not-a-sha256-digest/' \
+  "${template_qualifier_env}" > "${template_bad_qualifier_env}"
+if "${preflight}" --edge-env "${edge_env}" \
+  --qualifier-env "${template_bad_qualifier_env}" --owner-input "${template_owner_input}" \
+  --mode template >/dev/null 2>&1; then
+  printf 'D4 qualifier malformed template fixture unexpectedly passed.\n' >&2
+  exit 1
+fi
+grep -Fq '(( EUID == 0 ))' "${preflight}"
+grep -Fq "stat -c '%u:%a'" "${preflight}"
+grep -Fq 'D4 qualifier readiness requires root-owned mode-0600 inputs.' "${preflight}"
+grep -Fq 'D4 qualifier rejected owner-input evidence drift.' "${preflight}"
+
+printf 'D4 qualifier rootless template/static gates passed; privileged readiness remains separately required. No network or service started.\n'

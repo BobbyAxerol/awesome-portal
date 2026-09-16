@@ -34,7 +34,12 @@ It is **not** the production deployment runner:
   mode `1777`, disappear with the service namespace and are never the host
   temporary directories.  CI, security and publication workflows additionally
   bind `TMPDIR` to GitHub's per-job `RUNNER_TEMP`, so disposable build/test
-  artifacts remain in the exact workspace removed by the completion hook.
+artifacts remain in the exact workspace removed by the completion hook.
+- Privileged ownership/readiness drills do not run on this runner.  For the D4
+  qualifier specifically, ordinary CI runs its rootless template/static lane;
+  an owner-approved deployment or workstation drill must invoke
+  `./scripts/execution-d4-qualification-preflight-test.sh --require-root` to
+  prove real root ownership and file modes.
   The GitHub completion hook is root-owned outside that writable tree.
 - Resource envelope: the rootless Docker daemon and runner share
   `portal-ci-publish.slice` (at most 6 CPU cores, 20 GiB RAM, no swap).
