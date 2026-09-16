@@ -2093,7 +2093,245 @@
   overflow-wrap: anywhere;
 }
 
-/* --- Users & Access (ADMIN) ---------------------------------------------- */
+/* --- Users & Access — the owner account control desk (A4-2) ---------------
+ *
+ * The screen is a desk rather than a table: a roster you search, a confirmation
+ * that states a consequence, a credential handed over once, and a history of
+ * what has been done. The styles below follow that order.
+ */
+
+/* The search and the step-up chip share a line, because "am I going to be
+ * asked for my password again" is context for everything below, not a detail
+ * inside each dialog. */
+.admin-desk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.admin-search input {
+  min-width: 260px;
+}
+.admin-stepup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.admin-stepup-chip[data-state="ACTIVE"] {
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.admin-create-note {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+.admin-create-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.admin-account-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.admin-account-name:hover .admin-account-display {
+  color: var(--ink);
+}
+.admin-account-display {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+.admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.admin-row-action {
+  white-space: nowrap;
+}
+
+/*
+ * A disabled ghost button has to LOOK disabled.
+ *
+ * `.btn-primary` carries `disabled:opacity-40`; `.btn-ghost` carries nothing,
+ * so a refused action renders identically to an available one and the only
+ * feedback is that clicking does nothing. On this screen that is the
+ * difference between "you cannot issue a credential to a withdrawn account"
+ * and "this button is broken".
+ *
+ * Scoped to the account desk rather than fixed on `.btn-ghost` itself: that
+ * class has 62 other call sites across Research and Planning, and CLAUDE.md §0
+ * requires asking before a shared component change reaches those screens. The
+ * global defect is recorded for Bobby rather than quietly patched here.
+ */
+.admin-row-action:disabled,
+.admin-confirm .btn-ghost:disabled,
+.admin-token-actions .btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.admin-row-action:disabled:hover {
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+/* The confirmation. It is a panel in the flow rather than an overlay: an
+ * overlay hides the row you are acting on, and the one thing this screen must
+ * never do is let somebody confirm against the wrong account. */
+.admin-confirm {
+  padding: var(--space-4);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+}
+.admin-confirm-head {
+  margin-bottom: var(--space-3);
+}
+.admin-confirm-target {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+.admin-confirm-display {
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+.admin-confirm-consequence {
+  max-width: 68ch;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+.admin-confirm-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin: var(--space-3) 0;
+}
+.admin-confirm-facts dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+}
+.admin-confirm-facts dd {
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+.admin-confirm-typed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+.admin-confirm-typed input {
+  max-width: 320px;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+.admin-confirm-code,
+.admin-confirm-request {
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+.admin-confirm-foot {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.admin-confirm-blocked {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.admin-token-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.admin-token-copy-failed {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--bad);
+}
+.admin-stepup-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+.admin-stepup-field input {
+  max-width: 320px;
+}
+.admin-stepup-failed {
+  font-size: var(--text-xs);
+  color: var(--bad);
+}
+
+/* The history. A refused operation is listed beside an applied one, because a
+ * history that shows only what worked cannot answer "why did nothing happen
+ * when I pressed that". */
+.admin-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.admin-history li {
+  display: grid;
+  grid-template-columns: 150px 90px 1fr;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--text-xs);
+}
+.admin-history li[data-outcome="DENIED"] .admin-history-outcome,
+.admin-history li[data-outcome="CONFLICT"] .admin-history-outcome {
+  color: var(--bad);
+}
+.admin-history-action {
+  font-size: var(--text-2xs);
+  color: var(--ink);
+}
+.admin-history-outcome {
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+.admin-history-reason,
+.admin-history-when {
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+.admin-history-rollback {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+}
+
+/* --- Users & Access — retained table primitives ---------------------------- */
 .admin-table {
   width: 100%;
   min-width: 880px;

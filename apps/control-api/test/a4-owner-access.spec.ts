@@ -9,8 +9,9 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AdminService, AdminNotFoundError, OwnerProtectedError } from "../src/admin/admin.service";
-import { adminFailure } from "../src/admin/admin.controller";
+import { AdminService, OwnerProtectedError } from "../src/admin/admin.service";
+import { lifecycleFailure } from "../src/admin/account-lifecycle.controller";
+import { LifecycleDeniedError } from "../src/admin/account-lifecycle.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
 import { OwnerAccessService } from "../src/auth/owner-access.service";
@@ -560,7 +561,7 @@ describe("A4-1 owner anchor, capabilities and mutation hardening", () => {
 
       const denied = await http.inject({
         method: "GET",
-        url: "/api/admin/users",
+        url: "/api/admin/accounts",
         headers: { cookie: pending.cookie },
       });
       expect(denied.statusCode).toBe(401);
@@ -584,7 +585,7 @@ describe("A4-1 owner anchor, capabilities and mutation hardening", () => {
       const back = await signIn(password);
       const admitted = await http.inject({
         method: "GET",
-        url: "/api/admin/users",
+        url: "/api/admin/accounts",
         headers: { cookie: back.cookie },
       });
       expect(admitted.statusCode).toBe(200);
@@ -592,26 +593,25 @@ describe("A4-1 owner anchor, capabilities and mutation hardening", () => {
   });
 
   describe("A4-1 · an admin route answers in its own words or not at all", () => {
-    it("echoes a refusal this service composed", () => {
-      expect(adminFailure(new AdminNotFoundError("user not found"), "X", "fallback")).toMatchObject({
-        status: 404,
-        message: "user not found",
-      });
+    it("echoes a refusal this service composed, with its own code and status", () => {
       expect(
-        adminFailure(new OwnerProtectedError("the Portal owner's account cannot be disabled"), "X", "fallback"),
-      ).toMatchObject({ status: 409, code: "OWNER_PROTECTED" });
+        lifecycleFailure(new LifecycleDeniedError("ACCOUNT_NOT_FOUND", "No such account.", 404)),
+      ).toMatchObject({ status: 404, code: "ACCOUNT_NOT_FOUND", message: "No such account." });
+      expect(
+        lifecycleFailure(
+          new LifecycleDeniedError("OWNER_ANCHOR_PROTECTED", "The Portal owner's account cannot be archived."),
+        ),
+      ).toMatchObject({ status: 409, code: "OWNER_ANCHOR_PROTECTED" });
     });
 
     it("never echoes an error it did not write, and does not call it a 404", () => {
       // The guarded branch was the leaking one: a driver throws an `Error`, so
       // `error instanceof Error ? error.message : …` sent connection strings
       // and constraint names to the browser, labelled 404.
-      const leaked = adminFailure(
+      const leaked = lifecycleFailure(
         new Error('connection to server at "10.0.0.7", port 5432 failed'),
-        "DISABLE_FAILED",
-        "Disable failed.",
       );
-      expect(leaked.message).toBe("Disable failed.");
+      expect(leaked.message).toBe("The account operation could not be completed.");
       expect(leaked.status).toBe(500);
       expect(leaked.message).not.toContain("10.0.0.7");
     });

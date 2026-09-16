@@ -1,0 +1,1044 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal account lifecycle (A4-2)",
+    "version": "1.0.0",
+    "description": "Owner-only account control plane. Every mutation carries the account revision it is acting on, an idempotency key, and — for the destructive ones — a step-up performed in the same session. No response ever contains a password hash, a Cloudflare subject or email, a session id, or an activation credential other than on the single response that minted it."
+  },
+  "paths": {
+    "/api/admin/accounts": {
+      "get": {
+        "operationId": "listAccounts",
+        "summary": "The owner account roster.",
+        "responses": {
+          "200": {
+            "description": "Every account, sanitized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schema_version",
+                    "accounts"
+                  ],
+                  "properties": {
+                    "schema_version": {
+                      "type": "string",
+                      "const": "portal.account-roster.v1"
+                    },
+                    "record_authority": {
+                      "type": "string",
+                      "const": "PORTAL_CONTROL"
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AccountSummary"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createInvitedAccount",
+        "summary": "Create an invited account. Deliberately mints no credential.",
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Makes a retry answerable rather than re-executable. The same key with a DIFFERENT payload is refused, because that is a caller bug and not a retry."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "ADMIN",
+                      "USER"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The account, and the operation that created it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The account, and the operation that created it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the owner, or the step-up has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/accounts/{user_id}": {
+      "get": {
+        "operationId": "getAccount",
+        "summary": "One account and its action history.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account plus history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schema_version",
+                    "account",
+                    "history"
+                  ],
+                  "properties": {
+                    "schema_version": {
+                      "type": "string",
+                      "const": "portal.account-detail.v1"
+                    },
+                    "record_authority": {
+                      "type": "string",
+                      "const": "PORTAL_CONTROL"
+                    },
+                    "account": {
+                      "$ref": "#/components/schemas/AccountSummary"
+                    },
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LifecycleHistoryEntry"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateAccountProfile",
+        "summary": "Change display name or base role.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Makes a retry answerable rather than re-executable. The same key with a DIFFERENT payload is refused, because that is a caller bug and not a retry."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expected_revision"
+                ],
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "ADMIN",
+                      "USER"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the owner, or the step-up has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/accounts/{user_id}/activation": {
+      "post": {
+        "operationId": "issueActivation",
+        "summary": "Issue a one-time activation credential. Step-up required; non-replayable.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Makes a retry answerable rather than re-executable. The same key with a DIFFERENT payload is refused, because that is a caller bug and not a retry."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expected_revision"
+                ],
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer"
+                  },
+                  "reissue": {
+                    "type": "boolean",
+                    "description": "Revoke a still-live activation and mint another. Never implicit — a repeat without this is refused by name."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the owner, or the step-up has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/accounts/{user_id}/revoke-sessions": {
+      "post": {
+        "operationId": "revokeAccountSessions",
+        "summary": "End every session this account holds. Step-up required.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Makes a retry answerable rather than re-executable. The same key with a DIFFERENT payload is refused, because that is a caller bug and not a retry."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expected_revision"
+                ],
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the owner, or the step-up has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/accounts/{user_id}/disable": {
+      "post": {
+        "operationId": "disableAccount",
+        "summary": "Withdraw access. Step-up required; refused for the owner anchor.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Makes a retry answerable rather than re-executable. The same key with a DIFFERENT payload is refused, because that is a caller bug and not a retry."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expected_revision"
+                ],
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the owner, or the step-up has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/accounts/{user_id}/enable": {
+      "post": {
+        "operationId": "enableAccount",
+        "summary": "Restore access through a FRESH activation. Never revives an old password. Step-up required.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Makes a retry answerable rather than re-executable. The same key with a DIFFERENT payload is refused, because that is a caller bug and not a retry."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expected_revision"
+                ],
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the owner, or the step-up has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/accounts/{user_id}/archive": {
+      "post": {
+        "operationId": "archiveAccount",
+        "summary": "Archive access — what 'delete' means here. Nothing is deleted. Step-up required.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Makes a retry answerable rather than re-executable. The same key with a DIFFERENT payload is refused, because that is a caller bug and not a retry."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expected_revision"
+                ],
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The operation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the owner, or the step-up has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/step-up": {
+      "get": {
+        "operationId": "getStepUpState",
+        "summary": "Whether this session has a live step-up, and until when.",
+        "responses": {
+          "200": {
+            "description": "Current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepUpState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "grantStepUp",
+        "summary": "Re-authenticate the owner for this session with their OWN password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "password"
+                ],
+                "properties": {
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Step-up granted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepUpState"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The password was not accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountSummary": {
+        "type": "object",
+        "description": "An account as the roster may see it. §20.5 item 1 excludes hashes, tokens, Cloudflare subject/email, session ids and audit internals; this is the whole published shape.",
+        "required": [
+          "user_id",
+          "username",
+          "display_name",
+          "role",
+          "account_state",
+          "must_change_password",
+          "account_revision",
+          "locked"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Opaque and stable. Never a database sequence or an email."
+          },
+          "username": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ],
+            "description": "The coarse product role kept for compatibility. It is NOT ownership and authorizes nothing in this plane."
+          },
+          "account_state": {
+            "type": "string",
+            "enum": [
+              "INVITED",
+              "ACTIVE",
+              "DISABLED",
+              "ARCHIVED"
+            ],
+            "description": "ARCHIVED is disabled plus a retained lineage marker; no account row is ever deleted."
+          },
+          "must_change_password": {
+            "type": "boolean",
+            "description": "True means login accepts only an activation credential, so any earlier password is unreachable."
+          },
+          "account_revision": {
+            "type": "integer",
+            "description": "Pin the next operation to this. It changes on every lifecycle write and on nothing else."
+          },
+          "locked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LifecycleHistoryEntry": {
+        "type": "object",
+        "required": [
+          "operation_id",
+          "action",
+          "outcome",
+          "actor_user_id",
+          "expected_revision",
+          "state_before",
+          "rollback_description",
+          "step_up_used",
+          "occurred_at"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "CREATE_INVITED",
+              "UPDATE_PROFILE",
+              "ISSUE_ACTIVATION",
+              "REVOKE_SESSIONS",
+              "DISABLE",
+              "ENABLE",
+              "ARCHIVE"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "APPLIED",
+              "REPLAYED",
+              "CONFLICT",
+              "DENIED"
+            ],
+            "description": "Refusals are recorded too. A history that shows only what worked cannot answer 'why did nothing happen when I pressed that'."
+          },
+          "reason_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_user_id": {
+            "type": "string"
+          },
+          "expected_revision": {
+            "type": "integer"
+          },
+          "resulting_revision": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "state_before": {
+            "$ref": "#/components/schemas/AccountSummary"
+          },
+          "state_after": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AccountSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rollback_description": {
+            "type": "string",
+            "description": "What undoing this would mean, in the imperative, for a human reading the log during an incident."
+          },
+          "step_up_used": {
+            "type": "boolean"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OperationResult": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "outcome",
+          "operation_id",
+          "account",
+          "rollback_description"
+        ],
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "portal.account-operation.v1"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "APPLIED",
+              "REPLAYED"
+            ]
+          },
+          "operation_id": {
+            "type": "string"
+          },
+          "account": {
+            "type": "object",
+            "required": [
+              "user_id",
+              "username",
+              "account_revision"
+            ],
+            "properties": {
+              "user_id": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "account_revision": {
+                "type": "integer"
+              }
+            }
+          },
+          "rollback_description": {
+            "type": "string"
+          },
+          "activation": {
+            "$ref": "#/components/schemas/ActivationHandoff",
+            "description": "Present ONLY on the response that minted the credential. A REPLAYED outcome never carries it: the one view has already happened, and re-revealing on every retry would make 'one view' mean 'as many as the network felt like'."
+          }
+        }
+      },
+      "ActivationHandoff": {
+        "type": "object",
+        "required": [
+          "token",
+          "acknowledgement_required",
+          "note"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Plaintext, once, on a no-store response. Stored nowhere — not in the operation record, not in an audit row, not in a log."
+          },
+          "acknowledgement_required": {
+            "type": "boolean",
+            "const": true
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "StepUpState": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "state",
+          "expires_at"
+        ],
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "portal.owner-step-up.v1"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "REQUIRED"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "STEP_UP_REQUIRED, STALE_ACCOUNT_REVISION, IDEMPOTENCY_KEY_PAYLOAD_CONFLICT, ACTIVATION_ALREADY_ISSUED, OWNER_ANCHOR_PROTECTED, ACCOUNT_NOT_FOUND, USERNAME_TAKEN, USERNAME_INVALID."
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

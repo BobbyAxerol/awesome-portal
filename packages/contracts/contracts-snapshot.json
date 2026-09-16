@@ -122,7 +122,7 @@
     "openapi/execution-query-analytics.openapi.json": "sha256:a93b1cc79e4fec12cb59500d633a375b75f819a0e96f5b9dcc7f557cfc5216d4",
     "openapi/execution-realtime.openapi.json": "sha256:b6788f1aa82ad736b2a0981205f625a64e9c82486363df02ba86b686428274c0",
     "openapi/execution-staged-activation.openapi.json": "sha256:c741d5b93362e2af59342df7c6c78e7586f81ab72c89039e6010b2632c81e6b2",
-    "package.json": "sha256:235b93fae51dd9d0507b3932e2176ada95b05cebcd997779f6f0ca42b7baec65",
+    "package.json": "sha256:e14db827d58a4457671218759371a0bbd460e70ccd9a697316877fa44f0cc719",
     "schemas/command-envelope.v1.schema.json": "sha256:53c6f3ccf66d1b74de59945fe33f480ae58bb00ae500b7696d0411d8094d4cb1",
     "schemas/common.v1.schema.json": "sha256:a74a2c08ff7e87f8cb9110932099c66520bb942788000f5499c594d1c6ef5f88",
     "schemas/event-envelope.v1.schema.json": "sha256:527a2d5128758d088bfcd9e86291ac1a0be1b993821c90be2bd2a36890d10a95",

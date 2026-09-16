@@ -14,6 +14,8 @@ interface UserRow {
   created_at: Date;
   updated_at: Date;
   disabled_at: Date | null;
+  account_revision: number;
+  archived_at: Date | null;
 }
 
 function toUser(row: UserRow): PortalUser {
@@ -30,6 +32,8 @@ function toUser(row: UserRow): PortalUser {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     disabledAt: row.disabled_at,
+    accountRevision: row.account_revision,
+    archivedAt: row.archived_at,
   };
 }
 
@@ -57,6 +61,70 @@ export class UsersRepository {
       `SELECT * FROM portal_users ORDER BY username`,
     );
     return result.rows.map(toUser);
+  }
+
+  /**
+   * A4-2 · the only way an owner lifecycle operation changes an account.
+   *
+   * The expected revision is part of the WHERE clause, not a check done
+   * beforehand: reading the row, deciding, then writing leaves a window in
+   * which a second owner — or the same owner in a second tab — applies a
+   * different decision to the same account and both believe they won. Here the
+   * database decides, once, and a stale caller gets no row back.
+   *
+   * `null` therefore means "not applied", and the caller must distinguish a
+   * missing account from a stale revision by reading afterwards. That is
+   * deliberate: conflating them would let the UI tell an owner their colleague
+   * deleted an account that is merely one revision ahead.
+   */
+  async applyLifecycleChange(input: {
+    userId: string;
+    expectedRevision: number;
+    displayName?: string;
+    role?: Role;
+    status?: UserStatus;
+    mustChangePassword?: boolean;
+    /** `true` archives, `false` clears the marker; omitted leaves it alone. */
+    archived?: boolean;
+  }): Promise<PortalUser | null> {
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    if (input.displayName !== undefined) {
+      values.push(input.displayName);
+      sets.push(`display_name = $${values.length}`);
+    }
+    if (input.role !== undefined) {
+      values.push(input.role);
+      sets.push(`role = $${values.length}`);
+    }
+    if (input.status !== undefined) {
+      values.push(input.status);
+      sets.push(`status = $${values.length}`);
+      // `disabled_at` follows the status the same way `update` maintains it,
+      // so the two paths cannot disagree about when access was withdrawn.
+      sets.push(
+        input.status === "DISABLED" ? `disabled_at = now()` : `disabled_at = NULL`,
+      );
+    }
+    if (input.mustChangePassword !== undefined) {
+      values.push(input.mustChangePassword);
+      sets.push(`must_change_password = $${values.length}`);
+    }
+    if (input.archived !== undefined) {
+      sets.push(input.archived ? `archived_at = now()` : `archived_at = NULL`);
+    }
+    sets.push(`account_revision = account_revision + 1`);
+    sets.push(`updated_at = now()`);
+    values.push(input.userId);
+    const userIdParam = values.length;
+    values.push(input.expectedRevision);
+    const result = await this.pool.query<UserRow>(
+      `UPDATE portal_users SET ${sets.join(", ")}
+        WHERE user_id = $${userIdParam} AND account_revision = $${values.length}
+       RETURNING *`,
+      values,
+    );
+    return result.rows[0] ? toUser(result.rows[0]) : null;
   }
 
   async create(input: {

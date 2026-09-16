@@ -25,6 +25,18 @@ export const SECURITY_AUDIT_EVENTS = [
   "account_locked",
   /** An owner reset cleared the lock and the failure counter. */
   "account_lock_cleared",
+  /**
+   * A4-2 · an owner account lifecycle operation was applied.
+   *
+   * The full record — what changed, from what, and how to undo it — lives in
+   * `account_lifecycle_operations`. This row exists so that
+   * `auth_audit_events` remains one readable identity trail: a reader asking
+   * "what has happened to this account" should not have to know that half the
+   * answer is in a different table.
+   */
+  "account_lifecycle_applied",
+  /** An owner account lifecycle operation was refused, with the stage. */
+  "account_lifecycle_refused",
 ] as const;
 
 export type SecurityAuditEvent = (typeof SECURITY_AUDIT_EVENTS)[number];

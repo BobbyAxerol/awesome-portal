@@ -8243,3 +8243,122 @@ something a passing test suite did not:
    auth routes by curl and I said its `PORTAL_PUBLIC_ORIGIN` could not be
    known. Line 27 of that script sets it, and lines 241 and 251 already send
    it. The blocker was my not having opened the file.
+
+---
+
+## 20.8 A4 execution record — A4-2 (Claude, 2026-09-16)
+
+**Phase:** A4-2 — Owner account lifecycle and Users & Access control plane.
+**Status:** implementation complete, gates green, awaiting Bobby's acceptance.
+**Branch:** `feat/execution-loop-next`.
+
+### 20.8.1 What A4-2 delivered
+
+The old screen edited rows: it sent a change and hoped. This one issues named
+**operations**, and every one carries the account it acts on, the revision it
+believes is current, an idempotency key, and — for the destructive ones — a
+step-up performed in the same session.
+
+| Contract | Value |
+|---|---|
+| Routes | `/api/admin/accounts` (+ `/{id}`, `/activation`, `/revoke-sessions`, `/disable`, `/enable`, `/archive`) and `/api/admin/step-up`. The six `/api/admin/users*` routes are **retired**. |
+| Generated DTOs | `packages/contracts/generated/portal-account-lifecycle.d.ts` from `openapi/portal-account-lifecycle.openapi.json` |
+| Concurrency | `portal_users.account_revision`, pinned by every mutation and enforced inside the guarded UPDATE |
+| Idempotency | `account_lifecycle_operations.idempotency_key` + a payload fingerprint |
+| Step-up | `owner_step_up_grants`, session-scoped, windowed (`OWNER_STEP_UP_TTL_SECONDS`, default 300s) |
+| Archive | `portal_users.archived_at`; ARCHIVED = DISABLED + marker. No row is ever deleted. |
+
+### 20.8.2 Migration `1723680000035`
+
+Additive only — no `UPDATE`, no `DELETE`, no change to an existing CHECK. The
+Bobby / Stan / Thanhvuong rows and the v1.0.1 data behind them are untouched
+**by construction** rather than by promise, which is what §20.2 rule 8 asks for.
+The down migration drops exactly what it added.
+
+`archived_at` is a marker rather than a fourth status value deliberately:
+widening the status CHECK would touch a constraint every existing code path
+already reads, and archive is genuinely *disable plus a lineage decision*, not
+an independent state.
+
+### 20.8.3 The decisions worth reviewing
+
+1. **The old routes were retired, not left beside the new ones.** They mutated
+   accounts with no expected revision, no idempotency, no step-up and no
+   operation record. Left mounted, they would have been a way around every
+   control this phase adds.
+
+2. **Creating an account mints no credential.** Minting one there hands the
+   owner a secret at the moment they are least ready to deliver it — mid-form,
+   before they have decided how it reaches the person. `ISSUE_ACTIVATION` is
+   its own step-up-protected action, so the one view happens when asked for.
+
+3. **A replay never returns the credential.** A retried `ISSUE_ACTIVATION` that
+   re-executes silently invalidates the credential the owner is at that moment
+   reading out to somebody. The idempotency record exists so the retry can be
+   *answered*; re-revealing on every retry would make "one view" mean "as many
+   as the network felt like".
+
+4. **Enable never revives an old password.** It sets `must_change_password` and
+   issues a fresh activation, so login accepts only the new credential — and
+   the old password becomes unreachable **without** deleting the credential row
+   and losing the lineage. Proved by a test that signs in with the old password
+   after an enable and is refused.
+
+5. **The owner cannot archive, disable or demote its own anchor.** Each leaves
+   a Portal with no reachable administration and no route back. §20.2 rule 6
+   asks for reversible where safe; these are not safe, so they are refused by
+   name rather than confirmed in a dialog. All three refusals are recorded.
+
+6. **`window.confirm` is gone.** It can show one string: not the target, not
+   the consequence, not whether the step-up is live, not what the server said
+   when it refused. People click through a dialog that never says anything
+   different. Archive additionally requires typing the username — not ceremony:
+   it is the action that reads as deletion, and typing the name makes it a
+   deliberate sentence rather than a reflex on whichever row the cursor was on.
+
+### 20.8.4 Evidence
+
+| Gate | Result |
+|---|---|
+| Control API + PostgreSQL + restore drill | **68 files, 615/615 passed** |
+| Frontend unit | `UsersAccess.test.tsx` 13 tests; full suite green |
+| `tsc --noEmit` + build | clean |
+| Visual baseline | `users-access` re-recorded (2), full gate in verify mode |
+
+The lifecycle matrix passed on its first run: create → activate → password set
+→ active → reset → revoke → disable → enable + fresh activation → archive, with
+the whole journey readable back in order with each step's rollback description.
+Plus the five wrong ways — duplicate, stale revision, **two concurrent resets
+where exactly one wins**, expired step-up, refresh-after-write — and the
+authority boundary.
+
+The only failure in that run was the product's own password policy rejecting a
+**test** account name (`no-password-set` produced a password containing
+"password"). The product was right; the test was renamed.
+
+### 20.8.5 Found by looking at the screen, not by a test
+
+Both of these passed every unit test and both were wrong.
+
+1. **Withdrawn accounts still offered "Issue credential" and "End sessions".**
+   A credential issued to a disabled account cannot be used — login refuses
+   before it reads one — and "end sessions" on an account whose sessions the
+   disable already ended is a button that does nothing and reports success.
+   Now disabled, each with its reason.
+
+2. **`.btn-ghost` has no `disabled` styling at all.** `.btn-primary` carries
+   `disabled:opacity-40`; `.btn-ghost` carries nothing, so a refused action
+   renders identically to an available one. Patched **scoped to this screen**,
+   because that class has 62 other call sites across Research and Planning and
+   CLAUDE.md §0 requires asking before a shared component change reaches them.
+
+   **Open for Bobby:** fix `.btn-ghost` globally? It is a real defect
+   everywhere, not only here — but it would change the baseline of any
+   Research or Planning screen currently rendering a disabled ghost button.
+
+### 20.8.6 Precondition for A4-3
+
+A4-3 may begin once Bobby accepts the contracts in 20.8.1. A4-2 leaves no open
+defect. The one item carried forward is the `.btn-ghost` question above, which
+is a design-system decision rather than a security one and blocks nothing.
+

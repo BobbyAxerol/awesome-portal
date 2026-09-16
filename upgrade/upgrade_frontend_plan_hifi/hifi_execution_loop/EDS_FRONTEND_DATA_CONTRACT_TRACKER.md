@@ -11033,3 +11033,84 @@ Sửa ở fixture, chạy lại ở chế độ **kiểm tra** (không `--update
   QuantBT Research → **cần Bobby duyệt** vì chạm scope lock §0.
 - `A4-FE-BE-GAP-02`: login là timing oracle (argon2 chỉ chạy cho user có
   password).
+
+---
+
+## A80 — A4-2: Users & Access thành bàn điều khiển tài khoản (2026-09-16)
+
+Phase A4-2 của §20. Hồ sơ backend + evidence đầy đủ ở **§20.8** của
+`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`. Mục này ghi phần frontend
+và hai thứ chỉ **nhìn màn thật** mới bắt được.
+
+### A80.1 Bảng cũ sửa hàng, màn mới phát lệnh
+
+Màn cũ gửi thay đổi rồi hy vọng. Màn mới phát **thao tác có tên**, mỗi cái mang
+tài khoản đích, **revision** nó tin là hiện tại, và **idempotency key** — nên
+retry trả lời được thay vì chạy lại, tab thứ hai không đè quyết định của tab
+thứ nhất, và khi từ chối thì nói được cái nào sai.
+
+`window.confirm` bị bỏ hẳn theo §20.5. Lý do không phải nó xấu: nó chỉ hiện
+được **một chuỗi**. Không nói được ai bị ảnh hưởng, server sẽ làm gì, step-up
+còn hiệu lực không, và khi hỏng thì server trả lời gì. Người ta bấm qua một hộp
+thoại không bao giờ nói điều gì khác. Hộp thoại mới mỗi lần nói một điều khác.
+
+**Archive phải gõ username.** Không phải nghi thức: archive là thao tác *đọc
+ra như xoá*, và gõ tên là thứ biến nó thành một câu cố ý thay vì phản xạ trên
+hàng mà con trỏ tình cờ đang ở.
+
+### A80.2 Credential một lần, giữ ở đâu cũng không
+
+Token sống trong state của màn và **không ở đâu khác**: không `localStorage`,
+không `sessionStorage`, không ref sống lâu hơn component, không URL. Không ghi
+console kể cả đường lỗi — `console.error(response)` chính là cách một credential
+lọt vào ảnh chụp màn hình gửi support. Ẩn đi phải bấm **xác nhận đã giao**, vì
+cái hỏng cần chặn là owner đóng panel theo phản xạ trước khi thật sự giao chuỗi
+đó, mà không có lần đọc thứ hai.
+
+**Không có nút download.** Một file trên đĩa là đúng ngược lại của no-store.
+
+Replay **không** mở panel: `REPLAYED` không mang token, và vẽ panel rỗng là nói
+rằng có credential ở đâu đó trong khi không có.
+
+### A80.3 Hai thứ chỉ nhìn màn mới thấy
+
+**(1) Tài khoản DISABLED/ARCHIVED vẫn mời "Issue credential" và "End sessions".**
+Suite xanh, test 13/13 xanh, nhưng credential phát cho tài khoản đã thu quyền
+thì login từ chối trước khi đọc tới nó, và "end sessions" trên tài khoản mà
+disable vừa kết thúc session là nút không làm gì rồi báo thành công. Đã tắt kèm
+lý do.
+
+**(2) `.btn-ghost` KHÔNG có style `disabled` nào cả.** `.btn-primary` có
+`disabled:opacity-40`; `.btn-ghost` không. Nên nút bị tắt **trông y hệt** nút
+bật, và phản hồi duy nhất là bấm không thấy gì. Tôi vá **trong phạm vi bàn điều
+khiển** (`.admin-row-action:disabled` + trong confirm/handoff), **không** sửa
+`.btn-ghost`:
+
+> `btn-ghost` có **62 call site khác** ngoài màn này, trải khắp Research và
+> Planning. CLAUDE.md §0 bắt hỏi Bobby trước khi một thay đổi ở component dùng
+> chung chạm các màn đó.
+
+**→ Cần Bobby quyết:** có sửa `.btn-ghost` toàn cục không? Đây là defect có
+thật ở mọi nơi, không riêng màn này — nhưng nó sẽ đổi baseline của bất kỳ màn
+Research/Planning nào đang render một ghost button ở trạng thái tắt.
+
+### A80.4 Reuse report (§11.3)
+
+Tái dùng: `Callout`, `Panel`, `SectionHeading`, `StateView`, `.input`,
+`.btn-primary`, `.btn-ghost`, `.admin-table`, `.admin-status`, `.admin-flag`,
+`.admin-token`, icon `lucide-react`.
+Mới: `.btn-danger` (dùng token `--bad` sẵn có, chỉ màn này dùng),
+`AccountActionConfirm`, `ActivationHandoff`, `StepUpPrompt`.
+**Không** tái dùng `CommandPlanDrawer`: nó là plan→apply→verify cho lệnh
+Execution, ngữ nghĩa khác hẳn — tài khoản không có plan step và không có CLI
+tương đương.
+
+### A80.5 Evidence
+
+- Control API: **68 file, 615/615** + pg_dump/pg_restore drill
+- Frontend: `tsc` sạch, build xanh, `UsersAccess.test.tsx` **13 test** phủ cả
+  authority, không-window.confirm, gõ-tên-để-archive, refusal nguyên văn của
+  server, và token không lọt vào storage/log/URL
+- Visual: 2 baseline `users-access` ghi lại; gate đầy đủ ở chế độ kiểm tra
+- DTO sinh từ OpenAPI: `packages/contracts/generated/portal-account-lifecycle.d.ts`
+- Ledger route: 127 → 133 (thu 6 route `/api/admin/users*`, thêm 11)

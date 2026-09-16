@@ -293,7 +293,7 @@ describe("cloudflare access security matrix", () => {
     const stan = await seedActiveUser("stan", "USER");
     const session = await loginSession("stan", stan.password);
 
-    const users = await inject("/api/admin/users", {
+    const users = await inject("/api/admin/accounts", {
       headers: { cookie: session.cookie },
     });
     // A4-1: 403, not 401. The caller IS authenticated; what they lack is
@@ -303,9 +303,10 @@ describe("cloudflare access security matrix", () => {
     expect(users.statusCode).toBe(403);
     expect(JSON.stringify(users.json())).not.toContain("bobby");
 
-    const disable = await inject(`/api/admin/users/${stan.userId}/disable`, {
+    const disable = await inject(`/api/admin/accounts/${stan.userId}/disable`, {
       method: "POST",
       headers: { cookie: session.cookie },
+      payload: { expected_revision: 1 },
     });
     expect(disable.statusCode).toBe(403);
   });
@@ -322,21 +323,23 @@ describe("cloudflare access security matrix", () => {
     });
     const session = await loginSession("second-admin", otherAdmin.password);
 
-    const list = await inject("/api/admin/users", { headers: { cookie: session.cookie } });
+    const list = await inject("/api/admin/accounts", { headers: { cookie: session.cookie } });
     expect(list.statusCode).toBe(403);
 
-    const reset = await inject(`/api/admin/users/${owner.userId}/reset-credential`, {
+    const reset = await inject(`/api/admin/accounts/${owner.userId}/activation`, {
       method: "POST",
       headers: {
         cookie: session.cookie,
         "x-portal-csrf": session.csrf,
         origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-idempotency-key": "matrix-nonowner-activation",
       },
+      payload: { expected_revision: 1 },
     });
     // Denied even with a perfectly valid CSRF pair and Origin: authorization
     // is decided before mutation security, so a forged token buys nothing.
     expect(reset.statusCode).toBe(403);
-    expect(JSON.stringify(reset.json())).not.toContain("activation_token");
+    expect(JSON.stringify(reset.json())).not.toContain("token");
 
     // And the owner's account was not touched by the attempt.
     const target = await auth.users.findById(owner.userId);
@@ -356,39 +359,49 @@ describe("cloudflare access security matrix", () => {
     // The same owner, the same route, WITHOUT the mutation-security headers:
     // refused. Finding A4-F05 — these six routes had no server-side Origin or
     // CSRF check at all, and the browser's header was doing all the work.
-    const unprotected = await inject("/api/admin/users", {
+    const unprotected = await inject("/api/admin/accounts", {
       method: "POST",
-      headers: { cookie: session.cookie },
+      headers: { cookie: session.cookie, "x-portal-idempotency-key": "matrix-nope" },
       payload: { username: "nope", display_name: "Nope", role: "USER" },
     });
     expect(unprotected.statusCode).toBe(403);
     expect(await auth.users.findByUsername("nope")).toBeNull();
 
-    const created = await inject("/api/admin/users", {
+    const created = await inject("/api/admin/accounts", {
       method: "POST",
       headers: {
         cookie: session.cookie,
         "x-portal-csrf": session.csrf,
         origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-idempotency-key": "matrix-create-erin",
       },
       payload: { username: "erin", display_name: "Erin", role: "USER" },
     });
     expect(created.statusCode).toBe(201);
-    expect(created.json().username).toBe("erin");
+    expect(created.json().account.username).toBe("erin");
+    // A4-2: creating an account never mints a credential. The one view happens
+    // when the owner asks for it, not mid-form.
+    expect(created.json().activation).toBeUndefined();
 
-    const users = await inject("/api/admin/users", {
+    const users = await inject("/api/admin/accounts", {
       headers: { cookie: session.cookie },
     });
     expect(users.statusCode).toBe(200);
-    expect(users.json().users.map((u: { username: string }) => u.username)).toContain("erin");
-    expect(JSON.stringify(users.json())).not.toContain("password_hash");
-    expect(JSON.stringify(users.json())).not.toContain("token_hash");
+    expect(
+      users.json().accounts.map((u: { username: string }) => u.username),
+    ).toContain("erin");
+    const roster = JSON.stringify(users.json());
+    // §20.5 item 1: the roster excludes hashes, tokens, the Cloudflare subject
+    // and email, session ids and audit internals.
+    for (const forbidden of ["password_hash", "token_hash", "access_subject", "session_id", "csrf"]) {
+      expect(roster, forbidden).not.toContain(forbidden);
+    }
 
     const events = await ctx.pool.query(
       `SELECT event_type FROM auth_audit_events ORDER BY occurred_at`,
     );
     expect(events.rows.map((r: { event_type: string }) => r.event_type)).toContain(
-      "user_created",
+      "account_lifecycle_applied",
     );
   });
 

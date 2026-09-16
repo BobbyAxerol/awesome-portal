@@ -106,6 +106,18 @@
   .btn-primary {
     @apply mono inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-[12px] font-semibold text-white transition-colors duration-200 hover:bg-accent-700 disabled:opacity-40 disabled:cursor-not-allowed;
   }
+  /*
+   * A4-2 · the button that withdraws somebody's access.
+   *
+   * A new class rather than a variant of `.btn-primary`, and deliberately only
+   * used on the account control desk: a destructive action should not look
+   * like the affirmative one, and colour alone is never the signal — the
+   * confirmation beside it names the target and the consequence in words.
+   * `--bad` is the existing token, so no new colour enters the system.
+   */
+  .btn-danger {
+    @apply mono inline-flex items-center gap-2 rounded-md border border-bad bg-bad-bg px-4 py-2 text-[12px] font-semibold text-bad transition-colors duration-200 hover:bg-bad hover:text-white disabled:opacity-40 disabled:cursor-not-allowed;
+  }
   .btn-ghost {
     @apply mono inline-flex items-center gap-2 rounded-md border border-line bg-raised px-3 py-1.5 text-[12px] text-ink-soft transition-colors duration-200 hover:border-accent hover:text-ink;
   }

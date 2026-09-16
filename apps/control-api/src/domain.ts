@@ -54,6 +54,32 @@ export interface PortalUser {
   createdAt: Date;
   updatedAt: Date;
   disabledAt: Date | null;
+  /**
+   * A4-2 · what an owner lifecycle operation pins itself to.
+   *
+   * Bumped only by an account-lifecycle write. A failed login, a session
+   * version bump and a last-seen touch all change the row and deliberately do
+   * NOT change this, or the owner's screen would go stale every time somebody
+   * mistyped a password.
+   */
+  accountRevision: number;
+  /**
+   * A4-2 · archived access, which is what "delete" means in this product.
+   *
+   * Archived is DISABLED plus this timestamp, never a deleted row: §20.2
+   * rule 6 keeps the account, its audit and its evidence lineage.
+   */
+  archivedAt: Date | null;
+}
+
+/** The account state the product speaks in, derived rather than stored. */
+export type AccountState = "INVITED" | "ACTIVE" | "DISABLED" | "ARCHIVED";
+
+export function accountStateOf(user: {
+  status: UserStatus;
+  archivedAt: Date | null;
+}): AccountState {
+  return user.archivedAt !== null ? "ARCHIVED" : user.status;
 }
 
 export interface ExternalIdentityBinding {

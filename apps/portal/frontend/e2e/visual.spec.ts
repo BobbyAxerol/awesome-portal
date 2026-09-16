@@ -348,7 +348,9 @@ const ADMIN_SCREENS: Screen[] = [
   {
     name: "users-access",
     path: "/administration/users",
-    ready: (page) => page.getByTestId("admin-users"),
+    // A4-2 replaced the account table with the control desk; the roster is the
+    // element that means "the owner's answer arrived and the screen is real".
+    ready: (page) => page.getByTestId("account-roster"),
   },
   {
     name: "alpha-version",

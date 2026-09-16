@@ -219,6 +219,75 @@ export async function stubPortalApi(
    * view, so the stub answers for the same person the `principal` above
    * describes.
    */
+  /*
+   * A4-2 · the owner account control desk.
+   *
+   * Stubbed here for the same reason `/access/self` is: the shell asks for
+   * these on the Users & Access route, and an unstubbed route falls to the 501
+   * catch-all — which shifts the layout and floods the zero-console-error
+   * test, so a fixture gap would read as a design change.
+   *
+   * The roster is pinned, not generated: a baseline whose rows move is not a
+   * baseline. Step-up is REQUIRED so the recorded screen shows the state an
+   * owner actually arrives in.
+   */
+  await page.route("**/api/admin/accounts", (route) =>
+    void json(route, {
+      schema_version: "portal.account-roster.v1",
+      record_authority: "PORTAL_CONTROL",
+      accounts: [
+        {
+          user_id: "usr_baseline_bobby",
+          username: "bobby",
+          display_name: "Bobby",
+          role: "ADMIN",
+          account_state: "ACTIVE",
+          must_change_password: false,
+          account_revision: 12,
+          locked: false,
+        },
+        {
+          user_id: "usr_baseline_stan",
+          username: "stan",
+          display_name: "Stan",
+          role: "USER",
+          account_state: "ACTIVE",
+          must_change_password: false,
+          account_revision: 7,
+          locked: false,
+        },
+        {
+          user_id: "usr_baseline_thanh",
+          username: "thanhvuong",
+          display_name: "Thanh Vuong",
+          role: "USER",
+          account_state: "DISABLED",
+          must_change_password: true,
+          account_revision: 4,
+          locked: true,
+        },
+        {
+          user_id: "usr_baseline_former",
+          username: "former-analyst",
+          display_name: "Former Analyst",
+          role: "USER",
+          account_state: "ARCHIVED",
+          must_change_password: false,
+          account_revision: 21,
+          locked: false,
+        },
+      ],
+    }),
+  );
+
+  await page.route("**/api/admin/step-up", (route) =>
+    void json(route, {
+      schema_version: "portal.owner-step-up.v1",
+      state: "REQUIRED",
+      expires_at: null,
+    }),
+  );
+
   await page.route("**/api/admin/access/self", (route) =>
     void json(route, {
       schema_version: "portal.owner-access.v1",
