@@ -26,6 +26,14 @@ KillMode=process
 UMask=0077
 NoNewPrivileges=yes
 PrivateTmp=yes
+# `PrivateTmp` is intentionally isolated from the host.  Some hardened systemd
+# builds do not materialize the private mount when `ProtectSystem=strict` is
+# also present, leaving `/tmp` absent rather than private.  Make both standard
+# temporary locations explicit, mode 1777 and service-private.  This is needed
+# by the checked-in verification scripts and keeps their disposable artifacts
+# out of the host namespace.
+TemporaryFileSystem=/tmp:mode=1777
+TemporaryFileSystem=/var/tmp:mode=1777
 PrivateDevices=yes
 ProtectSystem=strict
 ProtectHome=yes

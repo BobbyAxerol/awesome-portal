@@ -108,6 +108,9 @@ def main() -> int:
         require(incompatible_directive not in docker_unit, f"rootless host compatibility drifted: {incompatible_directive}")
     require("PrivateTmp=yes" in docker_unit and "ProtectHome=yes" in docker_unit and "ProtectControlGroups=yes" in docker_unit, "compatible daemon hardening drifted")
     require("NoNewPrivileges=yes" in runner_unit and "RestrictSUIDSGID=yes" in runner_unit and "ProtectSystem=strict" in runner_unit, "Actions runner must retain no-privilege hardening")
+    require("PrivateTmp=yes" in runner_unit, "Actions runner must retain a private temporary namespace")
+    require("TemporaryFileSystem=/tmp:mode=1777" in runner_unit, "Actions runner must materialize its private /tmp")
+    require("TemporaryFileSystem=/var/tmp:mode=1777" in runner_unit, "Actions runner must materialize its private /var/tmp")
     require("MemoryMax=20G" in slice_unit and "CPUQuota=600%" in slice_unit and "MemorySwapMax=0" in slice_unit, "resource envelope drifted")
     require("ACTIONS_RUNNER_HOOK_JOB_COMPLETED" in runner_unit, "completion cleanup hook must remain wired")
 

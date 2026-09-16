@@ -9007,6 +9007,16 @@ the existing deploy runner:
 | CI + publication | `portal-ci-publish-sgp1` / `portal-ci`, `portal-publish` | checkout, tests, browser evidence, CodeQL, GHCR publication, SBOM/provenance and OIDC Cosign only | dedicated non-login user, rootless Docker, 6 CPU / 20 GiB / no swap slice; job-completion cleanup touches only its own workspaces and bounded rootless cache |
 | deploy | `portal-deploy-sgp1` / `portal-deploy` | reviewed deploy and feature-profile workflow only | existing narrow deployment environment authority; never receives general CI or image publication |
 
+**Runtime correction (2026-09-16):** the first real `portal-ci` job proved that
+the hardened runner namespace had no materialized `/tmp`, causing the normal
+contract verifier's disposable `mktemp` directory to fail before any project
+gate ran.  The runner unit now explicitly mounts private tmpfs locations at
+`/tmp` and `/var/tmp` (`mode=1777`) while retaining `PrivateTmp=yes`,
+`ProtectSystem=strict` and the `/srv/portal-ci-runner` write boundary.  This is
+an isolation repair, not a relaxation to host `/tmp`; the runner must execute a
+same-repository CI job successfully after the unit is reloaded before the
+runner campaign is accepted.
+
 ### 22.1 Required invariants
 
 1. CI/publication workflows must select explicit custom labels and immediately

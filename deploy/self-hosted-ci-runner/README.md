@@ -29,7 +29,10 @@ It is **not** the production deployment runner:
   slice rather than pretending those incompatible directives protect it. The
   Actions runner remains non-root with `NoNewPrivileges=yes`; this is not host
   Docker or deployment authority.
-- Filesystem: systemd permits writes only under `/srv/portal-ci-runner`.
+- Filesystem: systemd permits writes only under `/srv/portal-ci-runner`, plus
+  service-private tmpfs mounts at `/tmp` and `/var/tmp`.  Those mounts are
+  mode `1777`, disappear with the service namespace and are never the host
+  temporary directories.
   The GitHub completion hook is root-owned outside that writable tree.
 - Resource envelope: the rootless Docker daemon and runner share
   `portal-ci-publish.slice` (at most 6 CPU cores, 20 GiB RAM, no swap).
