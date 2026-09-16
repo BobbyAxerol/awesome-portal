@@ -9017,10 +9017,13 @@ the existing deploy runner:
    Execution/Trading-System access. It does not need a “data sync”: GitHub
    provides short-lived workflow credentials and OIDC identity per job.
    The rootless Docker daemon has one documented bootstrap exception: it may
-   execute the setuid `newuidmap`/`newgidmap` helpers under only
-   `CAP_SETUID,CAP_SETGID` to construct an unprivileged user namespace. The
-   Actions runner still has `NoNewPrivileges=yes`; this exception never grants
-   rootful Docker, deploy or data authority.
+   execute the setuid `newuidmap`/`newgidmap` helpers to construct an
+   unprivileged user namespace. This host rejects rootlesskit if mount/proc/
+   device sandbox directives constrain that mapping, so daemon authority is
+   bounded by its dedicated non-login Unix user, private socket, no deployment
+   material and cgroup slice. The Actions runner still has
+   `NoNewPrivileges=yes`; this exception never grants rootful Docker, deploy
+   or data authority.
 3. Runner installation is checksum-pinned, consumes a one-time registration
    token only, and fails rather than reusing an unknown user/path/service.
 4. Cleanup is mandatory after every job but never uses volume prune, global

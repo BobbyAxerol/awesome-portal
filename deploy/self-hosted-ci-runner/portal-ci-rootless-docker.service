@@ -24,25 +24,17 @@ KillMode=mixed
 Delegate=yes
 UMask=0077
 # newuidmap/newgidmap are setuid helpers required to create the unprivileged
-# user namespace.  Keep the exception narrowly bounded to these two mapping
-# capabilities; the Actions runner itself still has NoNewPrivileges=yes.
+# user namespace. The Actions runner itself still has NoNewPrivileges=yes.
 NoNewPrivileges=no
 PrivateTmp=yes
-PrivateDevices=yes
-ProtectSystem=strict
 ProtectHome=yes
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
 ProtectControlGroups=yes
-ProtectClock=yes
-ProtectHostname=yes
-ProtectProc=invisible
-ProcSubset=pid
-LockPersonality=yes
 RestrictSUIDSGID=no
-RestrictRealtime=yes
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-CapabilityBoundingSet=CAP_SETUID CAP_SETGID
+# Rootlesskit needs both mount propagation and writable /proc/<child>/uid_map.
+# On this host, mount/proc/device sandbox directives block that setup even
+# though the daemon remains an unprivileged system user. Filesystem authority
+# is instead bounded by Unix ownership, no deployment credentials, its private
+# socket and the fully hardened Actions runner service.
 ReadWritePaths=/srv/portal-ci-runner
 
 [Install]
