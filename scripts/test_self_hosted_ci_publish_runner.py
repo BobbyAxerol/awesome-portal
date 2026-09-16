@@ -137,6 +137,7 @@ def main() -> int:
         require('printf \'TMPDIR=%s\\n\' "${RUNNER_TEMP}" >> "${GITHUB_ENV}"' in workflow, f"{label} workflow lacks runner-managed temporary path")
         require("ubuntu-latest" not in workflow, f"{label} workflow must not consume hosted runner quota")
     require("test_self_hosted_ci_publish_runner.py" in ci, "CI must statically protect its own runner contract")
+    require("rhysd/actionlint:1.7.7" in ci and "--user 0:0" in ci, "actionlint must read the private rootless checkout safely")
     require("npx playwright install chromium" in ci and "--with-deps chromium" not in ci, "browser setup must remain non-root")
     smoke = read(ROOT / "scripts" / "smoke-stack.sh")
     require('temp_root="${TMPDIR:-/tmp}"' in smoke, "smoke stack must respect runner-managed temporary path")

@@ -47,7 +47,10 @@ jobs:
         run: ./scripts/portal verify
 
       - name: Lint GitHub Actions definitions
-        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7
+        # The runner's UMask=0077 keeps the checkout private.  UID 0 here is
+        # rootless-container UID 0, mapped to portal-ci-runner on the host; it
+        # is required to traverse that checkout and has no host-root authority.
+        run: docker run --rm --user 0:0 -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.7
 
       - name: Test shared contracts workspace
         run: ./scripts/contracts-test.sh
