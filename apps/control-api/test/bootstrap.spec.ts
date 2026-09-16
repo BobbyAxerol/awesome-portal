@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { buildPool } from "../src/db/pool";
 import { AuthService } from "../src/auth/auth.service";
@@ -93,6 +96,55 @@ describe("bootstrap credential handover", () => {
 });
 
 describe("parseBootstrapUsers", () => {
+  /**
+   * A4-D15 · the file the deployment actually reads, not a copy of it.
+   *
+   * The case below this one is named "parses the committed bootstrap file" and
+   * does no such thing: it builds the YAML inline. That is why nobody noticed
+   * that `deploy/control-api/bootstrap-users.yaml` carried no `owner:` marker
+   * at all — `runBootstrap` filters `owner === true` to an empty list, skips
+   * the claim, and every deployment came up with an UNCLAIMED anchor, which
+   * fails closed and shuts Users & Access and Profile & Access to everyone.
+   *
+   * CLAUDE.md §7.8: when a canonical file exists, the test LOADS it.
+   */
+  it("the shipped bootstrap input names exactly one owner, and that owner is an ADMIN", () => {
+    /*
+     * Two locations, one file. The gate copies `deploy/control-api` into the
+     * isolated test cell (which mounts only this package), so inside the cell
+     * it sits one level up; in the repo it is three. Resolved rather than
+     * duplicated — a second copy is the defect this test exists to catch.
+     */
+    const here = dirname(fileURLToPath(import.meta.url));
+    const candidates = [
+      join(here, "../deploy/control-api/bootstrap-users.yaml"),
+      join(here, "../../../deploy/control-api/bootstrap-users.yaml"),
+    ];
+    const file = candidates.find((path) => existsSync(path));
+    expect(file, `bootstrap input not found at any of ${candidates.join(", ")}`).toBeTruthy();
+    const users = parseBootstrapUsers(readFileSync(file!, "utf8"));
+    const owners = users.filter((entry) => entry.owner === true);
+
+    // Exactly one: `runBootstrap` throws on more than one, and claims nothing
+    // on none. Both failures are silent in different ways, so pin the number.
+    expect(owners).toHaveLength(1);
+    // An owner who is not an ADMIN would hold the anchor while the coarse role
+    // still gates the Planning facade — two authorities disagreeing about the
+    // same person.
+    expect(owners[0].role).toBe("ADMIN");
+    // The anchor binds to a user the same file creates, or the claim throws
+    // "bootstrap owner <name> was not created" at deploy time.
+    expect(users.map((entry) => entry.username)).toContain(owners[0].username);
+  });
+
+  it("parses an inline document, including the owner marker", () => {
+    expect(
+      parseBootstrapUsers(
+        ["# comment", "users:", "  - username: bobby", "    role: ADMIN", "    owner: true"].join("\n"),
+      ),
+    ).toEqual([{ username: "bobby", role: "ADMIN", owner: true }]);
+  });
+
   it("parses the committed bootstrap file", () => {
     const raw = [
       "# comment",

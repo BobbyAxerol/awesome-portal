@@ -1179,4 +1179,135 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       ctx.pool.query(`UPDATE governance_approval_decisions SET reason = 'rewritten' WHERE approval_id = 'AP-IMMUTABLE'`),
     ).rejects.toThrow(/append-only/);
   });
+
+  /**
+   * A4-D14 · the `needs you` badge is the inbox's triage signal.
+   *
+   * It used to read `actor.role === "ADMIN"` for all five gates, which stopped
+   * being true the moment A4-3 moved four of them onto capabilities. The two
+   * failures that caused are opposites, and both are tested here: a delegated
+   * decider whose queue looked empty, and an ADMIN pointed at a gate that would
+   * refuse them.
+   *
+   * Rows are isolated by a unique subject token rather than by gate, because a
+   * sibling spec seeds a 182k-row R1 corpus into this same database.
+   */
+  describe("A4-D14 · needs_you follows the authority the server actually enforces", () => {
+    const GATES = ["R1", "R2", "LIVE_GATE", "PAPER_EXIT", "SANDBOX_EXIT"] as const;
+    const TOKEN = "D14ROW";
+    let dara: Actor;
+
+    beforeAll(async () => {
+      // A USER who holds a decide grant — the case A4-3 exists for, and the
+      // one the old predicate could never report as `true`.
+      dara = await createActor("dara", "USER");
+      await ctx.pool.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'MEMBER')`,
+        [workspaceId, dara.userId],
+      );
+      await new GovernanceGrantsRepository(ctx.pool).insertGrant({
+        grantId: "grn_a4d14_r1_decide",
+        granteeUserId: dara.userId,
+        capability: "governance.r1.decide",
+        workspaceId: null,
+        issuedBy: bobby.userId,
+      });
+
+    }, 30_000);
+
+    /*
+     * Seeded per test, not once.
+     *
+     * The suite's own `beforeEach` truncates `governance_approval_requests`,
+     * so rows created in a `beforeAll` are gone before the first assertion
+     * runs. The grant and the account survive — neither table is truncated.
+     */
+    beforeEach(async () => {
+      for (const gate of GATES) {
+        await ctx.pool.query(
+          `INSERT INTO governance_approval_requests
+             (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
+              environment, target_label, requester_user_id, requester_username,
+              artifact_creator_user_id, artifact_creator_username, status, policy_version,
+              quorum_required, evidence_set_hash, evidence_complete, blocker_count,
+              blocker_summary, sla_due_at, expires_at, created_at, updated_at)
+           VALUES ($1, $2, $3, 'ALPHA_VERSION', $4, $4,
+                   'RESEARCH', $3, $5, 'stan', $5, 'stan', 'PENDING', 'approval.v3', 1,
+                   $6, true, 0, NULL,
+                   timestamptz '2026-09-01T00:00:00Z', timestamptz '2027-01-01T00:00:00Z',
+                   timestamptz '2026-08-01T00:00:00Z', now())`,
+          [
+            `AP-${TOKEN}-${gate}`,
+            workspaceId,
+            gate,
+            `${TOKEN} ${gate}`,
+            // Requested by stan so that nobody reading below is the requester:
+            // a self row is inert, and inert rows need nobody regardless.
+            stan.userId,
+            `sha256:${"0".repeat(64)}`,
+          ],
+        );
+      }
+    });
+
+    async function needsYouByGate(actor: Actor): Promise<Record<string, boolean>> {
+      const response = await inject(
+        actor,
+        `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&view=ALL&subject=${TOKEN}&limit=50`,
+      );
+      expect(response.statusCode).toBe(200);
+      const rows = response.json().page.rows as { id: string; gate: string; needs_you: boolean }[];
+      const seen = rows.filter((row) => row.id.startsWith(`AP-${TOKEN}-`));
+      expect(seen).toHaveLength(GATES.length);
+      return Object.fromEntries(seen.map((row) => [row.gate, row.needs_you]));
+    }
+
+    it("tells a delegated USER that the gate they hold needs them", async () => {
+      const needs = await needsYouByGate(dara);
+      // The whole point of A4-3, and previously invisible: dara's role is USER.
+      expect(needs.R1).toBe(true);
+      // ...and a grant for one gate is not a grant for the others.
+      expect(needs.R2).toBe(false);
+      expect(needs.LIVE_GATE).toBe(false);
+    });
+
+    it("does not send an ADMIN to a gate that would refuse them", async () => {
+      // `lan` is ADMIN and holds r1/r2 decide, but was never granted live.
+      const needs = await needsYouByGate(lan);
+      expect(needs.R1).toBe(true);
+      expect(needs.R2).toBe(true);
+      // Previously `true` purely because lan is an ADMIN; the live route
+      // guards on `governance.live.*`, so the badge would have been a lie.
+      expect(needs.LIVE_GATE).toBe(false);
+    });
+
+    it("gives the owner every gate the namespace covers", async () => {
+      const needs = await needsYouByGate(bobby);
+      expect(needs.R1).toBe(true);
+      expect(needs.R2).toBe(true);
+      expect(needs.LIVE_GATE).toBe(true);
+    });
+
+    it("keeps PAPER_EXIT on the role its own service still enforces", async () => {
+      // paper-exit.service.ts throws APPROVER_ROLE_REQUIRED for a non-ADMIN,
+      // so for this gate the role IS the right question. A capability rewrite
+      // here would have newly broken a gate that was working.
+      expect((await needsYouByGate(bobby)).PAPER_EXIT).toBe(true);
+      expect((await needsYouByGate(lan)).PAPER_EXIT).toBe(true);
+      expect((await needsYouByGate(dara)).PAPER_EXIT).toBe(false);
+    });
+
+    it("never claims a SANDBOX_EXIT row needs anybody, because nothing can decide one", async () => {
+      // The gate is legal in the schema and no code path creates or decides
+      // one. Fail closed rather than invent an approver.
+      for (const actor of [bobby, lan, dara]) {
+        expect((await needsYouByGate(actor)).SANDBOX_EXIT).toBe(false);
+      }
+    });
+
+    it("gives an ungranted USER nothing to do", async () => {
+      const needs = await needsYouByGate(stan);
+      expect(Object.values(needs).every((value) => value === false)).toBe(true);
+    });
+  });
 });

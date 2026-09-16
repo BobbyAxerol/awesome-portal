@@ -19,6 +19,7 @@ import { GovernanceApplyTokenSigner } from "./apply-token";
 import {
   approvalHistoryResource,
   approvalInboxResource,
+  type MayDecideApproval,
   governanceConditionsResource,
   R1Decision,
 } from "./contracts";
@@ -28,7 +29,7 @@ import {
   EvidenceRecord,
   GovernanceRepository,
 } from "./governance.repository";
-import { OwnerAccessService } from "../auth/owner-access.service";
+import { OwnerAccessService, type EffectiveAccess } from "../auth/owner-access.service";
 import {
   GOVERNANCE_DENIAL_MESSAGE,
   governanceDenial,
@@ -181,8 +182,16 @@ export class GovernanceService {
   }
 
   async list(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+    /*
+     * A4-D14 · read the caller's real authority before building the page.
+     *
+     * Read at request time like every other A4-3 decision — there is no cache,
+     * so a grant made a second ago is already reflected in this list.
+     */
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const mayDecide = approvalDecisionPredicate(user, access, workspaceId);
     const [page, counts] = await Promise.all([
-      this.query.list(approvalInboxResource(user), {
+      this.query.list(approvalInboxResource(user, mayDecide), {
         actorId: user.userId,
         workspaceId,
         role: user.role,
@@ -956,4 +965,48 @@ export class GovernanceService {
       reasonCode: code,
     });
   }
+}
+
+/**
+ * A4-D14 · which inbox rows this caller could actually decide.
+ *
+ * One entry per gate in `APPROVAL_GATES`, each mirroring the authority that
+ * gate's own decision path enforces — measured, not assumed:
+ *
+ *  - `R1` / `R2` / `LIVE_GATE` — `governance.service` guards their detail and
+ *    decision paths with `assertGovernance(user, "r1" | "r2" | "live", ...)`,
+ *    so the matching `*.decide` capability is the honest predicate. `LIVE_GATE`
+ *    is `live`, not `r2`: it has its own route (`/approvals/:id/live`) and its
+ *    own capability, even though Command Center links it at the R2 screen.
+ *  - `PAPER_EXIT` — still role-gated. `paper-exit.service.ts` throws
+ *    `APPROVER_ROLE_REQUIRED` for a non-`ADMIN`, so for these rows `ADMIN` is
+ *    the correct answer and a capability check would be the wrong one.
+ *  - `SANDBOX_EXIT` — no decision path exists. The gate is legal in the schema
+ *    but nothing in the product creates such an approval, so nobody can decide
+ *    one. Fails closed: telling somebody a row needs them when no action can be
+ *    taken on it is exactly the kind of claim §3.3 forbids.
+ *
+ * Deliberately NOT a capability lookup for all five. The §20.3 namespace was
+ * frozen in A4-1 and does not cover the exit gates; inventing entries for them
+ * here would create authority the owner never granted.
+ */
+function approvalDecisionPredicate(
+  user: PortalUser,
+  access: EffectiveAccess,
+  workspaceId: string | null,
+): MayDecideApproval {
+  return (gate) => {
+    switch (gate) {
+      case "R1":
+        return mayGovern({ access, gate: "r1", mode: "decide", workspaceId });
+      case "R2":
+        return mayGovern({ access, gate: "r2", mode: "decide", workspaceId });
+      case "LIVE_GATE":
+        return mayGovern({ access, gate: "live", mode: "decide", workspaceId });
+      case "PAPER_EXIT":
+        return user.role === "ADMIN";
+      case "SANDBOX_EXIT":
+        return false;
+    }
+  };
 }

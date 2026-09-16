@@ -8647,3 +8647,117 @@ have made an `--update` indistinguishable from papering over a regression.
    Both were caught by re-measuring before acting, which is the only reason
    neither reached a commit.
 
+---
+
+## 20.11 A4-D14 resolved, and A4-D15 — the deploy that would have shipped locked
+
+Bobby asked for A4-D14 to be finished and for the branch to be made ready for
+codex to deploy. Preparing the dev rebuild is what exposed A4-D15, which is the
+more serious of the two.
+
+### 20.11.1 A4-D14 — resolved without touching the frozen namespace
+
+§20.10.3 left one question: which capability governs `SANDBOX_EXIT` and
+`LIVE_GATE`. The answer did not require extending §20.3, because it is readable
+from what each gate's own decision path enforces:
+
+| Inbox gate | Authority the server enforces | Measured at | `needs_you` now |
+|---|---|---|---|
+| `R1` | `assertGovernance(user, "r1", …)` | `governance.service.ts:433` | `mayGovern(r1, decide)` |
+| `R2` | `assertGovernance(user, "r2", …)` | `governance.service.ts:552` | `mayGovern(r2, decide)` |
+| `LIVE_GATE` | `assertGovernance(user, "live", …)` | `governance.service.ts:655` | `mayGovern(live, decide)` |
+| `PAPER_EXIT` | `APPROVER_ROLE_REQUIRED` for non-`ADMIN` | `paper-exit.service.ts:426` | `user.role === "ADMIN"` |
+| `SANDBOX_EXIT` | none — no path creates or decides one | grep across `src/`, `migrations/` | `false`, fails closed |
+
+Two findings inside that table are worth keeping:
+
+- **`LIVE_GATE` is `live`, not `r2`.** Command Center links a LIVE_GATE row to
+  the R2 *screen* (`command-center.repository.ts:81`), which is what made `r2`
+  look like the answer. It has its own route, `/governance/approvals/:id/live`,
+  guarded by `governance.live.*`. Reading the link target instead of the route
+  would have produced a plausible, wrong mapping.
+- **`PAPER_EXIT` was already correct.** Rewriting all five gates onto
+  capabilities — the "obvious" fix — would have newly broken the one gate whose
+  role check is still the real one.
+
+`needs_you` now means "would the server let me decide THIS row". Six tests in
+`test/governance.spec.ts` cover it, including the two opposite failures: a USER
+holding `governance.r1.decide` who now sees their queue, and an `ADMIN` holding
+r1/r2 but not live who is no longer pointed at a live gate that would refuse
+them.
+
+### 20.11.2 A4-D15 — the owner anchor was never claimed by any real deployment
+
+**Severity: would have shipped to production locked.** **Found by:** checking
+what a dev rebuild would actually produce before running one.
+
+`bootstrap.ts:53` selects the owner with `users.filter((e) => e.owner === true)`.
+The deployment's protected bootstrap input, `deploy/control-api/bootstrap-users.yaml`,
+**had no `owner:` field on any user.** So:
+
+1. `owners` is empty, `owners[0]` is `undefined`, and the `if (owner)` claim
+   block never runs.
+2. `portal_owner_anchor` stays empty.
+3. `effectiveAccess` reports `OWNER_ANCHOR_UNCLAIMED` — correctly, and it fails
+   closed.
+4. **Users & Access and Profile & Access are shut to everyone, Bobby included.**
+
+A4-1 built the anchor, the claim, the guard and a hardened parser. The one thing
+never done was adding the marker to the file the deployment actually reads. The
+dev database confirms the consequence is live and not theoretical: it sits at
+migration `…033` with none of the A4 tables, so the next rebuild is a fresh A4
+schema — exactly the case this breaks.
+
+Fixed by adding `owner: true` to `bobby`, which is the mechanism A4-1 item 1
+prescribes: *"Fresh test/bootstrap environments must establish the owner only
+from protected bootstrap input, never a public API."* It is idempotent and
+one-way — `claimOwner` leaves a held anchor alone and refuses to move it.
+
+**Why no test caught it.** `test/bootstrap.spec.ts` has a case named *"parses the
+committed bootstrap file"* that does not read the committed file: it builds the
+YAML inline, and the inline copy has no `owner:` line either. CLAUDE.md §7.8
+exists for exactly this — a test must LOAD a canonical fixture, not restate it.
+A test that reads the real file and asserts exactly one owner is added with the
+fix, so the next deployment input that loses the marker fails a gate rather than
+a login.
+
+### 20.11.3 Evidence
+
+| Gate | Result |
+|---|---|
+| Control API + PostgreSQL + restore drill | **69 files, 646/646 passed** (638 → 646: six A4-D14 + two A4-D15) |
+| Frontend | **unchanged** — no frontend file is touched by A4-D14/D15, so the 332-passed visual verify on `0a099777` still describes these screens |
+| Scope | `apps/control-api/src/governance/{contracts,governance.service}.ts`, two control-api specs, `deploy/control-api/bootstrap-users.yaml`, `scripts/control-api-test.sh` |
+
+The first run of the A4-D14 tests failed all six while all 638 pre-existing
+tests passed — which is the useful shape: the product change was sound and the
+tests were wrong. The suite's `beforeEach` truncates
+`governance_approval_requests`, so rows seeded in a `beforeAll` were gone before
+the first assertion. Moved to `beforeEach`; the grant and the account stay in
+`beforeAll` because neither of those tables is truncated.
+
+Writing the A4-D15 guard also exposed why one could not have existed before: the
+gate copies only `migrations/`, `src/`, `test/` and `tooling/` into its isolated
+cell, so no control-api test could read `deploy/`. The gate now copies that one
+file in, and the test resolves it from either location rather than keeping a
+second copy — the second copy being the entire defect.
+
+### 20.11.4 Deployment note for codex
+
+The branch is `feat/execution-loop-next`. Three migrations are pending on any
+environment that has not seen A4: `…034` (owner anchor), `…035` (account
+lifecycle), `…036` (governance grants). All additive; none alters an existing
+password hash, binding, role or status.
+
+**Order matters.** `control-api-migrate` must complete, then
+`control-api-bootstrap` must run so the owner anchor is claimed from
+`deploy/control-api/bootstrap-users.yaml`. A stack brought up with the migration
+but without the bootstrap claim answers `OWNER_ANCHOR_UNCLAIMED` and both A4
+screens are closed to everyone. `compose.yaml` already sequences this
+(`control-api-bootstrap` depends on `control-api-migrate` completing, and
+`control-api` on both), so a normal `compose up` is correct; a hand-run
+migration without the bootstrap step is not.
+
+`claimOwner` is idempotent and refuses to move a held anchor, so re-running
+bootstrap on an environment that already has an owner changes nothing.
+

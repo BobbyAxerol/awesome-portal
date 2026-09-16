@@ -9,6 +9,19 @@
 users:
   - username: bobby
     role: ADMIN
+    # A4-D15 · the Portal owner anchor, established from protected bootstrap
+    # input exactly as A4-1 requires and never from a public API.
+    #
+    # Without this marker `bootstrap.ts` filters `owner === true` to an empty
+    # list, skips the claim entirely, and the deployment comes up with an
+    # UNCLAIMED anchor — which fails closed, so Users & Access and
+    # Profile & Access are shut to everyone including Bobby. A4-1 shipped the
+    # anchor, the claim and the parser; this input was never given the marker.
+    #
+    # Idempotent and one-way: `claimOwner` leaves an already-held anchor
+    # unchanged and refuses to move it to a different user, so re-running
+    # bootstrap cannot reassign the Portal.
+    owner: true
   - username: stan
     role: USER
   - username: thanhvuong

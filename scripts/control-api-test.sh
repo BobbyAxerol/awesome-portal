@@ -91,6 +91,12 @@ cp -a \
   "${APP_DIR}/tsconfig.json" \
   "${APP_DIR}/vitest.config.mts" \
   "${WORK_DIR}/"
+# A4-D15 · the deployment's own bootstrap input, so a test can assert against
+# the file that actually ships rather than a copy of it written by hand. That
+# hand-written copy is why an unclaimed owner anchor reached a release branch.
+mkdir -p "${WORK_DIR}/deploy/control-api"
+cp -a "${ROOT_DIR}/deploy/control-api/bootstrap-users.yaml" "${WORK_DIR}/deploy/control-api/"
+
 ln -s ../node_modules "${WORK_DIR}/node_modules"
 
 # The test cell can reach only its temporary PostgreSQL container. Source is

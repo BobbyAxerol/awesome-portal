@@ -160,8 +160,21 @@ function ageMinutes(from: Date, to: Date): number {
   return Math.max(0, Math.floor((to.valueOf() - from.valueOf()) / 60_000));
 }
 
+/**
+ * A4-D14 · `mayDecide` answers, per gate, "would the server let this caller
+ * decide a row of this kind".
+ *
+ * Passed in rather than computed here because the answer differs per gate and
+ * the authority for each lives with that gate's own service. The inbox's job is
+ * to report the answer, not to hold a second copy of the rule — a copy is how
+ * `needs_you` came to say `role === "ADMIN"` for every gate long after A4-3 had
+ * moved four of the five onto capabilities.
+ */
+export type MayDecideApproval = (gate: ApprovalGate) => boolean;
+
 export function approvalInboxResource(
   actor: PortalUser,
+  mayDecide: MayDecideApproval,
   now = new Date(),
 ): PostgresListResource<ApprovalInboxRow, ApprovalInboxItem> {
   return {
@@ -293,8 +306,13 @@ export function approvalInboxResource(
         quorum_met: row.quorum_met,
         quorum_required: row.quorum_required,
         inert,
+        /*
+         * A4-D14 · "would the server let me decide THIS row", not "am I an
+         * admin". The remaining three conditions are unchanged: a decided,
+         * expired or inert row needs nobody regardless of authority.
+         */
         needs_you:
-          actor.role === "ADMIN" && row.status === "PENDING" && row.expires_at > now && inert === null,
+          mayDecide(row.gate) && row.status === "PENDING" && row.expires_at > now && inert === null,
         record_authority: "PORTAL",
         updated_at: row.updated_at.toISOString(),
       };
