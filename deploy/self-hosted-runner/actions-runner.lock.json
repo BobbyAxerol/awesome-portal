@@ -1,0 +1,13 @@
+{
+  "schema_version": "portal.self-hosted-deploy-runner-lock.v1",
+  "runner_version": "2.337.0",
+  "asset_name": "actions-runner-linux-x64-2.337.0.tar.gz",
+  "asset_url": "https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz",
+  "asset_sha256": "70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613",
+  "runner_name": "portal-deploy-sgp1",
+  "runner_label": "portal-deploy",
+  "runner_user": "portal-gh-runner",
+  "runner_home": "/srv/portal-gh-runner",
+  "runner_directory": "/srv/portal-gh-runner/actions-runner",
+  "service_name": "portal-gh-deploy-runner.service"
+}
