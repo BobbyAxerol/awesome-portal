@@ -9027,6 +9027,12 @@ real file-owner/mode readiness is explicitly a separate
 workstation drill.  This preserves the proof without granting the build plane
 production-style privileges.
 
+The portable publication gate uses the workflow's short-lived GitHub token,
+`curl` and the checked-in Python standard library rather than assuming `gh` or
+`jq` are installed on the isolated runner.  Its regression test must validate
+the equivalent exact-SHA/name/newest-check semantics, never the removed CLI
+implementation details.
+
 ### 22.1 Required invariants
 
 1. CI/publication workflows must select explicit custom labels and immediately

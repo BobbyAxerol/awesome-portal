@@ -110,7 +110,7 @@
     {
       "id": "image_publication_gate",
       "file": "scripts/execution-image-publication-test.sh",
-      "sha256": "sha256:fe55254a08d32db2cd8f0db395530610a8463f9df83235efe923bd8f1a9a0530"
+      "sha256": "sha256:f97def95f26b4baf89ba4e3f52fefd75b4e572bedf0404c348ac7f1a1f3b35ca"
     },
     {
       "id": "release_authority_workflow_test",
