@@ -22,9 +22,12 @@ RUN apt-get purge --allow-remove-essential -y perl-base \
 
 COPY features/roadmap-task-board/backend ./backend
 
+# The CI runner checkout is intentionally umask-0077. The FastAPI package
+# must remain readable by the non-root runtime user.
 RUN useradd --create-home --uid 10002 roadmap \
     && mkdir -p /var/lib/roadmap-task-board \
-    && chown -R roadmap:roadmap /var/lib/roadmap-task-board
+    && chown -R roadmap:roadmap /var/lib/roadmap-task-board \
+    && chown -R roadmap:roadmap /opt/roadmap-task-board/backend
 
 USER roadmap
 EXPOSE 8000
