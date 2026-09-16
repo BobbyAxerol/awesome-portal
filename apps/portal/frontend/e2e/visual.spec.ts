@@ -353,6 +353,14 @@ const ADMIN_SCREENS: Screen[] = [
     ready: (page) => page.getByTestId("account-roster"),
   },
   {
+    name: "profile-access",
+    path: "/administration/profile-access",
+    // A4-3: the Governance matrix. Baselined because the three cell states —
+    // granted, implied-by-decide, and unavailable — are a visual language, and
+    // a unit test cannot see whether they read as three different things.
+    ready: (page) => page.getByTestId("access-matrix"),
+  },
+  {
     name: "alpha-version",
     path: "/research/quantbt/alphas/vb-momentum-alpha/0.3.1",
     ready: (page) => page.getByTestId("alpha-lifecycle-rail"),

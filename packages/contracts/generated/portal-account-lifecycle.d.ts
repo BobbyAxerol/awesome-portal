@@ -143,6 +143,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/profile-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every account and the Governance capabilities it holds. */
+        get: operations["getAccessPolicy"];
+        put?: never;
+        /** Grant one capability from the finite namespace. Step-up required. */
+        post: operations["grantCapability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/profile-access/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The immutable delegation lineage for one account, refusals included. */
+        get: operations["getAccessActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/profile-access/{grant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a grant, pinned to its revision. Effective on the next decision. */
+        delete: operations["revokeCapability"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -227,6 +279,55 @@ export interface components {
                 message: string;
                 request_id?: string;
             };
+        };
+        GrantedCapability: {
+            /** @enum {string} */
+            capability: "governance.r1.read" | "governance.r1.decide" | "governance.r2.read" | "governance.r2.decide" | "governance.canary.read" | "governance.canary.decide" | "governance.live.read" | "governance.live.decide";
+            grant_id: string;
+            /** @description null means every workspace the grantee is already a member of. A grant says what somebody may do, never where they may go. */
+            workspace_id: string | null;
+            /** @description Pin a revoke to this. */
+            grant_revision: number;
+        };
+        PolicyAccount: {
+            user_id: string;
+            username: string;
+            display_name: string;
+            /** @description The owner holds every capability through the anchor, not through a grant row — which is why a grant aimed at the owner is refused. */
+            is_owner: boolean;
+            /** @enum {string} */
+            account_state: "INVITED" | "ACTIVE" | "DISABLED" | "ARCHIVED";
+            capabilities: components["schemas"]["GrantedCapability"][];
+        };
+        GrantActivityEntry: {
+            event_id: string;
+            /** @enum {string} */
+            action: "GRANT" | "REVOKE";
+            capability: string;
+            /**
+             * @description Refusals are published too: a trail of only what worked cannot answer 'why does this person still not have it'.
+             * @enum {string}
+             */
+            outcome: "APPLIED" | "REPLAYED" | "CONFLICT" | "DENIED";
+            reason_code?: string | null;
+            actor_user_id: string;
+            grant_id?: string | null;
+            step_up_used?: boolean;
+            /** Format: date-time */
+            occurred_at: string;
+        };
+        GrantChangeResult: {
+            /** @constant */
+            schema_version: "portal.profile-access-change.v1";
+            /** @enum {string} */
+            outcome: "APPLIED" | "REPLAYED";
+            event_id: string;
+            grant?: components["schemas"]["GrantedCapability"] | null;
+            /**
+             * @description §20.2 rule 5: delegating a Governance capability creates no Trading System command, promotes no capital and changes no source data.
+             * @constant
+             */
+            external_effect: "NONE";
         };
     };
     responses: never;
@@ -750,6 +851,154 @@ export interface operations {
             };
             /** @description The password was not accepted. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAccessPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policy matrix. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        schema_version: "portal.profile-access.v1";
+                        /** @constant */
+                        record_authority?: "PORTAL_CONTROL";
+                        accounts: components["schemas"]["PolicyAccount"][];
+                    };
+                };
+            };
+        };
+    };
+    grantCapability: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-portal-idempotency-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    grantee_user_id: string;
+                    capability: string;
+                    workspace_id?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Granted. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantChangeResult"];
+                };
+            };
+            /** @description Not the owner, or no step-up. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description SELF_GRANT_REFUSED, OWNER_ANCHOR_PROTECTED, GRANT_ALREADY_ACTIVE, GRANTEE_NOT_IN_WORKSPACE, ACCOUNT_NOT_ACTIVE, CAPABILITY_NOT_DELEGABLE or a replayed key with a different payload. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description CAPABILITY_NOT_IN_NAMESPACE. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAccessActivity: {
+        parameters: {
+            query: {
+                grantee_user_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        schema_version: "portal.profile-access-activity.v1";
+                        activity: components["schemas"]["GrantActivityEntry"][];
+                    };
+                };
+            };
+        };
+    };
+    revokeCapability: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-portal-idempotency-key": string;
+            };
+            path: {
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expected_revision: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Revoked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantChangeResult"];
+                };
+            };
+            /** @description STALE_GRANT_REVISION or GRANT_ALREADY_REVOKED. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

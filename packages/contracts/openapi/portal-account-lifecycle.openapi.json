@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Portal account lifecycle (A4-2)",
+    "title": "Portal owner control plane (A4-2 accounts, A4-3 Governance delegation)",
     "version": "1.0.0",
     "description": "Owner-only account control plane. Every mutation carries the account revision it is acting on, an idempotency key, and — for the destructive ones — a step-up performed in the same session. No response ever contains a password hash, a Cloudflare subject or email, a session id, or an activation credential other than on the single response that minted it."
   },
@@ -771,6 +771,238 @@
           }
         }
       }
+    },
+    "/api/admin/profile-access": {
+      "get": {
+        "operationId": "getAccessPolicy",
+        "summary": "Every account and the Governance capabilities it holds.",
+        "responses": {
+          "200": {
+            "description": "The policy matrix.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schema_version",
+                    "accounts"
+                  ],
+                  "properties": {
+                    "schema_version": {
+                      "type": "string",
+                      "const": "portal.profile-access.v1"
+                    },
+                    "record_authority": {
+                      "type": "string",
+                      "const": "PORTAL_CONTROL"
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PolicyAccount"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "grantCapability",
+        "summary": "Grant one capability from the finite namespace. Step-up required.",
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "grantee_user_id",
+                  "capability"
+                ],
+                "properties": {
+                  "grantee_user_id": {
+                    "type": "string"
+                  },
+                  "capability": {
+                    "type": "string"
+                  },
+                  "workspace_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Granted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantChangeResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the owner, or no step-up.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SELF_GRANT_REFUSED, OWNER_ANCHOR_PROTECTED, GRANT_ALREADY_ACTIVE, GRANTEE_NOT_IN_WORKSPACE, ACCOUNT_NOT_ACTIVE, CAPABILITY_NOT_DELEGABLE or a replayed key with a different payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "CAPABILITY_NOT_IN_NAMESPACE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/activity": {
+      "get": {
+        "operationId": "getAccessActivity",
+        "summary": "The immutable delegation lineage for one account, refusals included.",
+        "parameters": [
+          {
+            "name": "grantee_user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schema_version",
+                    "activity"
+                  ],
+                  "properties": {
+                    "schema_version": {
+                      "type": "string",
+                      "const": "portal.profile-access-activity.v1"
+                    },
+                    "activity": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GrantActivityEntry"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/profile-access/{grant_id}": {
+      "delete": {
+        "operationId": "revokeCapability",
+        "summary": "Revoke a grant, pinned to its revision. Effective on the next decision.",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expected_revision"
+                ],
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantChangeResult"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "STALE_GRANT_REVISION or GRANT_ALREADY_REVOKED.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1036,6 +1268,183 @@
                 "type": "string"
               }
             }
+          }
+        }
+      },
+      "GrantedCapability": {
+        "type": "object",
+        "required": [
+          "capability",
+          "grant_id",
+          "workspace_id",
+          "grant_revision"
+        ],
+        "properties": {
+          "capability": {
+            "type": "string",
+            "enum": [
+              "governance.r1.read",
+              "governance.r1.decide",
+              "governance.r2.read",
+              "governance.r2.decide",
+              "governance.canary.read",
+              "governance.canary.decide",
+              "governance.live.read",
+              "governance.live.decide"
+            ]
+          },
+          "grant_id": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "null means every workspace the grantee is already a member of. A grant says what somebody may do, never where they may go."
+          },
+          "grant_revision": {
+            "type": "integer",
+            "description": "Pin a revoke to this."
+          }
+        }
+      },
+      "PolicyAccount": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "username",
+          "display_name",
+          "is_owner",
+          "account_state",
+          "capabilities"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "is_owner": {
+            "type": "boolean",
+            "description": "The owner holds every capability through the anchor, not through a grant row — which is why a grant aimed at the owner is refused."
+          },
+          "account_state": {
+            "type": "string",
+            "enum": [
+              "INVITED",
+              "ACTIVE",
+              "DISABLED",
+              "ARCHIVED"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrantedCapability"
+            }
+          }
+        }
+      },
+      "GrantActivityEntry": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "action",
+          "capability",
+          "outcome",
+          "actor_user_id",
+          "occurred_at"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "GRANT",
+              "REVOKE"
+            ]
+          },
+          "capability": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "APPLIED",
+              "REPLAYED",
+              "CONFLICT",
+              "DENIED"
+            ],
+            "description": "Refusals are published too: a trail of only what worked cannot answer 'why does this person still not have it'."
+          },
+          "reason_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_user_id": {
+            "type": "string"
+          },
+          "grant_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "step_up_used": {
+            "type": "boolean"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GrantChangeResult": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "outcome",
+          "event_id",
+          "external_effect"
+        ],
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "portal.profile-access-change.v1"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "APPLIED",
+              "REPLAYED"
+            ]
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "grant": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GrantedCapability"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "external_effect": {
+            "type": "string",
+            "const": "NONE",
+            "description": "§20.2 rule 5: delegating a Governance capability creates no Trading System command, promotes no capital and changes no source data."
           }
         }
       }

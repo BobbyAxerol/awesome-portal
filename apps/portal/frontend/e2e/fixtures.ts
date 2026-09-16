@@ -280,6 +280,67 @@ export async function stubPortalApi(
     }),
   );
 
+  /*
+   * A4-3 · the Governance policy matrix.
+   *
+   * Pinned rather than generated, and deliberately showing all three cell
+   * states the grid can be in: a direct grant, the read implied by a decide,
+   * and an account with no Portal access at all. A baseline that only shows
+   * the empty grid proves nothing about the thing this screen exists to say.
+   */
+  await page.route("**/api/admin/profile-access", (route) =>
+    void json(route, {
+      schema_version: "portal.profile-access.v1",
+      record_authority: "PORTAL_CONTROL",
+      accounts: [
+        {
+          user_id: "usr_baseline_bobby",
+          username: "bobby",
+          display_name: "Bobby",
+          is_owner: true,
+          account_state: "ACTIVE",
+          capabilities: [],
+        },
+        {
+          user_id: "usr_baseline_stan",
+          username: "stan",
+          display_name: "Stan",
+          is_owner: false,
+          account_state: "ACTIVE",
+          capabilities: [
+            { capability: "governance.r1.read", grant_id: "grn_1", workspace_id: null, grant_revision: 1 },
+            { capability: "governance.r2.decide", grant_id: "grn_2", workspace_id: null, grant_revision: 2 },
+          ],
+        },
+        {
+          user_id: "usr_baseline_thanh",
+          username: "thanhvuong",
+          display_name: "Thanh Vuong",
+          is_owner: false,
+          account_state: "ACTIVE",
+          capabilities: [
+            { capability: "governance.canary.read", grant_id: "grn_3", workspace_id: null, grant_revision: 1 },
+          ],
+        },
+        {
+          user_id: "usr_baseline_former",
+          username: "former-analyst",
+          display_name: "Former Analyst",
+          is_owner: false,
+          account_state: "ARCHIVED",
+          capabilities: [],
+        },
+      ],
+    }),
+  );
+
+  await page.route("**/api/admin/profile-access/activity**", (route) =>
+    void json(route, {
+      schema_version: "portal.profile-access-activity.v1",
+      activity: [],
+    }),
+  );
+
   await page.route("**/api/admin/step-up", (route) =>
     void json(route, {
       schema_version: "portal.owner-step-up.v1",

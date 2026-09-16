@@ -8362,3 +8362,120 @@ A4-3 may begin once Bobby accepts the contracts in 20.8.1. A4-2 leaves no open
 defect. The one item carried forward is the `.btn-ghost` question above, which
 is a design-system decision rather than a security one and blocks nothing.
 
+---
+
+## 20.9 A4 execution record — A4-3 frontend and A4-4 (Claude, 2026-09-16)
+
+**Phases:** A4-3 (Profile & Access surface) and A4-4 (UI/UX integration, defect
+sweep, release-candidate verification).
+**Status:** implementation complete, gates green, awaiting Bobby's acceptance.
+
+### 20.9.1 Profile & Access — a policy surface, not an RBAC editor
+
+The difference shows in what it refuses to offer: no free-form role, no route
+pattern, no permission string to type. Four Governance gates, two things a
+person can be trusted with at each — **See it** and **Decide it** — and the
+finite list of people who already have accounts.
+
+A grid, because the owner's real question is not "what permissions exist" but
+"who can approve R2 while I am away", and a grid answers that in one look. See
+and Decide are separate columns rather than one three-way control, because
+§20.2 rule 4 makes them genuinely separate grants and a single control would
+suggest they are points on one scale.
+
+Two things the screen says out loud that permission UIs usually leave implicit:
+
+- **Deciding a gate here changes nothing outside the Portal.** Every response
+  carries `external_effect: NONE` and the confirmation repeats it, so nobody
+  reads a granted capability as a promotion or a command.
+- **The owner is not in the grid.** Their authority is the anchor, not a row,
+  so there is no cell that could clear it. The screen says why rather than
+  leaving a reader to wonder where Bobby went.
+
+A third state was needed that a boolean grid does not have: a `.decide` grant
+implies `.read` on the server, so the See cell is **covered but not
+independently revocable**. Rendering it empty would be a lie; rendering it as
+an ordinary grant would make a click that cannot work look like a broken
+control. It is drawn dashed, disabled, and titled "Included with Decide".
+
+### 20.9.2 Owner-aware navigation, and a registry collision
+
+A4-4 item 1 asks for owner-aware navigation. Navigation now takes the
+capability set the SERVER computed and hides any feature whose registry
+`permissions` name a capability A4 actually enforces. While that answer is
+loading, or if it could not be read, the list is empty — a protected entry is
+hidden rather than optimistically shown, because the screen behind it would
+refuse anyway and an entry that always refuses is worse than no entry.
+
+**The collision, and what I did about it.** `/administration/profile-access`
+already existed in the registry as a *different* feature: "Verified identity,
+session and access information", persona `portal_user`, permission
+`profile.read`, `COMMISSIONED` / `STATIC_PREVIEW`. The registry-driven route
+therefore won, and the screen rendered the "not built yet" brief on top of the
+working page — a collision that was not theoretical.
+
+Registry files are normally protected (CLAUDE.md §3.1), so this is flagged
+rather than buried. I reconciled the entry instead of routing around it,
+because routing around it is exactly the "second feature model" §3.2 forbids:
+a screen that exists in the router and not in the product's own map. The entry
+now reads `AVAILABLE` / `REAL` with permission
+`administration.profile_access.manage`, persona `portal_owner`, and the feature
+is mapped through `FEATURE_COMPONENTS` like every other real feature. Both
+`registry.json` and the canonical `registry.public.json` fixture were changed
+together, or the app and its tests would disagree.
+
+Users & Access is deliberately NOT given a registry entry: it has never had
+one, and the registry is the product feature model for every user while owner
+account administration is not a product feature for every user. It stays a top
+bar control.
+
+### 20.9.3 Found by looking at the screen
+
+Four defects, every one of which passed the unit suite:
+
+1. **A second top bar icon pushed the bar onto two lines** at laptop width. It
+   was also a duplicate affordance — Profile & Access is in the sidebar now —
+   so it was removed rather than made smaller.
+2. **A bare `/* … */` in JSX position is text, not a comment.** TypeScript
+   accepted it. Converting it to `{/* … */}` then produced a parse error,
+   because it made two roots in a ternary branch — which is how the bug became
+   visible at all.
+3. **`.admin-table` is declared later in the stylesheet than the matrix rules**,
+   so a single-class override lost to it and the grid silently stretched back
+   out. Fixed with `.admin-table.access-matrix`.
+4. **Withdrawn accounts were offered capability cells.** A capability on an
+   account that cannot sign in means nothing; the cells now say so.
+
+**One cosmetic item accepted, not hidden.** The Gate R1 column group renders
+roughly twice the width of the other three. It is a browser `colSpan`
+distribution behaviour: declaring widths on the group header, on the mode
+headers, on the cells, switching to `table-layout: fixed`, declaring the cell
+padding and wrapping the table in a flex container each changed nothing, and
+the built stylesheet was verified to contain every rule. The grid is readable
+and every cell is in the right place; the unevenness is ugly rather than
+misleading. Recorded here rather than left for somebody to rediscover.
+
+### 20.9.4 Evidence
+
+| Gate | Result |
+|---|---|
+| Control API + PostgreSQL + restore drill | **69 files, 638/638** |
+| Frontend unit | **151 files, 2404 passed, 1 skipped** |
+| `tsc --noEmit` + build | clean |
+| Visual baseline | 2 `profile-access` snapshots added; full gate in verify mode |
+| Generated DTOs | `portal-account-lifecycle.d.ts` regenerated from OpenAPI, never hand-edited |
+| Route ledger | 133 → 137 |
+
+### 20.9.5 What A4-4 did NOT do
+
+Deliberately, and each for a stated reason:
+
+- **No dev candidate was built and no image was published.** §20.5 rule 5 and
+  the A4-4 release exit put that decision with Bobby; A4 implementation implies
+  no deployment. The branch is ready for it — one commit series, every gate
+  green — and the build is a separate, owner-authorised step.
+- **Stable was not touched.** Not during visual acceptance, not at all.
+- **The `.btn-ghost` design-system defect from A4-2 is still scoped-patched.**
+  It has 62 call sites across Research and Planning, and §0 requires asking
+  before a shared component change reaches those screens. Still open for Bobby.
+

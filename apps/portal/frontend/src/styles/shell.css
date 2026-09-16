@@ -2331,6 +2331,125 @@
   color: var(--ink-soft);
 }
 
+/* --- Profile & Access — the Governance matrix (A4-3) -----------------------
+ *
+ * A grid of people against gates, because the owner's real question is "who
+ * can approve R2 while I am away" and a grid answers that in one look. See and
+ * Decide are separate columns rather than a three-way control: §20.2 rule 4
+ * makes them genuinely separate grants, and a single control would suggest
+ * they are points on one scale.
+ */
+/*
+ * Sized to its content, not to the page.
+ *
+ * `.admin-table` is `width: 100%`, which spread nine columns across the whole
+ * canvas and left the See/Decide pair of one gate further apart than two
+ * different gates. A matrix that cannot be scanned in pairs is not a matrix —
+ * it is a scatter of icons. Found by looking at the recorded screen.
+ */
+/* A flex row makes the table size to its content instead of to the page. */
+.access-matrix-wrap {
+  display: flex;
+  overflow-x: auto;
+}
+.admin-table.access-matrix {
+  /* Both classes, deliberately: `.admin-table` is declared later in this file
+     with `width: 100%; min-width: 880px`, so a single-class rule loses to it
+     and the grid silently stretched back out. */
+  width: auto;
+  min-width: 0;
+}
+/* The account column takes only what a name needs. Letting it absorb the
+ * remaining width pushed the matrix to the right edge, which is the half of
+ * the screen a reader is actually scanning. */
+.admin-table.access-matrix th:first-child,
+.admin-table.access-matrix td:first-child {
+  min-width: 200px;
+  padding-right: var(--space-5);
+  white-space: nowrap;
+}
+/* A rule between gates, so the two cells that belong together look like they
+ * do. Colour alone would not survive greyscale or a print. */
+.access-matrix td:nth-child(even):not(:first-child),
+.access-matrix th.access-gate-head:not(:first-of-type) {
+  border-left: 1px solid var(--line-soft);
+}
+/* The group header is exactly its two cells wide. A `colSpan` header with no
+ * width lets the browser settle the group by widening its FIRST column, which
+ * made Gate R1 twice the width of the other three. */
+.access-gate-head {
+  width: 124px;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+/* Every mode column is the same width as its cells. Without this the browser
+ * settles a `colSpan` header by widening the group's FIRST column, which made
+ * Gate R1 twice as wide as the other three and broke the scan. */
+.access-mode-head {
+  width: 62px;
+  padding-bottom: var(--space-2);
+  text-align: center;
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+
+/*
+ * Uniform columns.
+ *
+ * `.admin-table` gives every cell 12px of horizontal padding, which is content
+ * -box extra on top of the declared width — so the eight mode columns asked for
+ * 62px and took 86px, the table stopped shrink-wrapping, and the browser spent
+ * the leftover on the first group. Gate R1 came out twice the width of the
+ * other three. Declaring the padding here makes each column exactly what it
+ * says it is.
+ */
+.admin-table.access-matrix th:not(:first-child),
+.admin-table.access-matrix td:not(:first-child) {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.access-cell {
+  width: 62px;
+  text-align: center;
+}
+.access-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--ink-faint);
+  transition: border-color 200ms, color 200ms, background 200ms;
+}
+.access-toggle:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+/* Held: the capability was granted directly and can be revoked here. */
+.access-toggle[data-held="true"] {
+  border-color: var(--good);
+  background: var(--good-bg);
+  color: var(--good);
+}
+/* Implied: a `.decide` grant carries `.read` with it. Shown as covered but not
+ * independently revocable — a click that silently did nothing would read as a
+ * broken control rather than as a rule. */
+.access-toggle[data-held="implied"] {
+  border-style: dashed;
+  border-color: var(--good);
+  color: var(--good);
+  opacity: 0.55;
+}
+.access-toggle:disabled {
+  cursor: not-allowed;
+}
+.access-toggle:disabled:not([data-held="implied"]) {
+  opacity: 0.35;
+}
+
 /* --- Users & Access — retained table primitives ---------------------------- */
 .admin-table {
   width: 100%;

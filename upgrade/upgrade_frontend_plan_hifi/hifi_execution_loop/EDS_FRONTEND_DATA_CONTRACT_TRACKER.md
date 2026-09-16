@@ -11114,3 +11114,76 @@ tương đương.
 - Visual: 2 baseline `users-access` ghi lại; gate đầy đủ ở chế độ kiểm tra
 - DTO sinh từ OpenAPI: `packages/contracts/generated/portal-account-lifecycle.d.ts`
 - Ledger route: 127 → 133 (thu 6 route `/api/admin/users*`, thêm 11)
+
+---
+
+## A81 — A4-3/A4-4: Profile & Access và nav theo năng lực (2026-09-16)
+
+Hồ sơ đầy đủ ở **§20.9** của `EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`.
+Mục này ghi phần frontend và bốn thứ **chỉ nhìn màn thật mới thấy**.
+
+### A81.1 Lưới, không phải trình soạn RBAC
+
+Câu hỏi thật của owner không phải "có những quyền gì" mà là **"ai duyệt được R2
+khi tôi vắng"** — và một lưới người × cổng trả lời nó trong một cái nhìn. **See**
+và **Decide** là hai cột riêng chứ không phải một control ba nấc, vì §20.2 luật 4
+làm chúng thành **hai grant khác nhau**; gộp vào một control sẽ ngụ ý chúng là
+hai mức trên cùng một thang.
+
+**Trạng thái thứ ba** mà lưới boolean không có: `.decide` kéo theo `.read` ở
+server, nên ô See là **đã phủ nhưng không thu hồi riêng được**. Vẽ rỗng là nói
+dối; vẽ như grant thường thì cú bấm không chạy được sẽ trông như control hỏng.
+Nó được vẽ nét đứt, disabled, kèm lý do "Included with Decide".
+
+**Owner không có trong lưới** — quyền của họ là anchor chứ không phải một dòng,
+nên không có ô nào xoá được. Màn nói thẳng điều đó thay vì để người đọc tự hỏi
+Bobby đâu.
+
+### A81.2 Va chạm registry — và vì sao tôi sửa nguồn thay vì đi vòng
+
+`/administration/profile-access` **đã tồn tại** trong registry như một feature
+**khác**: "Verified identity, session and access information", persona
+`portal_user`, quyền `profile.read`, `COMMISSIONED`. Route do registry sinh ra
+**thắng**, nên màn thật bị trang brief "chưa xây" đè lên. Va chạm này **có thật**,
+không phải giả định.
+
+Registry thường được bảo vệ (§3.1) nên tôi nêu rõ chứ không giấu. Tôi **sửa
+entry** thay vì thêm route thứ hai, vì thêm route thứ hai chính là "feature model
+thứ hai" mà §3.2 cấm: một màn tồn tại trong router mà không tồn tại trong bản đồ
+sản phẩm. Sửa **cả** `registry.json` lẫn fixture canonical `registry.public.json`
+— không thì app và test của nó nói hai điều khác nhau.
+
+### A81.3 Bốn lỗi chỉ nhìn màn mới thấy
+
+1. **Icon thứ hai trên top bar đẩy thanh xuống hai dòng** ở laptop. Nó cũng là
+   affordance trùng — Profile & Access đã nằm ở sidebar — nên tôi bỏ hẳn.
+2. **`/* … */` trần trong JSX là *text*, không phải comment.** TypeScript nhận.
+   Đổi sang `{/* … */}` mới lòi ra parse error vì thành hai root trong một nhánh
+   ternary — đó mới là cách lỗi hiện ra.
+3. **`.admin-table` khai báo *sau* các rule của ma trận**, nên override một class
+   thua nó và lưới âm thầm giãn lại. Phải dùng `.admin-table.access-matrix`.
+4. **Tài khoản đã thu quyền vẫn được mời cấp capability** — capability cho tài
+   khoản không đăng nhập được thì vô nghĩa.
+
+**Một lỗi thẩm mỹ tôi chấp nhận và ghi lại, không giấu:** nhóm cột Gate R1 rộng
+gấp đôi ba nhóm kia. Đây là hành vi phân bổ `colSpan` của trình duyệt: khai
+`width` ở group header, ở mode header, ở cell, đổi `table-layout: fixed`, khai
+padding, bọc table trong flex — **đều không đổi**, và tôi đã kiểm chứng rule có
+mặt trong CSS đã build. Lưới vẫn đọc được và mọi ô đúng chỗ; nó xấu chứ không
+đánh lừa.
+
+### A81.4 Reuse report (§11.3)
+
+Tái dùng: `Callout`, `Panel`, `SectionHeading`, `StateView`, `.input`,
+`.btn-primary`, `.btn-ghost`, `.btn-danger` (A4-2), `.admin-table`,
+`.admin-confirm*` (A4-2), `.admin-history` (A4-2), `StepUpPrompt` (A4-2),
+`newIdempotencyKey` (A4-2), icon `lucide-react`.
+Mới: `.access-matrix` + `.access-toggle` (ba trạng thái ô), `ProfileAccess`,
+`profileAccessApi`.
+
+### A81.5 Evidence
+
+- Control API **69 file, 638/638** + restore drill
+- Frontend **151 file, 2404 pass**, tsc + build sạch
+- Visual: thêm 2 baseline `profile-access`; gate đầy đủ chế độ kiểm tra
+- Ledger route 133 → 137; DTO sinh lại từ OpenAPI
