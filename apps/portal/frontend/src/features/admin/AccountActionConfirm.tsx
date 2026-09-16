@@ -33,7 +33,9 @@ export type AccountAction =
   | "revoke-sessions"
   | "disable"
   | "enable"
-  | "archive";
+  | "archive"
+  | "grant-admin"
+  | "revoke-admin";
 
 interface Consequence {
   title: string;
@@ -80,6 +82,20 @@ export const ACTION_COPY: Record<AccountAction, Consequence> = {
     consequence:
       "The account can sign in again — but not with whatever password it had before. A fresh activation credential is issued and shown once, and the account chooses a new password with it.",
     verb: "Enable and issue credential",
+    tone: "neutral",
+  },
+  "grant-admin": {
+    title: "Make this account an administrator",
+    consequence:
+      "The administrator role lets this account write anything through the Planning facade, not only its own tasks. It grants no Governance capability and does not make the account a Portal owner \u2014 those are granted on Profile & Access, and this change does not touch them.",
+    verb: "Grant administrator role",
+    tone: "danger",
+  },
+  "revoke-admin": {
+    title: "Return this account to standard access",
+    consequence:
+      "This account keeps its own Planning tasks but can no longer write anything else through the Planning facade. Governance capabilities granted on Profile & Access are unaffected, and nothing about its sign-in changes.",
+    verb: "Remove administrator role",
     tone: "neutral",
   },
   archive: {

@@ -281,6 +281,55 @@ export async function stubPortalApi(
   );
 
   /*
+   * A4-D13 · one account's detail, served for the expanded-row baseline.
+   *
+   * Registered after the roster route so the more specific pattern is the one
+   * that answers `/accounts/<id>`; without it that read falls to the 501
+   * catch-all, the history panel renders its failure state, and a fixture gap
+   * would photograph as a design regression.
+   */
+  await page.route("**/api/admin/accounts/*", (route) =>
+    void json(route, {
+      schema_version: "portal.account-detail.v1",
+      record_authority: "PORTAL_CONTROL",
+      account: {
+        user_id: "usr_baseline_stan",
+        username: "stan",
+        display_name: "Stan",
+        role: "USER",
+        account_state: "ACTIVE",
+        must_change_password: false,
+        account_revision: 7,
+        locked: false,
+      },
+      history: [
+        {
+          operation_id: "alo_baseline_2",
+          action: "REVOKE_SESSIONS",
+          outcome: "APPLIED",
+          reason_code: null,
+          expected_revision: 6,
+          resulting_revision: 7,
+          rollback_description: "Sessions cannot be restored; the account signs in again.",
+          step_up_used: true,
+          occurred_at: "2026-09-15T04:12:00Z",
+        },
+        {
+          operation_id: "alo_baseline_1",
+          action: "ISSUE_ACTIVATION",
+          outcome: "APPLIED",
+          reason_code: null,
+          expected_revision: 5,
+          resulting_revision: 6,
+          rollback_description: "Reissue to revoke this credential and issue another.",
+          step_up_used: true,
+          occurred_at: "2026-09-14T09:30:00Z",
+        },
+      ],
+    }),
+  );
+
+  /*
    * A4-3 · the Governance policy matrix.
    *
    * Pinned rather than generated, and deliberately showing all three cell

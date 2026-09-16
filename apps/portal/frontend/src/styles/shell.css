@@ -2180,6 +2180,7 @@
  */
 .admin-row-action:disabled,
 .admin-confirm .btn-ghost:disabled,
+.admin-profile-row .btn-ghost:disabled,
 .admin-token-actions .btn-ghost:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -2187,6 +2188,44 @@
 .admin-row-action:disabled:hover {
   border-color: var(--line);
   color: var(--ink-soft);
+}
+
+/*
+ * A4-D13 · the profile editor inside an expanded account row.
+ *
+ * Two rows of "label, control, commit" rather than a form: display name and
+ * role are independent writes against the same revision, and grouping them
+ * under one Save would make a single button mean two different consequences.
+ */
+.admin-profile-note {
+  margin: 0 0 var(--space-3);
+  max-width: 68ch;
+  color: var(--ink-soft);
+}
+.admin-profile-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.admin-profile-row + .admin-profile-row {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.admin-profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 18rem;
+}
+.admin-profile-field input {
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
 }
 
 /* The confirmation. It is a panel in the flow rather than an overlay: an
@@ -2476,31 +2515,26 @@
 .admin-table tr[data-self="true"] {
   background: var(--accent-soft);
 }
-.admin-self {
-  margin-left: var(--space-2);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  text-transform: uppercase;
-  color: var(--accent);
-}
-/* The select is the only place the role appears: a badge beside it would be a
- * second copy of the same fact, and the two could disagree mid-mutation. */
-.admin-role {
-  min-height: 28px;
-  font-size: var(--text-xs);
-}
-.admin-status[data-disabled="true"] {
-  color: var(--state-denied);
+/*
+ * The opened row.
+ *
+ * Both detail panels render BELOW the roster, so without this the only thing
+ * tying them to an account is the name in their titles. On a desk whose stated
+ * rule is that nobody acts against the wrong account, the row being read
+ * should not be something you reconstruct.
+ *
+ * Declared after `[data-self]` deliberately: an opened row you are also the
+ * owner of should read as opened, which is the state that changes what the
+ * panels below are showing.
+ */
+.admin-table tbody tr[data-expanded="true"] {
+  background: var(--raised);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 .admin-flag {
   display: block;
   font-size: var(--text-2xs);
   color: var(--state-degraded);
-}
-.admin-created {
-  font-size: var(--text-xs);
-  white-space: nowrap;
-  color: var(--ink-faint);
 }
 .admin-actions {
   display: flex;

@@ -27,8 +27,16 @@
  * is `OwnerAccessGuard`.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, LogOut, ShieldOff, ShieldCheck, Archive, UserPlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  KeyRound,
+  LogOut,
+  ShieldOff,
+  ShieldCheck,
+  Archive,
+  UserPlus,
+  UserCog,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AuthRequestError } from "../../auth/authApi";
 import { isOwnerAccess, useSession } from "../../auth/session";
@@ -44,6 +52,7 @@ import {
   accounts,
   newIdempotencyKey,
   stepUp,
+  type AccountRole,
   type AccountSummary,
 } from "./accountApi";
 
@@ -152,6 +161,24 @@ export function UsersAccess() {
           idempotencyKey,
         );
       }
+      /*
+       * A4-D13 · a role change is an UPDATE_PROFILE, not a lifecycle action.
+       *
+       * It is routed through the same confirmation and the same expected
+       * revision as everything else on this screen, because it grants real
+       * authority: `role === "ADMIN"` is what the Planning facade checks
+       * before it allows a write that is not the actor's own task.
+       */
+      if (action === "grant-admin" || action === "revoke-admin") {
+        return accounts.updateProfile(
+          account.userId,
+          {
+            expectedRevision: account.accountRevision,
+            role: action === "grant-admin" ? "ADMIN" : "USER",
+          },
+          idempotencyKey,
+        );
+      }
       return accounts.action(
         account.userId,
         action,
@@ -187,6 +214,17 @@ export function UsersAccess() {
         row.displayName.toLowerCase().includes(needle),
     );
   }, [roster.data, search]);
+
+  /*
+   * The expanded account is read back out of the roster rather than stashed in
+   * state, so a refresh after a write reaches the detail panel too: its
+   * revision has to be the current one or the next write is pinned to a stale
+   * number and refused.
+   */
+  const expandedRow = useMemo(
+    () => rows.find((row) => row.userId === expanded) ?? null,
+    [rows, expanded],
+  );
 
   // ------------------------------------------------------------- authority
 
@@ -407,6 +445,7 @@ export function UsersAccess() {
                   key={row.userId}
                   data-testid={`account-${row.username}`}
                   data-self={isSelf}
+                  data-expanded={expanded === row.userId}
                   data-state={row.accountState}
                 >
                   <td>
@@ -492,8 +531,21 @@ export function UsersAccess() {
         </table>
       )}
 
+      {expandedRow ? (
+        <AccountProfileEditor
+          account={expandedRow}
+          isOwnAccount={expandedRow.userId === principal?.principalId}
+          onChangeRole={(action) => open(expandedRow, action)}
+          onSaved={() => {
+            setFailure(null);
+            refresh();
+          }}
+          onFailure={setFailure}
+        />
+      ) : null}
+
       {expanded ? (
-        <Panel title="Action history">
+        <Panel title={`Action history \u00b7 ${expandedRow?.username ?? ""}`}>
           {detail.isPending ? (
             <StateView kind="loading" message="Reading this account's history…" />
           ) : detail.isError ? (
@@ -527,6 +579,138 @@ export function UsersAccess() {
     // retry or a second deliberate action.
     setPending({ account, action, idempotencyKey: newIdempotencyKey() });
   }
+}
+
+/**
+ * A4-D13 · display name and base role, the two account attributes that are not
+ * lifecycle transitions.
+ *
+ * It lives in the expanded row rather than in the action strip because it is
+ * not a lifecycle operation, and because the strip's five buttons already
+ * carry the consequences a reader scans for. The role half routes through the
+ * same confirmation as everything else — it grants authority, so it is not an
+ * inline toggle — while the display name saves in place, because it grants
+ * nothing and reads nothing back.
+ */
+function AccountProfileEditor({
+  account,
+  isOwnAccount,
+  onChangeRole,
+  onSaved,
+  onFailure,
+}: {
+  account: AccountSummary;
+  /** The viewer is the owner, so this row is the owner anchor. */
+  isOwnAccount: boolean;
+  onChangeRole: (action: "grant-admin" | "revoke-admin") => void;
+  onSaved: () => void;
+  onFailure: (error: AuthRequestError | null) => void;
+}) {
+  const [name, setName] = useState(account.displayName);
+  // A different account — or a name changed underneath us — reloads the field.
+  useEffect(() => setName(account.displayName), [account.userId, account.displayName]);
+
+  const rename = useMutation({
+    mutationFn: () =>
+      accounts.updateProfile(
+        account.userId,
+        { expectedRevision: account.accountRevision, displayName: name.trim() },
+        newIdempotencyKey(),
+      ),
+    onSuccess: () => {
+      onFailure(null);
+      onSaved();
+    },
+    onError: (error: unknown) =>
+      onFailure(error instanceof AuthRequestError ? error : null),
+  });
+
+  const trimmed = name.trim();
+  // §3.5: every disabled state here names the reason it is disabled.
+  const saveReason = rename.isPending
+    ? "The request is with the server; wait for its answer."
+    : trimmed.length === 0
+      ? "A display name cannot be empty."
+      : trimmed === account.displayName
+        ? "The display name is unchanged."
+        : undefined;
+
+  const role: AccountRole = account.role;
+  /*
+   * Mirrors `ownerSelfProtection()` exactly, in the server's own words. The
+   * server refuses this regardless, so the button would be a lie rather than a
+   * risk — but a control that fails only after you press it is still a control
+   * that taught you nothing.
+   */
+  const demoteReason = isOwnAccount
+    ? "The Portal owner cannot be demoted while they hold the owner anchor."
+    : undefined;
+
+  return (
+    <Panel title={`Profile \u00b7 ${account.username}`}>
+      <p className="admin-profile-note">
+        The role decides what this account may write through the Planning facade: an
+        administrator may write anything there, a standard user only its own tasks.
+        Governance capabilities are a separate grant, made on Profile &amp; Access, and
+        nothing here changes them.
+      </p>
+
+      <div className="admin-profile-row">
+        <label className="admin-profile-field">
+          <span className="mono-label">Display name</span>
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            data-testid="profile-display-name"
+            aria-label={`Display name for ${account.username}`}
+          />
+        </label>
+        <button
+          type="button"
+          className="btn-ghost"
+          onClick={() => rename.mutate()}
+          disabled={saveReason !== undefined}
+          title={saveReason}
+          data-testid="profile-save-name"
+        >
+          {rename.isPending ? "Saving\u2026" : "Save display name"}
+        </button>
+      </div>
+
+      <div className="admin-profile-row">
+        <span className="admin-profile-field">
+          <span className="mono-label">Role</span>
+          <span className="mono" data-testid="profile-role">
+            {role}
+          </span>
+        </span>
+        {role === "USER" ? (
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={() => onChangeRole("grant-admin")}
+            data-testid="profile-grant-admin"
+          >
+            <UserCog size={13} aria-hidden="true" />
+            Make administrator
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => onChangeRole("revoke-admin")}
+            disabled={demoteReason !== undefined}
+            title={demoteReason}
+            data-testid="profile-revoke-admin"
+          >
+            <UserCog size={13} aria-hidden="true" />
+            Remove administrator
+          </button>
+        )}
+      </div>
+    </Panel>
+  );
 }
 
 function RowAction({

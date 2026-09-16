@@ -8479,3 +8479,171 @@ Deliberately, and each for a stated reason:
   It has 62 call sites across Research and Planning, and §0 requires asking
   before a shared component change reaches those screens. Still open for Bobby.
 
+
+---
+
+## 20.10 A4 execution record — final full-campaign verification (Claude, 2026-09-16)
+
+Bobby asked for one more pass over all four phases — by eye, by flow, and by
+backend — before deciding whether A4 closes. This section records what that
+pass found. It is not a summary of §20.7–§20.9; it only carries what the
+re-verification itself established.
+
+### 20.10.1 A4-D13 — the owner cannot change a role that still grants authority
+
+**Severity:** real gap, product-visible. **Found by:** re-reading the A4-2 plan
+text against the shipped screen, not by a test.
+
+A4-2 mandatory backend delivery item 1 names, in its own words, "update
+display/base role where allowed". The server delivers it in full:
+
+- `PATCH /api/admin/accounts/:id` → `UPDATE_PROFILE`
+  (`account-lifecycle.controller.ts:190`), with expected-revision guarding,
+  step-up, idempotency, CSRF/Origin enforcement and an immutable audit row like
+  every other operation.
+- `ownerSelfProtection()` refuses `UPDATE_PROFILE` with `role: "USER"` against
+  the owner anchor (`account-lifecycle.service.ts:548`), which is precisely the
+  "owner cannot demote its own final owner anchor" line in A4-2's required
+  evidence.
+- `accounts.updateProfile()` exists in `accountApi.ts:201`, typed and correct.
+
+**No component calls it.** `grep -rn "updateProfile" src/` returns exactly one
+hit — the definition. The roster renders `role` as read-only text
+(`UsersAccess.tsx:426`). So the one person permitted to change a role has no
+way to do it, and the client method is dead code that implies a product surface
+which does not exist.
+
+This was nearly dismissed as harmless on the theory that A4-1 had made `role`
+vestigial — A4-1 did retire the shell's `role === "ADMIN"` check, and A4-3 moved
+authorization onto capabilities. That theory is wrong, and checking it is what
+turned this from tidy-up into a defect. `role` still grants real authority in
+two places:
+
+| Site | What `role` still decides |
+|---|---|
+| `facade/planning.controller.ts:67` | `ADMIN` may write **anything** through the Planning façade; a `USER` may only write tasks (`userMayWriteTask`). A real authorization grant. |
+| `governance/contracts.ts:297` | `needs_you` on a waiver row. A display flag, not a gate — noted so it is not mistaken for the first one. |
+
+So a role change silently grants or removes Planning write authority, and the
+Portal offers no governed way to perform it. That is the same class of problem
+A4-2 was written to end: authority that moves outside a named operation.
+
+**Disposition:** fix in place, inside A4-4's production defect sweep. The
+server half is already built, guarded and audited; what is missing is the
+governed control that reaches it.
+
+### 20.10.2 Why the control goes in the expanded row, not the action strip
+
+The row action strip holds lifecycle operations — issue credential, end
+sessions, disable/enable, archive. A role change is not a lifecycle transition
+and putting a fifth button there would both crowd the row and imply an
+equivalence that does not hold.
+
+It belongs in the per-account detail panel that already opens under the roster
+and already carries Action history. That placement also keeps the recorded
+`users-access` baseline honest: the baseline shoots the collapsed table, so a
+control added inside the expanded panel changes no existing snapshot, and any
+snapshot that *did* change would be real drift rather than a new control.
+
+### 20.10.3 A4-D14 — the Approval Inbox still triages by role, not by capability
+
+**Severity:** real defect, product-visible, **grants nothing**. **Found by:**
+looking at the recorded Approval Inbox screen and asking what drives the badge.
+**Disposition:** recorded, NOT fixed — the fix needs one decision from Bobby,
+stated at the end of this item.
+
+`governance/contracts.ts:296` computes the inbox's triage flag as:
+
+```ts
+needs_you:
+  actor.role === "ADMIN" && row.status === "PENDING" && row.expires_at > now && inert === null,
+```
+
+A4-3 moved R1/R2/canary/live decisions off roles and onto capabilities. This
+flag did not move with them. It is the inbox's primary triage signal — the
+`needs you` badge and the `n not yours` count — so the two disagree:
+
+| Caller | Sees | Server would actually |
+|---|---|---|
+| Role `USER` holding `governance.r1.decide` | `needs_you: false` on R1 rows | **let them decide** — their queue looks empty |
+| Role `ADMIN` holding no governance grant | `needs_you: true` on R1/R2 rows | **refuse them** — sent to a gate that says Access denied |
+
+The first case is the one that matters: it makes A4-3's delegation invisible to
+the person it was delegated to. Nobody gains authority from this — the decide
+endpoints are gated independently and were verified in §20.9 — so it misroutes
+attention rather than opening a hole. It is recorded as a defect and not as a
+nicety because an approval queue that hides your work is not doing its job.
+
+**The fix, stated so it is not re-derived:** `needs_you` should mean "would the
+server let me decide THIS row", evaluated per row against whatever that row's
+gate actually enforces — not one predicate for all five gates.
+
+**Why it is not applied here.** The inbox gate vocabulary is
+`R1, R2, PAPER_EXIT, SANDBOX_EXIT, LIVE_GATE` (`contracts.ts:7`). The A4-1
+capability namespace, frozen in §20.3, is `governance.{r1,r2,canary,live}`.
+They do not line up, and three of the five cannot be mapped by reading the code:
+
+- `PAPER_EXIT` — measured: still role-gated. `paper-exit.service.ts:426` throws
+  `APPROVER_ROLE_REQUIRED` for a non-`ADMIN`. So for these rows the present flag
+  is **correct**, and a capability-only rewrite would newly break them.
+- `SANDBOX_EXIT` — no decision endpoint of its own; it appears only as a link
+  kind (`canary.service.ts:276`, `live-operations.service.ts:430`).
+- `LIVE_GATE` — routes to the **R2** review screen
+  (`command-center.repository.ts:81`), so whether it is `governance.r2.decide`
+  or `governance.live.decide` is a policy question, not a lookup.
+
+Mapping those three means either extending a namespace §20.3 deliberately froze
+or splitting the rule per gate. Both are authority decisions, and A4 rule §20.2
+puts authority decisions with the owner. Guessing one and shipping it would be a
+worse outcome than this paragraph.
+
+**What Bobby decides:** whether `SANDBOX_EXIT` and `LIVE_GATE` decisions are
+governed by an existing capability (and which), or whether the namespace gains
+entries for them. Once that is answered the change is small and local: a
+per-gate predicate passed into `approvalInboxResource()`, whose single caller is
+`governance.service.ts:185` and which already has `effectiveAccess` and
+`mayGovern` in hand.
+
+### 20.10.4 Evidence
+
+Every gate below was run on the frozen tree that this record's commit contains.
+
+| Gate | Result |
+|---|---|
+| Control API + PostgreSQL + pg_restore drill | **69 files, 638/638 passed** |
+| Frontend unit | **151 files, 2410 passed, 1 skipped** (2404 → 2410: the six A4-D13 tests) |
+| `tsc --noEmit` | clean |
+| Visual baseline, **verify** mode | **332 passed, 16 skipped, 0 failed**; 0 existing baselines rewritten |
+| `verify-workspace.sh` | `Portal monorepo verification passed` |
+| Release-integrity ledgers (N29 / EDS-12) | `changed: false` — already current, nothing re-pinned |
+| Contracts | untouched: `PATCH /api/admin/accounts/{user_id}` was already published; no DTO regenerated |
+| Route ledger | unchanged at 137 — A4-D13 added no server route |
+
+Two new baselines were recorded (`users-access-profile`, research + operations)
+and nothing else was written: the `--update` run was scoped with `--grep` to the
+new screen alone, and the full verify afterwards reported zero modified
+snapshots. That ordering is the point — recording before proving no drift would
+have made an `--update` indistinguishable from papering over a regression.
+
+### 20.10.5 Three process errors in this pass, recorded because they cost real time
+
+1. **A gate reported as passing when it had failed.** `bash gate.sh > log; echo
+   $?; tail log` exits with the status of `tail`, so the harness reported
+   "exit code 0" for a run that had failed. The underlying failure was the
+   root-owned `dist/assets` hazard: a `node:22` container run as root leaves
+   build output that the Playwright container cannot delete. Checking `ls -ld
+   dist` was not enough — `dist` itself was mine and its *contents* were not.
+   The same shape recurred with `timeout 300 verify-workspace.sh | tail`, which
+   reported success for a run `timeout` had killed at exit 124.
+2. **Editing the tree during a gate.** The second visual run died on a truncated
+   Playwright trace zip. Playwright loads `e2e/*.ts` per worker at collection
+   time, so editing `visual.spec.ts` and `fixtures.ts` mid-run corrupted it.
+   "The build already finished, so source edits are inert" is true of the app
+   bundle and false of the spec files.
+3. **A wrong grep read as a finding.** `updateProfile` was nearly reported as
+   present-and-wired because the first search was for `.update(`. The method is
+   `updateProfile`. The correction ran the other way too: `.admin-status` was
+   nearly deleted as dead CSS because a non-recursive glob counted zero uses.
+   Both were caught by re-measuring before acting, which is the only reason
+   neither reached a commit.
+

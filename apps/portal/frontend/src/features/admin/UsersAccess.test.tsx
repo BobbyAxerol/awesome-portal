@@ -335,3 +335,102 @@ describe("the credential is seen once and kept nowhere", () => {
     expect(screen.queryByTestId("activation-handoff")).toBeNull();
   });
 });
+
+/**
+ * A4-D13 · display name and base role.
+ *
+ * These exist because the server half shipped without them: `UPDATE_PROFILE`
+ * was implemented, guarded and audited, and no component called it. The claim
+ * being defended is that the role is reachable ONLY through the same governed
+ * path as every other consequential change — pinned to a revision, behind the
+ * same confirmation — and that the owner anchor cannot demote itself.
+ */
+describe("profile: display name and base role", () => {
+  const expand = async (name: string) => {
+    await screen.findByTestId("account-roster");
+    fireEvent.click(screen.getByRole("button", { name }));
+    return screen.findByTestId("profile-role");
+  };
+
+  it("keeps the role out of the collapsed table and shows it when the row is opened", async () => {
+    mount({ stepUp: "ACTIVE" });
+    await screen.findByTestId("account-roster");
+    expect(screen.queryByTestId("profile-role")).toBeNull();
+
+    expect((await expand("stan Stan")).textContent).toBe("USER");
+    // The offer matches the state: a standard user can only be promoted.
+    expect(screen.getByTestId("profile-grant-admin")).toBeTruthy();
+    expect(screen.queryByTestId("profile-revoke-admin")).toBeNull();
+  });
+
+  it("routes a role change through the confirmation, pinned to the revision it read", async () => {
+    mount({ stepUp: "ACTIVE" });
+    await expand("stan Stan");
+    fireEvent.click(screen.getByTestId("profile-grant-admin"));
+
+    const dialog = await screen.findByTestId("account-action-confirm");
+    expect(dialog.getAttribute("data-action")).toBe("grant-admin");
+    // The consequence names the authority it actually grants.
+    expect(dialog.textContent).toContain("Planning facade");
+    // ...and disclaims the two it does not.
+    expect(dialog.textContent).toContain("no Governance capability");
+    expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(0);
+
+    fireEvent.click(screen.getByTestId("account-action-submit"));
+    await waitFor(() => expect(calls.some((c) => c.method === "PATCH")).toBe(true));
+    const patch = calls.find((c) => c.method === "PATCH")!;
+    expect(patch.url.endsWith("/u-stan")).toBe(true);
+    expect(patch.body).toMatchObject({ role: "ADMIN", expected_revision: 4 });
+  });
+
+  it("will not let the owner demote its own anchor, and says why in the server's words", async () => {
+    mount({
+      stepUp: "ACTIVE",
+      accounts: [
+        account({ user_id: "p-bobby", username: "bobby", display_name: "Bobby", role: "ADMIN" }),
+      ],
+    });
+    await expand("bobby Bobby");
+    const button = screen.getByTestId("profile-revoke-admin") as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.title).toContain("owner anchor");
+    expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(0);
+  });
+
+  it("offers the demotion for somebody who is not the owner", async () => {
+    mount({ stepUp: "ACTIVE", accounts: [account({ role: "ADMIN" })] });
+    await expand("stan Stan");
+    expect((screen.getByTestId("profile-revoke-admin") as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByTestId("profile-grant-admin")).toBeNull();
+  });
+
+  it("names the reason the display name cannot be saved, rather than just disabling it", async () => {
+    mount({ stepUp: "ACTIVE" });
+    await expand("stan Stan");
+
+    const save = () => screen.getByTestId("profile-save-name") as HTMLButtonElement;
+    expect(save().disabled).toBe(true);
+    expect(save().title).toContain("unchanged");
+
+    fireEvent.change(screen.getByTestId("profile-display-name"), { target: { value: "   " } });
+    expect(save().disabled).toBe(true);
+    expect(save().title).toContain("cannot be empty");
+
+    fireEvent.change(screen.getByTestId("profile-display-name"), { target: { value: "Stanley" } });
+    expect(save().disabled).toBe(false);
+  });
+
+  it("saves a display name in place, because it grants nothing to confirm", async () => {
+    mount({ stepUp: "ACTIVE" });
+    await expand("stan Stan");
+    fireEvent.change(screen.getByTestId("profile-display-name"), { target: { value: "Stanley" } });
+    fireEvent.click(screen.getByTestId("profile-save-name"));
+
+    await waitFor(() => expect(calls.some((c) => c.method === "PATCH")).toBe(true));
+    expect(calls.find((c) => c.method === "PATCH")!.body).toMatchObject({
+      display_name: "Stanley",
+      expected_revision: 4,
+    });
+    expect(screen.queryByTestId("account-action-confirm")).toBeNull();
+  });
+});
