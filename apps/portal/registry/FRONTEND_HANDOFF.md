@@ -308,7 +308,7 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
 | Alpha Pool (`/research/alphas`) | `COMMISSIONED` → Feature Preview. Inbox ở `/research/quantbt/imports`. | **Đã quyết** (R12): giữ `COMMISSIONED` tới slice certification. | Khi certification xong: đổi maturity + chuyển inbox, giữ redirect route cũ. |
 | Workspace / tenancy (`/api/workspaces`) | Chưa làm. | Topbar hiện ghi "Default Workspace · Prototype hiện chỉ có một workspace" — đúng sự thật hiện tại. Chỉ làm khi có tenancy thật. | Khi có nhiều workspace thật. |
 | Command Center — history / cross-filter | Evidence drawer đã xong (§8.1). Chuỗi theo thời gian và cross-filter thì chưa. | Chờ **U10** read model bền. Dựng chuỗi từ một snapshot là bịa dữ liệu. | Sau U10. |
-| Profile & Access (màn `PROFILE_ACCESS`) | `COMMISSIONED` preview. Phần **có backend** (Users & Access) đã làm và nằm ở route riêng — §8.4 điểm 4. | Profile của chính mình + danh sách session của chính mình chưa có endpoint. | Khi U07 công bố `/api/auth/sessions` + profile: gộp vào màn PROFILE_ACCESS và đổi maturity. |
+| Profile & Access (màn `PROFILE_ACCESS`) | `AVAILABLE`: policy surface owner-only cho bốn Governance gate, đọc/ghi qua `/api/admin/profile-access` với CSRF, step-up, idempotency và activity trail. Users & Access vẫn là control owner riêng. | Đây không phải profile tự phục vụ hay danh sách session; hai capability đó không được ngụy tạo thành dữ liệu của màn policy. | Khi U07 công bố profile/session riêng, thêm chúng như một surface/contract riêng thay vì hạ thấp authority của policy matrix. |
 | Maintenance / external-access error screen | Chưa làm. | Thuộc U07 production (Cloudflare Access edge), không phải màn app. | Sau U07 production. |
 | Visual baseline — mobile/tablet cho Research | Chỉ chụp laptop + workstation. | Có chủ ý: v0.4 §26.1 đưa research work sang "open on desktop", nên baseline mobile sẽ chốt một layout không ai được yêu cầu làm việc trên đó. | Chỉ mở nếu §26.1 đổi. |
 
@@ -409,18 +409,13 @@ Mọi thứ frontend làm thêm ngoài plan đều phải xuất hiện ở §8.
    reference** (chọn hướng A, request 11 đóng — xem §8.3). UI không bao giờ
    gửi code bytes.
 
-4. **Users & Access không nằm trên `PROFILE_ACCESS`.** Registry khai
-   `PROFILE_ACCESS` là `COMMISSIONED` (`/administration/profile-access`).
-   Render một màn chạy được sau badge `COMMISSIONED` là để badge nói sai — cùng
-   lý do Alpha 360° nằm dưới quantbt thay vì trên route `ALPHA_POOL`. Nên màn
-   admin nằm ở `/administration/users` (hard-code cạnh các bootstrap route,
-   `ADMIN_USERS_ROUTE`), vào từ topbar cạnh các control của session, **không**
-   xuất hiện trong nav dựng từ registry. Đây không phải feature model thứ hai:
-   không có nav/preview/task link nào của registry trỏ tới nó.
-   *Muốn sạch hơn thì cần registry entry* — đề xuất cho codex (chưa mở request
-   vì Bobby chốt slice này không cần backend): một feature `USERS_ACCESS`
-   (group `administration`, maturity theo thực tế, permission `users.admin`) để
-   nav và Portal Map biết màn này tồn tại.
+4. **Users & Access và Profile & Access có hai authority khác nhau.**
+   `PROFILE_ACCESS` là `AVAILABLE` tại `/administration/profile-access`: một
+   policy matrix owner-only cho delegation/revoke capability của bốn Governance
+   gate; server giữ CSRF, step-up, idempotency và audit. `Users & Access` vẫn
+   nằm tại `/administration/users` như owner account-control surface, không có
+   registry entry vì nó không phải product feature cho mọi user. Không được
+   gộp hai màn, cũng không được suy ra self-profile/session từ policy matrix.
 
 ### 8.4b Backend request (soát lại 2026-08-18, chiều)
 

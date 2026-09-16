@@ -7785,9 +7785,11 @@ nhưng mất đường kiểm chứng.
 - **35/36 nút disabled có lý do** hiện trên `title`.
 - **0 ô `0.00`** trên Alpha Fleet. Con số "55" ở lần đếm đầu là **regex của tôi
   đếm nhầm** phần thập phân bên trong số đã format — đã kiểm lại từng ô.
-- Sáu màn tĩnh (`/data/catalog`, `/research/*`, `/backtests/approvals`,
-  `/administration/profile-access`) vẫn tự khai `SOON` + `STATIC_PREVIEW` + câu
-  giải thích, đúng như §A51.7.
+- Năm màn tĩnh (`/data/catalog`, `/research/*`, `/backtests/approvals`) vẫn tự
+  khai `SOON` + `STATIC_PREVIEW` + câu giải thích, đúng như §A51.7.
+  `/administration/profile-access` không còn thuộc nhóm này: đó là policy
+  surface owner-only `AVAILABLE`, dùng same-origin Control API và không được
+  fallback về static preview.
 
 ### A54.7 Đề nghị thứ tự làm
 
