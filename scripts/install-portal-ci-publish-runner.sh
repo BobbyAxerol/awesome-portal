@@ -296,6 +296,15 @@ units_installed=1
 systemctl daemon-reload
 systemctl enable --now "${docker_service_name}"
 
+# Rootless Docker initializes containerd and BuildKit asynchronously.  Do not
+# mistake the short socket-creation interval for a failed bootstrap; the same
+# bounded readiness helper is used by the runner service itself.
+runuser -u "${runner_user}" -- env \
+  HOME="${runner_home}" \
+  XDG_RUNTIME_DIR="${runtime_directory}" \
+  DOCKER_HOST="unix://${runtime_directory}/docker.sock" \
+  /usr/local/lib/portal-ci-runner/wait-for-rootless-docker.sh
+
 rootless_security_options="$(runuser -u "${runner_user}" -- env \
   HOME="${runner_home}" \
   XDG_RUNTIME_DIR="${runtime_directory}" \

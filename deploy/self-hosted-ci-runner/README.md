@@ -76,6 +76,9 @@ sudo ./scripts/install-portal-ci-publish-runner.sh \
 `--install-browser-deps` installs only the explicitly listed Linux runtime
 packages required by Chromium/Playwright. Node, Python and Playwright's browser
 revision remain workflow-managed and are placed under the isolated runner home.
+The installer waits for rootless Docker's bounded containerd/BuildKit startup
+before registering the Actions service; it does not treat an initial missing
+socket as a reason to keep a partial runner.
 
 Validate without printing secrets:
 

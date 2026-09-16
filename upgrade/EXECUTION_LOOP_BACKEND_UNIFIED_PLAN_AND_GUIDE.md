@@ -9025,7 +9025,8 @@ the existing deploy runner:
    `NoNewPrivileges=yes`; this exception never grants rootful Docker, deploy
    or data authority.
 3. Runner installation is checksum-pinned, consumes a one-time registration
-   token only, and fails rather than reusing an unknown user/path/service.
+   token only, waits for bounded rootless Docker readiness, and fails rather
+   than reusing an unknown user/path/service.
 4. Cleanup is mandatory after every job but never uses volume prune, global
    system prune, rootful Docker, `/srv/portal`, business data, backup, evidence
    or execution-service deletion. Retain image/Buildx cache seven days and

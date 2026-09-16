@@ -83,6 +83,7 @@ def main() -> int:
     require("shred -u" in installer, "registration token must be destroyed")
     require("--replace" in installer and "--labels \"${runner_labels}\"" in installer, "runner registration must be deterministic")
     require("name=rootless" in installer and "dockerd-rootless.sh" in installer, "installer must verify rootless Docker")
+    require("wait-for-rootless-docker.sh" in installer and "systemctl enable --now \"${docker_service_name}\"" in installer, "installer must wait for rootless Docker readiness")
 
     for unit in (docker_unit, runner_unit):
         require("User=portal-ci-runner" in unit, "runner units must not run as root")
