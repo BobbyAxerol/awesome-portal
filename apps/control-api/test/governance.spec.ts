@@ -5,6 +5,8 @@ import { AuthService } from "../src/auth/auth.service";
 import { computeEvidenceManifestHash } from "../src/governance/governance.service";
 import { EvidenceRecord } from "../src/governance/governance.repository";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+import { OwnerAccessRepository } from "../src/repos/owner-access";
+import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -65,6 +67,35 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     bobby = await createActor("bobby", "ADMIN");
     lan = await createActor("lan", "ADMIN");
     stan = await createActor("stan", "USER");
+    /*
+     * A4-3 · the R1/R2 gates are capabilities now, not roles.
+     *
+     * Before this, every ADMIN could read and decide every approval in every
+     * workspace. §20.2 rule 3 narrows that to the owner plus whoever the owner
+     * explicitly delegated, so this cast has to say which each actor is.
+     *
+     * `lan` is the case the phase exists for: an ADMIN whose authority to
+     * decide now comes from a grant rather than from the role. `stan` stays
+     * ungranted, so every "USER is read-only" assertion below keeps testing
+     * what it always tested.
+     */
+    // The anchor is a singleton and specs share a database: clear it first so
+    // this file's owner is this file's owner, whichever spec ran before it.
+    await ctx.pool.query("DELETE FROM portal_owner_anchor");
+    await new OwnerAccessRepository(ctx.pool).claimOwner({
+      userId: bobby.userId,
+      claimedBy: "governance-spec",
+    });
+    const __grants = new GovernanceGrantsRepository(ctx.pool);
+    for (const capability of ["governance.r1.decide", "governance.r2.decide"] as const) {
+      await __grants.insertGrant({
+        grantId: `grn_governance-spec_${capability.replaceAll(".", "_")}`,
+        granteeUserId: lan.userId,
+        capability,
+        workspaceId: null,
+        issuedBy: bobby.userId,
+      });
+    }
 
     const workspaces = await inject(bobby, "/api/workspaces");
     workspaceId = workspaces.json().workspaces[0].workspace_id;
@@ -660,7 +691,9 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     expect(userRead.statusCode).toBe(200);
     const userPlan = await plan(stan, payload);
     expect(userPlan.statusCode).toBe(403);
-    expect(userPlan.json().error.code).toBe("APPROVER_ROLE_REQUIRED");
+    // A4-3: the refusal names the capability, not the role — the role is no
+    // longer what was missing.
+    expect(userPlan.json().error.code).toBe("GOVERNANCE_CAPABILITY_REQUIRED");
   });
 
   it("serves an active R2 review with its immutable workspace-bound capital scope", async () => {
@@ -697,12 +730,38 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       },
     });
 
+    /*
+     * A4-3 · workspace membership is not a Governance grant.
+     *
+     * This asserted that any member of the workspace could read the R2 review.
+     * §20.2 rule 4 separates the two: membership says where somebody may be,
+     * a grant says what they may do there. An ungranted member is refused, and
+     * the SAME member reads it the moment the owner grants `governance.r2.read`
+     * — which is the whole point of the phase, so both halves are asserted.
+     */
+    const ungrantedRead = await inject(stan, path);
+    expect(ungrantedRead.statusCode).toBe(403);
+    expect(ungrantedRead.json().error.code).toBe("GOVERNANCE_CAPABILITY_REQUIRED");
+    // Refused without leaking what the review contains.
+    expect(JSON.stringify(ungrantedRead.json())).not.toContain("PF_R2_1");
+
+    await new GovernanceGrantsRepository(ctx.pool).insertGrant({
+      grantId: `grn_r2_read_${Date.now()}`,
+      granteeUserId: stan.userId,
+      capability: "governance.r2.read",
+      workspaceId: null,
+      issuedBy: bobby.userId,
+    });
+    // No cache to invalidate: the next request reads the grants as they now
+    // stand, which is how §20.5 item 1's "takes effect immediately" is kept.
     const memberRead = await inject(stan, path);
     expect(memberRead.statusCode).toBe(200);
     expect(memberRead.json().data.approval).toMatchObject({
       portfolio_id: "PF_R2_1",
       currency: "USDT",
     });
+    // Read, never decide: the grant was `.read` and the eligibility says so.
+    expect(memberRead.json().data.eligibility.locks).toContain("NOT_ELIGIBLE");
 
     const storedR1Hash = response.json().data.r1_reference.digest;
     await ctx.pool.query(

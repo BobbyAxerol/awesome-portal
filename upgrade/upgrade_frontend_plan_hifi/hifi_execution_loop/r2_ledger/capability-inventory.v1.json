@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-10",
- "route_count": 133,
+ "route_count": 137,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -12,6 +12,46 @@
  "taxonomy_gap": "The R2-0 enum has no class for a route that is published, healthy and has no consumer. Six such routes are recorded as INTERACTION_READ with unused_capability=true. Codex to decide whether to add PUBLISHED_UNCONSUMED.",
  "edge_command_count_zero_because": "No command plane exists: issueCommand/sendCommand/commandPlane/EDGE_COMMAND/postToEdge appear nowhere in apps/control-api/src or the Rust crates. Every mutation route writes locally.",
  "routes": [
+  {
+   "route": "GET /api/admin/profile-access",
+   "controller": "admin/governance-grants.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-3 the owner's policy matrix: every account and the Governance capabilities it holds.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/admin/profile-access/activity",
+   "controller": "admin/governance-grants.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-3 immutable delegation lineage for one account, including refusals — a trail of only what worked cannot answer 'why does Stan still not have this'.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/profile-access",
+   "controller": "admin/governance-grants.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-3 grant a capability from the finite §20.3 namespace. Step-up, idempotency and external_effect NONE.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "DELETE /api/admin/profile-access/:grant_id",
+   "controller": "admin/governance-grants.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-3 revoke a grant, pinned to its revision. Effective on the next authorization decision; there is no cache.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
   {
    "route": "GET /api/admin/accounts",
    "controller": "admin/account-lifecycle.controller.ts",

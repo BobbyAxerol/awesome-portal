@@ -7,6 +7,8 @@ import { SandboxCertificationRepository } from "../src/sandbox/sandbox-certifica
 import { evaluateSandboxCertification } from "../src/sandbox/sandbox-certification.service";
 import { ProfileReadService } from "../src/profile-read/profile-read.service";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+import { OwnerAccessRepository } from "../src/repos/owner-access";
+import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ??
   "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
@@ -60,6 +62,58 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
     bobby = await createActor("canary-bobby", "ADMIN");
     approver = await createActor("canary-approver", "ADMIN");
     reader = await createActor("canary-reader", "USER");
+    /*
+     * A4-3 · the Canary gate is a capability now, not a role.
+     *
+     * Before this, every ADMIN could set canary limits on every deployment.
+     * §20.2 rule 3 narrows that to the owner plus whoever the owner explicitly
+     * delegated, so the cast has to say which each of these three is — and
+     * saying it here is what keeps the rest of this spec testing Canary rather
+     * than accidentally testing authorization.
+     */
+    // The anchor is a singleton and specs share a database: clear it first so
+    // this file's owner is this file's owner, whichever spec ran before it.
+    await ctx.pool.query("DELETE FROM portal_owner_anchor");
+    await new OwnerAccessRepository(ctx.pool).claimOwner({
+      userId: bobby.userId,
+      claimedBy: "canary-spec",
+    });
+    const grants = new GovernanceGrantsRepository(ctx.pool);
+    // A delegated decider: an ADMIN whose authority now comes from the grant,
+    // not from the role.
+    await grants.insertGrant({
+      grantId: "grn_canary_approver",
+      granteeUserId: approver.userId,
+      capability: "governance.canary.decide",
+      workspaceId: null,
+      issuedBy: bobby.userId,
+    });
+    // Read only: enough to see the control room, never enough to decide it.
+    await grants.insertGrant({
+      grantId: "grn_canary_reader",
+      granteeUserId: reader.userId,
+      capability: "governance.canary.read",
+      workspaceId: null,
+      issuedBy: bobby.userId,
+    });
+    /*
+     * Live is its OWN gate. This spec composes Live Full Operations as well as
+     * the Canary room, and A4-3 deliberately stopped Live from riding on the
+     * R2/Canary authorization: §20.3 gives each gate its own capability, so
+     * reading Live has to be granted as Live.
+     */
+    for (const [grantee, id] of [
+      [approver.userId, "grn_live_approver"],
+      [reader.userId, "grn_live_reader"],
+    ] as const) {
+      await grants.insertGrant({
+        grantId: id,
+        granteeUserId: grantee,
+        capability: "governance.live.read",
+        workspaceId: null,
+        issuedBy: bobby.userId,
+      });
+    }
     const workspaces = await inject(bobby, "/api/workspaces");
     workspaceId = workspaces.json().workspaces[0].workspace_id;
     await ctx.pool.query(

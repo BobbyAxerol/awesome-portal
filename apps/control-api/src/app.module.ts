@@ -11,6 +11,8 @@ import { AdminGuard } from "./admin/rbac.guard";
 import { OwnerAccessController } from "./admin/owner-access.controller";
 import { AccountLifecycleController } from "./admin/account-lifecycle.controller";
 import { OwnerStepUpController } from "./admin/owner-step-up.controller";
+import { GovernanceGrantsController } from "./admin/governance-grants.controller";
+import { GovernanceGrantsService } from "./admin/governance-grants.service";
 import { AccountLifecycleService } from "./admin/account-lifecycle.service";
 import { OwnerAccessGuard } from "./admin/owner-access.guard";
 import { OwnerAccessService } from "./auth/owner-access.service";
@@ -118,6 +120,7 @@ export class AppModule {
         // plane would leave a way around every control it adds.
         AccountLifecycleController,
         OwnerStepUpController,
+        GovernanceGrantsController,
         OwnerAccessController,
         FacadeController,
         PlanningFacadeController,
@@ -175,6 +178,16 @@ export class AppModule {
           useFactory: (cfg: ControlApiConfig, db: Pool, auth: AuthService) =>
             new AdminService(db, cfg, auth),
           inject: [CONTROL_API_CONFIG, CONTROL_API_POOL, AuthService],
+        },
+        {
+          provide: GovernanceGrantsService,
+          useFactory: (
+            db: Pool,
+            auth: AuthService,
+            ownerAccess: OwnerAccessService,
+            workspaces: WorkspacesRepository,
+          ) => new GovernanceGrantsService(db, auth, ownerAccess, workspaces),
+          inject: [CONTROL_API_POOL, AuthService, OwnerAccessService, WorkspacesRepository],
         },
         {
           provide: AccountLifecycleService,

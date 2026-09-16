@@ -45,6 +45,15 @@ export class OwnerAccessController {
       owner_state: access.ownerState,
       capabilities: access.capabilities,
       /*
+       * A4-3 · where each capability applies.
+       *
+       * `null` means every workspace this person is already a member of. The
+       * UI needs this to explain why a gate is decidable on one deployment and
+       * only readable on another — a flat capability list cannot say that, and
+       * a screen that cannot say it ends up guessing.
+       */
+      capability_scopes: access.scopes,
+      /*
        * What a mutation will require, stated by the server so the UI can
        * explain a refusal before making it rather than discovering it.
        */
