@@ -23,7 +23,10 @@ TimeoutStopSec=180
 KillMode=mixed
 Delegate=yes
 UMask=0077
-NoNewPrivileges=yes
+# newuidmap/newgidmap are setuid helpers required to create the unprivileged
+# user namespace.  Keep the exception narrowly bounded to these two mapping
+# capabilities; the Actions runner itself still has NoNewPrivileges=yes.
+NoNewPrivileges=no
 PrivateTmp=yes
 PrivateDevices=yes
 ProtectSystem=strict
@@ -36,10 +39,10 @@ ProtectHostname=yes
 ProtectProc=invisible
 ProcSubset=pid
 LockPersonality=yes
-RestrictSUIDSGID=yes
+RestrictSUIDSGID=no
 RestrictRealtime=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-CapabilityBoundingSet=
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID
 ReadWritePaths=/srv/portal-ci-runner
 
 [Install]

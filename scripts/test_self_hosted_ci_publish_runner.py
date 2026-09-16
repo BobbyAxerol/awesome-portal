@@ -87,10 +87,13 @@ def main() -> int:
     for unit in (docker_unit, runner_unit):
         require("User=portal-ci-runner" in unit, "runner units must not run as root")
         require("Slice=portal-ci-publish.slice" in unit, "runner units must share bounded slice")
-        require("NoNewPrivileges=yes" in unit and "ProtectSystem=strict" in unit, "systemd hardening drifted")
+        require("ProtectSystem=strict" in unit, "systemd hardening drifted")
         require("ReadWritePaths=/srv/portal-ci-runner" in unit, "runner filesystem boundary drifted")
         require("/var/run/docker.sock" not in unit and "/run/docker.sock" not in unit, "rootful Docker socket must never be mounted")
     require("Delegate=yes" in docker_unit, "rootless Docker needs delegated cgroups")
+    require("NoNewPrivileges=no" in docker_unit and "RestrictSUIDSGID=no" in docker_unit, "rootless user-map exception drifted")
+    require("CapabilityBoundingSet=CAP_SETUID CAP_SETGID" in docker_unit, "rootless user-map capability bound drifted")
+    require("NoNewPrivileges=yes" in runner_unit and "RestrictSUIDSGID=yes" in runner_unit, "Actions runner must retain no-privilege hardening")
     require("MemoryMax=20G" in slice_unit and "CPUQuota=600%" in slice_unit and "MemorySwapMax=0" in slice_unit, "resource envelope drifted")
     require("ACTIONS_RUNNER_HOOK_JOB_COMPLETED" in runner_unit, "completion cleanup hook must remain wired")
 

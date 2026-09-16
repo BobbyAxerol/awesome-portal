@@ -22,6 +22,10 @@ It is **not** the production deployment runner:
   `/srv/portal-ci-runner/runtime/docker.sock`; the host rootful Docker socket,
   stable containers, production volumes and `/srv/portal` are not mounted or
   reachable through the runner configuration.
+- The rootless daemon alone permits the setuid `newuidmap`/`newgidmap` helpers
+  needed to create its user namespace, bounded to `CAP_SETUID` and
+  `CAP_SETGID`. The Actions runner remains non-root with
+  `NoNewPrivileges=yes`; this is not host Docker or deployment authority.
 - Filesystem: systemd permits writes only under `/srv/portal-ci-runner`.
   The GitHub completion hook is root-owned outside that writable tree.
 - Resource envelope: the rootless Docker daemon and runner share
