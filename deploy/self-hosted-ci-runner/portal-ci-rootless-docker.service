@@ -16,7 +16,10 @@ Environment=XDG_RUNTIME_DIR=/srv/portal-ci-runner/runtime
 Environment=DOCKER_HOST=unix:///srv/portal-ci-runner/runtime/docker.sock
 Environment=DOCKERD_ROOTLESS_ROOTLESSKIT_NET=slirp4netns
 Environment=DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=builtin
-ExecStart=/usr/bin/dockerd-rootless.sh --host=unix:///srv/portal-ci-runner/runtime/docker.sock
+# This daemon is a system service rather than a per-user systemd manager;
+# cgroupfs avoids Docker looking for a non-existent user-995.slice. The parent
+# portal-ci-publish.slice still bounds all daemon/build/container descendants.
+ExecStart=/usr/bin/dockerd-rootless.sh --host=unix:///srv/portal-ci-runner/runtime/docker.sock --exec-opt native.cgroupdriver=cgroupfs
 Restart=always
 RestartSec=5
 TimeoutStopSec=180

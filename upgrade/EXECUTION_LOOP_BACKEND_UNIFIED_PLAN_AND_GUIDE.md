@@ -9034,6 +9034,10 @@ the existing deploy runner:
 5. A runner failure can delay CI/publishing but cannot mutate stable Portal
    data or deployment state. Deployment remains independent and is not
    restarted as runner recovery.
+6. Docker uses `cgroupfs` because this non-login system user has no user-systemd
+   cgroup manager. Per-container limits are not represented as real controls;
+   the service's parent `portal-ci-publish.slice` is the actual aggregate
+   6-CPU/20-GiB/no-swap boundary for daemon, BuildKit and containers.
 
 ### 22.2 Exit evidence
 

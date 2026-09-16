@@ -91,6 +91,7 @@ def main() -> int:
         require("ReadWritePaths=/srv/portal-ci-runner" in unit, "runner filesystem boundary drifted")
         require("/var/run/docker.sock" not in unit and "/run/docker.sock" not in unit, "rootful Docker socket must never be mounted")
     require("Delegate=yes" in docker_unit, "rootless Docker needs delegated cgroups")
+    require("--exec-opt native.cgroupdriver=cgroupfs" in docker_unit, "rootless cgroup driver drifted")
     require("NoNewPrivileges=no" in docker_unit and "RestrictSUIDSGID=no" in docker_unit, "rootless user-map exception drifted")
     require("CapabilityBoundingSet=" not in docker_unit, "rootless map helpers must retain their host-required setuid path")
     for incompatible_directive in (

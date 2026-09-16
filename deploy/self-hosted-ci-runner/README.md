@@ -34,6 +34,10 @@ It is **not** the production deployment runner:
 - Resource envelope: the rootless Docker daemon and runner share
   `portal-ci-publish.slice` (at most 6 CPU cores, 20 GiB RAM, no swap).
   This leaves capacity for Portal services, terminal/SSH and the host.
+- Docker uses `cgroupfs` inside that system-service slice because this host has
+  no per-user systemd manager for the non-login CI account. This intentionally
+  avoids a fictitious per-container quota; the parent slice remains the real
+  aggregate CPU/RAM/no-swap boundary for every CI process and container.
 - Network: outbound GitHub/GHCR/package access only; no listener or inbound
   firewall change is created.
 - Tokens: a fine-grained PAT with repository **Administration: write** is used
