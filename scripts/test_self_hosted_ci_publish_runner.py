@@ -144,6 +144,10 @@ def main() -> int:
     require("--require-root" in d4_qualification, "D4 qualification must expose an explicit privileged-readiness lane")
     require("rootless template/static gates passed" in d4_qualification, "CI must retain a non-privileged D4 qualification lane")
     require("sudo -n \"${preflight}\"" not in d4_qualification, "CI must not hard-code sudo for D4 qualification")
+    for test_cell in (ROOT / "scripts" / "contracts-test.sh", ROOT / "scripts" / "control-api-test.sh"):
+        text = read(test_cell)
+        require("CONTAINER_USER" in text and "name=rootless" in text, f"{test_cell.name} must map rootless test cells safely")
+        require("CONTAINER_USER='0:0'" in text, f"{test_cell.name} must use the namespace-root mapping only for rootless Docker")
     require("gh api" not in publish and "jq -r" not in publish, "publication must not depend on uninstalled gh/jq")
     require("curl --fail-with-body" in publish and "python3 - \"${required_name}\"" in publish, "publication CI gate poll must use portable tools")
     require("runs-on: [self-hosted, linux, x64, portal-deploy]" in deploy, "deploy runner routing drifted")

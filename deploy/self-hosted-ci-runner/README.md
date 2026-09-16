@@ -48,6 +48,12 @@ artifacts remain in the exact workspace removed by the completion hook.
   no per-user systemd manager for the non-login CI account. This intentionally
   avoids a fictitious per-container quota; the parent slice remains the real
   aggregate CPU/RAM/no-swap boundary for every CI process and container.
+- Test-cell scripts preserve the ordinary unprivileged UID/GID when Docker is
+  rootful. Only after `docker info` proves `name=rootless` do they use UID 0
+  *inside the container*: that UID maps back to `portal-ci-runner` on the host
+  and is needed to read the runner's mode-0600 disposable inputs. It is never
+  host root and cannot reach the rootful Docker socket, production files or
+  Portal volumes.
 - Network: outbound GitHub/GHCR/package access only; no listener or inbound
   firewall change is created.
 - Tokens: a fine-grained PAT with repository **Administration: write** is used

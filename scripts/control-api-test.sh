@@ -25,6 +25,12 @@ DEPS_DIR="$(mktemp -d)"
 WORK_DIR="${DEPS_DIR}/work"
 RUN_UID="${HOST_UID:-$(id -u)}"
 RUN_GID="${HOST_GID:-$(id -g)}"
+# A rootless daemon maps container UID 0 to its unprivileged host owner.  The
+# runner service deliberately uses UMask=0077, so using its numeric host UID
+# *inside* that user namespace maps to a subordinate UID which cannot read the
+# ephemeral package metadata.  Use root only inside a confirmed rootless
+# namespace; a rootful daemon keeps the original unprivileged host UID/GID.
+CONTAINER_USER="${RUN_UID}:${RUN_GID}"
 
 # The test cell is commonly invoked via passwordless sudo solely to reach the
 # Docker daemon.  Its Node process stays unprivileged, so the root-created
@@ -47,6 +53,10 @@ if ! "${DOCKER[@]}" info >/dev/null 2>&1; then
   fi
 fi
 
+if "${DOCKER[@]}" info --format '{{json .SecurityOptions}}' | grep -Fq 'name=rootless'; then
+  CONTAINER_USER='0:0'
+fi
+
 cleanup() {
   "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" "${PG_CONTAINER}" >/dev/null 2>&1 || true
   "${DOCKER[@]}" network rm "${NETWORK}" >/dev/null 2>&1 || true
@@ -59,7 +69,7 @@ trap cleanup EXIT
 # node_modules tree becomes read-only in the internal test cell below.
 cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
-  -u "${RUN_UID}:${RUN_GID}" \
+  -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
   -w /deps -e HOME=/tmp -e npm_config_cache=/tmp/.npm \
@@ -125,7 +135,7 @@ if [[ "${ready}" != true ]]; then
 fi
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" --read-only \
-  -u "${RUN_UID}:${RUN_GID}" \
+  -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/cell" \
   -v "${ROOT_DIR}/packages/contracts:/contracts:ro" \
   -e PORTAL_CONTRACTS_DIR=/contracts \
