@@ -134,9 +134,12 @@ def main() -> int:
     for workflow, label in ((ci, "portal-ci"), (publish, "portal-publish"), (security, "portal-ci")):
         require(f"runs-on: [self-hosted, linux, x64, {label}]" in workflow, f"{label} workflow routing drifted")
         require("assert-self-hosted-ci-publish-runner.sh" in workflow, f"{label} workflow lacks runner assertion")
+        require('printf \'TMPDIR=%s\\n\' "${RUNNER_TEMP}" >> "${GITHUB_ENV}"' in workflow, f"{label} workflow lacks runner-managed temporary path")
         require("ubuntu-latest" not in workflow, f"{label} workflow must not consume hosted runner quota")
     require("test_self_hosted_ci_publish_runner.py" in ci, "CI must statically protect its own runner contract")
     require("npx playwright install chromium" in ci and "--with-deps chromium" not in ci, "browser setup must remain non-root")
+    smoke = read(ROOT / "scripts" / "smoke-stack.sh")
+    require('temp_root="${TMPDIR:-/tmp}"' in smoke, "smoke stack must respect runner-managed temporary path")
     require("gh api" not in publish and "jq -r" not in publish, "publication must not depend on uninstalled gh/jq")
     require("curl --fail-with-body" in publish and "python3 - \"${required_name}\"" in publish, "publication CI gate poll must use portable tools")
     require("runs-on: [self-hosted, linux, x64, portal-deploy]" in deploy, "deploy runner routing drifted")

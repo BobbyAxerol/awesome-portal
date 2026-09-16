@@ -32,6 +32,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Bind disposable job temporary directory
+        run: printf 'TMPDIR=%s\n' "${RUNNER_TEMP}" >> "${GITHUB_ENV}"
+
       - name: Assert isolated CI runner boundary
         run: ./scripts/assert-self-hosted-ci-publish-runner.sh
 

@@ -9015,7 +9015,10 @@ gate ran.  The runner unit now explicitly mounts private tmpfs locations at
 `ProtectSystem=strict` and the `/srv/portal-ci-runner` write boundary.  This is
 an isolation repair, not a relaxation to host `/tmp`; the runner must execute a
 same-repository CI job successfully after the unit is reloaded before the
-runner campaign is accepted.
+runner campaign is accepted.  The CI/security/publication workflows also bind
+`TMPDIR` to the runner-managed per-job `RUNNER_TEMP`, and the smoke helper
+honours it.  That supplies a deterministic disposable path even during a host
+unit reload window; it is not an alternate host-temp escape hatch.
 
 ### 22.1 Required invariants
 

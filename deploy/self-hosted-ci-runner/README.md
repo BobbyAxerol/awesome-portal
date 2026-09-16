@@ -32,7 +32,9 @@ It is **not** the production deployment runner:
 - Filesystem: systemd permits writes only under `/srv/portal-ci-runner`, plus
   service-private tmpfs mounts at `/tmp` and `/var/tmp`.  Those mounts are
   mode `1777`, disappear with the service namespace and are never the host
-  temporary directories.
+  temporary directories.  CI, security and publication workflows additionally
+  bind `TMPDIR` to GitHub's per-job `RUNNER_TEMP`, so disposable build/test
+  artifacts remain in the exact workspace removed by the completion hook.
   The GitHub completion hook is root-owned outside that writable tree.
 - Resource envelope: the rootless Docker daemon and runner share
   `portal-ci-publish.slice` (at most 6 CPU cores, 20 GiB RAM, no swap).

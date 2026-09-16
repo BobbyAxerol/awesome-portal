@@ -41,10 +41,11 @@ export ROADMAP_TASK_BOARD_PUBLIC_URL="${ROADMAP_TASK_BOARD_PUBLIC_URL:-http://12
 mkdir -p "${PORTAL_HISTORICAL_DATA_DIR}"
 mkdir -p "${ROOT_DIR}/runtime/control-api-secrets"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
-health_file="$(mktemp /tmp/portal-smoke-health.XXXXXX)"
-cookie_file="$(mktemp /tmp/portal-smoke-cookie.XXXXXX)"
-sse_headers_file="$(mktemp /tmp/portal-smoke-sse-headers.XXXXXX)"
-sse_body_file="$(mktemp /tmp/portal-smoke-sse-body.XXXXXX)"
+temp_root="${TMPDIR:-/tmp}"
+health_file="$(mktemp "${temp_root%/}/portal-smoke-health.XXXXXX")"
+cookie_file="$(mktemp "${temp_root%/}/portal-smoke-cookie.XXXXXX")"
+sse_headers_file="$(mktemp "${temp_root%/}/portal-smoke-sse-headers.XXXXXX")"
+sse_body_file="$(mktemp "${temp_root%/}/portal-smoke-sse-body.XXXXXX")"
 
 cleanup() {
   # `compose up` may create only part of the project and then fail before it
