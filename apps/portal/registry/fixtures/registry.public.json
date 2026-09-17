@@ -277,7 +277,7 @@
       "task_ids": []
     }
   ],
-  "content_digest": "sha256:2ed7dea41070700f7a82b3173a59c4087e82cc325a032995e63065680b7205ce",
+  "content_digest": "sha256:761f85a75d6c349ee800e8168c0e716c560ee4076a83e4dcb6ebf4a3ce47e305",
   "feature_groups": [
     {
       "id": "command",
@@ -848,9 +848,9 @@
       "concern_ids": [
         "CONCERN_PORTAL_AUTHORIZATION"
       ],
-      "data_mode": "STATIC_PREVIEW",
+      "data_mode": "NONE",
       "default_task_id": "SEC-001",
-      "description": "Verified identity, session and access information.",
+      "description": "Who may see a Governance gate, and who may record its Portal decision.",
       "environments": [
         "local",
         "research",
@@ -864,7 +864,7 @@
       "label": "Profile & Access",
       "legacy_routes": [],
       "lifecycle_stage_ids": [],
-      "maturity": "COMMISSIONED",
+      "maturity": "AVAILABLE",
       "navigation": {
         "icon_key": "user-round-cog",
         "order": 10,
@@ -872,7 +872,7 @@
         "show_in_sidebar": true
       },
       "permissions": [
-        "profile.read"
+        "administration.profile_access.manage"
       ],
       "prototype_frame_id": "P0.20",
       "roadmap_epic_id": "U07",
@@ -2064,28 +2064,18 @@
         "CONCERN_PORTAL_AUTHORIZATION"
       ],
       "contract_revision": 2,
-      "data_mode": "STATIC_PREVIEW",
-      "delivery_policy": {
-        "governance_write_enabled": false,
-        "live_protective_commands_enabled": false,
-        "live_risk_increasing_commands_enabled": false,
-        "paper_commands_enabled": false,
-        "policy_revision": 2,
-        "projection_ingestion_enabled": false,
-        "query_enabled": false,
-        "sandbox_commands_enabled": false,
-        "sse_enabled": false
-      },
-      "delivery_profile": "fixture",
+      "data_mode": "NONE",
+      "delivery_policy": null,
+      "delivery_profile": null,
       "feature_id": "PROFILE_ACCESS",
       "inputs": [],
-      "maturity": "COMMISSIONED",
+      "maturity": "AVAILABLE",
       "permissions": [
-        "profile.read"
+        "administration.profile_access.manage"
       ],
-      "primary_action": null,
-      "primary_decision": "Which verified identity, session and role currently applies?",
-      "primary_persona": "portal_user",
+      "primary_action": "Grant or revoke one capability from the finite A4 namespace.",
+      "primary_decision": "Who may see each Governance gate, and who may decide it?",
+      "primary_persona": "portal_owner",
       "related_repositories": [
         "apps/portal"
       ],

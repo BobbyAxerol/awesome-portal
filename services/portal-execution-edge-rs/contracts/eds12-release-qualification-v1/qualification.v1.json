@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:1f355710d7f0b0a20c2a97d930cd0d7abc44b04ac21856ca375b4e66c2fe1215"
+      "sha256": "sha256:ebfda302c54ebf57efca3d65f3ef9551a471f3e1f42d28c7219e738b54498ae7"
     },
     {
       "id": "n29_debt",
@@ -90,7 +90,7 @@
     {
       "id": "protected_release_workflow",
       "file": ".github/workflows/publish-images.yml",
-      "sha256": "sha256:04acb0ec9f5976eb6a7f44108eeb06538eed1163fb1efa879fc65dc7675ae15a"
+      "sha256": "sha256:6e7453a78300c3adcb377e51091802e46c285f0697208fefdac3766f4a82fa12"
     },
     {
       "id": "protected_deploy_workflow",
@@ -100,7 +100,7 @@
     {
       "id": "ci_qualification_gate",
       "file": ".github/workflows/ci.yml",
-      "sha256": "sha256:d577365a4c7a3fcedf1036997ba22a737b128dd6279d7f2164c6129a83025703"
+      "sha256": "sha256:b7eab41ad8744c0fcfce1cb3ad359dee7688ae6732d3cec7b867ee2cf82990c5"
     },
     {
       "id": "cosign_signature_adapter",
@@ -110,7 +110,7 @@
     {
       "id": "image_publication_gate",
       "file": "scripts/execution-image-publication-test.sh",
-      "sha256": "sha256:fe55254a08d32db2cd8f0db395530610a8463f9df83235efe923bd8f1a9a0530"
+      "sha256": "sha256:f97def95f26b4baf89ba4e3f52fefd75b4e572bedf0404c348ac7f1a1f3b35ca"
     },
     {
       "id": "release_authority_workflow_test",

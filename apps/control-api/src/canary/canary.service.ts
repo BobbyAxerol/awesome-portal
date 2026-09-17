@@ -16,6 +16,11 @@ import {
 import { evaluateSandboxCertification } from "../sandbox/sandbox-certification.service";
 import { CanaryEnvelopeCreateRequest } from "./contracts";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "./canary.repository";
+import { OwnerAccessService } from "../auth/owner-access.service";
+import {
+  GOVERNANCE_DENIAL_MESSAGE,
+  governanceDenial,
+} from "../auth/governance-access";
 
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -50,9 +55,33 @@ export class CanaryService {
   constructor(
     @Inject(CanaryRepository) private readonly repository: CanaryRepository,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
+    @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
   ) {}
 
+  /**
+   * A4-3 · the Canary gate, decided from a capability rather than from a role.
+   *
+   * `role === "ADMIN"` said "every administrator may set canary limits on every
+   * deployment". §20.2 rule 3 and the §20.3 namespace say something narrower:
+   * the owner may, and anybody the owner has explicitly granted
+   * `governance.canary.*` may, in the workspaces that grant reaches. The role
+   * is untouched and still means what it meant — it simply no longer decides
+   * this.
+   */
+  private async assertGovernance(
+    user: PortalUser,
+    mode: "read" | "decide",
+    workspaceId: string | null,
+  ): Promise<void> {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const denial = governanceDenial({ access, gate: "canary", mode, workspaceId });
+    if (denial) {
+      throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
+    }
+  }
+
   async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+    await this.assertGovernance(user, "read", workspaceId);
     const envelope = await this.repository.latestByDeployment(workspaceId, deploymentId);
     const [lineage, currentSource] = await Promise.all([
       this.repository.lineageFor(envelope),
@@ -67,7 +96,7 @@ export class CanaryService {
   }
 
   async create(user: PortalUser, input: CanaryEnvelopeCreateRequest, requestId: string) {
-    this.assertAdmin(user);
+    await this.assertGovernance(user, "decide", input.workspace_id);
     if (compareDecimal(input.limits.daily_loss_cap, input.limits.capital_cap) > 0) {
       throw new GovernanceError(
         "CANARY_DAILY_LOSS_CAP_EXCEEDS_CAPITAL",
@@ -353,7 +382,4 @@ export class CanaryService {
     };
   }
 
-  private assertAdmin(user: PortalUser): void {
-    if (user.role !== "ADMIN") throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
-  }
 }

@@ -16,6 +16,7 @@ import { StateView } from "../components/ui";
 import { PortalRequestError } from "../portal/client";
 import { useRegistry, useSummary } from "../portal/hooks";
 import { breadcrumbsFor, type NavOptions } from "../portal/navigation";
+import { useSession } from "../auth/session";
 import { PortalPresentationProvider } from "./presentation";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
 import { PortalContext } from "./context";
@@ -38,10 +39,22 @@ export function PortalShell() {
   useCommandPaletteShortcut(openPalette);
 
   const environment = summary.data?.environment ?? null;
+  const { access } = useSession();
 
+  /*
+   * A4-4 · navigation is owner-aware, from the server's answer.
+   *
+   * The capability set comes from `/api/admin/access/self` through the session
+   * context — never from the role in the principal, which every administrator
+   * shares. While it is loading, or if it could not be read, the list is
+   * empty: a protected entry is hidden rather than optimistically shown,
+   * because the screen behind it would refuse anyway and an entry that always
+   * refuses is worse than no entry.
+   */
+  const capabilities = access.kind === "ready" ? access.access.capabilities : [];
   const navOptions = useMemo<NavOptions>(
-    () => ({ environment, showCommissioned: preferences.showCommissioned }),
-    [environment, preferences.showCommissioned],
+    () => ({ environment, showCommissioned: preferences.showCommissioned, capabilities }),
+    [environment, preferences.showCommissioned, capabilities],
   );
 
   const contextValue = useMemo(

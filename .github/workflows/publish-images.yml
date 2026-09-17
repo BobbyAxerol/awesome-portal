@@ -32,7 +32,7 @@ env:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, portal-publish]
     # CI permits a 60-minute authority job followed by a 75-minute browser
     # verification job.  Reserve a bounded 150-minute gate window (including
     # runner scheduling margin), then retain 60 minutes for build/sign/evidence.
@@ -45,6 +45,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Bind disposable job temporary directory
+        run: printf 'TMPDIR=%s\n' "${RUNNER_TEMP}" >> "${GITHUB_ENV}"
+
+      - name: Assert isolated publication runner boundary
+        run: ./scripts/assert-self-hosted-ci-publish-runner.sh
+
       - name: Require main for manual publication
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -56,7 +62,7 @@ jobs:
       - name: Wait for commit-bound Portal CI release gates
         if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.scope == 'all')
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p release-gates
           ci_gate_poll_seconds=30
@@ -67,9 +73,10 @@ jobs:
             "Validate Portal application build and browser flows"
           )
           for attempt in $(seq 1 "${ci_gate_max_attempts}"); do
-            gh api \
+            curl --fail-with-body --silent --show-error \
               -H 'Accept: application/vnd.github+json' \
-              "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
               > release-gates/portal-ci-check-runs.json
 
             all_green=true
@@ -77,13 +84,25 @@ jobs:
             for required_name in "${required_check_names[@]}"; do
               # A re-run can leave multiple checks with the same name on the
               # commit.  Only the newest exact-SHA execution is authoritative.
-              conclusion="$(jq -r --arg name "${required_name}" '
-                [.check_runs[]
-                  | select(.name == $name and .head_sha == env.GITHUB_SHA)]
-                | sort_by(.started_at // .created_at // "")
-                | last
-                | .conclusion // "pending"
-              ' release-gates/portal-ci-check-runs.json)"
+              conclusion="$(python3 - "${required_name}" "${GITHUB_SHA}" \
+                release-gates/portal-ci-check-runs.json <<'PY'
+          import json
+          import sys
+
+          name, sha, path = sys.argv[1:]
+          with open(path, encoding="utf-8") as handle:
+              checks = json.load(handle).get("check_runs", [])
+          matches = [
+              check for check in checks
+              if check.get("name") == name and check.get("head_sha") == sha
+          ]
+          if not matches:
+              print("pending")
+          else:
+              newest = max(matches, key=lambda check: check.get("started_at") or check.get("created_at") or "")
+              print(newest.get("conclusion") or "pending")
+          PY
+              )"
               if [[ "${conclusion}" == "success" ]]; then
                 continue
               fi

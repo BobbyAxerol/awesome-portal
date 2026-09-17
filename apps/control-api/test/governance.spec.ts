@@ -5,6 +5,8 @@ import { AuthService } from "../src/auth/auth.service";
 import { computeEvidenceManifestHash } from "../src/governance/governance.service";
 import { EvidenceRecord } from "../src/governance/governance.repository";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+import { OwnerAccessRepository } from "../src/repos/owner-access";
+import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -65,6 +67,35 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     bobby = await createActor("bobby", "ADMIN");
     lan = await createActor("lan", "ADMIN");
     stan = await createActor("stan", "USER");
+    /*
+     * A4-3 · the R1/R2 gates are capabilities now, not roles.
+     *
+     * Before this, every ADMIN could read and decide every approval in every
+     * workspace. §20.2 rule 3 narrows that to the owner plus whoever the owner
+     * explicitly delegated, so this cast has to say which each actor is.
+     *
+     * `lan` is the case the phase exists for: an ADMIN whose authority to
+     * decide now comes from a grant rather than from the role. `stan` begins
+     * ungranted; individual cases may deliberately add a narrow read grant
+     * when that is the behavior under test.
+     */
+    // The anchor is a singleton and specs share a database: clear it first so
+    // this file's owner is this file's owner, whichever spec ran before it.
+    await ctx.pool.query("DELETE FROM portal_owner_anchor");
+    await new OwnerAccessRepository(ctx.pool).claimOwner({
+      userId: bobby.userId,
+      claimedBy: "governance-spec",
+    });
+    const __grants = new GovernanceGrantsRepository(ctx.pool);
+    for (const capability of ["governance.r1.decide", "governance.r2.decide"] as const) {
+      await __grants.insertGrant({
+        grantId: `grn_governance-spec_${capability.replaceAll(".", "_")}`,
+        granteeUserId: lan.userId,
+        capability,
+        workspaceId: null,
+        issuedBy: bobby.userId,
+      });
+    }
 
     const workspaces = await inject(bobby, "/api/workspaces");
     workspaceId = workspaces.json().workspaces[0].workspace_id;
@@ -91,6 +122,11 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
   async function rawInject(url: string, options: Record<string, unknown> = {}) {
     const headers = { ...((options.headers as Record<string, string>) ?? {}) };
     if (!("x-dev-access-email" in headers)) headers["x-dev-access-email"] = "dev@azdag.com";
+    // A browser attaches `Origin` to every non-GET request; so does this.
+    const requestMethod = String(options.method ?? "GET").toUpperCase();
+    if (requestMethod !== "GET" && requestMethod !== "HEAD" && !("origin" in headers)) {
+      headers.origin = ctx.config.PORTAL_PUBLIC_ORIGIN;
+    }
     return ctx.app.getHttpAdapter().getInstance().inject({ method: "GET", url, ...options, headers });
   }
 
@@ -534,7 +570,7 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       .toBe(202);
 
     const first = await inject(
-      stan,
+      lan,
       `/api/v1/execution/governance/approvals/history?workspace_id=${workspaceId}&gate=R1&subject=RSI&limit=1`,
     );
     expect(first.statusCode).toBe(200);
@@ -545,7 +581,7 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     });
     expect(first.json().page.next_cursor).toMatch(/^kc1\./);
     const second = await inject(
-      stan,
+      lan,
       `/api/v1/execution/governance/approvals/history?workspace_id=${workspaceId}&gate=R1&subject=RSI&limit=1&after=${encodeURIComponent(first.json().page.next_cursor)}`,
     );
     expect(second.statusCode).toBe(200);
@@ -655,7 +691,53 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     expect(userRead.statusCode).toBe(200);
     const userPlan = await plan(stan, payload);
     expect(userPlan.statusCode).toBe(403);
-    expect(userPlan.json().error.code).toBe("APPROVER_ROLE_REQUIRED");
+    // A4-3: the refusal names the capability, not the role — the role is no
+    // longer what was missing.
+    expect(userPlan.json().error.code).toBe("GOVERNANCE_CAPABILITY_REQUIRED");
+  });
+
+  it("binds Inbox rows, counts and cursors to the caller's exact read grants", async () => {
+    await seedApproval({ approvalId: "AP-R1-VISIBILITY" });
+    await seedR2CapitalScope("AP-R2-VISIBILITY");
+
+    // An ungranted workspace member learns neither the rows nor their counts.
+    const ungranted = await inject(stan, `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}`);
+    expect(ungranted.statusCode).toBe(200);
+    expect(ungranted.json().page.rows).toEqual([]);
+    expect(ungranted.json().counts).toEqual({ pending: 0, overdue: 0, due_soon: 0 });
+
+    // Lan has both R1/R2 grants.  The cursor issued for that broader policy
+    // must never be accepted after it is copied into Stan's narrower context.
+    const broader = await inject(
+      lan,
+      `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&limit=1`,
+    );
+    expect(broader.statusCode).toBe(200);
+    expect(broader.json().page.next_cursor).toBeTruthy();
+    const narrowReader = await createActor("visibility-reader", "USER");
+    await ctx.pool.query(
+      `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'MEMBER')`,
+      [workspaceId, narrowReader.userId],
+    );
+    const grantRepo = new GovernanceGrantsRepository(ctx.pool);
+    await grantRepo.insertGrant({
+      grantId: "grn_stan_r1_visibility",
+      granteeUserId: narrowReader.userId,
+      capability: "governance.r1.read",
+      workspaceId: null,
+      issuedBy: bobby.userId,
+    });
+    const narrowed = await inject(
+      narrowReader,
+      `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&after=${encodeURIComponent(broader.json().page.next_cursor)}`,
+    );
+    expect(narrowed.statusCode).toBe(400);
+    expect(narrowed.json().error.code).toBe("CURSOR_CONTEXT_MISMATCH");
+
+    const r1Only = await inject(narrowReader, `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}`);
+    expect(r1Only.statusCode).toBe(200);
+    expect(r1Only.json().page.rows.map((row: { gate: string }) => row.gate)).toEqual(["R1"]);
+    expect(r1Only.json().counts.pending).toBe(1);
   });
 
   it("serves an active R2 review with its immutable workspace-bound capital scope", async () => {
@@ -692,12 +774,38 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       },
     });
 
+    /*
+     * A4-3 · workspace membership is not a Governance grant.
+     *
+     * This asserted that any member of the workspace could read the R2 review.
+     * §20.2 rule 4 separates the two: membership says where somebody may be,
+     * a grant says what they may do there. An ungranted member is refused, and
+     * the SAME member reads it the moment the owner grants `governance.r2.read`
+     * — which is the whole point of the phase, so both halves are asserted.
+     */
+    const ungrantedRead = await inject(stan, path);
+    expect(ungrantedRead.statusCode).toBe(403);
+    expect(ungrantedRead.json().error.code).toBe("GOVERNANCE_CAPABILITY_REQUIRED");
+    // Refused without leaking what the review contains.
+    expect(JSON.stringify(ungrantedRead.json())).not.toContain("PF_R2_1");
+
+    await new GovernanceGrantsRepository(ctx.pool).insertGrant({
+      grantId: `grn_r2_read_${Date.now()}`,
+      granteeUserId: stan.userId,
+      capability: "governance.r2.read",
+      workspaceId: null,
+      issuedBy: bobby.userId,
+    });
+    // No cache to invalidate: the next request reads the grants as they now
+    // stand, which is how §20.5 item 1's "takes effect immediately" is kept.
     const memberRead = await inject(stan, path);
     expect(memberRead.statusCode).toBe(200);
     expect(memberRead.json().data.approval).toMatchObject({
       portfolio_id: "PF_R2_1",
       currency: "USDT",
     });
+    // Read, never decide: the grant was `.read` and the eligibility says so.
+    expect(memberRead.json().data.eligibility.locks).toContain("NOT_ELIGIBLE");
 
     const storedR1Hash = response.json().data.r1_reference.digest;
     await ctx.pool.query(
@@ -1114,5 +1222,148 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     await expect(
       ctx.pool.query(`UPDATE governance_approval_decisions SET reason = 'rewritten' WHERE approval_id = 'AP-IMMUTABLE'`),
     ).rejects.toThrow(/append-only/);
+  });
+
+  /**
+   * A4-D14 · the `needs you` badge is the inbox's triage signal.
+   *
+   * It used to read `actor.role === "ADMIN"` for all five gates, which stopped
+   * being true the moment A4-3 moved four of them onto capabilities. The two
+   * failures that caused are opposites, and both are tested here: a delegated
+   * decider whose queue looked empty, and an ADMIN pointed at a gate that would
+   * refuse them.
+   *
+   * Rows are isolated by a unique subject token rather than by gate, because a
+   * sibling spec seeds a 182k-row R1 corpus into this same database.
+   */
+  describe("A4-D14 · needs_you follows the authority the server actually enforces", () => {
+    const GATES = ["R1", "R2", "LIVE_GATE", "PAPER_EXIT", "SANDBOX_EXIT"] as const;
+    const TOKEN = "D14ROW";
+    let dara: Actor;
+    let ungranted: Actor;
+
+    beforeAll(async () => {
+      // A USER who holds a decide grant — the case A4-3 exists for, and the
+      // one the old predicate could never report as `true`.
+      dara = await createActor("dara", "USER");
+      await ctx.pool.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'MEMBER')`,
+        [workspaceId, dara.userId],
+      );
+      await new GovernanceGrantsRepository(ctx.pool).insertGrant({
+        grantId: "grn_a4d14_r1_decide",
+        granteeUserId: dara.userId,
+        capability: "governance.r1.decide",
+        workspaceId: null,
+        issuedBy: bobby.userId,
+      });
+
+      // This actor must stay grant-free for the whole D14 block. `stan` is
+      // intentionally granted R2 read by an earlier detail-view test, so
+      // reusing it here would make this negative case depend on test order.
+      ungranted = await createActor("d14-ungranted", "USER");
+      await ctx.pool.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'MEMBER')`,
+        [workspaceId, ungranted.userId],
+      );
+
+    }, 30_000);
+
+    /*
+     * Seeded per test, not once.
+     *
+     * The suite's own `beforeEach` truncates `governance_approval_requests`,
+     * so rows created in a `beforeAll` are gone before the first assertion
+     * runs. The grant and the account survive — neither table is truncated.
+     */
+    beforeEach(async () => {
+      for (const gate of GATES) {
+        await ctx.pool.query(
+          `INSERT INTO governance_approval_requests
+             (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
+              environment, target_label, requester_user_id, requester_username,
+              artifact_creator_user_id, artifact_creator_username, status, policy_version,
+              quorum_required, evidence_set_hash, evidence_complete, blocker_count,
+              blocker_summary, sla_due_at, expires_at, created_at, updated_at)
+           VALUES ($1, $2, $3, 'ALPHA_VERSION', $4, $4,
+                   'RESEARCH', $3, $5, 'stan', $5, 'stan', 'PENDING', 'approval.v3', 1,
+                   $6, true, 0, NULL,
+                   timestamptz '2026-09-01T00:00:00Z', timestamptz '2027-01-01T00:00:00Z',
+                   timestamptz '2026-08-01T00:00:00Z', now())`,
+          [
+            `AP-${TOKEN}-${gate}`,
+            workspaceId,
+            gate,
+            `${TOKEN} ${gate}`,
+            // Requested by stan so that nobody reading below is the requester:
+            // a self row is inert, and inert rows need nobody regardless.
+            stan.userId,
+            `sha256:${"0".repeat(64)}`,
+          ],
+        );
+      }
+    });
+
+    async function needsYouByGate(
+      actor: Actor,
+      expectedGates: readonly (typeof GATES)[number][],
+    ): Promise<Record<string, boolean>> {
+      const response = await inject(
+        actor,
+        `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&view=ALL&subject=${TOKEN}&limit=50`,
+      );
+      expect(response.statusCode).toBe(200);
+      const rows = response.json().page.rows as { id: string; gate: string; needs_you: boolean }[];
+      const seen = rows.filter((row) => row.id.startsWith(`AP-${TOKEN}-`));
+      expect(seen.map((row) => row.gate).sort()).toEqual([...expectedGates].sort());
+      return Object.fromEntries(seen.map((row) => [row.gate, row.needs_you]));
+    }
+
+    it("tells a delegated USER that the gate they hold needs them", async () => {
+      const needs = await needsYouByGate(dara, ["R1"]);
+      // The whole point of A4-3, and previously invisible: dara's role is USER.
+      expect(needs.R1).toBe(true);
+      // A grant for one gate is not a grant to learn the other rows at all.
+      expect(needs).not.toHaveProperty("R2");
+      expect(needs).not.toHaveProperty("LIVE_GATE");
+    });
+
+    it("does not send an ADMIN to a gate that would refuse them", async () => {
+      // `lan` is ADMIN and holds r1/r2 decide, but was never granted live.
+      const needs = await needsYouByGate(lan, ["R1", "R2", "PAPER_EXIT"]);
+      expect(needs.R1).toBe(true);
+      expect(needs.R2).toBe(true);
+      // The Live row is not merely inert: it is not disclosed to a caller who
+      // lacks the matching read capability.
+      expect(needs).not.toHaveProperty("LIVE_GATE");
+    });
+
+    it("gives the owner every gate the namespace covers", async () => {
+      const needs = await needsYouByGate(bobby, GATES);
+      expect(needs.R1).toBe(true);
+      expect(needs.R2).toBe(true);
+      expect(needs.LIVE_GATE).toBe(true);
+    });
+
+    it("keeps PAPER_EXIT on the role its own service still enforces", async () => {
+      // paper-exit.service.ts throws APPROVER_ROLE_REQUIRED for a non-ADMIN,
+      // so for this gate the role IS the right question. A capability rewrite
+      // here would have newly broken a gate that was working.
+      expect((await needsYouByGate(bobby, GATES)).PAPER_EXIT).toBe(true);
+      expect((await needsYouByGate(lan, ["R1", "R2", "PAPER_EXIT"])).PAPER_EXIT).toBe(true);
+      expect(await needsYouByGate(dara, ["R1"])).not.toHaveProperty("PAPER_EXIT");
+    });
+
+    it("never claims a SANDBOX_EXIT row needs anybody, because nothing can decide one", async () => {
+      // The gate is legal in the schema and no code path creates or decides
+      // one. Fail closed rather than invent an approver.
+      expect((await needsYouByGate(bobby, GATES)).SANDBOX_EXIT).toBe(false);
+      expect(await needsYouByGate(lan, ["R1", "R2", "PAPER_EXIT"])).not.toHaveProperty("SANDBOX_EXIT");
+      expect(await needsYouByGate(dara, ["R1"])).not.toHaveProperty("SANDBOX_EXIT");
+    });
+
+    it("gives an ungranted USER nothing to do", async () => {
+      expect(await needsYouByGate(ungranted, [])).toEqual({});
+    });
   });
 });

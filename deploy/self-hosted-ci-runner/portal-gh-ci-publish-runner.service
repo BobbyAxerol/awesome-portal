@@ -1,0 +1,59 @@
+[Unit]
+Description=GitHub Actions Portal CI and immutable-image publication runner
+Documentation=https://github.com/BobbyAxerol/awesome-portal/blob/main/deploy/self-hosted-ci-runner/README.md
+Requires=portal-ci-rootless-docker.service
+After=network-online.target portal-ci-rootless-docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=portal-ci-runner
+Group=portal-ci-runner
+Slice=portal-ci-publish.slice
+WorkingDirectory=/srv/portal-ci-runner/actions-runner
+Environment=HOME=/srv/portal-ci-runner
+Environment=XDG_RUNTIME_DIR=/srv/portal-ci-runner/runtime
+Environment=DOCKER_HOST=unix:///srv/portal-ci-runner/runtime/docker.sock
+Environment=DOCKER_CONFIG=/srv/portal-ci-runner/.docker
+Environment=RUNNER_ALLOW_RUNASROOT=0
+Environment=ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/lib/portal-ci-runner/job-completed-cleanup.sh
+ExecStartPre=/usr/local/lib/portal-ci-runner/wait-for-rootless-docker.sh
+# Use the runner-supplied service wrapper, not run.sh.  runsvc.sh translates
+# systemd SIGTERM into SIGINT for the listener; run.sh does not, and a restart
+# can otherwise leave an orphaned listener holding the GitHub runner session.
+ExecStart=/srv/portal-ci-runner/actions-runner/bin/runsvc.sh
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+KillMode=process
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+# `PrivateTmp` is intentionally isolated from the host.  Some hardened systemd
+# builds do not materialize the private mount when `ProtectSystem=strict` is
+# also present, leaving `/tmp` absent rather than private.  Make both standard
+# temporary locations explicit, mode 1777 and service-private.  This is needed
+# by the checked-in verification scripts and keeps their disposable artifacts
+# out of the host namespace.
+TemporaryFileSystem=/tmp:mode=1777
+TemporaryFileSystem=/var/tmp:mode=1777
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+ReadWritePaths=/srv/portal-ci-runner
+
+[Install]
+WantedBy=multi-user.target

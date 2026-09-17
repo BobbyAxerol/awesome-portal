@@ -6665,6 +6665,56 @@ dirty `controls.json` remains untouched/uncommitted (Git blob
 `e2d15a61ebc0b54bf6f502ec666788da1b36b0b8`). Codex must fix any actual mapping or
 contract defect found in this review; Claude owns visual/interaction decisions.
 
+**Claude → codex · Portfolio 360 fix, batch this with your access work (2026-09-15).**
+
+Bobby asked for this to ride along with the permission fix so one build and one
+deploy cover both. Frontend only; no backend, contract or flag touched.
+
+*What Bobby saw:* Portfolio 360 on production with three panels unavailable,
+including `PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE`.
+
+*What it actually was:* not production, not a flag. Measured on both stacks,
+dev and production are identical — `portfolio_equity_snapshots` 2,000 items on
+each, projection HEALTHY on all three profiles, snapshots 7–32 seconds fresh.
+The data was there the whole time. Five frontend defects, each one found by
+fixing the previous one and looking again:
+
+1. The screen read `facts.portfolio_equity_snapshots` while `PORTFOLIO_RELATIONS`
+   asked only for the capital ledger, so the fact was never fetched. Your R3-1
+   ledger classifies both relations `COVERED` / `NAMED_PORTAL_OPERATION`, which
+   is what told me this was a frontend gap rather than a boundary.
+2. When the EDS-07 equity-chart route failed, the panel printed a reason about
+   the snapshots relation — the wrong read. The route's own reason now outranks
+   the generic one.
+3. `portfolio_types_pool` publishes 667 USDT snapshots at 22,220,000 AND 667 VND
+   snapshots at 50,000,000,000. Both went into one series labelled with whichever
+   currency arrived first, so the chart drew a 50-billion axis over a 22-million
+   portfolio. One chart per denomination now.
+4. `crossPortfolioStandings` keyed by portfolio alone, so the table said 1,334
+   snapshots where the chart said 667 — and `first`/`last` equity could come from
+   different denominations, making the net beside them a comparison of two
+   different things. Keyed per denomination now; the table already printed
+   "portfolio · currency", so it was always meant to be that way.
+5. The drained-standings fallback was unreachable: the container always passes
+   the `crossEquity` object, so an ok-but-empty route made the screen assert
+   "the store retains no equity snapshot for any portfolio" — a whole-store
+   claim — while the relation beside it held the snapshots.
+
+*One for you:* `portfolio_capital_ledger` is absent from the projection on BOTH
+dev and production, while the R3-1 ledger has it `COVERED` with
+`managerPortfolioCapitalLedgerPageV1`. The CONFIGURATION LOG panel is therefore
+telling the truth today. Ledger row **R3-FE-05**, joining R3-FE-01..04.
+
+*Gates:* tsc clean; vitest 149/149 files, 2,379 passed, 1 skipped; build green.
+Visual gate result is recorded in the commit. Thirteen product routes were swept
+by eye, and Portfolio 360 was re-inspected after every single fix — the table now
+reads 267/267/266 against a chart caption of 267, which is the consistency that
+was missing.
+
+*Also confirmed:* your `production-feature-profile-and-cleanup.md` matches the
+flag analysis I sent — candles and Command Center on, durable mirror staged, and
+the Market Context drift closed. Nothing further from me on flags.
+
 **Claude visual return — Bobby approved every question in this handoff (2026-09-12).**
 Candidate `ea77b90b` on `feat/execution-visual-rerecord`, a clean fast-forward
 from `origin/feat/execution-loop-next` (`101d130d`). Codex owns push, the PR into
@@ -7367,7 +7417,1513 @@ or making stable data/volumes share a dev deployment.
 
 ---
 
-## 20. Production durable-history transition — legacy reader to qualified mirror
+## 20. A4 — Owner Administration, delegated Governance and auth-recovery closeout
+
+**Status:** `PLANNED_FOR_CLAUDE_IMPLEMENTATION_AWAITING_BOBBY_APPROVAL` (2026-09-15). This is one small
+four-phase campaign after the v1.1.0 release. It does not widen Trading System,
+broker, Edge, CLI or direct-database authority. It makes the Portal's own
+identity, access and Governance authority usable, observable and safe.
+
+**Why this campaign exists:** the production review and the source audit found
+real Portal-owned gaps. They are not reasons to rebuild Execution Loop or the
+Trading System; they are reasons to finish the Portal control plane before the
+next release.
+
+### 20.1 Consolidated production findings
+
+| ID | Verified fact | Correct disposition in A4 |
+|---|---|---|
+| A4-F01 | Portfolio 360's production data was present on both dev and stable, but five frontend composition defects hid/miscombined it. Claude fixed relation selection, route-error precedence, per-currency charting, standings keying and empty fallback on the visual branch. | Preserve the fixes, consume the same named BFFs, and visually re-accept them in A4-4. This is not a source, flag or database problem. |
+| A4-F02 | `portfolio_capital_ledger` is absent from the current local projection on both stacks even though the current source ledger classifies its named Manager operation as covered. | Keep the Configuration Log panel truthful and typed until the named projection ingestion is available. Do not scrape Trading System DB or fabricate ledger rows. This does not block access administration. |
+| A4-F03 | `thanhvuong` is `ACTIVE` and has a verified Cloudflare binding, but a credential reset on 2026-08-25 set `must_change_password=true`; every activation credential is now used, revoked or expired. The latest audited attempts are genuine `INVALID_CREDENTIAL` failures. | Add a bound-identity recovery state and owner recovery controls. A fresh activation credential is an explicit owner action, not a migration side effect. |
+| A4-F04 | `stan` is `ACTIVE`, has an active password credential, a verified Cloudflare binding and no current lock. No login request has reached the Portal account path since 2026-08-25. | Do not reset Stan blindly. A4 emits safe correlation/error state so a real browser attempt is diagnosable without exposing credentials. |
+| A4-F05 | The existing frontend sends `x-portal-csrf` for `/api/admin/*`, but the current server-side `AdminGuard` checks only `ADMIN`; it does not itself enforce Origin plus CSRF on these production account mutations. | Fix first, on the server. Client behaviour is never a security boundary. |
+| A4-F06 | Existing `ADMIN` is a broad two-value role. There is no server-side Bobby-owner fact, no Profile & Access product route, and no per-gate R1/R2/Canary/Live delegation model. | Introduce an owner anchor plus explicit Portal governance grants; do not overload `ADMIN`, hard-code a browser username, or turn a UI-hidden link into an authority boundary. |
+| A4-F07 | `LOGIN_LOCK_SECONDS` is configurable but current failed-login SQL hard-codes 15 minutes. An expired-reset user also retains the previous failed-login count. | Make the configured lock duration authoritative and clear the counter during an owner credential reset. |
+
+**Confirmed non-cause:** v1.1.0 retained
+`portal-stable-v1-0-1_portal-postgres-data`; the deployed forward migration
+chain does not update `portal_users`, `password_credentials`, activation rows
+or Cloudflare bindings. The idempotent bootstrap path skips existing accounts.
+The account failure above is therefore a recoverability/control-plane defect,
+not loss or replacement of the stable v1.0.1 database.
+
+### 20.2 Non-negotiable product and security rules
+
+1. **Bobby-only is a server fact.** The product must anchor one owner by stable
+   `user_id` in Portal-owned protected state. The browser receives only an
+   effective capability set. A username comparison, a hidden nav item, an email
+   value or an `ADMIN` badge alone must never authorize a write.
+2. **No direct browser/database path.** All account, permission and Governance
+   writes go through same-origin Control API endpoints, authenticated Portal
+   session, exact server authorization, allowed Origin, CSRF and audit. Browser,
+   Portal, Edge and Trading System never receive SQL credentials or a direct
+   PostgreSQL route.
+3. **Only the owner manages access.** Bobby may manage account lifecycle and
+   Governance grants. A non-owner `ADMIN` may not see the access-management
+   navigation, list accounts, mint activation credentials, alter grants or
+   assign itself authority. The server returns a typed 403 even for guessed
+   URLs.
+4. **Least privilege has two dimensions.** A grant distinguishes a person who
+   may read a Governance gate from one who may record its Portal decision. A
+   grant never bypasses evidence, segregation-of-duties, quorum, expected
+   revision, CSRF, idempotency or a source-owned promotion gate.
+5. **A Portal decision is not a Trading System side effect.** R1/R2/Canary/Live
+   delegation may record an immutable Portal governance decision only. It does
+   not send broker/CLI/Trading System commands, promote capital or override an
+   unpublished source operation. Any later external command remains an exact
+   separately-approved command catalogue item.
+6. **Access changes are consequential and reversible where safe.** Reset,
+   disable, enable, session revoke and grant changes are explicit named actions,
+   need confirmation/step-up, are audited, invalidate applicable authorization
+   immediately, and show a truthful outcome. “Delete” in the UI means archived
+   access: hard deletion of users/audit/evidence rows is forbidden in this
+   campaign.
+7. **Secrets are one-view and no-store.** Passwords are never admin-set or
+   returned. A generated activation credential is delivered once over a
+   no-store response, never logged, persisted in browser storage, copied to an
+   audit row or replayed by idempotency.
+8. **No migration ambiguity.** A migration may add Portal-owned authorization
+   tables and a single owner anchor, but may not alter an existing password
+   hash, Cloudflare binding, role, account status or user record merely to make
+   the UI convenient. Owner/recovery actions are explicit audited API actions.
+9. **One branch, one release candidate.** Claude implements this entire
+   campaign on `feat/execution-loop-next`; no stable/runtime directory is
+   edited by hand. A4-4 is the only phase allowed to request a dev
+   rebuild/release candidate. Codex may perform an independent review only if
+   Bobby asks; it is not a second implementation stream.
+
+### 20.3 Target authority model
+
+The existing `ADMIN` / `USER` role remains a coarse product role for backwards
+compatibility. It is not the new ownership or per-gate permission model.
+
+| Server-side fact | Meaning | Initial assignment |
+|---|---|---|
+| `PORTAL_OWNER` | Exactly one immutable owner principal; may manage users, access grants and owner-only administration. | Existing Bobby `user_id`, established through a protected bootstrap/migration claim and never inferred from a browser-supplied username. |
+| `administration.users.manage` | Account lifecycle actions listed in A4-2. | Owner only in A4. |
+| `administration.profile_access.manage` | Create/revoke/review Governance grants and the owner policy view. | Owner only in A4. |
+| `governance.r1.read` / `.decide` | Read R1 and record an eligible Portal R1 decision. | Owner; Bobby may grant Stan explicitly. |
+| `governance.r2.read` / `.decide` | Read R2 and record an eligible Portal R2 decision. | Owner; delegated only by Bobby. |
+| `governance.canary.read` / `.decide` | Read Canary review and record an eligible Portal Canary decision. | Owner; delegated only by Bobby. |
+| `governance.live.read` / `.decide` | Read Live review and record an eligible Portal Live decision. | Owner; delegated only by Bobby. |
+
+`*.decide` implies the matching `*.read` for server evaluation, but the response
+still lists both effective capabilities so UI state is explainable. The policy
+model is deliberately restricted to Governance and Profile & Access in A4; it
+does not become an unrestricted per-route RBAC framework.
+
+For gates without a currently published source-side mutation, the decision is
+an immutable **Portal-authored review decision** with exact evidence/revision
+references. The UI must say that it did not promote or execute anything. This
+lets Bobby delegate legitimate review work without fabricating a Trading System
+operation.
+
+### 20.4 Phase order and ownership
+
+| Phase | Primary owner | May run alongside | Exit artifact |
+|---|---|---|---|
+| **A4-1** — Authorization foundation and recovery safety | Claude/full-stack | visual exploration only; no invented contract | sealed owner/capability contract plus auth-recovery regression suite |
+| **A4-2** — Owner account lifecycle control plane | Claude/full-stack | A4-3 design work only after A4-1 DTO freeze | authenticated owner-only account API and lifecycle evidence |
+| **A4-3** — Delegated Governance gates and Profile & Access | Claude/full-stack | none unless it does not touch A4-2 files/contracts | per-gate enforcement and immutable audit/idempotency evidence |
+| **A4-4** — UI/UX integration, acceptance and candidate release | Claude/full-stack | none; integration freeze | full visual/product packet and one dev candidate ready for Bobby review |
+
+A4-2 and A4-3 begin only after A4-1 freezes shared owner, capability,
+mutation-security and audit semantics. Claude may prepare non-overlapping work
+in parallel, but must serialize contract/migration edits and merge through one
+integration commit; neither deploys independently.
+
+---
+
+### A4-1 — Authorization foundation and activation-recovery safety
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`.
+
+**Goal:** close the current account-recovery and server mutation-security hole
+without changing a live user as an implicit migration side effect.
+
+**Claude mandatory backend delivery:**
+
+1. Define an additive, generated `owner-access.v1` contract: effective
+   capabilities, owner status, mutation requirements, no secret fields and
+   typed states. Add a singleton Portal owner anchor bound to a stable existing
+   owner `user_id`; enforce cardinality one and fail closed if the anchor is
+   absent/ambiguous. Fresh test/bootstrap environments must establish the owner
+   only from protected bootstrap input, never a public API.
+2. Add one reusable `OwnerAccessGuard` / authorization service used by every
+   new and legacy administration mutation. It verifies active current session,
+   owner anchor, Origin, CSRF cookie/header/session hash and a short-lived
+   session-bound step-up grant for destructive actions. It does not trust a
+   frontend role flag.
+3. Harden current `/api/admin/*` in place before adding any new functionality:
+   server-side Origin+CSRF enforcement, `Cache-Control: no-store` on sensitive
+   responses, typed 401/403/409/422 errors and auditable correlation IDs. The
+   current frontend CSRF header remains compatible but is no longer the only
+   protection.
+4. Add the activation recovery state. After Cloudflare identity and matching
+   Portal binding are verified, a `must_change_password` account with no usable
+   activation becomes `ACTIVATION_RECOVERY_REQUIRED`, not a generic impossible
+   password loop. The state reveals no token, password, other account or
+   binding. An unbound/unknown identity remains generic.
+5. Correct lock/reset semantics: use configured `LOGIN_LOCK_SECONDS`; owner
+   reset clears failed-login state and active lock in the same transaction,
+   revokes prior activation/session material, then creates exactly one new
+   activation hash. No plaintext activation is stored.
+6. Record `ACTIVATION_RECOVERY_REQUIRED`, owner-step-up, reset/lock lifecycle
+   and authorization-denial audit events without password, activation value,
+   JWT, email, source IP or browser payload.
+
+**Claude mandatory frontend delivery and freedom:**
+
+- Design the recovery page/state as a calm explicit dead end: “the activation
+  credential is no longer usable; contact the Portal owner.” Do not make a fake
+  reset button for non-owners and do not reveal whether an arbitrary username
+  exists.
+- Consume `/api/admin/access/self` (or final named equivalent) as the only
+  UI authority. Hide owner pages/menu for non-owner capability, but render a
+  typed denied state if a bookmarked route is reached.
+- Claude owns layout, copy, responsive hierarchy, confirmation affordances,
+  visual tests, semantic DTOs and server enforcement. The backend contract must
+  be frozen before the product route consumes it.
+
+**Required evidence:**
+
+- Fresh PostgreSQL migration/restore proves existing Bobby/Stan/Thanh rows,
+  password metadata and Cloudflare binding are unchanged by schema migration.
+- Owner/non-owner ADMIN/USER, stale session, disabled account, forged role,
+  bad Origin, missing/wrong CSRF, expired step-up and self-escalation negatives
+  all deny before any mutation.
+- Expired activation produces only the bound recovery state; valid activation
+  preserves login → change password → rotated session; reset clears a lock and
+  makes only the new activation usable.
+- Auth unit/controller, generated contract, browser auth-state and no-secret
+  logging tests pass.
+
+**Exit:** no account is changed in production by migration; legacy admin
+endpoints are server-hardened; a reviewer can prove Bobby-only authority is a
+backend decision.
+
+---
+
+### A4-2 — Owner account lifecycle and Users & Access control plane
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; begins after A4-1 contract
+freeze.
+
+**Goal:** turn `/administration/users` into a deliberate owner-only operations
+surface backed by a complete, bounded account lifecycle—not a raw DB editor.
+
+**Claude mandatory backend delivery:**
+
+1. Publish named same-origin owner endpoints and generated DTOs for:
+   account list/detail; create invited account; update display/base role where
+   allowed; issue/reset activation; revoke sessions; disable; enable with
+   mandatory fresh activation; archive access; and current action/audit status.
+   Existing account IDs remain opaque. List data excludes hashes, tokens,
+   Cloudflare subject/email, session IDs and audit internals.
+2. Make every consequential action an exact operation with target user,
+   expected account revision, step-up requirement, CSRF/Origin enforcement and
+   immutable owner audit. Ordinary lifecycle writes use idempotency keys and
+   request/payload fingerprints. Activation issuance is intentionally
+   non-replayable: a repeated request returns a typed “already issued; explicitly
+   reissue to revoke it” result rather than leaking/replaying plaintext.
+3. Preserve audit integrity. “Delete” in product language is **Archive access**:
+   disable, revoke sessions/grants and retain account/audit/evidence lineage.
+   Physical deletion/purge is not exposed. Enable never silently revives an old
+   password; it starts a fresh activation journey.
+4. Add the owner-only step-up flow and no-store activation reveal. The server
+   never lets Bobby set/read another user's password. A token is delivered once,
+   with copy/download only in transient client memory and a required explicit
+   acknowledgement before the UI hides it.
+5. Add a safe, explicit recovery path for Thanhvuong only when Bobby requests
+   it through this control plane. No background job resets Stan, Thanhvuong or
+   Bobby; each action has a pre/post state record and a rollback description.
+
+**Claude mandatory frontend delivery and freedom:**
+
+- Redesign **Users & Access** as a small institutional account-control desk:
+  searchable account roster, clear lifecycle badges, action history/impact,
+  intentional danger zone and an activation one-view handoff state. Claude may
+  change all composition/copy/visual hierarchy but must retain exact action
+  consequences supplied by server responses.
+- Do not use `window.confirm` as the final product interaction. Claude may use
+  a reviewed modal/drawer/typed confirmation pattern; it must display target,
+  consequence, step-up state and server error/replay outcome.
+- Only owner capability shows this page in navigation. Non-owner UI never
+  receives account rows or activation material.
+
+**Required evidence:**
+
+- Full lifecycle matrix: create → invite/activate → password set → active;
+  reset; revoke; disable; enable+fresh activation; archive. Test duplicate,
+  stale revision, concurrent reset, expired step-up and refresh-after-write.
+- Owner can manage another account; regular ADMIN cannot read or mutate;
+  non-owner cannot grant itself owner/admin/governance authority; owner cannot
+  archive/demote its own final owner anchor.
+- Production-shaped sanitized migration/rollback proves no old v1.0.1 user or
+  Roadmap data is removed. Browser tests prove token is neither logged nor
+  persisted after acknowledgement/unmount.
+
+**Exit:** Bobby has a safe owner-only account lifecycle screen and API. The old
+limited Users & Access table, bootstrap-only provisioning claim and unsafely
+client-only CSRF assumption are retired.
+
+---
+
+### A4-3 — Delegated Governance gates and Profile & Access authority
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; can be developed in parallel
+with A4-2 after A4-1, but integrates only after both are accepted.
+
+**Goal:** allow Bobby to delegate exactly who can see and who can make a
+Portal-authored decision for R1, R2, Canary and Live—without turning `ADMIN`
+into blanket execution authority.
+
+**Claude mandatory backend delivery:**
+
+1. Add Portal-owned governance access-grant tables/contract with grantee,
+   capability, optional workspace scope, grant state, expected revision,
+   issuer, timestamps and immutable audit lineage. Enforce uniqueness and
+   authorization at query time; grant updates take effect immediately for
+   HTTP/SSE and invalidate any relevant authorization cache/session view.
+2. Publish owner-only grant-management endpoints plus a safe effective-access
+   read. Bobby can list, grant, update and revoke only the finite capability
+   namespace in §20.3. No free-form route, SQL, role or command string is
+   accepted.
+3. Apply one governance authorization adapter to all named R1/R2/Canary/Live
+   read and decision surfaces. It evaluates workspace membership plus the gate
+   read/decide capability, then preserves current evidence/quorum/version/self-
+   approval restrictions. Existing `ADMIN` checks are narrowed to the new
+   capability where the action is Governance-only; they remain in force where
+   an endpoint is truly administration/command authority.
+4. For R1/R2/Canary/Live lacking a published external mutation, implement only
+   a Portal-authored immutable review decision with exact expected revision,
+   evidence references, idempotency and audit. Its response explicitly says
+   `external_effect=NONE`. It must not call Edge, Trading System, broker,
+   command relay or CLI. A later source command requires a new exact catalogue
+   row and its own approval.
+5. Make grant mutation owner-step-up, Origin/CSRF and idempotency protected;
+   reject self-grant, owner removal, duplicate/conflicting grant, cross-
+   workspace grant and stale revision without a partial write. Keep historic
+   decisions readable under their original authorization/audit record, while
+   new actions use current grants.
+
+**Claude mandatory frontend delivery and freedom:**
+
+- Build **Profile & Access** at `/administration/profile-access` as Bobby's
+  policy surface: account selector, concise governance gate matrix, separate
+  View/Decide affordances, scope/effective-access explanation, safe revoke and
+  immutable activity trail. It is not a generic RBAC editor.
+- Recompose Governance navigation and each R1/R2/Canary/Live screen from the
+  effective server capability. A delegated Stan sees only granted gates and
+  only receives decision affordances the server says are eligible. Denied,
+  evidence-blocked, already-decided and no-external-operation states remain
+  visibly distinct.
+- Claude controls information design and visual language. Do not fake a
+  “promotion successful” toast when a Portal decision has no external effect.
+
+**Required evidence:**
+
+- Matrix for Bobby owner, delegated Stan, ungranted USER and non-owner ADMIN
+  across each R1/R2/Canary/Live read/decision route, including workspace
+  membership removal while a page/stream is active.
+- Quorum, self-approval, stale evidence/version, duplicate idempotency key,
+  grant revocation race, two concurrent owner changes and external-effect-none
+  decisions are deterministic and audited.
+- Contract generator/OpenAPI, fresh PostgreSQL migration/restore, service and
+  authenticated browser tests prove no grant creates a Trading System command
+  or changes source data.
+
+**Exit:** Bobby can explicitly delegate Stan (or another existing user) per
+Governance gate; the server—not a menu—enforces every resulting permission.
+
+---
+
+### A4-4 — Claude UI/UX integration, production defect sweep and release candidate
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL`; begins only when A4-1 through
+A4-3 are integrated and all server contracts are frozen.
+
+**Goal:** deliver one coherent owner/admin/governance experience, retain the
+approved rich Execution UI and conduct the final production-shaped acceptance
+before Bobby decides on a new signed stable version.
+
+**Claude mandatory frontend delivery:**
+
+1. Finish the visual redesign of `/administration/users` and create
+   `/administration/profile-access`; add owner-aware navigation, bookmarked
+   route states and a Profile & Access governance matrix. Maintain the existing
+   Carbon/institutional design system, responsive density and accessibility;
+   Claude chooses exact layout, controls and copy.
+2. Integrate all A4 named BFFs only through same-origin consumers. No fixture
+   fallback in product routes, no browser side permission inference, no direct
+   database/Edge call and no stored secret/token. Use server typed states for
+   recovery, denied, no step-up, stale revision, policy/evidence block and
+   external-effect-none decision.
+3. Preserve and re-verify Claude's Portfolio 360 correction set. Bind
+   per-currency equity chart/table/standing values together; ensure source
+   error precedence is correct; retain `portfolio_capital_ledger` as a typed
+   unavailable Configuration Log until the named projection is published.
+4. Perform an eye-reviewed sweep of every affected route: sign-in/recovery;
+   Users & Access; Profile & Access; Approval Inbox; R1, R2, Canary and Live
+   review routes; Portfolio 360. Inspect actual/expected/diff before snapshot
+   update, fix React/DOM/console warnings and retain rich UI around empty or
+   denied panels.
+
+**Claude mandatory backend/release-candidate verification:**
+
+- Verify the final route-to-operation matrix, role/capability negative matrix,
+  generated types, API contracts, migration/restore, audit no-secret test and
+  all control-api gates against the identical commit Claude builds.
+- Build one isolated dev candidate from the exact branch/commit. Capture image
+  digests, config/manifest hash, migration ledger, stable-volume isolation,
+  frontend bundle hash and rollback pointer. Do not touch stable during visual
+  acceptance.
+- Run only relevant non-redundant release gates already defined by this plan;
+  record reused green evidence rather than rerunning unrelated expensive
+  historical suites.
+
+**Release exit / owner review:**
+
+- Owner UI and APIs are capability-gated end-to-end; regular users never see
+  protected account/grant data, and guessed routes/API calls are denied.
+- Every new mutable action has a clear server response, owner audit, CSRF/
+  Origin/step-up/idempotency proof and no secret leak.
+- Portfolio visual fixes survive the exact candidate build; all remaining
+  `SOURCE_GAP` panels have a named source owner/action rather than a hidden
+  fixture or blank collapse.
+- Claude returns one compact visual, server and release-candidate packet. Bobby
+  alone decides whether to merge protected main and issue the next signed
+  stable release. No deployment is implied by A4 implementation.
+
+### 20.5 Claude mandatory full-stack execution brief
+
+Claude is the sole implementation owner for A4. Treat it as **one
+owner-control product**, not two disconnected settings pages or a frontend
+mock-up. Backend and frontend rules are equally binding:
+
+1. Read §20.1–20.4 before editing. Implement in phase order. Do not start an
+   A4-2/A4-3 migration or mutable endpoint before A4-1 freezes the owner,
+   capability, audit, Origin/CSRF and step-up contract.
+2. Define generated same-origin DTOs and server enforcement first, then consume
+   those exact DTOs in product routes. Do not invent REST fields, roles,
+   permission decisions or fixture fallbacks. Record a missing source/product
+   field as `A4-FE-BE-GAP` with route, operation, current payload and required
+   typed state.
+3. Treat the browser as untrusted: no direct PostgreSQL/Edge/Trading-System
+   route, no client-only role or username check, no browser-stored activation
+   token, and no secret in logs, telemetry, DOM snapshots or audit data. Every
+   production database mutation goes through the named Control API transaction
+   with session, owner/capability evaluation, Origin, CSRF, step-up, expected
+   revision, idempotency and audit.
+4. Keep Bobby-only as a stable server-side owner anchor; do not hard-code a
+   display name, email or route visibility. Preserve coarse roles only for
+   compatibility and use the finite A4 capability set for Governance. No grant
+   may create a Trading System, broker, Edge, CLI or capital side effect.
+5. Keep the human meaning of every state visible: owner-only, delegated view,
+   delegated decision, evidence blocked, external-effect-none, recovery
+   required, disabled, archived, stale revision and activation one-view.
+6. Preserve approved rich Execution UI. A permission/data error changes only
+   the affected panel/action state; it must not replace an entire screen with a
+   bare envelope. Claude is free to choose the Carbon-consistent layout,
+   hierarchy, copy, responsive behaviour and accessible confirmation flow.
+7. Use additive, reversible migrations only. Never mutate existing Bobby,
+   Stan, Thanhvuong or other production identities/bindings/passwords during a
+   migration, seed, fixture run or deployment. Archive rather than hard-delete.
+   Do not dispatch production, edit a release directory or reveal a real
+   activation credential during implementation.
+8. For every phase, run the focused server authorization/negative matrix,
+   migration/restore, generated-contract/type, frontend unit/build, browser
+   network/console and visual evidence appropriate to that phase. Reuse valid
+   green evidence for unrelated expensive gates rather than performing ritual
+   reruns.
+9. At phase exit, append an **A4 execution record** to this same plan: commit
+   IDs, migration/contract changes, exact tests/evidence, known typed source
+   gaps, and the next phase precondition. A discovered unresolved defect blocks
+   the next phase until recorded and explicitly dispositioned; it may not be
+   silently deferred as technical debt.
+10. Return one coherent commit series from A4-1 through A4-4. Keep all work on
+    `feat/execution-loop-next`, rebase carefully before integration, preserve
+    unrelated dirty work, and request Bobby review before protected-main merge
+    or any release workflow.
+
+### 20.6 Acceptance and release discipline
+
+No A4 phase is “done” merely because a control appears. Each phase closes only
+when its server authority, negative security matrix, frontend state and
+documented evidence agree. Any request to reset Thanhvuong, modify Stan,
+delegate a gate or change a live account is a named owner operation during A4-2
+or A4-3—not a migration, fixture seed or deployment side effect.
+
+---
+
+## 20.7 A4 execution record — A4-1 (Claude, 2026-09-15)
+
+**Phase:** A4-1 — Authorization foundation and activation-recovery safety.
+**Status:** implementation complete, gates green, awaiting Bobby's acceptance.
+**Branch:** `feat/execution-visual-rerecord` (see *Branch discrepancy* below).
+**Commits, in order:**
+
+| Commit | What |
+|---|---|
+| `b588fe46` | backend: owner anchor, mutation security, recovery state, audit, twelve fixes |
+| `62a98d4e` | frontend: `/access/self` as the only UI authority, recovery frame, four new visual baselines |
+| `d5e634a6` | frontend tracker §A79 |
+| `9ea31c9c` | **this plan, which had never been committed** — see 20.7.7 |
+| `2483bb23` | merge onto `feat/execution-loop-next` |
+| `cca74942` | the façade analysis Bobby needed in order to decide |
+| `1b0f7651` | the last four defects closed: façade, auth drift, login timing, lockout |
+
+### 20.7.1 What A4-1 froze
+
+| Contract | Value |
+|---|---|
+| Owner anchor | `portal_owner_anchor`, one CHECK-constrained row, written only by the protected bootstrap CLI |
+| Capability namespace | the finite §20.3 list of ten, `*.decide` implies `*.read`, both listed |
+| Owner-access DTO | `portal.owner-access.v1` on `GET /api/admin/access/self`, `no-store` |
+| Mutation security | one shared `mutationSecurityDenial` (Origin present **and** allowed, CSRF header↔cookie↔session-hash), HTTP 403 |
+| Audit | `SECURITY_AUDIT_EVENTS` + `recordSecurityDecision`, which structurally has no parameter for IP, access subject or user agent |
+| Recovery state | `ACTIVATION_RECOVERY_REQUIRED`, reported only to a Cloudflare-verified identity bound to that same account |
+
+### 20.7.2 Migration
+
+`1723680000034_a4-portal-owner-anchor.sql` — additive, one new table, no data
+write, reversible. It alters no existing password hash, binding, role or
+status; the Bobby / Stan / Thanhvuong rows are untouched by construction
+because the migration contains no `UPDATE` at all. `portal_capability_grants`
+was deliberately **not** created here: A4-1 has no writer for it, and the
+repository's own `table-write-path` gate correctly rejects a table that src
+reads and cannot write. It belongs to A4-3, where the endpoints that write it
+are specified.
+
+### 20.7.3 Defects found and fixed inside A4-1
+
+The plan listed six items. Implementing them surfaced twelve defects that were
+already in the product; all are fixed and covered by a regression test. Four
+(A4-F05 to A4-F07, A4-F16) came from reading the plan against the code; eight
+(A4-F08 to A4-F15) from a six-lens adversarial review of the A4-1 surface —
+guard bypass, Origin/CSRF defeat, anchor manipulation, information leak,
+session lifecycle, lock weaponisation — in which seventeen candidate findings
+each had to survive an independent attempt to refute them. Thirteen survived;
+four were refuted and dropped. I re-verified every surviving one against the
+code myself before changing anything.
+
+| # | Defect | Consequence before the fix |
+|---|---|---|
+| A4-F05 | `/api/admin/*` had no server-side Origin or CSRF check, while seven other controllers each carried a hand-copied one | the frontend's header was doing all the work; client behaviour is not a boundary |
+| A4-F06 | authority was `role === "ADMIN"`, a coarse role every administrator shares | any ADMIN could administer every account |
+| A4-F07 | `LOGIN_LOCK_SECONDS` was read by nothing (the duration was a SQL literal), and `resetLoginCounters` was wired only to a **successful** login | an owner reset handed a locked-out user an activation the account could not use |
+| A4-F08 | `OwnerAccessGuard` omitted the `mustChangePassword` check `SessionGuard` enforces | a session minted from a one-time activation string held full owner authority over every account **before any password existed** |
+| A4-F09 | `changePassword` wrote `status: "ACTIVE"` unconditionally, clearing `disabled_at` | a holder of a live session whose account was disabled could restore their own access by setting a password |
+| A4-F10 | nothing stopped the owner disabling the owner | the anchor cannot move and the guard admits only an ACTIVE owner, so one mis-click ended account administration permanently |
+| A4-F11 | `failed_login_count` was a lifetime total that only a successful login cleared | a locked account parked at the threshold; one wrong guess after expiry bought another full window, so **one request every fifteen minutes** locked the sole owner out forever |
+| A4-F12 | login answered `error.code = "ACCOUNT_LOCKED"` | a username-existence and lock-state oracle that told an attacker their lockout campaign was working |
+| A4-F13 | four admin routes returned `error instanceof Error ? error.message : …` | the guarded branch was the leaking one — a driver `Error` carries connection strings and constraint names, labelled 404 |
+| A4-F14 | `clearSessionCookies` omitted `Secure`, which a `__Host-` cookie requires | logout's deletion was silently rejected by the browser; the cookies survived sign-out |
+| A4-F15 | the bootstrap parser ignored the key name in `- <key>: <value>` | `- role: ADMIN` created a user named "ADMIN" and swallowed the next entry's `owner: true`, permanently anchoring the Portal to an unintended account |
+| A4-F16 | `changePassword` revoked activations **before** clearing `must_change_password`, in four un-transacted writes | a crash in that window left a usable password, no activation and `must_change_password` still true — a permanently unauthenticable account |
+
+### 20.7.4 Defects found beyond the plan's list — all four now closed
+
+Recorded first, then fixed on the owner's instruction that A4-1 closes with no
+outstanding defect. Nothing here is deferred.
+
+1. **`A4-FE-BE-GAP-01` — the façade write path enforces neither Origin nor
+   CSRF.** `facade.controller.ts` `@All` accepts POST/PUT/PATCH/DELETE for
+   `/api/runs*`, `/api/strategies*`, `/api/datasets`, `/api/config/options`,
+   `/api/v1/alphas*` and `/api/v1/portal/*` behind `SessionGuard` with only a
+   `role !== "ADMIN"` check. Established by a five-question review, each answer
+   then attacked by two independent challengers; what follows is what survived,
+   with the challengers' corrections applied.
+
+   **Is it exploitable today? — a defence-in-depth gap with one real same-site
+   hole, not a live cross-site CSRF hole.**
+   The session cookie is `__Host-portal_session` with an *explicit*
+   `SameSite=Lax` (`cookies.ts:26-32`), so no browser sends it on a cross-site
+   POST, and the explicit attribute also forecloses Chrome's two-minute
+   "Lax+POST" grace window. Lax does allow a cross-site top-level GET, but no
+   write is reachable by GET: all four upstream mutating handlers are
+   `@router.post`, and there is no method-override shim. Cross-origin `fetch`
+   dies at the preflight — no CORS plugin is registered anywhere in
+   `createControlApiApp`.
+
+   What remains is **same-site, cross-origin**. `SameSite` is site-scoped, and
+   `deploy/cloudflared/config.example.yml` publishes
+   `dev-portal.primusspark.com` on the same registrable domain **deliberately
+   without an Access policy**, while `portal.primusspark.com` carries
+   `access.required: true`. A page on dev-portal is cross-origin but same-site,
+   so its requests to production carry the session cookie.
+
+   The first reviewer judged that harmless because a form-encodable body dies
+   on content type. **The challenger refuted that, correctly:**
+
+       # apps/portal/backend/src/portal_api/api/routes_runs.py:385
+       @router.post("/{run_id}/cancel")
+       async def cancel_run(run_id: str, request: Request) -> dict:
+           cancelled = _manager(request).cancel(run_id)
+
+   `cancel_run` takes **no body**. The content-type wall protects the other
+   three writes and not this one. A plain `<form method="POST"
+   enctype="text/plain">` on a same-site page is a simple request, carries the
+   cookie, and cancels a running backtest. Preconditions: a foothold serving
+   HTML on dev-portal (none found — no XSS sink, nginx only does `try_files`),
+   the victim holding an ADMIN session, and the 64-bit `run_id`. Narrow, but a
+   **real state change**, not residue. Cloudflare Access is not a CSRF control:
+   CSRF rides the victim's own browser, which holds the Access cookie too.
+
+   **Blast radius — local Portal/QuantBT only.** The proxy origin is pinned
+   (`buildPortalUpstreamUrl` throws `UPSTREAM_ORIGIN_MISMATCH`), the Execution
+   surfaces are a disjoint `/api/v1/execution` prefix on different controllers,
+   and `portal-api` has exactly four mutating handlers and **zero** `delete`,
+   `put` or `patch` anywhere. Nothing reaches the Trading System, a broker,
+   capital or an Edge cell, so §20.2's "a Portal decision is not a Trading
+   System side effect" is **not** violated. Worst realistic consequences, in
+   order: cancel a running backtest (hours of WFO compute); flood
+   `POST /api/runs` (`max_workers=1`, unbounded queue, a run directory per
+   submission); burn CPU on `preflight`; junk quarantine records from
+   `alphas/import`. A further nuisance: `handleWrite` commits the outbox and
+   product-audit rows **before** proxying, so even a forged write that 405s
+   upstream costs two DB rows and can poison an auto-derived idempotency key.
+
+   **What enabling it breaks — exactly four callers, one file, three screens.**
+   `apps/portal/frontend/src/lib/api.ts` funnels every write through one
+   `request()` helper that passes only `Content-Type`. The four are
+   `importAlpha`, `preflight`, `createRun`, `cancelRun`, driving
+   `/research/quantbt/new` (Validate, Run backtest),
+   `/research/quantbt/imports` (alpha import), and the Cancel button on the run
+   library row and progress header. Outside the frontend there are **zero**
+   callers: no script, CI job, smoke test or Rust crate. Two write tests in
+   `apps/control-api/test/facade.spec.ts` would flip to 403.
+
+   The hard break is `CSRF_MISSING`, **not** `ORIGIN_MISSING` — browsers always
+   attach `Origin` to a non-GET fetch. And the Origin config risk is now
+   measured, not assumed: `PORTAL_PUBLIC_ORIGIN` is
+   `https://dev-portal.primusspark.com` on dev and
+   `https://portal.primusspark.com` on stable, both an exact match for the
+   browser's Origin with no trailing slash or port.
+
+   **Is the scope lock really touched? — in letter, not in substance.**
+   All 28 importers of `lib/api.ts` are QuantBT Research features; **zero**
+   Execution Loop files import it, and Planning does not either (its
+   `@/lib/api` resolves through the vite alias to a different file entirely).
+   It renders nothing — a `fetch` wrapper plus types, no JSX, no CSS, no token
+   — so §0's trigger ("a shared component or token that changes a Research or
+   Planning screen") is not met. No pixel can move: the visual baseline
+   fulfils every `**/api/**` request from fixtures and never inspects headers,
+   and no screenshot test triggers a write at all. The real risk is
+   **behavioural and it is on Research**: if enforcement is wrong, Research
+   writes 403. That is what needs the owner's sign-off, not the pixels.
+
+   **The fix is ~14 lines of backend and ~12 of frontend, and the pattern
+   already exists in the same module.** `PlanningFacadeController`
+   (`facade/planning.controller.ts:63-80`) stands behind the same
+   `SessionGuard` and already enforces Origin + CSRF using
+   `request.portalSession.csrfSecretHash`. `SessionGuard` already attaches
+   `portalSession`, and `toSession` already carries `csrfSecretHash`; the only
+   gap in `facade.controller.ts` is that its `PortalRequest` interface omits
+   the field the guard is already setting. On the frontend,
+   `execution/api/httpApi.ts` already exports a working cookie reader that
+   `lib/api.ts` can reuse.
+
+   **Recommended order — send before enforce.** Ship the frontend header
+   first: it is inert while nothing checks it, so there is no window in which
+   the UI is broken. Confirm on dev that the header arrives. Only then turn on
+   enforcement. Each step is independently verifiable and independently
+   reversible, which "enforce everywhere at once" is not.
+
+   **Disposition — CLOSED 2026-09-15, Bobby approved.** Implemented in the
+   order recommended above. Backend: `facade.controller.ts` now calls
+   `mutationSecurityDenial` on every write, after the role check so the error
+   cannot become an oracle; `planning.controller.ts`'s drifted hand-copy was
+   replaced by the same call. Frontend: `lib/api.ts` attaches the header
+   centrally in `request()`, so the four writes and any future one are covered
+   by one chokepoint.
+
+   Bobby declined an Access policy for `dev-portal.primusspark.com` — it is the
+   fast preview channel and stays open. That is a deliberate decision, and it
+   means the same-site vector is permanent rather than temporary: this CSRF
+   check is now the only thing standing between a page on that hostname and a
+   cancelled production backtest. Recorded here so the next reader understands
+   why this control may not be relaxed.
+
+   Evidence: Control API **590/590** with the pg_dump/pg_restore drill;
+   frontend **150 files / 2390 passed**; `tsc --noEmit` and build clean;
+   visual baseline **328 passed / 0 failed** in verify mode with no snapshot
+   rewritten.
+
+   Seven regression tests, each asserting the refusal REASON and that the
+   write never reached upstream — a denial test that checks only the status
+   code would stay green if the gate were moved below `handleWrite`, while the
+   backtest was genuinely cancelled. Four frontend tests cover the header
+   itself, which until they were written was executed by no test at all: jsdom
+   starts with an empty `document.cookie`, so every existing write test ran the
+   no-token path.
+
+2. **`A4-FE-BE-GAP-03` — `auth.controller` carried both drifts. CLOSED.**
+   All three routes called `originAllowed` bare, and that helper answers TRUE
+   for a request with no Origin header at all; `change-password` additionally
+   compared the CSRF header only against the session's stored hash, never
+   against the `__Host-portal_csrf` cookie — so the proof was "knows the
+   token" rather than "is script on this origin that can read the cookie".
+
+   I first recorded this as un-fixable in this phase because
+   `scripts/smoke-stack.sh` drives all three by curl with no Origin and I said
+   its `PORTAL_PUBLIC_ORIGIN` was unknowable. **That was wrong, and it was
+   wrong because I had not read the script**: line 27 sets
+   `PORTAL_PUBLIC_ORIGIN="http://127.0.0.1:${PORTAL_HTTP_PORT}"` itself, and
+   lines 241 and 251 already send `--header "Origin: ${PORTAL_PUBLIC_ORIGIN}"`
+   for execution commands. The value was never unknown; the script defines it.
+
+   Fixed: `login` and `logout` use the new `originDenial` (Origin present and
+   allowed — login has no session and therefore no CSRF secret to compare
+   against, and logout must keep working for someone whose session is already
+   dead, or the people who most need to sign out cannot). `change-password`
+   uses the full `mutationSecurityDenial`. The three smoke curls now send the
+   Origin the script already defines. Measured rather than assumed: curl does
+   send a `Secure`-marked cookie over plain http to 127.0.0.1, so the smoke
+   run supplies the CSRF cookie the full decision now requires.
+
+   Only requests with NO Origin change behaviour. A browser always sends one
+   on a non-GET, and a browser sending the WRONG one was already refused by
+   `originAllowed`. So this reaches non-browser callers only.
+
+3. **`A4-FE-BE-GAP-02` — login was a timing oracle. CLOSED.**
+   Argon2 is deliberately expensive and that expense is observable. Login
+   reached it only for a user who exists, is ACTIVE and holds a password;
+   every other outcome returned in microseconds. One timed request therefore
+   separated three facts a stranger has no right to — whether the username
+   exists, whether the account is still awaiting its first password, and
+   whether it is locked — however carefully the body and error code were made
+   identical.
+
+   `Argon2CredentialService.verifyAgainstDecoy()` burns one verify against a
+   lazily built decoy hash, and every miss path now calls it: unknown or
+   disabled user, non-ACTIVE status, no password row, and both branches of the
+   activation path — both, because spending it only on failure would simply
+   invert the oracle. Proved by counting verifies rather than by timing a
+   clock: a wall-time assertion on a hashing function is flaky on a loaded
+   machine, and a flaky security test is one that gets deleted.
+
+4. **Sustained login flooding could hold an account locked. CLOSED — at the
+   cause, not with a rate limit.** A4-F11 had already removed the *permanent*
+   lockout, leaving a flood able to keep a known username shut while it ran.
+   The reflex fix is per-route rate limiting, which needs `trustProxy`
+   semantics settled against the production edge — and would still be a
+   throttle standing between an attacker and a victim.
+
+   The cause was the ORDER. The lock was checked before the credential, so ten
+   wrong guesses shut the account to everyone including the person holding the
+   right password. Deciding the lock *after* the credential is known removes
+   the attack outright: a correct credential is not a guess, so it is admitted
+   and the lock is cleared with the counters; a wrong one is still refused,
+   and still without incrementing, so the window cannot renew itself.
+
+   This gives up almost nothing. An attacker already holding the credential
+   was only ever delayed by the lock, never stopped; a guesser gains nothing,
+   because guessing correctly is the hard part. What it removes is the ability
+   to lock somebody else out on purpose — which, against the sole owner, had
+   no in-product remedy at all.
+
+   Rate limiting is therefore no longer a security necessity here, only a
+   resource-abuse measure. The `trustProxy` question is recorded for whenever
+   that is wanted; nothing depends on it.
+
+### 20.7.5 Evidence
+
+| Gate | Command | Result |
+|---|---|---|
+| Control API + PostgreSQL + restore drill | `sudo bash scripts/control-api-test.sh` | **67 files, 602/602 passed**, pg_dump/pg_restore drill passed |
+| Frontend unit | `npx vitest run` (node:22-bookworm, worktree at `/repo`) | **150 files, 2390 passed, 1 skipped** |
+| Frontend typecheck + build | `npx tsc --noEmit`, `npm run build` | clean |
+| Visual baseline | `scripts/portal-web-visual.sh` (no `--update`) | **328 passed / 0 failed**, no pre-existing snapshot rewritten |
+| New visual baselines | `--update -g "auth-activation-recovery"` | 4 recorded (2 themes × 2 breakpoints) |
+
+The Control API suite went from **558** at the start of A4-1 to **602**:
+forty-four tests added, every one of them a named defect that a green suite had
+not been catching.
+
+Negative matrix now covered by test: non-owner ADMIN denied every admin route ·
+unclaimed anchor is its own state · anchor refuses reassignment · a second
+anchor row is impossible at the schema · database error reads as not-owner ·
+stale `session_version` denied · REVOKED/EXPIRED session denied · disabled
+account denied · pending-password-change owner denied **and admitted once the
+password exists** · missing Origin denied · Origin mismatch denied · missing
+CSRF denied · header↔cookie mismatch denied · cookie↔session-hash mismatch
+denied · disable-the-owner refused · disable-anyone-else still works ·
+change-password cannot re-activate a disabled account · change-password still
+promotes an INVITED one · lock duration honours config · reset clears the lock ·
+expired lock does not re-lock on the next guess · locked response is
+byte-identical to an unknown-username response · admin routes never echo an
+error they did not write · bootstrap refuses a non-`username` entry.
+
+No-secret evidence: the recovery audit row asserts `source_ip`,
+`access_subject` and `user_agent_hash` are NULL and that neither the activation
+token nor the email appears anywhere in the row; `redactAuditMetadata` is
+tested by key, by value shape, nested, and end-to-end through a real write.
+The recovery frame is asserted to contain none of "expired", "revoked",
+"already used", a username or a subject.
+
+### 20.7.6 Frontend
+
+- `session.tsx` no longer derives authority from `principal.role`. It reads
+  `/api/admin/access/self` and exposes a three-state value — `loading`,
+  `ready`, `unavailable` — because a boolean would have to fold two of those
+  into `false` and every choice of which is a lie on some screen.
+- `UsersAccess` renders four distinct screens where it rendered one: loading,
+  unavailable (with the request id and a retry), denied-not-owner, and
+  denied-anchor-unclaimed. Only `ready && is_owner === true` opens it, and
+  `is_owner` must be the literal `true`.
+- `TopBar` offers the owner link only on that same answer.
+- `AccessProblemScreen` gains `ACTIVATION_RECOVERY_REQUIRED` as the one frame
+  with **no action at all** — asserted by a test — because "Retry" would re-run
+  a check whose answer cannot change and "Sign in again" would return the
+  reader to a form no credential satisfies.
+- `GET /api/admin/access/self` registered in `r2_ledger/capability-inventory.v1.json`.
+
+### 20.7.7 Branch — resolved
+
+§20.5 rule 10 requires all A4 work on `feat/execution-loop-next`. Codex paused
+and handed over all four phases, and Bobby directed the merge, so the work moved
+there on 2026-09-15 (merge `2483bb23`).
+
+Two facts worth keeping, because neither matched the expectation going in:
+
+1. **It was 22 commits, not 3.** Eighteen were the release and CI history
+   already on `main` (`7665cf91` is main's tip) — this branch was eighteen
+   commits behind it. No codex commit was lost: `3ffe1333` was already an
+   ancestor of the merged branch, and codex's R3-2 work (`4f098c7a`) is in
+   that history, verified with `merge-base --is-ancestor`.
+
+2. **This plan itself had never been committed.** `git log --all -S"## 20. A4"`
+   on this file returned nothing: §20.1 through §20.6 — the document assigning
+   all four phases and every rule they are built against — existed only as an
+   uncommitted working-tree file in `/home/bobby/portal-integration`. One
+   `git checkout`, `reset --hard` or stray stash would have destroyed it with
+   nothing recording that it had ever existed. Committed verbatim as `9ea31c9c`
+   before anything else was touched.
+
+`apps/portal/frontend/e2e/el-v2-03-evidence/controls.json` was deliberately left
+dirty and uncommitted at blob `e2d15a61ebc0b54bf6f502ec666788da1b36b0b8`, as §19
+requires, and its blob was re-verified after the merge. Codex's two stashes were
+not touched.
+
+### 20.7.8 Precondition for A4-2
+
+A4-2 may begin once Bobby accepts the contracts in 20.7.1 as frozen. **No A4-1
+defect remains open**: all four items in 20.7.4 are closed with tests, and the
+twelve in 20.7.3 were closed when they were found. A4-2 inherits no security
+debt from this phase.
+
+One non-blocking item is carried forward as a preference rather than a defect:
+per-route rate limiting on `/api/auth/login`, which needs the `trustProxy`
+question settled against the production edge. It is no longer a security
+necessity — item 4 above removed the attack it would have mitigated — so it can
+be taken up whenever resource-abuse limits are wanted.
+
+No A4-2 migration or mutable endpoint has been started.
+
+### 20.7.9 What this phase changed about how I work
+
+Three habits earned their place, and are written down because each one caught
+something a passing test suite did not:
+
+1. **Attack the work before reporting it.** A4-1 itself opened a hole — moving
+   `/api/admin/*` onto `OwnerAccessGuard`, I omitted the one line `SessionGuard`
+   has, `mustChangePassword`, so a session minted from a one-time activation
+   string held full owner authority before any password existed. The suite was
+   green. A six-lens adversarial pass found it.
+
+2. **Prove the measurement before blaming the product.** Twenty-three visual
+   baselines failed after the authority change. Re-recording them would have
+   stamped a *fixture gap* as a *design change* across Research and Planning
+   screens that §0 puts out of scope. The cause was one unstubbed route.
+
+3. **Read the thing before declaring it unknowable.** I recorded
+   `A4-FE-BE-GAP-03` as un-fixable because `scripts/smoke-stack.sh` calls the
+   auth routes by curl and I said its `PORTAL_PUBLIC_ORIGIN` could not be
+   known. Line 27 of that script sets it, and lines 241 and 251 already send
+   it. The blocker was my not having opened the file.
+
+---
+
+## 20.8 A4 execution record — A4-2 (Claude, 2026-09-16)
+
+**Phase:** A4-2 — Owner account lifecycle and Users & Access control plane.
+**Status:** implementation complete, gates green, awaiting Bobby's acceptance.
+**Branch:** `feat/execution-loop-next`.
+
+### 20.8.1 What A4-2 delivered
+
+The old screen edited rows: it sent a change and hoped. This one issues named
+**operations**, and every one carries the account it acts on, the revision it
+believes is current, an idempotency key, and — for the destructive ones — a
+step-up performed in the same session.
+
+| Contract | Value |
+|---|---|
+| Routes | `/api/admin/accounts` (+ `/{id}`, `/activation`, `/revoke-sessions`, `/disable`, `/enable`, `/archive`) and `/api/admin/step-up`. The six `/api/admin/users*` routes are **retired**. |
+| Generated DTOs | `packages/contracts/generated/portal-account-lifecycle.d.ts` from `openapi/portal-account-lifecycle.openapi.json` |
+| Concurrency | `portal_users.account_revision`, pinned by every mutation and enforced inside the guarded UPDATE |
+| Idempotency | `account_lifecycle_operations.idempotency_key` + a payload fingerprint |
+| Step-up | `owner_step_up_grants`, session-scoped, windowed (`OWNER_STEP_UP_TTL_SECONDS`, default 300s) |
+| Archive | `portal_users.archived_at`; ARCHIVED = DISABLED + marker. No row is ever deleted. |
+
+### 20.8.2 Migration `1723680000035`
+
+Additive only — no `UPDATE`, no `DELETE`, no change to an existing CHECK. The
+Bobby / Stan / Thanhvuong rows and the v1.0.1 data behind them are untouched
+**by construction** rather than by promise, which is what §20.2 rule 8 asks for.
+The down migration drops exactly what it added.
+
+`archived_at` is a marker rather than a fourth status value deliberately:
+widening the status CHECK would touch a constraint every existing code path
+already reads, and archive is genuinely *disable plus a lineage decision*, not
+an independent state.
+
+### 20.8.3 The decisions worth reviewing
+
+1. **The old routes were retired, not left beside the new ones.** They mutated
+   accounts with no expected revision, no idempotency, no step-up and no
+   operation record. Left mounted, they would have been a way around every
+   control this phase adds.
+
+2. **Creating an account mints no credential.** Minting one there hands the
+   owner a secret at the moment they are least ready to deliver it — mid-form,
+   before they have decided how it reaches the person. `ISSUE_ACTIVATION` is
+   its own step-up-protected action, so the one view happens when asked for.
+
+3. **A replay never returns the credential.** A retried `ISSUE_ACTIVATION` that
+   re-executes silently invalidates the credential the owner is at that moment
+   reading out to somebody. The idempotency record exists so the retry can be
+   *answered*; re-revealing on every retry would make "one view" mean "as many
+   as the network felt like".
+
+4. **Enable never revives an old password.** It sets `must_change_password` and
+   issues a fresh activation, so login accepts only the new credential — and
+   the old password becomes unreachable **without** deleting the credential row
+   and losing the lineage. Proved by a test that signs in with the old password
+   after an enable and is refused.
+
+5. **The owner cannot archive, disable or demote its own anchor.** Each leaves
+   a Portal with no reachable administration and no route back. §20.2 rule 6
+   asks for reversible where safe; these are not safe, so they are refused by
+   name rather than confirmed in a dialog. All three refusals are recorded.
+
+6. **`window.confirm` is gone.** It can show one string: not the target, not
+   the consequence, not whether the step-up is live, not what the server said
+   when it refused. People click through a dialog that never says anything
+   different. Archive additionally requires typing the username — not ceremony:
+   it is the action that reads as deletion, and typing the name makes it a
+   deliberate sentence rather than a reflex on whichever row the cursor was on.
+
+### 20.8.4 Evidence
+
+| Gate | Result |
+|---|---|
+| Control API + PostgreSQL + restore drill | **68 files, 615/615 passed** |
+| Frontend unit | `UsersAccess.test.tsx` 13 tests; full suite green |
+| `tsc --noEmit` + build | clean |
+| Visual baseline | `users-access` re-recorded (2), full gate in verify mode |
+
+The lifecycle matrix passed on its first run: create → activate → password set
+→ active → reset → revoke → disable → enable + fresh activation → archive, with
+the whole journey readable back in order with each step's rollback description.
+Plus the five wrong ways — duplicate, stale revision, **two concurrent resets
+where exactly one wins**, expired step-up, refresh-after-write — and the
+authority boundary.
+
+The only failure in that run was the product's own password policy rejecting a
+**test** account name (`no-password-set` produced a password containing
+"password"). The product was right; the test was renamed.
+
+### 20.8.5 Found by looking at the screen, not by a test
+
+Both of these passed every unit test and both were wrong.
+
+1. **Withdrawn accounts still offered "Issue credential" and "End sessions".**
+   A credential issued to a disabled account cannot be used — login refuses
+   before it reads one — and "end sessions" on an account whose sessions the
+   disable already ended is a button that does nothing and reports success.
+   Now disabled, each with its reason.
+
+2. **`.btn-ghost` has no `disabled` styling at all.** `.btn-primary` carries
+   `disabled:opacity-40`; `.btn-ghost` carries nothing, so a refused action
+   renders identically to an available one. Patched **scoped to this screen**,
+   because that class has 62 other call sites across Research and Planning and
+   CLAUDE.md §0 requires asking before a shared component change reaches them.
+
+   **Open for Bobby:** fix `.btn-ghost` globally? It is a real defect
+   everywhere, not only here — but it would change the baseline of any
+   Research or Planning screen currently rendering a disabled ghost button.
+
+### 20.8.6 Precondition for A4-3
+
+A4-3 may begin once Bobby accepts the contracts in 20.8.1. A4-2 leaves no open
+defect. The one item carried forward is the `.btn-ghost` question above, which
+is a design-system decision rather than a security one and blocks nothing.
+
+---
+
+## 20.9 A4 execution record — A4-3 frontend and A4-4 (Claude, 2026-09-16)
+
+**Phases:** A4-3 (Profile & Access surface) and A4-4 (UI/UX integration, defect
+sweep, release-candidate verification).
+**Status:** implementation complete, gates green, awaiting Bobby's acceptance.
+
+### 20.9.1 Profile & Access — a policy surface, not an RBAC editor
+
+The difference shows in what it refuses to offer: no free-form role, no route
+pattern, no permission string to type. Four Governance gates, two things a
+person can be trusted with at each — **See it** and **Decide it** — and the
+finite list of people who already have accounts.
+
+A grid, because the owner's real question is not "what permissions exist" but
+"who can approve R2 while I am away", and a grid answers that in one look. See
+and Decide are separate columns rather than one three-way control, because
+§20.2 rule 4 makes them genuinely separate grants and a single control would
+suggest they are points on one scale.
+
+Two things the screen says out loud that permission UIs usually leave implicit:
+
+- **Deciding a gate here changes nothing outside the Portal.** Every response
+  carries `external_effect: NONE` and the confirmation repeats it, so nobody
+  reads a granted capability as a promotion or a command.
+- **The owner is not in the grid.** Their authority is the anchor, not a row,
+  so there is no cell that could clear it. The screen says why rather than
+  leaving a reader to wonder where Bobby went.
+
+A third state was needed that a boolean grid does not have: a `.decide` grant
+implies `.read` on the server, so the See cell is **covered but not
+independently revocable**. Rendering it empty would be a lie; rendering it as
+an ordinary grant would make a click that cannot work look like a broken
+control. It is drawn dashed, disabled, and titled "Included with Decide".
+
+### 20.9.2 Owner-aware navigation, and a registry collision
+
+A4-4 item 1 asks for owner-aware navigation. Navigation now takes the
+capability set the SERVER computed and hides any feature whose registry
+`permissions` name a capability A4 actually enforces. While that answer is
+loading, or if it could not be read, the list is empty — a protected entry is
+hidden rather than optimistically shown, because the screen behind it would
+refuse anyway and an entry that always refuses is worse than no entry.
+
+**The collision, and what I did about it.** `/administration/profile-access`
+already existed in the registry as a *different* feature: "Verified identity,
+session and access information", persona `portal_user`, permission
+`profile.read`, `COMMISSIONED` / `STATIC_PREVIEW`. The registry-driven route
+therefore won, and the screen rendered the "not built yet" brief on top of the
+working page — a collision that was not theoretical.
+
+Registry files are normally protected (CLAUDE.md §3.1), so this is flagged
+rather than buried. I reconciled the entry instead of routing around it,
+because routing around it is exactly the "second feature model" §3.2 forbids:
+a screen that exists in the router and not in the product's own map. The entry
+now reads `AVAILABLE` / `REAL` with permission
+`administration.profile_access.manage`, persona `portal_owner`, and the feature
+is mapped through `FEATURE_COMPONENTS` like every other real feature. Both
+`registry.json` and the canonical `registry.public.json` fixture were changed
+together, or the app and its tests would disagree.
+
+Users & Access is deliberately NOT given a registry entry: it has never had
+one, and the registry is the product feature model for every user while owner
+account administration is not a product feature for every user. It stays a top
+bar control.
+
+### 20.9.3 Found by looking at the screen
+
+Four defects, every one of which passed the unit suite:
+
+1. **A second top bar icon pushed the bar onto two lines** at laptop width. It
+   was also a duplicate affordance — Profile & Access is in the sidebar now —
+   so it was removed rather than made smaller.
+2. **A bare `/* … */` in JSX position is text, not a comment.** TypeScript
+   accepted it. Converting it to `{/* … */}` then produced a parse error,
+   because it made two roots in a ternary branch — which is how the bug became
+   visible at all.
+3. **`.admin-table` is declared later in the stylesheet than the matrix rules**,
+   so a single-class override lost to it and the grid silently stretched back
+   out. Fixed with `.admin-table.access-matrix`.
+4. **Withdrawn accounts were offered capability cells.** A capability on an
+   account that cannot sign in means nothing; the cells now say so.
+
+**One cosmetic item accepted, not hidden.** The Gate R1 column group renders
+roughly twice the width of the other three. It is a browser `colSpan`
+distribution behaviour: declaring widths on the group header, on the mode
+headers, on the cells, switching to `table-layout: fixed`, declaring the cell
+padding and wrapping the table in a flex container each changed nothing, and
+the built stylesheet was verified to contain every rule. The grid is readable
+and every cell is in the right place; the unevenness is ugly rather than
+misleading. Recorded here rather than left for somebody to rediscover.
+
+### 20.9.4 Evidence
+
+| Gate | Result |
+|---|---|
+| Control API + PostgreSQL + restore drill | **69 files, 638/638** |
+| Frontend unit | **151 files, 2404 passed, 1 skipped** |
+| `tsc --noEmit` + build | clean |
+| Visual baseline | 2 `profile-access` snapshots added; full gate in verify mode |
+| Generated DTOs | `portal-account-lifecycle.d.ts` regenerated from OpenAPI, never hand-edited |
+| Route ledger | 133 → 137 |
+
+### 20.9.5 What A4-4 did NOT do
+
+Deliberately, and each for a stated reason:
+
+- **No dev candidate was built and no image was published.** §20.5 rule 5 and
+  the A4-4 release exit put that decision with Bobby; A4 implementation implies
+  no deployment. The branch is ready for it — one commit series, every gate
+  green — and the build is a separate, owner-authorised step.
+- **Stable was not touched.** Not during visual acceptance, not at all.
+- **The `.btn-ghost` design-system defect from A4-2 is still scoped-patched.**
+  It has 62 call sites across Research and Planning, and §0 requires asking
+  before a shared component change reaches those screens. Still open for Bobby.
+
+
+---
+
+## 20.10 A4 execution record — final full-campaign verification (Claude, 2026-09-16)
+
+Bobby asked for one more pass over all four phases — by eye, by flow, and by
+backend — before deciding whether A4 closes. This section records what that
+pass found. It is not a summary of §20.7–§20.9; it only carries what the
+re-verification itself established.
+
+### 20.10.1 A4-D13 — the owner cannot change a role that still grants authority
+
+**Severity:** real gap, product-visible. **Found by:** re-reading the A4-2 plan
+text against the shipped screen, not by a test.
+
+A4-2 mandatory backend delivery item 1 names, in its own words, "update
+display/base role where allowed". The server delivers it in full:
+
+- `PATCH /api/admin/accounts/:id` → `UPDATE_PROFILE`
+  (`account-lifecycle.controller.ts:190`), with expected-revision guarding,
+  step-up, idempotency, CSRF/Origin enforcement and an immutable audit row like
+  every other operation.
+- `ownerSelfProtection()` refuses `UPDATE_PROFILE` with `role: "USER"` against
+  the owner anchor (`account-lifecycle.service.ts:548`), which is precisely the
+  "owner cannot demote its own final owner anchor" line in A4-2's required
+  evidence.
+- `accounts.updateProfile()` exists in `accountApi.ts:201`, typed and correct.
+
+**No component calls it.** `grep -rn "updateProfile" src/` returns exactly one
+hit — the definition. The roster renders `role` as read-only text
+(`UsersAccess.tsx:426`). So the one person permitted to change a role has no
+way to do it, and the client method is dead code that implies a product surface
+which does not exist.
+
+This was nearly dismissed as harmless on the theory that A4-1 had made `role`
+vestigial — A4-1 did retire the shell's `role === "ADMIN"` check, and A4-3 moved
+authorization onto capabilities. That theory is wrong, and checking it is what
+turned this from tidy-up into a defect. `role` still grants real authority in
+two places:
+
+| Site | What `role` still decides |
+|---|---|
+| `facade/planning.controller.ts:67` | `ADMIN` may write **anything** through the Planning façade; a `USER` may only write tasks (`userMayWriteTask`). A real authorization grant. |
+| `governance/contracts.ts:297` | `needs_you` on a waiver row. A display flag, not a gate — noted so it is not mistaken for the first one. |
+
+So a role change silently grants or removes Planning write authority, and the
+Portal offers no governed way to perform it. That is the same class of problem
+A4-2 was written to end: authority that moves outside a named operation.
+
+**Disposition:** fix in place, inside A4-4's production defect sweep. The
+server half is already built, guarded and audited; what is missing is the
+governed control that reaches it.
+
+### 20.10.2 Why the control goes in the expanded row, not the action strip
+
+The row action strip holds lifecycle operations — issue credential, end
+sessions, disable/enable, archive. A role change is not a lifecycle transition
+and putting a fifth button there would both crowd the row and imply an
+equivalence that does not hold.
+
+It belongs in the per-account detail panel that already opens under the roster
+and already carries Action history. That placement also keeps the recorded
+`users-access` baseline honest: the baseline shoots the collapsed table, so a
+control added inside the expanded panel changes no existing snapshot, and any
+snapshot that *did* change would be real drift rather than a new control.
+
+### 20.10.3 A4-D14 — the Approval Inbox still triages by role, not by capability
+
+**Severity:** real defect, product-visible, **grants nothing**. **Found by:**
+looking at the recorded Approval Inbox screen and asking what drives the badge.
+**Disposition:** recorded, NOT fixed — the fix needs one decision from Bobby,
+stated at the end of this item.
+
+`governance/contracts.ts:296` computes the inbox's triage flag as:
+
+```ts
+needs_you:
+  actor.role === "ADMIN" && row.status === "PENDING" && row.expires_at > now && inert === null,
+```
+
+A4-3 moved R1/R2/canary/live decisions off roles and onto capabilities. This
+flag did not move with them. It is the inbox's primary triage signal — the
+`needs you` badge and the `n not yours` count — so the two disagree:
+
+| Caller | Sees | Server would actually |
+|---|---|---|
+| Role `USER` holding `governance.r1.decide` | `needs_you: false` on R1 rows | **let them decide** — their queue looks empty |
+| Role `ADMIN` holding no governance grant | `needs_you: true` on R1/R2 rows | **refuse them** — sent to a gate that says Access denied |
+
+The first case is the one that matters: it makes A4-3's delegation invisible to
+the person it was delegated to. Nobody gains authority from this — the decide
+endpoints are gated independently and were verified in §20.9 — so it misroutes
+attention rather than opening a hole. It is recorded as a defect and not as a
+nicety because an approval queue that hides your work is not doing its job.
+
+**The fix, stated so it is not re-derived:** `needs_you` should mean "would the
+server let me decide THIS row", evaluated per row against whatever that row's
+gate actually enforces — not one predicate for all five gates.
+
+**Why it is not applied here.** The inbox gate vocabulary is
+`R1, R2, PAPER_EXIT, SANDBOX_EXIT, LIVE_GATE` (`contracts.ts:7`). The A4-1
+capability namespace, frozen in §20.3, is `governance.{r1,r2,canary,live}`.
+They do not line up, and three of the five cannot be mapped by reading the code:
+
+- `PAPER_EXIT` — measured: still role-gated. `paper-exit.service.ts:426` throws
+  `APPROVER_ROLE_REQUIRED` for a non-`ADMIN`. So for these rows the present flag
+  is **correct**, and a capability-only rewrite would newly break them.
+- `SANDBOX_EXIT` — no decision endpoint of its own; it appears only as a link
+  kind (`canary.service.ts:276`, `live-operations.service.ts:430`).
+- `LIVE_GATE` — routes to the **R2** review screen
+  (`command-center.repository.ts:81`), so whether it is `governance.r2.decide`
+  or `governance.live.decide` is a policy question, not a lookup.
+
+Mapping those three means either extending a namespace §20.3 deliberately froze
+or splitting the rule per gate. Both are authority decisions, and A4 rule §20.2
+puts authority decisions with the owner. Guessing one and shipping it would be a
+worse outcome than this paragraph.
+
+**What Bobby decides:** whether `SANDBOX_EXIT` and `LIVE_GATE` decisions are
+governed by an existing capability (and which), or whether the namespace gains
+entries for them. Once that is answered the change is small and local: a
+per-gate predicate passed into `approvalInboxResource()`, whose single caller is
+`governance.service.ts:185` and which already has `effectiveAccess` and
+`mayGovern` in hand.
+
+### 20.10.4 Evidence
+
+Every gate below was run on the frozen tree that this record's commit contains.
+
+| Gate | Result |
+|---|---|
+| Control API + PostgreSQL + pg_restore drill | **69 files, 638/638 passed** |
+| Frontend unit | **151 files, 2410 passed, 1 skipped** (2404 → 2410: the six A4-D13 tests) |
+| `tsc --noEmit` | clean |
+| Visual baseline, **verify** mode | **332 passed, 16 skipped, 0 failed**; 0 existing baselines rewritten |
+| `verify-workspace.sh` | `Portal monorepo verification passed` |
+| Release-integrity ledgers (N29 / EDS-12) | `changed: false` — already current, nothing re-pinned |
+| Contracts | untouched: `PATCH /api/admin/accounts/{user_id}` was already published; no DTO regenerated |
+| Route ledger | unchanged at 137 — A4-D13 added no server route |
+
+Two new baselines were recorded (`users-access-profile`, research + operations)
+and nothing else was written: the `--update` run was scoped with `--grep` to the
+new screen alone, and the full verify afterwards reported zero modified
+snapshots. That ordering is the point — recording before proving no drift would
+have made an `--update` indistinguishable from papering over a regression.
+
+### 20.10.5 Three process errors in this pass, recorded because they cost real time
+
+1. **A gate reported as passing when it had failed.** `bash gate.sh > log; echo
+   $?; tail log` exits with the status of `tail`, so the harness reported
+   "exit code 0" for a run that had failed. The underlying failure was the
+   root-owned `dist/assets` hazard: a `node:22` container run as root leaves
+   build output that the Playwright container cannot delete. Checking `ls -ld
+   dist` was not enough — `dist` itself was mine and its *contents* were not.
+   The same shape recurred with `timeout 300 verify-workspace.sh | tail`, which
+   reported success for a run `timeout` had killed at exit 124.
+2. **Editing the tree during a gate.** The second visual run died on a truncated
+   Playwright trace zip. Playwright loads `e2e/*.ts` per worker at collection
+   time, so editing `visual.spec.ts` and `fixtures.ts` mid-run corrupted it.
+   "The build already finished, so source edits are inert" is true of the app
+   bundle and false of the spec files.
+3. **A wrong grep read as a finding.** `updateProfile` was nearly reported as
+   present-and-wired because the first search was for `.update(`. The method is
+   `updateProfile`. The correction ran the other way too: `.admin-status` was
+   nearly deleted as dead CSS because a non-recursive glob counted zero uses.
+   Both were caught by re-measuring before acting, which is the only reason
+   neither reached a commit.
+
+---
+
+## 20.11 A4-D14 resolved, and A4-D15 — the deploy that would have shipped locked
+
+Bobby asked for A4-D14 to be finished and for the branch to be made ready for
+codex to deploy. Preparing the dev rebuild is what exposed A4-D15, which is the
+more serious of the two.
+
+### 20.11.1 A4-D14 — resolved without touching the frozen namespace
+
+§20.10.3 left one question: which capability governs `SANDBOX_EXIT` and
+`LIVE_GATE`. The answer did not require extending §20.3, because it is readable
+from what each gate's own decision path enforces:
+
+| Inbox gate | Authority the server enforces | Measured at | `needs_you` now |
+|---|---|---|---|
+| `R1` | `assertGovernance(user, "r1", …)` | `governance.service.ts:433` | `mayGovern(r1, decide)` |
+| `R2` | `assertGovernance(user, "r2", …)` | `governance.service.ts:552` | `mayGovern(r2, decide)` |
+| `LIVE_GATE` | `assertGovernance(user, "live", …)` | `governance.service.ts:655` | `mayGovern(live, decide)` |
+| `PAPER_EXIT` | `APPROVER_ROLE_REQUIRED` for non-`ADMIN` | `paper-exit.service.ts:426` | `user.role === "ADMIN"` |
+| `SANDBOX_EXIT` | none — no path creates or decides one | grep across `src/`, `migrations/` | `false`, fails closed |
+
+Two findings inside that table are worth keeping:
+
+- **`LIVE_GATE` is `live`, not `r2`.** Command Center links a LIVE_GATE row to
+  the R2 *screen* (`command-center.repository.ts:81`), which is what made `r2`
+  look like the answer. It has its own route, `/governance/approvals/:id/live`,
+  guarded by `governance.live.*`. Reading the link target instead of the route
+  would have produced a plausible, wrong mapping.
+- **`PAPER_EXIT` was already correct.** Rewriting all five gates onto
+  capabilities — the "obvious" fix — would have newly broken the one gate whose
+  role check is still the real one.
+
+`needs_you` now means "would the server let me decide THIS row". Six tests in
+`test/governance.spec.ts` cover it, including the two opposite failures: a USER
+holding `governance.r1.decide` who now sees their queue, and an `ADMIN` holding
+r1/r2 but not live who is no longer pointed at a live gate that would refuse
+them.
+
+### 20.11.2 A4-D15 — the owner anchor was never claimed by any real deployment
+
+**Severity: would have shipped to production locked.** **Found by:** checking
+what a dev rebuild would actually produce before running one.
+
+`bootstrap.ts:53` selects the owner with `users.filter((e) => e.owner === true)`.
+The deployment's protected bootstrap input, `deploy/control-api/bootstrap-users.yaml`,
+**had no `owner:` field on any user.** So:
+
+1. `owners` is empty, `owners[0]` is `undefined`, and the `if (owner)` claim
+   block never runs.
+2. `portal_owner_anchor` stays empty.
+3. `effectiveAccess` reports `OWNER_ANCHOR_UNCLAIMED` — correctly, and it fails
+   closed.
+4. **Users & Access and Profile & Access are shut to everyone, Bobby included.**
+
+A4-1 built the anchor, the claim, the guard and a hardened parser. The one thing
+never done was adding the marker to the file the deployment actually reads. The
+dev database confirms the consequence is live and not theoretical: it sits at
+migration `…033` with none of the A4 tables, so the next rebuild is a fresh A4
+schema — exactly the case this breaks.
+
+Fixed by adding `owner: true` to `bobby`, which is the mechanism A4-1 item 1
+prescribes: *"Fresh test/bootstrap environments must establish the owner only
+from protected bootstrap input, never a public API."* It is idempotent and
+one-way — `claimOwner` leaves a held anchor alone and refuses to move it.
+
+**Why no test caught it.** `test/bootstrap.spec.ts` has a case named *"parses the
+committed bootstrap file"* that does not read the committed file: it builds the
+YAML inline, and the inline copy has no `owner:` line either. CLAUDE.md §7.8
+exists for exactly this — a test must LOAD a canonical fixture, not restate it.
+A test that reads the real file and asserts exactly one owner is added with the
+fix, so the next deployment input that loses the marker fails a gate rather than
+a login.
+
+### 20.11.3 Evidence
+
+| Gate | Result |
+|---|---|
+| Control API + PostgreSQL + restore drill | **69 files, 646/646 passed** (638 → 646: six A4-D14 + two A4-D15) |
+| Frontend | **unchanged** — no frontend file is touched by A4-D14/D15, so the 332-passed visual verify on `0a099777` still describes these screens |
+| Scope | `apps/control-api/src/governance/{contracts,governance.service}.ts`, two control-api specs, `deploy/control-api/bootstrap-users.yaml`, `scripts/control-api-test.sh` |
+
+The first run of the A4-D14 tests failed all six while all 638 pre-existing
+tests passed — which is the useful shape: the product change was sound and the
+tests were wrong. The suite's `beforeEach` truncates
+`governance_approval_requests`, so rows seeded in a `beforeAll` were gone before
+the first assertion. Moved to `beforeEach`; the grant and the account stay in
+`beforeAll` because neither of those tables is truncated.
+
+Writing the A4-D15 guard also exposed why one could not have existed before: the
+gate copies only `migrations/`, `src/`, `test/` and `tooling/` into its isolated
+cell, so no control-api test could read `deploy/`. The gate now copies that one
+file in, and the test resolves it from either location rather than keeping a
+second copy — the second copy being the entire defect.
+
+### 20.11.4 Deployment note for codex
+
+The branch is `feat/execution-loop-next`. Three migrations are pending on any
+environment that has not seen A4: `…034` (owner anchor), `…035` (account
+lifecycle), `…036` (governance grants). All additive; none alters an existing
+password hash, binding, role or status.
+
+**Order matters.** `control-api-migrate` must complete, then
+`control-api-bootstrap` must run so the owner anchor is claimed from
+`deploy/control-api/bootstrap-users.yaml`. A stack brought up with the migration
+but without the bootstrap claim answers `OWNER_ANCHOR_UNCLAIMED` and both A4
+screens are closed to everyone. `compose.yaml` already sequences this
+(`control-api-bootstrap` depends on `control-api-migrate` completing, and
+`control-api` on both), so a normal `compose up` is correct; a hand-run
+migration without the bootstrap step is not.
+
+`claimOwner` is idempotent and refuses to move a held anchor, so re-running
+bootstrap on an environment that already has an owner changes nothing.
+
+---
+
+## 20.12 A4-D16 — the registry A4-4 wrote did not satisfy its own schema
+
+**Severity: would have killed the stack at boot.** **Found by:** the dev
+rebuild Bobby asked for — nothing else in this campaign could have found it.
+
+`portal-api` refused to start:
+
+```
+PortalRegistryLoadError: REGISTRY_SOURCE_INVALID: registry contract rejected at
+features.12.permissions.0: 'administration.profile_access.manage' is not one of
+[...]
+```
+
+A4-4 promoted `PROFILE_ACCESS` from `COMMISSIONED/STATIC_PREVIEW` to
+`AVAILABLE/REAL` and renamed its permission to the A4 capability. Six schema
+violations followed, and **no gate in this campaign validates that file**: the
+validator is the Python `portal-api`, which no A4 gate ever started. The Control
+API gate, the frontend suite and the visual baseline all pass with a registry
+that cannot be loaded.
+
+| Violation | Resolution |
+|---|---|
+| `permissions.0` not in the schema enum (feature and screen) | **Enum extended.** Not reverted to `profile.read`: the string is functional now — `navigation.ts:79` `ENFORCED_CAPABILITIES` hides the entry unless the server says the caller holds that capability, so reverting would break owner-only navigation. |
+| `data_mode: REAL` requires `source_module` and `summary_source_ids` ≥ 1 | **`data_mode: NONE`.** |
+| `delivery_profile` / `delivery_policy` must be null unless the screen is `COMMISSIONED`/`BLOCKED` | Both set to `null`. |
+
+### 20.12.1 Why `NONE` and not `REAL`, which is what the screen actually is
+
+This was the one real decision, and the honest answer is uncomfortable: **the
+registry has no vocabulary for a screen that is built and real but served by the
+Control API rather than the portal summary pipeline.**
+
+`data_mode: REAL` requires at least one `summary_source_ids` entry, and the
+summary document contains exactly two sources — `planning_current` and
+`quantbt_current`. Neither feeds Profile & Access. Naming one to satisfy the
+schema would be inventing a data lineage, which §3.3 forbids more strongly than
+any inconvenience justifies.
+
+`NONE` was chosen only after checking what it costs. `dataModeBanner()` renders
+"No data contract yet — see the dependency brief" for `NONE`, which would be a
+lie on a working screen — but `ProfileAccess.tsx` renders `SectionHeading`, not
+`ModuleHeader`, so that banner never appears on this screen. It does appear on
+the Portal Map stage brief, where "no *portal data* contract" is literally true.
+
+**Recorded as a contract gap for codex, not silently absorbed:** the registry
+should be able to say "built, real, served by the Control API". Users & Access
+avoids the question only by not being in the registry at all, which is why A4-2
+never hit this.
+
+### 20.12.2 A pinned ledger that did its job
+
+`test_portal_registry_contract.py:423` asserts the exact AVAILABLE set:
+
+```python
+assert available == {"QUANTBT_RESEARCH", "PLANNING"}
+```
+
+That assertion exists so promoting a feature cannot be silent. It was updated to
+include `PROFILE_ACCESS`, with the reason written next to it. The `real` set is
+untouched, because `data_mode` is now `NONE`.
+
+### 20.12.3 Evidence, including the first real deployment of A4
+
+| Gate | Result |
+|---|---|
+| Registry + public fixture vs their schemas | **0 errors** (was 6 and 7) |
+| `test_portal_registry_contract.py` | **14 passed** |
+| Frontend unit | **151 files, 2410 passed** |
+| Dev stack `compose up --build` | **all services healthy** |
+| `portal-api` registry load failures | **0** |
+
+The dev stack is the evidence that matters, because it is the first time A4 ran
+anywhere but a test cell:
+
+- migrations `…034`, `…035`, `…036` applied to the live dev database, which had
+  been sitting at `…033`;
+- `control-api-bootstrap` reported `owner anchor already held by bobby` and
+  `user bobby already exists; skipped` — **A4-D15's fix, working**, additive, and
+  touching no existing credential, role or status;
+- `portal_owner_anchor` now names `bobby`, `claimed_by = bootstrap`.
+
+Had A4-D15 not been found first, this rebuild would have produced a Portal whose
+owner screens were closed to everyone. Had A4-D16 not been found here, the
+production deploy would have failed at container start.
+
+---
+
+## 20.13 Independent backend audit amendment — atomic control plane and exact visibility (Codex, 2026-09-16)
+
+This amendment is the final backend review of Claude's A4 implementation before
+the normal `feature → dev → main → signed release → protected deployment`
+transition. It does **not** authorize an in-place change to a release directory,
+the stable PostgreSQL volume, the AWS-HK Execution Edge, Trading System, or any
+command/source feature flag.
+
+### 20.13.1 Findings closed in the same change set
+
+| Finding | Closure |
+|---|---|
+| An account lifecycle request could persist account, credential, session or audit fragments separately if an intermediate write failed. | `AccountLifecycleService` now owns one PostgreSQL transaction and a transaction-scoped advisory lock keyed by the idempotency key. Account state, credential/session revocation, lifecycle record, operation record and audit event commit together or roll back together. |
+| Concurrent governance grant requests could race on their idempotency record or leave a partial grant/audit trail. | `GovernanceGrantsService` now uses the same transaction discipline and an operation-key advisory lock; inserts are conflict-safe and the denial/audit result is durable with the decision. |
+| Creating an account or changing a base role did not require a fresh owner step-up; a no-op profile update could create a misleading revision and revoke sessions. | Create and role-changing operations require an actual password-backed step-up; display-only profile edits remain low-risk; no-op updates return `PROFILE_UNCHANGED` without changing revision or sessions. |
+| `OwnerAccessGuard` could write an `owner_step_up_granted` audit event merely after session/CSRF admission. | Guard-side false-success audit logging was removed. Only successful password verification in the lifecycle step-up operation records that event. |
+| Bootstrap could create a lookalike owner/user from a typo or emit/reset a credential on a production release path. | Production compose invokes bootstrap with `--require-existing-users`. Strict mode verifies exactly one configured owner and every configured user before any loop, rejects one-time credential output, and can only claim an existing anchor. |
+| Any ordinary workspace member could enumerate/count/history-read all governance gates, even if they could not decide them. | Governance list, count, edge/page, condition and history reads now carry server-calculated row visibility; the cursor fingerprint includes that visibility. A stale or copied cursor after grant/revoke fails `CURSOR_CONTEXT_MISMATCH`. |
+
+The retained authority rule is exact: Bobby as the held owner anchor sees the
+full governed set; delegated grants expose only their matching R1/R2/Live rows;
+legacy `PAPER_EXIT` remains ADMIN-only; `SANDBOX_EXIT` remains fail-closed until
+there is an actual source-owned workflow. No browser-supplied role, capability,
+cursor, relation or Edge credential is trusted.
+
+### 20.13.2 Verification evidence
+
+All evidence below was run against disposable test infrastructure, not a dev or
+stable database:
+
+| Gate | Result |
+|---|---|
+| Focused A4 lifecycle/governance/bootstrap suite | **80 / 80 passed** |
+| Auth/owner matrix | **11 / 11 passed** |
+| EDS-08 source-continuity artifact check | **3 / 3 passed** with the repository's pinned artifact paths |
+| Control API TypeScript build | passed |
+| Full Control API suite | **69 files, 653 / 653 passed** |
+| `git diff --check` | clean |
+
+The test database was named solely for this audit and is separate from both
+`portal_control` and the stable database. The frontend evidence baseline in
+`apps/portal/frontend/e2e/el-v2-03-evidence/controls.json` is preserved as
+Claude's review artifact; this audit did not rewrite UI source, routes, styles
+or Execution Loop composition.
+
+### 20.13.3 Release and data-safety conditions
+
+1. Commit the audit as a separable change, then merge through `dev` and protected
+   `main`; publish/deploy only the signed image generated from the resulting
+   main commit.
+2. The production workflow must keep the existing stable project and named
+   volumes, execute migrations forward, run strict bootstrap after migration,
+   health-check, and leave a marker. It must not use `down -v`, restore a test
+   database, or manually edit `/srv/primus/portal/releases/...`.
+3. A strict bootstrap failure is an intentional deployment stop, not a reason to
+   create a replacement Bobby/Stan/Thanhvuong account. Recovery is through the
+   owner-admin API after the existing owner has authenticated and stepped up.
+4. Execution Edge, mTLS/delegated identity, current-source reads, command
+   policy, source profiles and data retention remain exactly as in the signed
+   prior release. A4 adds Portal-local governance/account administration only.
+
+### 20.13.4 Scope closeout
+
+The A4 owner/governance/account-control scope is closed with no known untested
+mutation, visibility or bootstrap gap. The following are intentionally outside
+this release rather than hidden as A4 debt: the registry's missing vocabulary
+for a real Control-API-backed screen, the source-owned Sandbox exit workflow,
+and the pre-existing shared `.btn-ghost` design-system cleanup recorded in
+§20.9.5. None changes account authority or deployment safety, and none is
+needed to deploy A4.
+
+---
+
+## 21. Production durable-history transition — legacy reader to qualified mirror
 
 **Status:** `IMPLEMENTATION_READY_NOT_DEPLOYED` (2026-09-14).
 
@@ -7378,7 +8934,7 @@ behind because its writer was disabled; enabling both mirror flags together
 would replace fresh product reads with stale rows. This section is therefore a
 three-stage production transition, not a feature-flag flip.
 
-### 20.1 Invariants
+### 21.1 Invariants
 
 1. `FEATURE_EXECUTION_DURABLE_MIRROR` controls the writer. It must never by
    itself select a product read table.
@@ -7394,7 +8950,7 @@ three-stage production transition, not a feature-flag flip.
    unrelated to this transition and remains disabled until its independent
    Manager contract is accepted.
 
-### 20.2 Stage A — writer-only warm-up and Portal-owned reseed
+### 21.2 Stage A — writer-only warm-up and Portal-owned reseed
 
 **Preconditions:** deploy a signed release containing the dual-write semantics
 and `execution-durable-mirror-reseed` CLI; preserve the currently deployed
@@ -7414,7 +8970,7 @@ watermarks and relation coverage; cursor/restart evidence shows bounded resume;
 no content conflict is detected. A failure restores the exact transaction
 backup and recreates only Control API.
 
-### 20.3 Stage B — production qualification
+### 21.3 Stage B — production qualification
 
 Run aggregate-only production probes per active profile and ladder relation:
 row count, oldest/newest UTC millisecond timestamp, missing-row count against
@@ -7424,7 +8980,7 @@ probe while reads remain legacy. If source retention cannot supply a missing
 range, record a bounded coverage caption and keep the reader false; a permanent
 silent hole is not accepted.
 
-### 20.4 Stage C — separately approved read cutover
+### 21.4 Stage C — separately approved read cutover
 
 Only after Stage B passes may a separate reviewed reader profile be introduced
 and dispatched. It must preserve the writer, change only `_READS=true`, check
@@ -7435,3 +8991,88 @@ both flags as its first operation.
 **Closure:** Stage A has code and tests, but is not deployed. Stage B/C remain
 blocked on real Stage-A production evidence, deliberately—not on a new Trading
 System capability.
+
+---
+
+## 22. Isolated self-hosted CI/publication compute
+
+**Status:** `IMPLEMENTATION_READY_NOT_BOOTSTRAPPED` (2026-09-16).
+
+GitHub-hosted compute is no longer assumed available for this private
+repository. The replacement is intentionally two-runner, not a widening of
+the existing deploy runner:
+
+| Plane | Runner / labels | Authority | Resource and cleanup boundary |
+| --- | --- | --- | --- |
+| CI + publication | `portal-ci-publish-sgp1` / `portal-ci`, `portal-publish` | checkout, tests, browser evidence, CodeQL, GHCR publication, SBOM/provenance and OIDC Cosign only | dedicated non-login user, rootless Docker, 6 CPU / 20 GiB / no swap slice; job-completion cleanup touches only its own workspaces and bounded rootless cache |
+| deploy | `portal-deploy-sgp1` / `portal-deploy` | reviewed deploy and feature-profile workflow only | existing narrow deployment environment authority; never receives general CI or image publication |
+
+**Runtime correction (2026-09-16):** the first real `portal-ci` job proved that
+the hardened runner namespace had no materialized `/tmp`, causing the normal
+contract verifier's disposable `mktemp` directory to fail before any project
+gate ran.  The runner unit now explicitly mounts private tmpfs locations at
+`/tmp` and `/var/tmp` (`mode=1777`) while retaining `PrivateTmp=yes`,
+`ProtectSystem=strict` and the `/srv/portal-ci-runner` write boundary.  This is
+an isolation repair, not a relaxation to host `/tmp`; the runner must execute a
+same-repository CI job successfully after the unit is reloaded before the
+runner campaign is accepted.  The CI/security/publication workflows also bind
+`TMPDIR` to the runner-managed per-job `RUNNER_TEMP`, and the smoke helper
+honours it.  That supplies a deterministic disposable path even during a host
+unit reload window; it is not an alternate host-temp escape hatch.
+
+The CI runner also never receives sudo only to emulate production ownership.
+Its D4 qualifier gate runs template parsing plus static enforcement checks;
+real file-owner/mode readiness is explicitly a separate
+`execution-d4-qualification-preflight-test.sh --require-root` deployment or
+workstation drill.  This preserves the proof without granting the build plane
+production-style privileges.
+
+The portable publication gate uses the workflow's short-lived GitHub token,
+`curl` and the checked-in Python standard library rather than assuming `gh` or
+`jq` are installed on the isolated runner.  Its regression test must validate
+the equivalent exact-SHA/name/newest-check semantics, never the removed CLI
+implementation details.
+
+### 22.1 Required invariants
+
+1. CI/publication workflows must select explicit custom labels and immediately
+   assert runner name, non-root identity, private rootless Docker socket and
+   rootless Docker security mode.
+2. The CI runner receives no deployment SSH key, deployment environment secret,
+   rootful Docker socket, Portal volume, database credential or direct
+   Execution/Trading-System access. It does not need a “data sync”: GitHub
+   provides short-lived workflow credentials and OIDC identity per job.
+   The rootless Docker daemon has one documented bootstrap exception: it may
+   execute the setuid `newuidmap`/`newgidmap` helpers to construct an
+   unprivileged user namespace. This host rejects rootlesskit if mount/proc/
+   device sandbox directives constrain that mapping, so daemon authority is
+   bounded by its dedicated non-login Unix user, private socket, no deployment
+   material and cgroup slice. The Actions runner still has
+   `NoNewPrivileges=yes`; this exception never grants rootful Docker, deploy
+   or data authority.
+3. Runner installation is checksum-pinned, consumes a one-time registration
+   token only, waits for bounded rootless Docker readiness, and fails rather
+   than reusing an unknown user/path/service.
+4. Cleanup is mandatory after every job but never uses volume prune, global
+   system prune, rootful Docker, `/srv/portal`, business data, backup, evidence
+   or execution-service deletion. Retain image/Buildx cache seven days and
+   browser revisions thirty days; retain the reusable runner itself.
+5. A runner failure can delay CI/publishing but cannot mutate stable Portal
+   data or deployment state. Deployment remains independent and is not
+   restarted as runner recovery.
+6. Docker uses `cgroupfs` because this non-login system user has no user-systemd
+   cgroup manager. Per-container limits are not represented as real controls;
+   the service's parent `portal-ci-publish.slice` is the actual aggregate
+   6-CPU/20-GiB/no-swap boundary for daemon, BuildKit and containers.
+
+### 22.2 Exit evidence
+
+- static runner-contract test, workflow lint and existing deployment-runner
+  contract test pass from the reviewed commit;
+- GitHub lists the new runner online with both exact labels while the existing
+  deployment runner remains online with only `portal-deploy`;
+- one same-repository CI workflow runs on `portal-ci`, proves rootless Docker
+  and completion cleanup; then publication proves GHCR/SBOM/provenance/OIDC
+  without a persistent registry secret;
+- stable services, named volumes and deployment runner show no restart or data
+  change throughout bootstrap and test execution.

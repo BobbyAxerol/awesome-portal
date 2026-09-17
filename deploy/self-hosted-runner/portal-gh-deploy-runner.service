@@ -11,10 +11,13 @@ Group=portal-gh-runner
 WorkingDirectory=/srv/portal-gh-runner/actions-runner
 Environment=HOME=/srv/portal-gh-runner
 Environment=RUNNER_ALLOW_RUNASROOT=0
-ExecStart=/srv/portal-gh-runner/actions-runner/run.sh
+# Use the runner-supplied service wrapper so a controlled restart forwards
+# SIGTERM as SIGINT to the listener instead of orphaning its GitHub session.
+ExecStart=/srv/portal-gh-runner/actions-runner/bin/runsvc.sh
 Restart=always
 RestartSec=5
-TimeoutStopSec=120
+KillSignal=SIGTERM
+TimeoutStopSec=5min
 KillMode=process
 UMask=0077
 NoNewPrivileges=yes

@@ -45,6 +45,15 @@ interface Screen {
    * exactly what the summary-state cases below need.
    */
   ready: (page: Page) => Locator;
+  /**
+   * Optional interaction to perform once `ready` has resolved.
+   *
+   * A4-D13 · the profile editor lives inside an expanded account row, so the
+   * only way to photograph it is to open one. Kept as a hook rather than a
+   * second screen list because the alternative is an entry whose `path` lies
+   * about where the thing actually is.
+   */
+  prepare?: (page: Page) => Promise<void>;
 }
 
 const SCREENS: Screen[] = [
@@ -245,6 +254,14 @@ const AUTH_FRAMES = [
   { name: "password-change", state: "PASSWORD_CHANGE_REQUIRED", ready: "password-change-screen" },
   { name: "access-denied", state: "ACCESS_REQUIRED", ready: "access-problem-screen" },
   { name: "account-disabled", state: "ACCOUNT_DISABLED", ready: "access-problem-screen" },
+  // A4-1. Baselined because it is the one frame with no action at all: a
+  // regression that adds a button here would read as a way out that does not
+  // exist, and no unit test notices a button that merely looks clickable.
+  {
+    name: "activation-recovery",
+    state: "ACTIVATION_RECOVERY_REQUIRED",
+    ready: "access-problem-screen",
+  },
 ] as const;
 
 for (const theme of THEMES) {
@@ -340,7 +357,34 @@ const ADMIN_SCREENS: Screen[] = [
   {
     name: "users-access",
     path: "/administration/users",
-    ready: (page) => page.getByTestId("admin-users"),
+    // A4-2 replaced the account table with the control desk; the roster is the
+    // element that means "the owner's answer arrived and the screen is real".
+    ready: (page) => page.getByTestId("account-roster"),
+  },
+  {
+    name: "profile-access",
+    path: "/administration/profile-access",
+    // A4-3: the Governance matrix. Baselined because the three cell states —
+    // granted, implied-by-decide, and unavailable — are a visual language, and
+    // a unit test cannot see whether they read as three different things.
+    ready: (page) => page.getByTestId("access-matrix"),
+  },
+  {
+    /*
+     * A4-D13 · the same screen with one account opened.
+     *
+     * Baselined separately because the profile editor is where the base role
+     * is changed, and a role still decides what an account may write through
+     * the Planning facade. A control with that consequence should not be the
+     * one surface on this desk that nobody ever looks at.
+     */
+    name: "users-access-profile",
+    path: "/administration/users",
+    ready: (page) => page.getByTestId("account-roster"),
+    prepare: async (page) => {
+      await page.getByRole("button", { name: "stan Stan" }).click();
+      await page.getByTestId("profile-role").waitFor({ state: "visible" });
+    },
   },
   {
     name: "alpha-version",
@@ -375,6 +419,7 @@ for (const theme of THEMES) {
 
         await page.goto(screen.path);
         await screen.ready(page).first().waitFor({ state: "visible" });
+        if (screen.prepare) await screen.prepare(page);
         await settle(page);
 
         await expect(page).toHaveScreenshot(`${screen.name}-${theme}-laptop.png`, {

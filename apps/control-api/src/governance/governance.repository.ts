@@ -629,7 +629,14 @@ export class GovernanceRepository {
     }
   }
 
-  async counts(workspaceId: string): Promise<{ pending: number; overdue: number; dueSoon: number }> {
+  async counts(
+    workspaceId: string,
+    visibleGates: readonly string[] | null = null,
+  ): Promise<{ pending: number; overdue: number; dueSoon: number }> {
+    // No readable gate means no aggregate either. Returning zero rather than a
+    // cross-gate count prevents an Inbox badge from revealing work a caller is
+    // not allowed to inspect.
+    if (visibleGates?.length === 0) return { pending: 0, overdue: 0, dueSoon: 0 };
     const result = await this.pool.query<{ pending: string; overdue: string; due_soon: string }>(
       `SELECT
          COUNT(*) FILTER (WHERE status = 'PENDING' AND expires_at > now())::text AS pending,
@@ -638,8 +645,10 @@ export class GovernanceRepository {
            WHERE status = 'PENDING' AND expires_at > now()
              AND sla_due_at > now() AND sla_due_at <= now() + interval '8 hours'
          )::text AS due_soon
-       FROM governance_approval_requests WHERE workspace_id = $1`,
-      [workspaceId],
+       FROM governance_approval_requests
+        WHERE workspace_id = $1
+          AND ($2::text[] IS NULL OR gate = ANY($2::text[]))`,
+      [workspaceId, visibleGates],
     );
     const row = result.rows[0];
     return { pending: Number(row.pending), overdue: Number(row.overdue), dueSoon: Number(row.due_soon) };

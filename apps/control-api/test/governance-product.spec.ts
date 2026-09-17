@@ -5,6 +5,8 @@ import { AuthService } from "../src/auth/auth.service";
 import { projectionDigest } from "../src/execution/profile-projection.repository";
 import { assertCaptureContract } from "./contract-validator";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+import { OwnerAccessRepository } from "../src/repos/owner-access";
+import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -64,6 +66,35 @@ describe("N29 governance product closeout", () => {
     bobby = await createActor("bobby-n29", "ADMIN");
     lan = await createActor("lan-n29", "ADMIN");
     stan = await createActor("stan-n29", "USER");
+    /*
+     * A4-3 · the R1/R2 gates are capabilities now, not roles.
+     *
+     * Before this, every ADMIN could read and decide every approval in every
+     * workspace. §20.2 rule 3 narrows that to the owner plus whoever the owner
+     * explicitly delegated, so this cast has to say which each actor is.
+     *
+     * `lan` is the case the phase exists for: an ADMIN whose authority to
+     * decide now comes from a grant rather than from the role. `stan` stays
+     * ungranted, so every "USER is read-only" assertion below keeps testing
+     * what it always tested.
+     */
+    // The anchor is a singleton and specs share a database: clear it first so
+    // this file's owner is this file's owner, whichever spec ran before it.
+    await ctx.pool.query("DELETE FROM portal_owner_anchor");
+    await new OwnerAccessRepository(ctx.pool).claimOwner({
+      userId: bobby.userId,
+      claimedBy: "governance-product-spec",
+    });
+    const __grants = new GovernanceGrantsRepository(ctx.pool);
+    for (const capability of ["governance.r1.decide", "governance.r2.decide"] as const) {
+      await __grants.insertGrant({
+        grantId: `grn_governance-product-spec_${capability.replaceAll(".", "_")}`,
+        granteeUserId: lan.userId,
+        capability,
+        workspaceId: null,
+        issuedBy: bobby.userId,
+      });
+    }
     const workspaces = await request(bobby, "/api/workspaces");
     workspaceId = workspaces.json().workspaces[0].workspace_id;
     await ctx.pool.query(
@@ -97,6 +128,11 @@ describe("N29 governance product closeout", () => {
   async function raw(url: string, options: Record<string, unknown> = {}) {
     const headers = { ...((options.headers as Record<string, string>) ?? {}) };
     if (!("x-dev-access-email" in headers)) headers["x-dev-access-email"] = "dev@azdag.com";
+    // A browser attaches `Origin` to every non-GET request; so does this.
+    const requestMethod = String(options.method ?? "GET").toUpperCase();
+    if (requestMethod !== "GET" && requestMethod !== "HEAD" && !("origin" in headers)) {
+      headers.origin = ctx.config.PORTAL_PUBLIC_ORIGIN;
+    }
     return ctx.app.getHttpAdapter().getInstance().inject({ method: "GET", url, ...options, headers });
   }
 

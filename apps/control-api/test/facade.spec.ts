@@ -162,6 +162,20 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
     if (!("x-dev-access-email" in headers)) {
       headers["x-dev-access-email"] = "dev@azdag.com";
     }
+    /*
+     * A browser attaches `Origin` to every non-GET request, so the harness
+     * does too — otherwise these tests would exercise a shape no real client
+     * produces, and the facade's new Origin check would look like a break.
+     *
+     * A test that wants the header genuinely ABSENT passes `origin: ""`, which
+     * the server reads as missing. That is the non-browser caller
+     * `mutationSecurityDenial` exists to refuse, and it is worth testing
+     * precisely because `originAllowed` on its own answers `true` for it.
+     */
+    const method = String(options.method ?? "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && !("origin" in headers)) {
+      headers.origin = ctx.config.PORTAL_PUBLIC_ORIGIN;
+    }
     return ctx.app.getHttpAdapter().getInstance().inject({
       method: "GET",
       url: path,
@@ -269,7 +283,33 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
       },
     );
     expect(response.statusCode).toBe(403);
-    expect(response.json().error.code).toBe("CSRF_REQUIRED");
+    // A4-1: the shared decision names the stage it refused at. The previous
+    // hand-copy in this controller called `originAllowed` bare — which passes
+    // a request with NO Origin header — and never compared the header to the
+    // cookie at all.
+    expect(response.json().error.code).toBe("CSRF_MISSING");
+  });
+
+  it("refuses a Planning mutation that carries no Origin at all", async () => {
+    // The bypass the drifted copy left open: `originAllowed` returns true for
+    // an absent header, so a non-browser caller skipped the origin gate
+    // entirely.
+    const { cookie, csrf } = await seedUser("bobby", "ADMIN", "Bobby");
+    const response = await inject(
+      "/roadmap-task-board/api/v1/tasks/TASK-1/transition",
+      {
+        method: "POST",
+        headers: {
+          cookie,
+          origin: "",
+          "x-portal-csrf": csrf,
+          "content-type": "application/json",
+        },
+        payload: { status: "Done", expected_version: 1 },
+      },
+    );
+    expect(response.statusCode).toBe(403);
+    expect(response.json().error.code).toBe("ORIGIN_MISSING");
   });
 
   it("allows USER task moves but denies destructive imports", async () => {
@@ -518,6 +558,11 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
       payload: {},
     });
     expect(response.statusCode).toBe(403);
+    // The CODE, not just the status: once the facade also enforces CSRF, a
+    // bare 403 no longer distinguishes "your role may not" from "you forgot a
+    // header", and this test would keep passing with the ADMIN-only rule
+    // deleted.
+    expect(response.json().error.code).toBe("PERMISSION_DENIED");
   });
 
   it("proxies read-only catalogs for USER sessions", async () => {
@@ -547,13 +592,165 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
       payload: {},
     });
     expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe("PERMISSION_DENIED");
     const admin = await seedUser("bobby", "ADMIN");
     const allowed = await inject("/api/v1/alphas/import", {
       method: "POST",
-      headers: { cookie: admin.cookie },
+      headers: {
+        cookie: admin.cookie,
+        // A4-FE-BE-GAP-01: the facade write path now requires the same proof
+        // every other Portal mutation does. Being ADMIN answers "may this
+        // person write"; these answer "did this person ask".
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-csrf": admin.csrf,
+      },
       payload: {},
     });
     expect(allowed.statusCode).toBe(201);
+  });
+
+  describe("A4-FE-BE-GAP-01 · the facade write path proves intent, not just role", () => {
+    /*
+     * The hole this closes was not theoretical. `SameSite=Lax` stops a
+     * cross-SITE post, but SameSite is scoped to the site rather than the
+     * origin, and `dev-portal.primusspark.com` shares a registrable domain
+     * with production while carrying no Access policy — so a page there sends
+     * the session cookie to production. Three of the four upstream writes then
+     * die on content type; `POST /api/runs/{id}/cancel` declares no body, so
+     * it does not, and a plain `enctype="text/plain"` form cancelled a running
+     * backtest.
+     */
+    /*
+     * Counts what actually reached upstream, not just what the caller was
+     * told.
+     *
+     * A denial test that asserts only `403` proves nothing about whether the
+     * write happened: move the gate BELOW `proxyService.handleWrite` and every
+     * such test stays green while `run_x` is genuinely cancelled, an
+     * `outbox_messages` row is written and the caller still sees 403. The harm
+     * this block exists to prevent would be fully reinstated by a refactor
+     * with a green suite. So the assertion is the upstream counter.
+     */
+    let upstreamCancels = 0;
+
+    const adminWrite = async (headers: Record<string, string>) => {
+      upstreamCancels = 0;
+      upstream
+        .intercept({ path: "/api/runs/run_x/cancel", method: "POST" })
+        .reply(200, () => {
+          upstreamCancels += 1;
+          return { run_id: "run_x", status: "CANCELLING" };
+        })
+        .persist();
+      const response = await inject("/api/runs/run_x/cancel", {
+        method: "POST",
+        headers,
+      });
+      return {
+        status: response.statusCode,
+        code: response.json()?.error?.code as string | undefined,
+        reachedUpstream: upstreamCancels,
+      };
+    };
+
+    it("admits the write that carries an allowed Origin and a matching CSRF pair", async () => {
+      const admin = await seedUser("bobby", "ADMIN");
+      const result = await adminWrite({
+        cookie: admin.cookie,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-csrf": admin.csrf,
+      });
+      expect(result.status).toBe(200);
+      expect(result.reachedUpstream).toBe(1);
+    });
+
+    it("refuses the same-site form that a page on dev-portal could actually send", async () => {
+      /*
+       * The attack, spelled exactly. A cross-origin form DOES send an Origin —
+       * its own — and CANNOT send a header, because HTML forms have no way to
+       * set one. The browser attaches the session cookie by itself because
+       * dev-portal shares a registrable domain with production. Before this
+       * change that was a 200 and a cancelled backtest.
+       */
+      const admin = await seedUser("bobby", "ADMIN");
+      const result = await adminWrite({
+        cookie: admin.cookie,
+        origin: "https://dev-portal.primusspark.com",
+      });
+      expect(result.status).toBe(403);
+      expect(result.code).toBe("ORIGIN_DENIED");
+      expect(result.reachedUpstream).toBe(0);
+    });
+
+    it("refuses a missing Origin rather than reading it as consent", async () => {
+      // `originAllowed` on its own returns true for an absent header — the
+      // trap `mutationSecurityDenial` exists to close for non-browser callers.
+      const admin = await seedUser("bobby", "ADMIN");
+      const result = await adminWrite({
+        cookie: admin.cookie,
+        origin: "",
+        "x-portal-csrf": admin.csrf,
+      });
+      expect(result.status).toBe(403);
+      expect(result.code).toBe("ORIGIN_MISSING");
+      expect(result.reachedUpstream).toBe(0);
+    });
+
+    it("refuses a CSRF header that does not match the session", async () => {
+      const admin = await seedUser("bobby", "ADMIN");
+      const result = await adminWrite({
+        cookie: admin.cookie,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-csrf": "not-the-token",
+      });
+      expect(result.status).toBe(403);
+      expect(result.code).toBe("CSRF_INVALID");
+      expect(result.reachedUpstream).toBe(0);
+    });
+
+    it("refuses a write with no CSRF header at all", async () => {
+      const admin = await seedUser("bobby", "ADMIN");
+      const result = await adminWrite({
+        cookie: admin.cookie,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+      });
+      expect(result.status).toBe(403);
+      expect(result.code).toBe("CSRF_MISSING");
+      expect(result.reachedUpstream).toBe(0);
+    });
+
+    it("checks role BEFORE mutation security, so the error is not an oracle", async () => {
+      /*
+       * A USER with a DELIBERATELY WRONG CSRF token. If the two checks were
+       * swapped, this would answer CSRF_INVALID — telling a prober that their
+       * role would otherwise have been accepted. The assertion is the code,
+       * not the status: both orderings return 403.
+       */
+      const stan = await seedUser("stan", "USER");
+      const result = await adminWrite({
+        cookie: stan.cookie,
+        origin: ctx.config.PORTAL_PUBLIC_ORIGIN,
+        "x-portal-csrf": "not-the-token",
+      });
+      expect(result.status).toBe(403);
+      expect(result.code).toBe("PERMISSION_DENIED");
+      expect(result.reachedUpstream).toBe(0);
+    });
+
+    it("gates DELETE the same way it gates POST", async () => {
+      // The route list accepts all four write verbs; only POST had coverage,
+      // so a gate that checked the method wrongly would have gone unnoticed.
+      const admin = await seedUser("bobby", "ADMIN");
+      const response = await inject("/api/v1/alphas/av_1", {
+        method: "DELETE",
+        headers: {
+          cookie: admin.cookie,
+          origin: "https://dev-portal.primusspark.com",
+        },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("ORIGIN_DENIED");
+    });
   });
 
   it("serves workspace run read models with cross-workspace isolation", async () => {
@@ -588,7 +785,7 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
         return { run_id: "run_0123456789abcdef", status: "QUEUED" };
       });
 
-    const { cookie } = await seedUser("bobby", "ADMIN");
+    const { cookie, csrf } = await seedUser("bobby", "ADMIN");
     const payload = {
       strategy_id: "delta-rsi-polynomial-alpha",
       dataset_id: "eth-1d",
@@ -598,7 +795,11 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
     };
     const first = await inject("/api/runs", {
       method: "POST",
-      headers: { cookie, "x-portal-idempotency-key": "create-run-1" },
+      headers: {
+        cookie,
+        "x-portal-csrf": csrf,
+        "x-portal-idempotency-key": "create-run-1",
+      },
       payload,
     });
     expect(first.statusCode).toBe(202);
@@ -606,7 +807,11 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
 
     const replay = await inject("/api/runs", {
       method: "POST",
-      headers: { cookie, "x-portal-idempotency-key": "create-run-1" },
+      headers: {
+        cookie,
+        "x-portal-csrf": csrf,
+        "x-portal-idempotency-key": "create-run-1",
+      },
       payload,
     });
     expect(replay.statusCode).toBe(202);
@@ -615,7 +820,11 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
 
     const conflict = await inject("/api/runs", {
       method: "POST",
-      headers: { cookie, "x-portal-idempotency-key": "create-run-1" },
+      headers: {
+        cookie,
+        "x-portal-csrf": csrf,
+        "x-portal-idempotency-key": "create-run-1",
+      },
       payload: { ...payload, symbol: "BTCUSDT" },
     });
     expect(conflict.statusCode).toBe(409);

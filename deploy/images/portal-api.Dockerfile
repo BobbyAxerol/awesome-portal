@@ -55,9 +55,13 @@ ENV PORTAL_HMD_READER_VERSION=${PORTAL_HMD_READER_VERSION} \
 # The protected strategy remains source-controlled in the portal application.
 COPY apps/portal/strategy ./strategy
 
+# The CI runner checkout is intentionally umask-0077. Registry and strategy
+# files are runtime inputs, so make them readable by the non-root application
+# user without broadening checkout permissions.
 RUN useradd --create-home --uid 10001 portal \
     && mkdir -p /var/lib/portal/artifacts /var/cache/numba \
-    && chown -R portal:portal /var/lib/portal /var/cache/numba
+    && chown -R portal:portal /var/lib/portal /var/cache/numba \
+    && chown -R portal:portal /opt/portal/registry /opt/portal/strategy
 
 USER portal
 EXPOSE 8000

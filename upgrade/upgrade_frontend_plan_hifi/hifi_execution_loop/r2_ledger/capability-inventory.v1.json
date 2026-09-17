@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-10",
- "route_count": 127,
+ "route_count": 137,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -13,14 +13,164 @@
  "edge_command_count_zero_because": "No command plane exists: issueCommand/sendCommand/commandPlane/EDGE_COMMAND/postToEdge appear nowhere in apps/control-api/src or the Rust crates. Every mutation route writes locally.",
  "routes": [
   {
-   "route": "GET /api/admin/users",
-   "controller": "admin/admin.controller.ts",
+   "route": "GET /api/admin/profile-access",
+   "controller": "admin/governance-grants.controller.ts",
    "interaction_class": "AUTO_READ",
    "consumer": "FRONTEND",
    "unused_capability": false,
-   "evidence": "browser sweep saw it on page load",
+   "evidence": "A4-3 the owner's policy matrix: every account and the Governance capabilities it holds.",
    "owner": "claude",
-   "test_owner": "codex"
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/admin/profile-access/activity",
+   "controller": "admin/governance-grants.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-3 immutable delegation lineage for one account, including refusals — a trail of only what worked cannot answer 'why does Stan still not have this'.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/profile-access",
+   "controller": "admin/governance-grants.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-3 grant a capability from the finite §20.3 namespace. Step-up, idempotency and external_effect NONE.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "DELETE /api/admin/profile-access/:grant_id",
+   "controller": "admin/governance-grants.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-3 revoke a grant, pinned to its revision. Effective on the next authorization decision; there is no cache.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/admin/accounts",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 owner roster. Excludes hashes, tokens, Cloudflare subject/email, session ids and audit internals — asserted in matrix.spec.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/admin/accounts/:user_id",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 account detail plus the operation history, including each entry's rollback description.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/accounts",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 create invited. Deliberately mints no credential: the one view happens when the owner asks for it.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "PATCH /api/admin/accounts/:user_id",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 update display name / base role, pinned to an expected account revision.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/accounts/:user_id/activation",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 issue activation. Step-up required; non-replayable — a repeat returns REPLAYED without the credential.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/accounts/:user_id/revoke-sessions",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 revoke sessions. Step-up required.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/accounts/:user_id/disable",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 disable. Step-up required; refused for the anchored owner.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/accounts/:user_id/enable",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 enable. Step-up required; never revives an old password — issues a fresh activation.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/accounts/:user_id/archive",
+   "controller": "admin/account-lifecycle.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 archive access, which is what 'delete' means here. Step-up required; no row is deleted.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/admin/step-up",
+   "controller": "admin/owner-step-up.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 current step-up state for this session, so the UI can say 'expired' rather than silently re-prompting.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/admin/step-up",
+   "controller": "admin/owner-step-up.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-2 owner re-authentication. The only password this control plane handles is the caller's own.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/admin/access/self",
+   "controller": "admin/owner-access.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "A4-1: the shell reads it once per session to decide whether to offer the owner screen; UsersAccess renders loading/denied/unavailable from it",
+   "owner": "claude",
+   "test_owner": "claude"
   },
   {
    "route": "GET /api/auth/context",
@@ -914,56 +1064,6 @@
    "evidence": "facade for run listing; no screen consumes it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
    "owner": "claude",
    "test_owner": "claude"
-  },
-  {
-   "route": "PATCH /api/admin/users/:user_id",
-   "controller": "admin/admin.controller.ts",
-   "interaction_class": "PORTAL_MUTATION",
-   "consumer": "FRONTEND",
-   "unused_capability": false,
-   "evidence": "local write",
-   "owner": "codex",
-   "test_owner": "codex"
-  },
-  {
-   "route": "POST /api/admin/users",
-   "controller": "admin/admin.controller.ts",
-   "interaction_class": "PORTAL_MUTATION",
-   "consumer": "FRONTEND",
-   "unused_capability": false,
-   "evidence": "local write",
-   "owner": "codex",
-   "test_owner": "codex"
-  },
-  {
-   "route": "POST /api/admin/users/:user_id/disable",
-   "controller": "admin/admin.controller.ts",
-   "interaction_class": "PORTAL_MUTATION",
-   "consumer": "FRONTEND",
-   "unused_capability": false,
-   "evidence": "local write",
-   "owner": "codex",
-   "test_owner": "codex"
-  },
-  {
-   "route": "POST /api/admin/users/:user_id/reset-credential",
-   "controller": "admin/admin.controller.ts",
-   "interaction_class": "PORTAL_MUTATION",
-   "consumer": "FRONTEND",
-   "unused_capability": false,
-   "evidence": "local write",
-   "owner": "codex",
-   "test_owner": "codex"
-  },
-  {
-   "route": "POST /api/admin/users/:user_id/revoke-sessions",
-   "controller": "admin/admin.controller.ts",
-   "interaction_class": "PORTAL_MUTATION",
-   "consumer": "FRONTEND",
-   "unused_capability": false,
-   "evidence": "local write",
-   "owner": "codex",
-   "test_owner": "codex"
   },
   {
    "route": "POST /api/auth/change-password",

@@ -41,10 +41,11 @@ export ROADMAP_TASK_BOARD_PUBLIC_URL="${ROADMAP_TASK_BOARD_PUBLIC_URL:-http://12
 mkdir -p "${PORTAL_HISTORICAL_DATA_DIR}"
 mkdir -p "${ROOT_DIR}/runtime/control-api-secrets"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
-health_file="$(mktemp /tmp/portal-smoke-health.XXXXXX)"
-cookie_file="$(mktemp /tmp/portal-smoke-cookie.XXXXXX)"
-sse_headers_file="$(mktemp /tmp/portal-smoke-sse-headers.XXXXXX)"
-sse_body_file="$(mktemp /tmp/portal-smoke-sse-body.XXXXXX)"
+temp_root="${TMPDIR:-/tmp}"
+health_file="$(mktemp "${temp_root%/}/portal-smoke-health.XXXXXX")"
+cookie_file="$(mktemp "${temp_root%/}/portal-smoke-cookie.XXXXXX")"
+sse_headers_file="$(mktemp "${temp_root%/}/portal-smoke-sse-headers.XXXXXX")"
+sse_body_file="$(mktemp "${temp_root%/}/portal-smoke-sse-body.XXXXXX")"
 
 cleanup() {
   # `compose up` may create only part of the project and then fail before it
@@ -129,6 +130,7 @@ printf 'Smoke: activate bootstrap administrator\n'
 curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/login" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header 'x-dev-access-email: bobby@azdag.com' \
   --data "{\"username\":\"bobby\",\"credential\":\"${activation_token}\"}" >/dev/null
 csrf_token="$(awk '$6 == "__Host-portal_csrf" { print $7; exit }' "${cookie_file}")"
@@ -140,6 +142,7 @@ printf 'Smoke: rotate bootstrap credential before protected façade access\n'
 curl --fail-with-body --silent --show-error --cookie "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/change-password" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header 'x-dev-access-email: bobby@azdag.com' \
   --header "x-portal-csrf: ${csrf_token}" \
   --data "{\"current_password\":\"${activation_token}\",\"new_password\":\"${smoke_credential}\"}" >/dev/null
@@ -149,6 +152,7 @@ printf 'Smoke: authenticate with rotated credential\n'
 curl --fail-with-body --silent --show-error --cookie-jar "${cookie_file}" \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/auth/login" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header 'x-dev-access-email: bobby@azdag.com' \
   --data "{\"username\":\"bobby\",\"credential\":\"${smoke_credential}\"}" >/dev/null
 unset smoke_credential
@@ -297,6 +301,7 @@ printf 'Smoke: create Planning task through authenticated gateway\n'
 created_task="$(curl --fail-with-body --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks" \
   --cookie "${cookie_file}" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header "x-portal-csrf: ${csrf_token}" \
   --header 'X-Portal-Actor: forged-browser-actor' \
   --data '{"id":"SMOKE-PHASE5","title":"Phase 5 gateway smoke","workstream":"Portal","phase":"P5","owner":"smoke"}')"
@@ -309,6 +314,7 @@ printf 'Smoke: transition Planning task through authenticated gateway\n'
 transitioned_task="$(curl --fail-with-body --silent --show-error --request POST "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5/transition" \
   --cookie "${cookie_file}" \
   --header 'Content-Type: application/json' \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header "x-portal-csrf: ${csrf_token}" \
   --header 'X-Portal-Actor: forged-browser-actor' \
   --data '{"status":"Done","expected_version":1}')"
@@ -329,6 +335,7 @@ printf 'Smoke: delete Planning task without a request body through authenticated
 deleted_task="$(curl --fail-with-body --silent --show-error --request DELETE \
   "${roadmap_task_board_api_url}/v1/tasks/SMOKE-PHASE5?expected_version=2" \
   --cookie "${cookie_file}" \
+  --header "Origin: ${PORTAL_PUBLIC_ORIGIN}" \
   --header "x-portal-csrf: ${csrf_token}")"
 [[ "${deleted_task}" == *'"id":"SMOKE-PHASE5"'* && "${deleted_task}" == *'"version":3'* && "${deleted_task}" == *'"deleted_at":'* ]] || {
   printf 'Roadmap task delete response was unexpected: %s\n' "${deleted_task}" >&2

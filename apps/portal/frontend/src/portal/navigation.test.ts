@@ -49,12 +49,51 @@ describe("sidebar", () => {
     }
   });
 
-  it("shows every registry feature that opts into the sidebar", () => {
+  /**
+   * A4-4 · a feature whose registry permissions name an enforced capability is
+   * listed only for somebody the SERVER says holds it.
+   *
+   * Everything else in `permissions` stays descriptive, exactly as rule §3.5
+   * says. The short list navigation may act on is the one A4 actually
+   * enforces — today `administration.users.manage` and
+   * `administration.profile_access.manage`.
+   */
+  const ENFORCED = ["administration.users.manage", "administration.profile_access.manage"];
+  const isGated = (f: { permissions: string[] }) =>
+    f.permissions.some((p) => ENFORCED.includes(p));
+
+  it("shows every ungated registry feature that opts into the sidebar", () => {
     const shown = sidebarGroups(registry).flatMap((g) => g.features.map((f) => f.id));
     const expected = registry.features
-      .filter((f) => f.navigation.show_in_sidebar && f.maturity !== "HIDDEN")
+      .filter((f) => f.navigation.show_in_sidebar && f.maturity !== "HIDDEN" && !isGated(f))
       .map((f) => f.id);
     expect(new Set(shown)).toEqual(new Set(expected));
+  });
+
+  it("hides a capability-gated feature from somebody who does not hold it", () => {
+    const gated = registry.features.filter((f) => f.navigation.show_in_sidebar && isGated(f));
+    // The fixture must actually contain one, or this test proves nothing.
+    expect(gated.length).toBeGreaterThan(0);
+    const shown = sidebarGroups(registry, { capabilities: [] }).flatMap((g) =>
+      g.features.map((f) => f.id),
+    );
+    for (const feature of gated) expect(shown, feature.id).not.toContain(feature.id);
+  });
+
+  it("shows it to somebody the server says holds the capability", () => {
+    const gated = registry.features.filter((f) => f.navigation.show_in_sidebar && isGated(f));
+    const shown = sidebarGroups(registry, {
+      capabilities: ENFORCED,
+    }).flatMap((g) => g.features.map((f) => f.id));
+    for (const feature of gated) expect(shown, feature.id).toContain(feature.id);
+  });
+
+  it("treats an unread capability set as no capabilities, never as permission", () => {
+    // The unwired-BFF case. An entry that always refuses is worse than no
+    // entry, and optimism here would be a browser-side permission inference.
+    const gated = registry.features.filter((f) => f.navigation.show_in_sidebar && isGated(f));
+    const shown = sidebarGroups(registry, {}).flatMap((g) => g.features.map((f) => f.id));
+    for (const feature of gated) expect(shown, feature.id).not.toContain(feature.id);
   });
 
   it("hides commissioned and blocked entries when the preference is off", () => {

@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 
 export interface PasswordCredential {
   credentialId: string;
@@ -39,7 +39,7 @@ interface ActivationRow {
 }
 
 export class CredentialsRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool | PoolClient) {}
 
   async findPassword(userId: string): Promise<PasswordCredential | null> {
     const result = await this.pool.query<PasswordRow>(
@@ -127,6 +127,29 @@ export class CredentialsRepository {
       usedAt: row.used_at,
       revokedAt: row.revoked_at,
     };
+  }
+
+  /**
+   * A4-1 · is there any activation this account could still log in with?
+   *
+   * Deliberately the SAME predicate as `findUsableActivation` minus the token
+   * hash: unused, unrevoked, unexpired. Asking it without a token is what lets
+   * the server distinguish "you typed the wrong thing" from "there is nothing
+   * left to type", which is the whole difference between a retry and a dead
+   * end. It returns a boolean and never the row, so no caller can be tempted
+   * to read a token hash out of a liveness check.
+   */
+  async hasUsableActivation(userId: string): Promise<boolean> {
+    const result = await this.pool.query<{ usable: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+           FROM activation_credentials
+          WHERE user_id = $1
+            AND used_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+       ) AS usable`,
+      [userId],
+    );
+    return result.rows[0]?.usable === true;
   }
 
   async consumeUsableActivation(

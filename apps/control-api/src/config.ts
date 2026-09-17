@@ -78,6 +78,16 @@ const EnvSchema = z.object({
   LOGIN_FAILED_DELAY_ATTEMPTS: z.coerce.number().int().positive().default(5),
   LOGIN_LOCK_ATTEMPTS: z.coerce.number().int().positive().default(10),
   LOGIN_LOCK_SECONDS: z.coerce.number().int().positive().default(15 * 60),
+  /*
+   * A4-2 · how long an owner step-up stays valid.
+   *
+   * Bounded at both ends on purpose. Too short and the owner re-enters a
+   * password between every action in one sitting, which is how a prompt
+   * becomes something people type through without reading; too long and it
+   * stops being a re-authentication at all. Five minutes covers a run of
+   * related actions and expires well inside one session.
+   */
+  OWNER_STEP_UP_TTL_SECONDS: z.coerce.number().int().min(30).max(30 * 60).default(5 * 60),
   JWKS_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   PORTAL_API_BASE_URL: ServiceOriginSchema.default("http://portal-api:8000"),
   PLANNING_API_BASE_URL: ServiceOriginSchema.default("http://roadmap-task-board-api:8000"),

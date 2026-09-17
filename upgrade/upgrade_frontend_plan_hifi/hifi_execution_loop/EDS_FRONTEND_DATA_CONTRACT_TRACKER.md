@@ -7785,9 +7785,11 @@ nhưng mất đường kiểm chứng.
 - **35/36 nút disabled có lý do** hiện trên `title`.
 - **0 ô `0.00`** trên Alpha Fleet. Con số "55" ở lần đếm đầu là **regex của tôi
   đếm nhầm** phần thập phân bên trong số đã format — đã kiểm lại từng ô.
-- Sáu màn tĩnh (`/data/catalog`, `/research/*`, `/backtests/approvals`,
-  `/administration/profile-access`) vẫn tự khai `SOON` + `STATIC_PREVIEW` + câu
-  giải thích, đúng như §A51.7.
+- Năm màn tĩnh (`/data/catalog`, `/research/*`, `/backtests/approvals`) vẫn tự
+  khai `SOON` + `STATIC_PREVIEW` + câu giải thích, đúng như §A51.7.
+  `/administration/profile-access` không còn thuộc nhóm này: đó là policy
+  surface owner-only `AVAILABLE`, dùng same-origin Control API và không được
+  fallback về static preview.
 
 ### A54.7 Đề nghị thứ tự làm
 
@@ -10841,3 +10843,349 @@ nhanh. Chúng vẫn ở trong manifest cho R3-4 dùng làm evidence.
 - CSRF **cố ý không test lại** ở tầng component: `post()` đã gắn token cho mọi
   mutation và bỏ header khi không có cookie, có coverage riêng — assert lại qua
   component là đang test cái double.
+
+## A78. PORTFOLIO 360 — BA PANEL ĐỎ, BỐN LỖI, KHÔNG CÁI NÀO LÀ LỖI PRODUCTION (15-09)
+
+Bobby báo Portfolio 360 trên production hiện ba panel unavailable. Tôi đo, và
+**không có lỗi nào thuộc về production hay về cờ**.
+
+### A78.1 Đo trước: dev và production giống hệt nhau
+
+| | dev | production |
+|---|---|---|
+| `portfolio_equity_snapshots` | 2000 items | 2000 items |
+| `portfolio_allocations` | 42 | 42 |
+| `portfolio_capital_ledger` | **vắng** | **vắng** |
+
+Projection production **HEALTHY** cả ba profile, snapshot tươi **7–32 giây**.
+Không phải worker chết, không phải cờ. Và dữ liệu **có thật**: đúng portfolio
+Bobby mở, equity 22.220.000 USDT, net_pnl 26.135,72.
+
+### A78.2 Lỗi 1 — màn không hỏi thứ chính nó đọc
+
+```ts
+const PORTFOLIO_RELATIONS = { portfolio_capital_ledger: "portfolio-capital-ledger" };
+```
+
+`portfolioOverview` đọc `facts.portfolio_equity_snapshots`, nhưng relation đó
+**chưa bao giờ được xin** → luôn `undefined` → hai panel rơi thẳng vào
+unavailable, in ra `PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE` **trong khi
+projection giữ 2000 dòng**.
+
+Vì sao thành thế: khi equity chart chuyển sang route EDS-07, comment ngay cạnh
+viết *"The relation stays for the cross-portfolio standings"* — nhưng relation
+sau đó bị thu lại còn mỗi capital ledger, cắt đúng nguồn mà standings cần.
+
+Ledger R3-1 xác nhận đây là lỗ frontend: cả hai relation đều `COVERED` /
+`NAMED_PORTAL_OPERATION`.
+
+### A78.3 Lỗi 2 — panel đổ lỗi cho read khác
+
+`equityChart` chỉ được truyền khi route EDS-07 trả lời. Route hỏng → panel in
+lý do về **snapshots**, tức chỉ sai người. Operator truy
+`PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE` sẽ tìm nhầm chỗ. Giờ lý do của route
+được truyền xuống và **outrank** câu chung.
+
+### A78.4 Lỗi 3 — trộn hai đơn vị tiền vào một chuỗi
+
+Sau khi sửa lỗi 1, biểu đồ hiện ra **một khối xanh đặc, trục Y tới 50 tỷ** cho
+một portfolio 22 triệu. Đo trên chính DB production:
+
+| currency | dòng | equity |
+|---|---|---|
+| USDT | 667 | 22.220.000 |
+| VND | 667 | **50.000.000.000** |
+
+`equitySeriesOf` nhồi cả hai vào **một** chuỗi và dán nhãn bằng currency gặp
+trước. Panel ngay dưới thì ghi đúng luật mà panel trên vừa phá: *"each
+portfolio in its own base currency · never summed across currencies"*.
+
+Sửa: **một chart cho mỗi denomination**, trục riêng, nhãn riêng. Không lọc bỏ
+currency kia (giấu dữ liệu đã publish), không chọn bừa một cái (cần base
+currency mà relation này không mang).
+
+### A78.5 Lỗi 4 — bảng standings gom hai currency làm một dòng
+
+Soi tiếp thì biểu đồ ghi **667 snapshots USDT** còn bảng ghi **1334** cho cùng
+portfolio+USDT. `crossPortfolioStandings` key **chỉ theo `portfolioId`**. Tệ
+hơn cái count: `first` và `last equity` có thể lấy từ **hai currency khác
+nhau**, khiến cột `net` bên cạnh là so sánh hai thứ khác loại.
+
+Sửa: key theo `portfolioId + currency`. Bảng vốn đã in "portfolio · currency",
+tức nó **luôn được thiết kế** để mỗi dòng là một denomination.
+
+### A78.6 Lỗi 5 — nhánh fallback là code chết
+
+`served = input.crossEquity ?? null`, mà container **luôn** truyền object →
+`served` luôn truthy → nhánh `standings` không bao giờ chạy. Route trả 0 dòng
+thì màn khẳng định *"the store retains no equity snapshot for any portfolio"* —
+một tuyên bố về **toàn bộ store** — trong khi relation bên cạnh vừa chứng minh
+ngược lại.
+
+Sửa: served thắng khi **có dòng**, hoặc khi không có gì để fallback (để lý do
+từ chối thật của route vẫn hiện).
+
+### A78.7 Lỗi 6 — nhãn lặp, và một cái bẫy tôi tự sập
+
+Scope bar in **"Benchmark benchmark not published"** vì container truyền
+`benchmark="benchmark not published"` rồi chip ghép thêm nhãn `Benchmark`. Sửa:
+`benchmark: string | null`, vắng mặt render **như vắng mặt**.
+
+Lần sửa đầu tôi để tiêu đề là `ρ(NAV, —)`. **Guard `absentValues` bắt ngay**:
+một dấu gạch không phải là sự vắng mặt (§3.3). Tôi **không nới trần guard** —
+tôi bỏ dấu gạch: khi không có benchmark thì tiêu đề là
+`Correlation vs benchmark · 30d`, không giả vờ có một cái.
+
+### A78.8 Còn lại cho codex
+
+`portfolio_capital_ledger` **vắng khỏi projection ở cả dev lẫn production**,
+trong khi ledger R3-1 xếp nó `COVERED` với operation `managerPortfolioCapitalLedgerPageV1`.
+Panel CONFIGURATION LOG vì thế đang nói **đúng sự thật**. → `R3-FE-05`.
+
+### A78.9 Evidence
+
+- `tsc` sạch · `vitest` **149/149 file, 2379 pass / 1 skip, 0 fail**
+- Guard mới `portfolioEquityCurrency.test.ts` 8 test, phủ cả hai hàm
+- Soi bằng mắt 13 route product; Portfolio 360 xác nhận sau mỗi lần sửa:
+  bảng **267/267/266** giờ khớp caption biểu đồ **267**
+
+---
+
+## A79 — A4-1: shell hỏi server nó được làm gì, thay vì tự đọc role (2026-09-15)
+
+Commit `b588fe46` (backend) · `62a98d4e` (frontend). Phase A4-1 của §20 trong
+`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`; hồ sơ thi hành đầy đủ ở
+**§20.7** của chính file đó. Mục này chỉ ghi phần frontend.
+
+### A79.1 Nguồn quyền cũ là một lời nói dối tiện tay
+
+`session.tsx` tính `isAdmin: principal?.role === "ADMIN"` — trong trình duyệt,
+từ một giá trị server gửi **để hiển thị**. §20.2 luật 1 nói quyền sở hữu là sự
+thật phía server; luật 3 nói chỉ owner quản trị truy cập. Một role mà **mọi
+administrator đều có** không phải cả hai thứ đó.
+
+Câu hỏi đã đổi: không còn là "người này role gì", mà là "người này được làm gì",
+và trả lời bởi chính server sẽ cưỡng chế nó — `GET /api/admin/access/self`
+(`portal.owner-access.v1`), đã đăng ký ở `r2_ledger/capability-inventory.v1.json`
+(127 → 128 route).
+
+### A79.2 Ba trạng thái, không phải một boolean
+
+`OwnerAccessState` = `loading` | `ready` | `unavailable`. **Không dùng boolean**:
+boolean buộc phải gộp hai trong ba thứ đó vào `false`, và gộp kiểu nào cũng
+thành nói dối ở một màn nào đó (§3.4).
+
+`UsersAccess` từ **1 màn thành 4**:
+
+| Trạng thái | Màn |
+|---|---|
+| `loading` | "Checking your Portal access…" |
+| `unavailable` | không đọc được — kèm request id + retry, **không phải** từ chối |
+| `ready` + `NOT_OWNER` | "A role is not ownership" |
+| `ready` + `OWNER_ANCHOR_UNCLAIMED` | chưa ai là owner trên deployment này |
+
+Cái quan trọng nhất là ô thứ hai: trước đây "không hỏi được" bị vẽ thành "anh
+không có quyền". Một cái bảo người ta thử lại; cái kia đẩy họ đi xin quyền họ
+đang có sẵn.
+
+`is_owner` phải là **literal `true`** — một proxy đổi body thành `"true"` không
+cấp quyền gì.
+
+### A79.3 Màn recovery — ngõ cụt thì nói là ngõ cụt
+
+`ACTIVATION_RECOVERY_REQUIRED` vào frame 01D, là trạng thái **duy nhất không có
+hành động nào** (có test khẳng định `queryByRole("button")` và `("link")` đều
+null). "Retry" sẽ chạy lại một phép kiểm tra mà câu trả lời không thể đổi;
+"Sign in again" sẽ đẩy người đọc về một form không credential nào thỏa mãn. Cả
+hai đọc ra thành hy vọng.
+
+Không nêu username, không nêu owner, và **không nêu** activation đã hết hạn,
+bị thu hồi hay đã dùng — phía server đó là ba sự thật khác nhau, với người cầm
+nó là một, và khác biệt đó chỉ tiết lộ **có ai đó vừa tác động lên tài khoản
+của họ**.
+
+### A79.4 23 baseline lỗi — và vì sao tôi KHÔNG ghi đè
+
+Gate visual lần đầu: **305 pass / 23 fail**. 20 ảnh Research/Planning ở
+mobile+tablet lệch 3px chiều cao, 2 ảnh `users-access`, 1 test console với 29
+lỗi 501.
+
+Nguyên nhân **không phải** trôi thiết kế: stub e2e chưa trả lời
+`/api/admin/access/self`, nên principal trong baseline thành "không phải owner"
+và icon owner rời top bar. Ghi đè baseline sẽ **đóng dấu một lỗ hổng fixture
+thành một thay đổi thiết kế** — và chạm baseline Research/Planning, thứ §0 cấm
+đổi khi chưa hỏi Bobby.
+
+Sửa ở fixture, chạy lại ở chế độ **kiểm tra** (không `--update`):
+**328 pass / 0 fail**. Không ảnh cũ nào bị ghi đè.
+
+### A79.5 Evidence
+
+- Control API: **66 file, 582/582** + pg_dump/pg_restore drill
+- Frontend: **149 file, 2386 pass / 1 skip**; build xanh
+- Visual: **328 pass / 0 fail**, thêm 4 baseline mới cho màn recovery
+  (2 theme × 2 breakpoint)
+
+### A79.6 Còn treo cho A4-2 (đã ghi ở §20.7.4, không phải nợ ngầm)
+
+- `A4-FE-BE-GAP-01`: façade write path (`/api/runs`, `/api/v1/alphas`,
+  `/api/config/options`) **không kiểm Origin lẫn CSRF**. Bật kiểm tra mà không
+  sửa `apps/portal/frontend/src/lib/api.ts` (file này **không** gửi
+  `x-portal-csrf`) sẽ làm hỏng cancel run và import alpha. `lib/api.ts` phục vụ
+  QuantBT Research → **cần Bobby duyệt** vì chạm scope lock §0.
+- `A4-FE-BE-GAP-02`: login là timing oracle (argon2 chỉ chạy cho user có
+  password).
+
+---
+
+## A80 — A4-2: Users & Access thành bàn điều khiển tài khoản (2026-09-16)
+
+Phase A4-2 của §20. Hồ sơ backend + evidence đầy đủ ở **§20.8** của
+`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`. Mục này ghi phần frontend
+và hai thứ chỉ **nhìn màn thật** mới bắt được.
+
+### A80.1 Bảng cũ sửa hàng, màn mới phát lệnh
+
+Màn cũ gửi thay đổi rồi hy vọng. Màn mới phát **thao tác có tên**, mỗi cái mang
+tài khoản đích, **revision** nó tin là hiện tại, và **idempotency key** — nên
+retry trả lời được thay vì chạy lại, tab thứ hai không đè quyết định của tab
+thứ nhất, và khi từ chối thì nói được cái nào sai.
+
+`window.confirm` bị bỏ hẳn theo §20.5. Lý do không phải nó xấu: nó chỉ hiện
+được **một chuỗi**. Không nói được ai bị ảnh hưởng, server sẽ làm gì, step-up
+còn hiệu lực không, và khi hỏng thì server trả lời gì. Người ta bấm qua một hộp
+thoại không bao giờ nói điều gì khác. Hộp thoại mới mỗi lần nói một điều khác.
+
+**Archive phải gõ username.** Không phải nghi thức: archive là thao tác *đọc
+ra như xoá*, và gõ tên là thứ biến nó thành một câu cố ý thay vì phản xạ trên
+hàng mà con trỏ tình cờ đang ở.
+
+### A80.2 Credential một lần, giữ ở đâu cũng không
+
+Token sống trong state của màn và **không ở đâu khác**: không `localStorage`,
+không `sessionStorage`, không ref sống lâu hơn component, không URL. Không ghi
+console kể cả đường lỗi — `console.error(response)` chính là cách một credential
+lọt vào ảnh chụp màn hình gửi support. Ẩn đi phải bấm **xác nhận đã giao**, vì
+cái hỏng cần chặn là owner đóng panel theo phản xạ trước khi thật sự giao chuỗi
+đó, mà không có lần đọc thứ hai.
+
+**Không có nút download.** Một file trên đĩa là đúng ngược lại của no-store.
+
+Replay **không** mở panel: `REPLAYED` không mang token, và vẽ panel rỗng là nói
+rằng có credential ở đâu đó trong khi không có.
+
+### A80.3 Hai thứ chỉ nhìn màn mới thấy
+
+**(1) Tài khoản DISABLED/ARCHIVED vẫn mời "Issue credential" và "End sessions".**
+Suite xanh, test 13/13 xanh, nhưng credential phát cho tài khoản đã thu quyền
+thì login từ chối trước khi đọc tới nó, và "end sessions" trên tài khoản mà
+disable vừa kết thúc session là nút không làm gì rồi báo thành công. Đã tắt kèm
+lý do.
+
+**(2) `.btn-ghost` KHÔNG có style `disabled` nào cả.** `.btn-primary` có
+`disabled:opacity-40`; `.btn-ghost` không. Nên nút bị tắt **trông y hệt** nút
+bật, và phản hồi duy nhất là bấm không thấy gì. Tôi vá **trong phạm vi bàn điều
+khiển** (`.admin-row-action:disabled` + trong confirm/handoff), **không** sửa
+`.btn-ghost`:
+
+> `btn-ghost` có **62 call site khác** ngoài màn này, trải khắp Research và
+> Planning. CLAUDE.md §0 bắt hỏi Bobby trước khi một thay đổi ở component dùng
+> chung chạm các màn đó.
+
+**→ Cần Bobby quyết:** có sửa `.btn-ghost` toàn cục không? Đây là defect có
+thật ở mọi nơi, không riêng màn này — nhưng nó sẽ đổi baseline của bất kỳ màn
+Research/Planning nào đang render một ghost button ở trạng thái tắt.
+
+### A80.4 Reuse report (§11.3)
+
+Tái dùng: `Callout`, `Panel`, `SectionHeading`, `StateView`, `.input`,
+`.btn-primary`, `.btn-ghost`, `.admin-table`, `.admin-status`, `.admin-flag`,
+`.admin-token`, icon `lucide-react`.
+Mới: `.btn-danger` (dùng token `--bad` sẵn có, chỉ màn này dùng),
+`AccountActionConfirm`, `ActivationHandoff`, `StepUpPrompt`.
+**Không** tái dùng `CommandPlanDrawer`: nó là plan→apply→verify cho lệnh
+Execution, ngữ nghĩa khác hẳn — tài khoản không có plan step và không có CLI
+tương đương.
+
+### A80.5 Evidence
+
+- Control API: **68 file, 615/615** + pg_dump/pg_restore drill
+- Frontend: `tsc` sạch, build xanh, `UsersAccess.test.tsx` **13 test** phủ cả
+  authority, không-window.confirm, gõ-tên-để-archive, refusal nguyên văn của
+  server, và token không lọt vào storage/log/URL
+- Visual: 2 baseline `users-access` ghi lại; gate đầy đủ ở chế độ kiểm tra
+- DTO sinh từ OpenAPI: `packages/contracts/generated/portal-account-lifecycle.d.ts`
+- Ledger route: 127 → 133 (thu 6 route `/api/admin/users*`, thêm 11)
+
+---
+
+## A81 — A4-3/A4-4: Profile & Access và nav theo năng lực (2026-09-16)
+
+Hồ sơ đầy đủ ở **§20.9** của `EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`.
+Mục này ghi phần frontend và bốn thứ **chỉ nhìn màn thật mới thấy**.
+
+### A81.1 Lưới, không phải trình soạn RBAC
+
+Câu hỏi thật của owner không phải "có những quyền gì" mà là **"ai duyệt được R2
+khi tôi vắng"** — và một lưới người × cổng trả lời nó trong một cái nhìn. **See**
+và **Decide** là hai cột riêng chứ không phải một control ba nấc, vì §20.2 luật 4
+làm chúng thành **hai grant khác nhau**; gộp vào một control sẽ ngụ ý chúng là
+hai mức trên cùng một thang.
+
+**Trạng thái thứ ba** mà lưới boolean không có: `.decide` kéo theo `.read` ở
+server, nên ô See là **đã phủ nhưng không thu hồi riêng được**. Vẽ rỗng là nói
+dối; vẽ như grant thường thì cú bấm không chạy được sẽ trông như control hỏng.
+Nó được vẽ nét đứt, disabled, kèm lý do "Included with Decide".
+
+**Owner không có trong lưới** — quyền của họ là anchor chứ không phải một dòng,
+nên không có ô nào xoá được. Màn nói thẳng điều đó thay vì để người đọc tự hỏi
+Bobby đâu.
+
+### A81.2 Va chạm registry — và vì sao tôi sửa nguồn thay vì đi vòng
+
+`/administration/profile-access` **đã tồn tại** trong registry như một feature
+**khác**: "Verified identity, session and access information", persona
+`portal_user`, quyền `profile.read`, `COMMISSIONED`. Route do registry sinh ra
+**thắng**, nên màn thật bị trang brief "chưa xây" đè lên. Va chạm này **có thật**,
+không phải giả định.
+
+Registry thường được bảo vệ (§3.1) nên tôi nêu rõ chứ không giấu. Tôi **sửa
+entry** thay vì thêm route thứ hai, vì thêm route thứ hai chính là "feature model
+thứ hai" mà §3.2 cấm: một màn tồn tại trong router mà không tồn tại trong bản đồ
+sản phẩm. Sửa **cả** `registry.json` lẫn fixture canonical `registry.public.json`
+— không thì app và test của nó nói hai điều khác nhau.
+
+### A81.3 Bốn lỗi chỉ nhìn màn mới thấy
+
+1. **Icon thứ hai trên top bar đẩy thanh xuống hai dòng** ở laptop. Nó cũng là
+   affordance trùng — Profile & Access đã nằm ở sidebar — nên tôi bỏ hẳn.
+2. **`/* … */` trần trong JSX là *text*, không phải comment.** TypeScript nhận.
+   Đổi sang `{/* … */}` mới lòi ra parse error vì thành hai root trong một nhánh
+   ternary — đó mới là cách lỗi hiện ra.
+3. **`.admin-table` khai báo *sau* các rule của ma trận**, nên override một class
+   thua nó và lưới âm thầm giãn lại. Phải dùng `.admin-table.access-matrix`.
+4. **Tài khoản đã thu quyền vẫn được mời cấp capability** — capability cho tài
+   khoản không đăng nhập được thì vô nghĩa.
+
+**Một lỗi thẩm mỹ tôi chấp nhận và ghi lại, không giấu:** nhóm cột Gate R1 rộng
+gấp đôi ba nhóm kia. Đây là hành vi phân bổ `colSpan` của trình duyệt: khai
+`width` ở group header, ở mode header, ở cell, đổi `table-layout: fixed`, khai
+padding, bọc table trong flex — **đều không đổi**, và tôi đã kiểm chứng rule có
+mặt trong CSS đã build. Lưới vẫn đọc được và mọi ô đúng chỗ; nó xấu chứ không
+đánh lừa.
+
+### A81.4 Reuse report (§11.3)
+
+Tái dùng: `Callout`, `Panel`, `SectionHeading`, `StateView`, `.input`,
+`.btn-primary`, `.btn-ghost`, `.btn-danger` (A4-2), `.admin-table`,
+`.admin-confirm*` (A4-2), `.admin-history` (A4-2), `StepUpPrompt` (A4-2),
+`newIdempotencyKey` (A4-2), icon `lucide-react`.
+Mới: `.access-matrix` + `.access-toggle` (ba trạng thái ô), `ProfileAccess`,
+`profileAccessApi`.
+
+### A81.5 Evidence
+
+- Control API **69 file, 638/638** + restore drill
+- Frontend **151 file, 2404 pass**, tsc + build sạch
+- Visual: thêm 2 baseline `profile-access`; gate đầy đủ chế độ kiểm tra
+- Ledger route 133 → 137; DTO sinh lại từ OpenAPI

@@ -79,6 +79,19 @@ function filterSql<TRow extends Record<string, unknown>, TItem>(
   });
 }
 
+/** A server-owned visibility domain is part of every SQL branch, never UI state. */
+function rowVisibilitySql<TRow extends Record<string, unknown>, TItem>(
+  resource: PostgresListResource<TRow, TItem>,
+  bindings: Bindings,
+): string | null {
+  const visibility = resource.rowVisibility;
+  if (!visibility) return null;
+  if (visibility.allowedValues.length === 0) return "FALSE";
+  const column = identifier(visibility.column);
+  const placeholders = visibility.allowedValues.map((value) => bindings.add(value));
+  return `${column} IN (${placeholders.join(", ")})`;
+}
+
 function keysetSql<TRow extends Record<string, unknown>, TItem>(
   resource: PostgresListResource<TRow, TItem>,
   sort: readonly AppliedSort[],
@@ -142,6 +155,12 @@ function validateResource<TRow extends Record<string, unknown>, TItem>(
   }
   for (const column of resource.selectColumns) identifier(column);
   identifier(resource.workspaceColumn);
+  if (resource.rowVisibility) {
+    identifier(resource.rowVisibility.column);
+    if (!resource.selectColumns.includes(resource.rowVisibility.column)) {
+      throw new Error("row visibility column must be selected");
+    }
+  }
   if (!(resource.idSortField in resource.sorts)) throw new Error("id sort field is not defined");
   if (resource.allowedRoles.length === 0) throw new Error("query resource requires an RBAC policy");
   for (const definition of Object.values(resource.sorts)) {
@@ -172,6 +191,8 @@ function countQuery<TRow extends Record<string, unknown>, TItem>(
 ): SqlPart {
   const bindings = new Bindings();
   const where = [`${identifier(resource.workspaceColumn)} = ${bindings.add(workspaceId)}`];
+  const visibility = rowVisibilitySql(resource, bindings);
+  if (visibility) where.push(visibility);
   where.push(...filterSql(resource, filters, bindings));
   return {
     sql: `SELECT COUNT(*)::text AS count FROM ${tableIdentifier(resource.table)} WHERE ${where.join(" AND ")}`,
@@ -189,8 +210,10 @@ function pageQuery<TRow extends Record<string, unknown>, TItem>(input: {
   const bindings = new Bindings();
   const where = [
     `${identifier(input.resource.workspaceColumn)} = ${bindings.add(input.workspaceId)}`,
-    ...filterSql(input.resource, input.query.filters, bindings),
   ];
+  const visibility = rowVisibilitySql(input.resource, bindings);
+  if (visibility) where.push(visibility);
+  where.push(...filterSql(input.resource, input.query.filters, bindings));
   if (input.direction !== "initial" && input.boundary) {
     where.push(
       keysetSql(input.resource, input.query.sort, input.direction, input.boundary, bindings),
@@ -221,9 +244,13 @@ function edgeExistenceQuery<TRow extends Record<string, unknown>, TItem>(input: 
   const bindings = new Bindings();
   const where = [
     `${identifier(input.resource.workspaceColumn)} = ${bindings.add(input.workspaceId)}`,
+  ];
+  const visibility = rowVisibilitySql(input.resource, bindings);
+  if (visibility) where.push(visibility);
+  where.push(
     ...filterSql(input.resource, input.query.filters, bindings),
     keysetSql(input.resource, input.query.sort, input.direction, input.boundary, bindings),
-  ];
+  );
   return {
     sql: `SELECT 1 FROM ${tableIdentifier(input.resource.table)} WHERE ${where.join(" AND ")} LIMIT 1`,
     values: bindings.values,
@@ -255,6 +282,7 @@ export class ControlPlaneQueryService {
       limit: query.limit,
       filters: query.filters,
       sort: query.sort,
+      rowVisibility: resource.rowVisibility ?? null,
     });
     const direction = query.after ? "after" : query.before ? "before" : "initial";
     const token = query.after ?? query.before;

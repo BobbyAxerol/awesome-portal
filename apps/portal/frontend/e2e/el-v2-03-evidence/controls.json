@@ -3,21 +3,21 @@
   "route": "/administration/actions",
   "index": 0,
   "tag": "BUTTON",
-  "text": "System healthREADsystemno CLI form publishedSUPP",
+  "text": "System healthREADsystemSUPPORTED · INACTIVE · TY",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 1,
   "tag": "BUTTON",
-  "text": "Alpha / account inspectREADaccount · alphano CLI",
+  "text": "Alpha / account inspectREADaccount · alphaINCOMP",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 2,
   "tag": "BUTTON",
-  "text": "Capital historyREADportfolio · accountno CLI for",
+  "text": "Capital historyREADportfolio · accountSUPPORTED ",
   "verdict": "changed"
  },
  {
@@ -31,84 +31,84 @@
   "route": "/administration/actions",
   "index": 4,
   "tag": "BUTTON",
-  "text": "Sizing explanationsREADalphano CLI form publishe",
+  "text": "Sizing explanationsREADalphaINCOMPATIBLE · SOURC",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 5,
   "tag": "BUTTON",
-  "text": "Broker bindings & exposureREADaccount · venueno ",
+  "text": "Broker bindings & exposureREADaccount · venueINC",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 6,
   "tag": "BUTTON",
-  "text": "Redis inspectionREADvenueno CLI form publishedIN",
+  "text": "Redis inspectionREADvenueINCOMPATIBLE · DIRECT_R",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 7,
   "tag": "BUTTON",
-  "text": "Create portfolioMUTATIONportfoliono CLI form pub",
+  "text": "Create portfolioMUTATIONportfolioINCOMPATIBLE · ",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 8,
   "tag": "BUTTON",
-  "text": "Portfolio stateMUTATIONportfoliono CLI form publ",
+  "text": "Portfolio stateMUTATIONportfolioSUPPORTED · INAC",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 9,
   "tag": "BUTTON",
-  "text": "Change allocationMUTATIONportfolio · accountno C",
+  "text": "Change allocationMUTATIONportfolio · accountSUPP",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 10,
   "tag": "BUTTON",
-  "text": "Declarative config plan / applyMUTATIONsystemno ",
+  "text": "Declarative config plan / applyMUTATIONsystemINC",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 11,
   "tag": "BUTTON",
-  "text": "Deployment stateMUTATIONdeploymentno CLI form pu",
+  "text": "Deployment stateMUTATIONdeploymentSUPPORTED · IN",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 12,
   "tag": "BUTTON",
-  "text": "Trading state per mode/venueMUTATIONvenueno CLI ",
+  "text": "Trading state per mode/venueMUTATIONvenueSUPPORT",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 13,
   "tag": "BUTTON",
-  "text": "Risk profileMUTATIONalpha · venueno CLI form pub",
+  "text": "Risk profileMUTATIONalpha · venueINCOMPATIBLE · ",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 14,
   "tag": "BUTTON",
-  "text": "Register alphaMUTATIONalphano CLI form published",
+  "text": "Register alphaMUTATIONalphaSUPPORTED · INACTIVE ",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 15,
   "tag": "BUTTON",
-  "text": "Account policyMUTATIONaccountno CLI form publish",
+  "text": "Account policyMUTATIONaccountSUPPORTED · INACTIV",
   "verdict": "changed"
  },
  {
@@ -122,21 +122,21 @@
   "route": "/administration/actions",
   "index": 17,
   "tag": "BUTTON",
-  "text": "Broker account syncMUTATIONaccount · venueno CLI",
+  "text": "Broker account syncMUTATIONaccount · venueSUPPOR",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 18,
   "tag": "BUTTON",
-  "text": "Reconcile positionsMUTATIONaccount · venueno CLI",
+  "text": "Reconcile positionsMUTATIONaccount · venueSUPPOR",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 19,
   "tag": "BUTTON",
-  "text": "Reconcile open ordersMUTATIONaccount · venueno C",
+  "text": "Reconcile open ordersMUTATIONaccount · venueSUPP",
   "verdict": "changed"
  },
  {
@@ -150,21 +150,21 @@
   "route": "/administration/actions",
   "index": 21,
   "tag": "BUTTON",
-  "text": "Emergency closeDANGERaccount · alpha · venueno C",
+  "text": "Emergency closeDANGERaccount · alpha · venueSUPP",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 22,
   "tag": "BUTTON",
-  "text": "Shared testnet hard resetBLOCKEDsystemno CLI for",
+  "text": "Shared testnet hard resetBLOCKEDsystemINCOMPATIB",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 23,
   "tag": "BUTTON",
-  "text": "Lab resetBLOCKEDsystemno CLI form publishedINCOM",
+  "text": "Lab resetBLOCKEDsystemINCOMPATIBLE · HOST_DESTRU",
   "verdict": "changed"
  },
  {
