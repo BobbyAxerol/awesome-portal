@@ -148,7 +148,7 @@ jobs:
         run: ./scripts/assert-self-hosted-ci-publish-runner.sh
 
       - name: Portal web visual baseline
-        run: ./scripts/portal-web-visual.sh ${{ inputs.update_visual_snapshots && '--update' || '' }}
+        run: ./scripts/portal-web-visual.sh ${{ inputs.update_visual_snapshots && '--update --grep wired-flow-list-detail-plan-apply-poll' || '' }}
 
       - name: Archive maintenance visual baseline
         if: github.event_name == 'workflow_dispatch' && inputs.update_visual_snapshots == true
