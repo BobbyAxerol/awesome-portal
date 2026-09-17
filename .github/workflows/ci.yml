@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main, dev]
   workflow_dispatch:
+    inputs:
+      update_visual_snapshots:
+        description: "Re-record the pinned visual baseline (maintenance only)"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -140,7 +146,16 @@ jobs:
         run: ./scripts/assert-self-hosted-ci-publish-runner.sh
 
       - name: Portal web visual baseline
-        run: ./scripts/portal-web-visual.sh
+        run: ./scripts/portal-web-visual.sh ${{ inputs.update_visual_snapshots && '--update' || '' }}
+
+      - name: Archive maintenance visual baseline
+        if: github.event_name == 'workflow_dispatch' && inputs.update_visual_snapshots == true
+        uses: actions/upload-artifact@v7
+        with:
+          name: portal-visual-baseline-${{ github.sha }}
+          path: apps/portal/frontend/e2e/execution-fixtures.spec.ts-snapshots/execution-wired-flow-list-detail-plan-apply-poll-laptop-chromium-linux.png
+          if-no-files-found: error
+          retention-days: 1
 
   application-verification:
     # Python, Node, browser and composed-stack checks are intentionally kept
