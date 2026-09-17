@@ -23,6 +23,7 @@ concurrency:
 jobs:
   integration:
     name: Validate Portal monorepo stack
+    if: inputs.update_visual_snapshots != true
     runs-on: [self-hosted, linux, x64, portal-ci]
     # Keep the authoritative source/contract/Rust gate independently bounded.
     # Browser visual and application suites have their own runners below: one
@@ -129,6 +130,7 @@ jobs:
     # Rust edge have passed, avoiding a single timeout budget for all work.
     name: Portal web visual baseline
     needs: integration
+    if: ${{ always() && (inputs.update_visual_snapshots == true || needs.integration.result == 'success') }}
     runs-on: [self-hosted, linux, x64, portal-ci]
     timeout-minutes: 60
 
