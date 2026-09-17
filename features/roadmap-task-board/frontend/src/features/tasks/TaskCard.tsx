@@ -9,6 +9,7 @@
 import type { DragEvent, KeyboardEvent } from "react";
 
 import { Checkbox, Chip } from "@/components/ui";
+import { AssigneeChip } from "./AssigneeChip";
 import { workstreamVar } from "@/lib/workstream";
 
 import type { Task, TaskStatus } from "./task-model";
@@ -112,6 +113,10 @@ export function TaskCard({
         {task.phase && <Chip>{task.phase}</Chip>}
         {task.weeks && <Chip>{task.weeks}</Chip>}
         <Chip>{task.owner}</Chip>
+        {/* The person, drawn differently from the team chips on purpose: on a
+            board scanned for "what is mine", the assignee is the thing being
+            looked for and should not be one more grey pill among four. */}
+        <AssigneeChip assignee={task.assignee} compact />
       </div>
 
       {task.workstream && (
