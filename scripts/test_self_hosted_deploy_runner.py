@@ -96,9 +96,16 @@ def main() -> int:
         "ProtectHome=yes",
         "CapabilityBoundingSet=",
         "ReadWritePaths=/srv/portal-gh-runner",
+        "ExecStart=/srv/portal-gh-runner/actions-runner/bin/runsvc.sh",
+        "KillSignal=SIGTERM",
+        "KillMode=process",
     ):
         require(marker in service, f"missing service hardening marker: {marker}")
     require("User=root" not in service, "runner must never run as root")
+    require(
+        "ExecStart=/srv/portal-gh-runner/actions-runner/run.sh" not in service,
+        "deploy runner must not use run.sh directly under systemd",
+    )
     require("sha256sum --check --status" in installer, "installer must verify runner binary hash")
     require("shred -u -- \"${registration_token_file}\"" in installer, "installer must destroy bootstrap token")
     require("runner_directory_created=0" in installer, "partial-install cleanup must not delete a pre-existing runner")

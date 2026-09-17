@@ -17,7 +17,7 @@ concurrency:
 jobs:
   integration:
     name: Validate Portal monorepo stack
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, portal-ci]
     # Keep the authoritative source/contract/Rust gate independently bounded.
     # Browser visual and application suites have their own runners below: one
     # serialized 45-minute job previously reached its timeout while tests were
@@ -31,6 +31,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Bind disposable job temporary directory
+        run: printf 'TMPDIR=%s\n' "${RUNNER_TEMP}" >> "${GITHUB_ENV}"
+
+      - name: Assert isolated CI runner boundary
+        run: ./scripts/assert-self-hosted-ci-publish-runner.sh
+
       - name: Protect append-only migration history
         if: github.event_name == 'pull_request'
         env:
@@ -41,7 +47,10 @@ jobs:
         run: ./scripts/portal verify
 
       - name: Lint GitHub Actions definitions
-        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7
+        # The runner's UMask=0077 keeps the checkout private.  UID 0 here is
+        # rootless-container UID 0, mapped to portal-ci-runner on the host; it
+        # is required to traverse that checkout and has no host-root authority.
+        run: docker run --rm --user 0:0 -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.7
 
       - name: Test shared contracts workspace
         run: ./scripts/contracts-test.sh
@@ -54,6 +63,9 @@ jobs:
 
       - name: Validate self-hosted production deployment runner contract
         run: python3 ./scripts/test_self_hosted_deploy_runner.py
+
+      - name: Validate self-hosted CI and publication runner contract
+        run: python3 ./scripts/test_self_hosted_ci_publish_runner.py
 
       - name: Validate production execution feature-profile deployment
         run: python3 ./scripts/test_apply_production_execution_feature_profile.py
@@ -111,7 +123,7 @@ jobs:
     # Rust edge have passed, avoiding a single timeout budget for all work.
     name: Portal web visual baseline
     needs: integration
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, portal-ci]
     timeout-minutes: 60
 
     steps:
@@ -120,6 +132,12 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Bind disposable job temporary directory
+        run: printf 'TMPDIR=%s\n' "${RUNNER_TEMP}" >> "${GITHUB_ENV}"
+
+      - name: Assert isolated CI runner boundary
+        run: ./scripts/assert-self-hosted-ci-publish-runner.sh
 
       - name: Portal web visual baseline
         run: ./scripts/portal-web-visual.sh
@@ -130,7 +148,7 @@ jobs:
     # concurrently with the visual baseline after the source authority gate.
     name: Validate Portal application build and browser flows
     needs: integration
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, portal-ci]
     timeout-minutes: 75
 
     steps:
@@ -139,6 +157,12 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Bind disposable job temporary directory
+        run: printf 'TMPDIR=%s\n' "${RUNNER_TEMP}" >> "${GITHUB_ENV}"
+
+      - name: Assert isolated CI runner boundary
+        run: ./scripts/assert-self-hosted-ci-publish-runner.sh
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -198,7 +222,10 @@ jobs:
 
       - name: Install Chromium for Roadmap browser parity
         working-directory: features/roadmap-task-board/frontend
-        run: npx playwright install --with-deps chromium
+        # The reviewed runner bootstrap installs the fixed OS-level browser
+        # dependencies once.  Jobs remain non-root and only fetch Chromium
+        # into the isolated runner cache.
+        run: npx playwright install chromium
 
       - name: Run Roadmap local-first browser flows
         working-directory: features/roadmap-task-board/frontend

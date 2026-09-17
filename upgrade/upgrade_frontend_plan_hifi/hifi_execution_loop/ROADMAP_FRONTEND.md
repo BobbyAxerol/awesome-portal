@@ -405,8 +405,10 @@ raw-ISO gate · screenshot soi tay PF-360, Exit Review) + full gate 103 e2e.
    lý do nhóm ADMINISTRATION chưa có màn Admin Actions ở sidebar (owner report).
 2. BR-EX-68 `ACK` + 6 open decision (spec file riêng).
 3. BR-EX-41…67 vẫn `RECEIVED` · OHLC owner decision §7.5.5(1) vẫn treo.
-4. Profile & Access: COMMISSIONED, thuộc lane U07 (login/step-up) — chưa có
-   việc frontend đến khi codex mở U10/U07.
+4. Profile & Access: `AVAILABLE`, owner-only Governance policy surface tại
+   `/administration/profile-access`; A4 đã đóng. Self-profile/session, nếu
+   được công bố sau U07, phải là contract riêng và không phải prerequisite của
+   policy matrix hiện tại.
 
 ### G.5 Verdict đóng luồng (owner hỏi 2026-08-30): ĐỦ ĐỂ ĐÓNG — với 1 gap có thực
 

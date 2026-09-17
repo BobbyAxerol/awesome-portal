@@ -128,8 +128,8 @@ for required in (
     '"Portal web visual baseline"',
     '"Validate Portal application build and browser flows"',
     "required_check_names=(",
-    "and .head_sha == env.GITHUB_SHA",
-    'sort_by(.started_at // .created_at // "")',
+    'check.get("name") == name and check.get("head_sha") == sha',
+    'max(matches, key=lambda check: check.get("started_at") or check.get("created_at") or "")',
     'if [[ "${all_green}" == true ]]; then',
 ):
     if required not in release_gate:

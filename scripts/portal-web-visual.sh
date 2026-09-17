@@ -35,10 +35,20 @@ fi
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required.\n' >&2; exit 1; }
 docker info >/dev/null 2>&1 || { printf 'Cannot access the Docker daemon.\n' >&2; exit 1; }
 
+# Rootless Docker maps container UID 0 to the unprivileged runner account. A
+# literal host UID/GID is translated through the subordinate-ID range instead,
+# which can make the bind-mounted checkout unreadable inside the container.
+# Retain normal ownership on rootful developer Docker, but use namespace root
+# for the isolated rootless CI daemon. This never grants host-root access.
+CONTAINER_USER="${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}"
+if docker info --format '{{json .SecurityOptions}}' | grep -Fq 'name=rootless'; then
+  CONTAINER_USER='0:0'
+fi
+
 # Rendering is font- and GPU-sensitive, so the pinned image is part of the
 # contract: a baseline recorded in a different image is not comparable.
 docker run --rm \
-  -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
+  -u "${CONTAINER_USER}" \
   -v "${ROOT_DIR}:/repo" \
   -w /repo/apps/portal/frontend \
   -e HOME=/tmp \

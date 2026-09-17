@@ -10,6 +10,12 @@ DEPS_DIR="$(mktemp -d)"
 WORKSPACE_DIR="${DEPS_DIR}/workspace"
 RUN_UID="${HOST_UID:-$(id -u)}"
 RUN_GID="${HOST_GID:-$(id -g)}"
+# A rootless daemon maps container UID 0 to its unprivileged host owner.  The
+# runner service deliberately uses UMask=0077, so using its numeric host UID
+# *inside* that user namespace maps to a subordinate UID which cannot read the
+# ephemeral package metadata.  Use root only inside a confirmed rootless
+# namespace; a rootful daemon keeps the original unprivileged host UID/GID.
+CONTAINER_USER="${RUN_UID}:${RUN_GID}"
 # This script may be invoked through passwordless sudo when Docker is not
 # directly accessible.  Keep the temporary parent traversable by the mapped
 # unprivileged Node UID; individual source files remain copied with their
@@ -30,6 +36,10 @@ if ! "${DOCKER[@]}" info >/dev/null 2>&1; then
   fi
 fi
 
+if "${DOCKER[@]}" info --format '{{json .SecurityOptions}}' | grep -Fq 'name=rootless'; then
+  CONTAINER_USER='0:0'
+fi
+
 cleanup() {
   "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" >/dev/null 2>&1 || true
   rm -rf -- "${DEPS_DIR}"
@@ -40,7 +50,7 @@ trap cleanup EXIT
 # application source are mounted later, read-only, in a networkless container.
 cp "${CONTRACTS_DIR}/package.json" "${CONTRACTS_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
-  -u "${RUN_UID}:${RUN_GID}" \
+  -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
   -w /deps -e HOME=/tmp -e npm_config_cache=/tmp/.npm \
@@ -83,7 +93,7 @@ mv "${DEPS_DIR}/node_modules" "${WORKSPACE_DIR}/node_modules"
 ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network none --read-only \
-  -u "${RUN_UID}:${RUN_GID}" \
+  -u "${CONTAINER_USER}" \
   -v "${WORKSPACE_DIR}:/repo" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
   -w /repo/packages/contracts \

@@ -64,6 +64,12 @@ dispatch `deploy.yml` only with an already-reviewed candidate manifest. A
 failed or cancelled deployment must leave the runner service up and must not
 leave `id_ed25519` or `known_hosts` under its work directory.
 
+The systemd unit invokes the runner-supplied `runsvc.sh` wrapper rather than
+`run.sh`; this forwards a controlled stop to the listener and prevents a
+restart from leaving a stale GitHub runner session. Never restart it during a
+deployment. Let the job finish or cancel it in GitHub first, then verify that
+there is exactly one listener and the runner is online.
+
 To remove it, disable the service, use GitHub to remove the registered runner,
 then remove exactly `/srv/portal-gh-runner` after confirming no job is running.
 Do not remove the production Portal runtime, `/srv/portal`, Docker volumes, or
