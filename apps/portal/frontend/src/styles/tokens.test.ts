@@ -166,7 +166,11 @@ describe("embedded Planning token parity", () => {
   const IMPORTED_CSS = ["features.css", "legacy-views.css"];
 
   /** Custom properties a component sets on itself before reading them. */
-  const LOCALLY_SCOPED = new Set(["--phase-hue", "--task-hue"]);
+  // Component-scoped variables, not design tokens: each is set by the rule
+  // that also reads it (or inline on the element), so the Portal has nothing
+  // to declare. `--assignee-hue` joins them — the assignee chip picks one of
+  // the `--ws-*` identity hues and hands it to its own dot.
+  const LOCALLY_SCOPED = new Set(["--phase-hue", "--task-hue", "--assignee-hue"]);
 
   function planningSources(dir: string): string[] {
     return readdirSync(dir).flatMap((entry) => {

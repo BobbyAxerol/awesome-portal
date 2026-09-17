@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ChangeEvent, type DragEvent } from "react";
+import { useCallback, useMemo, useState, type DragEvent } from "react";
 import {
   Button,
   Checkbox,
@@ -18,12 +18,12 @@ import { ActivityTimeline } from "../shared/ActivityTimeline";
 import {
   EMPTY_TASK_FILTERS,
   GROUPING_LABELS,
+  TASK_ASSIGNEES,
   TASK_GROUPINGS,
   TASK_STATUSES,
   filteredTasks,
   groupLanes,
   nextTaskId,
-  normaliseTasks,
   optionValues,
   taskDraft,
   type MilestoneLane,
@@ -32,7 +32,10 @@ import {
   type TaskGrouping,
   type TaskStatus,
 } from "./task-model";
+import { AssigneeChip } from "./AssigneeChip";
+import { ImportDialog } from "./ImportDialog";
 import { TaskCard } from "./TaskCard";
+import type { ImportPlan } from "./taskImport";
 import { useTasks } from "./useTasks";
 
 type BoardView = "board" | "table";
@@ -71,8 +74,27 @@ function TaskEditor({ draft, onChange }: { draft: Task; onChange: (field: keyof 
       <Field label="Workstream">
         {(field) => <Input {...field} value={draft.workstream} onChange={(event) => onChange("workstream", event.target.value)} aria-label="Task workstream" />}
       </Field>
-      <Field label="Owner">
+      <Field label="Owner (team)" hint="Who is accountable — a team, not a person.">
         {(field) => <Input {...field} value={draft.owner} onChange={(event) => onChange("owner", event.target.value)} aria-label="Task owner" />}
+      </Field>
+      {/* A closed list, so this is a Select: typing a name the Portal does not
+          declare would be accepted here and refused by the server, which is a
+          worse way to learn it. The chip repeats the choice as the board draws
+          it, so the editor and the card cannot look like different people. */}
+      <Field label="Assignee (person)" hint="One of the three accounts the Portal declares.">
+        {(field) => (
+          <div className="assignee-picker">
+            <Select
+              {...field}
+              value={draft.assignee}
+              onChange={(event) => onChange("assignee", event.target.value)}
+              aria-label="Task assignee"
+            >
+              {TASK_ASSIGNEES.map((person) => <option key={person}>{person}</option>)}
+            </Select>
+            <AssigneeChip assignee={draft.assignee} />
+          </div>
+        )}
       </Field>
       <Field label="Phase">
         {(field) => <Input {...field} className="input input-mono" value={draft.phase} onChange={(event) => onChange("phase", event.target.value)} aria-label="Task phase" placeholder="P0" />}
@@ -127,6 +149,7 @@ export function TaskBoardFeature({
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [draft, setDraft] = useState<Task | null>(null);
   const [activityTaskId, setActivityTaskId] = useState<string | null>(null);
   const [grouping, setGrouping] = useState<TaskGrouping>("status");
@@ -257,18 +280,35 @@ export function TaskBoardFeature({
     moveTask(task.id, nextStatus, tasks.filter((item) => item.status === nextStatus).length);
   };
 
-  const importTasks = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    void file.text()
-      .then((text) => {
-        const parsed: unknown = JSON.parse(text);
-        if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
-        return replace(normaliseTasks(parsed as Record<string, unknown>[]));
+  /*
+   * Applies a reviewed plan, one task at a time.
+   *
+   * Sequential rather than concurrent because `create` and `update` both read
+   * the current record set to place a task; firing them together lets two
+   * rows compute the same Backlog position. An import of a few dozen rows is
+   * not worth the race.
+   *
+   * A failure stops and reports how far it got. Saying "imported" after a
+   * partial write would be the one thing worse than the failure.
+   */
+  const applyImport = (plan: ImportPlan) => {
+    let done = 0;
+    const run = async () => {
+      for (const entry of plan.accepted) {
+        if (entry.action === "create") await create(entry.task);
+        else await update(entry.task);
+        done += 1;
+      }
+    };
+    void run()
+      .then(() => {
+        const created = plan.accepted.filter((entry) => entry.action === "create").length;
+        const updated = plan.accepted.length - created;
+        toast(`Imported ${created} new into Backlog, updated ${updated}`, "good");
       })
-      .then(() => toast("Task board imported", "good"))
-      .catch(() => toast("That task JSON file is not valid", "bad"));
+      .catch((error: Error) =>
+        toast(`Import stopped after ${done} of ${plan.accepted.length}: ${error.message}`, "bad"),
+      );
   };
 
   const startDrag = (event: DragEvent<HTMLElement>, taskId: string) => {
@@ -396,7 +436,7 @@ export function TaskBoardFeature({
         </div>
         <div className="feature-actions">
           <Button type="button" variant="ghost" onClick={() => downloadJson("quant-migration-tasks.json", tasks)}>Export JSON</Button>
-          <label className="btn-ghost file-button">Import JSON<input type="file" accept="application/json" onChange={importTasks} /></label>
+          <Button type="button" variant="ghost" onClick={() => setImportOpen(true)}>Import JSON</Button>
           <Button type="button" variant="ghost" onClick={() => {
             if (window.confirm("Reset every task back to the defaults?")) {
               void reset().then(() => toast("Task board reset", "good")).catch((error: Error) => toast(error.message, "bad"));
@@ -426,6 +466,9 @@ export function TaskBoardFeature({
         </Select>
         <Select value={filters.owner} onChange={(event) => setFilter("owner", event.target.value)} aria-label="Filter owner">
           <option value="">All owners</option>{owners.map((value) => <option key={value}>{value}</option>)}
+        </Select>
+        <Select value={filters.assignee} onChange={(event) => setFilter("assignee", event.target.value)} aria-label="Filter assignee">
+          <option value="">All assignees</option>{TASK_ASSIGNEES.map((value) => <option key={value}>{value}</option>)}
         </Select>
         <Button type="button" variant="ghost" onClick={() => setFilters(EMPTY_TASK_FILTERS)}>Clear</Button>
         <Select
@@ -484,7 +527,7 @@ export function TaskBoardFeature({
       ) : visibleTasks.length ? (
         <div className="table-wrap phase3-table-wrap">
           <table className="task-table">
-            <thead><tr><th /><th>ID</th><th>Title</th><th>Workstream</th><th>Phase</th><th>Weeks</th><th>Priority</th><th>Owner</th><th>Status</th><th>Depends</th><th /></tr></thead>
+            <thead><tr><th /><th>ID</th><th>Title</th><th>Workstream</th><th>Phase</th><th>Weeks</th><th>Priority</th><th>Owner</th><th>Assignee</th><th>Status</th><th>Depends</th><th /></tr></thead>
             <tbody>
               {visibleTasks.map((task) => (
                 <tr key={task.id} data-testid={`task-row-${task.id}`} data-selected={selected.has(task.id)}>
@@ -497,7 +540,7 @@ export function TaskBoardFeature({
                       onCheckedChange={(isSelected) => toggleSelected(task.id, isSelected)}
                     />
                   </td>
-                  <td>{task.id}</td><td>{task.title}</td><td>{task.workstream}</td><td>{task.phase}</td><td>{task.weeks}</td><td>{task.priority}</td><td>{task.owner}</td><td>{task.status}</td><td>{task.depends.join(", ")}</td>
+                  <td>{task.id}</td><td>{task.title}</td><td>{task.workstream}</td><td>{task.phase}</td><td>{task.weeks}</td><td>{task.priority}</td><td>{task.owner}</td><td><AssigneeChip assignee={task.assignee} compact /></td><td>{task.status}</td><td>{task.depends.join(", ")}</td>
                   <td className="table-actions"><button type="button" onClick={() => openEdit(task)}>Edit</button><button type="button" onClick={() => deleteTask(task)}>Delete</button></td>
                 </tr>
               ))}
@@ -505,6 +548,13 @@ export function TaskBoardFeature({
           </table>
         </div>
       ) : <StateView kind="empty" message="No task matches the filter." />}
+
+      <ImportDialog
+        open={importOpen}
+        tasks={tasks}
+        onClose={() => setImportOpen(false)}
+        onApply={applyImport}
+      />
 
       <Modal open={draft !== null} title={editingId ? `Edit ${editingId}` : "New task"} onClose={closeEditor}>
         {draft && <TaskEditor draft={draft} onChange={updateDraft} />}
