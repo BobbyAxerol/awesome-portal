@@ -368,6 +368,12 @@
       "TaskCreate": {
         "additionalProperties": false,
         "properties": {
+          "assignee": {
+            "default": "Unassigned",
+            "maxLength": 160,
+            "title": "Assignee",
+            "type": "string"
+          },
           "created": {
             "anyOf": [
               {
@@ -535,6 +541,18 @@
       "TaskUpdate": {
         "additionalProperties": false,
         "properties": {
+          "assignee": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
           "created": {
             "anyOf": [
               {
