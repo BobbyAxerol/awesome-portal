@@ -2464,3 +2464,55 @@ static `gate` row beneath them. `input.exec-role-control` now takes the same
 field skin, with a fainter placeholder so a hint cannot read as a typed id.
 
 Both are CSS-only; no contract, mapping or copy changed. Codex owns nothing here.
+
+### 8.63 primus-origin mirror run — everything but `main` (2026-09-18)
+
+Mirrored on Bobby's explicit request, following `AGENTS.md` §Remote policy.
+**88 branches + all 6 tags** went up in a single atomic push, no `--force`, no
+remote ref deleted. The two branches that exist only on the mirror
+(`feat/roadmap-task-board-release`, `feat/vercel-temporary-preview`) were left
+untouched, as the policy requires.
+
+**`main` was not pushed, and must not be forced.** The two histories diverged at
+`da9fa6e0` (2026-08-17):
+
+| ref | tip | relationship |
+|---|---|---|
+| `origin/main` | `e4fd9365` | 1128 commits the mirror lacks |
+| `primus-origin/main` | `3344aa8c` | 1 commit `origin` lacks — *Merge pull request #6 from PrimusSparkQuant/dev* |
+
+So the push is a non-fast-forward in both directions, and the policy's last
+sentence applies verbatim: *stop and report it rather than rewriting history*.
+
+**No source is at risk while it stays that way.** Two facts, both machine-checked:
+
+1. `3344aa8c` is an **empty merge** — its tree is `f9b13321b9ee`, byte-identical
+   to its own parent `da9fa6e0`. The commit the mirror holds and `origin` lacks
+   contains no content at all.
+2. The current production tree is already on the mirror under `dev`.
+   `primus-origin/dev` = `81a0ff97`, tree `ed4014e4240a`; `origin/main` =
+   `e4fd9365`, tree `ed4014e4240a`. `git diff primus-origin/dev origin/main`
+   is empty. Tag `v1.1.0` = `a48dd075` on both sides.
+
+The mirror therefore holds the complete v1.1.0 source. Only the `main` *pointer*
+is stale, aimed at an August commit with no unique content.
+
+**To make `main` mirrorable** someone has to merge `primus-origin/main` into
+`origin/main` — a content-free merge, but it lands on protected `main`, so it
+costs a PR and a full CI cycle. That is Bobby's call, not an agent's; it buys
+tidiness, not safety. Force-pushing would buy the same tidiness by destroying
+`3344aa8c`, and the policy forbids it.
+
+**Bobby's decision, 2026-09-18: leave it.** `primus-origin/main` stays at
+`3344aa8c`. No merge, no force. The mirror is considered complete for v1.1.0 on
+the strength of the two checks above — the source is there under `dev`, and the
+one commit the mirror holds alone is empty. A future agent asked to mirror
+should push every branch *except* `main` and expect the `main` rejection as the
+documented steady state, not as a new problem to solve.
+
+Housekeeping in the same pass: the two scratch branches from the release work,
+`sync/main-to-dev` and `work/release-sync`, were deleted after confirming
+`git rev-list --count work/release-sync --not dev main origin/main` = **0**.
+Local `main` was fast-forwarded from `b5eca9c9` to `e4fd9365` (32 commits
+behind, 0 ahead). `portal-integration` now sits on a detached HEAD at
+`e4fd9365`, because `main` and `dev` are both held by other worktrees.
