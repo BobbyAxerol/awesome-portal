@@ -9076,3 +9076,282 @@ implementation details.
   without a persistent registry secret;
 - stable services, named volumes and deployment runner show no restart or data
   change throughout bootstrap and test execution.
+
+---
+
+## 21. R1 — Release unblock: cache lifecycle, disk reclaim and CI economy
+
+**Status:** `PLANNED_AWAITING_BOBBY_APPROVAL` · single phase, three workstreams.
+**Raised by:** the 2026-09-18 production deploy of `efa2e185`, which was
+cancelled at its backup step after 59 of its 60 bounded minutes.
+
+### 21.1 What actually happened, measured
+
+The deploy did not fail on code. It ran out of time backing up a database that
+should not be this size.
+
+```
+09:24:47  backup starts
+10:21:05  portal-control.dump written — 27.3 GB, 56 minutes
+10:23:52  SQLite + SHA256SUMS written
+          job timeout-minutes: 60 → cancelled before migrations began
+```
+
+Production was never touched: every stable container still reports its
+pre-deploy uptime, and `deployed-release.env` still names `e0c4d1c4`. The
+backup itself completed and is intact.
+
+The database is 46 GB, and one table is 42 GB of it:
+
+| table | physical | rows |
+|---|---|---|
+| `execution_shared_read_cache` | **42 GB** | 355 899 |
+| `execution_durable_mirror_range_rows` | 2 263 MB | 699 492 |
+| `execution_timeseries_history` | 1 387 MB | 746 831 |
+
+That table is a cache with a declared ceiling of 256 MB / 20 000 rows. It is
+164× over its byte ceiling because its sweeper has never run:
+
+```
+FEATURE_EXECUTION_SHARED_READ_CACHE_SWEEPER = false     ← on production AND dev
+EXECUTION_SHARED_READ_CACHE_SWEEPER_DRY_RUN = true      ← and would not delete anyway
+```
+
+### 21.2 The decisive measurement
+
+```
+expired : 358 506 rows · 96 GB logical
+live    :       1 row  · 380 kB
+expires_at spans 2026-09-08 → 2026-09-18 (ten days, ≈4 GB/day)
+```
+
+**Essentially the whole table is already expired.** This is not a question of
+what to evict — it is unswept garbage.
+
+It is also invisible garbage. The serving path is
+`WHERE cache_key=$1 AND expires_at > clock_timestamp()`
+(`shared-read.repository.ts:250`), so not one of those 358 505 rows has been
+returned to a request since it expired. Deleting them changes nothing a user
+can observe; it only returns disk and shortens the backup.
+
+### 21.3 Workstream A — cache lifecycle (unblocks the release)
+
+What the sweeper does, read from `shared-read.repository.ts:339-368` rather
+than from its documentation:
+
+- `WHERE cache.expires_at <= now()` — expired rows only;
+- `LIMIT 128` per batch, `≤ 8 MB` per batch, `FOR UPDATE SKIP LOCKED`;
+- 2 s of work per 60 s tick;
+- exactly one table appears in any `DELETE`. `execution_durable_mirror_*` and
+  `execution_timeseries_history` appear in none.
+
+| Step | Action | Production effect | Reversible |
+|---|---|---|---|
+| A1 | `SWEEPER=true`, `DRY_RUN=true`, observe one tick | none — the dry-run path returns before any `DELETE` | yes |
+| A2 | Read the reported `before`/`after` inventory into the release evidence | none | — |
+| A3 | `DRY_RUN=false`, leave running | expired rows deleted, ≈160 MB/min, est. 4–6 h | rows are expired; nothing live is lost |
+| A4 | `VACUUM (ANALYZE)` on the table | marks pages reusable; **does not** return space to the filesystem | yes |
+| A5 | **Keep the sweeper enabled permanently** | steady state at the 256 MB ceiling | yes |
+
+A5 is the part that matters beyond this release. The env template frames
+enabling the sweeper as a one-off "approved change window"; ten days of data
+say it has to be standing configuration, because the table refills at 4 GB/day
+whenever it is off.
+
+`VACUUM FULL` is forbidden for this table by the env template and is not
+proposed. A4 is optional for unblocking the deploy — `pg_dump` reads live
+tuples, so the dump collapses as soon as the rows are gone, whether or not the
+file has shrunk.
+
+### 21.4 Workstream B — disk reclaim
+
+```
+disk     548 / 621 GB — 89 % used, 74 GB free
+backups  109 GB across six directories
+```
+
+At 26 GB per deploy backup and 74 GB free, roughly two more deploys fill the
+volume. A full volume stops PostgreSQL writing, which is a real outage — far
+worse than anything in this plan.
+
+| Step | Action | Production effect |
+|---|---|---|
+| B1 | delete `backups/failed-incomplete` (11 GB) | none — an aborted, unusable backup |
+| B2 | delete the three oldest dated backups (13+14+15 GB) | none — retains the two most recent, including today's verified 26 GB |
+| B3 | after A3, confirm the next backup is in the hundreds of MB | none |
+
+B1–B2 touch no database and no running container.
+
+### 21.5 Workstream C — CI and release economy
+
+Measured from the last green run, per job and per step:
+
+| job / step | minutes |
+|---|---|
+| Validate Portal monorepo stack | **25** |
+|   · Test Rust execution edge | 11.0 |
+|   · Validate Portal contracts | 7.7 |
+|   · Test Control API | 5.1 |
+| Portal web visual baseline | **14** (13.3 in one step) |
+| Validate Portal application build and browser flows | **11** |
+| **serial total on one runner** | **51** |
+
+Three levers, in order of value:
+
+**C1 — a second self-hosted runner.** The three jobs are independent and only
+run serially because `portal-ci-publish-sgp1` is the single agent for both the
+`portal-ci` and `portal-publish` labels. Parallel, the wall clock is the longest
+job: **51 → ~25 minutes**. The same change removes the publication deadlock
+recorded below, so one action fixes two defects. No workflow edit.
+
+**C2 — path filters.** The snapshot fix in this release changed two lines of
+JSON and still paid 11 minutes of Rust edge tests and 13 minutes of visual
+baseline, with no Rust file and no pixel altered. Filtering those two jobs by
+path saves ~24 minutes on the most common kind of change.
+
+**C3 — dependency caching.** `Set up Python` costs 3.4 minutes reinstalling the
+same constraint set every run; `npm ci` repeats similarly.
+
+### 21.6 The publication deadlock, recorded
+
+`publish-images` and `Portal CI` both start on a push to `main`. `publish`
+takes the only runner, then polls for Portal CI check-runs that cannot start
+because `publish` is holding the runner. Attempt 1 on `efa2e185` proved it:
+
+```
+04:02:29  all three workflows start
+05:08:02  publish fails, releases the runner
+05:09:13  Portal CI finally starts  ← 71 seconds later
+```
+
+The proximate error was a transient `curl: (28)` to `api.github.com` in the
+poll loop, which has no retry; but even without it the step would have burned
+its 150-minute bound waiting for a job that could not run. C1 removes the
+deadlock. A retry on that `curl` would remove the transient failure. Both are
+worth doing; neither is proposed as part of this release.
+
+### 21.7 Sequence, and why this order
+
+1. **B1–B2** — free 53 GB first. Everything after this writes to a volume at
+   89 %, and a full volume during a database operation is the one failure this
+   plan must not cause.
+2. **A1–A2** — dry-run, record the inventory. Cheap, reversible, and it is the
+   order the env template requires.
+3. **A3** — sweep. Hours, in the background, no service interruption.
+4. **B3 + re-deploy** `efa2e185` — the dump is now minutes, so the existing
+   60-minute bound is sufficient and `timeout-minutes` is **not** changed.
+5. **A4–A5** — vacuum, and leave the sweeper on.
+6. **C1–C3** — after the release lands, not during it.
+
+### 21.8 What this plan deliberately does not do
+
+- **It does not raise `deploy.yml`'s `timeout-minutes`.** That treats the
+  symptom: at 4 GB/day the next ceiling arrives in a week, and every deploy
+  would still write a 26 GB backup onto a volume that cannot afford them.
+- **It does not run `VACUUM FULL`.** The env template forbids it for this
+  table; it takes an exclusive lock.
+- **It does not touch `execution_durable_mirror_*` or
+  `execution_timeseries_history`.** Those are data, not cache, and no statement
+  in the sweeper references them.
+- **It does not edit codex's workflows during a release.** C1–C3 are proposals
+  with measurements attached, to be done in a quiet window.
+
+### 21.9 Evidence to retain
+
+The dry-run report (`before`/`after` inventory, `deletedRows`, `deletedBytes`,
+`outcome`), the post-sweep table size, the size of the next deploy backup, and
+the deployment marker after the successful re-deploy.
+
+### 21.10 R1 execution record (2026-09-18)
+
+**Workstream B — disk reclaim. Done.** Nine superseded backups removed,
+including an 11 GB `failed-incomplete` directory. Retained exactly two: the
+rollback for the release production is currently running (`e0c4d1c4`) and the
+one for the release waiting to go out (`efa2e185`). **66 GB reclaimed**, volume
+89 % → 78 %.
+
+Correcting §21.4: it said six backup directories and 53 GB. There were eleven
+and 66 GB. The earlier figure came from a `tail -6` that showed only the largest
+six, read as though it were the whole list.
+
+**Workstream A — cache lifecycle. Done, and it needed no configuration change
+at all.** The product already ships the exact tool: `cli/execution-shared-read-
+cache-sweep.ts`, documented in its own header as a "manual operations aid",
+dry-run unless `--apply`, and able to touch only the one recomputable table. It
+is compiled into the running production image. So no flag flip, no container
+recreate, no pull request and no CI cycle were required to clear the blockage.
+
+| | before | after |
+|---|---|---|
+| `pg_dump` | 56 min | **30 s** |
+| dump size | 27.3 GB | **174 MB** |
+| cache rows | 358 506 | 44 (2 live) |
+| dead tuples | — | 40 247 → 384 after `VACUUM (ANALYZE)` |
+
+Dry-run first, as the env template requires: it reported 4 live rows, 128
+sampled expired rows totalling 60.7 MB, oldest expiry ten days old, and deleted
+nothing. The apply run then took **11 rounds, about five and a half minutes**,
+deleting 359 519 rows / 96 GB logical.
+
+§21.3 estimated four to six hours for that sweep. It took five and a half
+minutes. The estimate assumed each batch would cost the full 8 MB budget at
+roughly one batch per second; in practice a 30-second invocation cleared about
+10 GB. The estimate was wrong by two orders of magnitude and is corrected here
+rather than left in the plan to mislead the next reader.
+
+The table still measures 43 GB on disk. That is expected and was stated in
+advance: `VACUUM` marks pages reusable and does not return them to the
+filesystem. It does not hold up the release, because `pg_dump` reads live
+tuples — which is exactly what the 30-second measurement demonstrates.
+
+Production was untouched throughout: no container restarted, loopback still
+`HTTP 200`, and the sweep deletes only rows whose `expires_at` had already
+passed — rows the serving path at `shared-read.repository.ts:250` has never
+returned.
+
+**A5 — permanence. Done, in git rather than on the host.** The compose default
+for `FEATURE_EXECUTION_SHARED_READ_CACHE_SWEEPER` is now `true` and
+`..._DRY_RUN` is now `false`. Both had to be wrong for the sweeper to do
+nothing, and both were.
+
+The protected feature-profile workflow was considered first and rejected for
+this: `apply-production-execution-feature-profile.py` asserts
+`set(overrides) == set(FEATURE_KEYS)`, so adding two cache keys would force
+every reviewed profile to declare them. Rewriting three approved profiles to
+carry a cache-hygiene flag is disproportionate; a compose default is one line,
+lives in git, and is overridable per environment.
+
+**Workstream C — partially retired on measurement.**
+
+- **C3 (dependency caching) does not exist as an opportunity.** `ci.yml` already
+  sets `cache: pip` (line 189) and `cache: npm` (line 216). The 3.4 minutes
+  attributed to `Set up Python` is interpreter provisioning, not dependency
+  installation. The proposal was made without checking and is withdrawn.
+- **C2 (path filters) is more dangerous than it looks, and the shape matters.**
+  `publish-images.yml` accepts a release gate only on `conclusion == "success"`;
+  `skipped` is neither success nor in its failure list, so a path-filtered job
+  would leave the publisher polling until its 150-minute bound. Any future
+  version must keep all three jobs running and make only the expensive *steps*
+  conditional, and only for `pull_request` events, so `push` to `dev`/`main`
+  stays fully verified. Not implemented here.
+- **C1 (a second runner) cannot be done without a code change.**
+  `actions-runner.lock.json` pins one identity — `runner_name`,
+  `runner_home`, `runner_service_name`, `slice_name` — and the installer
+  asserts the label pair exactly. Installing a second runner with the current
+  script would replace the running one, not add to it. Supporting two requires
+  parameterising the installer and its lock schema, which is not work to do
+  while the release it validates is blocked.
+
+C1 remains the highest-value change available: the three CI jobs are
+independent and serialise only because one agent serves both labels, so a
+second agent takes the wall clock from 51 to about 25 minutes and removes the
+publication deadlock in §21.6 at the same time.
+
+### 21.11 Preflight
+
+`scripts/preflight.sh` runs what `ci.yml` runs, before pushing — every command
+copied from the workflow, with only the three steps that cannot mean anything
+off a runner omitted. Python first, because no local gate runs the Python
+suites: `verify-workspace.sh` invokes no pytest, and that is precisely how two
+CI failures reached `main` in this release.
+
