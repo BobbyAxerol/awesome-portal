@@ -1210,3 +1210,263 @@ select.input,
   text-align: right;
   justify-items: end;
 }
+
+/* ---------------------------------------------------------------- assignee
+ *
+ * The person a task is assigned to.
+ *
+ * Reuses the workstream identity hues rather than introducing a second
+ * palette: the board already teaches those colours, and a fourth colour
+ * system on one screen is how a board stops being readable. Colour is never
+ * alone — the name is always printed beside the dot.
+ */
+.assignee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  padding: 2px 10px 2px 3px;
+  font-size: 11px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+/* Ringed rather than filled.
+ *
+ * The board already uses the identity hues this way — `--task-hue` tints a
+ * card's rail and never carries text on top of it — and following that keeps
+ * the dot legible in both themes without inventing an "ink on hue" token that
+ * would have to be maintained against eight hues. */
+.assignee-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--assignee-hue, var(--ws-other));
+  background: transparent;
+  color: var(--assignee-hue, var(--ws-other));
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+.assignee-name {
+  font-family: var(--font-mono);
+}
+.assignee-chip[data-slot="1"] { --assignee-hue: var(--ws-1); }
+.assignee-chip[data-slot="2"] { --assignee-hue: var(--ws-3); }
+.assignee-chip[data-slot="3"] { --assignee-hue: var(--ws-6); }
+
+/* Nobody has picked it up. Muted and dashed so it reads as an open question
+ * rather than as a person whose name happens to be grey. */
+.assignee-chip[data-unassigned="true"] {
+  border-style: dashed;
+  color: var(--ink-faint);
+  background: transparent;
+}
+.assignee-chip[data-unassigned="true"] .assignee-dot {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--ink-faint);
+}
+.assignee-chip-compact .assignee-name {
+  font-size: 10px;
+}
+
+.assignee-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.assignee-picker .select {
+  flex: 1 1 10rem;
+}
+
+/* ------------------------------------------------------------------ import
+ *
+ * The import dialog. Its job is to make an import a decision: the shape it
+ * accepts, what it would change, and what it refused, all before Apply.
+ */
+.import-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.import-lead {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.import-filename {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.import-spec summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.import-spec-table,
+.import-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+.import-spec-table th,
+.import-preview-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line);
+  padding: 0 8px 4px;
+}
+.import-spec-table td,
+.import-preview-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+.import-required {
+  margin-left: 6px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--bad);
+}
+.import-template {
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: var(--paper-sunken);
+  font-size: 11px;
+  overflow-x: auto;
+}
+.import-paste {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.import-error {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--bad);
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+.import-summary {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+}
+.import-action {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+}
+.import-action-create {
+  color: var(--good);
+  border-color: var(--good);
+}
+.import-action-update {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.import-was {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.import-rejected {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px;
+}
+.import-rejected-head {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.import-rejected ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.import-rejected li {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.import-rejected-label {
+  color: var(--ink);
+}
+.import-rejected-reason {
+  color: var(--bad);
+}
+
+/* Which collision rule the import runs under. A fieldset rather than a
+ * dropdown: both outcomes are consequential, so both are readable at once. */
+.import-mode {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 8px 12px 10px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.import-mode legend {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  padding: 0 4px;
+}
+.import-mode label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.import-mode label > span {
+  display: flex;
+  flex-direction: column;
+}
+.import-mode-note {
+  color: var(--ink-soft);
+}
+.import-prefixes {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.import-prefixes code {
+  margin-right: 4px;
+}

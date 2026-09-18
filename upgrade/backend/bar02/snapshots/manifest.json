@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-26T09:12:52.122047+00:00",
+  "generated_at": "2026-09-17T17:40:27.145392+00:00",
   "producer": "export_compat_snapshots.py",
   "run_request_component": "PortalRunRequest",
   "schema_version": "bar02.snapshots.v1",
   "snapshots": {
     "planning-api.openapi.json": {
-      "bytes": 55963,
-      "digest": "sha256:5c03e4311582f3ae5beb07d5d3f588b78ea9a1689f78712c062a25182bd5a9cf"
+      "bytes": 56399,
+      "digest": "sha256:1566dcdff7c3cc72debdeb392566ad6bd36d029babb23db7ed220c7d5633d605"
     },
     "portal-api.openapi.json": {
       "bytes": 156553,

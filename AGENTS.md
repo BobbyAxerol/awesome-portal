@@ -108,6 +108,20 @@ Rules for these agents:
   scripts/provision-contributor-workspace.sh. Contributors may create a Primus
   pull request to dev but must never merge it.
 
+## Remote policy (required)
+
+- `origin` (`BobbyAxerol/awesome-portal`) is the canonical working remote.
+  Push normal feature branches, reviewed promotions and ongoing development
+  there.
+- `primus-origin` (`PrimusSpark/awesome-primus-portal`) is an intermittent
+  source-preservation mirror, not a development upstream. Do not set local
+  branches to track it and do not mirror every ordinary change there.
+- Mirror only when explicitly requested. First fetch and compare refs; then
+  push all local Portal branches and archive/release tags atomically, without
+  `--force` and without deleting remote refs that are absent locally. If a
+  remote ref is not a fast-forward, stop and report it rather than rewriting
+  history.
+
 ## Commit discipline
 
 - Bobby must validate and commit every completed coherent change immediately.

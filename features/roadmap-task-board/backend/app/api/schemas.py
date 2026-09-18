@@ -6,7 +6,11 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from backend.app.domain.constants import TASK_STATUSES
+from backend.app.domain.constants import (
+    TASK_ASSIGNEE_UNASSIGNED,
+    TASK_ASSIGNEES,
+    TASK_STATUSES,
+)
 
 
 class APIModel(BaseModel):
@@ -21,11 +25,21 @@ class TaskCreate(APIModel):
     weeks: str = Field(default="", max_length=80)
     priority: str = Field(default="P1", max_length=40)
     owner: str = Field(default="Unassigned", max_length=160)
+    assignee: str = Field(default=TASK_ASSIGNEE_UNASSIGNED, max_length=160)
     status: str = Field(default="Backlog")
     notes: Optional[str] = Field(default=None, max_length=8000)
     depends: List[str] = Field(default_factory=list)
     created: Optional[str] = Field(default=None, max_length=80)
     position: Optional[int] = Field(default=None, ge=0)
+
+    @field_validator("assignee")
+    @classmethod
+    def validate_assignee(cls, value: str) -> str:
+        # Closed set, refused rather than coerced: turning an unknown name into
+        # "Unassigned" would lose an import row's intent without saying so.
+        if value not in TASK_ASSIGNEES:
+            raise ValueError("assignee must be one of: " + ", ".join(TASK_ASSIGNEES))
+        return value
 
     @field_validator("status")
     @classmethod
@@ -52,10 +66,18 @@ class TaskUpdate(APIModel):
     weeks: Optional[str] = Field(default=None, max_length=80)
     priority: Optional[str] = Field(default=None, max_length=40)
     owner: Optional[str] = Field(default=None, max_length=160)
+    assignee: Optional[str] = Field(default=None, max_length=160)
     notes: Optional[str] = Field(default=None, max_length=8000)
     depends: Optional[List[str]] = None
     created: Optional[str] = Field(default=None, max_length=80)
     expected_version: Optional[int] = Field(default=None, ge=1)
+
+    @field_validator("assignee")
+    @classmethod
+    def validate_assignee(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and value not in TASK_ASSIGNEES:
+            raise ValueError("assignee must be one of: " + ", ".join(TASK_ASSIGNEES))
+        return value
 
     @field_validator("depends")
     @classmethod

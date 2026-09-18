@@ -1,6 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  /*
+   * The embedded Planning source is scanned too.
+   *
+   * The Portal compiles Planning's components in place and owns the primitives
+   * they use — `.modal-backdrop`, `.modal-panel` and friends live in this
+   * package's `@layer components`. With only `./src` scanned, Tailwind found no
+   * use for them and purged them, so Planning's task editor and every other
+   * dialog rendered as unstyled blocks at the bottom of the page inside the
+   * Portal. Measured, not guessed: `document.styleSheets` contained no rule
+   * matching `.modal-backdrop` at all.
+   */
+  content: [
+    "./index.html",
+    "./src/**/*.{ts,tsx}",
+    "../../../features/roadmap-task-board/frontend/src/**/*.{ts,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
