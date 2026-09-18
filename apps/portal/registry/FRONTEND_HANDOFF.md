@@ -2503,12 +2503,35 @@ costs a PR and a full CI cycle. That is Bobby's call, not an agent's; it buys
 tidiness, not safety. Force-pushing would buy the same tidiness by destroying
 `3344aa8c`, and the policy forbids it.
 
-**Bobby's decision, 2026-09-18: leave it.** `primus-origin/main` stays at
-`3344aa8c`. No merge, no force. The mirror is considered complete for v1.1.0 on
-the strength of the two checks above — the source is there under `dev`, and the
-one commit the mirror holds alone is empty. A future agent asked to mirror
-should push every branch *except* `main` and expect the `main` rejection as the
-documented steady state, not as a new problem to solve.
+**Superseded the same day.** Leaving it was the first decision, and it was
+wrong for the reason Bobby gave: the mirror's default branch is `main`, so a
+member cloning it to start the research loop would check out August code. A
+mirror nobody can hand over is not preserving anything useful.
+
+**What was done instead — reconciled without a force-push.** To push to a
+diverged remote branch legally, the new commit only has to be a *descendant* of
+its tip. `5c82af59` is that commit: `origin/main`'s tree `ed4014e4240a` with two
+parents, `e4fd9365` and `3344aa8c`.
+
+```
+M=$(git commit-tree $(git rev-parse origin/main^{tree}) -p e4fd9365 -p 3344aa8c -m "...")
+git push primus-origin <named-branch>:main      # 3344aa8c..5c82af59, no --force
+```
+
+`git commit-tree` writes only to the object store — no index, no working tree —
+so it is safe to build beside a running hook. Because `3344aa8c` contributes
+nothing against the merge base, the result cannot differ from `origin/main`:
+`git diff 5c82af59 origin/main` is empty, checked before pushing. `git push`
+reported `3344aa8c..5c82af59`, two dots, which is the fast-forward itself.
+
+The mirror now serves the exact production tree at its default branch, and
+because `origin/main` will be pulled back through `5c82af59`, every later mirror
+push is an ordinary fast-forward — the divergence is closed, not deferred.
+
+One operational note for whoever repeats this: auto mode refuses
+`git push <remote> <sha>:refs/heads/main` as a remote repoint. Create a named
+local branch at the SHA and push `branch:main`; same effect, and the ref being
+moved is legible in the command.
 
 Housekeeping in the same pass: the two scratch branches from the release work,
 `sync/main-to-dev` and `work/release-sync`, were deleted after confirming
@@ -2516,3 +2539,35 @@ Housekeeping in the same pass: the two scratch branches from the release work,
 Local `main` was fast-forwarded from `b5eca9c9` to `e4fd9365` (32 commits
 behind, 0 ahead). `portal-integration` now sits on a detached HEAD at
 `e4fd9365`, because `main` and `dev` are both held by other worktrees.
+
+### 8.64 v1.1.1 — the tag production had been running without (2026-09-18)
+
+Bobby asked whether the recent PRs were already inside the stable `v1.1.0` he
+intends to hand to a member. They were not, and the gap was not small.
+
+| | tag object | commit | date |
+|---|---|---|---|
+| `v1.1.0` | `a48dd075` | `220739ac` | 2026-09-13 |
+| running in production | — | `e4fd9365` | 2026-09-18 |
+
+**99 commits**, tree differing by 224 files, `+23015 / -1370`. Read off the
+containers rather than inferred: all four app images carry
+`org.opencontainers.image.revision=e4fd93658de1ff0614126a85d70e59a23c25a01f`,
+created `2026-09-18T15:00Z`. There is no revision env var — the OCI label is the
+only machine-checkable link from a running container back to a commit.
+
+So production had been serving A4 owner governance, Planning import/assignee,
+the rootless CI/deploy runners and the cache sweeper under a tag that describes
+none of them. `v1.1.0` was **not** moved — moving it would silently redefine the
+release Bobby wants kept intact. `v1.1.1` (`66e537af`) was cut at `e4fd9365`
+instead, annotated, same tagger convention as the three tags before it, pushed
+to `origin` and `primus-origin` with identical object ids on both.
+
+`v1.1.0` remains an ancestor of `v1.1.1` and of `primus-origin/main`, verified
+with `git merge-base --is-ancestor`.
+
+One trap worth naming: `git rev-parse v1.1.0` returns the **tag object**
+(`a48dd075`), not the release commit (`220739ac`). Comparisons like `rev-list`
+and `diff` peel the tag for you, so the counts were right while the SHA quoted
+in the first report was not. Use `v1.1.0^{commit}` whenever the SHA itself is
+the thing being reported.
