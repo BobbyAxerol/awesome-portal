@@ -50,8 +50,23 @@ services:
       # BE-R2-1: Portal-owned cleanup of recomputable, already-expired N21
       # cache rows. Disabled and dry-run by default; it has no source,
       # projection, command or browser-facing side effect.
-      FEATURE_EXECUTION_SHARED_READ_CACHE_SWEEPER: ${CONTROL_API_FEATURE_EXECUTION_SHARED_READ_CACHE_SWEEPER:-false}
-      EXECUTION_SHARED_READ_CACHE_SWEEPER_DRY_RUN: ${CONTROL_API_EXECUTION_SHARED_READ_CACHE_SWEEPER_DRY_RUN:-true}
+      # BE-R2-1 cache hygiene, on by default since 2026-09-18.
+      #
+      # It was shipped off, and stayed off, until the table reached 42 GB of
+      # 358 506 expired rows against a declared 256 MB ceiling — 164x over —
+      # and the production release was cancelled because pg_dump of the
+      # resulting 46 GB database took 56 of its 60 bounded minutes.
+      #
+      # This is hygiene, not a feature: the sweeper only deletes rows whose
+      # `expires_at` has already passed, and the serving path has never
+      # returned such a row (`shared-read.repository.ts:250`). Leaving it off
+      # buys nothing and costs ~4 GB a day.
+      FEATURE_EXECUTION_SHARED_READ_CACHE_SWEEPER: ${CONTROL_API_FEATURE_EXECUTION_SHARED_READ_CACHE_SWEEPER:-true}
+      # Dry-run defaulted to true, which meant the feature flag alone still
+      # deleted nothing. Both had to be flipped for the sweeper to do its job,
+      # and neither ever was. An operator can still force a dry run per
+      # environment; the default now matches what the ceiling implies.
+      EXECUTION_SHARED_READ_CACHE_SWEEPER_DRY_RUN: ${CONTROL_API_EXECUTION_SHARED_READ_CACHE_SWEEPER_DRY_RUN:-false}
       EXECUTION_SHARED_READ_CACHE_SWEEPER_INTERVAL_MS: ${CONTROL_API_EXECUTION_SHARED_READ_CACHE_SWEEPER_INTERVAL_MS:-60000}
       EXECUTION_SHARED_READ_CACHE_SWEEPER_STARTUP_JITTER_MS: ${CONTROL_API_EXECUTION_SHARED_READ_CACHE_SWEEPER_STARTUP_JITTER_MS:-5000}
       EXECUTION_SHARED_READ_CACHE_SWEEPER_MAX_RUNTIME_MS: ${CONTROL_API_EXECUTION_SHARED_READ_CACHE_SWEEPER_MAX_RUNTIME_MS:-2000}
