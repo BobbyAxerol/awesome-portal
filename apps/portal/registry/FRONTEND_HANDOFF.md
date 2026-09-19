@@ -2654,3 +2654,40 @@ pre-deploy dumps of the production database, `portal-control.dump` plus
 are the restore path if a migration goes wrong, so they are not unrelated
 clutter and were not touched. No retention policy exists in the repo or in
 `/srv/portal/scripts`; the directory is bounded only by hand.
+
+**Backup F, resolved the same day.** With the nature of those dumps established,
+the owner kept the 2026-09-15 one and released
+`20260918T092447Z-sha-efa2e185` (26 G). It was taken at 09:24 and superseded
+seven hours later by the 16:21 dump of the same database, so the only thing lost
+is a restore point seven hours earlier on a day production stayed healthy. The
+15/09 dump stays as the sole pre-18/09 restore point. Running total returned:
+**133 G** — the box sits at 311 G of 621 G (51%), from 444 G.
+
+**Correction on `primus-historical-market-data`.** Those ten stopped containers
+were reported as pinning "~14 G". That was wrong: it summed nominal image sizes
+that share base layers, so it counted the same bytes repeatedly. The real
+picture, measured:
+
+- Seven images are referenced only by the stopped containers (~890 MB nominal
+  each, heavily shared) — realistically 2–5 G once layer sharing is accounted for.
+- Two, `collector-live-0b15d2d` and `phase-g-7bc78fe53718`, are **also used by
+  running collectors** and cannot be freed at all.
+- Separately, six primus images are referenced by **no container whatsoever**
+  and need no container removed to go.
+
+**Removing them cannot reach the historical data.** Every primus container binds
+the host directly — `/srv/primus/historical-market-data/{storage,state,logs,
+releases}`, 3.6 G of storage — and none owns a Docker volume. That also settles
+a question the volume prune raised in passing: their data was never inside
+Docker, so nothing in this cleanup could have touched it.
+
+What removal does cost is each container's logs and exit code. Eight exited 0.
+The two that did not are recorded here so the evidence outlives them:
+
+- `phase-e-binance-daily-matrix-1`, exit 1 — not infrastructure, a data audit
+  refusing to pass: `Binance daily matrix audit failed: SYRUPUSDT has no
+  complete OHLC history`. The rerun, `...-matrix-2`, exited 0.
+- `binance-orderbook-snapshot-1h-1`, exit 137 with `OOMKilled=false` — the log
+  runs cleanly hourly and simply stops at 2026-08-14T04:23, so it was signalled
+  from outside rather than crashing. A replacement,
+  `binance-orderbook-expanded-1h-1`, has been running since.
