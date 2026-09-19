@@ -3540,8 +3540,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 
 | Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
 |---|---|---|---|---|
-| [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex / [P01 source-only report](./research_loop/evidence/P01/phase-report.md), capture `a402f7b`, no browser/deploy claim |
-| [P02](#rl-p02) | P01 | 02/11 harness | 01 | BACKEND_TECHNICALLY_COMPLETE / Codex; FE review pending Claude / [P02 packet](./research_loop/evidence/P02/phase-report.md) |
+| [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex + Claude source review / [P01 report](./research_loop/evidence/P01/phase-report.md); matrices verified both directions, 0 defect, 0 omission; open `P01-FE-01` spec state coverage → P10/P21 |
+| [P02](#rl-p02) | P01 | 02/11 harness | 01 | BACKEND_TECHNICALLY_COMPLETE / Codex; FE_REVIEW_COMPLETE / Claude / [P02 packet](./research_loop/evidence/P02/phase-report.md); open `P02-FE-01` untyped `requested_spec` awaiting Bobby's scope decision |
 | [P03](#rl-p03) | P02 | nền | 02 | PLANNED / unassigned / — |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | PLANNED / unassigned / — |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | PLANNED / unassigned / — |
@@ -3615,6 +3615,46 @@ màn tương lai. Mỗi phase phải đóng **BE + consumer trong scope** trư�
   accepted UI or backend contract. A real browser/artifact review is a later
   approved gate, not a missing P01 visual pass.
 
+#### P01 Claude review result — 2026-09-19, `SOURCE_REVIEW_PASS_WITH_ONE_FINDING`
+
+Discrepancy-only review of `screen-action-matrix.csv` and `screen-field-matrix.csv`
+against all 15 HTML/spec pairs. No UI, route, token or contract was changed.
+
+- **Matrix → source: 0 defects.** All 267 rows (194 action, 73 field) resolve to
+  a real `file:line`; every non-empty `source_copy` is present in its element,
+  including `<select>` rows whose copy is the space-joined option labels.
+- **Source → matrix: 0 omissions.** Independently extracted every
+  `<button|input|select|textarea>` across the 15 screens — 140 controls — and
+  each one has a matrix or `prototype-controls.json` row within ±1 line. The
+  denominator holds; screens 00 and 09 legitimately carry zero form controls.
+- Three apparent mismatches were **my checker's fault**, not the baseline's:
+  a ±2-line window too narrow for multi-line elements, `&quot;`-escaped JSON in
+  `data-props`, and a token split that broke the joined option labels. Recorded
+  so the next reviewer does not re-raise them.
+
+**Finding P01-FE-01 — state coverage is uneven in the screen specs.** Searching
+each spec for all seven required states, counting Vietnamese and English
+wordings both (`đang tải/loading`, `rỗng/empty`, `một phần/partial`,
+`cũ/stale`, `từ chối|403|không có quyền/denied`, `không khả dụng/unavailable`,
+`lỗi|failed/terminal`):
+
+| state | specs naming it | state | specs naming it |
+|---|---|---|---|
+| terminal | 15/15 | stale | 7/15 |
+| loading | 11/15 | **denied** | **5/15** |
+| empty | 8/15 | **unavailable** | **4/15** |
+| partial | 8/15 | | |
+
+Only `01_run_library.md` names all seven. The two weakest are exactly the pair
+G4 forbids a screen from collapsing into, and RL-L02 names as the Execution
+failure being inherited against. The consequential gap is
+`11_release_candidate.md`, which never names a denied state although publishing
+an RC is the most permission-bound action in the set; `02_new_run.md` has no
+`unavailable`. This is a **specification** gap, not a defect in P01's capture:
+the matrices faithfully record what the source says. It is raised here so the
+owning phases (P10 for S02, P21/P22 for S11) inherit it explicitly rather than
+discovering it at their own G4.
+
 <a id="rl-p02"></a>
 ### P02 — Contract freeze và unchanged-Execution compatibility spike
 
@@ -3658,6 +3698,51 @@ màn tương lai. Mỗi phase phải đóng **BE + consumer trong scope** trư�
   [handoff-claude.md](./research_loop/evidence/P02/handoff-claude.md). Review
   only S02/S11 fixture/error/cursor UX, keep UI changes in a separate commit,
   and do not alter the protected runtime/contract files listed there.
+
+#### P02 Claude frontend review result — 2026-09-19, `FE_REVIEW_COMPLETE_ONE_CONTRACT_GAP`
+
+Review of the frozen contract against what S02 and S11 must render. No file
+under `apps/control-api/src/facade/**`, governance, runtime manifest, deploy
+input or protected QuantBT source was read for modification or changed.
+
+**Finding P02-FE-01 — `research.requested_spec` is the only untyped field, and
+it is where the whole S02 wizard would live.** In
+`scripts/research-loop-v11/p02-contract.mjs` every sibling gets a typed
+validator — `identifier()` for `client_intent_id`/`alpha_version_id`,
+`string(min:16,max:512)` for `preflight_token` — while `requested_spec` is
+validated as a bare `record(...)` with no inner shape. `optimizer-binding.json`
+already reaches inside it for `requested_spec.optimizer.trial_budget`,
+`requested_spec.seeds.strategy_seed` and two more, so structure is assumed but
+not declared.
+
+The frozen envelope names **7 fields** in total (3 legacy compatibility, 4
+research supplemental). P01 records **24 fields and 24 actions** on S02 alone —
+fill model, same-bar resolution, tick, portfolio mode, sizing rule, engine route
+R0…R3B and the rest, every one of them a `<select>` or `<input>` with a fixed
+option set visible in the hi-fi. Those 24 controls have no typed home.
+
+Why this matters before P10 rather than during it: G4 requires a **named DTO per
+panel and action**, and RL-L02 records that the expensive Execution failure was a
+rich screen degrading into an envelope when the response could not carry it. A
+generated client cannot be produced from `record()`, so the wizard would be
+hand-mapped against field names — which is the exact shape of RL-L01
+("backend done, consumer not wired") and RL-L11 (provenance swapped for speed).
+
+This is **not** a request to change the frozen envelope's top level, and not a
+claim that P02's backend spike is wrong: the `202` compatibility path, the four
+distinct digests and the strict-R1 readback are unaffected by it. The decision
+needed is narrow — whether `requested_spec`'s inner shape is declared in P02 as
+a Research-owned schema, or deferred to P10 with S02's field list as the
+acceptance denominator. Recorded for Bobby; not self-resolved.
+
+**S11 note.** The same state audit above applies: `11_release_candidate.md`
+never names a denied state, and S11 is where publish authority is exercised. The
+strict-R1 refusal path P02 proved on the backend therefore has no specified UI
+counterpart yet. Carried to P21/P22 as an explicit entry, not as silent debt.
+
+P02 frontend review is complete. Typed fixture consumption, URL `pick`/`trade`/
+`study` cursor codecs and the visual pass remain **unstarted implementation**,
+correctly owned by P10 and P21/P22 — this review does not claim them.
 
 <a id="rl-p03"></a>
 ### P03 — Research schema, identities và authorization
