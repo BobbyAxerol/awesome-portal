@@ -183,6 +183,12 @@ Rules for these agents:
 
 ## Self-hosted runner and resource hygiene (required for every phase)
 
+- Bring the dev stack up only with `--env-file /home/bobby/secure/portal-dev.env`.
+  Compose defaults an undeclared `FEATURE_EXECUTION_*` flag to `false`, so a
+  stack started without it answers `200` while its projection worker never
+  runs. Close a dev deploy on `max(source_as_of)` advancing per environment,
+  not on a health code. See `docs/production-feature-profile-and-cleanup.md`
+  C1.4-C1.6.
 - Before closing any phase, follow the per-phase cleanup decision in
   `docs/production-feature-profile-and-cleanup.md` C4: execute the phase's
   bounded teardown, take a read-only capacity snapshot, and record either

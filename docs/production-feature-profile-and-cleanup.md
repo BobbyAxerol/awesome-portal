@@ -94,6 +94,19 @@ caption; `_READS` stays false.
    evidence artifact per transaction for 30 days.
 3. Remove the obsolete `MARKET_CONTEXT=true` state now; do not re-enable it
    until Paper has a positive, pinned adapter qualification proof.
+4. Bring the dev stack up only with
+   `--env-file /home/bobby/secure/portal-dev.env`, the 47-variable file that
+   declares every `FEATURE_EXECUTION_*` flag. Compose defaults an undeclared
+   flag to `false`, so a stack started without it keeps answering `200` while
+   the projection worker never starts. On 2026-09-17 that ran unnoticed for
+   **41.7 hours** across all three environments with **zero** `refresh_failed`
+   lines, because nothing had failed -- the worker simply was not enabled.
+5. Health is not freshness. Close a dev deploy on `max(source_as_of)` advancing
+   per environment and on ladder events carrying `items > 0`, never on an HTTP
+   status. A stale stack and a healthy one return the same `200`.
+6. Keep that env file outside every worktree. It lived at `portal-dev/.env`
+   until 2026-09-19, where `git worktree remove` would have deleted it as an
+   ignored file; see C4.4.
 
 ### C2 — Durable mirror recovery, not deletion
 
