@@ -1,0 +1,21 @@
+{
+  "phase": "P02",
+  "runtime_services_added": 0,
+  "database_migrations_added": 0,
+  "containers_started": 0,
+  "transient_test_container": {
+    "kind": "PostgreSQL 16",
+    "storage": "tmpfs only",
+    "network": "loopback-only published ephemeral port",
+    "lifetime": "self-removing at test exit",
+    "production_connection": false
+  },
+  "production_network_calls": 0,
+  "execution_edge_calls": 0,
+  "persistent_test_resource": {
+    "path": "apps/portal/.venv",
+    "tracked": false,
+    "purpose": "constraints-installed isolated Python backend test environment",
+    "cleanup_policy": "retain through Research campaign; remove only when no later phase needs it"
+  }
+}

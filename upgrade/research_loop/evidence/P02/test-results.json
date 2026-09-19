@@ -1,0 +1,47 @@
+{
+  "phase": "P02",
+  "status": "BACKEND_PASS_FRONTEND_REVIEW_PENDING",
+  "command": "scripts/research-loop-v11/test-p02-compatibility.sh",
+  "required": [
+    "P02-T01", "P02-T02", "P02-T03", "P02-T04", "P02-T05", "P02-T06", "P02-T07",
+    "P02-T08", "P02-T09", "P02-T10", "P02-T11", "P02-T12", "P02-T13",
+    "V11-P02-DR", "V11-P02-BR", "V11-P02-GX"
+  ],
+  "receipts": [
+    {
+      "gate": "V11-P02-GX.static_contract_freeze",
+      "command": "node scripts/research-loop-v11/p02-compatibility.mjs",
+      "result": "PASS",
+      "protected_main_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "required_artifacts": 17
+    },
+    {
+      "gate": "P02_current_source_spike_and_regression",
+      "command": "P02_CURRENT_SOURCE_REGRESSION=true scripts/research-loop-v11/test-p02-postgres.sh",
+      "result": "PASS",
+      "test_files": 4,
+      "tests": 61,
+      "database": "self-removing PostgreSQL 16 tmpfs cell",
+      "production_connection": false
+    },
+    {
+      "gate": "P01-GAP-07_exact_runtime_environment_pin",
+      "command": "scripts/research-loop-v11/test-p02-python-pin.sh",
+      "result": "PASS",
+      "python_version": "3.12.14",
+      "execution": "cached read-only Portal API runtime image; network none"
+    },
+    {
+      "gate": "repository_hook_d4_synthetic_cleanup",
+      "command": "scripts/execution-d4-qualification-preflight-test.sh",
+      "result": "PASS",
+      "effect": "No service or network started; privileged synthetic fixtures clean up under their creating authority."
+    }
+  ],
+  "not_inferred": [
+    "real Delta compute or numerical evidence (V11-P02-DR; P04 owner)",
+    "browser/product acceptance (V11-P02-BR; Claude review pending)",
+    "new producer authentication or production write authority (P03/P10 owner)"
+  ],
+  "notes": "The local 3.12.13 environment was not used to rewrite the committed 3.12.14 freeze. The exact pin receipt above is the authoritative environment result."
+}

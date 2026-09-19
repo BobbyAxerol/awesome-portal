@@ -1,0 +1,15 @@
+{
+  "status": "CONTRACT_ONLY_NOT_CURRENT_PRODUCER",
+  "canonical_fields": {
+    "trial_budget": "research.requested_spec.optimizer.trial_budget",
+    "early_stop": "research.requested_spec.optimizer.early_stop",
+    "strategy_seed": "research.requested_spec.seeds.strategy_seed",
+    "sampler_seed": "research.requested_spec.seeds.sampler_seed"
+  },
+  "rejected_alias_pairs": [
+    ["trial_budget", "optuna_trials"],
+    ["early_stop", "optuna_early_stopping"]
+  ],
+  "seed_rule": "strategy_seed and sampler_seed are distinct named scopes and may differ; each is a non-negative signed-32-bit integer.",
+  "no_silent_alias_selection": true
+}

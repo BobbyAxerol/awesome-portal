@@ -1,0 +1,37 @@
+{
+  "phase": "P02",
+  "status": "BACKEND_CONTRACT_FROZEN_AND_SPIKE_PASSED",
+  "research_contract_version": "research.run-request.v1",
+  "execution_runtime_change": false,
+  "execution_contract_change": false,
+  "producer_status": "NOT_WIRED_UNTIL_P10",
+  "legacy_compatibility_fields": [
+    "strategy_id",
+    "dataset_id",
+    "protocol"
+  ],
+  "research_supplemental_fields": [
+    "research.client_intent_id",
+    "research.alpha_version_id",
+    "research.preflight_token",
+    "research.requested_spec"
+  ],
+  "research_envelope_top_level_policy": "exact_research_owned_keys_only; this producer-side harness does not modify the unchanged facade",
+  "r1_request_contract": "governance.approval-create-request.v1",
+  "r1_allowed_fields": [
+    "schema_version",
+    "workspace_id",
+    "request_key",
+    "gate",
+    "alpha_id",
+    "evidence_run_id",
+    "methodology_claim_id",
+    "summary"
+  ],
+  "four_distinct_digest_facts": {
+    "parameter_digest": "Research parameter-level canonical digest; never a substitute for an artifact pin.",
+    "legacy_selected_artifact_sha256": "Current Control API sha256(canonical_json(selected_params)) pin.",
+    "research_rc_manifest_digest": "Future Research release-candidate manifest digest.",
+    "execution_evidence_set_hash": "Governance-owned immutable evidence-set hash."
+  }
+}

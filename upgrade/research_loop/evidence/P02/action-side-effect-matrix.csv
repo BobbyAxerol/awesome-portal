@@ -1,0 +1,10 @@
+action,authority,side_effect,P02_status
+open_run_cursor,Research client URL state,none,CONTRACT_ONLY
+inspect_trial_pick,Research future query reader,none,CONTRACT_ONLY
+post_run,existing Control API facade,existing outbox and one local run_read_model,EXERCISED_ISOLATED
+refresh_run,existing Control API RunSync,existing local run_read_model refresh,EXERCISED_ISOLATED
+create_r1,existing Governance,existing approval/evidence/audit records,EXERCISED_ISOLATED
+read_r1,existing Governance,none,EXERCISED_ISOLATED
+seal_or_unlock_holdout,unidentified current source,not authorized,NOT_IMPLEMENTED_OWNER_GAP
+promotion_pick_or_reset,unidentified current source,not authorized,NOT_IMPLEMENTED_OWNER_GAP
+execution_deploy_or_command,Execution runtime,not allowed in P02,NOT_CALLED

@@ -3541,7 +3541,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
 |---|---|---|---|---|
 | [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex / [P01 source-only report](./research_loop/evidence/P01/phase-report.md), capture `a402f7b`, no browser/deploy claim |
-| [P02](#rl-p02) | P01 | 02/11 harness | 01 | PLANNED / unassigned / — |
+| [P02](#rl-p02) | P01 | 02/11 harness | 01 | BACKEND_TECHNICALLY_COMPLETE / Codex; FE review pending Claude / [P02 packet](./research_loop/evidence/P02/phase-report.md) |
 | [P03](#rl-p03) | P02 | nền | 02 | PLANNED / unassigned / — |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | PLANNED / unassigned / — |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | PLANNED / unassigned / — |
@@ -3629,6 +3629,35 @@ màn tương lai. Mỗi phase phải đóng **BE + consumer trong scope** trư�
 - **Tests FE/browser:** Fixture consumption/runtime validation; raw status vs display copy; cursor ambiguity/deep-link; inspection không write; UI role không vượt server permissions.
 - **Exit gate:** Actual unchanged consumer spike PASS; identity/auth/hash/202 gaps không defer tới P22. Owner decisions chỉ treo feature đúng phạm vi với explicit downstream gate, không tự waive.
 - **Rollback/handoff:** Rollback Research harness/schema mới; retain fixtures/protected hashes. Checkpoint01: packet P01/P02 + endpoint/identity/correction map cho Bobby.
+
+#### P02 backend closeout rule and recorded result — 2026-09-19
+
+- Codex completed only the approved Research-owned compatibility harness and
+  evidence packet. It does not modify any Execution contract/runtime, Portal
+  production runtime, database, protected QuantBT bytes, browser UI/UX or
+  deployment input. `research.run-request.v1` is frozen as a future
+  producer-side envelope while preserving the three legacy top-level fields
+  needed by the unchanged `202` facade path.
+- The exact compatibility receipt is recorded in
+  [evidence/P02](./research_loop/evidence/P02/README.md): static protected
+  boundary pass; 61/61 source/contract tests in a self-removing PostgreSQL
+  16 tmpfs cell; and a read-only/no-network freeze assertion under the exact
+  Python `3.12.14` runtime pin. No real-data/browser result is inferred.
+- A pre-existing D4 synthetic-test cleanup failure found by the mandatory
+  checkpoint hook is repaired in the same checkpoint: only its own
+  root-owned `mktemp` fixture directory is removed with the authority that
+  created it. This is test hygiene only; it changes no D4 runtime, contract,
+  service, deployment or production data.
+- P02 backend status is `BACKEND_TECHNICALLY_COMPLETE`. The only remaining
+  entry gates are explicitly assigned, not deferred: Claude P01/P02 fixture
+  and visual semantics review; P03/P10 producer principal/authentication; and
+  P04 actual Delta/resource evidence. See `evidence/P02/debt-register.json`.
+  Those gates must not be closed by edits to Execution or by calling a mock
+  result a product acceptance.
+- **Claude coordination:** use
+  [handoff-claude.md](./research_loop/evidence/P02/handoff-claude.md). Review
+  only S02/S11 fixture/error/cursor UX, keep UI changes in a separate commit,
+  and do not alter the protected runtime/contract files listed there.
 
 <a id="rl-p03"></a>
 ### P03 — Research schema, identities và authorization

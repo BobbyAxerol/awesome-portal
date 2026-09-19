@@ -12,10 +12,6 @@ elif [[ $# -ne 0 ]]; then
   printf 'Usage: %s [--require-root]\n' "$0" >&2
   exit 2
 fi
-tmp_dir="$(mktemp -d)"
-cleanup() { rm -rf -- "${tmp_dir}"; }
-trap cleanup EXIT
-
 # CI/publication uses a deliberately non-privileged user and must never obtain
 # sudo merely to emulate production file ownership.  A workstation or a
 # deployment-only drill can request the stronger real-ownership branch.
@@ -31,6 +27,17 @@ if [[ "${require_root}" == true && "${root_readiness}" != true ]]; then
   printf 'D4 qualifier privileged readiness was requested but root is unavailable.\n' >&2
   exit 1
 fi
+
+tmp_dir="$(mktemp -d)"
+cleanup() {
+  # This test deliberately creates root-owned synthetic key material when the
+  # privileged readiness branch is available.  Delete only its mktemp-owned
+  # directory with the same authority, so a successful gate neither leaks
+  # fixtures nor turns its EXIT trap into a false failure.
+  [[ -n "${tmp_dir}" && "${tmp_dir}" == /tmp/tmp.* ]] || return 1
+  "${root_command[@]}" rm -rf -- "${tmp_dir}"
+}
+trap cleanup EXIT
 
 runtime_gid="$(id -g)"
 if [[ "${runtime_gid}" == 0 ]]; then

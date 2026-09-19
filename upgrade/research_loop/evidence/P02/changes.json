@@ -1,0 +1,33 @@
+{
+  "phase": "P02",
+  "change_class": "research_owned_compatibility_harness_and_evidence",
+  "execution_contract_change": false,
+  "execution_runtime_change": false,
+  "execution_database_change": false,
+  "production_deploy_change": false,
+  "files": [
+    "scripts/research-loop-v11/p02-contract.mjs",
+    "scripts/research-loop-v11/p02-compatibility.mjs",
+    "scripts/research-loop-v11/p02-compatibility.spec.ts",
+    "scripts/research-loop-v11/test-p02-compatibility.sh",
+    "scripts/research-loop-v11/test-p02-postgres.sh",
+    "scripts/research-loop-v11/test-p02-python-pin.sh",
+    "scripts/research-loop-v11/vitest.p02.config.mts",
+    "upgrade/research_loop/evidence/P02/*",
+    "scripts/execution-d4-qualification-preflight-test.sh (cleanup-only test hygiene repair)"
+  ],
+  "non_changes": [
+    "apps/control-api runtime source",
+    "apps/portal runtime source",
+    "apps/portal/strategy/main.py",
+    "Execution Edge contracts/runtime",
+    "production database",
+    "browser UI/UX"
+  ],
+  "test_hygiene_repair": {
+    "file": "scripts/execution-d4-qualification-preflight-test.sh",
+    "reason": "Its successful privileged synthetic test left root-owned temporary fixtures, causing the repository pre-commit hook to fail at EXIT.",
+    "behavior_change": "Cleanup now uses the same already-selected test authority and deletes only the script's mktemp /tmp/tmp.* directory.",
+    "runtime_effect": "none"
+  }
+}

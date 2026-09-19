@@ -1,0 +1,50 @@
+{
+  "phase": "P02",
+  "decisions": [
+    {
+      "id": "DR01",
+      "topic": "holdout seal/unlock authority",
+      "status": "OWNER_GAP_NOT_IMPLEMENTED",
+      "evidence": "No current authorized Research source/endpoint was found in the P02 protected-surface inventory.",
+      "downstream_gate": "P08/P11"
+    },
+    {
+      "id": "DR02",
+      "topic": "warning formulas and presentation copy",
+      "status": "CONTRACT_FIXTURE_ONLY",
+      "evidence": "No production warning calculator is introduced in P02.",
+      "downstream_gate": "P09/P10"
+    },
+    {
+      "id": "DR03",
+      "topic": "promotion pick/reset/revoke authority",
+      "status": "OWNER_GAP_NOT_IMPLEMENTED",
+      "evidence": "P02 exposes only URL inspection state; it implements no promotion mutation.",
+      "downstream_gate": "P18/P22"
+    },
+    {
+      "id": "DR04",
+      "topic": "202 facade compatibility",
+      "status": "FROZEN_AND_EXERCISED",
+      "evidence": "P02-T01/T02 require exactly 202 plus run_id for a seeded run model."
+    },
+    {
+      "id": "DR05",
+      "topic": "identity mapping",
+      "status": "FROZEN_AND_VALIDATED",
+      "evidence": "strategy_adapter_id equals execution_subject_id; Research alpha remains explicit."
+    },
+    {
+      "id": "DR06",
+      "topic": "digest semantics",
+      "status": "FROZEN_AND_VALIDATED",
+      "evidence": "P02-T03/T04 use current TypeScript canonicalJson over the complete selected_params wrapper."
+    },
+    {
+      "id": "DR07",
+      "topic": "producer authentication",
+      "status": "BLOCKED_BY_P03_P10",
+      "evidence": "Current Python run routes do not verify the Control-API principal headers; P02 does not treat them as a new service-to-service auth channel."
+    }
+  ]
+}
