@@ -2571,3 +2571,47 @@ One trap worth naming: `git rev-parse v1.1.0` returns the **tag object**
 and `diff` peel the tag for you, so the counts were right while the SHA quoted
 in the first report was not. Use `v1.1.0^{commit}` whenever the SHA itself is
 the thing being reported.
+
+### 8.65 Host hygiene audit — what the box is actually holding (2026-09-19)
+
+Asked whether the cleanup had been effective. Measured rather than assumed, and
+the honest answer is **no: the Docker-level cleanup was never run.** The cache
+sweep done on 2026-09-18 fixed a different thing — the shared-read cache inside
+the production database — and that one did work, visibly.
+
+**Disk:** 444 G used of 621 G (72%), 178 G free. `/var/lib/docker` is 206 G of it.
+
+| pool | total | reclaimable | note |
+|---|---|---|---|
+| anonymous volumes | 429 orphans | **88.9 G** | 0 links, none newer than 2026-09-13 |
+| images | 284 / 48.2 G | **29.6 G** | only 32 are referenced by a container |
+| build cache | 48.8 G | **4.5 G** | the rest is live layer cache |
+| stopped containers | 17 | 0.4 M | negligible, but they pin images |
+| named volumes, unused | 12 | 7.9 G | cargo/node_modules/preview caches |
+
+**The orphans are historical, not from recent gates.** Creation dates run
+2026-08-22 to 2026-09-13 and stop there: zero were created on the 18th or 19th,
+across a day of `control-api-test.sh`, the visual gate and three CI cycles. The
+current gates dispose of their own volumes; this is a backlog, not a leak still
+running.
+
+**What must not be pruned blindly.** `docker image prune -a` would delete every
+`ghcr.io/bobbyaxerol/*` image no container currently references — which is the
+rollback path to `v1.1.0`. It would also reach the 16
+`primus-historical-market-data` images, which belong to a system outside this
+repository's scope. Any prune has to be filtered, not blanket.
+
+**Evidence the sweeper worked**, from the production backup directory:
+
+| backup | size |
+|---|---|
+| `20260915T073909Z-sha-e0c4d1c4` | 18 G |
+| `20260918T092447Z-sha-efa2e185` | 26 G |
+| `20260918T162151Z-sha-e4fd9365` (v1.1.1) | **627 M** |
+
+Same database, same bounded `pg_dump`, two hours apart. The 26 G → 627 M drop is
+the unswept shared-read cache no longer being dumped, which is what had been
+pushing the backup past its 60-minute bound.
+
+Retention is now three backups, 44 G, of which the two pre-sweeper ones account
+for all but 627 M. Whether to keep both is the owner's call, not an agent's.
