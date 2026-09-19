@@ -2615,3 +2615,42 @@ pushing the backup past its 60-minute bound.
 
 Retention is now three backups, 44 G, of which the two pre-sweeper ones account
 for all but 627 M. Whether to keep both is the owner's call, not an agent's.
+
+**Executed 2026-09-19, owner approved A–E.** 108 GB returned; the box went from
+72% of 621 G to 55%, and `/var/lib/docker` from 206 G to 114 G.
+
+| pool | before | after |
+|---|---|---|
+| volumes | 457 / 201.6 G / 98.9 G reclaimable | **16 / 102.7 G / 0 B** |
+| images | 271 / 48.2 G | 149 / 35.1 G |
+| build cache | 48.8 G | 43.8 G |
+| containers | 55 | 48 |
+
+Order mattered: stopped containers first, because they pin images, then volumes,
+then images, then build cache — pruning the cache last reclaimed 5.0 G rather
+than the 4.5 G measured before the images went.
+
+**Two rules kept the safe things safe.** Images were removed by ID with plain
+`docker rmi`, no `-f`, so anything still referenced was refused rather than
+forced; eight refusals turned out to be single images carrying two tags each,
+and were only forced after checking that *every* tag on them was `local/portal-*`
+— an image sharing a `ghcr.io` tag would have taken the rollback path with it.
+All 67 `ghcr.io/bobbyaxerol` images survive, including the four digests
+production is running. The 16 `primus-historical-market-data` images and their
+ten stopped containers were left alone as outside this repository's scope.
+
+A filter, not a blanket prune, did the volumes: `--filter
+label=com.docker.volume.anonymous` took the 429 orphans and could not reach a
+named one. `docker system df` now reports **0 B reclaimable** for volumes and
+build cache; the 24.8 G still listed against images is the deliberate rollback
+set.
+
+Verified after, not assumed: all three stacks 8/8 up, `127.0.0.1:18081` and
+`127.0.0.1:8080` both answering `200`.
+
+**F — what the 44 G of backups actually are.** Not sweeper output: they are
+pre-deploy dumps of the production database, `portal-control.dump` plus
+`roadmap-task-board.db`, named by timestamp and the commit being deployed. They
+are the restore path if a migration goes wrong, so they are not unrelated
+clutter and were not touched. No retention policy exists in the repo or in
+`/srv/portal/scripts`; the directory is bounded only by hand.
