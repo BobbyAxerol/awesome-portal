@@ -3544,7 +3544,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 |---|---|---|---|---|
 | [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex + Claude source review / [P01 report](./research_loop/evidence/P01/phase-report.md); matrices verified both directions, 0 defect, 0 omission; systemic `P01-FE-01` state vocabulary + immediate S02/S11 spec gaps closed by P02 amendment; screen implementation remains with owner phase |
 | [P02](#rl-p02) | P01 | 02/11 harness | 01 | CONTRACT_AMENDMENT_COMPLETE / Codex + Claude review / [P02 packet](./research_loop/evidence/P02/phase-report.md); versioned `requested_spec` schema/types map all 24 S02 controls, S02/S11 state semantics specified; no producer/browser/runtime claim |
-| [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; frontend owner-phase remains pending by design |
+| [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; FE_CONSUMER_HARNESS_COMPLETE / Claude — `src/research/` +663 lines, vitest 2430 pass, build exit 0. Generated client and browser acceptance remain P10 by design |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | PLANNED / unassigned / — |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | PLANNED / unassigned / — |
 | [P06](#rl-p06) | P03–P05 | nền/03 | 03 | PLANNED / unassigned / — |
@@ -3850,6 +3850,63 @@ Rollback remains reader/image rollback only; the additive migration is not
 destructively reversed after metadata can exist. Full schema/role/ER detail,
 rollback and zero in-scope debt are in the
 [P03 evidence packet](./research_loop/evidence/P03/README.md).
+
+#### P03 Claude frontend closeout — `FE_CONSUMER_HARNESS_COMPLETE`, 2026-09-19
+
+P03's FE/consumer to-do lists four items. The handoff deferred all of them to
+P10 on the grounds that P03 exposes no browser route. That reason holds for the
+**generated client**, which needs a published route, but not for the other
+three: a common-state harness, actor/workspace/revision query keys and canonical
+foreign-object fixtures are all derivable from the three refusal codes P03 froze
+and need no endpoint. Deferring them wholesale would have closed P03 with known
+in-scope debt, which `RL-C08` and A5 forbid. The route-dependent item remains
+P10's, unchanged.
+
+Delivered under `apps/portal/frontend/src/research/`, four new files, **+663
+lines, no existing file modified**:
+
+| file | lines | contents |
+|---|---|---|
+| `state.ts` | 247 | refusal/transport outcome → `ComponentState`; the 10↔7 bridge to the published envelope |
+| `queryKeys.ts` | 76 | every key rooted at `["research", actor, workspace]`; draft revision inside the key |
+| `fixtures.ts` | 100 | canonical foreign-object, conflict, saturated, transport, stale and partial envelopes |
+| `state.test.ts` | 240 | one block per P03 FE check |
+
+**Reuse, not a second vocabulary.** `lib/portalState.ts` already defines the
+state words and already proves a missing number never becomes zero. Research maps
+onto it; it does not get its own state language. Three mappings were judgement
+calls and are asserted by tests rather than left to a comment:
+
+- `RESEARCH_ADMISSION_SATURATED` → `failed-retryable`, not `unavailable`. The
+  dependency answered correctly; it answered "not now". Treating a full queue
+  as an outage would suppress a legitimate retry.
+- An in-flight request **over content already accepted** → `stale`, not
+  `loading`. Blanking a populated panel on every poll is the flicker the hi-fi
+  composition rule forbids, and it is how a working screen starts looking broken.
+- `RESEARCH_DRAFT_REVISION_CONFLICT` → `terminal` with `retainsContent`. The
+  same revision will fail identically, so it is terminal for that attempt;
+  recovery is a re-read, which is a new operation. The user's edit survives.
+
+**The denied fixture carries no workspace id and no payload**, asserted by test:
+leaking either would confirm both that the object exists and who owns it, which
+is what `denied` exists to prevent. A companion test asserts `denied` and `empty`
+never resolve alike, because "you may not see this" and "there are none here" are
+different and only one of them is true.
+
+**Gates, actually run** — `vitest run src/research` 22/22; full
+`vitest run` 152 files, 2430 passed, 3 skipped, 0 failed; `npm run build`
+(`tsc -b && vite build`) exit 0. The first build attempt reported 12 TypeScript
+errors, all in `features/roadmap-task-board/**` and none in this code: that
+package's dependencies were not installed in this worktree. Installing them and
+rebuilding returned exit 0. Recorded because "the build was red" and "my change
+broke the build" are different claims.
+
+**Not claimed.** No route, no generated client, no Research login, no workspace
+selector, no browser or visual acceptance. Type and fixture availability is not
+a browser acceptance, and `V11-P03-BR` correctly stays `PENDING_OWNER_PHASE`.
+Nothing under `apps/control-api/**`, governance, Execution contracts, runtime
+manifests or deploy inputs was read for modification or changed. Two Codex
+stashes present in the shared stack were left untouched per A13.1.
 
 <a id="rl-p04"></a>
 ### P04 — QuantBT 1.1.1 adapter và resource baseline
