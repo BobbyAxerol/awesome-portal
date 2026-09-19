@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/research-artifact-manifest.v1.schema.json",
+  "title": "Research Loop immutable artifact manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_id",
+    "artifact_revision",
+    "workspace_id",
+    "run_id",
+    "worker_attempt_id",
+    "lease_epoch",
+    "engine",
+    "input",
+    "retention",
+    "completed_at",
+    "tables",
+    "documents",
+    "totals"
+  ],
+  "properties": {
+    "schema_version": { "const": "research.artifact-manifest.v1" },
+    "artifact_id": { "$ref": "#/$defs/opaqueId" },
+    "artifact_revision": { "type": "integer", "minimum": 1 },
+    "workspace_id": { "$ref": "#/$defs/opaqueId" },
+    "run_id": { "$ref": "#/$defs/opaqueId" },
+    "worker_attempt_id": { "$ref": "#/$defs/opaqueId" },
+    "lease_epoch": { "type": "integer", "minimum": 1 },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_id", "build_ref"],
+      "properties": {
+        "release_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "build_ref": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_spec_digest", "effective_spec_digest", "dataset_binding_digest"],
+      "properties": {
+        "request_spec_digest": { "$ref": "#/$defs/sha256" },
+        "effective_spec_digest": { "$ref": "#/$defs/sha256" },
+        "dataset_binding_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class"],
+      "properties": { "class": { "type": "string", "minLength": 1, "maxLength": 128 } }
+    },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "tables": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/table" }
+    },
+    "documents": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/document" }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows", "bytes"],
+      "properties": {
+        "rows": { "type": "integer", "minimum": 0 },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "opaqueId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9_./-]{0,1023}$"
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "arrow_type", "nullable"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "arrow_type": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "nullable": { "type": "boolean" },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["table_kind", "part_ordinal", "relative_path", "sha256", "rows", "bytes", "sequence_min", "sequence_max"],
+      "properties": {
+        "table_kind": { "$ref": "#/$defs/opaqueId" },
+        "part_ordinal": { "type": "integer", "minimum": 1 },
+        "relative_path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "rows": { "type": "integer", "minimum": 0 },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "sequence_min": {
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string" },
+            { "type": "number" }
+          ]
+        },
+        "sequence_max": {
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string" },
+            { "type": "number" }
+          ]
+        }
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["table_kind", "schema_version", "part_schema_version", "schema_fingerprint", "columns", "sequence_column", "id_column", "rows", "bytes", "parts"],
+      "properties": {
+        "table_kind": { "$ref": "#/$defs/opaqueId" },
+        "schema_version": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "part_schema_version": { "const": "research.parquet-part.v1" },
+        "schema_fingerprint": { "$ref": "#/$defs/sha256" },
+        "columns": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/column" } },
+        "sequence_column": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "id_column": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "rows": { "type": "integer", "minimum": 0 },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "parts": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/part" } }
+      }
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "relative_path", "sha256", "bytes"],
+      "properties": {
+        "name": { "$ref": "#/$defs/opaqueId" },
+        "relative_path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

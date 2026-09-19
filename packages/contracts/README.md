@@ -166,6 +166,17 @@ correction or retention claim. The checked-in intake starts fail-closed until
 a digest-pinned Trading System owner return is accepted; the browser never sees
 an Edge path, relation, cursor, mTLS input or delegated credential.
 
+P05 adds `research-artifact-manifest.v1.schema.json`, the immutable
+Research-only storage contract shared by the bounded Python writer, the Rust
+reader foundation and the Control API metadata authority.  It records opaque
+workspace/run/worker identities, lease epoch, exact input/build digests,
+bounded Parquet part statistics, nullable/unit-bearing column descriptors and
+small document checksums.  It is a sealed-byte manifest, not a browser route:
+only the Control API can publish its candidate as a sealed durable artifact
+after fence validation.
+The schema contains no filesystem absolute path, database locator, credential,
+market row or Execution/Trading System authority.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

@@ -1,0 +1,37 @@
+{
+  "phase": "P05",
+  "status": "PASS_TECHNICAL_DELTA_PERSISTENCE",
+  "classification": "DETERMINISTIC_TECHNICAL_FIXTURE_NOT_REAL_ALPHA_OR_EXECUTION_OUTCOME",
+  "engine": {
+    "package": "quantbt-engine",
+    "version": "1.1.1",
+    "route": "signal_notional"
+  },
+  "fixture": {
+    "bars": 500,
+    "market_parquet_sha256": "16131e4d930bc78b8375ad3fb14584b5d5b8191d7f89bec29ce502470e4646ae",
+    "golden_fixture_sha256": "411bc122a26389f5dbc5a894a62aa0ca626df0f7fb337c67f14c84fc84f3c505",
+    "initial_capital": "20000",
+    "leverage": "3",
+    "alloc_per_trade": "2000",
+    "fee_rate": "0.0005"
+  },
+  "result": {
+    "final_equity": "20589.74597203475",
+    "num_trades": 8,
+    "persisted_table": "delta_equity_curve",
+    "persisted_rows": 500,
+    "utc_ms_first": 1704067200000,
+    "read_page_limit": 200
+  },
+  "process_boundary_proof": [
+    "The compute object, market frame, endpoint and Arrow batch are deleted before readback.",
+    "A fresh Python process discovers only sealed disk bytes through the bounded reader.",
+    "The fresh process reads 500 rows over opaque pages and verifies the final equity."
+  ],
+  "never_claims": [
+    "This is not a 5GB workload certification.",
+    "This is not a P06 isolated-child/scheduler/retry certification.",
+    "This is not an HMD publication, alpha approval, Paper/Sandbox/Live result or Trading System evidence."
+  ]
+}

@@ -218,6 +218,26 @@ decision in the phase evidence or tracking entry:
    `live_data_executor`, Portal projection workers and the runner.  Restarting
    a healthy production service solely to free memory is not cleanup.
 
+#### C4.6 — Research Loop P05 closeout record (2026-09-19)
+
+1. P05 recorded a read-only root snapshot of `341,091,954,688` bytes free
+   (`49%` used). This is above the 30% free-space observation threshold; the
+   closeout decision is `NO_ACTION_NEEDED`.
+2. The only phase-created Rust targets were exact
+   `/tmp/portal-research-p05-rust-target.*` directories; each was removed by
+   the gate's exact-path trap. P05's `research-p05-postgres-*` PostgreSQL
+   proof used tmpfs and its exact self-removing container; post-gate inspection
+   found no retained P05 test container.
+3. No image, container, volume, BuildKit cache, worktree, HMD data,
+   Execution/Trading System service or database row was removed. The Rust
+   1.85.1 toolchain is retained as a declared Research development dependency,
+   not a runtime cache.
+4. The observed Docker reclaimable image total belongs to a separate C4.3
+   protected quiet-window inventory. It is not a reason to run a broad prune
+   during a Research phase, and it is not hidden P05 technical debt. See
+   `upgrade/research_loop/evidence/P05/resource-cleanup.json` for the compact
+   measured record.
+
 ### C5 — Capacity follow-up
 
 1. Add host swap or increase capacity only through a separate owner-approved

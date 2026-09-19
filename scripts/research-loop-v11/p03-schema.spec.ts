@@ -107,7 +107,11 @@ describe("Research Loop P03 · schema, identity and authorization", () => {
     let upgradePool: Pool | undefined;
     try {
       for (const filename of await readdir(migrationSource)) {
-        if (filename.endsWith(".sql") && filename !== "1723680000037_research-schema-foundation.sql") {
+        // P03's historical-upgrade proof must remain a genuinely pre-P03
+        // database as later additive Research migrations land.  Comparing the
+        // sortable migration prefix avoids accidentally treating P05+ tables
+        // as part of P03's baseline.
+        if (filename.endsWith(".sql") && filename < "1723680000037_research-schema-foundation.sql") {
           await cp(join(migrationSource, filename), join(preP03Migrations, filename));
         }
       }

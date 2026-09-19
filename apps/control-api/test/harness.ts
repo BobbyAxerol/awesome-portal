@@ -15,6 +15,12 @@ export const TEST_TABLES = [
   "research.release_candidates",
   "research.inspection_states",
   "research.exposure_facts",
+  // P05 references point at the immutable artifact metadata, so cleanup must
+  // name dependants first.  This remains an explicit bounded test list rather
+  // than a schema-wide truncate that could hide a new relation from review.
+  "research.artifact_references",
+  "research.artifact_ingest_batches",
+  "research.artifact_parts",
   "research.artifacts",
   "research.evaluations",
   "research.selection_records",
@@ -108,6 +114,10 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_attempts: boolean;
       has_research_runs_cursor_index: boolean;
       has_research_runtime_role: boolean;
+      has_research_artifact_parts: boolean;
+      has_research_artifact_references: boolean;
+      has_research_artifact_ingest_batches: boolean;
+      has_research_artifact_transition_guard: boolean;
       research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
@@ -161,6 +171,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
               AND indexname = 'research_runs_library_cursor_idx'
          ) AS has_research_runs_cursor_index,
          EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'portal_research_runtime') AS has_research_runtime_role,
+         to_regclass('research.artifact_parts') IS NOT NULL AS has_research_artifact_parts,
+         to_regclass('research.artifact_references') IS NOT NULL AS has_research_artifact_references,
+         to_regclass('research.artifact_ingest_batches') IS NOT NULL AS has_research_artifact_ingest_batches,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_artifacts_p05_transition_guard'
+              AND NOT tgisinternal
+         ) AS has_research_artifact_transition_guard,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
@@ -209,6 +227,10 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_attempts ||
       !row.has_research_runs_cursor_index ||
       !row.has_research_runtime_role ||
+      !row.has_research_artifact_parts ||
+      !row.has_research_artifact_references ||
+      !row.has_research_artifact_ingest_batches ||
+      !row.has_research_artifact_transition_guard ||
       row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
@@ -250,6 +272,10 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_attempts=${row.has_research_attempts}, ` +
         `research_runs_cursor_index=${row.has_research_runs_cursor_index}, ` +
         `research_runtime_role=${row.has_research_runtime_role}, ` +
+        `research_artifact_parts=${row.has_research_artifact_parts}, ` +
+        `research_artifact_references=${row.has_research_artifact_references}, ` +
+        `research_artifact_ingest_batches=${row.has_research_artifact_ingest_batches}, ` +
+        `research_artifact_transition_guard=${row.has_research_artifact_transition_guard}, ` +
         `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,

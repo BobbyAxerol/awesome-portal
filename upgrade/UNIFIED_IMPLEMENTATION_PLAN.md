@@ -9,7 +9,8 @@
 > **Cập nhật:** 2026-08-15<br>
 > **Nguồn kiến trúc:** [QuantBT Portal Architecture & UI/UX Final v0.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md)<br>
 > **Phạm vi:** mother Portal, QuantBT Research, Planning, identity, control plane, quant compute, data/artifact, Alpha Platform, Paper/Sandbox/Live và operations<br>
-> **Engine baseline:** `quantbt-engine[optimization]==1.0.8` từ PyPI<br>
+> **Engine baseline:** `quantbt-engine[optimization]==1.1.1` từ PyPI; 1.0.8
+> chỉ còn là historical-reader identity khi đọc evidence cũ<br>
 > **Data reader baseline:** approved code-only wheel `primus-historical-market-data==0.1.0rc3`, loader contract `hmd-loader-v1`
 
 Tài liệu này là **execution index**, không phải bản viết lại của guide v0.4.
@@ -102,7 +103,9 @@ không suy diễn layout chỉ từ tên task.
 ### 3.3 Quant compute
 
 - Python 3.12 baseline.
-- `quantbt-engine[optimization]==1.0.8` exact pin từ PyPI.
+- `quantbt-engine[optimization]==1.1.1` exact pin từ PyPI cho Research hiện
+  hành; 1.0.8 chỉ là historical-reader identity khi đọc evidence cũ, không
+  được dùng làm runtime/test interpreter của P04+.
 - Pydantic v2, PyArrow/Parquet, NATS Python client, pytest/Hypothesis.
 - Một heavy run trên một process/container hoặc concurrency được kiểm soát rõ.
 - Python worker không sở hữu user session/RBAC, broker secret hoặc business
@@ -3546,8 +3549,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P02](#rl-p02) | P01 | 02/11 harness | 01 | CONTRACT_AMENDMENT_COMPLETE / Codex + Claude review / [P02 packet](./research_loop/evidence/P02/phase-report.md); versioned `requested_spec` schema/types map all 24 S02 controls, S02/S11 state semantics specified; no producer/browser/runtime claim |
 | [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; FE_CONSUMER_HARNESS_COMPLETE / Claude — `src/research/` +663 lines, vitest 2430 pass, build exit 0. Generated client and browser acceptance remain P10 by design |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; Claude UI/browser handoff pending by owner phase |
-| [P05](#rl-p05) | P03,P04 | nền | 03 | PLANNED / unassigned / — |
-| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | PLANNED / unassigned / — |
+| [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); Claude consumer handoff ready, no P05 UI mutation |
+| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | PLANNED / Codex backend next / P05 is closed; scheduler/worker runtime mutation must begin only under P06 authority |
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | PLANNED / unassigned / — |
 | [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | PLANNED / unassigned / — |
 | [P09](#rl-p09) | P02,P04 | 00/12 | 05 | PLANNED / unassigned / — |
@@ -3982,6 +3985,34 @@ work scheduling and named run submission; they are not P04 technical debt.
 - **Tests FE/browser:** Artifact readiness/no-store/security; partial vs complete, denied downloads and slow/abort client; numerical formatting roundtrip fixtures.
 - **Exit gate:** Worker off vẫn đọc đúng revision/IDs/nulls/precision; bounded peak measured; no orphan publication, no shared-storage destructive cleanup.
 - **Rollback/handoff:** Rollback reader version, giữ sealed bytes/refs. Handoff schema/index/retention/recovery evidence cho scheduler và screen queries.
+
+#### P05 implementation closeout — `TECHNICALLY_COMPLETE`, 2026-09-19
+
+Codex owns the backend foundation only. The implementation created one
+Research-only artifact authority: bounded PyArrow batch writers and readers,
+opaque immutable manifests, a narrow Control-API metadata authority, and a
+standalone Rust reader foundation. It does **not** change an existing browser
+route, the approved HIFI, Execution Loop, Trading System, broker, CLI, runtime
+container, or deployment input.
+
+The older FastAPI run/export paths remain an explicit compatibility surface
+until P10 moves named producer/read operations to the new authority. They are
+not used to publish P05 artifacts, and P05 must prove that the new storage
+path does not retain a full result in API memory. This avoids an unsafe
+mid-foundation cutover while preserving the P05 invariant for all new
+Research-owned artifact writes. Claude owns the later visual/consumer harness;
+P05 will provide a precise sealed/partial/missing/corrupt/download handoff
+rather than alter UI composition.
+
+P05 exit evidence is retained at
+[`research_loop/evidence/P05`](./research_loop/evidence/P05/README.md): current
+QuantBT 1.1.1 post-compute Delta readback, crash/fence/corruption/retention
+tests, fresh/upgrade/repeat PostgreSQL authority proof, Rust full-manifest and
+multi-batch cursor regressions, and C4 resource closeout. P05 uses the exact
+durable state `SEALED`, not an invented `READY` alias. The actual durable child, outbox/NATS dispatch,
+retry/cancel and whole-workload certification remain P06-owned downstream
+gates—not P05 defects. The P09/P11 rich consumer remains Claude-owned and
+`UI_NOT_YET_IN_SCOPE` for P05.
 
 <a id="rl-p06"></a>
 ### P06 — Durable scheduler, isolated workers và retry

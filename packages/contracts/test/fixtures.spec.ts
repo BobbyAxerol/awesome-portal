@@ -64,6 +64,8 @@ const analyticsFixtureSchemas: Record<string, string> = {
 };
 
 const schemaIds: Record<string, string> = {
+  "research-artifact-manifest.valid.json":
+    "https://schemas.primusspark.com/portal/research-artifact-manifest.v1.schema.json",
   "execution-governance.review-capture.r2.valid.json": "https://portal.primusspark.com/contracts/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse",
   "execution-governance.review-capture.paper-exit.valid.json": "https://portal.primusspark.com/contracts/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse",
   "execution-governance.review-capture.sandbox-note.valid.json": "https://portal.primusspark.com/contracts/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse",

@@ -1,0 +1,54 @@
+{
+  "phase": "P05",
+  "open_implementation_debt": [],
+  "resolved_closeouts": [
+    {
+      "id": "P05-BE-01",
+      "status": "RESOLVED",
+      "subject": "Bounded disk-first Parquet writer/reader, exact bytes, decimal/null/unit preservation and post-compute readback",
+      "evidence": "P05-T01/T02/T07/T08, V11-P05-DR and contract-results.json"
+    },
+    {
+      "id": "P05-BE-02",
+      "status": "RESOLVED",
+      "subject": "Random staging, fsync/rename crash boundaries, candidate-vs-SEALED authority and stale-fence rejection",
+      "evidence": "P05-T03/T04/T06 and PostgreSQL authority proof"
+    },
+    {
+      "id": "P05-BE-03",
+      "status": "RESOLVED",
+      "subject": "Immutable part/revision/ref ledger, idempotent retention reservation and valid active-lease pin validation",
+      "evidence": "P05-T09/T10/T13 and p05-artifact.spec.ts"
+    },
+    {
+      "id": "P05-BE-04",
+      "status": "RESOLVED",
+      "subject": "Rust reader enforces the full cross-language manifest invariants and advances correctly across multiple Parquet batches",
+      "evidence": "multi-batch and invariant-drift Rust regressions plus clippy -D warnings"
+    }
+  ],
+  "explicit_downstream_gates": [
+    {
+      "id": "P05-DG-01",
+      "owner": "P06",
+      "state": "NOT_STARTED_BY_DESIGN",
+      "subject": "Actual isolated child, durable scheduler/outbox, retry/cancel and whole-workload resource certification",
+      "reason": "P05 deliberately has no worker dispatch authority."
+    },
+    {
+      "id": "P05-DG-02",
+      "owner": "P09/P11 (Claude consumer phase)",
+      "state": "HANDOFF_READY",
+      "subject": "Artifact screen composition and browser acceptance",
+      "reason": "P05 deliberately changes no browser route or approved HIFI."
+    },
+    {
+      "id": "P05-DG-03",
+      "owner": "P10",
+      "state": "NOT_STARTED_BY_DESIGN",
+      "subject": "Named producer/read-operation cutover from legacy compatibility paths",
+      "reason": "Replacing legacy FastAPI paths mid-foundation would violate P05 compatibility scope."
+    }
+  ],
+  "interpretation": "The downstream gates are explicit phase ownership boundaries, not defects, waivers or hidden P05 technical debt."
+}

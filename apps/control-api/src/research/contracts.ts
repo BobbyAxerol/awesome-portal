@@ -32,6 +32,9 @@ export const RESEARCH_DB_BUDGET = Object.freeze({
   idleTransactionTimeoutMs: 2_000,
   maxConfigJsonBytes: 65_536,
   maxSmallMetadataJsonBytes: 16_384,
+  maxArtifactManifestMetadataBytes: 262_144,
+  maxArtifactParts: 512,
+  maxTrialRowsPerArtifactBatch: 256,
 });
 
 export type ResearchIntentKind =
@@ -65,6 +68,21 @@ export type ResearchTrialExecutionStatus =
   | "RUNNING"
   | "WAITING";
 
+export type ResearchArtifactReferenceKind =
+  | "ACTIVE_LEASE"
+  | "CHILD_RUN"
+  | "EXPOSURE"
+  | "RELEASE_CANDIDATE"
+  | "SELECTION"
+  | "VERIFICATION";
+
+export type ResearchArtifactState =
+  | "WRITING"
+  | "SEALED"
+  | "ABORTED"
+  | "CORRUPT"
+  | "MISSING";
+
 export class ResearchMetadataError extends Error {
   constructor(
     readonly code:
@@ -82,6 +100,11 @@ export class ResearchMetadataError extends Error {
       | "RESEARCH_EVALUATION_SCOPE_INVALID"
       | "RESEARCH_INSPECTION_SCOPE_INVALID"
       | "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT"
+      | "RESEARCH_ARTIFACT_NOT_FOUND"
+      | "RESEARCH_ARTIFACT_FENCE_REJECTED"
+      | "RESEARCH_ARTIFACT_LIFECYCLE_CONFLICT"
+      | "RESEARCH_ARTIFACT_INGEST_CONFLICT"
+      | "RESEARCH_ARTIFACT_REFERENCE_INVALID"
       | "RESEARCH_INVALID_INPUT"
       | "RESEARCH_CONCURRENT_TRANSACTION",
     message: string,
@@ -141,4 +164,72 @@ export interface ResearchTrialInput {
   objectiveDefined: boolean;
   objectiveValue?: number | null;
   objectiveDefinitionId?: string | null;
+}
+
+/**
+ * P05 internal storage boundary.  The browser never receives this input;
+ * Python receives a reservation/fence from the durable Control API service.
+ */
+export interface ResearchArtifactReservationInput {
+  artifactId: string;
+  runId: string;
+  workerAttemptId: string;
+  leaseEpoch: number;
+  storageLocator: string;
+  retentionClass: "RESEARCH_EVIDENCE" | "EPHEMERAL_DIAGNOSTIC";
+  notBeforeGcAt?: Date | null;
+}
+
+export interface ResearchArtifactReservation {
+  artifactId: string;
+  artifactRevision: number;
+  storageLocator: string;
+  state: "WRITING" | "SEALED";
+  replayed: boolean;
+}
+
+export interface ResearchArtifactPartInput {
+  tableKind: string;
+  schemaVersion: string;
+  partOrdinal: number;
+  relativePath: string;
+  partDigest: string;
+  rowCount: number;
+  byteCount: number;
+  sequenceMin?: string | null;
+  sequenceMax?: string | null;
+}
+
+export interface ResearchArtifactSealInput {
+  artifactId: string;
+  workerAttemptId: string;
+  leaseEpoch: number;
+  manifestDigest: string;
+  manifestSchemaVersion: "research.artifact-manifest.v1";
+  totalRows: number;
+  totalBytes: number;
+  parts: readonly ResearchArtifactPartInput[];
+}
+
+export interface ResearchArtifactReferenceInput {
+  artifactId: string;
+  referenceKind: ResearchArtifactReferenceKind;
+  referenceId: string;
+  pinnedUntil?: Date | null;
+}
+
+export interface ResearchArtifactTrialBatchInput {
+  artifactId: string;
+  studyId: string;
+  runId: string;
+  workerAttemptId: string;
+  leaseEpoch: number;
+  sourceRevision: number;
+  batchDigest: string;
+  rows: readonly ResearchTrialInput[];
+}
+
+export interface ResearchArtifactIntegrityInput {
+  artifactId: string;
+  state: "CORRUPT" | "MISSING";
 }

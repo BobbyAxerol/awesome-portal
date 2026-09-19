@@ -1,6 +1,6 @@
 {
   "file_digests": {
-    "README.md": "sha256:1f8f2ab6e6609fa5babce4eac5f0ef056967c547556e2410041493c9fc8f0ed9",
+    "README.md": "sha256:3af8d8cdbfe86092bda9cb17feaea8964d0cff210ee56d6969408cb0528c0842",
     "fixtures/command.valid.json": "sha256:9792bac391b74bfd6a2581768d6ea60ae0e880f9504063d82a52c4f8893f39ce",
     "fixtures/event.valid.json": "sha256:c245b69c773d205d6edec800db8cee5410769b0d8e256905ea8827fcf08ae11e",
     "fixtures/execution-account-broker-360.ready.valid.json": "sha256:7b8afa95f7f294ca4f2c3c54a72ace6f8d2fb0a6b7d492a37896d9a84456d856",
@@ -85,6 +85,7 @@
     "fixtures/governance-live-review.valid.json": "sha256:9fc9fddd082533e02d1b856492d0f80513e19726598bcb7a3978ab6ad68ae15e",
     "fixtures/keyset-page.valid.json": "sha256:2b78c3322f9b8b69045540cb9eb25346816ca814a6bd1b1530606615c7435c32",
     "fixtures/problem.valid.json": "sha256:3986ee8577ed6867e5abcf7619576869f80847944bc11d8cbae7056750c552a1",
+    "fixtures/research-artifact-manifest.valid.json": "sha256:945ac8598222af4f771e995f6c96e4935f395dbcd7da8d9fded56c592570dc94",
     "generated/execution-analytics-series.d.ts": "sha256:c0f407caebf5e4591771b3819e2a4843b2bfd96fcdac65a3467735e0e8c0ad75",
     "generated/execution-analytics.d.ts": "sha256:1845b35265ded763173e17322ba8cc4ef675c6e14806f39f7de6184cd26676ae",
     "generated/execution-canary.d.ts": "sha256:69b3a834e73c3d412cf5161afd048fe8bdc1d134a87f9d57e4f054f5c076c7f6",
@@ -103,7 +104,7 @@
     "generated/execution-query-analytics.d.ts": "sha256:41d046d4f65e97e2ebbac298ae8f52365bc7d9d6188cbc22e456e7ea6f6a805d",
     "generated/execution-realtime.d.ts": "sha256:37567de26b9c8f4824a9eb7c9aa45c3e677ff888ef615c2cb7a80cd05435c204",
     "generated/execution-staged-activation.d.ts": "sha256:0c1dca37692c56aa495510afa05202d41d9ec9d7fb77b8b6ab7d4943da2220ce",
-    "generated/portal-api.d.ts": "sha256:dcad2bc7eb4174cd08e80efeffa95244804fa450519dfd56375c0dcbf74d6919",
+    "generated/portal-api.d.ts": "sha256:11d0c428ec9166274ba86328713b7638839f61cfd0414efb032ee0b788f6bd44",
     "openapi/execution-analytics-series.openapi.json": "sha256:d1cb7c1c900060853f104ae716f34c7503bfaeaf060357eb6268095d4e95364c",
     "openapi/execution-analytics.openapi.json": "sha256:e4c3c321989c187b40e9a2caec0f63ee40b2df63fa844d566afe2a33aec7ab65",
     "openapi/execution-canary.openapi.json": "sha256:9a6a31cd42f2c92b35baab5afaf3ec2c60cf5fdc4dd9e429f50c568193a9d006",
@@ -156,7 +157,8 @@
     "schemas/execution-staged-activation.v1.schema.json": "sha256:2650ef1f73c93d2a9fb919a403eeed04518698922eb6518b67e72fb92fe66555",
     "schemas/governance-live-review.v1.schema.json": "sha256:a80d6a61f083a8a8598e7ccadf855145241aec0be3629d739d8ee43eedcec3fe",
     "schemas/keyset-page.v1.schema.json": "sha256:304c6bb02e5abed72ad23e30cff40f6a35cd5f343b401bf9df697d8460110ca5",
-    "schemas/problem.v1.schema.json": "sha256:dea537e39acbf3c4b42865fb089a1fa606907a4c2a21ec095f50703affaafbee"
+    "schemas/problem.v1.schema.json": "sha256:dea537e39acbf3c4b42865fb089a1fa606907a4c2a21ec095f50703affaafbee",
+    "schemas/research-artifact-manifest.v1.schema.json": "sha256:1665bdf426568d580d22c332798b2795d55d462db720db5ccef23b6fb35e9c16"
   },
   "schema_version": "contracts.snapshot.v1"
 }

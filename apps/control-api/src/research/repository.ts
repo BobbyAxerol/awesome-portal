@@ -6,6 +6,12 @@ import { CONTROL_API_POOL } from "../tokens";
 import {
   RESEARCH_DB_BUDGET,
   RESEARCH_DB_RUNTIME_ROLE,
+  type ResearchArtifactIntegrityInput,
+  type ResearchArtifactReferenceInput,
+  type ResearchArtifactReservation,
+  type ResearchArtifactReservationInput,
+  type ResearchArtifactSealInput,
+  type ResearchArtifactTrialBatchInput,
   type ResearchAlphaVersionInput,
   type ResearchAttemptInput,
   type ResearchAttemptRecord,
@@ -56,6 +62,10 @@ function isDigest(value: string): boolean {
   return /^[0-9a-f]{64}$/.test(value);
 }
 
+function isOpaqueId(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/.test(value);
+}
+
 function requireText(value: string, label: string, max = 512): void {
   if (value.trim().length === 0 || value.length > max) {
     throw new ResearchMetadataError(
@@ -63,6 +73,61 @@ function requireText(value: string, label: string, max = 512): void {
       `${label} must be a non-empty bounded string.`,
       400,
     );
+  }
+}
+
+function requireOpaqueId(value: string, label: string): void {
+  if (!isOpaqueId(value)) {
+    throw new ResearchMetadataError(
+      "RESEARCH_INVALID_INPUT",
+      `${label} must be an opaque bounded identifier.`,
+      400,
+    );
+  }
+}
+
+function requirePositiveSafeInteger(value: number, label: string, maximum = Number.MAX_SAFE_INTEGER): void {
+  if (!Number.isSafeInteger(value) || value < 1 || value > maximum) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", `${label} must be a positive safe integer.`, 400);
+  }
+}
+
+function requireNonNegativeSafeInteger(value: number, label: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", `${label} must be a non-negative safe integer.`, 400);
+  }
+}
+
+function requireArtifactRelativePath(value: string, label: string): void {
+  if (
+    value.length === 0 || value.length > 1_024 || value.startsWith("/") ||
+    value.split("/").some((part) => part.length === 0 || part === "." || part === "..")
+  ) {
+    throw new ResearchMetadataError(
+      "RESEARCH_INVALID_INPUT",
+      `${label} must be a safe artifact-relative path.`,
+      400,
+    );
+  }
+}
+
+function requireFiniteDate(value: Date, label: string): void {
+  if (!Number.isFinite(value.getTime())) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", `${label} must be a valid UTC timestamp.`, 400);
+  }
+}
+
+function requireArtifactRetentionClass(value: string): asserts value is "RESEARCH_EVIDENCE" | "EPHEMERAL_DIAGNOSTIC" {
+  if (value !== "RESEARCH_EVIDENCE" && value !== "EPHEMERAL_DIAGNOSTIC") {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact retention class is unsupported.", 400);
+  }
+}
+
+function requireArtifactReferenceKind(value: string): asserts value is ResearchArtifactReferenceInput["referenceKind"] {
+  if (![
+    "ACTIVE_LEASE", "CHILD_RUN", "EXPOSURE", "RELEASE_CANDIDATE", "SELECTION", "VERIFICATION",
+  ].includes(value)) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact reference kind is unsupported.", 400);
   }
 }
 
@@ -465,6 +530,543 @@ export class ResearchMetadataRepository {
     });
   }
 
+  /**
+   * P05 reservation is the only way a new durable artifact revision starts.
+   * The Python writer receives this opaque identity/fence but has no database
+   * credential; a stale or duplicate worker cannot manufacture a `SEALED` row.
+   */
+  async reserveArtifact(
+    scope: ResearchScope,
+    input: ResearchArtifactReservationInput,
+  ): Promise<ResearchArtifactReservation> {
+    this.assertScope(scope);
+    requireOpaqueId(input.artifactId, "artifactId");
+    requireOpaqueId(input.runId, "runId");
+    requireOpaqueId(input.workerAttemptId, "workerAttemptId");
+    requirePositiveSafeInteger(input.leaseEpoch, "leaseEpoch");
+    requireArtifactRetentionClass(input.retentionClass);
+    if (input.storageLocator !== `artifacts/${input.artifactId}`) {
+      throw new ResearchMetadataError(
+        "RESEARCH_INVALID_INPUT",
+        "Artifact storage locator must be the opaque reserved artifact location.",
+        400,
+      );
+    }
+    if (input.retentionClass === "RESEARCH_EVIDENCE" && input.notBeforeGcAt != null) {
+      throw new ResearchMetadataError(
+        "RESEARCH_INVALID_INPUT",
+        "Research evidence cannot carry a garbage-collection deadline.",
+        400,
+      );
+    }
+    if (input.retentionClass === "EPHEMERAL_DIAGNOSTIC" && !(input.notBeforeGcAt instanceof Date)) {
+      throw new ResearchMetadataError(
+        "RESEARCH_INVALID_INPUT",
+        "Ephemeral diagnostic artifacts require an explicit GC deadline.",
+        400,
+      );
+    }
+    if (input.notBeforeGcAt instanceof Date) requireFiniteDate(input.notBeforeGcAt, "notBeforeGcAt");
+    return this.withScopedWrite(scope, async (client) => {
+      // The stable pair lock makes a redelivered reservation idempotent
+      // without incrementing the run revision a second time.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))", [
+        scope.workspaceId,
+        input.artifactId,
+      ]);
+      const prior = await client.query<{
+        run_id: string;
+        worker_attempt_id: string | null;
+        lease_epoch: string | number | null;
+        artifact_revision: string | number;
+        storage_locator: string;
+        retention_class: string;
+        not_before_gc_at: Date | null;
+        state: string;
+      }>(
+        `SELECT run_id, worker_attempt_id, lease_epoch, artifact_revision,
+                storage_locator, retention_class, not_before_gc_at, state
+           FROM research.artifacts
+          WHERE workspace_id = $1 AND artifact_id = $2`,
+        [scope.workspaceId, input.artifactId],
+      );
+      if (prior.rows[0]) {
+        const row = prior.rows[0];
+        if (
+          row.run_id !== input.runId ||
+          row.worker_attempt_id !== input.workerAttemptId ||
+          asNumber(row.lease_epoch ?? 0) !== input.leaseEpoch ||
+          row.storage_locator !== input.storageLocator ||
+          row.retention_class !== input.retentionClass ||
+          (row.not_before_gc_at?.toISOString() ?? null) !== (input.notBeforeGcAt?.toISOString() ?? null) ||
+          (row.state !== "WRITING" && row.state !== "SEALED")
+        ) {
+          throw new ResearchMetadataError(
+            "RESEARCH_IDEMPOTENCY_PAYLOAD_CONFLICT",
+            "That artifact reservation is already bound to different durable work.",
+            409,
+          );
+        }
+        return {
+          artifactId: input.artifactId,
+          artifactRevision: asNumber(row.artifact_revision),
+          storageLocator: row.storage_locator,
+          state: row.state as "WRITING" | "SEALED",
+          replayed: true,
+        };
+      }
+      const incremented = await client.query<{ artifact_revision: string | number }>(
+        `UPDATE research.runs r
+            SET artifact_revision = r.artifact_revision + 1,
+                updated_at = now()
+           FROM research.worker_attempts wa
+           JOIN research.jobs j
+             ON j.workspace_id = wa.workspace_id AND j.job_id = wa.job_id
+          WHERE r.workspace_id = $1
+            AND r.run_id = $2
+            AND wa.workspace_id = r.workspace_id
+            AND wa.worker_attempt_id = $3
+            AND wa.lease_epoch = $4
+            AND wa.state IN ('CLAIMED', 'RUNNING')
+            AND wa.expires_at > now()
+            AND j.run_id = r.run_id
+          RETURNING r.artifact_revision`,
+        [scope.workspaceId, input.runId, input.workerAttemptId, input.leaseEpoch],
+      );
+      const revision = incremented.rows[0]?.artifact_revision;
+      if (revision === undefined) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ARTIFACT_FENCE_REJECTED",
+          "The worker lease is no longer authorized to reserve an artifact revision.",
+          409,
+        );
+      }
+      await client.query(
+        `INSERT INTO research.artifacts
+           (workspace_id, artifact_id, run_id, table_kind, schema_version,
+            manifest_digest, state, retention_class, storage_locator,
+            artifact_revision, worker_attempt_id, lease_epoch, not_before_gc_at)
+         VALUES ($1, $2, $3, 'research_bundle', 'research.artifact-manifest.v1',
+                 NULL, 'WRITING', $4, $5, $6, $7, $8, $9)`,
+        [
+          scope.workspaceId,
+          input.artifactId,
+          input.runId,
+          input.retentionClass,
+          input.storageLocator,
+          revision,
+          input.workerAttemptId,
+          input.leaseEpoch,
+          input.notBeforeGcAt ?? null,
+        ],
+      );
+      await this.audit(client, scope, "RESEARCH_ARTIFACT_RESERVED", "artifact", input.artifactId, {
+        run_id: input.runId,
+        artifact_revision: asNumber(revision),
+        worker_attempt_id: input.workerAttemptId,
+        lease_epoch: input.leaseEpoch,
+      });
+      return {
+        artifactId: input.artifactId,
+        artifactRevision: asNumber(revision),
+        storageLocator: input.storageLocator,
+        state: "WRITING",
+        replayed: false,
+      };
+    });
+  }
+
+  /** Seal a candidate only when its exact lease still owns the reservation. */
+  async sealArtifact(scope: ResearchScope, input: ResearchArtifactSealInput): Promise<{ replayed: boolean }> {
+    this.assertScope(scope);
+    requireOpaqueId(input.artifactId, "artifactId");
+    requireOpaqueId(input.workerAttemptId, "workerAttemptId");
+    requirePositiveSafeInteger(input.leaseEpoch, "leaseEpoch");
+    requireDigest(input.manifestDigest, "manifestDigest");
+    requireNonNegativeSafeInteger(input.totalRows, "totalRows");
+    requireNonNegativeSafeInteger(input.totalBytes, "totalBytes");
+    if (input.manifestSchemaVersion !== "research.artifact-manifest.v1") {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact manifest schema version is unsupported.", 400);
+    }
+    this.assertArtifactParts(input.parts);
+    const expectedRows = input.parts.reduce((total, part) => total + part.rowCount, 0);
+    const expectedBytes = input.parts.reduce((total, part) => total + part.byteCount, 0);
+    if (expectedRows !== input.totalRows || expectedBytes !== input.totalBytes) {
+      throw new ResearchMetadataError(
+        "RESEARCH_INVALID_INPUT",
+        "Artifact totals must equal the immutable part statistics.",
+        400,
+      );
+    }
+    return this.withScopedWrite(scope, async (client) => {
+      const prior = await client.query<{
+        state: string;
+        worker_attempt_id: string | null;
+        lease_epoch: string | number | null;
+        manifest_digest: string | null;
+        manifest_schema_version: string | null;
+        total_rows: string | number;
+        total_bytes: string | number;
+      }>(
+        `SELECT state, worker_attempt_id, lease_epoch, manifest_digest,
+                manifest_schema_version, total_rows, total_bytes
+           FROM research.artifacts
+          WHERE workspace_id = $1 AND artifact_id = $2
+          FOR UPDATE`,
+        [scope.workspaceId, input.artifactId],
+      );
+      const existing = prior.rows[0];
+      if (!existing) {
+        throw new ResearchMetadataError("RESEARCH_ARTIFACT_NOT_FOUND", "Artifact reservation was not found.", 404);
+      }
+      if (
+        existing.worker_attempt_id !== input.workerAttemptId ||
+        asNumber(existing.lease_epoch ?? 0) !== input.leaseEpoch
+      ) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ARTIFACT_FENCE_REJECTED",
+          "The sealing worker does not own this artifact reservation.",
+          409,
+        );
+      }
+      if (existing.state === "SEALED") {
+        if (
+          existing.manifest_digest === input.manifestDigest &&
+          existing.manifest_schema_version === input.manifestSchemaVersion &&
+          asNumber(existing.total_rows) === input.totalRows &&
+          asNumber(existing.total_bytes) === input.totalBytes
+        ) return { replayed: true };
+        throw new ResearchMetadataError(
+          "RESEARCH_ARTIFACT_LIFECYCLE_CONFLICT",
+          "A sealed artifact cannot be replaced by different bytes.",
+          409,
+        );
+      }
+      if (existing.state !== "WRITING") {
+        throw new ResearchMetadataError(
+          "RESEARCH_ARTIFACT_LIFECYCLE_CONFLICT",
+          "Only a writing artifact may be sealed.",
+          409,
+        );
+      }
+      const sealed = await client.query(
+        `UPDATE research.artifacts a
+            SET state = 'SEALED',
+                manifest_digest = $5,
+                manifest_schema_version = $6,
+                total_rows = $7,
+                total_bytes = $8,
+                sealed_at = now(),
+                updated_at = now()
+           FROM research.worker_attempts wa
+           JOIN research.jobs j
+             ON j.workspace_id = wa.workspace_id AND j.job_id = wa.job_id
+          WHERE a.workspace_id = $1
+            AND a.artifact_id = $2
+            AND a.worker_attempt_id = $3
+            AND a.lease_epoch = $4
+            AND a.state = 'WRITING'
+            AND wa.workspace_id = a.workspace_id
+            AND wa.worker_attempt_id = a.worker_attempt_id
+            AND wa.lease_epoch = a.lease_epoch
+            AND wa.state IN ('CLAIMED', 'RUNNING')
+            AND wa.expires_at > now()
+            AND j.run_id = a.run_id
+          RETURNING a.artifact_id`,
+        [
+          scope.workspaceId,
+          input.artifactId,
+          input.workerAttemptId,
+          input.leaseEpoch,
+          input.manifestDigest,
+          input.manifestSchemaVersion,
+          input.totalRows,
+          input.totalBytes,
+        ],
+      );
+      if (sealed.rowCount !== 1) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ARTIFACT_FENCE_REJECTED",
+          "The worker lease expired before the artifact could be sealed.",
+          409,
+        );
+      }
+      await client.query(
+        `INSERT INTO research.artifact_parts
+           (workspace_id, artifact_id, table_kind, part_ordinal, schema_version,
+            relative_path, part_digest, row_count, byte_count, sequence_min, sequence_max)
+         SELECT $1, $2, value->>'tableKind', (value->>'partOrdinal')::integer,
+                value->>'schemaVersion', value->>'relativePath', value->>'partDigest',
+                (value->>'rowCount')::bigint, (value->>'byteCount')::bigint,
+                value->>'sequenceMin', value->>'sequenceMax'
+           FROM jsonb_array_elements($3::jsonb) AS value`,
+        [scope.workspaceId, input.artifactId, JSON.stringify(input.parts)],
+      );
+      await this.audit(client, scope, "RESEARCH_ARTIFACT_SEALED", "artifact", input.artifactId, {
+        manifest_digest: input.manifestDigest,
+        total_rows: input.totalRows,
+        total_bytes: input.totalBytes,
+        part_count: input.parts.length,
+      });
+      return { replayed: false };
+    });
+  }
+
+  /**
+   * Bounded idempotent trial ingestion.  The ledger insert and all trial rows
+   * share one transaction, so a failed duplicate cannot leave a partial total.
+   */
+  async recordArtifactTrialBatch(
+    scope: ResearchScope,
+    input: ResearchArtifactTrialBatchInput,
+  ): Promise<{ replayed: boolean }> {
+    this.assertScope(scope);
+    for (const [label, value] of Object.entries({
+      artifactId: input.artifactId,
+      studyId: input.studyId,
+      runId: input.runId,
+      workerAttemptId: input.workerAttemptId,
+    })) requireOpaqueId(value, label);
+    requirePositiveSafeInteger(input.leaseEpoch, "leaseEpoch");
+    requirePositiveSafeInteger(input.sourceRevision, "sourceRevision");
+    requireDigest(input.batchDigest, "batchDigest");
+    if (input.rows.length === 0 || input.rows.length > RESEARCH_DB_BUDGET.maxTrialRowsPerArtifactBatch) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Trial batch size is outside the bounded contract.", 400);
+    }
+    for (const row of input.rows) this.assertTrialInput(row);
+    return this.withScopedWrite(scope, async (client) => {
+      const artifact = await client.query<{
+        run_id: string;
+        artifact_revision: string | number;
+        state: string;
+        worker_attempt_id: string | null;
+        lease_epoch: string | number | null;
+      }>(
+        `SELECT run_id, artifact_revision, state, worker_attempt_id, lease_epoch
+           FROM research.artifacts
+          WHERE workspace_id = $1 AND artifact_id = $2
+          FOR UPDATE`,
+        [scope.workspaceId, input.artifactId],
+      );
+      const row = artifact.rows[0];
+      if (!row) throw new ResearchMetadataError("RESEARCH_ARTIFACT_NOT_FOUND", "Artifact reservation was not found.", 404);
+      if (
+        row.run_id !== input.runId || row.state !== "WRITING" ||
+        row.worker_attempt_id !== input.workerAttemptId ||
+        asNumber(row.lease_epoch ?? 0) !== input.leaseEpoch ||
+        asNumber(row.artifact_revision) !== input.sourceRevision
+      ) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ARTIFACT_FENCE_REJECTED",
+          "The trial batch is not owned by the current writing artifact lease.",
+          409,
+        );
+      }
+      const lease = await client.query(
+        `SELECT 1
+           FROM research.worker_attempts wa
+           JOIN research.jobs j ON j.workspace_id = wa.workspace_id AND j.job_id = wa.job_id
+          WHERE wa.workspace_id = $1
+            AND wa.worker_attempt_id = $2
+            AND wa.lease_epoch = $3
+            AND wa.state IN ('CLAIMED', 'RUNNING')
+            AND wa.expires_at > now()
+            AND j.run_id = $4`,
+        [scope.workspaceId, input.workerAttemptId, input.leaseEpoch, input.runId],
+      );
+      if (lease.rowCount !== 1) {
+        throw new ResearchMetadataError("RESEARCH_ARTIFACT_FENCE_REJECTED", "The trial-ingest worker lease expired.", 409);
+      }
+      const ledger = await client.query(
+        `INSERT INTO research.artifact_ingest_batches
+           (workspace_id, artifact_id, study_id, run_id, table_kind,
+            source_revision, batch_digest, row_count)
+         VALUES ($1, $2, $3, $4, 'trial_index', $5, $6, $7)
+         ON CONFLICT (workspace_id, artifact_id, table_kind, batch_digest) DO NOTHING
+         RETURNING artifact_id`,
+        [scope.workspaceId, input.artifactId, input.studyId, input.runId, input.sourceRevision, input.batchDigest, input.rows.length],
+      );
+      if (ledger.rowCount === 0) {
+        const previous = await client.query<{
+          study_id: string; run_id: string; source_revision: string | number; row_count: number;
+        }>(
+          `SELECT study_id, run_id, source_revision, row_count
+             FROM research.artifact_ingest_batches
+            WHERE workspace_id = $1 AND artifact_id = $2
+              AND table_kind = 'trial_index' AND batch_digest = $3`,
+          [scope.workspaceId, input.artifactId, input.batchDigest],
+        );
+        const prior = previous.rows[0];
+        if (!prior || prior.study_id !== input.studyId || prior.run_id !== input.runId ||
+            asNumber(prior.source_revision) !== input.sourceRevision || prior.row_count !== input.rows.length) {
+          throw new ResearchMetadataError(
+            "RESEARCH_ARTIFACT_INGEST_CONFLICT",
+            "A trial batch digest is already bound to different Research rows.",
+            409,
+          );
+        }
+        return { replayed: true };
+      }
+      try {
+        for (const trial of input.rows) {
+          await client.query(
+            `INSERT INTO research.trial_index
+               (workspace_id, study_id, run_id, trial_id, trial_ordinal,
+                execution_status, feasibility_state, params, objective_defined,
+                objective_value, objective_definition_id, source_artifact_ref,
+                source_revision)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13)`,
+            [
+              scope.workspaceId, input.studyId, input.runId, trial.trialId, trial.trialOrdinal,
+              trial.executionStatus, trial.feasibilityState ?? "UNKNOWN", JSON.stringify(trial.params),
+              trial.objectiveDefined, trial.objectiveValue ?? null, trial.objectiveDefinitionId ?? null,
+              `artifact:${input.artifactId}`, input.sourceRevision,
+            ],
+          );
+        }
+      } catch (error) {
+        if (typeof error === "object" && error !== null && "code" in error &&
+            String((error as { code?: unknown }).code) === "23505") {
+          throw new ResearchMetadataError(
+            "RESEARCH_ARTIFACT_INGEST_CONFLICT",
+            "Trial identity or ordinal is already owned by another immutable batch.",
+            409,
+          );
+        }
+        throw error;
+      }
+      await this.audit(client, scope, "RESEARCH_TRIAL_BATCH_INGESTED", "artifact", input.artifactId, {
+        study_id: input.studyId,
+        batch_digest: input.batchDigest,
+        row_count: input.rows.length,
+        source_revision: input.sourceRevision,
+      });
+      return { replayed: false };
+    });
+  }
+
+  async recordArtifactReference(
+    scope: ResearchScope,
+    input: ResearchArtifactReferenceInput,
+  ): Promise<{ replayed: boolean }> {
+    this.assertScope(scope);
+    requireOpaqueId(input.artifactId, "artifactId");
+    requireOpaqueId(input.referenceId, "referenceId");
+    requireArtifactReferenceKind(input.referenceKind);
+    if (input.referenceKind === "ACTIVE_LEASE" && !(input.pinnedUntil instanceof Date)) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "An active lease reference requires a pin expiry.", 400);
+    }
+    if (input.pinnedUntil instanceof Date) requireFiniteDate(input.pinnedUntil, "pinnedUntil");
+    return this.withScopedWrite(scope, async (client) => {
+      const artifact = await client.query<{
+        run_id: string; state: string; worker_attempt_id: string | null;
+      }>(
+        `SELECT run_id, state, worker_attempt_id
+           FROM research.artifacts
+          WHERE workspace_id = $1 AND artifact_id = $2
+          FOR UPDATE`,
+        [scope.workspaceId, input.artifactId],
+      );
+      const row = artifact.rows[0];
+      if (!row) throw new ResearchMetadataError("RESEARCH_ARTIFACT_NOT_FOUND", "Artifact was not found.", 404);
+      if (input.referenceKind !== "ACTIVE_LEASE" && row.state !== "SEALED") {
+        throw new ResearchMetadataError(
+          "RESEARCH_ARTIFACT_LIFECYCLE_CONFLICT",
+          "Durable evidence references require a sealed artifact.",
+          409,
+        );
+      }
+      await this.assertArtifactReferenceTarget(client, scope, row.run_id, row.worker_attempt_id, input);
+      const inserted = await client.query(
+        `INSERT INTO research.artifact_references
+           (workspace_id, artifact_id, reference_kind, reference_id, pinned_until)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (workspace_id, artifact_id, reference_kind, reference_id) DO NOTHING
+         RETURNING artifact_id`,
+        [scope.workspaceId, input.artifactId, input.referenceKind, input.referenceId, input.pinnedUntil ?? null],
+      );
+      if (inserted.rowCount === 0) {
+        const prior = await client.query<{ pinned_until: Date | null }>(
+          `SELECT pinned_until FROM research.artifact_references
+            WHERE workspace_id = $1 AND artifact_id = $2 AND reference_kind = $3 AND reference_id = $4`,
+          [scope.workspaceId, input.artifactId, input.referenceKind, input.referenceId],
+        );
+        const priorPin = prior.rows[0]?.pinned_until?.toISOString() ?? null;
+        const requestedPin = input.pinnedUntil?.toISOString() ?? null;
+        if (priorPin !== requestedPin) {
+          throw new ResearchMetadataError(
+            "RESEARCH_ARTIFACT_REFERENCE_INVALID",
+            "An immutable artifact reference cannot be changed after creation.",
+            409,
+          );
+        }
+        return { replayed: true };
+      }
+      await this.audit(client, scope, "RESEARCH_ARTIFACT_REFERENCE_RECORDED", "artifact", input.artifactId, {
+        reference_kind: input.referenceKind,
+        reference_id: input.referenceId,
+      });
+      return { replayed: false };
+    });
+  }
+
+  async listGcEligibleArtifacts(scope: ResearchScope, now: Date, limit = 100): Promise<string[]> {
+    this.assertScope(scope);
+    if (!(now instanceof Date) || !Number.isFinite(now.getTime()) || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "GC query inputs are invalid.", 400);
+    }
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<{ artifact_id: string }>(
+        `SELECT a.artifact_id
+           FROM research.artifacts a
+          WHERE a.workspace_id = $1
+            AND a.state = 'SEALED'
+            AND a.retention_class = 'EPHEMERAL_DIAGNOSTIC'
+            AND a.not_before_gc_at <= $2
+            AND NOT EXISTS (
+              SELECT 1 FROM research.artifact_references r
+               WHERE r.workspace_id = a.workspace_id
+                 AND r.artifact_id = a.artifact_id
+                 AND (r.reference_kind <> 'ACTIVE_LEASE' OR r.pinned_until > $2)
+            )
+          ORDER BY a.not_before_gc_at ASC, a.artifact_id ASC
+          LIMIT $3`,
+        [scope.workspaceId, now, limit],
+      );
+      return result.rows.map((row) => row.artifact_id);
+    });
+  }
+
+  async markArtifactIntegrity(
+    scope: ResearchScope,
+    input: ResearchArtifactIntegrityInput,
+  ): Promise<void> {
+    this.assertScope(scope);
+    requireOpaqueId(input.artifactId, "artifactId");
+    if (input.state !== "CORRUPT" && input.state !== "MISSING") {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact integrity state is unsupported.", 400);
+    }
+    await this.withScopedWrite(scope, async (client) => {
+      const updated = await client.query(
+        `UPDATE research.artifacts
+            SET state = $3, updated_at = now()
+          WHERE workspace_id = $1 AND artifact_id = $2 AND state = 'SEALED'
+          RETURNING artifact_id`,
+        [scope.workspaceId, input.artifactId, input.state],
+      );
+      if (updated.rowCount !== 1) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ARTIFACT_LIFECYCLE_CONFLICT",
+          "Only a sealed artifact may be marked missing or corrupt.",
+          409,
+        );
+      }
+      await this.audit(client, scope, "RESEARCH_ARTIFACT_INTEGRITY_CHANGED", "artifact", input.artifactId, {
+        state: input.state,
+      });
+    });
+  }
+
   async createStudy(scope: ResearchScope, input: {
     studyId: string;
     runId: string;
@@ -491,15 +1093,7 @@ export class ResearchMetadataRepository {
 
   async createTrial(scope: ResearchScope, input: ResearchTrialInput): Promise<void> {
     this.assertScope(scope);
-    for (const [label, value] of Object.entries({ studyId: input.studyId, runId: input.runId, trialId: input.trialId })) {
-      requireText(value, label, 256);
-    }
-    if (!Number.isSafeInteger(input.trialOrdinal) || input.trialOrdinal < 0 ||
-        (input.objectiveDefined && (!Number.isFinite(input.objectiveValue ?? NaN))) ||
-        (!input.objectiveDefined && input.objectiveValue !== undefined && input.objectiveValue !== null)) {
-      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Trial objective shape is invalid.", 400);
-    }
-    requireBoundedObject(input.params, "trial params", RESEARCH_DB_BUDGET.maxConfigJsonBytes);
+    this.assertTrialInput(input);
     await this.withScopedWrite(scope, async (client) => {
       await client.query(
         `INSERT INTO research.trial_index
@@ -958,6 +1552,150 @@ export class ResearchMetadataRepository {
       datasetBindingDigest: input.datasetBindingDigest,
     })) requireDigest(value, label);
     if (input.spaceSignature) requireDigest(input.spaceSignature, "spaceSignature");
+  }
+
+  private assertTrialInput(input: ResearchTrialInput): void {
+    for (const [label, value] of Object.entries({
+      studyId: input.studyId,
+      runId: input.runId,
+      trialId: input.trialId,
+    })) requireText(value, label, 256);
+    if (
+      !Number.isSafeInteger(input.trialOrdinal) || input.trialOrdinal < 0 ||
+      (input.objectiveDefined && (!Number.isFinite(input.objectiveValue ?? NaN))) ||
+      (!input.objectiveDefined && input.objectiveValue !== undefined && input.objectiveValue !== null)
+    ) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Trial objective shape is invalid.", 400);
+    }
+    requireBoundedObject(input.params, "trial params", RESEARCH_DB_BUDGET.maxConfigJsonBytes);
+  }
+
+  private assertArtifactParts(parts: ResearchArtifactSealInput["parts"]): void {
+    if (parts.length === 0 || parts.length > RESEARCH_DB_BUDGET.maxArtifactParts) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact part count is outside the bounded contract.", 400);
+    }
+    if (Buffer.byteLength(JSON.stringify(parts), "utf8") > RESEARCH_DB_BUDGET.maxArtifactManifestMetadataBytes) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact part metadata exceeds its bounded contract.", 400);
+    }
+    const paths = new Set<string>();
+    const ordinals = new Set<string>();
+    for (const part of parts) {
+      requireText(part.tableKind, "part.tableKind", 128);
+      if (!isOpaqueId(part.tableKind)) {
+        throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "part.tableKind must be an opaque table identifier.", 400);
+      }
+      requireText(part.schemaVersion, "part.schemaVersion", 128);
+      requirePositiveSafeInteger(part.partOrdinal, "part.partOrdinal", 1_000_000);
+      requireArtifactRelativePath(part.relativePath, "part.relativePath");
+      if (!part.relativePath.endsWith(".parquet")) {
+        throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact part path must name a Parquet file.", 400);
+      }
+      if (!part.relativePath.startsWith(`tables/${part.tableKind}/`)) {
+        throw new ResearchMetadataError(
+          "RESEARCH_INVALID_INPUT",
+          "Artifact part path must remain under its declared table directory.",
+          400,
+        );
+      }
+      requireDigest(part.partDigest, "part.partDigest");
+      requireNonNegativeSafeInteger(part.rowCount, "part.rowCount");
+      requireNonNegativeSafeInteger(part.byteCount, "part.byteCount");
+      if (part.sequenceMin != null) requireText(part.sequenceMin, "part.sequenceMin", 1_024);
+      if (part.sequenceMax != null) requireText(part.sequenceMax, "part.sequenceMax", 1_024);
+      const ordinalKey = `${part.tableKind}\u0000${part.partOrdinal}`;
+      if (paths.has(part.relativePath) || ordinals.has(ordinalKey)) {
+        throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact parts must have unique paths and ordinals.", 400);
+      }
+      paths.add(part.relativePath);
+      ordinals.add(ordinalKey);
+    }
+    for (const tableKind of new Set(parts.map((part) => part.tableKind))) {
+      const ordinalsForTable = parts
+        .filter((part) => part.tableKind === tableKind)
+        .map((part) => part.partOrdinal)
+        .sort((left, right) => left - right);
+      if (!ordinalsForTable.every((ordinal, index) => ordinal === index + 1)) {
+        throw new ResearchMetadataError(
+          "RESEARCH_INVALID_INPUT",
+          "Artifact part ordinals must be contiguous within each declared table.",
+          400,
+        );
+      }
+    }
+  }
+
+  private async assertArtifactReferenceTarget(
+    client: ScopedClient,
+    scope: ResearchScope,
+    artifactRunId: string,
+    workerAttemptId: string | null,
+    input: ResearchArtifactReferenceInput,
+  ): Promise<void> {
+    let targetExists = false;
+    switch (input.referenceKind) {
+      case "ACTIVE_LEASE":
+        targetExists = workerAttemptId === input.referenceId && input.pinnedUntil != null &&
+          (await client.query(
+            `SELECT 1
+               FROM research.worker_attempts wa
+               JOIN research.jobs j
+                 ON j.workspace_id = wa.workspace_id AND j.job_id = wa.job_id
+              WHERE wa.workspace_id = $1
+                AND wa.worker_attempt_id = $2
+                AND wa.state IN ('CLAIMED', 'RUNNING')
+                AND wa.expires_at > now()
+                AND j.run_id = $3
+                AND $4::timestamptz > now()`,
+            [scope.workspaceId, input.referenceId, artifactRunId, input.pinnedUntil],
+          )).rowCount === 1;
+        break;
+      case "CHILD_RUN":
+        targetExists = (await client.query(
+          `SELECT 1 FROM research.runs
+            WHERE workspace_id = $1 AND run_id = $2 AND parent_run_id = $3`,
+          [scope.workspaceId, input.referenceId, artifactRunId],
+        )).rowCount === 1;
+        break;
+      case "EXPOSURE":
+        targetExists = (await client.query(
+          `SELECT 1 FROM research.exposure_facts
+            WHERE workspace_id = $1 AND exposure_id = $2 AND run_id = $3`,
+          [scope.workspaceId, input.referenceId, artifactRunId],
+        )).rowCount === 1;
+        break;
+      case "RELEASE_CANDIDATE":
+        targetExists = (await client.query(
+          `SELECT 1 FROM research.release_candidates
+            WHERE workspace_id = $1 AND release_candidate_id = $2 AND run_id = $3`,
+          [scope.workspaceId, input.referenceId, artifactRunId],
+        )).rowCount === 1;
+        break;
+      case "SELECTION":
+        targetExists = (await client.query(
+          `SELECT 1 FROM research.selection_records
+            WHERE workspace_id = $1 AND selection_id = $2 AND run_id = $3`,
+          [scope.workspaceId, input.referenceId, artifactRunId],
+        )).rowCount === 1;
+        break;
+      case "VERIFICATION":
+        targetExists = (await client.query(
+          `SELECT 1 FROM research.runs
+            WHERE workspace_id = $1 AND run_id = $2 AND parent_run_id = $3 AND run_kind = 'VERIFY'`,
+          [scope.workspaceId, input.referenceId, artifactRunId],
+        )).rowCount === 1;
+        break;
+      default: {
+        const exhaustive: never = input.referenceKind;
+        throw new Error(`Unhandled artifact reference kind ${exhaustive}`);
+      }
+    }
+    if (!targetExists) {
+      throw new ResearchMetadataError(
+        "RESEARCH_ARTIFACT_REFERENCE_INVALID",
+        "Artifact reference target is not owned by the same Research run.",
+        409,
+      );
+    }
   }
 
   private async withScopedRead<T>(scope: ResearchScope, work: (client: ScopedClient) => Promise<T>): Promise<T> {
