@@ -1,0 +1,56 @@
+{
+  "phase": "P04",
+  "status": "PASS_READ_ONLY",
+  "protected_delta_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+  "technical_fixture": {
+    "classification": "DETERMINISTIC_TECHNICAL_FIXTURE_NOT_REAL_ALPHA",
+    "bars": 500,
+    "route": "signal_notional",
+    "account": {
+      "initial_capital": "20000",
+      "leverage": "3",
+      "alloc_per_trade": "2000",
+      "fee_rate": "0.0005",
+      "use_funding": false
+    },
+    "direct_adapter_parity": true,
+    "result": {
+      "final_equity": "20589.74597203475",
+      "total_return_pct": "2.948729860173753",
+      "max_drawdown_pct": "1.3604729959578776",
+      "num_trades": 8
+    }
+  },
+  "historical_query": {
+    "classification": "APPROVED_HISTORICAL_RESEARCH_DATA_NOT_LIVE_ALPHA",
+    "reader": {
+      "distribution": "primus-historical-market-data",
+      "version": "0.1.0rc3",
+      "wheel_sha256": "3b2a41b87ff834912556bb3039bf3e3c148bd859a1ced9ee4f52a3c658ca5663",
+      "loader_contract": "hmd-loader-v1",
+      "manifest_digest": "f657851c3717835c460a8dbed28865cfaf5cc854f62a0e2570860c2e451a9d47"
+    },
+    "query": {
+      "dataset_id": "crypto-binance-1m",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "start": "2026-08-01T00:00:00+00:00",
+      "end_exclusive": "2026-08-15T00:00:00+00:00"
+    },
+    "rows": 336,
+    "missing_bar_count": 0,
+    "content_hash": "380e8679a74fc17987e280d7f17f638a11a8506709a9a1ee55d6762381e2a08a",
+    "direct_adapter_parity": true,
+    "result": {
+      "final_equity": "20018.930144723297",
+      "total_return_pct": "0.09465072361648709",
+      "max_drawdown_pct": "0.16550837121867357",
+      "num_trades": 5
+    }
+  },
+  "never_claims": [
+    "No actual market row is committed in this receipt.",
+    "No result is a published alpha, Paper trade, Execution result or approval evidence.",
+    "No 1.0.8-to-1.1.1 numerical equality is asserted; old identity is retained separately."
+  ]
+}

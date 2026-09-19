@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/research-engine-catalog.v1.schema.json",
+  "title": "Research Engine Catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_revision", "releases", "routes", "modes", "claims", "evidence_contract"],
+  "properties": {
+    "schema_version": {"const": "research-engine-catalog.v1"},
+    "manifest_revision": {"type": "integer", "minimum": 1},
+    "releases": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"$ref": "#/$defs/release"}},
+    "routes": {"type": "array", "minItems": 14, "maxItems": 32, "items": {"$ref": "#/$defs/route"}},
+    "modes": {"type": "array", "minItems": 5, "maxItems": 8, "items": {"$ref": "#/$defs/mode"}},
+    "claims": {"type": "array", "minItems": 7, "maxItems": 16, "items": {"$ref": "#/$defs/claim"}},
+    "evidence_contract": {"$ref": "#/$defs/evidenceContract"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_id", "role", "package", "version", "dist_info_record_sha256", "wheel_sha256"],
+      "properties": {
+        "release_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+        "role": {"enum": ["current", "historical_reader"]},
+        "package": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$"},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+[a-z0-9.+]*$"},
+        "dist_info_record_sha256": {"$ref": "#/$defs/sha256"},
+        "wheel_sha256": {"$ref": "#/$defs/sha256"},
+        "native_dependency": {"$ref": "#/$defs/nativeDependency"}
+      }
+    },
+    "nativeDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package", "version", "dist_info_record_sha256", "wheel_sha256", "platform_marker"],
+      "properties": {
+        "package": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$"},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+[a-z0-9.+]*$"},
+        "dist_info_record_sha256": {"$ref": "#/$defs/sha256"},
+        "wheel_sha256": {"$ref": "#/$defs/sha256"},
+        "platform_marker": {"type": "string", "minLength": 3, "maxLength": 180}
+      }
+    },
+    "axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "integration", "evidence", "admission"],
+      "properties": {
+        "engine": {"enum": ["ENGINE_SUPPORTED", "ENGINE_PARTIAL", "ENGINE_DEFERRED"]},
+        "integration": {"enum": ["ADAPTER_AVAILABLE", "INTEGRATION_GAP", "DEFERRED_BY_PORTAL"]},
+        "evidence": {"enum": ["EVIDENCE_MAPPED", "EVIDENCE_GAP", "NOT_APPLICABLE"]},
+        "admission": {"enum": ["P04_BASELINE_ONLY", "NOT_ADMITTED", "DEFERRED"]}
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route_id", "family", "execution_contract", "factory", "factory_kwargs", "backend", "report_levels", "default_for_new_runs", "axes", "reason", "required_input_class"],
+      "properties": {
+        "route_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "family": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{1,63}$"},
+        "execution_contract": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "factory": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "factory_kwargs": {"type": "object", "additionalProperties": {"type": "string"}},
+        "backend": {"type": "string", "minLength": 1, "maxLength": 80},
+        "report_levels": {"type": "array", "minItems": 1, "items": {"enum": ["minimal", "standard", "audit", "score"]}},
+        "default_for_new_runs": {"type": "boolean"},
+        "axes": {"$ref": "#/$defs/axes"},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+        "required_input_class": {"type": "string", "minLength": 1, "maxLength": 120}
+      }
+    },
+    "mode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode_id", "display_name", "valid_schedules", "default_schedule", "objective_summary", "suspect", "artifact_fields", "when_to_use", "rules"],
+      "properties": {
+        "mode_id": {"type": "string", "pattern": "^mode_[1-5]_[a-z0-9_]+$"},
+        "display_name": {"type": "string", "minLength": 1, "maxLength": 120},
+        "valid_schedules": {"type": "array", "minItems": 1, "items": {"enum": ["global", "per_fold_decay", "per_fold_causal"]}},
+        "default_schedule": {"enum": ["global", "per_fold_decay", "per_fold_causal"]},
+        "objective_summary": {"type": "string", "minLength": 1, "maxLength": 500},
+        "suspect": {"type": "string", "minLength": 1, "maxLength": 500},
+        "artifact_fields": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+        "when_to_use": {"type": "string", "minLength": 1, "maxLength": 400},
+        "rules": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "string", "minLength": 1, "maxLength": 300}}
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_id", "engine_certification", "numeric_guarantee", "never_claims"],
+      "properties": {
+        "contract_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+        "engine_certification": {"type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,63}$"},
+        "numeric_guarantee": {"type": "string", "minLength": 1, "maxLength": 400},
+        "never_claims": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    },
+    "evidenceContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_id", "required_fields", "writer_state"],
+      "properties": {
+        "schema_id": {"const": "research-run-evidence.v1"},
+        "required_fields": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "engine_release_id",
+              "route_id",
+              "effective_spec_digest",
+              "market_data_content_hash",
+              "report_level",
+              "selection_resolution",
+              "result_summary"
+            ]
+          }
+        },
+        "writer_state": {"const": "P05_OWNED_NOT_ACTIVE"}
+      }
+    }
+  }
+}

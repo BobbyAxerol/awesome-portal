@@ -33,6 +33,7 @@ from portal_api.api.ingress import IngressContextMiddleware, ingress_request_id
 from portal_api.api.routes_portal import router as router_portal
 from portal_api.api.routes_alphas import router as router_alphas
 from portal_api.api.routes_data import router as router_data
+from portal_api.api.routes_research import router as router_research
 from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
 from portal_api.repositories import ArtifactRepository
@@ -45,6 +46,7 @@ from portal_api.services.data_catalog import DataCatalogService, SnapshotStore
 from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.services.portal_links import PortalLinksService
 from portal_api.services.portal_registry import PortalRegistryService
+from portal_api.services.research_engine_catalog import ResearchEngineCatalogService
 from portal_api.services.portal_overview import (
     PortalSummaryContractError,
     PortalSummaryService,
@@ -149,6 +151,9 @@ def create_app(
     app.state.engine_capabilities = EngineCapabilityService(
         registry_repository.registry_root
     )
+    app.state.research_engine_catalog = ResearchEngineCatalogService(
+        registry_repository.registry_root
+    )
     app.state.data_catalog = DataCatalogService(registry_repository.registry_root)
     app.state.alpha_registry = AlphaRegistry(registry_repository.registry_root)
     app.state.alpha_import_service = AlphaImportService(
@@ -240,6 +245,7 @@ def create_app(
     app.include_router(router_runs)
     app.include_router(router_data)
     app.include_router(router_alphas)
+    app.include_router(router_research)
     return app
 
 

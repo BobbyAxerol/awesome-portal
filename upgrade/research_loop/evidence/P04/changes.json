@@ -1,0 +1,35 @@
+{
+  "phase": "P04",
+  "status": "BACKEND_COMPLETE_FE_HANDOFF_PENDING",
+  "scope": {
+    "included": [
+      "published QuantBT 1.1.1 and native 0.4.2 pin/provenance",
+      "allowlisted 14-route public constructor map",
+      "manifest-driven Engine Atlas read DTO",
+      "four-axis capability/admission separation",
+      "P04 evidence-envelope declaration",
+      "historical identity retention for QuantBT 1.0.8",
+      "legacy fold-table compatibility isolation for 1.1.1 metadata expansion",
+      "read-only HMD and deterministic Delta parity/resource evidence"
+    ],
+    "excluded": [
+      "new Research run HTTP operation or producer admission",
+      "artifact writer, retention or durable scheduler",
+      "Execution Loop, Trading System, broker, CLI, database migration, runtime container or deployment change",
+      "frontend implementation, browser build or visual review"
+    ]
+  },
+  "new_read_operation": {
+    "method": "GET",
+    "path": "/api/v1/research/quantbt/atlas",
+    "schema_version": "research-engine-atlas.v1",
+    "browser_excludes": [
+      "wheel hashes",
+      "installed RECORD hashes",
+      "filesystem paths",
+      "callable dispatch handles"
+    ]
+  },
+  "current_release": "er_quantbt_111",
+  "historical_identity_retained": "er_quantbt_108"
+}

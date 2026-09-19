@@ -7,6 +7,13 @@ jsonschema==4.26.0
 pandas==2.3.3
 primus-historical-market-data==0.1.0rc3
 pyarrow==24.0.0
-quantbt-engine==1.0.8
+# Research Loop P04 current release. Historical artifacts retain their own
+# engine identity in the Research Engine Catalog; this constraint is only the
+# executable release for new jobs.
+quantbt-engine==1.1.1
+# QuantBT 1.1.1 selects this published native wheel on Linux x86_64 / CPython
+# 3.12. Keep it explicit so image and local provenance have one reviewable
+# dependency edge. Other supported platforms resolve the engine's own marker.
+quantbt-native==0.4.2; sys_platform == "linux" and platform_machine == "x86_64" and python_version == "3.12"
 nats-py==2.10.0
 minio==7.2.18

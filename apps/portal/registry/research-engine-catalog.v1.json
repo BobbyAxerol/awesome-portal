@@ -1,0 +1,327 @@
+{
+  "schema_version": "research-engine-catalog.v1",
+  "manifest_revision": 1,
+  "releases": [
+    {
+      "release_id": "er_quantbt_108",
+      "role": "historical_reader",
+      "package": "quantbt-engine",
+      "version": "1.0.8",
+      "dist_info_record_sha256": "0963c05b3f68aaf875c0ec95f71db551cc22a3b39538ffe8ac072028405173c9",
+      "wheel_sha256": "866b064033e206675e997f4954afd9290c60332a6733538565a3bfb47b8ca299"
+    },
+    {
+      "release_id": "er_quantbt_111",
+      "role": "current",
+      "package": "quantbt-engine",
+      "version": "1.1.1",
+      "dist_info_record_sha256": "6087fef28710d6d4e5d442a36a57a9e2b0ba8e78f657358563911b86845c835d",
+      "wheel_sha256": "9a1c7af724e543d8cba338206c0b2c64afe1fb3a621f21b2505454c4807b8587",
+      "native_dependency": {
+        "package": "quantbt-native",
+        "version": "0.4.2",
+        "dist_info_record_sha256": "998c19c56c0e7f8f66269fdbf54667575ab6f9ba779ce1711e9e83dd0b1c21f9",
+        "wheel_sha256": "e56d204778d94101b49a1259a276abf9684c689af4277f6b8d08e9d9275376d5",
+        "platform_marker": "linux x86_64 CPython 3.12"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "route_id": "signal_notional",
+      "family": "signal",
+      "execution_contract": "close_target_v2",
+      "factory": "signal_notional",
+      "factory_kwargs": {},
+      "backend": "native_vectorized",
+      "report_levels": ["minimal", "standard", "audit", "score"],
+      "default_for_new_runs": true,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "ADAPTER_AVAILABLE", "evidence": "EVIDENCE_MAPPED", "admission": "P04_BASELINE_ONLY"},
+      "reason": "P04 primary technical baseline; a future typed run request still owns workload admission.",
+      "required_input_class": "single_symbol_ohlcv_plus_signal"
+    },
+    {
+      "route_id": "pct_equity",
+      "family": "signal",
+      "execution_contract": "legacy",
+      "factory": "pct_equity",
+      "factory_kwargs": {},
+      "backend": "legacy",
+      "report_levels": ["minimal", "standard"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "ADAPTER_AVAILABLE", "evidence": "EVIDENCE_MAPPED", "admission": "P04_BASELINE_ONLY"},
+      "reason": "Retained for comparability with historical artifacts; it is not the new-job default.",
+      "required_input_class": "single_symbol_ohlcv_plus_signal"
+    },
+    {
+      "route_id": "intrabar_bracket",
+      "family": "bracket",
+      "execution_contract": "intrabar_bracket_v1",
+      "factory": "intrabar_bracket",
+      "factory_kwargs": {},
+      "backend": "native_intrabar",
+      "report_levels": ["minimal", "standard", "audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Engine constructor is public; Portal has not admitted typed stop/take-profit intent fields in P04.",
+      "required_input_class": "ohlcv_plus_intrabar_intent_tape"
+    },
+    {
+      "route_id": "dca_ladder",
+      "family": "bracket",
+      "execution_contract": "dca_ladder",
+      "factory": "dca_ladder",
+      "factory_kwargs": {},
+      "backend": "legacy",
+      "report_levels": ["minimal", "standard"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Portal needs a typed ladder and safety-order evidence contract before admission.",
+      "required_input_class": "ohlcv_plus_ladder_levels"
+    },
+    {
+      "route_id": "reactive",
+      "family": "event",
+      "execution_contract": "event_lifecycle",
+      "factory": "event_driven",
+      "factory_kwargs": {"input_mode": "strategy"},
+      "backend": "native_event",
+      "report_levels": ["minimal", "standard", "audit", "score"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Reactive is the event_driven strategy facade; no standalone reactive() API is inferred and no strategy callback contract is admitted yet.",
+      "required_input_class": "stateful_strategy_callback"
+    },
+    {
+      "route_id": "event_driven",
+      "family": "event",
+      "execution_contract": "event_lifecycle",
+      "factory": "event_driven",
+      "factory_kwargs": {},
+      "backend": "native_event",
+      "report_levels": ["minimal", "standard", "audit", "score"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Portal has no admitted typed event command/tape request in P04.",
+      "required_input_class": "event_strategy_or_order_commands"
+    },
+    {
+      "route_id": "native_event_lifecycle",
+      "family": "event",
+      "execution_contract": "event_lifecycle",
+      "factory": "native_event_lifecycle",
+      "factory_kwargs": {},
+      "backend": "native_event",
+      "report_levels": ["minimal", "standard", "audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Lifecycle commands require a typed Portal order lifecycle contract and audit surface.",
+      "required_input_class": "event_order_commands"
+    },
+    {
+      "route_id": "orders",
+      "family": "tape",
+      "execution_contract": "event_lifecycle",
+      "factory": "orders",
+      "factory_kwargs": {},
+      "backend": "native_event",
+      "report_levels": ["minimal", "standard", "audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Explicit order replay is not equivalent to a typed Portal tape evidence contract.",
+      "required_input_class": "order_intent_tape"
+    },
+    {
+      "route_id": "fill_replay",
+      "family": "tape",
+      "execution_contract": "fill_replay",
+      "factory": "fill_replay",
+      "factory_kwargs": {},
+      "backend": "native_intrabar",
+      "report_levels": ["audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Accounting replay needs source-fill provenance before it can be offered as a Portal run.",
+      "required_input_class": "explicit_fill_tape"
+    },
+    {
+      "route_id": "basket",
+      "family": "multi",
+      "execution_contract": "native_portfolio",
+      "factory": "basket",
+      "factory_kwargs": {},
+      "backend": "native_event",
+      "report_levels": ["minimal", "standard", "audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Basket legs and frozen hedge-ratio evidence have no typed Portal schema in P04.",
+      "required_input_class": "multi_leg_basket_spec"
+    },
+    {
+      "route_id": "arbitrage",
+      "family": "multi",
+      "execution_contract": "event_lifecycle",
+      "factory": "arbitrage",
+      "factory_kwargs": {},
+      "backend": "native_event",
+      "report_levels": ["minimal", "standard", "audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_PARTIAL", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "QuantBT support is type-specific; Portal must first model the executable specification and engine refusal reason.",
+      "required_input_class": "arbitrage_type_and_spec"
+    },
+    {
+      "route_id": "portfolio",
+      "family": "multi",
+      "execution_contract": "native_portfolio",
+      "factory": "portfolio",
+      "factory_kwargs": {},
+      "backend": "native_portfolio",
+      "report_levels": ["minimal", "standard", "audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "INTEGRATION_GAP", "evidence": "EVIDENCE_GAP", "admission": "NOT_ADMITTED"},
+      "reason": "Portfolio exposure and margin require a typed multi-asset request and result schema.",
+      "required_input_class": "portfolio_spec_and_market_matrix"
+    },
+    {
+      "route_id": "nautilus_dca_grid",
+      "family": "validation",
+      "execution_contract": "dca_ladder",
+      "factory": "nautilus_dca_grid",
+      "factory_kwargs": {},
+      "backend": "nautilus_adapter",
+      "report_levels": ["standard", "audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "DEFERRED_BY_PORTAL", "evidence": "EVIDENCE_GAP", "admission": "DEFERRED"},
+      "reason": "P04 records the public validation route but deliberately does not admit an external adapter workload.",
+      "required_input_class": "nautilus_dca_grid_spec"
+    },
+    {
+      "route_id": "options",
+      "family": "multi",
+      "execution_contract": "options",
+      "factory": "options",
+      "factory_kwargs": {},
+      "backend": "native_option",
+      "report_levels": ["standard", "audit"],
+      "default_for_new_runs": false,
+      "axes": {"engine": "ENGINE_SUPPORTED", "integration": "DEFERRED_BY_PORTAL", "evidence": "EVIDENCE_GAP", "admission": "DEFERRED"},
+      "reason": "The engine supports options; Portal has no approved option-chain/package/margin input contract in this release.",
+      "required_input_class": "option_chain_instruments_and_packages"
+    }
+  ],
+  "modes": [
+    {
+      "mode_id": "mode_1_decay",
+      "display_name": "Decay robustness",
+      "valid_schedules": ["global", "per_fold_decay"],
+      "default_schedule": "global",
+      "objective_summary": "Ranks OOS stability against IS-to-OOS decay.",
+      "suspect": "A high average OOS score with broad decay dispersion requires review.",
+      "artifact_fields": ["fold_decay", "top_parameter_frequency"],
+      "when_to_use": "Use when a frozen candidate pool needs an explicit decay diagnostic.",
+      "rules": ["Do not relabel global output as strict outer OOS.", "Keep selected separate from best."]
+    },
+    {
+      "mode_id": "mode_2_sbb",
+      "display_name": "Stationary bootstrap robustness",
+      "valid_schedules": ["global"],
+      "default_schedule": "global",
+      "objective_summary": "Scores an IS-only stationary bootstrap robustness estimate.",
+      "suspect": "Bootstrap confidence is not out-of-sample proof.",
+      "artifact_fields": ["bootstrap_samples", "bootstrap_decay"],
+      "when_to_use": "Use for robustness calibration, not to make an OOS claim.",
+      "rules": ["The current Portal proxy is not an engine certificate."]
+    },
+    {
+      "mode_id": "mode_3_flat_minima",
+      "display_name": "Flat minima",
+      "valid_schedules": ["global"],
+      "default_schedule": "global",
+      "objective_summary": "Selects a stable plateau rather than a single sharp optimum.",
+      "suspect": "A centroid can be unevaluated and must not be silently promoted as a trial.",
+      "artifact_fields": ["robust_candidates", "selection_target"],
+      "when_to_use": "Use when parameter stability is more meaningful than one peak score.",
+      "rules": ["Centroid references are explicit.", "No fold-last fallback."]
+    },
+    {
+      "mode_id": "mode_4_is_only_robust",
+      "display_name": "IS-only robust",
+      "valid_schedules": ["global", "per_fold_causal"],
+      "default_schedule": "global",
+      "objective_summary": "Combines robust IS subperiod statistics with explicit penalties.",
+      "suspect": "Good central tendency with high temporal dispersion is a warning, not a pass.",
+      "artifact_fields": ["subperiod_scores", "dispersion"],
+      "when_to_use": "Use for train-only selection diagnostics or causal per-fold experiments.",
+      "rules": ["Per-fold causal requires its own evidence lane."]
+    },
+    {
+      "mode_id": "mode_5_full_robust",
+      "display_name": "Full-sample robust",
+      "valid_schedules": ["global"],
+      "default_schedule": "global",
+      "objective_summary": "Calibrates robustness on the full supplied sample.",
+      "suspect": "Full-sample selection must never be described as OOS evidence.",
+      "artifact_fields": ["full_sample_used_for_selection", "robust_candidates"],
+      "when_to_use": "Use only for calibration where the full-sample label is explicit.",
+      "rules": ["Publication labels must retain the full-sample disclosure."]
+    }
+  ],
+  "claims": [
+    {
+      "contract_id": "close_target_v2",
+      "engine_certification": "L2",
+      "numeric_guarantee": "Signal changes anchor target units at the current price.",
+      "never_claims": "Never claims intrabar stop or take-profit fill semantics."
+    },
+    {
+      "contract_id": "intrabar_bracket_v1",
+      "engine_certification": "L2",
+      "numeric_guarantee": "Bracket intent uses explicit OHLC/intrabar contract fields.",
+      "never_claims": "Never claims venue-exact fill ordering beyond the supplied contract."
+    },
+    {
+      "contract_id": "fill_replay",
+      "engine_certification": "L1",
+      "numeric_guarantee": "Replays supplied accounting fills with the selected accounting backend.",
+      "never_claims": "Never claims signal quality or origin of supplied fills."
+    },
+    {
+      "contract_id": "event_lifecycle",
+      "engine_certification": "L2",
+      "numeric_guarantee": "Models typed event lifecycle commands and resulting fills.",
+      "never_claims": "Never claims broker acknowledgement or external execution."
+    },
+    {
+      "contract_id": "reactive",
+      "engine_certification": "L3",
+      "numeric_guarantee": "Executes the event-driven strategy facade under its selected profile.",
+      "never_claims": "Never claims an invented reactive() route or global callback ordering."
+    },
+    {
+      "contract_id": "native_portfolio",
+      "engine_certification": "L2",
+      "numeric_guarantee": "Computes the declared multi-asset portfolio contract.",
+      "never_claims": "Never claims a Portfolio manager admission or a broker margin guarantee."
+    },
+    {
+      "contract_id": "nautilus",
+      "engine_certification": "L4",
+      "numeric_guarantee": "Validates the declared Nautilus DCA-grid adapter input.",
+      "never_claims": "Never claims cross-engine parity until a typed comparison evidence lane exists."
+    }
+  ],
+  "evidence_contract": {
+    "schema_id": "research-run-evidence.v1",
+    "required_fields": [
+      "engine_release_id",
+      "route_id",
+      "effective_spec_digest",
+      "market_data_content_hash",
+      "report_level",
+      "selection_resolution",
+      "result_summary"
+    ],
+    "writer_state": "P05_OWNED_NOT_ACTIVE"
+  }
+}

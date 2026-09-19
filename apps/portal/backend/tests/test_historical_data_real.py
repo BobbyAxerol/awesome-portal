@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import importlib
 import os
 
+import numpy as np
 import pytest
 
 from portal_api.adapters.market_data import (
@@ -13,6 +15,9 @@ from portal_api.adapters.market_data import (
     market_content_hash,
     normalize_market_frame,
 )
+from portal_api.adapters.quantbt import QuantBTGateway
+from golden_fixture import GOLDEN_PARAMS
+from strategy.main import generate_delta_rsi_signals
 
 
 pytestmark = pytest.mark.skipif(
@@ -59,3 +64,38 @@ def test_approved_btcusdt_reader_window_and_provenance() -> None:
         .set_index("datetime")
     )
     assert market_content_hash(direct_frame) == prepared.content_hash
+
+
+def test_approved_btcusdt_delta_signal_notional_direct_adapter_parity() -> None:
+    """P04 actual-data proof, intentionally opt-in and read-only.
+
+    It does not promote the historical tape to a live alpha result.  It proves
+    only that the protected Delta signal, public 1.1.1 endpoint and Portal
+    adapter agree over a manifest-pinned historical window.
+    """
+    runtime = load_historical_data_runtime(os.environ["HISTORICAL_MARKET_DATA_ROOT"])
+    prepared = HistoricalMarketDataProvider(runtime=runtime, engine="duckdb").load(
+        MarketDataQuery(
+            dataset_id=CRYPTO_BINANCE_DATASET_ID,
+            symbol="BTCUSDT",
+            timeframe="1h",
+            start="2026-08-01T00:00:00+00:00",
+            end_exclusive="2026-08-15T00:00:00+00:00",
+        )
+    )
+    assert len(prepared.frame) == 336
+    assert prepared.missing_bar_count == 0
+    signal = generate_delta_rsi_signals(prepared.frame, GOLDEN_PARAMS)["pos_weight"]
+    account = {
+        "initial_capital": 20_000,
+        "leverage": 3,
+        "alloc_per_trade": 2_000,
+        "fee_rate": 0.0005,
+        "use_funding": False,
+    }
+    direct = importlib.import_module("quantbt").QuantBTEndpoint.signal_notional(**account)
+    adapter = QuantBTGateway().signal_notional_endpoint(**account)
+    direct_result = direct.backtest(data=prepared.frame, signal=signal)
+    adapter_result = adapter.backtest(data=prepared.frame, signal=signal)
+    np.testing.assert_allclose(direct_result.equity.to_numpy(), adapter_result.equity.to_numpy())
+    assert direct.full_report() == adapter.full_report()

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/research-run-evidence.v1.schema.json",
+  "title": "Research Run Evidence v1",
+  "description": "P04 declares this envelope. P05 owns durable writes, sealing and retention.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "engine_release_id",
+    "route_id",
+    "effective_spec_digest",
+    "market_data_content_hash",
+    "report_level",
+    "selection_resolution",
+    "result_summary"
+  ],
+  "properties": {
+    "schema_version": {"const": "research-run-evidence.v1"},
+    "engine_release_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+    "route_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+    "effective_spec_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "market_data_content_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "report_level": {"enum": ["minimal", "standard", "audit", "score"]},
+    "selection_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selection_state", "integrity_state", "publication_eligible"],
+      "properties": {
+        "selection_state": {"enum": ["SELECTED", "NO_SELECTED_CANDIDATE"]},
+        "integrity_state": {"enum": ["COMPLETE", "MISSING_REQUIRED_ARTIFACT"]},
+        "publication_eligible": {"type": "boolean"}
+      }
+    },
+    "result_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["final_equity", "total_return_pct", "max_drawdown_pct", "num_trades"],
+      "properties": {
+        "final_equity": {"type": "string", "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$"},
+        "total_return_pct": {"type": "string", "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$"},
+        "max_drawdown_pct": {"type": "string", "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$"},
+        "num_trades": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

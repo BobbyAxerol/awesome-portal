@@ -3545,7 +3545,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex + Claude source review / [P01 report](./research_loop/evidence/P01/phase-report.md); matrices verified both directions, 0 defect, 0 omission; systemic `P01-FE-01` state vocabulary + immediate S02/S11 spec gaps closed by P02 amendment; screen implementation remains with owner phase |
 | [P02](#rl-p02) | P01 | 02/11 harness | 01 | CONTRACT_AMENDMENT_COMPLETE / Codex + Claude review / [P02 packet](./research_loop/evidence/P02/phase-report.md); versioned `requested_spec` schema/types map all 24 S02 controls, S02/S11 state semantics specified; no producer/browser/runtime claim |
 | [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; FE_CONSUMER_HARNESS_COMPLETE / Claude — `src/research/` +663 lines, vitest 2430 pass, build exit 0. Generated client and browser acceptance remain P10 by design |
-| [P04](#rl-p04) | P02 | nền/12 | 02 | PLANNED / unassigned / — |
+| [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; Claude UI/browser handoff pending by owner phase |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | PLANNED / unassigned / — |
 | [P06](#rl-p06) | P03–P05 | nền/03 | 03 | PLANNED / unassigned / — |
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | PLANNED / unassigned / — |
@@ -3922,6 +3922,51 @@ stashes present in the shared stack were left untouched per A13.1.
 - **Tests FE/browser:** Descriptor→card/form states, refusal vs resource queue, engine R1≠approval R1; generated types handle unknown version without auto-enable.
 - **Exit gate:** Primary supported tuples có actual output/parity/resource evidence; no fabricated selection. Delta thật bắt buộc; unsupported vs Portal adapter gap tách rõ, required gap không ghi complete.
 - **Rollback/handoff:** Switch new-job engine default only, in-flight/history pin nguyên. Checkpoint02: P03/P04 + actual version/numeric/memory artifacts.
+
+#### P04 backend closeout — `BACKEND_COMPLETE_FE_HANDOFF_PENDING`, 2026-09-19
+
+P04 is complete as a Research backend baseline, without a runtime deployment,
+new submit operation, durable artifact writer or frontend modification.
+
+- Research now pins published `quantbt-engine==1.1.1` with its published
+  `quantbt-native==0.4.2` Linux/Python-3.12 dependency. The gateway verifies
+  installed distribution/RECORD provenance, rejects local import shadowing,
+  and never adds a sibling engine checkout to `sys.path`. Historical 1.0.8 is
+  retained as a reader identity; it is not relabeled or installed as a second
+  active runtime.
+- The manifest-driven, read-only
+  `/api/v1/research/quantbt/atlas` exposes one safe DTO: 14 public constructor
+  descriptors, five mode/schedule matrices, seven claim/never-claim records,
+  current/historical release identities and a declared future evidence
+  envelope. Installed-wheel provenance is measured once at controlled service
+  construction, not re-hashed on every Atlas request. Wheel/RECORD hashes,
+  paths and callable dispatch handles never cross the browser boundary.
+- Four axes are enforced: engine availability, Portal integration, evidence
+  mapping and P04 admission. Only `signal_notional` and `pct_equity` are
+  baseline-admitted; the other 12 engine-visible constructors remain typed
+  gaps/deferred rather than becoming implicit workload paths. `reactive` is
+  explicitly the `event_driven(input_mode="strategy")` facade, never a guessed
+  `reactive()` call.
+- P04 declares `research-run-evidence.v1`, including exact-string financial
+  summary fields and selection integrity. It is intentionally
+  `P05_OWNED_NOT_ACTIVE`: P04 writes no Research artifact bundle and does not
+  pretend that declaration is persistence.
+- Actual protected-Delta direct-vs-adapter parity passes on the deterministic
+  500-hour fixture and an approved read-only 336-bar BTCUSDT historical
+  window. Resource receipts record cold/warm aggregate process RSS across
+  minimal/standard/audit profiles; they are not a production capacity claim.
+- QuantBT 1.1.1 expands advanced fold metadata. The established v1
+  `wfo/folds.parquet` shape remains stable; additive metadata is preserved in
+  versioned `wfo/folds_extension.v1.parquet`, avoiding a silent consumer break.
+
+All P04 backend/test receipts, bounded cleanup and rollback are in
+[evidence/P04](./research_loop/evidence/P04/README.md). `P04-T01…T13`,
+`V11-P04-DR` and `V11-P04-GX` are satisfied by the packet. `V11-P04-BR` is
+correctly `PENDING_OWNER_PHASE`: P04 makes no new browser screen, and Claude's
+specific Atlas handoff is
+[frontend-handoff-claude.md](./research_loop/evidence/P04/frontend-handoff-claude.md).
+P05/P06/P10 remain explicit owner phases for persistent artifacts, isolated
+work scheduling and named run submission; they are not P04 technical debt.
 
 <a id="rl-p05"></a>
 ### P05 — Disk-first artifacts, Parquet và bounded export

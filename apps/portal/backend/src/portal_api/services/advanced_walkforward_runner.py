@@ -43,6 +43,17 @@ class AdvancedWalkForwardError(RuntimeError):
     pass
 
 
+FOLD_TABLE_V1_COLUMNS = (
+    "fold_id",
+    "train_start",
+    "train_end",
+    "test_start",
+    "test_end",
+    "train_bars",
+    "test_bars",
+)
+
+
 def _utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -278,7 +289,10 @@ class AdvancedWalkForwardRunner:
         ):
             table = wf.get(key)
             if isinstance(table, pd.DataFrame) and not table.empty:
-                self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", table)
+                if name == "folds":
+                    self._write_compatible_fold_tables(run_id, table)
+                else:
+                    self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", table)
         params_by_fold = wf.get("params_by_fold")
         if params_by_fold:
             self._artifacts.write_json(
@@ -296,6 +310,33 @@ class AdvancedWalkForwardRunner:
 
                     table = _search_trials_only(table)
                 self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", _flatten_frame(table))
+
+    def _write_compatible_fold_tables(self, run_id: str, table: pd.DataFrame) -> None:
+        """Preserve the v1 consumer table across a QuantBT metadata expansion.
+
+        QuantBT 1.1.1 adds useful fold context (warm-up/purge/embargo, etc.).
+        Existing Portal readers contractually consume the seven v1 columns, so
+        silently widening that parquet shape would be a breaking change.  The
+        stable table remains exact; additive 1.1.1 fields are retained in a
+        separately versioned extension artifact for a later admitted reader.
+        """
+        missing = [
+            column for column in FOLD_TABLE_V1_COLUMNS if column not in table.columns
+        ]
+        if missing:
+            raise AdvancedWalkForwardError(
+                "QuantBT fold table is missing required v1 columns: " + ", ".join(missing)
+            )
+        stable = table.loc[:, list(FOLD_TABLE_V1_COLUMNS)].copy()
+        self._artifacts.write_frame(run_id, "wfo/folds.parquet", stable)
+        extension_columns = [
+            column for column in table.columns if column not in FOLD_TABLE_V1_COLUMNS
+        ]
+        if extension_columns:
+            extension = table.loc[:, ["fold_id", *extension_columns]].copy()
+            self._artifacts.write_frame(
+                run_id, "wfo/folds_extension.v1.parquet", extension
+            )
 
 
 def _freeze_deployment_selection(

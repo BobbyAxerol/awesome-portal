@@ -97,7 +97,7 @@ def test_freeze_manifest_regenerates_identically() -> None:
 def test_freeze_manifest_locks_pins_and_tolerances() -> None:
     manifest = _load_json(MANIFEST_PATH)
 
-    assert manifest["python_pins"]["quantbt_engine"] == "quantbt-engine==1.0.8"
+    assert manifest["python_pins"]["quantbt_engine"] == "quantbt-engine==1.1.1"
     assert (
         manifest["python_pins"]["historical_market_data_reader"]
         == "primus-historical-market-data==0.1.0rc3"
@@ -146,7 +146,7 @@ def test_environment_report_is_credential_free_and_typed() -> None:
     for marker in FORBIDDEN_MARKERS:
         assert marker not in encoded, f"environment report leaks {marker}"
     assert report["platform"] in {"linux", "darwin", "win32"}
-    assert report["packages"]["quantbt-engine"] == "1.0.8"
+    assert report["packages"]["quantbt-engine"] == "1.1.1"
     assert report["packages"]["portal-api"] == "0.1.0"
     assert report["control_api_version"] == "0.1.0"
 

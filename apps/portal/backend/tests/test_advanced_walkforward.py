@@ -219,6 +219,12 @@ def test_artifact_reopens_without_quantbt_rerun(runner) -> None:
         "train_bars",
         "test_bars",
     ]
+    # QuantBT 1.1.1 extends fold metadata.  P04 retains it in a separately
+    # versioned artifact instead of silently breaking the v1 reader shape.
+    extensions = _read_frame(artifacts, "run_p3_reopen", "wfo/folds_extension.v1.parquet")
+    assert {"fold_id", "validation_start", "purge_bars", "account_policy"}.issubset(
+        extensions.columns
+    )
     selected = artifacts.read_json("run_p3_reopen", "selection/selected_params.json")
     assert selected["params"]
     stitched = _read_frame(artifacts, "run_p3_reopen", "series/stitched.parquet")

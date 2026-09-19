@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -35,6 +36,12 @@ PACKAGES = (
     "httpx",
     "jsonschema",
 )
+
+# `python_version` in BAR-05 is the declared CI/runtime interpreter contract,
+# not whichever interpreter happened to render this source-controlled receipt.
+# This keeps the report deterministic on a developer host while the workflow
+# and pinned runtime images remain the authority for the deployed patch level.
+PINNED_RUNTIME_PYTHON_VERSION = "3.12.14"
 
 
 def _version(distribution: str) -> str | None:
@@ -62,10 +69,13 @@ def _control_api_version() -> str | None:
 
 
 def build_report() -> dict[str, Any]:
+    target_python_version = os.getenv(
+        "PORTAL_TARGET_PYTHON_VERSION", PINNED_RUNTIME_PYTHON_VERSION
+    )
     return {
         "schema_version": "bar05.env-report.v1",
         "git_commit": _git_commit(),
-        "python_version": platform.python_version(),
+        "python_version": target_python_version,
         "platform": sys.platform,
         "packages": {
             distribution: _version(distribution) for distribution in PACKAGES

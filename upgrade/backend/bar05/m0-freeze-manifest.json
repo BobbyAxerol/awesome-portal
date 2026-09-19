@@ -5,9 +5,10 @@
     "portal_producer": "portal-api"
   },
   "file_digests": {
+    "advanced_walkforward_runner": "sha256:7f6f7629d77b39ff3bbf038a0a7eba6c06a73ea760524599a5eed9074c234982",
     "compose": "sha256:2f6fd5f16e236d9eebf32bf1c048ff8ba0d52e7f567fbe564ae932de4b3c5157",
     "compose_production": "sha256:eb614a2b49ea4d4e3a36d232e8eeb556fa1d8ced1c2aed04b5af92ebeb500f37",
-    "constraints_portal": "sha256:a16dcc4c1a3ded5c03a742ce38f351f8d13e738255518a6629da42ad65b900b2",
+    "constraints_portal": "sha256:bd6172132133a7c332c068b1f8799a4794b0277313d71a462343864d772c905d",
     "control_api_migrations": "sha256:7af62e52e20e1340882c50f033ab0cd690de99231c3cc4dbd150b2a2f0a000b8",
     "control_api_package": "sha256:1df7c864abd7219bce94d7094857ef1f7b84687e5a669aa691791efbee3f6709",
     "control_api_package_lock": "sha256:f33d9fe854d6b0d89376c6dac2a647a8d474e350c7fc089905238680f921eeb5",
@@ -19,21 +20,28 @@
     "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
     "nginx_portal_conf": "sha256:7673a0b298254b977c08c2ef19fc4d8a9ee43db4893a186cb2401afc722d91c1",
     "openapi_planning_snapshot": "sha256:1566dcdff7c3cc72debdeb392566ad6bd36d029babb23db7ed220c7d5633d605",
-    "openapi_portal": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
-    "openapi_portal_snapshot": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
+    "openapi_portal": "sha256:e0da05d5724ed18768e33f15856c3c6850e4e894bbfd9e51bcba72767fced575",
+    "openapi_portal_snapshot": "sha256:e0da05d5724ed18768e33f15856c3c6850e4e894bbfd9e51bcba72767fced575",
     "planning_frontend_lock": "sha256:ac4c28d02e411ae40c7c9eb0a80871adf9a179c12ad0bb33930a37797e083ac7",
     "planning_frontend_package": "sha256:50296a506bfa3c5786e7bc5845655b10c0a7d222cfcfabd58a0ada28d2024268",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
     "planning_requirements_dev": "sha256:6b932715dbbe91092d3abd614cbb095f2d105ddce45eaa99f5c98159ec93156b",
-    "portal_backend_pyproject": "sha256:82975f70a727453e452de81f21ffd25f671d3cc047b7fcbf7be769e908a313db",
+    "portal_app_main": "sha256:076f512b012c9f6db6ae2e00594383ddf88e415517a3cc7e5d90ac3042598cab",
+    "portal_backend_pyproject": "sha256:3abd375cbb9902764ffe6976cbb9981942b4d6ea2576e37a6e28b536c311e7f4",
     "portal_frontend_lock": "sha256:468da5d8cdff4bf1668d7ef21c112dcd79d865a8cd1a61bec98ecb96269f4752",
     "portal_frontend_package": "sha256:9120f2903cb786dcfa120801a878aac76d64d560683486886d8f1c8789261f34",
     "protected_kernel_hash": "sha256:3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
     "protected_kernel_main": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+    "quantbt_gateway": "sha256:6c45c9e080082a57847cca419978c151a9c59602531ec3158ecb52199bf3733c",
     "registry_source": "sha256:620c6cf89030ba3fef0267c9eea67db62fc334be8db8f628f68cde7d962e0694",
+    "research_engine_atlas_route": "sha256:1ac77f98a93f2b623f199ee912ba6992d9da88a86e9b4d1d47c1f8410146e81d",
+    "research_engine_catalog": "sha256:d494f214bd90f642311e469d9da7e35e1627ece5b881a3395d6fc51df26de4a9",
+    "research_engine_catalog_schema": "sha256:fa8ea96f173d3009063bceedbd45c1869668dd768ad67b09565976ec138b1c35",
+    "research_engine_catalog_service": "sha256:1bd98aee4baa5463973df43ca2781d198274f363f01f6ec1f76dd37289dd1a27",
+    "research_run_evidence_schema": "sha256:ac1213412f91adbfb3f76c12dc12c6943fc979e83e75b1a5de9909e7fb01b730",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "973b2e2b1c098393291e57d3f08c17d237c3270e",
+  "frozen_at_commit": "0841c8c69e2ff583c1a2ecd13776e042107edb1e",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
@@ -44,7 +52,7 @@
   },
   "python_pins": {
     "historical_market_data_reader": "primus-historical-market-data==0.1.0rc3",
-    "quantbt_engine": "quantbt-engine==1.0.8"
+    "quantbt_engine": "quantbt-engine==1.1.1"
   },
   "registry_source_digest": "sha256:929d3aa0a74f8cf1563d6430a18525dd32850f82d7b4b897a7e52617dd27494a",
   "rollback": {

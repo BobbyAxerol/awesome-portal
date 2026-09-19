@@ -9,7 +9,30 @@ import pandas as pd
 
 
 QUANTBT_DISTRIBUTION = "quantbt-engine"
-QUANTBT_ENGINE_VERSION = "1.0.8"
+QUANTBT_ENGINE_VERSION = "1.1.1"
+
+# Only these release-verified public constructors may be selected by Research
+# Loop code. The map deliberately lives at the Python boundary rather than in
+# a browser payload: a manifest may describe capability, but never gains the
+# ability to call arbitrary engine attributes.
+PUBLIC_ROUTE_FACTORIES: dict[str, tuple[str, Mapping[str, object]]] = {
+    "signal_notional": ("signal_notional", {}),
+    "pct_equity": ("pct_equity", {}),
+    "intrabar_bracket": ("intrabar_bracket", {}),
+    "dca_ladder": ("dca_ladder", {}),
+    # QuantBT exposes the reactive strategy facade through event_driven; it
+    # does not expose a guessed reactive() constructor.
+    "reactive": ("event_driven", {"input_mode": "strategy"}),
+    "event_driven": ("event_driven", {}),
+    "native_event_lifecycle": ("native_event_lifecycle", {}),
+    "orders": ("orders", {}),
+    "fill_replay": ("fill_replay", {}),
+    "basket": ("basket", {}),
+    "arbitrage": ("arbitrage", {}),
+    "portfolio": ("portfolio", {}),
+    "nautilus_dca_grid": ("nautilus_dca_grid", {}),
+    "options": ("options", {}),
+}
 
 
 class QuantBTGateway:
@@ -80,6 +103,101 @@ class QuantBTGateway:
 
     def pct_equity_endpoint(self, **kwargs):
         return self._module().QuantBTEndpoint.pct_equity(**kwargs)
+
+    def signal_notional_endpoint(self, **kwargs):
+        """Construct the P04 current default through the verified public API."""
+        return self._module().QuantBTEndpoint.signal_notional(**kwargs)
+
+    def public_route_surface(self) -> dict[str, bool]:
+        """Verify the immutable P04 route map against the installed public API.
+
+        This is a constructor-surface probe only. It deliberately does not
+        execute a route whose domain-specific request (options package,
+        arbitrage specification, order tape, ...) has not passed Portal
+        admission yet.
+        """
+        endpoint = self._module().QuantBTEndpoint
+        return {
+            route_id: callable(getattr(endpoint, factory_name, None))
+            for route_id, (factory_name, _) in PUBLIC_ROUTE_FACTORIES.items()
+        }
+
+    def route_endpoint(self, route_id: str, /, **kwargs):
+        """Build one allowlisted public endpoint without dynamic dispatch.
+
+        Forced arguments in the release mapping cannot be silently overridden
+        by a caller. This matters for the reactive route: it must remain the
+        explicit strategy-input facade until a future typed tape contract is
+        admitted.
+        """
+        try:
+            factory_name, forced_kwargs = PUBLIC_ROUTE_FACTORIES[route_id]
+        except KeyError as exc:
+            raise ValueError(f"unknown QuantBT public route {route_id!r}") from exc
+        supplied = dict(kwargs)
+        for key, value in forced_kwargs.items():
+            if key in supplied and supplied[key] != value:
+                raise ValueError(
+                    f"route {route_id!r} requires {key}={value!r}; conflicting value supplied"
+                )
+            supplied[key] = value
+        factory = getattr(self._module().QuantBTEndpoint, factory_name, None)
+        if not callable(factory):
+            raise RuntimeError(
+                f"{QUANTBT_DISTRIBUTION}=={QUANTBT_ENGINE_VERSION} no longer exposes "
+                f"the mapped public factory {factory_name!r} for {route_id!r}."
+            )
+        return factory(**supplied)
+
+    def build_optimization_config(self, *, config_fields: Mapping[str, object]):
+        """Build 1.1.1's public OptimizationConfig with Portal-safe defaults.
+
+        P04 does not retrofit the legacy execution runner. New Research jobs
+        can use this method after their own request schema is admitted. Alias
+        names and unsafe parallelism fail before any engine compute starts.
+        """
+        fields = dict(config_fields)
+        aliases = {"random_seed": "seed", "optuna_trials": "n_trials"}
+        for alias, canonical in aliases.items():
+            if alias in fields:
+                raise ValueError(
+                    f"optimizer field {alias!r} is not accepted; use canonical {canonical!r}"
+                )
+        allowed = {
+            "study_name",
+            "n_trials",
+            "directions",
+            "seed",
+            "n_jobs",
+            "early_stopping_rounds",
+            "early_stopping_min_trials",
+            "early_stopping_min_delta",
+            "show_progress_bar",
+            "duplicate_policy",
+            "exception_policy",
+        }
+        deferred = {"storage", "load_if_exists", "log_path"}
+        requested_deferred = sorted(set(fields) & deferred)
+        if requested_deferred:
+            raise ValueError(
+                "optimizer persistence fields are deferred until persistent study lifecycle "
+                f"admission: {', '.join(requested_deferred)}"
+            )
+        unknown = sorted(set(fields) - allowed)
+        if unknown:
+            raise ValueError(f"unsupported optimizer fields: {', '.join(unknown)}")
+        if fields.get("n_jobs", 1) != 1:
+            raise ValueError("optimizer n_jobs is locked to 1 until dedupe is certified")
+        # P04 establishes only an in-process, deterministic adapter baseline.
+        # Persistent Optuna storage and filesystem logs belong to a later
+        # lifecycle phase with explicit retention, ownership and cleanup
+        # contracts; accepting their public QuantBT knobs here would create an
+        # accidental side-effect channel before that phase exists.
+        fields["n_jobs"] = 1
+        config_type = getattr(self._module(), "OptimizationConfig", None)
+        if config_type is None:
+            raise RuntimeError("QuantBT public OptimizationConfig is unavailable")
+        return config_type(**fields)
 
     # --- Phase P2 orchestration (plan §10) ----------------------------------
 

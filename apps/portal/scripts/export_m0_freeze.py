@@ -29,6 +29,14 @@ FROZEN_FILES = {
     "links_sidecar": "apps/portal/registry/links.v1.json",
     "constraints_portal": "constraints/portal.txt",
     "portal_backend_pyproject": "apps/portal/backend/pyproject.toml",
+    "portal_app_main": "apps/portal/backend/src/portal_api/main.py",
+    "quantbt_gateway": "apps/portal/backend/src/portal_api/adapters/quantbt.py",
+    "advanced_walkforward_runner": "apps/portal/backend/src/portal_api/services/advanced_walkforward_runner.py",
+    "research_engine_catalog_service": "apps/portal/backend/src/portal_api/services/research_engine_catalog.py",
+    "research_engine_atlas_route": "apps/portal/backend/src/portal_api/api/routes_research.py",
+    "research_engine_catalog": "apps/portal/registry/research-engine-catalog.v1.json",
+    "research_engine_catalog_schema": "apps/portal/registry/schemas/research-engine-catalog.v1.schema.json",
+    "research_run_evidence_schema": "apps/portal/registry/schemas/research-run-evidence.v1.schema.json",
     "openapi_portal": "apps/portal/registry/openapi/portal-api.openapi.json",
     "openapi_portal_snapshot": "upgrade/backend/bar02/snapshots/portal-api.openapi.json",
     "openapi_planning_snapshot": "upgrade/backend/bar02/snapshots/planning-api.openapi.json",
@@ -53,7 +61,7 @@ FROZEN_FILES = {
 }
 
 PYTHON_PINS = {
-    "quantbt_engine": "quantbt-engine==1.0.8",
+    "quantbt_engine": "quantbt-engine==1.1.1",
     "historical_market_data_reader": "primus-historical-market-data==0.1.0rc3",
 }
 

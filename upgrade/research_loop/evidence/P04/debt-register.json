@@ -1,0 +1,54 @@
+{
+  "phase": "P04",
+  "open_implementation_debt": [],
+  "resolved_closeouts": [
+    {
+      "id": "P04-BE-01",
+      "status": "RESOLVED",
+      "subject": "Published QuantBT 1.1.1/native provenance, shadowing guard and 14-route allowlist",
+      "evidence": "research-engine-catalog.v1, QuantBTGateway, P04-T01/T02"
+    },
+    {
+      "id": "P04-BE-02",
+      "status": "RESOLVED",
+      "subject": "Four-axis engine/integration/evidence/admission separation and no callable browser dispatch",
+      "evidence": "Atlas DTO, P04-T02/T06/T12"
+    },
+    {
+      "id": "P04-BE-03",
+      "status": "RESOLVED",
+      "subject": "Actual protected-Delta direct/adapter parity on deterministic and approved historical inputs",
+      "evidence": "delta-real-data.json and real-HMD opt-in test"
+    },
+    {
+      "id": "P04-BE-04",
+      "status": "RESOLVED",
+      "subject": "QuantBT 1.1.1 expanded fold metadata without breaking established v1 consumers",
+      "evidence": "folds_extension.v1 compatibility adapter and advanced walk-forward regression"
+    }
+  ],
+  "explicit_downstream_gates": [
+    {
+      "id": "P04-DG-01",
+      "owner": "P05",
+      "state": "NOT_STARTED_BY_DESIGN",
+      "subject": "Sealed durable evidence writer, retention, quota, export and recovery",
+      "reason": "P04 declares research-run-evidence.v1 only; it persists no Research artifact bundle."
+    },
+    {
+      "id": "P04-DG-02",
+      "owner": "P06/P10",
+      "state": "NOT_STARTED_BY_DESIGN",
+      "subject": "Scheduler/worker admission and typed Research run producer/BFF",
+      "reason": "Atlas is read-only; no P04 route can submit a workload."
+    },
+    {
+      "id": "P04-DG-03",
+      "owner": "Claude P04 handoff/P09",
+      "state": "PENDING_OWNER_PHASE",
+      "subject": "Atlas UI types, cards, disabled states and browser acceptance",
+      "reason": "Codex did not edit frontend by owner rule."
+    }
+  ],
+  "interpretation": "Downstream gates are planned ownership boundaries, not P04 defects, waivers or hidden technical debt."
+}

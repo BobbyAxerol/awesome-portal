@@ -14,7 +14,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /opt/portal
 
-# The stack constraint pins quantbt-engine==1.0.8 from PyPI, so the image
+# The stack constraint pins quantbt-engine==1.1.1 from PyPI, so the image
 # never depends on a sibling QuantBT source checkout.
 COPY constraints/portal.txt /tmp/portal-constraints.txt
 COPY apps/portal/backend/pyproject.toml apps/portal/backend/README.md ./
