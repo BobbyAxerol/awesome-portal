@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT — New Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+  input, select { font:inherit; }
+  input:focus, select:focus { outline:none; border-color:#0f4c5c; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+  button { transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+</style>
+</helmet>
+
+<div data-screen-label="New Run Preflight" style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px"><div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5"><span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span><span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span><span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap"><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">QuantBT Backtest</span><span style="color:#939db0">/</span><span style="color:#1c2532; flex:none">New Run</span></span><span style="flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 12px">Search <span style="font-size:10px; color:#939db0; border:1px solid #e3e0d7; border-radius:3px; padding:0 4px; font-family:'JetBrains Mono',monospace;">⌘K</span></span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span><span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span><span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Comfortable ▾</span></div><div style="display:flex; flex:1; min-height:0"><div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px"><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">command</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Command Center</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Portal Map</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">research</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><a href="QuantBT 01 Run Library.dc.html" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; background:#e2edf0; color:#1c2532; font-weight:500; text-decoration:none"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">QuantBT Backtest</span></a><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Pool</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Mining</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Strategy Composer</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">backtests</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Approvals</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">deployments</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Paper Trading</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sandbox</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Live Operations</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">data & operations</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Data Catalog</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">planning</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Roadmap & Task Board</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">administration</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Profile & Access</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div></div><div style="flex:1; min-width:0"><div style="background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px; display:flex; flex-direction:column; gap:14px; padding:16px 24px 56px; max-width:1440px; margin:0 auto; min-width:0; ">
+
+  <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px 16px; border-bottom:1px solid #e3e0d7; padding-bottom:10px">
+    <div style="display:flex; flex-direction:column; gap:3px">
+      <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4e5a6e">
+        <a href="QuantBT 01 Run Library.dc.html">Runs</a><span style="color:#939db0">/</span><span style="color:#1c2532">New Run</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px"><span style="font-family:Newsreader,Georgia,serif; font-size:22px; font-weight:300; letter-spacing:-.01em">New Run</span><span style="{{ bindChip.style }}">{{ bindChip.label }}</span></div>
+      <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0">Bind the alpha version, pick how orders come to exist, then the methodology. Each step validates on its own — a problem is reported where it can be fixed.</div>
+    </div>
+    <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">routes, protocols and ceilings read from the INSTALLED engine release — quantbt-engine==1.1.1 · er_quantbt_1_1_1</span>
+  </div>
+
+  <div style="display:flex; gap:4px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:6px; overflow-x:auto">
+    <sc-for list="{{ steps }}" as="st" hint-placeholder-count="6">
+      <button onClick="{{ st.onPick }}" style="{{ st.style }}">
+        <span style="{{ st.numStyle }}">{{ st.num }}</span>
+        <span style="display:flex; flex-direction:column; align-items:flex-start; gap:0">
+          <span style="font-size:11.5px; font-weight:500">{{ st.label }}</span>
+          <span style="{{ st.subStyle }}">{{ st.sub }}</span>
+        </span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="display:flex; gap:16px; align-items:flex-start">
+    <div style="flex:1.6; min-width:0; display:flex; flex-direction:column; gap:12px">
+
+      <sc-if value="{{ isContext }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:10px">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap">
+            <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Context — alpha &amp; version binding</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">the unit that later composes rc_ — <a href="QuantBT 11 Release Candidate and Publish.dc.html">see where this lands</a></span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:end">
+            <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Alpha</span>
+              <select value="{{ alphaId }}" onChange="{{ onAlpha }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+                <sc-for list="{{ alphaOpts }}" as="ao" hint-placeholder-count="2"><option value="{{ ao.v }}">{{ ao.label }}</option></sc-for>
+              </select>
+            </label>
+            <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Version (immutable after submit)</span>
+              <select value="{{ avId }}" onChange="{{ onAv }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+                <sc-for list="{{ avOpts }}" as="vo" hint-placeholder-count="2"><option value="{{ vo.v }}">{{ vo.label }}</option></sc-for>
+              </select>
+            </label>
+            <div style="display:flex; gap:6px; padding-bottom:1px">
+              <button onClick="{{ onBound }}" style="{{ boundBtnStyle }}">bound</button>
+              <button onClick="{{ onScratch }}" style="{{ scratchBtnStyle }}">scratch</button>
+            </div>
+          </div>
+          <sc-if value="{{ isBoundView }}" hint-placeholder-val="{{ true }}">
+            <div style="border:1px solid #efede4; border-radius:6px; background:#faf9f5; padding:9px 12px; display:flex; flex-wrap:wrap; gap:5px 22px">
+              <sc-for list="{{ passport }}" as="pp" hint-placeholder-count="6">
+                <span style="display:flex; flex-direction:column; gap:1px"><span style="font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:#939db0">{{ pp.k }}</span><span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:{{ pp.color }}">{{ pp.v }}</span></span>
+              </sc-for>
+              <span style="margin-left:auto; display:flex; align-items:center; gap:10px">
+                <a href="QuantBT 10 Attempt Lineage.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px">lineage →</a>
+                <a href="QuantBT 01 Run Library.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px">runs of this av_ →</a>
+                <a href="QuantBT 14 Alpha Import.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px">import new version →</a>
+              </span>
+            </div>
+            <span style="font-size:10px; color:{{ avStateNoteColor }}; line-height:1.5">{{ avStateNote }}</span>
+          </sc-if>
+          <sc-if value="{{ isScratchView }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; gap:10px; align-items:center; border:1px dashed #9a6a1f; border-radius:6px; background:#fdfbf5; padding:8px 12px">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#9a6a1f; flex:none">NOT_PUBLISHABLE</span>
+              <span style="font-size:10.5px; color:#4e5a6e; line-height:1.5">Scratch runs iterate freely and stay full evidence for you — but no release candidate can ever be composed from one. Strategy pick below becomes free.</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isRoute }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:10px">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap">
+            <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Execution route — how orders come to exist</span>
+            <a href="QuantBT 12 Mode Atlas.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:9.5px">full route atlas →</a>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px">
+            <sc-for list="{{ routeCards }}" as="rc" hint-placeholder-count="14">
+              <button onClick="{{ rc.onPick }}" title="{{ rc.title }}" style="{{ rc.style }}">
+                <span style="display:flex; justify-content:space-between; align-items:baseline; gap:6px"><span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:600">{{ rc.name }}</span><span style="{{ rc.badgeStyle }}">{{ rc.badge }}</span></span>
+                <span style="font-size:9.5px; color:#4e5a6e; text-align:left; line-height:1.4">{{ rc.desc }}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0">{{ rc.meta }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="border:1px solid #efede4; border-radius:6px; background:#faf9f5; padding:10px 12px; display:flex; flex-direction:column; gap:8px">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600">{{ routeSel.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:0 5px">{{ routeSel.contract }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ routeSel.backend }}</span>
+              <span style="margin-left:auto; font-size:9.5px; color:{{ routeSel.methodColor }}">{{ routeSel.methodNote }}</span>
+            </div>
+            <sc-if value="{{ cfgIntrabar }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px">
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">level_mode</span>
+                  <select value="{{ ib.levelMode }}" onChange="{{ ib.onLevelMode }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px"><option value="hlc_conservative">hlc_conservative</option><option value="ohlc_path">ohlc_path</option><option value="close_only">close_only</option></select>
+                </label>
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">same_bar_policy</span>
+                  <select value="{{ ib.sameBar }}" onChange="{{ ib.onSameBar }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px"><option value="stop_first">stop_first (conservative)</option><option value="target_first">target_first</option><option value="ambiguity_flag">flag ambiguity, no resolve</option></select>
+                </label>
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">tick_size</span>
+                  <input value="{{ ib.tick }}" onChange="{{ ib.onTick }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px">
+                </label>
+                <span style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">intent columns</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e; padding-top:5px">sl_price · tp_price · trail_bps</span></span>
+              </div>
+              <span style="font-size:10px; color:#939db0; line-height:1.5">Ambiguous bars (SL and TP inside one candle) are resolved by same_bar_policy and every resolution is flagged in the fill ledger — <a href="QuantBT 08 S4 Execute Replay.dc.html">inspect them in Execute Replay</a>.</span>
+            </sc-if>
+            <sc-if value="{{ cfgPortfolio }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">portfolio mode</span>
+                  <select value="{{ pf.mode }}" onChange="{{ pf.onMode }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px"><option value="longshort">longshort</option><option value="market_neutral">market_neutral</option><option value="directional">directional</option><option value="equal_weight">equal_weight</option><option value="risk_parity">risk_parity</option><option value="beta_neutral">beta_neutral</option></select>
+                </label>
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">sizing</span>
+                  <select value="{{ pf.sizing }}" onChange="{{ pf.onSizing }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px"><option value="equal_weight">equal_weight</option><option value="risk_parity">risk_parity</option><option value="vol_target">vol_target</option><option value="kelly_fraction">kelly_fraction</option><option value="fixed_notional">fixed_notional</option><option value="atr_risk">atr_risk</option><option value="min_variance">min_variance</option><option value="score_weighted">score_weighted</option></select>
+                </label>
+              </div>
+              <span style="font-size:10px; color:#939db0; line-height:1.5">Cross-sectional matrix run — per-symbol attribution, exposure and margin report land in <a href="QuantBT 09 Run Report.dc.html">Run Report</a>; beta/exposure panels in <a href="QuantBT 08 S4 Execute Replay.dc.html">Execute Replay</a>.</span>
+            </sc-if>
+            <sc-if value="{{ cfgReactive }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px">
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">reactive_runtime</span>
+                  <select value="{{ rx.runtime }}" onChange="{{ rx.onRuntime }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px"><option value="R0">R0 · python reference</option><option value="R1">R1 · numeric kernel</option><option value="R2">R2 · sparse-wake</option><option value="R3">R3 · block compile</option><option value="R3B">R3B · batch</option></select>
+                </label>
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">audit_mode</span>
+                  <select value="{{ rx.audit }}" onChange="{{ rx.onAudit }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px"><option value="minimal">minimal</option><option value="standard">standard</option><option value="audit">audit · wake trace</option></select>
+                </label>
+                <span style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">parity</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e; padding-top:5px">R1–R3B certified vs R0</span></span>
+              </div>
+              <span style="font-size:10px; color:#939db0; line-height:1.5">audit_mode=audit records the per-bar wake trace — the strip <a href="QuantBT 08 S4 Execute Replay.dc.html">Execute Replay</a> renders under equity. minimal skips it; the panel will say so rather than show an empty chart.</span>
+            </sc-if>
+            <sc-if value="{{ cfgDca }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px">
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">base_order_usd</span>
+                  <input value="{{ dc.base }}" onChange="{{ dc.onBase }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">safety_orders</span>
+                  <input value="{{ dc.so }}" onChange="{{ dc.onSo }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px">
+                </label>
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">step_scale</span>
+                  <input value="{{ dc.step }}" onChange="{{ dc.onStep }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:10.5px">
+                </label>
+              </div>
+              <span style="font-size:10px; color:#939db0; line-height:1.5">Ladder fills render as stacked entries per position in <a href="QuantBT 08 S4 Execute Replay.dc.html">Execute Replay</a>.</span>
+            </sc-if>
+            <sc-if value="{{ cfgSummary }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:10.5px; color:#4e5a6e; line-height:1.5">{{ routeSel.summary }}</span>
+            </sc-if>
+          </div>
+          <sc-if value="{{ hasRouteError }}" hint-placeholder-val="{{ false }}">
+            <span style="border:1px solid #b43a3a; border-radius:6px; background:#f7e8e8; color:#b43a3a; padding:6px 10px; font-size:11.5px">{{ routeError }}</span>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isStrategy }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:10px">
+          <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Strategy &amp; protocol</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <sc-for list="{{ strategyCards }}" as="sc" hint-placeholder-count="3">
+              <button onClick="{{ sc.onPick }}" style="{{ sc.style }}">
+                <span style="display:flex; justify-content:space-between; align-items:baseline; gap:8px"><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:600">{{ sc.name }}</span><span style="{{ sc.badgeStyle }}">{{ sc.badge }}</span></span>
+                <span style="font-size:10.5px; color:#4e5a6e; text-align:left">{{ sc.desc }}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">{{ sc.meta }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <span style="font-size:10px; color:#9a6a1f; line-height:1.5">{{ pinnedNote }}</span>
+          <div style="display:flex; flex-direction:column; gap:4px">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Protocol</span>
+            <div style="display:flex; gap:6px; flex-wrap:wrap">
+              <sc-for list="{{ protocolOpts }}" as="po" hint-placeholder-count="2"><button onClick="{{ po.onPick }}" style="{{ po.style }}">{{ po.label }}</button></sc-for>
+            </div>
+            <span style="font-size:10px; color:#939db0">Showing only the protocols the installed engine release certifies (2). An uncertified protocol is not offered.</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isData }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:10px">
+          <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Market data</span>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 24px; border:1px solid #efede4; border-radius:6px; padding:10px 12px; background:#faf9f5">
+            <span style="display:flex; flex-direction:column"><span style="font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">required columns</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px">{{ req.cols }}</span></span>
+            <span style="display:flex; flex-direction:column"><span style="font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">declared timeframes</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px">{{ req.tfs }}</span></span>
+            <span style="display:flex; flex-direction:column"><span style="font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">warmup bars</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px">{{ req.warmup }}</span></span>
+            <span style="display:flex; flex-direction:column"><span style="font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">seed</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px">{{ req.seed }}</span></span>
+            <span style="grid-column:1 / -1; font-size:10px; color:#939db0; line-height:1.5">Timeframe and seed are checked in this form. Required columns and warmup are checked by the server at preflight — the Review step names whichever gate failed.</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1.4fr .7fr .7fr; gap:10px">
+            <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Dataset</span>
+              <select value="{{ datasetId }}" onChange="{{ onDataset }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+                <option value="ds_btcusdt_4h">ds_btcusdt_4h · available</option>
+                <option value="ds_ethusdt_1h">ds_ethusdt_1h · available</option>
+              </select>
+              <span style="font-size:9.5px; color:#939db0">Historical source — backtest only. Realtime and paper are separate services.</span>
+            </label>
+            <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Symbol *</span>
+              <input value="{{ symbol }}" onChange="{{ onSymbol }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+            </label>
+            <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Timeframe *</span>
+              <select value="{{ timeframe }}" onChange="{{ onTimeframe }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+                <option value="15m">15m</option><option value="1h">1h</option><option value="4h">4h</option><option value="1d">1d</option>
+              </select>
+            </label>
+          </div>
+          <sc-if value="{{ hasDataError }}" hint-placeholder-val="{{ false }}">
+            <span style="border:1px solid #b43a3a; border-radius:6px; background:#f7e8e8; color:#b43a3a; padding:6px 10px; font-size:11.5px">{{ dataError }}</span>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isWindows }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:10px">
+          <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em">{{ windowsTitle }}</span>
+          <sc-if value="{{ isThreeWindow }}" hint-placeholder-val="{{ true }}">
+            <div style="border:1px solid #efede4; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:8px">
+              <sc-for list="{{ windowRows }}" as="wr" hint-placeholder-count="3">
+                <div style="display:grid; grid-template-columns:64px 1fr 1fr; align-items:center; gap:8px">
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; text-transform:uppercase; color:{{ wr.color }}">{{ wr.role }}</span>
+                  <input type="datetime-local" value="{{ wr.start }}" onChange="{{ wr.onStart }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532; min-width:0">
+                  <input type="datetime-local" value="{{ wr.end }}" onChange="{{ wr.onEnd }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532; min-width:0">
+                </div>
+              </sc-for>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">Half-open: end-exclusive · an empty Holdout Live runs to the dataset's last bar</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isAdvanced }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px">
+              <sc-for list="{{ advFields }}" as="af" hint-placeholder-count="6">
+                <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">{{ af.label }}</span>
+                  <input value="{{ af.value }}" onChange="{{ af.onChange }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+                </label>
+              </sc-for>
+            </div>
+            <div style="border:1px solid #efede4; border-radius:6px; background:#faf9f5; padding:8px 12px; display:flex; flex-direction:column; gap:5px">
+              <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">fold plan preview</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">{{ foldPreview.formula }}</span>
+                <span style="{{ foldPreview.badgeStyle }}">≈ {{ foldPreview.n }} outer folds</span>
+              </div>
+              <div style="display:flex; gap:1.5px; align-items:center">
+                <sc-for list="{{ foldPreview.cells }}" as="fc" hint-placeholder-count="12"><span title="{{ fc.title }}" style="{{ fc.style }}"></span></sc-for>
+              </div>
+              <span style="font-size:10px; color:{{ foldPreview.noteColor }}; line-height:1.5">{{ foldPreview.note }}</span>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">optimization_mode</span>
+              <sc-for list="{{ advModeOpts }}" as="am" hint-placeholder-count="5"><button onClick="{{ am.onPick }}" style="{{ am.style }}">{{ am.label }}</button></sc-for>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">optimization_schedule</span>
+              <sc-for list="{{ advSchedOpts }}" as="as" hint-placeholder-count="3"><button onClick="{{ as.onPick }}" title="{{ as.title }}" style="{{ as.style }}">{{ as.label }}</button></sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasWindowError }}" hint-placeholder-val="{{ false }}">
+            <span style="border:1px solid #b43a3a; border-radius:6px; background:#f7e8e8; color:#b43a3a; padding:6px 10px; font-size:11.5px">{{ windowError }}</span>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isParameters }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:8px">
+          <div style="display:flex; justify-content:space-between; align-items:baseline">
+            <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Parameter space</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">{{ spaceSummary }}</span>
+          </div>
+          <div style="display:flex; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding-bottom:3px">
+            <span style="width:96px; flex:none">param</span><span style="width:118px; flex:none">declared</span><span style="width:104px; flex:none">dim</span><span style="width:90px; flex:none">low / value</span><span style="width:90px; flex:none">high</span><span style="width:44px; flex:none; text-align:right">step</span><span style="flex:1; padding-left:12px">status</span>
+          </div>
+          <sc-for list="{{ paramRows }}" as="pr" hint-placeholder-count="6">
+            <div style="display:flex; align-items:center; gap:0; font-family:'JetBrains Mono',monospace; font-size:11px; padding:3px 0; border-bottom:1px solid #f4f2ec">
+              <span style="width:96px; flex:none">{{ pr.name }}</span>
+              <span style="width:118px; flex:none; color:#939db0">{{ pr.declared }}</span>
+              <span style="width:104px; flex:none; display:flex; gap:3px; padding-right:8px">
+                <button onClick="{{ pr.onSweep }}" style="{{ pr.sweepStyle }}">sweep</button>
+                <button onClick="{{ pr.onPin }}" style="{{ pr.pinStyle }}">pin</button>
+              </span>
+              <span style="width:90px; flex:none; padding-right:8px"><input value="{{ pr.low }}" onChange="{{ pr.onLow }}" style="{{ pr.inputStyle }}"></span>
+              <span style="width:90px; flex:none; padding-right:8px"><sc-if value="{{ pr.isSweep }}" hint-placeholder-val="{{ true }}"><input value="{{ pr.high }}" onChange="{{ pr.onHigh }}" style="{{ pr.inputStyle }}"></sc-if><sc-if value="{{ pr.isPin }}" hint-placeholder-val="{{ false }}"><span style="color:#c9c5ba; padding-left:6px">—</span></sc-if></span>
+              <span style="width:44px; flex:none; text-align:right; color:#4e5a6e">{{ pr.step }}</span>
+              <span style="flex:1; padding-left:12px; font-size:10px; font-family:Inter,sans-serif; color:{{ pr.statusColor }}">{{ pr.status }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ hasParamError }}" hint-placeholder-val="{{ false }}">
+            <span style="border:1px solid #b43a3a; border-radius:6px; background:#f7e8e8; color:#b43a3a; padding:6px 10px; font-size:11.5px">{{ parameterError }}</span>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isOptimization }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:10px">
+          <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Optimization</span>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px">
+            <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Optuna trials</span>
+              <input value="{{ trials }}" onChange="{{ onTrials }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+              <span style="font-size:9.5px; color:#939db0">wheel ceiling: 2000</span>
+            </label>
+            <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Early stopping</span>
+              <input value="{{ earlyStopping }}" onChange="{{ onEarly }}" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+              <span style="font-size:9.5px; color:#939db0">stagnation patience — actual trials may land lower</span>
+            </label>
+            <label style="display:flex; flex-direction:column; gap:3px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">Random seed</span>
+              <input value="{{ seed }}" onChange="{{ onSeed }}" placeholder="null" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:5px 8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532">
+              <span style="font-size:9.5px; color:{{ seedHintColor }}">{{ seedHint }}</span>
+            </label>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; border-top:1px solid #efede4; padding-top:8px">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">pinned by protocol</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; border:1px solid #e3e0d7; border-radius:999px; background:#faf9f5; padding:1px 8px; color:#4e5a6e">candidate_selection_metric = robust_decay</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; border:1px solid #e3e0d7; border-radius:999px; background:#faf9f5; padding:1px 8px; color:#4e5a6e">top_is_fraction = 0.1</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; border:1px solid #e3e0d7; border-radius:999px; background:#faf9f5; padding:1px 8px; color:#4e5a6e">decay λ = γ = 0.5</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; border:1px solid #e3e0d7; border-radius:999px; background:#faf9f5; padding:1px 8px; color:#4e5a6e">scoring_backend = endpoint</span>
+          </div>
+          <sc-if value="{{ hasTrialsError }}" hint-placeholder-val="{{ false }}">
+            <span style="border:1px solid #b43a3a; border-radius:6px; background:#f7e8e8; color:#b43a3a; padding:6px 10px; font-size:11.5px">{{ trialsError }}</span>
+          </sc-if>
+          <div style="border:1px solid #efede4; border-radius:6px; background:#faf9f5; overflow:hidden">
+            <button onClick="{{ onToggleCfg }}" style="width:100%; display:flex; align-items:center; gap:10px; border:0; background:transparent; padding:8px 12px; text-align:left">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">optimization_config — full surface</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#4e5a6e">{{ cfgSummary }}</span>
+              <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; color:#0f4c5c">{{ cfgCaret }}</span>
+            </button>
+            <sc-if value="{{ cfgOpen }}" hint-placeholder-val="{{ false }}">
+              <sc-for list="{{ cfgGroups }}" as="cg" hint-placeholder-count="4">
+                <div style="border-top:1px solid #efede4; padding:7px 12px; display:flex; flex-direction:column; gap:3px">
+                  <span style="font-size:9px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:#7a8699">{{ cg.name }}</span>
+                  <sc-for list="{{ cg.rows }}" as="cr" hint-placeholder-count="6">
+                    <div style="display:flex; align-items:center; gap:10px; padding:2px 0">
+                      <span title="{{ cr.note }}" style="width:210px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e">{{ cr.k }}</span>
+                      <sc-if value="{{ cr.editable }}" hint-placeholder-val="{{ true }}">
+                        <input value="{{ cr.v }}" onChange="{{ cr.onChange }}" style="{{ cr.inputStyle }}">
+                      </sc-if>
+                      <sc-if value="{{ cr.locked }}" hint-placeholder-val="{{ false }}">
+                        <span style="width:150px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0; padding:2px 6px">{{ cr.v }}</span>
+                      </sc-if>
+                      <span style="{{ cr.badgeStyle }}">{{ cr.badge }}</span>
+                      <span style="flex:1; min-width:0; font-size:9.5px; color:#939db0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ cr.note }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+              <div style="border-top:1px solid #efede4; padding:6px 12px; font-size:10px; color:#939db0; line-height:1.5">Defaults come from the release manifest (er_quantbt_1_1_1) — an untouched field is NOT serialized into the payload; the engine's own default applies and the review rail says so. Missing objective metrics raise MissingOptimizationMetricError — there is no silent fallback.</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:8px">
+          <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Review &amp; run</span>
+          <sc-for list="{{ reviewRows }}" as="rr" hint-placeholder-count="8">
+            <span style="display:flex; gap:12px; font-size:11.5px; border-bottom:1px solid #f4f2ec; padding:3px 0">
+              <span style="width:150px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; color:#939db0">{{ rr.k }}</span>
+              <span style="flex:1; font-family:'JetBrains Mono',monospace; font-size:11px">{{ rr.v }}</span>
+            </span>
+          </sc-for>
+          <sc-if value="{{ hasBlocking }}" hint-placeholder-val="{{ false }}">
+            <span style="border:1px solid #b43a3a; border-radius:6px; background:#f7e8e8; color:#b43a3a; padding:6px 10px; font-size:11.5px">{{ blockingError }}</span>
+          </sc-if>
+          <sc-if value="{{ preflightRan }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #efede4; border-radius:6px; padding:8px 12px; display:flex; flex-direction:column; gap:3px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:#939db0">server preflight</span>
+              <sc-for list="{{ preflightRows }}" as="pf" hint-placeholder-count="4">
+                <span style="display:flex; gap:8px; font-size:11px; align-items:baseline">
+                  <span style="{{ pf.markStyle }}">{{ pf.mark }}</span>
+                  <span style="flex:1; color:#4e5a6e">{{ pf.k }}</span>
+                </span>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display:flex; align-items:center; gap:10px">
+            <button onClick="{{ onRun }}" style="{{ runBtnStyle }}">{{ runBtnLabel }}</button>
+            <span style="font-size:10.5px; color:#4e5a6e">{{ runNote }}</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="flex:1; min-width:330px; max-width:400px; position:sticky; top:14px; display:flex; flex-direction:column; gap:12px">
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:12px 14px; display:flex; flex-direction:column; gap:6px">
+        <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">window timeline — half-open, end-exclusive</span>
+        <sc-for list="{{ timeline }}" as="tl" hint-placeholder-count="3">
+          <span style="display:flex; align-items:center; gap:8px">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; width:52px; flex:none; color:{{ tl.color }}">{{ tl.role }}</span>
+            <span style="position:relative; flex:1; height:10px; border-radius:999px; background:#f4f2ec"><span style="{{ tl.barStyle }}"></span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; width:70px; flex:none; text-align:right; color:#939db0">{{ tl.bars }} bars</span>
+          </span>
+        </sc-for>
+      </div>
+
+      <div style="border:1px solid #9a6a1f; border-radius:8px; background:#fdfbf5; box-shadow:0 4px 12px rgba(28,37,50,.08); padding:14px; display:flex; flex-direction:column; gap:7px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:700; color:#9a6a1f">claim forecast — the addition</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">payload sha256:{{ cfgHash }}</span>
+        </div>
+        <span style="display:flex; justify-content:space-between; gap:10px; font-size:11px"><span style="color:#939db0">mode × schedule</span><span style="font-family:'JetBrains Mono',monospace">{{ fc.modeSched }}</span></span>
+        <span style="display:flex; justify-content:space-between; gap:10px; font-size:11px"><span style="color:#939db0">source</span><span style="font-family:'JetBrains Mono',monospace; color:{{ fc.srcColor }}">{{ fc.src }}</span></span>
+        <span style="display:flex; justify-content:space-between; gap:10px; font-size:11px"><span style="color:#939db0">claim (forecast)</span><span style="font-family:'JetBrains Mono',monospace; color:#9a6a1f">{{ fc.claim }}</span></span>
+        <div style="display:flex; align-items:center; gap:10px; padding-top:2px">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; flex:none">cert ceiling</span>
+          <span style="{{ fc.ceilStyle }}">{{ fc.ceil }}</span>
+          <span style="font-size:10px; color:#4e5a6e; line-height:1.45; flex:1">{{ fc.note }}</span>
+        </div>
+        <span style="font-size:10px; color:#939db0; line-height:1.5">This card is the augmentation over today's form: the ceiling is visible before compute is spent. The payload itself is unchanged — the backend contract stays frozen.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:3px; border-top:1px solid #e3e0d7; padding-top:8px">
+    <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0">rules of this screen</span>
+    <span style="font-size:11px; color:#4e5a6e; line-height:1.6">Same flow, same authority rules as the shipped ConfigWorkspace: strategy list from the registry projections; protocol list from the installed release's capability manifest; the parameter editor refuses values outside the declared space; the run payload is byte-identical to the frozen backend contract. The only addition is the claim-forecast rail — it reads the payload, it never changes it.</span>
+  </div>
+</div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1360, &quot;height&quot;: 1300}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.STRATS = {
+      mom_breakout_v3: { desc: "momentum · emits pos_weight + ATR stops", tfs: ["1h", "4h"], warmup: 72, seedRequired: true, cols: "open, high, low, close", blocked: null },
+      delta_rsi_v2: { desc: "mean reversion · emits pos_weight only", tfs: ["15m", "1h"], warmup: 48, seedRequired: false, cols: "close", blocked: null },
+      pair_spread_v1: { desc: "two-leg spread", tfs: ["1h"], warmup: 96, seedRequired: null, cols: "close (per leg)", blocked: "The installed engine release certifies no basket route — the registry blocks this strategy for single-symbol runs." }
+    };
+    this.SPACE = [
+      { name: "window", lo: 12, hi: 72, step: 2 },
+      { name: "entry_z", lo: 0.6, hi: 2.6, step: 0.1 },
+      { name: "atr_mult", lo: 1.0, hi: 6.0, step: null },
+      { name: "risk_pct", lo: 0.25, hi: 2.0, step: 0.25 },
+      { name: "cooldown", lo: 0, hi: 24, step: 4 },
+      { name: "use_trail", cat: "[true, false]" }
+    ];
+    this.ALPHAS = {
+      alpha_7f2: { name: "alpha_momentum_btc", versions: {
+        av_0_9_3: { digest: "sha256:3fe4a1", state: "ACTIVE", entry: "alphas.momentum_btc:Alpha", strategyId: "mom_breakout_v3", supersedes: "av_0_9_2", lastRc: "rc_2026_08_c · APPROVED (superseded on next publish)" },
+        av_0_9_2: { digest: "sha256:11d0b7", state: "SUPERSEDED", entry: "alphas.momentum_btc:Alpha", strategyId: "mom_breakout_v3", supersedes: "av_0_9_1", lastRc: "rc_2026_05_a · EXPIRED" }
+      } },
+      alpha_9c1: { name: "alpha_meanrev_eth", versions: {
+        av_0_3_0: { digest: "sha256:88c1f2", state: "DRAFT", entry: "alphas.meanrev_eth:Alpha", strategyId: "delta_rsi_v2", supersedes: "av_0_2_1", lastRc: "—" },
+        av_0_2_1: { digest: "sha256:77aa21", state: "SUPERSEDED", entry: "alphas.meanrev_eth:Alpha", strategyId: "delta_rsi_v2", supersedes: "—", lastRc: "—" }
+      } }
+    };
+    this.ROUTES = [
+      { id: "signal_notional", fam: "signal", contract: "close_target_v2", backend: "native_vectorized", badge: "DEFAULT", tone: "ok", desc: "signal column → notional target, executed at close", method: "wfo" },
+      { id: "pct_equity", fam: "signal", contract: "legacy", backend: "vectorized", badge: "LEGACY", tone: "warn", desc: "percent-of-equity allocation — kept for comparability", method: "wfo" },
+      { id: "intrabar_bracket", fam: "bracket", contract: "intrabar_bracket_v1", backend: "numba · rust auto-promoted", badge: "RUST", tone: "rust", desc: "SL / TP / trailing intents resolved inside the bar", method: "wfo" },
+      { id: "dca_ladder", fam: "bracket", contract: "ladder (legacy)", backend: "vectorized", badge: "OK", tone: "ok", desc: "DCA ladder — base + safety orders, step scaling", method: "wfo" },
+      { id: "reactive", fam: "event", contract: "native_event_strategy", backend: "R0–R3B, parity-certified", badge: "RUST", tone: "rust", desc: "wake-driven strategy kernels (sparse wake, block, batch)", method: "wfo" },
+      { id: "event_driven", fam: "event", contract: "event_lifecycle_v2/v3", backend: "facade", badge: "OK", tone: "ok", desc: "facade over lifecycle runtimes — research / optimize / audit profiles", method: "wfo" },
+      { id: "native_event_lifecycle", fam: "event", contract: "event_lifecycle_v2_next_bar_close · v3_next_open", backend: "event engine", badge: "OK", tone: "ok", desc: "OrderCommand v2 — OCO, parent groups, cancel / replace", method: "tape" },
+      { id: "orders", fam: "tape", contract: "native_event v1", backend: "event engine", badge: "OK", tone: "ok", desc: "OrderIntent tape replay", method: "tape" },
+      { id: "fill_replay", fam: "tape", contract: "fill_replay_v1/v2", backend: "numba · rust", badge: "OK", tone: "ok", desc: "accounting-only replay of an executed fills tape", method: "tape" },
+      { id: "basket", fam: "multi", contract: "native_event package", backend: "event engine", badge: "OK", tone: "ok", desc: "multi-leg basket, frozen hedge ratio", method: "wfo" },
+      { id: "arbitrage", fam: "multi", contract: "native_event package", backend: "event engine", badge: "6/9", tone: "warn", desc: "Basis · StatArbPair · CalendarSpread · FundingArb · CashCarry · IndexBasket — 3 more specs schema-only", method: "wfo" },
+      { id: "portfolio", fam: "multi", contract: "native_portfolio", backend: "matrix engine", badge: "OK", tone: "ok", desc: "cross-sectional matrix — 6 modes × 8 sizing rules", method: "wfo" },
+      { id: "nautilus_dca_grid", fam: "validation", contract: "nautilus", backend: "nautilus adapter", badge: "EXP", tone: "warn", desc: "experimental nautilus grid — parity vs dca_ladder", method: "wfo" },
+      { id: "options", fam: "multi", contract: "native_option", backend: "—", badge: "DEFERRED", tone: "blocked", desc: "contracts, multi-leg, delta-hedge — deferred this round by decision", method: "none", blocked: "options route is deferred this round — no portal parameters are declared for it yet." }
+    ];
+    this.state = {
+      step: "context", alphaId: "alpha_7f2", avId: "av_0_9_3", scratch: false,
+      route: "signal_notional",
+      routeCfg: { ib: { levelMode: "hlc_conservative", sameBar: "stop_first", tick: "0.1" }, pf: { mode: "market_neutral", sizing: "risk_parity" }, rx: { runtime: "R2", audit: "audit" }, dc: { base: "100", so: "5", step: "1.4" } },
+      strategyId: "mom_breakout_v3", protocol: "three_window_decay",
+      datasetId: "ds_btcusdt_4h", symbol: "BTCUSDT", timeframe: "4h",
+      windows: { isStart: "2020-01-01T00:00", isEnd: "2024-01-01T00:00", oosStart: "2024-01-01T00:00", oosEnd: "2025-07-01T00:00", holdoutStart: "2025-07-01T00:00", holdoutEnd: "2026-08-14T00:00" },
+      advanced: { dataStart: "2020-01-01T00:00", dataEnd: "2026-08-14T00:00", splitMode: "2022-01-01", splitFrequency: "quarterly", windowMode: "expanding", optimizationMode: "mode_1_decay", optimizationSchedule: "global" },
+      edits: {}, trials: "400", earlyStopping: "200", seed: "42",
+      preflightRan: false, preflightValid: false, created: false,
+      cfgOpen: false, cfg: {}
+    };
+    this.CFG = [
+      { g: "study (OptimizationConfig)", rows: [
+        { k: "n_trials", d: "400", note: "declared trials — actual may land lower via early stopping" },
+        { k: "early_stopping_rounds", d: "200", note: "stagnation patience; null disables" },
+        { k: "early_stopping_min_trials", d: "800", note: "exploration floor — study cannot stop before it" },
+        { k: "seed", d: "42", note: "null = unseeded exploratory TPE; integer = reproducible audit run" },
+        { k: "directions", d: "(maximize,)", note: "multi-objective: e.g. (maximize, minimize, minimize) for sharpe/dd/turnover" },
+        { k: "n_jobs", d: "1", locked: true, note: "LOCKED by release — parallel rejected until duplicate detection is certified thread-safe" }
+      ] },
+      { g: "sampler (SamplerConfig)", rows: [
+        { k: "name", d: "tpe", note: "tpe · random · grid · cmaes · nsgaii — grid refuses unbounded dynamic floats" },
+        { k: "n_startup_trials", d: "120", note: "random warmup before TPE exploits" },
+        { k: "multivariate · group", d: "false · false", note: "TPE joint-sampling switches" },
+        { k: "constraint_mode", d: "auto", note: "random/grid/cmaes with formal constraints REQUIRE post_filter; tpe/nsgaii pass native" },
+        { k: "seeds (multi-seed)", d: "(None, 41, 42, 43, 44)", note: "MultiSeedOptimization — robust_plateau can demand seed_consensus across trajectories" }
+      ] },
+      { g: "objective & constraints", rows: [
+        { k: "scoring_backend", d: "endpoint", note: "endpoint = objective from the real backtest route; proxy only where forced (mode_2)" },
+        { k: "value_metrics", d: "(sharpe,)", note: "ReportMetricObjective — strict: missing metric raises, never silently 0.0" },
+        { k: "min_trades_constraint", d: "100", note: "formal Optuna constraint: ≤ 0 feasible" },
+        { k: "max_drawdown_constraint", d: "25.0 %", note: "formal constraint, preferred over ad-hoc penalties" },
+        { k: "min_trades_per_year", d: "100", note: "trade-count filter against low-trade Sharpe traps" },
+        { k: "trade_penalty_factor", d: "0.5", note: "optional overfit-tax on thin trade counts" },
+        { k: "use_numba", d: "true", note: "kernel acceleration for scoring" }
+      ] },
+      { g: "candidate selection", rows: [
+        { k: "candidate_selector.mode", d: "robust_decay (mode default)", note: "best · feasible_best · pareto_first · robust_plateau · mode-owned selectors" },
+        { k: "top_quantile", d: "0.10", note: "robust_plateau: objective quantile entering plateau scoring" },
+        { k: "neighborhood_radius", d: "0.10", note: "normalized param-space radius" },
+        { k: "min_neighbor_count", d: "8", note: "plateau must have this many neighbors" },
+        { k: "seed_consensus", d: "3", note: "region must be seen by ≥ N seeds (multi-seed only)" },
+        { k: "instability_penalty · worst_weight", d: "0.25 · 0.25", note: "std tax · worst-neighbor weight in plateau score" },
+        { k: "initial_trials (warm start)", d: "0 declared", note: "historical champions evaluated first; baseline floor sets search_regression=true if selection is worse" },
+        { k: "effective_params_builder", d: "off", note: "semantic dedupe when params contain inactive branches (e.g. tp fields with istp=false)" }
+      ] }
+    ];
+  }
+  pill(active, opts) {
+    const o = opts || {};
+    if (o.disabled) return "border:1px dashed #c9c5ba; background:transparent; color:#c9c5ba; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; text-decoration:line-through; cursor:not-allowed;";
+    return "border:1px solid " + (active ? (o.warn ? "#9a6a1f" : "#0f4c5c") : "#e3e0d7") + "; background:" + (active ? (o.warn ? "#f4ecdb" : "#e2edf0") : "#ffffff") + "; color:" + (active ? (o.warn ? "#9a6a1f" : "#0f4c5c") : "#4e5a6e") + "; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px;";
+  }
+  hash() {
+    const s = this.state;
+    const str = s.strategyId + s.protocol + s.datasetId + s.symbol + s.timeframe + JSON.stringify(s.windows) + JSON.stringify(s.advanced) + JSON.stringify(s.edits) + s.trials + s.seed;
+    let h = 7; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+    return h.toString(16).padStart(8, "0").slice(0, 6) + "…";
+  }
+  patch(p) { this.setState(Object.assign({ preflightRan: false, preflightValid: false, created: false }, p)); }
+  renderVals() {
+    const s = this.state;
+    const A = this.ALPHAS[s.alphaId]; const AV = A.versions[s.avId] || A.versions[Object.keys(A.versions)[0]];
+    const bound = !s.scratch;
+    const effStrategyId = bound ? AV.strategyId : s.strategyId;
+    const ST = this.STRATS[effStrategyId];
+    const route = this.ROUTES.find(r => r.id === s.route);
+    const routeError = route.blocked || null;
+    const tw = s.protocol === "three_window_decay";
+    const strategyError = ST.blocked;
+    const dataError = !s.symbol ? "A symbol is required." : ST.tfs.length && !ST.tfs.includes(s.timeframe) ? "The strategy declares only " + ST.tfs.join(", ") + "." : null;
+    const w = s.windows;
+    const windowError = tw
+      ? (w.isEnd !== w.oosStart ? "OOS must begin exactly where IS ends."
+        : w.oosEnd !== w.holdoutStart ? "Holdout must begin exactly where OOS ends."
+        : w.isStart >= w.isEnd || w.oosStart >= w.oosEnd ? "Every window must have a positive length."
+        : !w.holdoutEnd ? "A holdout end-exclusive is required for the historical query." : null)
+      : (s.advanced.dataStart >= s.advanced.dataEnd ? "Analysis end must be after analysis start." : null);
+    let paramViolations = 0; let sweptN = 0; let pinnedN = 0;
+    const dimBtn = (on, warn) => "flex:1; border:1px solid " + (on ? (warn ? "#9a6a1f" : "#0f4c5c") : "#e3e0d7") + "; border-radius:4px; background:" + (on ? (warn ? "#f4ecdb" : "#e2edf0") : "#ffffff") + "; color:" + (on ? (warn ? "#9a6a1f" : "#0f4c5c") : "#939db0") + "; padding:1px 0; font-family:'JetBrains Mono',monospace; font-size:9px;";
+    const paramRows = this.SPACE.map(sp => {
+      const e = s.edits[sp.name] || {};
+      if (sp.cat) {
+        const pinned = e.mode === "pin";
+        if (pinned) pinnedN++; else sweptN++;
+        return {
+          name: sp.name, declared: sp.cat, low: pinned ? (e.lo !== undefined ? e.lo : "true") : "—", high: "—", step: "cat",
+          isSweep: false, isPin: pinned,
+          status: pinned ? "pinned level — out of sweep dims" : "categorical — levels fixed by declaration", statusColor: "#939db0",
+          onSweep: () => this.patch({ edits: Object.assign({}, s.edits, { [sp.name]: { } }) }),
+          onPin: () => this.patch({ edits: Object.assign({}, s.edits, { [sp.name]: { mode: "pin", lo: "true" } }) }),
+          sweepStyle: dimBtn(!pinned), pinStyle: dimBtn(pinned, true),
+          onLow: (ev) => { if (pinned) this.patch({ edits: Object.assign({}, s.edits, { [sp.name]: Object.assign({}, e, { lo: ev.target.value }) }) }); }, onHigh: () => {},
+          inputStyle: "width:100%; border:1px solid " + (pinned ? "#e3e0d7" : "#efede4") + "; border-radius:4px; background:" + (pinned ? "#ffffff" : "#f4f2ec") + "; padding:2px 6px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:" + (pinned ? "#1c2532" : "#939db0") + ";"
+        };
+      }
+      const pinned = e.mode === "pin";
+      const lo = e.lo !== undefined ? e.lo : String(pinned ? sp.lo : sp.lo);
+      const hi = e.hi !== undefined ? e.hi : String(sp.hi);
+      const nlo = parseFloat(lo), nhi = parseFloat(hi);
+      const bad = pinned ? (isNaN(nlo) || nlo < sp.lo || nlo > sp.hi) : (isNaN(nlo) || isNaN(nhi) || nlo < sp.lo || nhi > sp.hi || nlo >= nhi);
+      if (bad) paramViolations++;
+      if (pinned) pinnedN++; else sweptN++;
+      return {
+        name: sp.name, declared: sp.lo + " … " + sp.hi, low: lo, high: hi, step: pinned ? "—" : sp.step == null ? "dyn" : String(sp.step),
+        isSweep: !pinned, isPin: pinned,
+        status: bad ? (pinned ? "pin value outside declared space — refused" : "outside the declared space — refused")
+          : pinned ? "pinned at " + lo + " — fixed, out of sweep dims"
+          : nlo > sp.lo || nhi < sp.hi ? "narrowed — allowed" : "declared bounds",
+        statusColor: bad ? "#b43a3a" : pinned || nlo > sp.lo || nhi < sp.hi ? "#9a6a1f" : "#939db0",
+        onSweep: () => this.patch({ edits: Object.assign({}, s.edits, { [sp.name]: {} }) }),
+        onPin: () => this.patch({ edits: Object.assign({}, s.edits, { [sp.name]: { mode: "pin", lo: String(sp.lo) } }) }),
+        sweepStyle: dimBtn(!pinned), pinStyle: dimBtn(pinned, true),
+        onLow: (ev) => this.patch({ edits: Object.assign({}, s.edits, { [sp.name]: Object.assign({}, e, { lo: ev.target.value }) }) }),
+        onHigh: (ev) => this.patch({ edits: Object.assign({}, s.edits, { [sp.name]: Object.assign({}, e, { hi: ev.target.value }) }) }),
+        inputStyle: "width:100%; border:1px solid " + (bad ? "#b43a3a" : "#e3e0d7") + "; border-radius:4px; background:#ffffff; padding:2px 6px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#1c2532;"
+      };
+    });
+    const sweepOverflow = sweptN > 8 ? "sweep dims " + sweptN + " > 8 — pin params or drop entries." : null;
+    const parameterError = paramViolations > 0 ? paramViolations + " parameters fall outside the declared parameter space." : sweepOverflow;
+    const trialsN = parseInt(s.trials, 10) || 0;
+    const trialsError = trialsN > 2000 ? "The engine release publishes a ceiling of 2000 trials." : null;
+    const seedError = ST.seedRequired === true && (s.seed === "" || s.seed == null) ? "The strategy declares determinism.seed_required — a fixed random seed is required." : null;
+    const blockingError = routeError || strategyError || dataError || windowError || parameterError || trialsError || seedError;
+    const STEPS = [
+      { id: "context", label: "Context", err: null },
+      { id: "strategy", label: "Strategy", err: strategyError },
+      { id: "route", label: "Route", err: routeError },
+      { id: "data", label: "Data", err: dataError },
+      { id: "windows", label: "Walk-forward", err: windowError },
+      { id: "parameters", label: "Parameters", err: parameterError },
+      { id: "optimization", label: "Optimization", err: trialsError || seedError },
+      { id: "review", label: "Review & run", err: null }
+    ];
+    const steps = STEPS.map((st, i) => ({
+      num: st.err ? "!" : s.step === st.id ? String(i + 1) : "✓",
+      label: st.label,
+      sub: st.err ? "needs attention" : st.id === "review" ? (s.preflightValid ? "preflight valid" : "preflight pending") : "valid",
+      onPick: () => this.setState({ step: st.id }),
+      style: "display:flex; align-items:center; gap:8px; border:0; border-radius:6px; padding:6px 12px; background:" + (s.step === st.id ? "#e2edf0" : "transparent") + "; color:#1c2532; flex:none;",
+      numStyle: "width:20px; height:20px; flex:none; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; border:1.5px solid " + (st.err ? "#b43a3a" : s.step === st.id ? "#0f4c5c" : "#1e7b4f") + "; color:" + (st.err ? "#b43a3a" : s.step === st.id ? "#0f4c5c" : "#1e7b4f") + ";",
+      subStyle: "font-size:9px; color:" + (st.err ? "#b43a3a" : "#939db0") + ";"
+    }));
+    const strategyCards = Object.keys(this.STRATS).map(k => {
+      const st = this.STRATS[k];
+      const pinnedOut = bound && k !== effStrategyId;
+      const dead = !!st.blocked || pinnedOut;
+      return {
+        name: k, desc: st.desc, meta: "timeframes " + st.tfs.join(", ") + " · warmup " + st.warmup + " · seed " + (st.seedRequired === true ? "required" : st.seedRequired === false ? "optional" : "not declared"),
+        badge: st.blocked ? "BLOCKED" : pinnedOut ? "PINNED OUT" : bound ? "from av_" : "runnable",
+        badgeStyle: "font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; border-radius:3px; padding:0 5px; border:1px solid " + (st.blocked ? "#b43a3a" : pinnedOut ? "#c9c5ba" : "#1e7b4f") + "; color:" + (st.blocked ? "#b43a3a" : pinnedOut ? "#939db0" : "#1e7b4f") + ";",
+        onPick: () => { if (!dead) this.patch({ strategyId: k, timeframe: st.tfs[0], step: "route" }); },
+        style: "flex:1; min-width:210px; display:flex; flex-direction:column; gap:4px; text-align:left; border:1px " + (pinnedOut ? "dashed #c9c5ba" : "solid " + (effStrategyId === k ? "#0f4c5c" : "#e3e0d7")) + "; border-radius:6px; background:" + (effStrategyId === k ? "#e2edf0" : dead ? "#faf9f5" : "#ffffff") + "; padding:9px 12px; opacity:" + (dead ? ".65" : "1") + "; cursor:" + (dead ? "not-allowed" : "pointer") + ";"
+      };
+    });
+    const protocolOpts = [
+      { k: "three_window_decay", label: "Three-Window Decay" },
+      { k: "advanced_walk_forward", label: "Advanced Walk-Forward" }
+    ].map(p => ({ label: p.label, onPick: () => this.patch({ protocol: p.k }), style: this.pill(s.protocol === p.k) }));
+    const mkW = (key) => (ev) => this.patch({ windows: Object.assign({}, s.windows, { [key]: ev.target.value }) });
+    const windowRows = [
+      { role: "IS", color: "#7a8699", start: w.isStart, end: w.isEnd, onStart: mkW("isStart"), onEnd: mkW("isEnd") },
+      { role: "OOS", color: "#0f4c5c", start: w.oosStart, end: w.oosEnd, onStart: mkW("oosStart"), onEnd: mkW("oosEnd") },
+      { role: "Holdout", color: "#9a6a1f", start: w.holdoutStart, end: w.holdoutEnd, onStart: mkW("holdoutStart"), onEnd: mkW("holdoutEnd") }
+    ];
+    const mkA = (key) => (ev) => this.patch({ advanced: Object.assign({}, s.advanced, { [key]: ev.target.value }) });
+    const advFields = [
+      { label: "Analysis start", value: s.advanced.dataStart, onChange: mkA("dataStart") },
+      { label: "End exclusive", value: s.advanced.dataEnd, onChange: mkA("dataEnd") },
+      { label: "Split mode / first OOS", value: s.advanced.splitMode, onChange: mkA("splitMode") },
+      { label: "Frequency", value: s.advanced.splitFrequency, onChange: mkA("splitFrequency") },
+      { label: "Window mode", value: s.advanced.windowMode, onChange: mkA("windowMode") }
+    ];
+    const FREQ_M = { monthly: 1, quarterly: 3, semiannual: 6, yearly: 12, annual: 12 };
+    const parseD = (v) => { const t = Date.parse(String(v).slice(0, 10)); return isNaN(t) ? null : t; };
+    const fp = (() => {
+      const a = s.advanced;
+      const first = parseD(a.splitMode); const end = parseD(a.dataEnd); const start = parseD(a.dataStart);
+      const stepM = FREQ_M[String(a.splitFrequency).toLowerCase()];
+      if (!first || !end || !start || !stepM) return { n: 0, formula: "—", cells: [], note: "fold count is computable once split mode is a date and frequency is monthly / quarterly / semiannual / yearly — otherwise the server derives it at preflight.", noteColor: "#939db0", warn: false };
+      const months = Math.max(0, (new Date(end).getUTCFullYear() - new Date(first).getUTCFullYear()) * 12 + (new Date(end).getUTCMonth() - new Date(first).getUTCMonth()));
+      const n = Math.max(0, Math.floor(months / stepM));
+      const warn = n > 20; const bad = n < 2;
+      const cells = Array.from({ length: Math.min(n, 48) }, (_, i) => ({
+        title: "fold_" + String(i + 1).padStart(2, "0") + " · OOS step " + (i + 1) + " of " + n + " · " + a.splitFrequency,
+        style: "flex:1; min-width:4px; max-width:26px; height:12px; border-radius:2px; background:" + (a.windowMode === "expanding" ? "linear-gradient(90deg,#a8c6ce " + Math.round(40 + i / Math.max(1, n - 1) * 45) + "%, #0f4c5c 0)" : "linear-gradient(90deg,#a8c6ce 62%, #0f4c5c 0)") + "; border:1px solid #e3e0d7;"
+      }));
+      return {
+        n, warn,
+        formula: a.splitFrequency + " × (" + String(a.splitMode).slice(0, 10) + " → " + String(a.dataEnd).slice(0, 10) + ")",
+        cells,
+        note: bad ? "fewer than 2 folds — walk-forward degenerates to a single train/test; widen the span or shorten the frequency."
+          : warn ? n + " folds ⇒ " + n + " studies × " + (s.trials || "?") + " trials = " + (n * (parseInt(s.trials, 10) || 0)).toLocaleString("en-US") + " declared trials. The portal renders this at scale (compact gantt, windowed ledgers) — budget engine time, not screen space."
+          : n + " studies × " + (s.trials || "?") + " trials = " + (n * (parseInt(s.trials, 10) || 0)).toLocaleString("en-US") + " declared trials · mist = train (" + a.windowMode + "), teal = OOS step.",
+        noteColor: bad ? "#b43a3a" : warn ? "#9a6a1f" : "#4e5a6e"
+      };
+    })();
+    const foldPreview = {
+      n: String(fp.n), formula: fp.formula, cells: fp.cells, note: fp.note, noteColor: fp.noteColor,
+      badgeStyle: "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; border-radius:999px; padding:1px 9px; border:1px solid " + (fp.warn ? "#9a6a1f" : "#0f4c5c") + "; color:" + (fp.warn ? "#9a6a1f" : "#0f4c5c") + "; background:" + (fp.warn ? "#f4ecdb" : "#e2edf0") + ";"
+    };
+    const MODESCHED = { mode_1_decay: ["per_fold_causal", "per_fold_decay", "global"], mode_2_sbb: ["global"], mode_3_flat_minima: ["global"], mode_4_is_only_robust: ["per_fold_causal", "global"], mode_5_full_robust: ["global"] };
+    const advModeOpts = Object.keys(MODESCHED).map(k => ({
+      label: k, onPick: () => this.patch({ advanced: Object.assign({}, s.advanced, { optimizationMode: k, optimizationSchedule: MODESCHED[k].includes(s.advanced.optimizationSchedule) ? s.advanced.optimizationSchedule : MODESCHED[k][0] }) }),
+      style: this.pill(s.advanced.optimizationMode === k)
+    }));
+    const advSchedOpts = ["per_fold_causal", "per_fold_decay", "global"].map(k => {
+      const valid = MODESCHED[s.advanced.optimizationMode].includes(k);
+      return { label: k, title: valid ? "" : "invalid for " + s.advanced.optimizationMode, onPick: () => { if (valid) this.patch({ advanced: Object.assign({}, s.advanced, { optimizationSchedule: k }) }); }, style: this.pill(s.advanced.optimizationSchedule === k, { disabled: !valid, warn: k !== "per_fold_causal" }) };
+    });
+    const tfMs = { "15m": 900000, "1h": 3600000, "4h": 14400000, "1d": 86400000 }[s.timeframe] || 14400000;
+    const pts = tw ? [
+      { role: "IS", color: "#7a8699", a: w.isStart, b: w.isEnd },
+      { role: "OOS", color: "#0f4c5c", a: w.oosStart, b: w.oosEnd },
+      { role: "Holdout", color: "#9a6a1f", a: w.holdoutStart, b: w.holdoutEnd }
+    ] : [{ role: "span", color: "#0f4c5c", a: s.advanced.dataStart, b: s.advanced.dataEnd }];
+    const t0 = Math.min(...pts.map(p => new Date(p.a).getTime()));
+    const t1 = Math.max(...pts.map(p => new Date(p.b || p.a).getTime()));
+    const span = Math.max(1, t1 - t0);
+    const timeline = pts.map(p => {
+      const a = new Date(p.a).getTime(), b = new Date(p.b || p.a).getTime();
+      const left = (a - t0) / span * 100, width = Math.max(0.5, (b - a) / span * 100);
+      return { role: p.role, color: p.color, bars: b > a ? Math.round((b - a) / tfMs).toLocaleString("en-US") : "—", barStyle: "position:absolute; left:" + left.toFixed(1) + "%; width:" + width.toFixed(1) + "%; top:0; bottom:0; border-radius:999px; background:" + p.color + "; opacity:.8;" };
+    });
+    const mode = tw ? "mode_1_decay" : s.advanced.optimizationMode;
+    const sched = tw ? "global" : s.advanced.optimizationSchedule;
+    const CLAIMS = {
+      per_fold_causal: { c: "STRICT_OUTER_OOS", ceil: "B", note: "holdout sealed keeps the ceiling at B" },
+      per_fold_decay: { c: "SELECTION_ADJUSTED_OOS", ceil: "C", note: "selection will see OOS — ceiling C before any trial runs" },
+      global: { c: mode === "mode_5_full_robust" ? "NONE_FULL_SAMPLE_CALIBRATION" : "RETROSPECTIVE / COMPAT", ceil: mode === "mode_5_full_robust" ? "D" : "C", note: mode === "mode_5_full_robust" ? "nothing withheld — calibration only" : "schedule=global caps the ceiling at C. Want B? Advanced Walk-Forward with per_fold_causal." }
+    };
+    const CL = CLAIMS[sched];
+    const ceilColor = CL.ceil === "B" ? "#9a6a1f" : CL.ceil === "C" ? "#b4772f" : "#b43a3a";
+    const reviewRows = [
+      { k: "alpha binding", v: bound ? A.name + " · " + s.avId + " (" + AV.digest + ") — PUBLISHABLE" : "scratch — NOT_PUBLISHABLE, no rc_ can be composed" },
+      { k: "execution route", v: route.id + " → " + route.contract + (route.method === "tape" ? " · tape-driven, single-pass" : "") },
+      { k: "strategy_id", v: effStrategyId + (bound ? " (pinned by " + s.avId + ")" : "") },
+      { k: "dataset · symbol · tf", v: s.datasetId + " · " + s.symbol + " · " + s.timeframe },
+      { k: "protocol", v: s.protocol },
+      { k: "windows", v: tw ? "IS " + w.isStart.slice(0, 10) + " → OOS " + w.oosStart.slice(0, 10) + " → holdout " + w.holdoutStart.slice(0, 10) : "walk-forward · " + s.advanced.splitFrequency + " · " + s.advanced.windowMode },
+      { k: "fold plan", v: tw ? "single train/test — no folds" : "≈ " + fp.n + " outer folds (" + s.advanced.splitFrequency + ", " + s.advanced.windowMode + ") — server derives the authoritative plan at preflight" },
+      { k: "parameter_space", v: this.SPACE.length + " entries · " + sweptN + " swept · " + pinnedN + " pinned (sweep ceiling 8)" },
+      { k: "mode × schedule", v: mode + " × " + sched + (tw ? " (pinned by protocol payload)" : "") },
+      { k: "trials · early stop · seed", v: s.trials + " · " + (s.earlyStopping || "null") + " · " + (s.seed || "null") },
+      { k: "optimization_config", v: Object.keys(s.cfg).length ? Object.keys(s.cfg).length + " overrides (" + Object.keys(s.cfg).join(", ") + ") — rest engine defaults" : "release defaults — nothing serialized" },
+      { k: "account · execution", v: "capital 20,000 · fee 5 bps one-way · slippage 1 bp · target pct_equity" }
+    ];
+    const preflightRows = [
+      { k: "required columns present on dataset (server)", ok: true },
+      { k: "warmup " + ST.warmup + " bars available before IS start (server)", ok: true },
+      { k: "resource ceiling — " + this.SPACE.length + "/8 entries, " + trialsN + "/2000 trials", ok: !trialsError },
+      { k: "holdout end-exclusive present for the historical query", ok: tw ? !!w.holdoutEnd : true }
+    ].map(p => ({ k: p.k, mark: p.ok ? "✓" : "✕", markStyle: "width:14px; flex:none; font-family:'JetBrains Mono',monospace; font-weight:700; color:" + (p.ok ? "#1e7b4f" : "#b43a3a") + ";" }));
+    return {
+      steps,
+      isStrategy: s.step === "strategy", isData: s.step === "data", isWindows: s.step === "windows",
+      isParameters: s.step === "parameters", isOptimization: s.step === "optimization", isReview: s.step === "review",
+      strategyCards, protocolOpts,
+      req: { cols: ST.cols, tfs: ST.tfs.join(", "), warmup: String(ST.warmup), seed: ST.seedRequired === true ? "required (determinism.seed_required)" : ST.seedRequired === false ? "optional" : "not declared by the strategy" },
+      datasetId: s.datasetId, onDataset: (ev) => this.patch({ datasetId: ev.target.value }),
+      symbol: s.symbol, onSymbol: (ev) => this.patch({ symbol: ev.target.value.toUpperCase() }),
+      timeframe: s.timeframe, onTimeframe: (ev) => this.patch({ timeframe: ev.target.value }),
+      hasDataError: !!dataError, dataError: dataError || "",
+      windowsTitle: tw ? "Three windows" : "Walk-forward folds",
+      isThreeWindow: tw, isAdvanced: !tw, windowRows, advFields, advModeOpts, advSchedOpts, foldPreview,
+      hasWindowError: !!windowError, windowError: windowError || "",
+      spaceSummary: sweptN + " swept · " + pinnedN + " pinned · sweep ceiling 8", paramRows,
+      hasParamError: !!parameterError, parameterError: parameterError || "",
+      trials: s.trials, onTrials: (ev) => this.patch({ trials: ev.target.value }),
+      earlyStopping: s.earlyStopping, onEarly: (ev) => this.patch({ earlyStopping: ev.target.value }),
+      seed: s.seed, onSeed: (ev) => this.patch({ seed: ev.target.value }),
+      seedHint: seedError || (ST.seedRequired === true ? "required by the strategy manifest" : "optional"),
+      seedHintColor: seedError ? "#b43a3a" : "#939db0",
+      hasTrialsError: !!(trialsError || seedError), trialsError: trialsError || seedError || "",
+      cfgOpen: s.cfgOpen, cfgCaret: s.cfgOpen ? "collapse ▴" : "expand ▾",
+      onToggleCfg: () => this.setState({ cfgOpen: !s.cfgOpen }),
+      cfgSummary: (() => { const n = Object.keys(s.cfg).length; return n ? n + " override" + (n > 1 ? "s" : "") + " · rest = release defaults" : "all defaults from er_quantbt_1_1_1 — nothing serialized"; })(),
+      cfgGroups: this.CFG.map(g => ({
+        name: g.g,
+        rows: g.rows.map(r => {
+          const edited = s.cfg[r.k] !== undefined;
+          return {
+            k: r.k, note: r.note, editable: !r.locked, locked: !!r.locked,
+            v: edited ? s.cfg[r.k] : r.d,
+            onChange: (ev) => { const c = Object.assign({}, s.cfg); if (ev.target.value === r.d || ev.target.value === "") delete c[r.k]; else c[r.k] = ev.target.value; this.patch({ cfg: c, cfgOpen: true }); },
+            inputStyle: "width:150px; flex:none; border:1px solid " + (edited ? "#9a6a1f" : "#e3e0d7") + "; border-radius:4px; background:#ffffff; padding:2px 6px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#1c2532;",
+            badge: r.locked ? "LOCKED" : edited ? "OVERRIDE" : "default",
+            badgeStyle: "width:64px; flex:none; text-align:center; font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; border-radius:3px; padding:0 4px; " + (r.locked ? "color:#b43a3a; border:1px solid #b43a3a;" : edited ? "color:#9a6a1f; border:1px solid #9a6a1f; background:#fdfbf5;" : "color:#c9c5ba; border:1px solid #efede4;")
+          };
+        })
+      })),
+      isContext: s.step === "context", isRoute: s.step === "route",
+      bindChip: bound
+        ? { label: "PUBLISHABLE · " + s.avId, style: "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.04em; border:1px solid #1e7b4f; color:#1e7b4f; background:#eef5f0; border-radius:999px; padding:2px 10px;" }
+        : { label: "NOT_PUBLISHABLE · scratch", style: "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.04em; border:1px dashed #9a6a1f; color:#9a6a1f; background:#fdfbf5; border-radius:999px; padding:2px 10px;" },
+      alphaId: s.alphaId, avId: s.avId,
+      alphaOpts: Object.keys(this.ALPHAS).map(k => ({ v: k, label: this.ALPHAS[k].name + " · " + k })),
+      avOpts: Object.keys(A.versions).map(k => ({ v: k, label: k + " · " + A.versions[k].state + " · " + A.versions[k].digest })),
+      onAlpha: (ev) => { const k = ev.target.value; const v0 = Object.keys(this.ALPHAS[k].versions)[0]; this.patch({ alphaId: k, avId: v0, strategyId: this.ALPHAS[k].versions[v0].strategyId }); },
+      onAv: (ev) => this.patch({ avId: ev.target.value }),
+      onBound: () => this.patch({ scratch: false }),
+      onScratch: () => this.patch({ scratch: true }),
+      boundBtnStyle: this.pill(bound) + " border-radius:6px;",
+      scratchBtnStyle: this.pill(!bound, { warn: true }) + " border-radius:6px;",
+      isBoundView: bound, isScratchView: !bound,
+      passport: [
+        { k: "artifact digest", v: AV.digest, color: "#1c2532" },
+        { k: "import state (U14)", v: AV.state, color: AV.state === "ACTIVE" ? "#1e7b4f" : AV.state === "DRAFT" ? "#9a6a1f" : "#939db0" },
+        { k: "entrypoint", v: AV.entry, color: "#1c2532" },
+        { k: "supersedes", v: AV.supersedes, color: "#4e5a6e" },
+        { k: "last published rc", v: AV.lastRc, color: "#4e5a6e" }
+      ],
+      avStateNote: AV.state === "ACTIVE" ? "This version can compose a release candidate after the run completes — evidence lands in the pack on the Release Candidate screen."
+        : AV.state === "DRAFT" ? "DRAFT import — runnable as evidence, but activate it in Alpha 360° before any publish: a draft version cannot compose rc_."
+        : "SUPERSEDED — runnable for comparison, but a new rc_ should come from the active version.",
+      avStateNoteColor: AV.state === "ACTIVE" ? "#4e5a6e" : "#9a6a1f",
+      pinnedNote: bound ? "Strategy is pinned by " + s.avId + " (entrypoint " + AV.entry + ") — switch to scratch in Context to explore other strategies." : "",
+      routeCards: this.ROUTES.map(r => {
+        const active = s.route === r.id;
+        const bc = r.tone === "blocked" ? "#b43a3a" : r.tone === "warn" ? "#9a6a1f" : r.tone === "rust" ? "#0f4c5c" : "#1e7b4f";
+        return {
+          name: r.id, desc: r.desc, meta: r.fam + " · " + r.contract, badge: r.badge, title: r.blocked || r.contract,
+          badgeStyle: "font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; border-radius:3px; padding:0 4px; border:1px solid " + bc + "; color:" + bc + "; flex:none;",
+          onPick: () => { if (!r.blocked) this.patch({ route: r.id }); },
+          style: "width:calc(25% - 5px); min-width:200px; display:flex; flex-direction:column; gap:3px; text-align:left; border:1px " + (r.blocked ? "dashed #c9c5ba" : "solid " + (active ? "#0f4c5c" : "#e3e0d7")) + "; border-radius:6px; background:" + (active ? "#e2edf0" : r.blocked ? "#faf9f5" : "#ffffff") + "; padding:8px 10px; opacity:" + (r.blocked ? ".6" : "1") + "; cursor:" + (r.blocked ? "not-allowed" : "pointer") + ";"
+        };
+      }),
+      routeSel: {
+        name: route.id, contract: route.contract, backend: route.backend,
+        methodNote: route.method === "tape" ? "tape-driven — single-pass replay; the walk-forward step collapses to the tape span" : route.method === "none" ? "deferred — not runnable this round" : "strategy-param route — walk-forward search applies",
+        methodColor: route.method === "wfo" ? "#1e7b4f" : "#9a6a1f",
+        summary: route.id === "arbitrage" ? "Pick the executable spec at submit: Basis · StatArbPair · CalendarSpread · FundingArb · SpotPerpCashCarry · IndexBasketArb. The 3 schema-only specs are listed disabled with reasons — the support matrix is the source of truth."
+          : route.method === "tape" ? "Tape reference is attached at submit. Metrics are accounting-grade; no search, no folds — the Methodology step will show a single span."
+          : "Route parameters are declared at submit; defaults come from the engine release manifest.",
+      },
+      cfgIntrabar: s.route === "intrabar_bracket", cfgPortfolio: s.route === "portfolio",
+      cfgReactive: s.route === "reactive", cfgDca: s.route === "dca_ladder",
+      cfgSummary: ["intrabar_bracket", "portfolio", "reactive", "dca_ladder"].indexOf(s.route) < 0,
+      ib: { levelMode: s.routeCfg.ib.levelMode, sameBar: s.routeCfg.ib.sameBar, tick: s.routeCfg.ib.tick,
+        onLevelMode: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { ib: Object.assign({}, s.routeCfg.ib, { levelMode: ev.target.value }) }) }),
+        onSameBar: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { ib: Object.assign({}, s.routeCfg.ib, { sameBar: ev.target.value }) }) }),
+        onTick: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { ib: Object.assign({}, s.routeCfg.ib, { tick: ev.target.value }) }) }) },
+      pf: { mode: s.routeCfg.pf.mode, sizing: s.routeCfg.pf.sizing,
+        onMode: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { pf: Object.assign({}, s.routeCfg.pf, { mode: ev.target.value }) }) }),
+        onSizing: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { pf: Object.assign({}, s.routeCfg.pf, { sizing: ev.target.value }) }) }) },
+      rx: { runtime: s.routeCfg.rx.runtime, audit: s.routeCfg.rx.audit,
+        onRuntime: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { rx: Object.assign({}, s.routeCfg.rx, { runtime: ev.target.value }) }) }),
+        onAudit: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { rx: Object.assign({}, s.routeCfg.rx, { audit: ev.target.value }) }) }) },
+      dc: { base: s.routeCfg.dc.base, so: s.routeCfg.dc.so, step: s.routeCfg.dc.step,
+        onBase: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { dc: Object.assign({}, s.routeCfg.dc, { base: ev.target.value }) }) }),
+        onSo: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { dc: Object.assign({}, s.routeCfg.dc, { so: ev.target.value }) }) }),
+        onStep: (ev) => this.patch({ routeCfg: Object.assign({}, s.routeCfg, { dc: Object.assign({}, s.routeCfg.dc, { step: ev.target.value }) }) }) },
+      hasRouteError: !!routeError, routeError: routeError || "",
+      reviewRows, hasBlocking: !!blockingError, blockingError: blockingError || "",
+      preflightRan: s.preflightRan, preflightRows,
+      onRun: () => {
+        if (blockingError) return;
+        if (!s.preflightRan) { this.setState({ preflightRan: true, preflightValid: true }); return; }
+        if (s.preflightValid && !s.created) this.setState({ created: true });
+      },
+      runBtnLabel: blockingError ? "blocked — fix the failing step" : s.created ? "✓ run created — R-WFO-120" : s.preflightValid ? "create run" : "run preflight",
+      runBtnStyle: "border:1px solid " + (blockingError ? "#c9c5ba" : "#0f4c5c") + "; border-radius:6px; background:" + (blockingError ? "#f4f2ec" : s.created ? "#e2edf0" : "#0f4c5c") + "; color:" + (blockingError ? "#939db0" : s.created ? "#0f4c5c" : "#ffffff") + "; padding:7px 16px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; cursor:" + (blockingError ? "not-allowed" : "pointer") + ";",
+      runNote: s.created ? "queued — track it in the Run Library; mode and schedule are now locked" : "preflight validates the exact payload; the run is created only against a validated key",
+      timeline,
+      cfgHash: this.hash(),
+      fc: {
+        modeSched: mode + " × " + sched,
+        src: tw ? "pinned by protocol payload" : "chosen in Walk-forward step",
+        srcColor: tw ? "#9a6a1f" : "#1c2532",
+        claim: CL.c, ceil: CL.ceil,
+        ceilStyle: "font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; border:2px solid " + ceilColor + "; color:" + ceilColor + "; border-radius:6px; padding:0 10px;",
+        note: CL.note
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

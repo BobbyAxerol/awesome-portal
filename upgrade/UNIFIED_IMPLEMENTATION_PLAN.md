@@ -1,5 +1,10 @@
 # Unified Implementation Plan — QuantBT Portal v0.4
 
+> **Research Loop V1.1 — active planning index, 2026-09-19:** xem [§13](#research-loop-v11)
+> cho 24 phase P01–P24, rules phối hợp, test/exit gates và links hi-fi/guide.
+> Baseline v0.4 và journal Execution bên dưới giữ nguyên lịch sử, không tự áp
+> engine pin/role/status cũ cho campaign Research mới.
+
 > **Trạng thái:** Draft để owner review và chốt thứ tự triển khai<br>
 > **Cập nhật:** 2026-08-15<br>
 > **Nguồn kiến trúc:** [QuantBT Portal Architecture & UI/UX Final v0.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md)<br>
@@ -3412,3 +3417,596 @@ EDS-01 does not activate a profile, deploy a runtime image, alter Edge/Source
 Proxy/Trading System/DB/Redis/broker/CLI or change command authority. Rich
 screen composition is explicitly EDS-03 after EDS-02 generated product
 contracts; this is planned layer sequencing rather than hidden EDS-01 debt.
+
+---
+
+<a id="research-loop-v11"></a>
+# 13. Research Loop V1.1 — chỉ mục triển khai 24 phase, kế thừa Execution v1.1.1
+
+**Owner:** Bobby. **Ngày lập:** 2026-09-19. **Trạng thái:** `PLAN_WRITTEN / IMPLEMENTATION_NOT_STARTED`.
+Lệnh hiện tại duyệt viết plan/rules, **chưa khởi động P01 hay deploy**.
+Workspace soạn plan: `/home/bobby/portal-research`, nhánh `docs/research-loop-plan`,
+base kiểm tra `533162635f56584d630e3d971d77d50860595f15`. Đây là source baseline,
+không phải chứng nhận runtime production hoặc QuantBT 1.1.1 đã active.
+
+Phần §1–12 và các journal Execution giữ nguyên lịch sử. §13 là **live phase index duy nhất**
+của Research: 24 mục dưới đây giữ goal/to-do/tests/exit/handoff, link sang guide để làm chi tiết;
+không tạo plan/tracker cạnh tranh và không chép nguyên guide. Các thuật ngữ version Portal
+v1.1.1, Guide V1.1, QuantBT 1.1.1 và Delta strategy 1.0.0 là **bốn danh tính riêng**.
+
+<a id="rl-authority"></a>
+## 13.1. Nguồn bắt buộc và reconciliation
+
+| Nguồn | Cách sử dụng |
+|---|---|
+| [Research rules A13](./research_loop/CLAUDE-FOR-thanhvuong.md#research-working-rules) | Quy trình chung Codex/Claude; A1–A12 áp dụng quyền contributor theo Linux identity, không hạn chế Bobby |
+| [Guide 24 phase](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#part-iv) | Toàn bộ to-do, FND/COR/DR, tests, exit gates, rollback của P01–P24 vẫn bắt buộc |
+| [V1.1 Delta](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#v11-delta), [browser](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#v11-browser), [phase gates](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#v11-phase-gates), [dev review](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#v11-dev-review) | Bổ sung bắt buộc cho từng phase, không chỉ P24 |
+| [Screen spec index](./research_loop/release-v1.1/docs/SPEC_INDEX.md), [IA](./research_loop/release-v1.1/docs/01_IA_AND_WIRING.md), [Alpha/RC](./research_loop/release-v1.1/docs/03_ALPHA_RC_BINDING.md), [engine routes](./research_loop/release-v1.1/docs/04_ENGINE_ROUTE_MATRIX.md) | 15 màn 00–14; mỗi phase đọc hết HTML + spec màn, handlers, panels và test cuối file |
+| [Execution backend plan](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md) §18–21 | Lessons/current contracts, không mở lại các phase Execution hoặc thừa hưởng quyền activate cũ |
+| [Release](../docs/release-and-deployment.md), [cleanup](../docs/production-feature-profile-and-cleanup.md) C4/C6 | Build/release/data isolation và tài nguyên; facts đo ngày cũ phải đo lại khi thực thi |
+| [v0.5 topology](./RESEARCH_EXECUTION_DUAL_CELL_AND_INSTITUTIONAL_UIUX_ADJUSTMENT_GUIDE_v0.5_vi.md) | Kế thừa boundaries và release discipline; target cũ không là runtime hiện tại hoặc quyền xây thêm AWS services |
+
+**Authority theo concern:** chỉ đạo Bobby mới nhất + rules dự án; §13 quản lý phase/status/acceptance;
+guide giữ chi tiết implementation; frontend HTML/spec + COR đã duyệt giữ UX; actual published
+engine/Execution contract giữ computational/source authority. Không tự sửa consumer Execution
+để làm mô tả Research thành đúng. Conflict chưa giải quyết đi vào decision ledger, không chọn
+im lặng bản dễ làm. Các điều chỉnh dưới đây không đổi hi-fi hoặc waiver test.
+
+| ID | Chênh lệch/lưu ý đã đọc | Xử lý trong phase |
+|---|---|---|
+| RL-C01 | Root rules/guide cũ ghi Claude FE-only, Research ngoài scope; Bobby hiện giao Research BE+FE | Override scoped tại root AGENTS/CLAUDE và Research A13: thế mạnh không là role cấm; sửa phần đã chốt của bên kia cần approval/handoff cụ thể |
+| RL-C02 | Engine 1.0.8 trong baseline cũ; guide target 1.1.1; frontend hiện TanStack Query/ECharts6, prototype có ECharts5 CDN | P01 inventory lock/package/runtime; P04 upgrade adapter; P09 dùng libs/fonts đã cài, không downgrade/copy prototype runtime. Giữ reader/history cũ |
+| RL-C03 | ZIP/prose không chứng minh deploy, source capability hay privileges hiện tại | P01 source/host ledger tách OBSERVED/NOT_VERIFIED/PLANNED; P02 spike qua current code. Không tự SSH/probe AWS để triển khai Research |
+| RL-C04 | Current facade chỉ seed run khi202; RunSync hash toàn selected_params wrapper; approval-create strict và workspace optional | P02/P10/P22 chứng minh bằng exact code/tests: `apps/control-api/src/facade/proxy.service.ts`, `run-sync.service.ts`, `governance/contracts.ts`. Không hardcode workspace `primary`, invent rc_id payload hoặc đồng nhất bốn digest |
+| RL-C05 | Một số README v1.0/14screens; bộ hiện có15HTML (00–14); lifecycle P-1…P-8 “implemented” là design record | P01 giữ đủ15 màn + subpanels. Không dùng trạng thái prototype làm implementation evidence. P01 source test inventory là denominator |
+| RL-C06 | Report HTML gọi `doc-page.js`, chưa thấy file trong package; CSS ẩn `doc-page:not(:defined)` | P01 xác minh dependency/license/source, lập phương án harness; P09/P18 Research-owned print/render tương thích và visual review. Không chụp blank report làm baseline; không tự chép thư viện ngoài |
+| RL-C07 | Contributor remote trong archive khác tên mirror trong root policy; Bobby dùng canonical origin | P01 owner provisioning xác nhận repository/URL/branch prefix/dev SHA thực tế. Không tự đổi remote hoặc dùng credential Bobby; Bobby chuyển baseline đã review cho contributor, không mirror mọi commit mặc định |
+| RL-C08 | Guide cho carry bounded debt ở một số đoạn cũ | V1.1 + A5 thắng: không known unresolved in-scope defect/test thiếu trước phase sau. Work vốn thuộc phase sau khác debt; external gap ảnh hưởng required feature cần Bobby quyết scope, không tự N/A |
+| RL-C09 | DR-01 holdout authority; DR-02 bound warning; DR-03 promotion_pick chưa đủ source | P02 ghi source/action bị ảnh hưởng; DR-01 đóng trước P14 mutation, DR-02 trước P13/P15/P16 copy/formula, DR-03 trước P19. Không invent gate/reset/pick hay blanket block mọi read |
+| RL-C10 | Research dev hostname mới chỉ là target trong guide | P01 gom bootstrap request; P07 trở đi cần actual dev-review receipt khi UI reviewable. Env/secrets/data ngoài worktree; không deploy vào dev/prod chung để né thiếu provisioning |
+
+### 13.2. Mục tiêu, scope và cách phối hợp
+
+- Hoàn thiện15 màn và mọi required tab/drawer/action theo hi-fi, từ Import→Run→Evidence→RC→existing R1;
+  backend thật, không “UI đẹp dùng mock” hay “API có nhưng màn envelope”.
+- TS giữ actor/workspace/RBAC/control/Research workflow; Rust giữ bounded storage/query/projections;
+  Python chỉ adapter/worker khi QuantBT/strategy cần. QuantBT giữ simulation/accounting/selection,
+  không viết engine thứ hai để khớp UI. Reuse nền hiện có; không tạo service cho từng màn.
+- Research ở SGP; **không sửa Execution/TS/Edge/AWS runtime**, không direct TS DB/Redis/broker/CLI.
+  Existing publication APIs được test trong isolated authorized environment, không gửi approval production.
+- Codex backend-first, Claude frontend-first, **đều được làm BE/FE theo assignment**. Mỗi slice có
+  người đang sửa + file/contract revision. Trước đổi phần được bên kia/Bobby duyệt: hỏi với exact diff,
+  rationale, visual/consumer impact và tests; approval cụ thể hiện có không hỏi lại. Không chia file quyền
+  theo model tuyệt đối, cũng không sửa hộ âm thầm.
+- Bobby có thể làm trước bất kỳ slice được giao; record phase base/head, evidence invalidation và phần còn lại.
+  Thanhvuong dùng workspace Linux riêng và baseline dev được Bobby chuyển/review, không chung metadata Git,
+  secrets hoặc volumes Bobby. Handoff mặc định mỗi cặp P01–02…P23–24 theo A6; chỉ Bobby merge.
+- Dependencies kỹ thuật giữ nguyên. Thanhvuong chỉ chuyển phase/cặp theo A5/A6; song song subtasks
+  trong phase được cấp, không suy sơ đồ dependency thành quyền mở mọi phase. Bobby có thể phân lại phạm vi
+  rõ ràng. Không tạo phase25 để dời thiếu sót đã biết.
+- Frontend giữ Research Light và HTML/spec; không đổi global Execution Carbon, typography hoặc routing chung.
+  Đủ loading/empty/partial/stale/denied/unavailable/terminal; giữ bố cục ở mọi state.
+  Sửa spacing/layout/copy khác source cần COR/owner decision trước thực hiện.
+
+<a id="rl-test-gates"></a>
+## 13.3. Test và exit gate chung — áp dụng vào từng Pxx
+
+**Ma trận bên dưới là phần bổ sung, không thay các test của guide/screen specs.**
+Mỗi phase chạy đủ `Pxx-T01…Tnn` + `V11-Pxx-DR/BR/GX` + các source-screen test IDs áp dụng cho output hiện tại.
+Link tới màn tương lai trong foundation là yêu cầu đọc/contract harness, không buộc hoàn thiện màn sớm:
+P02 kiểm02/11 compatibility, P04 kiểm12 descriptor, P08 kiểm02/05 preflight; toàn bộ screen tests
+đóng ở phase giao màn hoàn chỉnh tương ứng. P01 mapping test→phase giữ nguyên denominator,
+không loại test tương lai hoặc gọi harness là product acceptance.
+P01 inventory test IDs, P02 chốt contract vectors; chưa có runner thì đó là deliverable phải viết,
+không ghi tên lệnh tưởng tượng như script hiện hữu. Chỉ `NOT_APPLICABLE_PROVEN` có predicate/source
+rõ mới loại một conditional test; test required chưa chạy là gate chưa đạt.
+
+| Gate | Backend/contract | Frontend/integration | Evidence/điều kiện |
+|---|---|---|---|
+| G0 — baseline & scope | Exact source/lock/schema, protected diff, kernel checksum, endpoint ownership | Đọc handoff/code mới, source HTML/spec, inventory đủ controls/states | Không sửa ngoài allowlist, không mất commit hoặc dữ liệu của agent khác |
+| G1 — authority & compatibility | Session/workspace/object auth, malformed input, unauthorized/forged headers, CSRF+Origin cho writes, replay/CAS/idempotency; schema+generated drift | Canonical fixtures và generated client; errors không biến thành empty; không chọn raw relation/DB URL hoặc leak token | Auth enforcement server-side; backward reader/old client tests nơi bị ảnh hưởng |
+| G2 — numeric/data truth | Direct engine→persisted→API: IDs/UTC/precision/units/null/coverage/selection; derived formula independent oracle | API→DOM/chart/table/export cùng revision; no stale resource data under new route | Fixture, binary64 tolerance và exact decimal fields phân biệt; seed/data/config pins |
+| G3 — bounded cost/durability | Pagination/count/query plan/row+byte limits; TTL/retention/pins; duplicate/cancel/restart/fencing; no hidden compute in reads | 1/10/20 viewers + same-scope sharing, virtualized rows/chart windows, no implicit jobs, obsolete-response cancellation | Đo theo phase workload; aggregate5GB baseline,8GB không là waiver5GB; user quota riêng |
+| G4 — UI & browser | Named DTO cho từng panel/action, đủ useful current data | Source-layout/copy; all subpanels, responsive1280/660 và viewport riêng spec; keyboard/a11y/console; deep-link/back/forward | Không sửa baseline để xanh; không thay rich screen bằng generic unavailable/JSON |
+| G5 — integration & isolation | Applicable Python/Rust/Control API/PG suites; migrations fresh+upgrade; không đổi execution consumers | `VISUAL_FIXTURE`, `REAL_DELTA_E2E`, `EXECUTION_REGRESSION` tách riêng | Real lane không response stub/HAR fallback; test current unchanged Execution interfaces khi chạm boundary |
+| G6 — delivered dev | Exact image/config/migration/API SHA; env ngoài checkout; host-bound project/data | Browser bundle/build flag/version, login+real route+assets/chart; refresh không trắng; same-origin | Từ phase UI reviewable cần dev receipt; P01–06 harness không tự gọi fullUI PASS |
+| G7 — closeout & resources | Rollback/restore phù hợp rủi ro; scoped teardown, capacity, cache/evidence retention | FE requests read→mapped→consumed→browser verified, không chỉ một factory đổi tên | Report đủ15mục A4, debt=0 trong scope, cleanup record, coherent commit và owner checkpoint |
+
+**Test economy:** focused gates mỗi slice; full affected-domain gates lúc đóng phase; integration/full required gates
+tại checkpoint đúng scope và P23/P24. Có thể reuse exact immutable evidence khi dependency hash/input/toolchain/config
+không đổi, ghi `REUSED_VERIFIED` + origin run, không giả newly run. Thay schema/auth/adapter/format/stream/projection
+phải invalidate các consumer tests tương ứng. Không chạy lại compute/UI toàn bộ cho docs-only change.
+Tests cơ học có thể dùng `npm test`, `npm run build` trong frontend;
+`scripts/control-api-test.sh`, `scripts/contracts-test.sh`, `apps/portal/scripts/test_backend.sh`,
+Rust crate tests và kernel verifier **chỉ sau đọc script, quota, ports/project và provisioning**.
+Không tự chạy helper trỏ shared production; contributor không tự cài OS deps/sudo/Docker.
+
+**Bốn mốc không gộp:** code complete → tested/integrated → dev review-ready → Bobby accepted.
+Production deployed chỉ sau release order riêng. Các phase foundation có output riêng, không đòi UI tương lai để đóng;
+nhưng thiếu consumer test/required field của phase hiện tại không được gọi future work.
+
+**Closeout tối thiểu:** phase source range; exact test commands/exit/counts/fail/skip/reuse; field/action/scenario matrix delta;
+Delta references/tolerances; screenshot/trace **private refs**; resource before/after; protected diff; rollback;
+open decisions; dev identity receipt khi applicable; next action. Small authored redacted report vào Git,
+raw market/Parquet/logs/screenshots/cookies/generated test reports ngoài Git với retention đủ review.
+
+<a id="rl-board"></a>
+## 13.4. Board duy nhất và trình tự bàn giao
+
+Tất cả24phase hiện **PLANNED**, implementer `UNASSIGNED_BY_BOBBY`; chưa có test/commit/receipt phase.
+Khi bắt đầu/đóng, cập nhật **row này**: implementer, state, base/head SHA, report/evidence, next/blocker.
+Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detailed entries §13.5 là yêu cầu ổn định.
+
+| Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
+|---|---|---|---|---|
+| [P01](#rl-p01) | — | 00–14 inventory | 01 | PLANNED / unassigned / — |
+| [P02](#rl-p02) | P01 | 02/11 harness | 01 | PLANNED / unassigned / — |
+| [P03](#rl-p03) | P02 | nền | 02 | PLANNED / unassigned / — |
+| [P04](#rl-p04) | P02 | nền/12 | 02 | PLANNED / unassigned / — |
+| [P05](#rl-p05) | P03,P04 | nền | 03 | PLANNED / unassigned / — |
+| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | PLANNED / unassigned / — |
+| [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | PLANNED / unassigned / — |
+| [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | PLANNED / unassigned / — |
+| [P09](#rl-p09) | P02,P04 | 00/12 | 05 | PLANNED / unassigned / — |
+| [P10](#rl-p10) | P06–P09 | 02 | 05 | PLANNED / unassigned / — |
+| [P11](#rl-p11) | P06,P09,P10 | 03 | 06 | PLANNED / unassigned / — |
+| [P12](#rl-p12) | P05,P09–P11 | 01 | 06 | PLANNED / unassigned / — |
+| [P13](#rl-p13) | P05,P09–P11 | 04 | 07 | PLANNED / unassigned / — |
+| [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | PLANNED / unassigned / — |
+| [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | PLANNED / unassigned / — |
+| [P16](#rl-p16) | P13–P15 | 07 | 08 | PLANNED / unassigned / — |
+| [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | PLANNED / unassigned / — |
+| [P18](#rl-p18) | P13–P17 | 09 | 09 | PLANNED / unassigned / — |
+| [P19](#rl-p19) | P07,P10,P12,P15 | 10 | 10 | PLANNED / unassigned / — |
+| [P20](#rl-p20) | P13,P15,P18,P19 | 13 | 10 | PLANNED / unassigned / — |
+| [P21](#rl-p21) | P07,P16–P19 | 11 composer | 11 | PLANNED / unassigned / — |
+| [P22](#rl-p22) | P02,P10,P21 | 11 handoff | 11 | PLANNED / unassigned / — |
+| [P23](#rl-p23) | P11–P22 | mọi màn | 12 | PLANNED / unassigned / — |
+| [P24](#rl-p24) | P23 | mọi màn | 12 | PLANNED / unassigned / — |
+
+**Status vocabulary:** `PLANNED → IN_PROGRESS → TECHNICALLY_COMPLETE → DEV_REVIEW_READY`
+(khi có UI) `→ AWAITING_BOBBY_REVIEW → OWNER_ACCEPTED`; `BLOCKED` ghi exact failed/missing gate.
+Bobby quyết scope tiếp; một owner approval đã có không xin lại dưới tên khác.
+Phần Bobby làm trước được gắn vào chính row phase, không tạo “phase Bobby” song song.
+
+## 13.5. Chỉ mục thực thi từng phase
+
+Mỗi mục dưới đây kế thừa G0–G7 và toàn bộ guide, không được dùng danh sách test tóm tắt
+để bỏ test source. “FE” ở foundation là contract/browser harness đã có, không yêu cầu build
+màn tương lai. Mỗi phase phải đóng **BE + consumer trong scope** trước khi bàn giao.
+
+<a id="rl-p01"></a>
+### P01 — Baseline, source inventory và protected boundaries
+
+**Đọc chi tiết:** [Guide P01](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p01); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P01-T01…T08`, `V11-P01-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Ghim source/engine/reader/hi-fi/permissions trước thay đổi; biết cái gì đã tồn tại và cái gì chỉ là proposal.
+- **To-do BE:** Inventory producer/facade/RunSync/governance, DB/queue/storage/flags; protected manifests + Research allowlist. Pin Delta kernel/spec/snapshot permission; xác nhận quota, env location, contributor remote; gom bootstrap packet còn thiếu một lần.
+- **To-do FE/consumer:** Đọc đủ15 HTML/spec và handlers, source test IDs, assets/fonts, prototype controls; lập field/action/scenario matrices. Đối chiếu Research với shell đã phát hành, không sửa Execution navigation theo sidebar SOON trong prototype.
+- **Tests BE:** Hash source; protected-diff detector trên copy; secret-redaction; route collision; quyền reader; quota evidence (unknown≠measurement).
+- **Tests FE/browser:** Inventory từng field/action đủ locator và trạng thái; nhận diện demo finish/publish/verify; phát hiện thiếu doc-page.js; phân biệt parsed HTML với rendered baseline.
+- **Exit gate:** Baseline/allowlist/source matrix có denominator; source/identity ownership rõ. Bootstrap gaps có target phase; không tuyên bố real compute/browser PASS.
+- **Rollback/handoff:** Chỉ thêm inventory/redacted evidence; không sửa server. Bàn giao P02 baseline, COR/FND/DR và exact provisioning needs.
+
+<a id="rl-p02"></a>
+### P02 — Contract freeze và unchanged-Execution compatibility spike
+
+**Đọc chi tiết:** [Guide P02](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p02); [spec S02](./research_loop/release-v1.1/docs/screens/02_new_run.md) + [HTML 02](<./research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html>); [spec S11](./research_loop/release-v1.1/docs/screens/11_release_candidate.md) + [HTML 11](<./research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P02-T01…T13`, `V11-P02-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Chứng minh đường Research→existing R1 trước khi xây màn; khóa IDs, action semantics và contract ownership.
+- **To-do BE:** Endpoint map/canonical request discriminator/envelopes; isolated actual facade202→RunSync→strict approval readback; bốn digest, alpha alias/claims/actor. Chốt DR01–07 bằng source, không invent holdout/promotion authority.
+- **To-do FE/consumer:** Typed client/fixture harness cho wizard/RC mirror, typed conflict/unknown/reauth; URL pick/trade/study codecs; công bố handoff fields/actions, không giả UI hoàn thiện.
+- **Tests BE:** 202 positive/201 negative; wrapper canonical hash Unicode/numeric/null; wrong actor/workspace/alpha/claim; duplicate/pending/timeout recovery; extra-field rejection; no protected consumer diff.
+- **Tests FE/browser:** Fixture consumption/runtime validation; raw status vs display copy; cursor ambiguity/deep-link; inspection không write; UI role không vượt server permissions.
+- **Exit gate:** Actual unchanged consumer spike PASS; identity/auth/hash/202 gaps không defer tới P22. Owner decisions chỉ treo feature đúng phạm vi với explicit downstream gate, không tự waive.
+- **Rollback/handoff:** Rollback Research harness/schema mới; retain fixtures/protected hashes. Checkpoint01: packet P01/P02 + endpoint/identity/correction map cho Bobby.
+
+<a id="rl-p03"></a>
+### P03 — Research schema, identities và authorization
+
+**Đọc chi tiết:** [Guide P03](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p03); [contracts/spec index](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P03-T01…T11`, `V11-P03-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Metadata durable, scoped, transactional; không state-memory hay auth riêng cạnh identity Portal.
+- **To-do BE:** Research schema/repositories, FKs/unique idempotency/CAS/index; alpha/version/attempt/run/job/study/evaluation relations; existing session/workspace principal; scoped DB role/audit/pool budgets.
+- **To-do FE/consumer:** Generated client/common-state harness; query keys actor/workspace/revision; wrong-workspace deep link denied, không localStorage authority; fixture foreign-object errors chuẩn.
+- **Tests BE:** Fresh+upgrade+repeat migration/isolated restore; cross-workspace FK/IDOR; concurrent CAS;10autosaves+duplicate submit một intent; null selected trial; research role không ghi execution; no cascade pinned evidence.
+- **Tests FE/browser:** Loading/conflict/forbidden mapping; auth-switch cache clearing; session recovery dùng flows đã có; no leaked object metadata hoặc null→0.
+- **Exit gate:** Restart giữ identity/counters; schema/index và auth constraints enforce server-side; existing account/credential/grant rows không bị migrate thay đổi.
+- **Rollback/handoff:** Additive migrations/versioned readers; không destructive down trên data thật. Bàn giao schema/ER/auth/query plans cho P04–06.
+
+<a id="rl-p04"></a>
+### P04 — QuantBT 1.1.1 adapter và resource baseline
+
+**Đọc chi tiết:** [Guide P04](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p04); [spec S12](./research_loop/release-v1.1/docs/screens/12_engine_atlas.md) + [HTML 12](<./research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P04-T01…T13`, `V11-P04-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Dùng public engine thật theo route, giữ history cũ và đo chi phí trước mở workload.
+- **To-do BE:** Verify/pin installed package/native digest, adapter public endpoint mapping14routes; engine/integration/evidence/admission axes; canonical optimizer aliases/seeds; direct Delta vs Portal reference; actual memory incl native retention.
+- **To-do FE/consumer:** Capability fixtures/types/Atlas data source; actual resolved-backend labels, disabled reason; không badge Rust chỉ vì wheel có native code.
+- **Tests BE:** DR-SIGNAL/DIRECT/PORTAL same immutable input; selectedNone/best/centroid/per-fold; defaults/reproduce/upgrade diff; invalid mode×schedule; cold/warm resource;1.0.8 historical readers.
+- **Tests FE/browser:** Descriptor→card/form states, refusal vs resource queue, engine R1≠approval R1; generated types handle unknown version without auto-enable.
+- **Exit gate:** Primary supported tuples có actual output/parity/resource evidence; no fabricated selection. Delta thật bắt buộc; unsupported vs Portal adapter gap tách rõ, required gap không ghi complete.
+- **Rollback/handoff:** Switch new-job engine default only, in-flight/history pin nguyên. Checkpoint02: P03/P04 + actual version/numeric/memory artifacts.
+
+<a id="rl-p05"></a>
+### P05 — Disk-first artifacts, Parquet và bounded export
+
+**Đọc chi tiết:** [Guide P05](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p05); [contracts/spec index](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P05-T01…T13`, `V11-P05-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Run đọc được khi compute đã tắt; full required evidence durable không giữ result nguyên trong API RAM.
+- **To-do BE:** Chunked writers/SQL indexes, part stats/manifests; staging→fsync/seal→register + lease fence; bounded Rust reader/seek; retention/quota/pins; avoid pandas/full-bytes copy chain.
+- **To-do FE/consumer:** Real sealed/partial/missing/corrupt/download harness; byte/row/coverage metadata; không link artifact chưa ready; no full-ledger browser load.
+- **Tests BE:** Engine→Parquet→new-process readback; crash mỗi commit boundary, concurrent writer/retry dedup, stale fence, corrupt part/disk-full; GC pinned refs; row-group memory incl engine+exporter; scoped downloads.
+- **Tests FE/browser:** Artifact readiness/no-store/security; partial vs complete, denied downloads and slow/abort client; numerical formatting roundtrip fixtures.
+- **Exit gate:** Worker off vẫn đọc đúng revision/IDs/nulls/precision; bounded peak measured; no orphan publication, no shared-storage destructive cleanup.
+- **Rollback/handoff:** Rollback reader version, giữ sealed bytes/refs. Handoff schema/index/retention/recovery evidence cho scheduler và screen queries.
+
+<a id="rl-p06"></a>
+### P06 — Durable scheduler, isolated workers và retry
+
+**Đọc chi tiết:** [Guide P06](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p06); [contracts/spec index](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P06-T01…T13`, `V11-P06-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Một logical run có một committed effect, bounded compute và recoverable intent.
+- **To-do BE:** PG intent/outbox→existing NATS IDs; leases/fencing/inbox dedup/cancel CAS; actual child process sandbox; one-heavy-slot admission/fairness; audit/diagnostic/export cũng tính quota.
+- **To-do FE/consumer:** Queue/cancel/retry/finishing contract harness, worker attempts drawer data; actual progress source; không fake ETA hoặc technical retry thành research attempt.
+- **Tests BE:** 20queued không20datasets; duplicate delivery/kill/lease expiry/late commit/cancel race; PG/NATS outage; malicious PID/network/files/memory; repeated job RAM/FD; optional audit không giữ primary pending mãi.
+- **Tests FE/browser:** Double-submit/reconnect giữ run ID; inspect/mount/slider không submit job; queue/error/cancel truth; signed-in scope and SSE harness (chưa full03 acceptance).
+- **Exit gate:** Delta qua durable worker thật, retry/failure tests PASS trong quota; no second scheduler dispatch, no API hidden heavy compute.
+- **Rollback/handoff:** Pause claims/drain authorized jobs, giữ intents/outbox; teardown chỉ test jobs. Checkpoint03: P05/P06 durability + memory + recovery.
+
+<a id="rl-p07"></a>
+### P07 — Alpha Registry, Import và immutable version binding
+
+**Đọc chi tiết:** [Guide P07](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p07); [spec S14](./research_loop/release-v1.1/docs/screens/14_alpha_import.md) + [HTML 14](<./research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P07-T01…T12`, `V11-P07-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Hoàn chỉnh import .py→validate→DRAFT→authorized ACTIVE bằng bytes/entrypoint đã kiểm.
+- **To-do BE:** Scoped file_ref TTL/digest/TOCTOU; AST+7 ordered sandbox gates; uniqueness/CAS; registry exact version binding; Delta wrapper nếu cần không sửa protected kernel.
+- **To-do FE/consumer:** Full14 upload/paste/readonly parsed mirror/gates/logs/errors/register/activate; edit source invalidate receipt; no runtime dependency installer. Research-scoped early screen primitives, không sửa shared shell; P09 chuẩn hóa lại sau.
+- **Tests BE:** Malicious top-level import/network/process/path/allocation; cross-user file_ref; duplicate/concurrent activate; modified bytes;<=12param declaration; existing runs giữ old binding; imported Delta output vs built-in.
+- **Tests FE/browser:** Every S14 test; upload/paste/fail→SKIPPED/reset/keyboard; parsed fields readonly cả crafted request; DRAFT/ACTIVE/scratch copy; responsive/fonts and actual dev URL/build.
+- **Exit gate:** Full14 real backend + browser/dev receipt; gate7 không false causal certificate. P07 không chờ P09 bằng fixture: chỉ tối thiểu local composition trong allowed boundary.
+- **Rollback/handoff:** Disable new import nếu rollback, giữ versions/evidence; không revoke execution alpha. Handoff binding contract cho P08/P10.
+
+<a id="rl-p08"></a>
+### P08 — Data snapshots, effective spec và preflight
+
+**Đọc chi tiết:** [Guide P08](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p08); [spec S02](./research_loop/release-v1.1/docs/screens/02_new_run.md) + [HTML 02](<./research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html>); [spec S05](./research_loop/release-v1.1/docs/screens/05_s1_split.md) + [HTML 05](<./research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P08-T01…T12`, `V11-P08-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Browser preview, submitted spec và worker input là cùng manifest immutable.
+- **To-do BE:** Reuse authorized code-only historical reader; minimal columns/range; snapshot/calendar/timezone/closed-bar/warmup/funding/quality; requested→effective optimizer/topology; token expiry/invalidation; storage+RAM budget.
+- **To-do FE/consumer:** Data/preflight widgets/harness với quality counters, `[start,end)`, seed/pin/bounds; changed fields clear token, preserve valid edits; sealed holdout metadata không tự mở raw.
+- **Tests BE:** Mutable source after pin; UTC-naive/VN-naive/aware ms boundary; funding/column gaps; future perturbation/read boundaries; config aliases and null/0/false; holdout exposure vs checksum; quota refusal truthful.
+- **Tests FE/browser:** Review→payload matching, stale token/material edit, resource estimate units, reproduced-vs-upgraded config diff; widgets rebuild nếu đã được dùng bởi screen.
+- **Exit gate:** Worker receives exact manifest; no silent resnapshot/default/forward-fill; required data permission/DR dependencies resolved cho exercised path.
+- **Rollback/handoff:** Invalidate old token schema, retain referenced inputs. Checkpoint04: P07/P08 + import/dev receipt và reader/preflight evidence.
+
+<a id="rl-p09"></a>
+### P09 — Frontend foundation, Journey Map và Engine Atlas
+
+**Đọc chi tiết:** [Guide P09](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p09); [spec S00](./research_loop/release-v1.1/docs/screens/00_journey_map.md) + [HTML 00](<./research_loop/release-v1.1/QuantBT 00 Journey Map.dc.html>); [spec S12](./research_loop/release-v1.1/docs/screens/12_engine_atlas.md) + [HTML 12](<./research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P09-T01…T12`, `V11-P09-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Tích hợp Research design system/routes vào Portal, không đổi giao diện Execution.
+- **To-do BE:** Small persisted descriptor/Journey registry, generated API client, no engine import per view; route ownership and cursor codec binding theo P02.
+- **To-do FE/consumer:** Research Light scoped tokens/fonts/charts, shell-free00, route registry; all14engine routes/3Atlas tabs, current vs historical release; integrate early P07 primitives without visual regression; owned asset packaging thay prototype support.js/CDN runtime.
+- **Tests BE:** Descriptor revision/ETag/auth; unknown route/release/capability; URL pick/trade/study/seq aliases and conflicts; no domain writes from Journey/Atlas.
+- **Tests FE/browser:** All S00/S12 tests, links/no nested shell, English copy, real fonts/charts,1280/660 + spec viewport, keyboard/reduced-motion; Execution/Planning visual regression unchanged.
+- **Exit gate:** 00/12 render bằng production-equivalent build, dev receipt; not placeholder/static prototype fallback; no unreviewed global token/router change.
+- **Rollback/handoff:** Rollback lazy Research routes only, keep old shell; handoff typed components/cursor/fixture contracts cho P10–22.
+
+<a id="rl-p10"></a>
+### P10 — New Run end-to-end và compatible creation
+
+**Đọc chi tiết:** [Guide P10](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p10); [spec S02](./research_loop/release-v1.1/docs/screens/02_new_run.md) + [HTML 02](<./research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P10-T01…T14`, `V11-P10-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Tất cả controls wizard8steps đi vào effective worker request và legacy read model đúng.
+- **To-do BE:** Existing facade202 + legacy fields, durable producer intent before ACK; preflight/version binding, route validators; same client_intent_id recovery after transport timeout; old request backward compatibility.
+- **To-do FE/consumer:** Full02 normal/advanced route config/presets/sweep/pin/seed/review, scratch disclosure, double-click/stale token/reload. Không bỏ trường input để POST pass; preview và serializer cùng canonical model.
+- **Tests BE:** Real Delta submit→worker→storage; old/new requests; duplicate/unknown outcome; invalid bounds/schedule/aliases/null defaults; readback strategy/alpha/run seed và RunSync summary.
+- **Tests FE/browser:** All S02 tests; every required control→request→effective persisted value; bound/scratch; version change preserves valid input; errors/focus/back-forward; actual no-stub journey.
+- **Exit gate:** 100%required wizard mappings and real durable run; no direct compute fallback hoặc fake success; legacy consumer compatibility vẫn xanh.
+- **Rollback/handoff:** Rollback wizard intake flag, giữ jobs/schema/old client. Checkpoint05: P09/P10, exact dev candidate + payload/worker parity.
+
+<a id="rl-p11"></a>
+### P11 — Progress, console và artifact readiness
+
+**Đọc chi tiết:** [Guide P11](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p11); [spec S03](./research_loop/release-v1.1/docs/screens/03_run_progress.md) + [HTML 03](<./research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P11-T01…T12`, `V11-P11-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Progress phản ánh durable lifecycle và tự phục hồi mà không leak connection/RAM.
+- **To-do BE:** Structured actual stage events/sequence/snapshot/resume; bounded seek log tail, no log-as-accounting; mandatory seal controls COMPLETED; terminal auth frame/preflight theo approved transport; pacing/backpressure.
+- **To-do FE/consumer:** Full03 stage/Gantt/artifact drawer, console500lines/batch100ms, poll5s transient fallback, queue/cancel/retry; auth failure closes stream/poll retry; no demo finish/timer.
+- **Tests BE:** Duplicate/gap/out-of-order/stale epoch; service restart/resume; cancel vs seal; mandatory vs optional audit; large log no whole read; 20viewer buffers/requests; auth revoked/401 no retry loop.
+- **Tests FE/browser:** All S03 tests; actual counters, no selected double-count; network loss/reconnect+logout terminal; visibility/unmount cleanup; new run not overwritten by old stream; sealed artifacts before complete.
+- **Exit gate:** State/counters match persisted source; real reconnect and auth-stop browser evidence; all event/log buffers bounded, full history remains separately accessible.
+- **Rollback/handoff:** Approved polling fallback for Research only; preserve event identity. Handoff P12/P13 real status and snapshot contracts.
+
+<a id="rl-p12"></a>
+### P12 — Run Library, search và historical browsing
+
+**Đọc chi tiết:** [Guide P12](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p12); [spec S01](./research_loop/release-v1.1/docs/screens/01_run_library.md) + [HTML 01](<./research_loop/release-v1.1/QuantBT 01 Run Library.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P12-T01…T11`, `V11-P12-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Fast useful library trên persisted data, đầy đủ filters/actions và không N+1.
+- **To-do BE:** Indexed keyset/group/sort/count,<=24point sparklines; batch projections; old-engine reader; logical run vs worker/child/draft counters; mutable mirror separate from immutable metrics.
+- **To-do FE/consumer:** Full01 filters/URL/group headers/menus/compare bar, running-row10s poll visibility-aware; stable selections and scroll; real empty/stale/denied reasons.
+- **Tests BE:** Cursor ties/filter mismatch/concurrent updates; exact totals/auth isolation; query plans/cold-warm under compute; no full Parquet scan; synthetic scale separately labelled.
+- **Tests FE/browser:** All S01 tests; selection survives refresh; clone/reproduce IDs correct; metrics scope (full-sample≠OOS); no null→0; large rows bounded DOM; worker stopped still browsable.
+- **Exit gate:** Required columns/filter/actions integrated and truthful; useful real run rows, bounded query+render; Library/Lineage counter definitions compatible.
+- **Rollback/handoff:** Rollback query/projection version not metadata. Checkpoint06: P11/P12 + auth/stream/load/library dev evidence.
+
+<a id="rl-p13"></a>
+### P13 — Evidence Flow Hub và metric projections
+
+**Đọc chi tiết:** [Guide P13](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p13); [spec S04](./research_loop/release-v1.1/docs/screens/04_evidence_flow.md) + [HTML 04](<./research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P13-T01…T13`, `V11-P13-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Tất cả7tabs/drawers/charts có exact source mapping; không một report engine thứ hai.
+- **To-do BE:** Versioned evidence envelope, summary/claim/equity/drawdown/rolling/monthly/distributions/folds; metric registry units/scope/formula/null; atomic revision; lazy detail; DR02 warning definitions.
+- **To-do FE/consumer:** Full04 composition incl claim/data drawers/navigation; rich panels giữ layout trong sparse/error states; no whole-route envelope; actual series plotted, inspectors don't change selected passport.
+- **Tests BE:** Raw engine metrics + independent derived vectors; zero/no-loss/empty/NaN/benchmark missing; downsample extrema not metric; revision/cache concurrency; required raw-available transforms implemented.
+- **Tests FE/browser:** All S04 tests and7tab network coverage; chart/tooltip/table values vs frozen reference; resource switches and stale-response rejection; fonts/a11y/overflow, no JSON-hidden proof.
+- **Exit gate:** Required field/action matrix closed, browser values match raw/DTO revision; useful data rendered and all declared edge states handled; no compute on page open.
+- **Rollback/handoff:** Rollback projection version/cache namespace, keep raw evidence. Handoff metric/warning registry and cursor semantics.
+
+<a id="rl-p14"></a>
+### P14 — Split, chronology và holdout truth
+
+**Đọc chi tiết:** [Guide P14](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p14); [spec S05](./research_loop/release-v1.1/docs/screens/05_s1_split.md) + [HTML 05](<./research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P14-T01…T13`, `V11-P14-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Thể hiện đúng IS/OOS/holdout và causal claims theo evidence, không dựng approval mới.
+- **To-do BE:** Authoritative folds/windows/time roles; warmup/purge/embargo; exposure and seal read model. DR01 xác minh actual unlock actor/API trước nối mutation; không tự create governance.
+- **To-do FE/consumer:** Full05 timeline/windowed folds/quality drawer/highlights and valid links; readonly seal metadata works separately; correct source state and never-claim disclosures.
+- **Tests BE:** Future perturbation/prefix invariance đúng asserted route; strict selector boundaries; half-open/timezone; snapshot integrity≠evaluated≠viewed; duplicate/race/unauthorized unlock nếu actual supported.
+- **Tests FE/browser:** All S05 tests; viewport compression doesn't alter intervals; real-source labels and loading/withheld states; navigating không evaluate raw sealed holdout; no fixture-success unlock.
+- **Exit gate:** Chronology/fold evidence and readonly seal integration PASS; unlock/claim acceptance chỉ khi DR01 resolved. Mandatory unresolved action blocks its acceptance, không tự N/A/complete phase.
+- **Rollback/handoff:** Disable Research unlock intake if rollback, never re-seal viewed data. Checkpoint07: P13/P14 + scope/numeric/holdout decision record.
+
+<a id="rl-p15"></a>
+### P15 — Search, complete trial ledger và diagnostics
+
+**Đọc chi tiết:** [Guide P15](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p15); [spec S06](./research_loop/release-v1.1/docs/screens/06_s2_search.md) + [HTML 06](<./research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P15-T01…T14`, `V11-P15-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Đủ StageA/StageB/objectives/selection và toàn ledger, giữ inspected trial khác chosen artifact.
+- **To-do BE:** Study-scoped trial/evaluation index, keyset/jump/exact totals;<=600point scatter inclusion selected/best; histograms/frequencies/pruning/progression; source objective modes/centroid/per-fold; derived diagnostics full raw khi đủ.
+- **To-do FE/consumer:** Full06 three-column layout/formulas/modes/pool/funnel/ledger/keyboards; inspected cursor synchronizes detail not frozen selection; no implicit optimize when tab opened.
+- **Tests BE:** SelectedNone/centroid/multiobjective/missing objective; trialID collisions; complete/pruned/feasible flags; full totals≠sample; canonical seed/constraints; categorical diagnostic no arbitrary numeric encoding.
+- **Tests FE/browser:** All S06 tests; all modes/schedules supported; >sample-cap pages reachable; nonselected pick→Freeze/Report still θ*; formula labels actual config; narrow/widen boundary and responsive spec overflow.
+- **Exit gate:** Every required panel/field/action closed; full-ledger source counts reconcile; derived raw-sufficient work done; no selection recomputation in query layer.
+- **Rollback/handoff:** Rollback reader transform/version, retain original trial ledger. Handoff selected target/population/diagnostic schemas cho P16.
+
+<a id="rl-p16"></a>
+### P16 — Freeze, integrity verification và what-if
+
+**Đọc chi tiết:** [Guide P16](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p16); [spec S07](./research_loop/release-v1.1/docs/screens/07_s3_freeze.md) + [HTML 07](<./research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P16-T01…T14`, `V11-P16-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Verify immutable evidence thật; diagnostic không thay frozen parameters hoặc chạy ngầm.
+- **To-do BE:** Separate pool/selection/evaluation boundaries; bounded expected-digest verifier/receipt; diagnostic explicit queued job or exact-grid reuse; seed/data/objective key;81cells canonical unique-evaluation mapping.
+- **To-do FE/consumer:** Full07 passport/timing/integrity/reverify/9×9lookup and sibling draft; sliders query only, missing cell labelled; preserve hi-fi interactions without fake verify timer.
+- **Tests BE:** Corrupt bytes no rebaseline; skewed clocks not causal proof; reuse target/audit; clamp/step dedup; stochastic key isolation; cancel/resource bound; ΔJ correct scope.
+- **Tests FE/browser:** All S07 tests; advancing fake timer cannot PASS real verifier; slider/mount no POST/job; nonselected pick still frozen passport; new intent explicit; undefined/queued grid states truthful.
+- **Exit gate:** Expected bytes checked, original θ/digests immutable; diagnostic job/data/resource provenance fully traceable; DR02 copy/definition settled.
+- **Rollback/handoff:** Disable diagnostic creation only, retain original/grids. Checkpoint08: P15/P16 + trial→freeze invariants and dev evidence.
+
+<a id="rl-p17"></a>
+### P17 — Route-aware replay và state-at-cursor
+
+**Đọc chi tiết:** [Guide P17](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p17); [spec S08](./research_loop/release-v1.1/docs/screens/08_s4_execute.md) + [HTML 08](<./research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P17-T01…T14`, `V11-P17-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Replay evidence đã có nhanh và chính xác, không chạy lại engine khi seek.
+- **To-do BE:** Actual route-discriminated orders/fills/trades/events/positions; original identity + playback ordinal, checkpoints/window queries; candles/MAE-MFE only when input sufficient; fold resets, child audit provenance.
+- **To-do FE/consumer:** Full08 playback/SL-TP/legs/OCO/wake/validation panels đúng route; virtual ledger/detail drawers, trade/event deep links; causal reveal presentation-only.
+- **Tests BE:** Sequential vs random/far-seek equivalence; seq{10,12,90}/same timestamp/crossstream ambiguity; partial fills/funding/OCO units; missing evidence typed; no equity→inventedfills; no compute on seek.
+- **Tests FE/browser:** All S08 tests; all applicable subpanels, charts/trades synchronized; reveal hides future outcomes in playhead panels, retrospective summary labelled; deep-link fresh tab; large-window DOM/memory bounds.
+- **Exit gate:** Source accounting/IDs match; seek bounded even late range; preserved layout+truthful conditional panels; observed history not relabelled authoritative Trading replay.
+- **Rollback/handoff:** Rollback reader/index version, retain artifacts; handoff source order/checkpoint/financial reconciliation for Report.
+
+<a id="rl-p18"></a>
+### P18 — Report, print và reproducible export
+
+**Đọc chi tiết:** [Guide P18](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p18); [spec S09](./research_loop/release-v1.1/docs/screens/09_run_report.md) + [HTML 09](<./research_loop/release-v1.1/QuantBT 09 Run Report.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P18-T01…T12`, `V11-P18-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Report giữ cùng evidence với Hub/Freeze/Replay, dùng được khi worker không chạy.
+- **To-do BE:** Sealed report assembly/manifest; async bounded export/digest/download auth; no engine rerun, mutable approval annotations separate from frozen core; sanitize CSV/name inputs.
+- **To-do FE/consumer:** Full09 shell-free/print page breaks/provenance/detail links/export pending/error; replace missing doc-page harness dependency via reviewed Research implementation, not blank baseline.
+- **Tests BE:** Raw→Report/Hub parity; export restart/abort/diskfull/slowclient; path/CSV injection; authorization on every part; old-engine report; no recomputation after re-export.
+- **Tests FE/browser:** All S09 tests; print/screen fonts/charts render real, no undefined custom-element hidden body; formatting/units/warnings/page breaks; no report θ change after trial inspect.
+- **Exit gate:** Readable verified report+download complete and bounded; print fields/digests match original revision, actual browser not file-exists test.
+- **Rollback/handoff:** Rollback presentation/export transformer, retain archived report bytes. Checkpoint09: P17/P18 + replay/print/export exact evidence.
+
+<a id="rl-p19"></a>
+### P19 — Attempt lineage, semantic diffs và exposure
+
+**Đọc chi tiết:** [Guide P19](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p19); [spec S10](./research_loop/release-v1.1/docs/screens/10_attempt_lineage.md) + [HTML 10](<./research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P19-T01…T13`, `V11-P19-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Lịch sử nghiên cứu đúng ý định, không đếm infra retries hoặc chọn promotion bằng Sharpe.
+- **To-do BE:** Parent graph/scoped IDs/CAS, effective spec/version/intent diff; failed/abandoned/draft/child refs; exposure facts persisted; promotion_pick from DR03 verified source only.
+- **To-do FE/consumer:** Full10 tree/table/cards/diff drawer/notes/fork navigation; virtual graph, active/version/superseded distinctions; gates-reset disclosure not execution command.
+- **Tests BE:** Cycles/cross-workspace/races; autosave/retry vs material seed/data/code change; counters; audit/repro children; restore/GC preserve exposure; no best/newest promotion heuristic.
+- **Tests FE/browser:** All S10 tests; stable expand/focus/back-forward; counts reconcile Library definitions; missing-source pick labelled, current-vs-historical version truthful; GATES RESET click no mutation.
+- **Exit gate:** Full lineage relationships source-backed; DR03 resolved for mandatory field; no omitted failed history or inferred authority; chart/graph bounded.
+- **Rollback/handoff:** Rollback derived graph reader not nodes/history. Handoff same-alpha comparison/provenance and publication links.
+
+<a id="rl-p20"></a>
+### P20 — Compare modes và derived correlation
+
+**Đọc chi tiết:** [Guide P20](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p20); [spec S13](./research_loop/release-v1.1/docs/screens/13_compare.md) + [HTML 13](<./research_loop/release-v1.1/QuantBT 13 Compare.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P20-T01…T12`, `V11-P20-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Compare trong một alpha, số liệu cùng convention/window hoặc disclosure rõ.
+- **To-do BE:** Attempts/markets/pair unions; ComparisonContractKey server guard, pair<=2; raw aligned returns correlation with formula/version/n/missing policy; deterministic narrative; rank by claim before metric.
+- **To-do FE/consumer:** Full13 attempt ladder, market small multiples, two-color pair overlay/delta table; refusal retains designed context but no hidden incompatible metrics; URL state.
+- **Tests BE:** Cross-alpha/key guard/auth; common-window/zero-overlap/zero-variance/time alignment; no forward-fill fake returns; independent numeric correlation; no source selection mutation or pair approval.
+- **Tests FE/browser:** All S13 tests; mismatch hides prohibited chart/table; rank not publish pick; distinct legend/tooltip/unit and responsive; switching comparisons doesn't mix stale runs.
+- **Exit gate:** Required derived fields implemented when raw exists; no correlation0 placeholder; comparison state faithful and no new governance semantics.
+- **Rollback/handoff:** Rollback transform/cache version, no rerun/evidence edit. Checkpoint10: P19/P20 + graph/correlation/interaction proof.
+
+<a id="rl-p21"></a>
+### P21 — Release Candidate composer và immutable evidence pack
+
+**Đọc chi tiết:** [Guide P21](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p21); [spec S11](./research_loop/release-v1.1/docs/screens/11_release_candidate.md) + [HTML 11](<./research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P21-T01…T14`, `V11-P21-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Full17fields/12evidence items đúng nguồn, không giảm RC thành params hash.
+- **To-do BE:** Exact alpha/version/run/selection/audit/data/engine/revision builder; draftCAS/declarations; missing/integrity/scratch eligibility; sealed manifest and retention pins; keep four digest namespaces.
+- **To-do FE/consumer:** Full11 checklist/passport/copy/declarations/UNSET deployment fields/known limitations/restrictions; local seal separate delivery/approval; renderer no fake published setState success.
+- **Tests BE:** Mandatory item missing/corrupt/mismatched child audit; centroid/per-fold/null trial; ACTIVE binding vs scratch; concurrent drafts; correct pins/GC; no optimize on compose; source approval unchanged by Research integrity warning.
+- **Tests FE/browser:** Composer S11 tests; each17field/12item value+link to source; missing/partial/stale-draft errors; copy/no-secret; fixtures labelled, no invented approval mirror.
+- **Exit gate:** RC manifest/relations match Report/Freeze with authorized refs; local seal not downstream ACK; required fields not disguised as waiver.
+- **Rollback/handoff:** Disable new compose, retain seals/pins/drafts. Handoff exact payload/mapping/auth facts to P22.
+
+<a id="rl-p22"></a>
+### P22 — Publication và existing approval mirror
+
+**Đọc chi tiết:** [Guide P22](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p22); [spec S11](./research_loop/release-v1.1/docs/screens/11_release_candidate.md) + [HTML 11](<./research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html>).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P22-T01…T14`, `V11-P22-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Khép Research→existing R1 bằng real compatible path, không thay consumer hoặc gate.
+- **To-do BE:** Publication intent/receipt as Research saga; exact202-seeded run/alpha/claim/frozen wrapper; strict request, scoped actor, idempotency/CAS/unknown-outcome reconcile; no tokens in outbox; actual SLA/expiry/mirror reads.
+- **To-do FE/consumer:** Full11 publish confirm/progress/delivery-unknown/reauth/conflict/retry/receipt links; R1/R2 view navigation existing; conditions/raw status preserved, no inline approval or automatic Paper.
+- **Tests BE:** Real Delta final audit→RunSync→R1 in isolated environment; duplicate/concurrent timeout before/after downstream commit; wrong scope/hash/claims; existing open approval evidence conflict; expired auth no impersonation; protected regressions.
+- **Tests FE/browser:** Remaining S11 handoff tests + composer regression; seal≠delivered≠approved; denied/changes/expired/conditional status copy from source; retry no duplicate action; no production mutation network path.
+- **Exit gate:** End-to-end publication through unchanged current code, truthful actual pin scope and authorized recovery; no auth/hash/identity/consumer debt.
+- **Rollback/handoff:** Stop new publish intake, retain receipts and authorized reconciliation, never revoke approvals as rollback. Checkpoint11: P21/P22 + actual API receipt.
+
+<a id="rl-p23"></a>
+### P23 — Resource, security, recovery và upgrade qualification
+
+**Đọc chi tiết:** [Guide P23](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p23); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P23-T01…T15`, `V11-P23-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Chứng minh toàn Research chịu mixed load/failure/upgrade trong budget mà Execution không bị ảnh hưởng.
+- **To-do BE:** 20user workload with1heavy+queued diagnostic/export/audit; measured aggregate<=5,000,000,000bytes including DB/queue/query/native/pagecache; disk/FD/I/O/pool budgets; backup+restore relations+bytes; historical/new release compatibility.
+- **To-do FE/consumer:** Full15screen responsive/a11y/reconnect/cursor/auth-state matrix under load; measured browser heap/DOM/latency; no implicit jobs on inspect/drag; Execution/Planning regression.
+- **Tests BE:** IDOR/secret/path/export isolation; corrupt artifact, PG/NATS/worker down, diskhigh/full, fencing/duplicate/resume; cacheTTL/GC pins; restore actual readback; new engine fields/defaults don't change archived reproduce.
+- **Tests FE/browser:** 20authorized viewers visual+real lanes separate; source gap labels and no stale-response contamination; terminal session no reconnect storm; full relevant unit/type/build/browser gates, no baseline rewrite.
+- **Exit gate:** Guide §16 resource/latency/correctness gates with actual workload pass; no hidden swap/tmpfs escape, false completion or duplicate approval; restore verifiable.8GB optional result not5GB waiver.
+- **Rollback/handoff:** Research-only fault drills; drain/recover/release switch tested; cleanup isolated stacks. Handoff P24 complete qualification pack, not production activation.
+
+<a id="rl-p24"></a>
+### P24 — Full product acceptance, handoff và release rehearsal
+
+**Đọc chi tiết:** [Guide P24](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p24); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
+**Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+**Test IDs bắt buộc:** `P24-T01…T15`, `V11-P24-DR/BR/GX` và source tests applicable theo §13.3.
+
+- **Goal:** Đóng đủ24phase/15màn bằng real journey và owner-reviewable candidate, không chỉ green tests.
+- **To-do BE:** Real import/bind→preflight→durable Delta→evidence→RC→existing approval; scratch/failure/retry/history cases; all FND/COR/DR closure, migrations+data/auth preservation, signed-release compatibility rehearsal.
+- **To-do FE/consumer:** Every route/tab/drawer/action matrix; full actual no-stub journey + canonical visual lane, print/deep links/refresh/auth/console/chart values; owner sees exact research-dev candidate with rollback receipt.
+- **Tests BE:** Full required backend/contract/Rust/Python/ControlAPI/PG and recovery gates from candidate; direct→storage→API oracle; restored artifact usability workers-off; protected code/kernel/old clients; no Trading mutation.
+- **Tests FE/browser:** Full required unit/type/build + no-update visual + real Delta browser + unchanged Execution regression; source-inspected≠integrated≠browser-verified; all15screens/subpanels included, no fixture leak or blank route.
+- **Exit gate:** All mandatory gates PASS with retained evidence, no known in-scope debt; report owner review separately. Deliver READY_FOR_BOBBY_REVIEW; OWNER_ACCEPTED only after Bobby verdict, DEPLOYED only actual rollout.
+- **Rollback/handoff:** Checkpoint12: one acceptance packet/runbooks/repro commands + full coverage/cleanup/rollback. Main merge/signed production rollout are Bobby's separate release instruction via existing workflow; never auto-copy dev DB.
+
+<a id="rl-decisions"></a>
+## 13.6. Decision/request ledger và mẫu cập nhật phase
+
+Ghi request tại đây trong cùng change, không tách thêm campaign hay gửi từng mẩu qua chat.
+Mỗi entry có `id / phase / screen-field-action / source locator + revision /
+expected-actual / classification / proposed change / owner / decision-status /
+test-to-close / evidence`. Phân loại `PORTAL_IMPLEMENTATION`, `CONTRACT_MISMATCH`,
+`SOURCE_CAPABILITY_GAP_PROVEN`, `PROVISIONING`, `OWNER_UX_DECISION`;
+raw đủ nhưng thiếu transform thuộc implementation, không source gap.
+Không đánh dấu resolved chỉ vì trả lời Claude; phải link code/test hoặc quyết định scope Bobby.
+
+Các mục RL-C01…10 là reconciliation khi lập plan, **không phải lỗi runtime đã test**.
+DR01–07 vẫn dùng ID gốc trong guide; không tạo ID thứ hai cho cùng quyết định.
+Nếu Bobby/Claude đã giải quyết trước, đọc exact return/commit và cập nhật evidence, không hỏi lại.
+
+Mẫu phase report (small authored file; trạng thái chỉ cập nhật board §13.4):
+
+```text
+Phase / assigned scope / effective Linux identity:
+Worktree / branch / base SHA / head SHA / upstream dependencies:
+Implementer / reviewer / cross-agent handoff approval:
+Goal and delivered BE/FE panels/actions:
+Files changed + real Git additions/deletions:
+Contracts + numeric/source/authority mapping:
+Guide test IDs + source test IDs + actual commands/results/reused evidence:
+Delta source/data/engine/effective-spec + direct/storage/API/DOM comparison:
+Visual/real/regression lane refs + copy/layout/console/network outcomes:
+Resources + scale-refine six fields + bounded cleanup decision:
+Protected Execution/kernel/shared surfaces + data/auth preservation:
+Dev URL / bundle/API/image/config/schema identity + rollback receipt:
+Debt / owner decisions / external dependencies:
+Exit gate outcome / Bobby review state:
+Next phase/action + remaining prerequisites:
+```
+
+## 13.7. Release/data safety và điểm dừng của campaign
+
+P24 nghiệm thu **research-dev** ở `dev-portal-research.primusspark.com` sau provisioning thật.
+Không thay `dev-portal.primusspark.com` hoặc `portal.primusspark.com` như một bước test.
+Config/secrets/data/evidence ở approved storage ngoài ephemeral worktree; xóa worktree không được
+làm runtime mất env hoặc data. Source checkout sạch không chứng minh service đúng image/flags.
+
+Khi Bobby ra lệnh release sau review: dùng [runbook hiện có](../docs/release-and-deployment.md),
+reviewed dev→main, same-commit CI→signed image/SBOM/provenance→protected deploy.
+Giữ stable project/ports/volumes/Cloudflare Access/accounts/Planning/Execution overlays.
+Backup PG + Roadmap SQLite nhất quán, migration append-only forward, restore/revert compatibility
+được thử trong isolation. Không promote database contents, bootstrap lại user hoặc down migration phá dữ liệu.
+Release flag mới cần named profile cùng evidence; không bật mọi feature chỉ vì “build đầy đủ”.
+
+Self-hosted CI/publish và deployment dùng roles/labels hiện hành, job budgets bounded.
+Docs-only không cần full compute/browser lại; workflow/schema/auth/asset-routing changes phải chạy
+đúng gates liên quan. Không bỏ một required check để vượt hết minutes; thiếu capacity dùng
+approved runner, không host Docker/secrets quyền rộng. Cleanup theo C4/C6, chỉ exact phase-owned
+temporary assets sau job terminal, giữ rollback và retained evidence.
+
+**Hiện tại:** chỉ plan/rules, không changes runtime, không compute/data read, không phase tests hoặc
+dev deploy đã được claim. Hành động kế tiếp: Bobby giao P01 (hoặc chỉ rõ slice làm trước/người nhận);
+agent theo entry/gates trong plan này.
+
+## 13.8. Planning validation journal — 2026-09-19
+
+- Đã kiểm tra đủ 24 entries, 168 trường goal/to-do/test/exit/handoff, test-range Pxx
+  đối chiếu guide và 72 mã V11-DR/BR/GX; 162 local links/explicit anchors trong
+  phần plan/rules mới đều tồn tại. Đây là kiểm tra tài liệu, không phải phase tests PASS.
+- Đưa bộ guide/hi-fi/spec do Bobby cung cấp vào cùng source history để handoff không
+  thiếu dependency; không đổi UI/logic/spec/support.js, không đưa `.DS_Store` vào commit.
+  Chỉ bỏ một trailing space ở HTML04 dòng1310 do whitespace gate; không đổi JavaScript semantics.
+- Giữ nguyên history trước §13 ngoài pointer đầu file; root rules chỉ bổ sung override
+  Research. Chưa sửa product code, contracts, DB, runtime, DNS, account hoặc Execution.
+- P01 còn phải xác minh archive/baseline byte-hash bằng nguồn gốc và mapping toàn bộ
+  HTML handlers/tests; không coi link-check là đã browser-review cả 15 màn.
+- Không tạo container/job/test account/build cache trong bước soạn plan; cleanup
+  runtime `NO_ACTION_NEEDED`. Pre-commit verification nếu chạy được ghi riêng ở handoff,
+  không đổi trạng thái 24 phase từ `PLANNED`.

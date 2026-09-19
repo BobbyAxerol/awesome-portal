@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT — Run Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+  button { transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+  @keyframes rp-pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
+</style>
+</helmet>
+
+<div data-screen-label="Run Progress" style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px">
+  <div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5">
+    <span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span>
+    <span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span>
+    <span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap">
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span>
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">QuantBT Backtest</span><span style="color:#939db0">/</span>
+      <span style="font-family:'JetBrains Mono',monospace; flex:none">R-WFO-119</span><span style="color:#939db0">/</span>
+      <span style="color:#1c2532; flex:none">Progress</span>
+    </span>
+    <span style="flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 12px">Search <span style="font-size:10px; color:#939db0; border:1px solid #e3e0d7; border-radius:3px; padding:0 4px; font-family:'JetBrains Mono',monospace">⌘K</span></span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Comfortable ▾</span>
+  </div>
+  <div style="display:flex; flex:1; min-height:0">
+    <div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px">
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">command</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e"><span style="flex:1">Command Center</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e"><span style="flex:1">Portal Map</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">research</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><a href="QuantBT 01 Run Library.dc.html" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; background:#e2edf0; color:#1c2532; font-weight:500; text-decoration:none"><span style="flex:1">QuantBT Backtest</span></a><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Alpha Pool</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Alpha Mining</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Strategy Composer</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">backtests</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Approvals</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">deployments</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Paper Trading</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Sandbox</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Live Operations</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">data &amp; operations</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Data Catalog</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">planning</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e"><span style="flex:1">Roadmap &amp; Task Board</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">administration</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1">Profile &amp; Access</span></div></div>
+    </div>
+    <div style="flex:1; min-width:0">
+      <div style="width:100%; max-width:1440px; margin:0 auto; padding:16px 24px 56px; display:flex; flex-direction:column; gap:14px">
+
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px 16px; border-bottom:1px solid #e3e0d7; padding-bottom:10px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4e5a6e">
+              <a href="QuantBT 01 Run Library.dc.html">Runs</a><span style="color:#939db0">/</span>
+              <span style="font-family:'JetBrains Mono',monospace">R-WFO-119</span><span style="color:#939db0">/</span><span style="color:#1c2532">Progress</span>
+            </div>
+            <div style="font-family:Newsreader,Georgia,serif; font-size:22px; font-weight:300; letter-spacing:-.01em">{{ pageTitle }}</div>
+            <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0">The same screen becomes the evidence: claims sit in forecast state while the engine works, and flip to issued the moment it finishes — nothing moves, nothing reloads.</div>
+          </div>
+          <div style="flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px">
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e"><span style="{{ sseDotStyle }}"></span>{{ sseLabel }}</span>
+            <span style="display:inline-flex; gap:6px; align-items:center">
+              <span style="font-size:9.5px; color:#939db0; font-family:'JetBrains Mono',monospace">demo transport</span>
+              <button onClick="{{ onPlay }}" style="{{ playStyle }}">{{ playLabel }}</button>
+              <sc-for list="{{ speedOpts }}" as="sp" hint-placeholder-count="3"><button onClick="{{ sp.onPick }}" style="{{ sp.style }}">{{ sp.label }}</button></sc-for>
+              <button onClick="{{ onFinish }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; color:#4e5a6e; padding:2px 9px; font-family:'JetBrains Mono',monospace; font-size:10px">complete now ⇥</button>
+              <sc-for list="{{ scaleOpts }}" as="sc2" hint-placeholder-count="2"><button title="WFO at scale — 32 folds, 19,200 declared trials" onClick="{{ sc2.onPick }}" style="{{ sc2.style }}">{{ sc2.label }}</button></sc-for>
+            </span>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; padding:6px 12px; border:1px solid #efede4; border-radius:3px; background:#f4f2ec; font-family:'JetBrains Mono',monospace; font-size:11px; color:#939db0">
+          <span>run <span style="color:#1c2532">R-WFO-119</span></span>
+          <span style="{{ statusChipStyle }}">{{ statusChip }}</span>
+          <span style="border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">walk_forward · mode_1_decay · per_fold_causal</span>
+          <span style="border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">mom_breakout_v3 · BTCUSDT · 4h</span>
+          <span style="border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">route close_target_v2</span>
+          <span style="margin-left:auto">wheel quantbt-engine==1.1.1[optimization] · config sha256:91bd47…</span>
+        </div>
+
+        <div style="border:1px solid {{ claimBorder }}; border-radius:6px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05)">
+          <div style="display:flex; align-items:center; gap:10px; padding:7px 14px; border-bottom:1px solid #efede4">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:600; color:{{ claimHeadColor }}">{{ claimHead }}</span>
+            <span style="font-size:10.5px; color:#939db0">{{ claimHeadNote }}</span>
+            <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+              <a href="{{ evidenceHref }}" style="margin-left:auto; display:inline-block; border:1px solid #0f4c5c; border-radius:6px; background:#0f4c5c; color:#ffffff; padding:4px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; text-decoration:none">open evidence flow →</a>
+            </sc-if>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px 24px; padding:10px 14px">
+            <sc-for list="{{ claims }}" as="c" hint-placeholder-count="5">
+              <div style="display:flex; flex-direction:column; gap:2px">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">{{ c.k }}</span>
+                <span style="{{ c.style }}">{{ c.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:8px">
+          <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center">
+            <sc-for list="{{ stepper }}" as="st" hint-placeholder-count="11">
+              <span title="{{ st.title }}" style="{{ st.style }}">{{ st.mark }}{{ st.label }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#c9c5ba">{{ st.arrow }}</span>
+            </sc-for>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+            <span style="position:relative; flex:1; min-width:280px; height:14px; border-radius:999px; background:#f4f2ec; border:1px solid #efede4; overflow:hidden">
+              <span style="{{ progFillStyle }}"></span>
+              <sc-for list="{{ progTicks }}" as="pt" hint-placeholder-count="4"><span style="{{ pt.style }}"></span></sc-for>
+            </span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532; white-space:nowrap">{{ progText }}</span>
+          </div>
+          <div style="display:flex; gap:4px 22px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#4e5a6e">
+            <span>study <span style="color:#1c2532">{{ studyText }}</span></span>
+            <span>elapsed <span style="color:#1c2532">{{ elapsedText }}</span></span>
+            <span>eta <span style="color:#1c2532">{{ etaText }}</span></span>
+            <span>rate <span style="color:#1c2532">~42 trials/s</span></span>
+            <span style="color:#939db0">ETA is engine time from the trial rate — not the demo transport speed</span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:stretch">
+          <div style="flex:1.15; min-width:460px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:6px">
+            <div style="display:flex; justify-content:space-between; align-items:baseline">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">fold gantt — live · the evidence cursor follows the running fold</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ foldPlanNote }}</span>
+            </div>
+            <sc-if value="{{ hasFoldCells }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; gap:2px; align-items:stretch">
+                <sc-for list="{{ foldCells }}" as="fc" hint-placeholder-count="16">
+                  <button title="{{ fc.title }}" onClick="{{ fc.onPick }}" style="{{ fc.style }}"><span style="{{ fc.fillStyle }}"></span></button>
+                </sc-for>
+              </div>
+              <span style="font-size:9.5px; color:#939db0">compact plan — one cell per fold · fill = trial progress · click a cell to inspect it below · detail rows show the running fold ± neighbours</span>
+            </sc-if>
+            <sc-for list="{{ foldRows }}" as="f" hint-placeholder-count="5">
+              <div style="{{ f.rowStyle }}">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; width:58px; flex:none; color:#4e5a6e">{{ f.id }}</span>
+                <span style="position:relative; flex:1; height:14px; border-radius:999px; background:#f4f2ec; overflow:hidden">
+                  <span style="{{ f.fillStyle }}"></span>
+                </span>
+                <span style="{{ f.statusStyle }}">{{ f.status }}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; width:190px; flex:none; text-align:right; color:#939db0">{{ f.note }}</span>
+              </div>
+            </sc-for>
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding-top:6px; border-top:1px solid #efede4">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">evidence cursor</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">fold <span style="color:#1c2532">{{ cur.fold }}</span></span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">trial <span style="color:#1c2532">{{ cur.trial }}</span></span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">params <span style="color:{{ cur.paramsColor }}">{{ cur.params }}</span></span>
+              <span style="font-size:9.5px; color:#939db0">handed to Evidence Flow at completion — you land on the same fold you watched</span>
+            </div>
+          </div>
+
+          <div style="flex:1; min-width:380px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:5px">
+            <div style="display:flex; justify-content:space-between; align-items:baseline">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">artifacts — appearing as they are built</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">manifest preview</span>
+            </div>
+            <sc-for list="{{ artifacts }}" as="a" hint-placeholder-count="7">
+              <span style="display:flex; align-items:baseline; gap:10px; font-size:11px; border-bottom:1px solid #f4f2ec; padding:3px 0">
+                <span style="width:170px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10.5px">{{ a.name }}</span>
+                <span style="{{ a.stateStyle }}">{{ a.state }}</span>
+                <span style="flex:1; color:#939db0; font-size:10px">{{ a.note }}</span>
+              </span>
+            </sc-for>
+            <span style="font-size:10px; color:#939db0; line-height:1.5; padding-top:4px">Each artifact becomes clickable evidence the moment its digest is written. A run cancelled mid-flight keeps everything already built — cancel discards compute, never evidence.</span>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px">
+          <span style="display:inline-flex; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+            <sc-for list="{{ tabOpts }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onPick }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+          </span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">{{ tabNote }}</span>
+          <button style="margin-left:auto; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; color:#b43a3a; padding:3px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.05em; text-transform:uppercase">{{ cancelLabel }}</button>
+        </div>
+
+        <sc-if value="{{ isLive }}" hint-placeholder-val="{{ true }}">
+          <div style="border:1px solid #2b3747; border-radius:8px; background:#10151d; padding:12px 16px; font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.75; min-height:330px">
+            <sc-for list="{{ consoleLines }}" as="l" hint-placeholder-count="18">
+              <div style="{{ l.style }}">{{ l.text }}</div>
+            </sc-for>
+            <span style="{{ caretStyle }}">▌</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isStage }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+            <div style="display:flex; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding:6px 12px">
+              <span style="width:64px; flex:none">fold</span><span style="width:110px; flex:none">study started</span><span style="width:88px; flex:none; text-align:right">trials</span><span style="width:80px; flex:none; text-align:right">best J₁</span><span style="width:90px; flex:none; text-align:right">selected</span><span style="width:110px; flex:none; padding-left:14px">params digest</span><span style="width:110px; flex:none">frozen at</span><span style="flex:1; padding-left:14px">state</span>
+            </div>
+            <sc-for list="{{ stageRows }}" as="sr" hint-placeholder-count="5">
+              <div style="{{ sr.style }}">
+                <span style="width:64px; flex:none">{{ sr.id }}</span>
+                <span style="width:110px; flex:none; color:#4e5a6e">{{ sr.started }}</span>
+                <span style="width:88px; flex:none; text-align:right">{{ sr.trials }}</span>
+                <span style="width:80px; flex:none; text-align:right; color:#1e7b4f">{{ sr.best }}</span>
+                <span style="width:90px; flex:none; text-align:right">{{ sr.sel }}</span>
+                <span style="width:110px; flex:none; padding-left:14px; color:#0f4c5c">{{ sr.digest }}</span>
+                <span style="width:110px; flex:none; color:#4e5a6e">{{ sr.frozen }}</span>
+                <span style="flex:1; padding-left:14px; color:{{ sr.stateColor }}; font-size:10px">{{ sr.state }}</span>
+              </div>
+            </sc-for>
+            <div style="padding:6px 12px; border-top:1px solid #efede4; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">{{ ledgerFoot }} — every value here reappears verbatim in Stage 2 · Search after completion</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #1e7b4f; border-radius:8px; background:#e3f1e9; padding:12px 16px; display:flex; flex-wrap:wrap; align-items:center; gap:10px">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#1e7b4f">✓ RUN COMPLETE — CLAIMS ISSUED</span>
+            <span style="font-size:11.5px; color:#4e5a6e; flex:1; min-width:260px">The claim bar above is now authoritative. Continue into the evidence with the cursor you watched:</span>
+            <span style="display:inline-flex; gap:6px; flex-wrap:wrap">
+              <a href="{{ s1Href }}" style="border:1px solid #0f4c5c; border-radius:6px; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10px">S1 split</a>
+              <a href="{{ s2Href }}" style="border:1px solid #0f4c5c; border-radius:6px; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10px">S2 search</a>
+              <a href="{{ s3Href }}" style="border:1px solid #0f4c5c; border-radius:6px; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10px">S3 freeze</a>
+              <a href="{{ s4Href }}" style="border:1px solid #0f4c5c; border-radius:6px; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10px">S4 replay</a>
+              <a href="{{ s5Href }}" style="border:1px solid #0f4c5c; border-radius:6px; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10px">S5 claim</a>
+            </span>
+          </div>
+        </sc-if>
+
+        <div style="display:flex; flex-direction:column; gap:3px; border-top:1px solid #e3e0d7; padding-top:8px">
+          <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0">rules of this screen</span>
+          <span style="font-size:11px; color:#4e5a6e; line-height:1.6">SSE accelerates, polling underneath never stops — the screen degrades in speed, not in truth. Claims stay in forecast state until the engine issues them; this page never promotes a forecast to a fact. BACKTESTING_HOLDOUT_LIVE renders as skipped because the holdout is sealed — a skipped stage is information, not an error.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startCompleted&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo&quot;}, &quot;speed&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [1, 4, 16], &quot;default&quot;: 4, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Demo&quot;}, &quot;folds&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [5, 32], &quot;default&quot;: 5, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Scale demo&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.TRIALS = 600; this.RATE = 42;
+    this.FOLDS = parseInt(props.folds, 10) === 32 ? 32 : 5;
+    this.setScale(this.FOLDS);
+    this.lines = [
+      { t: "[I 04:12:00] run R-WFO-119 accepted · wheel quantbt-engine==1.1.1[optimization]", c: "#7a8699" },
+      { t: "[I 04:12:01] VALIDATING_DATA · ds_btcusdt_4h@sha256:9f2c18d4aa · 6,912 bars · 0 gaps", c: "#d5dbe6" },
+      { t: "[I 04:12:03] fold_plan.json written · outer 5 · purge 24h · embargo 72h · digest sha256:2ba4…", c: "#4fb07c" },
+      { t: "[I 04:12:04] WARMING_KERNEL · numba jit warm · 1.9s", c: "#d5dbe6" }
+    ];
+    const t0 = props.startCompleted ? this.TRIALS * this.FOLDS : 1240;
+    this.state = { playing: !props.startCompleted, speed: props.speed || 4, t: t0, finish: props.startCompleted ? 100 : 0, tab: "live", tick: 0 };
+    if (props.startCompleted) this.seedCompletedLines();
+  }
+  digest(id) { return "prm_" + ((id * 2654435761 % 0xffffff) >>> 0).toString(16).padStart(6, "0"); }
+  fid(i) { return "fold_" + String(i + 1).padStart(2, "0"); }
+  digOf(i) { return this.FOLDS === 5 ? ["prm_9d44f2", "prm_3b81c7", "prm_7c1a9e", "prm_c25a1d", "prm_66e09b"][i] : this.digest(this.SELS[i]); }
+  setScale(n) {
+    this.FOLDS = n;
+    if (n === 5) { this.BESTS = [1.049, 0.982, 1.043, 1.061, 0.997]; this.SELS = [143, 388, 217, 452, 301]; }
+    else {
+      this.BESTS = []; this.SELS = [];
+      for (let i = 0; i < n; i++) { this.BESTS.push(+(0.92 + ((i * 37) % 23) / 80).toFixed(3)); this.SELS.push(100 + (i * 97) % 500); }
+    }
+  }
+  clock(sec) { const s = Math.floor(4 * 3600 + 12 * 60 + sec); const p = (v) => String(v).padStart(2, "0"); return p(Math.floor(s / 3600)) + ":" + p(Math.floor(s / 60) % 60) + ":" + p(s % 60); }
+  engineSec() { return this.state.t / this.RATE + this.state.finish * 0.6; }
+  seedCompletedLines() {
+    const from = Math.max(0, this.FOLDS - 8);
+    if (from > 0) this.lines.push({ t: "── " + from + " earlier folds frozen (see stage log) ──", c: "#7a8699" });
+    for (let f = from; f < this.FOLDS; f++) this.lines.push({ t: "[I " + this.clock((f + 1) * 600 / this.RATE) + "] " + this.fid(f) + " frozen · best J₁ " + this.BESTS[f].toFixed(3) + " · trial " + this.SELS[f] + " · " + this.digOf(f), c: "#4fb07c" });
+    this.lines.push({ t: "[I 04:14:00] BUILDING_ARTIFACTS · claims.json issued · cert B (holdout sealed)", c: "#d4b36a" });
+  }
+  componentDidMount() { this.timer = setInterval(() => this.tick(), 280); }
+  componentWillUnmount() { if (this.timer) clearInterval(this.timer); }
+  push(t, c) { this.lines.push({ t, c: c || "#d5dbe6" }); if (this.lines.length > 400) this.lines = this.lines.slice(-400); }
+  tick() {
+    const s = this.state; if (!s.playing || (s.finish >= 100)) return;
+    const total = this.TRIALS * this.FOLDS;
+    if (s.t < total) {
+      const NM = this.FOLDS - 1;
+      const prevFold = Math.min(NM, Math.floor(s.t / 600));
+      const nt = Math.min(total, s.t + s.speed * 8 * (0.8 + Math.random() * 0.4));
+      const fold = Math.min(NM, Math.floor(nt / 600));
+      if (fold !== prevFold || (s.t === 0)) {
+        this.push("[I " + this.clock(nt / this.RATE) + "] " + this.fid(prevFold) + " frozen · best J₁ " + this.BESTS[prevFold].toFixed(3) + " · trial " + this.SELS[prevFold] + " · " + this.digOf(prevFold), "#4fb07c");
+        this.push("── " + this.fid(fold) + " study started · sampler TPE · seed 42 · objective J₁ ──", "#d4b36a");
+      }
+      const trial = Math.floor(nt - fold * 600);
+      const v = (0.4 + Math.random() * 0.9).toFixed(3);
+      this.push("[I " + this.clock(nt / this.RATE) + "] " + this.fid(fold) + " trial " + trial + "/600 finished · value " + v + " · best " + Math.min(this.BESTS[fold], 0.6 + trial / 600 * 0.5).toFixed(3));
+      this.setState({ t: nt, tick: s.tick + 1 });
+    } else {
+      const nf = Math.min(100, s.finish + s.speed * 2.2);
+      if (s.finish < 30 && nf >= 30) this.push("[I " + this.clock(this.engineSec()) + "] BACKTESTING_OOS · stitching 5 test segments · stitch digest sha256:7e01…", "#7fb3c4");
+      if (s.finish < 55 && nf >= 55) this.push("[I " + this.clock(this.engineSec()) + "] BACKTESTING_HOLDOUT_LIVE · SKIPPED — holdout sealed · cap ≤ B recorded", "#d4b36a");
+      if (s.finish < 62 && nf >= 62) this.push("[I " + this.clock(this.engineSec()) + "] BUILDING_ARTIFACTS · series/stitched.parquet · metrics/summary.json", "#d5dbe6");
+      if (nf >= 100) { this.push("[I " + this.clock(this.engineSec()) + "] COMPLETED · claims.json issued · validation_claim STRICT_OUTER_OOS · cert B", "#4fb07c"); }
+      this.setState({ finish: nf, tick: s.tick + 1 });
+    }
+  }
+  renderVals() {
+    const s = this.state; const total = this.TRIALS * this.FOLDS;
+    const done = s.finish >= 100;
+    const running = !done;
+    const NF = this.FOLDS; const NM = NF - 1;
+    const fold = Math.min(NM, Math.floor(Math.min(s.t, total - 1) / 600));
+    const trialIn = Math.floor(s.t - fold * 600);
+    const optiDone = s.t >= total;
+    let stage;
+    if (!optiDone) {
+      stage = trialIn < 540 ? "OPTIMIZING_IS" : trialIn < 556 ? "RANKING_IS_CANDIDATES" : trialIn < 576 ? "REPLAYING_CANDIDATES_ON_OOS" : trialIn < 588 ? "SELECTING_PARAMS" : "FREEZING_PARAMS";
+    } else stage = s.finish < 30 ? "BACKTESTING_IS" : s.finish < 55 ? "BACKTESTING_OOS" : s.finish < 62 ? "BACKTESTING_HOLDOUT_LIVE" : s.finish < 100 ? "BUILDING_ARTIFACTS" : "COMPLETED";
+    const ORDER = ["VALIDATING_DATA", "WARMING_KERNEL", "OPTIMIZING_IS", "RANKING_IS_CANDIDATES", "REPLAYING_CANDIDATES_ON_OOS", "SELECTING_PARAMS", "FREEZING_PARAMS", "BACKTESTING_IS", "BACKTESTING_OOS", "BACKTESTING_HOLDOUT_LIVE", "BUILDING_ARTIFACTS"];
+    const reachedIdx = optiDone ? (2 + 5 + (s.finish >= 62 ? 3 : s.finish >= 55 ? 2 : s.finish >= 30 ? 1 : 0)) : (s.t > 80 ? 2 + ORDER.slice(2, 7).indexOf(stage) : s.t > 30 ? 1 : 0);
+    const stepper = ORDER.map((st, i) => {
+      const active = st === stage && running;
+      const reached = i < reachedIdx || done || (optiDone && i <= reachedIdx) || (!optiDone && s.t > 80 && i < 2);
+      const isHold = st === "BACKTESTING_HOLDOUT_LIVE";
+      const skipped = isHold && (done || s.finish >= 62);
+      const passed = reached && !active && !skipped;
+      return {
+        label: st.split("_").join(" "), arrow: i < ORDER.length - 1 ? "→" : "",
+        title: skipped ? "skipped — holdout sealed; recorded as the ≤ B cap, not an error" : "",
+        mark: passed ? "✓ " : skipped ? "⊘ " : "",
+        style: "font-family:'JetBrains Mono',monospace; font-size:9.5px; border-radius:999px; padding:1px 8px; border:1px solid " + (active ? "#0f4c5c" : skipped ? "#9a6a1f" : passed ? "rgba(30,123,79,.4)" : "#e3e0d7") + "; background:" + (active ? "#e2edf0" : skipped ? "#f4ecdb" : passed ? "#e3f1e9" : "transparent") + "; color:" + (active ? "#0f4c5c" : skipped ? "#9a6a1f" : passed ? "#1e7b4f" : "#939db0") + ";" + (active ? " animation:rp-pulse 1.6s infinite;" : "")
+      };
+    });
+    const doneTrials = Math.floor(Math.min(s.t, total));
+    const pct = (doneTrials / total * 92 + s.finish * 0.08);
+    const remaining = (total - doneTrials) / this.RATE + (100 - s.finish) * 0.6;
+    const etaText = done ? "—" : remaining >= 60 ? Math.floor(remaining / 60) + "m " + Math.round(remaining % 60) + "s" : Math.round(remaining) + "s";
+    const el = this.engineSec();
+    const claimChip = (v, issued, warn) => "font-family:'JetBrains Mono',monospace; font-size:11.5px; " + (issued ? "color:" + (warn ? "#9a6a1f" : "#1c2532") + "; border-left:2px solid " + (warn ? "#9a6a1f" : "#1e7b4f") + "; padding-left:6px;" : "color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 6px; font-style:italic;");
+    const claims = [
+      { k: "validation_claim", v: done ? "STRICT_OUTER_OOS" : "STRICT_OUTER_OOS (forecast)", style: claimChip(0, done) },
+      { k: "chronological_claim", v: done ? "CHRONOLOGICAL_CAUSAL" : "CHRONOLOGICAL_CAUSAL (forecast)", style: claimChip(0, done) },
+      { k: "oos_used_for_selection", v: done ? "NO — read once after freeze" : "NO (by schedule)", style: claimChip(0, done) },
+      { k: "holdout_state", v: "SEALED · LOCKED", style: claimChip(0, done, true) },
+      { k: "certification", v: done ? "B — issued by engine" : "≤ B ceiling (holdout sealed)", style: claimChip(0, done, true) }
+    ];
+    const compact = NF > 8;
+    const foldCells = compact ? Array.from({ length: NF }, (_, i) => {
+      const fDone = s.t >= (i + 1) * 600 || done;
+      const fRun = !fDone && fold === i && running;
+      const fill = Math.max(0, Math.min(1, (s.t - i * 600) / 600));
+      return {
+        title: this.fid(i) + (fDone ? " · frozen · best J₁ " + this.BESTS[i].toFixed(3) : fRun ? " · running · trial " + trialIn + "/600" : " · queued"),
+        onPick: () => this.setState({ tick: s.tick + 1, inspect: i }),
+        style: "position:relative; flex:1; min-width:6px; height:20px; border:1px solid " + (fRun ? "#0f4c5c" : fDone ? "rgba(30,123,79,.4)" : "#e3e0d7") + "; background:#fdfdfa; border-radius:2px; padding:0; overflow:hidden;",
+        fillStyle: "position:absolute; left:0; top:0; bottom:0; width:" + (fill * 100).toFixed(0) + "%; background:" + (fDone ? "#a8c6ce" : "#0f4c5c") + ";" + (fRun ? " animation:rp-pulse 1.8s infinite;" : "")
+      };
+    }) : [];
+    const inspect = compact ? (s.inspect != null ? s.inspect : fold) : null;
+    const rowIdx = compact
+      ? Array.from(new Set([0, inspect - 1, inspect, inspect + 1, fold, NF - 1].filter(i => i >= 0 && i < NF))).sort((a, b) => a - b)
+      : Array.from({ length: NF }, (_, i) => i);
+    const foldRows = [];
+    for (const i of rowIdx) {
+      const fDone = s.t >= (i + 1) * 600 || done;
+      const fRun = !fDone && fold === i && running;
+      const fill = Math.max(0, Math.min(1, (s.t - i * 600) / 600));
+      foldRows.push({
+        id: this.fid(i),
+        rowStyle: "display:flex; align-items:center; gap:8px; padding:3px 6px; border-radius:3px; border-left:2px solid " + (fRun ? "#0f4c5c" : "transparent") + "; background:" + (fRun ? "#e2edf0" : "transparent") + ";",
+        fillStyle: "position:absolute; left:0; top:0; bottom:0; width:" + (fill * 100).toFixed(1) + "%; background:" + (fDone ? "#a8c6ce" : "#0f4c5c") + ";" + (fRun ? " animation:rp-pulse 1.8s infinite;" : ""),
+        status: fDone ? "DONE" : fRun ? "RUNNING" : "PENDING",
+        statusStyle: "font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; width:66px; flex:none; text-align:center; border-radius:999px; padding:1px 0; border:1px solid " + (fDone ? "rgba(30,123,79,.4)" : fRun ? "#0f4c5c" : "#e3e0d7") + "; color:" + (fDone ? "#1e7b4f" : fRun ? "#0f4c5c" : "#939db0") + "; background:" + (fDone ? "#e3f1e9" : fRun ? "#ffffff" : "transparent") + ";",
+        note: fDone ? "best J₁ " + this.BESTS[i].toFixed(3) + " · trial " + this.SELS[i] + " · " + this.digOf(i) : fRun ? "trial " + trialIn + "/600 · " + stage.split("_").join(" ").toLowerCase() : "queued"
+      });
+    }
+    const cur = {
+      fold: this.fid(fold), trial: optiDone ? "#" + this.SELS[NM] : "#" + trialIn,
+      params: (s.t >= (fold + 1) * 600 || done) ? this.digOf(fold) : "unfrozen",
+      paramsColor: (s.t >= (fold + 1) * 600 || done) ? "#0f4c5c" : "#9a6a1f"
+    };
+    const art = (name, state, note) => ({
+      name, state, note,
+      stateStyle: "width:76px; flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:" + (state === "ready" ? "#1e7b4f" : state === "building" ? "#0f4c5c" : state === "denied" ? "#b43a3a" : "#939db0") + "; border-left:2px solid " + (state === "ready" ? "#1e7b4f" : state === "building" ? "#0f4c5c" : state === "denied" ? "#b43a3a" : "#c9c5ba") + "; padding-left:5px;" + (state === "building" ? " animation:rp-pulse 1.6s infinite;" : "")
+    });
+    const artifacts = [
+      art("fold_plan.json", "ready", "written at VALIDATING_DATA · sha256:2ba4…"),
+      art("search-trace.parquet", done ? "ready" : "building", done ? "512 × " + NF + " rows · sha256:5cd0…" : Math.floor(s.t).toLocaleString("en-US") + " trial rows so far"),
+      art("selection_trace.json", s.t >= 600 || done ? (done ? "ready" : "building") : "pending", s.t >= 600 ? Math.min(NF, Math.floor(s.t / 600)) + "/" + NF + " fold decisions" : "first fold not selected yet"),
+      art("parameter_set.json", s.t >= 600 || done ? (done ? "ready" : "building") : "pending", s.t >= 600 ? Math.min(NF, Math.floor(s.t / 600)) + "/" + NF + " θ* frozen" : "—"),
+      art("series/stitched.parquet", done ? "ready" : s.finish >= 30 ? "building" : "pending", done ? "sha256:7e01…" : "after all folds freeze"),
+      art("claims.json", done ? "ready" : "pending", done ? "issued · cert B" : "issued only at COMPLETED — never earlier"),
+      art("holdout artifacts", "denied", "sealed — unlock is a one-time audited workflow")
+    ];
+    const speedOpts = [1, 4, 16].map(v => ({ label: v + "×", onPick: () => this.setState({ speed: v }), style: "border:1px solid " + (s.speed === v ? "#0f4c5c" : "#e3e0d7") + "; border-radius:3px; background:" + (s.speed === v ? "#e2edf0" : "#ffffff") + "; color:" + (s.speed === v ? "#0f4c5c" : "#4e5a6e") + "; padding:2px 8px; font-family:'JetBrains Mono',monospace; font-size:10px;" }));
+    const tabOpts = [{ k: "live", label: "Live console" }, { k: "stage", label: "Stage log" }].map(t => ({ label: t.label, onPick: () => this.setState({ tab: t.k }), style: "border:0; border-right:1px solid #e3e0d7; background:" + (s.tab === t.k ? "#e2edf0" : "#ffffff") + "; color:" + (s.tab === t.k ? "#0f4c5c" : "#4e5a6e") + "; padding:4px 14px; font-family:'JetBrains Mono',monospace; font-size:10.5px;" }));
+    const consoleLines = this.lines.slice(-18).map(l => ({ text: l.t, style: "color:" + l.c + "; white-space:pre-wrap; word-break:break-all;" }));
+    const stageRows = [];
+    for (const i of (compact ? rowIdx : Array.from({ length: NF }, (_, k) => k))) {
+      const fDone = s.t >= (i + 1) * 600 || done;
+      const fRun = !fDone && fold === i && running;
+      stageRows.push({
+        id: this.fid(i),
+        started: s.t >= i * 600 ? this.clock(i * 600 / this.RATE) + "Z" : "—",
+        trials: fDone ? "512" : fRun ? String(trialIn) : "—",
+        best: fDone ? this.BESTS[i].toFixed(3) : fRun ? Math.min(this.BESTS[i], 0.6 + trialIn / 600 * 0.5).toFixed(3) : "—",
+        sel: fDone ? "#" + this.SELS[i] : "—",
+        digest: fDone ? this.digOf(i) : "—",
+        frozen: fDone ? this.clock((i + 1) * 600 / this.RATE) + "Z" : "—",
+        state: fDone ? "FROZEN — immutable from here" : fRun ? stage.split("_").join(" ") : "PENDING",
+        stateColor: fDone ? "#1e7b4f" : fRun ? "#0f4c5c" : "#939db0",
+        style: "display:flex; align-items:baseline; padding:5px 12px; border-bottom:1px solid #f4f2ec; font-family:'JetBrains Mono',monospace; font-size:10.5px;" + (fRun ? " background:#e2edf0; border-left:2px solid #0f4c5c;" : "")
+      });
+    }
+    const hcur = NF === 5
+      ? "fold=" + (fold + 1) + "&trial=" + (optiDone ? this.SELS[NM] : trialIn) + (cur.params !== "unfrozen" ? "&params=" + cur.params : "")
+      : ""; // scale demo is synthetic — never plant its fold/trial/digest into the canonical hub cursor
+    return {
+      ledgerFoot: compact ? "showing running fold ± neighbours · " + stageRows.length + " of " + NF + " rows — the full ledger lives in the artifact" : "ledger — one row per fold study",
+      evidenceHref: "QuantBT 04 Evidence Flow.dc.html#stage=summary" + (hcur ? "&" + hcur : "") + "&schedule=per_fold_causal",
+      s1Href: "QuantBT 05 S1 Split.dc.html#" + hcur,
+      s2Href: "QuantBT 06 S2 Search and Selection.dc.html#" + hcur,
+      s3Href: "QuantBT 07 S3 Freeze.dc.html#" + hcur,
+      s4Href: "QuantBT 08 S4 Execute Replay.dc.html#" + hcur,
+      s5Href: "QuantBT 11 Release Candidate and Publish.dc.html#" + hcur,
+      pageTitle: done ? "Run completed — R-WFO-119" : "Run progress — R-WFO-119",
+      sseDotStyle: "width:7px; height:7px; border-radius:50%; background:" + (running ? "#1e7b4f" : "#939db0") + ";" + (running ? " animation:rp-pulse 1.4s infinite;" : ""),
+      sseLabel: running ? "SSE streaming · poll floor 8s underneath" : "stream closed at terminal frame",
+      onPlay: () => this.setState({ playing: !s.playing }),
+      playLabel: s.playing ? "❚❚" : "▶",
+      playStyle: "border:1px solid #0f4c5c; border-radius:3px; background:#ffffff; color:#0f4c5c; padding:2px 10px; font-family:'JetBrains Mono',monospace; font-size:10px;",
+      speedOpts,
+      onFinish: () => { this.seedCompletedLines(); this.setState({ t: total, finish: 100 }); },
+      statusChip: done ? "COMPLETED" : "RUNNING",
+      statusChipStyle: "display:inline-flex; align-items:center; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:600; background:" + (done ? "#e3f1e9" : "#e2edf0") + "; color:" + (done ? "#1e7b4f" : "#0f4c5c") + ";" + (running ? " animation:rp-pulse 1.8s infinite;" : ""),
+      claimBorder: done ? "#1e7b4f" : "#c9c5ba",
+      claimHead: done ? "claim passport — issued" : "claim passport — forecast",
+      claimHeadColor: done ? "#1e7b4f" : "#9a6a1f",
+      claimHeadNote: done ? "issued by quantbt-engine 1.1.1 at COMPLETED — now authoritative" : "computed from mode × schedule in the config; issued only when the engine completes",
+      done, claims, stepper,
+      progFillStyle: "position:absolute; left:0; top:0; bottom:0; width:" + pct.toFixed(1) + "%; background:linear-gradient(90deg,#a8c6ce,#0f4c5c);" + (running ? " animation:rp-pulse 2.4s infinite;" : ""),
+      progText: doneTrials.toLocaleString("en-US") + " / " + total.toLocaleString("en-US") + " trials · " + pct.toFixed(0) + "%",
+      studyText: Math.min(NF, fold + 1) + " / " + NF, elapsedText: Math.floor(el / 60) + "m " + Math.round(el % 60) + "s", etaText,
+      progTicks: Array.from({ length: NF - 1 }, (_, i) => i + 1).filter(i => NF <= 10 || i % Math.ceil(NF / 8) === 0).map(i => ({ style: "position:absolute; left:" + (i / NF * 100).toFixed(1) + "%; top:0; bottom:0; width:1px; background:#e3e0d7;" })),
+      scaleOpts: [5, 32].map(n => ({ label: n + " folds", onPick: () => { this.setScale(n); this.foldCache = {}; this.lines = this.lines.slice(0, 4); this.setState({ t: s.playing || s.finish > 0 ? Math.min(s.t, 600 * n) : s.t, finish: 0, playing: true, inspect: null, tick: s.tick + 1 }); }, style: "border:1px solid " + (NF === n ? (n !== 5 ? "#9a6a1f" : "#0f4c5c") : "#e3e0d7") + "; border-radius:3px; background:" + (NF === n ? (n !== 5 ? "#f4ecdb" : "#e2edf0") : "#ffffff") + "; color:" + (NF === n ? (n !== 5 ? "#9a6a1f" : "#0f4c5c") : "#4e5a6e") + "; padding:2px 8px; font-family:'JetBrains Mono',monospace; font-size:10px;" })),
+      hasFoldCells: compact, foldCells,
+      foldPlanNote: "fold_plan.json · outer " + NF,
+      foldRows, cur, artifacts, tabOpts,
+      tabNote: s.tab === "live" ? "terminal surface keeps its own palette in both themes (§15.7)" : "structured ledger — replay of state transitions",
+      cancelLabel: done ? "archive run" : "cancel run",
+      isLive: s.tab === "live", isStage: s.tab === "stage",
+      consoleLines,
+      caretStyle: "color:#7fb3c4;" + (running ? " animation:rp-pulse 1s infinite;" : " opacity:0;"),
+      stageRows
+    };
+  }
+}
+</script>
+</body>
+</html>

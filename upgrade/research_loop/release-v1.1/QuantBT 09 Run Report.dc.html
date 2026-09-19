@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Backtest Evidence Report — R-WFO-118</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<script src="doc-page.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  doc-page:not(:defined) { visibility:hidden; }
+  html, body { margin:0; padding:0; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+  .rr-keep { break-inside: avoid; }
+  @media print { .no-print { display:none !important; } }
+</style>
+</helmet>
+
+<div data-screen-label="Run Report" class="no-print" style="display:flex; align-items:center; gap:12px; padding:10px 18px; background:#f4f2ec; border-bottom:1px solid #e3e0d7; font-family:Inter,system-ui,sans-serif; font-size:12px; color:#4e5a6e">
+  <a href="QuantBT 04 Evidence Flow.dc.html#stage=claim">← Hub · Stage 5 Claim</a> <span style="color:#939db0">·</span> <a href="QuantBT 11 Release Candidate and Publish.dc.html">Release Candidate &amp; Publish</a>
+  <span style="color:#939db0">/</span><span>Run Report</span>
+  <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">this bar does not print — Export → PDF gives the clean sheet</span>
+</div>
+
+<doc-page margin="0.55in">
+  <div style="font-family:Inter,system-ui,sans-serif; color:#1c2532; font-size:12px; line-height:1.5">
+
+    <div class="rr-keep" style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; border-bottom:2px solid #1c2532; padding-bottom:10px">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:#939db0">Quant Ecosystem Portal · Backtest Evidence Report</div>
+        <div style="font-family:Newsreader,Georgia,serif; font-size:27px; letter-spacing:-.01em; margin-top:2px">R-WFO-118 — mom_breakout_v3 on BTCUSDT · 4h</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e; margin-top:3px">generated 2026-08-20 09:41Z · from immutable artifacts of run completed 2026-08-12 04:18Z · quantbt-engine==1.1.1[optimization]</div>
+      </div>
+      <div style="flex:none; text-align:center; border:2px solid #9a6a1f; border-radius:8px; padding:8px 18px">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#9a6a1f">certification</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:700; color:#9a6a1f; line-height:1.1">B</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0">bound by S1 · holdout sealed</div>
+      </div>
+    </div>
+
+    <div class="rr-keep" style="margin-top:12px; border:1px solid #e3e0d7; border-radius:6px">
+      <div style="padding:6px 12px; border-bottom:1px solid #e3e0d7; background:#f4f2ec; font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#4e5a6e; font-weight:600">Claim passport — issued by the engine, quoted verbatim</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px 26px; padding:9px 12px">
+        <span style="display:flex; flex-direction:column"><span style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">validation_claim</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; border-left:2px solid #9a6a1f; padding-left:5px">STRICT_OUTER_OOS</span></span>
+        <span style="display:flex; flex-direction:column"><span style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">chronological_claim</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px">CHRONOLOGICAL_CAUSAL</span></span>
+        <span style="display:flex; flex-direction:column"><span style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">oos_used_for_selection</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px">NO — read once after freeze</span></span>
+        <span style="display:flex; flex-direction:column"><span style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">holdout_state</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">SEALED · LOCKED · never read</span></span>
+        <span style="display:flex; flex-direction:column"><span style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">scoring_backend</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px">PYTHON_AUTHORITATIVE</span></span>
+        <span style="display:flex; flex-direction:column"><span style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">mode × schedule</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px">mode_1_decay × per_fold_causal</span></span>
+      </div>
+    </div>
+
+    <div class="rr-keep" style="margin-top:10px; display:flex; gap:10px">
+      <div style="flex:1.15; border:1px solid #e3e0d7; border-radius:6px; padding:8px 12px">
+        <div style="font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#939db0; font-weight:600; margin-bottom:4px">Identity</div>
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:2px 12px; font-family:'JetBrains Mono',monospace; font-size:10px">
+          <span style="color:#939db0">alpha</span><span>alpha_momentum_btc · <span style="font-weight:600">av_0_9_3</span> (sha256:3fe4a1…) · import ACTIVE — PUBLISHABLE</span>
+          <span style="color:#939db0">strategy</span><span>mom_breakout_v3 · pinned by av_0_9_3 · digest sha256:aa10…</span>
+          <span style="color:#939db0">dataset</span><span>ds_btcusdt_4h @ sha256:9f2c18d4aa · 6,912 bars · 0 gaps</span>
+          <span style="color:#939db0">protocol</span><span>walk_forward · outer 5 · purge 24h · embargo 72h</span>
+          <span style="color:#939db0">route</span><span>signal_notional → close_target_v2 — orders/fills not_applicable</span>
+          <span style="color:#939db0">runtime</span><span>engine er_quantbt_1_1_1 · authority python (promotion v1: below_promotion_min_bars)</span>
+          <span style="color:#939db0">seed</span><span>42 (multi-seed consensus 4/5)</span>
+          <span style="color:#939db0">config</span><span>sha256:88ae02… · payload frozen at submit</span>
+          <span style="color:#939db0">bundle</span><span>sha256:c41f7a9e0b… · sealed = runtime ✓ no drift</span>
+        </div>
+      </div>
+      <div style="flex:1; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start">
+        <div style="flex:1 1 44%; border:1px solid #e3e0d7; border-radius:6px; padding:6px 10px"><div style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">OOS return</div><div style="font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600; color:#1e7b4f">+28.4%</div></div>
+        <div style="flex:1 1 44%; border:1px solid #e3e0d7; border-radius:6px; padding:6px 10px"><div style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">OOS sharpe</div><div style="font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600">1.19</div></div>
+        <div style="flex:1 1 44%; border:1px solid #e3e0d7; border-radius:6px; padding:6px 10px"><div style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">max drawdown</div><div style="font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600; color:#b43a3a">−9.6%</div></div>
+        <div style="flex:1 1 44%; border:1px solid #e3e0d7; border-radius:6px; padding:6px 10px"><div style="font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">trades · win rate</div><div style="font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:600">214 · 54.2%</div></div>
+        <div style="flex:1 1 100%; font-size:9px; color:#939db0; padding:0 2px">All metrics: stitched OOS account, metrics/summary.json. Holdout cells intentionally absent — 0/5 disclosed, sealed.</div>
+      </div>
+    </div>
+
+    <figure class="rr-keep" style="margin:10px 0 0; border:1px solid #e3e0d7; border-radius:6px; padding:10px 12px">
+      <figcaption style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px">
+        <span style="font-family:Newsreader,Georgia,serif; font-size:13.5px">Equity — IS account vs stitched OOS (5 folds, frozen params each)</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0">series/stitched.parquet · UTC · digest sha256:7e01…</span>
+      </figcaption>
+      <div ref="{{ eqRef }}" style="width:100%; height:215px"></div>
+      <div ref="{{ ddRef }}" style="width:100%; height:92px; margin-top:2px"></div>
+    </figure>
+
+    <div class="rr-keep" style="margin-top:10px; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+      <div style="padding:6px 12px; border-bottom:1px solid #e3e0d7; background:#f4f2ec; font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#4e5a6e; font-weight:600">Per-fold verdict</div>
+      <table style="width:100%; border-collapse:collapse; font-size:10.5px">
+        <thead><tr>
+          <th style="text-align:left; padding:4px 12px; font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0; border-bottom:1px solid #e3e0d7">fold</th>
+          <th style="text-align:left; padding:4px 12px; font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0; border-bottom:1px solid #e3e0d7">OOS window</th>
+          <th style="text-align:left; padding:4px 12px; font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0; border-bottom:1px solid #e3e0d7">params</th>
+          <th style="text-align:right; padding:4px 12px; font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0; border-bottom:1px solid #e3e0d7">IS</th>
+          <th style="text-align:right; padding:4px 12px; font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0; border-bottom:1px solid #e3e0d7">OOS</th>
+          <th style="text-align:right; padding:4px 12px; font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0; border-bottom:1px solid #e3e0d7">Δ decay</th>
+          <th style="text-align:right; padding:4px 12px; font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0; border-bottom:1px solid #e3e0d7">contribution</th>
+          <th style="text-align:left; padding:4px 12px; font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; color:#939db0; border-bottom:1px solid #e3e0d7">verdict</th>
+        </tr></thead>
+        <tbody>
+          <sc-for list="{{ foldRows }}" as="f" hint-placeholder-count="5">
+            <tr style="{{ f.style }}">
+              <td style="padding:3px 12px; font-family:'JetBrains Mono',monospace">{{ f.id }}</td>
+              <td style="padding:3px 12px; font-family:'JetBrains Mono',monospace; color:#4e5a6e">{{ f.win }}</td>
+              <td style="padding:3px 12px; font-family:'JetBrains Mono',monospace; color:#0f4c5c">{{ f.params }}</td>
+              <td style="padding:3px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ f.isS }}</td>
+              <td style="padding:3px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ f.oosS }}</td>
+              <td style="padding:3px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:{{ f.decayColor }}">{{ f.decay }}</td>
+              <td style="padding:3px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ f.contrib }}</td>
+              <td style="padding:3px 12px; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:{{ f.chipColor }}">{{ f.chip }}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <div style="padding:5px 12px; border-top:1px solid #efede4; font-size:9.5px; color:#4e5a6e">fold_02 drags the run: decay +0.45 and the equity trough live in its window. fold_05 warns at +0.33. The stitched account is exactly the sum of these five segments.</div>
+    </div>
+
+    <div class="rr-keep" style="margin-top:10px; display:flex; gap:10px">
+      <div style="flex:1.1; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+        <div style="padding:6px 12px; border-bottom:1px solid #e3e0d7; background:#f4f2ec; font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#4e5a6e; font-weight:600">Certification chain — min of the caps</div>
+        <table style="width:100%; border-collapse:collapse; font-size:10.5px">
+          <tbody>
+            <tr style="border-bottom:1px solid #efede4; background:#fdfbf5"><td style="padding:4px 12px; font-family:'JetBrains Mono',monospace">S1 · Split</td><td style="padding:4px 12px; color:#4e5a6e">holdout sealed — never read</td><td style="padding:4px 12px; font-family:'JetBrains Mono',monospace; font-weight:700; color:#9a6a1f; text-align:right">≤ B ← binding</td></tr>
+            <tr style="border-bottom:1px solid #efede4"><td style="padding:4px 12px; font-family:'JetBrains Mono',monospace">S2 · Search</td><td style="padding:4px 12px; color:#4e5a6e">per_fold_causal — selection never saw OOS</td><td style="padding:4px 12px; font-family:'JetBrains Mono',monospace; color:#1e7b4f; text-align:right">no cap</td></tr>
+            <tr style="border-bottom:1px solid #efede4"><td style="padding:4px 12px; font-family:'JetBrains Mono',monospace">S3 · Freeze</td><td style="padding:4px 12px; color:#4e5a6e">order verified · digests match</td><td style="padding:4px 12px; font-family:'JetBrains Mono',monospace; color:#1e7b4f; text-align:right">no cap</td></tr>
+            <tr><td style="padding:4px 12px; font-family:'JetBrains Mono',monospace">S4 · Execute</td><td style="padding:4px 12px; color:#4e5a6e">event stream complete — no gaps</td><td style="padding:4px 12px; font-family:'JetBrains Mono',monospace; color:#1e7b4f; text-align:right">no cap</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="flex:1; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+        <div style="padding:6px 12px; border-bottom:1px solid #e3e0d7; background:#f4f2ec; font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#4e5a6e; font-weight:600">Key artifacts &amp; digests</div>
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:2px 12px; padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:9.5px">
+          <span style="color:#939db0">fold_plan.json</span><span>sha256:2ba4…</span>
+          <span style="color:#939db0">search-trace.parquet</span><span>sha256:5cd0…</span>
+          <span style="color:#939db0">selection_trace.json</span><span>sha256:4d81…</span>
+          <span style="color:#939db0">parameter_set.json</span><span>sha256:77aa…</span>
+          <span style="color:#939db0">series/stitched.parquet</span><span>sha256:7e01…</span>
+          <span style="color:#939db0">claims.json</span><span>sha256:c9d2…</span>
+          <span style="color:#939db0">orders / fills</span><span style="color:#6f7a8c">not_applicable — close-target route</span>
+          <span style="color:#939db0">fees / funding series</span><span style="color:#9a6a1f">absent — portal endpoint gap</span>
+          <span style="color:#939db0">holdout artifacts</span><span style="color:#b43a3a">denied — sealed</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rr-keep" style="margin-top:10px; border:1px solid #e3e0d7; border-radius:6px; padding:9px 12px; display:flex; gap:16px; align-items:flex-start">
+      <div style="flex:1">
+        <div style="font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#939db0; font-weight:600; margin-bottom:3px">Promotion state</div>
+        <div style="font-size:10.5px; color:#4e5a6e; line-height:1.55">Not eligible for Approval Gate: requires certification ≥ A, this run certifies <span style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#9a6a1f">B</span> while the holdout stays sealed. Unlocking the holdout is a one-time audited event and would supersede this report. Deployment params must equal <span style="font-family:'JetBrains Mono',monospace">parameter_set.json</span> digests or declare a refit.</div>
+      </div>
+      <div style="flex:1; border-left:1px solid #efede4; padding-left:16px">
+        <div style="font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:#939db0; font-weight:600; margin-bottom:3px">Provenance of this report</div>
+        <div style="font-size:10.5px; color:#4e5a6e; line-height:1.55">Rendered from immutable artifacts only; no value computed at render time. Evidence link: <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px">portal://runs/R-WFO-118?bundle=sha256:c41f7a9e0b</span>. Report payload digest <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px">sha256:e4b90a…</span> — anyone holding this sheet can re-derive it byte-for-byte.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px; padding-top:6px; border-top:1px solid #e3e0d7; display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0">
+      <span>Quant Ecosystem Portal · Research · confidential</span>
+      <span>R-WFO-118 · report 2026-08-20 09:41Z · page prints on letter or A4</span>
+    </div>
+  </div>
+</doc-page>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1100, &quot;height&quot;: 1500}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { ready: false };
+    this.refEls = {}; this.charts = {};
+    this.mkRef = (n) => (el) => { if (el) { this.refEls[n] = el; this.queue(); } else { const c = this.charts[n]; if (c) { try { c.dispose(); } catch (e) {} this.charts[n] = null; } this.refEls[n] = null; } };
+    this.eqRef = this.mkRef("eq"); this.ddRef = this.mkRef("dd");
+  }
+  rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  queue() { if (this._q) return; this._q = true; setTimeout(() => { this._q = false; this.sync(); }, 30); }
+  componentDidMount() { this.queue(); this._resize = () => Object.values(this.charts).forEach(c => { if (c && c.resize) c.resize(); }); window.addEventListener("resize", this._resize); }
+  componentWillUnmount() { window.removeEventListener("resize", this._resize); }
+  ec(n) {
+    const el = this.refEls[n]; if (!el || !window.echarts) return null;
+    if (!this.charts[n] || this.charts[n]._el !== el) { if (this.charts[n]) try { this.charts[n].dispose(); } catch (e) {} const c = window.echarts.init(el, null, { renderer: "svg" }); c._el = el; this.charts[n] = c; }
+    return this.charts[n];
+  }
+  axis(extra) { return Object.assign({ axisLine: { lineStyle: { color: "#e3e0d7" } }, axisLabel: { color: "#939db0", fontSize: 9.5, fontFamily: "JetBrains Mono, monospace" }, splitLine: { show: false } }, extra || {}); }
+  sync() {
+    if (!window.echarts) { setTimeout(() => this.sync(), 300); return; }
+    const r1 = this.rng(118), r2 = this.rng(220);
+    const n = 410, start = Date.UTC(2024, 0, 1); const ts = [], oos = [], is = [];
+    let e1 = 100000, e2 = 100000;
+    for (let i = 0; i < n; i++) { ts.push(start + i * 86400000); e1 *= 1 + (r1() - 0.485) * 0.012; e2 *= 1 + (r2() - 0.478) * 0.011; oos.push(e1); is.push(e2); }
+    const so = 128400 / oos[n - 1], si = 141200 / is[n - 1];
+    const O = oos.map(v => Math.round(v * so)), I = is.map(v => Math.round(v * si));
+    const eq = this.ec("eq");
+    if (eq) eq.setOption({
+      textStyle: { fontFamily: "JetBrains Mono, monospace", fontSize: 9.5, color: "#939db0" }, animation: false,
+      grid: { left: 46, right: 8, top: 22, bottom: 18, containLabel: true },
+      legend: { top: 0, right: 0, icon: "rect", itemWidth: 9, itemHeight: 9, textStyle: { color: "#939db0", fontSize: 9.5, fontFamily: "JetBrains Mono, monospace" } },
+      xAxis: this.axis({ type: "time", splitNumber: 6, axisLabel: { hideOverlap: true, color: "#939db0", fontSize: 9.5, fontFamily: "JetBrains Mono, monospace", formatter: (v) => new Date(v).toISOString().slice(0, 10) } }),
+      yAxis: this.axis({ type: "value", scale: true, splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+      series: [
+        { name: "IS account", type: "line", showSymbol: false, data: I.map((v, i) => [ts[i], v]), lineStyle: { width: 1, color: "#7a8699", opacity: .9 }, itemStyle: { color: "#7a8699" } },
+        { name: "Stitched OOS", type: "line", showSymbol: false, data: O.map((v, i) => [ts[i], v]), lineStyle: { width: 1.6, color: "#0f4c5c" }, itemStyle: { color: "#0f4c5c" },
+          markLine: { symbol: "none", silent: true, lineStyle: { color: "#c9c5ba", type: "dashed", width: 1 }, label: { show: true, position: "insideEndTop", color: "#939db0", fontSize: 8, fontFamily: "JetBrains Mono, monospace", formatter: (p) => p.name },
+            data: [1, 2, 3, 4, 5].map(i => ({ xAxis: ts[Math.floor(i * n / 6)], name: "fold_0" + i })) } }
+      ]
+    }, true);
+    let peak = -Infinity;
+    const dd = O.map((v, i) => { peak = Math.max(peak, v); return [ts[i], +((v / peak - 1) * 100).toFixed(2)]; });
+    const ddc = this.ec("dd");
+    if (ddc) ddc.setOption({
+      textStyle: { fontFamily: "JetBrains Mono, monospace", fontSize: 9, color: "#939db0" }, animation: false,
+      grid: { left: 46, right: 8, top: 6, bottom: 16, containLabel: true },
+      xAxis: this.axis({ type: "time", splitNumber: 6, axisLabel: { show: false } }),
+      yAxis: this.axis({ type: "value", axisLabel: { formatter: "{value}%", color: "#939db0", fontSize: 9, fontFamily: "JetBrains Mono, monospace" }, splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+      series: [{ type: "line", showSymbol: false, data: dd, lineStyle: { width: 1, color: "#0f4c5c", opacity: .8 }, itemStyle: { color: "#0f4c5c" }, areaStyle: { color: "#0f4c5c", opacity: .16 },
+        markPoint: { symbol: "circle", symbolSize: 5, itemStyle: { color: "#b43a3a" }, label: { show: true, position: "top", distance: 5, color: "#b43a3a", fontFamily: "JetBrains Mono, monospace", fontSize: 8.5, formatter: (p) => typeof p.value === "number" ? p.value.toFixed(1) + "%" : "" }, data: [{ type: "min", valueIndex: 1 }] } }]
+    }, true);
+  }
+  renderVals() {
+    const F = [
+      { id: "fold_01", win: "2024-07-01 → 08-15", params: "prm_9d44f2", isS: 1.51, oosS: 1.28, contrib: "+7.2pp", chip: "PASS" },
+      { id: "fold_02", win: "2024-08-16 → 09-30", params: "prm_3b81c7", isS: 1.47, oosS: 1.02, contrib: "+1.1pp", chip: "DRAG" },
+      { id: "fold_03", win: "2024-10-01 → 11-15", params: "prm_7c1a9e", isS: 1.42, oosS: 1.19, contrib: "+6.8pp", chip: "PASS" },
+      { id: "fold_04", win: "2024-11-16 → 12-31", params: "prm_c25a1d", isS: 1.39, oosS: 1.24, contrib: "+7.9pp", chip: "PASS" },
+      { id: "fold_05", win: "2025-01-01 → 02-15", params: "prm_66e09b", isS: 1.44, oosS: 1.11, contrib: "+5.4pp", chip: "WARN" }
+    ];
+    const chipColors = { PASS: "#1e7b4f", WARN: "#9a6a1f", DRAG: "#b43a3a" };
+    return {
+      eqRef: this.eqRef, ddRef: this.ddRef,
+      foldRows: F.map(f => {
+        const d = f.isS - f.oosS;
+        return {
+          id: f.id, win: f.win, params: f.params, isS: f.isS.toFixed(2), oosS: f.oosS.toFixed(2),
+          decay: "+" + d.toFixed(2), decayColor: d > 0.3 ? "#b43a3a" : "#1c2532",
+          contrib: f.contrib, chip: f.chip, chipColor: chipColors[f.chip],
+          style: "border-top:1px solid #efede4;" + (f.chip === "DRAG" ? " background:#fdf3f3;" : "")
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -8,6 +8,23 @@ their own private runtime services.
 
 ## Agent roles
 
+### Research Loop campaign override — Bobby, 2026-09-19
+
+For Research Loop only, read `upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#research-loop-v11`
+and `upgrade/research_loop/CLAUDE-FOR-thanhvuong.md#research-working-rules`
+before a phase. The Unified Plan is the single live phase index; the 24-phase
+guide and hi-fi/specs remain the detailed implementation/design sources.
+Codex is backend-first and Claude frontend-first, not an exclusive permission
+split: either can implement both when assigned. Before changing the other's
+accepted design, contract, implementation or visual baseline, explain the
+proposed change and obtain Bobby's specific approval/confirmed handoff; do not
+overwrite concurrent work. This scoped directive supersedes the older
+frontend-only prohibition and duplicate tracking instructions below, not
+contributor access controls, protected Execution code or release safeguards.
+The contributor-only parts of the Thanhvuong rules do not restrict Bobby.
+Research UI is English; reports are Vietnamese; QuantBT 1.1.1 is a P04 target,
+not a claim that the current installed engine has already been upgraded.
+
 | Role | Agent | Authority |
 |---|---|---|
 | Owner/maintainer | Bobby | Merge decisions, version releases, workspace provisioning |

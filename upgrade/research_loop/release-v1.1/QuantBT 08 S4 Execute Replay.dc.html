@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT Stage 4 — Execute Replay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+  input[type=range] { accent-color:#0f4c5c; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+  button { transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+  @keyframes ex-pulse { 0%,100% { opacity:1 } 50% { opacity:.4 } }
+</style>
+</helmet>
+
+<div data-screen-label="S4 Execute Replay" style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px"><div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5"><span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span><span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span><span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap"><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">QuantBT Backtest</span><span style="color:#939db0">/</span><span style="font-family:'JetBrains Mono',monospace; flex:none">R-WFO-118</span><span style="color:#939db0">/</span><span style="color:#1c2532; flex:none">Stage 4 · Execute</span></span><span style="flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 12px">Search <span style="font-size:10px; color:#939db0; border:1px solid #e3e0d7; border-radius:3px; padding:0 4px; font-family:'JetBrains Mono',monospace;">⌘K</span></span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span><span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span><span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Comfortable ▾</span></div><div style="display:flex; flex:1; min-height:0"><div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px"><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">command</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Command Center</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Portal Map</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">research</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><a href="QuantBT 01 Run Library.dc.html" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; background:#e2edf0; color:#1c2532; font-weight:500; text-decoration:none"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">QuantBT Backtest</span></a><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Pool</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Mining</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Strategy Composer</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">backtests</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Approvals</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">deployments</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Paper Trading</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sandbox</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Live Operations</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">data & operations</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Data Catalog</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">planning</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Roadmap & Task Board</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">administration</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Profile & Access</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div></div><div style="flex:1; min-width:0"><div style="background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px; display:flex; flex-direction:column; gap:14px; padding:16px 24px 56px; width:100%; max-width:1440px; margin:0 auto; min-width:0">
+
+  <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px 16px; border-bottom:1px solid #e3e0d7; padding-bottom:10px">
+    <div style="display:flex; flex-direction:column; gap:3px">
+      <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4e5a6e">
+        <a href="{{ backHref }}">Evidence Flow</a><span style="color:#939db0">/</span>
+        <span style="font-family:'JetBrains Mono',monospace">R-WFO-118</span><span style="color:#939db0">/</span>
+        <span style="color:#1c2532">Stage 4 · Execute Replay</span><span style="color:#939db0">·</span><a href="QuantBT 09 Run Report.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px">next: Run Report →</a>
+      </div>
+      <div style="font-family:Newsreader,Georgia,serif; font-size:22px; font-weight:300; letter-spacing:-.01em">Execute — the frozen params trading the tape</div>
+      <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0">Replay reads immutable artifacts, one event at a time — it never re-runs the strategy. One cursor drives everything: chart, tape, ledger, blotter, chain.</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex:none">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">bars.parquet · events.parquet · ds_btcusdt_4h@sha256:9f2c18d4aa</span>
+      <button onClick="{{ onCopy }}" style="border:1px solid #0f4c5c; border-radius:6px; background:transparent; color:#0f4c5c; padding:3px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase">{{ copyLabel }}</button>
+    </div>
+  </div>
+
+  <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05)">
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:9px 14px; border-bottom:1px solid #efede4">
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">execution contract</span>
+      <sc-for list="{{ routeOpts }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.onPick }}" style="{{ r.style }}">{{ r.label }}</button></sc-for>
+      <span style="width:1px; height:18px; background:#e3e0d7; margin:0 4px"></span>
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">lens</span>
+      <sc-for list="{{ personaOpts }}" as="p" hint-placeholder-count="3"><button onClick="{{ p.onPick }}" title="{{ p.title }}" style="{{ p.style }}">{{ p.label }}</button></sc-for>
+      <span style="width:1px; height:18px; background:#e3e0d7; margin:0 4px"></span>
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">fold</span>
+      <button onClick="{{ onPrevFold }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; color:#4e5a6e; padding:2px 8px; font-family:'JetBrains Mono',monospace; font-size:11px">‹</button>
+      <select value="{{ foldSel }}" onChange="{{ onFoldSel }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; padding:2px 6px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#1c2532; max-width:210px">
+        <sc-for list="{{ foldSelOpts }}" as="fo" hint-placeholder-count="5"><option value="{{ fo.v }}">{{ fo.label }}</option></sc-for>
+      </select>
+      <button onClick="{{ onNextFold }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; color:#4e5a6e; padding:2px 8px; font-family:'JetBrains Mono',monospace; font-size:11px">›</button>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ foldPosNote }}</span>
+      <span style="width:1px; height:18px; background:#e3e0d7; margin:0 4px"></span>
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">scale demo</span>
+      <sc-for list="{{ scaleOpts }}" as="sc2" hint-placeholder-count="2"><button title="regenerates the demo tape at WFO scale — 32 folds over 2020→2026, ~700–800 trades" onClick="{{ sc2.onPick }}" style="{{ sc2.style }}">{{ sc2.label }}</button></sc-for>
+      <span style="margin-left:auto; display:flex; gap:14px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e">
+        <span>claim <span style="color:#9a6a1f">STRICT_OUTER_OOS</span></span>
+        <span>causality <span style="color:#1c2532">CAUSAL_PREFIX</span></span>
+        <span>params <span style="color:#0f4c5c">{{ foldDigest }}</span></span>
+      </span>
+    </div>
+    <div style="{{ routeNoticeStyle }}">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; flex:none; font-weight:600">{{ routeNoticeTag }}</span>
+      <span style="font-size:11.5px; line-height:1.55">{{ routeNotice }}</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); overflow:hidden">
+    <div style="display:flex; align-items:center; gap:6px; padding:7px 14px; border-bottom:1px solid #efede4; flex-wrap:wrap">
+      <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0; flex:none; font-weight:500">stitched account</span>
+      <sc-for list="{{ foldStrip }}" as="fs" hint-placeholder-count="5">
+        <button title="{{ fs.title }}" onClick="{{ fs.onPick }}" style="{{ fs.segStyle }}">
+          <span style="{{ fs.fillStyle }}"></span>
+          <span style="{{ fs.labStyle }}">{{ fs.lab }}</span>
+        </button>
+        <span title="param handoff — position FLAT by protocol, account re-based; exposure never crosses a fold boundary" style="{{ fs.arrowStyle }}">{{ fs.arrow }}</span>
+      </sc-for>
+      <span style="flex:none; font-size:9px; color:#939db0; font-family:'JetBrains Mono',monospace">⇄ = param handoff</span>
+    </div>
+    <sc-if value="{{ hasBoundary }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; gap:10px; align-items:center; padding:6px 14px; border-bottom:1px solid #9a6a1f; background:#f4ecdb; font-family:'JetBrains Mono',monospace; font-size:10px; color:#9a6a1f">
+        <span style="font-weight:700; letter-spacing:.08em; flex:none">FOLD BOUNDARY</span>
+        <span style="line-height:1.5">{{ boundaryText }}</span>
+      </div>
+    </sc-if>
+    <div style="display:flex; gap:8px; align-items:center; padding:7px 14px; border-bottom:1px solid #efede4; background:#faf9f5; flex-wrap:wrap">
+      <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0; flex:none; font-weight:500">fold {{ curFold }}</span>
+      <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; color:#7a8699">IS</span>
+      <span style="flex:2.2; height:8px; background:repeating-linear-gradient(135deg,#cdd4dc 0 2px,transparent 2px 5px); border:1px solid #b6bec8"></span>
+      <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; color:#0f4c5c">OOS (plotted)</span>
+      <span style="flex:1; height:8px; background:#e2edf0; border:1px solid #0f4c5c"></span>
+      <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; color:#9a6a1f">HOLDOUT</span>
+      <span style="flex:.7; height:8px; background:repeating-linear-gradient(135deg,#f4ecdb 0 3px,transparent 3px 6px); border:1px dashed #9a6a1f"></span>
+      <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">{{ markerNote }}</span>
+      <button onClick="{{ onToggleReveal }}" style="{{ revealStyle }}"><span style="{{ revealBoxStyle }}">{{ revealMark }}</span> causal reveal</button>
+    </div>
+    <div style="position:relative; height:440px; background:#faf9f5">
+      <div ref="{{ replayRef }}" style="position:absolute; inset:0"></div>
+      <div style="{{ replayFallbackStyle }}">{{ replayFallback }}</div>
+      <div style="position:absolute; top:6px; left:10px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0; pointer-events:none; z-index:5">{{ barsLabel }}</div>
+    </div>
+    <sc-if value="{{ showWake }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:6px 14px 2px; border-top:1px solid #efede4">
+        <span style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px">
+          <span style="font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">wake trace — kernel woke on {{ wakeCount }} of {{ wakeBars }} bars ({{ wakePct }})</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">audit_mode=audit · R2 sparse-wake · <span style="color:#0f4c5c">price</span> · <span style="color:#9a6a1f">timer</span> · <span style="color:#b43a3a">order event</span></span>
+        </span>
+        <div style="position:relative; height:16px; margin-top:3px; border:1px solid #efede4; border-radius:3px; background:#fdfdfa; overflow:hidden">
+          <sc-for list="{{ wakeTicks }}" as="wk" hint-placeholder-count="40"><span title="{{ wk.title }}" style="{{ wk.style }}"></span></sc-for>
+        </div>
+        <span style="font-size:9px; color:#939db0">idle bars cost no strategy call — that is the R2 speedup; parity vs R0 certified per release. minimal audit_mode would record nothing and this strip would say so.</span>
+      </div>
+    </sc-if>
+    <div style="padding:6px 14px 2px; border-top:1px solid #efede4">
+      <span style="font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">{{ tapeNote }}</span>
+      <div style="position:relative; height:26px; margin-top:3px; border:1px solid #efede4; border-radius:3px; background:#fdfdfa">
+        <sc-for list="{{ tapeSpans }}" as="ts" hint-placeholder-count="10">
+          <button title="{{ ts.title }}" onClick="{{ ts.onPick }}" style="{{ ts.style }}"></button>
+        </sc-for>
+        <sc-for list="{{ tapeTicks }}" as="tk" hint-placeholder-count="20">
+          <span style="{{ tk.style }}"></span>
+        </sc-for>
+        <span style="{{ playheadStyle }}"></span>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; padding:8px 14px; flex-wrap:wrap">
+      <span style="display:inline-flex; gap:4px">
+        <sc-for list="{{ transport }}" as="t" hint-placeholder-count="7"><button title="{{ t.title }}" onClick="{{ t.onPress }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+      </span>
+      <span style="display:inline-flex; gap:4px">
+        <sc-for list="{{ speeds }}" as="sp" hint-placeholder-count="4"><button onClick="{{ sp.onPick }}" style="{{ sp.style }}">{{ sp.label }}</button></sc-for>
+      </span>
+      <button onClick="{{ onToggleAcross }}" title="when this fold's tape ends, replay continues into the next fold with its own frozen params — the boundary handoff is shown, never hidden" style="{{ acrossStyle }}">{{ acrossLabel }}</button>
+      <input type="range" min="0" max="{{ seekMax }}" value="{{ seekVal }}" onChange="{{ onSeek }}" style="flex:1; min-width:160px">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e; white-space:nowrap">{{ seekLabel }}</span>
+    </div>
+    <div style="display:flex; border-top:1px solid #efede4; background:#f4f2ec; padding:6px 14px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e">
+      <span style="margin-right:18px">t <span style="color:#1c2532">{{ readout.ts }}</span></span>
+      <span style="margin-right:18px">bar <span style="color:#1c2532">{{ readout.bar }}</span></span>
+      <span style="margin-right:18px">event_seq <span style="color:#1c2532">{{ readout.seq }}</span></span>
+      <span style="margin-right:18px">position <span style="color:#1c2532">{{ readout.pos }}</span></span>
+      <span style="margin-right:18px">equity <span style="color:#1c2532">{{ readout.equity }}</span></span>
+      <span style="color:#939db0">{{ lensNote }}</span>
+    </div>
+  </div>
+
+  <sc-if value="{{ showValidation }}" hint-placeholder-val="{{ false }}">
+    <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; overflow-x:auto">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; padding:8px 14px; border-bottom:1px solid #efede4; gap:10px; flex-wrap:wrap">
+        <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">validation — independent engine parity (nautilus)</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">nautilus_support_matrix() · same config, same tape</span>
+      </div>
+      <div style="display:flex; gap:0; min-width:760px; padding:8px 14px; flex-wrap:wrap">
+        <sc-for list="{{ validationRows }}" as="vr" hint-placeholder-count="5">
+          <span style="flex:1; min-width:140px; display:flex; flex-direction:column; gap:2px; border-right:1px solid #f4f2ec; padding-right:12px; margin-right:12px">
+            <span style="font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:#939db0">{{ vr.k }}</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:{{ vr.color }}">{{ vr.v }}</span>
+            <span style="font-size:9px; color:#939db0">{{ vr.sub }}</span>
+          </span>
+        </sc-for>
+      </div>
+      <div style="padding:6px 14px; border-top:1px solid #efede4; font-size:10px; color:#939db0">Validation validates — it never scores. A parity breach blocks the claim, a parity pass adds engine cert L4 · external.</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isManager }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+      <sc-for list="{{ verdictTiles }}" as="vt" hint-placeholder-count="5">
+        <div style="flex:1; min-width:150px; border:1px solid #efede4; border-radius:6px; background:#ffffff; padding:8px 12px; display:flex; flex-direction:column; gap:3px">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">{{ vt.k }}</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:600; color:{{ vt.color }}">{{ vt.v }}</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">{{ vt.sub }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:stretch">
+    <sc-if value="{{ showLedger }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1.4; min-width:480px; display:flex; flex-direction:column; gap:14px">
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; overflow:hidden">
+          <div style="display:flex; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #e3e0d7">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">event ledger</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ ledgerCount }}</span>
+          </div>
+          <sc-for list="{{ ledger }}" as="e" hint-placeholder-count="10">
+            <button onClick="{{ e.onPick }}" style="{{ e.style }}">
+              <span style="width:52px; flex:none; color:#939db0">{{ e.seq }}</span>
+              <span style="width:112px; flex:none; color:#4e5a6e">{{ e.ts }}</span>
+              <span style="width:98px; flex:none; color:{{ e.typeColor }}; font-weight:600">{{ e.type }}</span>
+              <span style="flex:1; color:#4e5a6e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ e.note }}</span>
+              <span style="{{ e.digestStyle }}">{{ e.digest }}</span>
+            </button>
+          </sc-for>
+          <div style="padding:6px 12px; border-top:1px solid #efede4; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ ledgerSource }}</div>
+        </div>
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:5px">
+          <div style="display:flex; justify-content:space-between; align-items:baseline">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">trade anatomy — entry → exit under this contract's schema, every link an artifact reference</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ chainSource }}</span>
+          </div>
+          <sc-for list="{{ chain }}" as="c" hint-placeholder-count="6">
+            <span style="display:flex; gap:9px; align-items:baseline; font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:2px 0; border-bottom:1px solid #f4f2ec">
+              <span style="color:#c9c5ba; flex:none">└▸</span>
+              <span style="width:120px; flex:none; color:#939db0">{{ c.k }}</span>
+              <span style="flex:1; color:#1c2532">{{ c.v }}</span>
+            </span>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="flex:1.2; min-width:440px; display:flex; flex-direction:column; gap:14px">
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; overflow-x:auto">
+        <div style="display:flex; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #e3e0d7">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">trade blotter — derived by the engine from target transitions</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ blotterMeta }}</span>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center; padding:6px 12px; border-bottom:1px solid #efede4; background:#faf9f5">
+          <sc-for list="{{ blotFilters }}" as="bf" hint-placeholder-count="10"><button onClick="{{ bf.onPick }}" style="{{ bf.style }}">{{ bf.label }}</button></sc-for>
+          <span style="margin-left:auto; display:inline-flex; gap:4px; align-items:center">
+            <button onClick="{{ onBlotPrev }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; color:#4e5a6e; padding:1px 7px; font-family:'JetBrains Mono',monospace; font-size:10px">‹</button>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#4e5a6e">{{ blotPageNote }}</span>
+            <button onClick="{{ onBlotNext }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; color:#4e5a6e; padding:1px 7px; font-family:'JetBrains Mono',monospace; font-size:10px">›</button>
+          </span>
+        </div>
+        <div style="display:flex; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding:4px 12px">
+          <span style="width:34px; flex:none">#</span><span style="width:52px; flex:none">side</span><span style="width:86px; flex:none">entry</span><span style="width:50px; flex:none; text-align:right">hold</span><span style="width:74px; flex:none; text-align:right">PnL %</span><span style="width:56px; flex:none; text-align:right">MAE %</span><span style="width:56px; flex:none; text-align:right">MFE %</span><span style="flex:1; padding-left:12px">{{ exitHead }}</span>
+        </div>
+        <sc-for list="{{ blotter }}" as="b" hint-placeholder-count="9">
+          <button onClick="{{ b.onPick }}" style="{{ b.style }}">
+            <span style="width:34px; flex:none; color:#939db0">{{ b.n }}</span>
+            <span style="width:52px; flex:none; color:{{ b.sideColor }}; font-weight:600">{{ b.side }}</span>
+            <span style="width:86px; flex:none; color:#4e5a6e">{{ b.entry }}</span>
+            <span style="width:50px; flex:none; text-align:right; color:#4e5a6e">{{ b.hold }}</span>
+            <span style="width:74px; flex:none; text-align:right; color:{{ b.pnlColor }}; font-weight:600">{{ b.pnl }}</span>
+            <span style="width:56px; flex:none; text-align:right; color:#b43a3a">{{ b.mae }}</span>
+            <span style="width:56px; flex:none; text-align:right; color:#1e7b4f">{{ b.mfe }}</span>
+            <span style="flex:1; padding-left:12px; min-width:0; color:#4e5a6e; font-size:9.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ b.exit }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:flex; gap:14px; flex-wrap:wrap">
+        <div style="flex:1.1; min-width:230px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:12px; display:flex; flex-direction:column; gap:4px">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">MAE × MFE — pain vs potential per trade</span>
+          <div ref="{{ maeRef }}" style="width:100%; height:180px"></div>
+          <span style="font-size:9.5px; color:#939db0; line-height:1.45">Dots below the diagonal suffered more than they ever promised — stop placement evidence, per trade, clickable.</span>
+        </div>
+        <div style="flex:1; min-width:210px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:12px; display:flex; flex-direction:column; gap:4px">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">trade PnL distribution</span>
+          <div style="display:flex; gap:1px; align-items:flex-end; height:130px; border-bottom:1px solid #e3e0d7">
+            <sc-for list="{{ pnlBins }}" as="pb" hint-placeholder-count="14"><span title="{{ pb.title }}" style="{{ pb.style }}"></span></sc-for>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0"><span>{{ pnlLo }}</span><span style="color:#9a6a1f">0</span><span>{{ pnlHi }}</span></div>
+          <span style="font-size:9.5px; color:#939db0; line-height:1.45">{{ pnlNote }}</span>
+        </div>
+      </div>
+      <div style="border:1px dashed #9a6a1f; border-radius:8px; background:repeating-linear-gradient(135deg,#f4ecdb 0 6px,#faf9f5 6px 12px); padding:12px 14px; display:flex; gap:12px; align-items:flex-start">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:#9a6a1f; flex:none">cost timeline · absent</span>
+        <span style="font-size:11px; color:#9a6a1f; line-height:1.55">fee, funding and margin series exist in BacktestResultV2 — the portal series endpoint has not published them yet. A portal gap, not an engine gap. This panel renders itself the day the endpoint ships; until then the absence is stated, not hidden.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:3px; border-top:1px solid #e3e0d7; padding-top:8px">
+    <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0">rules of this screen</span>
+    <span style="font-size:11px; color:#4e5a6e; line-height:1.6">Scrubbing the timeline replays checkpoints; it never re-runs strategy or accounting — "reproduce run" is a separate command that creates a new attempt with its own parity verdict. Markers on a close-target run are target transitions, never audited fills. The blotter, MAE/MFE and PnL distribution are engine-derived artifacts; the UI plots, it does not compute.</span>
+  </div>
+</div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1500, &quot;height&quot;: 1400}, &quot;route&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;close_target_v2&quot;, &quot;intrabar_bracket_v1&quot;, &quot;event_lifecycle_v2&quot;, &quot;reactive_r2&quot;, &quot;dca_ladder&quot;], &quot;default&quot;: &quot;close_target_v2&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo run&quot;}, &quot;persona&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;quant&quot;, &quot;manager&quot;, &quot;audit&quot;], &quot;default&quot;: &quot;quant&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo run&quot;}, &quot;folds&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;5&quot;, &quot;32&quot;], &quot;default&quot;: &quot;5&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Scale&quot;}, &quot;validation&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;none&quot;, &quot;nautilus&quot;], &quot;default&quot;: &quot;none&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo run&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.foldCache = {};
+    this.barsByFold = {}; this.charts = {}; this.refEls = {};
+    this.mkRef = (name) => (el) => {
+      if (el) { this.refEls[name] = el; this.queueSync(); }
+      else { this.disposeChart(name); this.refEls[name] = null; }
+    };
+    this.replayRef = this.mkRef("replay");
+    this.maeRef = this.mkRef("mae");
+    this.state = {
+      route: props.route || "close_target_v2", persona: props.persona || "quant", fold: 3,
+      index: 0, selected: null, playing: false, speed: 4, reveal: false, copied: false, replayError: null,
+      playAcross: true, trade: null, boundary: null,
+      folds: parseInt(props.folds, 10) || 5, blotFilter: { side: "all", out: "all" }, blotSort: "time", blotPage: 0
+    };
+    const h = this.readHash(); if (h.folds) this.state.folds = parseInt(h.folds, 10) === 32 ? 32 : this.state.folds; if (h.fold) this.state.fold = Math.max(1, Math.min(this.state.folds, parseInt(h.fold, 10) || 3)); if (h.route) this.state.route = h.route;
+  }
+  digestOf(i) { return "prm_" + ((i * 2654435761 % 0xffffff) >>> 0).toString(16).padStart(6, "0"); }
+  folds() {
+    const n = this.state.folds;
+    if (this.foldCache[n]) return this.foldCache[n];
+    let out;
+    if (n === 5) {
+      // canonical R-WFO-118 folds — must match every other screen verbatim
+      out = [
+        { id: "fold_01", digest: "prm_9d44f2", cutoff: "2024-06-30 23:59Z", test: "2024-07-01 → 08-15" },
+        { id: "fold_02", digest: "prm_3b81c7", cutoff: "2024-08-15 23:59Z", test: "2024-08-16 → 09-30" },
+        { id: "fold_03", digest: "prm_7c1a9e", cutoff: "2024-09-30 23:59Z", test: "2024-10-01 → 11-15" },
+        { id: "fold_04", digest: "prm_c25a1d", cutoff: "2024-11-15 23:59Z", test: "2024-11-16 → 12-31" },
+        { id: "fold_05", digest: "prm_66e09b", cutoff: "2024-12-31 23:59Z", test: "2025-01-01 → 02-15" }
+      ];
+    } else {
+      const t0 = Date.UTC(2020, 6, 1); const t1 = Date.UTC(2026, 5, 30);
+      const seg = (t1 - t0) / n;
+      const fd = (ms) => new Date(ms).toISOString().slice(0, 10);
+      out = [];
+      for (let i = 0; i < n; i++) {
+        const a = t0 + i * seg, b = t0 + (i + 1) * seg;
+        out.push({ id: "fold_" + String(i + 1).padStart(2, "0"), digest: this.digestOf(i + 7 + n), cutoff: fd(a - 86400000) + " 23:59Z", test: fd(a) + " → " + fd(b) });
+      }
+    }
+    this.foldCache[n] = out; return out;
+  }
+  rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  bars(fold) {
+    const key = fold + "_" + this.state.folds;
+    if (this.barsByFold[key]) return this.barsByFold[key];
+    const NF = this.state.folds;
+    const r = this.rng(NF === 5 ? fold * 13 + 3 : fold * 13 + 3 + NF * 101);
+    const n = NF <= 8 ? 270 : 420;
+    const start = NF === 5 ? Date.UTC(2024, 5 + fold, 1) : Date.UTC(2020, 6, 1) + (fold - 1) * ((Date.UTC(2026, 5, 30) - Date.UTC(2020, 6, 1)) / NF);
+    const bars = []; let price = NF === 5 ? 52000 + fold * 3000 : 30000 + (fold * 2917) % 40000;
+    for (let i = 0; i < n; i++) {
+      const drift = Math.sin(i / 24) * 0.004 + (r() - 0.5) * 0.001;
+      const open = price; const close = price * (1 + drift + (r() - 0.5) * 0.016);
+      const high = Math.max(open, close) * (1 + r() * 0.006); const low = Math.min(open, close) * (1 - r() * 0.006);
+      bars.push({ time: Math.floor((start + i * 14400000) / 1000), ms: start + i * 14400000, open: +open.toFixed(1), high: +high.toFixed(1), low: +low.toFixed(1), close: +close.toFixed(1) });
+      price = close;
+    }
+    const win = NF <= 8 ? 12 : 8; const band = NF <= 8 ? 0.004 : 0.0014;
+    const position = []; const sma = [];
+    for (let i = 0; i < n; i++) {
+      let s2 = 0, c = 0; for (let j = Math.max(0, i - win); j <= i; j++) { s2 += bars[j].close; c++; }
+      sma.push(s2 / c);
+      position.push(i < win ? 0 : bars[i].close > sma[i] * (1 + band) ? 1 : bars[i].close < sma[i] * (1 - band) ? -1 : (position[i - 1] || 0));
+    }
+    const equity = [100000];
+    for (let i = 1; i < n; i++) equity.push(Math.round(equity[i - 1] * (1 + position[i - 1] * (bars[i].close / bars[i - 1].close - 1) * 0.9)));
+    const events = []; let seq = 91000 + fold * 400; let prev = 0;
+    for (let i = 1; i < n; i++) {
+      if (position[i] !== prev) {
+        const side = position[i] > 0 ? "LONG" : position[i] < 0 ? "SHORT" : "FLAT";
+        events.push({ seq: seq++, bar: i, ms: bars[i].ms, type: "signal_eval", side, note: "close vs sma(" + win + ") crossed · pos " + prev + " → " + position[i], src: "signals.parquet" });
+        events.push({ seq: seq++, bar: i, ms: bars[i].ms, type: "target_set", side, note: "target exposure " + position[i].toFixed(1) + " committed at close " + bars[i].close, src: "signals.parquet" });
+        events.push({ seq: seq++, bar: i, ms: bars[i].ms, type: "acct_post", side, note: "equity marked " + equity[i].toLocaleString("en-US"), src: "account-snapshots" });
+        if (position[i] !== 0) {
+          const fb = Math.min(i + 1, n - 1);
+          events.push({ seq: seq++, bar: i, ms: bars[i].ms, type: "order", side, price: bars[i].close, note: "MARKET " + side + " · tif=GTC", src: "orders.parquet", lifecycleOnly: true, intentId: "int_" + seq });
+          events.push({ seq: seq++, bar: fb, ms: bars[fb].ms, type: "fill", side, price: bars[fb].open, stop: bars[i].close * (side === "LONG" ? 0.97 : 1.03), tp: bars[i].close * (side === "LONG" ? 1.05 : 0.95), note: "fill @ open[t+1] " + bars[fb].open + " (maker)", src: "fills.parquet", lifecycleOnly: true, signalId: "sig_" + (seq - 5), orderId: "ord_" + (seq - 1) });
+        }
+        prev = position[i];
+      }
+    }
+    // trades with MAE/MFE
+    const trades = []; let open = null;
+    for (let i = 1; i < n; i++) {
+      if (position[i] !== position[i - 1]) {
+        if (open) { open.exitBar = i; trades.push(open); open = null; }
+        if (position[i] !== 0) open = { side: position[i], entryBar: i };
+      }
+    }
+    if (open) { open.exitBar = n - 1; trades.push(open); }
+    trades.forEach((t, ti) => {
+      const e = bars[t.entryBar].close;
+      t.n = ti + 1;
+      t.exitP = bars[t.exitBar].close;
+      t.pnl = t.side * (t.exitP / e - 1) * 100;
+      t.hold = t.exitBar - t.entryBar;
+      let mae = 0, mfe = 0;
+      for (let j = t.entryBar; j <= t.exitBar; j++) {
+        const adverse = t.side > 0 ? (bars[j].low / e - 1) * 100 : (1 - bars[j].high / e) * 100;
+        const favor = t.side > 0 ? (bars[j].high / e - 1) * 100 : (1 - bars[j].low / e) * 100;
+        mae = Math.min(mae, adverse); mfe = Math.max(mfe, favor);
+      }
+      t.mae = Math.abs(mae); t.mfe = mfe;
+    });
+    const out = { bars, position, equity, events, trades };
+    this.barsByFold[key] = out; return out;
+  }
+  fmt(ms) { const d = new Date(ms); const p = (v) => String(v).padStart(2, "0"); return d.getUTCFullYear() + "-" + p(d.getUTCMonth() + 1) + "-" + p(d.getUTCDate()) + " " + p(d.getUTCHours()) + ":" + p(d.getUTCMinutes()) + "Z"; }
+  visibleEvents() {
+    const s = this.state; const d = this.bars(s.fold); const ct = s.route === "close_target_v2";
+    return d.events.filter(e => {
+      if (ct && e.lifecycleOnly) return false;
+      if (s.route === "intrabar_bracket_v1" && e.type === "order") return false;
+      return true;
+    });
+  }
+  current() { const l = this.visibleEvents(); if (!l.length) return null; return l[Math.min(this.state.index, l.length - 1)]; }
+  queueSync() { if (this._q) return; this._q = true; setTimeout(() => { this._q = false; this.syncCharts(); }, 30); }
+  componentDidMount() { this.queueSync(); }
+  componentDidUpdate() { this.writeHash({ fold: this.state.fold, route: this.state.route, stage: "execute" }); this.queueSync(); }
+  componentWillUnmount() { if (this.timer) clearInterval(this.timer); if (this._bt) clearTimeout(this._bt); this.disposeChart("replay"); this.disposeChart("mae"); }
+  disposeChart(name) { const c = this.charts[name]; if (!c) return; try { if (c.chart) c.chart.remove(); else if (c.dispose) c.dispose(); } catch (e) {} this.charts[name] = null; }
+  syncCharts() {
+    if (window.LightweightCharts) this.syncReplay();
+    if (window.echarts) this.syncMae();
+    if (!window.LightweightCharts || !window.echarts) setTimeout(() => this.syncCharts(), 350);
+  }
+  syncMae() {
+    const el = this.refEls.mae; if (!el) return;
+    let C = this.charts.mae;
+    if (!C || C._el !== el) {
+      this.disposeChart("mae");
+      C = window.echarts.init(el); C._el = el; this.charts.mae = C;
+      C.on("click", (p) => { if (p.data && p.data.eb != null) { this.setState({ trade: p.data.n }); this.jumpToBar(p.data.eb); } });
+    }
+    const d = this.bars(this.state.fold);
+    const xMax = Math.max(3, Math.ceil(Math.max(0, ...d.trades.map(t => t.mae))));
+    const yMax = Math.max(4, Math.ceil(Math.max(0, ...d.trades.map(t => t.mfe))));
+    const diag = Math.min(xMax, yMax);
+    C.setOption({
+      textStyle: { fontFamily: "JetBrains Mono, monospace", fontSize: 9.5, color: "#939db0" }, animation: false,
+      grid: { left: 34, right: 12, top: 10, bottom: 26, containLabel: true },
+      tooltip: { trigger: "item", backgroundColor: "#ffffff", borderColor: "#e3e0d7", textStyle: { color: "#1c2532", fontSize: 10.5, fontFamily: "JetBrains Mono, monospace" }, formatter: (p) => "trade " + p.data.n + " · MAE −" + p.data.value[0].toFixed(1) + "% · MFE +" + p.data.value[1].toFixed(1) + "% · PnL " + (p.data.pnl >= 0 ? "+" : "") + p.data.pnl.toFixed(2) + "% · click to jump" },
+      xAxis: { type: "value", name: "MAE %", nameGap: 4, nameTextStyle: { fontSize: 9, color: "#939db0" }, max: xMax, axisLine: { lineStyle: { color: "#e3e0d7" } }, axisLabel: { fontSize: 9, color: "#939db0", fontFamily: "JetBrains Mono, monospace" }, splitLine: { show: false } },
+      yAxis: { type: "value", name: "MFE %", nameGap: 4, nameTextStyle: { fontSize: 9, color: "#939db0" }, max: yMax, axisLine: { lineStyle: { color: "#e3e0d7" } }, axisLabel: { fontSize: 9, color: "#939db0", fontFamily: "JetBrains Mono, monospace" }, splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } },
+      series: [{ type: "scatter", symbolSize: d.trades.length > 300 ? 4 : 6,
+        data: d.trades.map(t => ({ value: [+t.mae.toFixed(2), +t.mfe.toFixed(2)], n: t.n, eb: t.entryBar, pnl: t.pnl, itemStyle: { color: t.pnl >= 0 ? "rgba(30,123,79,.75)" : "rgba(180,58,58,.75)" } })),
+        markLine: { silent: true, symbol: "none", lineStyle: { color: "#c9c5ba", type: "dashed" }, label: { show: false }, data: [[{ coord: [0, 0] }, { coord: [diag, diag] }]] } }]
+    }, true);
+  }
+  syncReplay() {
+    const el = this.refEls.replay; if (!el) return;
+    const s = this.state; const d = this.bars(s.fold); const LC = window.LightweightCharts;
+    try {
+      let R = this.charts.replay;
+      if (!R || R._el !== el || R._fold !== s.fold + "_" + s.folds) {
+        this.disposeChart("replay");
+        const chart = LC.createChart(el, {
+          layout: { background: { color: "#faf9f5" }, textColor: "#939db0", fontFamily: "JetBrains Mono, monospace", fontSize: 10, panes: { separatorColor: "#e3e0d7" } },
+          grid: { vertLines: { color: "#efede4" }, horzLines: { color: "#efede4" } },
+          rightPriceScale: { borderColor: "#e3e0d7" },
+          timeScale: { borderColor: "#e3e0d7", timeVisible: true },
+          crosshair: { vertLine: { color: "#939db0", style: 2 }, horzLine: { color: "#939db0", style: 2 } }
+        });
+        const candles = chart.addSeries(LC.CandlestickSeries, { upColor: "#1e7b4f", downColor: "#b43a3a", borderUpColor: "#0f5c3a", borderDownColor: "#7c2626", wickUpColor: "#1e7b4f", wickDownColor: "#b43a3a" });
+        const pos = chart.addSeries(LC.LineSeries, { color: "#0f4c5c", lineWidth: 1, lineType: 1, priceLineVisible: false, lastValueVisible: false }, 1);
+        const eq = chart.addSeries(LC.LineSeries, { color: "#9a6a1f", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 2);
+        try { const panes = chart.panes(); if (panes[0] && panes[0].setHeight) { panes[0].setHeight(280); panes[1].setHeight(60); panes[2].setHeight(80); } } catch (e) {}
+        R = { chart, candles, pos, eq, _el: el, _fold: s.fold + "_" + s.folds, priceLines: [] };
+        R.markers = LC.createSeriesMarkers ? LC.createSeriesMarkers(candles, []) : null;
+        this.charts.replay = R;
+      }
+      const cur = this.current(); const bar = cur ? cur.bar : 0;
+      const slice = s.reveal ? d.bars.slice(0, bar + 1) : d.bars;
+      R.candles.setData(slice.map(b => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })));
+      R.pos.setData(slice.map((b, i) => ({ time: b.time, value: d.position[i] })));
+      R.eq.setData(slice.map((b, i) => ({ time: b.time, value: d.equity[i] })));
+      if (R.markers) {
+        const mk = (e) => {
+          const long = e.side === "LONG";
+          if (e.type === "signal_eval") return { shape: long ? "arrowUp" : "arrowDown", position: long ? "belowBar" : "aboveBar", color: "#7a8699", text: "S" };
+          if (e.type === "target_set") return { shape: "square", position: long ? "belowBar" : "aboveBar", color: "#0f4c5c", text: "T" };
+          if (e.type === "fill") return { shape: "circle", position: long ? "belowBar" : "aboveBar", color: "#0f4c5c", text: "F" };
+          if (e.type === "order") return { shape: "square", position: "aboveBar", color: "#4e5a6e", text: "O" };
+          return null;
+        };
+        let evm = this.visibleEvents().filter(e => mk(e) && (!s.reveal || e.bar <= bar));
+        if (evm.length > 110) evm = evm.filter(e => Math.abs(e.bar - bar) <= 80);
+        R.markers.setMarkers(evm.map(e => Object.assign({ time: d.bars[e.bar].time }, mk(e))));
+      }
+      R.priceLines.forEach(l => { try { R.candles.removePriceLine(l); } catch (e) {} }); R.priceLines = [];
+      const sel = s.selected != null ? d.events.find(e => e.seq === s.selected) : cur;
+      if (s.route !== "close_target_v2" && sel && sel.type === "fill" && sel.stop) {
+        R.priceLines.push(R.candles.createPriceLine({ price: +sel.stop.toFixed(1), color: "#b43a3a", lineWidth: 1, lineStyle: 2, title: "SL" }));
+        R.priceLines.push(R.candles.createPriceLine({ price: +sel.tp.toFixed(1), color: "#1e7b4f", lineWidth: 1, lineStyle: 2, title: "TP" }));
+      }
+      if (cur) {
+        try { R.chart.setCrosshairPosition(d.bars[cur.bar].close, d.bars[cur.bar].time, R.candles); } catch (e) {}
+        try { const range = R.chart.timeScale().getVisibleLogicalRange(); if (range && (cur.bar < range.from + 4 || cur.bar > range.to - 4)) { const span = Math.max(60, range.to - range.from); R.chart.timeScale().setVisibleLogicalRange({ from: cur.bar - span * 0.7, to: cur.bar + span * 0.3 }); } } catch (e) {}
+      }
+      if (this.state.replayError) this.setState({ replayError: null });
+    } catch (err) { this.setState({ replayError: "chart adapter error: " + String(err && err.message ? err.message : err) }); }
+  }
+  step(dl) { const max = this.visibleEvents().length - 1; this.setState({ index: Math.max(0, Math.min(max, this.state.index + dl)), selected: null }); }
+  stepTransition(dl) {
+    const list = this.visibleEvents(); const cur = this.current(); if (!cur) return; let i = this.state.index;
+    while (i + dl >= 0 && i + dl <= list.length - 1) { i += dl; if (list[i].type === "target_set" || list[i].type === "fill") break; }
+    this.setState({ index: i, selected: null });
+  }
+  togglePlay() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; this.setState({ playing: false }); return; }
+    this.setState({ playing: true });
+    this.timer = setInterval(() => {
+      if (this.state.index >= this.visibleEvents().length - 1) {
+        if (this.state.playAcross && this.state.fold < this.state.folds) { this.crossBoundary(); return; }
+        clearInterval(this.timer); this.timer = null; this.setState({ playing: false }); return;
+      }
+      this.step(1);
+    }, Math.round(420 / this.state.speed));
+  }
+  crossBoundary() {
+    const s = this.state; const from = this.folds()[s.fold - 1]; const to = this.folds()[s.fold];
+    this.setState({ fold: s.fold + 1, index: 0, selected: null, trade: null, boundary: { text: "entered " + to.id + " — params " + from.digest + " → " + to.digest + " · position FLAT at the boundary (each fold trades its own frozen θ*) · the stitched account concatenates segments, it never carries exposure across" } });
+    if (this._bt) clearTimeout(this._bt);
+    this._bt = setTimeout(() => this.setState({ boundary: null }), 4000);
+  }
+  jumpToBar(bar) {
+    const list = this.visibleEvents();
+    let best = 0;
+    for (let i = 0; i < list.length; i++) { if (list[i].bar <= bar) best = i; else break; }
+    this.setState({ index: best, selected: null });
+  }
+  copy() {
+    const s = this.state; const c = this.current();
+    const link = "portal://runs/R-WFO-118/stage/execute?fold=fold_0" + s.fold + "&route=" + s.route + (c ? "&event_seq=" + c.seq : "") + "&bundle=bdl_e41d7b";
+    try { navigator.clipboard.writeText(link); } catch (e) {}
+    this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1600);
+  }
+  pill(active, warn) {
+    return "border:1px solid " + (active ? (warn ? "#9a6a1f" : "#0f4c5c") : "#e3e0d7") + "; background:" + (active ? (warn ? "#f4ecdb" : "#e2edf0") : "#ffffff") + "; color:" + (active ? (warn ? "#9a6a1f" : "#0f4c5c") : "#4e5a6e") + "; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px;";
+  }
+  readHash() { const h = {}; (location.hash || "").replace(/^#/, "").split("&").forEach((p) => { const kv = p.split("="); if (kv[0] && kv[1] != null) h[kv[0]] = decodeURIComponent(kv[1]); }); return h; }
+  writeHash(obj) { const cur = this.readHash(); Object.assign(cur, obj); const str = Object.keys(cur).filter((k) => cur[k] != null && cur[k] !== "").map((k) => k + "=" + encodeURIComponent(cur[k])).join("&"); try { history.replaceState(null, "", "#" + str); } catch (e) {} }
+  renderVals() {
+    const s = this.state; const d = this.bars(s.fold);
+    const ct = s.route === "close_target_v2";
+    const FD = this.folds(); const NF = FD.length;
+    const clampFold = (v) => Math.max(1, Math.min(NF, v));
+    const gotoFold = (v) => this.setState({ fold: clampFold(v), index: 0, selected: null, trade: null, blotPage: 0, boundary: null });
+    const fold = FD[Math.min(s.fold, NF) - 1];
+    const NB = d.bars.length;
+    const list = this.visibleEvents();
+    const cur = this.current();
+    const sel = s.selected != null ? d.events.find(e => e.seq === s.selected) : cur;
+    const isManager = s.persona === "manager";
+    const isAudit = s.persona === "audit";
+    const routeOpts = ["close_target_v2", "intrabar_bracket_v1", "event_lifecycle_v2", "reactive_r2", "dca_ladder"].map(k => ({
+      label: k, onPick: () => this.setState({ route: k, index: 0, selected: null }), style: this.pill(s.route === k, k !== "close_target_v2")
+    }));
+    const showWake = s.route === "reactive_r2";
+    let wakeTicks = [], wakeCount = 0;
+    if (showWake) {
+      const NBw = d.bars.length;
+      for (let i = 0; i < NBw; i++) {
+        const b = d.bars[i];
+        const move = Math.abs(b.close - b.open) / b.open > 0.004;
+        const timer = i % 16 === 0;
+        const orderEv = d.events.some(e => e.bar === i && e.type === "fill");
+        if (!move && !timer && !orderEv) continue;
+        wakeCount++;
+        const color = orderEv ? "#b43a3a" : move ? "#0f4c5c" : "#9a6a1f";
+        const reason = orderEv ? "order event" : move ? "price move > 40bps" : "timer";
+        wakeTicks.push({ title: "bar " + i + " · wake: " + reason, style: "position:absolute; left:" + (i / NBw * 100).toFixed(2) + "%; top:2px; bottom:2px; width:2px; background:" + color + ";" });
+      }
+    }
+    const personaOpts = [
+      { k: "manager", title: "verdict + trades — no event plumbing" },
+      { k: "quant", title: "full panels" },
+      { k: "audit", title: "quant + digests on every row" }
+    ].map(p => ({ label: p.k, title: p.title, onPick: () => this.setState({ persona: p.k }), style: this.pill(s.persona === p.k) }));
+    const foldSelOpts = FD.map((f, i) => ({ v: String(i + 1), label: f.id + " · " + f.digest }));
+    const scaleOpts = [5, 32].map(n => ({
+      label: n + " folds", onPick: () => this.setState({ folds: n, fold: Math.min(s.fold, n), index: 0, selected: null, trade: null, blotPage: 0, boundary: null }),
+      style: this.pill(s.folds === n, n !== 5)
+    }));
+    const routeNotice = ct
+      ? "close_target_v2 — the route this run executed. Accounting happens at close only: order, intent and fill DO NOT EXIST. Markers are target transitions, not audited fills. The causal chain below says so instead of inventing links."
+      : s.route === "intrabar_bracket_v1"
+      ? "intrabar_bracket_v1 — PREVIEW on a sample tape. Fills at open[t+1]; SL/TP walk the intrabar high/low path and render as price lines when a fill is selected; same-bar conflicts resolve by engine policy, read from the contract inspector."
+      : s.route === "reactive_r2"
+      ? "reactive R2 — PREVIEW on a sample tape. Sparse-wake kernel: the strategy runs only on woken bars (strip below the chart); parity vs the R0 python reference is release-certified. audit_mode=audit recorded the wake trace."
+      : s.route === "dca_ladder"
+      ? "dca_ladder — PREVIEW on a sample tape. One position = base order + safety-order ladder; entries stack at declared step_scale, exits close the basket. The chain shows every rung as its own fill."
+      : "event_lifecycle_v2 — PREVIEW on a sample tape. Full lifecycle: place / cancel / replace, OCO, GTD. Selecting a fill opens the complete signal → intent → order → fill chain, every link an artifact reference.";
+    const tapeSpans = d.trades.map(t => ({
+      title: "trade " + t.n + " · " + (t.side > 0 ? "LONG" : "SHORT") + " · PnL " + t.pnl.toFixed(2) + "% · hold " + t.hold + " bars",
+      onPick: () => { this.setState({ trade: t.n }); this.jumpToBar(t.entryBar); },
+      style: "position:absolute; left:" + (t.entryBar / NB * 100).toFixed(2) + "%; width:" + Math.max(0.35, (t.exitBar - t.entryBar) / NB * 100).toFixed(2) + "%; top:3px; bottom:3px; border:0; border-radius:2px; background:" + (t.pnl >= 0 ? "rgba(30,123,79,.45)" : "rgba(180,58,58,.45)") + "; padding:0;"
+    }));
+    const tapeTicks = list.length <= 110 ? list.filter((e, i) => i % 2 === 0).map(e => ({
+      style: "position:absolute; left:" + (e.bar / NB * 100).toFixed(1) + "%; bottom:0; width:1px; height:5px; background:#939db0;"
+    })) : [];
+    const tapeNote = "trade tape — green span = winning trade, red = losing · click a span to jump" + (list.length > 110 ? " · " + d.trades.length + " trades · event ticks hidden at this density" : " · ticks = events");
+    const markerNote = list.length > 110 ? "marker LOD — showing ±80 bars around the cursor · " + list.length + " events on this fold" : "markers: S = signal · T = target · O = order · F = fill";
+    const playheadStyle = "position:absolute; left:" + ((cur ? cur.bar : 0) / NB * 100).toFixed(1) + "%; top:0; bottom:0; width:2px; background:#9a6a1f; z-index:3;";
+    const transport = [
+      { label: "|◀", title: "previous fold", onPress: () => gotoFold(s.fold - 1) },
+      { label: "◀◀", title: "previous transition", onPress: () => this.stepTransition(-1) },
+      { label: "◀", title: "previous event", onPress: () => this.step(-1) },
+      { label: s.playing ? "❚❚" : "▶", title: "play / pause", onPress: () => this.togglePlay() },
+      { label: "▶", title: "next event", onPress: () => this.step(1) },
+      { label: "▶▶", title: "next transition", onPress: () => this.stepTransition(1) },
+      { label: "▶|", title: "next fold", onPress: () => gotoFold(s.fold + 1) }
+    ].map((t, i) => Object.assign({}, t, { style: "border:1px solid " + (i === 3 ? "#0f4c5c" : "#e3e0d7") + "; border-radius:3px; background:" + (i === 3 && s.playing ? "#e2edf0" : "#ffffff") + "; color:" + (i === 3 ? "#0f4c5c" : "#4e5a6e") + "; padding:2px 9px; font-family:'JetBrains Mono',monospace; font-size:11px;" }));
+    const speeds = [1, 4, 16, 64].map(v => ({ label: v + "×", onPick: () => { this.setState({ speed: v }); if (this.timer) { clearInterval(this.timer); this.timer = null; this.setState({ playing: false }); } }, style: this.pill(s.speed === v) }));
+    const ledger = [];
+    const from = Math.max(0, Math.min(s.index - 4, list.length - 10));
+    for (let i = from; i < Math.min(list.length, from + 10); i++) {
+      const e = list[i]; const active = i === s.index || e.seq === s.selected;
+      ledger.push({
+        seq: e.seq, ts: this.fmt(e.ms), type: e.type,
+        typeColor: e.type === "target_set" ? "#0f4c5c" : e.type === "fill" ? "#1e7b4f" : e.type === "order" ? "#4e5a6e" : e.type === "acct_post" ? "#9a6a1f" : "#7a8699",
+        note: e.note,
+        digest: isAudit ? "sha256:" + ((e.seq * 2654435761 % 0xfffff) >>> 0).toString(16).padStart(5, "0") + "…" : "",
+        digestStyle: isAudit ? "width:110px; flex:none; text-align:right; color:#939db0; font-size:9px;" : "display:none;",
+        onPick: () => this.setState({ index: i, selected: e.seq }),
+        style: "display:flex; align-items:baseline; gap:8px; width:100%; text-align:left; padding:4px 12px; border:0; border-bottom:1px solid #efede4; background:" + (active ? "#e2edf0" : "transparent") + "; font-family:'JetBrains Mono',monospace; font-size:10px; color:#1c2532;"
+      });
+    }
+    const SLp = (t) => d.bars[t.entryBar].close * (t.side > 0 ? 0.97 : 1.03);
+    const TPp = (t) => d.bars[t.entryBar].close * (t.side > 0 ? 1.05 : 0.95);
+    const exitInfo = (t) => {
+      const after = d.position[Math.min(t.exitBar, NB - 1)];
+      const flip = after !== 0;
+      if (ct) return { label: flip ? "flip at close → " + (after > 0 ? "LONG" : "SHORT") : "target → 0 at close" };
+      if (s.route === "intrabar_bracket_v1") {
+        if (t.mae >= 3 && t.mfe >= 4.5) return { label: "⚠ ambiguous bar — SL and TP both inside · same_bar_policy=stop_first resolved SL, flagged in ledger" };
+        if (t.mae >= 3) return { label: "SL @ " + SLp(t).toFixed(0) + " · intrabar low path" };
+        if (t.mfe >= 4.5) return { label: "TP @ " + TPp(t).toFixed(0) + " · intrabar high path" };
+        return { label: flip ? "signal flip — bracket cancelled" : "signal exit — bracket cancelled" };
+      }
+      return { label: t.n % 3 === 0 ? "OCO tp leg · 2 partials" : t.n % 3 === 1 ? "reduce-only MARKET close" : "OCO sl leg · sibling cancelled" };
+    };
+    const exitHead = ct ? "exit — accounting" : s.route === "intrabar_bracket_v1" ? "exit leg (SL / TP / signal)" : s.route === "dca_ladder" ? "basket exit" : "exit lifecycle";
+    const selT = d.trades.find(t => t.n === s.trade) || (cur ? d.trades.find(t => cur.bar >= t.entryBar && cur.bar <= t.exitBar) : null) || d.trades[0];
+    let chain = [{ k: "chain", v: "no trades on tape" }]; let chainSource = "—";
+    if (selT) {
+      const eB = d.bars[selT.entryBar], xB = d.bars[Math.min(selT.exitBar, NB - 1)];
+      const sideL = selT.side > 0 ? "LONG" : "SHORT";
+      const ex = exitInfo(selT);
+      const holdRow = { k: "· · · hold", v: selT.hold + " bars · MAE −" + selT.mae.toFixed(1) + "% · MFE +" + selT.mfe.toFixed(1) + "% · click the tape span to scrub through it" };
+      const pnlTxt = (selT.pnl >= 0 ? "+" : "") + selT.pnl.toFixed(2) + "%";
+      if (ct) {
+        chain = [
+          { k: "entry · signal", v: "bar " + selT.entryBar + " · close " + eB.close + " crossed sma(12) → " + sideL },
+          { k: "entry · target", v: "target " + (selT.side > 0 ? "+1.0" : "−1.0") + " committed AT CLOSE — no order object exists on this route" },
+          { k: "entry · account", v: "exposure effective from next bar · positions.parquet" },
+          holdRow,
+          { k: "exit · signal", v: "bar " + selT.exitBar + " · " + ex.label },
+          { k: "exit · account", v: "settled at close " + xB.close + " · PnL " + pnlTxt + " · fee series absent (portal gap)" },
+          { k: "params · claim", v: fold.digest + " frozen " + fold.cutoff + " · " + fold.id + " STRICT_OUTER_OOS" }
+        ];
+        chainSource = "trade " + selT.n + " · close_target schema — 3 artifact types, no fills";
+      } else if (s.route === "intrabar_bracket_v1") {
+        const fillB = d.bars[Math.min(selT.entryBar + 1, NB - 1)];
+        const slip = ((fillB.open / eB.close - 1) * 10000 * selT.side).toFixed(1);
+        chain = [
+          { k: "entry · signal", v: "bar " + selT.entryBar + " · close " + eB.close + " → " + sideL },
+          { k: "entry · order", v: "MARKET " + sideL + " · tif=GTC · queued for open[t+1]" },
+          { k: "entry · fill", v: "@ " + fillB.open + " · slip " + slip + " bps vs signal close" },
+          { k: "bracket armed", v: "SL " + SLp(selT).toFixed(0) + " · TP " + TPp(selT).toFixed(0) + " · OCO · same-bar conflict: engine policy, from the contract inspector" },
+          holdRow,
+          { k: "exit · fill", v: ex.label + " · PnL " + pnlTxt },
+          { k: "settle", v: "sibling bracket leg cancelled · acct_post · fee series absent (portal gap)" }
+        ];
+        chainSource = "trade " + selT.n + " · bracket schema — preview tape";
+      } else {
+        chain = [
+          { k: "entry · signal", v: "bar " + selT.entryBar + " · " + sideL + " · sig_" + (91000 + selT.n) },
+          { k: "entry · place", v: "LIMIT @ " + (eB.close * (selT.side > 0 ? 0.999 : 1.001)).toFixed(0) + " · ack 12ms · ord_" + (7100 + selT.n) },
+          { k: "entry · fills", v: "partial 40% @ limit · replace +2 ticks · filled 100% · maker/taker mix" },
+          { k: "OCO armed", v: "tp + sl legs · GTD 48h · reduce_only=true" },
+          holdRow,
+          { k: "exit", v: ex.label + " · PnL " + pnlTxt },
+          { k: "settle", v: "sibling leg cancelled · acct_post · every id above is an artifact key" }
+        ];
+        chainSource = "trade " + selT.n + " · lifecycle schema — preview tape";
+      }
+      if (s.route === "dca_ladder" && selT) {
+        const eB2 = d.bars[selT.entryBar];
+        chain = [
+          { k: "base order", v: "bar " + selT.entryBar + " · " + sideL + " · 100 USD @ " + eB2.close.toFixed(0) + " · fill_" + (52000 + selT.n) },
+          { k: "safety order 1", v: "bar " + (selT.entryBar + 2) + " · +140 USD @ step −1.2% · fill_" + (52100 + selT.n) },
+          { k: "safety order 2", v: "bar " + (selT.entryBar + 4) + " · +196 USD @ step −2.6% · step_scale 1.4 · fill_" + (52200 + selT.n) },
+          { k: "basket avg", v: "avg entry " + (eB2.close * 0.986).toFixed(0) + " · 3 rungs · 436 USD notional" },
+          { k: "basket exit", v: "bar " + selT.exitBar + " · TP on basket avg +1.8% · all rungs closed as one accounting event" }
+        ];
+        chainSource = "trade " + selT.n + " · ladder schema — every rung its own fill, preview tape";
+      }
+      if (s.route === "reactive_r2" && selT) {
+        chain = [
+          { k: "wake", v: "bar " + selT.entryBar + " · reason price_move · kernel call #" + (140 + selT.n * 3) },
+          { k: "entry · signal", v: sideL + " emitted by woken kernel · sig_" + (91000 + selT.n) },
+          { k: "fill", v: "open[t+1] · fill_" + (52000 + selT.n) + " · idle bars between wakes cost no strategy call" },
+          { k: "exit wake", v: "bar " + selT.exitBar + " · reason " + (selT.mae >= 3 ? "stop breach" : "signal flip") },
+          { k: "parity", v: "R2 output ≡ R0 reference on this tape — release-certified" }
+        ];
+        chainSource = "trade " + selT.n + " · reactive schema — wake-driven, preview tape";
+      }
+    }
+    const labEvery = Math.max(1, Math.ceil(NF / 8));
+    const foldStrip = FD.map((f, i) => {
+      const doneF = i + 1 < s.fold; const activeF = i + 1 === s.fold;
+      const prog = doneF ? 100 : activeF ? ((cur ? cur.bar : 0) / NB * 100) : 0;
+      const showLab = NF <= 8 || activeF || i % labEvery === 0;
+      return {
+        lab: showLab ? (NF <= 8 ? "f" + (i + 1) + " · " + f.digest : "f" + (i + 1)) : "",
+        arrow: NF <= 8 && i < NF - 1 ? "⇄" : "",
+        title: f.id + " · OOS " + f.test + " · θ* " + f.digest + (activeF ? " · replaying" : doneF ? " · replayed" : " · queued"),
+        onPick: () => gotoFold(i + 1),
+        segStyle: "position:relative; flex:1; min-width:" + (NF <= 8 ? 96 : 8) + "px; height:26px; border:1px solid " + (activeF ? "#0f4c5c" : "#e3e0d7") + "; background:#fdfdfa; border-radius:" + (NF <= 8 ? 3 : 1) + "px; padding:0; overflow:hidden;",
+        fillStyle: "position:absolute; left:0; top:0; bottom:0; width:" + prog.toFixed(1) + "%; background:" + (activeF ? "rgba(15,76,92,.16)" : "rgba(168,198,206,.3)") + ";",
+        labStyle: "position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:9px; color:" + (activeF ? "#0f4c5c" : "#939db0") + "; white-space:nowrap; overflow:hidden;",
+        arrowStyle: NF <= 8 && i < NF - 1 ? "flex:none; font-size:10px; color:#9a6a1f; cursor:help;" : "display:none;"
+      };
+    });
+    const bf = s.blotFilter || { side: "all", out: "all" };
+    let tlist = d.trades.slice();
+    if (bf.side !== "all") tlist = tlist.filter(t => (t.side > 0 ? "long" : "short") === bf.side);
+    if (bf.out !== "all") tlist = tlist.filter(t => bf.out === "win" ? t.pnl >= 0 : t.pnl < 0);
+    if (s.blotSort === "pnl") tlist.sort((a, b) => a.pnl - b.pnl);
+    else if (s.blotSort === "mae") tlist.sort((a, b) => b.mae - a.mae);
+    const per = 9; const pages = Math.max(1, Math.ceil(tlist.length / per));
+    const page = Math.min(s.blotPage, pages - 1);
+    const chipS = (act) => "border:1px solid " + (act ? "#0f4c5c" : "#e3e0d7") + "; border-radius:999px; background:" + (act ? "#e2edf0" : "#ffffff") + "; color:" + (act ? "#0f4c5c" : "#4e5a6e") + "; padding:1px 9px; font-family:'JetBrains Mono',monospace; font-size:9.5px;";
+    const setBF = (patch) => this.setState({ blotFilter: Object.assign({}, bf, patch), blotPage: 0 });
+    const blotFilters = [
+      { label: "all", act: bf.side === "all", on: () => setBF({ side: "all" }) },
+      { label: "long", act: bf.side === "long", on: () => setBF({ side: "long" }) },
+      { label: "short", act: bf.side === "short", on: () => setBF({ side: "short" }) },
+      { sep: true },
+      { label: "win", act: bf.out === "win", on: () => setBF({ out: bf.out === "win" ? "all" : "win" }) },
+      { label: "loss", act: bf.out === "loss", on: () => setBF({ out: bf.out === "loss" ? "all" : "loss" }) },
+      { sep: true },
+      { label: "sort: time", act: s.blotSort === "time", on: () => this.setState({ blotSort: "time", blotPage: 0 }) },
+      { label: "sort: worst pnl", act: s.blotSort === "pnl", on: () => this.setState({ blotSort: "pnl", blotPage: 0 }) },
+      { label: "sort: deepest MAE", act: s.blotSort === "mae", on: () => this.setState({ blotSort: "mae", blotPage: 0 }) }
+    ].map(c => c.sep ? { label: "", onPick: () => {}, style: "width:1px; height:14px; background:#e3e0d7; border:0; padding:0; pointer-events:none;" } : { label: c.label, onPick: c.on, style: chipS(c.act) });
+    const blotter = tlist.slice(page * per, page * per + per).map(t => {
+      const isSel = selT && t.n === selT.n;
+      return {
+        n: String(t.n), side: t.side > 0 ? "LONG" : "SHORT", sideColor: t.side > 0 ? "#1e7b4f" : "#b43a3a",
+        entry: this.fmt(d.bars[t.entryBar].ms).slice(0, 11), hold: t.hold + " bars",
+        pnl: (t.pnl >= 0 ? "+" : "") + t.pnl.toFixed(2), pnlColor: t.pnl >= 0 ? "#1e7b4f" : "#b43a3a",
+        mae: "−" + t.mae.toFixed(1), mfe: "+" + t.mfe.toFixed(1),
+        exit: exitInfo(t).label,
+        onPick: () => { this.setState({ trade: t.n }); this.jumpToBar(t.entryBar); },
+        style: "display:flex; align-items:baseline; width:100%; text-align:left; border:0; padding:4px 12px; border-bottom:1px solid #f4f2ec; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#1c2532; background:" + (isSel ? "#e2edf0" : "transparent") + "; border-left:2px solid " + (isSel ? "#0f4c5c" : "transparent") + ";"
+      };
+    });
+    const pnls = d.trades.map(t => t.pnl);
+    const pLo = Math.min(...pnls, -1), pHi = Math.max(...pnls, 1); const nb = 14;
+    const cnt = new Array(nb).fill(0);
+    pnls.forEach(v => cnt[Math.min(nb - 1, Math.floor((v - pLo) / (pHi - pLo) * nb))]++);
+    const cMax = Math.max(...cnt, 1);
+    const pnlBins = cnt.map((c, i) => {
+      const mid = pLo + (i + 0.5) / nb * (pHi - pLo);
+      return { title: mid.toFixed(1) + "% · " + c + " trades", style: "flex:1; height:" + Math.max(2, c / cMax * 100).toFixed(0) + "%; background:" + (mid >= 0 ? "rgba(30,123,79,.5)" : "rgba(180,58,58,.5)") + "; border:1px solid " + (mid >= 0 ? "#1e7b4f" : "#b43a3a") + "; border-bottom:0;" };
+    });
+    const wins = d.trades.filter(t => t.pnl >= 0);
+    const verdictTiles = [
+      { k: "OOS sharpe", v: "1.19", sub: fold.id + " · engine-published", color: "#1c2532" },
+      { k: "trades", v: String(d.trades.length), sub: "this fold", color: "#1c2532" },
+      { k: "win rate", v: (wins.length / d.trades.length * 100).toFixed(0) + "%", sub: wins.length + " of " + d.trades.length, color: "#1c2532" },
+      { k: "avg win / avg loss", v: (wins.reduce((a, t) => a + t.pnl, 0) / Math.max(1, wins.length)).toFixed(1) + " / " + (d.trades.filter(t => t.pnl < 0).reduce((a, t) => a + t.pnl, 0) / Math.max(1, d.trades.length - wins.length)).toFixed(1), sub: "% per trade", color: "#1c2532" },
+      { k: "worst MAE", v: "−" + Math.max(...d.trades.map(t => t.mae)).toFixed(1) + "%", sub: "deepest pain before exit", color: "#b43a3a" }
+    ];
+    return {
+      backHref: "QuantBT 04 Evidence Flow.dc.html#stage=execute&fold=" + this.state.fold + "&route=" + this.state.route,
+      onCopy: () => this.copy(), copyLabel: s.copied ? "✓ evidence link copied" : "copy evidence link",
+      routeOpts, personaOpts, foldDigest: fold.digest, curFold: String(s.fold).padStart(2, "0"),
+      foldSelOpts, foldSel: String(s.fold),
+      onFoldSel: (ev) => gotoFold(parseInt(ev.target.value, 10) || 1),
+      onPrevFold: () => gotoFold(s.fold - 1), onNextFold: () => gotoFold(s.fold + 1),
+      foldPosNote: "f" + s.fold + " / " + NF, scaleOpts,
+      tapeNote, markerNote, maeRef: this.maeRef,
+      blotFilters, onBlotPrev: () => this.setState({ blotPage: Math.max(0, page - 1) }),
+      onBlotNext: () => this.setState({ blotPage: Math.min(pages - 1, page + 1) }),
+      blotPageNote: tlist.length ? (page * per + 1) + "–" + Math.min(tlist.length, page * per + per) + " / " + tlist.length : "0 / 0",
+      routeNotice, routeNoticeTag: ct ? "route contract" : "route preview",
+      showWake, wakeTicks, wakeCount: String(wakeCount), wakeBars: String(d.bars.length), wakePct: d.bars.length ? Math.round(wakeCount / d.bars.length * 100) + "%" : "—",
+      showValidation: (this.props.validation ?? "none") === "nautilus",
+      validationRows: [
+        { k: "engines", v: "quantbt ↔ nautilus", sub: "same config · same tape", color: "#1c2532" },
+        { k: "final equity Δ", v: "0.0000%", sub: "tolerance 0.01%", color: "#1e7b4f" },
+        { k: "fills matched", v: "214 / 214", sub: "sequence + price + qty", color: "#1e7b4f" },
+        { k: "funding Δ", v: "+0.0002%", sub: "within tolerance", color: "#1e7b4f" },
+        { k: "verdict", v: "PARITY PASS", sub: "engine cert → L4 · external", color: "#1e7b4f" }
+      ],
+      routeNoticeStyle: "display:flex; gap:12px; align-items:flex-start; padding:9px 14px; border-top:1px solid #efede4; background:" + (ct ? "#ffffff" : "#f4ecdb") + "; color:" + (ct ? "#4e5a6e" : "#9a6a1f") + "; border-radius:0 0 6px 6px;",
+      replayRef: this.replayRef,
+      replayFallbackStyle: "position:absolute; inset:0; display:" + (s.replayError ? "flex" : "none") + "; align-items:center; justify-content:center; text-align:center; padding:24px; font-size:11px; color:#9a6a1f; background:repeating-linear-gradient(135deg,#f7f4ec 0 6px,transparent 6px 12px); z-index:6;",
+      replayFallback: s.replayError || "",
+      barsLabel: d.bars.length + " bars · OOS " + fold.test + " · " + fold.digest,
+      onToggleReveal: () => this.setState({ reveal: !s.reveal }),
+      revealMark: s.reveal ? "×" : "",
+      revealBoxStyle: "width:11px; height:11px; flex:none; border:1px solid " + (s.reveal ? "#0f4c5c" : "#939db0") + "; display:inline-flex; align-items:center; justify-content:center; font-size:9px; color:#0f4c5c;",
+      revealStyle: "display:flex; align-items:center; gap:6px; border:0; background:transparent; font-size:10px; color:#1c2532; flex:none; margin-left:8px;",
+      tapeSpans, tapeTicks, playheadStyle,
+      transport, speeds,
+      seekMax: Math.max(0, list.length - 1), seekVal: Math.min(s.index, Math.max(0, list.length - 1)),
+      onSeek: (ev) => this.setState({ index: Number(ev.target.value), selected: null }),
+      seekLabel: (Math.min(s.index, list.length - 1) + 1) + " / " + list.length + " events",
+      readout: {
+        ts: cur ? this.fmt(cur.ms) : "—", bar: cur ? String(cur.bar) : "—", seq: cur ? String(cur.seq) : "—",
+        pos: cur ? d.position[cur.bar].toFixed(1) : "—", equity: cur ? "$" + d.equity[cur.bar].toLocaleString("en-US") : "—"
+      },
+      lensNote: isManager ? "manager lens — plumbing hidden, verdict and trades only" : isAudit ? "audit lens — every ledger row carries its artifact digest" : "quant lens — full panels",
+      isManager, showLedger: !isManager,
+      verdictTiles, ledger,
+      ledgerCount: list.length + " events · " + d.events.length + " total on tape",
+      ledgerSource: ct ? "signals.parquet + positions.parquet + account-snapshots — no fill tape exists on this route" : "events.parquet → fills / orders / signals (preview tape)",
+      chain, chainSource,
+      foldStrip, onToggleAcross: () => this.setState({ playAcross: !s.playAcross }),
+      acrossLabel: "play across folds · " + (s.playAcross ? "ON" : "off"),
+      acrossStyle: this.pill(s.playAcross) + " border-radius:3px; flex:none;",
+      hasBoundary: !!s.boundary, boundaryText: s.boundary ? s.boundary.text : "",
+      exitHead,
+      blotter, blotterMeta: (tlist.length !== d.trades.length ? tlist.length + " filtered of " : "") + d.trades.length + " trades · trades.parquet",
+      pnlBins, pnlLo: pLo.toFixed(1) + "%", pnlHi: pHi.toFixed(1) + "%",
+      pnlNote: "A right-leaning pile with a short left tail is what the win rate cannot show you — one bad tail bar here is worth five tiles above."
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT Stage 2 — Search &amp; Selection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+  button { transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+  @keyframes sr-pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
+  @keyframes sr-flow { 0% { transform:translateX(-4px); opacity:.2 } 50% { opacity:1 } 100% { transform:translateX(4px); opacity:.2 } }
+  .katex { font-size: 1.05em; }
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+</helmet>
+
+<div data-screen-label="S2 Search and Selection" style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px"><div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5"><span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span><span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span><span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap"><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">QuantBT Backtest</span><span style="color:#939db0">/</span><span style="font-family:'JetBrains Mono',monospace; flex:none">R-WFO-118</span><span style="color:#939db0">/</span><span style="color:#1c2532; flex:none">Stage 2 · Search</span></span><span style="flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 12px">Search <span style="font-size:10px; color:#939db0; border:1px solid #e3e0d7; border-radius:3px; padding:0 4px; font-family:'JetBrains Mono',monospace;">⌘K</span></span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span><span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span><span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Comfortable ▾</span></div><div style="display:flex; flex:1; min-height:0"><div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px"><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">command</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Command Center</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Portal Map</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">research</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><a href="QuantBT 01 Run Library.dc.html" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; background:#e2edf0; color:#1c2532; font-weight:500; text-decoration:none"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">QuantBT Backtest</span></a><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Pool</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Mining</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Strategy Composer</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">backtests</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Approvals</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">deployments</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Paper Trading</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sandbox</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Live Operations</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">data & operations</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Data Catalog</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">planning</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Roadmap & Task Board</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">administration</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Profile & Access</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div></div><div style="flex:1; min-width:0"><div style="background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px; display:flex; flex-direction:column; gap:14px; padding:16px 24px 56px; max-width:1560px; margin:0 auto">
+
+  <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px 16px; border-bottom:1px solid #e3e0d7; padding-bottom:10px">
+    <div style="display:flex; flex-direction:column; gap:3px">
+      <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4e5a6e">
+        <a href="{{ backHref }}">Evidence Flow</a><span style="color:#939db0">/</span>
+        <span style="font-family:'JetBrains Mono',monospace">R-WFO-118</span><span style="color:#939db0">/</span>
+        <span style="color:#1c2532">Stage 2 · Search &amp; Selection</span><span style="color:#939db0">·</span><a href="QuantBT 07 S3 Freeze.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px">next: S3 Freeze →</a>
+      </div>
+      <div style="font-family:Newsreader,Georgia,serif; font-size:22px; font-weight:300; letter-spacing:-.01em">Search &amp; Selection — how parameters were searched and selected</div>
+      <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0">Stage A searches on IS. The pool freezes. Stage B selects on the frozen pool. Information crosses the freeze line one way — unless the schedule lets OOS in, and then the claim says exactly that.</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex:none">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">demo tape · schema mirrors the r1a export — panels degrade when a field is missing, never infer</span>
+      <button onClick="{{ onCopy }}" style="border:1px solid #0f4c5c; border-radius:6px; background:transparent; color:#0f4c5c; padding:3px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase">{{ copyLabel }}</button>
+    </div>
+  </div>
+
+  <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05)">
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:9px 14px; border-bottom:1px solid #efede4">
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">optimization_mode</span>
+      <sc-for list="{{ modeOpts }}" as="m" hint-placeholder-count="5">
+        <button onClick="{{ m.onPick }}" title="{{ m.title }}" style="{{ m.style }}">{{ m.label }}</button>
+      </sc-for>
+      <span style="width:1px; height:18px; background:#e3e0d7; margin:0 4px"></span>
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">schedule</span>
+      <sc-for list="{{ schedOpts }}" as="sd" hint-placeholder-count="3">
+        <button onClick="{{ sd.onPick }}" title="{{ sd.title }}" style="{{ sd.style }}">{{ sd.label }}</button>
+      </sc-for>
+      <span style="margin-left:auto; font-size:10px; color:#939db0">one run is one mode — switching here opens another demo run; a real run locks its mode at submit</span>
+    </div>
+    <div style="display:flex; align-items:stretch">
+      <div style="flex:1; display:flex; flex-wrap:wrap; gap:8px 24px; padding:9px 14px">
+        <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">validation_claim</span><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; border-left:2px solid #9a6a1f; padding-left:6px">{{ claim.validation }}</span></div>
+        <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">chronological_claim</span><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px">{{ claim.chrono }}</span></div>
+        <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">oos_used_for_selection</span><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px">{{ claim.oosSel }}</span></div>
+        <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">OOS column state</span><span style="{{ claim.oosStateStyle }}">{{ claim.oosState }}</span></div>
+        <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">scoring_backend</span><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:{{ claim.backendColor }}">{{ claim.backend }}</span></div>
+        <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">candidate_selection_metric</span><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px">{{ claim.selector }} <span style="font-size:9px; color:{{ claim.selectorTagColor }}">{{ claim.selectorTag }}</span></span></div>
+      </div>
+      <div style="border-left:1px solid #efede4; padding:9px 14px; max-width:250px; display:flex; align-items:center">
+        <span style="font-size:10px; color:#4e5a6e; line-height:1.5">Two selector layers, two enums: <span style="font-family:'JetBrains Mono',monospace">optimization_mode</span> belongs to the walk-forward endpoint; <span style="font-family:'JetBrains Mono',monospace">CandidateSelector.mode</span> belongs to the optimization package. This screen never mixes them.</span>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:14px; padding:8px 14px; border-top:1px solid #efede4; background:#f4f2ec; border-radius:0 0 6px 6px; flex-wrap:wrap">
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0; flex:none">what this mode reads</span>
+      <sc-for list="{{ diagram }}" as="dg" hint-placeholder-count="6">
+        <span style="display:flex; flex-direction:column; gap:2px; align-items:center">
+          <span style="display:flex; gap:1px">
+            <span style="{{ dg.trainStyle }}"></span>
+            <span style="{{ dg.testStyle }}"></span>
+          </span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0">{{ dg.label }}</span>
+        </span>
+      </sc-for>
+      <span style="font-size:10.5px; color:#4e5a6e; line-height:1.5; flex:1; min-width:260px">{{ diagramNote }}</span>
+    </div>
+  </div>
+
+  <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px; display:flex; flex-direction:column; gap:10px; min-width:0; overflow-x:auto">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">search cinema — watch the selection happen · window × entry_z surface</span>
+      <button onClick="{{ onCinePlay }}" style="border:1px solid #0f4c5c; border-radius:6px; background:#0f4c5c; color:#ffffff; padding:4px 14px; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.05em">{{ cinePlayLabel }}</button>
+    </div>
+    <div style="display:flex; gap:16px; flex-wrap:wrap">
+      <div style="flex:1.6; min-width:480px; display:flex; flex-direction:column; gap:8px">
+        <div style="position:relative; height:300px; border:1px solid #e3e0d7; background:#fdfdfa; overflow:hidden">
+          <span style="{{ cineRingStyle }}"></span>
+          <sc-for list="{{ cinePts }}" as="cp" hint-placeholder-count="40">
+            <span title="{{ cp.title }}" style="{{ cp.style }}"></span>
+          </sc-for>
+          <span style="{{ cineStampStyle }}">POOL FROZEN · K = 52</span>
+          <span style="{{ cineDropStyle }}"></span>
+          <span style="position:absolute; left:6px; top:5px; font-size:9px; color:#939db0; font-family:'JetBrains Mono',monospace">↑ entry_z</span>
+          <span style="position:absolute; right:6px; bottom:4px; font-size:9px; color:#939db0; font-family:'JetBrains Mono',monospace">window →</span>
+        </div>
+        <div style="{{ cineSlotStyle }}">❖ {{ cineSlotText }}</div>
+      </div>
+      <div style="flex:1; min-width:300px; display:flex; flex-direction:column; gap:4px">
+        <sc-for list="{{ cineSteps }}" as="st" hint-placeholder-count="5">
+          <button onClick="{{ st.onPick }}" style="{{ st.style }}">
+            <span style="{{ st.numStyle }}">{{ st.n }}</span>
+            <span style="display:flex; flex-direction:column; gap:1px">
+              <span style="{{ st.tStyle }}">{{ st.t }}</span>
+              <span style="font-size:10.5px; color:#4e5a6e; line-height:1.45">{{ st.d }}</span>
+            </span>
+          </button>
+        </sc-for>
+        <span style="font-size:10px; color:#939db0; line-height:1.5; padding:4px 9px">The cinema replays immutable search artifacts in order — it never re-runs the sampler. Step 4 changes with the schedule above; that is the claim being made visible.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:minmax(0,1.08fr) 52px minmax(0,1fr); align-items:stretch; min-width:0">
+
+    <div style="display:flex; flex-direction:column; gap:12px; min-width:0">
+      <div style="display:flex; align-items:baseline; gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#7a8699; letter-spacing:.08em">STAGE A · SEARCH</span>
+        <span style="font-size:11px; color:#939db0">the sampler only sees IS — every row has oos_seen_by_optuna = false</span>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:6px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">A1 · search space as declared</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">config.parameter_space</span>
+        </div>
+        <div style="display:flex; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding-bottom:3px">
+          <span style="width:86px; flex:none">param</span><span style="width:112px; flex:none">kind</span><span style="width:96px; flex:none">low … high</span><span style="width:44px; flex:none; text-align:right">step</span><span style="width:56px; flex:none; text-align:right">levels</span><span style="flex:1; padding-left:14px">θ* and range position</span>
+        </div>
+        <sc-for list="{{ spaceRows }}" as="sp" hint-placeholder-count="6">
+          <div style="display:flex; align-items:center; font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:2px 0; border-bottom:1px solid #f4f2ec">
+            <span style="width:86px; flex:none">{{ sp.name }}</span>
+            <span style="width:112px; flex:none; color:#4e5a6e">{{ sp.kind }}</span>
+            <span style="width:96px; flex:none; color:#4e5a6e">{{ sp.range }}</span>
+            <span style="width:44px; flex:none; text-align:right; color:#4e5a6e">{{ sp.step }}</span>
+            <span style="width:56px; flex:none; text-align:right">{{ sp.levels }}</span>
+            <span style="flex:1; padding-left:14px; display:flex; align-items:center; gap:8px">
+              <span style="width:44px; flex:none; text-align:right; color:#1e7b4f">{{ sp.theta }}</span>
+              <span style="position:relative; flex:1; height:11px; border-bottom:1px solid #e3e0d7"><span style="{{ sp.tickStyle }}"></span></span>
+              <span style="{{ sp.noteStyle }}">{{ sp.note }}</span>
+            </span>
+          </div>
+        </sc-for>
+        <div style="display:flex; gap:4px 22px; flex-wrap:wrap; padding-top:5px">
+          <sc-for list="{{ coverage }}" as="cv" hint-placeholder-count="5">
+            <span style="display:flex; flex-direction:column; gap:1px"><span style="font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:#939db0">{{ cv.k }}</span><span style="{{ cv.style }}">{{ cv.v }}</span></span>
+          </sc-for>
+        </div>
+        <span style="font-size:10px; color:#9a6a1f; line-height:1.5">{{ coverageNote }}</span>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:6px">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">A2 · trial surface — {{ surfaceTitle }}</span>
+          <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
+            <span style="font-size:9px; color:#939db0">x</span>
+            <sc-for list="{{ axisXOpts }}" as="a" hint-placeholder-count="6"><button onClick="{{ a.onPick }}" style="{{ a.style }}">{{ a.label }}</button></sc-for>
+            <span style="font-size:9px; color:#939db0; padding-left:4px">y</span>
+            <sc-for list="{{ axisYOpts }}" as="a" hint-placeholder-count="6"><button onClick="{{ a.onPick }}" style="{{ a.style }}">{{ a.label }}</button></sc-for>
+          </span>
+        </div>
+        <div style="position:relative; height:250px; border:1px solid #e3e0d7; background:#fdfdfa">
+          <sc-for list="{{ surfacePts }}" as="p" hint-placeholder-count="60">
+            <button onClick="{{ p.onPick }}" title="{{ p.title }}" style="{{ p.style }}"></button>
+          </sc-for>
+          <span style="position:absolute; left:6px; top:5px; font-size:9px; color:#939db0; font-family:'JetBrains Mono',monospace">↑ {{ surfaceY }}</span>
+          <span style="position:absolute; right:6px; bottom:4px; font-size:9px; color:#939db0; font-family:'JetBrains Mono',monospace">{{ surfaceX }} →</span>
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:9.5px; color:#939db0">
+          <span style="display:flex; gap:4px; align-items:center"><span style="display:inline-block; width:44px; height:8px; background:linear-gradient(90deg,#dbe5e7,#0f4c5c)"></span>objective low → high</span>
+          <span style="display:flex; gap:4px; align-items:center"><span style="display:inline-block; width:9px; height:9px; border-radius:50%; border:2px solid #1e7b4f"></span>θ* {{ thetaTrial }}</span>
+          <span style="display:flex; gap:4px; align-items:center"><span style="display:inline-block; width:9px; height:9px; border-radius:50%; border:2px solid #b43a3a"></span>best IS {{ bestTrial }}</span>
+          <span style="display:flex; gap:4px; align-items:center"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; border:1px dashed #939db0"></span>pruned = duplicate</span>
+          <span style="display:flex; gap:4px; align-items:center"><span style="display:inline-block; width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 3px rgba(154,106,31,.3)"></span>click a point → lineage lights up</span>
+        </div>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:8px">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">A3 · progression — where the sampler contracts</span>
+          <span style="display:flex; gap:6px; align-items:center"><span style="font-size:9px; color:#939db0">param</span>
+            <sc-for list="{{ concOpts }}" as="a" hint-placeholder-count="6"><button onClick="{{ a.onPick }}" style="{{ a.style }}">{{ a.label }}</button></sc-for>
+          </span>
+        </div>
+        <div style="display:flex; gap:14px; align-items:stretch">
+          <div style="flex:1.2; min-width:0; display:flex; flex-direction:column; gap:4px">
+            <span style="font-size:9.5px; color:#939db0">objective in trial order · gold = best-so-far</span>
+            <div style="position:relative; height:130px; border:1px solid #e3e0d7; background:#fdfdfa">
+              <sc-for list="{{ progPts }}" as="p" hint-placeholder-count="60"><span title="{{ p.title }}" style="{{ p.style }}"></span></sc-for>
+            </div>
+            <div style="position:relative; height:12px; border:1px solid #e3e0d7; background:#f7f4ec">
+              <sc-for list="{{ prunedRail }}" as="r" hint-placeholder-count="10"><span title="{{ r.title }}" style="{{ r.style }}"></span></sc-for>
+            </div>
+            <span style="font-size:9.5px; color:#4e5a6e">{{ railNote }}</span>
+          </div>
+          <div style="flex:1; min-width:0; border-left:1px solid #efede4; padding-left:14px; display:flex; flex-direction:column; gap:4px">
+            <span style="font-size:9.5px; color:#939db0">{{ concTitle }}</span>
+            <div style="position:relative; height:130px; border:1px solid #e3e0d7; background:#fdfdfa">
+              <sc-for list="{{ concPts }}" as="p" hint-placeholder-count="60"><span title="{{ p.title }}" style="{{ p.style }}"></span></sc-for>
+              <span style="{{ concThetaStyle }}"></span>
+            </div>
+            <span style="font-size:9.5px; color:#4e5a6e; line-height:1.45">{{ concNote }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:6px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">A4 · per param — sampled regions, mean objective per region</span>
+          <span style="font-size:9.5px; color:#939db0">darker bar = higher objective · green tick = θ*</span>
+        </div>
+        <div style="display:flex; flex-wrap:wrap">
+          <sc-for list="{{ dists }}" as="d" hint-placeholder-count="6">
+            <div style="width:33.33%; padding:6px 14px 8px 0; display:flex; flex-direction:column; gap:3px">
+              <div style="display:flex; justify-content:space-between; align-items:baseline"><span style="font-family:'JetBrains Mono',monospace; font-size:10.5px">{{ d.name }}</span><span style="font-size:9px; color:#939db0">{{ d.summary }}</span></div>
+              <div style="position:relative; display:flex; gap:1px; align-items:flex-end; height:52px; border-bottom:1px solid #e3e0d7">
+                <sc-for list="{{ d.bins }}" as="b" hint-placeholder-count="12"><span title="{{ b.title }}" style="{{ b.style }}"></span></sc-for>
+                <span style="{{ d.thetaStyle }}"></span>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0"><span>{{ d.lo }}</span><span style="color:#1e7b4f">θ* {{ d.theta }}</span><span>{{ d.hi }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="border-top:1px solid #efede4; padding-top:8px; display:flex; flex-direction:column; gap:3px">
+          <div style="display:flex; justify-content:space-between; align-items:baseline"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">A5 · which params drive the objective</span><span style="font-size:9px; color:#9a6a1f">Spearman proxy, not fANOVA</span></div>
+          <sc-for list="{{ importance }}" as="im" hint-placeholder-count="6">
+            <span style="display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:10px">
+              <span style="width:86px; flex:none; color:#4e5a6e">{{ im.name }}</span>
+              <span style="width:48px; flex:none; text-align:right; color:{{ im.color }}">{{ im.rho }}</span>
+              <span style="flex:1; height:8px; background:#f4f2ec; border:1px solid #efede4; position:relative"><span style="{{ im.barStyle }}"></span></span>
+            </span>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:6px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">A6 · parameter interactions — top-decile trials</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">search_diagnostics.param_interactions</span>
+        </div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap">
+          <div style="flex:1; min-width:280px; display:flex; flex-direction:column; gap:2px">
+            <sc-for list="{{ interRows }}" as="ir" hint-placeholder-count="5">
+              <span style="display:flex; gap:2px; align-items:center">
+                <span style="width:60px; flex:none; font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#4e5a6e">{{ ir.name }}</span>
+                <sc-for list="{{ ir.cells }}" as="ic" hint-placeholder-count="5">
+                  <span title="{{ ic.title }}" style="{{ ic.style }}">{{ ic.label }}</span>
+                </sc-for>
+              </span>
+            </sc-for>
+            <span style="display:flex; gap:2px"><span style="width:60px; flex:none"></span>
+              <sc-for list="{{ interHead }}" as="ih" hint-placeholder-count="5"><span style="flex:1; text-align:center; font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0">{{ ih.label }}</span></sc-for>
+            </span>
+            <span style="font-size:10px; color:#939db0; line-height:1.5; padding-top:3px">|Spearman ρ| between params among top-decile trials — a dark pair trades off inside the good region. Published by the engine; the UI never mines correlations itself.</span>
+          </div>
+          <div style="flex:1.1; min-width:300px; border-left:1px solid #efede4; padding-left:16px; display:flex; flex-direction:column; gap:3px">
+            <span style="font-size:9.5px; color:#939db0">window × entry_z — mean IS objective per cell</span>
+            <sc-for list="{{ heatRows }}" as="hr" hint-placeholder-count="6">
+              <span style="display:flex; gap:1px">
+                <sc-for list="{{ hr.cells }}" as="hc" hint-placeholder-count="10"><span title="{{ hc.title }}" style="{{ hc.style }}"></span></sc-for>
+              </span>
+            </sc-for>
+            <span style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0"><span>window 12</span><span>72</span></span>
+            <span style="font-size:10px; color:#939db0; line-height:1.5">The plateau the cinema ring lands on — wide and calm beats a sharp peak one cell wide.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; align-items:center; padding:34px 0 0; min-width:0; overflow:hidden">
+      <div style="flex:1; width:0; border-left:2px dashed #9a6a1f"></div>
+      <div style="flex:none; display:flex; flex-direction:column; align-items:center; gap:6px; padding:10px 0">
+        <span style="writing-mode:vertical-rl; transform:rotate(180deg); font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; letter-spacing:.14em; color:#9a6a1f; white-space:nowrap">{{ freezeLabel }}</span>
+        <span title="{{ freezeArrowTitle }}" style="{{ freezeArrowStyle }}">{{ freezeArrow }}</span>
+      </div>
+      <div style="flex:1; width:0; border-left:2px dashed #9a6a1f"></div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px; min-width:0">
+      <div style="display:flex; align-items:baseline; gap:10px">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#9a6a1f; letter-spacing:.08em">STAGE B · SELECTION</span>
+        <span style="font-size:11px; color:#939db0">runs on the FROZEN pool — {{ stageBSub }}</span>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:5px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">B1 · pool freeze</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">pool_frozen_at {{ frozenAt }}</span>
+        </div>
+        <sc-for list="{{ funnel }}" as="fn" hint-placeholder-count="5">
+          <span style="display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:10.5px">
+            <span style="width:158px; flex:none; color:#4e5a6e; font-family:Inter,sans-serif; font-size:10.5px">{{ fn.label }}</span>
+            <span style="{{ fn.barStyle }}"></span>
+            <span style="width:40px; flex:none; text-align:right">{{ fn.n }}</span>
+            <span style="flex:1; font-size:9px; color:#939db0; padding-left:6px">{{ fn.note }}</span>
+          </span>
+        </sc-for>
+        <span style="border:1px solid #9a6a1f; background:#f4ecdb; color:#9a6a1f; padding:5px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.6; margin-top:4px">{{ kFormula }}</span>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:6px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">B2 · the formula of {{ modeName }} — every term opens</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ formulaSource }}</span>
+        </div>
+        <span style="border-left:2px solid #0f4c5c; padding:2px 0 2px 10px; overflow-x:auto">{{ formulaTex }}</span>
+        <sc-for list="{{ formulaTerms }}" as="ft" hint-placeholder-count="5">
+          <span style="display:flex; align-items:baseline; gap:9px; font-size:10.5px; padding:2px 0; border-bottom:1px solid #f4f2ec">
+            <span style="width:150px; flex:none; font-family:'JetBrains Mono',monospace; color:#4e5a6e">{{ ft.k }}</span>
+            <span style="flex:1; color:#939db0">{{ ft.detail }}</span>
+            <span style="{{ ft.style }}">{{ ft.v }}</span>
+          </span>
+        </sc-for>
+
+        <sc-if value="{{ showM1 }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; gap:14px; padding-top:6px">
+            <div style="flex:1; display:flex; flex-direction:column; gap:3px">
+              <span style="font-size:9.5px; color:#939db0">per-fold decay of θ* — the sign matters</span>
+              <sc-for list="{{ m1Bars }}" as="b" hint-placeholder-count="5">
+                <span style="display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:9.5px">
+                  <span style="width:52px; flex:none; color:#4e5a6e">{{ b.fold }}</span>
+                  <span style="position:relative; flex:1; height:10px; background:#f4f2ec">
+                    <span style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:#c9c5ba"></span>
+                    <span style="{{ b.barStyle }}"></span>
+                  </span>
+                  <span style="width:44px; flex:none; text-align:right; color:{{ b.color }}">{{ b.v }}</span>
+                </span>
+              </sc-for>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:3px">
+              <span style="font-size:9.5px; color:#939db0">pool on the S_IS × S̄_OOS plane · diagonal = zero decay</span>
+              <div style="position:relative; height:118px; border:1px solid #e3e0d7; background:#fdfdfa; overflow:hidden">
+                <span style="position:absolute; left:0; bottom:0; width:141%; height:1px; background:#c9c5ba; transform:rotate(-45deg); transform-origin:0 0"></span>
+                <sc-for list="{{ m1Scatter }}" as="p" hint-placeholder-count="24"><span title="{{ p.title }}" style="{{ p.style }}"></span></sc-for>
+              </div>
+              <span style="font-size:9px; color:#939db0">below the diagonal = positive decay (IS &gt; OOS)</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showM2 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:4px; padding-top:6px">
+            <span style="font-size:9.5px; color:#939db0">synthetic Sharpe distribution of θ* — {{ m2N }} stationary-bootstrap paths · no OOS term anywhere in J₂</span>
+            <div style="display:flex; gap:1px; align-items:flex-end; height:84px; border-bottom:1px solid #e3e0d7">
+              <sc-for list="{{ m2Bins }}" as="b" hint-placeholder-count="18"><span title="{{ b.title }}" style="{{ b.style }}"></span></sc-for>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0"><span>{{ m2Lo }}</span><span style="color:#9a6a1f">μ_boot {{ m2Mu }}</span><span>{{ m2Hi }}</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showM3 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:3px; padding-top:6px">
+            <span style="font-size:9.5px; color:#939db0">clusters on the normalized [0,1] param space — a medoid is a real trial; a centroid may NEVER have been evaluated</span>
+            <div style="display:flex; font-size:9px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding-bottom:2px">
+              <span style="width:44px; flex:none">cluster</span><span style="width:40px; flex:none; text-align:right">|C|</span><span style="width:52px; flex:none; text-align:right">Q_C</span><span style="width:52px; flex:none; text-align:right">M_C</span><span style="width:52px; flex:none; text-align:right">V_C</span><span style="width:56px; flex:none; text-align:right">P_C</span><span style="flex:1; padding-left:12px">selected via</span>
+            </div>
+            <sc-for list="{{ m3Rows }}" as="r" hint-placeholder-count="3">
+              <div style="{{ r.style }}">
+                <span style="width:44px; flex:none">{{ r.id }}</span><span style="width:40px; flex:none; text-align:right">{{ r.size }}</span><span style="width:52px; flex:none; text-align:right">{{ r.q }}</span><span style="width:52px; flex:none; text-align:right">{{ r.m }}</span><span style="width:52px; flex:none; text-align:right">{{ r.v }}</span><span style="width:56px; flex:none; text-align:right; font-weight:600">{{ r.p }}</span><span style="flex:1; padding-left:12px; color:#4e5a6e">{{ r.via }}</span>
+              </div>
+            </sc-for>
+            <span style="font-size:9.5px; color:#9a6a1f">fallback_reasons = [] — a valid cluster exists. No cluster at all ⇒ fallback to best trial, and that is a diagnostic signal (surface too sharp), not a silent error.</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showM4 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:3px; padding-top:6px">
+            <span style="font-size:9.5px; color:#939db0">candidate × IS subperiod shard — darker cell = higher shard Sharpe · no cell is OOS</span>
+            <sc-for list="{{ m4Rows }}" as="r" hint-placeholder-count="6">
+              <span style="display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:9.5px">
+                <span style="width:56px; flex:none; color:{{ r.idColor }}">{{ r.id }}</span>
+                <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="6"><span title="{{ c.title }}" style="{{ c.style }}"></span></sc-for>
+                <span style="width:40px; flex:none; text-align:right">{{ r.mt }}</span>
+                <span style="width:40px; flex:none; text-align:right; color:#4e5a6e">{{ r.qt }}</span>
+                <span style="width:40px; flex:none; text-align:right; color:#4e5a6e">{{ r.dt }}</span>
+                <span style="width:44px; flex:none; text-align:right; font-weight:600">{{ r.j }}</span>
+              </span>
+            </sc-for>
+            <span style="display:flex; gap:6px; font-family:'JetBrains Mono',monospace; font-size:8.5px; color:#939db0"><span style="width:56px; flex:none"></span><span style="flex:1">← 6 IS shards</span><span style="width:40px; text-align:right">M_T</span><span style="width:40px; text-align:right">Q_T</span><span style="width:40px; text-align:right">D_T</span><span style="width:44px; text-align:right">J₄</span></span>
+            <span style="font-size:9.5px; color:#939db0">B(θ) = 0.000 <span style="color:#9a6a1f">flag off</span> · C(θ) = 0.000 <span style="color:#9a6a1f">flag off</span> — terms render even at zero, never hidden.</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showM5 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:4px; padding-top:6px">
+            <span style="border:1px dashed #b43a3a; background:#f7e8e8; color:#b43a3a; padding:6px 10px; font-size:10.5px; line-height:1.55">train_index = test_index = full_index. The fold navigator has one entry. The string "OOS" appears in no label of this mode — the ledger column included. <span style="font-family:'JetBrains Mono',monospace">full_sample_used_for_selection = true</span>.</span>
+            <sc-for list="{{ m5Rows }}" as="r" hint-placeholder-count="4">
+              <span style="display:flex; gap:9px; font-size:10.5px; padding:2px 0; border-bottom:1px solid #f4f2ec"><span style="width:170px; flex:none; font-family:'JetBrains Mono',monospace; color:#4e5a6e">{{ r.k }}</span><span style="flex:1; color:#939db0">{{ r.v }}</span></span>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:8px">
+        <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">B3 · best trial ≠ selected params</span>
+        <div style="display:flex; gap:10px">
+          <div style="flex:1; border:1px solid #e3e0d7; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:4px">
+            <span style="display:flex; justify-content:space-between; align-items:baseline"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#b43a3a">best_trial {{ bestTrial }}</span><span style="font-size:9px; color:#939db0">rank 1 by IS</span></span>
+            <sc-for list="{{ bestCard }}" as="r" hint-placeholder-count="4"><span style="display:flex; justify-content:space-between; gap:10px; font-family:'JetBrains Mono',monospace; font-size:10.5px"><span style="color:#939db0; flex:none">{{ r.k }}</span><span style="color:{{ r.color }}; flex:1; text-align:right">{{ r.v }}</span></span></sc-for>
+          </div>
+          <div style="flex:1; border:1px solid #9a6a1f; border-radius:6px; background:#fdfbf5; padding:10px 12px; display:flex; flex-direction:column; gap:4px">
+            <span style="display:flex; justify-content:space-between; align-items:baseline"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">selected {{ thetaTrial }}</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; letter-spacing:.08em; color:#9a6a1f; border:1px solid #9a6a1f; padding:0 5px">SELECTED BY POLICY</span></span>
+            <sc-for list="{{ selCard }}" as="r" hint-placeholder-count="4"><span style="display:flex; justify-content:space-between; gap:10px; font-family:'JetBrains Mono',monospace; font-size:10.5px"><span style="color:#939db0; flex:none">{{ r.k }}</span><span style="color:{{ r.color }}; flex:1; text-align:right">{{ r.v }}</span></span></sc-for>
+          </div>
+        </div>
+        <span style="font-size:10.5px; color:#4e5a6e; line-height:1.55">{{ bestVsSelNote }}</span>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; min-width:0; overflow-x:auto; gap:6px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="display:inline-flex; align-items:center; gap:8px">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">B4 · θ* journey — ổn định qua các fold</span>
+            <sc-for list="{{ jScaleOpts }}" as="js" hint-placeholder-count="2"><button title="scale demo — how this panel reads at WFO scale" onClick="{{ js.onPick }}" style="{{ js.style }}">{{ js.label }}</button></sc-for>
+          </span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ journeySource }}</span>
+        </div>
+        <sc-if value="{{ hasJourney }}" hint-placeholder-val="{{ true }}">
+          <sc-for list="{{ journey }}" as="j" hint-placeholder-count="5">
+            <span style="display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:10px">
+              <span style="width:86px; flex:none; color:#4e5a6e">{{ j.name }}</span>
+              <span style="position:relative; flex:1; height:22px; background:#fdfdfa; border:1px solid #efede4">
+                <sc-for list="{{ j.dots }}" as="dt" hint-placeholder-count="5"><span title="{{ dt.title }}" style="{{ dt.style }}"></span></sc-for>
+              </span>
+              <span style="width:110px; flex:none; text-align:right; color:{{ j.freqColor }}">{{ j.freq }}</span>
+            </span>
+          </sc-for>
+          <span style="font-size:9.5px; color:#939db0; line-height:1.5">{{ journeyCaption }}</span>
+        </sc-if>
+        <sc-if value="{{ noJourney }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:10.5px; color:#939db0; padding:6px 0">{{ journeyNote }}</span>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+    <div style="display:flex; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #e3e0d7">
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">trial ledger — around θ* · Optuna trials only; candidate replays are a separate ledger</span>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ ledgerMeta }}</span>
+    </div>
+    <div style="display:flex; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding:5px 12px">
+      <span style="width:62px; flex:none">trial</span><span style="width:50px; flex:none">seed</span><span style="width:96px; flex:none">state</span><span style="width:76px; flex:none; text-align:right">S_IS</span><span style="width:120px; flex:none; text-align:right">{{ oosColHead }}</span><span style="width:110px; flex:none; padding-left:14px">digest</span><span style="flex:1; padding-left:14px">note</span>
+    </div>
+    <sc-for list="{{ ledgerRows }}" as="lr" hint-placeholder-count="12">
+      <button onClick="{{ lr.onPick }}" style="{{ lr.style }}">
+        <span style="width:62px; flex:none">{{ lr.id }}</span>
+        <span style="width:50px; flex:none; color:#939db0">{{ lr.seed }}</span>
+        <span title="{{ lr.stateTitle }}" style="width:96px; flex:none; font-size:9px; color:{{ lr.stateColor }}">{{ lr.state }}</span>
+        <span style="width:76px; flex:none; text-align:right">{{ lr.is }}</span>
+        <span style="width:120px; flex:none; text-align:right; color:{{ lr.oosColor }}">{{ lr.oos }}</span>
+        <span style="width:110px; flex:none; padding-left:14px; color:#0f4c5c">{{ lr.digest }}</span>
+        <span style="flex:1; padding-left:14px; color:#939db0; text-align:left">{{ lr.note }}</span>
+      </button>
+    </sc-for>
+    <div style="padding:6px 12px; border-top:1px solid #efede4; font-size:10px; color:#939db0">PRUNED = a duplicate under <span style="font-family:'JetBrains Mono',monospace">duplicate_policy=prune</span>, not epoch pruning. The OOS column has four states from the mode × schedule matrix — never a boolean. The UI recomputes no objective.</div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:3px; border-top:1px solid #e3e0d7; padding-top:8px">
+    <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0">rules of this screen</span>
+    <span style="font-size:11px; color:#4e5a6e; line-height:1.6">One run is one mode. Switching modes above opens another demo run to learn the reading; a real run wanting another mode means a new attempt. Changing a selector in the UI is a policy preview — it never writes onto frozen params. Where a field is missing (SelectionTraceV1, search_diagnostics) the panel renders degraded: the frontend never clusters, never computes J.</span>
+  </div>
+</div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mode&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;mode_1_decay&quot;, &quot;mode_2_sbb&quot;, &quot;mode_3_flat_minima&quot;, &quot;mode_4_is_only_robust&quot;, &quot;mode_5_full_robust&quot;], &quot;default&quot;: &quot;mode_1_decay&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo run&quot;}, &quot;schedule&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;per_fold_causal&quot;, &quot;per_fold_decay&quot;, &quot;global&quot;], &quot;default&quot;: &quot;per_fold_causal&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo run&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.SPACE = [
+      { name: "window", kind: "suggest_int", low: 12, high: 72, step: 2, levels: "31" },
+      { name: "entry_z", kind: "suggest_float", low: 0.6, high: 2.6, step: 0.1, levels: "21" },
+      { name: "atr_mult", kind: "float · dynamic", low: 1.0, high: 6.0, step: null, levels: "∞" },
+      { name: "risk_pct", kind: "suggest_float", low: 0.25, high: 2.0, step: 0.25, levels: "8" },
+      { name: "cooldown", kind: "suggest_int", low: 0, high: 24, step: 4, levels: "7" },
+      { name: "use_trail", kind: "categorical", low: 0, high: 1, step: 1, levels: "2" }
+    ];
+    this.MODES = {
+      mode_1_decay: {
+        title: "J = OOS − λσ − γ·decay⁺", schedules: ["per_fold_decay", "per_fold_causal", "global"], defSched: "per_fold_causal",
+        selector: "robust_decay", selectorTag: "CONFIRMED", backend: "python", theta: 143, best: 517, folds: 5,
+        expr: "d_k(θ) = S_IS,k − S_OOS,k      J₁(θ) = S̄_OOS(θ) − λ·σ_d(θ) − γ·max(0, d̄(θ))      λ = γ = 0.5",
+        source: "methodology/walk_forward.md §7, §13",
+        terms: [
+          { k: "S̄_OOS", detail: "mean OOS sharpe across the pool member's 5 folds", v: "1.186" },
+          { k: "σ_d", detail: "std of decay across folds", v: "0.093" },
+          { k: "d̄", detail: "mean decay = S̄_IS − S̄_OOS · sign matters", v: "+0.181" },
+          { k: "λ·σ_d + γ·max(0,d̄)", detail: "instability penalty + positive-decay penalty · λ = γ = 0.5", v: "−0.137" },
+          { k: "J₁ total", detail: "θ*'s selection score — no panel keeps another mode's symbols", v: "1.049" }
+        ]
+      },
+      mode_2_sbb: {
+        title: "bootstrap IS · scoring proxy", schedules: ["global"], defSched: "global",
+        selector: "sbb_default", selectorTag: "INFERRED", backend: "proxy (forced)", theta: 388, best: 129, folds: 0,
+        expr: "J₂(θ) = μ_boot(θ) − λ_sbb·max(0, d_boot(θ)) − η_sbb·σ_boot(θ)      sbb_samples = 256 · block 24",
+        source: "stationary bootstrap · sbb_simulation = stationary",
+        terms: [
+          { k: "μ_boot", detail: "mean Sharpe of 256 synthetic IS paths", v: "1.212" },
+          { k: "σ_boot", detail: "std of the synthetic distribution", v: "0.284" },
+          { k: "d_boot", detail: "S_IS − μ_boot · penalizes a raw score above its own distribution", v: "+0.096" },
+          { k: "η_sbb·σ_boot + λ_sbb·d_boot⁺", detail: "λ_sbb = 0.5 · η_sbb = 0.25", v: "−0.119" },
+          { k: "J₂ total", detail: "NO OOS term — any S_OOS column elsewhere is report only", v: "1.093" }
+        ]
+      },
+      mode_3_flat_minima: {
+        title: "cluster top-IS · plateau", schedules: ["global"], defSched: "global",
+        selector: "flat_selector = medoid", selectorTag: "CONFIRMED", backend: "python", theta: 217, best: 402, folds: 0,
+        expr: "P_C = Q_C + w_m·M_C − w_s·V_C + w_n·log(1 + |C|)      DBSCAN-style on the normalized [0,1] param space · flat_eps 0.12",
+        source: "flat_top_fraction 0.10 · plateau_quantile 0.25",
+        terms: [
+          { k: "Q_C", detail: "objective 25% quantile of winning cluster C1", v: "1.310" },
+          { k: "w_m·M_C", detail: "median objective · w_m = 0.5", v: "+0.684" },
+          { k: "w_s·V_C", detail: "in-cluster variance penalty · w_s = 1.0", v: "−0.041" },
+          { k: "w_n·log(1+|C|)", detail: "cluster size bonus · |C1| = 14", v: "+0.271" },
+          { k: "P_C1 total", detail: "winning cluster — selected via medoid, a real trial", v: "2.224" }
+        ]
+      },
+      mode_4_is_only_robust: {
+        title: "IS subperiod robustness", schedules: ["per_fold_causal", "global"], defSched: "per_fold_causal",
+        selector: "is_only_robust (locked)", selectorTag: "CONFIRMED", backend: "python", theta: 452, best: 88, folds: 5,
+        expr: "T(θ) = M_T + w_q·Q_T − w_d·D_T      J₄(θ) = w_T·T(θ) + w_P·P(θ) − B(θ) − C(θ)      is_subperiods = 6",
+        source: "q25_weight 0.5 · dispersion_penalty 1.0",
+        terms: [
+          { k: "M_T", detail: "median Sharpe across 6 IS subperiods", v: "1.240" },
+          { k: "w_q·Q_T", detail: "Q25 subperiod · w_q = 0.5", v: "+0.512" },
+          { k: "w_d·D_T", detail: "MAD across subperiods · w_d = 1.0", v: "−0.117" },
+          { k: "B(θ) · C(θ)", detail: "bootstrap / complexity penalty — flag off, still rendered", v: "0.000 · 0.000" },
+          { k: "J₄ total", detail: "w_T = 0.7 · w_P = 0.3", v: "1.318" }
+        ]
+      },
+      mode_5_full_robust: {
+        title: "full sample · train = test", schedules: ["global"], defSched: "global",
+        selector: "full_robust", selectorTag: "CONFIRMED", backend: "python", theta: 301, best: 301, folds: 0,
+        expr: "J₅(θ) = robustness over the entire sample — no window is withheld",
+        source: "sub-selectors: full_robust · full_plateau_robust · full_temporal_robust · full_best",
+        terms: [
+          { k: "M_full", detail: "median Sharpe across 8 temporal shards of the FULL sample", v: "1.305" },
+          { k: "plateau", detail: "neighborhood density around θ*", v: "0.66" },
+          { k: "J₅ total", detail: "calibration score — not OOS evidence", v: "1.221" },
+          { k: "full_sample_used_for_selection", detail: "must render next to the claim", v: "true" }
+        ]
+      }
+    };
+    this.CLAIMMX = {
+      "mode_1_decay|per_fold_decay": { validation: "selection_adjusted_oos", chrono: "selection_adjusted_outer_oos", oosSel: "true", oosState: "selection input", arrow: "decay" },
+      "mode_1_decay|per_fold_causal": { validation: "strict_nested_fold_local_retraining", chrono: "strict_outer_oos_after_frozen_selection", oosSel: "false", oosState: "withheld", arrow: "none" },
+      "mode_1_decay|global": { validation: "walk_forward_oos (compat)", chrono: "retrospective multi-fold calibration", oosSel: "true (retrospective)", oosState: "retrospective", arrow: "retro" },
+      "mode_2_sbb|global": { validation: "train-only robustness stress", chrono: "not an OOS proof", oosSel: "false (IS-only objective)", oosState: "report only", arrow: "none" },
+      "mode_3_flat_minima|global": { validation: "IS-only surface geometry", chrono: "not an OOS validation", oosSel: "false", oosState: "report only", arrow: "none" },
+      "mode_4_is_only_robust|per_fold_causal": { validation: "strict outer OOS if strategy causal — INFERRED", chrono: "strict after frozen selection", oosSel: "false", oosState: "report only", arrow: "none" },
+      "mode_4_is_only_robust|global": { validation: "walk_forward_oos (compat)", chrono: "retrospective multi-fold calibration", oosSel: "true (retrospective)", oosState: "retrospective", arrow: "retro" },
+      "mode_5_full_robust|global": { validation: "none_full_sample_calibration", chrono: "not a validation protocol", oosSel: "n/a — train = test", oosState: "n/a", arrow: "na" }
+    };
+    this.SCHED_REASON = {
+      per_fold_decay: "needs per-fold OOS ranking — this mode's objective is IS-only or has no folds",
+      per_fold_causal: "needs nested inner folds per fold — this mode does not define them",
+      global: ""
+    };
+    this.trialCache = {}; this.cineCache = {};
+    const mode = props.mode || "mode_1_decay";
+    this.state = { mode, schedule: props.schedule || this.MODES[mode].defSched, axisX: "window", axisY: "entry_z", conc: "window", pick: null, copied: false, cinePhase: 1, cineRun: false };
+    this.applyHash();
+  }
+  applyHash() {
+    const h = this.readHash();
+    if (h.mode && this.MODES[h.mode]) this.state.mode = h.mode;
+    if (h.schedule) this.state.schedule = h.schedule;
+    if (!this.MODES[this.state.mode].schedules.includes(this.state.schedule)) this.state.schedule = this.MODES[this.state.mode].defSched;
+    const pk = h.pick || h.trial; if (pk) this.state.pick = parseInt(pk, 10) || null;
+  }
+  rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  trials(mode) {
+    if (this.trialCache[mode]) return this.trialCache[mode];
+    const M = this.MODES[mode]; const seedBase = Object.keys(this.MODES).indexOf(mode) + 11;
+    const r = this.rng(seedBase * 97); const out = []; const seeds = ["—", "41", "42", "43", "44"];
+    for (let i = 1; i <= 600; i++) {
+      const p = {};
+      this.SPACE.forEach(sp => {
+        let v = sp.low + r() * (sp.high - sp.low);
+        if (sp.step) v = Math.round((v - sp.low) / sp.step) * sp.step + sp.low;
+        p[sp.name] = +v.toFixed(2);
+      });
+      const shape = 1.4 - Math.abs(p.window - 46) / 60 - Math.abs(p.entry_z - 1.6) / 3 + (r() - 0.5) * 0.55 + 0.35 * (1 - Math.exp(-i / 200));
+      const pruned = r() < 0.09; const infeasible = !pruned && r() < 0.14;
+      out.push({ id: i, seed: seeds[i % 5], p, is: +shape.toFixed(3), oos: +(shape - 0.15 - r() * 0.3).toFixed(3), pruned, infeasible });
+    }
+    const t = out[M.theta - 1]; t.pruned = false; t.infeasible = false; t.is = mode === "mode_1_decay" ? 1.367 : 1.34; t.oos = 1.186;
+    t.p = { window: 46, entry_z: 1.6, atr_mult: 2.8, risk_pct: 0.75, cooldown: 6, use_trail: 1 };
+    const b = out[M.best - 1]; b.pruned = false; b.infeasible = false; b.is = 1.51 + (mode === "mode_5_full_robust" ? -0.14 : 0); b.oos = 0.82;
+    this.trialCache[mode] = out; return out;
+  }
+  digest(id) { return "prm_" + ((id * 2654435761 % 0xffffff) >>> 0).toString(16).padStart(6, "0"); }
+  componentWillUnmount() { if (this.cineT) clearInterval(this.cineT); }
+  cine(mode) {
+    if (this.cineCache[mode]) return this.cineCache[mode];
+    const r = this.rng(mode.length * 13 + 5);
+    const pts = [];
+    for (let i = 0; i < 160; i++) {
+      let x, y;
+      if (i < 60) { x = 3 + r() * 94; y = 3 + r() * 94; }
+      else { x = 56.7 + (r() + r() - 1) * 19; y = 50 + (r() + r() - 1) * 23; }
+      x = Math.max(2.5, Math.min(97.5, x)); y = Math.max(2.5, Math.min(97.5, y));
+      const dist = Math.hypot((x - 56.7) / 48, (y - 50) / 48);
+      pts.push({ idx: i, x, y, is: 1.32 - dist * 0.85 + (r() - 0.5) * 0.28 });
+    }
+    const sorted = pts.slice().sort((a, b) => b.is - a.is);
+    sorted.slice(0, 20).forEach((p, ri) => { p.pool = true; p.good = ri % 3 !== 1; });
+    const th = sorted[0]; th.theta = true; th.good = true; th.x = 56.7; th.y = 50;
+    this.cineCache[mode] = pts; return pts;
+  }
+  cinePlay() {
+    if (this.cineT) { clearInterval(this.cineT); this.cineT = null; this.setState({ cineRun: false }); return; }
+    this.setState({ cinePhase: 1, cineRun: true });
+    this.cineT = setInterval(() => {
+      if (this.state.cinePhase >= 5) { clearInterval(this.cineT); this.cineT = null; this.setState({ cineRun: false }); return; }
+      this.setState({ cinePhase: this.state.cinePhase + 1 });
+    }, 1500);
+  }
+  cinemaVals() {
+    const s = this.state; const M = this.MODES[s.mode];
+    const isM5 = s.mode === "mode_5_full_robust";
+    const ph = s.cinePhase;
+    const pts = this.cine(s.mode);
+    const RAMP = ["#dbe5e7", "#a8c6ce", "#6b9ea8", "#3d7a86", "#0f4c5c"];
+    const cinePts = pts.filter(p => ph >= 2 || p.idx < 60).map(p => {
+      let bg = "rgba(15,76,92,.35)", border = "0", op = "1", z = 1, sz = 5;
+      if (ph >= 3 && p.pool) { border = "1.5px solid #9a6a1f"; bg = "#f4ecdb"; sz = 7; z = 2; }
+      if (ph >= 4 && p.pool) { border = "2px solid " + (p.good ? "#1e7b4f" : "#b43a3a"); bg = p.good ? "#e3f1e9" : "#f7e8e8"; }
+      if (ph >= 4 && !p.pool) op = ".16";
+      if (p.theta) { sz = ph >= 5 ? 12 : ph >= 3 ? 8 : 5; z = 4; if (ph >= 5) { bg = "#9a6a1f"; border = "2px solid #9a6a1f"; } }
+      return {
+        title: p.theta ? "θ* — trial 143" : "trial ~" + (p.idx * 3 + 1) + (p.pool ? " · frozen pool" : ""),
+        style: "position:absolute; left:" + p.x.toFixed(1) + "%; top:" + p.y.toFixed(1) + "%; width:" + sz + "px; height:" + sz + "px; margin:-" + (sz / 2) + "px 0 0 -" + (sz / 2) + "px; border-radius:50%; background:" + bg + "; border:" + border + "; opacity:" + op + "; z-index:" + z + "; transition:all .6s ease;" + (p.theta && ph >= 5 ? " box-shadow:0 0 0 6px rgba(154,106,31,.22);" : "")
+      };
+    });
+    const rw = ph >= 3 ? 30 : 52; const rh = ph >= 3 ? 34 : 60;
+    const step4 = isM5 ? { t: "full-sample scoring", d: "robustness on the same bars — no second window exists, nothing can be called OOS" }
+      : s.schedule === "per_fold_decay" ? { t: "OOS ranking", d: "the frozen pool is ranked on this fold's OOS — green survived, red decayed. This entry is exactly what downgrades the claim to selection-adjusted" }
+      : s.schedule === "global" ? { t: "retrospective scoring", d: "the pool is rescored after the full span was read — evidence for reports, never for deployment" }
+      : { t: "inner decay check", d: "decay measured on nested inner folds only — the outer OOS stays sealed until its single read at Stage 4" };
+    const stepDefs = [
+      { t: "sample", d: "TPE scatters wide across the declared space — every dot scored on IS only" },
+      { t: "contract", d: "the sampler concentrates where IS looks good — the dashed ring closes in" },
+      { t: "pool freeze", d: "top-IS K = 52 outlined and FROZEN — the one-way boundary every claim rests on" },
+      step4,
+      { t: "freeze θ*", d: "the survivor is sealed with a digest and drops down into Stage 3 · Freeze" }
+    ];
+    const cineSteps = stepDefs.map((st, i) => ({
+      n: String(i + 1), t: st.t, d: st.d,
+      onPick: () => this.setState({ cinePhase: i + 1 }),
+      style: "display:flex; gap:9px; align-items:flex-start; text-align:left; border:0; width:100%; background:" + (ph === i + 1 ? "#e2edf0" : "transparent") + "; border-left:2px solid " + (ph >= i + 1 ? "#0f4c5c" : "#e3e0d7") + "; padding:6px 9px; border-radius:3px;",
+      numStyle: "font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; flex:none; color:" + (ph >= i + 1 ? "#0f4c5c" : "#c9c5ba") + ";",
+      tStyle: "font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:" + (ph >= i + 1 ? "#1c2532" : "#939db0") + ";"
+    }));
+    const trials = this.trials(s.mode); const done = trials.filter(t => !t.pruned);
+    const objs = done.map(t => t.is); const q90 = this.quantile(objs, 0.9);
+    const top = done.filter(t => t.is > q90);
+    const names = ["window", "entry_z", "atr_mult", "risk_pct", "cooldown"];
+    const interRows = names.map(rn => ({
+      name: rn,
+      cells: names.map(cn => {
+        if (rn === cn) return { label: "·", title: rn, style: "flex:1; height:22px; display:inline-flex; align-items:center; justify-content:center; background:#f4f2ec; color:#c9c5ba; font-family:'JetBrains Mono',monospace; font-size:9px;" };
+        const rho = this.spearman(top.map(t => t.p[rn]), top.map(t => t.p[cn]));
+        const a = Math.min(0.99, Math.abs(rho));
+        const bg = RAMP[Math.min(4, Math.floor(a * 6))];
+        return { label: (rho >= 0 ? "+" : "−") + a.toFixed(2).slice(1), title: rn + " × " + cn + " · ρ = " + rho.toFixed(2) + " (top-decile trials)", style: "flex:1; height:22px; display:inline-flex; align-items:center; justify-content:center; background:" + bg + "; color:" + (a > 0.45 ? "#ffffff" : "#4e5a6e") + "; font-family:'JetBrains Mono',monospace; font-size:9px;" };
+      })
+    }));
+    const interHead = names.map(n => ({ label: n.slice(0, 6) }));
+    const wsp = this.SPACE[0], zsp = this.SPACE[1];
+    const NBX = 10, NBY = 6; const sums = [], cnts = [];
+    for (let i = 0; i < NBY; i++) { sums.push(new Array(NBX).fill(0)); cnts.push(new Array(NBX).fill(0)); }
+    done.forEach(t => {
+      const xi = Math.min(NBX - 1, Math.floor((t.p.window - wsp.low) / (wsp.high - wsp.low) * NBX));
+      const yi = Math.min(NBY - 1, Math.floor((t.p.entry_z - zsp.low) / (zsp.high - zsp.low) * NBY));
+      sums[yi][xi] += t.is; cnts[yi][xi]++;
+    });
+    let mLo = 99, mHi = -99;
+    for (let i = 0; i < NBY; i++) for (let j = 0; j < NBX; j++) if (cnts[i][j]) { const m = sums[i][j] / cnts[i][j]; mLo = Math.min(mLo, m); mHi = Math.max(mHi, m); }
+    const heatRows = [];
+    for (let i = NBY - 1; i >= 0; i--) {
+      heatRows.push({ cells: sums[i].map((v, j) => {
+        const c = cnts[i][j]; const m = c ? v / c : null;
+        return { title: c ? c + " trials · mean IS " + m.toFixed(2) : "no samples", style: "flex:1; height:17px; background:" + (m == null ? "#faf9f5" : RAMP[Math.min(4, Math.floor((m - mLo) / Math.max(1e-9, mHi - mLo) * 4.99))]) + "; border:1px solid #ffffff;" };
+      }) });
+    }
+    return {
+      onCinePlay: () => this.cinePlay(),
+      cinePlayLabel: s.cineRun ? "❚❚ pause" : "▶ play the selection",
+      cinePts, cineSteps,
+      cineRingStyle: "position:absolute; left:" + (56.7 - rw / 2) + "%; top:" + (50 - rh / 2) + "%; width:" + rw + "%; height:" + rh + "%; border:1.5px dashed #0f4c5c; border-radius:50%; opacity:" + (ph >= 2 ? ".85" : "0") + "; transition:all .8s ease; pointer-events:none;",
+      cineStampStyle: "position:absolute; top:10px; right:10px; font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; letter-spacing:.08em; color:#9a6a1f; border:1.5px dashed #9a6a1f; padding:2px 8px; transform:rotate(4deg); background:#faf9f5; opacity:" + (ph >= 3 ? "1" : "0") + "; transition:opacity .5s; z-index:5;",
+      cineDropStyle: "position:absolute; left:56.7%; top:50%; bottom:0; width:0; border-left:2px dashed #9a6a1f; opacity:" + (ph >= 5 ? ".8" : "0") + "; transition:opacity .5s;",
+      cineSlotStyle: "display:flex; align-items:center; gap:8px; border:1px solid #9a6a1f; border-radius:6px; background:#f4ecdb; color:#9a6a1f; padding:6px 12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; opacity:" + (ph >= 5 ? "1" : ".22") + "; transform:translateY(" + (ph >= 5 ? "0" : "-6px") + "); transition:all .6s;",
+      cineSlotText: ph >= 5 ? "θ* trial 143 → prm_7c1a9e sealed 2024-09-30 23:59Z → lands in Stage 3 · Freeze" : "the freeze slot — θ* lands here at step 5",
+      interRows, interHead, heatRows
+    };
+  }
+  pill(active, opts) {
+    const o = opts || {};
+    if (o.disabled) return "border:1px dashed #c9c5ba; background:transparent; color:#c9c5ba; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; text-decoration:line-through; cursor:not-allowed;";
+    return "border:1px solid " + (active ? (o.warn ? "#9a6a1f" : "#0f4c5c") : "#e3e0d7") + "; background:" + (active ? (o.warn ? "#f4ecdb" : "#e2edf0") : "#ffffff") + "; color:" + (active ? (o.warn ? "#9a6a1f" : "#0f4c5c") : "#4e5a6e") + "; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px;";
+  }
+  spill(active) { return "border:1px solid " + (active ? "#0f4c5c" : "#e3e0d7") + "; background:" + (active ? "#e2edf0" : "transparent") + "; color:" + (active ? "#0f4c5c" : "#4e5a6e") + "; padding:1px 6px; font-family:'JetBrains Mono',monospace; font-size:9px;"; }
+  quantile(a, q) { const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.max(0, Math.floor(q * (s.length - 1))))]; }
+  spearman(x, y) {
+    const rank = (a) => { const s = a.map((v, i) => [v, i]).sort((p, q) => p[0] - q[0]); const r = new Array(a.length); s.forEach((e, i) => { r[e[1]] = i + 1; }); return r; };
+    const rx = rank(x), ry = rank(y), n = x.length;
+    const mx = (n + 1) / 2; let num = 0, dx = 0, dy = 0;
+    for (let i = 0; i < n; i++) { const a = rx[i] - mx, b = ry[i] - mx; num += a * b; dx += a * a; dy += b * b; }
+    return dx && dy ? num / Math.sqrt(dx * dy) : 0;
+  }
+  componentDidMount() {
+    if (!window.katex) { this._kt = setInterval(() => { if (window.katex) { clearInterval(this._kt); this.forceUpdate(); } }, 200); }
+  }
+  componentWillUnmount() { if (this._kt) clearInterval(this._kt); }
+  tex(mode, fallback) {
+    const L = {
+      mode_1_decay: "d_k(\\theta)=S_{\\mathrm{IS},k}-S_{\\mathrm{OOS},k}\\qquad J_1(\\theta)=\\bar S_{\\mathrm{OOS}}-\\lambda\\,\\sigma_d-\\gamma\\,\\max(0,\\bar d)\\qquad \\lambda=\\gamma=0.5",
+      mode_2_sbb: "J_2(\\theta)=\\mu_{\\mathrm{boot}}-\\lambda_{\\mathrm{sbb}}\\,\\max(0,d_{\\mathrm{boot}})-\\eta_{\\mathrm{sbb}}\\,\\sigma_{\\mathrm{boot}}\\qquad n_{\\mathrm{paths}}=256,\\;\\ell_{\\mathrm{block}}=24",
+      mode_3_flat_minima: "P_C=Q_C+w_m M_C-w_s V_C+w_n\\log(1+\\lvert C\\rvert)\\qquad \\varepsilon_{\\mathrm{flat}}=0.12",
+      mode_4_is_only_robust: "T(\\theta)=M_T+w_q Q_T-w_d D_T\\qquad J_4(\\theta)=w_T\\,T+w_P\\,P-B-C\\qquad n_{\\mathrm{sub}}=6",
+      mode_5_full_robust: "J_5(\\theta)=\\mathrm{robustness}(\\text{full sample})\\qquad \\text{train}\\equiv\\text{test}"
+    };
+    if (window.katex && L[mode]) {
+      try { return React.createElement("span", { dangerouslySetInnerHTML: { __html: window.katex.renderToString(L[mode], { throwOnError: false, displayMode: false }) } }); } catch (e) {}
+    }
+    return React.createElement("span", { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: "12px" } }, fallback);
+  }
+  copy() {
+    const s = this.state; const M = this.MODES[s.mode];
+    const link = "portal://runs/R-WFO-118/stage/search?mode=" + s.mode + "&schedule=" + s.schedule + "&trial=" + M.theta + "&params=" + this.digest(M.theta) + "&config=sha256:88ae02";
+    try { navigator.clipboard.writeText(link); } catch (e) {}
+    this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1600);
+  }
+  readHash() { const h = {}; (location.hash || "").replace(/^#/, "").split("&").forEach((p) => { const kv = p.split("="); if (kv[0] && kv[1] != null) h[kv[0]] = decodeURIComponent(kv[1]); }); return h; }
+  writeHash(obj) { const cur = this.readHash(); Object.assign(cur, obj); const str = Object.keys(cur).filter((k) => cur[k] != null && cur[k] !== "").map((k) => k + "=" + encodeURIComponent(cur[k])).join("&"); try { history.replaceState(null, "", "#" + str); } catch (e) {} }
+  componentDidUpdate() { this.writeHash({ mode: this.state.mode, schedule: this.state.schedule, pick: this.state.pick || "" }); }
+  renderVals() {
+    const s = this.state; const M = this.MODES[s.mode];
+    const claim = this.CLAIMMX[s.mode + "|" + s.schedule] || this.CLAIMMX[s.mode + "|" + M.defSched];
+    const trials = this.trials(s.mode);
+    const done = trials.filter(t => !t.pruned);
+    const theta = trials[M.theta - 1]; const best = trials[M.best - 1];
+    const RAMP = ["#dbe5e7", "#a8c6ce", "#6b9ea8", "#3d7a86", "#0f4c5c"];
+    const objs = done.map(t => t.is);
+    const qs = [0.2, 0.4, 0.6, 0.8].map(q => this.quantile(objs, q));
+    const bucket = (v) => { let i = 0; while (i < qs.length && v > qs[i]) i++; return i; };
+    const oosStateColor = { "selection input": "#9a6a1f", "retrospective": "#9a6a1f", "report only": "#6f7a8c", "withheld": "#7a8699", "n/a": "#b43a3a" };
+    const modeOpts = Object.keys(this.MODES).map(k => ({
+      label: k, title: this.MODES[k].title,
+      onPick: () => this.setState({ mode: k, schedule: this.MODES[k].defSched, pick: null, cinePhase: 1 }),
+      style: this.pill(s.mode === k)
+    }));
+    const schedOpts = ["per_fold_decay", "per_fold_causal", "global"].map(k => {
+      const valid = M.schedules.includes(k);
+      return {
+        label: k, title: valid ? "" : "invalid for " + s.mode + ": " + this.SCHED_REASON[k],
+        onPick: () => { if (valid) this.setState({ schedule: k }); },
+        style: this.pill(s.schedule === k, { disabled: !valid, warn: k !== "per_fold_causal" })
+      };
+    });
+    const isM5 = s.mode === "mode_5_full_robust";
+    const hasFolds = M.folds > 0;
+    const diagram = (hasFolds ? [1, 2, 3, 4, 5] : [1]).map(i => {
+      const testColor = claim.oosState === "n/a" ? "#a8c6ce" : claim.oosState === "withheld" ? "repeating-linear-gradient(135deg,#f4ecdb 0 3px,transparent 3px 6px)" : claim.oosState === "selection input" || claim.oosState === "retrospective" ? "#9a6a1f" : "#e2edf0";
+      return {
+        label: hasFolds ? "fold_0" + i : isM5 ? "full sample" : "train / test",
+        trainStyle: "display:inline-block; width:" + (hasFolds ? 34 : 120) + "px; height:12px; background:#a8c6ce; animation:sr-pulse 2.2s infinite;",
+        testStyle: isM5 ? "display:none;" : "display:inline-block; width:" + (hasFolds ? 14 : 46) + "px; height:12px; border:1px solid " + (claim.oosState === "withheld" ? "#9a6a1f" : "#0f4c5c") + "; background:" + testColor + ";" + (claim.arrow !== "none" && claim.arrow !== "na" ? " animation:sr-pulse 2.2s infinite .4s;" : "")
+      };
+    });
+    const diagramNote = isM5 ? "The whole sample is train and test at once — a single pulsing block. Nothing is withheld to check later."
+      : claim.oosState === "withheld" ? "The sampler pulses on IS (mist blue). The hatched OOS cell is withheld — read exactly once after freeze, at Stage 4, not here."
+      : claim.oosState === "selection input" ? "The sampler pulses on IS. The gold OOS cell pulses too: it ENTERS selection across the freeze line — which is why the claim is selection-adjusted."
+      : claim.oosState === "retrospective" ? "Refit after reading the full span: the gold OOS pulses against time order — retrospective evidence, never a deployment claim."
+      : "The sampler pulses on IS only. Any OOS column elsewhere is report only — it takes no part in selection.";
+    const spaceRows = this.SPACE.map(sp => {
+      const tv = theta.p[sp.name];
+      const p = (tv - sp.low) / (sp.high - sp.low) * 100;
+      const edge = p <= 6 || p >= 94;
+      return {
+        name: sp.name, kind: sp.kind, range: sp.low + " … " + sp.high, step: sp.step == null ? "—" : String(sp.step), levels: sp.levels,
+        theta: sp.name === "use_trail" ? (tv ? "true" : "false") : String(tv),
+        tickStyle: "position:absolute; left:" + p.toFixed(1) + "%; bottom:-1px; width:2px; height:11px; background:" + (edge ? "#b43a3a" : "#1e7b4f") + ";",
+        note: edge ? "AT BOUND — widen range?" : p < 18 || p > 82 ? "near bound · " + p.toFixed(0) + "%" : "mid range · " + p.toFixed(0) + "%",
+        noteStyle: "width:118px; flex:none; font-size:9px; font-family:Inter,sans-serif; color:" + (edge ? "#b43a3a" : p < 18 || p > 82 ? "#9a6a1f" : "#939db0")
+      };
+    });
+    const coverage = [
+      { k: "grid_size", v: "unbounded (dynamic float)", tone: "#9a6a1f" },
+      { k: "trials", v: "512 / 600 declared", tone: "#1c2532" },
+      { k: "early stopping", v: "stagnation · patience 250", tone: "#9a6a1f" },
+      { k: "sampler", v: "TPE · multi-seed (None,41,42,43,44)", tone: "#1c2532" },
+      { k: "rejected", v: "grid (unbounded) · cmaes (categorical)", tone: "#4e5a6e" }
+    ].map(c => ({ k: c.k, v: c.v, style: "font-family:'JetBrains Mono',monospace; font-size:10.5px; color:" + c.tone }));
+    const ax = this.SPACE.find(x => x.name === s.axisX), ay = this.SPACE.find(x => x.name === s.axisY);
+    const surfacePts = trials.filter((t, i) => i % 3 === 0 || t.id === M.theta || t.id === M.best).map(t => {
+      const isT = t.id === M.theta, isB = t.id === M.best;
+      const x = (t.p[s.axisX] - ax.low) / (ax.high - ax.low) * 96 + 2;
+      const y = 98 - (t.p[s.axisY] - ay.low) / (ay.high - ay.low) * 96;
+      const sz = isT || isB ? 9 : t.pruned ? 6 : 5;
+      return {
+        title: "trial " + t.id + (t.pruned ? " · PRUNED (duplicate)" : " · IS " + t.is.toFixed(3)) + " · " + s.axisX + " " + t.p[s.axisX] + " · " + s.axisY + " " + t.p[s.axisY],
+        onPick: () => this.setState({ pick: t.id }),
+        style: "position:absolute; left:" + x.toFixed(2) + "%; top:" + y.toFixed(2) + "%; width:" + sz + "px; height:" + sz + "px; margin:-" + sz / 2 + "px 0 0 -" + sz / 2 + "px; padding:0; border-radius:50%; background:" + (t.pruned ? "transparent" : RAMP[bucket(t.is)]) + "; border:" + (isT ? "2px solid #1e7b4f" : isB ? "2px solid #b43a3a" : t.pruned ? "1px dashed #939db0" : "0") + "; box-shadow:" + (s.pick === t.id ? "0 0 0 3px rgba(154,106,31,.35)" : "none") + "; z-index:" + (isT || isB ? 3 : 1) + ";"
+      };
+    });
+    const mkAxis = (which, cur) => this.SPACE.filter(x => x.name !== "use_trail").map(x => ({
+      label: x.name, style: this.spill(cur === x.name),
+      onPick: () => this.setState(which === "x" ? { axisX: x.name } : which === "y" ? { axisY: x.name } : { conc: x.name })
+    }));
+    const lo = Math.min(...objs), hi = Math.max(...objs);
+    const progPts = [];
+    let bs = -99;
+    for (let i = 0; i < trials.length; i += 6) {
+      const t = trials[i]; if (t.pruned) continue;
+      bs = Math.max(bs, t.is);
+      const x = i / trials.length * 98 + 1;
+      progPts.push({ title: "trial " + t.id + " · IS " + t.is.toFixed(3), style: "position:absolute; left:" + x.toFixed(1) + "%; top:" + (92 - (t.is - lo) / (hi - lo) * 84).toFixed(1) + "%; width:3px; height:3px; border-radius:50%; background:rgba(15,76,92,.4);" });
+      progPts.push({ title: "best-so-far " + bs.toFixed(3), style: "position:absolute; left:" + x.toFixed(1) + "%; top:" + (92 - (bs - lo) / (hi - lo) * 84).toFixed(1) + "%; width:3px; height:2px; background:#9a6a1f;" });
+    }
+    const prunedRail = trials.filter(t => t.pruned).filter((t, i) => i % 2 === 0).map(t => ({
+      title: "trial " + t.id + " · PRUNED — duplicate_policy=prune",
+      style: "position:absolute; left:" + (t.id / 600 * 99).toFixed(1) + "%; top:1px; bottom:1px; width:2px; background:repeating-linear-gradient(180deg,#939db0 0 2px,transparent 2px 4px);"
+    }));
+    const cs = this.SPACE.find(x => x.name === s.conc);
+    const concPts = trials.filter((t, i) => i % 4 === 0).map(t => ({
+      title: "trial " + t.id + " · " + s.conc + " = " + t.p[s.conc],
+      style: "position:absolute; left:" + (t.id / 600 * 98 + 1).toFixed(1) + "%; top:" + (94 - (t.p[s.conc] - cs.low) / (cs.high - cs.low) * 88).toFixed(1) + "%; width:3px; height:3px; border-radius:50%; background:" + (t.pruned ? "#d8d4c9" : "rgba(15,76,92,.35)") + ";"
+    }));
+    const concTheta = 94 - (theta.p[s.conc] - cs.low) / (cs.high - cs.low) * 88;
+    const dists = this.SPACE.map(sp => {
+      const nb = 12; const sums = new Array(nb).fill(0); const cnts = new Array(nb).fill(0);
+      done.forEach(t => { const i = Math.min(nb - 1, Math.floor((t.p[sp.name] - sp.low) / (sp.high - sp.low) * nb)); sums[i] += t.is; cnts[i]++; });
+      const means = sums.map((v, i) => cnts[i] ? v / cnts[i] : null);
+      const mLo = Math.min(...means.filter(v => v != null)), mHi = Math.max(...means.filter(v => v != null));
+      const cMax = Math.max(...cnts);
+      const tp = (theta.p[sp.name] - sp.low) / (sp.high - sp.low) * 100;
+      return {
+        name: sp.name, lo: String(sp.low), hi: String(sp.high),
+        theta: sp.name === "use_trail" ? (theta.p[sp.name] ? "true" : "false") : String(theta.p[sp.name]),
+        summary: cnts.filter(c => c > 0).length + "/" + nb + " regions sampled",
+        thetaStyle: "position:absolute; left:" + tp.toFixed(1) + "%; top:0; bottom:-1px; width:2px; background:#1e7b4f;",
+        bins: cnts.map((c, i) => {
+          const shade = means[i] == null ? "#f4f2ec" : RAMP[Math.min(4, Math.floor((means[i] - mLo) / Math.max(1e-9, mHi - mLo) * 4.99))];
+          return { title: c + " trial · mean IS " + (means[i] == null ? "—" : means[i].toFixed(2)), style: "flex:1; height:" + Math.max(3, c / cMax * 100).toFixed(0) + "%; background:" + shade + ";" };
+        })
+      };
+    });
+    const importance = this.SPACE.filter(x => x.name !== "use_trail").map(sp => {
+      const rho = this.spearman(done.map(t => t.p[sp.name]), done.map(t => t.is));
+      return { name: sp.name, rho: (rho >= 0 ? "+" : "") + rho.toFixed(2), color: Math.abs(rho) > 0.25 ? "#0f4c5c" : "#939db0", barStyle: "position:absolute; left:0; top:0; bottom:0; width:" + Math.min(100, Math.abs(rho) * 160).toFixed(0) + "%; background:" + (Math.abs(rho) > 0.25 ? "#a8c6ce" : "#e3e0d7") + ";" };
+    }).sort((a, b) => Math.abs(parseFloat(b.rho)) - Math.abs(parseFloat(a.rho)));
+    const freezeArrowKind = claim.arrow;
+    const funnel = [
+      { label: "trials evaluated", n: 512, note: "actual < declared: early stop" },
+      { label: "feasible (constraint ≤ 0)", n: 402, note: "constraints shown as numbers, not just pass/fail" },
+      { label: "top-IS pool → FROZEN", n: 52, note: "K = ⌈512 × 0.10⌉" },
+      { label: isM5 ? "robustness shortlist" : "candidates re-evaluated", n: 24, note: isM5 ? "on the full sample" : claim.oosState === "withheld" ? "on inner folds — outer OOS still sealed" : "stage B" },
+      { label: "selected by policy", n: 1, note: M.selector }
+    ].map(f => ({ label: f.label, n: String(f.n), note: f.note, barStyle: "flex:none; width:" + Math.max(2, f.n / 512 * 42).toFixed(0) + "%; height:9px; background:#f4ecdb; border:1px solid #9a6a1f;" }));
+    const m1Bars = s.mode === "mode_1_decay" ? [
+      { fold: "fold_01", v: 0.23 }, { fold: "fold_02", v: 0.45 }, { fold: "fold_03", v: 0.16 }, { fold: "fold_04", v: -0.08 }, { fold: "fold_05", v: 0.14 }
+    ].map(b => ({
+      fold: b.fold, v: (b.v >= 0 ? "+" : "") + b.v.toFixed(2), color: b.v > 0.3 ? "#b43a3a" : b.v < 0 ? "#1e7b4f" : "#1c2532",
+      barStyle: "position:absolute; top:1px; bottom:1px; " + (b.v >= 0 ? "left:50%; width:" + (b.v * 90).toFixed(0) + "%;" : "right:50%; width:" + (-b.v * 90).toFixed(0) + "%;") + " background:" + (b.v > 0.3 ? "#b43a3a" : b.v >= 0 ? "#9a6a1f" : "#1e7b4f") + "; opacity:.75;"
+    })) : [];
+    const m1Scatter = s.mode === "mode_1_decay" ? done.filter(t => t.is > this.quantile(objs, 0.9)).slice(0, 24).map(t => {
+      const isT = t.id === M.theta;
+      return {
+        title: "trial " + t.id + " · IS " + t.is.toFixed(2) + " · OOS " + t.oos.toFixed(2),
+        style: "position:absolute; left:" + ((t.is - 0.6) / 1.2 * 90 + 4).toFixed(1) + "%; top:" + (96 - (t.oos - 0.2) / 1.2 * 90).toFixed(1) + "%; width:" + (isT ? 9 : 5) + "px; height:" + (isT ? 9 : 5) + "px; border-radius:50%; background:" + (isT ? "#f4ecdb" : "rgba(15,76,92,.45)") + "; border:" + (isT ? "2px solid #9a6a1f" : "0") + "; box-shadow:" + (s.pick === t.id ? "0 0 0 3px rgba(154,106,31,.35)" : "none") + ";"
+      };
+    }) : [];
+    const r2 = this.rng(777); const m2BinsRaw = new Array(18).fill(0);
+    for (let i = 0; i < 256; i++) { let g = 0; for (let j = 0; j < 6; j++) g += r2() - 0.5; const v = 1.21 + g * 0.4; const bi = Math.min(17, Math.max(0, Math.floor((v - 0.3) / 1.8 * 18))); m2BinsRaw[bi]++; }
+    const m2Max = Math.max(...m2BinsRaw);
+    const m2Bins = m2BinsRaw.map((c, i) => ({ title: "≈ " + (0.3 + (i + 0.5) / 18 * 1.8).toFixed(2) + " · " + c + " path", style: "flex:1; height:" + Math.max(2, c / m2Max * 100).toFixed(0) + "%; background:#e2edf0; border:1px solid #0f4c5c; border-bottom:0;" }));
+    const m3Rows = [
+      { id: "C1", size: "14", q: "1.31", m: "1.37", v: "0.04", p: "2.22", via: "medoid → trial 217 (a real, evaluated trial)", win: true },
+      { id: "C2", size: "9", q: "1.24", m: "1.29", v: "0.09", p: "1.98", via: "—", win: false },
+      { id: "noise", size: "29", q: "—", m: "—", v: "—", p: "—", via: "in no cluster", win: false }
+    ].map(r => ({ ...r, style: "display:flex; font-family:'JetBrains Mono',monospace; font-size:10px; padding:3px 0; border-bottom:1px solid #f4f2ec;" + (r.win ? "background:#f4ecdb; border-left:2px solid #9a6a1f; padding-left:4px;" : "") }));
+    const r4 = this.rng(452);
+    const m4Rows = [452, 88, 301, 129, 217, 388].map((id, ri) => {
+      const base = ri === 0 ? 1.24 : 1.3 - ri * 0.09;
+      const shards = new Array(6).fill(0).map(() => +(base + (r4() - 0.5) * (ri === 0 ? 0.2 : 0.7)).toFixed(2));
+      const srt = shards.slice().sort((a, b) => a - b);
+      const mt = srt[3], qt = srt[1];
+      const dt = +(shards.reduce((a, v) => a + Math.abs(v - mt), 0) / 6).toFixed(2);
+      return {
+        id: "#" + id, idColor: ri === 0 ? "#9a6a1f" : "#1c2532",
+        mt: mt.toFixed(2), qt: qt.toFixed(2), dt: dt.toFixed(2), j: (0.7 * (mt + 0.5 * qt - dt) + 0.3 * 0.6).toFixed(2),
+        cells: shards.map((v, ci) => ({ title: "shard " + (ci + 1) + " · Sharpe " + v.toFixed(2), style: "flex:1; height:14px; background:" + RAMP[Math.min(4, Math.max(0, Math.floor((v - 0.4) / 1.2 * 4.99)))] + "; border:1px solid #ffffff;" }))
+      };
+    });
+    const m5Rows = [
+      { k: "fold navigator", v: "a single entry — full_index" },
+      { k: "cert cap", v: "≤ D — calibration, not validation" },
+      { k: "used for", v: "calibrate params before opening a real mode_1 run; never to claim performance" },
+      { k: "sub-selectors", v: "full_robust (default) · full_plateau_robust · full_temporal_robust · full_best" }
+    ];
+    const stateOf = (t) => t.id === M.theta ? "SELECTED" : t.pruned ? "PRUNED" : t.infeasible ? "INFEASIBLE" : "COMPLETE";
+    const oosCell = (t) => {
+      if (claim.oosState === "n/a") return { v: "n/a", c: "#939db0" };
+      if (claim.oosState === "withheld") return { v: "S_OOS · withheld", c: "#7a8699" };
+      const val = t.pruned || t.infeasible ? "—" : t.oos.toFixed(3);
+      if (claim.oosState === "report only") return { v: val + " · report", c: "#6f7a8c" };
+      if (claim.oosState === "retrospective") return { v: val + " · retro", c: "#9a6a1f" };
+      return { v: val, c: "#1c2532" };
+    };
+    const ledgerRows = [];
+    const focus = s.pick || M.theta;
+    const start = Math.max(1, Math.min(focus - 5, 589));
+    for (let i = start; i < start + 11; i++) {
+      const t = trials[i - 1]; if (!t) continue;
+      const st = stateOf(t); const oc = oosCell(t);
+      ledgerRows.push({
+        id: "#" + t.id, seed: t.seed, state: st,
+        stateTitle: st === "PRUNED" ? "a duplicate under duplicate_policy=prune — not epoch pruning" : st === "INFEASIBLE" ? "constraint > 0 (violated) — numeric value in the trace" : "",
+        stateColor: st === "SELECTED" ? "#9a6a1f" : st === "PRUNED" ? "#939db0" : st === "INFEASIBLE" ? "#b43a3a" : "#1e7b4f",
+        is: t.pruned ? "—" : t.is.toFixed(3), oos: oc.v, oosColor: oc.c,
+        digest: this.digest(t.id) === this.digest(M.theta) && t.id === M.theta ? this.digest(M.theta) : this.digest(t.id),
+        note: t.id === M.theta ? "θ* — winner under " + M.selector : t.id === M.best ? "best IS — NOT selected" : "",
+        onPick: () => this.setState({ pick: t.id }),
+        style: "display:flex; align-items:baseline; width:100%; text-align:left; border:0; padding:4px 12px; border-bottom:1px solid #f4f2ec; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#1c2532; background:" + (t.id === M.theta ? "#f4ecdb" : s.pick === t.id ? "#e2edf0" : "transparent") + ";"
+      });
+    }
+    const NJ = s.jScale === 32 ? 32 : 5;
+    const journeyData = hasFolds ? this.SPACE.filter(x => x.name !== "use_trail").slice(0, 5).map((sp, pi) => {
+      const rj = this.rng(pi * 31 + (s.mode === "mode_1_decay" ? 7 : 13) + (NJ === 32 ? 401 : 0));
+      const center = (theta.p[sp.name] - sp.low) / (sp.high - sp.low);
+      const spread = pi === 1 ? 0.3 : 0.08;
+      const vals = Array.from({ length: NJ }, () => Math.max(0.02, Math.min(0.98, center + (rj() - 0.5) * spread * 2)));
+      const freq = pi === 1 ? 0.41 : 0.86 - pi * 0.06;
+      let dots;
+      if (NJ <= 8) {
+        dots = vals.map((v, fi) => ({
+          title: "fold_0" + (fi + 1) + " · θ* " + sp.name + " ≈ " + (sp.low + v * (sp.high - sp.low)).toFixed(1),
+          style: "position:absolute; left:" + (v * 96 + 2).toFixed(1) + "%; top:50%; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:" + (fi + 1 === 3 ? "#9a6a1f" : "#0f4c5c") + "; opacity:" + (0.45 + fi * 0.12) + ";"
+        }));
+      } else {
+        // density strip: bin θ* across folds; darker bin = more folds landed there
+        const nb = 24; const bins = new Array(nb).fill(0);
+        vals.forEach(v => { bins[Math.min(nb - 1, Math.floor(v * nb))]++; });
+        const bMax = Math.max(...bins, 1);
+        dots = bins.map((c, bi) => ({
+          title: c + " of " + NJ + " folds put θ* " + sp.name + " near " + (sp.low + (bi + 0.5) / nb * (sp.high - sp.low)).toFixed(1),
+          style: "position:absolute; left:" + (bi / nb * 100).toFixed(1) + "%; width:" + (100 / nb).toFixed(1) + "%; top:2px; bottom:2px; background:rgba(15,76,92," + (c ? (0.12 + c / bMax * 0.72).toFixed(2) : 0) + ");"
+        }));
+        dots.push({ title: "current fold's θ*", style: "position:absolute; left:" + (vals[2] * 100).toFixed(1) + "%; top:0; bottom:0; width:2px; background:#9a6a1f;" });
+      }
+      return {
+        name: sp.name,
+        freq: (freq * 100).toFixed(0) + "% top-decile", freqColor: freq > 0.6 ? "#1e7b4f" : "#9a6a1f",
+        dots
+      };
+    }) : [];
+    const extra = this.cinemaVals();
+    return {
+      backHref: "QuantBT 04 Evidence Flow.dc.html#stage=search" + (this.state.pick ? "&trial=" + this.state.pick : ""), ...extra,
+      onCopy: () => this.copy(), copyLabel: s.copied ? "✓ evidence link copied" : "copy evidence link",
+      modeOpts, schedOpts,
+      claim: {
+        validation: claim.validation, chrono: claim.chrono, oosSel: claim.oosSel,
+        oosState: claim.oosState,
+        oosStateStyle: "font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:" + oosStateColor[claim.oosState] + "; border:1px solid " + oosStateColor[claim.oosState] + "; border-radius:3px; padding:0 6px; align-self:flex-start;",
+        backend: M.backend, backendColor: M.backend.indexOf("forced") >= 0 ? "#9a6a1f" : "#1c2532",
+        selector: M.selector, selectorTag: M.selectorTag, selectorTagColor: M.selectorTag === "INFERRED" ? "#9a6a1f" : "#1e7b4f"
+      },
+      diagram, diagramNote,
+      spaceRows, coverage,
+      coverageNote: "atr_mult is a dynamic float ⇒ grid_size = unbounded — shown as exactly that, not 0. GridSampler raises on this space, which is why sampler_rejection_reasons lists grid. Every conclusion below is about the sampled region, not the whole space.",
+      surfaceTitle: "512 trials · 46 pruned · " + (isM5 ? "full sample" : "fold_03"),
+      axisXOpts: mkAxis("x", s.axisX), axisYOpts: mkAxis("y", s.axisY), concOpts: mkAxis("c", s.conc),
+      surfacePts, surfaceX: s.axisX, surfaceY: s.axisY,
+      thetaTrial: "#" + M.theta, bestTrial: "#" + M.best,
+      progPts, prunedRail, railNote: "46 pruned scattered across the sequence — duplicates where the sampler contracts, not epoch pruning.",
+      concTitle: s.conc + " by trial order — where the sampler contracts", concPts,
+      concThetaStyle: "position:absolute; left:0; right:0; top:" + concTheta.toFixed(1) + "%; height:1px; background:#1e7b4f; opacity:.7;",
+      concNote: "In the back half of the sequence, " + s.conc + " gathers around the green line (θ*) — TPE exploiting a good region. Gathering too early = under-exploration.",
+      dists, importance,
+      freezeLabel: "POOL FROZEN · K = ⌈512 × 0.10⌉ = 52 · 2024-09-30 23:59Z",
+      freezeArrow: freezeArrowKind === "decay" ? "◀ OOS" : freezeArrowKind === "retro" ? "◀ FULL" : freezeArrowKind === "na" ? "×" : "→",
+      freezeArrowTitle: freezeArrowKind === "decay" ? "OOS enters selection across the freeze line — the claim becomes selection-adjusted" : freezeArrowKind === "retro" ? "refit after reading the full span — retrospective" : freezeArrowKind === "na" ? "no window is withheld" : "information flows one way, left → right",
+      freezeArrowStyle: "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; padding:3px 6px; border-radius:3px; border:1px solid " + (freezeArrowKind === "none" ? "#9a6a1f" : "#b43a3a") + "; color:" + (freezeArrowKind === "none" ? "#9a6a1f" : "#b43a3a") + "; background:#faf9f5;" + (freezeArrowKind === "decay" || freezeArrowKind === "retro" ? " animation:sr-flow 1.6s infinite;" : ""),
+      stageBSub: isM5 ? "on the full sample — no OOS exists" : claim.oosState === "withheld" ? "using inner folds; outer OOS is read once at Stage 4" : claim.oosState === "selection input" ? "and the fold's OOS joins the ranking" : "IS-only, by this mode's formula",
+      frozenAt: "2024-09-30 23:59Z", funnel,
+      kFormula: "K = ⌈n_trials × top_is_fraction⌉ = ⌈512 × 0.10⌉ = 52 — the pool closes BEFORE any " + (isM5 ? "robustness" : "OOS") + " value is computed. This boundary is what makes the claim.",
+      modeName: s.mode, formulaTex: this.tex(s.mode, M.expr), formulaSource: M.source, formulaTerms: M.terms.map(t => ({ k: t.k, detail: t.detail, v: t.v, style: "font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; text-align:right;" })),
+      showM1: s.mode === "mode_1_decay", showM2: s.mode === "mode_2_sbb", showM3: s.mode === "mode_3_flat_minima", showM4: s.mode === "mode_4_is_only_robust", showM5: isM5,
+      m1Bars, m1Scatter,
+      m2N: "256", m2Bins, m2Lo: "0.30", m2Hi: "2.10", m2Mu: "1.21",
+      m3Rows, m4Rows, m5Rows,
+      bestCard: [
+        { k: "S_IS", v: best.is.toFixed(3), color: "#1c2532" },
+        { k: isM5 ? "S_full" : "S̄_OOS", v: claim.oosState === "withheld" ? "withheld" : claim.oosState === "n/a" ? "n/a" : best.oos.toFixed(3), color: claim.oosState === "withheld" ? "#7a8699" : "#b43a3a" },
+        { k: "d̄ decay", v: claim.oosState === "n/a" ? "n/a" : "+0.69", color: "#b43a3a" },
+        { k: "max_dd", v: "−14.2%", color: "#4e5a6e" }
+      ],
+      selCard: [
+        { k: "S_IS", v: theta.is.toFixed(3), color: "#1c2532" },
+        { k: isM5 ? "S_full" : "S̄_OOS", v: claim.oosState === "withheld" ? "withheld · Stage 4" : claim.oosState === "n/a" ? "n/a" : theta.oos.toFixed(3), color: claim.oosState === "withheld" ? "#7a8699" : "#1e7b4f" },
+        { k: "d̄ decay", v: claim.oosState === "n/a" ? "n/a" : "+0.18", color: "#1e7b4f" },
+        { k: "max_dd", v: "−8.1%", color: "#4e5a6e" }
+      ],
+      bestVsSelNote: isM5 ? "Mode 5 selects directly on full-sample robustness — best and selected coinciding is normal here: there is no second window to trade against."
+        : "The selector deliberately gave up " + (best.is - theta.is).toFixed(2) + " IS points for stability — CORRECT behavior (walk_forward.md §13.4), not a bug. If best ≡ selected, check the plateau with mode_3_flat_minima before trusting it.",
+      journeySource: hasFolds ? "search_diagnostics.top_parameter_frequency" : "—",
+      hasJourney: hasFolds, noJourney: !hasFolds,
+      journey: journeyData,
+      jScaleOpts: [5, 32].map(n => ({
+        label: n + " folds", onPick: () => this.setState({ jScale: n }),
+        style: "border:1px solid " + (NJ === n ? (n !== 5 ? "#9a6a1f" : "#0f4c5c") : "#e3e0d7") + "; border-radius:3px; background:" + (NJ === n ? (n !== 5 ? "#f4ecdb" : "#e2edf0") : "#ffffff") + "; color:" + (NJ === n ? (n !== 5 ? "#9a6a1f" : "#0f4c5c") : "#4e5a6e") + "; padding:1px 7px; font-family:'JetBrains Mono',monospace; font-size:9px;"
+      })),
+      journeyCaption: NJ <= 8
+        ? "Each dot is one fold's θ* (5 folds · axis = param range). Right column = top_parameter_frequency from search_diagnostics: a region that survives several random trajectories beats a single score. Seed consensus 4/5."
+        : "Scale demo — 32 folds render as a density strip: darker cell = more folds froze θ* there; amber line = this fold. A single tight dark band (window) is stability; two bands (entry_z) means the optimum migrated mid-history — read that as regime evidence, not noise.",
+      journeyNote: isM5 ? "Mode 5 has a single fold — there is no cross-fold journey. To see stability over time, open a mode_1 or mode_4 run." : "This mode selects once over the whole span — there is no per-fold θ* to compare.",
+      ledgerMeta: "trials.parquet · 512 rows · multi-seed (None,41,42,43,44)",
+      oosColHead: isM5 ? "S_full" : "S_OOS", ledgerRows
+    };
+  }
+}
+</script>
+</body>
+</html>

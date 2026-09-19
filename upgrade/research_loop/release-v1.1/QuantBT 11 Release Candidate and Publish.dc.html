@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT — Release Candidate &amp; Publish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, a:focus-visible { outline:none; box-shadow:0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+</style>
+</helmet>
+
+<div data-screen-label="Release Candidate &amp; Publish" style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px">
+  <div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5">
+    <span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span>
+    <span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span>
+    <span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap">
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span>
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">QuantBT Backtest</span><span style="color:#939db0">/</span>
+      <span style="font-family:'JetBrains Mono',monospace; flex:none">R-WFO-118</span><span style="color:#939db0">/</span>
+      <span style="color:#1c2532; flex:none">Release Candidate</span>
+    </span>
+    <span style="flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 12px">Search <span style="font-size:10px; color:#939db0; border:1px solid #e3e0d7; border-radius:3px; padding:0 4px; font-family:'JetBrains Mono',monospace">⌘K</span></span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Comfortable ▾</span>
+  </div>
+  <div style="display:flex; flex:1; min-height:0">
+    <div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px"><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">command</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Command Center</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Portal Map</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">research</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><a href="QuantBT 01 Run Library.dc.html" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; background:#e2edf0; color:#1c2532; font-weight:500; text-decoration:none"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">QuantBT Backtest</span></a><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Pool</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Mining</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Strategy Composer</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">backtests</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Approvals</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">deployments</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Paper Trading</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sandbox</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Live Operations</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">data & operations</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Data Catalog</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">planning</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Roadmap & Task Board</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">administration</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Profile & Access</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div></div>
+    <div style="flex:1; min-width:0">
+      <div style="width:100%; max-width:1240px; margin:0 auto; padding:16px 24px 56px; display:flex; flex-direction:column; gap:14px">
+
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px 16px; border-bottom:1px solid #e3e0d7; padding-bottom:10px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4e5a6e">
+              <a href="QuantBT 04 Evidence Flow.dc.html#stage=claim">Evidence Flow</a><span style="color:#939db0">/</span>
+              <span style="font-family:'JetBrains Mono',monospace">R-WFO-118</span><span style="color:#939db0">/</span><span style="color:#1c2532">Release Candidate &amp; Publish</span>
+            </div>
+            <div style="font-family:Newsreader,Georgia,serif; font-size:22px; font-weight:300; letter-spacing:-.01em">Release Candidate — compose, pin, publish</div>
+            <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0">A run is evidence; what travels is the release candidate. Publish writes one immutable record — the Approval Inbox reads it. Nothing here recomputes or approves.</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; flex:none">
+            <span style="{{ stateChip.style }}">{{ stateChip.label }}</span>
+            <a href="QuantBT 09 Run Report.dc.html" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; color:#0f4c5c; padding:5px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; text-decoration:none">run report</a>
+          </div>
+        </div>
+
+        <sc-if value="{{ isUnbound }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; gap:12px; align-items:center; border:1px dashed #b43a3a; border-radius:8px; background:#f7e8e8; padding:10px 14px">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:#b43a3a; flex:none">NOT_PUBLISHABLE</span>
+            <span style="font-size:12px; color:#1c2532; line-height:1.55; flex:1; min-width:280px">This run was submitted without an <span style="font-family:'JetBrains Mono',monospace">alpha_version</span> binding — a scratch research run. It stays fully usable as evidence for you, but no release candidate can be composed from it. Bind a version at <a href="QuantBT 02 New Run Preflight.dc.html">New Run</a> and re-run to publish.</span>
+          </div>
+        </sc-if>
+
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:14px 16px; display:flex; flex-direction:column; gap:10px">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">1 · identity &amp; lineage — the unit that travels</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">spec v0.7 §3.1 — binding goes through rc_, never alpha↔run directly</span>
+          </div>
+          <div style="display:flex; align-items:stretch; gap:0; flex-wrap:wrap; row-gap:10px">
+            <sc-for list="{{ rail }}" as="r" hint-placeholder-count="5">
+              <div style="display:flex; align-items:center">
+                <div title="{{ r.title }}" style="{{ r.style }}">
+                  <span style="font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:{{ r.kColor }}">{{ r.k }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:600; color:{{ r.vColor }}">{{ r.v }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">{{ r.sub }}</span>
+                </div>
+                <span style="{{ r.arrowStyle }}">→</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex; gap:14px; flex-wrap:wrap; border-top:1px solid #efede4; padding-top:10px">
+            <div style="flex:1.3; min-width:380px; display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">change taxonomy vs last published rc — {{ lastRc }}</span>
+              <div style="display:flex; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding-bottom:3px">
+                <span style="width:210px; flex:none">what</span><span style="width:120px; flex:none">state</span><span style="flex:1">consequence (§3.4)</span>
+              </div>
+              <sc-for list="{{ taxonomy }}" as="t" hint-placeholder-count="4">
+                <div style="display:flex; align-items:baseline; font-size:11px; padding:3px 0; border-bottom:1px solid #f4f2ec">
+                  <span style="width:210px; flex:none; color:#4e5a6e">{{ t.what }}</span>
+                  <span style="width:120px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:{{ t.color }}">{{ t.state }}</span>
+                  <span style="flex:1; color:#4e5a6e; line-height:1.5">{{ t.consequence }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex:1; min-width:300px; border-left:1px solid #efede4; padding-left:14px; display:flex; flex-direction:column; gap:5px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">gate verdict for this candidate</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:#9a6a1f">R1 + R2 must run — selected params changed</span>
+              <span style="font-size:11px; color:#4e5a6e; line-height:1.55">Code and dataset are unchanged, but <span style="font-family:'JetBrains Mono',monospace">prm_49b2e0 → prm_7c1a9e</span> is a numerical-artifact change: the old approval does not carry over. Target venue/account is unset here by design — that belongs to the deployment candidate and Gate R2 on the Execution side.</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); overflow-x:auto">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 16px; border-bottom:1px solid #e3e0d7">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">2 · evidence pack — 12 items of gate R1, each linked to the screen that proves it</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap">
+              <span title="methodology claim ceiling — holdout locked, unlock lifts B → A" style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:1px 7px; background:#f4ecdb">claim ceiling B</span>
+              <span title="engine execution-contract certification (0–4) — separate axis from the methodology claim" style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 7px; background:#e2edf0">engine cert L2 · engine-causal</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">{{ packCount }}</span>
+            </div>
+          </div>
+          <div style="display:flex; min-width:960px; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding:5px 16px">
+            <span style="width:26px; flex:none">#</span><span style="width:250px; flex:none">item</span><span style="width:96px; flex:none">status</span><span style="width:250px; flex:none">digest / value</span><span style="width:110px; flex:none">source</span><span style="flex:1">note</span>
+          </div>
+          <sc-for list="{{ pack }}" as="e" hint-placeholder-count="12">
+            <div style="{{ e.rowStyle }}">
+              <span style="width:26px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">{{ e.n }}</span>
+              <span style="width:250px; flex:none; font-size:12px; font-weight:500">{{ e.item }}</span>
+              <span title="{{ e.statusTitle }}" style="{{ e.statusStyle }}">{{ e.status }}</span>
+              <span style="width:250px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ e.digest }}</span>
+              <sc-if value="{{ e.hasLink }}" hint-placeholder-val="{{ true }}"><a href="{{ e.href }}" style="width:110px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px">{{ e.source }}</a></sc-if>
+              <sc-if value="{{ e.noLink }}" hint-placeholder-val="{{ false }}"><span title="opens the portal's Alpha 360° passport — outside this prototype" style="width:110px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">{{ e.source }}</span></sc-if>
+              <span style="flex:1; font-size:10.5px; color:#939db0; line-height:1.5">{{ e.note }}</span>
+            </div>
+          </sc-for>
+          <div style="padding:8px 16px; border-top:1px solid #efede4; background:#f4f2ec; font-size:11px; color:#4e5a6e; line-height:1.55">DEGRADED travels <em>as</em> DEGRADED — the reviewer sees it. MISSING blocks publish. The two INPUT rows are the researcher's own signed declarations.</div>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:stretch">
+          <div style="flex:1.25; min-width:440px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); overflow:hidden; display:flex; flex-direction:column">
+            <div style="display:flex; justify-content:space-between; padding:8px 14px; border-bottom:1px solid #e3e0d7">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">3 · record preview — exactly what is written, byte for byte (spec v0.7 §3.2)</span>
+              <button onClick="{{ onCopy }}" style="border:0; background:transparent; color:#0f4c5c; font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:0">{{ copyLabel }}</button>
+            </div>
+            <div style="flex:1; padding:10px 14px; background:#fdfdfa; overflow-x:auto">
+              <sc-for list="{{ yaml }}" as="y" hint-placeholder-count="16">
+                <div style="display:flex; font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.75; white-space:nowrap">
+                  <span style="color:#7a8699; width:270px; flex:none">{{ y.k }}</span>
+                  <span style="color:{{ y.color }}">{{ y.v }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="flex:1; min-width:360px; display:flex; flex-direction:column; gap:14px">
+            <sc-if value="{{ isDraft }}" hint-placeholder-val="{{ true }}">
+              <div style="border:1px solid #9a6a1f; border-radius:8px; background:#fdfbf5; padding:14px 16px; display:flex; flex-direction:column; gap:8px">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#9a6a1f">publish</span>
+                <span style="font-size:11.5px; color:#1c2532; line-height:1.6">Publishing freezes this exact combination as <span style="font-family:'JetBrains Mono',monospace">{{ rcId }}</span> in the portal governance store. It creates no account, no allocation, and does not start Paper — it only makes the candidate reviewable.</span>
+                <button onClick="{{ onPublish }}" disabled="{{ publishDisabled }}" style="{{ publishStyle }}">{{ publishLabel }}</button>
+                <span style="font-size:10px; color:#939db0; line-height:1.5">Separation of duties: the publisher cannot be the sole R1 approver where policy requires it. R1 approval default expiry: approved_at + 90d (policy default — confirm).</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isPublished }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid #1e7b4f; border-radius:8px; background:#eef5f0; padding:14px 16px; display:flex; flex-direction:column; gap:6px">
+                <div style="display:flex; justify-content:space-between; align-items:baseline">
+                  <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#1e7b4f">published — immutable</span>
+                  <button onClick="{{ onReset }}" style="border:0; background:transparent; color:#939db0; font-family:'JetBrains Mono',monospace; font-size:9px; padding:0">reset demo</button>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; color:#1e7b4f">{{ rcId }}</span>
+                <span style="font-size:11px; color:#4e5a6e; line-height:1.55">published_at 2026-09-14 09:12Z · by researcher@bobby · evidence digest <span style="font-family:'JetBrains Mono',monospace">sha256:aa47c1</span>. Any further change to code, params, or methodology creates a NEW candidate and supersedes this one — this record itself never mutates.</span>
+              </div>
+            </sc-if>
+
+            <div style="{{ mirrorStyle }}">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">what the approval inbox sees</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">read model · decisions live on the Execution side</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:8px 12px; flex-wrap:wrap">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px; flex:none">R1 · RESEARCH EVIDENCE</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; flex:1; min-width:170px">{{ mirror.subject }}</span>
+                <span style="{{ mirror.statusStyle }}">{{ mirror.status }}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:{{ mirror.slaColor }}; flex:none">{{ mirror.sla }}</span>
+              </div>
+              <div style="display:flex; gap:4px 10px; flex-wrap:wrap; font-size:10px; color:#939db0">
+                <span>assignee pool: Quant Reviewers</span><span>·</span><span>conditions: {{ mirror.conditions }}</span><span>·</span><span>decision outcomes: APPROVED · APPROVED_WITH_CONDITIONS · CHANGES_REQUESTED · REJECTED · SUPERSEDED · EXPIRED</span>
+              </div>
+              <span style="font-size:10.5px; color:#4e5a6e; line-height:1.55">{{ mirror.note }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:3px; border-top:1px solid #e3e0d7; padding-top:8px">
+          <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0">rules of this screen</span>
+          <span style="font-size:11px; color:#4e5a6e; line-height:1.6">The promotable unit is rc_, never a bare run_id. Digests pinned at publish are verified downstream. This screen never computes, approves, or mutates — its one verb is publish.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1500}, &quot;demoState&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;draft&quot;, &quot;published&quot;], &quot;default&quot;: &quot;draft&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo&quot;}, &quot;binding&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;bound&quot;, &quot;unbound&quot;], &quot;default&quot;: &quot;bound&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { published: (props.demoState ?? "draft") === "published", copied: false };
+  }
+  renderVals() {
+    const s = this.state;
+    const unbound = (this.props.binding ?? "bound") === "unbound";
+    const pub = s.published && !unbound;
+    const rcId = "rc_2026_0914_a";
+    const chip = (label, color, bg) => "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.05em; border:1px solid " + color + "; color:" + color + "; background:" + bg + "; border-radius:999px; padding:2px 10px;";
+    const node = (k, v, sub, tone) => ({
+      k, v, sub, title: k + " — " + sub,
+      kColor: tone === "dim" ? "#c9c5ba" : "#939db0",
+      vColor: tone === "gold" ? "#9a6a1f" : tone === "green" ? "#1e7b4f" : tone === "dim" ? "#939db0" : "#1c2532",
+      style: "display:flex; flex-direction:column; gap:1px; border:1px " + (tone === "dim" ? "dashed #c9c5ba" : "solid " + (tone === "gold" ? "#9a6a1f" : tone === "green" ? "#1e7b4f" : "#e3e0d7")) + "; border-radius:8px; background:" + (tone === "gold" ? "#fdfbf5" : tone === "green" ? "#eef5f0" : "#ffffff") + "; padding:7px 12px; min-width:150px;",
+      arrowStyle: "padding:0 8px; color:#939db0; font-size:12px;"
+    });
+    const rail = [
+      node("alpha", "alpha_momentum_btc", "alpha_7f2 · identity", ""),
+      node("alpha_version", unbound ? "— unbound" : "av_0_9_3", unbound ? "scratch run" : "sha256:3fe4a1 · U14 ACTIVE", unbound ? "dim" : ""),
+      node("run / attempt", "R-WFO-118 · att_04", "final_audit_run · COMPLETE", ""),
+      node("selected params", "prm_7c1a9e", "θ* #143 · SelectionTraceV1", ""),
+      pub ? node("release candidate", rcId, "published · immutable", "green") : node("release candidate", "rc_ (draft)", unbound ? "blocked — no av_" : "composes on publish", unbound ? "dim" : "gold")
+    ];
+    rail[rail.length - 1].arrowStyle = "display:none;";
+    const taxonomy = [
+      { what: "code / entrypoint (av_)", state: "UNCHANGED", color: "#1e7b4f", consequence: "no gate re-run from this row" },
+      { what: "selected strategy params", state: "CHANGED", color: "#b43a3a", consequence: "R1 + R2 re-run — numerical artifact changed" },
+      { what: "data contract / dataset snapshot", state: "UNCHANGED", color: "#1e7b4f", consequence: "no gate re-run from this row" },
+      { what: "target venue / account / capital", state: "UNSET", color: "#939db0", consequence: "belongs to deployment candidate → Gate R2, Execution side" }
+    ];
+    const st = (kind) => kind === "ok" ? { t: "COMPLETE", style: "width:96px; flex:none; font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; color:#1e7b4f;", title: "artifact present, digest pinned" }
+      : kind === "deg" ? { t: "DEGRADED", style: "width:96px; flex:none; font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; color:#9a6a1f;", title: "partial artifact — travels as DEGRADED, reviewer sees it" }
+      : { t: "INPUT", style: "width:96px; flex:none; font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; color:#0f4c5c;", title: "researcher declaration — part of the signed pack" };
+    const row = (n, item, kind, digest, source, href, note) => {
+      const x = st(kind);
+      return { n: String(n), item, status: x.t, statusStyle: x.style, statusTitle: x.title, digest, source, href: href || "", hasLink: !!href, noLink: !href, note,
+        rowStyle: "display:flex; align-items:baseline; gap:0; min-width:960px; padding:6px 16px; border-bottom:1px solid #f4f2ec;" + (kind === "deg" ? " background:#fdfbf5;" : "") };
+    };
+    const pack = [
+      row(1, "Alpha Version passport", "ok", "av_0_9_3 · sha256:3fe4a1", "Alpha 360°", "", "imported via U14 wizard · import state ACTIVE · supersedes av_0_9_2"),
+      row(2, "Engine / capability / backend", "ok", "er_quantbt_1_1_1 · image sha256:90d1c2", "09 report", "QuantBT 09 Run Report.dc.html", "scoring_backend=endpoint · runtime authority: python (promotion table v1, reason below_promotion_min_bars)"),
+      row(3, "Dataset & universe snapshots", "ok", "ds_btcusdt_4h @ snap_2026_06_30", "05 split", "QuantBT 05 S1 Split.dc.html", "gap scan: 0 critical · 2 WATCH · UTC aligned"),
+      row(4, "Methodology claim", "ok", "claim_m1_pfc_118", "04 hub", "QuantBT 04 Evidence Flow.dc.html", "mode_1_decay · per_fold_causal · strict_outer_oos_after_frozen_selection"),
+      row(5, "Selected params lineage", "ok", "prm_7c1a9e", "07 freeze", "QuantBT 07 S3 Freeze.dc.html", "θ* trial #143 · pool frozen before OOS · SelectionTraceV1 present"),
+      row(6, "Final audit replay", "ok", "replay digest 1af9d3", "08 execute", "QuantBT 08 S4 Execute Replay.dc.html", "report_level=audit · fill ledger 1,042 rows · parity pass 1↔2"),
+      row(7, "Metrics — IS/OOS/holdout semantics", "ok", "metrics_summary.json · 77e0b9", "09 report", "QuantBT 09 Run Report.dc.html", "headline = OOS only (scope=auto) · holdout LOCKED, never read"),
+      row(8, "Execution assumptions", "ok", "fee 5bps taker · slip 2bps · funding on", "08 execute", "QuantBT 08 S4 Execute Replay.dc.html", "close_target_v2 — no intrabar SL/TP claims made or implied"),
+      row(9, "Robustness / parameter stability / regime", "deg", "search_diagnostics · partial", "06 search", "QuantBT 06 S2 Search and Selection.dc.html", "seed consensus 4/5 · θ* journey stable · regime evidence MISSING for 2020H1 — travels as DEGRADED"),
+      row(10, "Known limitations & waivers", "in", "2 declared", "", "", "capacity evidence limited (single venue depth) · funding model constant-rate; no waiver requested"),
+      row(11, "Reproducibility / parity checksums", "ok", "config sha256:88ae02 · data_signature 4bc21f", "09 report", "QuantBT 09 Run Report.dc.html", "config + tape + params re-derive final equity exactly"),
+      row(12, "Proposed use restrictions", "in", "3 declared", "", "", "markets: BTCUSDT-PERP only · paper first · max leverage 3 — restrictions travel into R1 conditions")
+    ];
+    const yaml = [
+      { k: "release_candidate_id", v: pub ? rcId : "rc_… (assigned on publish)", color: pub ? "#1e7b4f" : "#9a6a1f" },
+      { k: "alpha_id", v: "alpha_7f2", color: "#1c2532" },
+      { k: "alpha_version_id", v: unbound ? "null   # NOT_PUBLISHABLE" : "av_0_9_3", color: unbound ? "#b43a3a" : "#1c2532" },
+      { k: "alpha_artifact_digest", v: "sha256:3fe4a1…", color: "#1c2532" },
+      { k: "entrypoint", v: "alphas.momentum_btc:Alpha", color: "#1c2532" },
+      { k: "selected_parameter_artifact_id", v: "prm_7c1a9e", color: "#1c2532" },
+      { k: "parameter_digest", v: "sha256:7c1a9e…", color: "#1c2532" },
+      { k: "final_audit_run_id", v: "R-WFO-118 · att_04", color: "#1c2532" },
+      { k: "run_spec_digest", v: "sha256:88ae02…", color: "#1c2532" },
+      { k: "quantbt_engine_release_id", v: "er_quantbt_1_1_1", color: "#1c2532" },
+      { k: "engine_image_digest", v: "sha256:90d1c2…", color: "#1c2532" },
+      { k: "dataset_snapshot_ids", v: "[ds_btcusdt_4h@snap_2026_06_30]", color: "#1c2532" },
+      { k: "universe_snapshot_id", v: "univ_btc_perp_v1", color: "#1c2532" },
+      { k: "methodology_claim_id", v: "claim_m1_pfc_118", color: "#1c2532" },
+      { k: "known_limitations", v: "[capacity_evidence_limited, funding_model_constant]", color: "#9a6a1f" },
+      { k: "proposed_use_restrictions", v: "[btcusdt_perp_only, paper_first, max_leverage_3]", color: "#9a6a1f" },
+      { k: "created_at", v: pub ? "2026-09-14T09:12Z" : "— (on publish)", color: "#7a8699" }
+    ];
+    return {
+      isUnbound: unbound, isDraft: !pub, isPublished: pub, rcId,
+      stateChip: pub ? { label: "PUBLISHED", style: chip("PUBLISHED", "#1e7b4f", "#eef5f0") } : unbound ? { label: "NOT_PUBLISHABLE", style: chip("x", "#b43a3a", "#f7e8e8") } : { label: "DRAFT", style: chip("DRAFT", "#9a6a1f", "#f4ecdb") },
+      rail, taxonomy, lastRc: "rc_2026_08_c (av_0_9_3 · prm_49b2e0 · APPROVED, now superseded-on-publish)",
+      pack, packCount: "9 COMPLETE · 1 DEGRADED · 2 INPUT · 0 MISSING",
+      yaml,
+      onCopy: () => { try { navigator.clipboard.writeText(yaml.map(y => y.k + ": " + y.v).join("\n")); } catch (e) {} this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1500); },
+      copyLabel: s.copied ? "✓ copied" : "copy yaml",
+      onPublish: () => { if (!unbound) this.setState({ published: true }); },
+      onReset: () => this.setState({ published: false }),
+      publishDisabled: unbound,
+      publishLabel: unbound ? "publish blocked — bind alpha_version first" : "Publish release candidate " + rcId,
+      publishStyle: unbound
+        ? "border:1px dashed #c9c5ba; border-radius:6px; background:#faf9f5; color:#939db0; padding:9px 14px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; cursor:not-allowed;"
+        : "border:1px solid #9a6a1f; border-radius:6px; background:#9a6a1f; color:#ffffff; padding:9px 14px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.03em;",
+      mirrorStyle: "display:flex; flex-direction:column; gap:8px; border:1px " + (pub ? "solid #e3e0d7" : "dashed #c9c5ba") + "; border-radius:8px; background:" + (pub ? "#ffffff" : "#faf9f5") + "; padding:14px 16px;" + (pub ? " box-shadow:0 1px 2px rgba(28,37,50,.05);" : " opacity:.75;"),
+      mirror: pub ? {
+        subject: rcId + " — alpha_momentum_btc av_0_9_3",
+        status: "PENDING", statusStyle: "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:1px 7px; background:#f4ecdb; flex:none;",
+        sla: "SLA 5d · 4d 21h left", slaColor: "#4e5a6e", conditions: "none yet",
+        note: "The reviewer opens this row, walks the same evidence links you pinned above, and records one of six outcomes. Conditions and waivers they attach flow back into this mirror. You cannot edit anything past this point — only supersede with a new candidate."
+      } : {
+        subject: "— not yet published", status: "—", statusStyle: "font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0; flex:none;",
+        sla: "SLA starts at publish", slaColor: "#939db0", conditions: "—",
+        note: "Preview of the inbox row this publish will create on the Execution side. It stays a ghost until the record exists — this screen never fakes a governance state."
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

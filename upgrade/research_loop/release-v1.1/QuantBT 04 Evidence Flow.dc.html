@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT Evidence Flow — R-WFO-118</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+  input[type=range] { accent-color:#0f4c5c; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+  button { transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+  @keyframes ev-pulse { 0%,100% { opacity:1 } 50% { opacity:.45 } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px">
+
+  <div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5">
+    <span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span>
+    <span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span>
+    <span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap">
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">QuantBT Backtest</span><span style="color:#939db0">/</span>
+      <span style="font-family:'JetBrains Mono',monospace; flex:none">R-WFO-118</span><span style="color:#939db0">/</span>
+      <span style="color:#1c2532; flex:none">{{ crumbStage }}</span>
+    </span>
+    <span style="margin-left:auto; flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 12px">Search <span style="font-size:10px; color:#939db0; border:1px solid #e3e0d7; border-radius:3px; padding:0 4px; font-family:'JetBrains Mono',monospace">⌘K</span></span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Comfortable ▾</span>
+  </div>
+
+  <div style="display:flex; flex:1; min-height:0">
+
+    <div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px">
+      <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="3">
+        <div style="margin-bottom:16px">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">{{ g.label }}</div>
+          <div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <div style="{{ it.style }}">
+              <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ it.label }}</span>
+              <span style="{{ it.tagStyle }}">{{ it.tag }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="flex:1; min-width:0; max-width:1440px; margin:0 auto; padding:20px 28px 64px; display:flex; flex-direction:column; gap:14px">
+
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; padding:6px 12px; border:1px solid #efede4; border-radius:3px; background:#f4f2ec; font-family:'JetBrains Mono',monospace; font-size:11px; color:#939db0">
+        <span>run <span style="color:#1c2532">R-WFO-118</span></span>
+        <span style="display:inline-flex; align-items:center; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:600; background:#e3f1e9; color:#1e7b4f">COMPLETED</span>
+        <span style="border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">walk_forward · mode_1_decay</span>
+        <span style="border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">mom_breakout_v3</span>
+        <button onClick="{{ onToggleDs }}" title="dataset identity — coverage, gaps, digest" style="{{ dsChipStyle }}">BTCUSDT · 4h · ds@9f2c… {{ dsCaret }}</button>
+        <span style="border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">route close_target_v2 · pct_equity</span>
+        <span style="margin-left:auto">engine er_quantbt_1_1_1 · quantbt-engine==1.1.1[optimization] · created 2026-08-12 04:18Z</span>
+      </div>
+
+      <sc-if value="{{ dsOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="border:1px solid #0f4c5c; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(28,37,50,.08); padding:12px 16px; display:flex; flex-direction:column; gap:8px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:600; color:#0f4c5c">dataset identity — ds_btcusdt_4h</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">dataset manifest · Data Catalog module is SOON — this drawer reads the manifest the run pinned</span>
+        </div>
+        <div style="display:flex; gap:18px; flex-wrap:wrap">
+          <div style="flex:1.1; min-width:320px; display:grid; grid-template-columns:auto 1fr; gap:2px 14px; font-family:'JetBrains Mono',monospace; font-size:10.5px">
+            <span style="color:#939db0">digest</span><span>sha256:9f2c18d4aa… (pinned at submit — the run can never silently see other data)</span>
+            <span style="color:#939db0">source</span><span>binance-spot · klines v3 · revision 2026-08-01</span>
+            <span style="color:#939db0">span</span><span>2020-01-01 → 2026-08-14 · 14,462 bars · 4h · UTC aligned ✓</span>
+            <span style="color:#939db0">gaps</span><span style="color:#1e7b4f">0 unfilled</span>
+            <span style="color:#939db0">patched bars</span><span style="color:#9a6a1f">3 — venue outage 2021-03, forward-filled, flagged in bars.parquet.patch_mask</span>
+            <span style="color:#939db0">columns</span><span>open · high · low · close · volume (fees/funding series absent — portal gap)</span>
+          </div>
+          <div style="flex:1; min-width:300px; display:flex; flex-direction:column; gap:4px">
+            <span style="font-size:9.5px; text-transform:uppercase; letter-spacing:.07em; color:#939db0">coverage — where this run's windows sit</span>
+            <div style="position:relative; height:16px; border-radius:999px; background:#f4f2ec; border:1px solid #efede4">
+              <span title="IS 2024-01 → 2025-02 (rolling)" style="position:absolute; left:60%; width:22%; top:0; bottom:0; background:#a8c6ce; border-radius:999px"></span>
+              <span title="stitched OOS test segments" style="position:absolute; left:70%; width:12%; top:0; bottom:0; background:#0f4c5c; border-radius:999px"></span>
+              <span title="holdout — sealed" style="position:absolute; left:83%; width:14%; top:0; bottom:0; border:1px dashed #9a6a1f; border-radius:999px; background:repeating-linear-gradient(135deg,#f4ecdb 0 3px,transparent 3px 6px)"></span>
+              <span title="patched bars — 2021-03 outage, flagged" style="position:absolute; left:19%; width:0.8%; top:2px; bottom:2px; background:#9a6a1f"></span>
+            </div>
+            <span style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0"><span>2020-01</span><span>patch ▲ 2021-03</span><span>2026-08</span></span>
+            <span style="font-size:10px; color:#4e5a6e; line-height:1.5">The run only ever read bars inside its declared windows; the 2021 patch predates the IS start and touches nothing this run traded. Every stage cites this digest — one dataset truth per run.</span>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <div style="display:flex; align-items:stretch; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05)">
+        <div style="flex:1; display:flex; flex-wrap:wrap; gap:8px 24px; padding:10px 14px">
+          <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">validation_claim</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; border-left:2px solid #9a6a1f; padding-left:6px">{{ claim.validation }}</span></div>
+          <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">chronological_claim</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px">{{ claim.chrono }}</span></div>
+          <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">oos_used_for_selection</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px">{{ claim.oosSel }}</span></div>
+          <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">holdout_state</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#9a6a1f">SEALED · LOCKED</span></div>
+          <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">causality_claim</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px">CAUSAL_PREFIX</span></div>
+          <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">execution_contract</span><span title="the numeric contract every metric on this run was produced under" style="font-family:'JetBrains Mono',monospace; font-size:12px">close_target_v2</span></div>
+          <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">runtime authority</span><span title="scoring_backend=endpoint · resolved by promotion table v1 — reason: below_promotion_min_bars, python kept authority" style="font-family:'JetBrains Mono',monospace; font-size:12px">python <span style="font-size:9px; color:#9a6a1f">resolved · not assumed</span></span></div>
+          <div style="display:flex; flex-direction:column; gap:2px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">certification</span>
+            <button onClick="{{ claim.onGoBinding }}" title="Jump to the stage that sets the binding cap" style="display:inline-flex; align-items:center; gap:6px; border:0; background:transparent; padding:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:#1c2532">
+              <span style="{{ claim.certStyle }}">{{ claim.cert }}</span>
+              <span style="font-size:10px; color:#0f4c5c; text-decoration:underline">{{ claim.certNote }}</span>
+            </button>
+          </div>
+        </div>
+        <div style="border-left:1px solid #efede4; padding:10px 14px; max-width:230px; display:flex; align-items:center">
+          <span style="font-size:10px; color:#4e5a6e; line-height:1.5">Claims issued by <span style="font-family:'JetBrains Mono',monospace">quantbt-engine 1.1.1</span> from mode × schedule. The UI renders them — it never infers.</span>
+        </div>
+      </div>
+
+      <div style="position:sticky; top:0; z-index:25; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; box-shadow:0 2px 6px rgba(28,37,50,.08)">
+        <div style="display:flex; align-items:stretch; overflow-x:auto">
+          <sc-for list="{{ stages }}" as="st" hint-placeholder-count="7">
+            <button onClick="{{ st.onPick }}" style="{{ st.style }}">
+              <span style="display:flex; align-items:baseline; gap:6px"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:{{ st.numColor }}">{{ st.num }}</span><span style="font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:.05em">{{ st.name }}</span></span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0; white-space:nowrap">{{ st.sub }}</span>
+            </button>
+          </sc-for>
+          <div style="flex:none; display:flex; flex-direction:column; gap:2px; justify-content:center; padding:8px 14px; border-left:1px dashed #c9c5ba; opacity:.62">
+            <span style="display:flex; align-items:baseline; gap:6px"><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">→</span><span style="font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; color:#4e5a6e">Promotion</span><span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; border:1px dashed #939db0; border-radius:3px; padding:0 4px; color:#939db0">SOON</span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">Approval Gate · Paper</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:7px 14px; border-top:1px solid #efede4; background:#f4f2ec; border-radius:0 0 6px 6px">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">evidence cursor</span>
+          <span style="display:inline-flex; align-items:center; gap:3px; font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 4px 1px 8px; color:#4e5a6e">fold
+            <button onClick="{{ onPrevFold }}" title="previous fold" style="border:0; background:transparent; color:#4e5a6e; padding:0 3px; font-family:'JetBrains Mono',monospace; font-size:11px">‹</button>
+            <select value="{{ foldSel }}" onChange="{{ onFoldSel }}" style="border:0; background:transparent; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1c2532; max-width:150px">
+              <sc-for list="{{ foldSelOpts }}" as="fo" hint-placeholder-count="5"><option value="{{ fo.v }}">{{ fo.label }}</option></sc-for>
+            </select>
+            <button onClick="{{ onNextFold }}" title="next fold" style="border:0; background:transparent; color:#4e5a6e; padding:0 3px; font-family:'JetBrains Mono',monospace; font-size:11px">›</button>
+          </span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">trial <span style="color:#1c2532">{{ cur.trial }}</span></span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">params <span style="color:#1c2532">{{ cur.params }}</span></span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">seq <span style="color:#1c2532">{{ cur.seq }}</span></span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">schedule <span style="color:#1c2532">{{ cur.schedule }}</span></span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:1px 8px; color:#4e5a6e">window <span style="color:#1c2532">{{ cur.window }}</span></span>
+          <span style="font-size:10px; color:#939db0; margin-left:4px">deep dives: <a href="{{ dd.s2 }}">S2 search</a> · <a href="{{ dd.s3 }}">S3 freeze</a> · <a href="{{ dd.s4 }}">S4 replay</a> · <a href="{{ dd.s5 }}">promotion</a> · <a href="QuantBT 00 Journey Map.dc.html">journey map ↗</a></span>
+          <button onClick="{{ onCopyEvidence }}" style="margin-left:auto; border:1px solid #0f4c5c; border-radius:6px; background:transparent; color:#0f4c5c; padding:3px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase">{{ copyLabel }}</button>
+        </div>
+      </div>
+
+      <sc-if value="{{ isSummary }}" hint-placeholder-val="{{ true }}">
+      <section data-screen-label="Summary" style="display:flex; flex-direction:column; gap:14px">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <span style="display:inline-flex; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+              <sc-for list="{{ windowOpts }}" as="w" hint-placeholder-count="4">
+                <button onClick="{{ w.onPick }}" style="{{ w.style }}">{{ w.label }}</button>
+              </sc-for>
+            </span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#9a6a1f; border-left:2px solid #9a6a1f; padding-left:6px">{{ windowNote }}</span>
+          </div>
+          <span style="display:inline-flex; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+            <sc-for list="{{ capOpts }}" as="c" hint-placeholder-count="2">
+              <button onClick="{{ c.onPick }}" style="{{ c.style }}">{{ c.label }}</button>
+            </sc-for>
+          </span>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:8px">
+          <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="5">
+            <div style="flex:1; min-width:150px; border:1px solid #efede4; border-radius:6px; background:#ffffff; padding:8px 12px; display:flex; flex-direction:column; gap:3px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">{{ t.label }}</span>
+              <span style="{{ t.valueStyle }}">{{ t.value }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ t.foot }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ showHoldoutNote }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px dashed #9a6a1f; border-radius:6px; background:repeating-linear-gradient(135deg,#f4ecdb 0 6px,#faf9f5 6px 12px); padding:12px 16px; font-size:12px; color:#9a6a1f; line-height:1.5">
+            <span style="font-family:'JetBrains Mono',monospace; font-weight:600">withheld — LOCKED.</span> 0/5 metric cards render for this window. The empty cells are information, not missing data: the holdout has never been read. An unlock is a one-time audited event and would appear here with its digest, approver and timestamp.
+          </div>
+        </sc-if>
+
+        <figure style="margin:0; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px; break-inside:avoid">
+          <figcaption style="margin-bottom:12px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">EChart 1</span>
+            <span style="font-family:Newsreader,Georgia,serif; font-size:15px; color:#1c2532">{{ equityTitle }}</span>
+          </figcaption>
+          <div ref="{{ equityRef }}" style="width:100%; height:380px"></div>
+          <div style="margin-top:10px; padding-top:8px; border-top:1px solid #efede4; display:flex; flex-wrap:wrap; gap:4px 24px; font-size:10px">
+            <span><span style="color:#939db0; text-transform:uppercase; letter-spacing:.06em">source</span> <span style="font-family:'JetBrains Mono',monospace; color:#1c2532">series/stitched.parquet + fold series</span></span>
+            <span><span style="color:#939db0; text-transform:uppercase; letter-spacing:.06em">segment</span> <span style="font-family:'JetBrains Mono',monospace; color:#1c2532">{{ eqSegment }}</span></span>
+            <span><span style="color:#939db0; text-transform:uppercase; letter-spacing:.06em">units</span> <span style="font-family:'JetBrains Mono',monospace; color:#1c2532">{{ eqUnits }}</span></span>
+            <span><span style="color:#939db0; text-transform:uppercase; letter-spacing:.06em">timezone</span> <span style="font-family:'JetBrains Mono',monospace; color:#1c2532">UTC</span></span>
+            <span><span style="color:#939db0; text-transform:uppercase; letter-spacing:.06em">as-of</span> <span style="font-family:'JetBrains Mono',monospace; color:#1c2532">2026-08-12 04:18Z</span></span>
+            <span><span style="color:#939db0; text-transform:uppercase; letter-spacing:.06em">digest</span> <span style="font-family:'JetBrains Mono',monospace; color:#1c2532">sha256:9f2c18d4aa…</span></span>
+          </div>
+        </figure>
+
+        <figure style="margin:0; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px; break-inside:avoid">
+          <figcaption style="margin-bottom:12px; display:flex; align-items:baseline; gap:8px">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">EChart 2</span>
+            <span style="font-family:Newsreader,Georgia,serif; font-size:15px; color:#1c2532">Underwater — drawdown derived from equity</span>
+          </figcaption>
+          <div ref="{{ underRef }}" style="width:100%; height:180px"></div>
+          <div style="margin-top:8px; font-size:12px; line-height:1.4; color:#939db0">Drawdown is a restatement of the equity series above, not a separate metric the engine computes. The marked trough is the same point the MAX DRAWDOWN tile refers to.</div>
+        </figure>
+
+        <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+          <div style="display:flex; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #e3e0d7">
+            <span style="display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">per-fold verdict — which fold carries the run, which fold drags it</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#4e5a6e">{{ verdictSummary }}</span>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:6px">
+              <sc-for list="{{ vSortOpts }}" as="vo" hint-placeholder-count="2"><button onClick="{{ vo.onPick }}" style="{{ vo.style }}">{{ vo.label }}</button></sc-for>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">metrics/per_fold.json · click a row to move the cursor</span>
+            </span>
+          </div>
+          <table style="width:100%; border-collapse:collapse; font-size:12px; min-width:980px">
+            <thead><tr>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:7px 12px">fold</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:7px 12px; min-width:150px">OOS sharpe</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:7px 12px">Δ decay</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:7px 12px">trades</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:7px 12px">max dd</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:7px 12px">contribution</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:7px 12px">worst moment</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:7px 12px">verdict</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:7px 12px">open</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ verdictRows }}" as="v" hint-placeholder-count="0">
+                <tr onClick="{{ v.onPick }}" style="{{ v.style }}">
+                  <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace">{{ v.id }}</td>
+                  <td style="padding:6px 12px">
+                    <span style="display:flex; align-items:center; gap:8px">
+                      <span style="position:relative; flex:1; height:8px; background:#f4f2ec; border:1px solid #efede4"><span style="{{ v.barStyle }}"></span></span>
+                      <span style="font-family:'JetBrains Mono',monospace; width:38px; text-align:right">{{ v.oos }}</span>
+                    </span>
+                  </td>
+                  <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:{{ v.decayColor }}">{{ v.decay }}</td>
+                  <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ v.trades }}</td>
+                  <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:#b43a3a">{{ v.dd }}</td>
+                  <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:{{ v.contribColor }}">{{ v.contrib }}</td>
+                  <td style="padding:6px 12px; color:#4e5a6e; font-size:11px">{{ v.worst }}</td>
+                  <td style="padding:6px 12px"><span style="{{ v.chipStyle }}">{{ v.chip }}</span></td>
+                  <td style="padding:6px 12px; white-space:nowrap"><a href="{{ v.searchHref }}" style="font-family:'JetBrains Mono',monospace; font-size:10px">search</a> <span style="color:#c9c5ba">·</span> <a href="{{ v.replayHref }}" style="font-family:'JetBrains Mono',monospace; font-size:10px">replay</a></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div style="padding:7px 12px; border-top:1px solid #efede4; font-size:10.5px; color:#4e5a6e; line-height:1.5">{{ verdictFoot }}</div>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <figure style="margin:0; flex:1.4; min-width:520px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px">
+            <figcaption style="margin-bottom:12px; display:flex; align-items:baseline; gap:8px">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">EChart 3</span>
+              <span style="font-family:Newsreader,Georgia,serif; font-size:15px; color:#1c2532">Strategy behavior — rolling 30d Sharpe · rolling beta vs BTCUSDT</span>
+            </figcaption>
+            <div ref="{{ rollRef }}" style="width:100%; height:230px"></div>
+            <div style="margin-top:8px; font-size:12px; line-height:1.4; color:#939db0">Read from analytics/behavior.json — engine-published series; the UI computes nothing. A Sharpe that only lives in one regime, or a beta drifting toward 1, is a behavior finding the headline tiles cannot show.</div>
+          </figure>
+          <figure style="margin:0; flex:1; min-width:380px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px">
+            <figcaption style="margin-bottom:12px; display:flex; align-items:baseline; gap:8px">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">EChart 4</span>
+              <span style="font-family:Newsreader,Georgia,serif; font-size:15px; color:#1c2532">Daily return distribution — stitched OOS</span>
+            </figcaption>
+            <div ref="{{ distRef }}" style="width:100%; height:230px"></div>
+            <div style="margin-top:8px; font-size:12px; line-height:1.4; color:#939db0">skew +0.62 · excess kurtosis 4.2 — the fat left tail is what the max-drawdown tile summarizes into one number.</div>
+          </figure>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <div style="flex:1.3; min-width:460px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:6px">
+            <div style="display:flex; justify-content:space-between; align-items:baseline">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">monthly returns — stitched OOS</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">analytics/behavior.json</span>
+            </div>
+            <div style="display:flex; gap:3px; align-items:flex-end">
+              <sc-for list="{{ monthCols }}" as="mc" hint-placeholder-count="14">
+                <span title="{{ mc.title }}" style="display:flex; flex-direction:column; gap:2px; flex:1; min-width:0">
+                  <span style="{{ mc.cellStyle }}"></span>
+                  <span style="{{ mc.valStyle }}">{{ mc.val }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:8px; text-align:center; color:#939db0">{{ mc.label }}</span>
+                </span>
+              </sc-for>
+            </div>
+            <span style="font-size:10px; color:#939db0; line-height:1.5">One cell per calendar month, value in %. Depth of tint = magnitude; the reading to look for is clustering — three red cells in a row is a regime, not noise.</span>
+          </div>
+          <div style="flex:1; min-width:340px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:6px">
+            <div style="display:flex; justify-content:space-between; align-items:baseline">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">behavior — engine-published, UI renders</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">segment oos</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px">
+              <sc-for list="{{ behaviorTiles }}" as="bt" hint-placeholder-count="8">
+                <span style="border:1px solid #efede4; border-radius:6px; padding:6px 10px; display:flex; flex-direction:column; gap:1px">
+                  <span style="font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:#939db0">{{ bt.k }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600">{{ bt.v }}</span>
+                  <span style="font-size:9.5px; color:#939db0">{{ bt.sub }}</span>
+                </span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isSplit }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Stage 1 Split" style="display:flex; flex-direction:column; gap:14px">
+        <div>
+          <div style="font-family:Newsreader,Georgia,serif; font-size:23px">Stage 1 · Split — fold construction</div>
+          <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0; margin-top:2px">How time was divided before anything was searched. If this is wrong, every later stage is wrong.</div>
+        </div>
+
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px; display:flex; flex-direction:column; gap:6px">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">fold timeline — rolling windows · outer 5</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">train = mist · test = accent · purge 24h · embargo 72h · config/fold_plan.json</span>
+          </div>
+          <sc-for list="{{ ganttRows }}" as="g" hint-placeholder-count="5">
+            <button onClick="{{ g.onPick }}" style="{{ g.rowStyle }}">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; width:64px; flex:none; text-align:left; color:#4e5a6e">{{ g.id }}</span>
+              <span style="position:relative; flex:1; height:16px; border-radius:999px; background:#f4f2ec">
+                <span style="{{ g.trainStyle }}"></span>
+                <span style="{{ g.testStyle }}"></span>
+                <span style="{{ g.embargoStyle }}"></span>
+              </span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; width:190px; flex:none; text-align:right; color:#939db0">{{ g.range }}</span>
+            </button>
+          </sc-for>
+          <div style="display:flex; align-items:center; gap:8px; padding:6px 0 0">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; width:64px; flex:none; color:#9a6a1f">holdout</span>
+            <span style="position:relative; flex:1; height:16px; border-radius:999px; border:1px dashed #9a6a1f; background:repeating-linear-gradient(135deg,#f4ecdb 0 4px,transparent 4px 8px)">
+              <span style="position:absolute; left:74%; top:1px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#9a6a1f">SEALED · LOCKED · never read</span>
+            </span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; width:190px; flex:none; text-align:right; color:#9a6a1f">2025-02-16 → 2025-06-30</span>
+          </div>
+          <div style="margin-top:6px; border-left:2px solid #9a6a1f; padding-left:8px; font-size:11px; color:#4e5a6e">While the holdout stays sealed this stage caps certification at <span style="font-family:'JetBrains Mono',monospace; font-weight:600">≤ B</span> — the cap the claim bar is currently showing. Unlocking is a one-time audited workflow (out of scope for this round; state shown as LOCKED only).</div>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <div style="flex:2; min-width:520px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+            <table style="width:100%; border-collapse:collapse; font-size:12px">
+              <thead><tr>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">fold</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">train</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">test (outer OOS)</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">params</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:8px 12px">IS sharpe</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:8px 12px">OOS sharpe</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:8px 12px">Δ decay</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ foldRows }}" as="f" hint-placeholder-count="5">
+                  <tr onClick="{{ f.onPick }}" style="{{ f.style }}">
+                    <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace">{{ f.id }}</td>
+                    <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; color:#4e5a6e">{{ f.train }}</td>
+                    <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; color:#4e5a6e">{{ f.test }}</td>
+                    <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; color:#0f4c5c">{{ f.params }}</td>
+                    <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ f.isS }}</td>
+                    <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ f.oosS }}</td>
+                    <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:{{ f.decayColor }}">{{ f.decay }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <div style="padding:6px 12px; border-top:1px solid #efede4; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">source config/fold_plan.json · protocol walk_forward · as-of 2026-08-12 04:18Z · click a row to move the cursor — every stage follows</div>
+          </div>
+          <div style="flex:1; min-width:280px; display:flex; flex-direction:column; gap:14px">
+            <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:6px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">inner validation — containment</span>
+              <span style="font-size:12px; color:#4e5a6e; line-height:1.5">Inner search folds (k=3, nested) are built strictly inside the active fold's outer train window.</span>
+              <span style="display:flex; gap:2px; height:10px; margin:4px 0">
+                <span style="flex:2; background:#a8c6ce; border-radius:2px"></span>
+                <span style="flex:2; background:#a8c6ce; border-radius:2px"></span>
+                <span style="flex:2; background:#a8c6ce; border-radius:2px"></span>
+                <span style="flex:3; background:#f4f2ec; border:1px dashed #c9c5ba; border-radius:2px"></span>
+              </span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px"><span style="color:#1e7b4f; font-weight:600">✓ inner ⊂ outer IS — VERIFIED</span> <span style="color:#939db0">· inner_fold_table digest sha256:2ba4…</span></span>
+            </div>
+            <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:6px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">stitched OOS provenance</span>
+              <span style="font-size:12px; color:#4e5a6e; line-height:1.5">The stitched OOS account on Summary is the concatenation of the 5 test segments — no overlap, no gap, each traded with its own frozen params.</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">stitch digest sha256:7e01… · verified against fold boundaries</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Stage 2 Search" style="display:flex; flex-direction:column; gap:14px">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px">
+          <div>
+            <div style="font-family:Newsreader,Georgia,serif; font-size:23px">Stage 2 · Search — why these params</div>
+            <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0; margin-top:2px">Every trial, the funnel that narrowed them, and the decision that picked one — for the fold under the cursor.</div>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:999px; background:#ffffff; padding:2px 10px">fold {{ cur.fold }} · OOS {{ searchOOSRange }}</span>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <div style="flex:1; min-width:250px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:4px; font-family:'JetBrains Mono',monospace; font-size:11px">
+            <span style="font-family:Inter,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0; margin-bottom:2px">search configuration · search-trace.parquet</span>
+            <span>sampler <span style="color:#0f4c5c">TPE</span> · seed 42 · objective sharpe_v2</span>
+            <span style="color:#4e5a6e">budget 600 · early_stop 250 · constraints 3</span>
+            <span style="color:#4e5a6e">search_data_scope <span style="color:#1c2532">is_only</span></span>
+            <span style="color:#4e5a6e">information cutoff <span style="color:#1c2532">{{ searchCutoff }}</span></span>
+            <span style="color:#4e5a6e">rejected samplers: grid (space too large) · cmaes (categorical dims) — sampler_rejection_reasons</span>
+          </div>
+          <div style="flex:1.1; min-width:270px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:5px">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0; margin-bottom:2px">candidate funnel</span>
+            <sc-for list="{{ funnel }}" as="fn" hint-placeholder-count="5">
+              <span style="display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px">
+                <span style="width:128px; flex:none; color:#4e5a6e; font-family:Inter,sans-serif; font-size:11px">{{ fn.label }}</span>
+                <span style="{{ fn.barStyle }}"></span>
+                <span style="width:36px; text-align:right">{{ fn.count }}</span>
+              </span>
+            </sc-for>
+          </div>
+          <div style="flex:1.1; min-width:270px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:4px; font-family:'JetBrains Mono',monospace; font-size:11px">
+            <span style="font-family:Inter,sans-serif; font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0; margin-bottom:2px">selection decision · selection_trace</span>
+            <span>selector <span style="color:#0f4c5c">robust_plateau v2</span></span>
+            <span style="color:#4e5a6e">winner trial <span style="color:#1c2532">{{ cur.trial }}</span> → candidate #11 of 24 frozen</span>
+            <span style="color:#4e5a6e">tie-break: lower max_drawdown</span>
+            <span style="color:#4e5a6e">plateau density 0.71 · seed consensus 4/5</span>
+            <span style="color:#4e5a6e">decision digest sha256:4d81…</span>
+            <span style="border-left:2px solid #9a6a1f; padding-left:6px; font-size:10px; color:#4e5a6e; font-family:Inter,sans-serif; line-height:1.5; margin-top:4px">{{ schedNote }}</span>
+          </div>
+        </div>
+
+        <figure style="margin:0; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px">
+          <figcaption style="margin-bottom:12px; display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap">
+            <span style="display:flex; align-items:baseline; gap:8px">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">EChart 3</span>
+              <span style="font-family:Newsreader,Georgia,serif; font-size:15px; color:#1c2532">Search progression — 600 trials, IS objective only</span>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:6px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:#939db0">claim driver · schedule</span>
+              <sc-for list="{{ schedOpts }}" as="sd" hint-placeholder-count="3">
+                <button onClick="{{ sd.onPick }}" style="{{ sd.style }}">{{ sd.label }}</button>
+              </sc-for>
+            </span>
+          </figcaption>
+          <div ref="{{ trialRef }}" style="width:100%; height:260px"></div>
+          <div style="margin-top:8px; font-size:12px; line-height:1.4; color:#939db0">Each dot is one trial scored on IS only. Gold line = best-so-far. Dashed marks: candidate-set freeze (480) and selection commit. Switching the schedule recomputes the claim bar above — same mode, different claim.</div>
+        </figure>
+
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">lineage — one unbroken chain, each link opens its stage</span>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px">
+            <sc-for list="{{ lineage }}" as="ln" hint-placeholder-count="6">
+              <button onClick="{{ ln.onPick }}" style="{{ ln.style }}">
+                <span style="font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:#939db0">{{ ln.k }}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px">{{ ln.v }}</span>
+              </button>
+              <span style="color:#939db0; font-size:11px">{{ ln.arrow }}</span>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse; font-size:12px">
+            <thead><tr>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">trial</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">state</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:8px 12px">sharpe_is</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:8px 12px">maxdd_is</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">params digest</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">note</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ trialRows }}" as="tr" hint-placeholder-count="10">
+                <tr onClick="{{ tr.onPick }}" style="{{ tr.style }}">
+                  <td style="padding:5px 12px; font-family:'JetBrains Mono',monospace">{{ tr.id }}</td>
+                  <td style="padding:5px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:{{ tr.stateColor }}">{{ tr.state }}</td>
+                  <td style="padding:5px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ tr.sharpe }}</td>
+                  <td style="padding:5px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ tr.dd }}</td>
+                  <td style="padding:5px 12px; font-family:'JetBrains Mono',monospace; color:#0f4c5c">{{ tr.digest }}</td>
+                  <td style="padding:5px 12px; color:#4e5a6e">{{ tr.note }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div style="padding:6px 12px; border-top:1px solid #efede4; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">trial ledger — Optuna trials only; candidate replays are a separate ledger (never mixed). Click a row: cursor picks up trial + params, Freeze and Execute follow.</div>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isFreeze }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Stage 3 Freeze" style="display:flex; flex-direction:column; gap:14px">
+        <div>
+          <div style="font-family:Newsreader,Georgia,serif; font-size:23px">Stage 3 · Freeze — the hinge between Search and Execute</div>
+          <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0; margin-top:2px">What was frozen, when, and proof that nothing drifted afterwards.</div>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <div style="flex:1.4; min-width:420px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:16px">
+            <div style="display:flex; justify-content:space-between; align-items:baseline">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">three timestamps — ordering is the claim</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:#1e7b4f">✓ ORDER VERIFIED</span>
+            </div>
+            <div style="position:relative; height:64px; margin-top:14px">
+              <div style="position:absolute; left:2%; right:2%; top:30px; height:1px; background:#e3e0d7"></div>
+              <div style="position:absolute; left:6%; top:24px; width:13px; height:13px; border-radius:999px; background:#0f4c5c"></div>
+              <div style="position:absolute; left:2%; top:0; font-family:'JetBrains Mono',monospace; font-size:10px"><span style="color:#4e5a6e">params_frozen_at</span><br>2024-09-30 23:59Z</div>
+              <div style="position:absolute; left:38%; top:24px; width:13px; height:13px; border-radius:999px; background:#0f4c5c"></div>
+              <div style="position:absolute; left:33%; top:44px; font-family:'JetBrains Mono',monospace; font-size:10px"><span style="color:#4e5a6e">bundle_frozen_at</span><br>2024-10-01 00:02Z</div>
+              <div style="position:absolute; left:74%; top:24px; width:13px; height:13px; border-radius:999px; border:2px solid #9a6a1f; background:#faf9f5"></div>
+              <div style="position:absolute; left:68%; top:0; font-family:'JetBrains Mono',monospace; font-size:10px"><span style="color:#9a6a1f">outer_oos_first_read_at</span><br>2024-10-01 00:05Z</div>
+            </div>
+            <div style="border-left:2px solid #1e7b4f; padding-left:8px; font-size:11px; color:#4e5a6e; margin-top:6px">Params and bundle were both frozen <em>before</em> the outer OOS was first read — the ordering that makes "{{ claim.validation }}" a claim instead of a guess. A freeze after first read would cap certification at ≤ C.</div>
+          </div>
+          <div style="flex:1; min-width:320px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:16px; display:flex; flex-direction:column; gap:8px">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">digest chain — drift detection</span>
+            <div style="display:flex; flex-direction:column; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px">
+              <span style="display:flex; justify-content:space-between; gap:8px"><span style="color:#4e5a6e">parameter_set</span><span style="color:#0f4c5c">{{ cur.params }}</span></span>
+              <span style="color:#939db0; padding-left:8px">└▸ sealed into</span>
+              <span style="display:flex; justify-content:space-between; gap:8px"><span style="color:#4e5a6e">sealed_bundle_digest</span><span>sha256:c41f7a9e0b…</span></span>
+              <span style="color:#939db0; padding-left:8px">└▸ compared with</span>
+              <span style="display:flex; justify-content:space-between; gap:8px"><span style="color:#4e5a6e">runtime_bundle_digest</span><span>sha256:c41f7a9e0b…</span></span>
+              <span style="display:flex; justify-content:space-between; gap:8px; border-top:1px solid #efede4; padding-top:6px"><span style="color:#4e5a6e">verdict</span><span style="color:#1e7b4f; font-weight:600">✓ MATCH — no drift into Execute</span></span>
+            </div>
+            <span style="font-size:11px; color:#939db0; line-height:1.5">A mismatch here means the bundle was rebuilt after freeze → certification BLOCKED. The check re-runs at Stage 4 against the tape actually replayed.</span>
+          </div>
+        </div>
+
+        <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse; font-size:12px">
+            <thead><tr>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">parameter</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">search range</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px; min-width:220px">range position</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:8px 12px">frozen θ*</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:8px 12px">what-if θ′</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ paramRows }}" as="p" hint-placeholder-count="5">
+                <tr style="border-top:1px solid #efede4">
+                  <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">{{ p.name }}</td>
+                  <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; color:#939db0">{{ p.range }}</td>
+                  <td style="padding:7px 12px">
+                    <span style="position:relative; display:block; height:8px; border-radius:999px; background:#f4f2ec; border:1px solid #efede4">
+                      <span style="{{ p.markStyle }}"></span>
+                      <span style="{{ p.whatifMarkStyle }}"></span>
+                    </span>
+                  </td>
+                  <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600">{{ p.frozen }}</td>
+                  <td style="padding:7px 12px; text-align:right; white-space:nowrap">
+                    <button onClick="{{ p.onDec }}" style="border:1px solid #e3e0d7; background:#ffffff; border-radius:3px; padding:0 6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#4e5a6e">−</button>
+                    <span style="{{ p.whatifStyle }}">{{ p.whatif }}</span>
+                    <button onClick="{{ p.onInc }}" style="border:1px solid #e3e0d7; background:#ffffff; border-radius:3px; padding:0 6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#4e5a6e">+</button>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 12px; border-top:1px solid #e3e0d7; background:#f4f2ec">
+            <span style="font-size:11px; color:#4e5a6e">What-if never writes onto frozen params — it drafts a <span style="font-family:'JetBrains Mono',monospace">new attempt</span> with its own lineage.</span>
+            <sc-for list="{{ attempts }}" as="a" hint-placeholder-count="1">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; border:1px dashed #9a6a1f; border-radius:999px; padding:1px 8px; color:#9a6a1f">{{ a.label }}</span>
+            </sc-for>
+            <button onClick="{{ onCreateAttempt }}" style="{{ attemptBtnStyle }}">{{ attemptBtnLabel }}</button>
+          </div>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isExecute }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Stage 4 Execute" style="display:flex; flex-direction:column; gap:14px">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px">
+          <div>
+            <div style="font-family:Newsreader,Georgia,serif; font-size:23px">Stage 4 · Execute — candle replay</div>
+            <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0; margin-top:2px">The frozen params trading the OOS tape, one event at a time. Replay reads immutable artifacts — it never re-runs the strategy.</div>
+          </div>
+          <span style="display:inline-flex; align-items:center; gap:6px">
+            <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:#939db0">execution contract</span>
+            <sc-for list="{{ routeOpts }}" as="r" hint-placeholder-count="3">
+              <button onClick="{{ r.onPick }}" style="{{ r.style }}">{{ r.label }}</button>
+            </sc-for>
+          </span>
+        </div>
+
+        <div style="{{ routeNoticeStyle }}">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; flex:none; font-weight:600">{{ routeNoticeTag }}</span>
+          <span style="font-size:11.5px; line-height:1.55">{{ routeNotice }}</span>
+        </div>
+
+        <div style="display:flex; align-items:stretch; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); overflow:hidden">
+          <div style="width:196px; flex:none; border-right:1px solid #e3e0d7; display:flex; flex-direction:column; background:#faf9f5">
+            <div style="padding:8px 10px; border-bottom:1px solid #efede4; display:flex; justify-content:space-between; align-items:baseline">
+              <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0; font-weight:500">fold navigator</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">folds.parquet</span>
+            </div>
+            <sc-for list="{{ exFolds }}" as="f" hint-placeholder-count="5">
+              <button onClick="{{ f.onPick }}" style="{{ f.style }}">
+                <span style="display:flex; justify-content:space-between; align-items:baseline"><span style="font-family:'JetBrains Mono',monospace; font-size:11px">{{ f.id }}</span><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:{{ f.statusColor }}">{{ f.status }}</span></span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">{{ f.params }} · OOS {{ f.oosS }}</span>
+              </button>
+            </sc-for>
+            <div style="padding:8px 10px; border-top:1px solid #efede4; display:flex; flex-direction:column; gap:5px">
+              <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0; font-weight:500">layers</span>
+              <sc-for list="{{ layers }}" as="l" hint-placeholder-count="5">
+                <button onClick="{{ l.onToggle }}" style="{{ l.style }}">
+                  <span style="{{ l.boxStyle }}">{{ l.mark }}</span>
+                  <span>{{ l.label }}</span>
+                  <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">{{ l.state }}</span>
+                </button>
+              </sc-for>
+              <button onClick="{{ onToggleReveal }}" style="{{ revealStyle }}">
+                <span style="{{ revealBoxStyle }}">{{ revealMark }}</span>
+                <span>causal reveal</span>
+              </button>
+              <span style="font-size:9.5px; color:#939db0; line-height:1.5">Reveal hides bars after the cursor — a prefix cut of bars.parquet, never a re-run.</span>
+            </div>
+          </div>
+
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column">
+            <div style="display:flex; gap:8px; align-items:center; padding:7px 14px; border-bottom:1px solid #efede4; background:#faf9f5">
+              <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0; flex:none; font-weight:500">fold {{ cur.fold }}</span>
+              <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; color:#7a8699">IS</span>
+              <span style="flex:2.2; height:8px; background:repeating-linear-gradient(135deg,#cdd4dc 0 2px,transparent 2px 5px); border:1px solid #b6bec8"></span>
+              <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; color:#0f4c5c">OOS (plotted)</span>
+              <span style="flex:1; height:8px; background:#e2edf0; border:1px solid #0f4c5c"></span>
+              <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; color:#9a6a1f">HOLDOUT</span>
+              <span style="flex:.7; height:8px; background:repeating-linear-gradient(135deg,#f4ecdb 0 3px,transparent 3px 6px); border:1px dashed #9a6a1f"></span>
+              <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0">cutoff {{ searchCutoff }}</span>
+            </div>
+            <div style="position:relative; height:480px; background:#faf9f5">
+              <div ref="{{ replayRef }}" style="position:absolute; inset:0"></div>
+              <div style="{{ replayFallbackStyle }}">{{ replayFallback }}</div>
+              <div style="position:absolute; top:6px; left:10px; display:flex; gap:8px; font-family:'JetBrains Mono',monospace; font-size:9px; color:#939db0; pointer-events:none; z-index:5">
+                <span>bars.parquet · ds_btcusdt_4h@sha256:9f2c18d4aa</span>
+                <span>{{ barsLabel }}</span>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 14px; border-top:1px solid #e3e0d7; background:#ffffff; flex-wrap:wrap">
+              <span style="display:inline-flex; gap:4px">
+                <sc-for list="{{ transport }}" as="t" hint-placeholder-count="7">
+                  <button title="{{ t.title }}" onClick="{{ t.onPress }}" style="{{ t.style }}">{{ t.label }}</button>
+                </sc-for>
+              </span>
+              <span style="display:inline-flex; gap:4px">
+                <sc-for list="{{ speeds }}" as="sp" hint-placeholder-count="4">
+                  <button onClick="{{ sp.onPick }}" style="{{ sp.style }}">{{ sp.label }}</button>
+                </sc-for>
+              </span>
+              <input type="range" min="0" max="{{ seekMax }}" value="{{ seekVal }}" onChange="{{ onSeek }}" style="flex:1; min-width:160px">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e; white-space:nowrap">{{ seekLabel }}</span>
+            </div>
+            <div style="display:flex; gap:0; border-top:1px solid #efede4; background:#f4f2ec; padding:6px 14px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e">
+              <span style="margin-right:18px">t <span style="color:#1c2532">{{ readout.ts }}</span></span>
+              <span style="margin-right:18px">bar <span style="color:#1c2532">{{ readout.bar }}</span></span>
+              <span style="margin-right:18px">event_seq <span style="color:#1c2532">{{ readout.seq }}</span></span>
+              <span style="margin-right:18px">position <span style="color:#1c2532">{{ readout.pos }}</span></span>
+              <span style="margin-right:18px">equity <span style="color:#1c2532">{{ readout.equity }}</span></span>
+              <span style="color:#939db0">readout follows the transport — the global cursor above follows the readout</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <div style="flex:1.5; min-width:460px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; overflow:hidden">
+            <div style="display:flex; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #e3e0d7">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">event ledger</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ ledgerCount }}</span>
+            </div>
+            <sc-for list="{{ ledger }}" as="e" hint-placeholder-count="10">
+              <button onClick="{{ e.onPick }}" style="{{ e.style }}">
+                <span style="width:56px; flex:none; color:#939db0">{{ e.seq }}</span>
+                <span style="width:118px; flex:none; color:#4e5a6e">{{ e.ts }}</span>
+                <span style="width:34px; flex:none; color:#939db0">{{ e.bar }}</span>
+                <span style="width:104px; flex:none; color:{{ e.typeColor }}; font-weight:600">{{ e.type }}</span>
+                <span style="flex:1; color:#4e5a6e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ e.note }}</span>
+              </button>
+            </sc-for>
+            <div style="padding:6px 12px; border-top:1px solid #efede4; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ ledgerSource }}</div>
+          </div>
+          <div style="flex:1; min-width:300px; display:flex; flex-direction:column; gap:14px">
+            <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:5px">
+              <div style="display:flex; justify-content:space-between; align-items:baseline">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">event inspector</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ inspectorSource }}</span>
+              </div>
+              <sc-for list="{{ inspectorRows }}" as="ir" hint-placeholder-count="6">
+                <span style="display:flex; justify-content:space-between; gap:10px; font-family:'JetBrains Mono',monospace; font-size:11px; border-bottom:1px solid #efede4; padding:3px 0">
+                  <span style="color:#939db0">{{ ir.k }}</span><span style="text-align:right">{{ ir.v }}</span>
+                </span>
+              </sc-for>
+              <span style="font-size:10px; color:#939db0; line-height:1.5; margin-top:4px">Every row is an artifact reference, not a UI inference. Copy evidence link keeps event_seq + bundle digest.</span>
+            </div>
+            <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:5px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">why these params?</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#4e5a6e">selector robust_plateau v2 → trial {{ cur.trial }} → candidate #11 → {{ cur.params }}</span>
+              <span style="font-size:11px; color:#4e5a6e; line-height:1.5">The full funnel, progression chart and decision digest live in Search — with this fold already under the cursor.</span>
+              <button onClick="{{ onGoSearch }}" style="align-self:flex-start; margin-top:4px; border:1px solid #0f4c5c; border-radius:6px; background:transparent; color:#0f4c5c; padding:3px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase">open stage 2 · search →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isClaim }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Stage 5 Claim" style="display:flex; flex-direction:column; gap:14px">
+        <div>
+          <div style="font-family:Newsreader,Georgia,serif; font-size:23px">Stage 5 · Claim — what this run is allowed to say</div>
+          <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0; margin-top:2px">The claim passport only aggregates. Nothing here is computed on this screen.</div>
+        </div>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <div style="flex:1.4; min-width:460px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+            <div style="padding:8px 12px; border-bottom:1px solid #e3e0d7; display:flex; justify-content:space-between"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">certification — min of the caps, never issued here</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">cert_chain.json</span></div>
+            <table style="width:100%; border-collapse:collapse; font-size:12px">
+              <thead><tr>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">stage</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">condition observed</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">cap</th>
+                <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px"></th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ capRows }}" as="cr" hint-placeholder-count="4">
+                  <tr style="{{ cr.style }}">
+                    <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">{{ cr.stage }}</td>
+                    <td style="padding:7px 12px; color:#4e5a6e">{{ cr.cond }}</td>
+                    <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-weight:600; color:{{ cr.capColor }}">{{ cr.cap }}</td>
+                    <td style="padding:7px 12px"><button onClick="{{ cr.onGo }}" style="border:0; background:transparent; padding:0; font-family:'JetBrains Mono',monospace; font-size:10px; color:#0f4c5c; text-decoration:underline">{{ cr.link }}</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <div style="padding:8px 12px; border-top:1px solid #e3e0d7; background:#f4f2ec; display:flex; align-items:center; gap:10px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:#939db0; font-weight:500">resulting level</span>
+              <span style="{{ claim.certStyle }}">{{ claim.cert }}</span>
+              <span style="font-size:11px; color:#4e5a6e">binding: {{ bindingLabel }} — fix it there, not here.</span>
+            </div>
+          </div>
+
+          <div style="flex:1; min-width:340px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+            <div style="padding:8px 12px; border-bottom:1px solid #e3e0d7"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">window disclosure — who may read what</span></div>
+            <table style="width:100%; border-collapse:collapse; font-size:12px">
+              <tbody>
+                <tr style="border-bottom:1px solid #efede4"><td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; color:#7a8699">IS</td><td style="padding:7px 12px; color:#4e5a6e">training window — always readable</td><td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:#1e7b4f">5/5 cards</td></tr>
+                <tr style="border-bottom:1px solid #efede4"><td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; color:#0f4c5c">OOS</td><td style="padding:7px 12px; color:#4e5a6e">{{ oosDisclosure }}</td><td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:#1e7b4f">5/5 cards</td></tr>
+                <tr style="border-bottom:1px solid #efede4"><td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; color:#9a6a1f">Holdout</td><td style="padding:7px 12px; color:#4e5a6e">withheld — LOCKED; empty cells are information, not missing data</td><td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:#9a6a1f">0/5 cards</td></tr>
+                <tr><td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; color:#939db0">Compare</td><td style="padding:7px 12px; color:#4e5a6e">enabled — same ComparisonContractKey within this run</td><td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:#1e7b4f">enabled</td></tr>
+              </tbody>
+            </table>
+            <div style="padding:8px 12px; border-top:1px solid #efede4; font-size:10px; color:#939db0; line-height:1.5">The Overview window switcher renders these labels — it never writes its own.</div>
+          </div>
+        </div>
+
+        <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+          <div style="padding:8px 12px; border-bottom:1px solid #e3e0d7; display:flex; justify-content:space-between"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">artifact manifest — whole run</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">route-aware · close_target_v2 shown</span></div>
+          <sc-for list="{{ manifestRows }}" as="m" hint-placeholder-count="10">
+            <div style="display:flex; align-items:baseline; gap:12px; padding:5px 12px; border-bottom:1px solid #efede4; font-size:12px">
+              <span style="width:190px; flex:none; font-family:'JetBrains Mono',monospace">{{ m.name }}</span>
+              <span style="{{ m.stateStyle }}">{{ m.state }}</span>
+              <span style="flex:1; color:#4e5a6e">{{ m.note }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">{{ m.digest }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px; display:flex; flex-direction:column; gap:10px">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">next — hooks only, gates designed in a later round</span><span style="display:inline-flex; gap:8px"><a href="QuantBT 09 Run Report.dc.html" style="border:1px solid #0f4c5c; border-radius:6px; background:#0f4c5c; color:#ffffff; padding:4px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; text-decoration:none">generate run report →</a><a href="QuantBT 11 Release Candidate and Publish.dc.html" style="border:1px solid #0f4c5c; border-radius:6px; padding:4px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.05em; text-transform:uppercase; text-decoration:none">release candidate →</a></span></div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center">
+            <button disabled="disabled" aria-disabled="true" style="border:1px solid #c9c5ba; border-radius:6px; background:#f4f2ec; color:#939db0; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; cursor:not-allowed">Send to Approval Gate</button>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; border:1px dashed #939db0; border-radius:3px; padding:1px 5px; color:#939db0">SOON</span>
+            <span style="font-size:11.5px; color:#4e5a6e">requires certification ≥ A · currently <span style="font-family:'JetBrains Mono',monospace; font-weight:600">{{ claim.cert }}</span> ({{ bindingLabel }})</span>
+          </div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center">
+            <button disabled="disabled" aria-disabled="true" style="border:1px solid #c9c5ba; border-radius:6px; background:#f4f2ec; color:#939db0; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; cursor:not-allowed">Register for Paper Trading</button>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:600; border:1px dashed #939db0; border-radius:3px; padding:1px 5px; color:#939db0">SOON</span>
+            <span style="font-size:11.5px; color:#4e5a6e">will carry: params digest, bundle digest, claim passport, evidence link — deployment params must equal frozen params or declare a refit.</span>
+          </div>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isAtlas }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Atlas" style="display:flex; flex-direction:column; gap:14px">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px">
+          <div>
+            <div style="font-family:Newsreader,Georgia,serif; font-size:23px">Atlas — how to read modes and routes</div>
+            <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0; margin-top:2px">Reference, not a stage. Every cell deep-links into the stages with the cursor it describes.</div>
+          </div>
+          <span style="display:inline-flex; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+            <sc-for list="{{ atlasTabs }}" as="at" hint-placeholder-count="2">
+              <button onClick="{{ at.onPick }}" style="{{ at.style }}">{{ at.label }}</button>
+            </sc-for>
+          </span>
+        </div>
+
+        <sc-if value="{{ atlasIsModes }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse; font-size:12px; min-width:980px">
+            <thead><tr>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">optimization_mode</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">search basis</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">OOS usage</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">claim @ per_fold_causal</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">claim @ per_fold_decay</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">cert cap</th>
+            </tr></thead>
+            <tbody>
+              <tr style="background:#e2edf0; border-left:2px solid #0f4c5c">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-weight:600">mode_1_decay <span style="font-size:9px; color:#0f4c5c">← this run</span></td>
+                <td style="padding:7px 12px; color:#4e5a6e">per-fold inner search, IS only</td>
+                <td style="padding:7px 12px; color:#4e5a6e">schedule-dependent — the whole point</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px">STRICT_OUTER_OOS</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px">SELECTION_ADJUSTED_OOS</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">B / C</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">mode_2_screening</td>
+                <td style="padding:7px 12px; color:#4e5a6e">coarse grid, IS only</td>
+                <td style="padding:7px 12px; color:#4e5a6e">report only — never selects</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#939db0">OOS (report only)</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#939db0">OOS (report only)</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">≤ C</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">mode_3_bayes</td>
+                <td style="padding:7px 12px; color:#4e5a6e">TPE across folds</td>
+                <td style="padding:7px 12px; color:#4e5a6e">report only — never selects</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#939db0">OOS (report only)</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#939db0">OOS (report only)</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">≤ C</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">mode_4_pareto</td>
+                <td style="padding:7px 12px; color:#4e5a6e">multi-objective front</td>
+                <td style="padding:7px 12px; color:#4e5a6e">frontier frozen before OOS</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px">STRICT_OUTER_OOS</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px">SELECTION_ADJUSTED_OOS</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">B / C</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">mode_5_full_robust</td>
+                <td style="padding:7px 12px; color:#4e5a6e">single fold, full-sample robustness</td>
+                <td style="padding:7px 12px; color:#4e5a6e">OOS window does not exist</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#939db0">— (no OOS)</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#939db0">— (no OOS)</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">≤ D</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="padding:8px 12px; border-top:1px solid #e3e0d7; background:#f4f2ec; font-size:11px; color:#4e5a6e">The claim comes from <span style="font-family:'JetBrains Mono',monospace">mode × schedule</span>, never from the mode alone. Two enums, two layers: this table is the walk-forward <span style="font-family:'JetBrains Mono',monospace">optimization_mode</span>; the package-level <span style="font-family:'JetBrains Mono',monospace">CandidateSelector.mode</span> (best · feasible_best · pareto_first · robust_plateau) appears only inside Stage 2's decision card — the two are never mixed.</div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ atlasIsRoutes }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+          <table style="width:100%; border-collapse:collapse; font-size:12px; min-width:980px">
+            <thead><tr>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">execution route</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">orders / fills</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">intrabar path</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">stage 4 renders</th>
+              <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">replay level</th>
+            </tr></thead>
+            <tbody>
+              <tr style="background:#e2edf0; border-left:2px solid #0f4c5c">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-weight:600">close_target_v2 · pct_equity <span style="font-size:9px; color:#0f4c5c">← this run</span></td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#6f7a8c">not_applicable — none exist</td>
+                <td style="padding:7px 12px; color:#939db0">close-only accounting</td>
+                <td style="padding:7px 12px; color:#4e5a6e">target transitions + accounting posts; order/fill layers disabled honestly</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">bar-close</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">signal_notional</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#6f7a8c">not_applicable</td>
+                <td style="padding:7px 12px; color:#939db0">close-only accounting</td>
+                <td style="padding:7px 12px; color:#4e5a6e">same as close_target_v2 with notional sizing</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">bar-close</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">intrabar_bracket_v1</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1e7b4f">fills at open[t+1]</td>
+                <td style="padding:7px 12px; color:#4e5a6e">SL/TP on high/low path</td>
+                <td style="padding:7px 12px; color:#4e5a6e">fills + SL/TP price lines + same-bar conflict policy from engine</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">intrabar</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">event_lifecycle_v2</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1e7b4f">full lifecycle</td>
+                <td style="padding:7px 12px; color:#4e5a6e">place / cancel / replace, OCO, GTD</td>
+                <td style="padding:7px 12px; color:#4e5a6e">signal → intent → order → fill causal chain per event</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">event</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">dca_grid_v1</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1e7b4f">ladder orders</td>
+                <td style="padding:7px 12px; color:#4e5a6e">grid fills intrabar</td>
+                <td style="padding:7px 12px; color:#4e5a6e">ladder overlay + per-rung fill ledger</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">event</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">portfolio_matrix_v1</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#6f7a8c">per-leg accounting</td>
+                <td style="padding:7px 12px; color:#939db0">close-only per leg</td>
+                <td style="padding:7px 12px; color:#4e5a6e">weight heatmap + per-symbol drill-down replaces single-symbol chart</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">bar-close</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">basket_pair_v1</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1e7b4f">two-leg fills</td>
+                <td style="padding:7px 12px; color:#4e5a6e">spread path</td>
+                <td style="padding:7px 12px; color:#4e5a6e">spread chart primary, leg charts secondary</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">event</td>
+              </tr>
+              <tr style="border-top:1px solid #efede4">
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">arbitrage_v1</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1e7b4f">cross-venue fills</td>
+                <td style="padding:7px 12px; color:#4e5a6e">latency-sensitive</td>
+                <td style="padding:7px 12px; color:#4e5a6e">venue-pair ledger; parity bundle decides cert per venue</td>
+                <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">event</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="padding:8px 12px; border-top:1px solid #e3e0d7; background:#f4f2ec; font-size:11px; color:#4e5a6e">Stage 4 is route-aware: it renders what the contract produced and states <span style="font-family:'JetBrains Mono',monospace">not_applicable</span> for what it cannot — an empty order ledger on a close-target run is honesty, not absence. Try the contract switcher inside Stage 4 to preview each shape.</div>
+        </div>
+        </sc-if>
+      </section>
+      </sc-if>
+
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0; text-align:center; padding-top:8px">hi-fi prototype · synthetic data · every claim rendered from an engine-issued table — the UI never infers</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startStage&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;summary&quot;, &quot;split&quot;, &quot;search&quot;, &quot;freeze&quot;, &quot;execute&quot;, &quot;claim&quot;, &quot;atlas&quot;], &quot;default&quot;: &quot;summary&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Flow&quot;}, &quot;schedule&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;per_fold_causal&quot;, &quot;per_fold_decay&quot;, &quot;global&quot;], &quot;default&quot;: &quot;per_fold_causal&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Claim driver&quot;}, &quot;route&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;close_target_v2&quot;, &quot;intrabar_bracket_v1&quot;, &quot;event_lifecycle_v2&quot;], &quot;default&quot;: &quot;close_target_v2&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Claim driver&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const FOLDS = [
+      { id: "fold_01", train: "2024-01-01 → 06-30", test: "2024-07-01 → 08-15", cutoff: "2024-06-30 23:59Z", params: "prm_9d44f2", isS: 1.51, oosS: 1.28, status: "PASS", t0: 0, t1: 36, s0: 36.4, s1: 45 },
+      { id: "fold_02", train: "2024-02-15 → 08-15", test: "2024-08-16 → 09-30", cutoff: "2024-08-15 23:59Z", params: "prm_3b81c7", isS: 1.47, oosS: 1.02, status: "WARN", t0: 8, t1: 45, s0: 45.4, s1: 54 },
+      { id: "fold_03", train: "2024-04-01 → 09-30", test: "2024-10-01 → 11-15", cutoff: "2024-09-30 23:59Z", params: "prm_7c1a9e", isS: 1.42, oosS: 1.19, status: "PASS", t0: 17, t1: 54, s0: 54.4, s1: 63 },
+      { id: "fold_04", train: "2024-05-15 → 11-15", test: "2024-11-16 → 12-31", cutoff: "2024-11-15 23:59Z", params: "prm_c25a1d", isS: 1.39, oosS: 1.24, status: "PASS", t0: 25, t1: 63, s0: 63.4, s1: 72 },
+      { id: "fold_05", train: "2024-07-01 → 12-31", test: "2025-01-01 → 02-15", cutoff: "2024-12-31 23:59Z", params: "prm_66e09b", isS: 1.44, oosS: 1.11, status: "PASS", t0: 33, t1: 72, s0: 72.4, s1: 81 }
+    ];
+    this.FOLDS = FOLDS;
+    this.CLAIMS = {
+      per_fold_causal: { validation: "STRICT_OUTER_OOS", chrono: "CHRONOLOGICAL_CAUSAL", oosSel: "NO — read once after freeze", schedCap: null,
+        note: "per_fold_causal: the candidate is committed first, then OOS is read exactly once. Nothing about OOS fed back into selection ⇒ strict outer OOS.",
+        oosLabel: "OOS · strict — read once after freeze", disclosure: "strict — read once after freeze; further reads create a new attempt" },
+      per_fold_decay: { validation: "SELECTION_ADJUSTED_OOS", chrono: "CHRONOLOGICAL_CAUSAL", oosSel: "YES — frozen set ranked on OOS", schedCap: "C",
+        note: "per_fold_decay: the frozen candidate set is ranked on OOS decay. Same mode, weaker claim — selection has seen OOS ⇒ selection-adjusted, cert capped ≤ C.",
+        oosLabel: "OOS (selection-adjusted)", disclosure: "selection-adjusted — the frozen set was ranked on this window" },
+      global: { validation: "RETROSPECTIVE_OOS", chrono: "NON_CHRONOLOGICAL", oosSel: "YES — global refit after full read", schedCap: "C",
+        note: "global: parameters refit after reading the full span. Retrospective evidence only — never a deployment claim. Cert capped ≤ C.",
+        oosLabel: "OOS (retrospective)", disclosure: "retrospective — refit after full read; report use only" }
+    };
+    this.trialsByFold = {}; this.barsByFold = {};
+    this.state = {
+      stage: props.startStage || "summary",
+      fold: 3, trial: 143, params: "prm_7c1a9e", seq: null,
+      schedule: props.schedule || "per_fold_causal",
+      window: "compare", capitalMode: "capital",
+      route: props.route || "close_target_v2",
+      index: 0, selected: null, playing: false, speed: 4, reveal: false,
+      layers: { signal: true, target: true, position: true, equity: true },
+      copied: false, whatif: {}, attempts: [], atlasTab: "modes", replayError: null, dsOpen: false, vSort: "fold"
+    };
+    const h = this.readHash();
+    if (h.stage) this.state.stage = h.stage;
+    if (h.fold) { const f = Math.max(1, Math.min(5, parseInt(h.fold, 10) || 3)); this.state.fold = f; this.state.params = this.FOLDS[f - 1].params; this.state.trial = f === 3 ? 143 : 100 + (f - 1) * 60; }
+    if (h.trial) this.state.trial = parseInt(h.trial, 10) || this.state.trial;
+    if (h.params) this.state.params = h.params;
+    if (h.schedule && this.CLAIMS[h.schedule]) this.state.schedule = h.schedule;
+    if (h.route) this.state.route = h.route;
+    this.charts = {}; this.refEls = {};
+    this.mkRef = (name) => (el) => {
+      if (el) { this.refEls[name] = el; this.queueSync(); }
+      else { this.disposeChart(name); this.refEls[name] = null; }
+    };
+    this.equityRef = this.mkRef("equity"); this.underRef = this.mkRef("under");
+    this.rollRef = this.mkRef("roll"); this.distRef = this.mkRef("dist");
+    this.trialRef = this.mkRef("trial"); this.replayRef = this.mkRef("replay");
+    this.PARAMS = [
+      { name: "window", min: 12, max: 96, frozen: 46, step: 2 },
+      { name: "entry_z", min: 0.5, max: 3.0, frozen: 1.6, step: 0.1 },
+      { name: "atr_mult", min: 1.0, max: 6.0, frozen: 2.8, step: 0.2 },
+      { name: "risk_pct", min: 0.25, max: 2.0, frozen: 0.75, step: 0.25 },
+      { name: "cooldown", min: 0, max: 24, frozen: 6, step: 1 }
+    ];
+    this.buildSummary();
+  }
+  rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  buildSummary() {
+    const r = this.rng(118); const n = 410; const start = Date.UTC(2024, 0, 1);
+    const ts = [], oos = [], is = [];
+    let e1 = 100000, e2 = 100000;
+    for (let i = 0; i < n; i++) {
+      ts.push(start + i * 86400000);
+      e1 *= 1 + (r() - 0.485) * 0.012; e2 *= 1 + (r() - 0.478) * 0.011;
+      oos.push(Math.round(e1)); is.push(Math.round(e2));
+    }
+    const last = oos[n - 1]; const scale = 128400 / last;
+    const scale2 = 141200 / is[n - 1];
+    this.summary = { ts, oos: oos.map(v => Math.round(v * scale)), is: is.map(v => Math.round(v * scale2)) };
+  }
+  trials(fold) {
+    if (this.trialsByFold[fold]) return this.trialsByFold[fold];
+    const r = this.rng(fold * 7 + 5); const pts = []; let best = -1;
+    for (let i = 1; i <= 600; i++) {
+      const feasible = r() > 0.3;
+      const base = 0.2 + 0.9 * (1 - Math.exp(-i / 180));
+      const score = feasible ? +(base + (r() - 0.45) * 0.8).toFixed(3) : +((r() - 0.5) * 0.6).toFixed(3);
+      if (score > best) best = score;
+      pts.push({ id: i, score, best: +best.toFixed(3), feasible, pruned: !feasible && r() > 0.5 });
+    }
+    if (fold === 3) { pts[142].score = 1.42; pts[142].feasible = true; }
+    this.trialsByFold[fold] = pts; return pts;
+  }
+  bars(fold) {
+    if (this.barsByFold[fold]) return this.barsByFold[fold];
+    const r = this.rng(fold * 13 + 3);
+    const n = 270; const start = Date.UTC(2024, 5 + fold, 1); const bars = []; let price = 52000 + fold * 3000;
+    for (let i = 0; i < n; i++) {
+      const drift = Math.sin(i / 24) * 0.004 + (r() - 0.5) * 0.001;
+      const open = price; const close = price * (1 + drift + (r() - 0.5) * 0.016);
+      const high = Math.max(open, close) * (1 + r() * 0.006); const low = Math.min(open, close) * (1 - r() * 0.006);
+      bars.push({ time: Math.floor((start + i * 14400000) / 1000), ms: start + i * 14400000, open: +open.toFixed(1), high: +high.toFixed(1), low: +low.toFixed(1), close: +close.toFixed(1) });
+      price = close;
+    }
+    const win = 12; const position = []; const sma = [];
+    for (let i = 0; i < n; i++) {
+      let s = 0, c = 0; for (let j = Math.max(0, i - win); j <= i; j++) { s += bars[j].close; c++; }
+      sma.push(s / c);
+      position.push(i < win ? 0 : bars[i].close > sma[i] * 1.004 ? 1 : bars[i].close < sma[i] * 0.996 ? -1 : (position[i - 1] || 0));
+    }
+    const equity = [100000];
+    for (let i = 1; i < n; i++) equity.push(Math.round(equity[i - 1] * (1 + position[i - 1] * (bars[i].close / bars[i - 1].close - 1) * 0.9)));
+    const events = []; let seq = 91000 + fold * 400; let prev = 0;
+    for (let i = 1; i < n; i++) {
+      if (position[i] !== prev) {
+        const side = position[i] > 0 ? "LONG" : position[i] < 0 ? "SHORT" : "FLAT";
+        events.push({ seq: seq++, bar: i, ms: bars[i].ms, type: "signal_eval", side, note: "close vs sma(" + win + ") crossed · pos_weight " + prev + " → " + position[i] });
+        events.push({ seq: seq++, bar: i, ms: bars[i].ms, type: "target_set", side, note: "target exposure " + position[i].toFixed(1) + " committed at close " + bars[i].close });
+        events.push({ seq: seq++, bar: i, ms: bars[i].ms, type: "acct_post", side, note: "equity marked " + equity[i].toLocaleString("en-US") + " · fee series absent (portal gap)" });
+        if (position[i] !== 0) {
+          events.push({ seq: seq++, bar: i, ms: bars[i].ms, type: "order", side, price: bars[i].close, note: "MARKET " + side + " · tif=GTC (event_lifecycle preview)", lifecycleOnly: true });
+          events.push({ seq: seq++, bar: Math.min(i + 1, n - 1), ms: bars[Math.min(i + 1, n - 1)].ms, type: "fill", side, price: bars[Math.min(i + 1, n - 1)].open, stop: bars[i].close * (side === "LONG" ? 0.97 : 1.03), tp: bars[i].close * (side === "LONG" ? 1.05 : 0.95), note: "fill @ open[t+1] " + bars[Math.min(i + 1, n - 1)].open + " (maker)", lifecycleOnly: true });
+        }
+        prev = position[i];
+      }
+    }
+    const out = { bars, position, equity, events };
+    this.barsByFold[fold] = out; return out;
+  }
+  fmt(ms) { const d = new Date(ms); const p = (v) => String(v).padStart(2, "0"); return d.getUTCFullYear() + "-" + p(d.getUTCMonth() + 1) + "-" + p(d.getUTCDate()) + " " + p(d.getUTCHours()) + ":" + p(d.getUTCMinutes()) + "Z"; }
+  visibleEvents() {
+    const s = this.state; const d = this.bars(s.fold); const closeTarget = s.route === "close_target_v2";
+    return d.events.filter(e => {
+      if (closeTarget && e.lifecycleOnly) return false;
+      if (!closeTarget && s.route === "intrabar_bracket_v1" && e.type === "order") return false;
+      if (e.type === "signal_eval") return s.layers.signal;
+      if (e.type === "target_set") return s.layers.target;
+      if (e.type === "acct_post") return s.layers.equity;
+      return true;
+    });
+  }
+  current() { const l = this.visibleEvents(); if (!l.length) return null; return l[Math.min(this.state.index, l.length - 1)]; }
+  queueSync() { if (this._q) return; this._q = true; setTimeout(() => { this._q = false; this.syncCharts(); }, 30); }
+  componentDidMount() { this._resize = () => { Object.values(this.charts).forEach(c => { if (c && c.resize) c.resize(); }); }; window.addEventListener("resize", this._resize); this.queueSync(); }
+  componentWillUnmount() { window.removeEventListener("resize", this._resize); if (this.timer) clearInterval(this.timer); ["equity","under","trial","roll","dist"].forEach(n => this.disposeChart(n)); this.disposeChart("replay"); }
+  componentDidUpdate() { const s0 = this.state; this.writeHash({ stage: s0.stage, fold: s0.fold, trial: s0.trial, params: s0.params, schedule: s0.schedule }); this.queueSync(); }
+  disposeChart(name) {
+    const c = this.charts[name]; if (!c) return;
+    try { if (name === "replay") c.chart.remove(); else c.dispose(); } catch (e) {}
+    this.charts[name] = null;
+  }
+  axis(extra) { return Object.assign({ axisLine: { lineStyle: { color: "#e3e0d7" } }, axisLabel: { color: "#939db0", fontSize: 11, fontFamily: "JetBrains Mono, monospace" }, splitLine: { show: false } }, extra || {}); }
+  baseOpt(extra) {
+    return Object.assign({
+      textStyle: { fontFamily: "JetBrains Mono, ui-monospace, monospace", fontSize: 11, color: "#939db0" },
+      backgroundColor: "transparent", animation: false,
+      grid: { left: 56, right: 20, top: 34, bottom: 44, containLabel: true },
+      tooltip: { trigger: "axis", backgroundColor: "#ffffff", borderColor: "#e3e0d7", textStyle: { color: "#1c2532", fontSize: 11, fontFamily: "JetBrains Mono, monospace" }, axisPointer: { type: "cross", snap: true, lineStyle: { color: "#939db0", type: "dashed" }, crossStyle: { color: "#939db0", type: "dashed" }, label: { backgroundColor: "#ffffff", color: "#1c2532", borderColor: "#e3e0d7", borderWidth: 1 } } },
+      legend: { top: 0, left: 0, icon: "rect", itemWidth: 10, itemHeight: 10, textStyle: { color: "#939db0", fontSize: 11, fontFamily: "JetBrains Mono, monospace" } }
+    }, extra);
+  }
+  dataZoom() {
+    return [{ type: "inside", throttle: 50 }, { type: "slider", height: 18, bottom: 0, borderColor: "#efede4", backgroundColor: "#f4f2ec", fillerColor: "rgba(15,76,92,0.08)", dataBackground: { lineStyle: { color: "#efede4", width: 1 }, areaStyle: { color: "rgba(147,157,176,0.12)" } }, selectedDataBackground: { lineStyle: { color: "#0f4c5c", width: 1 }, areaStyle: { color: "rgba(15,76,92,0.14)" } }, handleStyle: { color: "#ffffff", borderColor: "#0f4c5c", borderWidth: 1 }, moveHandleStyle: { color: "rgba(15,76,92,0.35)" }, showDetail: false, brushSelect: false }];
+  }
+  syncCharts() {
+    const s = this.state;
+    if (window.echarts) {
+      if (s.stage === "summary") { this.syncEquity(); this.syncUnder(); this.syncRoll(); this.syncDist(); }
+      if (s.stage === "search") this.syncTrial();
+    } else if (["summary", "search"].includes(s.stage)) { setTimeout(() => this.syncCharts(), 350); }
+    if (s.stage === "execute") {
+      if (window.LightweightCharts) this.syncReplay();
+      else setTimeout(() => this.syncCharts(), 350);
+    }
+  }
+  ec(name) {
+    const el = this.refEls[name]; if (!el) return null;
+    if (!this.charts[name] || this.charts[name]._el !== el) {
+      this.disposeChart(name);
+      const c = window.echarts.init(el); c._el = el; this.charts[name] = c;
+    }
+    return this.charts[name];
+  }
+  syncEquity() {
+    const c = this.ec("equity"); if (!c) return;
+    const s = this.state; const d = this.summary; const w = s.window;
+    const rebase = s.capitalMode === "rebased";
+    const mk = (vals) => { const b = vals[0]; return vals.map((v, i) => [d.ts[i], rebase ? +(v / b * 100).toFixed(2) : v]); };
+    const series = [];
+    if (w === "is" || w === "compare") series.push({ name: "IS (per-fold train account)", type: "line", showSymbol: false, data: mk(d.is), lineStyle: { width: 1.25, color: "#7a8699", opacity: 0.9 }, itemStyle: { color: "#7a8699" } });
+    if (w === "oos" || w === "compare") series.push({ name: "Stitched OOS (5 folds)", type: "line", showSymbol: false, data: mk(d.oos), lineStyle: { width: 1.75, color: "#0f4c5c" }, itemStyle: { color: "#0f4c5c" },
+      markLine: { symbol: "none", silent: true, lineStyle: { color: "#c9c5ba", type: "dashed", width: 1 }, label: { show: true, position: "insideEndTop", color: "#939db0", fontSize: 9, fontFamily: "JetBrains Mono, monospace", formatter: (p) => p.name },
+        data: this.FOLDS.filter((f, i) => this.FOLDS.length <= 8 || i % Math.ceil(this.FOLDS.length / 8) === 0).map((f, i) => ({ xAxis: d.ts[Math.floor((i + 1) * d.ts.length / (Math.min(this.FOLDS.length, 8) + 1))], name: f.id })) } });
+    c.setOption(this.baseOpt({
+      xAxis: this.axis({ type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10, color: "#939db0", fontSize: 11, fontFamily: "JetBrains Mono, monospace", formatter: (v) => new Date(v).toISOString().slice(0, 10) } }),
+      yAxis: this.axis({ type: "value", scale: true, splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+      legend: { top: 0, right: 0, left: "auto", icon: "rect", itemWidth: 10, itemHeight: 10, textStyle: { color: "#939db0", fontSize: 11, fontFamily: "JetBrains Mono, monospace" } },
+      dataZoom: this.dataZoom(), series
+    }), true);
+  }
+  syncUnder() {
+    const c = this.ec("under"); if (!c) return;
+    const d = this.summary; let peak = -Infinity;
+    const dd = d.oos.map((v, i) => { peak = Math.max(peak, v); return [d.ts[i], +((v / peak - 1) * 100).toFixed(2)]; });
+    c.setOption(this.baseOpt({
+      grid: { left: 56, right: 20, top: 16, bottom: 40, containLabel: true },
+      legend: { show: false },
+      xAxis: this.axis({ type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10, color: "#939db0", fontSize: 11, fontFamily: "JetBrains Mono, monospace", formatter: (v) => new Date(v).toISOString().slice(0, 10) } }),
+      yAxis: this.axis({ type: "value", axisLabel: { formatter: "{value}%", color: "#939db0", fontSize: 11, fontFamily: "JetBrains Mono, monospace" }, splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+      series: [{ name: "Stitched OOS", type: "line", showSymbol: false, data: dd, lineStyle: { width: 1.25, color: "#0f4c5c", opacity: 0.8 }, itemStyle: { color: "#0f4c5c" }, areaStyle: { color: "#0f4c5c", opacity: 0.18 },
+        markPoint: { symbol: "circle", symbolSize: 7, itemStyle: { color: "#0f4c5c", borderColor: "#ffffff", borderWidth: 1.5 }, label: { show: true, position: "top", distance: 8, color: "#1c2532", fontFamily: "JetBrains Mono, monospace", fontSize: 10, formatter: (p) => typeof p.value === "number" ? p.value.toFixed(1) + "%" : "" }, data: [{ type: "min", name: "deepest trough", valueIndex: 1 }] } }]
+    }), true);
+  }
+  syncRoll() {
+    const c = this.ec("roll"); if (!c) return;
+    const d = this.summary; const n = d.ts.length;
+    if (!this.bench) { const r = this.rng(41); const b = [100]; for (let i = 1; i < n; i++) b.push(b[i - 1] * (1 + (r() - 0.48) * 0.03)); this.bench = b; }
+    const ret = (a, i) => a[i] / a[i - 1] - 1;
+    const sh = [], be = [];
+    for (let i = 30; i < n; i++) {
+      let m = 0, bm = 0;
+      for (let j = i - 29; j <= i; j++) { m += ret(d.oos, j); bm += ret(this.bench, j); }
+      m /= 30; bm /= 30;
+      let v = 0, cv = 0, bv = 0;
+      for (let j = i - 29; j <= i; j++) { const x = ret(d.oos, j) - m, y = ret(this.bench, j) - bm; v += x * x; cv += x * y; bv += y * y; }
+      sh.push([d.ts[i], +(m / Math.sqrt(v / 30 || 1e-9) / Math.sqrt(30) * Math.sqrt(365)).toFixed(2)]);
+      be.push([d.ts[i], +(cv / (bv || 1e-9)).toFixed(2)]);
+    }
+    c.setOption(this.baseOpt({
+      grid: { left: 50, right: 46, top: 30, bottom: 40, containLabel: true },
+      legend: { top: 0, right: 0, left: "auto", icon: "rect", itemWidth: 10, itemHeight: 10, textStyle: { color: "#939db0", fontSize: 11, fontFamily: "JetBrains Mono, monospace" } },
+      xAxis: this.axis({ type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, margin: 10, color: "#939db0", fontSize: 11, fontFamily: "JetBrains Mono, monospace", formatter: (v) => new Date(v).toISOString().slice(0, 10) } }),
+      yAxis: [this.axis({ type: "value", splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }), this.axis({ type: "value", splitLine: { show: false } })],
+      series: [
+        { name: "rolling 30d Sharpe", type: "line", showSymbol: false, data: sh, lineStyle: { width: 1.5, color: "#0f4c5c" }, itemStyle: { color: "#0f4c5c" } },
+        { name: "rolling beta vs BTC", type: "line", yAxisIndex: 1, showSymbol: false, data: be, lineStyle: { width: 1.25, color: "#9a6a1f" }, itemStyle: { color: "#9a6a1f" } }
+      ]
+    }), true);
+  }
+  syncDist() {
+    const c = this.ec("dist"); if (!c) return;
+    const d = this.summary; const rets = [];
+    for (let i = 1; i < d.ts.length; i++) rets.push((d.oos[i] / d.oos[i - 1] - 1) * 100);
+    const lo = Math.min(...rets), hi = Math.max(...rets); const nb = 30;
+    const cnt = new Array(nb).fill(0);
+    rets.forEach(v => cnt[Math.min(nb - 1, Math.floor((v - lo) / (hi - lo) * nb))]++);
+    const idx0 = Math.max(0, Math.min(nb - 1, Math.round((0 - lo) / (hi - lo) * nb)));
+    c.setOption(this.baseOpt({
+      grid: { left: 44, right: 16, top: 20, bottom: 40, containLabel: true },
+      legend: { show: false },
+      tooltip: { trigger: "axis", backgroundColor: "#ffffff", borderColor: "#e3e0d7", textStyle: { color: "#1c2532", fontSize: 11, fontFamily: "JetBrains Mono, monospace" } },
+      xAxis: this.axis({ type: "category", data: cnt.map((_, i) => (lo + (i + 0.5) / nb * (hi - lo)).toFixed(1) + "%"), axisLabel: { interval: 5, color: "#939db0", fontSize: 10, fontFamily: "JetBrains Mono, monospace" } }),
+      yAxis: this.axis({ type: "value", splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+      series: [{ name: "days", type: "bar", data: cnt, barCategoryGap: "14%", itemStyle: { color: "rgba(15,76,92,.55)" },
+        markLine: { symbol: "none", lineStyle: { color: "#9a6a1f", type: "dashed" }, label: { color: "#9a6a1f", fontSize: 9, fontFamily: "JetBrains Mono, monospace", formatter: "0%" }, data: [{ xAxis: idx0 }] } }]
+    }), true);
+  }
+  syncTrial() {
+    const c = this.ec("trial"); if (!c) return;
+    const s = this.state; const pts = this.trials(s.fold);
+    c.setOption(this.baseOpt({
+      grid: { left: 48, right: 20, top: 30, bottom: 36, containLabel: true },
+      legend: { show: false },
+      tooltip: { trigger: "item", backgroundColor: "#ffffff", borderColor: "#e3e0d7", textStyle: { color: "#1c2532", fontSize: 11, fontFamily: "JetBrains Mono, monospace" } },
+      xAxis: this.axis({ type: "value", name: "trial", nameTextStyle: { color: "#939db0", fontFamily: "JetBrains Mono, monospace", fontSize: 10 }, max: 600 }),
+      yAxis: this.axis({ type: "value", name: "sharpe_is", nameTextStyle: { color: "#939db0", fontFamily: "JetBrains Mono, monospace", fontSize: 10 }, splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+      series: [
+        { name: "trials", type: "scatter", symbolSize: 3.5, data: pts.map(p => ({ value: [p.id, p.score], itemStyle: { color: p.id === s.trial ? "#9a6a1f" : p.feasible ? "rgba(15,76,92,0.45)" : "rgba(147,157,176,0.3)" } })) },
+        { name: "best-so-far", type: "line", showSymbol: false, data: pts.map(p => [p.id, p.best]), lineStyle: { width: 1.5, color: "#9a6a1f" }, itemStyle: { color: "#9a6a1f" },
+          markLine: { symbol: "none", lineStyle: { color: "#4e5a6e", type: "dashed" }, label: { color: "#4e5a6e", fontSize: 9, fontFamily: "JetBrains Mono, monospace" },
+            data: [{ xAxis: 480, name: "pool freeze", label: { formatter: "pool freeze · 480" } }, { xAxis: s.trial, name: "selected", label: { formatter: "selected · " + s.trial }, lineStyle: { color: "#9a6a1f" } }] } },
+        { name: "selected", type: "scatter", symbolSize: 11, symbol: "circle", data: [[s.trial, (pts[s.trial - 1] || pts[142]).score]], itemStyle: { color: "#9a6a1f", borderColor: "#ffffff", borderWidth: 1.5 } }
+      ]
+    }), true);
+  }
+  syncReplay() {
+    const el = this.refEls.replay; if (!el) return;
+    const s = this.state; const d = this.bars(s.fold); const LC = window.LightweightCharts;
+    try {
+      let R = this.charts.replay;
+      if (!R || R._el !== el || R._fold !== s.fold) {
+        this.disposeChart("replay");
+        const chart = LC.createChart(el, {
+          layout: { background: { color: "#faf9f5" }, textColor: "#939db0", fontFamily: "JetBrains Mono, monospace", fontSize: 10, panes: { separatorColor: "#e3e0d7" } },
+          grid: { vertLines: { color: "#efede4" }, horzLines: { color: "#efede4" } },
+          rightPriceScale: { borderColor: "#e3e0d7" },
+          timeScale: { borderColor: "#e3e0d7", timeVisible: true },
+          crosshair: { vertLine: { color: "#939db0", style: 2 }, horzLine: { color: "#939db0", style: 2 } }
+        });
+        const candles = chart.addSeries(LC.CandlestickSeries, { upColor: "#1e7b4f", downColor: "#b43a3a", borderUpColor: "#0f5c3a", borderDownColor: "#7c2626", wickUpColor: "#1e7b4f", wickDownColor: "#b43a3a" });
+        const pos = chart.addSeries(LC.LineSeries, { color: "#0f4c5c", lineWidth: 1, lineType: 1, priceLineVisible: false, lastValueVisible: false }, 1);
+        const eq = chart.addSeries(LC.LineSeries, { color: "#9a6a1f", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, 2);
+        try { const panes = chart.panes(); if (panes[0] && panes[0].setHeight) { panes[0].setHeight(300); panes[1].setHeight(70); panes[2].setHeight(90); } } catch (e) {}
+        R = { chart, candles, pos, eq, _el: el, _fold: s.fold, priceLines: [] };
+        R.markers = LC.createSeriesMarkers ? LC.createSeriesMarkers(candles, []) : null;
+        this.charts.replay = R;
+      }
+      const cur = this.current(); const bar = cur ? cur.bar : 0;
+      const slice = s.reveal ? d.bars.slice(0, bar + 1) : d.bars;
+      R.candles.setData(slice.map(b => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })));
+      R.pos.setData(slice.map((b, i) => ({ time: b.time, value: d.position[i] })));
+      R.eq.setData(slice.map((b, i) => ({ time: b.time, value: d.equity[i] })));
+      if (R.markers) {
+        const mk = (e) => {
+          const long = e.side === "LONG";
+          if (e.type === "signal_eval") return { shape: long ? "arrowUp" : "arrowDown", position: long ? "belowBar" : "aboveBar", color: "#7a8699", text: "S" };
+          if (e.type === "target_set") return { shape: "square", position: long ? "belowBar" : "aboveBar", color: "#0f4c5c", text: "T" };
+          if (e.type === "fill") return { shape: "circle", position: long ? "belowBar" : "aboveBar", color: "#0f4c5c", text: "F" };
+          if (e.type === "order") return { shape: "square", position: "aboveBar", color: "#4e5a6e", text: "O" };
+          return null;
+        };
+        R.markers.setMarkers(this.visibleEvents().filter(e => mk(e) && (!s.reveal || e.bar <= bar)).map(e => Object.assign({ time: d.bars[e.bar].time }, mk(e))));
+      }
+      R.priceLines.forEach(l => { try { R.candles.removePriceLine(l); } catch (e) {} }); R.priceLines = [];
+      const sel = s.selected != null ? d.events.find(e => e.seq === s.selected) : cur;
+      if (s.route === "intrabar_bracket_v1" && sel && sel.type === "fill" && sel.stop) {
+        R.priceLines.push(R.candles.createPriceLine({ price: +sel.stop.toFixed(1), color: "#b43a3a", lineWidth: 1, lineStyle: 2, title: "SL" }));
+        R.priceLines.push(R.candles.createPriceLine({ price: +sel.tp.toFixed(1), color: "#1e7b4f", lineWidth: 1, lineStyle: 2, title: "TP" }));
+      }
+      if (cur) {
+        try { R.chart.setCrosshairPosition(d.bars[cur.bar].close, d.bars[cur.bar].time, R.candles); } catch (e) {}
+        try { const range = R.chart.timeScale().getVisibleLogicalRange(); if (range && (cur.bar < range.from + 4 || cur.bar > range.to - 4)) { const span = Math.max(60, range.to - range.from); R.chart.timeScale().setVisibleLogicalRange({ from: cur.bar - span * 0.7, to: cur.bar + span * 0.3 }); } } catch (e) {}
+      }
+      if (this.state.replayError) this.setState({ replayError: null });
+    } catch (err) { this.setState({ replayError: "chart adapter error: " + String(err && err.message ? err.message : err) }); }
+  }
+  set(patch) { const cur0 = patch.index != null ? patch.index : null; this.setState(patch, () => { const c = this.current(); if (c && (patch.index != null || patch.selected != null)) this.setState({ seq: c.seq }); }); }
+  step(d) { const max = this.visibleEvents().length - 1; this.set({ index: Math.max(0, Math.min(max, this.state.index + d)), selected: null }); }
+  stepTransition(d) {
+    const list = this.visibleEvents(); const cur = this.current(); if (!cur) return; let i = this.state.index;
+    while (i + d >= 0 && i + d <= list.length - 1) { i += d; if (list[i].type === "target_set" || list[i].type === "fill") break; }
+    this.set({ index: i, selected: null });
+  }
+  togglePlay() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; this.setState({ playing: false }); return; }
+    this.setState({ playing: true });
+    this.timer = setInterval(() => {
+      if (this.state.index >= this.visibleEvents().length - 1) { clearInterval(this.timer); this.timer = null; this.setState({ playing: false }); return; }
+      this.step(1);
+    }, Math.round(420 / this.state.speed));
+  }
+  copyEvidence() {
+    const s = this.state; const c = this.current();
+    const link = "portal://runs/R-WFO-118/stage/" + s.stage + "?fold=fold_0" + s.fold + "&trial=" + s.trial + "&params=" + s.params + (c ? "&event_seq=" + c.seq : "") + "&mode=mode_1_decay&schedule=" + s.schedule + "&window=" + s.window + "&bundle=sha256:c41f7a9e0b&cfg=sha256:88ae02";
+    try { navigator.clipboard.writeText(link); } catch (e) {}
+    this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1600);
+  }
+  pill(active, warn) {
+    return "border:1px solid " + (active ? (warn ? "#9a6a1f" : "#0f4c5c") : "#e3e0d7") + "; background:" + (active ? (warn ? "#f4ecdb" : "#e2edf0") : "#ffffff") + "; color:" + (active ? (warn ? "#9a6a1f" : "#0f4c5c") : "#4e5a6e") + "; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; border-radius:0;";
+  }
+  readHash() { const h = {}; (location.hash || "").replace(/^#/, "").split("&").forEach((p) => { const kv = p.split("="); if (kv[0] && kv[1] != null) h[kv[0]] = decodeURIComponent(kv[1]); }); return h; }
+  writeHash(obj) { const cur = this.readHash(); Object.assign(cur, obj); const str = Object.keys(cur).filter((k) => cur[k] != null && cur[k] !== "").map((k) => k + "=" + encodeURIComponent(cur[k])).join("&"); try { history.replaceState(null, "", "#" + str); } catch (e) {} }
+  renderVals() {
+    const s = this.state; const claimT = this.CLAIMS[s.schedule];
+    const fold = this.FOLDS[s.fold - 1];
+    const closeTarget = s.route === "close_target_v2";
+    const schedCap = claimT.schedCap;
+    const cert = schedCap === "C" ? "C" : "B";
+    const binding = schedCap === "C" ? "search" : "split";
+    const bindingLabel = schedCap === "C" ? "Stage 2 · schedule " + s.schedule + " caps ≤ C" : "Stage 1 · holdout sealed caps ≤ B";
+    const STAGE_DEFS = [
+      { key: "summary", num: "◈", name: "Summary", sub: "R-WFO-118 · 5 windows" },
+      { key: "split", num: "S1", name: "Split", sub: "5 folds · holdout sealed" },
+      { key: "search", num: "S2", name: "Search", sub: "600 trials / fold" },
+      { key: "freeze", num: "S3", name: "Freeze", sub: "3 digests · ✓ order" },
+      { key: "execute", num: "S4", name: "Execute", sub: s.route },
+      { key: "claim", num: "S5", name: "Claim", sub: "cert " + cert },
+      { key: "atlas", num: "◫", name: "Atlas", sub: "modes × routes" }
+    ];
+    const stages = STAGE_DEFS.map(d => ({
+      num: d.num, name: d.name, sub: d.sub, numColor: s.stage === d.key ? "#0f4c5c" : "#939db0",
+      onPick: () => { this.setState({ stage: d.key }); try { window.scrollTo({ top: 0 }); } catch (e) {} },
+      style: "flex:none; display:flex; flex-direction:column; gap:2px; align-items:flex-start; padding:8px 14px; border:0; border-right:1px solid #efede4; border-bottom:2px solid " + (s.stage === d.key ? "#0f4c5c" : "transparent") + "; background:" + (s.stage === d.key ? "#e2edf0" : "transparent") + "; color:#1c2532; text-align:left;"
+    }));
+    const navItem = (label, opts) => ({
+      label, tag: opts && opts.soon ? "SOON" : opts && opts.proto ? "PROTOTYPE" : "",
+      tagStyle: "font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:" + (opts && opts.proto ? "#9a6a1f" : "#939db0") + "; border:" + (opts && opts.soon ? "1px dashed #c9c5ba" : opts && opts.proto ? "1px solid #9a6a1f" : "0") + "; border-radius:3px; padding:0 3px;",
+      style: "display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; " + (opts && opts.active ? "background:#e2edf0; color:#1c2532; font-weight:500;" : opts && opts.soon ? "color:#939db0; opacity:.62;" : "color:#4e5a6e;")
+    });
+    const navGroups = [
+      { label: "command", items: [navItem("Command Center", { proto: true }), navItem("Portal Map", { proto: true })] },
+      { label: "research", items: [navItem("QuantBT Backtest", { active: true }), navItem("Alpha Pool", { soon: true }), navItem("Alpha Mining", { soon: true }), navItem("Strategy Composer", { soon: true })] },
+      { label: "backtests", items: [navItem("Approvals", { soon: true })] },
+      { label: "deployments", items: [navItem("Paper Trading", { soon: true }), navItem("Sandbox", { soon: true }), navItem("Live Operations", { soon: true })] },
+      { label: "data & operations", items: [navItem("Data Catalog", { soon: true })] },
+      { label: "planning", items: [navItem("Roadmap & Task Board")] },
+      { label: "administration", items: [navItem("Profile & Access", { soon: true })] }
+    ];
+    const winVals = {
+      is: { eq: "$141,200", ret: "+41.2%", retTone: "#1e7b4f", sharpe: "1.42", dd: "−7.8%", trades: "388", seg: "is" },
+      oos: { eq: "$128,400", ret: "+28.4%", retTone: "#1e7b4f", sharpe: "1.19", dd: "−9.6%", trades: "214", seg: "oos" },
+      compare: { eq: "$128,400", ret: "+28.4%", retTone: "#1e7b4f", sharpe: "1.19", dd: "−9.6%", trades: "214", seg: "oos (hero)" }
+    };
+    const wv = winVals[s.window] || null;
+    const mkTile = (label, key, unit) => wv ? {
+      label, value: wv[key], foot: wv.seg + " · " + unit + " · metrics/summary.json",
+      valueStyle: "font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; font-size:22px; font-weight:600; line-height:28px; color:" + (key === "ret" ? wv.retTone : key === "dd" ? "#b43a3a" : "#1c2532") + ";"
+    } : {
+      label, value: "withheld — holdout sealed", foot: "holdout_live · unlock is a one-time audited event",
+      valueStyle: "font-size:12px; color:#9a6a1f; font-style:italic; line-height:28px;"
+    };
+    const tiles = [mkTile("Final Equity", "eq", "USD"), mkTile("Total Return", "ret", "percent"), mkTile("Sharpe", "sharpe", "ratio · annualized"), mkTile("Max Drawdown", "dd", "percent"), mkTile("Trades", "trades", "count")];
+    const windowOpts = [
+      { k: "is", label: "IS" }, { k: "oos", label: "OOS" }, { k: "holdout", label: "Holdout Live" }, { k: "compare", label: "Compare" }
+    ].map(w => ({ label: w.label, onPick: () => this.setState({ window: w.k }), style: "border:0; border-right:1px solid #e3e0d7; background:" + (s.window === w.k ? "#e2edf0" : "#ffffff") + "; color:" + (s.window === w.k ? "#0f4c5c" : "#4e5a6e") + "; padding:4px 14px; font-family:'JetBrains Mono',monospace; font-size:11px;" }));
+    const capOpts = [{ k: "capital", label: "Capital" }, { k: "rebased", label: "Rebased 100" }].map(c => ({ label: c.label, onPick: () => this.setState({ capitalMode: c.k }), style: "border:0; border-right:1px solid #e3e0d7; background:" + (s.capitalMode === c.k ? "#e2edf0" : "#ffffff") + "; color:" + (s.capitalMode === c.k ? "#0f4c5c" : "#4e5a6e") + "; padding:4px 14px; font-family:'JetBrains Mono',monospace; font-size:11px;" }));
+    const windowNote = s.window === "is" ? "IS · training window — always readable" : s.window === "holdout" ? "Holdout · withheld — LOCKED" : claimT.oosLabel + " — label issued by Stage 5, not by this switcher";
+    const ganttRows = this.FOLDS.map((f, i) => {
+      const active = i + 1 === s.fold;
+      return {
+        id: f.id, range: f.train.slice(0, 10) + " ⋯ " + f.test.slice(10),
+        onPick: () => this.setState({ fold: i + 1, index: 0, selected: null, trial: i + 1 === 3 ? 143 : 100 + i * 60, params: f.params }),
+        rowStyle: "display:flex; align-items:center; gap:8px; width:100%; border:0; padding:3px 6px; background:" + (active ? "#e2edf0" : "transparent") + "; border-left:2px solid " + (active ? "#0f4c5c" : "transparent") + "; border-radius:3px;",
+        trainStyle: "position:absolute; left:" + f.t0 + "%; width:" + (f.t1 - f.t0) + "%; top:0; bottom:0; border-radius:999px; background:#a8c6ce; opacity:" + (active ? "1" : ".55") + ";",
+        testStyle: "position:absolute; left:" + f.s0 + "%; width:" + (f.s1 - f.s0) + "%; top:0; bottom:0; border-radius:999px; background:#0f4c5c; opacity:" + (active ? "1" : ".6") + ";",
+        embargoStyle: "position:absolute; left:" + (f.s1 + 0.4) + "%; width:1.6%; top:3px; bottom:3px; background:repeating-linear-gradient(135deg,#9a6a1f 0 2px,transparent 2px 4px); opacity:.7;"
+      };
+    });
+    const foldRows = this.FOLDS.map((f, i) => ({
+      id: f.id, train: f.train, test: f.test, params: f.params, isS: f.isS.toFixed(2), oosS: f.oosS.toFixed(2),
+      decay: (f.isS - f.oosS).toFixed(2), decayColor: f.isS - f.oosS > 0.3 ? "#b43a3a" : "#1c2532",
+      onPick: () => this.setState({ fold: i + 1, index: 0, selected: null, trial: i + 1 === 3 ? 143 : 100 + i * 60, params: f.params }),
+      style: "cursor:pointer; background:" + (i + 1 === s.fold ? "#e2edf0" : "transparent") + "; border-left:2px solid " + (i + 1 === s.fold ? "#0f4c5c" : "transparent") + ";"
+    }));
+    const funnel = [
+      { label: "trials evaluated", count: 600 }, { label: "feasible", count: 418 }, { label: "top-IS pool", count: 60 }, { label: "frozen candidates", count: 24 }, { label: "selected by policy", count: 1 }
+    ].map(f => ({ label: f.label, count: f.count, barStyle: "flex:1; height:9px; max-width:" + Math.max(3, f.count / 600 * 100) + "%; background:#e2edf0; border:1px solid #0f4c5c;" }));
+    const schedOpts = ["per_fold_causal", "per_fold_decay", "global"].map(k => ({
+      label: k, onPick: () => this.setState({ schedule: k }), style: this.pill(s.schedule === k, k !== "per_fold_causal")
+    }));
+    const pts = this.trials(s.fold);
+    const trialRows = [];
+    const center = Math.min(Math.max(s.trial, 6), 594);
+    for (let i = center - 5; i <= center + 5; i++) {
+      const p = pts[i - 1]; if (!p) continue;
+      const isSel = p.id === s.trial;
+      trialRows.push({
+        id: "#" + p.id, state: isSel ? "SELECTED" : p.pruned ? "PRUNED" : p.feasible ? "COMPLETE" : "INFEASIBLE",
+        stateColor: isSel ? "#9a6a1f" : p.pruned ? "#939db0" : p.feasible ? "#1e7b4f" : "#b43a3a",
+        sharpe: p.feasible ? p.score.toFixed(3) : "—", dd: p.feasible ? "−" + (4 + (p.id % 9)).toFixed(1) + "%" : "—",
+        digest: isSel ? s.params : "prm_" + ((p.id * 2654435761 % 0xffffff) >>> 0).toString(16).padStart(6, "0"),
+        note: isSel ? "winner → candidate #11 · robust_plateau" : p.pruned ? "early-stopped at bar 120" : p.feasible ? "" : "constraint: max_dd > 15%",
+        onPick: () => this.setState({ trial: p.id, params: isSel ? s.params : "prm_" + ((p.id * 2654435761 % 0xffffff) >>> 0).toString(16).padStart(6, "0") }),
+        style: "cursor:pointer; border-top:1px solid #efede4; background:" + (isSel ? "#f4ecdb" : "transparent") + "; border-left:2px solid " + (isSel ? "#9a6a1f" : "transparent") + ";"
+      });
+    }
+    const lineage = [
+      { k: "trial", v: "#" + s.trial, go: "search" }, { k: "candidate", v: "#11 / 24", go: "search" },
+      { k: "params", v: s.params, go: "freeze" }, { k: "freeze", v: fold.cutoff.slice(0, 10), go: "freeze" },
+      { k: "OOS trade", v: fold.id, go: "execute" }, { k: "claim", v: claimT.validation, go: "claim" }
+    ].map((n, i, arr) => ({
+      k: n.k, v: n.v, arrow: i < arr.length - 1 ? "→" : "",
+      onPick: () => this.setState({ stage: n.go }),
+      style: "display:flex; flex-direction:column; gap:1px; align-items:flex-start; border:1px solid #e3e0d7; border-radius:6px; background:#faf9f5; padding:5px 10px; color:#1c2532;"
+    }));
+    const paramRows = this.PARAMS.map(p => {
+      const wf = s.whatif[p.name] != null ? s.whatif[p.name] : p.frozen;
+      const pos = (p.frozen - p.min) / (p.max - p.min) * 100;
+      const wpos = (wf - p.min) / (p.max - p.min) * 100;
+      const dirty = wf !== p.frozen;
+      const fmtv = (v) => p.step < 1 ? v.toFixed(2) : String(v);
+      return {
+        name: p.name, range: fmtv(p.min) + " – " + fmtv(p.max), frozen: fmtv(p.frozen), whatif: fmtv(wf),
+        markStyle: "position:absolute; left:calc(" + pos.toFixed(1) + "% - 4px); top:-3px; width:8px; height:12px; border-radius:2px; background:#0f4c5c;",
+        whatifMarkStyle: dirty ? "position:absolute; left:calc(" + wpos.toFixed(1) + "% - 4px); top:-3px; width:8px; height:12px; border-radius:2px; border:1px dashed #9a6a1f; background:#f4ecdb;" : "display:none;",
+        whatifStyle: "display:inline-block; min-width:52px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; color:" + (dirty ? "#9a6a1f" : "#939db0") + "; font-weight:" + (dirty ? "600" : "400") + ";",
+        onInc: () => this.setState({ whatif: Object.assign({}, s.whatif, { [p.name]: Math.min(p.max, +(wf + p.step).toFixed(2)) }) }),
+        onDec: () => this.setState({ whatif: Object.assign({}, s.whatif, { [p.name]: Math.max(p.min, +(wf - p.step).toFixed(2)) }) })
+      };
+    });
+    const dirtyCount = this.PARAMS.filter(p => s.whatif[p.name] != null && s.whatif[p.name] !== p.frozen).length;
+    const routeOpts = ["close_target_v2", "intrabar_bracket_v1", "event_lifecycle_v2"].map(k => ({
+      label: k, onPick: () => this.setState({ route: k, index: 0, selected: null }), style: this.pill(s.route === k, k !== "close_target_v2")
+    }));
+    const routeNotice = closeTarget
+      ? "close_target_v2 (pct_equity / signal_notional) — the route this run actually executed. The engine accounts target exposure at close only: order, intent and fill DO NOT EXIST. Markers are target transitions, not audited fills; the order/fill layers below are disabled as not_applicable. For order-level replay, create an audit replay attempt on an order-producing contract."
+      : s.route === "intrabar_bracket_v1"
+      ? "intrabar_bracket_v1 — PREVIEW on a sample tape (this run executed close_target_v2). Entry fills at open[t+1]; SL/TP walk the high/low path inside the bar; same-bar conflicts resolve by engine policy, rendered from the contract inspector — never as static frontend prose."
+      : "event_lifecycle_v2 — PREVIEW on a sample tape (this run executed close_target_v2). Full lifecycle: place / cancel / replace, OCO, GTD, reduce-only. Each fill opens a causal chain: signal → intent → order → fill, every link an artifact reference.";
+    const list = this.visibleEvents();
+    const cur = this.current();
+    const sel = s.selected != null ? this.bars(s.fold).events.find(e => e.seq === s.selected) : cur;
+    const d = this.bars(s.fold);
+    const exFolds = this.FOLDS.map((f, i) => ({
+      id: f.id, status: i + 1 === s.fold ? "ACTIVE" : f.status, statusColor: i + 1 === s.fold ? "#0f4c5c" : f.status === "WARN" ? "#9a6a1f" : "#1e7b4f",
+      params: f.params, oosS: f.oosS.toFixed(2),
+      onPick: () => this.setState({ fold: i + 1, index: 0, selected: null, params: f.params, trial: i + 1 === 3 ? 143 : 100 + i * 60 }),
+      style: "display:flex; flex-direction:column; gap:2px; text-align:left; width:100%; padding:6px 10px; border:0; border-bottom:1px solid #efede4; border-left:2px solid " + (i + 1 === s.fold ? "#0f4c5c" : "transparent") + "; background:" + (i + 1 === s.fold ? "#e2edf0" : "transparent") + "; color:#1c2532;"
+    }));
+    const layerDefs = [
+      { k: "signal", label: "signal eval", na: false }, { k: "target", label: "target transition", na: false },
+      { k: "order", label: "order / fill", na: closeTarget }, { k: "position", label: "position pane", na: false }, { k: "equity", label: "accounting posts", na: false }
+    ];
+    const layers = layerDefs.map(l => {
+      const on = s.layers[l.k] !== false && !l.na;
+      return {
+        label: l.label, mark: l.na ? "–" : on ? "×" : "", state: l.na ? "not_applicable" : on ? "" : "off",
+        boxStyle: "width:11px; height:11px; flex:none; border:1px solid " + (l.na ? "#c9c5ba" : on ? "#0f4c5c" : "#939db0") + "; display:inline-flex; align-items:center; justify-content:center; font-size:9px; color:#0f4c5c;",
+        style: "display:flex; align-items:center; gap:6px; width:100%; text-align:left; border:0; background:transparent; padding:1px 0; font-size:10.5px; color:" + (l.na ? "#939db0" : "#1c2532") + "; cursor:" + (l.na ? "not-allowed" : "pointer") + ";",
+        onToggle: () => { if (!l.na && l.k !== "position") this.setState({ layers: Object.assign({}, s.layers, { [l.k]: s.layers[l.k] === false ? true : false }), index: 0 }); }
+      };
+    });
+    const transport = [
+      { label: "|◀", title: "previous fold", onPress: () => this.setState({ fold: Math.max(1, s.fold - 1), index: 0, selected: null, params: this.FOLDS[Math.max(0, s.fold - 2)].params }) },
+      { label: "◀◀", title: "previous transition", onPress: () => this.stepTransition(-1) },
+      { label: "◀", title: "previous event", onPress: () => this.step(-1) },
+      { label: s.playing ? "❚❚" : "▶", title: "play / pause", onPress: () => this.togglePlay() },
+      { label: "▶", title: "next event", onPress: () => this.step(1) },
+      { label: "▶▶", title: "next transition", onPress: () => this.stepTransition(1) },
+      { label: "▶|", title: "next fold", onPress: () => this.setState({ fold: Math.min(5, s.fold + 1), index: 0, selected: null, params: this.FOLDS[Math.min(4, s.fold)].params }) }
+    ].map((t, i) => Object.assign({}, t, { style: "border:1px solid " + (i === 3 ? "#0f4c5c" : "#e3e0d7") + "; border-radius:3px; background:" + (i === 3 && s.playing ? "#e2edf0" : "#ffffff") + "; color:" + (i === 3 ? "#0f4c5c" : "#4e5a6e") + "; padding:2px 9px; font-family:'JetBrains Mono',monospace; font-size:11px;" }));
+    const speeds = [1, 4, 16, 64].map(v => ({ label: v + "×", onPick: () => { this.setState({ speed: v }); if (this.timer) { clearInterval(this.timer); this.timer = null; this.setState({ playing: false }); } }, style: this.pill(s.speed === v) }));
+    const ledger = [];
+    const from = Math.max(0, Math.min(s.index - 4, list.length - 11));
+    for (let i = from; i < Math.min(list.length, from + 11); i++) {
+      const e = list[i]; const active = i === s.index || e.seq === s.selected;
+      ledger.push({
+        seq: e.seq, ts: this.fmt(e.ms), bar: e.bar, type: e.type,
+        typeColor: e.type === "target_set" ? "#0f4c5c" : e.type === "fill" ? "#1e7b4f" : e.type === "order" ? "#4e5a6e" : e.type === "acct_post" ? "#9a6a1f" : "#7a8699",
+        note: e.note,
+        onPick: () => this.set({ index: i, selected: e.seq }),
+        style: "display:flex; align-items:baseline; gap:8px; width:100%; text-align:left; padding:4px 12px; border:0; border-bottom:1px solid #efede4; background:" + (active ? "#e2edf0" : "transparent") + "; font-family:'JetBrains Mono',monospace; font-size:10px; color:#1c2532;"
+      });
+    }
+    const inspectorRows = sel ? [
+      { k: "event_seq", v: String(sel.seq) }, { k: "timestamp", v: this.fmt(sel.ms) + " · bar " + sel.bar },
+      { k: "type", v: sel.type }, { k: "side", v: sel.side || "—" },
+      { k: "price ref", v: sel.price != null ? String(sel.price) : "close " + d.bars[sel.bar].close },
+      { k: "position", v: d.position[sel.bar].toFixed(1) }, { k: "params", v: s.params + " · frozen " + fold.cutoff },
+      { k: "claim", v: fold.id + " · " + claimT.validation }
+    ] : [{ k: "state", v: "no event at cursor" }];
+    const manifestBase = [
+      { name: "bars.parquet", state: "ready", note: "270 bars · 4h · UTC per fold", digest: "sha256:9f2c…" },
+      { name: "fold_plan.json", state: "ready", note: "outer 5 · inner 3 nested", digest: "sha256:2ba4…" },
+      { name: "search-trace.parquet", state: "ready", note: "600 trials × 5 folds", digest: "sha256:5cd0…" },
+      { name: "selection_trace.json", state: "ready", note: "decision digests per fold", digest: "sha256:4d81…" },
+      { name: "parameter_set.json", state: "ready", note: "frozen θ* per fold", digest: "sha256:77aa…" },
+      { name: "signals.parquet", state: "ready", note: "target transitions", digest: "sha256:d2f5…" },
+      { name: "orders / fills", state: closeTarget ? "not_applicable" : "ready", note: closeTarget ? "close-target route produces none — contract-confirmed" : "lifecycle tape", digest: closeTarget ? "—" : "sha256:e01b…" },
+      { name: "positions.parquet", state: "ready", note: "accepted position", digest: "sha256:8c33…" },
+      { name: "fees / funding / margin", state: "absent", note: "BacktestResultV2 has them; portal series endpoint not yet published — portal gap, not engine gap", digest: "—" },
+      { name: "holdout artifacts", state: "denied", note: "sealed — readable only through the unlock workflow", digest: "sealed" }
+    ];
+    const stateColors = { ready: "#1e7b4f", not_applicable: "#6f7a8c", absent: "#9a6a1f", denied: "#b43a3a" };
+    const manifestRows = manifestBase.map(m => ({
+      name: m.name, state: m.state, note: m.note, digest: m.digest,
+      stateStyle: "width:110px; flex:none; font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.05em; text-transform:uppercase; color:" + stateColors[m.state] + "; border-left:2px solid " + stateColors[m.state] + "; padding-left:5px;"
+    }));
+    const capRows = [
+      { stage: "S1 · Split", cond: "holdout sealed — never read", cap: "≤ B", active: binding === "split", go: "split" },
+      { stage: "S2 · Search", cond: "schedule " + s.schedule + (schedCap ? " — selection saw OOS" : " — selection never saw OOS"), cap: schedCap ? "≤ C" : "no cap", active: binding === "search" && !!schedCap, go: "search" },
+      { stage: "S3 · Freeze", cond: "freeze order verified · digests match", cap: "no cap", active: false, go: "freeze" },
+      { stage: "S4 · Execute", cond: "event stream complete — no gaps", cap: "no cap", active: false, go: "execute" }
+    ].map(c => ({
+      stage: c.stage, cond: c.cond, cap: c.cap, capColor: c.cap === "no cap" ? "#1e7b4f" : c.active ? "#b43a3a" : "#9a6a1f",
+      link: "go to stage →", onGo: () => this.setState({ stage: c.go }),
+      style: "border-top:1px solid #efede4;" + (c.active ? "background:#f7e8e8; border-left:2px solid #b43a3a;" : "")
+    }));
+    const atlasTabs = [{ k: "modes", label: "Mode Atlas" }, { k: "routes", label: "Route Atlas" }].map(t => ({
+      label: t.label, onPick: () => this.setState({ atlasTab: t.k }),
+      style: "border:0; border-right:1px solid #e3e0d7; background:" + (s.atlasTab === t.k ? "#e2edf0" : "#ffffff") + "; color:" + (s.atlasTab === t.k ? "#0f4c5c" : "#4e5a6e") + "; padding:5px 16px; font-family:'JetBrains Mono',monospace; font-size:11px;"
+    }));
+    const mret = [];
+    { const d0 = this.summary; let curM = -1, startV = 1, lastV = 1, label = "";
+      for (let i = 0; i < d0.ts.length; i++) { const dt = new Date(d0.ts[i]); const key = dt.getUTCFullYear() * 12 + dt.getUTCMonth();
+        if (key !== curM) { if (curM >= 0) mret.push({ label, r: lastV / startV - 1 }); curM = key; startV = d0.oos[i]; label = (dt.getUTCMonth() + 1) + "/" + String(dt.getUTCFullYear()).slice(2); }
+        lastV = d0.oos[i]; }
+      mret.push({ label, r: lastV / startV - 1 }); }
+    const monthCols = mret.map(m => ({
+      label: m.label, title: m.label + " · " + (m.r * 100).toFixed(1) + "%", val: (m.r * 100).toFixed(1),
+      cellStyle: "height:26px; border-radius:3px; background:" + (m.r >= 0 ? "rgba(30,123,79," + Math.min(0.85, 0.15 + Math.abs(m.r) * 9).toFixed(2) + ")" : "rgba(180,58,58," + Math.min(0.85, 0.15 + Math.abs(m.r) * 9).toFixed(2) + ")") + ";",
+      valStyle: "font-family:'JetBrains Mono',monospace; font-size:8.5px; text-align:center; color:" + (m.r >= 0 ? "#1e7b4f" : "#b43a3a") + ";"
+    }));
+    const behaviorTiles = [
+      { k: "beta vs BTCUSDT", v: "0.34", sub: "rolling 30d median" },
+      { k: "corr vs BTCUSDT", v: "0.41", sub: "daily returns" },
+      { k: "skew", v: "+0.62", sub: "daily returns" },
+      { k: "excess kurtosis", v: "4.2", sub: "fat tails — size stops accordingly" },
+      { k: "win rate", v: "54.2%", sub: "214 trades" },
+      { k: "avg holding", v: "9.5 bars", sub: "≈ 38h at 4h" },
+      { k: "exposure L/S/F", v: "44 / 31 / 25", sub: "% of bars" },
+      { k: "turnover", v: "0.8× / day", sub: "of equity" }
+    ];
+    const VX = [
+      { trades: 44, dd: "\u22126.1%", contrib: "+7.2pp", worst: "3-loss streak Aug 02\u201309", chip: "PASS", note: "" },
+      { trades: 39, dd: "\u22129.6%", contrib: "+1.1pp", worst: "\u22124.8% single bar (112) \u2014 the run trough lives here", chip: "DRAG", note: "" },
+      { trades: 46, dd: "\u22125.4%", contrib: "+6.8pp", worst: "whipsaw cluster bars 140\u2013162", chip: "PASS", note: "" },
+      { trades: 41, dd: "\u22124.9%", contrib: "+7.9pp", worst: "gap-down fill slip at open", chip: "PASS", note: "" },
+      { trades: 44, dd: "\u22127.7%", contrib: "+5.4pp", worst: "late-window fade, bars 220+", chip: "WARN", note: "" }
+    ];
+    const sevRank = { DRAG: 0, WARN: 1, PASS: 2 };
+    const vOrder = this.FOLDS.map((f, i) => i);
+    if (s.vSort === "worst") vOrder.sort((a, b) => (sevRank[VX[a].chip] - sevRank[VX[b].chip]) || ((this.FOLDS[b].isS - this.FOLDS[b].oosS) - (this.FOLDS[a].isS - this.FOLDS[a].oosS)));
+    const vCounts = VX.reduce((m, v) => { m[v.chip] = (m[v.chip] || 0) + 1; return m; }, {});
+    const verdictRows = vOrder.map(vi => [this.FOLDS[vi], vi]).map(([f, i]) => {
+      const vx = VX[i]; const decay = f.isS - f.oosS;
+      const chipColors = { PASS: "#1e7b4f", WARN: "#9a6a1f", DRAG: "#b43a3a" };
+      const cc = chipColors[vx.chip];
+      const trial = i + 1 === 3 ? 143 : 100 + i * 60;
+      return {
+        id: f.id, oos: f.oosS.toFixed(2),
+        barStyle: "position:absolute; left:0; top:0; bottom:0; width:" + Math.min(100, f.oosS / 1.5 * 100).toFixed(0) + "%; background:" + (vx.chip === "DRAG" ? "#b43a3a" : "#a8c6ce") + ";",
+        decay: (decay >= 0 ? "+" : "") + decay.toFixed(2), decayColor: decay > 0.3 ? "#b43a3a" : "#1c2532",
+        trades: String(vx.trades), dd: vx.dd, contrib: vx.contrib, contribColor: parseFloat(vx.contrib) < 2 ? "#9a6a1f" : "#1e7b4f",
+        worst: vx.worst, chip: vx.chip,
+        chipStyle: "font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; letter-spacing:.06em; border-radius:999px; padding:1px 8px; border:1px solid " + cc + "; color:" + (vx.chip === "DRAG" ? "#ffffff" : cc) + "; background:" + (vx.chip === "DRAG" ? cc : "transparent") + ";",
+        searchHref: "QuantBT 06 S2 Search and Selection.dc.html#fold=" + (i + 1) + "&trial=" + trial + "&pick=" + trial,
+        replayHref: "QuantBT 08 S4 Execute Replay.dc.html#fold=" + (i + 1) + "&route=" + s.route,
+        onPick: () => this.setState({ fold: i + 1, index: 0, selected: null, trial, params: f.params }),
+        style: "cursor:pointer; border-top:1px solid #efede4; background:" + (i + 1 === s.fold ? "#e2edf0" : "transparent") + "; border-left:2px solid " + (i + 1 === s.fold ? "#0f4c5c" : "transparent") + ";"
+      };
+    });
+    const verdictFoot = "fold_02 drags: decay +0.45 says its selection looked lucky on IS, and the run's deepest trough lives in its window \u2014 open search to see the funnel that picked prm_3b81c7, or replay to watch the \u22124.8% bar. fold_05 warns on decay +0.33. Stitched totals above are the sum of these five rows \u2014 nothing else contributes.";
+    const crumbMap = { summary: "Summary", split: "Stage 1 · Split", search: "Stage 2 · Search", freeze: "Stage 3 · Freeze", execute: "Stage 4 · Execute", claim: "Stage 5 · Claim", atlas: "Atlas" };
+    return {
+      dd: { s2: "QuantBT 06 S2 Search and Selection.dc.html#fold=" + s.fold + "&trial=" + s.trial + "&pick=" + s.trial + "&schedule=" + s.schedule, s3: "QuantBT 07 S3 Freeze.dc.html#fold=" + s.fold, s4: "QuantBT 08 S4 Execute Replay.dc.html#fold=" + s.fold + "&route=" + s.route, s5: "QuantBT 11 Release Candidate and Publish.dc.html" },
+      verdictRows, verdictFoot,
+      verdictSummary: (vCounts.DRAG || 0) + " DRAG · " + (vCounts.WARN || 0) + " WARN · " + (vCounts.PASS || 0) + " PASS",
+      vSortOpts: [{ k: "fold", label: "by fold" }, { k: "worst", label: "worst first" }].map(o => ({
+        label: o.label, onPick: () => this.setState({ vSort: o.k }),
+        style: "border:1px solid " + (s.vSort === o.k ? "#0f4c5c" : "#e3e0d7") + "; border-radius:999px; background:" + (s.vSort === o.k ? "#e2edf0" : "#ffffff") + "; color:" + (s.vSort === o.k ? "#0f4c5c" : "#4e5a6e") + "; padding:1px 9px; font-family:'JetBrains Mono',monospace; font-size:9px;"
+      })),
+      dsOpen: s.dsOpen, onToggleDs: () => this.setState({ dsOpen: !s.dsOpen }), dsCaret: s.dsOpen ? "▴" : "▾",
+      dsChipStyle: "border:1px solid " + (s.dsOpen ? "#0f4c5c" : "#e3e0d7") + "; border-radius:999px; background:" + (s.dsOpen ? "#e2edf0" : "#ffffff") + "; padding:1px 8px; color:" + (s.dsOpen ? "#0f4c5c" : "#4e5a6e") + "; font-family:'JetBrains Mono',monospace; font-size:11px; cursor:pointer;",
+      crumbStage: crumbMap[s.stage], navGroups, stages,
+      claim: {
+        validation: claimT.validation, chrono: claimT.chrono, oosSel: claimT.oosSel,
+        cert: cert, certNote: bindingLabel.split("·")[0].trim() + " sets the cap ↗",
+        certStyle: "display:inline-flex; align-items:center; border-radius:3px; padding:0 8px; font-weight:700; font-size:13px; background:" + (cert === "B" ? "#f4ecdb" : "#f7e8e8") + "; color:" + (cert === "B" ? "#9a6a1f" : "#b43a3a") + "; border:1px solid " + (cert === "B" ? "#9a6a1f" : "#b43a3a") + ";",
+        onGoBinding: () => this.setState({ stage: binding })
+      },
+      cur: { fold: "fold_0" + s.fold, trial: "#" + s.trial, params: s.params, seq: s.seq != null ? String(s.seq) : "—", schedule: s.schedule, window: s.window },
+      foldSel: String(s.fold),
+      foldSelOpts: this.FOLDS.map((f, i) => ({ v: String(i + 1), label: f.id + " · " + f.params })),
+      onFoldSel: (ev) => { const i = Math.max(1, Math.min(this.FOLDS.length, parseInt(ev.target.value, 10) || 1)); this.setState({ fold: i, index: 0, selected: null, trial: i === 3 ? 143 : 100 + (i - 1) * 60, params: this.FOLDS[i - 1].params }); },
+      onPrevFold: () => { const i = Math.max(1, s.fold - 1); this.setState({ fold: i, index: 0, selected: null, trial: i === 3 ? 143 : 100 + (i - 1) * 60, params: this.FOLDS[i - 1].params }); },
+      onNextFold: () => { const i = Math.min(this.FOLDS.length, s.fold + 1); this.setState({ fold: i, index: 0, selected: null, trial: i === 3 ? 143 : 100 + (i - 1) * 60, params: this.FOLDS[i - 1].params }); },
+      onCopyEvidence: () => this.copyEvidence(), copyLabel: s.copied ? "✓ evidence link copied" : "copy evidence link",
+      isSummary: s.stage === "summary", isSplit: s.stage === "split", isSearch: s.stage === "search",
+      isFreeze: s.stage === "freeze", isExecute: s.stage === "execute", isClaim: s.stage === "claim", isAtlas: s.stage === "atlas",
+      windowOpts, capOpts, windowNote, tiles, showHoldoutNote: s.window === "holdout",
+      equityTitle: "Equity — " + (s.window === "is" ? "per-fold IS account" : s.window === "compare" ? "IS vs stitched OOS" : s.window === "holdout" ? "holdout (withheld)" : "stitched OOS account (5 folds)") + (s.capitalMode === "rebased" ? " · rebased to 100" : " · capital"),
+      equityRef: this.equityRef, underRef: this.underRef,
+      rollRef: this.rollRef, distRef: this.distRef, monthCols, behaviorTiles,
+      eqSegment: s.window === "compare" ? "is + stitched" : s.window, eqUnits: s.capitalMode === "capital" ? "USD" : "index (100 = baseline)",
+      ganttRows, foldRows,
+      searchOOSRange: fold.test, searchCutoff: fold.cutoff, funnel, schedOpts, schedNote: claimT.note,
+      trialRef: this.trialRef, trialRows, lineage,
+      paramRows, attempts: s.attempts.map(a => ({ label: a })),
+      onCreateAttempt: () => { if (dirtyCount) this.setState({ attempts: s.attempts.concat(["att_draft_0" + (s.attempts.length + 1) + " · what-if · " + dirtyCount + " param" + (dirtyCount > 1 ? "s" : "") + " changed · queued as NEW attempt"]), whatif: {} }); },
+      attemptBtnStyle: "margin-left:auto; border:1px solid " + (dirtyCount ? "#0f4c5c" : "#c9c5ba") + "; border-radius:6px; background:" + (dirtyCount ? "#0f4c5c" : "#f4f2ec") + "; color:" + (dirtyCount ? "#ffffff" : "#939db0") + "; padding:4px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.05em; text-transform:uppercase; cursor:" + (dirtyCount ? "pointer" : "not-allowed") + ";",
+      attemptBtnLabel: dirtyCount ? "create what-if attempt (" + dirtyCount + ") →" : "create what-if attempt",
+      routeOpts, routeNotice, routeNoticeTag: closeTarget ? "route contract" : "route preview",
+      routeNoticeStyle: "display:flex; gap:12px; align-items:flex-start; padding:9px 14px; border:1px solid " + (closeTarget ? "#e3e0d7" : "#9a6a1f") + "; border-radius:6px; background:" + (closeTarget ? "#ffffff" : "#f4ecdb") + "; color:" + (closeTarget ? "#4e5a6e" : "#9a6a1f") + ";",
+      exFolds, layers, transport, speeds,
+      onToggleReveal: () => this.set({ reveal: !s.reveal }),
+      revealMark: s.reveal ? "×" : "",
+      revealBoxStyle: "width:11px; height:11px; flex:none; border:1px solid " + (s.reveal ? "#0f4c5c" : "#939db0") + "; display:inline-flex; align-items:center; justify-content:center; font-size:9px; color:#0f4c5c;",
+      revealStyle: "display:flex; align-items:center; gap:6px; width:100%; text-align:left; border:0; background:transparent; padding:1px 0; font-size:10.5px; color:#1c2532;",
+      replayRef: this.replayRef,
+      replayFallbackStyle: "position:absolute; inset:0; display:" + (s.replayError ? "flex" : "none") + "; align-items:center; justify-content:center; text-align:center; padding:24px; font-size:11px; color:#9a6a1f; background:repeating-linear-gradient(135deg,#f7f4ec 0 6px,transparent 6px 12px); z-index:6;",
+      replayFallback: s.replayError || "",
+      barsLabel: d.bars.length + " bars · OOS window · " + fold.test,
+      seekMax: Math.max(0, list.length - 1), seekVal: Math.min(s.index, Math.max(0, list.length - 1)),
+      onSeek: (ev) => this.set({ index: Number(ev.target.value), selected: null }),
+      seekLabel: (Math.min(s.index, list.length - 1) + 1) + " / " + list.length + " events",
+      readout: {
+        ts: cur ? this.fmt(cur.ms) : "—", bar: cur ? String(cur.bar) : "—", seq: cur ? String(cur.seq) : "—",
+        pos: cur ? d.position[cur.bar].toFixed(1) : "—", equity: cur ? "$" + d.equity[cur.bar].toLocaleString("en-US") : "—"
+      },
+      ledger, ledgerCount: list.length + " events in layer selection · " + d.events.length + " total",
+      ledgerSource: closeTarget ? "signals.parquet + positions.parquet + account-snapshots — no fill tape exists on this route" : "events.parquet → fills / orders / signals (preview tape)",
+      inspectorRows, inspectorSource: sel ? (sel.type === "fill" ? "fills.parquet" : sel.type === "order" ? "orders.parquet" : "events.parquet") : "events.parquet",
+      onGoSearch: () => this.setState({ stage: "search" }),
+      capRows, bindingLabel, oosDisclosure: claimT.disclosure,
+      manifestRows, atlasTabs, atlasIsModes: s.atlasTab === "modes", atlasIsRoutes: s.atlasTab === "routes"
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT — Compare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+  button { transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+</style>
+</helmet>
+
+<div data-screen-label="Compare" style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px">
+  <div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5">
+    <span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span>
+    <span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span>
+    <span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap">
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span>
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">QuantBT Backtest</span><span style="color:#939db0">/</span>
+      <span style="color:#1c2532; flex:none">Compare</span>
+    </span>
+    <span style="flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 12px">Search <span style="font-size:10px; color:#939db0; border:1px solid #e3e0d7; border-radius:3px; padding:0 4px; font-family:'JetBrains Mono',monospace">⌘K</span></span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Comfortable ▾</span>
+  </div>
+  <div style="display:flex; flex:1; min-height:0">
+    <div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px">
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">command</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Command Center</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Portal Map</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">research</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><a href="QuantBT 01 Run Library.dc.html" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; background:#e2edf0; color:#1c2532; font-weight:500; text-decoration:none"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">QuantBT Backtest</span></a><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Pool</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Mining</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Strategy Composer</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">backtests</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Approvals</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">deployments</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Paper Trading</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sandbox</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Live Operations</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">data &amp; operations</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Data Catalog</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">planning</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Roadmap &amp; Task Board</span></div></div>
+      <div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">administration</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Profile &amp; Access</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div>
+    </div>
+    <div style="flex:1; min-width:0">
+      <div style="width:100%; max-width:1440px; margin:0 auto; padding:16px 24px 56px; display:flex; flex-direction:column; gap:14px">
+
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px 16px; border-bottom:1px solid #e3e0d7; padding-bottom:10px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4e5a6e">
+              <a href="QuantBT 01 Run Library.dc.html">Runs</a><span style="color:#939db0">/</span><span style="color:#1c2532">Compare</span>
+            </div>
+            <div style="font-family:Newsreader,Georgia,serif; font-size:22px; font-weight:300; letter-spacing:-.01em">Compare — three different questions, three different rules</div>
+            <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0">Attempts of one idea rank by claim before number. One idea across markets refuses overlay. Two ideas on one key overlay — and correlation, not level, decides the second slot.</div>
+          </div>
+          <span style="flex:none; display:inline-flex; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+            <sc-for list="{{ modeOpts }}" as="m" hint-placeholder-count="3">
+              <button onClick="{{ m.onPick }}" style="{{ m.style }}">{{ m.label }}</button>
+            </sc-for>
+          </span>
+        </div>
+
+        <sc-if value="{{ isAttempts }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:9px 14px; border:1px solid #9a6a1f; border-radius:6px; background:#f4ecdb; color:#9a6a1f">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; flex:none">rule of this mode</span>
+            <span style="font-size:11.5px; line-height:1.55">Same alpha, same key — every chart may overlay. But numbers across claim classes never rank each other: a retrospective 1.31 does not beat a strict 1.19. Read the ladder left to right: the number falls as the claim strengthens, and that gap is the selection luck the weaker claims were counting.</span>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:stretch">
+            <sc-for list="{{ ladder }}" as="l" hint-placeholder-count="4">
+              <div style="{{ l.style }}">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px">
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700">{{ l.att }}</span>
+                  <span style="{{ l.statusStyle }}">{{ l.status }}</span>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ l.run }} · {{ l.sched }}</span>
+                <span style="{{ l.claimStyle }}">{{ l.claim }}</span>
+                <div style="display:flex; align-items:baseline; gap:8px; margin-top:2px">
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600">{{ l.sharpe }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; border:1.5px solid {{ l.certColor }}; color:{{ l.certColor }}; border-radius:3px; padding:0 6px">cert {{ l.cert }}</span>
+                </div>
+                <span style="font-size:10px; color:#4e5a6e; line-height:1.45">{{ l.note }}</span>
+              </div>
+              <span style="align-self:center; font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f; flex:none">{{ l.arrow }}</span>
+            </sc-for>
+          </div>
+
+          <figure style="margin:0; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px">
+            <figcaption style="margin-bottom:10px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">EChart 1</span>
+              <span style="font-family:Newsreader,Georgia,serif; font-size:15px; color:#1c2532">OOS Sharpe per fold, per attempt — same folds, same tape, different honesty</span>
+              <span style="display:inline-flex; gap:4px; margin-left:auto">
+                <sc-for list="{{ cScaleOpts }}" as="cs" hint-placeholder-count="2"><button title="scale demo — at WFO scale grouped bars become unreadable; the chart switches to one line per attempt" onClick="{{ cs.onPick }}" style="{{ cs.style }}">{{ cs.label }}</button></sc-for>
+              </span>
+            </figcaption>
+            <div ref="{{ foldRef }}" style="width:100%; height:250px"></div>
+            <div style="margin-top:8px; font-size:11px; color:#939db0; line-height:1.5">{{ foldChartNote }}</div>
+          </figure>
+
+          <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start">
+            <div style="flex:1.3; min-width:460px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+              <div style="padding:8px 12px; border-bottom:1px solid #e3e0d7; display:flex; justify-content:space-between"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">config diff — the only keys that changed anywhere in the tree</span><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">gold = differs from ACTIVE att_03</span></div>
+              <table style="width:100%; border-collapse:collapse; font-size:11px; min-width:560px">
+                <thead><tr>
+                  <th style="font-size:9.5px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:6px 12px">key</th>
+                  <sc-for list="{{ diffCols }}" as="dc" hint-placeholder-count="4">
+                    <th style="{{ dc.style }}">{{ dc.label }}</th>
+                  </sc-for>
+                </tr></thead>
+                <tbody>
+                  <sc-for list="{{ diffRows }}" as="dr" hint-placeholder-count="4">
+                    <tr style="border-top:1px solid #efede4">
+                      <td style="padding:5px 12px; font-family:'JetBrains Mono',monospace; color:#4e5a6e">{{ dr.k }}</td>
+                      <sc-for list="{{ dr.cells }}" as="c" hint-placeholder-count="4">
+                        <td style="{{ c.style }}">{{ c.v }}</td>
+                      </sc-for>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+              <div style="padding:6px 12px; border-top:1px solid #efede4; font-size:10px; color:#939db0">diffs are config keys from attempts.json — never inferred from results. Full tree with parents: <a href="QuantBT 10 Attempt Lineage.dc.html">Attempt Lineage</a></div>
+            </div>
+            <div style="flex:1; min-width:320px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px 16px; display:flex; flex-direction:column; gap:6px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">what this trajectory says</span>
+              <span style="font-size:11.5px; color:#4e5a6e; line-height:1.6">Three methodology steps took the headline from 1.31 to 1.19 — and turned a retrospective number into a promotable claim. The ~0.12 the ladder gave up is the measured price of selection luck. att_05 offers it back (1.31) at the cost of the claim; <a href="QuantBT 10 Attempt Lineage.dc.html">the tree</a> records the temptation, and <a href="QuantBT 11 Release Candidate and Publish.dc.html">the release candidate</a> only ever reads the ACTIVE node.</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isMarkets }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; gap:12px; align-items:flex-start; padding:9px 14px; border:1px solid #b43a3a; border-radius:6px; background:#f7e8e8; color:#b43a3a">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; flex:none">rule of this mode</span>
+            <span style="font-size:11.5px; line-height:1.55">Three different ComparisonContractKeys — overlay and Δ columns are REFUSED by design. Small multiples only: read shapes and claims side by side, never subtract across keys. This is the robustness question: does the idea survive a different market at all?</span>
+          </div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap">
+            <sc-for list="{{ markets }}" as="mk" hint-placeholder-count="3">
+              <div style="{{ mk.style }}">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px">
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700">{{ mk.key }}</span>
+                  <span style="{{ mk.stateStyle }}">{{ mk.state }}</span>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ mk.run }} · {{ mk.sched }}</span>
+                <div ref="{{ mk.ref }}" style="width:100%; height:120px"></div>
+                <div style="display:flex; gap:4px 16px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:10.5px">
+                  <span>sharpe <span style="font-weight:600">{{ mk.sharpe }}</span></span>
+                  <span>maxdd <span style="color:#b43a3a">{{ mk.dd }}</span></span>
+                  <span style="border:1px solid {{ mk.certColor }}; color:{{ mk.certColor }}; border-radius:3px; padding:0 5px; font-weight:700">{{ mk.cert }}</span>
+                </div>
+                <span style="{{ mk.claimStyle }}">{{ mk.claim }}</span>
+                <span style="font-size:10px; color:#4e5a6e; line-height:1.45">{{ mk.note }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAlphas }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px">
+            <div style="{{ guardStyle }}">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; flex:none">{{ guardTag }}</span>
+              <span style="font-size:11.5px; line-height:1.55; flex:1">{{ guardNote }}</span>
+            </div>
+            <span style="flex:none; display:inline-flex; border:1px solid #e3e0d7; border-radius:6px; overflow:hidden">
+              <sc-for list="{{ pairOpts }}" as="p" hint-placeholder-count="2">
+                <button onClick="{{ p.onPick }}" style="{{ p.style }}">{{ p.label }}</button>
+              </sc-for>
+            </span>
+          </div>
+
+          <sc-if value="{{ legal }}" hint-placeholder-val="{{ true }}">
+            <figure style="margin:0; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px">
+              <figcaption style="margin-bottom:10px; display:flex; align-items:baseline; gap:8px">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a6a1f">EChart 2</span>
+                <span style="font-family:Newsreader,Georgia,serif; font-size:15px; color:#1c2532">Two alphas, one key — stitched OOS rebased to 100, both claims STRICT (B)</span>
+              </figcaption>
+              <div ref="{{ eqRef }}" style="width:100%; height:270px"></div>
+            </figure>
+            <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:stretch">
+              <div style="flex:1.2; min-width:400px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto">
+                <div style="padding:8px 12px; border-bottom:1px solid #e3e0d7"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">metric deltas — engine-published; the UI subtracts nothing else</span></div>
+                <table style="width:100%; border-collapse:collapse; font-size:12px">
+                  <thead><tr>
+                    <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:7px 12px">metric</th>
+                    <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#0f4c5c; text-align:right; border-bottom:1px solid #e3e0d7; padding:7px 12px">mom_breakout_v3</th>
+                    <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#9a6a1f; text-align:right; border-bottom:1px solid #e3e0d7; padding:7px 12px">delta_rsi_v2</th>
+                    <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:7px 12px">Δ</th>
+                  </tr></thead>
+                  <tbody>
+                    <sc-for list="{{ deltaRows }}" as="d" hint-placeholder-count="6">
+                      <tr style="border-top:1px solid #efede4">
+                        <td style="padding:6px 12px; color:#4e5a6e">{{ d.k }}</td>
+                        <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ d.a }}</td>
+                        <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right">{{ d.b }}</td>
+                        <td style="padding:6px 12px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; color:{{ d.color }}">{{ d.delta }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+              <div style="flex:1; min-width:320px; border:1.5px solid #0f4c5c; border-radius:8px; background:#f7fafb; padding:14px 16px; display:flex; flex-direction:column; gap:6px">
+                <div style="display:flex; justify-content:space-between; align-items:baseline">
+                  <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:700; color:#0f4c5c">correlation — the number that decides the second slot</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">comparison.json · engine-published</span>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:12px">
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:700; color:#0f4c5c">ρ = 0.18</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e">daily OOS returns · overlapping window only</span>
+                </div>
+                <span style="font-size:11.5px; color:#4e5a6e; line-height:1.6">Two ~1.1–1.2 Sharpe lines at ρ 0.18 are worth more together than either alone at 1.4 — the portfolio question is correlation, not level. The delta column above ranks numbers; this card is why ranking is the wrong question for a second slot.</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ refused }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed #b43a3a; border-radius:8px; background:repeating-linear-gradient(135deg,#f7e8e8 0 6px,#faf9f5 6px 12px); padding:28px; display:flex; flex-direction:column; gap:8px; align-items:center; text-align:center">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; color:#b43a3a">COMPARISON REFUSED</span>
+              <span style="font-size:12px; color:#b43a3a; max-width:560px; line-height:1.6">R-WFO-118 is BTCUSDT · 4h · close_target_v2 · walk_forward; R-TT-002 is ETHUSDT · 1h · close_target_v2 · train_test. Different key — an overlay would look meaningful and mean nothing. No chart is rendered for a mismatched pair.</span>
+              <span style="font-size:11px; color:#4e5a6e">Cross-market reading of ONE alpha lives in the "one alpha × markets" mode — as small multiples, never an overlay.</span>
+            </div>
+          </sc-if>
+        </sc-if>
+
+        <div style="display:flex; flex-direction:column; gap:3px; border-top:1px solid #e3e0d7; padding-top:8px">
+          <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0">rules of this screen</span>
+          <span style="font-size:11px; color:#4e5a6e; line-height:1.6">Three modes, three rules. Attempts of one alpha: overlay allowed, but claims rank before numbers and only the ACTIVE node may promote. One alpha across markets: keys differ ⇒ small multiples, no Δ, no overlay. Two alphas on one key: overlay + deltas are legal, correlation is engine-published, and the weaker claim of the pair gates any joint promotion. ComparisonContractKey is an engine artifact — the UI checks equality, it never constructs one.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mode&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;attempts&quot;, &quot;markets&quot;, &quot;alphas&quot;], &quot;default&quot;: &quot;attempts&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Compare&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: props.mode || "attempts", pair: "legal", cScale: 5 };
+    this.charts = {}; this.refEls = {};
+    this.mkRef = (n) => (el) => { if (el) { this.refEls[n] = el; this.queue(); } else { this.dispose(n); this.refEls[n] = null; } };
+    this.foldRef = this.mkRef("fold"); this.eqRef = this.mkRef("eq");
+    this.m2a = this.mkRef("m2a"); this.m2b = this.mkRef("m2b"); this.m2c = this.mkRef("m2c");
+    this.ATT = [
+      { att: "att_01", run: "R-WFO-114", sched: "mode_1 × global", claim: "RETROSPECTIVE", cert: "C", sharpe: "1.31", perFold: [1.42, 1.21, 1.35, 1.30, 1.27], color: "#c9c5ba", status: "SUPERSEDED", note: "the number that motivated the tree — refit after reading the full span" },
+      { att: "att_02", run: "R-WFO-115", sched: "mode_1 × per_fold_decay", claim: "SELECTION_ADJUSTED", cert: "C", sharpe: "1.24", perFold: [1.35, 1.10, 1.28, 1.26, 1.21], color: "#d4b36a", status: "SUPERSEDED", note: "honest per-fold ranking — the first 0.07 was selection luck" },
+      { att: "att_05", run: "R-WFO-117", sched: "mode_1 × per_fold_decay", claim: "SELECTION_ADJUSTED", cert: "C", sharpe: "1.31", perFold: [1.41, 1.18, 1.33, 1.29, 1.35], color: "#9a6a1f", status: "SUPERSEDED", note: "the temptation: higher number, weaker claim — recorded, not promoted" },
+      { att: "att_03", run: "R-WFO-118", sched: "mode_1 × per_fold_causal", claim: "STRICT_OUTER_OOS", cert: "B", sharpe: "1.19", perFold: [1.28, 1.02, 1.19, 1.24, 1.11], color: "#0f4c5c", status: "ACTIVE", note: "the promotable number — OOS read once after freeze" }
+    ];
+  }
+  rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  series(seed, drift, n) { const r = this.rng(seed); const out = [100]; const ts = [Date.UTC(2024, 6, 1)]; for (let i = 1; i < (n || 230); i++) { out.push(+(out[i - 1] * (1 + (r() - drift) * 0.011)).toFixed(2)); ts.push(ts[0] + i * 86400000); } return { out, ts }; }
+  queue() { if (this._q) return; this._q = true; setTimeout(() => { this._q = false; this.sync(); }, 30); }
+  componentDidMount() { this.queue(); this._resize = () => Object.values(this.charts).forEach(c => { if (c && c.resize) c.resize(); }); window.addEventListener("resize", this._resize); }
+  componentDidUpdate() { this.queue(); }
+  componentWillUnmount() { window.removeEventListener("resize", this._resize); ["fold", "eq", "m2a", "m2b", "m2c"].forEach(n => this.dispose(n)); }
+  dispose(n) { const c = this.charts[n]; if (c) { try { c.dispose(); } catch (e) {} this.charts[n] = null; } }
+  ec(n) {
+    const el = this.refEls[n]; if (!el || !window.echarts) return null;
+    if (!this.charts[n] || this.charts[n]._el !== el) { this.dispose(n); const c = window.echarts.init(el); c._el = el; this.charts[n] = c; }
+    return this.charts[n];
+  }
+  axis(extra) { return Object.assign({ axisLine: { lineStyle: { color: "#e3e0d7" } }, axisLabel: { color: "#939db0", fontSize: 10.5, fontFamily: "JetBrains Mono, monospace" }, splitLine: { show: false } }, extra || {}); }
+  base() { return { textStyle: { fontFamily: "JetBrains Mono, monospace", fontSize: 10.5, color: "#939db0" }, animation: false, tooltip: { trigger: "axis", backgroundColor: "#ffffff", borderColor: "#e3e0d7", textStyle: { color: "#1c2532", fontSize: 11, fontFamily: "JetBrains Mono, monospace" } } }; }
+  sync() {
+    const s = this.state;
+    if (!window.echarts) { setTimeout(() => this.sync(), 300); return; }
+    if (s.mode === "attempts") {
+      const c = this.ec("fold");
+      const NF = s.cScale;
+      const perFoldAt = (a, ai) => {
+        if (NF === 5) return a.perFold;
+        const r = this.rng(ai * 53 + 11);
+        const base = parseFloat(a.sharpe);
+        return Array.from({ length: NF }, (_, i) => +(base + Math.sin((i + ai) / 4) * 0.14 + (r() - 0.5) * 0.3).toFixed(2));
+      };
+      if (c) c.setOption(Object.assign(this.base(), {
+        grid: { left: 40, right: 12, top: 30, bottom: 24, containLabel: true },
+        legend: { top: 0, left: 0, icon: "rect", itemWidth: 10, itemHeight: 10, textStyle: { color: "#939db0", fontSize: 10.5, fontFamily: "JetBrains Mono, monospace" } },
+        xAxis: this.axis({ type: "category", data: Array.from({ length: NF }, (_, i) => NF <= 8 ? "fold_0" + (i + 1) : "f" + (i + 1)), axisLabel: { color: "#939db0", fontSize: 10.5, fontFamily: "JetBrains Mono, monospace", interval: NF <= 8 ? 0 : "auto" } }),
+        yAxis: this.axis({ type: "value", splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+        series: this.ATT.map((a, ai) => NF <= 8
+          ? { name: a.att + " · " + a.claim.split("_")[0] + " (" + a.cert + ")", type: "bar", data: perFoldAt(a, ai), itemStyle: { color: a.color }, barGap: "10%" }
+          : { name: a.att + " · " + a.claim.split("_")[0] + " (" + a.cert + ")", type: "line", showSymbol: false, data: perFoldAt(a, ai), lineStyle: { width: a.status === "ACTIVE" ? 2 : 1.25, color: a.color }, itemStyle: { color: a.color } })
+      }), true);
+    }
+    if (s.mode === "alphas" && s.pair === "legal") {
+      const c = this.ec("eq");
+      if (c) {
+        const a = this.series(118, 0.474), b = this.series(92, 0.4755);
+        c.setOption(Object.assign(this.base(), {
+          grid: { left: 46, right: 16, top: 28, bottom: 22, containLabel: true },
+          legend: { top: 0, right: 0, icon: "rect", itemWidth: 10, itemHeight: 10, textStyle: { color: "#939db0", fontSize: 10.5, fontFamily: "JetBrains Mono, monospace" } },
+          xAxis: this.axis({ type: "time", splitNumber: 5, axisLabel: { hideOverlap: true, color: "#939db0", fontSize: 10.5, fontFamily: "JetBrains Mono, monospace", formatter: (v) => new Date(v).toISOString().slice(0, 10) } }),
+          yAxis: this.axis({ type: "value", scale: true, splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+          series: [
+            { name: "mom_breakout_v3 · R-WFO-118 (B)", type: "line", showSymbol: false, data: a.out.map((v, i) => [a.ts[i], v]), lineStyle: { width: 1.75, color: "#0f4c5c" }, itemStyle: { color: "#0f4c5c" } },
+            { name: "delta_rsi_v2 · R-CT-201 (B)", type: "line", showSymbol: false, data: b.out.map((v, i) => [b.ts[i], v]), lineStyle: { width: 1.5, color: "#9a6a1f", type: "dashed" }, itemStyle: { color: "#9a6a1f" } }
+          ]
+        }), true);
+      }
+    }
+    if (s.mode === "markets") {
+      const defs = [["m2a", 118, 0.474, "#0f4c5c"], ["m2b", 121, 0.481, "#9a6a1f"], ["m2c", 133, 0.478, "#7a8699"]];
+      defs.forEach(([n, seed, drift, color]) => {
+        const c = this.ec(n); if (!c) return;
+        const sr = this.series(seed, drift, 160);
+        c.setOption(Object.assign(this.base(), {
+          grid: { left: 40, right: 8, top: 8, bottom: 18, containLabel: true },
+          xAxis: this.axis({ type: "time", splitNumber: 3, axisLabel: { hideOverlap: true, color: "#939db0", fontSize: 9, fontFamily: "JetBrains Mono, monospace", formatter: (v) => new Date(v).toISOString().slice(2, 7) } }),
+          yAxis: this.axis({ type: "value", scale: true, axisLabel: { fontSize: 9, color: "#939db0", fontFamily: "JetBrains Mono, monospace" }, splitLine: { lineStyle: { color: "#efede4", type: "dashed" } } }),
+          series: [{ type: "line", showSymbol: false, data: sr.out.map((v, i) => [sr.ts[i], v]), lineStyle: { width: 1.5, color }, itemStyle: { color }, areaStyle: { color, opacity: 0.08 } }]
+        }), true);
+      });
+    }
+  }
+  renderVals() {
+    const s = this.state;
+    const modeOpts = [
+      { k: "attempts", label: "attempts of one alpha" },
+      { k: "markets", label: "one alpha × markets" },
+      { k: "alphas", label: "two alphas, one key" }
+    ].map(m => ({ label: m.label, onPick: () => this.setState({ mode: m.k }), style: "border:0; border-right:1px solid #e3e0d7; background:" + (s.mode === m.k ? "#e2edf0" : "#ffffff") + "; color:" + (s.mode === m.k ? "#0f4c5c" : "#4e5a6e") + "; padding:5px 14px; font-family:'JetBrains Mono',monospace; font-size:10.5px;" }));
+    const ladder = this.ATT.map((a, i) => ({
+      att: a.att, run: a.run, sched: a.sched, claim: a.claim, cert: a.cert, sharpe: a.sharpe, note: a.note, status: a.status,
+      arrow: i < 3 ? "claim ↑ →" : "",
+      certColor: a.cert === "B" ? "#9a6a1f" : "#b4772f",
+      claimStyle: "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; color:" + (a.claim === "STRICT_OUTER_OOS" ? "#1e7b4f" : "#9a6a1f") + "; border-left:2px solid " + (a.claim === "STRICT_OUTER_OOS" ? "#1e7b4f" : "#9a6a1f") + "; padding-left:6px; margin-top:2px;",
+      statusStyle: "font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; border-radius:999px; padding:1px 7px; border:1px solid " + (a.status === "ACTIVE" ? "#1e7b4f" : "#939db0") + "; color:" + (a.status === "ACTIVE" ? "#ffffff" : "#939db0") + "; background:" + (a.status === "ACTIVE" ? "#1e7b4f" : "transparent") + ";",
+      style: "flex:1; min-width:200px; display:flex; flex-direction:column; gap:4px; border:" + (a.status === "ACTIVE" ? "1.5px solid #0f4c5c" : "1px solid #e3e0d7") + "; border-radius:8px; background:" + (a.status === "ACTIVE" ? "#f7fafb" : "#ffffff") + "; padding:11px 14px; box-shadow:0 1px 2px rgba(28,37,50,.05);"
+    }));
+    const DIFF = [
+      { k: "optimization_schedule", vals: ["global", "per_fold_decay", "per_fold_decay", "per_fold_causal"] },
+      { k: "inner_folds", vals: ["—", "—", "—", "k=3 nested"] },
+      { k: "entry_z (θ*)", vals: ["1.7", "1.6", "1.4", "1.6"] },
+      { k: "atr_mult (θ*)", vals: ["2.6", "2.8", "3.2", "2.8"] }
+    ];
+    const order = [0, 1, 2, 3];
+    const diffCols = this.ATT.map(a => ({ label: a.att, style: "font-size:9.5px; font-weight:" + (a.status === "ACTIVE" ? "700" : "500") + "; text-transform:uppercase; letter-spacing:.07em; color:" + (a.status === "ACTIVE" ? "#0f4c5c" : "#939db0") + "; text-align:right; border-bottom:1px solid #e3e0d7; padding:6px 12px;" }));
+    const diffRows = DIFF.map(d => ({
+      k: d.k,
+      cells: order.map(i => {
+        const active = d.vals[3];
+        const differs = d.vals[i] !== active;
+        return { v: d.vals[i], style: "padding:5px 12px; font-family:'JetBrains Mono',monospace; text-align:right; color:" + (differs ? "#9a6a1f" : "#1c2532") + "; font-weight:" + (differs ? "600" : "400") + "; background:" + (i === 3 ? "#f7fafb" : "transparent") + ";" };
+      })
+    }));
+    const markets = [
+      { key: "BTCUSDT · 4h", run: "R-WFO-118 · att_03", sched: "per_fold_causal", state: "COMPLETED", sharpe: "1.19", dd: "−9.6%", cert: "B", claim: "STRICT_OUTER_OOS", ref: this.m2a, color: "#0f4c5c", note: "the home market — the promotable claim lives here" },
+      { key: "ETHUSDT · 1h", run: "R-WFO-121", sched: "global (three-window)", state: "COMPLETED", sharpe: "0.94", dd: "−12.1%", cert: "C", claim: "RETROSPECTIVE", ref: this.m2b, color: "#9a6a1f", note: "idea survives, weaker — and the claim is weaker too: rerun causal before believing 0.94" },
+      { key: "SOLUSDT · 4h", run: "R-WFO-124 · queued", sched: "per_fold_causal", state: "QUEUED", sharpe: "—", dd: "—", cert: "—", claim: "no claim until COMPLETED", ref: this.m2c, color: "#7a8699", note: "queued — the empty panel is the honest state, not a placeholder metric" }
+    ].map(m => ({
+      key: m.key, run: m.run, sched: m.sched, state: m.state, sharpe: m.sharpe, dd: m.dd, cert: m.cert, claim: m.claim, ref: m.ref, note: m.note,
+      certColor: m.cert === "B" ? "#9a6a1f" : m.cert === "C" ? "#b4772f" : "#939db0",
+      stateStyle: "font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; border-radius:999px; padding:1px 7px; border:1px solid " + (m.state === "COMPLETED" ? "#1e7b4f" : "#939db0") + "; color:" + (m.state === "COMPLETED" ? "#1e7b4f" : "#939db0") + ";",
+      claimStyle: "font-family:'JetBrains Mono',monospace; font-size:9.5px; color:" + (m.claim.indexOf("STRICT") === 0 ? "#1e7b4f" : "#9a6a1f") + ";",
+      style: "flex:1; min-width:300px; display:flex; flex-direction:column; gap:5px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:12px 14px; box-shadow:0 1px 2px rgba(28,37,50,.05);"
+    }));
+    const legal = s.pair === "legal";
+    const pairOpts = [
+      { k: "legal", label: "vs delta_rsi_v2 · same key" },
+      { k: "refused", label: "vs R-TT-002 · mismatched" }
+    ].map(p => ({ label: p.label, onPick: () => this.setState({ pair: p.k }), style: "border:0; border-right:1px solid #e3e0d7; background:" + (s.pair === p.k ? "#e2edf0" : "#ffffff") + "; color:" + (s.pair === p.k ? "#0f4c5c" : "#4e5a6e") + "; padding:5px 12px; font-family:'JetBrains Mono',monospace; font-size:10px;" }));
+    const deltaRows = [
+      { k: "OOS sharpe (stitched)", a: "1.19", b: "1.12", delta: "+0.07", good: true },
+      { k: "total return (OOS)", a: "+28.4%", b: "+22.1%", delta: "+6.3pp", good: true },
+      { k: "max drawdown", a: "−9.6%", b: "−7.2%", delta: "−2.4pp", good: false },
+      { k: "trades", a: "214", b: "342", delta: "−128", good: false },
+      { k: "win rate", a: "54.2%", b: "61.8%", delta: "−7.6pp", good: false },
+      { k: "claim class", a: "STRICT (B)", b: "STRICT (B)", delta: "equal", good: true }
+    ].map(d => ({ ...d, color: d.delta === "equal" ? "#1e7b4f" : d.good ? "#1e7b4f" : "#b43a3a" }));
+    return {
+      modeOpts,
+      isAttempts: s.mode === "attempts", isMarkets: s.mode === "markets", isAlphas: s.mode === "alphas",
+      ladder, foldRef: this.foldRef, diffCols, diffRows,
+      cScaleOpts: [5, 32].map(n => ({
+        label: n + " folds", onPick: () => this.setState({ cScale: n }),
+        style: "border:1px solid " + (s.cScale === n ? (n !== 5 ? "#9a6a1f" : "#0f4c5c") : "#e3e0d7") + "; border-radius:3px; background:" + (s.cScale === n ? (n !== 5 ? "#f4ecdb" : "#e2edf0") : "#ffffff") + "; color:" + (s.cScale === n ? (n !== 5 ? "#9a6a1f" : "#0f4c5c") : "#4e5a6e") + "; padding:1px 8px; font-family:'JetBrains Mono',monospace; font-size:9px;"
+      })),
+      foldChartNote: s.cScale === 5
+        ? "att_05 beats att_03 in four folds of five — with a claim class lower. fold_02 drags every attempt: the weakness is the idea's, not the methodology's."
+        : "scale demo — 32 synthesized folds: grouped bars become unreadable here, so the chart switches to one line per attempt (ACTIVE drawn heavier). Read crossings, not columns: where the strict line sits above a selection-adjusted one, honesty cost nothing on that fold.",
+      markets,
+      legal, refused: !legal, pairOpts,
+      guardTag: legal ? "contract key match" : "contract key mismatch",
+      guardStyle: "flex:1; min-width:320px; display:flex; gap:12px; align-items:flex-start; padding:9px 14px; border:1px solid " + (legal ? "#1e7b4f" : "#b43a3a") + "; border-radius:6px; background:" + (legal ? "#e3f1e9" : "#f7e8e8") + "; color:" + (legal ? "#1e7b4f" : "#b43a3a") + ";",
+      guardNote: legal
+        ? "BTCUSDT · 4h · close_target_v2 · walk_forward — both alphas publish the same ComparisonContractKey AND the same claim class (STRICT, B), so overlay, deltas and the correlation card are all legal."
+        : "The two runs publish different ComparisonContractKeys. The screen refuses to draw.",
+      eqRef: this.eqRef, deltaRows
+    };
+  }
+}
+</script>
+</body>
+</html>

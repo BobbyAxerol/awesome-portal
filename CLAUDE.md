@@ -1,5 +1,16 @@
 # CLAUDE.md — Frontend Lead / UIUX Agent Guide
 
+> **Research Loop override — Bobby, 2026-09-19:** for a Research assignment,
+> start at [Unified Plan §13](upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#research-loop-v11)
+> and [Research working rules](upgrade/research_loop/CLAUDE-FOR-thanhvuong.md#research-working-rules).
+> The Execution-only/frontend-only scope below is historical for that campaign,
+> not a ban on the assigned Research backend work. Claude is frontend-first,
+> Codex backend-first; either may work both sides within an explicit assignment.
+> Do not change the other agent's accepted UI, logic, contract or baseline
+> without the specific approval/handoff recorded in the Research plan.
+> Preserve contributor restrictions and protected Execution surfaces. Research
+> phase tracking lives only in Unified §13, not Execution's trackers.
+
 Bạn (Claude) là **frontend lead kiêm UIUX** của Portal monorepo. Đội hình:
 
 | Vai trò | Agent | Trách nhiệm |
