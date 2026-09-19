@@ -238,6 +238,29 @@ decision in the phase evidence or tracking entry:
    `upgrade/research_loop/evidence/P05/resource-cleanup.json` for the compact
    measured record.
 
+#### C4.7 — Research Loop P06 closeout record (2026-09-19)
+
+1. P06 recorded a post-gate, read-only root snapshot of `341,009,268,736` bytes free
+   (`49%` used), above the C4.5 observation threshold. The closeout decision
+   is `NO_ACTION_NEEDED`.
+2. P06's PostgreSQL proof used only an exact `research-p06-postgres-*`
+   tmpfs test container and its self-removal trap. Its cross-language Delta
+   receipt used exact `/tmp/portal-research-p06-durable-child-*` and
+   `/tmp/portal-research-p06-upgrade-*` paths, each removed by its own
+   `finally` block. The post-gate read-only inventory found zero retained P06
+   containers.
+3. Runner observation was read-only: `portal-gh-deploy-runner.service` was
+   `active`; `portal-ci-publish-sgp1.service` was `inactive`. P06 neither used
+   nor restarted either runner, changed no deployment/workflow input and did
+   not touch production services.
+4. No image, volume, BuildKit cache, worktree, HMD data, Execution/Trading
+   System resource, research artifact or database business row was removed.
+   The `24.76GB` reclaimable-image observation remains a separate C4.3
+   protected quiet-window decision, never an excuse for a broad prune during
+   phase closeout. See
+   `upgrade/research_loop/evidence/P06/resource-cleanup.json` for the compact
+   measured record.
+
 ### C5 — Capacity follow-up
 
 1. Add host swap or increase capacity only through a separate owner-approved

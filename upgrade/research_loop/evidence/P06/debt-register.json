@@ -1,0 +1,35 @@
+{
+  "phase": "P06",
+  "open_implementation_debt": [],
+  "resolved_closeouts": [
+    {
+      "id": "P06-BE-01",
+      "status": "RESOLVED",
+      "subject": "PostgreSQL canonical work-digest/command identity, explicit readiness class, requester fairness, one-heavy admission and bounded resource declaration",
+      "evidence": "P06-T01/T07/T11/T13 and scheduler-policy.md"
+    },
+    {
+      "id": "P06-BE-02",
+      "status": "RESOLVED",
+      "subject": "Lease epoch, terminal fencing, cancellation CAS, retry/recovery and immutable transition ledger",
+      "evidence": "P06-T02/T03/T04/T12 and p06-scheduler.spec.ts"
+    },
+    {
+      "id": "P06-BE-03",
+      "status": "RESOLVED",
+      "subject": "ID-only publish-before-ack outbox with bounded redelivery",
+      "evidence": "P06-T09 and scheduler-outbox.service.ts"
+    },
+    {
+      "id": "P06-BE-04",
+      "status": "RESOLVED",
+      "subject": "Actual namespace-isolated P04 Delta child with credential hygiene, cap receipt and same-lease terminal commit",
+      "evidence": "P06-T05/T06/T08 and V11-P06-DR"
+    }
+  ],
+  "later_phase_ownership_not_debt": [
+    "P07 owns generic/imported strategy sandboxing.",
+    "P09/P11 own browser consumer and readiness aggregation.",
+    "P10 owns named producer/direct-submit and deployment-bound NATS transport activation."
+  ]
+}

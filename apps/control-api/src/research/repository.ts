@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 
 import { newUlid } from "../id";
@@ -6,6 +7,7 @@ import { CONTROL_API_POOL } from "../tokens";
 import {
   RESEARCH_DB_BUDGET,
   RESEARCH_DB_RUNTIME_ROLE,
+  RESEARCH_DURABLE_SCHEDULER_POLICY_V1,
   type ResearchArtifactIntegrityInput,
   type ResearchArtifactReferenceInput,
   type ResearchArtifactReservation,
@@ -15,10 +17,16 @@ import {
   type ResearchAlphaVersionInput,
   type ResearchAttemptInput,
   type ResearchAttemptRecord,
+  type ResearchDurableJobClaim,
+  type ResearchDurableJobInput,
+  type ResearchJobOutboxClaim,
+  type ResearchJobOutboxMessage,
+  type ResearchReadinessClass,
   type ResearchRunKind,
   type ResearchRunRelationship,
   type ResearchScope,
   type ResearchTrialInput,
+  type ResearchWorkerUsage,
   ResearchMetadataError,
 } from "./contracts";
 
@@ -49,6 +57,32 @@ interface RunRow {
   run_id: string;
   attempt_id: string;
 }
+
+interface DurableJobRow {
+  job_id: string;
+  run_id: string;
+  command_id: string;
+  logical_work_key: string;
+  work_digest: string | null;
+  job_kind: ResearchDurableJobInput["jobKind"];
+  readiness_class: ResearchReadinessClass;
+  queue_class: ResearchDurableJobInput["queueClass"];
+  resource_class: string;
+  cost_estimate: ResearchJobCostRow | string;
+  attempt_limit: string | number;
+  cancel_version: string | number;
+  requested_by_user_id: string;
+  state: string;
+}
+
+interface ResearchJobCostRow {
+  memory_bytes: number;
+  cpu_seconds: number;
+  scratch_bytes: number;
+  io_bytes: number;
+}
+
+const RESEARCH_SCHEDULER_BUDGET = RESEARCH_DURABLE_SCHEDULER_POLICY_V1;
 
 function asNumber(value: string | number): number {
   const parsed = typeof value === "number" ? value : Number(value);
@@ -150,6 +184,58 @@ function requireBoundedObject(value: Record<string, unknown>, label: string, max
       400,
     );
   }
+}
+
+function digestJson(value: Record<string, unknown>): string {
+  // Scheduler payloads intentionally have fixed, named fields.  Serialising
+  // them in lexical key order makes the outbox digest stable across a retry
+  // without admitting caller-supplied JSON or secret-bearing payloads.
+  const encoded = JSON.stringify(
+    Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right))),
+  );
+  return createHash("sha256").update(encoded).digest("hex");
+}
+
+function requireJobKind(value: string): asserts value is ResearchDurableJobInput["jobKind"] {
+  if (!["PRIMARY", "AUDIT", "DIAGNOSTIC", "EXPORT", "VERIFY", "PROJECTION"].includes(value)) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research job kind is unsupported.", 400);
+  }
+}
+
+function requireQueueClass(value: string): asserts value is ResearchDurableJobInput["queueClass"] {
+  if (!["INTERACTIVE", "HEAVY", "BACKGROUND"].includes(value)) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research queue class is unsupported.", 400);
+  }
+}
+
+function requireReadinessClass(value: string): asserts value is ResearchReadinessClass {
+  if (value !== "MANDATORY" && value !== "OPTIONAL") {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research readiness class is unsupported.", 400);
+  }
+}
+
+function assertJobCost(cost: ResearchDurableJobInput["cost"]): void {
+  const limits: Record<keyof ResearchDurableJobInput["cost"], number> = {
+    memoryBytes: RESEARCH_SCHEDULER_BUDGET.maximumMemoryBytes,
+    cpuSeconds: RESEARCH_SCHEDULER_BUDGET.maximumCpuSeconds,
+    scratchBytes: RESEARCH_SCHEDULER_BUDGET.maximumScratchBytes,
+    ioBytes: RESEARCH_SCHEDULER_BUDGET.maximumIoBytes,
+  };
+  for (const [key, maximum] of Object.entries(limits) as Array<[keyof typeof limits, number]>) {
+    requirePositiveSafeInteger(cost[key], `cost.${key}`, maximum);
+  }
+}
+
+function decodeJobCost(value: ResearchJobCostRow | string): ResearchDurableJobInput["cost"] {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  const cost = {
+    memoryBytes: parsed.memory_bytes,
+    cpuSeconds: parsed.cpu_seconds,
+    scratchBytes: parsed.scratch_bytes,
+    ioBytes: parsed.io_bytes,
+  };
+  assertJobCost(cost);
+  return cost;
 }
 
 function rowToAttempt(row: AttemptRow, runId: string): ResearchAttemptRecord {
@@ -448,8 +534,8 @@ export class ResearchMetadataRepository {
       const inserted = await client.query(
         `INSERT INTO research.jobs
            (workspace_id, job_id, run_id, command_id, job_kind, queue_class,
-            cost_estimate, resource_class, state, requested_by_user_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, 'QUEUED', $9)
+            cost_estimate, resource_class, logical_work_key, state, requested_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $4, 'QUEUED', $9)
          ON CONFLICT (workspace_id, command_id) DO NOTHING
          RETURNING job_id`,
         [
@@ -528,6 +614,747 @@ export class ResearchMetadataRepository {
         lease_epoch: input.leaseEpoch,
       });
     });
+  }
+
+  /**
+   * P06's only new scheduler admission path.  A job is identified by its
+   * logical work key as well as its command ID: duplicate broker deliveries
+   * therefore cannot create a second computation or a second outbox effect.
+   *
+   * P10, not P06, will route the legacy browser submit path here.  Keeping
+   * that producer unchanged prevents two schedulers from dispatching the same
+   * existing Research run during this infrastructure phase.
+   */
+  async enqueueDurableJob(
+    scope: ResearchScope,
+    input: ResearchDurableJobInput,
+  ): Promise<{ jobId: string; replayed: boolean }> {
+    this.assertScope(scope);
+    this.assertDurableJobInput(input);
+    return this.withScopedWrite(scope, async (client) => {
+      const run = await client.query<{ attempt_id: string; attempt_state: string; run_state: string }>(
+        `SELECT r.attempt_id, a.state AS attempt_state, r.state AS run_state
+           FROM research.runs r
+           JOIN research.attempts a
+             ON a.workspace_id = r.workspace_id AND a.attempt_id = r.attempt_id
+          WHERE r.workspace_id = $1 AND r.run_id = $2
+          FOR UPDATE OF r, a`,
+        [scope.workspaceId, input.runId],
+      );
+      const runRow = run.rows[0];
+      if (!runRow) {
+        throw new ResearchMetadataError("RESEARCH_RUN_NOT_FOUND", "The Research run was not found.", 404);
+      }
+      if (!["DRAFT", "PREFLIGHT_VALID", "QUEUED"].includes(runRow.attempt_state) ||
+          !["DRAFT", "QUEUED"].includes(runRow.run_state)) {
+        throw new ResearchMetadataError(
+          "RESEARCH_JOB_STATE_CONFLICT",
+          "Only a preflight-valid Research draft may enter the durable scheduler.",
+          409,
+        );
+      }
+
+      const costEstimate = this.jobCostDatabaseShape(input.cost);
+      const inserted = await client.query<{ job_id: string }>(
+        `INSERT INTO research.jobs
+           (workspace_id, job_id, run_id, command_id, logical_work_key, work_digest,
+            job_kind, readiness_class, queue_class, cost_estimate, resource_class, attempt_limit,
+            state, requested_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, 'QUEUED', $13)
+         ON CONFLICT DO NOTHING
+         RETURNING job_id`,
+        [
+          scope.workspaceId,
+          input.jobId,
+          input.runId,
+          input.commandId,
+          input.logicalWorkKey,
+          input.workDigest,
+          input.jobKind,
+          input.readinessClass,
+          input.queueClass,
+          JSON.stringify(costEstimate),
+          input.resourceClass,
+          input.attemptLimit ?? 3,
+          scope.actorUserId,
+        ],
+      );
+      if (inserted.rowCount === 0) {
+        const existing = await client.query<DurableJobRow>(
+          `SELECT job_id, run_id, command_id, logical_work_key, work_digest, job_kind, readiness_class,
+                  queue_class, resource_class, cost_estimate, attempt_limit,
+                  cancel_version, requested_by_user_id, state
+             FROM research.jobs
+            WHERE workspace_id = $1
+              AND (command_id = $2 OR (run_id = $3 AND logical_work_key = $4))
+            FOR UPDATE`,
+          [scope.workspaceId, input.commandId, input.runId, input.logicalWorkKey],
+        );
+        const row = existing.rows[0];
+        if (existing.rows.length !== 1 || !row || !this.matchesDurableJob(row, input)) {
+          throw new ResearchMetadataError(
+            "RESEARCH_IDEMPOTENCY_PAYLOAD_CONFLICT",
+            "That command or logical Research work key is already bound to different durable work.",
+            409,
+          );
+        }
+        await this.audit(client, scope, "RESEARCH_DURABLE_JOB_REPLAYED", "job", row.job_id, {
+          original_requester_user_id: row.requested_by_user_id,
+          replay_command_id: input.commandId,
+          logical_work_key: input.logicalWorkKey,
+          work_digest: input.workDigest,
+        });
+        return { jobId: row.job_id, replayed: true };
+      }
+
+      await client.query(
+        `UPDATE research.attempts
+            SET state = 'QUEUED', updated_at = now()
+          WHERE workspace_id = $1 AND attempt_id = $2`,
+        [scope.workspaceId, runRow.attempt_id],
+      );
+      await client.query(
+        `UPDATE research.runs
+            SET state = 'QUEUED', state_version = state_version + 1, updated_at = now()
+          WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, input.runId],
+      );
+      await this.enqueueOutboxEvent(client, scope, {
+        jobId: input.jobId,
+        eventType: "RESEARCH_JOB_QUEUED",
+        deliveryGeneration: 1,
+        payload: this.outboxPayload(input.jobId, input.runId, input.queueClass, input.logicalWorkKey, input.workDigest),
+      });
+      await this.recordJobEvent(client, scope, input.jobId, null, "JOB_QUEUED", {
+        queue_class: input.queueClass,
+        logical_work_key: input.logicalWorkKey,
+        work_digest: input.workDigest,
+      });
+      await this.audit(client, scope, "RESEARCH_DURABLE_JOB_ENQUEUED", "job", input.jobId, {
+        run_id: input.runId,
+        command_id: input.commandId,
+        logical_work_key: input.logicalWorkKey,
+        queue_class: input.queueClass,
+        readiness_class: input.readinessClass,
+      });
+      return { jobId: input.jobId, replayed: false };
+    });
+  }
+
+  /**
+   * Claims at most one job.  PostgreSQL is the lease/fencing authority; this
+   * method does not launch Python and has no NATS or Execution credential.
+   */
+  async claimNextDurableJob(
+    scope: ResearchScope,
+    input: { workerId: string; leaseSeconds?: number },
+  ): Promise<ResearchDurableJobClaim | null> {
+    this.assertScope(scope);
+    requireOpaqueId(input.workerId, "workerId");
+    const leaseSeconds = input.leaseSeconds ?? 60;
+    requirePositiveSafeInteger(leaseSeconds, "leaseSeconds", RESEARCH_SCHEDULER_BUDGET.maximumLeaseSeconds);
+    return this.withScopedWrite(scope, async (client) => {
+      await this.recoverExpiredDurableJobsInTransaction(client, scope);
+      const candidate = await client.query<DurableJobRow>(
+        `SELECT j.job_id, j.run_id, j.command_id, j.logical_work_key, j.work_digest, j.job_kind, j.readiness_class,
+                j.queue_class, j.resource_class, j.cost_estimate, j.attempt_limit,
+                j.cancel_version, j.requested_by_user_id, j.state
+           FROM research.jobs j
+          WHERE j.workspace_id = $1
+            AND (j.state = 'QUEUED' OR (j.state = 'RETRY_WAIT' AND j.retry_not_before <= now()))
+            AND j.work_digest IS NOT NULL
+            AND (
+              j.queue_class <> 'HEAVY'
+              OR NOT EXISTS (
+                SELECT 1 FROM research.jobs active_heavy
+                 WHERE active_heavy.workspace_id = j.workspace_id
+                   AND active_heavy.queue_class = 'HEAVY'
+                   AND active_heavy.state IN ('CLAIMED', 'RUNNING', 'CANCEL_REQUESTED')
+              )
+            )
+          ORDER BY
+            CASE j.queue_class WHEN 'INTERACTIVE' THEN 0 WHEN 'HEAVY' THEN 1 ELSE 2 END,
+            COALESCE((SELECT fairness.last_claimed_at
+                        FROM research.scheduler_fairness fairness
+                       WHERE fairness.workspace_id = j.workspace_id
+                         AND fairness.requested_by_user_id = j.requested_by_user_id),
+                     '-infinity'::timestamptz),
+            j.created_at,
+            j.job_id
+          FOR UPDATE SKIP LOCKED
+          LIMIT 1`,
+        [scope.workspaceId],
+      );
+      const job = candidate.rows[0];
+      if (!job) return null;
+      const state = await client.query<{ attempt_id: string; attempt_state: string; run_state: string }>(
+        `SELECT r.attempt_id, a.state AS attempt_state, r.state AS run_state
+           FROM research.runs r
+           JOIN research.attempts a ON a.workspace_id = r.workspace_id AND a.attempt_id = r.attempt_id
+          WHERE r.workspace_id = $1 AND r.run_id = $2
+          FOR UPDATE OF r, a`,
+        [scope.workspaceId, job.run_id],
+      );
+      const stateRow = state.rows[0];
+      if (!stateRow || !["QUEUED", "CLAIMED"].includes(stateRow.attempt_state) ||
+          !["QUEUED", "RUNNING"].includes(stateRow.run_state)) {
+        throw new ResearchMetadataError(
+          "RESEARCH_JOB_STATE_CONFLICT",
+          "A claimable job no longer has a claimable Research run state.",
+          409,
+        );
+      }
+      const counters = await client.query<{ ordinal: string | number; lease_epoch: string | number }>(
+        `SELECT COALESCE(max(ordinal), 0) + 1 AS ordinal,
+                COALESCE(max(lease_epoch), 0) + 1 AS lease_epoch
+           FROM research.worker_attempts
+          WHERE workspace_id = $1 AND job_id = $2`,
+        [scope.workspaceId, job.job_id],
+      );
+      const workerAttemptId = newUlid("rwa");
+      const ordinal = asNumber(counters.rows[0].ordinal);
+      const leaseEpoch = asNumber(counters.rows[0].lease_epoch);
+      const worker = await client.query<{ expires_at: Date }>(
+        `INSERT INTO research.worker_attempts
+           (workspace_id, worker_attempt_id, job_id, ordinal, worker_id,
+            lease_epoch, expires_at, state)
+         VALUES ($1, $2, $3, $4, $5, $6, now() + $7 * interval '1 second', 'CLAIMED')
+         RETURNING expires_at`,
+        [scope.workspaceId, workerAttemptId, job.job_id, ordinal, input.workerId, leaseEpoch, leaseSeconds],
+      );
+      const expiresAt = worker.rows[0]?.expires_at;
+      if (!expiresAt) throw new Error("Research durable worker claim did not return an expiry.");
+      await client.query(
+        `UPDATE research.jobs
+            SET state = 'CLAIMED', current_worker_attempt_id = $3,
+                current_lease_epoch = $4, retry_not_before = NULL, updated_at = now()
+          WHERE workspace_id = $1 AND job_id = $2`,
+        [scope.workspaceId, job.job_id, workerAttemptId, leaseEpoch],
+      );
+      await client.query(
+        `UPDATE research.attempts SET state = 'CLAIMED', updated_at = now()
+          WHERE workspace_id = $1 AND attempt_id = $2`,
+        [scope.workspaceId, stateRow.attempt_id],
+      );
+      await client.query(
+        `UPDATE research.runs SET state = 'RUNNING', state_version = state_version + 1, updated_at = now()
+          WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, job.run_id],
+      );
+      await client.query(
+        `INSERT INTO research.scheduler_fairness
+           (workspace_id, requested_by_user_id, last_claimed_at, claim_count)
+         VALUES ($1, $2, now(), 1)
+         ON CONFLICT (workspace_id, requested_by_user_id)
+         DO UPDATE SET last_claimed_at = EXCLUDED.last_claimed_at,
+                       claim_count = research.scheduler_fairness.claim_count + 1`,
+        [scope.workspaceId, job.requested_by_user_id],
+      );
+      await this.recordJobEvent(client, scope, job.job_id, workerAttemptId, "JOB_CLAIMED", {
+        worker_id: input.workerId,
+        ordinal,
+        lease_epoch: leaseEpoch,
+      });
+      await this.audit(client, scope, "RESEARCH_DURABLE_JOB_CLAIMED", "job", job.job_id, {
+        worker_attempt_id: workerAttemptId,
+        lease_epoch: leaseEpoch,
+        ordinal,
+      });
+      return {
+        jobId: job.job_id,
+        runId: job.run_id,
+        jobKind: job.job_kind,
+        workDigest: this.requireWorkDigest(job),
+        readinessClass: job.readiness_class,
+        queueClass: job.queue_class,
+        resourceClass: job.resource_class,
+        cost: decodeJobCost(job.cost_estimate),
+        workerAttemptId,
+        leaseEpoch,
+        leaseExpiresAt: expiresAt,
+        ordinal,
+        cancellationVersion: asNumber(job.cancel_version),
+      };
+    });
+  }
+
+  async markDurableJobRunning(
+    scope: ResearchScope,
+    claim: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch">,
+  ): Promise<void> {
+    this.assertScope(scope);
+    this.assertClaim(claim);
+    await this.withScopedWrite(scope, async (client) => {
+      const worker = await client.query(
+        `UPDATE research.worker_attempts wa
+            SET state = 'RUNNING', updated_at = now()
+           FROM research.jobs j
+          WHERE wa.workspace_id = $1
+            AND wa.worker_attempt_id = $2
+            AND wa.lease_epoch = $3
+            AND wa.state = 'CLAIMED'
+            AND wa.expires_at > now()
+            AND j.workspace_id = wa.workspace_id
+            AND j.job_id = wa.job_id
+            AND j.job_id = $4
+            AND j.current_worker_attempt_id = wa.worker_attempt_id
+            AND j.current_lease_epoch = wa.lease_epoch
+            AND j.state = 'CLAIMED'
+          RETURNING wa.worker_attempt_id`,
+        [scope.workspaceId, claim.workerAttemptId, claim.leaseEpoch, claim.jobId],
+      );
+      if (worker.rowCount !== 1) this.throwLeaseRejected();
+      await client.query(
+        `UPDATE research.jobs SET state = 'RUNNING', updated_at = now()
+          WHERE workspace_id = $1 AND job_id = $2`,
+        [scope.workspaceId, claim.jobId],
+      );
+      await client.query(
+        `UPDATE research.attempts a SET state = 'RUNNING', updated_at = now()
+          FROM research.runs r
+         WHERE a.workspace_id = $1 AND r.workspace_id = a.workspace_id
+           AND a.attempt_id = r.attempt_id
+           AND r.attempt_id = a.attempt_id AND r.run_id = (
+             SELECT run_id FROM research.jobs WHERE workspace_id = $1 AND job_id = $2
+           )`,
+        [scope.workspaceId, claim.jobId],
+      );
+      await this.recordJobEvent(client, scope, claim.jobId, claim.workerAttemptId, "JOB_RUNNING", {});
+    });
+  }
+
+  async heartbeatDurableJob(
+    scope: ResearchScope,
+    claim: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch">,
+    leaseSeconds = 60,
+  ): Promise<Date> {
+    this.assertScope(scope);
+    this.assertClaim(claim);
+    requirePositiveSafeInteger(leaseSeconds, "leaseSeconds", RESEARCH_SCHEDULER_BUDGET.maximumLeaseSeconds);
+    return this.withScopedWrite(scope, async (client) => {
+      const result = await client.query<{ expires_at: Date }>(
+        `UPDATE research.worker_attempts wa
+            SET expires_at = now() + $5 * interval '1 second', updated_at = now()
+           FROM research.jobs j
+          WHERE wa.workspace_id = $1
+            AND wa.worker_attempt_id = $2
+            AND wa.lease_epoch = $3
+            AND wa.state IN ('CLAIMED', 'RUNNING')
+            AND wa.expires_at > now()
+            AND j.workspace_id = wa.workspace_id
+            AND j.job_id = wa.job_id
+            AND j.job_id = $4
+            AND j.current_worker_attempt_id = wa.worker_attempt_id
+            AND j.current_lease_epoch = wa.lease_epoch
+            AND j.state IN ('CLAIMED', 'RUNNING')
+          RETURNING wa.expires_at`,
+        [scope.workspaceId, claim.workerAttemptId, claim.leaseEpoch, claim.jobId, leaseSeconds],
+      );
+      if (result.rowCount !== 1 || !result.rows[0]) this.throwLeaseRejected();
+      return result.rows[0].expires_at;
+    });
+  }
+
+  /** Request cancellation by CAS. A queued job becomes terminal immediately;
+   * an active child sees CANCEL_REQUESTED and must stop before finalisation. */
+  async requestDurableJobCancellation(
+    scope: ResearchScope,
+    input: { jobId: string; reason: string },
+  ): Promise<{ terminal: boolean; cancellationVersion: number }> {
+    this.assertScope(scope);
+    requireOpaqueId(input.jobId, "jobId");
+    requireText(input.reason, "cancellation reason", 256);
+    return this.withScopedWrite(scope, async (client) => {
+      const selected = await client.query<DurableJobRow & { attempt_id: string }>(
+        `SELECT j.job_id, j.run_id, j.command_id, j.logical_work_key, j.work_digest, j.job_kind, j.readiness_class,
+                j.queue_class, j.resource_class, j.cost_estimate, j.attempt_limit,
+                j.cancel_version, j.requested_by_user_id, j.state, r.attempt_id
+           FROM research.jobs j
+           JOIN research.runs r ON r.workspace_id = j.workspace_id AND r.run_id = j.run_id
+          WHERE j.workspace_id = $1 AND j.job_id = $2
+          FOR UPDATE OF j, r`,
+        [scope.workspaceId, input.jobId],
+      );
+      const job = selected.rows[0];
+      if (!job) throw new ResearchMetadataError("RESEARCH_JOB_NOT_FOUND", "The Research job was not found.", 404);
+      if (["SUCCEEDED", "FAILED", "CANCELLED"].includes(job.state)) {
+        return { terminal: job.state === "CANCELLED", cancellationVersion: asNumber(job.cancel_version) };
+      }
+      const terminal = ["QUEUED", "RETRY_WAIT"].includes(job.state);
+      const updated = await client.query<{ cancel_version: string | number }>(
+        `UPDATE research.jobs
+            SET state = $3,
+                cancellation_requested_at = now(),
+                terminal_reason = CASE WHEN $4 THEN 'CANCELLED_BEFORE_CLAIM' ELSE terminal_reason END,
+                cancel_version = cancel_version + 1,
+                updated_at = now()
+          WHERE workspace_id = $1 AND job_id = $2
+          RETURNING cancel_version`,
+        [scope.workspaceId, input.jobId, terminal ? "CANCELLED" : "CANCEL_REQUESTED", terminal],
+      );
+      const cancellationVersion = asNumber(updated.rows[0].cancel_version);
+      if (terminal) {
+        await client.query(
+          `UPDATE research.attempts SET state = 'CANCELLED', updated_at = now()
+            WHERE workspace_id = $1 AND attempt_id = $2`,
+          [scope.workspaceId, job.attempt_id],
+        );
+        await client.query(
+          `UPDATE research.runs SET state = 'CANCELLED', state_version = state_version + 1, updated_at = now()
+            WHERE workspace_id = $1 AND run_id = $2`,
+          [scope.workspaceId, job.run_id],
+        );
+        await this.enqueueOutboxEvent(client, scope, {
+          jobId: job.job_id,
+          eventType: "RESEARCH_JOB_CANCELLED",
+          deliveryGeneration: cancellationVersion,
+          payload: this.outboxPayload(job.job_id, job.run_id, job.queue_class, job.logical_work_key, this.requireWorkDigest(job)),
+        });
+      }
+      await this.recordJobEvent(client, scope, job.job_id, null, terminal ? "JOB_CANCELLED" : "JOB_CANCEL_REQUESTED", {
+        reason: input.reason,
+        cancellation_version: cancellationVersion,
+      });
+      await this.audit(client, scope, terminal ? "RESEARCH_DURABLE_JOB_CANCELLED" : "RESEARCH_DURABLE_JOB_CANCEL_REQUESTED", "job", job.job_id, {
+        reason: input.reason,
+        cancellation_version: cancellationVersion,
+      });
+      return { terminal, cancellationVersion };
+    });
+  }
+
+  /**
+   * Commits one terminal result only if this exact worker lease still owns the
+   * job. Cancellation wins over a late successful child result.
+   */
+  async finishDurableJob(
+    scope: ResearchScope,
+    input: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch"> & {
+      outcome: "SUCCEEDED" | "FAILED" | "CANCELLED";
+      reason?: string;
+      usage: ResearchWorkerUsage;
+    },
+  ): Promise<{ outcome: "SUCCEEDED" | "FAILED" | "CANCELLED" }> {
+    this.assertScope(scope);
+    this.assertClaim(input);
+    if (input.reason != null) requireText(input.reason, "terminal reason", 256);
+    this.assertWorkerUsage(input.usage);
+    return this.withScopedWrite(scope, async (client) => {
+      const selected = await client.query<DurableJobRow & { attempt_id: string }>(
+        `SELECT j.job_id, j.run_id, j.command_id, j.logical_work_key, j.work_digest, j.job_kind, j.readiness_class,
+                j.queue_class, j.resource_class, j.cost_estimate, j.attempt_limit,
+                j.cancel_version, j.requested_by_user_id, j.state, r.attempt_id
+           FROM research.jobs j
+           JOIN research.runs r ON r.workspace_id = j.workspace_id AND r.run_id = j.run_id
+          WHERE j.workspace_id = $1 AND j.job_id = $2
+          FOR UPDATE OF j, r`,
+        [scope.workspaceId, input.jobId],
+      );
+      const job = selected.rows[0];
+      if (!job) throw new ResearchMetadataError("RESEARCH_JOB_NOT_FOUND", "The Research job was not found.", 404);
+      const outcome = job.state === "CANCEL_REQUESTED" ? "CANCELLED" : input.outcome;
+      const worker = await client.query(
+        `UPDATE research.worker_attempts
+            SET state = $5,
+                exit_reason = $6,
+                measured_usage = $7::jsonb,
+                updated_at = now()
+          WHERE workspace_id = $1
+            AND worker_attempt_id = $2
+            AND lease_epoch = $3
+            AND job_id = $4
+            AND state IN ('CLAIMED', 'RUNNING')
+            AND expires_at > now()
+          RETURNING worker_attempt_id`,
+        [
+          scope.workspaceId,
+          input.workerAttemptId,
+          input.leaseEpoch,
+          input.jobId,
+          outcome,
+          outcome === "SUCCEEDED" ? null : (input.reason ?? outcome),
+          JSON.stringify(this.workerUsageDatabaseShape(input.usage)),
+        ],
+      );
+      if (worker.rowCount !== 1) this.throwLeaseRejected();
+      await client.query(
+        `UPDATE research.jobs
+            SET state = $3,
+                terminal_reason = $4,
+                updated_at = now()
+          WHERE workspace_id = $1 AND job_id = $2
+            AND current_worker_attempt_id = $5 AND current_lease_epoch = $6
+            AND state IN ('CLAIMED', 'RUNNING', 'CANCEL_REQUESTED')`,
+        [scope.workspaceId, job.job_id, outcome, outcome === "SUCCEEDED" ? null : (input.reason ?? outcome), input.workerAttemptId, input.leaseEpoch],
+      );
+      const attemptState = outcome === "SUCCEEDED" ? "READY" : outcome;
+      await client.query(
+        `UPDATE research.attempts SET state = $3, updated_at = now()
+          WHERE workspace_id = $1 AND attempt_id = $2`,
+        [scope.workspaceId, job.attempt_id, attemptState],
+      );
+      const runState = outcome === "SUCCEEDED" ? "READY" : outcome;
+      await client.query(
+        `UPDATE research.runs SET state = $3, state_version = state_version + 1, updated_at = now()
+          WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, job.run_id, runState],
+      );
+      await this.recordJobEvent(client, scope, job.job_id, input.workerAttemptId, `JOB_${outcome}`, {
+        lease_epoch: input.leaseEpoch,
+        cancellation_version: asNumber(job.cancel_version),
+      });
+      await this.audit(client, scope, "RESEARCH_DURABLE_JOB_TERMINAL", "job", job.job_id, {
+        outcome,
+        worker_attempt_id: input.workerAttemptId,
+        lease_epoch: input.leaseEpoch,
+      });
+      return { outcome };
+    });
+  }
+
+  /** Technical retry does not mutate the attempt/run specification. */
+  async retryDurableJob(
+    scope: ResearchScope,
+    input: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch"> & {
+      reason: string;
+      retryDelaySeconds?: number;
+    },
+  ): Promise<{ scheduled: boolean; terminal: boolean }> {
+    this.assertScope(scope);
+    this.assertClaim(input);
+    requireText(input.reason, "retry reason", 256);
+    const retryDelaySeconds = input.retryDelaySeconds ?? 1;
+    requirePositiveSafeInteger(retryDelaySeconds, "retryDelaySeconds", 3_600);
+    return this.withScopedWrite(scope, async (client) => this.retryDurableJobInTransaction(
+      client,
+      scope,
+      input,
+      retryDelaySeconds,
+      "WORKER_RETRY",
+    ));
+  }
+
+  /** Explicit recovery entry point for restart/outage reconciliation. */
+  async recoverExpiredDurableJobs(scope: ResearchScope): Promise<{ recovered: number; terminal: number }> {
+    this.assertScope(scope);
+    return this.withScopedWrite(scope, async (client) => this.recoverExpiredDurableJobsInTransaction(client, scope));
+  }
+
+  /**
+   * Claim ID-only outbox records for a publisher. Publishing and acknowledgement
+   * are intentionally two calls: a transport outage never advances the job
+   * state and a duplicate delivery remains harmless at the consumer boundary.
+   */
+  async claimDurableJobOutbox(
+    scope: ResearchScope,
+    input: { publisherId: string; limit?: number; leaseSeconds?: number },
+  ): Promise<ResearchJobOutboxClaim[]> {
+    this.assertScope(scope);
+    requireOpaqueId(input.publisherId, "publisherId");
+    const limit = input.limit ?? 16;
+    const leaseSeconds = input.leaseSeconds ?? 30;
+    requirePositiveSafeInteger(limit, "outbox limit", 128);
+    requirePositiveSafeInteger(leaseSeconds, "outbox leaseSeconds", RESEARCH_SCHEDULER_BUDGET.maximumOutboxClaimSeconds);
+    return this.withScopedWrite(scope, async (client) => {
+      await client.query(
+        `UPDATE research.job_outbox
+            SET state = 'PENDING', claim_token = NULL, claim_expires_at = NULL, updated_at = now()
+          WHERE workspace_id = $1 AND state = 'CLAIMED' AND claim_expires_at <= now()`,
+        [scope.workspaceId],
+      );
+      const rows = await client.query<{
+        outbox_id: string; job_id: string; event_type: ResearchJobOutboxMessage["eventType"];
+        payload_digest: string; payload: Record<string, string | number>; delivery_generation: string | number;
+      }>(
+        `SELECT outbox_id, job_id, event_type, payload_digest, payload, delivery_generation
+           FROM research.job_outbox
+          WHERE workspace_id = $1 AND state = 'PENDING' AND available_at <= now()
+          ORDER BY available_at, created_at, outbox_id
+          FOR UPDATE SKIP LOCKED
+          LIMIT $2`,
+        [scope.workspaceId, limit],
+      );
+      const claims: ResearchJobOutboxClaim[] = [];
+      for (const row of rows.rows) {
+        const claimToken = newUlid("rop");
+        const claimed = await client.query<{ claim_expires_at: Date }>(
+          `UPDATE research.job_outbox
+              SET state = 'CLAIMED', claim_token = $3,
+                  claim_expires_at = now() + $4 * interval '1 second',
+                  delivery_attempts = delivery_attempts + 1, updated_at = now()
+            WHERE workspace_id = $1 AND outbox_id = $2 AND state = 'PENDING'
+            RETURNING claim_expires_at`,
+          [scope.workspaceId, row.outbox_id, claimToken, leaseSeconds],
+        );
+        if (claimed.rowCount !== 1 || !claimed.rows[0]) continue;
+        claims.push({
+          outboxId: row.outbox_id,
+          jobId: row.job_id,
+          eventType: row.event_type,
+          payloadDigest: row.payload_digest,
+          payload: row.payload,
+          deliveryGeneration: asNumber(row.delivery_generation),
+          claimToken,
+          claimExpiresAt: claimed.rows[0].claim_expires_at,
+        });
+      }
+      return claims;
+    });
+  }
+
+  async acknowledgeDurableJobOutbox(
+    scope: ResearchScope,
+    input: { outboxId: string; claimToken: string },
+  ): Promise<void> {
+    this.assertScope(scope);
+    requireOpaqueId(input.outboxId, "outboxId");
+    requireOpaqueId(input.claimToken, "outbox claimToken");
+    await this.withScopedWrite(scope, async (client) => {
+      const acknowledged = await client.query(
+        `UPDATE research.job_outbox
+            SET state = 'DELIVERED', delivered_at = now(),
+                claim_token = NULL, claim_expires_at = NULL, updated_at = now()
+          WHERE workspace_id = $1 AND outbox_id = $2
+            AND state = 'CLAIMED' AND claim_token = $3 AND claim_expires_at > now()
+          RETURNING outbox_id`,
+        [scope.workspaceId, input.outboxId, input.claimToken],
+      );
+      if (acknowledged.rowCount !== 1) {
+        throw new ResearchMetadataError(
+          "RESEARCH_OUTBOX_NOT_FOUND",
+          "The outbox publisher lease is absent or expired; the record was not acknowledged.",
+          409,
+        );
+      }
+    });
+  }
+
+  private async retryDurableJobInTransaction(
+    client: ScopedClient,
+    scope: ResearchScope,
+    input: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch"> & { reason: string },
+    retryDelaySeconds: number,
+    transition: "WORKER_RETRY" | "LEASE_EXPIRED",
+  ): Promise<{ scheduled: boolean; terminal: boolean }> {
+    const selected = await client.query<DurableJobRow & { attempt_id: string; ordinal: string | number }>(
+      `SELECT j.job_id, j.run_id, j.command_id, j.logical_work_key, j.work_digest, j.job_kind, j.readiness_class,
+              j.queue_class, j.resource_class, j.cost_estimate, j.attempt_limit,
+              j.cancel_version, j.requested_by_user_id, j.state, r.attempt_id, wa.ordinal
+         FROM research.jobs j
+         JOIN research.runs r ON r.workspace_id = j.workspace_id AND r.run_id = j.run_id
+         JOIN research.worker_attempts wa
+           ON wa.workspace_id = j.workspace_id AND wa.job_id = j.job_id
+        WHERE j.workspace_id = $1 AND j.job_id = $2
+          AND wa.worker_attempt_id = $3 AND wa.lease_epoch = $4
+        FOR UPDATE OF j, r, wa`,
+      [scope.workspaceId, input.jobId, input.workerAttemptId, input.leaseEpoch],
+    );
+    const row = selected.rows[0];
+    if (!row) this.throwLeaseRejected();
+    const job = row!;
+    const active = ["CLAIMED", "RUNNING", "CANCEL_REQUESTED"].includes(job.state);
+    const allowedWorkerState = transition === "LEASE_EXPIRED"
+      ? ["CLAIMED", "RUNNING"]
+      : ["CLAIMED", "RUNNING"];
+    const workerState = await client.query<{ state: string; expires_at: Date }>(
+      `SELECT state, expires_at FROM research.worker_attempts
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, input.workerAttemptId],
+    );
+    if (!active || !workerState.rows[0] || !allowedWorkerState.includes(workerState.rows[0].state) ||
+        (transition === "WORKER_RETRY" && workerState.rows[0].expires_at <= new Date())) {
+      this.throwLeaseRejected();
+    }
+    const ordinal = asNumber(job.ordinal);
+    const attemptLimit = asNumber(job.attempt_limit);
+    const cancelled = job.state === "CANCEL_REQUESTED";
+    const scheduled = !cancelled && ordinal < attemptLimit;
+    const terminalState = cancelled ? "CANCELLED" : "FAILED";
+    await client.query(
+      `UPDATE research.worker_attempts
+          SET state = $4, exit_reason = $5, updated_at = now()
+        WHERE workspace_id = $1 AND worker_attempt_id = $2 AND lease_epoch = $3`,
+      [scope.workspaceId, input.workerAttemptId, input.leaseEpoch, transition === "LEASE_EXPIRED" ? "LOST_LEASE" : "FAILED", input.reason],
+    );
+    await client.query(
+      `UPDATE research.jobs
+          SET state = $3,
+              retry_not_before = CASE WHEN $4 THEN now() + $5 * interval '1 second' ELSE NULL END,
+              current_worker_attempt_id = NULL,
+              current_lease_epoch = NULL,
+              terminal_reason = CASE WHEN $4 THEN NULL ELSE $6 END,
+              updated_at = now()
+        WHERE workspace_id = $1 AND job_id = $2
+          AND current_worker_attempt_id = $7 AND current_lease_epoch = $8`,
+      [
+        scope.workspaceId, job.job_id, scheduled ? "RETRY_WAIT" : terminalState,
+        scheduled, retryDelaySeconds, input.reason, input.workerAttemptId, input.leaseEpoch,
+      ],
+    );
+    await client.query(
+      `UPDATE research.attempts SET state = $3, updated_at = now()
+        WHERE workspace_id = $1 AND attempt_id = $2`,
+      [scope.workspaceId, job.attempt_id, scheduled ? "QUEUED" : terminalState],
+    );
+    await client.query(
+      `UPDATE research.runs SET state = $3, state_version = state_version + 1, updated_at = now()
+        WHERE workspace_id = $1 AND run_id = $2`,
+      [scope.workspaceId, job.run_id, scheduled ? "QUEUED" : terminalState],
+    );
+    if (scheduled) {
+      await this.enqueueOutboxEvent(client, scope, {
+        jobId: job.job_id,
+        eventType: "RESEARCH_JOB_RETRY_READY",
+        deliveryGeneration: ordinal + 1,
+        payload: this.outboxPayload(job.job_id, job.run_id, job.queue_class, job.logical_work_key, this.requireWorkDigest(job)),
+      });
+    }
+    await this.recordJobEvent(client, scope, job.job_id, input.workerAttemptId, transition, {
+      reason: input.reason,
+      scheduled,
+      ordinal,
+    });
+    await this.audit(client, scope, "RESEARCH_DURABLE_JOB_RETRY_DECIDED", "job", job.job_id, {
+      transition,
+      scheduled,
+      worker_attempt_id: input.workerAttemptId,
+      lease_epoch: input.leaseEpoch,
+    });
+    return { scheduled, terminal: !scheduled };
+  }
+
+  private async recoverExpiredDurableJobsInTransaction(
+    client: ScopedClient,
+    scope: ResearchScope,
+  ): Promise<{ recovered: number; terminal: number }> {
+    const expired = await client.query<{ job_id: string; worker_attempt_id: string; lease_epoch: string | number }>(
+      `SELECT j.job_id, wa.worker_attempt_id, wa.lease_epoch
+         FROM research.jobs j
+         JOIN research.worker_attempts wa
+           ON wa.workspace_id = j.workspace_id AND wa.job_id = j.job_id
+        WHERE j.workspace_id = $1
+          AND j.state IN ('CLAIMED', 'RUNNING', 'CANCEL_REQUESTED')
+          AND j.current_worker_attempt_id = wa.worker_attempt_id
+          AND j.current_lease_epoch = wa.lease_epoch
+          AND wa.state IN ('CLAIMED', 'RUNNING')
+          AND wa.expires_at <= now()
+        FOR UPDATE OF j, wa SKIP LOCKED`,
+      [scope.workspaceId],
+    );
+    let recovered = 0;
+    let terminal = 0;
+    for (const row of expired.rows) {
+      const decision = await this.retryDurableJobInTransaction(
+        client,
+        scope,
+        { jobId: row.job_id, workerAttemptId: row.worker_attempt_id, leaseEpoch: asNumber(row.lease_epoch), reason: "LEASE_EXPIRED" },
+        1,
+        "LEASE_EXPIRED",
+      );
+      recovered += 1;
+      if (decision.terminal) terminal += 1;
+    }
+    return { recovered, terminal };
   }
 
   /**
@@ -1552,6 +2379,193 @@ export class ResearchMetadataRepository {
       datasetBindingDigest: input.datasetBindingDigest,
     })) requireDigest(value, label);
     if (input.spaceSignature) requireDigest(input.spaceSignature, "spaceSignature");
+  }
+
+  private assertDurableJobInput(input: ResearchDurableJobInput): void {
+    for (const [label, value] of Object.entries({
+      jobId: input.jobId,
+      runId: input.runId,
+      commandId: input.commandId,
+      logicalWorkKey: input.logicalWorkKey,
+      resourceClass: input.resourceClass,
+    })) requireOpaqueId(value, label);
+    requireDigest(input.workDigest, "workDigest");
+    requireJobKind(input.jobKind);
+    requireReadinessClass(input.readinessClass);
+    requireQueueClass(input.queueClass);
+    assertJobCost(input.cost);
+    if (input.attemptLimit != null) {
+      requirePositiveSafeInteger(input.attemptLimit, "attemptLimit", RESEARCH_SCHEDULER_BUDGET.retryAttemptLimitMaximum);
+    }
+  }
+
+  private matchesDurableJob(
+    row: DurableJobRow,
+    input: ResearchDurableJobInput,
+  ): boolean {
+    const requestedLimit = input.attemptLimit ?? 3;
+    const actual = decodeJobCost(row.cost_estimate);
+    const sameCommand = row.command_id === input.commandId;
+    const sameLogicalWork = row.run_id === input.runId && row.logical_work_key === input.logicalWorkKey;
+
+    // A retry of one client command must preserve its exact logical work key.
+    // A second authorised user may submit a different command ID for the same
+    // deterministic logical work and receive the existing job instead.  The
+    // latter is deduplication, not an authorization shortcut: `withScopedWrite`
+    // has already checked workspace membership and we record the replay audit.
+    if (!sameLogicalWork || (sameCommand && row.logical_work_key !== input.logicalWorkKey)) {
+      return false;
+    }
+    return (
+      row.job_kind === input.jobKind &&
+      row.work_digest === input.workDigest &&
+      row.readiness_class === input.readinessClass &&
+      row.queue_class === input.queueClass &&
+      row.resource_class === input.resourceClass &&
+      asNumber(row.attempt_limit) === requestedLimit &&
+      actual.memoryBytes === input.cost.memoryBytes &&
+      actual.cpuSeconds === input.cost.cpuSeconds &&
+      actual.scratchBytes === input.cost.scratchBytes &&
+      actual.ioBytes === input.cost.ioBytes
+    );
+  }
+
+  private jobCostDatabaseShape(cost: ResearchDurableJobInput["cost"]): ResearchJobCostRow {
+    return {
+      memory_bytes: cost.memoryBytes,
+      cpu_seconds: cost.cpuSeconds,
+      scratch_bytes: cost.scratchBytes,
+      io_bytes: cost.ioBytes,
+    };
+  }
+
+  private assertClaim(claim: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch">): void {
+    requireOpaqueId(claim.jobId, "jobId");
+    requireOpaqueId(claim.workerAttemptId, "workerAttemptId");
+    requirePositiveSafeInteger(claim.leaseEpoch, "leaseEpoch");
+  }
+
+  private assertWorkerUsage(usage: ResearchWorkerUsage): void {
+    const limits: Record<keyof ResearchWorkerUsage, number> = {
+      peakRssBytes: RESEARCH_SCHEDULER_BUDGET.maximumMemoryBytes,
+      cpuSeconds: RESEARCH_SCHEDULER_BUDGET.maximumCpuSeconds,
+      scratchBytes: RESEARCH_SCHEDULER_BUDGET.maximumScratchBytes,
+      fdPeak: 65_536,
+    };
+    for (const [key, maximum] of Object.entries(limits) as Array<[keyof typeof limits, number]>) {
+      requireNonNegativeSafeInteger(usage[key], `usage.${key}`);
+      if (usage[key] > maximum) {
+        throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", `usage.${key} exceeds the bounded worker contract.`, 400);
+      }
+    }
+  }
+
+  private workerUsageDatabaseShape(usage: ResearchWorkerUsage): Record<string, number> {
+    return {
+      peak_rss_bytes: usage.peakRssBytes,
+      cpu_seconds: usage.cpuSeconds,
+      scratch_bytes: usage.scratchBytes,
+      fd_peak: usage.fdPeak,
+    };
+  }
+
+  private outboxPayload(
+    jobId: string,
+    runId: string,
+    queueClass: ResearchDurableJobInput["queueClass"],
+    logicalWorkKey: string,
+    workDigest: string,
+  ): Record<string, string> {
+    return {
+      job_id: jobId,
+      logical_work_key: logicalWorkKey,
+      queue_class: queueClass,
+      run_id: runId,
+      work_digest: workDigest,
+    };
+  }
+
+  private requireWorkDigest(job: DurableJobRow): string {
+    if (job.work_digest == null || !isDigest(job.work_digest)) {
+      throw new ResearchMetadataError(
+        "RESEARCH_JOB_STATE_CONFLICT",
+        "A pre-P06 job without canonical work identity cannot use the durable scheduler.",
+        409,
+      );
+    }
+    return job.work_digest;
+  }
+
+  private async enqueueOutboxEvent(
+    client: ScopedClient,
+    scope: ResearchScope,
+    input: {
+      jobId: string;
+      eventType: ResearchJobOutboxMessage["eventType"];
+      deliveryGeneration: number;
+      payload: Record<string, string>;
+    },
+  ): Promise<void> {
+    requirePositiveSafeInteger(input.deliveryGeneration, "outbox deliveryGeneration", 1_000_000);
+    requireBoundedObject(input.payload, "scheduler outbox payload", RESEARCH_DB_BUDGET.maxSmallMetadataJsonBytes);
+    const inserted = await client.query(
+      `INSERT INTO research.job_outbox
+         (workspace_id, outbox_id, job_id, delivery_generation, event_type,
+          payload_digest, payload, state)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'PENDING')
+       ON CONFLICT (workspace_id, job_id, event_type, delivery_generation) DO NOTHING
+       RETURNING outbox_id`,
+      [
+        scope.workspaceId,
+        newUlid("rout"),
+        input.jobId,
+        input.deliveryGeneration,
+        input.eventType,
+        digestJson(input.payload),
+        JSON.stringify(input.payload),
+      ],
+    );
+    if (inserted.rowCount === 0) {
+      const prior = await client.query<{ payload_digest: string; payload: Record<string, string> }>(
+        `SELECT payload_digest, payload FROM research.job_outbox
+          WHERE workspace_id = $1 AND job_id = $2 AND event_type = $3 AND delivery_generation = $4`,
+        [scope.workspaceId, input.jobId, input.eventType, input.deliveryGeneration],
+      );
+      if (!prior.rows[0] || prior.rows[0].payload_digest !== digestJson(input.payload) ||
+          JSON.stringify(prior.rows[0].payload) !== JSON.stringify(input.payload)) {
+        throw new ResearchMetadataError(
+          "RESEARCH_IDEMPOTENCY_PAYLOAD_CONFLICT",
+          "A scheduler outbox generation is already bound to different ID-only payload bytes.",
+          409,
+        );
+      }
+    }
+  }
+
+  private async recordJobEvent(
+    client: ScopedClient,
+    scope: ResearchScope,
+    jobId: string,
+    workerAttemptId: string | null,
+    eventType: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    requireText(eventType, "scheduler event type", 160);
+    requireBoundedObject(payload, "scheduler event payload", RESEARCH_DB_BUDGET.maxSmallMetadataJsonBytes);
+    await client.query(
+      `INSERT INTO research.job_events
+         (workspace_id, job_event_id, job_id, worker_attempt_id, event_type, event_payload)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+      [scope.workspaceId, newUlid("rjev"), jobId, workerAttemptId, eventType, JSON.stringify(payload)],
+    );
+  }
+
+  private throwLeaseRejected(): never {
+    throw new ResearchMetadataError(
+      "RESEARCH_JOB_LEASE_REJECTED",
+      "The worker lease is absent, expired or fenced by a newer scheduler decision.",
+      409,
+    );
   }
 
   private assertTrialInput(input: ResearchTrialInput): void {

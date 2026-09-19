@@ -106,6 +106,7 @@ import { PortalDerivationsService } from "./execution/portal-derivations.service
 import { OperationalCompositionController } from "./execution/operational-composition.controller";
 import { OperationalCompositionService } from "./execution/operational-composition.service";
 import { ResearchMetadataRepository } from "./research/repository";
+import { ResearchSchedulerOutboxService } from "./research/scheduler-outbox.service";
 
 @Module({})
 export class AppModule {
@@ -200,6 +201,10 @@ export class AppModule {
         // mounts no new HTTP route or worker; later Research phases opt into
         // it deliberately rather than gaining accidental authority.
         ResearchMetadataRepository,
+        // P06 owns only transactional outbox ordering. It does not connect to
+        // NATS, schedule a child or mount a route at bootstrap; P10 supplies
+        // the named producer and deployment-bound transport adapter.
+        ResearchSchedulerOutboxService,
         RunsRepository,
         OutboxRepository,
         ProductAuditRepository,

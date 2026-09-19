@@ -1,0 +1,31 @@
+{
+  "phase": "P06",
+  "status": "NO_ACTION_NEEDED",
+  "capacity_snapshot_utc": "2026-09-19T21:10:24Z",
+  "root_filesystem": {
+    "device": "/dev/vda1",
+    "total_bytes": 665811062784,
+    "used_bytes": 324785016832,
+    "available_bytes": 341009268736,
+    "used_percent": 49
+  },
+  "docker_read_only_snapshot": {
+    "images": {"total": 141, "active": 21, "size": "36.28GB", "reclaimable": "24.76GB"},
+    "containers": {"total": 40, "active": 38, "size": "1.27MB", "reclaimable": "40.96kB"},
+    "local_volumes": {"total": 16, "active": 16, "size": "102.8GB", "reclaimable": "0B"},
+    "build_cache": {"total": 1353, "active": 48, "size": "45.24GB", "reclaimable": "138.5MB"}
+  },
+  "runner_read_only_state": {
+    "portal-gh-deploy-runner.service": "active",
+    "portal-ci-publish-sgp1.service": "inactive"
+  },
+  "phase_local_cleanup": [
+    "research-p06-postgres-* is tmpfs-only and self-removed by the exact test trap; post-gate inventory found zero matching containers.",
+    "/tmp/portal-research-p06-durable-child-* and /tmp/portal-research-p06-upgrade-* are removed by exact finally blocks after their tests."
+  ],
+  "intentional_retention": [
+    "No Docker image, BuildKit cache, volume, worktree, HMD data, research artifact, Execution service, Trading System resource or database business row was removed.",
+    "The reclaimable-image observation belongs to the separate C4.3 protected quiet-window inventory."
+  ],
+  "separate_followup_if_needed": "Any image/cache reclamation requires a C4.3 inventory and quiet window; no broad prune is authorized by P06."
+}

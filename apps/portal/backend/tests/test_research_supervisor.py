@@ -1,0 +1,82 @@
+"""P06 actual PID/network namespace supervisor proof."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import pytest
+
+from portal_api.services.research_supervisor import (
+    IsolatedResearchSupervisor,
+    ResearchChildLimits,
+    ResearchChildReceipt,
+    ResearchSupervisorError,
+)
+
+
+BACKEND_ROOT = Path(__file__).parents[1]
+MARKET_PATH = BACKEND_ROOT / "tests" / "fixtures" / "golden_market.parquet"
+
+
+def _receipt(tmp_path: Path, suffix: str = "one") -> ResearchChildReceipt:
+    return ResearchChildReceipt(
+        job_id=f"p06-job-{suffix}",
+        run_id=f"p06-run-{suffix}",
+        worker_attempt_id=f"p06-worker-{suffix}",
+        lease_epoch=1,
+        market_path=MARKET_PATH,
+        artifact_root=tmp_path / "p05-artifacts",
+    )
+
+
+def test_p06_t05_t08_actual_quantbt_child_is_separate_network_pid_and_resource_bounded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The P06 child is a process namespace, not `asyncio.to_thread` theatre."""
+
+    monkeypatch.setenv("DATABASE_URL", "postgres://must-not-reach-child")
+    monkeypatch.setenv("NATS_URL", "nats://must-not-reach-child")
+    supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=MARKET_PATH.parent)
+    parent_network_namespace = os.readlink("/proc/self/ns/net")
+    result = supervisor.run_p04_delta_qualification(
+        _receipt(tmp_path),
+        limits=ResearchChildLimits(memory_bytes=4 * 1024 * 1024 * 1024, cpu_seconds=45, wall_seconds=90),
+    )
+    assert result.launcher_pid != os.getpid()
+    assert result.child_pid != os.getpid()
+    assert result.network_namespace != parent_network_namespace
+    assert result.engine_version == "1.1.1"
+    assert result.bars == 500
+    assert result.num_trades == 8
+    assert result.final_equity == pytest.approx(20_589.74597203475)
+    assert result.elapsed_seconds > 0
+    assert result.enforced_limits == {
+        "address_space_bytes": 4 * 1024 * 1024 * 1024,
+        "cpu_seconds": 45,
+        "file_bytes": 2 * 1024 * 1024,
+        "fd_limit": 128,
+        "nproc_limit": 128,
+        "scratch_bytes": 64 * 1024 * 1024,
+    }
+    # The work directory remains forensic-only and bounded; no child keeps a
+    # native handle or process after the supervisor returns.
+    assert not Path(f"/proc/{result.launcher_pid}").exists()
+
+
+def test_p06_t06_t08_rejects_unapproved_inputs_and_never_reuses_a_receipt(tmp_path: Path) -> None:
+    supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=MARKET_PATH.parent)
+    receipt = _receipt(tmp_path, "two")
+    with pytest.raises(ResearchSupervisorError, match="memory_bytes"):
+        supervisor.run_p04_delta_qualification(
+            receipt,
+            limits=ResearchChildLimits(memory_bytes=1, cpu_seconds=45, wall_seconds=90),
+        )
+    bad = ResearchChildReceipt(
+        job_id="p06-job-bad",
+        run_id="p06-run-bad",
+        worker_attempt_id="p06-worker-bad",
+        lease_epoch=1,
+        market_path=Path("/etc/passwd"),
+        artifact_root=tmp_path / "p05-artifacts",
+    )
+    with pytest.raises(ResearchSupervisorError, match="approved Parquet"):
+        supervisor.run_p04_delta_qualification(bad)

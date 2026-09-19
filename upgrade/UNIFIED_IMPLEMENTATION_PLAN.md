@@ -3550,7 +3550,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; FE_CONSUMER_HARNESS_COMPLETE / Claude — `src/research/` +663 lines, vitest 2430 pass, build exit 0. Generated client and browser acceptance remain P10 by design |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; Claude UI/browser handoff pending by owner phase |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); Claude consumer handoff ready, no P05 UI mutation |
-| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | PLANNED / Codex backend next / P05 is closed; scheduler/worker runtime mutation must begin only under P06 authority |
+| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced |
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | PLANNED / unassigned / — |
 | [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | PLANNED / unassigned / — |
 | [P09](#rl-p09) | P02,P04 | 00/12 | 05 | PLANNED / unassigned / — |
@@ -4028,6 +4028,29 @@ gates—not P05 defects. The P09/P11 rich consumer remains Claude-owned and
 - **Tests FE/browser:** Double-submit/reconnect giữ run ID; inspect/mount/slider không submit job; queue/error/cancel truth; signed-in scope and SSE harness (chưa full03 acceptance).
 - **Exit gate:** Delta qua durable worker thật, retry/failure tests PASS trong quota; no second scheduler dispatch, no API hidden heavy compute.
 - **Rollback/handoff:** Pause claims/drain authorized jobs, giữ intents/outbox; teardown chỉ test jobs. Checkpoint03: P05/P06 durability + memory + recovery.
+
+**P06 closeout (2026-09-19):** The P06 foundation is technically complete
+with one PostgreSQL authority: canonical SHA-256 logical-work and command
+identity, explicit `MANDATORY`/`OPTIONAL` readiness classification, requester-fair admission,
+worker lease epoch/fencing, cancellation CAS, retry/recovery and an ID-only
+transactional outbox. A cross-language `V11-P06-DR` receipt proves the exact
+chain `claimed PostgreSQL lease → isolated Python PID/user/mount/network
+namespace → pinned QuantBT 1.1.1 Delta compute → same fenced terminal
+commit`; it is not a mock result or an API-thread substitute. The child has no
+database, broker, Execution, Trading System or browser credential, receives
+only a bounded receipt, mounts per-receipt tmpfs scratch, and reports the
+enforced address-space/CPU/file/FD/process caps.
+
+Pre-P06 compatibility rows retain no canonical work digest and are deliberately
+not claimable by the P06 scheduler; P10 must supply the real named-producer
+identity rather than infer it from legacy rows. The transport is deliberately a narrow publish-before-ack port, not a new
+runtime NATS client. P10 alone owns wiring the existing named producer/direct
+submit path and deployment-bound NATS credentials, so P06 cannot create a
+second scheduler. P09/P11 own rich consumer/readiness aggregation; no P06
+browser route, timer-based progress, UI mutation or deployment claim exists.
+Those are explicit phase ownership boundaries—not open P06 implementation
+debt. See [P06 evidence](./research_loop/evidence/P06/README.md) for the
+test, cleanup, rollback and Claude handoff receipts.
 
 <a id="rl-p07"></a>
 ### P07 — Alpha Registry, Import và immutable version binding

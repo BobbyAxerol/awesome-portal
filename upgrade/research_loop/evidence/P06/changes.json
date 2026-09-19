@@ -1,0 +1,18 @@
+{
+  "phase": "P06",
+  "status": "TECHNICALLY_COMPLETE",
+  "authority_changes": [
+    "1723680000039_research-durable-scheduler.sql: additive PostgreSQL logical-work/canonical-digest, readiness, lease, fairness, outbox and immutable-event authority",
+    "ResearchMetadataRepository: bounded admission, cross-user logical-work deduplication, claim/heartbeat/cancel/finish/retry/recovery and outbox claim/ack",
+    "ResearchSchedulerOutboxService: ID-only publish-before-ack transport port",
+    "research_supervisor.py and research_child.py: allowlisted P04 child with PID/user/mount/network isolation and bounded resources",
+    "p06-durable-child-harness.py: test-only claimed-lease to isolated-child bridge; not a runtime worker daemon"
+  ],
+  "explicit_non_changes": [
+    "No browser route or UI/UX source",
+    "No NATS socket, credential, runtime container or Compose change",
+    "No direct-submit producer cutover",
+    "No P05 artifact-writer authority change",
+    "No Execution Loop, Trading System, broker, Redis, CLI or production data change"
+  ]
+}
