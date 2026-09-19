@@ -2784,3 +2784,47 @@ sudo grep -rn '/home/bobby/portal' /srv/portal/*.env
 
 Clean and merged describes the tracked tree. It says nothing about what the host
 mounts out of the untracked half.
+
+### 8.67 Closeout — dev and main at one SHA, four worktrees (2026-09-19)
+
+PR #84 merged on five green jobs. `origin/main`, `origin/dev`,
+`primus-origin/main` and `primus-origin/dev` now all read `53316263`, and both
+mirror pushes were plain same-name fast-forwards — the reconciliation from
+§8.63 holding, with no hand-built commit needed.
+
+**The second worktree removal found what the first one missed.** Applying C4.4
+of the policy merged in that same PR — sweep bind mounts and env files, not
+`git status` — turned up `/home/bobby/portal-dev/.env`: 47 variables, gitignored,
+and the file `deploy-int.sh` passes as `--env-file` to build and recreate
+dev-portal. Removing that worktree would have repeated the
+`portal-stable-v1.0.1` failure exactly.
+
+Reading the script settled it: `deploy-int.sh` does `cd /home/bobby/portal-integration`
+and builds from **there**; `portal-dev` was contributing one 3.5 KB file to a
+4.6 G tree. So the file moved to where such files belong —
+`/home/bobby/secure/portal-dev.env`, mode 600, byte-identical — the script was
+repointed with a `.bak` kept beside it, and `docker compose config` against the
+new path exits 0 before anything was deleted. An env file that a worktree
+removal can delete is in the wrong place regardless of whether the worktree
+survives.
+
+`portal-prod-feature-profiles` needed no such care: no `.env`, nothing on the
+host referencing it, and its uncommitted rules are now in `main` as `cc0f0cc8`.
+
+**Four worktrees remain**, and the reason matters for the next tidy-up:
+`portal` is the *main checkout* — `git rev-parse --git-common-dir` resolves into
+it, so `worktree remove` cannot take it; `portal-integration` is what
+`deploy-int.sh` builds from; `portal-dev-certified` and `portal-main-release`
+hold `dev` and `main`.
+
+Session total: **444 G → 298 G**, 621 G at 48%, 323 G free. Verified after:
+production and dev-portal both `200`, all four compose projects up — including
+the twelve `primus-historical-market-data` collectors, whose data was never in
+Docker to begin with.
+
+Left deliberately: the `/home/bobby/release` handoff bundle, because its
+`release-handoff-manifest.json` and `SHA256SUMS` record artifact digests and a
+publication run that git cannot regenerate; `pool_alpha`, outside §0;
+`trading-system-r4r5-local`, which holds one commit pushed nowhere; and
+`trading-system-r4r5-p01-integration`, whose remote could not be reached to
+verify provenance.
