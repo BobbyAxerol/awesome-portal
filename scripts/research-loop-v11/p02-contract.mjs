@@ -15,6 +15,31 @@ const CURSOR_ORDER = [
   "mode", "schedule", "route", "playback_ordinal",
 ];
 const CURSOR_KEYS = new Set(CURSOR_ORDER);
+const DECIMAL = /^[+-]?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+const SHA256 = /^[a-f0-9]{64}$/;
+
+/**
+ * P02 owns the structural, producer-side S02 draft contract.  Dynamic route,
+ * manifest and optimizer values remain P04/P10 authority; this freeze only
+ * gives a generated client an exact, versioned place for every declared S02
+ * payload field.  It deliberately does not turn the current facade into a
+ * new endpoint or claim that its present validation understands these fields.
+ */
+export const REQUESTED_SPEC_V1_SCHEMA_VERSION = "research.requested-spec.v1";
+export const REQUESTED_SPEC_V1_S02_FORM_CONTROL_DENOMINATOR = 24;
+export const REQUESTED_SPEC_V1_ROUTE_IDS = Object.freeze([
+  "signal_notional", "pct_equity", "intrabar_bracket", "dca_ladder", "reactive",
+  "event_driven", "native_event_lifecycle", "orders", "fill_replay", "basket",
+  "arbitrage", "portfolio", "nautilus_dca_grid", "options",
+]);
+const REQUESTED_SPEC_ROUTE_IDS = new Set(REQUESTED_SPEC_V1_ROUTE_IDS);
+const REQUESTED_SPEC_PROTOCOLS = new Set(["three_window_decay", "advanced"]);
+const REQUESTED_SPEC_FIELDS = [
+  "schema_version", "alpha_binding", "not_publishable", "strategy_id", "execution_route",
+  "route_params", "data", "protocol", "windows", "walk_forward", "optimization_mode",
+  "optimization_schedule", "parameter_space_overrides", "optuna_trials", "early_stopping",
+  "random_seed", "optimization_config", "client",
+];
 
 export class P02ContractError extends Error {
   constructor(code, message) {
@@ -55,6 +80,292 @@ function exactKeys(value, allowed, code, label) {
   }
 }
 
+function requiredKeys(value, required, code, label) {
+  for (const key of required) {
+    if (!Object.hasOwn(value, key) || value[key] === undefined) {
+      throw new P02ContractError(code, `${label} is missing required key: ${key}.`);
+    }
+  }
+}
+
+function absentKey(value, key, code, label) {
+  if (Object.hasOwn(value, key)) {
+    throw new P02ContractError(code, `${label} must not include ${key} for this discriminator.`);
+  }
+}
+
+function boolean(value, code, label) {
+  if (typeof value !== "boolean") {
+    throw new P02ContractError(code, `${label} must be a boolean.`);
+  }
+  return value;
+}
+
+function integer(value, code, label, { nullable = false, min = 0, max = 2_147_483_647 } = {}) {
+  if (nullable && value === null) return null;
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new P02ContractError(code, `${label} must be an integer between ${min} and ${max}.`);
+  }
+  return value;
+}
+
+function decimalString(value, code, label) {
+  const text = string(value, code, label, { min: 1, max: 96 });
+  if (!DECIMAL.test(text)) {
+    throw new P02ContractError(code, `${label} must be an exact decimal string.`);
+  }
+  return text;
+}
+
+function oneOf(value, values, code, label) {
+  if (!values.includes(value)) {
+    throw new P02ContractError(code, `${label} has an unsupported value.`);
+  }
+  return value;
+}
+
+function scalar(value, code, label) {
+  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  throw new P02ContractError(code, `${label} must be a string, finite number, or boolean.`);
+}
+
+function interval(value, code, label) {
+  const candidate = record(value, code, label);
+  exactKeys(candidate, ["start", "end_exclusive"], `${code}_UNKNOWN_FIELD`, label);
+  requiredKeys(candidate, ["start", "end_exclusive"], `${code}_MISSING_FIELD`, label);
+  return Object.freeze({
+    start: string(candidate.start, code, `${label}.start`, { min: 1, max: 64 }),
+    end_exclusive: string(candidate.end_exclusive, code, `${label}.end_exclusive`, { min: 1, max: 64 }),
+  });
+}
+
+function alphaBinding(value) {
+  if (value === null) return null;
+  const binding = record(value, "REQUESTED_SPEC_ALPHA_BINDING_INVALID", "requested_spec.alpha_binding");
+  exactKeys(
+    binding,
+    ["alpha_id", "alpha_version_id"],
+    "REQUESTED_SPEC_ALPHA_BINDING_UNKNOWN_FIELD",
+    "requested_spec.alpha_binding",
+  );
+  requiredKeys(
+    binding,
+    ["alpha_id", "alpha_version_id"],
+    "REQUESTED_SPEC_ALPHA_BINDING_MISSING_FIELD",
+    "requested_spec.alpha_binding",
+  );
+  return Object.freeze({
+    alpha_id: identifier(binding.alpha_id, "REQUESTED_SPEC_ALPHA_ID_INVALID", "requested_spec.alpha_binding.alpha_id"),
+    alpha_version_id: identifier(
+      binding.alpha_version_id,
+      "REQUESTED_SPEC_ALPHA_VERSION_ID_INVALID",
+      "requested_spec.alpha_binding.alpha_version_id",
+    ),
+  });
+}
+
+function routeParams(value, executionRoute) {
+  const params = record(value, "REQUESTED_SPEC_ROUTE_PARAMS_REQUIRED", "requested_spec.route_params");
+  const allowed = ["intrabar", "portfolio", "reactive", "dca"];
+  exactKeys(params, allowed, "REQUESTED_SPEC_ROUTE_PARAMS_UNKNOWN_FIELD", "requested_spec.route_params");
+  const expected = {
+    intrabar_bracket: "intrabar",
+    portfolio: "portfolio",
+    reactive: "reactive",
+    dca_ladder: "dca",
+  }[executionRoute];
+  if (!expected) {
+    if (Object.keys(params).length !== 0) {
+      throw new P02ContractError(
+        "REQUESTED_SPEC_ROUTE_PARAMS_FORBIDDEN",
+        `requested_spec.route_params must be empty for ${executionRoute}.`,
+      );
+    }
+    return Object.freeze({});
+  }
+  requiredKeys(params, [expected], "REQUESTED_SPEC_ROUTE_PARAMS_MISSING_FIELD", "requested_spec.route_params");
+  for (const key of allowed) {
+    if (key !== expected) absentKey(params, key, "REQUESTED_SPEC_ROUTE_PARAMS_FORBIDDEN", "requested_spec.route_params");
+  }
+
+  if (expected === "intrabar") {
+    const input = record(params.intrabar, "REQUESTED_SPEC_INTRABAR_INVALID", "requested_spec.route_params.intrabar");
+    exactKeys(input, ["level_mode", "same_bar_policy", "tick_size"], "REQUESTED_SPEC_INTRABAR_UNKNOWN_FIELD", "requested_spec.route_params.intrabar");
+    requiredKeys(input, ["level_mode", "same_bar_policy", "tick_size"], "REQUESTED_SPEC_INTRABAR_MISSING_FIELD", "requested_spec.route_params.intrabar");
+    return Object.freeze({
+      intrabar: Object.freeze({
+        level_mode: oneOf(input.level_mode, ["hlc_conservative", "ohlc_path", "close_only"], "REQUESTED_SPEC_INTRABAR_LEVEL_MODE_INVALID", "requested_spec.route_params.intrabar.level_mode"),
+        same_bar_policy: oneOf(input.same_bar_policy, ["stop_first", "target_first", "ambiguity_flag"], "REQUESTED_SPEC_INTRABAR_SAME_BAR_POLICY_INVALID", "requested_spec.route_params.intrabar.same_bar_policy"),
+        tick_size: decimalString(input.tick_size, "REQUESTED_SPEC_INTRABAR_TICK_INVALID", "requested_spec.route_params.intrabar.tick_size"),
+      }),
+    });
+  }
+  if (expected === "portfolio") {
+    const input = record(params.portfolio, "REQUESTED_SPEC_PORTFOLIO_INVALID", "requested_spec.route_params.portfolio");
+    exactKeys(input, ["mode", "sizing"], "REQUESTED_SPEC_PORTFOLIO_UNKNOWN_FIELD", "requested_spec.route_params.portfolio");
+    requiredKeys(input, ["mode", "sizing"], "REQUESTED_SPEC_PORTFOLIO_MISSING_FIELD", "requested_spec.route_params.portfolio");
+    return Object.freeze({
+      portfolio: Object.freeze({
+        mode: oneOf(input.mode, ["longshort", "market_neutral", "directional", "equal_weight", "risk_parity", "beta_neutral"], "REQUESTED_SPEC_PORTFOLIO_MODE_INVALID", "requested_spec.route_params.portfolio.mode"),
+        sizing: oneOf(input.sizing, ["equal_weight", "risk_parity", "vol_target", "kelly_fraction", "fixed_notional", "atr_risk", "min_variance", "score_weighted"], "REQUESTED_SPEC_PORTFOLIO_SIZING_INVALID", "requested_spec.route_params.portfolio.sizing"),
+      }),
+    });
+  }
+  if (expected === "reactive") {
+    const input = record(params.reactive, "REQUESTED_SPEC_REACTIVE_INVALID", "requested_spec.route_params.reactive");
+    exactKeys(input, ["runtime", "audit_mode"], "REQUESTED_SPEC_REACTIVE_UNKNOWN_FIELD", "requested_spec.route_params.reactive");
+    requiredKeys(input, ["runtime", "audit_mode"], "REQUESTED_SPEC_REACTIVE_MISSING_FIELD", "requested_spec.route_params.reactive");
+    return Object.freeze({
+      reactive: Object.freeze({
+        runtime: oneOf(input.runtime, ["R0", "R1", "R2", "R3", "R3B"], "REQUESTED_SPEC_REACTIVE_RUNTIME_INVALID", "requested_spec.route_params.reactive.runtime"),
+        audit_mode: oneOf(input.audit_mode, ["minimal", "standard", "audit"], "REQUESTED_SPEC_REACTIVE_AUDIT_MODE_INVALID", "requested_spec.route_params.reactive.audit_mode"),
+      }),
+    });
+  }
+  const input = record(params.dca, "REQUESTED_SPEC_DCA_INVALID", "requested_spec.route_params.dca");
+  exactKeys(input, ["base_order_usd", "safety_orders", "step_scale"], "REQUESTED_SPEC_DCA_UNKNOWN_FIELD", "requested_spec.route_params.dca");
+  requiredKeys(input, ["base_order_usd", "safety_orders", "step_scale"], "REQUESTED_SPEC_DCA_MISSING_FIELD", "requested_spec.route_params.dca");
+  return Object.freeze({
+    dca: Object.freeze({
+      base_order_usd: decimalString(input.base_order_usd, "REQUESTED_SPEC_DCA_BASE_ORDER_INVALID", "requested_spec.route_params.dca.base_order_usd"),
+      safety_orders: integer(input.safety_orders, "REQUESTED_SPEC_DCA_SAFETY_ORDERS_INVALID", "requested_spec.route_params.dca.safety_orders", { min: 0 }),
+      step_scale: decimalString(input.step_scale, "REQUESTED_SPEC_DCA_STEP_SCALE_INVALID", "requested_spec.route_params.dca.step_scale"),
+    }),
+  });
+}
+
+function parameterOverride(value, index) {
+  const label = `requested_spec.parameter_space_overrides[${index}]`;
+  const candidate = record(value, "REQUESTED_SPEC_PARAMETER_OVERRIDE_INVALID", label);
+  exactKeys(candidate, ["name", "kind", "low", "high", "value"], "REQUESTED_SPEC_PARAMETER_OVERRIDE_UNKNOWN_FIELD", label);
+  requiredKeys(candidate, ["name", "kind"], "REQUESTED_SPEC_PARAMETER_OVERRIDE_MISSING_FIELD", label);
+  const kind = oneOf(candidate.kind, ["sweep", "pin"], "REQUESTED_SPEC_PARAMETER_OVERRIDE_KIND_INVALID", `${label}.kind`);
+  if (kind === "sweep") {
+    requiredKeys(candidate, ["low", "high"], "REQUESTED_SPEC_PARAMETER_OVERRIDE_MISSING_FIELD", label);
+    absentKey(candidate, "value", "REQUESTED_SPEC_PARAMETER_OVERRIDE_FORBIDDEN_FIELD", label);
+    return Object.freeze({
+      name: identifier(candidate.name, "REQUESTED_SPEC_PARAMETER_NAME_INVALID", `${label}.name`),
+      kind,
+      low: scalar(candidate.low, "REQUESTED_SPEC_PARAMETER_VALUE_INVALID", `${label}.low`),
+      high: scalar(candidate.high, "REQUESTED_SPEC_PARAMETER_VALUE_INVALID", `${label}.high`),
+    });
+  }
+  requiredKeys(candidate, ["value"], "REQUESTED_SPEC_PARAMETER_OVERRIDE_MISSING_FIELD", label);
+  absentKey(candidate, "low", "REQUESTED_SPEC_PARAMETER_OVERRIDE_FORBIDDEN_FIELD", label);
+  absentKey(candidate, "high", "REQUESTED_SPEC_PARAMETER_OVERRIDE_FORBIDDEN_FIELD", label);
+  return Object.freeze({
+    name: identifier(candidate.name, "REQUESTED_SPEC_PARAMETER_NAME_INVALID", `${label}.name`),
+    kind,
+    value: scalar(candidate.value, "REQUESTED_SPEC_PARAMETER_VALUE_INVALID", `${label}.value`),
+  });
+}
+
+/**
+ * Validates the versioned S02 payload shape.  This is intentionally structural:
+ * P04 remains the authority for installed-manifest options/ceilings and P10
+ * remains the authority for the authenticated producer and current API path.
+ */
+export function assertRequestedSpecV1(value) {
+  const spec = record(value, "REQUESTED_SPEC_REQUIRED", "research.requested_spec");
+  exactKeys(spec, REQUESTED_SPEC_FIELDS, "REQUESTED_SPEC_UNKNOWN_FIELD", "research.requested_spec");
+  requiredKeys(
+    spec,
+    ["schema_version", "alpha_binding", "not_publishable", "strategy_id", "execution_route", "route_params", "data", "protocol", "optimization_mode", "optimization_schedule", "parameter_space_overrides", "optuna_trials", "early_stopping", "random_seed", "optimization_config", "client"],
+    "REQUESTED_SPEC_MISSING_FIELD",
+    "research.requested_spec",
+  );
+  if (spec.schema_version !== REQUESTED_SPEC_V1_SCHEMA_VERSION) {
+    throw new P02ContractError(
+      "REQUESTED_SPEC_SCHEMA_VERSION_UNSUPPORTED",
+      `requested_spec.schema_version must be ${REQUESTED_SPEC_V1_SCHEMA_VERSION}.`,
+    );
+  }
+  const binding = alphaBinding(spec.alpha_binding);
+  const notPublishable = boolean(spec.not_publishable, "REQUESTED_SPEC_NOT_PUBLISHABLE_INVALID", "requested_spec.not_publishable");
+  if ((binding === null) !== notPublishable) {
+    throw new P02ContractError(
+      "REQUESTED_SPEC_BINDING_PUBLISHABILITY_CONFLICT",
+      "requested_spec.alpha_binding and requested_spec.not_publishable must agree.",
+    );
+  }
+  const executionRoute = oneOf(spec.execution_route, REQUESTED_SPEC_V1_ROUTE_IDS, "REQUESTED_SPEC_ROUTE_INVALID", "requested_spec.execution_route");
+  const protocol = oneOf(spec.protocol, [...REQUESTED_SPEC_PROTOCOLS], "REQUESTED_SPEC_PROTOCOL_INVALID", "requested_spec.protocol");
+  const data = record(spec.data, "REQUESTED_SPEC_DATA_REQUIRED", "requested_spec.data");
+  exactKeys(data, ["dataset_id", "symbol", "timeframe"], "REQUESTED_SPEC_DATA_UNKNOWN_FIELD", "requested_spec.data");
+  requiredKeys(data, ["dataset_id", "symbol", "timeframe"], "REQUESTED_SPEC_DATA_MISSING_FIELD", "requested_spec.data");
+  const client = record(spec.client, "REQUESTED_SPEC_CLIENT_REQUIRED", "requested_spec.client");
+  exactKeys(client, ["engine_release_id", "config_digest"], "REQUESTED_SPEC_CLIENT_UNKNOWN_FIELD", "requested_spec.client");
+  requiredKeys(client, ["engine_release_id", "config_digest"], "REQUESTED_SPEC_CLIENT_MISSING_FIELD", "requested_spec.client");
+  const configDigest = string(client.config_digest, "REQUESTED_SPEC_CONFIG_DIGEST_INVALID", "requested_spec.client.config_digest", { min: 64, max: 64 });
+  if (!SHA256.test(configDigest)) {
+    throw new P02ContractError("REQUESTED_SPEC_CONFIG_DIGEST_INVALID", "requested_spec.client.config_digest must be lowercase SHA-256 hex.");
+  }
+  const optimizationConfig = record(spec.optimization_config, "REQUESTED_SPEC_OPTIMIZATION_CONFIG_INVALID", "requested_spec.optimization_config");
+  for (const [key, candidate] of Object.entries(optimizationConfig)) {
+    identifier(key, "REQUESTED_SPEC_OPTIMIZATION_CONFIG_KEY_INVALID", "requested_spec.optimization_config key");
+    scalar(candidate, "REQUESTED_SPEC_OPTIMIZATION_CONFIG_VALUE_INVALID", `requested_spec.optimization_config.${key}`);
+  }
+  if (!Array.isArray(spec.parameter_space_overrides)) {
+    throw new P02ContractError("REQUESTED_SPEC_PARAMETER_OVERRIDES_INVALID", "requested_spec.parameter_space_overrides must be an array.");
+  }
+  const normalized = {
+    schema_version: spec.schema_version,
+    alpha_binding: binding,
+    not_publishable: notPublishable,
+    strategy_id: identifier(spec.strategy_id, "REQUESTED_SPEC_STRATEGY_ID_INVALID", "requested_spec.strategy_id"),
+    execution_route: executionRoute,
+    route_params: routeParams(spec.route_params, executionRoute),
+    data: Object.freeze({
+      dataset_id: identifier(data.dataset_id, "REQUESTED_SPEC_DATASET_ID_INVALID", "requested_spec.data.dataset_id"),
+      symbol: string(data.symbol, "REQUESTED_SPEC_SYMBOL_INVALID", "requested_spec.data.symbol", { min: 1, max: 64 }),
+      timeframe: identifier(data.timeframe, "REQUESTED_SPEC_TIMEFRAME_INVALID", "requested_spec.data.timeframe"),
+    }),
+    protocol,
+    optimization_mode: identifier(spec.optimization_mode, "REQUESTED_SPEC_OPTIMIZATION_MODE_INVALID", "requested_spec.optimization_mode"),
+    optimization_schedule: identifier(spec.optimization_schedule, "REQUESTED_SPEC_OPTIMIZATION_SCHEDULE_INVALID", "requested_spec.optimization_schedule"),
+    parameter_space_overrides: Object.freeze(spec.parameter_space_overrides.map(parameterOverride)),
+    optuna_trials: integer(spec.optuna_trials, "REQUESTED_SPEC_TRIALS_INVALID", "requested_spec.optuna_trials", { min: 1 }),
+    early_stopping: integer(spec.early_stopping, "REQUESTED_SPEC_EARLY_STOPPING_INVALID", "requested_spec.early_stopping", { nullable: true, min: 1 }),
+    random_seed: integer(spec.random_seed, "REQUESTED_SPEC_RANDOM_SEED_INVALID", "requested_spec.random_seed", { nullable: true, min: 0 }),
+    optimization_config: Object.freeze({ ...optimizationConfig }),
+    client: Object.freeze({
+      engine_release_id: identifier(client.engine_release_id, "REQUESTED_SPEC_ENGINE_RELEASE_ID_INVALID", "requested_spec.client.engine_release_id"),
+      config_digest: configDigest,
+    }),
+  };
+  if (protocol === "three_window_decay") {
+    requiredKeys(spec, ["windows"], "REQUESTED_SPEC_WINDOWS_REQUIRED", "research.requested_spec");
+    absentKey(spec, "walk_forward", "REQUESTED_SPEC_PROTOCOL_FIELD_FORBIDDEN", "research.requested_spec");
+    const windows = record(spec.windows, "REQUESTED_SPEC_WINDOWS_INVALID", "requested_spec.windows");
+    exactKeys(windows, ["is", "oos", "holdout"], "REQUESTED_SPEC_WINDOWS_UNKNOWN_FIELD", "requested_spec.windows");
+    requiredKeys(windows, ["is", "oos", "holdout"], "REQUESTED_SPEC_WINDOWS_MISSING_FIELD", "requested_spec.windows");
+    return Object.freeze({
+      ...normalized,
+      windows: Object.freeze({
+        is: interval(windows.is, "REQUESTED_SPEC_WINDOW_INVALID", "requested_spec.windows.is"),
+        oos: interval(windows.oos, "REQUESTED_SPEC_WINDOW_INVALID", "requested_spec.windows.oos"),
+        holdout: interval(windows.holdout, "REQUESTED_SPEC_WINDOW_INVALID", "requested_spec.windows.holdout"),
+      }),
+    });
+  }
+  requiredKeys(spec, ["walk_forward"], "REQUESTED_SPEC_WALK_FORWARD_REQUIRED", "research.requested_spec");
+  absentKey(spec, "windows", "REQUESTED_SPEC_PROTOCOL_FIELD_FORBIDDEN", "research.requested_spec");
+  const walkForward = record(spec.walk_forward, "REQUESTED_SPEC_WALK_FORWARD_INVALID", "requested_spec.walk_forward");
+  exactKeys(walkForward, ["start", "end_exclusive", "split_mode", "frequency", "window_mode"], "REQUESTED_SPEC_WALK_FORWARD_UNKNOWN_FIELD", "requested_spec.walk_forward");
+  requiredKeys(walkForward, ["start", "end_exclusive", "split_mode", "frequency", "window_mode"], "REQUESTED_SPEC_WALK_FORWARD_MISSING_FIELD", "requested_spec.walk_forward");
+  return Object.freeze({
+    ...normalized,
+    walk_forward: Object.freeze({
+      start: string(walkForward.start, "REQUESTED_SPEC_WALK_FORWARD_VALUE_INVALID", "requested_spec.walk_forward.start", { min: 1, max: 64 }),
+      end_exclusive: string(walkForward.end_exclusive, "REQUESTED_SPEC_WALK_FORWARD_VALUE_INVALID", "requested_spec.walk_forward.end_exclusive", { min: 1, max: 64 }),
+      split_mode: identifier(walkForward.split_mode, "REQUESTED_SPEC_WALK_FORWARD_VALUE_INVALID", "requested_spec.walk_forward.split_mode"),
+      frequency: identifier(walkForward.frequency, "REQUESTED_SPEC_WALK_FORWARD_VALUE_INVALID", "requested_spec.walk_forward.frequency"),
+      window_mode: identifier(walkForward.window_mode, "REQUESTED_SPEC_WALK_FORWARD_VALUE_INVALID", "requested_spec.walk_forward.window_mode"),
+    }),
+  });
+}
+
 /**
  * Validates only the Research-owned supplemental envelope.  `strategy_id`,
  * `dataset_id`, and `protocol` remain top-level legacy fields because the
@@ -87,6 +398,29 @@ export function assertResearchRunRequestV1(value) {
     "RESEARCH_ENVELOPE_UNKNOWN_FIELD",
     "research",
   );
+  const requestedSpec = assertRequestedSpecV1(
+    research.requested_spec,
+  );
+  const researchAlphaVersionId = identifier(
+    research.alpha_version_id,
+    "ALPHA_VERSION_ID_INVALID",
+    "research.alpha_version_id",
+    { nullable: true },
+  );
+  if (requestedSpec.strategy_id !== request.strategy_id
+    || requestedSpec.data.dataset_id !== request.dataset_id
+    || requestedSpec.protocol !== request.protocol) {
+    throw new P02ContractError(
+      "RESEARCH_REQUEST_LEGACY_MIRROR_MISMATCH",
+      "requested_spec strategy_id, data.dataset_id, and protocol must exactly mirror the legacy compatibility fields.",
+    );
+  }
+  if (researchAlphaVersionId !== (requestedSpec.alpha_binding?.alpha_version_id ?? null)) {
+    throw new P02ContractError(
+      "RESEARCH_REQUEST_ALPHA_VERSION_MISMATCH",
+      "research.alpha_version_id must exactly mirror requested_spec.alpha_binding.alpha_version_id (or null for scratch).",
+    );
+  }
   const normalized = {
     strategy_id: request.strategy_id,
     dataset_id: request.dataset_id,
@@ -98,23 +432,14 @@ export function assertResearchRunRequestV1(value) {
         "CLIENT_INTENT_ID_REQUIRED",
         "research.client_intent_id",
       ),
-      alpha_version_id: identifier(
-        research.alpha_version_id,
-        "ALPHA_VERSION_ID_INVALID",
-        "research.alpha_version_id",
-        { nullable: true },
-      ),
+      alpha_version_id: researchAlphaVersionId,
       preflight_token: string(
         research.preflight_token,
         "PREFLIGHT_TOKEN_REQUIRED",
         "research.preflight_token",
         { min: 16, max: 512 },
       ),
-      requested_spec: record(
-        research.requested_spec,
-        "REQUESTED_SPEC_REQUIRED",
-        "research.requested_spec",
-      ),
+      requested_spec: requestedSpec,
     },
   };
   return normalized;

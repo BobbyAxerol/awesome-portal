@@ -45,6 +45,13 @@
       "topic": "producer authentication",
       "status": "BLOCKED_BY_P03_P10",
       "evidence": "Current Python run routes do not verify the Control-API principal headers; P02 does not treat them as a new service-to-service auth channel."
+    },
+    {
+      "id": "DR08",
+      "topic": "S02 requested_spec structural contract",
+      "status": "FROZEN_AND_VALIDATED",
+      "evidence": "research.requested-spec.v1 schema, TypeScript declaration, 24/24 source-control field map, and P02-FE-01 focused contract tests.",
+      "downstream_gate": "P04 owns installed manifest values and ceilings; P10 owns authenticated producer and browser wiring."
     }
   ]
 }

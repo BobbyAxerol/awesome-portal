@@ -2,6 +2,7 @@
 
 > Màn compose ĐƠN VỊ PROMOTE DUY NHẤT (rc_) và publish nó cho Approval Inbox. Guide plan cho agent code; copy VERBATIM; số = CSS px.
 > Luật gốc: (1) đơn vị đi xa là rc_, không bao giờ là run_id trần; (2) DEGRADED đi theo pack như-DEGRADED, MISSING chặn; (3) màn này không tính, không duyệt, không sửa bản ghi đã publish — động từ duy nhất là publish.
+> Presentation states dùng chung [Research Screen State Semantics v1](../RESEARCH_SCREEN_STATE_SEMANTICS_V1.md). `denied`/`unavailable` là overlay trình bày, không thay `DRAFT`/`PUBLISHED` và không biến màn thành envelope.
 
 ---
 
@@ -68,9 +69,17 @@
 | DRAFT (MISSING > 0) | — | — | publish disabled + note "resolve MISSING rows first"; hàng MISSING đỏ |
 | PUBLISHED | mirror poll 60s | PUBLISHED | SLA countdown/status cập nhật (read-model) |
 | PUBLISHED | rc superseded (poll) | PUBLISHED | mirror status SUPERSEDED + note |
+| DRAFT hoặc PUBLISHING | publish/PATCH trả 401, 403 hoặc typed authorization refusal | domain state không bị suy đoán đổi | presentation `denied`; dừng retry/poll liên quan, giữ INPUT local chưa gửi, disable publish/PATCH, hiện đường reauth/access; không render empty hay lộ pack/mirror ngoài scope |
+| DRAFT hoặc PUBLISHING | publish/PATCH trả 502, 503, timeout/offline | domain state không bị suy đoán đổi | presentation `unavailable`; giữ draft + composition, không optimistic publish/fallback fixture; retry do người dùng chọn và bounded |
+| PUBLISHED | mirror poll trả 401/403 | PUBLISHED | presentation `denied`; dừng poll, giữ last accepted mirror chỉ khi scope còn hợp lệ, không dùng cache để lách quyền |
+| PUBLISHED | mirror poll trả 502/503/timeout | PUBLISHED | presentation `unavailable`; nếu last mirror có source `as_of` thì có thể render `stale` cùng timestamp, còn không chỉ render unavailable |
+| DRAFT/PUBLISHING | publish/PATCH 422/protocol terminal | domain state không bị suy đoán đổi | presentation `terminal`; render safe reason/field target, giữ INPUT; không collapse route hoặc tự retry mutation |
 
 - INPUT rows: 2 field editable KHI DRAFT (textarea inline mở từ nút "edit" trên hàng; lưu draft server `PATCH /release-candidates/draft`); PUBLISHED: read-only.
 - Mirror KHÔNG có nút hành động nào — read-model thuần.
+- `RcComposeDetail.state` là domain state. Presentation state được giữ ngoài DTO
+  đó cho tới khi P21/P22 publish một envelope typed; client không được tự gắn
+  `stale` nếu source thiếu `as_of`/freshness.
 
 ## 4. Data contract
 
@@ -87,6 +96,14 @@ interface RcComposeDetail {
   yaml: { k: string; v: string; tone: 'ink'|'gold'|'red'|'dim' }[];   // 17 dòng server dựng
   publish: { enabled: boolean; blocked_reason: string | null; rc_id: string };
   mirror: MirrorRow | null;   // null khi draft (ghost render local copy)
+}
+type RcPresentationState = 'loading'|'empty'|'partial'|'stale'|'denied'|'unavailable'|'terminal';
+interface RcPresentationMeta {
+  state: RcPresentationState;
+  as_of?: string;          // source-only, never browser invented
+  reason_code?: string;
+  display_message?: string; // safe server copy or fixed status-class copy only
+  retryable: boolean;
 }
 POST /runs/{id}/release-candidates → 201 { rc_id, published_at, mirror }
 PATCH /runs/{id}/release-candidates/draft { known_limitations?, proposed_use_restrictions? }
@@ -125,12 +142,19 @@ GET  /release-candidates/{rcId}/mirror → MirrorRow   // poll 60s khi PUBLISHED
 | T12 | 12 link nguồn | 10 link đúng màn; Alpha360° không link + title |
 | T13 | 660px | rail wrap; bảng pack cuộn ngang min 960; YAML cuộn |
 | T14 | axe | bảng th scope; nút publish aria-disabled kèm lý do (aria-describedby); 0 serious |
+| T15 | publish/PATCH 401 | `denied`; INPUT local còn, publish/PATCH disable, không retry tự động/không empty; reauth/access affordance có aria label |
+| T16 | publish/PATCH 403 hoặc typed refusal | `denied`; domain DRAFT/PUBLISHED không bị ghi đè, reason safe render, không leak pack/mirror trái scope |
+| T17 | publish/PATCH 502/503/timeout | `unavailable`; giữ composition/draft, không optimistic `PUBLISHED`, retry user-triggered bounded |
+| T18 | mirror 502 sau snapshot có `as_of` | `stale` chỉ với timestamp source; thiếu `as_of` phải `unavailable`; poll dừng khi tab hidden/denied |
+| T19 | publish/PATCH 422 | `terminal` cho request; map reason/field an toàn, INPUT còn; không generic error thay toàn màn |
 
 ## 7. Copy inventory — VERBATIM (bổ sung ngoài §2)
 - Publish blocked: "publish blocked — bind alpha_version first" / "resolve MISSING rows first"
 - 409: "evidence changed since composing — review the pack"
 - Chip title claim ceiling: "methodology claim ceiling — holdout locked, unlock lifts B → A"
 - Chip title engine cert: "engine execution-contract certification (0–4) — separate axis from the methodology claim"
+- Denied: "Access changed — reauthenticate or ask a workspace administrator." (nối safe `display_message` khi server có)
+- Unavailable: "Release candidate service is temporarily unavailable — your draft is kept locally."
 - Toàn bộ câu dài §2.2–2.6 giữ nguyên từng ký tự (đã khớp hi-fi).
 
 ## 8. TS architecture & guide plan
@@ -141,9 +165,9 @@ GET  /release-candidates/{rcId}/mirror → MirrorRow   // poll 60s khi PUBLISHED
 2. LineageRail (5 node grammar) + Taxonomy — T01/T03/T10.
 3. EvidencePack bảng + INPUT edit + counter — T04–T07/T12.
 4. YamlPreview + copy — T09.
-5. Publish mutation + 409 + mirror poll — T02/T08/T11.
-6. A11y/responsive — T13/T14.
-7. DoD: T01–T14 xanh; copy diff 0; screenshot draft/published/unbound ≤1%; integration 10→11 (promotion pick) + 01 rc chip → 11 đúng run.
+5. Publish mutation + 409 + mirror poll — T02/T08/T11/T15–T19; dùng presentation state chung, không đổi domain `RcComposeDetail.state`.
+6. A11y/responsive — T13/T14 và denied/unavailable affordance T15–T18.
+7. DoD: T01–T19 xanh; copy diff 0; screenshot draft/published/unbound/denied/unavailable ≤1%; integration 10→11 (promotion pick) + 01 rc chip → 11 đúng run.
 
 ## 9. Phi phạm vi
 - Không duyệt/điều kiện/waiver ở đây (Execution side).
@@ -261,6 +285,7 @@ GET  /release-candidates/{rcId}/mirror → MirrorRow   // poll 60s khi PUBLISHED
 6. [ ] Copy diff §7 = 0; screenshot 4 fixture ≤1%.
 7. [ ] Poll mirror dừng khi tab ẩn; resume khi hiện.
 8. [ ] Grep run_id trần trong payload publish = 0 ngoài final_audit_run_id (đúng field).
+9. [ ] `denied`/`unavailable` không overwrite `RcComposeDetail.state`, không auto-retry mutation và không thay rich composition bằng envelope.
 
 ## 17. Không-trạng-thái & phi phạm vi (nhắc)
 - State màn: {rcState, inputDrafts, publishing} — không gì khác; pack/status/yaml đều server.

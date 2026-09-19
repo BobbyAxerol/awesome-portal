@@ -18,6 +18,17 @@ strict Governance R1 request can create and read back a R1 record.
   202 path. The P02 producer harness allows exactly its five frozen top-level
   keys; this is a Research-side validation rule, not a claim that the current
   facade was changed to enforce it.
+- Its formerly untyped `research.requested_spec` is now frozen as
+  `research.requested-spec.v1`: see
+  [`requested-spec.v1.schema.json`](./requested-spec.v1.schema.json),
+  [`requested-spec.v1.d.ts`](./requested-spec.v1.d.ts), and the exact
+  [`24-control S02 field map`](./requested-spec-field-map.v1.json). Its
+  compile-only [`typecheck fixture`](./requested-spec.v1.typecheck.ts) proves
+  that a route discriminator cannot be paired with another route's params.
+  The type
+  is structural only: P04 still owns installed manifest values/ceilings and
+  P10 owns authenticated producer wiring. It adds no runtime route or current
+  facade requirement.
 - The R1 payload is exactly `governance.approval-create-request.v1`; it carries
   no Research RC object or experimental fields.
 - Four different hashes remain different facts: `parameter_digest`,
@@ -36,6 +47,11 @@ strict Governance R1 request can create and read back a R1 record.
   must close that producer/identity boundary before any new production write.
 - It does not modify or create a new Execution contract. See
   `execution-compatibility-matrix.md` and `decision-register.json`.
+- It does not claim browser/product acceptance. The shared state vocabulary
+  is specified in
+  [`Research Screen State Semantics v1`](../../release-v1.1/docs/RESEARCH_SCREEN_STATE_SEMANTICS_V1.md);
+  S02/S11 are amended for the immediate `denied`/`unavailable` gaps, while
+  P10/P21/P22 remain responsible for their real screen implementations.
 
 Run the focused gate with:
 

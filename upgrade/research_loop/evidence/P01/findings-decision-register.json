@@ -183,6 +183,19 @@
       ],
       "status": "TEST_ENVIRONMENT_NOT_PROVISIONED",
       "P01_resolution": "P01 records the exact prerequisite and runs an import-free AST parse only. P02 provisions a lockfile-aligned isolated environment before compatibility claims."
+    },
+    {
+      "finding_id": "P01-FE-01",
+      "source_locator": "P01/P02 frontend review recorded in upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#rl-p02",
+      "issue": "The frozen screen specifications lacked an explicit, shared denied/unavailable presentation vocabulary; S02 and publish-critical S11 had no immediate state/test semantics for the server refusals already proven by P02.",
+      "target_phases": [
+        "P02",
+        "P10",
+        "P21",
+        "P22"
+      ],
+      "status": "RESOLVED_BY_P02_SHARED_STATE_CONTRACT",
+      "P01_resolution": "P02 adds Research Screen State Semantics v1 and amends S02/S11 specifications and test matrices. Per-screen UI implementation and browser evidence remain owned by their listed phases; no runtime behavior is inferred."
     }
   ]
 }

@@ -1,0 +1,66 @@
+{
+  "schema_version": "research.requested-spec-field-map.v1",
+  "status": "P02_TYPED_STRUCTURAL_CONTRACT_ONLY",
+  "source": {
+    "screen_id": "02",
+    "screen": "New Run Preflight",
+    "source_spec": "upgrade/research_loop/release-v1.1/docs/screens/02_new_run.md#25",
+    "source_control_inventory": "upgrade/research_loop/evidence/P01/screen-field-matrix.csv",
+    "source_action_inventory": "upgrade/research_loop/evidence/P01/screen-action-matrix.csv"
+  },
+  "denominator": {
+    "html_form_controls": 24,
+    "source_action_records": 24,
+    "mapped_form_controls": 24,
+    "action_policy": "requested_spec carries input values only. The P01 action inventory remains the source identity for S02 interactions; P10 names and wires any network action after P03 authentication."
+  },
+  "typed_contract": {
+    "schema": "upgrade/research_loop/evidence/P02/requested-spec.v1.schema.json",
+    "typescript": "upgrade/research_loop/evidence/P02/requested-spec.v1.d.ts",
+    "schema_version": "research.requested-spec.v1",
+    "runtime_claim": "none; future producer-side input only"
+  },
+  "controls": [
+    { "source_control_id": "control-5", "source_locator": "QuantBT 02 New Run Preflight.dc.html:65", "draft_path": "alphaId", "requested_spec_path": "alpha_binding.alpha_id", "condition": "bound" },
+    { "source_control_id": "control-6", "source_locator": "QuantBT 02 New Run Preflight.dc.html:70", "draft_path": "avId", "requested_spec_path": "alpha_binding.alpha_version_id", "condition": "bound" },
+    { "source_control_id": "control-14", "source_locator": "QuantBT 02 New Run Preflight.dc.html:126", "draft_path": "routeCfg.ib.levelMode", "requested_spec_path": "route_params.intrabar.level_mode", "condition": "execution_route=intrabar_bracket" },
+    { "source_control_id": "control-15", "source_locator": "QuantBT 02 New Run Preflight.dc.html:129", "draft_path": "routeCfg.ib.sameBar", "requested_spec_path": "route_params.intrabar.same_bar_policy", "condition": "execution_route=intrabar_bracket" },
+    { "source_control_id": "control-16", "source_locator": "QuantBT 02 New Run Preflight.dc.html:132", "draft_path": "routeCfg.ib.tick", "requested_spec_path": "route_params.intrabar.tick_size", "condition": "execution_route=intrabar_bracket" },
+    { "source_control_id": "control-18", "source_locator": "QuantBT 02 New Run Preflight.dc.html:141", "draft_path": "routeCfg.pf.mode", "requested_spec_path": "route_params.portfolio.mode", "condition": "execution_route=portfolio" },
+    { "source_control_id": "control-19", "source_locator": "QuantBT 02 New Run Preflight.dc.html:144", "draft_path": "routeCfg.pf.sizing", "requested_spec_path": "route_params.portfolio.sizing", "condition": "execution_route=portfolio" },
+    { "source_control_id": "control-22", "source_locator": "QuantBT 02 New Run Preflight.dc.html:152", "draft_path": "routeCfg.rx.runtime", "requested_spec_path": "route_params.reactive.runtime", "condition": "execution_route=reactive" },
+    { "source_control_id": "control-23", "source_locator": "QuantBT 02 New Run Preflight.dc.html:155", "draft_path": "routeCfg.rx.audit", "requested_spec_path": "route_params.reactive.audit_mode", "condition": "execution_route=reactive" },
+    { "source_control_id": "control-25", "source_locator": "QuantBT 02 New Run Preflight.dc.html:164", "draft_path": "routeCfg.dc.base", "requested_spec_path": "route_params.dca.base_order_usd", "condition": "execution_route=dca_ladder" },
+    { "source_control_id": "control-26", "source_locator": "QuantBT 02 New Run Preflight.dc.html:167", "draft_path": "routeCfg.dc.so", "requested_spec_path": "route_params.dca.safety_orders", "condition": "execution_route=dca_ladder" },
+    { "source_control_id": "control-27", "source_locator": "QuantBT 02 New Run Preflight.dc.html:170", "draft_path": "routeCfg.dc.step", "requested_spec_path": "route_params.dca.step_scale", "condition": "execution_route=dca_ladder" },
+    { "source_control_id": "control-31", "source_locator": "QuantBT 02 New Run Preflight.dc.html:220", "draft_path": "datasetId", "requested_spec_path": "data.dataset_id", "condition": "always" },
+    { "source_control_id": "control-32", "source_locator": "QuantBT 02 New Run Preflight.dc.html:227", "draft_path": "symbol", "requested_spec_path": "data.symbol", "condition": "always" },
+    { "source_control_id": "control-33", "source_locator": "QuantBT 02 New Run Preflight.dc.html:230", "draft_path": "timeframe", "requested_spec_path": "data.timeframe", "condition": "always" },
+    { "source_control_id": "control-34", "source_locator": "QuantBT 02 New Run Preflight.dc.html:249", "draft_path": "windows[*].start / advanced.start", "requested_spec_path": "windows.{is,oos,holdout}.start / walk_forward.start", "condition": "protocol discriminator" },
+    { "source_control_id": "control-35", "source_locator": "QuantBT 02 New Run Preflight.dc.html:250", "draft_path": "windows[*].end", "requested_spec_path": "windows.{is,oos,holdout}.end_exclusive", "condition": "protocol=three_window_decay" },
+    { "source_control_id": "control-36", "source_locator": "QuantBT 02 New Run Preflight.dc.html:260", "draft_path": "advanced.*", "requested_spec_path": "walk_forward.{start,end_exclusive,split_mode,frequency,window_mode}", "condition": "protocol=advanced" },
+    { "source_control_id": "control-41", "source_locator": "QuantBT 02 New Run Preflight.dc.html:307", "draft_path": "parameter row low/value", "requested_spec_path": "parameter_space_overrides[].low or .value", "condition": "edited sweep or pin only" },
+    { "source_control_id": "control-42", "source_locator": "QuantBT 02 New Run Preflight.dc.html:308", "draft_path": "parameter row high", "requested_spec_path": "parameter_space_overrides[].high", "condition": "edited sweep only" },
+    { "source_control_id": "control-43", "source_locator": "QuantBT 02 New Run Preflight.dc.html:324", "draft_path": "trials", "requested_spec_path": "optuna_trials", "condition": "always; ceiling remains manifest-owned" },
+    { "source_control_id": "control-44", "source_locator": "QuantBT 02 New Run Preflight.dc.html:328", "draft_path": "earlyStopping", "requested_spec_path": "early_stopping", "condition": "always; null when blank" },
+    { "source_control_id": "control-45", "source_locator": "QuantBT 02 New Run Preflight.dc.html:332", "draft_path": "seed", "requested_spec_path": "random_seed", "condition": "always; null only where manifest permits" },
+    { "source_control_id": "control-47", "source_locator": "QuantBT 02 New Run Preflight.dc.html:360", "draft_path": "cfgOverrides", "requested_spec_path": "optimization_config", "condition": "sparse override keys only" }
+  ],
+  "wire_only_fields": [
+    "schema_version",
+    "not_publishable",
+    "strategy_id",
+    "execution_route",
+    "protocol",
+    "optimization_mode",
+    "optimization_schedule",
+    "client.engine_release_id",
+    "client.config_digest"
+  ],
+  "cross_envelope_equalities": [
+    "requested_spec.strategy_id == legacy strategy_id",
+    "requested_spec.data.dataset_id == legacy dataset_id",
+    "requested_spec.protocol == legacy protocol",
+    "requested_spec.alpha_binding.alpha_version_id == research.alpha_version_id, or both null for scratch"
+  ]
+}

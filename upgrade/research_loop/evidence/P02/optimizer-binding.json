@@ -1,15 +1,20 @@
 {
   "status": "CONTRACT_ONLY_NOT_CURRENT_PRODUCER",
   "canonical_fields": {
-    "trial_budget": "research.requested_spec.optimizer.trial_budget",
-    "early_stop": "research.requested_spec.optimizer.early_stop",
-    "strategy_seed": "research.requested_spec.seeds.strategy_seed",
-    "sampler_seed": "research.requested_spec.seeds.sampler_seed"
+    "trial_budget": "P02 harness-only optimizer.trial_budget",
+    "early_stop": "P02 harness-only optimizer.early_stop",
+    "strategy_seed": "P02 harness-only seeds.strategy_seed",
+    "sampler_seed": "P02 harness-only seeds.sampler_seed"
   },
   "rejected_alias_pairs": [
     ["trial_budget", "optuna_trials"],
     ["early_stop", "optuna_early_stopping"]
   ],
   "seed_rule": "strategy_seed and sampler_seed are distinct named scopes and may differ; each is a non-negative signed-32-bit integer.",
-  "no_silent_alias_selection": true
+  "no_silent_alias_selection": true,
+  "requested_spec_v1_relation": {
+    "status": "SEPARATE_BY_DESIGN",
+    "reason": "The S02 wire model uses requested_spec.optuna_trials, requested_spec.early_stopping, requested_spec.random_seed and sparse requested_spec.optimization_config. The P02 alias helper does not create undocumented requested_spec.optimizer or requested_spec.seeds fields.",
+    "authority": "P04 supplies actual optimizer manifest keys/defaults; P10 wires the authenticated producer."
+  }
 }

@@ -13,7 +13,10 @@
     "scripts/research-loop-v11/test-p02-postgres.sh",
     "scripts/research-loop-v11/test-p02-python-pin.sh",
     "scripts/research-loop-v11/vitest.p02.config.mts",
-    "upgrade/research_loop/evidence/P02/*",
+    "upgrade/research_loop/evidence/P02/* (including requested-spec schema, generated declaration, field-map and compile-only typecheck fixture)",
+    "upgrade/research_loop/release-v1.1/docs/RESEARCH_SCREEN_STATE_SEMANTICS_V1.md",
+    "upgrade/research_loop/release-v1.1/docs/screens/02_new_run.md",
+    "upgrade/research_loop/release-v1.1/docs/screens/11_release_candidate.md",
     "scripts/execution-d4-qualification-preflight-test.sh (cleanup-only test hygiene repair)"
   ],
   "non_changes": [
@@ -22,7 +25,7 @@
     "apps/portal/strategy/main.py",
     "Execution Edge contracts/runtime",
     "production database",
-    "browser UI/UX"
+    "browser UI/UX runtime"
   ],
   "test_hygiene_repair": {
     "file": "scripts/execution-d4-qualification-preflight-test.sh",

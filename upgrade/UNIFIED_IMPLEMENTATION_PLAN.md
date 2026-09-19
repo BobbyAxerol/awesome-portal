@@ -3540,8 +3540,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 
 | Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
 |---|---|---|---|---|
-| [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex + Claude source review / [P01 report](./research_loop/evidence/P01/phase-report.md); matrices verified both directions, 0 defect, 0 omission; open `P01-FE-01` spec state coverage → P10/P21 |
-| [P02](#rl-p02) | P01 | 02/11 harness | 01 | BACKEND_TECHNICALLY_COMPLETE / Codex; FE_REVIEW_COMPLETE / Claude / [P02 packet](./research_loop/evidence/P02/phase-report.md); open `P02-FE-01` untyped `requested_spec` awaiting Bobby's scope decision |
+| [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex + Claude source review / [P01 report](./research_loop/evidence/P01/phase-report.md); matrices verified both directions, 0 defect, 0 omission; systemic `P01-FE-01` state vocabulary + immediate S02/S11 spec gaps closed by P02 amendment; screen implementation remains with owner phase |
+| [P02](#rl-p02) | P01 | 02/11 harness | 01 | CONTRACT_AMENDMENT_COMPLETE / Codex + Claude review / [P02 packet](./research_loop/evidence/P02/phase-report.md); versioned `requested_spec` schema/types map all 24 S02 controls, S02/S11 state semantics specified; no producer/browser/runtime claim |
 | [P03](#rl-p03) | P02 | nền | 02 | PLANNED / unassigned / — |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | PLANNED / unassigned / — |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | PLANNED / unassigned / — |
@@ -3655,6 +3655,21 @@ the matrices faithfully record what the source says. It is raised here so the
 owning phases (P10 for S02, P21/P22 for S11) inherit it explicitly rather than
 discovering it at their own G4.
 
+#### P01-FE-01 resolution — 2026-09-19
+
+Bobby selected the early, narrow remedy rather than waiting until every screen
+phase: [Research Screen State Semantics v1](./research_loop/release-v1.1/docs/RESEARCH_SCREEN_STATE_SEMANTICS_V1.md)
+freezes the seven presentation states and their authority/transport rules; S02
+and S11 now explicitly carry the immediate `denied`/`unavailable` cases and
+test IDs. This prevents the security-sensitive publish screen from reaching its
+implementation phase without a refusal state.
+
+This closes the **systemic language and immediate S02/S11 specification gap**;
+it does not call all 15 screens implemented. Every owning phase must link the
+shared state contract and add its own field/panel/browser evidence before its
+exit gate. In particular, P10 owns S02 implementation and P21/P22 own S11
+implementation.
+
 <a id="rl-p02"></a>
 ### P02 — Contract freeze và unchanged-Execution compatibility spike
 
@@ -3680,7 +3695,7 @@ discovering it at their own G4.
   needed by the unchanged `202` facade path.
 - The exact compatibility receipt is recorded in
   [evidence/P02](./research_loop/evidence/P02/README.md): static protected
-  boundary pass; 61/61 source/contract tests in a self-removing PostgreSQL
+  boundary pass; 63/63 source/contract tests after the contract/spec amendment in a self-removing PostgreSQL
   16 tmpfs cell; and a read-only/no-network freeze assertion under the exact
   Python `3.12.14` runtime pin. No real-data/browser result is inferred.
 - A pre-existing D4 synthetic-test cleanup failure found by the mandatory
@@ -3688,18 +3703,19 @@ discovering it at their own G4.
   root-owned `mktemp` fixture directory is removed with the authority that
   created it. This is test hygiene only; it changes no D4 runtime, contract,
   service, deployment or production data.
-- P02 backend status is `BACKEND_TECHNICALLY_COMPLETE`. The only remaining
-  entry gates are explicitly assigned, not deferred: Claude P01/P02 fixture
-  and visual semantics review; P03/P10 producer principal/authentication; and
-  P04 actual Delta/resource evidence. See `evidence/P02/debt-register.json`.
-  Those gates must not be closed by edits to Execution or by calling a mock
-  result a product acceptance.
+- P02 status is `CONTRACT_AMENDMENT_COMPLETE`. The frontend review has supplied
+  its concrete contract findings and the P02 amendment closes them without a
+  runtime change. Remaining entry gates are explicitly assigned: P03/P10
+  producer principal/authentication, P04 actual Delta/resource evidence, and
+  P10/P21/P22 screen implementation/browser evidence. See
+  `evidence/P02/debt-register.json`. Those gates must not be closed by edits to
+  Execution or by calling a mock result a product acceptance.
 - **Claude coordination:** use
   [handoff-claude.md](./research_loop/evidence/P02/handoff-claude.md). Review
   only S02/S11 fixture/error/cursor UX, keep UI changes in a separate commit,
   and do not alter the protected runtime/contract files listed there.
 
-#### P02 Claude frontend review result — 2026-09-19, `FE_REVIEW_COMPLETE_ONE_CONTRACT_GAP`
+#### P02 Claude frontend review result — 2026-09-19, `FE_REVIEW_COMPLETE — AMENDMENT_APPLIED`
 
 Review of the frozen contract against what S02 and S11 must render. No file
 under `apps/control-api/src/facade/**`, governance, runtime manifest, deploy
@@ -3728,21 +3744,50 @@ generated client cannot be produced from `record()`, so the wizard would be
 hand-mapped against field names — which is the exact shape of RL-L01
 ("backend done, consumer not wired") and RL-L11 (provenance swapped for speed).
 
-This is **not** a request to change the frozen envelope's top level, and not a
+This was **not** a request to change the frozen envelope's top level, and not a
 claim that P02's backend spike is wrong: the `202` compatibility path, the four
 distinct digests and the strict-R1 readback are unaffected by it. The decision
-needed is narrow — whether `requested_spec`'s inner shape is declared in P02 as
+needed was narrow — whether `requested_spec`'s inner shape was declared in P02 as
 a Research-owned schema, or deferred to P10 with S02's field list as the
-acceptance denominator. Recorded for Bobby; not self-resolved.
+acceptance denominator. Bobby directed the P02 declaration; the amendment below
+records the completed resolution.
 
 **S11 note.** The same state audit above applies: `11_release_candidate.md`
 never names a denied state, and S11 is where publish authority is exercised. The
-strict-R1 refusal path P02 proved on the backend therefore has no specified UI
-counterpart yet. Carried to P21/P22 as an explicit entry, not as silent debt.
+strict-R1 refusal path P02 proved on the backend therefore had no specified UI
+counterpart. The amendment below supplies the shared semantics and immediate
+S11 spec/test cases; P21/P22 still own implementation, not an unrecorded debt.
 
 P02 frontend review is complete. Typed fixture consumption, URL `pick`/`trade`/
 `study` cursor codecs and the visual pass remain **unstarted implementation**,
 correctly owned by P10 and P21/P22 — this review does not claim them.
+
+#### P02 contract/spec amendment — `P02-FE-01` resolved now, 2026-09-19
+
+The requested inner type is declared **in P02**, not deferred to P10:
+
+- [`requested-spec.v1.schema.json`](./research_loop/evidence/P02/requested-spec.v1.schema.json)
+  and [`requested-spec.v1.d.ts`](./research_loop/evidence/P02/requested-spec.v1.d.ts)
+  define `research.requested-spec.v1` as a versioned, strict structural DTO.
+  It contains the S02 payload groups, protocol/route discriminators, exact
+  decimal strings, sparse configuration and client release/digest pin without
+  adding a top-level field to `research.run-request.v1`.
+- [`requested-spec-field-map.v1.json`](./research_loop/evidence/P02/requested-spec-field-map.v1.json)
+  maps all **24/24** source form controls from P01 to a named canonical payload
+  path and records the separate 24-action denominator. Thus Claude can use a
+  generated client/fixture type rather than map magic field names by hand.
+- The P02 validator rejects unsupported nested keys, invalid route/protocol
+  discriminator combinations and disagreement between the nested schema and
+  legacy `strategy_id`/`dataset_id`/`protocol` fields. It deliberately does
+  not hardcode P04 manifest values or claim that the unchanged facade validates
+  every future field.
+- S02 and S11 now link the shared state semantics. `denied` and `unavailable`
+  are specified before the screen phases, with no automatic retry leak and no
+  loss of hi-fi composition. P10/P21/P22 still own real UI/BFF/browser work.
+
+Focused P02 evidence was rerun after this amendment: static freeze `PASS` with
+21 required artifacts (including the compile-only generated-type guard) and the isolated suite `PASS` at 63/63. See the packet
+rather than the historical pre-amendment receipt.
 
 <a id="rl-p03"></a>
 ### P03 — Research schema, identities và authorization

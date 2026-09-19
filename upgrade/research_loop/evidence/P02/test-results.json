@@ -1,6 +1,6 @@
 {
   "phase": "P02",
-  "status": "BACKEND_PASS_FRONTEND_REVIEW_PENDING",
+  "status": "CONTRACT_AMENDMENT_PASS_FRONTEND_IMPLEMENTATION_PENDING",
   "command": "scripts/research-loop-v11/test-p02-compatibility.sh",
   "required": [
     "P02-T01", "P02-T02", "P02-T03", "P02-T04", "P02-T05", "P02-T06", "P02-T07",
@@ -13,14 +13,20 @@
       "command": "node scripts/research-loop-v11/p02-compatibility.mjs",
       "result": "PASS",
       "protected_main_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-      "required_artifacts": 17
+      "required_artifacts": 21
+    },
+    {
+      "gate": "P02_FE_requested_spec_generated_type",
+      "command": "apps/control-api/node_modules/.bin/tsc --noEmit --strict --skipLibCheck upgrade/research_loop/evidence/P02/requested-spec.v1.typecheck.ts",
+      "result": "PASS",
+      "assertion": "The generated-client declaration accepts a canonical S02 request and rejects an invalid execution_route/route_params pair without building a frontend."
     },
     {
       "gate": "P02_current_source_spike_and_regression",
       "command": "P02_CURRENT_SOURCE_REGRESSION=true scripts/research-loop-v11/test-p02-postgres.sh",
       "result": "PASS",
       "test_files": 4,
-      "tests": 61,
+      "tests": 63,
       "database": "self-removing PostgreSQL 16 tmpfs cell",
       "production_connection": false
     },
@@ -40,8 +46,8 @@
   ],
   "not_inferred": [
     "real Delta compute or numerical evidence (V11-P02-DR; P04 owner)",
-    "browser/product acceptance (V11-P02-BR; Claude review pending)",
+    "browser/product implementation acceptance (V11-P02-BR; frontend review is complete, but P10/P21/P22 own implementation and browser evidence)",
     "new producer authentication or production write authority (P03/P10 owner)"
   ],
-  "notes": "The local 3.12.13 environment was not used to rewrite the committed 3.12.14 freeze. The exact pin receipt above is the authoritative environment result."
+  "notes": "The local 3.12.13 environment was not used to rewrite the committed 3.12.14 freeze. The exact pin receipt above is the authoritative environment result. The amendment validates research.requested-spec.v1, the 24/24 S02 source-control map, strict nested-key rejection, and nested-to-legacy compatibility without adding a route, producer, UI implementation, or runtime change."
 }

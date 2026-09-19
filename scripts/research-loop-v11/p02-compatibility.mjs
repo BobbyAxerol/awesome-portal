@@ -16,6 +16,10 @@ const required = [
   "execution-compatibility-matrix.md",
   "action-side-effect-matrix.csv",
   "optimizer-binding.json",
+  "requested-spec.v1.schema.json",
+  "requested-spec.v1.d.ts",
+  "requested-spec.v1.typecheck.ts",
+  "requested-spec-field-map.v1.json",
   "cursor-codec.md",
   "final-audit-relationship.md",
   "decision-register.json",
@@ -42,6 +46,10 @@ if (freeze.research_contract_version !== "research.run-request.v1") {
 }
 if (freeze.execution_runtime_change !== false || freeze.execution_contract_change !== false) {
   throw new Error("P02 must not claim an Execution runtime or contract change.");
+}
+if (freeze.requested_spec_schema_version !== "research.requested-spec.v1"
+  || freeze.requested_spec_s02_form_control_denominator !== 24) {
+  throw new Error("P02 requested_spec freeze is missing its versioned S02 typed-contract declaration.");
 }
 const forbidden = /(BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|postgres(?:ql)?:\/\/[^\s]+:[^\s]+@|AKIA[0-9A-Z]{16})/i;
 for (const file of required) {

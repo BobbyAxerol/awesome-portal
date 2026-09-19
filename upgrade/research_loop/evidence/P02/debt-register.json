@@ -1,6 +1,20 @@
 {
   "phase": "P02",
   "open_implementation_debt": [],
+  "resolved_closeouts": [
+    {
+      "id": "P02-FE-01",
+      "status": "RESOLVED_BY_P02_TYPED_STRUCTURAL_CONTRACT",
+      "evidence": "requested-spec.v1.schema.json, requested-spec.v1.d.ts, requested-spec-field-map.v1.json and focused P02 tests",
+      "non_claim": "No P10 producer or browser screen is implemented."
+    },
+    {
+      "id": "P01-FE-01-S02-S11",
+      "status": "SYSTEMIC_LANGUAGE_AND_IMMEDIATE_SPEC_GAPS_RESOLVED",
+      "evidence": "RESEARCH_SCREEN_STATE_SEMANTICS_V1.md plus S02/S11 spec/test-matrix amendments",
+      "non_claim": "Screen-specific implementation and browser evidence remain owned by their phases."
+    }
+  ],
   "explicit_downstream_gates": [
     {
       "id": "P02-DG-01",
@@ -19,9 +33,9 @@
     {
       "id": "P02-DG-03",
       "owner": "Claude P01/P02 review",
-      "state": "PENDING_FRONTEND_REVIEW",
-      "subject": "Fixture/error/cursor visual semantics against HIFI/spec",
-      "reason": "No frontend source was changed in P02; browser acceptance is deliberately not inferred."
+      "state": "FRONTEND_REVIEW_COMPLETE_IMPLEMENTATION_PENDING",
+      "subject": "S02/S11 typed fixture/error/cursor implementation and browser evidence",
+      "reason": "Claude completed the P01/P02 review; P02 now supplies the typed structural contract, but no browser/product implementation is inferred."
     }
   ],
   "interpretation": "These are scoped future entry gates, not unresolved P02 implementation defects or waived requirements."

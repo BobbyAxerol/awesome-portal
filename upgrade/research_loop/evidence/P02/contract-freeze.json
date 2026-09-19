@@ -17,6 +17,12 @@
     "research.requested_spec"
   ],
   "research_envelope_top_level_policy": "exact_research_owned_keys_only; this producer-side harness does not modify the unchanged facade",
+  "requested_spec_schema_version": "research.requested-spec.v1",
+  "requested_spec_schema": "requested-spec.v1.schema.json",
+  "requested_spec_types": "requested-spec.v1.d.ts",
+  "requested_spec_field_map": "requested-spec-field-map.v1.json",
+  "requested_spec_s02_form_control_denominator": 24,
+  "requested_spec_contract_policy": "structural S02 payload ownership only; P04 remains manifest/ceiling authority and P10 remains authenticated producer authority",
   "r1_request_contract": "governance.approval-create-request.v1",
   "r1_allowed_fields": [
     "schema_version",

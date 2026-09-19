@@ -3,6 +3,11 @@
 > Màn khai báo dày nhất domain. Agent code phải bám spec này từng control. Copy VERBATIM. Số = CSS px.
 > Luật gốc: (1) khai báo ngoài không gian đã declare là KHÔNG THỂ submit; (2) claim forecast hiện TRƯỚC khi tốn compute; (3) field không sửa thì KHÔNG serialize — default của engine tự áp.
 
+> **Presentation-state contract:** dùng chung
+> [Research Screen State Semantics v1](../RESEARCH_SCREEN_STATE_SEMANTICS_V1.md).
+> `denied`/`unavailable` là trạng thái trình bày, không phải `empty`, không
+> thay domain/draft state và không cho phép màn rich bị thay bằng envelope.
+
 ---
 
 ## 1. Meta
@@ -331,9 +336,14 @@ Review rail rows (mono label 150px + value):
 | T25 | preflight xong, sửa 1 field | — | preflightRan=false; create disable lại |
 | T26 | create | bấm | POST body == preview (deep equal); redirect /runs/R-…/progress |
 | T27 | F5 giữa chừng | reload | draft khôi phục; step giữ (?step=) |
-| T28 | manifest 500 | mở màn | error + retry; không mở wizard data giả |
+| T28 | manifest 500 | mở màn | `unavailable` + retry có chủ đích; không mở wizard data giả |
 | T29 | 660px | resize | rail xuống dưới; params/accordion cuộn ngang trong card; không tràn trang |
 | T30 | axe | scan | mọi input có label; step pill aria-current="step"; 0 serious |
+| T31 | manifest/registry 401 hoặc 403 | mở màn hoặc refresh | `denied`; giữ local draft chưa gửi, panel shell còn nguyên, preflight/create disabled; không retry tự động, không render empty/data cũ trái scope |
+| T32 | manifest/registry/preflight/create 502, 503, timeout hoặc offline | thử request | `unavailable`; giữ draft, không fixture fallback, retry do người dùng kích hoạt và bị hủy khi unmount/scope đổi |
+| T33 | server trả manifest/registry partial có lý do | mở step phụ thuộc | `partial`; chỉ control phụ thuộc bị disable + reason nguồn, các control/data đã trả vẫn render; không suy field thiếu là default/zero |
+| T34 | response giữ lại có `as_of`/freshness source | refresh thất bại sau response hợp lệ | `stale`; hiện timestamp/age nguồn, giữ composition; create cần preflight mới, không gọi stale nếu source không gửi metadata |
+| T35 | create 409 hoặc 422 | submit | `terminal` cho request hiện tại: 409 giữ draft + reload manifest; 422 map `field_path` về step đầu tiên; không generic error thay cả route |
 
 ## 18. Guide plan cho agent code
 
@@ -346,8 +356,8 @@ Review rail rows (mono label 150px + value):
 7. Params sweep/pin — T13–T16.
 8. Optimization + accordion (cfg sparse map) — T17–T23.
 9. Review + preflight + create (msw) — T24–T27.
-10. Edge/a11y/perf — T28–T30.
-11. DoD: §14 checklist + T01–T30 xanh + payload golden-file test + screenshot diff các step ≤1%.
+10. State semantics/a11y/perf — T28–T35; fixture phải tách `denied`, `unavailable`, `partial`, `stale`, `terminal` theo [state contract chung](../RESEARCH_SCREEN_STATE_SEMANTICS_V1.md).
+11. DoD: §14 checklist + T01–T35 xanh + payload golden-file test + screenshot diff các step ≤1%.
 
 ## 19. Phi phạm vi
 - Không template/preset lưu server (v2).
@@ -436,6 +446,7 @@ create ─ POST /api/runs {payload} ─▶ 201 {run_id} ─▶ nav 03
 
 | Draft field | Payload key | Điều kiện serialize |
 |---|---|---|
+| — (producer discriminator) | schema_version = `research.requested-spec.v1` | luôn; P02 structural contract, không phải control UI |
 | alphaId / avId / scratch | alpha_binding {alpha_id, alpha_version_id} \| null | scratch ⇒ null + flag not_publishable=true |
 | strategyId | strategy_id | luôn |
 | route | execution_route | luôn |
@@ -475,15 +486,26 @@ Golden test: 4 fixture draft (bound-3W-default · scratch-adv-intrabar-3override
 ## 28. Error-recovery table
 | Tình huống | Khôi phục |
 |---|---|
-| preflight 500 | khối lỗi + retry; draft nguyên |
+| manifest/registry 401 hoặc 403 | state `denied`; giữ draft local chưa gửi, tắt preflight/create/PATCH liên quan, hiển thị reauth/access path; không retry nền hoặc render `empty` |
+| manifest/registry/preflight/create 502, 503, timeout hoặc offline | state `unavailable`; khối lỗi trong panel + retry do người dùng chọn; draft nguyên, không dùng fixture/mock/fallback |
+| manifest/registry partial có reason nguồn | state `partial`; chỉ control phụ thuộc disable + reason; phần payload/rail đã có vẫn render, không giả default |
+| response cũ có `as_of`/freshness nguồn | state `stale`; hiện timestamp/age; giữ draft nhưng yêu cầu preflight mới trước create; không gắn stale nếu source không nói freshness |
+| preflight 500 | state `unavailable`; khối lỗi + retry có chủ đích; draft nguyên |
 | create 409 release drift | banner "release changed — reload manifest"; nút reload manifest GIỮ draft; validators re-run trên manifest mới; field nào thành invalid thì pill "!" chỉ đúng chỗ |
 | create 422 (server validator) | map message vào đúng step qua `field_path` server trả; nhảy tới step đầu tiên lỗi |
 | sessionStorage đầy/hỏng | bỏ persist im lặng; console.debug; wizard vẫn chạy in-memory |
 | alphas registry rỗng | Context hiện gợi ý import (link 14); scratch vẫn dùng |
 | mất mạng giữa wizard | không chặn nhập; preflight/create fail có retry |
 
+### 28.1 State invariants bắt buộc
+- Dùng đúng bảy state tại [state contract chung](../RESEARCH_SCREEN_STATE_SEMANTICS_V1.md); `DRAFT`, `preflightRan` và lỗi validator local vẫn là domain/local state riêng.
+- `denied` không tự refresh/stream retry; chỉ reauth hoặc scope change do người dùng khởi tạo mới được thử lại.
+- `unavailable` không biến thành `terminal` chỉ vì timeout; retry phải bounded và hủy khi route unmount.
+- `partial`/`stale` chỉ hợp lệ khi server trả explicit reason/freshness. Khi không có metadata đó, dùng `unavailable`, không suy diễn.
+- Ở mọi state, giữ wizard/review rail theo hi-fi; thay content trong panel, không thay cả route bằng JSON/envelope.
+
 ## 29. Definition of Done (chốt PR)
-1. [ ] T01–T30 xanh; golden payload 4 fixture khớp.
+1. [ ] T01–T35 xanh; golden payload 4 fixture khớp.
 2. [ ] Bảng §25 đối chiếu đủ — không key thừa/thiếu trong payload.
 3. [ ] Copy §22 diff tự động = 0 khác biệt.
 4. [ ] Screenshot diff 8 step ≤ 1% với hi-fi (1280) + không tràn 660.

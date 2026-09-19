@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 // This intentionally resolves the Control API's lockfile-pinned test-only
 // dependency while the suite itself remains outside the protected test tree.
 import { Agent, MockAgent, setGlobalDispatcher } from "../../apps/control-api/node_modules/undici/index.js";
@@ -11,7 +12,10 @@ import { OwnerAccessRepository } from "../../apps/control-api/src/repos/owner-ac
 import { migrateTestDatabase, setupApp, teardownApp } from "../../apps/control-api/test/harness";
 import {
   P02ContractError,
+  REQUESTED_SPEC_V1_S02_FORM_CONTROL_DENOMINATOR,
+  REQUESTED_SPEC_V1_SCHEMA_VERSION,
   assertIdentityBinding,
+  assertRequestedSpecV1,
   assertResearchRunRequestV1,
   createExactR1Payload,
   parseResearchCursor,
@@ -48,6 +52,48 @@ function errorCode(action: () => unknown): string {
     throw error;
   }
   throw new Error("Expected a P02 contract error.");
+}
+
+function validRequestedSpec(overrides: Record<string, unknown> = {}) {
+  const base = {
+    schema_version: REQUESTED_SPEC_V1_SCHEMA_VERSION,
+    alpha_binding: { alpha_id: "alpha_p02", alpha_version_id: "research-alpha-p02-v1" },
+    not_publishable: false,
+    strategy_id: "alpha_p02",
+    execution_route: "intrabar_bracket",
+    route_params: {
+      intrabar: {
+        level_mode: "hlc_conservative",
+        same_bar_policy: "stop_first",
+        tick_size: "0.01",
+      },
+    },
+    data: { dataset_id: "btc_usdt_1m", symbol: "BTC/USDT", timeframe: "1m" },
+    protocol: "three_window_decay",
+    windows: {
+      is: { start: "2024-01-01T00:00", end_exclusive: "2024-02-01T00:00" },
+      oos: { start: "2024-02-01T00:00", end_exclusive: "2024-03-01T00:00" },
+      holdout: { start: "2024-03-01T00:00", end_exclusive: "2024-04-01T00:00" },
+    },
+    optimization_mode: "mode_1",
+    optimization_schedule: "global",
+    parameter_space_overrides: [
+      { name: "entry_z", kind: "sweep", low: 1.25, high: 2.5 },
+      { name: "exit_z", kind: "pin", value: 0.5 },
+    ],
+    optuna_trials: 24,
+    early_stopping: null,
+    random_seed: 7,
+    optimization_config: { sampler_seed: 13, n_startup_trials: 12 },
+    client: { engine_release_id: "er_quantbt_1_1_1", config_digest: "a".repeat(64) },
+  };
+  const merged = { ...base, ...overrides } as Record<string, unknown>;
+  for (const field of ["data", "client"] as const) {
+    if (overrides[field] && typeof overrides[field] === "object" && !Array.isArray(overrides[field])) {
+      merged[field] = { ...(base[field] as Record<string, unknown>), ...(overrides[field] as Record<string, unknown>) };
+    }
+  }
+  return merged;
 }
 
 describe("Research Loop P02 · unchanged Execution compatibility spike", () => {
@@ -191,7 +237,7 @@ describe("Research Loop P02 · unchanged Execution compatibility spike", () => {
         client_intent_id: "intent-p02-001",
         alpha_version_id: "research-alpha-p02-v1",
         preflight_token: "pft1.current-source.compatibility.token",
-        requested_spec: { optimizer: { trial_budget: 24 }, seeds: { strategy_seed: 7, sampler_seed: 13 } },
+        requested_spec: validRequestedSpec(),
       },
     });
     expect(errorCode(() => assertResearchRunRequestV1({
@@ -325,5 +371,86 @@ describe("Research Loop P02 · unchanged Execution compatibility spike", () => {
       execution_subject_id: "strategy-b", actor_user_id: "usr_p02",
     }))).toBe("EXECUTION_SUBJECT_STRATEGY_MISMATCH");
     expect(P02ContractError).toBeTypeOf("function");
+  });
+
+  it("P02-FE-01: freezes all S02 form controls into a generated-client requested_spec contract", () => {
+    const accepted = assertRequestedSpecV1(validRequestedSpec());
+    expect(accepted).toMatchObject({
+      schema_version: "research.requested-spec.v1",
+      execution_route: "intrabar_bracket",
+      route_params: { intrabar: { same_bar_policy: "stop_first" } },
+      data: { dataset_id: "btc_usdt_1m" },
+      protocol: "three_window_decay",
+    });
+    expect(errorCode(() => assertRequestedSpecV1({
+      ...validRequestedSpec(),
+      invented_hifi_field: true,
+    }))).toBe("REQUESTED_SPEC_UNKNOWN_FIELD");
+    expect(errorCode(() => assertRequestedSpecV1({
+      ...validRequestedSpec(),
+      route_params: {},
+    }))).toBe("REQUESTED_SPEC_ROUTE_PARAMS_MISSING_FIELD");
+    const advanced = validRequestedSpec({
+      protocol: "advanced",
+      execution_route: "reactive",
+      route_params: { reactive: { runtime: "R2", audit_mode: "audit" } },
+      walk_forward: {
+        start: "2024-01-01T00:00",
+        end_exclusive: "2024-04-01T00:00",
+        split_mode: "2024-02-01T00:00",
+        frequency: "monthly",
+        window_mode: "expanding",
+      },
+    });
+    delete advanced.windows;
+    expect(assertRequestedSpecV1(advanced)).toMatchObject({
+      protocol: "advanced",
+      walk_forward: { frequency: "monthly" },
+      route_params: { reactive: { runtime: "R2" } },
+    });
+
+    const fieldMap = JSON.parse(readFileSync(
+      new URL("../../upgrade/research_loop/evidence/P02/requested-spec-field-map.v1.json", import.meta.url),
+      "utf8",
+    ));
+    expect(fieldMap.denominator).toMatchObject({
+      html_form_controls: REQUESTED_SPEC_V1_S02_FORM_CONTROL_DENOMINATOR,
+      source_action_records: 24,
+      mapped_form_controls: 24,
+    });
+    expect(fieldMap.controls).toHaveLength(REQUESTED_SPEC_V1_S02_FORM_CONTROL_DENOMINATOR);
+    expect(fieldMap.controls.map((row: { source_control_id: string }) => row.source_control_id)).toEqual([
+      "control-5", "control-6", "control-14", "control-15", "control-16", "control-18",
+      "control-19", "control-22", "control-23", "control-25", "control-26", "control-27",
+      "control-31", "control-32", "control-33", "control-34", "control-35", "control-36",
+      "control-41", "control-42", "control-43", "control-44", "control-45", "control-47",
+    ]);
+  });
+
+  it("P02-FE-01: keeps nested requested_spec mirrors consistent with the unchanged legacy facade fields", () => {
+    const request = {
+      strategy_id: "alpha_p02",
+      dataset_id: "btc_usdt_1m",
+      protocol: "three_window_decay",
+      research_contract_version: "research.run-request.v1",
+      research: {
+        client_intent_id: "intent-p02-mirror-001",
+        alpha_version_id: "research-alpha-p02-v1",
+        preflight_token: "pft1.current-source.compatibility.token",
+        requested_spec: validRequestedSpec(),
+      },
+    };
+    expect(assertResearchRunRequestV1(request).research.requested_spec).toMatchObject({
+      strategy_id: "alpha_p02",
+      data: { dataset_id: "btc_usdt_1m" },
+    });
+    expect(errorCode(() => assertResearchRunRequestV1({
+      ...request,
+      dataset_id: "eth_usdt_1m",
+    }))).toBe("RESEARCH_REQUEST_LEGACY_MIRROR_MISMATCH");
+    expect(errorCode(() => assertResearchRunRequestV1({
+      ...request,
+      research: { ...request.research, alpha_version_id: null },
+    }))).toBe("RESEARCH_REQUEST_ALPHA_VERSION_MISMATCH");
   });
 });
