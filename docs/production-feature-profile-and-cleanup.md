@@ -117,23 +117,114 @@ caption; `_READS` stays false.
 3. Delete only backups outside that set after a restore drill; never delete
    PostgreSQL volumes, Roadmap data or release evidence as a cache cleanup.
 
-### C4 — Docker/worktree/cache hygiene
+### C4 — Self-hosted runner, Docker, worktree and cache hygiene
 
-1. On AWS-HK, retain active Trading System/Data Layer/Edge containers and the
-   current plus previous rollback image; prune only confirmed unused build
-   cache and images after each release.
-2. Remove stopped test stacks only after their owning branch/evidence is
-   archived; stopped containers do not consume RAM, so they are not an urgent
-   memory fix.
-3. Review old local worktrees only after remote branch/ref provenance is
-   verified; archive handoffs before removal.
+The self-hosted runner changes the capacity model: an accidental cleanup can
+remove the only rollback image or a mounted volume, while no cleanup lets
+build/cache bytes gradually consume the host.  The policy is therefore
+**measured, phase-scoped and fail-safe**, rather than a blanket `docker system
+prune`.
+
+#### C4.1 — Responsibility separation
+
+1. `portal-deploy-sgp1` / `portal-gh-deploy-runner.service` is a **deploy-only**
+   runner.  It must remain non-root, outside the `docker` group, without a
+   Docker socket mount and without a public listener.  It downloads a signed
+   candidate and uses the reviewed, short-lived SSH path only; it never builds
+   images locally and must not be used as a Docker garbage collector.
+2. Image build cache belongs to the explicitly designated build host or CI
+   runner.  Production container/image/volume cleanup belongs to a protected
+   host maintenance action.  Neither responsibility may be silently inherited
+   by an arbitrary phase test or by the deployment runner.
+3. Per-job SSH keys, known-hosts files, release-pack staging and runtime
+   evidence staging are confined to the named `RUNNER_TEMP` directory.  Every
+   workflow that creates them requires an `if: always()` cleanup step which
+   shreds keys and removes only those path-bound temporary files.
+
+#### C4.2 — Required closeout after **every** completed phase
+
+Before the phase is committed/handed off, its owner records a compact cleanup
+decision in the phase evidence or tracking entry:
+
+1. Run the phase's existing `trap`/Compose teardown and confirm that its
+   phase-scoped test project is no longer running.  Remove only stopped test
+   containers that have the exact approved Compose project label and whose
+   branch/ref and evidence have been retained.  Never pass `--volumes` to a
+   test teardown unless that phase created an explicitly disposable named
+   volume and its test proves the volume is not shared.
+2. Take a **read-only** capacity snapshot: root filesystem free bytes, Docker
+   `system df` on the relevant host, runner service state, and the count of
+   phase-scoped stopped containers.  This makes resource growth visible before
+   it becomes an SSH/VS Code outage.
+3. Remove only known phase-local temporary directories, test reports and
+   downloaded archives under the documented workspace or `RUNNER_TEMP` path.
+   Do not use broad `rm -rf`, `git clean`, recursive home-directory cleanup,
+   or a glob that could cross a worktree boundary.
+4. If a release/deployment is running, do **not** concurrently prune images,
+   BuildKit cache, releases, backups, containers or database rows.  Record the
+   observation and run the protected cleanup in a separate change window after
+   the release reaches health/evidence collection.
+5. A phase is not marked resource-clean merely because tests pass.  It needs
+   either a `NO_ACTION_NEEDED` capacity record or a named, bounded follow-up
+   action with target, retention proof and owner.  That follow-up is visible
+   operational work, not hidden technical debt.
+
+#### C4.3 — Protected Docker and build-cache cleanup
+
+1. Before deleting Docker bytes, inventory each candidate by image digest,
+   container reference, release marker, creation time and size.  Protect all
+   active-container images; the currently deployed signed release; the
+   immediately previous rollback-capable release; an in-window signed
+   candidate; and any image/volume used by an active migration, backup or
+   restore drill.
+2. A quiet-window maintenance action may prune **only** confirmed unused
+   BuildKit cache older than seven days, after verifying no build/publish job
+   is active.  It must first capture `docker system df -v`, then record the
+   reclaimed bytes.  This is cache cleanup, not application-data cleanup.
+3. Dangling images may be removed only when unreferenced by the protected set
+   above and older than the retention window.  Do not use `docker system prune
+   -a`, `docker volume prune`, unqualified `docker image prune`, or any command
+   that removes anonymous/named volumes as a routine phase closeout.
+4. Stopped containers normally cost disk metadata, not RAM.  Prefer the
+   labelled, evidence-backed test-stack deletion from C4.2 over deleting an
+   unknown stopped container just to make a memory graph look cleaner.
+
+#### C4.4 — Worktree and runner workspace retention
+
+1. Use `git worktree list --porcelain` and remote branch/ref provenance before
+   removing an old worktree.  Archive handoff markdown/evidence first; never
+   delete the canonical `main`, `dev`, stable release or an active agent
+   workspace.
+2. Persistent GitHub runner workspaces are cleaned only after the job's
+   `always()` evidence/SSH cleanup has completed and no other job is assigned
+   to that runner.  Remove only the exact completed-job workspace, not the
+   runner installation, `_work` root or another job's directory.
+3. Dependency caches are retained when they are an intentional bounded cache
+   with a documented key/TTL.  Orphaned package/build downloads are removed by
+   exact path and age, never by deleting repository source or lockfiles.
+
+#### C4.5 — Capacity triggers and escalation
+
+1. At less than 30% root filesystem free, attach a capacity observation to the
+   next phase closeout.  At less than 20% free, do not start another
+   disk-intensive local build/release until an inventory-backed, scoped
+   cleanup or owner-approved capacity change is complete.  The current release
+   may finish only when its preflight proves sufficient backup/pull headroom.
+2. If a phase finds cache growth that materially extends backup/restore time,
+   prefer the existing bounded application-level TTL sweeper for recomputable
+   rows.  Database cache deletion remains separate from Docker cleanup and
+   never uses `VACUUM FULL` during normal operation.
+3. Record CPU/RSS limits and restart policy for current Kafka/QDL,
+   `live_data_executor`, Portal projection workers and the runner.  Restarting
+   a healthy production service solely to free memory is not cleanup.
 
 ### C5 — Capacity follow-up
 
-1. Record CPU/RSS limits and restart policy for current Kafka/QDL,
-   `live_data_executor` and Portal projection workers.
-2. Add host swap or increase capacity only through a separate owner-approved
+1. Add host swap or increase capacity only through a separate owner-approved
    infrastructure change; do not disguise it as a Docker cleanup.
+2. Review this policy after every signed release and after any self-hosted
+   runner incident.  A newly observed resource class must be added to the
+   protected-set inventory before any agent is allowed to remove it.
 
 ### C6 — Self-hosted CI/publication runner lifecycle
 
