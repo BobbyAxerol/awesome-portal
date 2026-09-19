@@ -3540,7 +3540,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 
 | Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
 |---|---|---|---|---|
-| [P01](#rl-p01) | — | 00–14 inventory | 01 | PLANNED / unassigned / — |
+| [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex / [P01 source-only report](./research_loop/evidence/P01/phase-report.md), capture `a402f7b`, no browser/deploy claim |
 | [P02](#rl-p02) | P01 | 02/11 harness | 01 | PLANNED / unassigned / — |
 | [P03](#rl-p03) | P02 | nền | 02 | PLANNED / unassigned / — |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | PLANNED / unassigned / — |
@@ -3590,6 +3590,30 @@ màn tương lai. Mỗi phase phải đóng **BE + consumer trong scope** trư�
 - **Tests FE/browser:** Inventory từng field/action đủ locator và trạng thái; nhận diện demo finish/publish/verify; phát hiện thiếu doc-page.js; phân biệt parsed HTML với rendered baseline.
 - **Exit gate:** Baseline/allowlist/source matrix có denominator; source/identity ownership rõ. Bootstrap gaps có target phase; không tuyên bố real compute/browser PASS.
 - **Rollback/handoff:** Chỉ thêm inventory/redacted evidence; không sửa server. Bàn giao P02 baseline, COR/FND/DR và exact provisioning needs.
+
+#### P01 closeout rule and recorded result — 2026-09-19
+
+- Codex completed the approved source/discovery scope on shared branch
+  `docs/research-loop-plan`: 15/15 HTML + 15/15 specs, 73 field records, 194
+  action records, 56 prototype-only records, 180 literal static route entries,
+  protected-kernel SHA and all `P01-T01…T08` evidence are recorded in
+  [evidence/P01](./research_loop/evidence/P01/README.md). `V11-P01-DR/BR/GX`
+  are explicitly scoped: Delta source/reader mapping only, browser
+  `DISCOVERY_ONLY`, no runtime/deploy claim.
+- **Generated baseline rule:** the CSV/JSON files under `evidence/P01` are
+  machine-derived. If any tracked source input recorded in `baseline.json`
+  changes, the same coherent change must run `--write` then
+  `test-p01-baseline.sh`; its capture fence rejects dirty implementation roots.
+  Do not hand-edit inventory rows or promote parsed HTML to browser acceptance.
+- P01 creates no runtime resource. Cleanup decision is `NO_ACTION_NEEDED`;
+  the self-test removes only its own temporary copy. There is zero known
+  unresolved implementation defect in P01 scope. `P01-GAP-01…07` have exact
+  later-phase ownership in the decision register and are not silently waived.
+- **Claude coordination:** no UI code is requested in P01. Claude may perform
+  a discrepancy-only semantic/visual review of the two matrices against all
+  HTML/spec pairs; they must not alter Execution Carbon, global routes,
+  accepted UI or backend contract. A real browser/artifact review is a later
+  approved gate, not a missing P01 visual pass.
 
 <a id="rl-p02"></a>
 ### P02 — Contract freeze và unchanged-Execution compatibility spike

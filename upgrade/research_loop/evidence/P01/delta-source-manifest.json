@@ -1,0 +1,90 @@
+{
+  "schema": "research-loop.delta-source-manifest.v1",
+  "strategy": {
+    "strategy_id": "delta-rsi-polynomial-alpha",
+    "specification_version": "1.0.0",
+    "specification_path": "apps/portal/strategy/specification.py",
+    "specification_sha256": "3a4f7e5beb79eecebda61f46a8501d0128bffa0b29508ee1826835b1eeb59730",
+    "parameter_count": 8,
+    "parameters": [
+      {
+        "name": "window",
+        "minimum": "20",
+        "maximum": "60",
+        "step": "2"
+      },
+      {
+        "name": "rsi_l",
+        "minimum": "12",
+        "maximum": "30",
+        "step": "1"
+      },
+      {
+        "name": "signalLength",
+        "minimum": "3",
+        "maximum": "20",
+        "step": "1"
+      },
+      {
+        "name": "len_atr1",
+        "minimum": "5",
+        "maximum": "20",
+        "step": "1"
+      },
+      {
+        "name": "len_atr2",
+        "minimum": "25",
+        "maximum": "60",
+        "step": "1"
+      },
+      {
+        "name": "rvol",
+        "minimum": "1.0",
+        "maximum": "2.5",
+        "step": "0.1"
+      },
+      {
+        "name": "len_vol",
+        "minimum": "8",
+        "maximum": "40",
+        "step": "2"
+      },
+      {
+        "name": "slpercent",
+        "minimum": "0.7",
+        "maximum": "2.5",
+        "step": "0.1"
+      }
+    ],
+    "protected_kernel": {
+      "path": "apps/portal/strategy/main.py",
+      "expected_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "observed_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "verified": true
+    },
+    "adapter_path": "apps/portal/backend/src/portal_api/strategies/delta_rsi.py",
+    "registry_path": "apps/portal/backend/src/portal_api/strategies/registry.py"
+  },
+  "current_engine_pin": {
+    "value": "quantbt-engine==1.0.8",
+    "sources": [
+      "constraints/portal.txt",
+      "apps/portal/backend/pyproject.toml"
+    ],
+    "status": "CURRENT_SOURCE_PIN",
+    "P04_target": "QuantBT 1.1.1; not installed or claimed by P01."
+  },
+  "historical_reader": {
+    "path": "apps/portal/backend/src/portal_api/adapters/market_data.py",
+    "distribution": "primus-historical-market-data",
+    "version": "0.1.0rc3",
+    "loader_contract": "hmd-loader-v1",
+    "allowed_scopes": [
+      "backtest",
+      "research"
+    ],
+    "runtime_snapshot_identity": "UNKNOWN_NOT_MEASURED",
+    "read_authorization": "UNKNOWN_NOT_MEASURED",
+    "P04_close_requirement": "Authorized immutable reader/snapshot receipt plus direct-vs-Portal comparison."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "research-loop.p01-changes.v1",
+  "phase": "P01",
+  "mutation_scope": [
+    "scripts/research-loop-v11/p01-baseline.mjs",
+    "scripts/research-loop-v11/test-p01-baseline.sh",
+    "upgrade/research_loop/evidence/P01/",
+    "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
+  ],
+  "protected_or_runtime_mutations": [],
+  "statement": "P01 adds source inventory tooling and redacted evidence only."
+}

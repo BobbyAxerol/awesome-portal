@@ -1,0 +1,188 @@
+{
+  "schema": "research-loop.p01-findings-decision-register.v1",
+  "findings": [
+    {
+      "finding_id": "R01",
+      "source_locator": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#src-r01",
+      "issue": "Freeze prototype verify/timer, bound diagnostics and digest scope",
+      "target_phases": [
+        "P02",
+        "P09",
+        "P11",
+        "P16",
+        "P17",
+        "P24"
+      ],
+      "status": "SOURCE_MAPPED",
+      "P01_resolution": "Recorded with source locator; no authority or behavior inferred."
+    },
+    {
+      "finding_id": "R02",
+      "source_locator": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#src-r02",
+      "issue": "Alpha Import mirror-only declaration and gates",
+      "target_phases": [
+        "P07",
+        "P08",
+        "P10"
+      ],
+      "status": "SOURCE_MAPPED",
+      "P01_resolution": "Recorded with source locator; no authority or behavior inferred."
+    },
+    {
+      "finding_id": "R03",
+      "source_locator": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#src-r03",
+      "issue": "Declared-space and duplicate logical optimizer fields",
+      "target_phases": [
+        "P02",
+        "P04",
+        "P08",
+        "P10"
+      ],
+      "status": "SOURCE_MAPPED",
+      "P01_resolution": "Recorded with source locator; no authority or behavior inferred."
+    },
+    {
+      "finding_id": "R04",
+      "source_locator": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#src-r04",
+      "issue": "Search inspection, nullable thetaTrial and warning population",
+      "target_phases": [
+        "P02",
+        "P03",
+        "P09",
+        "P13",
+        "P15",
+        "P16",
+        "P21"
+      ],
+      "status": "SOURCE_MAPPED",
+      "P01_resolution": "Recorded with source locator; no authority or behavior inferred."
+    },
+    {
+      "finding_id": "R05",
+      "source_locator": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#src-r05",
+      "issue": "Split seal/read-only role and governance source",
+      "target_phases": [
+        "P02",
+        "P08",
+        "P14",
+        "P19",
+        "P21"
+      ],
+      "status": "SOURCE_MAPPED",
+      "P01_resolution": "Recorded with source locator; no authority or behavior inferred."
+    },
+    {
+      "finding_id": "R06",
+      "source_locator": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#src-r06",
+      "issue": "RC final audit/evidence items and immutable inputs",
+      "target_phases": [
+        "P21",
+        "P22",
+        "P24"
+      ],
+      "status": "SOURCE_MAPPED",
+      "P01_resolution": "Recorded with source locator; no authority or behavior inferred."
+    },
+    {
+      "finding_id": "R07",
+      "source_locator": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#src-r07",
+      "issue": "Replay sequence/cursor and prototype causal reveal",
+      "target_phases": [
+        "P05",
+        "P09",
+        "P13",
+        "P17",
+        "P18"
+      ],
+      "status": "SOURCE_MAPPED",
+      "P01_resolution": "Recorded with source locator; no authority or behavior inferred."
+    },
+    {
+      "finding_id": "R08",
+      "source_locator": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#src-r08",
+      "issue": "Lineage draft counts, promotion source and version-change copy",
+      "target_phases": [
+        "P03",
+        "P06",
+        "P10",
+        "P12",
+        "P19"
+      ],
+      "status": "SOURCE_MAPPED",
+      "P01_resolution": "Recorded with source locator; no authority or behavior inferred."
+    },
+    {
+      "finding_id": "P01-GAP-01",
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 09 Run Report.dc.html:15",
+      "issue": "Run Report imports doc-page.js, but the frozen archive has no doc-page.js/font/chart binary asset.",
+      "target_phases": [
+        "P09",
+        "P18"
+      ],
+      "status": "SOURCE_GAP_RECORDED",
+      "P01_resolution": "Do not photograph a blank/hidden document as baseline. P09/P18 choose a licensed, source-compatible render harness before any visual PASS."
+    },
+    {
+      "finding_id": "P01-GAP-02",
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:160;upgrade/research_loop/release-v1.1/docs/screens/04_evidence_flow.md:1",
+      "issue": "HTML screen label is Summary while the frozen file/spec name is Evidence Flow.",
+      "target_phases": [
+        "P09"
+      ],
+      "status": "SOURCE_LABEL_VARIANCE_RECORDED",
+      "P01_resolution": "No copy normalization in P01. P09 must choose the canonical route/title mapping with a COR or owner decision."
+    },
+    {
+      "finding_id": "P01-GAP-03",
+      "source_locator": "apps/portal/frontend/playwright.config.ts:fixture comments",
+      "issue": "Current visual configuration is fixture/stubbed; no Research real-build/browser evidence was run in P01.",
+      "target_phases": [
+        "P07",
+        "P09",
+        "P23"
+      ],
+      "status": "BROWSER_EVIDENCE_NOT_YET_PROVISIONED",
+      "P01_resolution": "Keep browser lane DISCOVERY_ONLY until approved isolated build/DNS/port and trace receipt exist."
+    },
+    {
+      "finding_id": "P01-GAP-04",
+      "source_locator": "apps/portal/backend/src/portal_api/adapters/market_data.py:23-31",
+      "issue": "Historical reader contract is source-mapped, but immutable snapshot identity and reader authorization are not present in versioned source.",
+      "target_phases": [
+        "P04"
+      ],
+      "status": "EXTERNAL_INPUT_REQUIRED",
+      "P01_resolution": "P04 receives one authorized read-only fixture/snapshot receipt; P01 creates no numerical substitute."
+    },
+    {
+      "finding_id": "P01-GAP-05",
+      "source_locator": "constraints/portal.txt:10;apps/portal/backend/pyproject.toml",
+      "issue": "Current source pin is quantbt-engine==1.0.8; QuantBT 1.1.1 is a future target.",
+      "target_phases": [
+        "P04"
+      ],
+      "status": "VERSION_TRANSITION_PENDING",
+      "P01_resolution": "Do not label any 1.0.8 output as 1.1.1 or fabricate numeric parity in P01."
+    },
+    {
+      "finding_id": "P01-GAP-06",
+      "source_locator": "deploy/.env.development.example;deploy/compose.production.yaml",
+      "issue": "Repository deployment examples cannot prove deployed flags, live schema ownership, mount type or allocation.",
+      "target_phases": [
+        "P23"
+      ],
+      "status": "RUNTIME_RECEIPT_REQUIRED",
+      "P01_resolution": "Keep source defaults distinct from deployed evidence; use an authorized redacted receipt later."
+    },
+    {
+      "finding_id": "P01-GAP-07",
+      "source_locator": "apps/portal/scripts/test_backend.sh:5-10",
+      "issue": "The local P01 worktree has no apps/portal/.venv, so the existing Portal pytest suite cannot be collected here yet.",
+      "target_phases": [
+        "P02"
+      ],
+      "status": "TEST_ENVIRONMENT_NOT_PROVISIONED",
+      "P01_resolution": "P01 records the exact prerequisite and runs an import-free AST parse only. P02 provisions a lockfile-aligned isolated environment before compatibility claims."
+    }
+  ]
+}

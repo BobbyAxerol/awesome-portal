@@ -1,0 +1,654 @@
+{
+  "schema": "research-loop.p01-baseline.v1",
+  "captured_at_utc": "2026-09-19T00:00:00Z",
+  "source_capture_commit": "a402f7b95d4429804f7f51e76540ed2ed3c81828",
+  "archive": {
+    "release_directory": "upgrade/research_loop/release-v1.1",
+    "html_count": 15,
+    "spec_count": 15,
+    "html_ids": [
+      "00",
+      "01",
+      "02",
+      "03",
+      "04",
+      "05",
+      "06",
+      "07",
+      "08",
+      "09",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14"
+    ],
+    "spec_ids": [
+      "00",
+      "01",
+      "02",
+      "03",
+      "04",
+      "05",
+      "06",
+      "07",
+      "08",
+      "09",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14"
+    ],
+    "tracked_zip": "NOT_PRESENT_IN_VERSIONED_SOURCE",
+    "content_sha256": "69defad980635f445f872c386a68e7b92d1c307ff1d72e2e3c0d166af01a7e13"
+  },
+  "current_engine_pin": "quantbt-engine==1.0.8",
+  "engine_target_note": "QuantBT 1.1.1 is a P04 target, not an installed-engine claim in P01.",
+  "source_files": [
+    {
+      "source_id": "control-api-lockfile",
+      "kind": "lockfile",
+      "path": "apps/control-api/package-lock.json",
+      "sha256": "f33d9fe854d6b0d89376c6dac2a647a8d474e350c7fc089905238680f921eeb5",
+      "line_count": 2856,
+      "purpose": "Control API dependency lock",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "control-api-main",
+      "kind": "control-api",
+      "path": "apps/control-api/src/main.ts",
+      "sha256": "d9383c44b73cbd6eaccfe986a1737487611c8d032f7f64df1227274a39738b34",
+      "line_count": 16,
+      "purpose": "Control API composition root",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "dev-env-example",
+      "kind": "deployment-source",
+      "path": "deploy/.env.development.example",
+      "sha256": "094798c98e25ea71bafc68b3e209cf306d8accefe6d980a19e2006edd6bbec3c",
+      "line_count": 39,
+      "purpose": "Redacted repository defaults, not runtime values",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "edge-rust-lockfile",
+      "kind": "lockfile",
+      "path": "services/portal-execution-edge-rs/Cargo.lock",
+      "sha256": "b5273c673c326adbf61a63f07b66aa681806cc69982013deb28689ab3de31336",
+      "line_count": 3587,
+      "purpose": "Execution Rust dependency lock",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "edge-rust-manifest",
+      "kind": "rust-service",
+      "path": "services/portal-execution-edge-rs/Cargo.toml",
+      "sha256": "03a4b9994631693a512d498078b56a0fced4235ced1b00cdfd50331cd84b8a4c",
+      "line_count": 85,
+      "purpose": "Execution-owned Rust service; out of P01 mutation scope",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "facade-controller",
+      "kind": "control-api",
+      "path": "apps/control-api/src/facade/facade.controller.ts",
+      "sha256": "1a671eade971125cbeaa893cca2c0035724c4e6c6bbfabc00788b75d6b925c95",
+      "line_count": 316,
+      "purpose": "Existing facade boundary",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "facade-proxy",
+      "kind": "control-api",
+      "path": "apps/control-api/src/facade/proxy.service.ts",
+      "sha256": "9ca58cfccf6107f7aaaf4ec1cdfdcece248788ba85f2f6bb8439cb458f0a9e52",
+      "line_count": 407,
+      "purpose": "Existing facade transport",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "frontend-package",
+      "kind": "frontend-config",
+      "path": "apps/portal/frontend/package.json",
+      "sha256": "9120f2903cb786dcfa120801a878aac76d64d560683486886d8f1c8789261f34",
+      "line_count": 52,
+      "purpose": "React/TanStack/ECharts declaration",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "governance-contracts",
+      "kind": "control-api",
+      "path": "apps/control-api/src/governance/contracts.ts",
+      "sha256": "a0b4791d07bfcbab85d074cf5c01967927aa063f28f33c9c3c2f898ebc840794",
+      "line_count": 657,
+      "purpose": "Governance DTO/source boundary",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "governance-service",
+      "kind": "control-api",
+      "path": "apps/control-api/src/governance/governance.service.ts",
+      "sha256": "6b5a2b0f35c44c61b8584a6103ea9ed12eac658aafc6c625c2c1c6a0df3081b9",
+      "line_count": 1045,
+      "purpose": "Governance service boundary",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "historical-reader",
+      "kind": "python-adapter",
+      "path": "apps/portal/backend/src/portal_api/adapters/market_data.py",
+      "sha256": "b56bb3c737a7bdd8f805364e022b191155bf0caf2ae5d74b8892f92a2acfcbb5",
+      "line_count": 689,
+      "purpose": "Historical data reader contract",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "playwright-config",
+      "kind": "frontend-config",
+      "path": "apps/portal/frontend/playwright.config.ts",
+      "sha256": "8157691d4e7611e0f8f8a7d285e9c3ef9e1fa1cdec6d6e6ebd2c5405ae6430db",
+      "line_count": 95,
+      "purpose": "Visual suite and build flags",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "portal-api-main",
+      "kind": "python-api",
+      "path": "apps/portal/backend/src/portal_api/main.py",
+      "sha256": "970cd6afe58d38da9637ae6259319a8d326637591a212fc19f92a95b10aba4a1",
+      "line_count": 247,
+      "purpose": "Portal API composition root",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "portal-compose",
+      "kind": "deployment-source",
+      "path": "deploy/compose.production.yaml",
+      "sha256": "eb614a2b49ea4d4e3a36d232e8eeb556fa1d8ced1c2aed04b5af92ebeb500f37",
+      "line_count": 225,
+      "purpose": "Repository default, not deployed evidence",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "portal-data",
+      "kind": "python-api",
+      "path": "apps/portal/backend/src/portal_api/api/routes_data.py",
+      "sha256": "e63edd6109b41ab1decdc2971c34ae53347ae41acb9222b8df8d38f8b99b1b06",
+      "line_count": 59,
+      "purpose": "Snapshot read boundary",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "portal-lockfile",
+      "kind": "lockfile",
+      "path": "apps/portal/frontend/package-lock.json",
+      "sha256": "468da5d8cdff4bf1668d7ef21c112dcd79d865a8cd1a61bec98ecb96269f4752",
+      "line_count": 4691,
+      "purpose": "Frontend dependency lock",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "portal-runs",
+      "kind": "python-api",
+      "path": "apps/portal/backend/src/portal_api/api/routes_runs.py",
+      "sha256": "689d3828ff6f3ac123b20cb71f897d5c96fd4e822cbef1761bcb739f06643fd4",
+      "line_count": 571,
+      "purpose": "Run read/create boundary",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "portal-worker",
+      "kind": "python-worker",
+      "path": "apps/portal/backend/src/portal_api/workers/run_worker.py",
+      "sha256": "e56ed7402b62fefde75f1f02862eb8e7a1045e221daf6c9c8389f39d624c3109",
+      "line_count": 367,
+      "purpose": "Bounded process runner",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "prototype-index",
+      "kind": "prototype",
+      "path": "upgrade/research_loop/release-v1.1/index.html",
+      "sha256": "4ea7ba19e70d4f29b34ae953263f35df68eaddfdf14b449bf3568547e70598d9",
+      "line_count": 7,
+      "purpose": "Offline archive entrypoint only",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": ""
+    },
+    {
+      "source_id": "prototype-support",
+      "kind": "prototype",
+      "path": "upgrade/research_loop/release-v1.1/support.js",
+      "sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+      "line_count": 1912,
+      "purpose": "Hi-fi prototype support only",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": ""
+    },
+    {
+      "source_id": "research-guide",
+      "kind": "guide",
+      "path": "upgrade/research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md",
+      "sha256": "c328fdffeb58b05cc2809191961809812a16ea33f17b9e6161e708722f6f8baf",
+      "line_count": 4228,
+      "purpose": "Research Loop detailed authority",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "research-rulebook",
+      "kind": "rules",
+      "path": "upgrade/research_loop/CLAUDE-FOR-thanhvuong.md",
+      "sha256": "773bb62af8f3e97a5bc74390214f41a9b1d7c69f10468389c12e66c67b27162e",
+      "line_count": 1151,
+      "purpose": "Shared Research Loop delivery rules",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "run-sync",
+      "kind": "control-api",
+      "path": "apps/control-api/src/facade/run-sync.service.ts",
+      "sha256": "0221540a8b70dd998066d5e33573fa696451fd39d56e9b7d0c2a16761cd6c161",
+      "line_count": 139,
+      "purpose": "RunSync compatibility boundary",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "screen-00-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 00 Journey Map.dc.html",
+      "sha256": "525d0ef771a42d38b8defd84a88d02ab59f35248cb1dd41df0e0a9094bd3b2d3",
+      "line_count": 153,
+      "purpose": "Journey Map source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "00"
+    },
+    {
+      "source_id": "screen-00-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/00_journey_map.md",
+      "sha256": "9d245d732fb33cb1eef3863c2e48b2f224c795e556c1c1f5325cf19681101800",
+      "line_count": 501,
+      "purpose": "Journey Map implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "00"
+    },
+    {
+      "source_id": "screen-01-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html",
+      "sha256": "0304f5334e9f50e57313de751388f0c697e778cc977ee3faa3e871f5a9d96353",
+      "line_count": 276,
+      "purpose": "Run Library source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "01"
+    },
+    {
+      "source_id": "screen-01-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/01_run_library.md",
+      "sha256": "43795dccfdaa1d02064716fdea859a23d97d613cbf27ef4b023276e31e62320c",
+      "line_count": 505,
+      "purpose": "Run Library implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "01"
+    },
+    {
+      "source_id": "screen-02-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html",
+      "sha256": "224a0d09a549a78ee9625647e609ac2ae8ece0ea7a8b06637e18ef6d85e0ec29",
+      "line_count": 867,
+      "purpose": "New Run Preflight source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "02"
+    },
+    {
+      "source_id": "screen-02-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/02_new_run.md",
+      "sha256": "994232129fa0c3945b2ca854b6c782ff4396d07fb0f070463dfb8b833bf2d700",
+      "line_count": 494,
+      "purpose": "New Run Preflight implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "02"
+    },
+    {
+      "source_id": "screen-03-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html",
+      "sha256": "769fa78c32b14d2364b6044fe69e06645c48f0b40e4b8792d114b8a2e4621bda",
+      "line_count": 455,
+      "purpose": "Run Progress source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "03"
+    },
+    {
+      "source_id": "screen-03-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/03_run_progress.md",
+      "sha256": "71225aabaa8a6b27fe3929cdf7d6532645de2e5d30a451e669b32c0128b795f1",
+      "line_count": 503,
+      "purpose": "Run Progress implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "03"
+    },
+    {
+      "source_id": "screen-04-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html",
+      "sha256": "f45215ce8fc52b022110b7de35d74d288ee3085f69373e181e77af251756bc45",
+      "line_count": 1617,
+      "purpose": "Evidence Flow source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "04"
+    },
+    {
+      "source_id": "screen-04-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/04_evidence_flow.md",
+      "sha256": "1953f3f9679db2be5e823c60bc8d7df5bd2228a151db3a7a240cd80d1f1ff65b",
+      "line_count": 486,
+      "purpose": "Evidence Flow implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "04"
+    },
+    {
+      "source_id": "screen-05-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html",
+      "sha256": "b29b55fcff75169989d88caf541992b7e77d6facbc388a293acc13b613eb6440",
+      "line_count": 417,
+      "purpose": "S1 Split source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "05"
+    },
+    {
+      "source_id": "screen-05-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/05_s1_split.md",
+      "sha256": "e0d99ee3bde198156fdf2b6161885d95030fffa027c58489571cb7d0fd012621",
+      "line_count": 432,
+      "purpose": "S1 Split implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "05"
+    },
+    {
+      "source_id": "screen-06-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html",
+      "sha256": "d7064a544addd7d9cb0b015b50708e73c5ff32491a04f0b448d14d846f5a3b30",
+      "line_count": 1034,
+      "purpose": "S2 Search and Selection source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "06"
+    },
+    {
+      "source_id": "screen-06-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/06_s2_search.md",
+      "sha256": "b198de53b06c8afcae4313d6eef43442ee16856854327f5a5746d6b8f76af246",
+      "line_count": 364,
+      "purpose": "S2 Search and Selection implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "06"
+    },
+    {
+      "source_id": "screen-07-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html",
+      "sha256": "305a02097714b92dd0bc5c92cbfd1e906532996218170b7525968e4ce8770e26",
+      "line_count": 367,
+      "purpose": "S3 Freeze source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "07"
+    },
+    {
+      "source_id": "screen-07-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/07_s3_freeze.md",
+      "sha256": "2cb3d4e30286d1c4c1fcbd7423113157908a4f79096ad985091a92fc77a090d2",
+      "line_count": 267,
+      "purpose": "S3 Freeze implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "07"
+    },
+    {
+      "source_id": "screen-08-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html",
+      "sha256": "3f8a8ad71e213e32378b5f024091223a94c66098fbbc4d08d15f2cb8e1a3006f",
+      "line_count": 824,
+      "purpose": "S4 Execute Replay source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "08"
+    },
+    {
+      "source_id": "screen-08-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/08_s4_execute.md",
+      "sha256": "028b752e58f7c4363007589a078eaffcd3ff54c4dd74ef1474c33fe1ca438fa6",
+      "line_count": 228,
+      "purpose": "S4 Execute Replay implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "08"
+    },
+    {
+      "source_id": "screen-09-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 09 Run Report.dc.html",
+      "sha256": "d49a797fa7e0c5e5c0364dfd7a58f1f673e957435a25b9d1820ff70ed47e5bfd",
+      "line_count": 252,
+      "purpose": "Run Report source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "09"
+    },
+    {
+      "source_id": "screen-09-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/09_run_report.md",
+      "sha256": "beacc921d42c650d6a92853156b6944a163c7a55d5db3cc4695c58b1d95c762f",
+      "line_count": 274,
+      "purpose": "Run Report implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "09"
+    },
+    {
+      "source_id": "screen-10-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html",
+      "sha256": "6f2adbfd85135a2a956399bc77b81b9e424c7cc1a831b7619701f0cc877748d6",
+      "line_count": 346,
+      "purpose": "Attempt Lineage source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "10"
+    },
+    {
+      "source_id": "screen-10-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/10_attempt_lineage.md",
+      "sha256": "b2924e448182b82c5ade9e5d1408018d0d3a5f8f00a3748c56739b9e8564fba5",
+      "line_count": 197,
+      "purpose": "Attempt Lineage implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "10"
+    },
+    {
+      "source_id": "screen-11-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html",
+      "sha256": "abc1b0ca446a93b3b988950753617d361f298328108cb584eea46f8babdba7a8",
+      "line_count": 305,
+      "purpose": "Release Candidate and Publish source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "11"
+    },
+    {
+      "source_id": "screen-11-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/11_release_candidate.md",
+      "sha256": "1665527e0e8c1ced70041eadca95c5330cf0a0f7ebf48cfa1153f933b2fb328d",
+      "line_count": 270,
+      "purpose": "Release Candidate and Publish implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "11"
+    },
+    {
+      "source_id": "screen-12-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html",
+      "sha256": "b63805b8f60ba79558b8770cd05f72c2b0d02b7a5c4d6b7f028f562213052435",
+      "line_count": 384,
+      "purpose": "Mode Atlas source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "12"
+    },
+    {
+      "source_id": "screen-12-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/12_engine_atlas.md",
+      "sha256": "e3a41f399f7681e951baada349e185599b57f8ea8b7392298101ae88b2375c45",
+      "line_count": 83,
+      "purpose": "Mode Atlas implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "12"
+    },
+    {
+      "source_id": "screen-13-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html",
+      "sha256": "53bcc38386bd0ce3a2be4379982b95f3107f7eb5a6d2e21616511442f01e0d9e",
+      "line_count": 400,
+      "purpose": "Compare source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "13"
+    },
+    {
+      "source_id": "screen-13-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/13_compare.md",
+      "sha256": "ab1274b4504db343cc9daf83d672df36e7ec61ed873cc4b2cac0b1d3af9946de",
+      "line_count": 89,
+      "purpose": "Compare implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "13"
+    },
+    {
+      "source_id": "screen-14-html",
+      "kind": "hifi-html",
+      "path": "upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html",
+      "sha256": "61f02a686bf1e9acd6c6ebeb75dbfa93ff7b675cd4ea495faee894c6ac1edd4a",
+      "line_count": 294,
+      "purpose": "Alpha Import source prototype",
+      "authority": "SOURCE_REFERENCE_ONLY",
+      "screen_id": "14"
+    },
+    {
+      "source_id": "screen-14-spec",
+      "kind": "screen-spec",
+      "path": "upgrade/research_loop/release-v1.1/docs/screens/14_alpha_import.md",
+      "sha256": "e89cd8fbb615ee1532db488840a4e887671e59912d3dc6ae96ddad8a5081c7b9",
+      "line_count": 145,
+      "purpose": "Alpha Import implementation specification",
+      "authority": "DESIGN_REQUIREMENT",
+      "screen_id": "14"
+    },
+    {
+      "source_id": "snapshot-store",
+      "kind": "python-storage",
+      "path": "apps/portal/backend/src/portal_api/services/data_catalog.py",
+      "sha256": "31eaca06e3c9481a1df6030f9996820d115f24b1d71145ee38169d543000a8bd",
+      "line_count": 417,
+      "purpose": "Snapshot store and query boundary",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "strategy-adapter",
+      "kind": "strategy-adapter",
+      "path": "apps/portal/backend/src/portal_api/strategies/delta_rsi.py",
+      "sha256": "bc096381759429eb63dab887a6c37040a98e55754adf6bb07bb6336c23f9a731",
+      "line_count": 54,
+      "purpose": "Lazy protected-kernel adapter",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "strategy-kernel",
+      "kind": "protected-kernel",
+      "path": "apps/portal/strategy/main.py",
+      "sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "line_count": 233,
+      "purpose": "Protected signal kernel; P01 read-only",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "strategy-parameters",
+      "kind": "strategy-contract",
+      "path": "apps/portal/strategy/params.py",
+      "sha256": "208de442ecca2682c88fef31ac9b042abed42adf242d8bec4a7ca0fa6746b432",
+      "line_count": 20,
+      "purpose": "Delta RSI declared parameter ranges",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "strategy-protected-manifest",
+      "kind": "protected-manifest",
+      "path": "apps/portal/strategy/PROTECTED_SHA256",
+      "sha256": "3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
+      "line_count": 2,
+      "purpose": "Expected SHA for protected kernel",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "strategy-registry",
+      "kind": "strategy-registry",
+      "path": "apps/portal/backend/src/portal_api/strategies/registry.py",
+      "sha256": "6e4e7c4c33aff1623a7b99154e9e67bb89d9a6edea3b77319d4e5aae80b0250d",
+      "line_count": 22,
+      "purpose": "Portal strategy adapter registry",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    },
+    {
+      "source_id": "strategy-specification",
+      "kind": "strategy-contract",
+      "path": "apps/portal/strategy/specification.py",
+      "sha256": "3a4f7e5beb79eecebda61f46a8501d0128bffa0b29508ee1826835b1eeb59730",
+      "line_count": 53,
+      "purpose": "Delta RSI immutable specification",
+      "authority": "CURRENT_REPOSITORY_SOURCE",
+      "screen_id": ""
+    }
+  ],
+  "static_route_count": 180,
+  "static_route_collisions": 0,
+  "static_route_inventory_sha256": "f5df34798cd303c84c45aee7dad0f78618d1f9c647eba0bef88814a7928aaab6",
+  "repository_configuration_inventory_sha256": "156d39cdc329ad76bbb408011ff84afd8f8f048e394fb1d7af466a4b23f6e611"
+}

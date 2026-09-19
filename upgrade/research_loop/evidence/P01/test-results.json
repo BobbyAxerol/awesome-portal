@@ -1,0 +1,42 @@
+{
+  "schema": "research-loop.p01-test-results.v1",
+  "run_scope": "local source-only verifier; no external runtime call",
+  "commands": [
+    {
+      "command": "node scripts/research-loop-v11/p01-baseline.mjs --self-test",
+      "tests": ["P01-T02", "P01-T03 negative", "P01-T04 synthetic collision", "P01-T06 missing-source negative"],
+      "result": "PASS"
+    },
+    {
+      "command": "node scripts/research-loop-v11/p01-baseline.mjs --verify",
+      "tests": ["P01-T01", "P01-T03", "P01-T04", "P01-T05", "P01-T06", "P01-T07", "P01-T08"],
+      "result": "PASS"
+    },
+    {
+      "command": "scripts/research-loop-v11/test-p01-baseline.sh",
+      "tests": ["P01 named-capture source fence", "P01-T01 through P01-T08"],
+      "result": "PASS — rejects tracked/untracked changes below captured source roots before verification"
+    },
+    {
+      "command": "node --check scripts/research-loop-v11/p01-baseline.mjs && bash -n scripts/research-loop-v11/test-p01-baseline.sh && git diff --check",
+      "tests": ["V11-P01-GX hygiene"],
+      "result": "PASS"
+    },
+    {
+      "command": "python3 -c '<AST parse every apps/portal/backend/src/*.py>'",
+      "tests": ["P01 backend source syntax"],
+      "result": "PASS (57 files; import-free)"
+    },
+    {
+      "command": "apps/portal/scripts/test_backend.sh",
+      "tests": ["existing Portal backend pytest suite"],
+      "result": "NOT_COLLECTED — apps/portal/.venv/bin/python absent; recorded as P01-GAP-07/P02 prerequisite"
+    }
+  ],
+  "not_run_by_design": [
+    "browser visual acceptance",
+    "real Delta compute",
+    "deployment/runtime probe",
+    "Docker/SSH/Trading System/Execution Edge call"
+  ]
+}

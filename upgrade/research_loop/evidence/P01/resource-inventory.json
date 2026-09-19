@@ -1,0 +1,69 @@
+{
+  "schema": "research-loop.p01-resource-inventory.v1",
+  "inspection_scope": "LOCAL_WORKSPACE_HOST_ONLY",
+  "deployment_or_production_evidence": false,
+  "measurements": {
+    "cpu_logical_cores": {
+      "value": 8,
+      "unit": "cores",
+      "source": "node:os.cpus",
+      "status": "MEASURED_LOCAL"
+    },
+    "memory_host_total_kib": {
+      "value": 32862520,
+      "unit": "KiB",
+      "source": "/proc/meminfo:MemTotal",
+      "status": "MEASURED_LOCAL"
+    },
+    "workspace_filesystem_total_bytes": {
+      "value": 665811062784,
+      "unit": "bytes",
+      "source": "node:fs.statfsSync(workspace)",
+      "status": "MEASURED_LOCAL"
+    },
+    "workspace_filesystem_available_bytes": {
+      "value": 342555299840,
+      "unit": "bytes",
+      "source": "node:fs.statfsSync(workspace)",
+      "status": "MEASURED_LOCAL"
+    },
+    "kernel_release": {
+      "value": "5.15.0-185-generic",
+      "unit": "string",
+      "source": "node:os.release",
+      "status": "MEASURED_LOCAL"
+    }
+  },
+  "unknowns": [
+    {
+      "subject": "Research dev deployment host/mount type",
+      "status": "UNKNOWN_NOT_MEASURED",
+      "close_phase": "P23",
+      "reason": "No authorized Research runtime deployment probe in P01."
+    },
+    {
+      "subject": "Deployed DB schema, runtime feature flags and live service allocation",
+      "status": "UNKNOWN_NOT_MEASURED",
+      "close_phase": "P23",
+      "reason": "P01 inventories repository declarations only; no secret-bearing runtime access."
+    },
+    {
+      "subject": "Historical reader snapshot identity and read authorization",
+      "status": "UNKNOWN_NOT_MEASURED",
+      "close_phase": "P04",
+      "reason": "Reader contract is source-mapped; authorized immutable fixture/snapshot receipt is not provisioned."
+    },
+    {
+      "subject": "Local Portal backend pytest environment",
+      "status": "UNKNOWN_NOT_MEASURED",
+      "close_phase": "P02",
+      "reason": "apps/portal/.venv is absent in this worktree; P01 did not create or install an environment."
+    },
+    {
+      "subject": "Local process cgroup memory limit",
+      "status": "UNKNOWN_NOT_MEASURED",
+      "close_phase": "P23",
+      "reason": "No cgroup memory limit file is visible to this local workspace process."
+    }
+  ]
+}

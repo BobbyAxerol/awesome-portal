@@ -1,0 +1,38 @@
+{
+  "schema": "research-loop.p01-protected-surface.v1",
+  "protected": [
+    {
+      "path": "apps/portal/strategy/main.py",
+      "authority": "EXECUTION_STRATEGY_KERNEL",
+      "expected_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "observed_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "status": "VERIFIED_UNCHANGED",
+      "P01_policy": "read-only; no P01 mutation permitted"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/",
+      "authority": "EXECUTION_EDGE",
+      "status": "OUT_OF_RESEARCH_MUTATION_SCOPE",
+      "P01_policy": "Inventory only; no adapter, config or runtime modification."
+    },
+    {
+      "path": "deploy/compose.production.yaml",
+      "authority": "DEPLOYMENT_RUNTIME",
+      "status": "REPOSITORY_DEFAULT_ONLY",
+      "P01_policy": "Read-only source inspection; deployed values are not inferred."
+    }
+  ],
+  "research_allowlist": [
+    "scripts/research-loop-v11/",
+    "upgrade/research_loop/evidence/P01/",
+    "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
+  ],
+  "shared_bootstrap_exceptions": [],
+  "cross_agent_protocol": {
+    "shared_branch": "docs/research-loop-plan",
+    "one_writer_per_shared_file": true,
+    "frontend_owner": "Claude (visual/UI accepted output)",
+    "backend_owner": "Codex (P01 source/evidence tooling)",
+    "required_before_cross_boundary_change": "Bobby-specific approval or explicit confirmed handoff"
+  }
+}
