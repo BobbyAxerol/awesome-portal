@@ -2691,3 +2691,46 @@ The two that did not are recorded here so the evidence outlives them:
   runs cleanly hourly and simply stops at 2026-08-14T04:23, so it was signalled
   from outside rather than crashing. A replacement,
   `binance-orderbook-expanded-1h-1`, has been running since.
+
+### 8.66 Worktree consolidation before the research loop (2026-09-19)
+
+Eighteen worktrees down to six. Disk 444 G → 302 G across the whole session,
+621 G at 49%, 319 G free. Branches were kept every time — `git worktree remove`
+retires the directory, not the history, so any of these can be checked out again.
+
+**Removed: eleven.** Nine were clean and already merged into `origin/main`
+(`ahead=0, dirty=0`): `portal-eds-current-bff`, `portal-eds10-eds11`,
+`portal-hotfix-lark-stable-v1.0.1`, `portal-self-hosted-deploy-runner`,
+`portal-stable-spa-cache`, `portal-stable-v1.0.1`, `portal-uiux-next`,
+`portal-uiux-showcase`, `portal-visual-baseline`. Two more went after their
+uncommitted content was shown to be superseded: `/tmp/pr76-fix` and
+`/tmp/portal-be-r2-7-visual-11aadc07`, plus `portal-active-source-adapters`.
+
+Three of the nine failed with `Permission denied` and needed `sudo rm -rf` —
+`portal-eds10-eds11` alone held **51,483 root-owned files**, build caches left by
+containers running as root. The loop printed a tick for them anyway because it
+did not check the exit code; the same mistake as reading a gate's status from
+the wrong command. Verified afterwards by listing the directories, not by
+trusting the loop.
+
+**"Dirty" had to be resolved per worktree, not assumed.** Uncommitted is not the
+same as unsaved:
+
+| worktree | uncommitted | verdict |
+|---|---|---|
+| `portal-active-source-adapters` | tracker, +5908 lines | **0 lines** absent from `origin/main`'s 11191-line copy — a superseded intermediate. Removed |
+| `/tmp/pr76-fix` | 36 files, +41/−1875 | a *reversal* of work already merged. Removed |
+| `portal-main-release` | 36 files staged, same −1875 | `HEAD == origin/main`, so `reset --hard` restored main exactly. Patch saved first |
+| `portal-dev` | +264/−21 in `portal-execution-edge-rs` | **real work, in no branch**. Kept |
+| `portal-prod-feature-profiles` | +130/−13 in `AGENTS.md` and a doc | **real work, in no branch**. Kept |
+
+**One file existed nowhere else.** `D4_PORTAL_SOURCE_HANDOFF.md` — 174 lines,
+sanitized, `NO_SECRET_DISCLOSED`, dated 2026-08-24 — is untracked in `portal/`
+and has **zero commits on any branch**. Had that directory been cleaned, it
+would have ceased to exist. Copied to the session scratchpad; it still deserves
+a commit.
+
+`/home/bobby/portal` turns out to be the **main checkout**, not a linked
+worktree — `git rev-parse --git-common-dir` resolves into it, so every other
+worktree depends on it and `worktree remove` cannot touch it. Worth knowing
+before the next tidy-up reaches for it.
