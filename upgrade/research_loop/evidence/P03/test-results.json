@@ -1,0 +1,51 @@
+{
+  "phase": "P03",
+  "status": "PASS_BACKEND_FOUNDATION_FRONTEND_OWNER_PHASE_PENDING",
+  "receipts": [
+    {
+      "gate": "P03-T01..T11",
+      "command": "scripts/research-loop-v11/test-p03-schema.sh",
+      "result": "PASS",
+      "tests": 11,
+      "database": "self-removing PostgreSQL 16 tmpfs cell",
+      "production_connection": false,
+      "coverage": [
+        "fresh/upgrade/repeat migration",
+        "workspace FK and repository scope denial",
+        "immutable replay/idempotency conflict",
+        "concurrent CAS autosave",
+        "Research-role Execution DML/DDL denial",
+        "pinned-evidence delete refusal",
+        "pool/admission bound and cursor-index plan",
+        "duplicate submit, ten autosaves, worker retry identity and fresh-connection persistence",
+        "nullable centroid trial",
+        "child-run/evaluation/exposure isolation",
+        "inspection non-mutation"
+      ]
+    },
+    {
+      "gate": "P02 unchanged Execution regression",
+      "command": "scripts/research-loop-v11/test-p02-compatibility.sh",
+      "result": "PASS",
+      "database": "self-removing PostgreSQL 16 tmpfs cell",
+      "production_connection": false,
+      "assertion": "P03 migration/provider/harness changes did not break the frozen P02 compatibility suite."
+    },
+    {
+      "gate": "P03 static source build",
+      "command": "apps/control-api/node_modules/.bin/tsc --noEmit -p apps/control-api/tsconfig.build.json",
+      "result": "PASS"
+    },
+    {
+      "gate": "P03 protected diff whitespace",
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "not_run_by_design": [
+    "frontend/browser build or visual acceptance: P03 adds no UI endpoint or consumer",
+    "QuantBT/Delta real computation: P04 owns actual engine evidence",
+    "scheduler/worker/source/Execution Edge/Trading System integration: P04-P06 own those boundaries",
+    "runtime Compose, deployment or production database migration"
+  ]
+}

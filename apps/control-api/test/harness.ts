@@ -7,6 +7,27 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  // P03 Research metadata is deliberately a separate schema.  Explicitly
+  // listing it keeps test cleanup bounded and makes a new relation visible to
+  // the shared harness rather than relying on an incidental CASCADE path.
+  "research.audit_log",
+  "research.command_dedup",
+  "research.release_candidates",
+  "research.inspection_states",
+  "research.exposure_facts",
+  "research.artifacts",
+  "research.evaluations",
+  "research.selection_records",
+  "research.trial_index",
+  "research.studies",
+  "research.input_bindings",
+  "research.worker_attempts",
+  "research.jobs",
+  "research.runs",
+  "research.attempts",
+  "research.import_sessions",
+  "research.alpha_versions",
+  "research.alphas",
   "governance_review_captures",
   "execution_financial_query_cursors",
   "execution_durable_mirror_conflicts",
@@ -83,6 +104,11 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_durable_gaps: boolean;
       has_durable_conflicts: boolean;
       has_financial_query_cursors: boolean;
+      has_research_schema: boolean;
+      has_research_attempts: boolean;
+      has_research_runs_cursor_index: boolean;
+      has_research_runtime_role: boolean;
+      research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
       `SELECT
@@ -127,6 +153,15 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_durable_mirror_gaps') IS NOT NULL AS has_durable_gaps,
          to_regclass('public.execution_durable_mirror_conflicts') IS NOT NULL AS has_durable_conflicts,
          to_regclass('public.execution_financial_query_cursors') IS NOT NULL AS has_financial_query_cursors,
+         EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'research') AS has_research_schema,
+         to_regclass('research.attempts') IS NOT NULL AS has_research_attempts,
+         EXISTS (
+           SELECT 1 FROM pg_indexes
+            WHERE schemaname = 'research'
+              AND indexname = 'research_runs_library_cursor_idx'
+         ) AS has_research_runs_cursor_index,
+         EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'portal_research_runtime') AS has_research_runtime_role,
+         has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
             'execution_activation_capabilities_effective_profile_check',
@@ -170,6 +205,11 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_durable_gaps ||
       !row.has_durable_conflicts ||
       !row.has_financial_query_cursors ||
+      !row.has_research_schema ||
+      !row.has_research_attempts ||
+      !row.has_research_runs_cursor_index ||
+      !row.has_research_runtime_role ||
+      row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
@@ -206,6 +246,11 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `durable_gaps=${row.has_durable_gaps}, ` +
         `durable_conflicts=${row.has_durable_conflicts}, ` +
         `financial_query_cursors=${row.has_financial_query_cursors}, ` +
+        `research_schema=${row.has_research_schema}, ` +
+        `research_attempts=${row.has_research_attempts}, ` +
+        `research_runs_cursor_index=${row.has_research_runs_cursor_index}, ` +
+        `research_runtime_role=${row.has_research_runtime_role}, ` +
+        `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );

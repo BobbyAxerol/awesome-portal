@@ -3534,15 +3534,17 @@ raw market/Parquet/logs/screenshots/cookies/generated test reports ngoài Git v�
 <a id="rl-board"></a>
 ## 13.4. Board duy nhất và trình tự bàn giao
 
-Tất cả24phase hiện **PLANNED**, implementer `UNASSIGNED_BY_BOBBY`; chưa có test/commit/receipt phase.
-Khi bắt đầu/đóng, cập nhật **row này**: implementer, state, base/head SHA, report/evidence, next/blocker.
+Mỗi phase khởi đầu ở trạng thái **PLANNED**, implementer `UNASSIGNED_BY_BOBBY`.
+Trạng thái sống, implementer và receipt chính xác nằm tại từng row dưới đây; không suy
+diễn trạng thái từ Guide. Khi bắt đầu/đóng, cập nhật **row này**: implementer, state,
+base/head SHA, report/evidence, next/blocker.
 Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detailed entries §13.5 là yêu cầu ổn định.
 
 | Phase | Dependency | Màn | Checkpoint | State / implementer / evidence |
 |---|---|---|---|---|
 | [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex + Claude source review / [P01 report](./research_loop/evidence/P01/phase-report.md); matrices verified both directions, 0 defect, 0 omission; systemic `P01-FE-01` state vocabulary + immediate S02/S11 spec gaps closed by P02 amendment; screen implementation remains with owner phase |
 | [P02](#rl-p02) | P01 | 02/11 harness | 01 | CONTRACT_AMENDMENT_COMPLETE / Codex + Claude review / [P02 packet](./research_loop/evidence/P02/phase-report.md); versioned `requested_spec` schema/types map all 24 S02 controls, S02/S11 state semantics specified; no producer/browser/runtime claim |
-| [P03](#rl-p03) | P02 | nền | 02 | PLANNED / unassigned / — |
+| [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; frontend owner-phase remains pending by design |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | PLANNED / unassigned / — |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | PLANNED / unassigned / — |
 | [P06](#rl-p06) | P03–P05 | nền/03 | 03 | PLANNED / unassigned / — |
@@ -3803,6 +3805,51 @@ rather than the historical pre-amendment receipt.
 - **Tests FE/browser:** Loading/conflict/forbidden mapping; auth-switch cache clearing; session recovery dùng flows đã có; no leaked object metadata hoặc null→0.
 - **Exit gate:** Restart giữ identity/counters; schema/index và auth constraints enforce server-side; existing account/credential/grant rows không bị migrate thay đổi.
 - **Rollback/handoff:** Additive migrations/versioned readers; không destructive down trên data thật. Bàn giao schema/ER/auth/query plans cho P04–06.
+
+#### P03 backend closeout — `BACKEND_FOUNDATION_COMPLETE`, 2026-09-19
+
+P03 delivers the durable metadata and authorization substrate without claiming
+a producer, runtime service, source integration or visible screen:
+
+- `research` is an additive schema containing alpha/version, attempt/primary
+  run, job/worker retry, input/study/trial/selection/evaluation, source
+  exposure, artifact, release-candidate, inspection and audit relations.
+  Workspace/run composite FKs prevent cross-owner evidence/relation binding;
+  nullable selected-trial is valid only for centroid/composite truth.
+- The sole writer is the internal `ResearchMetadataRepository`. Every call
+  derives scope from the existing Portal actor/workspace principal, verifies
+  `workspace_members`, starts one transaction, uses `SET LOCAL ROLE
+  portal_research_runtime`, applies local statement/lock/idle budgets and
+  records a bounded audit row. The role may read only identity/workspace rows
+  in `public`, insert `research.*`, and CAS-update only draft/inspection
+  columns; it cannot write or alter Execution.
+- Unique intent keys, immutable payload/version checks, CAS draft revisions,
+  immutable evidence triggers and a four-active/twelve-queued admission gate
+  eliminate silent LWW, duplicate logical runs, unbounded metadata contention
+  and delete cascades through pinned evidence. The global Control API pool
+  remains ten connections; P03 creates no second pool.
+- `P03-T01…T11` PASS in a self-removing PostgreSQL 16 tmpfs cell: fresh,
+  upgrade/repeat and isolated restore proof; scope/FK/IDOR denial; replay/CAS; role denial;
+  evidence protection; index-plan/pool proof; duplicate submit/autosave/worker
+  retry; nullable centroid; child/evaluation/exposure isolation; inspection
+  non-mutation. The frozen P02 compatibility regression and Control API
+  TypeScript build also PASS. See [P03 test receipt](./research_loop/evidence/P03/test-results.json).
+- `V11-P03-GX` is satisfied by the static/protected-diff receipt.
+  `V11-P03-DR` remains correctly `NOT_RUN_BY_DESIGN` (P04 actual engine
+  evidence), and `V11-P03-BR` is `PENDING_OWNER_PHASE` because P03 exposes no
+  browser route. They are phase-owned future gates, not P03 debt.
+- P03's frontend handoff is explicit at
+  [frontend-handoff-claude.md](./research_loop/evidence/P03/frontend-handoff-claude.md).
+  Claude must retain the approved HIFI and P01/P02 state semantics; no frontend
+  file was changed by this backend slice.
+- C4 closeout recorded a self-cleaning tmpfs test cell and 51% filesystem-free
+  snapshot. No phase resource remained; broad Docker/image cleanup is not
+  allowed in this phase. See [resource cleanup](./research_loop/evidence/P03/resource-cleanup.json).
+
+Rollback remains reader/image rollback only; the additive migration is not
+destructively reversed after metadata can exist. Full schema/role/ER detail,
+rollback and zero in-scope debt are in the
+[P03 evidence packet](./research_loop/evidence/P03/README.md).
 
 <a id="rl-p04"></a>
 ### P04 — QuantBT 1.1.1 adapter và resource baseline

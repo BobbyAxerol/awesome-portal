@@ -105,6 +105,7 @@ import { PortalDerivationsController } from "./execution/portal-derivations.cont
 import { PortalDerivationsService } from "./execution/portal-derivations.service";
 import { OperationalCompositionController } from "./execution/operational-composition.controller";
 import { OperationalCompositionService } from "./execution/operational-composition.service";
+import { ResearchMetadataRepository } from "./research/repository";
 
 @Module({})
 export class AppModule {
@@ -195,6 +196,10 @@ export class AppModule {
           inject: [CONTROL_API_CONFIG, CONTROL_API_POOL, AuthService],
         },
         WorkspacesRepository,
+        // P03 is an internal, transaction-scoped metadata boundary.  It
+        // mounts no new HTTP route or worker; later Research phases opt into
+        // it deliberately rather than gaining accidental authority.
+        ResearchMetadataRepository,
         RunsRepository,
         OutboxRepository,
         ProductAuditRepository,

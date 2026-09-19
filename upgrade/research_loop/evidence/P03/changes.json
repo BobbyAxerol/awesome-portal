@@ -1,0 +1,31 @@
+{
+  "phase": "P03",
+  "change_class": "additive_research_metadata_schema_and_internal_repository",
+  "execution_contract_change": false,
+  "execution_runtime_change": false,
+  "execution_database_change": false,
+  "production_deploy_change": false,
+  "frontend_runtime_change": false,
+  "files": [
+    "apps/control-api/migrations/1723680000037_research-schema-foundation.sql",
+    "apps/control-api/src/research/contracts.ts",
+    "apps/control-api/src/research/repository.ts",
+    "apps/control-api/src/app.module.ts",
+    "apps/control-api/test/harness.ts",
+    "scripts/research-loop-v11/p03-schema.spec.ts",
+    "scripts/research-loop-v11/vitest.p03.config.mts",
+    "scripts/research-loop-v11/test-p03-postgres.sh",
+    "scripts/research-loop-v11/test-p03-schema.sh",
+    "upgrade/research_loop/evidence/P03/*",
+    "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
+  ],
+  "non_changes": [
+    "apps/portal UI/UX source and accepted Claude composition",
+    "apps/portal/strategy/main.py and protected QuantBT surface",
+    "existing Execution tables, contracts, routes, workers and feature flags",
+    "Execution Edge, Source Proxy, Trading System, broker, Redis and CLI",
+    "runtime Compose/deployment inputs, production database and user credentials"
+  ],
+  "authorization_model": "existing Portal session -> existing workspace_members check -> SET LOCAL ROLE portal_research_runtime -> research schema only",
+  "rollback_model": "reader/image rollback; migration down is intentionally non-destructive because metadata/audit lineage may already be referenced"
+}
