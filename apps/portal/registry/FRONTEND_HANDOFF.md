@@ -2734,3 +2734,53 @@ a commit.
 worktree — `git rev-parse --git-common-dir` resolves into it, so every other
 worktree depends on it and `worktree remove` cannot touch it. Worth knowing
 before the next tidy-up reaches for it.
+
+**Incident during the consolidation: a removed worktree held a production path.**
+`portal-stable-v1.0.1` looked safe by every test applied — merged, clean, no
+container using its *branch*. It was not. `/srv/portal/.env.production:36` sets
+
+```
+CONTROL_API_SECRETS_DIR='/home/bobby/portal-stable-v1.0.1/runtime/control-api-secrets'
+```
+
+and `compose.production.stable-runtime.yaml` binds it read-only at
+`/run/secrets/control-api` for `control-api` and `control-api-migrate`. Removing
+the worktree deleted it. `/runtime/` is gitignored, and `git worktree remove`
+deletes ignored files too — so a directory production depends on went out with a
+tree that `git status` called clean.
+
+Production never dropped: the running mount holds the original inode, so
+`:18081` answered `200` throughout and the containers stayed `Up 14 hours
+(healthy)`. The damage was deferred to the next restart, where
+`${CONTROL_API_SECRETS_DIR:?}` would have refused to start the stack.
+
+**No secret material was lost**, on three independent checks. The removal ran as
+`bobby` without `sudo` and did *not* fail — unlike three other worktrees that
+stopped with `Permission denied` — and compose calls this "the root-owned
+Control API secret directory", so root-owned key files could not have been
+deleted by it. Its two consumers, `QUERY_CURSOR_KEYS_FILE` and
+`GOVERNANCE_APPLY_KEYS_FILE`, are empty in every env file on the host. The mount
+is `read_only: true`.
+
+Restored `root:portal-runtime 750` to match the sibling secret directory
+`/srv/primus/portal/control-api`, which is where the live edge CA, client cert
+and delegation key actually live and which was never touched.
+`docker compose config` over the deployed release now exits **0** with the mount
+resolving to the restored path.
+
+Swept for the same class of breakage afterwards: no container binds any other
+removed directory, and the one file in the repo that names these paths,
+`scripts/test_prepare_stable_release_takeover.py`, uses them as literals inside a
+synthetic `docker inspect` payload — its gate still passes 9/9.
+
+**The check that should have run first**, before any removal, is a bind-mount and
+env sweep rather than a git-cleanliness test:
+
+```bash
+for c in $(sudo docker ps -aq); do sudo docker inspect $c \
+  --format '{{range .Mounts}}{{if eq .Type "bind"}}{{.Source}}{{"\n"}}{{end}}{{end}}'; done | sort -u | grep /home/bobby
+sudo grep -rn '/home/bobby/portal' /srv/portal/*.env
+```
+
+Clean and merged describes the tracked tree. It says nothing about what the host
+mounts out of the untracked half.
