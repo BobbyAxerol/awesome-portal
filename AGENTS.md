@@ -181,6 +181,32 @@ Rules for these agents:
   credentials or owner-owned implementation must fail closed and be reported
   once, not rediscovered phase by phase.
 
+## Self-hosted runner and resource hygiene (required for every phase)
+
+- Before closing any phase, follow the per-phase cleanup decision in
+  `docs/production-feature-profile-and-cleanup.md` C4: execute the phase's
+  bounded teardown, take a read-only capacity snapshot, and record either
+  `NO_ACTION_NEEDED` or one named follow-up with retention/ownership proof.
+  Passing tests alone is not a resource-clean closeout.
+- Treat `portal-deploy-sgp1` as deploy-only: it remains non-root, without the
+  Docker socket/group and without a public listener.  Do not turn it into a
+  build worker, an unrestricted shell host or a Docker garbage collector.
+- Every workflow/phase which creates SSH keys, archives, test stacks, release
+  staging or temporary evidence must clean only its exact documented paths in
+  an `always()`/trap path.  Shred transient private key material.  Do not use
+  broad `rm -rf`, `git clean`, `docker system prune -a`, `docker volume prune`,
+  or unqualified image pruning as a convenience cleanup.
+- Never prune images, BuildKit cache, containers, volumes, release bundles,
+  backups or database rows while a build, signed deployment, migration,
+  backup, restore drill or evidence collection is active.  Inventory first and
+  protect active images, current/previous rollback releases and all mounted
+  volumes.  Run destructive cache cleanup only in its own quiet maintenance
+  action with before/after evidence.
+- At less than 20% root filesystem free, do not begin a disk-intensive local
+  build or release without a documented capacity decision.  Prefer bounded
+  TTL cleanup of recomputable application cache rows over deleting data,
+  backups or volumes.  `VACUUM FULL` is never routine cleanup.
+
 ## Execution Manager N18–N29 campaign rules
 
 - Use the single campaign branch `feat/execution-manager-campaign` for every

@@ -2571,3 +2571,216 @@ One trap worth naming: `git rev-parse v1.1.0` returns the **tag object**
 and `diff` peel the tag for you, so the counts were right while the SHA quoted
 in the first report was not. Use `v1.1.0^{commit}` whenever the SHA itself is
 the thing being reported.
+
+### 8.65 Host hygiene audit — what the box is actually holding (2026-09-19)
+
+Asked whether the cleanup had been effective. Measured rather than assumed, and
+the honest answer is **no: the Docker-level cleanup was never run.** The cache
+sweep done on 2026-09-18 fixed a different thing — the shared-read cache inside
+the production database — and that one did work, visibly.
+
+**Disk:** 444 G used of 621 G (72%), 178 G free. `/var/lib/docker` is 206 G of it.
+
+| pool | total | reclaimable | note |
+|---|---|---|---|
+| anonymous volumes | 429 orphans | **88.9 G** | 0 links, none newer than 2026-09-13 |
+| images | 284 / 48.2 G | **29.6 G** | only 32 are referenced by a container |
+| build cache | 48.8 G | **4.5 G** | the rest is live layer cache |
+| stopped containers | 17 | 0.4 M | negligible, but they pin images |
+| named volumes, unused | 12 | 7.9 G | cargo/node_modules/preview caches |
+
+**The orphans are historical, not from recent gates.** Creation dates run
+2026-08-22 to 2026-09-13 and stop there: zero were created on the 18th or 19th,
+across a day of `control-api-test.sh`, the visual gate and three CI cycles. The
+current gates dispose of their own volumes; this is a backlog, not a leak still
+running.
+
+**What must not be pruned blindly.** `docker image prune -a` would delete every
+`ghcr.io/bobbyaxerol/*` image no container currently references — which is the
+rollback path to `v1.1.0`. It would also reach the 16
+`primus-historical-market-data` images, which belong to a system outside this
+repository's scope. Any prune has to be filtered, not blanket.
+
+**Evidence the sweeper worked**, from the production backup directory:
+
+| backup | size |
+|---|---|
+| `20260915T073909Z-sha-e0c4d1c4` | 18 G |
+| `20260918T092447Z-sha-efa2e185` | 26 G |
+| `20260918T162151Z-sha-e4fd9365` (v1.1.1) | **627 M** |
+
+Same database, same bounded `pg_dump`, two hours apart. The 26 G → 627 M drop is
+the unswept shared-read cache no longer being dumped, which is what had been
+pushing the backup past its 60-minute bound.
+
+Retention is now three backups, 44 G, of which the two pre-sweeper ones account
+for all but 627 M. Whether to keep both is the owner's call, not an agent's.
+
+**Executed 2026-09-19, owner approved A–E.** 108 GB returned; the box went from
+72% of 621 G to 55%, and `/var/lib/docker` from 206 G to 114 G.
+
+| pool | before | after |
+|---|---|---|
+| volumes | 457 / 201.6 G / 98.9 G reclaimable | **16 / 102.7 G / 0 B** |
+| images | 271 / 48.2 G | 149 / 35.1 G |
+| build cache | 48.8 G | 43.8 G |
+| containers | 55 | 48 |
+
+Order mattered: stopped containers first, because they pin images, then volumes,
+then images, then build cache — pruning the cache last reclaimed 5.0 G rather
+than the 4.5 G measured before the images went.
+
+**Two rules kept the safe things safe.** Images were removed by ID with plain
+`docker rmi`, no `-f`, so anything still referenced was refused rather than
+forced; eight refusals turned out to be single images carrying two tags each,
+and were only forced after checking that *every* tag on them was `local/portal-*`
+— an image sharing a `ghcr.io` tag would have taken the rollback path with it.
+All 67 `ghcr.io/bobbyaxerol` images survive, including the four digests
+production is running. The 16 `primus-historical-market-data` images and their
+ten stopped containers were left alone as outside this repository's scope.
+
+A filter, not a blanket prune, did the volumes: `--filter
+label=com.docker.volume.anonymous` took the 429 orphans and could not reach a
+named one. `docker system df` now reports **0 B reclaimable** for volumes and
+build cache; the 24.8 G still listed against images is the deliberate rollback
+set.
+
+Verified after, not assumed: all three stacks 8/8 up, `127.0.0.1:18081` and
+`127.0.0.1:8080` both answering `200`.
+
+**F — what the 44 G of backups actually are.** Not sweeper output: they are
+pre-deploy dumps of the production database, `portal-control.dump` plus
+`roadmap-task-board.db`, named by timestamp and the commit being deployed. They
+are the restore path if a migration goes wrong, so they are not unrelated
+clutter and were not touched. No retention policy exists in the repo or in
+`/srv/portal/scripts`; the directory is bounded only by hand.
+
+**Backup F, resolved the same day.** With the nature of those dumps established,
+the owner kept the 2026-09-15 one and released
+`20260918T092447Z-sha-efa2e185` (26 G). It was taken at 09:24 and superseded
+seven hours later by the 16:21 dump of the same database, so the only thing lost
+is a restore point seven hours earlier on a day production stayed healthy. The
+15/09 dump stays as the sole pre-18/09 restore point. Running total returned:
+**133 G** — the box sits at 311 G of 621 G (51%), from 444 G.
+
+**Correction on `primus-historical-market-data`.** Those ten stopped containers
+were reported as pinning "~14 G". That was wrong: it summed nominal image sizes
+that share base layers, so it counted the same bytes repeatedly. The real
+picture, measured:
+
+- Seven images are referenced only by the stopped containers (~890 MB nominal
+  each, heavily shared) — realistically 2–5 G once layer sharing is accounted for.
+- Two, `collector-live-0b15d2d` and `phase-g-7bc78fe53718`, are **also used by
+  running collectors** and cannot be freed at all.
+- Separately, six primus images are referenced by **no container whatsoever**
+  and need no container removed to go.
+
+**Removing them cannot reach the historical data.** Every primus container binds
+the host directly — `/srv/primus/historical-market-data/{storage,state,logs,
+releases}`, 3.6 G of storage — and none owns a Docker volume. That also settles
+a question the volume prune raised in passing: their data was never inside
+Docker, so nothing in this cleanup could have touched it.
+
+What removal does cost is each container's logs and exit code. Eight exited 0.
+The two that did not are recorded here so the evidence outlives them:
+
+- `phase-e-binance-daily-matrix-1`, exit 1 — not infrastructure, a data audit
+  refusing to pass: `Binance daily matrix audit failed: SYRUPUSDT has no
+  complete OHLC history`. The rerun, `...-matrix-2`, exited 0.
+- `binance-orderbook-snapshot-1h-1`, exit 137 with `OOMKilled=false` — the log
+  runs cleanly hourly and simply stops at 2026-08-14T04:23, so it was signalled
+  from outside rather than crashing. A replacement,
+  `binance-orderbook-expanded-1h-1`, has been running since.
+
+### 8.66 Worktree consolidation before the research loop (2026-09-19)
+
+Eighteen worktrees down to six. Disk 444 G → 302 G across the whole session,
+621 G at 49%, 319 G free. Branches were kept every time — `git worktree remove`
+retires the directory, not the history, so any of these can be checked out again.
+
+**Removed: eleven.** Nine were clean and already merged into `origin/main`
+(`ahead=0, dirty=0`): `portal-eds-current-bff`, `portal-eds10-eds11`,
+`portal-hotfix-lark-stable-v1.0.1`, `portal-self-hosted-deploy-runner`,
+`portal-stable-spa-cache`, `portal-stable-v1.0.1`, `portal-uiux-next`,
+`portal-uiux-showcase`, `portal-visual-baseline`. Two more went after their
+uncommitted content was shown to be superseded: `/tmp/pr76-fix` and
+`/tmp/portal-be-r2-7-visual-11aadc07`, plus `portal-active-source-adapters`.
+
+Three of the nine failed with `Permission denied` and needed `sudo rm -rf` —
+`portal-eds10-eds11` alone held **51,483 root-owned files**, build caches left by
+containers running as root. The loop printed a tick for them anyway because it
+did not check the exit code; the same mistake as reading a gate's status from
+the wrong command. Verified afterwards by listing the directories, not by
+trusting the loop.
+
+**"Dirty" had to be resolved per worktree, not assumed.** Uncommitted is not the
+same as unsaved:
+
+| worktree | uncommitted | verdict |
+|---|---|---|
+| `portal-active-source-adapters` | tracker, +5908 lines | **0 lines** absent from `origin/main`'s 11191-line copy — a superseded intermediate. Removed |
+| `/tmp/pr76-fix` | 36 files, +41/−1875 | a *reversal* of work already merged. Removed |
+| `portal-main-release` | 36 files staged, same −1875 | `HEAD == origin/main`, so `reset --hard` restored main exactly. Patch saved first |
+| `portal-dev` | +264/−21 in `portal-execution-edge-rs` | **real work, in no branch**. Kept |
+| `portal-prod-feature-profiles` | +130/−13 in `AGENTS.md` and a doc | **real work, in no branch**. Kept |
+
+**One file existed nowhere else.** `D4_PORTAL_SOURCE_HANDOFF.md` — 174 lines,
+sanitized, `NO_SECRET_DISCLOSED`, dated 2026-08-24 — is untracked in `portal/`
+and has **zero commits on any branch**. Had that directory been cleaned, it
+would have ceased to exist. Copied to the session scratchpad; it still deserves
+a commit.
+
+`/home/bobby/portal` turns out to be the **main checkout**, not a linked
+worktree — `git rev-parse --git-common-dir` resolves into it, so every other
+worktree depends on it and `worktree remove` cannot touch it. Worth knowing
+before the next tidy-up reaches for it.
+
+**Incident during the consolidation: a removed worktree held a production path.**
+`portal-stable-v1.0.1` looked safe by every test applied — merged, clean, no
+container using its *branch*. It was not. `/srv/portal/.env.production:36` sets
+
+```
+CONTROL_API_SECRETS_DIR='/home/bobby/portal-stable-v1.0.1/runtime/control-api-secrets'
+```
+
+and `compose.production.stable-runtime.yaml` binds it read-only at
+`/run/secrets/control-api` for `control-api` and `control-api-migrate`. Removing
+the worktree deleted it. `/runtime/` is gitignored, and `git worktree remove`
+deletes ignored files too — so a directory production depends on went out with a
+tree that `git status` called clean.
+
+Production never dropped: the running mount holds the original inode, so
+`:18081` answered `200` throughout and the containers stayed `Up 14 hours
+(healthy)`. The damage was deferred to the next restart, where
+`${CONTROL_API_SECRETS_DIR:?}` would have refused to start the stack.
+
+**No secret material was lost**, on three independent checks. The removal ran as
+`bobby` without `sudo` and did *not* fail — unlike three other worktrees that
+stopped with `Permission denied` — and compose calls this "the root-owned
+Control API secret directory", so root-owned key files could not have been
+deleted by it. Its two consumers, `QUERY_CURSOR_KEYS_FILE` and
+`GOVERNANCE_APPLY_KEYS_FILE`, are empty in every env file on the host. The mount
+is `read_only: true`.
+
+Restored `root:portal-runtime 750` to match the sibling secret directory
+`/srv/primus/portal/control-api`, which is where the live edge CA, client cert
+and delegation key actually live and which was never touched.
+`docker compose config` over the deployed release now exits **0** with the mount
+resolving to the restored path.
+
+Swept for the same class of breakage afterwards: no container binds any other
+removed directory, and the one file in the repo that names these paths,
+`scripts/test_prepare_stable_release_takeover.py`, uses them as literals inside a
+synthetic `docker inspect` payload — its gate still passes 9/9.
+
+**The check that should have run first**, before any removal, is a bind-mount and
+env sweep rather than a git-cleanliness test:
+
+```bash
+for c in $(sudo docker ps -aq); do sudo docker inspect $c \
+  --format '{{range .Mounts}}{{if eq .Type "bind"}}{{.Source}}{{"\n"}}{{end}}{{end}}'; done | sort -u | grep /home/bobby
+sudo grep -rn '/home/bobby/portal' /srv/portal/*.env
+```
+
+Clean and merged describes the tracked tree. It says nothing about what the host
+mounts out of the untracked half.
