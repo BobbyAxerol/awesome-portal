@@ -49,6 +49,13 @@ const EnvSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().min(16).optional(),
   ),
+  // P07 source custody remains in Control API PostgreSQL; the Python service
+  // is a short-lived private AST analyser only.  These limits bound that
+  // adapter path without adding a worker, runtime container or browser-held
+  // source credential.
+  RESEARCH_ALPHA_IMPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(10 * 60),
+  RESEARCH_ALPHA_IMPORT_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
+  RESEARCH_ALPHA_IMPORT_MAXIMUM_ACTIVE_SOURCES_PER_ACTOR: z.coerce.number().int().min(1).max(32).default(8),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),

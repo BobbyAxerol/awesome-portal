@@ -107,6 +107,9 @@ import { OperationalCompositionController } from "./execution/operational-compos
 import { OperationalCompositionService } from "./execution/operational-composition.service";
 import { ResearchMetadataRepository } from "./research/repository";
 import { ResearchSchedulerOutboxService } from "./research/scheduler-outbox.service";
+import { ResearchAlphaImportController } from "./research/alpha-import.controller";
+import { ResearchAlphaImportService } from "./research/alpha-import.service";
+import { ResearchAlphaAnalysisClient } from "./research/alpha-analysis.client";
 
 @Module({})
 export class AppModule {
@@ -153,6 +156,7 @@ export class AppModule {
         OperationalCompositionController,
         ExecutionFinancialChartController,
         ExecutionMarketCandlesController,
+        ResearchAlphaImportController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -201,6 +205,8 @@ export class AppModule {
         // mounts no new HTTP route or worker; later Research phases opt into
         // it deliberately rather than gaining accidental authority.
         ResearchMetadataRepository,
+        ResearchAlphaAnalysisClient,
+        ResearchAlphaImportService,
         // P06 owns only transactional outbox ordering. It does not connect to
         // NATS, schedule a child or mount a route at bootstrap; P10 supplies
         // the named producer and deployment-bound transport adapter.

@@ -31,8 +31,12 @@ export const TEST_TABLES = [
   "research.jobs",
   "research.runs",
   "research.attempts",
+  // P07 source custody is explicitly listed: tests must never leave source
+  // bytes or immutable digest claims behind in a shared database cell.
   "research.import_sessions",
+  "research.alpha_digest_claims",
   "research.alpha_versions",
+  "research.import_sources",
   "research.alphas",
   "governance_review_captures",
   "execution_financial_query_cursors",
@@ -118,6 +122,10 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_artifact_references: boolean;
       has_research_artifact_ingest_batches: boolean;
       has_research_artifact_transition_guard: boolean;
+      has_research_import_sources: boolean;
+      has_research_alpha_digest_claims: boolean;
+      has_research_import_source_guard: boolean;
+      has_research_alpha_source_reference: boolean;
       research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
@@ -177,8 +185,21 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          EXISTS (
            SELECT 1 FROM pg_trigger
             WHERE tgname = 'research_artifacts_p05_transition_guard'
-              AND NOT tgisinternal
+             AND NOT tgisinternal
          ) AS has_research_artifact_transition_guard,
+         to_regclass('research.import_sources') IS NOT NULL AS has_research_import_sources,
+         to_regclass('research.alpha_digest_claims') IS NOT NULL AS has_research_alpha_digest_claims,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_import_sources_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_import_source_guard,
+         EXISTS (
+           SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'research'
+              AND table_name = 'alpha_versions'
+              AND column_name = 'source_file_ref'
+         ) AS has_research_alpha_source_reference,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
@@ -231,6 +252,10 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_artifact_references ||
       !row.has_research_artifact_ingest_batches ||
       !row.has_research_artifact_transition_guard ||
+      !row.has_research_import_sources ||
+      !row.has_research_alpha_digest_claims ||
+      !row.has_research_import_source_guard ||
+      !row.has_research_alpha_source_reference ||
       row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
@@ -276,6 +301,10 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_artifact_references=${row.has_research_artifact_references}, ` +
         `research_artifact_ingest_batches=${row.has_research_artifact_ingest_batches}, ` +
         `research_artifact_transition_guard=${row.has_research_artifact_transition_guard}, ` +
+        `research_import_sources=${row.has_research_import_sources}, ` +
+        `research_alpha_digest_claims=${row.has_research_alpha_digest_claims}, ` +
+        `research_import_source_guard=${row.has_research_import_source_guard}, ` +
+        `research_alpha_source_reference=${row.has_research_alpha_source_reference}, ` +
         `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,

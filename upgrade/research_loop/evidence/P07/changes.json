@@ -1,0 +1,18 @@
+{
+  "phase": "P07",
+  "status": "BACKEND_COMPLETE_FE_HANDOFF_PENDING",
+  "authority_changes": [
+    "1723680000040_research-alpha-import-v1.sql adds immutable temporary import-source custody, parser-bound receipts, source-file provenance on AlphaVersion and workspace-local digest claims.",
+    "ResearchAlphaImportService and ResearchMetadataRepository own bounded parse/gate/register/activate/list flows, expiry cleanup and activation CAS.",
+    "ResearchAlphaAnalysisClient calls only the fixed private Portal API AST analyser with a short-lived signed principal and strict response/timeout bounds.",
+    "research_alpha_analyzer.py performs bounded AST/literal analysis and restricted-definition loading without importing or calling submitted strategy code.",
+    "P07 routes are same-origin Control API routes; the Portal API analyser route is private and excluded from public API schema."
+  ],
+  "explicit_non_changes": [
+    "No modification to apps/portal/strategy/main.py or another protected QuantBT kernel file.",
+    "No React/TSX, HIFI, shared shell or frontend acceptance change.",
+    "No worker, NATS, Redis, broker, CLI, Trading System, Execution Edge or direct browser database path.",
+    "No runtime container start, deploy, production flag, shared-database migration or release action.",
+    "No generic plugin installer, zip/multifile source import, arbitrary source execution or runtime causality claim."
+  ]
+}

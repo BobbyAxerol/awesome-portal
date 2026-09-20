@@ -2229,3 +2229,24 @@ immutable cache policy, and makes either missing asset path return `404` with
 must validate these headers through the loopback TLS proxy before a signed web
 image is promoted; it does not require a database migration or a change to any
 execution/data/command authority.
+
+### 14.1.11 Research Loop P07 Alpha import authority (2026-09-20)
+
+P07 is **backend complete, frontend handoff pending**. It adds an additive
+Research-only import path: one bounded `.py` source becomes a server-owned
+opaque temporary reference, is structurally analysed by a private
+Control-API-to-Portal-API HMAC boundary, passes seven ordered gates, then may
+be registered as an immutable `DRAFT` AlphaVersion and activated by an ADMIN
+compare-and-swap. Source bytes, entrypoint, declared contract, analysis
+digest and gate receipt are bound together; source updates must parse and gate
+again. The analyser never imports, instantiates or calls submitted strategy
+code, and its static scan expressly does not claim runtime causality.
+
+The implementation changes no protected QuantBT source, execution path,
+Trading System connector, browser direct API, worker runtime, deployment or
+existing durable run binding. Expired unbound source custody is bounded and
+actor-scoped; referenced provenance is retained. The evidence packet at
+`upgrade/research_loop/evidence/P07/` records fresh-PostgreSQL T01–T12/DR,
+Python parser/HMAC tests, build and Compose-render receipts. Screen 14 still
+requires its owned frontend/browser acceptance before P07 may be promoted
+beyond `BACKEND_COMPLETE_FE_HANDOFF_PENDING`.

@@ -15,6 +15,13 @@ import {
   type ResearchArtifactSealInput,
   type ResearchArtifactTrialBatchInput,
   type ResearchAlphaVersionInput,
+  type ResearchAlphaActivation,
+  type ResearchAlphaImportGateReceiptInput,
+  type ResearchAlphaImportRegistration,
+  type ResearchAlphaImportRegistrationInput,
+  type ResearchAlphaImportSourceInput,
+  type ResearchAlphaImportSourceRecord,
+  type ResearchAlphaRegistryRecord,
   type ResearchAttemptInput,
   type ResearchAttemptRecord,
   type ResearchDurableJobClaim,
@@ -51,6 +58,44 @@ interface ExistingAlphaVersionRow {
   entrypoint: string;
   dependency_ref: string;
   matches_declared_contract: boolean;
+}
+
+interface AlphaImportSourceRow {
+  source_file_ref: string;
+  original_filename: string;
+  source_bytes: Buffer;
+  source_digest: string;
+  analysis_digest: string;
+  declared_contract: Record<string, unknown> | string;
+  parsed_mirror: Array<Record<string, unknown>> | string;
+  expires_at: Date;
+}
+
+interface AlphaImportAlphaRow {
+  active_version_id: string | null;
+  revision: string | number;
+}
+
+interface AlphaImportVersionRow {
+  alpha_id: string;
+  alpha_version_id: string;
+  source_file_ref: string | null;
+  code_digest: string;
+  entrypoint: string;
+  dependency_ref: string;
+  lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
+  matches_declared_contract: boolean;
+}
+
+interface AlphaImportRegistryRow {
+  alpha_id: string;
+  alpha_version_id: string;
+  version_label: string;
+  lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
+  entrypoint: string;
+  source_digest_prefix: string;
+  alpha_revision: string | number;
+  registered_at: Date;
 }
 
 interface RunRow {
@@ -184,6 +229,44 @@ function requireBoundedObject(value: Record<string, unknown>, label: string, max
       400,
     );
   }
+}
+
+function requireAlphaImportFilename(value: string): void {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}[.]py$/.test(value)) {
+    throw new ResearchMetadataError(
+      "RESEARCH_INVALID_INPUT",
+      "Alpha import requires one bounded .py filename.",
+      400,
+    );
+  }
+}
+
+function requireAlphaId(value: string): void {
+  if (!/^[a-z][a-z0-9-]{2,63}$/.test(value)) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Alpha ID is invalid.", 400);
+  }
+}
+
+function requireAlphaLifecycle(value: string): asserts value is AlphaImportVersionRow["lifecycle_state"] {
+  if (!(["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] as const).includes(value as AlphaImportVersionRow["lifecycle_state"])) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Alpha lifecycle value is invalid.", 400);
+  }
+}
+
+function decodeObject(value: Record<string, unknown> | string, label: string): Record<string, unknown> {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", `${label} has an invalid database shape.`, 409);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function decodeMirror(value: Array<Record<string, unknown>> | string): readonly Record<string, unknown>[] {
+  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  if (!Array.isArray(parsed)) {
+    throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Alpha import mirror has an invalid database shape.", 409);
+  }
+  return parsed as readonly Record<string, unknown>[];
 }
 
 function digestJson(value: Record<string, unknown>): string {
@@ -359,6 +442,557 @@ export class ResearchMetadataRepository {
         code_digest: input.codeDigest,
       });
       return { alphaId: input.alphaId, alphaVersionId: input.alphaVersionId, replayed: false };
+    });
+  }
+
+  /**
+   * P07: persist one browser-submitted source file behind an opaque, actor
+   * scoped temporary reference.  The database receives exact bytes only after
+   * the private Python adapter has returned a bounded AST mirror; no raw path
+   * or source bytes ever become part of the browser DTO surface.
+   */
+  async storeAlphaImportSource(
+    scope: ResearchScope,
+    input: ResearchAlphaImportSourceInput,
+  ): Promise<ResearchAlphaImportSourceRecord> {
+    this.assertScope(scope);
+    requireOpaqueId(input.sourceFileRef, "sourceFileRef");
+    requireAlphaImportFilename(input.originalFilename);
+    if (!Buffer.isBuffer(input.sourceBytes) || input.sourceBytes.byteLength < 1 ||
+        input.sourceBytes.byteLength > RESEARCH_DB_BUDGET.maxAlphaImportSourceBytes) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Alpha source bytes exceed the bounded import contract.", 400);
+    }
+    requireDigest(input.sourceDigest, "sourceDigest");
+    requireDigest(input.analysisDigest, "analysisDigest");
+    requireBoundedObject(input.declaredContract, "declared alpha contract", RESEARCH_DB_BUDGET.maxConfigJsonBytes);
+    const mirror = [...input.parsedMirror];
+    if (Buffer.byteLength(JSON.stringify(mirror), "utf8") > RESEARCH_DB_BUDGET.maxAlphaImportMirrorBytes) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Alpha import mirror exceeds its bounded contract.", 400);
+    }
+    requireFiniteDate(input.expiresAt, "source expiry");
+    if (input.expiresAt.getTime() <= Date.now()) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Alpha source expiry must be in the future.", 400);
+    }
+    requirePositiveSafeInteger(
+      input.maximumActiveSources,
+      "maximumActiveSources",
+      RESEARCH_DB_BUDGET.maxAlphaImportActiveSourcesPerActor,
+    );
+
+    return this.withScopedWrite(scope, async (client) => {
+      const active = await client.query<{ count: string | number }>(
+        `SELECT count(*) AS count
+           FROM research.import_sources source
+          WHERE source.workspace_id = $1
+            AND source.actor_user_id = $2
+            AND source.expires_at > now()
+            AND NOT EXISTS (
+              SELECT 1 FROM research.alpha_versions version
+               WHERE version.workspace_id = source.workspace_id
+                 AND version.source_file_ref = source.source_file_ref
+            )`,
+        [scope.workspaceId, scope.actorUserId],
+      );
+      if (asNumber(active.rows[0]?.count ?? 0) >= input.maximumActiveSources) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ADMISSION_SATURATED",
+          "Too many active unregistered Alpha import sources exist for this actor; wait for expiry or register one.",
+          503,
+        );
+      }
+      await client.query(
+        `INSERT INTO research.import_sources
+           (workspace_id, source_file_ref, actor_user_id, original_filename,
+            source_bytes, source_digest, source_schema_version, analysis_digest,
+            declared_contract, parsed_mirror, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 'research.alpha-source.v1', $7,
+                 $8::jsonb, $9::jsonb, $10)`,
+        [
+          scope.workspaceId,
+          input.sourceFileRef,
+          scope.actorUserId,
+          input.originalFilename,
+          input.sourceBytes,
+          input.sourceDigest,
+          input.analysisDigest,
+          JSON.stringify(input.declaredContract),
+          JSON.stringify(mirror),
+          input.expiresAt,
+        ],
+      );
+      await this.audit(client, scope, "ALPHA_IMPORT_SOURCE_PARSED", "alpha_import_source", input.sourceFileRef, {
+        source_digest: input.sourceDigest,
+        analysis_digest: input.analysisDigest,
+        expires_at: input.expiresAt.toISOString(),
+      });
+      return {
+        sourceFileRef: input.sourceFileRef,
+        originalFilename: input.originalFilename,
+        sourceBytes: Buffer.from(input.sourceBytes),
+        sourceDigest: input.sourceDigest,
+        analysisDigest: input.analysisDigest,
+        declaredContract: input.declaredContract,
+        parsedMirror: mirror,
+        expiresAt: input.expiresAt,
+      };
+    });
+  }
+
+  /** Read exact P07 source bytes only for the actor that created the opaque ref. */
+  async loadAlphaImportSource(scope: ResearchScope, sourceFileRef: string): Promise<ResearchAlphaImportSourceRecord> {
+    this.assertScope(scope);
+    requireOpaqueId(sourceFileRef, "sourceFileRef");
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<AlphaImportSourceRow>(
+        `SELECT source_file_ref, original_filename, source_bytes, source_digest,
+                analysis_digest, declared_contract, parsed_mirror, expires_at
+           FROM research.import_sources
+          WHERE workspace_id = $1
+            AND source_file_ref = $2
+            AND actor_user_id = $3`,
+        [scope.workspaceId, sourceFileRef, scope.actorUserId],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        // Do not reveal whether a different user in this workspace owns the
+        // ref.  Cross-user and cross-workspace use both look identical.
+        throw new ResearchMetadataError("RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND", "Alpha import source was not found.", 404);
+      }
+      if (row.expires_at.getTime() <= Date.now()) {
+        throw new ResearchMetadataError("RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED", "Alpha import source has expired; parse the file again.", 409);
+      }
+      return {
+        sourceFileRef: row.source_file_ref,
+        originalFilename: row.original_filename,
+        sourceBytes: Buffer.from(row.source_bytes),
+        sourceDigest: row.source_digest,
+        analysisDigest: row.analysis_digest,
+        declaredContract: decodeObject(row.declared_contract, "Alpha source contract"),
+        parsedMirror: decodeMirror(row.parsed_mirror),
+        expiresAt: row.expires_at,
+      };
+    });
+  }
+
+  /** Persist one bounded seven-gate receipt tied to exact source+analysis bytes. */
+  async recordAlphaImportGates(
+    scope: ResearchScope,
+    input: ResearchAlphaImportGateReceiptInput,
+  ): Promise<void> {
+    this.assertScope(scope);
+    requireOpaqueId(input.importSessionId, "importSessionId");
+    requireOpaqueId(input.sourceFileRef, "sourceFileRef");
+    requireDigest(input.sourceDigest, "sourceDigest");
+    requireDigest(input.sourceAnalysisDigest, "sourceAnalysisDigest");
+    requireBoundedObject(input.gateResults, "alpha import gates", RESEARCH_DB_BUDGET.maxAlphaImportMirrorBytes);
+    requireFiniteDate(input.expiresAt, "gate receipt expiry");
+
+    await this.withScopedWrite(scope, async (client) => {
+      const source = await this.assertLiveOwnedAlphaImportSource(client, scope, input.sourceFileRef);
+      if (source.source_digest !== input.sourceDigest || source.analysis_digest !== input.sourceAnalysisDigest) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED",
+          "The source or analysis changed; run the seven gates again.",
+          409,
+        );
+      }
+      if (input.expiresAt.getTime() > source.expires_at.getTime() || input.expiresAt.getTime() <= Date.now()) {
+        throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Gate receipt expiry must remain within the live source lease.", 400);
+      }
+      await client.query(
+        `INSERT INTO research.import_sessions
+           (workspace_id, import_session_id, actor_user_id, source_file_ref,
+            source_digest, source_analysis_digest, validation_version,
+            gate_results, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 'research.alpha-import-gates.v1', $7::jsonb, $8)`,
+        [
+          scope.workspaceId,
+          input.importSessionId,
+          scope.actorUserId,
+          input.sourceFileRef,
+          input.sourceDigest,
+          input.sourceAnalysisDigest,
+          JSON.stringify(input.gateResults),
+          input.expiresAt,
+        ],
+      );
+      await this.audit(client, scope, "ALPHA_IMPORT_GATES_RECORDED", "alpha_import_session", input.importSessionId, {
+        source_file_ref: input.sourceFileRef,
+        source_digest: input.sourceDigest,
+        all_pass: input.gateResults.all_pass === true,
+      });
+    });
+  }
+
+  /**
+   * Atomic DRAFT registration: source custody, gate receipt, digest claim and
+   * immutable AlphaVersion identity all commit together under a digest lock.
+   */
+  async registerImportedAlphaVersion(
+    scope: ResearchScope,
+    input: ResearchAlphaImportRegistrationInput,
+  ): Promise<ResearchAlphaImportRegistration> {
+    this.assertScope(scope);
+    requireAlphaId(input.alphaId);
+    requireText(input.name, "alpha name", 240);
+    requireText(input.executionSubjectId, "executionSubjectId", 240);
+    requireOpaqueId(input.alphaVersionId, "alphaVersionId");
+    requireText(input.versionLabel, "versionLabel", 128);
+    requireOpaqueId(input.sourceFileRef, "sourceFileRef");
+    requireDigest(input.sourceDigest, "sourceDigest");
+    requireDigest(input.analysisDigest, "analysisDigest");
+    if (input.gateReceiptId) requireOpaqueId(input.gateReceiptId, "gateReceiptId");
+    requireText(input.entrypoint, "entrypoint", 128);
+    requireText(input.dependencyRef, "dependencyRef", 512);
+    requireBoundedObject(input.declaredContract, "declared alpha contract", RESEARCH_DB_BUDGET.maxConfigJsonBytes);
+
+    return this.withScopedWrite(scope, async (client) => {
+      const source = await this.assertLiveOwnedAlphaImportSource(client, scope, input.sourceFileRef);
+      if (source.source_digest !== input.sourceDigest || source.analysis_digest !== input.analysisDigest) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED",
+          "The source or parser revision changed; parse and gate the exact bytes again.",
+          409,
+        );
+      }
+      const sourceContractMatches = await client.query<{ matches: boolean }>(
+        `SELECT declared_contract = $3::jsonb AS matches
+           FROM research.import_sources
+          WHERE workspace_id = $1 AND source_file_ref = $2`,
+        [scope.workspaceId, input.sourceFileRef, JSON.stringify(input.declaredContract)],
+      );
+      if (sourceContractMatches.rows[0]?.matches !== true) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED",
+          "Client-provided Alpha contract does not match the server-parsed source.",
+          409,
+        );
+      }
+      await this.assertPassingGateReceipt(client, scope, input);
+      // The digest is the cross-alpha uniqueness authority.  Advisory locking
+      // avoids a check-then-insert race without widening the runtime role.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1 || ':' || $2))", [scope.workspaceId, input.sourceDigest]);
+
+      const existingClaim = await client.query<{ alpha_id: string; alpha_version_id: string }>(
+        `SELECT alpha_id, alpha_version_id
+           FROM research.alpha_digest_claims
+          WHERE workspace_id = $1 AND source_digest = $2`,
+        [scope.workspaceId, input.sourceDigest],
+      );
+      if (existingClaim.rows[0] &&
+          (existingClaim.rows[0].alpha_id !== input.alphaId || existingClaim.rows[0].alpha_version_id !== input.alphaVersionId)) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED",
+          `Identical artifact already registered as ${existingClaim.rows[0].alpha_version_id}; re-registering is forbidden; bump the code, not the label.`,
+          409,
+        );
+      }
+
+      await client.query(
+        `INSERT INTO research.alphas
+           (workspace_id, alpha_id, name, owner_user_id, execution_subject_id)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (workspace_id, alpha_id) DO NOTHING`,
+        [scope.workspaceId, input.alphaId, input.name, scope.actorUserId, input.executionSubjectId],
+      );
+      const alpha = await client.query<AlphaImportAlphaRow & {
+        name: string; owner_user_id: string; execution_subject_id: string;
+      }>(
+        `SELECT active_version_id, revision, name, owner_user_id, execution_subject_id
+           FROM research.alphas
+          WHERE workspace_id = $1 AND alpha_id = $2`,
+        [scope.workspaceId, input.alphaId],
+      );
+      const alphaRow = alpha.rows[0];
+      if (!alphaRow || alphaRow.name !== input.name || alphaRow.owner_user_id !== scope.actorUserId ||
+          alphaRow.execution_subject_id !== input.executionSubjectId) {
+        throw new ResearchMetadataError(
+          "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT",
+          "That Alpha identity is already bound to different immutable metadata.",
+          409,
+        );
+      }
+
+      const inserted = await client.query<{ alpha_version_id: string }>(
+        `INSERT INTO research.alpha_versions
+           (workspace_id, alpha_version_id, alpha_id, code_digest, entrypoint,
+            dependency_ref, declared_contract, source_file_ref, lifecycle_state,
+            registered_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, 'DRAFT', $9)
+         ON CONFLICT (workspace_id, alpha_version_id) DO NOTHING
+         RETURNING alpha_version_id`,
+        [
+          scope.workspaceId,
+          input.alphaVersionId,
+          input.alphaId,
+          input.sourceDigest,
+          input.entrypoint,
+          input.dependencyRef,
+          JSON.stringify(input.declaredContract),
+          input.sourceFileRef,
+          scope.actorUserId,
+        ],
+      );
+
+      let replayed = false;
+      if (inserted.rowCount === 0) {
+        const existing = await client.query<AlphaImportVersionRow>(
+          `SELECT alpha_id, alpha_version_id, source_file_ref, code_digest,
+                  entrypoint, dependency_ref, lifecycle_state,
+                  declared_contract = $3::jsonb AS matches_declared_contract
+             FROM research.alpha_versions
+            WHERE workspace_id = $1 AND alpha_version_id = $2`,
+          [scope.workspaceId, input.alphaVersionId, JSON.stringify(input.declaredContract)],
+        );
+        const row = existing.rows[0];
+        if (!row || row.alpha_id !== input.alphaId || row.source_file_ref !== input.sourceFileRef ||
+            row.code_digest !== input.sourceDigest || row.entrypoint !== input.entrypoint ||
+            row.dependency_ref !== input.dependencyRef || !row.matches_declared_contract) {
+          throw new ResearchMetadataError(
+            "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT",
+            "An Alpha version ID cannot be rebound to different source bytes or contract metadata.",
+            409,
+          );
+        }
+        replayed = true;
+      }
+
+      const claimed = await client.query<{ alpha_version_id: string }>(
+        `INSERT INTO research.alpha_digest_claims
+           (workspace_id, source_digest, alpha_id, alpha_version_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (workspace_id, source_digest) DO NOTHING
+         RETURNING alpha_version_id`,
+        [scope.workspaceId, input.sourceDigest, input.alphaId, input.alphaVersionId],
+      );
+      if (claimed.rowCount === 0 && !existingClaim.rows[0]) {
+        // The advisory lock makes this branch exceptional (e.g. a manual DB
+        // intervention). Re-read and fail closed rather than claiming success.
+        const claim = await client.query<{ alpha_id: string; alpha_version_id: string }>(
+          `SELECT alpha_id, alpha_version_id FROM research.alpha_digest_claims
+            WHERE workspace_id = $1 AND source_digest = $2`,
+          [scope.workspaceId, input.sourceDigest],
+        );
+        if (!claim.rows[0] || claim.rows[0].alpha_id !== input.alphaId || claim.rows[0].alpha_version_id !== input.alphaVersionId) {
+          throw new ResearchMetadataError(
+            "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED",
+            "The source digest is already claimed by another immutable AlphaVersion.",
+            409,
+          );
+        }
+      }
+      if (!replayed) {
+        await this.audit(client, scope, "ALPHA_VERSION_REGISTERED", "alpha_version", input.alphaVersionId, {
+          alpha_id: input.alphaId,
+          source_digest: input.sourceDigest,
+          source_file_ref: input.sourceFileRef,
+          version_label: input.versionLabel,
+        });
+      }
+      return {
+        alphaId: input.alphaId,
+        alphaVersionId: input.alphaVersionId,
+        sourceDigest: input.sourceDigest,
+        supersedes: alphaRow.active_version_id,
+        alphaRevision: asNumber(alphaRow.revision),
+        replayed,
+      };
+    });
+  }
+
+  /** DRAFT → ACTIVE metadata CAS; no run/attempt binding is ever rewritten. */
+  async activateImportedAlphaVersion(
+    scope: ResearchScope,
+    input: { alphaVersionId: string; expectedAlphaRevision: number },
+  ): Promise<ResearchAlphaActivation> {
+    this.assertScope(scope);
+    requireOpaqueId(input.alphaVersionId, "alphaVersionId");
+    requirePositiveSafeInteger(input.expectedAlphaRevision, "expectedAlphaRevision");
+    return this.withScopedWrite(scope, async (client) => {
+      const target = await client.query<AlphaImportVersionRow>(
+        `SELECT alpha_id, alpha_version_id, source_file_ref, code_digest,
+                entrypoint, dependency_ref, lifecycle_state,
+                true AS matches_declared_contract
+           FROM research.alpha_versions
+          WHERE workspace_id = $1 AND alpha_version_id = $2`,
+        [scope.workspaceId, input.alphaVersionId],
+      );
+      const targetRow = target.rows[0];
+      if (!targetRow || targetRow.source_file_ref == null) {
+        throw new ResearchMetadataError("RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND", "Imported Alpha version was not found.", 404);
+      }
+      const alpha = await client.query<AlphaImportAlphaRow>(
+        `SELECT active_version_id, revision
+           FROM research.alphas
+          WHERE workspace_id = $1 AND alpha_id = $2`,
+        [scope.workspaceId, targetRow.alpha_id],
+      );
+      const alphaRow = alpha.rows[0];
+      if (!alphaRow) {
+        throw new ResearchMetadataError("RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND", "Imported Alpha version was not found.", 404);
+      }
+      if (alphaRow.active_version_id === input.alphaVersionId) {
+        return {
+          alphaId: targetRow.alpha_id,
+          alphaVersionId: input.alphaVersionId,
+          supersededAlphaVersionId: null,
+          alphaRevision: asNumber(alphaRow.revision),
+          replayed: true,
+        };
+      }
+      if (targetRow.lifecycle_state !== "DRAFT") {
+        throw new ResearchMetadataError(
+          "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT",
+          "Only a DRAFT imported AlphaVersion may be activated.",
+          409,
+        );
+      }
+      const switched = await client.query<{ revision: string | number }>(
+        `UPDATE research.alphas
+            SET active_version_id = $3, revision = revision + 1, updated_at = now()
+          WHERE workspace_id = $1 AND alpha_id = $2 AND revision = $4
+          RETURNING revision`,
+        [scope.workspaceId, targetRow.alpha_id, input.alphaVersionId, input.expectedAlphaRevision],
+      );
+      if (switched.rowCount !== 1) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT",
+          "The Alpha registry changed in another request. Refresh before activating.",
+          409,
+        );
+      }
+      if (alphaRow.active_version_id) {
+        await client.query(
+          `UPDATE research.alpha_versions
+              SET lifecycle_state = 'SUPERSEDED', metadata_revision = metadata_revision + 1
+            WHERE workspace_id = $1 AND alpha_version_id = $2 AND lifecycle_state = 'ACTIVE'`,
+          [scope.workspaceId, alphaRow.active_version_id],
+        );
+      }
+      await client.query(
+        `UPDATE research.alpha_versions
+            SET lifecycle_state = 'ACTIVE', metadata_revision = metadata_revision + 1
+          WHERE workspace_id = $1 AND alpha_version_id = $2 AND lifecycle_state = 'DRAFT'`,
+        [scope.workspaceId, input.alphaVersionId],
+      );
+      await this.audit(client, scope, "ALPHA_VERSION_ACTIVATED", "alpha_version", input.alphaVersionId, {
+        alpha_id: targetRow.alpha_id,
+        superseded_alpha_version_id: alphaRow.active_version_id,
+      });
+      return {
+        alphaId: targetRow.alpha_id,
+        alphaVersionId: input.alphaVersionId,
+        supersededAlphaVersionId: alphaRow.active_version_id,
+        alphaRevision: asNumber(switched.rows[0].revision),
+        replayed: false,
+      };
+    });
+  }
+
+  /** Safe registry strip: never return raw source bytes or opaque file refs. */
+  async listImportedAlphaVersions(scope: ResearchScope, alphaId?: string): Promise<ResearchAlphaRegistryRecord[]> {
+    this.assertScope(scope);
+    if (alphaId !== undefined) requireAlphaId(alphaId);
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<AlphaImportRegistryRow>(
+        `SELECT version.alpha_id, version.alpha_version_id,
+                COALESCE('av_' || replace(version.declared_contract->>'version', '.', '_'), version.alpha_version_id) AS version_label,
+                version.lifecycle_state,
+                version.entrypoint,
+                substring(COALESCE(source.source_digest, version.code_digest) FROM 1 FOR 12) AS source_digest_prefix,
+                alpha.revision AS alpha_revision,
+                version.registered_at
+           FROM research.alpha_versions version
+           JOIN research.alphas alpha
+             ON alpha.workspace_id = version.workspace_id AND alpha.alpha_id = version.alpha_id
+           LEFT JOIN research.import_sources source
+             ON source.workspace_id = version.workspace_id AND source.source_file_ref = version.source_file_ref
+          WHERE version.workspace_id = $1
+            AND version.source_file_ref IS NOT NULL
+            AND ($2::text IS NULL OR version.alpha_id = $2)
+          ORDER BY version.registered_at DESC, version.alpha_version_id DESC
+          LIMIT 200`,
+        [scope.workspaceId, alphaId ?? null],
+      );
+      return result.rows.map((row) => ({
+        alphaId: row.alpha_id,
+        alphaVersionId: row.alpha_version_id,
+        versionLabel: row.version_label,
+        lifecycleState: row.lifecycle_state,
+        entrypoint: row.entrypoint,
+        sourceDigestPrefix: row.source_digest_prefix,
+        alphaRevision: asNumber(row.alpha_revision),
+        registeredAt: row.registered_at,
+      }));
+    });
+  }
+
+  /** Gate 3 read: workspace-local digest claim, never a cross-workspace probe. */
+  async findImportedAlphaDigestClaim(scope: ResearchScope, sourceDigest: string): Promise<string | null> {
+    this.assertScope(scope);
+    requireDigest(sourceDigest, "sourceDigest");
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<{ alpha_version_id: string }>(
+        `SELECT alpha_version_id
+           FROM research.alpha_digest_claims
+          WHERE workspace_id = $1 AND source_digest = $2`,
+        [scope.workspaceId, sourceDigest],
+      );
+      return result.rows[0]?.alpha_version_id ?? null;
+    });
+  }
+
+  /** Bounded cleanup of only this actor's expired, unbound temporary bytes. */
+  async cleanupExpiredUnboundAlphaImportSources(
+    scope: ResearchScope,
+    maximumRows: number,
+  ): Promise<{ deletedSources: number; deletedReceipts: number }> {
+    this.assertScope(scope);
+    requirePositiveSafeInteger(maximumRows, "maximumRows", RESEARCH_DB_BUDGET.maxAlphaImportCleanupRows);
+    return this.withScopedWrite(scope, async (client) => {
+      // The runtime role deliberately has no UPDATE privilege on immutable
+      // source rows.  Do not use SELECT … FOR UPDATE merely to make a cleanup
+      // convenient: DELETE is already atomic, owns the needed row lock, and
+      // a concurrent sweeper receives an empty RETURNING set after the first
+      // transaction commits.  This preserves least privilege without making
+      // expiry cleanup race into a source-retention bypass.
+      const sources = await client.query<{ source_file_ref: string }>(
+        `DELETE FROM research.import_sources
+          WHERE (workspace_id, source_file_ref) IN (
+            SELECT candidate.workspace_id, candidate.source_file_ref
+              FROM research.import_sources candidate
+             WHERE candidate.workspace_id = $1
+               AND candidate.actor_user_id = $2
+               AND candidate.expires_at <= now()
+               AND NOT EXISTS (
+                 SELECT 1 FROM research.alpha_versions version
+                  WHERE version.workspace_id = candidate.workspace_id
+                    AND version.source_file_ref = candidate.source_file_ref
+               )
+             ORDER BY candidate.expires_at ASC, candidate.source_file_ref ASC
+             LIMIT $3
+          )
+            AND workspace_id = $1 AND actor_user_id = $2
+            AND NOT EXISTS (
+              SELECT 1 FROM research.alpha_versions version
+               WHERE version.workspace_id = research.import_sources.workspace_id
+                 AND version.source_file_ref = research.import_sources.source_file_ref
+            )
+          RETURNING source_file_ref`,
+        [scope.workspaceId, scope.actorUserId, maximumRows],
+      );
+      const refs = sources.rows.map((row) => row.source_file_ref);
+      if (refs.length === 0) return { deletedSources: 0, deletedReceipts: 0 };
+      const receipts = await client.query(
+        `DELETE FROM research.import_sessions
+          WHERE workspace_id = $1 AND actor_user_id = $2 AND source_file_ref = ANY($3::text[])`,
+        [scope.workspaceId, scope.actorUserId, refs],
+      );
+      await this.audit(client, scope, "ALPHA_IMPORT_TEMPORARY_SOURCE_PURGED", "alpha_import_source", "bounded-expiry-cleanup", {
+        deleted_sources: sources.rowCount,
+        deleted_receipts: receipts.rowCount,
+      });
+      return { deletedSources: sources.rowCount ?? 0, deletedReceipts: receipts.rowCount ?? 0 };
     });
   }
 
@@ -2353,6 +2987,72 @@ export class ResearchMetadataRepository {
       );
       return result.rows.map((row) => rowToAttempt(row, row.run_id));
     });
+  }
+
+  private async assertLiveOwnedAlphaImportSource(
+    client: ScopedClient,
+    scope: ResearchScope,
+    sourceFileRef: string,
+  ): Promise<Pick<AlphaImportSourceRow, "source_digest" | "analysis_digest" | "expires_at">> {
+    const result = await client.query<Pick<AlphaImportSourceRow, "source_digest" | "analysis_digest" | "expires_at">>(
+      `SELECT source_digest, analysis_digest, expires_at
+         FROM research.import_sources
+        WHERE workspace_id = $1 AND source_file_ref = $2 AND actor_user_id = $3`,
+      [scope.workspaceId, sourceFileRef, scope.actorUserId],
+    );
+    const source = result.rows[0];
+    if (!source) {
+      throw new ResearchMetadataError("RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND", "Alpha import source was not found.", 404);
+    }
+    if (source.expires_at.getTime() <= Date.now()) {
+      throw new ResearchMetadataError("RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED", "Alpha import source has expired; parse the file again.", 409);
+    }
+    return source;
+  }
+
+  private async assertPassingGateReceipt(
+    client: ScopedClient,
+    scope: ResearchScope,
+    input: ResearchAlphaImportRegistrationInput,
+  ): Promise<void> {
+    const parameters: unknown[] = [
+      scope.workspaceId,
+      scope.actorUserId,
+      input.sourceFileRef,
+      input.sourceDigest,
+      input.analysisDigest,
+    ];
+    let query = `SELECT import_session_id, gate_results
+                   FROM research.import_sessions
+                  WHERE workspace_id = $1
+                    AND actor_user_id = $2
+                    AND source_file_ref = $3
+                    AND source_digest = $4
+                    AND source_analysis_digest = $5
+                    AND validation_version = 'research.alpha-import-gates.v1'
+                    AND expires_at > now()`;
+    if (input.gateReceiptId) {
+      parameters.push(input.gateReceiptId);
+      query += " AND import_session_id = $6";
+    }
+    query += " ORDER BY created_at DESC, import_session_id DESC LIMIT 1";
+    const receipt = await client.query<{ import_session_id: string; gate_results: Record<string, unknown> | string }>(query, parameters);
+    const row = receipt.rows[0];
+    if (!row) {
+      throw new ResearchMetadataError(
+        "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED",
+        "A live passing seven-gate receipt for the exact source is required before registration.",
+        409,
+      );
+    }
+    const gates = decodeObject(row.gate_results, "Alpha import gate receipt");
+    if (gates.all_pass !== true) {
+      throw new ResearchMetadataError(
+        "RESEARCH_ALPHA_IMPORT_GATES_FAILED",
+        "A failed Alpha import gate cannot be registered provisionally.",
+        409,
+      );
+    }
   }
 
   private assertScope(scope: ResearchScope): void {

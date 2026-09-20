@@ -253,6 +253,11 @@ Chúng không thay thế phase hoặc exit gate trong
   `verify_artifact` phát hiện digest drift, 3 endpoint read-only
   `/api/v1/alphas*` với public projection an toàn (không maintainer/lock
   digest). 12 tests.
+- [Research Loop P07 evidence — Alpha import and immutable binding](../research_loop/evidence/P07/README.md)
+  — **backend complete / frontend handoff pending:** bounded single-file
+  source custody, private AST analysis, ordered gates, exact digest/version
+  identity and ADMIN activation CAS. It does not execute uploaded strategy
+  code or alter the protected QuantBT kernel, Execution authority or runtime.
 - [BAR-12 — Approval, Promotion, Paper & Sandbox foundations](./BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md)
   — U15 foundations. **Complete:** ApprovalAuthority (policy v1, request
   gắn immutable artifact/audit digest, separation of duties chặn

@@ -1,0 +1,50 @@
+{
+  "phase": "P07",
+  "status": "PASS_BACKEND",
+  "receipts": [
+    {
+      "gate": "P07 private AST analyser and HMAC boundary",
+      "command": "PYTHONPATH=apps/portal/backend/src:apps/portal apps/portal/.venv/bin/python -m pytest -c apps/portal/backend/pyproject.toml apps/portal/backend/tests/test_research_alpha_analyzer.py",
+      "result": "9 passed",
+      "coverage": ["P07-T01", "P07-T02", "P07-T03", "P07-T08"],
+      "notes": "Proves no strategy-body invocation, required contract/parameter bounds, top-level side-effect denial, static-scan disclosure, HMAC positive/negative and no public Portal API mount."
+    },
+    {
+      "gate": "P07 fresh PostgreSQL schema, custody, gates, binding and recovery proof",
+      "command": "scripts/research-loop-v11/test-p07-postgres.sh",
+      "result": "1 file passed; 7 tests passed",
+      "coverage": ["P07-T01", "P07-T02", "P07-T03", "P07-T04", "P07-T05", "P07-T06", "P07-T07", "P07-T08", "P07-T09", "P07-T10", "P07-T11", "P07-T12", "V11-P07-DR"],
+      "notes": "Uses one exact self-removing tmpfs research-p07-postgres-* container. Covers immutable source/actor scope, stale crafted receipt refusal, digest/version conflict, activation CAS, old attempt pinning, bounded expiry cleanup and admission cap."
+    },
+    {
+      "gate": "Control API production source compilation",
+      "command": "cd apps/control-api && npm run build",
+      "result": "PASS",
+      "notes": "Production TypeScript build passes; no image build or service restart was performed."
+    },
+    {
+      "gate": "Compose contract rendering",
+      "command": "docker compose -f compose.yaml config --quiet; env <non-secret placeholder deployment inputs> docker compose -f deploy/compose.production.yaml config --quiet",
+      "result": "PASS",
+      "notes": "Production render uses placeholders only; no deployment secret was read or emitted."
+    },
+    {
+      "gate": "Protected-boundary and patch hygiene",
+      "command": "cd apps/portal && sha256sum -c strategy/PROTECTED_SHA256; bash -n scripts/research-loop-v11/test-p07-postgres.sh; git diff --check",
+      "result": "PASS",
+      "notes": "strategy/main.py remains byte-identical; no frontend diff is present."
+    }
+  ],
+  "baseline_nonblocking": [
+    {
+      "gate": "cd apps/control-api && npm run typecheck",
+      "result": "BASELINE_RED_OUT_OF_SCOPE",
+      "notes": "The repository-wide test-inclusive typecheck reports unrelated fixture/module-resolution errors across legacy governance, execution and test harness suites. The P07 production build is green. P07 fixed its own config-spread diagnostic in durable-mirror-reseed.spec.ts; no P07 path is left knowingly red."
+    }
+  ],
+  "not_run_by_design": [
+    "Full Screen 14 browser/dev acceptance: owned by Claude's frontend handoff, not claimed by a backend-only P07 slice.",
+    "QuantBT execution of imported source, P10 worker attachment, NATS/Compose runtime activation, deployment and shared-database migration: prohibited by P07 scope.",
+    "Broad Docker/image/cache cleanup: P07 used an exact self-removing tmpfs test container only; any global cleanup requires a separate inventory and quiet window."
+  ]
+}

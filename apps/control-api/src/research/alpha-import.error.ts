@@ -1,0 +1,20 @@
+export class ResearchAlphaImportError extends Error {
+  constructor(
+    readonly code:
+      | "RESEARCH_ALPHA_IMPORT_INVALID"
+      | "RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE"
+      | "RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED"
+      | "RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND"
+      | "RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED"
+      | "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED"
+      | "RESEARCH_ALPHA_IMPORT_GATES_FAILED"
+      | "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED"
+      | "RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN"
+      | "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT",
+    message: string,
+    readonly status: 400 | 403 | 404 | 409 | 502 | 503,
+  ) {
+    super(message);
+    this.name = "ResearchAlphaImportError";
+  }
+}

@@ -28,6 +28,8 @@ import { FinancialQueryCursorError } from "./execution/financial-query-cursor.re
 import { FinancialChartError } from "./execution/financial-chart.service";
 import { MarketContextError } from "./execution/market-context.service";
 import { LocalRealtimeError } from "./execution/profile-realtime.service";
+import { ResearchMetadataError } from "./research/contracts";
+import { ResearchAlphaImportError } from "./research/alpha-import.error";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -62,7 +64,9 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof FinancialQueryCursorError ||
       exception instanceof FinancialChartError ||
       exception instanceof MarketContextError ||
-      exception instanceof LocalRealtimeError
+      exception instanceof LocalRealtimeError ||
+      exception instanceof ResearchMetadataError ||
+      exception instanceof ResearchAlphaImportError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

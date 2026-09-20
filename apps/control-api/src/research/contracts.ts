@@ -35,6 +35,10 @@ export const RESEARCH_DB_BUDGET = Object.freeze({
   maxArtifactManifestMetadataBytes: 262_144,
   maxArtifactParts: 512,
   maxTrialRowsPerArtifactBatch: 256,
+  maxAlphaImportSourceBytes: 256 * 1024,
+  maxAlphaImportMirrorBytes: 32_768,
+  maxAlphaImportActiveSourcesPerActor: 32,
+  maxAlphaImportCleanupRows: 128,
 });
 
 export type ResearchIntentKind =
@@ -146,6 +150,12 @@ export class ResearchMetadataError extends Error {
       | "RESEARCH_EVALUATION_SCOPE_INVALID"
       | "RESEARCH_INSPECTION_SCOPE_INVALID"
       | "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT"
+      | "RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND"
+      | "RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED"
+      | "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED"
+      | "RESEARCH_ALPHA_IMPORT_GATES_FAILED"
+      | "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED"
+      | "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT"
       | "RESEARCH_ARTIFACT_NOT_FOUND"
       | "RESEARCH_ARTIFACT_FENCE_REJECTED"
       | "RESEARCH_ARTIFACT_LIFECYCLE_CONFLICT"
@@ -176,6 +186,83 @@ export interface ResearchAlphaVersionInput {
   dependencyRef: string;
   declaredContract: Record<string, unknown>;
   lifecycleState?: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
+}
+
+/** P07 server-only source custody input; raw bytes never enter a browser DTO. */
+export interface ResearchAlphaImportSourceInput {
+  sourceFileRef: string;
+  originalFilename: string;
+  sourceBytes: Buffer;
+  sourceDigest: string;
+  analysisDigest: string;
+  declaredContract: Record<string, unknown>;
+  parsedMirror: readonly Record<string, unknown>[];
+  expiresAt: Date;
+  /** Service-configured admission ceiling; requests can never choose it. */
+  maximumActiveSources: number;
+}
+
+export interface ResearchAlphaImportSourceRecord {
+  sourceFileRef: string;
+  originalFilename: string;
+  sourceBytes: Buffer;
+  sourceDigest: string;
+  analysisDigest: string;
+  declaredContract: Record<string, unknown>;
+  parsedMirror: readonly Record<string, unknown>[];
+  expiresAt: Date;
+}
+
+export interface ResearchAlphaImportGateReceiptInput {
+  importSessionId: string;
+  sourceFileRef: string;
+  sourceDigest: string;
+  sourceAnalysisDigest: string;
+  gateResults: Record<string, unknown>;
+  expiresAt: Date;
+}
+
+export interface ResearchAlphaImportRegistrationInput {
+  alphaId: string;
+  name: string;
+  executionSubjectId: string;
+  alphaVersionId: string;
+  versionLabel: string;
+  sourceFileRef: string;
+  sourceDigest: string;
+  analysisDigest: string;
+  gateReceiptId?: string;
+  entrypoint: string;
+  dependencyRef: string;
+  declaredContract: Record<string, unknown>;
+}
+
+export interface ResearchAlphaImportRegistration {
+  alphaId: string;
+  alphaVersionId: string;
+  sourceDigest: string;
+  supersedes: string | null;
+  alphaRevision: number;
+  replayed: boolean;
+}
+
+export interface ResearchAlphaActivation {
+  alphaId: string;
+  alphaVersionId: string;
+  supersededAlphaVersionId: string | null;
+  alphaRevision: number;
+  replayed: boolean;
+}
+
+export interface ResearchAlphaRegistryRecord {
+  alphaId: string;
+  alphaVersionId: string;
+  versionLabel: string;
+  lifecycleState: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
+  entrypoint: string;
+  sourceDigestPrefix: string;
+  alphaRevision: number;
+  registeredAt: Date;
 }
 
 export interface ResearchAttemptInput {
