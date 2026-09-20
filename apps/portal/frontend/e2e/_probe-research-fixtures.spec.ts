@@ -54,6 +54,33 @@ for (const [name, width, height] of [
   });
 }
 
+test("no internal identifier reaches the rendered page", async ({ page }) => {
+  // A module can be clean while a server-supplied string still puts an internal
+  // identifier on screen, so the same prohibition is asserted against the DOM.
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/research/_fixtures");
+  await settle(page);
+
+  const text = await page.locator("body").innerText();
+  const html = await page.content();
+  for (const [label, pattern] of [
+    ["lease epoch", /lease[_ ]?epoch|\blease\b/i],
+    ["worker identity", /worker[_ ]?(id|pid|host)\b/i],
+    ["work digest", /work[_ ]?digest/i],
+    ["storage locator", /\/var\/|\/srv\/|file:\/\/|s3:\/\/|\.parquet/i],
+    ["credential", /\b(hmac|bearer|api[_ ]?key)\b/i],
+  ] as const) {
+    expect(text, `${label} visible in rendered text`).not.toMatch(pattern);
+    expect(html, `${label} present in markup`).not.toMatch(pattern);
+  }
+
+  // The attempt anatomy survives the removal: ordinal and state remain.
+  await expect(page.locator("[data-attempt-ordinal]").first()).toBeVisible();
+  expect(await page.locator("[data-attempt-ordinal]").count()).toBeGreaterThan(5);
+});
+
 test("keyboard reaches the Atlas tabs and every panel is a named region", async ({ page }) => {
   await freezeClock(page);
   await stubPortalApi(page, "healthy");

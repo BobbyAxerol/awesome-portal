@@ -270,8 +270,8 @@ export default function ResearchFixtures() {
                 runId: "run_fixture",
                 state,
                 attempts: [
-                  { ordinal: 1, leaseEpoch: "e1", state: "FAILED", message: "worker lost lease" },
-                  { ordinal: 2, leaseEpoch: "e2", state, message: null },
+                  { ordinal: 1, state: "FAILED", message: "the worker stopped responding" },
+                  { ordinal: 2, state, message: null },
                 ],
                 progress: state === "RUNNING" ? { completed: 3, total: 10 } : null,
               }}
@@ -282,7 +282,7 @@ export default function ResearchFixtures() {
             run={{
               runId: "run_fixture_diag",
               state: "SUCCEEDED",
-              attempts: [{ ordinal: 1, leaseEpoch: "e1", state: "SUCCEEDED", message: null }],
+              attempts: [{ ordinal: 1, state: "SUCCEEDED", message: null }],
               diagnostics: [{ id: "audit_trace", kind: "OPTIONAL", failed: true }],
             }}
           />

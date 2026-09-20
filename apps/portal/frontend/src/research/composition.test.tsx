@@ -122,7 +122,7 @@ function logicalRun(overrides: Partial<LogicalRun> = {}): LogicalRun {
   return {
     runId: "run_abc",
     state: "RUNNING",
-    attempts: [{ ordinal: 1, leaseEpoch: "e1", state: "RUNNING", message: null }],
+    attempts: [{ ordinal: 1, state: "RUNNING", message: null }],
     ...overrides,
   };
 }
@@ -477,9 +477,9 @@ describe("P06 — queue and attempt panels", () => {
       <QueuePanel
         run={logicalRun({
           attempts: [
-            { ordinal: 1, leaseEpoch: "e1", state: "FAILED", message: null },
-            { ordinal: 2, leaseEpoch: "e2", state: "FAILED", message: null },
-            { ordinal: 3, leaseEpoch: "e3", state: "RUNNING", message: null },
+            { ordinal: 1, state: "FAILED", message: null },
+            { ordinal: 2, state: "FAILED", message: null },
+            { ordinal: 3, state: "RUNNING", message: null },
           ],
         })}
       />,

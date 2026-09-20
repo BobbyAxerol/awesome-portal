@@ -16,7 +16,6 @@ import {
   type WorkerAttempt,
   RESEARCH_JOB_STATES,
   boundedProgressCaption,
-  isClaimableP06Job,
   isTerminal,
   outboxDeliveryImpliesCompletion,
   reconcileLateAttempt,
@@ -24,7 +23,7 @@ import {
 } from "./scheduler";
 
 function attempt(overrides: Partial<WorkerAttempt> = {}): WorkerAttempt {
-  return { ordinal: 1, leaseEpoch: "epoch_1", state: "RUNNING", message: null, ...overrides };
+  return { ordinal: 1, state: "RUNNING", message: null, ...overrides };
 }
 
 function run(overrides: Partial<LogicalRun> = {}): LogicalRun {
@@ -36,17 +35,18 @@ describe("a retry is the same run, not a new one", () => {
     const display = runDisplay(
       run({
         attempts: [
-          attempt({ ordinal: 1, state: "FAILED", leaseEpoch: "e1" }),
-          attempt({ ordinal: 2, state: "FAILED", leaseEpoch: "e2" }),
-          attempt({ ordinal: 3, state: "RUNNING", leaseEpoch: "e3" }),
+          attempt({ ordinal: 1, state: "FAILED" }),
+          attempt({ ordinal: 2, state: "FAILED" }),
+          attempt({ ordinal: 3, state: "RUNNING" }),
         ],
       }),
     );
     expect(display.runId).toBe("run_1");
     expect(display.attemptCount).toBe(3);
     expect(display.latestAttempt?.ordinal).toBe(3);
-    // Each attempt carries its own fence; the run keeps one identity.
-    expect(display.latestAttempt?.leaseEpoch).toBe("e3");
+    // The ordinal is the only attempt identity the browser is given; the lease
+    // that fences the worker is an internal fact and never crosses over.
+    expect(display.latestAttempt).not.toHaveProperty("leaseEpoch");
   });
 
   it("reports no attempts as zero rather than inventing one", () => {
@@ -171,15 +171,13 @@ describe("an outbox delivery is transport, not compute", () => {
   });
 });
 
-describe("a row without a work digest is not a queued P06 job", () => {
-  it("refuses a compatibility row that carries no digest", () => {
-    expect(isClaimableP06Job({ workDigest: null })).toBe(false);
-    expect(isClaimableP06Job({ workDigest: "" })).toBe(false);
-    expect(isClaimableP06Job({})).toBe(false);
-  });
-
-  it("accepts a row the producer has digested", () => {
-    expect(isClaimableP06Job({ workDigest: "a".repeat(64) })).toBe(true);
+describe("claimability is not a browser decision", () => {
+  it("exposes no claimability helper at all", async () => {
+    // A browser-side claimability check is inference the server owns: its typed
+    // state already answers the question, and a row the scheduler has not
+    // accepted must not reach the queue as an item in the first place.
+    const module = await import("./scheduler");
+    expect(Object.keys(module)).not.toContain("isClaimableP06Job");
   });
 
   it("never forms a digest in the browser", () => {

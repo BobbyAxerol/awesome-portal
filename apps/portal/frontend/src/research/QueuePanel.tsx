@@ -68,9 +68,6 @@ function AttemptRow({ attempt, runId }: { attempt: WorkerAttempt; runId: string 
         attempt {attempt.ordinal}
       </span>
       <StateChip state={attempt.state} />
-      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-        lease {attempt.leaseEpoch}
-      </span>
       {attempt.message ? (
         <span className="flex-1 text-[10.5px]" style={{ color: "var(--ink-soft)" }}>
           {attempt.message}

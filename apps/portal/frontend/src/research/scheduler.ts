@@ -20,6 +20,14 @@
  * There is no percent-complete and no ETA in this module. The server publishes
  * progress or it does not; a number the browser invents to fill a bar is a
  * claim about work it cannot observe.
+ *
+ * **Boundary.** No lease epoch, worker identity, work digest, scheduler
+ * credential or storage locator appears in any type here. Those are internal
+ * fencing facts: the backend keeps them, the browser is given an ordinal, a
+ * typed state and a redacted message. Claimability is likewise not a browser
+ * decision — the server's typed state already answers it, and a row the
+ * scheduler has not accepted must not reach the queue as an item.
+ * `researchBoundary.test.ts` asserts this across the whole Research surface.
  */
 
 /** The exact server states. The browser adds none. */
@@ -55,10 +63,13 @@ export type DiagnosticKind = "MANDATORY" | "OPTIONAL";
 export interface WorkerAttempt {
   /** Ordinal within the logical run. Retries increment it; the run id does not change. */
   ordinal: number;
-  /** Server-issued fence. Opaque; never compared numerically for authority. */
-  leaseEpoch: string;
   state: ResearchJobState;
-  /** Server message for this attempt. Never authoritative over the run. */
+  /**
+   * Server message for this attempt, already redacted by the server.
+   * Never authoritative over the run, and never a raw exception or an internal
+   * identifier — the browser renders it verbatim, so anything unsafe in it is
+   * unsafe on screen.
+   */
   message?: string | null;
 }
 
@@ -139,14 +150,6 @@ export function reconcileLateAttempt(
  */
 export function outboxDeliveryImpliesCompletion(): false {
   return false;
-}
-
-/**
- * A P03 compatibility row with no work digest is not a P06 job. Surfacing it
- * in the queue would invent a queued item the scheduler has never seen.
- */
-export function isClaimableP06Job(row: { workDigest?: string | null }): boolean {
-  return typeof row.workDigest === "string" && row.workDigest.length > 0;
 }
 
 /**

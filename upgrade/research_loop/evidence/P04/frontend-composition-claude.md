@@ -85,11 +85,23 @@ than the auth gate.
 | both Atlas instances present, second one document-less | heading, three tabs and the `unavailable` fact all retained |
 | keyboard reaches the tabs; every panel is a named region | pass |
 
-Screenshots are held outside Git at the session scratchpad
-`research-shots/`, referenced by digest:
+### Screenshot receipt — ephemeral, not archived
 
-- `research-fixtures-laptop.png` 1280×3912 — sha256 `52043151327afd3384314a152fb5bbe1…`
-- `research-fixtures-mobile.png` 660×… — sha256 `f0f66755551028a05358d8f370049c31…`
+These captures live only in this session's scratchpad and are **not retained**:
+the directory is removed when the session ends and no durable private archive
+was provisioned for Research visual evidence. They are recorded here as an
+ephemeral receipt with full digests so the same build can be re-verified, not
+as a stored artifact someone can fetch later.
+
+| file | location | dimensions | sha256 |
+|---|---|---|---|
+| `research-fixtures-laptop.png` | `/tmp/claude-1000/-home-bobby/e9193882-3547-4d96-bd79-71735ca75103/scratchpad/research-shots/` | 1280x3824 | `03518e24af7e9f828029f50a88b9bd577e6f2910a11fd81f333e64ecfbaf95f3` |
+| `research-fixtures-mobile.png` | `/tmp/claude-1000/-home-bobby/e9193882-3547-4d96-bd79-71735ca75103/scratchpad/research-shots/` | 660x5854 | `f81446b594c6ed058bb0a925107244aa09d28e5de1ef6d13871bbc72bb9b04ae` |
+
+Reproduce: `npm run build`, `npx vite preview --port <p>`, then
+`npx playwright test --config=playwright.research-probe.config.ts` with
+`RESEARCH_SHOT_DIR` set. A durable location for Research visual evidence is a
+provisioning request, not something this slice should invent.
 
 ## Findings found by looking, not by testing
 
