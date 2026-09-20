@@ -1,0 +1,20 @@
+{
+  "phase": "P08",
+  "status": "PHASE_LOCAL_CLEANUP_ONLY",
+  "runtime_footprint": [
+    "P08 creates no long-running process, image, volume, cache warmer, worker, queue or deployment.",
+    "The PostgreSQL proof uses one exact disposable tmpfs container named research-p08-postgres-<pid>; its EXIT trap removes only that container.",
+    "Snapshot files are shared content-addressed inputs. Expired preflight metadata may be cleaned actor-scoped and bounded; snapshots referenced by a manifest are never deleted by P08.",
+    "An obviously inadmissible study is rejected before snapshot serialization, preventing rejected trial-budget retries from creating unreferenced frames."
+  ],
+  "limits": {
+    "snapshot_rows": 2000000,
+    "snapshot_bytes": 536870912,
+    "metadata_document_bytes": 61440,
+    "folds": 128,
+    "active_manifests_per_actor_maximum": 16
+  },
+  "prohibited_cleanup": [
+    "No broad Docker prune, image prune, volume deletion, worktree deletion, HMD/Parquet purge, database vacuum/full rebuild or shared cache cleanup is authorized by P08."
+  ]
+}

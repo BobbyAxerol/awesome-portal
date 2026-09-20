@@ -1,0 +1,33 @@
+{
+  "phase": "P08",
+  "lanes": {
+    "delta_real_data": {
+      "state": "CONTRACT_FIXTURE_PROVEN",
+      "evidence": "HMD-shaped bounded provider covers source mutation, timezones, range, warmup, quality and provenance; no production reader/data was queried in this phase."
+    },
+    "direct_vs_portal": {
+      "state": "PRIVATE_BOUNDARY_PROVEN",
+      "evidence": "Portal API private HMAC route succeeds only with signed principal; a lookalike public route is 404, and legacy generic Data Catalog list/quality/series routes deny the resulting research-hmd-ohlcv snapshot before reading its frame."
+    },
+    "persistence_vs_api": {
+      "state": "POSTGRES_DISPOSABLE_PROVEN",
+      "evidence": "Fresh migration/repository test proves immutable actor-scoped token, bounded cleanup and digest-checked API materialization."
+    },
+    "api_vs_ui": {
+      "state": "TYPED_CONTRACT_READY",
+      "evidence": "OpenAPI + generated TypeScript expose exact panel fields; Screen 02/05 consumer is Claude-owned and not yet mounted."
+    },
+    "visual_fixture": {
+      "state": "NOT_RUN_BY_DESIGN",
+      "reason": "P08 does not alter HIFI composition; P09/P10 own product route and Screen 02 visual receipt."
+    },
+    "browser_real": {
+      "state": "NOT_RUN_BY_DESIGN",
+      "reason": "No browser-facing consumer was added by this backend phase."
+    },
+    "dev_host_review": {
+      "state": "NOT_RUN_BY_DESIGN",
+      "reason": "No image/build/deploy was justified for a contract-only backend foundation."
+    }
+  }
+}

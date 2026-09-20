@@ -11,6 +11,7 @@ export const TEST_TABLES = [
   // listing it keeps test cleanup bounded and makes a new relation visible to
   // the shared harness rather than relying on an incidental CASCADE path.
   "research.audit_log",
+  "research.preflight_manifests",
   "research.command_dedup",
   "research.release_candidates",
   "research.inspection_states",
@@ -126,6 +127,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_alpha_digest_claims: boolean;
       has_research_import_source_guard: boolean;
       has_research_alpha_source_reference: boolean;
+      has_research_preflight_manifests: boolean;
+      has_research_preflight_immutable_guard: boolean;
       research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
@@ -200,6 +203,12 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
               AND table_name = 'alpha_versions'
               AND column_name = 'source_file_ref'
          ) AS has_research_alpha_source_reference,
+         to_regclass('research.preflight_manifests') IS NOT NULL AS has_research_preflight_manifests,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_preflight_manifests_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_preflight_immutable_guard,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
@@ -256,6 +265,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_alpha_digest_claims ||
       !row.has_research_import_source_guard ||
       !row.has_research_alpha_source_reference ||
+      !row.has_research_preflight_manifests ||
+      !row.has_research_preflight_immutable_guard ||
       row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
@@ -305,6 +316,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_alpha_digest_claims=${row.has_research_alpha_digest_claims}, ` +
         `research_import_source_guard=${row.has_research_import_source_guard}, ` +
         `research_alpha_source_reference=${row.has_research_alpha_source_reference}, ` +
+        `research_preflight_manifests=${row.has_research_preflight_manifests}, ` +
+        `research_preflight_immutable_guard=${row.has_research_preflight_immutable_guard}, ` +
         `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,

@@ -1,0 +1,167 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Preflight API",
+    "version": "1.0.0",
+    "description": "P08 same-origin immutable data-snapshot and effective-spec preflight. The browser receives bounded metadata only: no HMD rows, snapshot path, private adapter URL, principal, source credential, sealed-holdout values or worker admission. This contract does not submit or execute a run."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/research/preflights": {
+      "post": {
+        "operationId": "researchPreflightCreateV1",
+        "summary": "Create one actor-scoped immutable preflight manifest",
+        "parameters": [{ "$ref": "#/components/parameters/Csrf" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateRequest" } } } },
+        "responses": {
+          "201": { "description": "A new immutable manifest token and metadata-only effective specification", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchPreflightV1" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "502": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/preflights/{preflight_token}": {
+      "get": {
+        "operationId": "researchPreflightGetV1",
+        "summary": "Read the exact live actor-scoped preflight manifest metadata",
+        "parameters": [
+          { "$ref": "#/components/parameters/PreflightToken" },
+          { "$ref": "#/components/parameters/WorkspaceId" }
+        ],
+        "responses": {
+          "200": { "description": "The exact immutable manifest metadata", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchPreflightV1" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "parameters": {
+      "Csrf": { "name": "x-csrf-token", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } },
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" } },
+      "PreflightToken": { "name": "preflight_token", "in": "path", "required": true, "schema": { "type": "string", "minLength": 6, "maxLength": 160, "pattern": "^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$" } }
+    },
+    "responses": {
+      "Problem": { "description": "Typed same-origin failure. No raw market data, source path, private transport, credential or worker state is disclosed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "RequestedSpec": { "$ref": "../schemas/research-requested-spec.v1.schema.json" },
+      "CreateRequest": {
+        "type": "object", "additionalProperties": false, "required": ["requested_spec"],
+        "properties": {
+          "workspace_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+          "requested_spec": { "$ref": "#/components/schemas/RequestedSpec" }
+        }
+      },
+      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "UtcMilliseconds": { "type": "integer", "minimum": 0 },
+      "UtcRange": {
+        "type": "object", "additionalProperties": false,
+        "required": ["start_utc", "end_exclusive_utc", "start_utc_ms", "end_exclusive_utc_ms"],
+        "properties": {
+          "start_utc": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "end_exclusive_utc": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "start_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
+          "end_exclusive_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
+          "bars": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "Warmup": {
+        "allOf": [
+          { "$ref": "#/components/schemas/UtcRange" },
+          { "type": "object", "additionalProperties": false, "required": ["requested_bars", "state"], "properties": { "requested_bars": { "type": "integer", "minimum": 0 }, "state": { "const": "BOUNDARY_ONLY_NOT_FIT" } } }
+        ]
+      },
+      "Quality": {
+        "type": "object", "additionalProperties": false,
+        "required": ["rows", "gaps", "duplicates", "gap_ratio", "passed", "reason_codes", "missing_bar_count", "state"],
+        "properties": {
+          "rows": { "type": "integer", "minimum": 1 }, "gaps": { "type": "integer", "minimum": 0 }, "duplicates": { "type": "integer", "minimum": 0 }, "gap_ratio": { "type": "number", "minimum": 0 },
+          "passed": { "const": true }, "reason_codes": { "type": "array", "maxItems": 16, "items": { "type": "string", "maxLength": 96 } }, "missing_bar_count": { "type": "integer", "minimum": 0 }, "state": { "const": "SNAPSHOT_INTEGRITY_ONLY" }
+        }
+      },
+      "Snapshot": {
+        "type": "object", "additionalProperties": false,
+        "required": ["snapshot_id", "snapshot_content_hash", "market_content_hash", "source_manifest_digest", "row_count", "byte_count", "query", "logical_range", "warmup", "timezone", "calendar_policy", "closed_bar_policy", "columns", "quality", "provenance"],
+        "properties": {
+          "snapshot_id": { "type": "string", "pattern": "^dss_[0-9a-f]{32}$" }, "snapshot_content_hash": { "$ref": "#/components/schemas/Digest" }, "market_content_hash": { "$ref": "#/components/schemas/Digest" }, "source_manifest_digest": { "$ref": "#/components/schemas/Digest" },
+          "row_count": { "type": "integer", "minimum": 1 }, "byte_count": { "type": "integer", "minimum": 1 }, "query": { "$ref": "#/components/schemas/UtcRange" }, "logical_range": { "$ref": "#/components/schemas/UtcRange" }, "warmup": { "$ref": "#/components/schemas/Warmup" },
+          "timezone": { "type": "string", "minLength": 1, "maxLength": 128 }, "calendar_policy": { "type": "string", "minLength": 1, "maxLength": 128 }, "closed_bar_policy": { "const": "CLOSED_BARS_ONLY" },
+          "columns": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 64 } }, "quality": { "$ref": "#/components/schemas/Quality" },
+          "provenance": { "type": "object", "propertyNames": { "enum": ["source_class", "usage_scope", "reader_distribution", "reader_version", "reader_wheel_sha256", "loader_contract", "manifest_digest", "environment_id", "release_commit", "release_tag", "dataset_release_id", "adapter_version"] }, "additionalProperties": { "type": ["string", "number", "boolean"] } }
+        }
+      },
+      "Capability": {
+        "type": "object", "additionalProperties": false,
+        "required": ["engine_release_id", "engine_catalog_digest", "execution_route", "required_input_class", "route_axes", "preflight_admission", "optimization_mode", "optimization_schedule"],
+        "properties": {
+          "engine_release_id": { "type": "string" }, "engine_catalog_digest": { "$ref": "#/components/schemas/Digest" },
+          "execution_route": { "type": "string" }, "required_input_class": { "type": "string" },
+          "route_axes": { "type": "object", "additionalProperties": false, "required": ["engine", "integration", "evidence", "admission"], "properties": { "engine": { "type": "string" }, "integration": { "type": "string" }, "evidence": { "type": "string" }, "admission": { "type": "string" } } },
+          "preflight_admission": { "const": "PREFLIGHT_ONLY" }, "optimization_mode": { "type": "string" }, "optimization_schedule": { "type": "string" }
+        }
+      },
+      "Fold": {
+        "type": "object", "additionalProperties": false, "required": ["fold_id", "train", "outer_oos", "state"],
+        "properties": { "fold_id": { "type": "string", "pattern": "^fold_[0-9]{3}$" }, "train": { "$ref": "#/components/schemas/UtcRange" }, "outer_oos": { "$ref": "#/components/schemas/UtcRange" }, "state": { "const": "BOUNDARY_FIXED_NOT_EVALUATED" } }
+      },
+      "SealedHoldout": {
+        "allOf": [
+          { "$ref": "#/components/schemas/UtcRange" },
+          { "type": "object", "additionalProperties": false, "required": ["snapshot_read_state", "evaluation_state", "disclosure"], "properties": { "snapshot_read_state": { "const": "OPAQUE_SNAPSHOT_ONLY" }, "evaluation_state": { "const": "NOT_EVALUATED" }, "disclosure": { "type": "string", "minLength": 1, "maxLength": 512 } } }
+        ]
+      },
+      "ThreeWindowTopology": {
+        "type": "object", "additionalProperties": false, "required": ["protocol", "folds", "sealed_holdout", "topology_digest"],
+        "properties": { "protocol": { "const": "three_window_decay" }, "folds": { "type": "array", "minItems": 1, "maxItems": 128, "items": { "$ref": "#/components/schemas/Fold" } }, "sealed_holdout": { "$ref": "#/components/schemas/SealedHoldout" }, "topology_digest": { "$ref": "#/components/schemas/Digest" } }
+      },
+      "AdvancedTopology": {
+        "type": "object", "additionalProperties": false, "required": ["protocol", "frequency", "window_mode", "folds", "sealed_holdout", "topology_digest"],
+        "properties": { "protocol": { "const": "advanced_walk_forward" }, "frequency": { "enum": ["single", "yearly", "semi_yearly", "quarterly", "monthly", "weekly"] }, "window_mode": { "const": "expanding" }, "folds": { "type": "array", "minItems": 1, "maxItems": 128, "items": { "$ref": "#/components/schemas/Fold" } }, "sealed_holdout": { "type": "null" }, "topology_digest": { "$ref": "#/components/schemas/Digest" } }
+      },
+      "Topology": { "oneOf": [{ "$ref": "#/components/schemas/ThreeWindowTopology" }, { "$ref": "#/components/schemas/AdvancedTopology" }] },
+      "DatasetBinding": {
+        "type": "object", "additionalProperties": false, "required": ["schema_version", "snapshot_id", "snapshot_content_hash", "market_content_hash", "source_manifest_digest", "dataset_id", "symbol", "timeframe", "range_start_utc_ms", "range_end_exclusive_utc_ms", "timezone", "calendar_policy", "closed_bar_policy"],
+        "properties": { "schema_version": { "const": "research.dataset-binding.v1" }, "snapshot_id": { "type": "string", "pattern": "^dss_[0-9a-f]{32}$" }, "snapshot_content_hash": { "$ref": "#/components/schemas/Digest" }, "market_content_hash": { "$ref": "#/components/schemas/Digest" }, "source_manifest_digest": { "$ref": "#/components/schemas/Digest" }, "dataset_id": { "type": "string", "maxLength": 191 }, "symbol": { "type": "string", "minLength": 1, "maxLength": 64 }, "timeframe": { "type": "string", "maxLength": 191 }, "range_start_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "range_end_exclusive_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "timezone": { "type": "string", "minLength": 1, "maxLength": 128 }, "calendar_policy": { "type": "string", "minLength": 1, "maxLength": 128 }, "closed_bar_policy": { "const": "CLOSED_BARS_ONLY" } }
+      },
+      "ResourceEstimate": {
+        "type": "object", "additionalProperties": false, "required": ["schema_version", "scope", "trial_count", "seed_count", "outer_fold_count", "evaluation_count", "raw_frame_bytes", "snapshot_bytes", "estimated_memory_bytes", "estimated_scratch_bytes", "estimated_cpu_seconds", "admission_state", "disclosure"],
+        "properties": { "schema_version": { "const": "research.resource-estimate.v1" }, "scope": { "const": "per_study_per_fold_per_seed; no product-wide trial claim is implied" }, "trial_count": { "type": "integer", "minimum": 1 }, "seed_count": { "const": 1 }, "outer_fold_count": { "type": "integer", "minimum": 1, "maximum": 128 }, "evaluation_count": { "type": "integer", "minimum": 1 }, "raw_frame_bytes": { "type": "integer", "minimum": 0 }, "snapshot_bytes": { "type": "integer", "minimum": 1 }, "estimated_memory_bytes": { "type": "integer", "minimum": 1 }, "estimated_scratch_bytes": { "type": "integer", "minimum": 1 }, "estimated_cpu_seconds": { "type": "integer", "minimum": 1 }, "admission_state": { "const": "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING" }, "disclosure": { "type": "string", "minLength": 1, "maxLength": 512 } }
+      },
+      "EffectiveDataBinding": {
+        "type": "object", "additionalProperties": false, "required": ["snapshot_id", "snapshot_content_hash", "market_content_hash", "source_manifest_digest", "timezone", "calendar_policy", "closed_bar_policy", "columns", "warmup_bars", "range_start_utc_ms", "range_end_exclusive_utc_ms"],
+        "properties": { "snapshot_id": { "type": "string", "pattern": "^dss_[0-9a-f]{32}$" }, "snapshot_content_hash": { "$ref": "#/components/schemas/Digest" }, "market_content_hash": { "$ref": "#/components/schemas/Digest" }, "source_manifest_digest": { "$ref": "#/components/schemas/Digest" }, "timezone": { "type": "string", "minLength": 1, "maxLength": 128 }, "calendar_policy": { "type": "string", "minLength": 1, "maxLength": 128 }, "closed_bar_policy": { "const": "CLOSED_BARS_ONLY" }, "columns": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 64 } }, "warmup_bars": { "type": "integer", "minimum": 0 }, "range_start_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "range_end_exclusive_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" } }
+      },
+      "Optimization": { "type": "object", "additionalProperties": false, "required": ["mode", "schedule", "trial_count", "early_stopping", "random_seed", "scope"], "properties": { "mode": { "type": "string", "maxLength": 191 }, "schedule": { "type": "string", "maxLength": 191 }, "trial_count": { "type": "integer", "minimum": 1 }, "early_stopping": { "type": ["integer", "null"], "minimum": 1 }, "random_seed": { "type": ["integer", "null"], "minimum": 0 }, "scope": { "const": "per_study_per_fold_per_seed" } } },
+      "Intent": { "type": "object", "additionalProperties": false, "required": ["kind", "reproduction_semantics", "upgrade_semantics"], "properties": { "kind": { "const": "NEW" }, "reproduction_semantics": { "type": "string", "minLength": 1, "maxLength": 512 }, "upgrade_semantics": { "type": "string", "minLength": 1, "maxLength": 512 } } },
+      "EffectiveSpec": { "type": "object", "additionalProperties": false, "required": ["schema_version", "requested_spec_digest", "engine", "data_binding", "topology", "optimization", "intent"], "properties": { "schema_version": { "const": "research.effective-spec.v1" }, "requested_spec_digest": { "$ref": "#/components/schemas/Digest" }, "engine": { "$ref": "#/components/schemas/Capability" }, "data_binding": { "$ref": "#/components/schemas/EffectiveDataBinding" }, "topology": { "$ref": "#/components/schemas/Topology" }, "optimization": { "$ref": "#/components/schemas/Optimization" }, "intent": { "$ref": "#/components/schemas/Intent" } } },
+      "ResearchPreflightV1": {
+        "type": "object", "additionalProperties": false,
+        "required": ["schema_version", "preflight_token", "expires_at_utc_ms", "requested_spec_digest", "effective_spec_digest", "dataset_binding_digest", "manifest_digest", "effective_spec", "dataset_binding", "snapshot", "topology", "resource_estimate", "capability"],
+        "properties": {
+          "schema_version": { "const": "research.preflight.v1" }, "preflight_token": { "$ref": "#/components/parameters/PreflightToken/schema" }, "expires_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
+          "requested_spec_digest": { "$ref": "#/components/schemas/Digest" }, "effective_spec_digest": { "$ref": "#/components/schemas/Digest" }, "dataset_binding_digest": { "$ref": "#/components/schemas/Digest" }, "manifest_digest": { "$ref": "#/components/schemas/Digest" },
+          "effective_spec": { "$ref": "#/components/schemas/EffectiveSpec" }, "dataset_binding": { "$ref": "#/components/schemas/DatasetBinding" }, "snapshot": { "$ref": "#/components/schemas/Snapshot" }, "topology": { "$ref": "#/components/schemas/Topology" }, "resource_estimate": { "$ref": "#/components/schemas/ResourceEstimate" }, "capability": { "$ref": "#/components/schemas/Capability" }
+        }
+      },
+      "Problem": {
+        "type": "object", "additionalProperties": false, "required": ["error", "request_id"],
+        "properties": {
+          "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "enum": ["SESSION_REQUIRED", "REQUEST_REJECTED", "RESEARCH_PREFLIGHT_INVALID", "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE", "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE", "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE", "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE", "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED", "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN", "RESEARCH_PREFLIGHT_RELEASE_STALE", "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID", "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED", "RESEARCH_PREFLIGHT_RESOURCE_REFUSED", "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE", "RESEARCH_PREFLIGHT_UNAVAILABLE", "RESEARCH_PREFLIGHT_REJECTED", "RESEARCH_PREFLIGHT_NOT_FOUND", "RESEARCH_PREFLIGHT_EXPIRED", "RESEARCH_PREFLIGHT_STALE"] }, "message": { "type": "string", "maxLength": 1024 } } },
+          "request_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      }
+    }
+  }
+}

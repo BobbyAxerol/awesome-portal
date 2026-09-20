@@ -1,6 +1,6 @@
 {
   "file_digests": {
-    "README.md": "sha256:7093d7269f8c292d5c9f244108bf5e7c69d50538e6423397a590a79130cbc9bd",
+    "README.md": "sha256:0affcb76165c3af08f5c91f24cc3f46e4c98801ff052149e97227a7418c76ab1",
     "fixtures/command.valid.json": "sha256:9792bac391b74bfd6a2581768d6ea60ae0e880f9504063d82a52c4f8893f39ce",
     "fixtures/event.valid.json": "sha256:c245b69c773d205d6edec800db8cee5410769b0d8e256905ea8827fcf08ae11e",
     "fixtures/execution-account-broker-360.ready.valid.json": "sha256:7b8afa95f7f294ca4f2c3c54a72ace6f8d2fb0a6b7d492a37896d9a84456d856",
@@ -111,6 +111,7 @@
     "generated/execution-staged-activation.d.ts": "sha256:0c1dca37692c56aa495510afa05202d41d9ec9d7fb77b8b6ab7d4943da2220ce",
     "generated/portal-api.d.ts": "sha256:11d0c428ec9166274ba86328713b7638839f61cfd0414efb032ee0b788f6bd44",
     "generated/research-alpha-import.d.ts": "sha256:47dff1c3e601b7dcca6e1323ba81d9f883f5095644a1cbcd2019183b3cd0e2bd",
+    "generated/research-preflight.d.ts": "sha256:03f64486cd1b032290c4627bc5922b8b618e95ec7e55bc5025dd9b5107cf2586",
     "openapi/execution-analytics-series.openapi.json": "sha256:d1cb7c1c900060853f104ae716f34c7503bfaeaf060357eb6268095d4e95364c",
     "openapi/execution-analytics.openapi.json": "sha256:e4c3c321989c187b40e9a2caec0f63ee40b2df63fa844d566afe2a33aec7ab65",
     "openapi/execution-canary.openapi.json": "sha256:9a6a31cd42f2c92b35baab5afaf3ec2c60cf5fdc4dd9e429f50c568193a9d006",
@@ -130,7 +131,8 @@
     "openapi/execution-realtime.openapi.json": "sha256:b6788f1aa82ad736b2a0981205f625a64e9c82486363df02ba86b686428274c0",
     "openapi/execution-staged-activation.openapi.json": "sha256:c741d5b93362e2af59342df7c6c78e7586f81ab72c89039e6010b2632c81e6b2",
     "openapi/research-alpha-import.openapi.json": "sha256:3e10253864c908f160ed0a6f9943b997a745b5a531d181f1aefce7f79b239524",
-    "package.json": "sha256:01bc243ab26f6ccec49bae0599c019f75f664ee16a36f23065ca0ac855688975",
+    "openapi/research-preflight.openapi.json": "sha256:1c93873d01d8fd4e7e0d6ea49b37e9656644303d1c289c766288a2ed81116cfd",
+    "package.json": "sha256:da7c1fa4a31e64a8c2b9b6d8b90b608f3148ce70f3dbad57673894309734ecb3",
     "schemas/command-envelope.v1.schema.json": "sha256:53c6f3ccf66d1b74de59945fe33f480ae58bb00ae500b7696d0411d8094d4cb1",
     "schemas/common.v1.schema.json": "sha256:a74a2c08ff7e87f8cb9110932099c66520bb942788000f5499c594d1c6ef5f88",
     "schemas/event-envelope.v1.schema.json": "sha256:527a2d5128758d088bfcd9e86291ac1a0be1b993821c90be2bd2a36890d10a95",
@@ -166,7 +168,8 @@
     "schemas/keyset-page.v1.schema.json": "sha256:304c6bb02e5abed72ad23e30cff40f6a35cd5f343b401bf9df697d8460110ca5",
     "schemas/problem.v1.schema.json": "sha256:dea537e39acbf3c4b42865fb089a1fa606907a4c2a21ec095f50703affaafbee",
     "schemas/research-alpha-import.v1.schema.json": "sha256:6c2a59acdc8abe813348ce92c0559e50b2a2446e156b5c57f7a606633eeaea65",
-    "schemas/research-artifact-manifest.v1.schema.json": "sha256:1665bdf426568d580d22c332798b2795d55d462db720db5ccef23b6fb35e9c16"
+    "schemas/research-artifact-manifest.v1.schema.json": "sha256:1665bdf426568d580d22c332798b2795d55d462db720db5ccef23b6fb35e9c16",
+    "schemas/research-requested-spec.v1.schema.json": "sha256:73e6fee22874668493a2959d2a713370f645330037d4185441e92b3f4c07d2e9"
   },
   "schema_version": "contracts.snapshot.v1"
 }

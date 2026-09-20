@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Callable
@@ -247,6 +248,29 @@ def test_snapshot_is_immutable_and_repair_creates_a_new_one(tmp_path: Path) -> N
     frame_path.write_bytes(b"tampered")
     with pytest.raises(DataCatalogError, match="corrupt"):
         store.open(first.snapshot_id)
+
+
+def test_snapshot_concurrent_identical_registration_never_exposes_partial_files(tmp_path: Path) -> None:
+    """P08 may preflight the same content concurrently; publication stays atomic."""
+    activated = DataCatalogService(_activate_candles(tmp_path))
+    family = activated.activated_family("binance-perp-1m")
+    store = SnapshotStore(tmp_path / "store")
+    frame = _candle_frame(rows=240)
+
+    def register_once():
+        return store.register(
+            frame=frame,
+            family=family,
+            lineage=("manifest:accepted", "p08:identical"),
+            expected_frequency="1h",
+        )[0]
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        identities = list(executor.map(lambda _ignored: register_once(), range(4)))
+    assert len({identity.snapshot_id for identity in identities}) == 1
+    reopened, _, reopened_frame = store.open(identities[0].snapshot_id)
+    assert reopened.content_hash == identities[0].content_hash
+    assert len(reopened_frame) == len(frame)
 
 
 def test_query_contract_returns_pagination_and_downsampling_metadata(

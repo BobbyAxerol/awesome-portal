@@ -21,7 +21,10 @@ import {
   type ResearchAlphaImportRegistrationInput,
   type ResearchAlphaImportSourceInput,
   type ResearchAlphaImportSourceRecord,
+  type ResearchAlphaVersionDataContract,
   type ResearchAlphaRegistryRecord,
+  type ResearchPreflightManifestInput,
+  type ResearchPreflightManifestRecord,
   type ResearchAttemptInput,
   type ResearchAttemptRecord,
   type ResearchDurableJobClaim,
@@ -96,6 +99,28 @@ interface AlphaImportRegistryRow {
   source_digest_prefix: string;
   alpha_revision: string | number;
   registered_at: Date;
+}
+
+interface AlphaVersionDataContractRow {
+  alpha_id: string;
+  alpha_version_id: string;
+  declared_contract: Record<string, unknown> | string;
+}
+
+interface PreflightManifestRow {
+  preflight_token: string;
+  requested_spec_digest: string;
+  effective_spec_digest: string;
+  dataset_binding_digest: string;
+  manifest_digest: string;
+  requested_spec: Record<string, unknown> | string;
+  effective_spec: Record<string, unknown> | string;
+  dataset_binding: Record<string, unknown> | string;
+  topology: Record<string, unknown> | string;
+  resource_estimate: Record<string, unknown> | string;
+  snapshot: Record<string, unknown> | string;
+  expires_at: Date;
+  created_at: Date;
 }
 
 interface RunRow {
@@ -924,6 +949,191 @@ export class ResearchMetadataRepository {
         alphaRevision: asNumber(row.alpha_revision),
         registeredAt: row.registered_at,
       }));
+    });
+  }
+
+  /**
+   * P08 reads only the server-parsed data requirements attached to the exact
+   * imported AlphaVersion.  It deliberately never returns source bytes, paths
+   * or parser mirrors, and it proves the alpha/version pair is workspace-local
+   * before the private historical-data adapter is called.
+   */
+  async loadAlphaVersionDataContract(
+    scope: ResearchScope,
+    alphaId: string,
+    alphaVersionId: string,
+  ): Promise<ResearchAlphaVersionDataContract> {
+    this.assertScope(scope);
+    requireAlphaId(alphaId);
+    requireOpaqueId(alphaVersionId, "alphaVersionId");
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<AlphaVersionDataContractRow>(
+        `SELECT alpha_id, alpha_version_id, declared_contract
+           FROM research.alpha_versions
+          WHERE workspace_id = $1
+            AND alpha_id = $2
+            AND alpha_version_id = $3
+            AND source_file_ref IS NOT NULL`,
+        [scope.workspaceId, alphaId, alphaVersionId],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        throw new ResearchMetadataError("RESEARCH_PREFLIGHT_NOT_FOUND", "The bound AlphaVersion was not found.", 404);
+      }
+      return {
+        alphaId: row.alpha_id,
+        alphaVersionId: row.alpha_version_id,
+        declaredContract: decodeObject(row.declared_contract, "AlphaVersion data contract"),
+      };
+    });
+  }
+
+  /**
+   * P08 persists an immutable, actor-scoped manifest reference.  PostgreSQL
+   * holds only bounded metadata; the shared content-addressed data snapshot
+   * remains in Portal API storage and no raw market frame reaches this table.
+   */
+  async storePreflightManifest(
+    scope: ResearchScope,
+    input: ResearchPreflightManifestInput,
+    maximumActiveManifests: number,
+  ): Promise<ResearchPreflightManifestRecord> {
+    this.assertScope(scope);
+    requireOpaqueId(input.preflightToken, "preflightToken");
+    if (!input.preflightToken.startsWith("rpft_")) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "preflightToken has an invalid prefix.", 400);
+    }
+    for (const [label, digest] of Object.entries({
+      requestedSpecDigest: input.requestedSpecDigest,
+      effectiveSpecDigest: input.effectiveSpecDigest,
+      datasetBindingDigest: input.datasetBindingDigest,
+      manifestDigest: input.manifestDigest,
+    })) requireDigest(digest, label);
+    for (const [label, value] of Object.entries({
+      requestedSpec: input.requestedSpec,
+      effectiveSpec: input.effectiveSpec,
+      datasetBinding: input.datasetBinding,
+      topology: input.topology,
+      resourceEstimate: input.resourceEstimate,
+      snapshot: input.snapshot,
+    })) requireBoundedObject(value, label, RESEARCH_DB_BUDGET.maxPreflightManifestBytes);
+    requireFiniteDate(input.expiresAt, "preflight expiry");
+    if (input.expiresAt.getTime() <= Date.now()) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Preflight expiry must be in the future.", 400);
+    }
+    requirePositiveSafeInteger(
+      maximumActiveManifests,
+      "maximumActiveManifests",
+      RESEARCH_DB_BUDGET.maxPreflightActiveManifestsPerActor,
+    );
+    return this.withScopedWrite(scope, async (client) => {
+      const active = await client.query<{ count: string | number }>(
+        `SELECT count(*) AS count
+           FROM research.preflight_manifests
+          WHERE workspace_id = $1 AND actor_user_id = $2 AND expires_at > now()`,
+        [scope.workspaceId, scope.actorUserId],
+      );
+      if (asNumber(active.rows[0]?.count ?? 0) >= maximumActiveManifests) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ADMISSION_SATURATED",
+          "Too many live Research preflight manifests exist for this actor; let one expire before creating another.",
+          503,
+        );
+      }
+      const inserted = await client.query<PreflightManifestRow>(
+        `INSERT INTO research.preflight_manifests
+           (workspace_id, preflight_token, actor_user_id,
+            requested_spec_digest, effective_spec_digest, dataset_binding_digest, manifest_digest,
+            requested_spec, effective_spec, dataset_binding, topology,
+            resource_estimate, snapshot, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb,
+                 $11::jsonb, $12::jsonb, $13::jsonb, $14)
+         RETURNING preflight_token, requested_spec_digest, effective_spec_digest,
+                   dataset_binding_digest, manifest_digest, requested_spec, effective_spec,
+                   dataset_binding, topology, resource_estimate, snapshot, expires_at, created_at`,
+        [
+          scope.workspaceId, input.preflightToken, scope.actorUserId,
+          input.requestedSpecDigest, input.effectiveSpecDigest, input.datasetBindingDigest, input.manifestDigest,
+          JSON.stringify(input.requestedSpec), JSON.stringify(input.effectiveSpec), JSON.stringify(input.datasetBinding),
+          JSON.stringify(input.topology), JSON.stringify(input.resourceEstimate), JSON.stringify(input.snapshot), input.expiresAt,
+        ],
+      );
+      const row = inserted.rows[0];
+      if (!row) throw new ResearchMetadataError("RESEARCH_CONCURRENT_TRANSACTION", "Preflight manifest was not recorded; retry.", 409);
+      await this.audit(client, scope, "RESEARCH_PREFLIGHT_CREATED", "preflight_manifest", input.preflightToken, {
+        requested_spec_digest: input.requestedSpecDigest,
+        effective_spec_digest: input.effectiveSpecDigest,
+        dataset_binding_digest: input.datasetBindingDigest,
+        manifest_digest: input.manifestDigest,
+        snapshot_id: typeof input.snapshot.snapshot_id === "string" ? input.snapshot.snapshot_id : "unknown",
+        expires_at: input.expiresAt.toISOString(),
+      });
+      return this.preflightRecord(row);
+    });
+  }
+
+  /** Actor-local token lookup; cross-user tokens intentionally look absent. */
+  async loadPreflightManifest(
+    scope: ResearchScope,
+    preflightToken: string,
+  ): Promise<ResearchPreflightManifestRecord> {
+    this.assertScope(scope);
+    requireOpaqueId(preflightToken, "preflightToken");
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<PreflightManifestRow>(
+        `SELECT preflight_token, requested_spec_digest, effective_spec_digest,
+                dataset_binding_digest, manifest_digest, requested_spec, effective_spec,
+                dataset_binding, topology, resource_estimate, snapshot, expires_at, created_at
+           FROM research.preflight_manifests
+          WHERE workspace_id = $1 AND actor_user_id = $2 AND preflight_token = $3`,
+        [scope.workspaceId, scope.actorUserId, preflightToken],
+      );
+      const row = result.rows[0];
+      if (!row) throw new ResearchMetadataError("RESEARCH_PREFLIGHT_NOT_FOUND", "Research preflight was not found.", 404);
+      if (row.expires_at.getTime() <= Date.now()) {
+        throw new ResearchMetadataError("RESEARCH_PREFLIGHT_EXPIRED", "Research preflight expired; run preflight again.", 409);
+      }
+      return this.preflightRecord(row);
+    });
+  }
+
+  /** Material requested-spec changes invalidate a prior opaque preflight token. */
+  async assertPreflightManifestFresh(
+    scope: ResearchScope,
+    preflightToken: string,
+    expectedRequestedSpecDigest: string,
+  ): Promise<ResearchPreflightManifestRecord> {
+    requireDigest(expectedRequestedSpecDigest, "expectedRequestedSpecDigest");
+    const record = await this.loadPreflightManifest(scope, preflightToken);
+    if (record.requestedSpecDigest !== expectedRequestedSpecDigest) {
+      throw new ResearchMetadataError(
+        "RESEARCH_PREFLIGHT_STALE",
+        "Research preflight does not match the current requested spec; run preflight again.",
+        409,
+      );
+    }
+    return record;
+  }
+
+  /** Bounded metadata-only expiry cleanup. It never deletes shared snapshots. */
+  async cleanupExpiredPreflightManifests(
+    scope: ResearchScope,
+    maximumRows: number,
+  ): Promise<number> {
+    this.assertScope(scope);
+    requirePositiveSafeInteger(maximumRows, "maximumRows", RESEARCH_DB_BUDGET.maxPreflightCleanupRows);
+    return this.withScopedWrite(scope, async (client) => {
+      const deleted = await client.query(
+        `DELETE FROM research.preflight_manifests
+          WHERE ctid IN (
+            SELECT ctid FROM research.preflight_manifests
+             WHERE workspace_id = $1 AND actor_user_id = $2 AND expires_at <= now()
+             ORDER BY expires_at ASC, preflight_token ASC
+             LIMIT $3
+          )`,
+        [scope.workspaceId, scope.actorUserId, maximumRows],
+      );
+      return deleted.rowCount ?? 0;
     });
   }
 
@@ -3008,6 +3218,24 @@ export class ResearchMetadataRepository {
       throw new ResearchMetadataError("RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED", "Alpha import source has expired; parse the file again.", 409);
     }
     return source;
+  }
+
+  private preflightRecord(row: PreflightManifestRow): ResearchPreflightManifestRecord {
+    return {
+      preflightToken: row.preflight_token,
+      requestedSpecDigest: row.requested_spec_digest,
+      effectiveSpecDigest: row.effective_spec_digest,
+      datasetBindingDigest: row.dataset_binding_digest,
+      manifestDigest: row.manifest_digest,
+      requestedSpec: decodeObject(row.requested_spec, "Research preflight requested spec"),
+      effectiveSpec: decodeObject(row.effective_spec, "Research preflight effective spec"),
+      datasetBinding: decodeObject(row.dataset_binding, "Research preflight dataset binding"),
+      topology: decodeObject(row.topology, "Research preflight topology"),
+      resourceEstimate: decodeObject(row.resource_estimate, "Research preflight resource estimate"),
+      snapshot: decodeObject(row.snapshot, "Research preflight snapshot"),
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+    };
   }
 
   private async assertPassingGateReceipt(

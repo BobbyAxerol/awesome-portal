@@ -1,0 +1,18 @@
+{
+  "phase": "P08",
+  "status": "BACKEND_AND_TYPED_CONTRACT_COMPLETE_FE_CONSUMER_AND_P10_WORKER_PENDING_BY_OWNER",
+  "authority_changes": [
+    "A private HMD snapshot adapter reads only bounded [start,end) input through the existing authorized Portal API historical-data provider and returns metadata only.",
+    "Content-addressed shared snapshots now use sibling staging plus atomic directory rename, closing partial-file observation during identical concurrent registration.",
+    "Control API adds actor/workspace-scoped immutable preflight manifests, expiry cleanup, requested/effective/data digest pinning and P10 server-side freshness assertion.",
+    "P08 publishes two same-origin routes and a canonical OpenAPI/generated client whose range, quality, topology, resource, snapshot and effective-spec fields are typed rather than generic metadata maps.",
+    "The preflight authority refuses overlarge topology/metadata explicitly, never silently truncates folds, projects only an allowlisted finite provenance set, checks all cross-document binding facts and rejects obviously inadmissible resource work before snapshot serialization.",
+    "Research P08 snapshot IDs are opaque to legacy public Data Catalog list/quality/series routes; those routes deny the Research family before a raw frame is opened.",
+    "The P02 frozen requested-spec schema is packaged inside the canonical contracts workspace and mechanically checked against its immutable P02 evidence copy, so all generators resolve one source-identical schema."
+  ],
+  "explicit_non_changes": [
+    "No QuantBT worker, submitted run, strategy execution, transform fit, holdout evaluation, source mutation, deployment, runtime container or Database Catalog UI activation.",
+    "No direct browser HMD call, raw candle/Parquet/source-path exposure, direct database access, Execution Loop/Trading System change, broker, CLI or command route.",
+    "No HIFI/TSX/composition change. The frontend tsconfig receives only a non-visual generated-contract alias for the future typed consumer."
+  ]
+}

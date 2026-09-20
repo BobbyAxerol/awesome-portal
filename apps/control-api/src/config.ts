@@ -56,6 +56,13 @@ const EnvSchema = z.object({
   RESEARCH_ALPHA_IMPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(10 * 60),
   RESEARCH_ALPHA_IMPORT_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
   RESEARCH_ALPHA_IMPORT_MAXIMUM_ACTIVE_SOURCES_PER_ACTOR: z.coerce.number().int().min(1).max(32).default(8),
+  // P08 writes only immutable preflight-manifest metadata to PostgreSQL. The
+  // source snapshot stays private to the Portal API content-addressed store;
+  // these settings bound the short private adapter call and actor-local token
+  // lease without starting a worker or changing any execution profile.
+  RESEARCH_PREFLIGHT_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(10 * 60),
+  RESEARCH_PREFLIGHT_TIMEOUT_MS: z.coerce.number().int().min(250).max(15_000).default(5_000),
+  RESEARCH_PREFLIGHT_MAXIMUM_ACTIVE_MANIFESTS_PER_ACTOR: z.coerce.number().int().min(1).max(16).default(8),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),

@@ -3591,7 +3591,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); FE_ARTIFACT_HARNESS_COMPLETE / Claude — artifact harness +337 lines. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: artifact panels may start now; named DTO/download action activation remains P10/P11; FE_ARTIFACT_PANEL_COMPLETE / Claude — [composition](./research_loop/evidence/P05/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced; FE_SCHEDULER_HARNESS_COMPLETE / Claude — scheduler harness +349 lines, full suite 2488 pass. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: attempt/queue panels may start now; producer/SSE/action activation remains P10/P11; FE_QUEUE_PANEL_COMPLETE / Claude — [composition](./research_loop/evidence/P06/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | BACKEND_AND_CONTRACT_COMPLETE / Codex / [P07 evidence](./research_loop/evidence/P07/phase-report.md); private AST analysis, bounded source custody, seven ordered gates, immutable registry binding and ADMIN activation CAS are proven on a fresh disposable PostgreSQL cell. The five public same-origin operations and generated typed client are published. `may_activate` is required, caller-specific server admission and is evaluated by the exact same predicate as activation; **CG-P07-01 resolved**. All five Control API routes are registered with truthful P07/P09 ownership in the R2 capability inventory; **FD-P07-02 resolved**. · FE_SCREEN14_COMPOSITION_COMPLETE / Claude — Screen 14 is built against `@portal/contracts-research-alpha-import` with zero hand-written types or error strings; tsc 0, research suite 158/158, full frontend suite 158 files/0 failures, build 0 and browser probe 6/6 with 0 console output and 0 px overflow at 1280 and 660. `/research/quantbt/imports` is untouched; `ResearchAlphaAnalysis` is never imported, rendered or requested. No product route is mounted — P09 owns that — so the only render today is the labelled fixture lane. Screen 14 T07 (prefill Screen 02 from `av_`) is **NOT_RUN_BY_DESIGN**, explicitly owned by P10 New Run; it is neither a P07 pass nor a hidden failure. [Claude S14 composition](./research_loop/evidence/P07/frontend-composition-claude.md) |
-| [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | PLANNED / unassigned / — |
+| [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P08 packet](./research_loop/evidence/P08/README.md); bounded HMD private reader, shared immutable snapshot, requested→effective/fold/resource manifest, token expiry/freshness assertion and exact two-route same-origin OpenAPI are proven. No raw candle/holdout/worker path exists; generic Data Catalog routes cannot replay an opaque P08 snapshot ID. `V11-P08-BR` plus Screen 02/05 consumer/browser receipt remain Claude-owned; first fix three P07 `ResearchFixtures.tsx` `may_activate` literals, then consume the generated P08 types. P10 owns server-side worker binding. Rolling is truthfully `RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED` until a versioned manifest-owned train-width contract is approved, never inferred. |
 | [P09](#rl-p09) | P02,P04 | 00/12 | 05 | PLANNED / unassigned / — |
 | [P10](#rl-p10) | P06–P09 | 02 | 05 | PLANNED / unassigned / — |
 | [P11](#rl-p11) | P06,P09,P10 | 03 | 06 | PLANNED / unassigned / — |
@@ -4272,6 +4272,25 @@ Those are explicit future delivery gates, not unrecorded P07 backend debt.
 - **Tests FE/browser:** Review→payload matching, stale token/material edit, resource estimate units, reproduced-vs-upgraded config diff; widgets rebuild nếu đã được dùng bởi screen.
 - **Exit gate:** Worker receives exact manifest; no silent resnapshot/default/forward-fill; required data permission/DR dependencies resolved cho exercised path.
 - **Rollback/handoff:** Invalidate old token schema, retain referenced inputs. Checkpoint04: P07/P08 + import/dev receipt và reader/preflight evidence.
+
+**P08 backend closeout (2026-09-20):** The same-origin contract is now
+published at `packages/contracts/openapi/research-preflight.openapi.json`, with
+generated types for every Screen 02/05 panel fact (UTC range, warmup, quality,
+fold/topology, resource estimate, snapshot/data binding and effective spec).
+The frozen P02 requested-spec schema is packaged and mechanically parity-checked
+against P02 evidence, so generation is self-contained in local, CI and release
+containers rather than depending on an incidental repository mount.
+Control API owns actor-scoped immutable metadata and validates stored records
+again before a response; Portal API owns only a fixed HMAC private HMD reader
+and content-addressed snapshot seal. Snapshot publication is atomic under a
+concurrent identical request, only declared Alpha columns are sealed after the
+certified full-OHLCV adapter validation, generic Data Catalog raw routes deny
+this Research snapshot family, and cross-document snapshot/topology/optimizer
+facts must agree. Arbitrary loader provenance is not exposed, an obviously
+inadmissible budget is rejected before serialization, and the 128-fold / 60
+KiB document ceilings fail typed rather than truncate or fall through to a
+database error. Full details and explicit non-run visual/worker gates are in
+the [P08 evidence packet](./research_loop/evidence/P08/README.md).
 
 <a id="rl-p09"></a>
 ### P09 — Frontend foundation, Journey Map và Engine Atlas

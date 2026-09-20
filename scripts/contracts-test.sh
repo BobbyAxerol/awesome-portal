@@ -63,6 +63,7 @@ mkdir -p \
   "${WORKSPACE_DIR}/packages/contracts" \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations" \
+  "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02" \
   "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract"
 cp -a \
   "${CONTRACTS_DIR}/README.md" \
@@ -83,6 +84,9 @@ cp -a \
 cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/catalog.generated.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
+cp -a \
+  "${ROOT_DIR}/upgrade/research_loop/evidence/P02/requested-spec.v1.schema.json" \
+  "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02/"
 cp -a \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract/cli-command-map.json" \
   "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract/"

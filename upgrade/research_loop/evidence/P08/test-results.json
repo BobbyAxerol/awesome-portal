@@ -1,0 +1,57 @@
+{
+  "phase": "P08",
+  "status": "PASS_BACKEND_AND_GENERATED_CONTRACT",
+  "receipts": [
+    {
+      "gate": "P08 private snapshot source, temporal boundary, provenance and atomic store",
+      "command": "PYTHONPATH=apps/portal/backend/src:apps/portal apps/portal/.venv/bin/python -m pytest -q apps/portal/backend/tests/test_research_preflight_snapshot.py apps/portal/backend/tests/test_data_catalog.py",
+      "result": "25 passed",
+      "coverage": ["P08-T01", "P08-T02", "P08-T03", "P08-T04", "P08-T05", "P08-T07", "P08-T08", "P08-T09", "P08-T10", "P08-T11", "P08-T12", "V11-P08-DR"],
+      "notes": "Includes source mutation pin, UTC/Vietnam/aware timestamps, half-open closed-bar warmup, funding/column refusal, declared-column-only sealing after HMD validation, no raw holdout/points, opaque generic Data Catalog denial before raw-frame open, pre-serialization no-orphan resource refusal, rolling refusal, no silent long-fold truncation, provenance allowlist and HMAC/private-public route proof."
+    },
+    {
+      "gate": "P08 fresh PostgreSQL manifest authority",
+      "command": "scripts/research-loop-v11/test-p08-postgres.sh",
+      "result": "1 file passed; 10 tests passed",
+      "coverage": ["P08-T06", "P08-T07", "P08-T09", "P08-T10", "P08-T12", "V11-P08-DR"],
+      "notes": "Uses one exact self-removing tmpfs research-p08-postgres-* container. Proves canonical cross-language SHA, actor/workspace isolation, exact manifest persistence, stale-token rejection, stored-manifest digest revalidation, immutable trigger/runtime-role UPDATE denial, bounded expiry cleanup, cross-document private capability/binding equality and oversized private metadata rejection before persistence."
+    },
+    {
+      "gate": "P08 canonical OpenAPI and generated consumer types",
+      "command": "cd packages/contracts && npm run generate:research-preflight && npm test && python3 tooling/snapshot.py --check && ./tooling/verify-generated.sh; scripts/contracts-test.sh",
+      "result": "3 files passed; 138 tests passed; local generated verifier PASS; isolated Docker contracts gate PASS; 170-file snapshot matched",
+      "coverage": ["P08 same-origin two-route boundary", "typed panel DTOs", "typed refusal vocabulary", "no raw HMD/worker route"],
+      "notes": "Generated types expose concrete range/quality/fold/topology/resource/binding/effective-spec structures; a frontend does not need to hand-parse unknown metadata. The self-contained packaged P02 requested-spec schema is parsed-equal to the immutable P02 evidence copy; isolated contract-test staging copies that one read-only frozen input solely for the parity assertion."
+    },
+    {
+      "gate": "Control API production source compilation",
+      "command": "cd apps/control-api && npm run build",
+      "result": "PASS",
+      "notes": "Production build includes immutable metadata revalidation before every browser response. No runtime/image build was run."
+    },
+    {
+      "gate": "Protected boundary and patch hygiene",
+      "command": "cd apps/portal && sha256sum -c strategy/PROTECTED_SHA256 && bash -n ../../scripts/research-loop-v11/test-p08-postgres.sh && git -C ../.. diff --check",
+      "result": "PASS",
+      "notes": "Protected QuantBT strategy is byte-identical; P08 changed no HIFI/TSX composition."
+    },
+    {
+      "gate": "Research frontend project typecheck",
+      "command": "cd apps/portal/frontend && npx tsc --noEmit --pretty false",
+      "result": "BLOCKED_BY_PREEXISTING_P07_FRONTEND_FIXTURES",
+      "notes": "The P08 generated alias is parsed by package-contract gates. The full frontend project remains red because three existing ResearchFixtures.tsx P07 entries omit required may_activate. Claude owns that fixture/type receipt; P08 does not make may_activate optional or modify HIFI/TSX."
+    }
+  ],
+  "baseline_nonblocking": [
+    {
+      "gate": "cd apps/control-api && npx tsc --noEmit",
+      "result": "BASELINE_RED_OUT_OF_SCOPE",
+      "notes": "Repository-wide test-inclusive typecheck remains red in unrelated legacy test fixtures/module resolution. Targeted P08 paths show no diagnostics and the production build is green."
+    }
+  ],
+  "not_run_by_design": [
+    "V11-P08-BR browser/visual/dev-host receipt: no Screen 02/05 product consumer is mounted in this backend foundation; Claude owns it and P09/P10 own route/worker closure.",
+    "Real production HMD reader/source evidence: P08 deliberately uses a bounded HMD-shaped test adapter in the isolated proof and makes no production-data claim.",
+    "QuantBT run execution, transform fitting, holdout evaluation, job/queue activation, image build, deploy and runtime restart are prohibited by P08 scope."
+  ]
+}

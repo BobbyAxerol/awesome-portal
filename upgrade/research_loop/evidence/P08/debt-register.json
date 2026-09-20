@@ -1,0 +1,54 @@
+{
+  "phase": "P08",
+  "open_implementation_debt": [],
+  "resolved_closeouts": [
+    {
+      "id": "P08-BE-01",
+      "status": "RESOLVED",
+      "subject": "Shared snapshot publication could expose partial files under concurrent identical preflight calls.",
+      "evidence": "SnapshotStore staged atomic publication and concurrent registration test."
+    },
+    {
+      "id": "P08-BE-02",
+      "status": "RESOLVED",
+      "subject": "An advanced fold range could be silently truncated at an implementation ceiling.",
+      "evidence": "Explicit 128-fold RESOURCE_REFUSED test and typed contract maximum."
+    },
+    {
+      "id": "P08-BE-03",
+      "status": "RESOLVED",
+      "subject": "Arbitrary scalar loader metadata could reach a persisted/browser preflight response.",
+      "evidence": "Finite provenance allowlist, secret-like metadata negative test and OpenAPI property-name allowlist."
+    },
+    {
+      "id": "P08-FE-01",
+      "status": "RESOLVED",
+      "subject": "Panel fields needed by Screen 02/05 were generic metadata maps, forcing a consumer to hand-parse server structures.",
+      "evidence": "Typed OpenAPI/generation for range, quality, fold, topology, resource, binding and effective specification plus frontend alias."
+    },
+    {
+      "id": "P08-BE-04",
+      "status": "RESOLVED",
+      "subject": "A metadata snapshot reference could have been replayed through legacy generic Data Catalog series/quality/list routes to read raw Research/holdout bars.",
+      "evidence": "research-hmd-ohlcv is browser-opaque at the generic routes before SnapshotStore.open(), with private-route regression proof."
+    },
+    {
+      "id": "P08-BE-05",
+      "status": "RESOLVED",
+      "subject": "Independently schema-valid private documents could point at different snapshot/topology/optimizer facts, or an obviously invalid resource budget could write an unreferenced snapshot.",
+      "evidence": "Control API cross-document and stored-manifest digest invariant tests plus pre-serialization resource admission and no-orphan Python regression test."
+    },
+    {
+      "id": "P08-BE-06",
+      "status": "RESOLVED",
+      "subject": "The P08 OpenAPI generator could resolve the P02 requested-spec schema locally but not inside the isolated contracts verifier image.",
+      "evidence": "Self-contained packages/contracts schema plus a parsed-JSON equality test against P02 immutable evidence; generated verifier passes in its container mount."
+    }
+  ],
+  "later_phase_ownership_not_debt": [
+    "Claude owns Screen 02/05 HIFI composition, same-origin consumer, browser/dev receipt and visual behavior from frontend-handoff-claude.md.",
+    "Claude owns the small P07 fixture correction for required may_activate before claiming a clean full frontend typecheck; P08 does not weaken that server admission field.",
+    "P10 owns durable run creation and the server-side call to assertFreshForRequestedSpec before a worker can receive this manifest.",
+    "A rolling topology needs a deliberate versioned requested-spec field for train width. P08 correctly returns TOPOLOGY_UNSUPPORTED rather than inventing an engine default."
+  ]
+}

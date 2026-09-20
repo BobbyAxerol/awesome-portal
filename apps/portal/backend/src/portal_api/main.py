@@ -48,6 +48,7 @@ from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.services.portal_links import PortalLinksService
 from portal_api.services.portal_registry import PortalRegistryService
 from portal_api.services.research_engine_catalog import ResearchEngineCatalogService
+from portal_api.services.research_preflight_snapshot import ResearchPreflightSnapshotService
 from portal_api.services.portal_overview import (
     PortalSummaryContractError,
     PortalSummaryService,
@@ -164,6 +165,14 @@ def create_app(
     )
     app.state.snapshot_store = SnapshotStore(
         Path(os.getenv("PORTAL_SNAPSHOT_ROOT", str(Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs")) / "snapshots")))
+    )
+    # P08 is a private, metadata-only source snapshot authority.  It is not a
+    # worker, browser route, direct engine caller, or activation flag: Control
+    # API remains the public BFF and owns preflight token/manifest custody.
+    app.state.research_preflight_snapshot_service = ResearchPreflightSnapshotService(
+        provider=app.state.market_data_provider,
+        snapshots=app.state.snapshot_store,
+        engine_catalog=app.state.research_engine_catalog,
     )
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,

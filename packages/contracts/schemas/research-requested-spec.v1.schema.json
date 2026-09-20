@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "research.requested-spec.v1",
+  "title": "Research requested specification v1",
+  "description": "P02 producer-side structural contract for S02. It is not a live endpoint contract. P04 supplies installed-manifest values and P10 supplies authenticated producer wiring.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "alpha_binding",
+    "not_publishable",
+    "strategy_id",
+    "execution_route",
+    "route_params",
+    "data",
+    "protocol",
+    "optimization_mode",
+    "optimization_schedule",
+    "parameter_space_overrides",
+    "optuna_trials",
+    "early_stopping",
+    "random_seed",
+    "optimization_config",
+    "client"
+  ],
+  "properties": {
+    "schema_version": { "const": "research.requested-spec.v1" },
+    "alpha_binding": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/alphaBinding" }
+      ]
+    },
+    "not_publishable": { "type": "boolean" },
+    "strategy_id": { "$ref": "#/$defs/identifier" },
+    "execution_route": {
+      "enum": [
+        "signal_notional",
+        "pct_equity",
+        "intrabar_bracket",
+        "dca_ladder",
+        "reactive",
+        "event_driven",
+        "native_event_lifecycle",
+        "orders",
+        "fill_replay",
+        "basket",
+        "arbitrage",
+        "portfolio",
+        "nautilus_dca_grid",
+        "options"
+      ]
+    },
+    "route_params": { "$ref": "#/$defs/routeParams" },
+    "data": { "$ref": "#/$defs/data" },
+    "protocol": { "enum": ["three_window_decay", "advanced"] },
+    "windows": { "$ref": "#/$defs/windows" },
+    "walk_forward": { "$ref": "#/$defs/walkForward" },
+    "optimization_mode": { "$ref": "#/$defs/identifier" },
+    "optimization_schedule": { "$ref": "#/$defs/identifier" },
+    "parameter_space_overrides": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/parameterOverride" }
+    },
+    "optuna_trials": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+    "early_stopping": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "integer", "minimum": 1, "maximum": 2147483647 }
+      ]
+    },
+    "random_seed": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "integer", "minimum": 0, "maximum": 2147483647 }
+      ]
+    },
+    "optimization_config": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/identifier" },
+      "additionalProperties": { "$ref": "#/$defs/scalar" }
+    },
+    "client": { "$ref": "#/$defs/client" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "not_publishable": { "const": true } }, "required": ["not_publishable"] },
+      "then": { "properties": { "alpha_binding": { "type": "null" } } },
+      "else": { "properties": { "alpha_binding": { "$ref": "#/$defs/alphaBinding" } } }
+    },
+    {
+      "if": { "properties": { "protocol": { "const": "three_window_decay" } }, "required": ["protocol"] },
+      "then": { "required": ["windows"], "not": { "required": ["walk_forward"] } },
+      "else": { "required": ["walk_forward"], "not": { "required": ["windows"] } }
+    },
+    {
+      "if": { "properties": { "execution_route": { "const": "intrabar_bracket" } }, "required": ["execution_route"] },
+      "then": { "properties": { "route_params": { "required": ["intrabar"], "not": { "anyOf": [{ "required": ["portfolio"] }, { "required": ["reactive"] }, { "required": ["dca"] }] } } } }
+    },
+    {
+      "if": { "properties": { "execution_route": { "const": "portfolio" } }, "required": ["execution_route"] },
+      "then": { "properties": { "route_params": { "required": ["portfolio"], "not": { "anyOf": [{ "required": ["intrabar"] }, { "required": ["reactive"] }, { "required": ["dca"] }] } } } }
+    },
+    {
+      "if": { "properties": { "execution_route": { "const": "reactive" } }, "required": ["execution_route"] },
+      "then": { "properties": { "route_params": { "required": ["reactive"], "not": { "anyOf": [{ "required": ["intrabar"] }, { "required": ["portfolio"] }, { "required": ["dca"] }] } } } }
+    },
+    {
+      "if": { "properties": { "execution_route": { "const": "dca_ladder" } }, "required": ["execution_route"] },
+      "then": { "properties": { "route_params": { "required": ["dca"], "not": { "anyOf": [{ "required": ["intrabar"] }, { "required": ["portfolio"] }, { "required": ["reactive"] }] } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_route": {
+            "enum": ["signal_notional", "pct_equity", "event_driven", "native_event_lifecycle", "orders", "fill_replay", "basket", "arbitrage", "nautilus_dca_grid", "options"]
+          }
+        },
+        "required": ["execution_route"]
+      },
+      "then": { "properties": { "route_params": { "maxProperties": 0 } } }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+    },
+    "decimalString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[+-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "scalar": { "type": ["string", "number", "boolean"] },
+    "alphaBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alpha_id", "alpha_version_id"],
+      "properties": {
+        "alpha_id": { "$ref": "#/$defs/identifier" },
+        "alpha_version_id": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset_id", "symbol", "timeframe"],
+      "properties": {
+        "dataset_id": { "$ref": "#/$defs/identifier" },
+        "symbol": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "timeframe": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "interval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end_exclusive"],
+      "properties": {
+        "start": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "end_exclusive": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "windows": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["is", "oos", "holdout"],
+      "properties": {
+        "is": { "$ref": "#/$defs/interval" },
+        "oos": { "$ref": "#/$defs/interval" },
+        "holdout": { "$ref": "#/$defs/interval" }
+      }
+    },
+    "walkForward": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end_exclusive", "split_mode", "frequency", "window_mode"],
+      "properties": {
+        "start": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "end_exclusive": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "split_mode": { "$ref": "#/$defs/identifier" },
+        "frequency": { "$ref": "#/$defs/identifier" },
+        "window_mode": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "intrabarParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level_mode", "same_bar_policy", "tick_size"],
+      "properties": {
+        "level_mode": { "enum": ["hlc_conservative", "ohlc_path", "close_only"] },
+        "same_bar_policy": { "enum": ["stop_first", "target_first", "ambiguity_flag"] },
+        "tick_size": { "$ref": "#/$defs/decimalString" }
+      }
+    },
+    "portfolioParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "sizing"],
+      "properties": {
+        "mode": { "enum": ["longshort", "market_neutral", "directional", "equal_weight", "risk_parity", "beta_neutral"] },
+        "sizing": { "enum": ["equal_weight", "risk_parity", "vol_target", "kelly_fraction", "fixed_notional", "atr_risk", "min_variance", "score_weighted"] }
+      }
+    },
+    "reactiveParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "audit_mode"],
+      "properties": {
+        "runtime": { "enum": ["R0", "R1", "R2", "R3", "R3B"] },
+        "audit_mode": { "enum": ["minimal", "standard", "audit"] }
+      }
+    },
+    "dcaParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_order_usd", "safety_orders", "step_scale"],
+      "properties": {
+        "base_order_usd": { "$ref": "#/$defs/decimalString" },
+        "safety_orders": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+        "step_scale": { "$ref": "#/$defs/decimalString" }
+      }
+    },
+    "routeParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intrabar": { "$ref": "#/$defs/intrabarParams" },
+        "portfolio": { "$ref": "#/$defs/portfolioParams" },
+        "reactive": { "$ref": "#/$defs/reactiveParams" },
+        "dca": { "$ref": "#/$defs/dcaParams" }
+      }
+    },
+    "parameterOverride": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "kind", "low", "high"],
+          "properties": {
+            "name": { "$ref": "#/$defs/identifier" },
+            "kind": { "const": "sweep" },
+            "low": { "$ref": "#/$defs/scalar" },
+            "high": { "$ref": "#/$defs/scalar" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "kind", "value"],
+          "properties": {
+            "name": { "$ref": "#/$defs/identifier" },
+            "kind": { "const": "pin" },
+            "value": { "$ref": "#/$defs/scalar" }
+          }
+        }
+      ]
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine_release_id", "config_digest"],
+      "properties": {
+        "engine_release_id": { "$ref": "#/$defs/identifier" },
+        "config_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

@@ -41,3 +41,4 @@ generate_and_compare openapi/execution-manager-lists.openapi.json generated/exec
 generate_and_compare openapi/execution-contract-authority.openapi.json generated/execution-contract-authority.d.ts
 generate_and_compare openapi/execution-market-context.openapi.json generated/execution-market-context.d.ts
 generate_and_compare openapi/research-alpha-import.openapi.json generated/research-alpha-import.d.ts
+generate_and_compare openapi/research-preflight.openapi.json generated/research-preflight.d.ts

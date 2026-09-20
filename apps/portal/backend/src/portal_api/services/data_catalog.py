@@ -9,8 +9,12 @@ reader wheel; nothing here scans the filesystem.
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
+import os
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -188,42 +192,63 @@ class SnapshotStore:
             row_count=len(frame),
         )
         if not path.is_dir():
-            path.mkdir(parents=True, exist_ok=True)
-            (path / "frame.parquet").write_bytes(encoded)
-            (path / "identity.json").write_text(
-                json.dumps(
-                    {
-                        "snapshot_id": identity.snapshot_id,
-                        "family_id": identity.family_id,
-                        "kind": identity.kind,
-                        "schema_version": identity.schema_version,
-                        "content_hash": identity.content_hash,
-                        "lineage": list(identity.lineage),
-                        "produced_at": identity.produced_at,
-                        "bounds": list(identity.bounds),
-                        "row_count": identity.row_count,
-                    },
-                    sort_keys=True,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
-            (path / "quality.json").write_text(
-                json.dumps(
-                    {
-                        "snapshot_id": quality.snapshot_id,
-                        "gaps": quality.gaps,
-                        "duplicates": quality.duplicates,
-                        "rows": quality.rows,
-                        "gap_ratio": quality.gap_ratio,
-                        "passed": quality.passed,
-                        "reason_codes": list(quality.reason_codes),
-                    },
-                    sort_keys=True,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
+            # A P08 burst can resolve identical immutable market content at
+            # the same time.  Stage every file in a sibling directory and
+            # atomically rename the completed directory into place, so no
+            # reader can ever observe a half-written frame/identity pair.
+            snapshots_root = path.parent
+            snapshots_root.mkdir(parents=True, exist_ok=True)
+            staging = Path(tempfile.mkdtemp(prefix=f".{snapshot_id}.", dir=snapshots_root))
+            try:
+                (staging / "frame.parquet").write_bytes(encoded)
+                (staging / "identity.json").write_text(
+                    json.dumps(
+                        {
+                            "snapshot_id": identity.snapshot_id,
+                            "family_id": identity.family_id,
+                            "kind": identity.kind,
+                            "schema_version": identity.schema_version,
+                            "content_hash": identity.content_hash,
+                            "lineage": list(identity.lineage),
+                            "produced_at": identity.produced_at,
+                            "bounds": list(identity.bounds),
+                            "row_count": identity.row_count,
+                        },
+                        sort_keys=True,
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
+                (staging / "quality.json").write_text(
+                    json.dumps(
+                        {
+                            "snapshot_id": quality.snapshot_id,
+                            "gaps": quality.gaps,
+                            "duplicates": quality.duplicates,
+                            "rows": quality.rows,
+                            "gap_ratio": quality.gap_ratio,
+                            "passed": quality.passed,
+                            "reason_codes": list(quality.reason_codes),
+                        },
+                        sort_keys=True,
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
+                try:
+                    os.rename(staging, path)
+                except OSError as exc:
+                    if exc.errno not in {errno.EEXIST, errno.ENOTEMPTY} or not path.is_dir():
+                        raise
+                    # Another caller atomically published the same digest
+                    # first. Its content hash is checked by open(); discard
+                    # our private staging copy only.
+            finally:
+                if staging.exists():
+                    shutil.rmtree(staging)
+        required_files = (path / "frame.parquet", path / "identity.json", path / "quality.json")
+        if not all(item.is_file() for item in required_files):
+            raise DataCatalogError(f"snapshot {snapshot_id} is incomplete")
         return identity, quality
 
     def list(self) -> list[dict[str, Any]]:
@@ -251,37 +276,57 @@ class SnapshotStore:
         from io import BytesIO
 
         path = self.snapshot_path(snapshot_id)
-        if not path.is_dir():
-            raise DataCatalogError(f"snapshot {snapshot_id} not found")
+        identity, quality = self.describe(snapshot_id)
         payload = (path / "frame.parquet").read_bytes()
-        if sha256_bytes(payload) != json.loads(
-            (path / "identity.json").read_text(encoding="utf-8")
-        )["content_hash"]:
+        if sha256_bytes(payload) != identity.content_hash:
             raise DataCatalogError(f"snapshot {snapshot_id} is corrupt")
         frame = pd.read_parquet(BytesIO(payload))
-        identity_payload = json.loads((path / "identity.json").read_text(encoding="utf-8"))
-        quality_payload = json.loads((path / "quality.json").read_text(encoding="utf-8"))
-        identity = SnapshotIdentity(
-            snapshot_id=identity_payload["snapshot_id"],
-            family_id=identity_payload["family_id"],
-            kind=identity_payload["kind"],
-            schema_version=identity_payload["schema_version"],
-            content_hash=identity_payload["content_hash"],
-            lineage=tuple(identity_payload["lineage"]),
-            produced_at=identity_payload["produced_at"],
-            bounds=tuple(identity_payload["bounds"]),
-            row_count=identity_payload["row_count"],
-        )
-        quality = QualityReport(
-            snapshot_id=quality_payload["snapshot_id"],
-            gaps=quality_payload["gaps"],
-            duplicates=quality_payload["duplicates"],
-            rows=quality_payload["rows"],
-            gap_ratio=quality_payload["gap_ratio"],
-            passed=quality_payload["passed"],
-            reason_codes=tuple(quality_payload["reason_codes"]),
-        )
+
         return identity, quality, frame
+
+    def describe(self, snapshot_id: str) -> tuple[SnapshotIdentity, QualityReport]:
+        """Read immutable snapshot metadata without opening its frame.
+
+        The public data routes use this guard before deciding whether a
+        family is browser-readable.  In particular, P08 Research snapshots
+        remain metadata-only through the Control API and must not load a
+        sealed frame merely to produce a public 404.
+        """
+        path = self.snapshot_path(snapshot_id)
+        required_files = (path / "frame.parquet", path / "identity.json", path / "quality.json")
+        if not path.is_dir() or not all(item.is_file() for item in required_files):
+            raise DataCatalogError(f"snapshot {snapshot_id} not found")
+        try:
+            identity_payload = json.loads((path / "identity.json").read_text(encoding="utf-8"))
+            quality_payload = json.loads((path / "quality.json").read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError, KeyError) as exc:
+            raise DataCatalogError(f"snapshot {snapshot_id} metadata is corrupt") from exc
+        if identity_payload.get("snapshot_id") != snapshot_id or quality_payload.get("snapshot_id") != snapshot_id:
+            raise DataCatalogError(f"snapshot {snapshot_id} metadata is corrupt")
+        try:
+            identity = SnapshotIdentity(
+                snapshot_id=identity_payload["snapshot_id"],
+                family_id=identity_payload["family_id"],
+                kind=identity_payload["kind"],
+                schema_version=identity_payload["schema_version"],
+                content_hash=identity_payload["content_hash"],
+                lineage=tuple(identity_payload["lineage"]),
+                produced_at=identity_payload["produced_at"],
+                bounds=tuple(identity_payload["bounds"]),
+                row_count=identity_payload["row_count"],
+            )
+            quality = QualityReport(
+                snapshot_id=quality_payload["snapshot_id"],
+                gaps=quality_payload["gaps"],
+                duplicates=quality_payload["duplicates"],
+                rows=quality_payload["rows"],
+                gap_ratio=quality_payload["gap_ratio"],
+                passed=quality_payload["passed"],
+                reason_codes=tuple(quality_payload["reason_codes"]),
+            )
+        except (TypeError, KeyError, ValueError) as exc:
+            raise DataCatalogError(f"snapshot {snapshot_id} metadata is corrupt") from exc
+        return identity, quality
 
     def query(
         self,

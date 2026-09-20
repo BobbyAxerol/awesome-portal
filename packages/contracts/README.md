@@ -191,6 +191,24 @@ shadow it. Regenerate only with `npm run generate` (or the narrow
 `npm run generate:research-alpha-import`) and never hand-maintain the emitted
 TypeScript declarations.
 
+P08 publishes the additive Research Preflight contract at
+`openapi/research-preflight.openapi.json`, generated as
+`generated/research-preflight.d.ts`. It contains exactly two same-origin,
+actor/workspace-scoped operations: create an immutable effective-spec/data
+snapshot manifest and read its live opaque token. The request uses the frozen
+P02 `research.requested-spec.v1`; responses retain exact digests, UTC
+milliseconds, closed-bar policy, quality/topology/resource metadata and typed
+refusals. They never expose OHLCV points, a snapshot path, an internal HMAC
+principal, a private adapter URL, sealed-holdout values, a worker reservation
+or an execution command. P08 is `PREFLIGHT_ONLY`, not a run submission API.
+Regenerate only with `npm run generate` (or
+`npm run generate:research-preflight`) and never hand-maintain emitted types.
+The P02 frozen `research.requested-spec.v1` is packaged at
+`schemas/research-requested-spec.v1.schema.json`, so OpenAPI generation is
+self-contained in local, CI and release-image containers. The P08 contract
+test requires its parsed JSON to remain exactly equal to the immutable P02
+evidence copy; P02 remains the freeze authority.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

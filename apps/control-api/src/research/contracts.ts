@@ -39,6 +39,12 @@ export const RESEARCH_DB_BUDGET = Object.freeze({
   maxAlphaImportMirrorBytes: 32_768,
   maxAlphaImportActiveSourcesPerActor: 32,
   maxAlphaImportCleanupRows: 128,
+  // P08 retains only bounded immutable-manifest metadata in PostgreSQL. Raw
+  // market frames live once in the private content-addressed snapshot store,
+  // never in a user row or browser response.
+  maxPreflightManifestBytes: 65_536,
+  maxPreflightActiveManifestsPerActor: 16,
+  maxPreflightCleanupRows: 128,
 });
 
 export type ResearchIntentKind =
@@ -156,6 +162,9 @@ export class ResearchMetadataError extends Error {
       | "RESEARCH_ALPHA_IMPORT_GATES_FAILED"
       | "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED"
       | "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT"
+      | "RESEARCH_PREFLIGHT_NOT_FOUND"
+      | "RESEARCH_PREFLIGHT_EXPIRED"
+      | "RESEARCH_PREFLIGHT_STALE"
       | "RESEARCH_ARTIFACT_NOT_FOUND"
       | "RESEARCH_ARTIFACT_FENCE_REJECTED"
       | "RESEARCH_ARTIFACT_LIFECYCLE_CONFLICT"
@@ -252,6 +261,32 @@ export interface ResearchAlphaActivation {
   supersededAlphaVersionId: string | null;
   alphaRevision: number;
   replayed: boolean;
+}
+
+/** P08 persisted metadata only; the snapshot ref never contains a filesystem path. */
+export interface ResearchPreflightManifestInput {
+  preflightToken: string;
+  requestedSpecDigest: string;
+  effectiveSpecDigest: string;
+  datasetBindingDigest: string;
+  manifestDigest: string;
+  requestedSpec: Record<string, unknown>;
+  effectiveSpec: Record<string, unknown>;
+  datasetBinding: Record<string, unknown>;
+  topology: Record<string, unknown>;
+  resourceEstimate: Record<string, unknown>;
+  snapshot: Record<string, unknown>;
+  expiresAt: Date;
+}
+
+export interface ResearchPreflightManifestRecord extends ResearchPreflightManifestInput {
+  createdAt: Date;
+}
+
+export interface ResearchAlphaVersionDataContract {
+  alphaId: string;
+  alphaVersionId: string;
+  declaredContract: Record<string, unknown>;
 }
 
 export interface ResearchAlphaRegistryRecord {

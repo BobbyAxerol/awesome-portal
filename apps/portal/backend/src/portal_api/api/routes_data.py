@@ -6,6 +6,20 @@ from portal_api.services.data_catalog import DataCatalogError
 
 router = APIRouter(prefix="/api/v1/data", tags=["data"])
 
+# P08 seals HMD frames for a future worker under this family.  A Research
+# preflight response contains an opaque snapshot reference as immutable
+# provenance, not a browser capability.  Keep legacy public Data Catalog
+# series/quality/list endpoints from turning that reference into a raw-frame
+# bypass (especially for sealed holdout bars).
+_BROWSER_OPAQUE_SNAPSHOT_FAMILIES = frozenset({"research-hmd-ohlcv"})
+
+
+def _require_browser_readable_snapshot(family_id: str) -> None:
+    if family_id in _BROWSER_OPAQUE_SNAPSHOT_FAMILIES:
+        # Match an absent object: callers must not learn whether an opaque
+        # research snapshot exists, nor cause its frame to be opened.
+        raise HTTPException(status_code=404, detail="snapshot not found")
+
 
 @router.get("/catalog")
 async def data_catalog(request: Request) -> dict:
@@ -15,13 +29,20 @@ async def data_catalog(request: Request) -> dict:
 @router.get("/snapshots")
 async def data_snapshots(request: Request) -> dict:
     store = request.app.state.snapshot_store
-    return {"snapshots": store.list()}
+    return {
+        "snapshots": [
+            snapshot
+            for snapshot in store.list()
+            if snapshot.get("family_id") not in _BROWSER_OPAQUE_SNAPSHOT_FAMILIES
+        ]
+    }
 
 
 @router.get("/snapshots/{snapshot_id}/quality")
 async def snapshot_quality(snapshot_id: str, request: Request) -> dict:
     try:
-        _, quality, _ = request.app.state.snapshot_store.open(snapshot_id)
+        identity, quality = request.app.state.snapshot_store.describe(snapshot_id)
+        _require_browser_readable_snapshot(identity.family_id)
     except DataCatalogError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {
@@ -44,6 +65,8 @@ async def snapshot_series(
     max_points: int | None = Query(default=None, ge=1, le=100_000),
 ) -> dict:
     try:
+        identity, _ = request.app.state.snapshot_store.describe(snapshot_id)
+        _require_browser_readable_snapshot(identity.family_id)
         result = request.app.state.snapshot_store.query(
             snapshot_id,
             start=start,
