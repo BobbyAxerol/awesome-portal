@@ -43,6 +43,7 @@ export class ResearchAlphaImportController {
     const workspaceId = await this.workspace(request, query.data.workspace_id);
     try {
       const entries = await this.service.list(
+        request.portalUser,
         { workspaceId, actorUserId: request.portalUser.userId },
         query.data.alpha_id,
       );

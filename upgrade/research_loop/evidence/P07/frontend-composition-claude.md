@@ -86,7 +86,7 @@ where it is given constants and issues no request.
 
 ## Findings
 
-### `CG-P07-01` — activation admission is unpublished (backend request)
+### `CG-P07-01` — activation admission was unpublished (resolved 2026-09-20)
 
 `POST /{alpha_version_id}/activate` can answer
 `RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN`, but nothing the browser may read
@@ -96,25 +96,18 @@ over it.
 
 P05 settled the precedent — `mayExport()` requires the server's own admission,
 because a control that exists only to be refused teaches the reader that
-controls lie. So the activation control is **withheld** in the container, and
-steps 1–3 close without it. The presentational component accepts
-`activationAdmitted` and the fixture lane exercises both branches, so the day
-the field is published this is a one-line change.
+controls lie. The backend now publishes required `may_activate: boolean` on
+both `RegistrationResponse` and `RegistryEntry`, evaluated per actor by the
+exact same predicate as `POST /{alpha_version_id}/activate` after workspace
+membership is checked. The real S14 container reads the generated registration
+field directly; it does not infer permission from a browser-held role or object
+lifecycle. Fixture branches remain useful for visual coverage, but they are no
+longer a substitute for server admission.
 
-```text
-Backend request
-- Field needed: a boolean on RegistrationResponse and RegistryEntry
-  (suggested `may_activate`) stating whether the calling principal may activate
-  that version.
-- UI reason: Screen 14's third affordance cannot be offered honestly without it.
-- Current impact: the Activate control is withheld on the real container;
-  S14 steps 1–3 are unaffected.
-- Proposed schema: `may_activate: boolean` (server-evaluated, per actor).
-```
+### `FD-P07-02` — the R2 capability ledger omitted the five new routes (resolved 2026-09-20)
 
-### `FD-P07-02` — the R2 capability ledger does not know the five new routes
-
-`npm test` fails in `src/execution/r2Ledger.test.ts`:
+At the time Claude identified this gap, `npm test` failed in
+`src/execution/r2Ledger.test.ts`:
 
 ```
 expected [ 'GET /api/v1/research/alphas', …(4) ] to deeply equal []
@@ -125,11 +118,11 @@ compares them with `r2_ledger/capability-inventory.v1.json`. P07's backend
 published five controller routes without a ledger entry, so the inventory is
 now incomplete and the gate is red.
 
-**Not fixed here.** The missing columns are `interaction_class`, `owner`,
-`test_owner` and `evidence` — backend ownership claims that are codex's to make,
-not mine to author. Pre-existing on the branch: my change set touches only
-`apps/portal/frontend/src/research/**` and `e2e/`, and the failure reproduces
-from the control-api tree alone.
+The backend owner added all five entries with exact interaction class, consumer,
+owner, test owner and truthful P07/P09 evidence. They remain marked
+`unused_capability: true` because P09, not P07, owns the first mounted product
+route and browser receipt. The ledger gate is now green; no route is falsely
+claimed as product-active.
 
 ### `FD-P07-03` — the boundary sweep's network rule was too blunt
 
@@ -182,7 +175,7 @@ visible sentence, because a tooltip alone reaches neither touch nor keyboard:
 | T04 | 7 PASS on a 120 ms stagger; step 3 enabled | pass |
 | T05 | `av_0_3_0` DRAFT; supersedes note; registry strip | pass |
 | T06 | ACTIVE; the rc-composable note disappears | pass |
-| T07 | Screen 02 prefill from `av_` | **not covered — Screen 02 does not exist in this phase.** Deferred to whichever phase builds New Run; recorded here so it is not mistaken for green |
+| T07 | Screen 02 prefill from `av_` | **NOT_RUN_BY_DESIGN — Screen 02/New Run does not exist in P07. P10 owns it and its browser receipt; this is neither green nor a P07 defect.** |
 | T08 | two files → single-file error verbatim | pass |
 | T09 | reduced motion → no stagger | pass |
 | T10 | dropzone label, gate rows `role=list`, named regions | pass |
@@ -195,7 +188,7 @@ visible sentence, because a tooltip alone reaches neither touch nor keyboard:
 |---|---|---|
 | typecheck | `npx tsc --noEmit -p tsconfig.json` | **exit 0** |
 | research suite | `npx vitest run src/research` | **158 passed / 8 files** |
-| full frontend suite | `npm test` | 2562 passed, **1 failed: `r2Ledger` (`FD-P07-02`, codex-owned)**. `disabledReason` was also red and is now green. |
+| full frontend suite | `npm test` | **158 test files, 0 failures** after the backend ledger closeout |
 | build | `npm run build` | **exit 0** |
 | browser probe | `npx playwright test --config=playwright.research-probe.config.ts` | **6 passed**, 0 console errors or warnings |
 
@@ -239,5 +232,6 @@ Reproduce: `npm run build`, `npx vite preview --port 4317 --strictPort`, then
 No product route is mounted (P09 owns route normalisation). No dev or
 production deployment. `V11-P07-BR` stays `PENDING_OWNER_PHASE`: this is
 composition against a published contract plus a fixture-lane browser receipt,
-not a browser acceptance of a live route. T07's cross-screen prefill is
-unbuilt. `CG-P07-01` is open and blocks the activation affordance only.
+not a browser acceptance of a live route. Screen 14 T07 is
+`NOT_RUN_BY_DESIGN`; P10 owns Screen 02/New Run and that cross-screen prefill.
+`CG-P07-01` and `FD-P07-02` are resolved.

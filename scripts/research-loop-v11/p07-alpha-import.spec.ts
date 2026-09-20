@@ -192,16 +192,16 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     expect(gates.gates.map((gate) => gate.n)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(gates.gates.every((gate) => gate.state === "PASS")).toBe(true);
     expect(gates.static_scan_disclosure).toBe("Static scan — runtime causality is proven per run at Stage 3/4.");
-    expect(result).toMatchObject({ schema_version: "research.alpha-registration.v1", lifecycle_state: "DRAFT", replayed: false, alpha_id: "p07-alpha" });
+    expect(result).toMatchObject({ schema_version: "research.alpha-registration.v1", lifecycle_state: "DRAFT", replayed: false, alpha_id: "p07-alpha", may_activate: true });
 
     const activated = await service.activate(admin, scopeA, {
       alphaVersionId: result.alpha_version_id,
       expectedAlphaRevision: result.alpha_revision,
     });
     expect(activated).toMatchObject({ schema_version: "research.alpha-activation.v1", lifecycle_state: "ACTIVE", replayed: false, alpha_revision: 2 });
-    expect(await service.list(scopeA)).toMatchObject([{
+    expect(await service.list(admin, scopeA)).toMatchObject([{
       alpha_id: "p07-alpha", alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE",
-      source_digest_prefix: parsed.source_digest.slice(0, 12),
+      source_digest_prefix: parsed.source_digest.slice(0, 12), may_activate: true,
     }]);
     const controller = new ResearchAlphaImportController(
       service,
@@ -214,7 +214,7 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     } as never, {});
     expect(listEnvelope).toMatchObject({
       schema_version: "research.alpha-registry.v1",
-      entries: [{ alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE" }],
+      entries: [{ alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE", may_activate: true }],
     });
     const provenance = await pool.query(
       `SELECT version.source_file_ref, version.code_digest, source.source_digest,
@@ -226,6 +226,27 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
       [scopeA.workspaceId, result.alpha_version_id],
     );
     expect(provenance.rows[0]).toMatchObject({ source_file_ref: parsed.source_file_ref, code_digest: parsed.source_digest, source_digest: parsed.source_digest, entrypoint: "generate_signals" });
+  });
+
+  it("P07 caller admission is server-derived and exactly mirrors activation enforcement", async () => {
+    await seedIdentity();
+    const member: PortalUser = { ...admin, userId: scopeB.actorUserId, username: "p07-user-b", role: "USER" };
+    const parsed = await service.parse(member, scopeB, { originalFilename: "alpha.py", sourceText: source() }, "p07-request");
+    const gates = await service.gates(member, scopeB, parsed.source_file_ref, "p07-request");
+    const registered = await service.register(member, scopeB, {
+      sourceFileRef: parsed.source_file_ref,
+      alphaId: "p07-member-alpha",
+      gateReceiptId: gates.gate_receipt_id,
+    }, "p07-request");
+    expect(registered.may_activate).toBe(false);
+    expect((await service.list(member, scopeB)).every((entry) => entry.may_activate === false)).toBe(true);
+    await expectImportError(
+      service.activate(member, scopeB, {
+        alphaVersionId: registered.alpha_version_id,
+        expectedAlphaRevision: registered.alpha_revision,
+      }),
+      "RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN",
+    );
   });
 
   it("P07-T02/T03: a failed first gate skips later gates and never creates a provisional registration", async () => {

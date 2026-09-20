@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
- "generated_at": "2026-09-10",
- "route_count": 137,
+ "generated_at": "2026-09-20",
+ "route_count": 142,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1394,8 +1394,58 @@
    "evidence": "BE-R2-8: authenticated HTTP + fresh-PG writer/readback + canonical schema/FE reader tests. Typed client exists; no product capture form is claimed or deployed.",
    "owner": "codex",
    "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/alphas",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 publishes the bounded, caller-specific registry envelope for Screen 14. The generated client and fixture composition exist; P09 alone owns mounting the product route and its browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/alphas/import/parse",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 bounded same-origin source custody: the server accepts one capped module and returns only a read-only mirror/opaque receipt. The typed Screen 14 client exists; P09 owns product-route activation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/alphas/import/gates",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 records seven ordered server gates over the exact opaque source receipt; a failure makes remaining gates SKIPPED. The typed Screen 14 client exists; P09 owns product-route activation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/alphas/import/register",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 creates or replays an immutable DRAFT AlphaVersion only from current passing server evidence. The typed Screen 14 client exists; P09 owns product-route activation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/alphas/:alpha_version_id/activate",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 ADMIN-only CAS activation. may_activate is server-derived from this exact policy, while P09 owns the first mounted product-route/browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
   }
  ],
  "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",
- "code_inventory_updated_at": "2026-09-12"
+ "code_inventory_updated_at": "2026-09-20"
 }

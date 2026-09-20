@@ -29,18 +29,25 @@
     {
       "id": "CG-P07-01",
       "status": "RESOLVED",
-      "subject": "Five P07 same-origin routes lacked a canonical OpenAPI/generated client and two repository failures were not translated into the bounded P07 public error vocabulary.",
-      "evidence": "research-alpha-import.openapi.json, generated/research-alpha-import.d.ts, 134 contract tests, P07 PostgreSQL 8-test matrix and Control API production build"
+      "subject": "Five P07 same-origin routes lacked a canonical OpenAPI/generated client, caller-specific activation admission and two repository failures were not translated into the bounded P07 public error vocabulary.",
+      "evidence": "research-alpha-import.openapi.json, generated/research-alpha-import.d.ts, required may_activate schema, 135 contract tests, P07 PostgreSQL 9-test matrix and Control API production build"
     },
     {
       "id": "P07-BE-05",
       "status": "RESOLVED",
       "subject": "Generated-contract drift verifier was image-path-coupled and could not prove the same contract from a developer worktree.",
       "evidence": "packages/contracts/tooling/verify-generated.sh now derives repo_root from its own path; full verifier passed from /home/bobby/portal-research/packages/contracts."
+    },
+    {
+      "id": "FD-P07-02",
+      "status": "RESOLVED",
+      "subject": "The R2 capability ledger omitted all five published P07 Control API routes, making the frontend CI ownership gate red.",
+      "evidence": "capability-inventory.v1.json records all five P07 routes; r2Ledger and the full frontend suite report zero failures."
     }
   ],
   "later_phase_ownership_not_debt": [
-    "Claude owns Screen 14 same-origin consumer, HIFI composition and browser/dev receipt; P07 remains BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING until that delivery gate passes.",
+    "Claude owns Screen 14 same-origin consumer, HIFI composition and browser/dev receipt; P09 owns the first product route mount and V11-P07-BR.",
+    "Screen 14 T07 cross-screen prefill is owned by P10 New Run; it is explicitly NOT_RUN_BY_DESIGN in P07 and is not implementation debt in this phase.",
     "P08 owns data snapshots/effective spec/preflight.",
     "P10 owns any named worker-side imported-source execution adapter; P07 deliberately refuses to execute uploaded source."
   ]

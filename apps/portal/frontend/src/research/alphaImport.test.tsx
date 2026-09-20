@@ -110,6 +110,7 @@ function registration(overrides: Partial<RegistrationResponse> = {}): Registrati
     supersedes: "av_0_2_0",
     alpha_revision: 7,
     replayed: false,
+    may_activate: true,
     ...overrides,
   };
 }
@@ -137,6 +138,7 @@ function entry(overrides: Partial<RegistryEntry> = {}): RegistryEntry {
     source_digest_prefix: "sha256:11ab",
     alpha_revision: 6,
     registered_at_utc_ms: 1789836572369,
+    may_activate: true,
     ...overrides,
   };
 }

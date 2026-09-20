@@ -1,8 +1,9 @@
 # P07 frontend handoff for Claude — Screen 14 Alpha Import
 
-Status: `BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING`; Claude owns the Screen
-14 HIFI composition, frontend tests and required browser/dev receipt. Do not
-replace approved Research shell or modify protected QuantBT source.
+Status: `BACKEND_CONTRACT_AND_ADMISSION_COMPLETE`; Claude owns the Screen 14
+HIFI composition, frontend tests and required browser/dev receipt. P09 alone
+owns mounting the product route. Do not replace approved Research shell or
+modify protected QuantBT source.
 
 ## Codex response — `CG-P07-01` resolved
 
@@ -29,6 +30,14 @@ responses now carry explicit schema versions. `RESEARCH_ALPHA_IMPORT_ADMISSION_S
 and `RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT` are now P07-specific typed errors
 rather than leaked generic repository codes.
 
+`may_activate` is now required on `ResearchAlphaRegistrationV1` and every
+`ResearchAlphaRegistryV1.entries[]` item. It is caller-specific server
+admission, evaluated with the **same predicate** enforced by the activate
+mutation after workspace membership is checked. Do not infer it from lifecycle
+or a browser-held role. The S14 container consumes the generated registration
+field directly; it must neither recreate a role rule nor treat a missing value
+as permission.
+
 **Route decision:** Screen 14 is a new Research Loop route,
 `/research/alphas/import`, and is **parallel** to the existing
 `/research/quantbt/imports` legacy quarantine inbox. Do not delete, redirect,
@@ -39,16 +48,23 @@ migration/cutover phase must own that decision and compatibility receipt.
 
 | Product need | Method/path | Browser input | Server-derived output |
 |---|---|---|---|
-| Initial/imported registry | `GET /api/v1/research/alphas` | optional `workspace_id`, `alpha_id` | `research.alpha-registry.v1` safe registry envelope |
+| Initial/imported registry | `GET /api/v1/research/alphas` | optional `workspace_id`, `alpha_id` | `research.alpha-registry.v1` safe registry envelope; each entry carries server-derived `may_activate` |
 | Parse one source | `POST /api/v1/research/alphas/import/parse` | `original_filename`, `source_text`, optional `workspace_id` | `research.alpha-source.v1` opaque ref, digests, parse state, readonly mirror |
 | Run gates | `POST /api/v1/research/alphas/import/gates` | opaque `source_file_ref`, optional workspace | `research.alpha-import-gates.v1` ordered seven gate rows + receipt |
-| Register draft | `POST /api/v1/research/alphas/import/register` | opaque ref, `alpha_id`, optional receipt/workspace | `research.alpha-registration.v1` DRAFT version and revision |
+| Register draft | `POST /api/v1/research/alphas/import/register` | opaque ref, `alpha_id`, optional receipt/workspace | `research.alpha-registration.v1` DRAFT version, revision and server-derived `may_activate` |
 | Activate draft | `POST /api/v1/research/alphas/:alpha_version_id/activate` | `expected_alpha_revision`, optional workspace | `research.alpha-activation.v1` ACTIVE version/revision or typed conflict |
 
 All mutations require existing same-origin session, CSRF and allowed-origin
 mechanisms. Do not call Portal API, PostgreSQL, QuantBT, NATS, Execution or
 Trading System directly; do not hold private principal or select an analyser
 URL in browser code.
+
+## Explicit later-phase boundary
+
+Screen 14 test **T07** (prefill Screen 02 from an `av_` version) is
+`NOT_RUN_BY_DESIGN`: Screen 02/New Run does not exist in P07. P10 owns both
+that destination and its cross-screen browser receipt. It is neither a P07
+failure to hide nor a P07 pass to claim.
 
 ## Rendering and state rules
 

@@ -1,6 +1,6 @@
 # P07 evidence — Alpha Registry, Import and immutable version binding
 
-Status: `BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING` on 2026-09-20.
+Status: `BACKEND_AND_CONTRACT_COMPLETE_FE_PRODUCT_ROUTE_PENDING` on 2026-09-20.
 
 P07 implements the Research-only server authority for one bounded Python
 source file: parse → seven ordered gates → immutable `DRAFT` AlphaVersion →
@@ -26,3 +26,8 @@ Read in this order:
 This packet is credential-free. It is not a runtime rollout, worker execution
 path, dependency installer, Research dev deployment or approval to run
 imported code.
+
+`may_activate` in the registry and registration responses is caller-specific
+server admission, derived by the same policy that protects the activation
+write. Screen 14 → Screen 02 `av_` prefill (`T07`) is explicitly owned by P10
+New Run and is not claimed by P07.

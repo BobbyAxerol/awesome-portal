@@ -1,6 +1,6 @@
 {
   "phase": "P07",
-  "status": "BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING",
+  "status": "BACKEND_AND_CONTRACT_COMPLETE_FE_PRODUCT_ROUTE_PENDING",
   "authority_changes": [
     "1723680000040_research-alpha-import-v1.sql adds immutable temporary import-source custody, parser-bound receipts, source-file provenance on AlphaVersion and workspace-local digest claims.",
     "ResearchAlphaImportService and ResearchMetadataRepository own bounded parse/gate/register/activate/list flows, expiry cleanup and activation CAS.",
@@ -8,11 +8,13 @@
     "research_alpha_analyzer.py performs bounded AST/literal analysis and restricted-definition loading without importing or calling submitted strategy code.",
     "P07 routes are same-origin Control API routes; the Portal API analyser route is private and excluded from public API schema.",
     "CG-P07-01 publishes the canonical five-operation OpenAPI source, generated TypeScript client, fixtures, schema snapshot and frontend type alias; it also version-labels P07 success envelopes and bounds formerly generic admission/version-conflict errors.",
-    "The generated-contract verifier now resolves the repository root from its own location rather than assuming an immutable-image-only /repo mount, so the exact same drift proof runs in a developer worktree and release image."
+    "The generated-contract verifier now resolves the repository root from its own location rather than assuming an immutable-image-only /repo mount, so the exact same drift proof runs in a developer worktree and release image.",
+    "CG-P07-01 closeout adds required caller-specific may_activate on registration and registry entries, derived by the exact activation predicate; the S14 container consumes that generated field without a browser role guess.",
+    "FD-P07-02 closeout adds all five P07 routes to the R2 capability inventory with interaction class, owner, test owner and evidence; product-route activation remains explicitly P09-owned."
   ],
   "explicit_non_changes": [
     "No modification to apps/portal/strategy/main.py or another protected QuantBT kernel file.",
-    "No React/TSX, HIFI, shared shell or frontend acceptance change; the only frontend-side edit is a type-only tsconfig alias for the generated contract.",
+    "This Codex closeout makes no visual React/TSX, HIFI, shared-shell or frontend acceptance change; its only frontend-side edits are generated-contract type plumbing and non-visual may_activate wiring. Claude's separate Screen 14 composition receipt remains recorded in frontend-composition-claude.md.",
     "No worker, NATS, Redis, broker, CLI, Trading System, Execution Edge or direct browser database path.",
     "No runtime container start, deploy, production flag, shared-database migration or release action.",
     "No generic plugin installer, zip/multifile source import, arbitrary source execution or runtime causality claim."

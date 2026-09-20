@@ -84,9 +84,9 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
     researchState({ kind: "in-flight", hasAcceptedResponse: false }),
   );
 
-  /* The registry read is the only GET, and it is the only thing allowed to
-     tell us whether this actor may activate: a 403 on the write path is not
-     something to discover by offering the button and watching it fail. */
+  /* Registry and registration are the only server responses permitted to tell
+     this container whether the caller may activate. A 403 on the write path is
+     not something to discover by offering the button and watching it fail. */
   const loadRegistry = useCallback(() => {
     alphaImportApi
       .registry(workspaceId)
@@ -267,25 +267,8 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
     onRunGates,
     onRegister,
     onActivate,
-    /* No published field says whether this actor may activate, so the control
-       is withheld rather than offered optimistically. See `CG-P07-01` below. */
-    activationAdmitted: false,
+    /* The generated RegistrationResponse is the only authority for this
+       affordance; never infer it from a browser-held role or lifecycle. */
+    activationAdmitted: registration?.may_activate === true,
   };
 }
-
-/**
- * `CG-P07-01` — contract gap, backend request open.
- *
- * `POST /{alpha_version_id}/activate` exists and can answer
- * `RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN`, but nothing the browser may
- * read says in advance whether *this* actor may activate: `RegistryEntry`
- * carries the object's lifecycle, not the caller's rights over it. P05 settled
- * the precedent — `mayExport()` requires the server's own admission, because a
- * control that exists only to be refused teaches the reader that controls
- * lie.
- *
- * So the activation control is withheld here, and steps 1–3 close without it.
- * The fix is one boolean on the registration/registry DTO (`may_activate`),
- * not a client-side guess at a role.
- */
-export const CG_P07_01_ACTIVATION_ADMISSION_UNPUBLISHED = true;

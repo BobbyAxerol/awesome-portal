@@ -1,6 +1,6 @@
 # P07 phase report — Alpha Registry, Import and immutable version binding
 
-Status: `BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING` — 2026-09-20.
+Status: `BACKEND_AND_CONTRACT_COMPLETE_FE_PRODUCT_ROUTE_PENDING` — 2026-09-20.
 
 ## Delivered authority
 
@@ -42,6 +42,13 @@ authority, not deferred to a frontend workaround:
 - The generated-contract drift verifier now derives its repository root from
   its own path rather than assuming `/repo`; it runs identically from a local
   worktree and the immutable release image.
+- `may_activate` is required on RegistrationResponse and RegistryEntry. It is
+  caller-specific server admission evaluated by the exact same predicate that
+  guards `POST activate` (`ADMIN` after controller-verified workspace
+  membership); the browser never infers it from lifecycle or a held role.
+- All five P07 routes are now recorded in the R2 capability inventory with
+  interaction class, owner, test owner and evidence. They are honestly marked
+  typed/unmounted until P09 owns the product route rather than leaving CI red.
 - Screen 14 stays additive at `/research/alphas/import`; legacy
   `/research/quantbt/imports` remains untouched until an explicitly approved
   migration phase.
@@ -74,9 +81,20 @@ path reference, dependency resolution or arbitrary-code runtime.
 
 ## Intentionally not claimed
 
-No React/S14 code, browser journey, dev URL receipt, runtime container,
+This Codex closeout makes no visual React/S14 composition, runtime container,
 deployment, QuantBT worker execution, protected `strategy/main.py` change,
 Execution Loop authority, Trading System path, direct browser database access
-or dependency installer exists in P07. Screen 14 UI acceptance is the next
-delivery action for Claude; this blocks full phase closeout but is not an
-unrecorded backend defect.
+or dependency-installer change. Claude's separate Screen 14 composition and
+fixture-lane browser receipt are recorded in
+`frontend-composition-claude.md`. The only frontend code change in this
+closeout is non-visual generated-contract wiring: it reads server-supplied
+`registration.may_activate` rather than hard-coding a withheld affordance.
+P09 owns product-route mount and `V11-P07-BR`.
+
+## Cross-screen boundary
+
+Screen 14 test `T07` — prefill Screen 02 New Run from an `av_` binding — is
+**NOT_RUN_BY_DESIGN** in P07. Screen 02 does not exist yet; P10 owns its
+canonical binding/pre-fill behaviour and real browser receipt. P07 does not
+label this integration green merely because registration returns an
+`alpha_version_id`.

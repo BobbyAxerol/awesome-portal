@@ -67,4 +67,12 @@ describe("P07 published Research Alpha Import contract", () => {
     expect(schema).not.toContain('"source_text"');
     expect(schema).not.toContain('"source_bytes"');
   });
+
+  it("requires caller-specific activation admission on DRAFT registration and registry rows", () => {
+    const schema = JSON.stringify(json(schemaPath));
+    expect(schema).toContain('"may_activate"');
+
+    const generated = readFileSync(generatedPath, "utf8");
+    expect(generated).toContain("may_activate: boolean");
+  });
 });

@@ -140,7 +140,7 @@
     "RegistryEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["alpha_id", "alpha_version_id", "version_label", "lifecycle_state", "entrypoint", "source_digest_prefix", "alpha_revision", "registered_at_utc_ms"],
+      "required": ["alpha_id", "alpha_version_id", "version_label", "lifecycle_state", "entrypoint", "source_digest_prefix", "alpha_revision", "registered_at_utc_ms", "may_activate"],
       "properties": {
         "alpha_id": { "$ref": "#/$defs/AlphaId" },
         "alpha_version_id": { "$ref": "#/$defs/AlphaVersionId" },
@@ -149,7 +149,11 @@
         "entrypoint": { "type": "string", "minLength": 1, "maxLength": 160 },
         "source_digest_prefix": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
         "alpha_revision": { "type": "integer", "minimum": 1 },
-        "registered_at_utc_ms": { "$ref": "#/$defs/UtcMilliseconds" }
+        "registered_at_utc_ms": { "$ref": "#/$defs/UtcMilliseconds" },
+        "may_activate": {
+          "type": "boolean",
+          "description": "Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role."
+        }
       }
     },
     "RegistryListResponse": {
@@ -164,7 +168,7 @@
     "RegistrationResponse": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "alpha_id", "alpha_version_id", "version_label", "source_digest", "lifecycle_state", "supersedes", "alpha_revision", "replayed"],
+      "required": ["schema_version", "alpha_id", "alpha_version_id", "version_label", "source_digest", "lifecycle_state", "supersedes", "alpha_revision", "replayed", "may_activate"],
       "properties": {
         "schema_version": { "const": "research.alpha-registration.v1" },
         "alpha_id": { "$ref": "#/$defs/AlphaId" },
@@ -174,7 +178,11 @@
         "lifecycle_state": { "const": "DRAFT" },
         "supersedes": { "type": ["string", "null"], "maxLength": 160 },
         "alpha_revision": { "type": "integer", "minimum": 1 },
-        "replayed": { "type": "boolean" }
+        "replayed": { "type": "boolean" },
+        "may_activate": {
+          "type": "boolean",
+          "description": "Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role."
+        }
       }
     },
     "ActivationResponse": {

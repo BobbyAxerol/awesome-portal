@@ -31,6 +31,15 @@ const GATE_NAMES = [
   "no-lookahead-static-scan",
 ] as const;
 
+/**
+ * This is deliberately the exact predicate enforced by `activate`, not a UI
+ * hint derived from object lifecycle. The controller proves workspace
+ * membership before either read or mutation reaches this service.
+ */
+export function mayActivateResearchAlpha(user: Pick<PortalUser, "role">): boolean {
+  return user.role === "ADMIN";
+}
+
 @Injectable()
 export class ResearchAlphaImportService {
   constructor(
@@ -170,6 +179,7 @@ export class ResearchAlphaImportService {
       supersedes: registration.supersedes,
       alpha_revision: registration.alphaRevision,
       replayed: registration.replayed,
+      may_activate: mayActivateResearchAlpha(user),
     };
   }
 
@@ -178,7 +188,7 @@ export class ResearchAlphaImportService {
     scope: ResearchScope,
     input: { alphaVersionId: string; expectedAlphaRevision: number },
   ): Promise<ResearchAlphaActivateResponse> {
-    if (user.role !== "ADMIN") {
+    if (!mayActivateResearchAlpha(user)) {
       throw new ResearchAlphaImportError(
         "RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN",
         "Only a Research workspace administrator may activate an AlphaVersion.",
@@ -197,7 +207,11 @@ export class ResearchAlphaImportService {
     };
   }
 
-  async list(scope: ResearchScope, alphaId?: string): Promise<readonly ResearchAlphaRegistryEntry[]> {
+  async list(
+    user: Pick<PortalUser, "role">,
+    scope: ResearchScope,
+    alphaId?: string,
+  ): Promise<readonly ResearchAlphaRegistryEntry[]> {
     const rows = await this.repository.listImportedAlphaVersions(scope, alphaId);
     return rows.map((row) => ({
       alpha_id: row.alphaId,
@@ -208,6 +222,7 @@ export class ResearchAlphaImportService {
       source_digest_prefix: row.sourceDigestPrefix,
       alpha_revision: row.alphaRevision,
       registered_at_utc_ms: row.registeredAt.getTime(),
+      may_activate: mayActivateResearchAlpha(user),
     }));
   }
 

@@ -12,16 +12,23 @@
     {
       "gate": "P07 fresh PostgreSQL schema, custody, gates, binding and recovery proof",
       "command": "scripts/research-loop-v11/test-p07-postgres.sh",
-      "result": "1 file passed; 8 tests passed",
+      "result": "1 file passed; 9 tests passed",
       "coverage": ["P07-T01", "P07-T02", "P07-T03", "P07-T04", "P07-T05", "P07-T06", "P07-T07", "P07-T08", "P07-T09", "P07-T10", "P07-T11", "P07-T12", "V11-P07-DR"],
-      "notes": "Uses one exact self-removing tmpfs research-p07-postgres-* container. Covers immutable source/actor scope, stale crafted receipt refusal, digest/version conflict, activation CAS, old attempt pinning, bounded expiry cleanup and admission cap."
+      "notes": "Uses one exact self-removing tmpfs research-p07-postgres-* container. Covers immutable source/actor scope, stale crafted receipt refusal, digest/version conflict, activation CAS, old attempt pinning, bounded expiry cleanup, admission cap and ADMIN/USER may_activate parity with the activation write guard."
     },
     {
       "gate": "CG-P07-01 canonical OpenAPI, generated types and schema fixtures",
       "command": "cd packages/contracts && npm run generate && ./tooling/verify-generated.sh && python3 tooling/snapshot.py --check",
-      "result": "2 files passed; 134 tests passed; full generated-type verifier, output comparison and 167-file snapshot matched",
+      "result": "2 files passed; 135 tests passed; full generated-type verifier, output comparison and 167-file snapshot matched",
       "coverage": ["CG-P07-01", "P07 public response schemas", "P07 generated operation/error type drift"],
       "notes": "Validates all five success envelopes, exact five-operation boundary, generated type names and the absence of source bytes in success schemas. The verifier derives its checkout root at runtime, so it proves drift in a worktree rather than relying on a /repo image mount."
+    },
+    {
+      "gate": "P07 caller-specific activation admission and R2 route-ledger closeout",
+      "command": "scripts/research-loop-v11/test-p07-postgres.sh; cd apps/portal/frontend && npx vitest run src/research src/execution/r2Ledger.test.ts && npm test",
+      "result": "P07 PostgreSQL 1 file / 9 tests passed; narrow frontend 8 files / 178 tests passed; full frontend suite 158 files / 0 failures",
+      "coverage": ["CG-P07-01", "FD-P07-02", "ADMIN may_activate=true", "USER may_activate=false", "activation refusal matches admission", "all five P07 routes inventory-covered"],
+      "notes": "may_activate is required/generated and is derived by the same server predicate that guards activation. The full frontend suite replaces Claude's former r2Ledger-only red receipt."
     },
     {
       "gate": "Control API production source compilation",
@@ -39,7 +46,7 @@
       "gate": "Protected-boundary and patch hygiene",
       "command": "cd apps/portal && sha256sum -c strategy/PROTECTED_SHA256; bash -n scripts/research-loop-v11/test-p07-postgres.sh; git diff --check",
       "result": "PASS",
-      "notes": "strategy/main.py remains byte-identical; no frontend UI/TSX diff is present (only a type-only tsconfig alias was added for the generated contract)."
+      "notes": "strategy/main.py remains byte-identical; no visual frontend/TSX composition changed. The frontend diff is generated-contract plumbing plus one server-admission field read."
     }
   ],
   "baseline_nonblocking": [
@@ -50,6 +57,7 @@
     }
   ],
   "not_run_by_design": [
+    "Screen 14 T07 prefill into Screen 02 New Run: NOT_RUN_BY_DESIGN. P10 owns Screen 02 and its real av_ binding/browser receipt; P07 does not claim this integration passed.",
     "Full Screen 14 browser/dev acceptance: owned by Claude's frontend handoff, not claimed by a backend-only P07 slice.",
     "QuantBT execution of imported source, P10 worker attachment, NATS/Compose runtime activation, deployment and shared-database migration: prohibited by P07 scope.",
     "Broad Docker/image/cache cleanup: P07 used an exact self-removing tmpfs test container only; any global cleanup requires a separate inventory and quiet window."

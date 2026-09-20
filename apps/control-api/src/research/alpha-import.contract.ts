@@ -117,6 +117,8 @@ export interface ResearchAlphaRegistryEntry {
   source_digest_prefix: string;
   alpha_revision: number;
   registered_at_utc_ms: number;
+  /** Caller-specific server admission, evaluated by the same policy as activate. */
+  may_activate: boolean;
 }
 
 export interface ResearchAlphaImportRegisterResponse {
@@ -129,6 +131,8 @@ export interface ResearchAlphaImportRegisterResponse {
   supersedes: string | null;
   alpha_revision: number;
   replayed: boolean;
+  /** Caller-specific server admission, evaluated by the same policy as activate. */
+  may_activate: boolean;
 }
 
 export interface ResearchAlphaActivateResponse {

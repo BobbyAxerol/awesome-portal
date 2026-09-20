@@ -141,6 +141,8 @@ export interface components {
             source_digest_prefix: string;
             alpha_revision: number;
             registered_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            /** @description Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role. */
+            may_activate: boolean;
         };
         RegistryListResponse: {
             /** @constant */
@@ -198,6 +200,8 @@ export interface components {
             supersedes: string | null;
             alpha_revision: number;
             replayed: boolean;
+            /** @description Caller-specific admission evaluated by the exact server policy that guards POST activate; it is not inferred from lifecycle or a browser-held role. */
+            may_activate: boolean;
         };
         ActivationResponse: {
             /** @constant */

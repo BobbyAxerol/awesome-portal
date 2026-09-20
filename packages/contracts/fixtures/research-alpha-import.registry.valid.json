@@ -9,7 +9,8 @@
       "entrypoint": "generate_signals",
       "source_digest_prefix": "aaaaaaaaaaaa",
       "alpha_revision": 1,
-      "registered_at_utc_ms": 1780000000000
+      "registered_at_utc_ms": 1780000000000,
+      "may_activate": true
     }
   ]
 }
