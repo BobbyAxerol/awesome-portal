@@ -11,6 +11,10 @@
  * component — rather than any single one, and the browser probe makes the same
  * assertion against the rendered DOM, because a module can be clean while a
  * server-supplied string still puts an internal identifier on screen.
+ *
+ * The network rule is stated as an allowlist rather than a ban. P07 has to call
+ * the Portal's own BFF, and a blanket "no fetch" would have been deleted the
+ * first time it was inconvenient — which is how a boundary stops being one.
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -41,7 +45,7 @@ const FORBIDDEN: [string, RegExp][] = [
   ["work digest", /work[_ ]?digest/i],
   ["scheduler credential", /\b(hmac|secret|credential|api[_ ]?key|bearer)\b/i],
   ["storage locator", /\/var\/|\/srv\/|file:\/\/|s3:\/\/|\.parquet|postgres(ql)?:\/\//i],
-  ["direct source access", /\bfetch\s*\(|XMLHttpRequest|EventSource|WebSocket|\bnats\b/i],
+  ["direct source access", /XMLHttpRequest|EventSource|WebSocket|\bnats\b/i],
   ["digest computation", /createHash|subtle\.digest|sha256\s*\(/i],
 ];
 
@@ -57,6 +61,32 @@ describe("no internal identifier or direct source access on the Research surface
       expect(offenders, `${label} found in: ${offenders.join(", ")}`).toEqual([]);
     });
   }
+
+  /*
+   * P07 introduced the surface's first real request. The prohibition was never
+   * "no request" — it is "no direct dependency": the browser may talk to the
+   * named same-origin BFF and to nothing else. So `fetch` is allowed in exactly
+   * one module, and that module's targets are checked to be relative paths
+   * under the Portal's own API prefix. An absolute URL here would be an
+   * analyser or engine address, which is precisely what P07's handoff forbids.
+   */
+  const NETWORK_MODULES = ["alphaImportClient.ts"];
+
+  it("keeps requests inside the one module allowed to make them", () => {
+    const callers = SOURCES.filter((f) => /\bfetch\s*\(/.test(codeOf(f.text))).map((f) => f.name);
+    expect(callers.sort()).toEqual([...NETWORK_MODULES].sort());
+  });
+
+  it("addresses only the same-origin Portal API, never a dependency", () => {
+    for (const name of NETWORK_MODULES) {
+      const code = codeOf(SOURCES.find((f) => f.name === name)!.text);
+      // No scheme and no protocol-relative host may appear at all.
+      expect(code).not.toMatch(/["'`](https?:)?\/\//);
+      const base = /const BASE = "([^"]+)"/.exec(code);
+      expect(base).not.toBeNull();
+      expect(base![1].startsWith("/api/v1/")).toBe(true);
+    }
+  });
 
   it("types no attempt field beyond ordinal, state and message", async () => {
     const { RESEARCH_JOB_STATES } = await import("./scheduler");

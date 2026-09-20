@@ -14,10 +14,18 @@
 
 import { useState } from "react";
 
+import { AlphaImport, awaitingStep } from "./AlphaImport";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { EngineAtlas, type AtlasTab, ATLAS_TABS } from "./EngineAtlas";
 import { QueuePanel } from "./QueuePanel";
 import { ResearchPanel, ResearchValue } from "./ResearchPanel";
+import type {
+  GateRow,
+  GatesResponse,
+  RegistrationResponse,
+  RegistryEntry,
+  SourceResponse,
+} from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { RESEARCH_ARTIFACT_STATES } from "./artifacts";
 import { RESEARCH_JOB_STATES } from "./scheduler";
@@ -135,6 +143,157 @@ const FIXTURE_ATLAS: AtlasDocument = {
     required_fields: ["engine_release_id", "route_id"],
   },
 };
+
+/* --------------------------------------------------------- P07 Screen 14 */
+
+const FIXTURE_GATE_NAMES: GateRow["name"][] = [
+  "contract-complete",
+  "entrypoint-importable",
+  "digest-unique",
+  "parameter-space-sane",
+  "determinism-declared",
+  "data-contract-known",
+  "no-lookahead-static-scan",
+];
+
+const FIXTURE_SOURCE: SourceResponse = {
+  schema_version: "research.alpha-source.v1",
+  source_file_ref: "sfr_fixture",
+  source_digest: "sha256:4f1c2b9ae0d1",
+  analysis_digest: "sha256:aa91b3ce7742",
+  parse_ok: true,
+  mirror: [
+    { field: "entrypoint", state: "parsed", value: "alpha.delta_rsi:run" },
+    { field: "warmup_bars", state: "parsed", value: 120 },
+    { field: "parameter_space", state: "parsed", value: { rsi_len: [5, 30], poly_deg: [2, 4] } },
+    { field: "determinism", state: "parsed", value: "seeded" },
+    { field: "data_contract", state: "parsed", value: "ohlcv.1m.v2" },
+  ],
+};
+
+const FIXTURE_SOURCE_INCOMPLETE: SourceResponse = {
+  ...FIXTURE_SOURCE,
+  parse_ok: false,
+  mirror: [
+    { field: "entrypoint", state: "parsed", value: "alpha.delta_rsi:run" },
+    { field: "warmup_bars", state: "missing" },
+    { field: "parameter_space", state: "parsed", value: { rsi_len: [5, 30] } },
+    { field: "determinism", state: "missing" },
+    { field: "data_contract", state: "parsed", value: "ohlcv.1m.v2" },
+  ],
+};
+
+function fixtureGates(failAt: number | null): GatesResponse {
+  return {
+    schema_version: "research.alpha-import-gates.v1",
+    gate_receipt_id: "grc_fixture",
+    source_file_ref: "sfr_fixture",
+    source_digest: "sha256:4f1c2b9ae0d1",
+    analysis_digest: "sha256:aa91b3ce7742",
+    all_pass: failAt === null,
+    static_scan_disclosure: "Static scan — runtime causality is proven per run at Stage 3/4.",
+    gates: FIXTURE_GATE_NAMES.map((name, index) => {
+      const n = index + 1;
+      if (failAt === null || n < failAt) {
+        return { n, name, state: "PASS" as const, message: `${name} satisfied.`, ms: 4 + n };
+      }
+      if (n === failAt) {
+        return {
+          n,
+          name,
+          state: "FAIL" as const,
+          message: "This exact source digest is already registered as av_0_2_0.",
+          ms: 9,
+        };
+      }
+      return { n, name, state: "SKIPPED" as const, message: "Not run: an earlier gate failed.", ms: 0 };
+    }),
+  };
+}
+
+const FIXTURE_REGISTRATION: RegistrationResponse = {
+  schema_version: "research.alpha-registration.v1",
+  alpha_id: "delta_rsi_polynomial",
+  alpha_version_id: "av_0_3_0",
+  version_label: "av_0_3_0",
+  source_digest: "sha256:4f1c2b9ae0d1",
+  lifecycle_state: "DRAFT",
+  supersedes: "av_0_2_0",
+  alpha_revision: 7,
+  replayed: false,
+};
+
+const FIXTURE_REGISTRY: RegistryEntry[] = [
+  {
+    alpha_id: "delta_rsi_polynomial",
+    alpha_version_id: "av_0_2_0",
+    version_label: "av_0_2_0",
+    lifecycle_state: "ACTIVE",
+    entrypoint: "alpha.delta_rsi:run",
+    source_digest_prefix: "sha256:11ab",
+    alpha_revision: 6,
+    registered_at_utc_ms: 1789836572369,
+  },
+  {
+    alpha_id: "delta_rsi_polynomial",
+    alpha_version_id: "av_0_1_0",
+    version_label: "av_0_1_0",
+    lifecycle_state: "SUPERSEDED",
+    entrypoint: "alpha.delta_rsi:run",
+    source_digest_prefix: "sha256:07dd",
+    alpha_revision: 2,
+    registered_at_utc_ms: 1789236572369,
+  },
+];
+
+/**
+ * One Screen 14 instance with local-only state. It issues no request: the
+ * server facts are the constants above, so the lane stays a visual fixture
+ * rather than a second, unlabelled way to reach the import API.
+ */
+function AlphaImportFixture({
+  parse,
+  gates,
+  registration,
+  activationAdmitted = false,
+}: {
+  parse: SourceResponse | null;
+  gates: GatesResponse | null;
+  registration?: RegistrationResponse | null;
+  activationAdmitted?: boolean;
+}) {
+  const [sourceText, setSourceText] = useState("def run(ctx):\n    ...\n");
+  const [alphaId, setAlphaId] = useState("delta_rsi_polynomial");
+  const ok = researchState({ kind: "ok", rowCount: 1 });
+  const noop = () => undefined;
+
+  return (
+    <AlphaImport
+      sourceText={sourceText}
+      fileName="delta_rsi_polynomial.py"
+      onSourceChange={(text) => setSourceText(text)}
+      parse={parse}
+      gates={gates}
+      registration={registration ?? null}
+      activation={null}
+      registry={FIXTURE_REGISTRY}
+      parseState={parse ? ok : awaitingStep("No source has been parsed yet.")}
+      gatesState={gates ? ok : awaitingStep("Gates run once a source parses.")}
+      registerState={
+        registration ? ok : awaitingStep("Registration opens once all seven gates pass.")
+      }
+      registryState={ok}
+      refusal={null}
+      alphaId={alphaId}
+      onAlphaIdChange={setAlphaId}
+      onParse={noop}
+      onRunGates={noop}
+      onRegister={noop}
+      onActivate={noop}
+      activationAdmitted={activationAdmitted}
+    />
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -286,6 +445,20 @@ export default function ResearchFixtures() {
               diagnostics: [{ id: "audit_trace", kind: "OPTIONAL", failed: true }],
             }}
           />
+        </div>
+      </Section>
+
+      <Section title="P07 · Screen 14 Alpha Import — clean, failing and unparsed">
+        <div className="flex flex-col gap-4">
+          <AlphaImportFixture
+            parse={FIXTURE_SOURCE}
+            gates={fixtureGates(null)}
+            registration={FIXTURE_REGISTRATION}
+            activationAdmitted
+          />
+          <AlphaImportFixture parse={FIXTURE_SOURCE} gates={fixtureGates(3)} />
+          <AlphaImportFixture parse={FIXTURE_SOURCE_INCOMPLETE} gates={fixtureGates(1)} />
+          <AlphaImportFixture parse={null} gates={null} />
         </div>
       </Section>
     </div>

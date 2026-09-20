@@ -100,3 +100,104 @@ test("keyboard reaches the Atlas tabs and every panel is a named region", async 
     expect((await region.getAttribute("aria-label"))?.length ?? 0).toBeGreaterThan(0);
   }
 });
+
+test("Screen 14 holds its fail-closed composition in the browser", async ({ page }) => {
+  const noise: string[] = [];
+  page.on("console", (m) => {
+    if (m.type() === "error" || m.type() === "warning") noise.push(`${m.type()}: ${m.text()}`);
+  });
+  page.on("pageerror", (e) => noise.push(`pageerror: ${e}`));
+
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/research/_fixtures");
+  await settle(page);
+
+  const screens = page.locator("[data-screen='alpha-import']");
+  expect(await screens.count()).toBe(4);
+
+  // The failing instance: gate 3 red, everything after it SKIPPED, step 3 shut.
+  const failing = screens.nth(1);
+  // The rows arrive on a 120 ms stagger, so wait for the list rather than for
+  // a fixed delay: a timing-flaky probe is worse than no probe.
+  await expect(failing.locator("[data-gate]")).toHaveCount(7);
+  await expect(failing.locator("[data-gate='digest-unique']")).toHaveAttribute(
+    "data-gate-state",
+    "FAIL",
+  );
+  const states = await failing.locator("[data-gate-state]").evaluateAll((nodes) =>
+    nodes.map((n) => n.getAttribute("data-gate-state")),
+  );
+  expect(states).toEqual(["PASS", "PASS", "FAIL", "SKIPPED", "SKIPPED", "SKIPPED", "SKIPPED"]);
+  await expect(failing.locator("[data-fail-closed-note]")).toHaveText(
+    "fail-closed: a red gate stops the import — there is no provisional registration.",
+  );
+  await expect(failing.locator("[data-action='register']")).toBeDisabled();
+  await expect(failing.locator("[data-disabled-reason='register']")).toHaveText(
+    "A gate failed. Fix the module and submit it again.",
+  );
+
+  // The clean instance: seven passes, DRAFT, and the disclosure from the DTO.
+  const clean = screens.nth(0);
+  await expect(clean.locator("[data-gate-state='PASS']")).toHaveCount(7);
+  await expect(clean.locator("[data-lifecycle='DRAFT']").first()).toBeVisible();
+  await expect(clean.locator("[data-draft-note]")).toHaveText(
+    "a DRAFT version can run as evidence but cannot compose rc_",
+  );
+  await expect(clean.locator("[data-static-scan-disclosure]")).toHaveText(
+    "Static scan — runtime causality is proven per run at Stage 3/4.",
+  );
+
+  // A field the parser did not find prints no value at all — not 0, - or N/A.
+  const missing = screens.nth(2).locator("[data-mirror-field='warmup_bars']");
+  await expect(missing).toHaveAttribute("data-mirror-state", "missing");
+  expect((await missing.locator("dd").innerText()).trim()).toBe("");
+
+  // The unparsed instance keeps its frame and says what is still owed.
+  const idle = screens.nth(3);
+  await expect(idle.locator("[data-research-panel='parsed contract mirror']")).toBeVisible();
+  await expect(idle.locator("[data-research-panel='import gates']")).toContainText(
+    "Gates run once a source parses",
+  );
+
+  // Crops rather than a full page: the last three defects on this surface were
+  // found by reading a screenshot, not by a passing assertion.
+  await clean.screenshot({ path: `${OUT}/s14-clean.png` });
+  await failing.screenshot({ path: `${OUT}/s14-failing.png` });
+
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("Screen 14 does not overflow a 660px viewport", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 660, height: 900 });
+  await page.goto("/research/_fixtures");
+  await settle(page);
+
+  const screen14 = page.locator("[data-screen='alpha-import']").first();
+  await expect(screen14).toBeVisible();
+  // Wait out the stagger, or the crop records a half-drawn list as the layout.
+  await expect(screen14.locator("[data-gate]")).toHaveCount(7);
+
+  // The mirror carries its own horizontal scroll, so when its content is wider
+  // than the phone the *frame* scrolls and the page does not. Assert the
+  // containment itself rather than that overflow happens to occur at this
+  // width: the fixture's longest value could shrink and quietly retire the
+  // check.
+  const mirror = screen14.locator("[data-mirror]").first();
+  await expect(mirror).toBeVisible();
+  const contained = await mirror.evaluate(
+    (node) => node.getBoundingClientRect().right <= window.innerWidth + 1,
+  );
+  expect(contained, "the mirror frame reaches past the viewport").toBe(true);
+  expect(await mirror.evaluate((n) => getComputedStyle(n).overflowX)).toBe("auto");
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, `page overflows by ${overflow}px`).toBeLessThanOrEqual(1);
+
+  await screen14.screenshot({ path: `${OUT}/s14-clean-660.png` });
+});
