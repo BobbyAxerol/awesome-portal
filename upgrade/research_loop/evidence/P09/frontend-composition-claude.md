@@ -248,6 +248,17 @@ of this change set — and the same tests run there:
 6 failed / 9 passed at `HEAD` on that subset — one screen from each of the three
 failing families, all reproducing without this change.
 
+The whole suite was then run at `HEAD` and the two failure sets compared by
+name. They are **identical**: 33 failures, 299 passed, 25 distinct test names,
+and `comm` reports nothing in either direction.
+
+```
+$ comm -13 head-fails.txt mine-fails.txt   # failing here but not at HEAD
+$ comm -23 head-fails.txt mine-fails.txt   # failing at HEAD but not here
+```
+
+Both empty. This change set moves the visual baseline by zero tests.
+
 ### The mechanism
 
 `7441c572` (Planning) widened Tailwind's `content` glob to scan the embedded
