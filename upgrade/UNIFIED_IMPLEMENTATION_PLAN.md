@@ -3548,9 +3548,9 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex + Claude source review / [P01 report](./research_loop/evidence/P01/phase-report.md); matrices verified both directions, 0 defect, 0 omission; systemic `P01-FE-01` state vocabulary + immediate S02/S11 spec gaps closed by P02 amendment; screen implementation remains with owner phase |
 | [P02](#rl-p02) | P01 | 02/11 harness | 01 | CONTRACT_AMENDMENT_COMPLETE / Codex + Claude review / [P02 packet](./research_loop/evidence/P02/phase-report.md); versioned `requested_spec` schema/types map all 24 S02 controls, S02/S11 state semantics specified; no producer/browser/runtime claim |
 | [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; FE_CONSUMER_HARNESS_COMPLETE / Claude — `src/research/` +663 lines, vitest 2430 pass, build exit 0. Generated client and browser acceptance remain P10 by design |
-| [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; Claude UI/browser handoff pending by owner phase |
-| [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); Claude consumer handoff ready, no P05 UI mutation |
-| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced |
+| [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; FE_ATLAS_DATA_SOURCE_COMPLETE / Claude — atlas data source +540 lines, 41/41, tsc 0; Atlas composition and browser acceptance remain P09 |
+| [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); FE_ARTIFACT_HARNESS_COMPLETE / Claude — artifact harness +337 lines; DTO and screen remain P10/P11 |
+| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced; FE_SCHEDULER_HARNESS_COMPLETE / Claude — scheduler harness +349 lines, full suite 2488 pass, build exit 0 |
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | PLANNED / unassigned / — |
 | [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | PLANNED / unassigned / — |
 | [P09](#rl-p09) | P02,P04 | 00/12 | 05 | PLANNED / unassigned / — |
@@ -3971,6 +3971,48 @@ specific Atlas handoff is
 P05/P06/P10 remain explicit owner phases for persistent artifacts, isolated
 work scheduling and named run submission; they are not P04 technical debt.
 
+#### P04 Claude frontend closeout — `FE_ATLAS_DATA_SOURCE_COMPLETE`, 2026-09-20
+
+P04's FE to-do is "capability fixtures/types/Atlas data source" with resolved
+backend labels and disabled reasons. The handoff assigns Atlas *composition*
+and browser acceptance to P09, which is correct and untouched here; the data
+source it composes over is not route-dependent and is delivered now.
+
+`apps/portal/frontend/src/research/atlas.ts` (+232) and `atlas.test.ts` (+308)
+derive display facts from `ResearchEngineAtlasDocument`, consumed from the
+generated OpenAPI client rather than hand-written field names, so a contract
+change fails compilation instead of emptying a card.
+
+Four rules are enforced by test rather than comment:
+
+- **The four axes stay four facts.** `ENGINE_SUPPORTED` with `INTEGRATION_GAP`
+  reports `blockedBy: "integration"` while the engine axis keeps saying it is
+  supported. Collapsing that into one verdict blames the wrong component and
+  hides who owns the gap. All 81 axis combinations are exercised; exactly two
+  are admitted.
+- **Admission is not authorization.** `RouteDisplay` has no `canSubmit`,
+  `canRun` or `enabled`, asserted by a test that would fail if one were added.
+- **A route's backend is its own.** The release carries `quantbt-native`, and a
+  test asserts a `python` route is still labelled `python`. Badging every route
+  native because the wheel ships compiled code is the mislabel P04 names.
+- **An unverified version is an unknown.** `verified: false` prints a safe
+  state, and a test asserts the expected version is not printed in its place —
+  including when an installed string is present but unverified.
+
+**Finding P04-FE-02.** A first implementation compared
+`evidence_contract.writer_state !== "ACTIVE"`. `tsc -b` refused it: the contract
+pins that field to the single literal `P05_OWNED_NOT_ACTIVE`, so no value could
+ever equal `"ACTIVE"` and the check was always true — a guard in shape only, and
+one `vitest` alone would have passed over. `required_fields` is likewise a fixed
+enum of seven names, not free-form strings. Both are now typed against the
+contract, and the function is written so that **widening the union in P05 breaks
+compilation on purpose**: that is when a screen must be taught to render a
+written artifact instead of a described shape.
+
+Gates: `vitest run src/research` 41/41 at this point, `tsc -b` exit 0. No route,
+no fetch, no mutation; a test greps the module for network calls and for
+wheel/RECORD escape hatches and finds none.
+
 <a id="rl-p05"></a>
 ### P05 — Disk-first artifacts, Parquet và bounded export
 
@@ -4014,6 +4056,38 @@ retry/cancel and whole-workload certification remain P06-owned downstream
 gates—not P05 defects. The P09/P11 rich consumer remains Claude-owned and
 `UI_NOT_YET_IN_SCOPE` for P05.
 
+#### P05 Claude frontend closeout — `FE_ARTIFACT_HARNESS_COMPLETE`, 2026-09-20
+
+P05 publishes no DTO and no route — P10/P11 will — but it froze the artifact
+state vocabulary and the rules each state imposes. P05's FE to-do calls for a
+"real sealed/partial/missing/corrupt/download harness", which is exactly the
+part that needs no endpoint, so it is delivered now and P10/P11 inherit it.
+
+`apps/portal/frontend/src/research/artifacts.ts` (+161) and
+`artifacts.test.ts` (+176).
+
+- **Five states, and `READY` is not one of them.** `WRITING`, `SEALED`,
+  `CORRUPT`, `MISSING`, `ABORTED` are the exact labels; a test asserts no
+  synonym is substituted and that every state retains its panel.
+- **Export needs three independent facts**, not one: state `SEALED`, registered
+  by the authority, and a server-published export action. A candidate sealed on
+  disk but unregistered is withheld with that exact sentence, because handing
+  over bytes the authority has not accepted is the failure this rule exists for.
+  Every state × registered × admitted combination is exercised, and each one
+  without an export carries a non-empty withheld reason.
+- **Exact values survive.** Decimals stay strings; a test demonstrates that
+  `Number("1234567890.123456789")` does not round-trip while `exactDecimal`
+  does. Timestamps must already carry UTC milliseconds or they are returned as
+  `null` rather than reformatted — a silently adjusted time is worse than an
+  absent one. Null stays null, never `0` and never a dash.
+- **Windows stay server-owned.** A caption reads `50 of 10000 rows`, never the
+  page size alone, and the cursor is opaque — a test greps for `atob`/`JSON.parse`
+  over it.
+
+Gates: 58/58 at this point, `tsc -b` exit 0. A test greps the module for any
+filesystem path, database locator, HMAC key, lease epoch or worker identity and
+finds none.
+
 <a id="rl-p06"></a>
 ### P06 — Durable scheduler, isolated workers và retry
 
@@ -4051,6 +4125,49 @@ browser route, timer-based progress, UI mutation or deployment claim exists.
 Those are explicit phase ownership boundaries—not open P06 implementation
 debt. See [P06 evidence](./research_loop/evidence/P06/README.md) for the
 test, cleanup, rollback and Claude handoff receipts.
+
+#### P06 Claude frontend closeout — `FE_SCHEDULER_HARNESS_COMPLETE`, 2026-09-20
+
+The P06 handoff states that no Claude action is required. That is right about
+routes, shell, tokens and HIFI layout, none of which were touched. It is not
+right about P06's own FE to-do in this plan, which asks for a
+"queue/cancel/retry/finishing contract harness, worker attempts drawer data" and
+forbids a fabricated ETA — none of which needs an endpoint. Deferring it
+wholesale would have closed P06 with in-scope debt that `RL-C08` and A5 forbid.
+
+`apps/portal/frontend/src/research/scheduler.ts` (+160) and
+`scheduler.test.ts` (+189) encode the three distinctions P06 warns are easy to
+collapse, each of which turns a true screen into a plausible false one:
+
+- **A logical run is not a worker attempt.** Three attempts under one `run_id`
+  report `attemptCount: 3`, not three runs. Presenting attempts as runs inflates
+  the research record with work the researcher never requested.
+- **An optional diagnostic failure is not a primary failure.** A `SUCCEEDED`
+  run with a failed `OPTIONAL` audit stays `primaryFailure: false` and reports
+  the optional failure separately. Reddening the run would hide which result is
+  actually untrustworthy.
+- **A late worker result never overrides an authoritative terminal state.** A
+  worker reporting `SUCCEEDED` after the run was `CANCELLED` keeps `CANCELLED`
+  and sets `ignoredLateMessage`. Otherwise the screen tells a researcher their
+  cancelled run succeeded.
+
+Also enforced: an outbox delivery is transport and never implies completion; a
+P03 compatibility row with no work digest is not a claimable P06 job; and the
+browser forms no digest — a test greps for `createHash`/`subtle.digest`.
+
+**No percent and no ETA exist in the module.** Progress prints `3 of 10` only
+when the server published counts, and a test greps the source for `eta`,
+`estimate`, `percent`, `elapsed /` and `Date.now`. A number invented to fill a
+progress bar is a claim about work the browser cannot observe.
+
+Gates: `vitest run src/research` 78/78; full `vitest run` 155 files, 2488
+passed, 1 skipped, 0 failed; `npm run build` exit 0.
+
+**Scope not claimed across P04–P06.** No route, generated client, screen,
+visual or browser acceptance; `V11-Pxx-BR` remains `PENDING_OWNER_PHASE` for the
+owning screen phases. Nothing under `apps/control-api/**`, governance, Execution
+contracts, runtime manifests or deploy inputs was modified. Six new files under
+`apps/portal/frontend/src/research/`, **+1226 lines, no existing file changed**.
 
 <a id="rl-p07"></a>
 ### P07 — Alpha Registry, Import và immutable version binding
