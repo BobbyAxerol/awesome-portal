@@ -253,6 +253,16 @@ export interface ResearchPreflightResponse {
   schema_version: "research.preflight.v1";
   preflight_token: string;
   expires_at_utc_ms: number;
+  /**
+   * Current server admission for turning this preflight into a run.
+   *
+   * P08 has no run-creation operation, so this is deliberately false for
+   * every caller.  P10 may make it caller-specific only when its POST route
+   * evaluates the exact same server-side predicate; a browser-held role,
+   * token, lifecycle state, or successful preflight is never authority to
+   * create a run.
+   */
+  may_create_run: boolean;
   requested_spec_digest: string;
   effective_spec_digest: string;
   dataset_binding_digest: string;

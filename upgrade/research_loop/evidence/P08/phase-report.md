@@ -89,8 +89,11 @@ before binding a worker input. A browser token/digest is never trusted alone.
 
 ## Deliberate non-claims and next ownership
 
-`V11-P08-BR`, HIFI Screen 02/05 composition, browser/dev-host receipt and the
-full P08 worker handoff are not falsely green: P09 owns product-route/foundation
-and P10 owns durable run/worker binding. They are named future gates, not a
-hidden P08 backend defect. Claude can now build the typed consumer from the
-published generated contract without hand-parsing panel fields.
+The typed Screen 02/05 consumer and its labelled fixture-lane browser receipt
+are now green; the cross-phase browser/HIFI audit is in
+`frontend-hifi-browser-audit.md`. That is deliberately **not** a product-route
+or real-API receipt. P09 owns product-route/foundation, P10 owns the full
+declaration/create-run/worker binding, and P14 owns the detailed split screen.
+Those named later gates are not a hidden P08 backend defect. The generated
+contract now also publishes `may_create_run=false` rather than inviting the
+browser to infer authority.

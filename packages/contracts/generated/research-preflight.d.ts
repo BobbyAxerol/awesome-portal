@@ -222,6 +222,8 @@ export interface components {
             schema_version: "research.preflight.v1";
             preflight_token: components["parameters"]["PreflightToken"]["schema"];
             expires_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            /** @description Caller-specific server admission for creating a run from this preflight. P08 is preflight-only and currently returns false for every caller; P10 may return true only when its create route enforces the identical server-side predicate. It is never inferred by the browser from token, lifecycle or role. */
+            may_create_run: boolean;
             requested_spec_digest: components["schemas"]["Digest"];
             effective_spec_digest: components["schemas"]["Digest"];
             dataset_binding_digest: components["schemas"]["Digest"];

@@ -38,8 +38,15 @@
     {
       "gate": "Research frontend project typecheck",
       "command": "cd apps/portal/frontend && npx tsc --noEmit --pretty false",
-      "result": "BLOCKED_BY_PREEXISTING_P07_FRONTEND_FIXTURES",
-      "notes": "The P08 generated alias is parsed by package-contract gates. The full frontend project remains red because three existing ResearchFixtures.tsx P07 entries omit required may_activate. Claude owns that fixture/type receipt; P08 does not make may_activate optional or modify HIFI/TSX."
+      "result": "HISTORICAL_PRE_CLOSEOUT_BLOCKED",
+      "notes": "This was the pre-closeout observation: three ResearchFixtures.tsx P07 entries then omitted required may_activate. It is retained as history, not current phase state. The later full-suite receipt below proves the P07 fixture correction plus P08 ledger/contract closure."
+    },
+    {
+      "gate": "P08 frontend ledger and generated-contract closeout",
+      "command": "cd apps/portal/frontend && npm test",
+      "result": "PASS (exit 0)",
+      "coverage": ["FD-P08-01 R2 ledger", "P07 fixture type compatibility", "P08 generated may_create_run field", "full frontend suite"],
+      "notes": "Run after both preflight routes entered the 144-route inventory and ResearchPreflightV1 added required may_create_run=false. This proves source/test compatibility only; browser fixture and product-route receipts remain explicitly separate."
     }
   ],
   "baseline_nonblocking": [

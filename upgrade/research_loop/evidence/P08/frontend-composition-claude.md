@@ -131,6 +131,12 @@ Pre-existing on the branch: this change set touches only
 `apps/portal/frontend/src/research/**` and `e2e/`, and the failure reproduces
 from the control-api tree alone.
 
+**Codex resolution — 2026-09-20:** `FD-P08-01` is closed.  The R2 inventory
+now has exactly two P08 entries (`POST /api/v1/research/preflights` as a local
+manifest mutation, and `GET /api/v1/research/preflights/:preflight_token` as an
+explicit caller/workspace-scoped interaction read), each with Codex ownership
+and P08 evidence. `r2Ledger` now passes; no UI composition changed.
+
 ### `FD-P08-02` — the boundary sweep gained a raw-hex guard
 
 Research Light matches the hi-fi value for value, so a component reaching for a
@@ -156,6 +162,15 @@ Backend request
   be refused — the precedent P05 set and P07 closed.
 - Current impact: none. P08 exposes no create control, by design.
 ```
+
+**Codex resolution — 2026-09-20:** `CG-P08-01` is closed at the only authority
+level P08 can truthfully own. The generated `ResearchPreflightV1` response now
+requires `may_create_run`; the server returns `false` for every caller because
+P08 is preflight-only. This is an explicit negative server fact, not a client
+role/token/lifecycle inference. P10 is now bound in the Unified Plan to make it
+caller-specific only when its create transaction recomputes the same predicate
+over actor, workspace, unexpired owned token and immutable manifest/version
+bindings. There is still no P08 create button, route, queue or worker claim.
 
 ## Defects found by looking at the screenshots
 
@@ -200,6 +215,15 @@ Both survived a green unit suite and a green browser probe:
 | full frontend suite | `npm test` | 2607 passed, 1 skipped, **1 failed: `r2Ledger` (`FD-P08-01`, codex-owned)** |
 | build | `npm run build` | **exit 0** |
 | browser probe | `npx playwright test --config=playwright.research-probe.config.ts` | **8 passed**, 0 console errors or warnings |
+
+### Post-closeout verification — Codex, 2026-09-20
+
+The full frontend suite was rerun after the two P08 routes were added to the
+capability ledger and completed with **exit 0**. The row above preserves the
+historical pre-closeout failure rather than rewriting it as if it had never
+occurred. The rerun also typechecks the mechanical `may_create_run: false`
+fixture updates generated from the amended contract; it does not add a create
+control or broaden this component's P08 scope.
 
 ## Browser receipt
 

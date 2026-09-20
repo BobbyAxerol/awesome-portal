@@ -1,6 +1,6 @@
 # P08 evidence — immutable data snapshots, effective spec and preflight
 
-Status: `BACKEND_AND_TYPED_CONTRACT_COMPLETE; SCREEN02_05_CONSUMER_AND_P10_WORKER_HANDOFF_PENDING_BY_OWNER` — 2026-09-20.
+Status: `BACKEND_AND_TYPED_CONTRACT_COMPLETE; COMPONENT_FIXTURE_BROWSER_RECEIPT_COMPLETE; PRODUCT_ROUTE_AND_P10_WORKER_PENDING_BY_PHASE_OWNER` — 2026-09-20.
 
 P08 implements a narrow, same-origin Research preflight authority. It reads
 only the already-approved Historical Market Data (HMD) adapter through a fixed
@@ -26,6 +26,9 @@ Read this packet in order:
    browser/dev receipt; no UI was changed in P08 backend.
 5. [changes.json](./changes.json), [resource-cleanup.json](./resource-cleanup.json),
    [rollback.md](./rollback.md) and [debt-register.json](./debt-register.json).
+6. [frontend-hifi-browser-audit.md](./frontend-hifi-browser-audit.md) —
+   browser/HIFI reconciliation across the P03–P08 composition slices; it
+   distinguishes fixture proof from product-route acceptance.
 
 This packet is secret-free. Raw HMD frames, Parquet bytes, source credentials,
 cookies, snapshots, traces and screenshots do not belong in Git evidence.

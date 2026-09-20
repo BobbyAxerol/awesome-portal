@@ -43,12 +43,18 @@
       "status": "RESOLVED",
       "subject": "The P08 OpenAPI generator could resolve the P02 requested-spec schema locally but not inside the isolated contracts verifier image.",
       "evidence": "Self-contained packages/contracts schema plus a parsed-JSON equality test against P02 immutable evidence; generated verifier passes in its container mount."
+    },
+    {
+      "id": "P08-BE-07",
+      "status": "RESOLVED",
+      "subject": "The two published P08 controller routes were absent from the R2 capability inventory, and a later Screen 02 could otherwise infer run-creation authority from a successful preflight.",
+      "evidence": "The 144-entry R2 inventory declares both preflight routes with their exact owner, interaction class and evidence; ResearchPreflightV1 mechanically publishes server-owned may_create_run=false for P08. Focused contracts, ledger and isolated PostgreSQL tests assert the state. P10 is bound in the Unified Plan to recompute the same predicate at its future create transaction."
     }
   ],
   "later_phase_ownership_not_debt": [
     "Claude owns Screen 02/05 HIFI composition, same-origin consumer, browser/dev receipt and visual behavior from frontend-handoff-claude.md.",
     "Claude owns the small P07 fixture correction for required may_activate before claiming a clean full frontend typecheck; P08 does not weaken that server admission field.",
-    "P10 owns durable run creation and the server-side call to assertFreshForRequestedSpec before a worker can receive this manifest.",
+    "P10 owns durable run creation and the server-side call to assertFreshForRequestedSpec before a worker can receive this manifest. P08 already exposes the required server-owned may_create_run=false state; P10 must replace that negative state only through its exact create predicate and write-boundary recheck.",
     "A rolling topology needs a deliberate versioned requested-spec field for train width. P08 correctly returns TOPOLOGY_UNSUPPORTED rather than inventing an engine default."
   ]
 }

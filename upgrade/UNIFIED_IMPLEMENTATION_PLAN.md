@@ -3564,6 +3564,27 @@ Tests cơ học có thể dùng `npm test`, `npm run build` trong frontend;
 Rust crate tests và kernel verifier **chỉ sau đọc script, quota, ports/project và provisioning**.
 Không tự chạy helper trỏ shared production; contributor không tự cài OS deps/sudo/Docker.
 
+### 13.3.1. Browser-first HiFi reconciliation (amendment 2026-09-20)
+
+Mỗi phase UI phải đọc HTML HiFi đúng màn, screen spec, COR và DTO/action
+contract trước khi sửa; lưu mapping `HiFi element/interaction/copy →
+component/panel → DTO/action → browser assertion → status/owner`. Trước closeout
+phải đối chiếu bằng browser build production-like ở `1280px`, `660px` và
+viewport riêng của spec; kiểm console/network, overflow, keyboard/focus,
+deep-link/back/refresh và toàn bộ typed states. Evidence phải phân biệt
+`COMPONENT_FIXTURE_BROWSER_RECEIPT`, `PRODUCT_ROUTE_BROWSER_RECEIPT` và
+`REAL_API_E2E_RECEIPT`; fixture/mock không được nâng thành product acceptance.
+
+HTML/spec/COR conflict là `VISUAL_DECISION_REQUIRED`, không tự chọn hoặc bịa
+authority/data chỉ để giống ảnh. Screenshot/trace/storage state giữ private;
+Markdown receipt ghi command, source/build SHA, route/lane, browser version,
+dimensions, digest, console/network result và retention. Không update snapshot
+rộng để che regression. Chỉ named product route có receipt thật mới claim
+“HiFi screen complete”. Quy tắc chi tiết/mandatory cho mọi contributor nằm ở
+[A13.4](./research_loop/CLAUDE-FOR-thanhvuong.md#a134-browser-first-hifi-reconciliation-và-visual-receipt-bắt-buộc);
+audit baseline P03–P08 ở
+[P08 evidence](./research_loop/evidence/P08/frontend-hifi-browser-audit.md).
+
 **Bốn mốc không gộp:** code complete → tested/integrated → dev review-ready → Bobby accepted.
 Production deployed chỉ sau release order riêng. Các phase foundation có output riêng, không đòi UI tương lai để đóng;
 nhưng thiếu consumer test/required field của phase hiện tại không được gọi future work.
@@ -3591,7 +3612,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); FE_ARTIFACT_HARNESS_COMPLETE / Claude — artifact harness +337 lines. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: artifact panels may start now; named DTO/download action activation remains P10/P11; FE_ARTIFACT_PANEL_COMPLETE / Claude — [composition](./research_loop/evidence/P05/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced; FE_SCHEDULER_HARNESS_COMPLETE / Claude — scheduler harness +349 lines, full suite 2488 pass. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: attempt/queue panels may start now; producer/SSE/action activation remains P10/P11; FE_QUEUE_PANEL_COMPLETE / Claude — [composition](./research_loop/evidence/P06/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | BACKEND_AND_CONTRACT_COMPLETE / Codex / [P07 evidence](./research_loop/evidence/P07/phase-report.md); private AST analysis, bounded source custody, seven ordered gates, immutable registry binding and ADMIN activation CAS are proven on a fresh disposable PostgreSQL cell. The five public same-origin operations and generated typed client are published. `may_activate` is required, caller-specific server admission and is evaluated by the exact same predicate as activation; **CG-P07-01 resolved**. All five Control API routes are registered with truthful P07/P09 ownership in the R2 capability inventory; **FD-P07-02 resolved**. · FE_SCREEN14_COMPOSITION_COMPLETE / Claude — Screen 14 is built against `@portal/contracts-research-alpha-import` with zero hand-written types or error strings; tsc 0, research suite 158/158, full frontend suite 158 files/0 failures, build 0 and browser probe 6/6 with 0 console output and 0 px overflow at 1280 and 660. `/research/quantbt/imports` is untouched; `ResearchAlphaAnalysis` is never imported, rendered or requested. No product route is mounted — P09 owns that — so the only render today is the labelled fixture lane. Screen 14 T07 (prefill Screen 02 from `av_`) is **NOT_RUN_BY_DESIGN**, explicitly owned by P10 New Run; it is neither a P07 pass nor a hidden failure. [Claude S14 composition](./research_loop/evidence/P07/frontend-composition-claude.md) |
-| [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P08 packet](./research_loop/evidence/P08/README.md); bounded HMD private reader, shared immutable snapshot, requested→effective/fold/resource manifest, token expiry/freshness assertion and exact two-route same-origin OpenAPI are proven. No raw candle/holdout/worker path exists; generic Data Catalog routes cannot replay an opaque P08 snapshot ID. `V11-P08-BR` plus Screen 02/05 consumer/browser receipt remain Claude-owned; first fix three P07 `ResearchFixtures.tsx` `may_activate` literals, then consume the generated P08 types. P10 owns server-side worker binding. Rolling is truthfully `RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED` until a versioned manifest-owned train-width contract is approved, never inferred. · FE_PREFLIGHT_CONSUMER_COMPLETE / Claude — typed Screen 02/05 consumer from `@portal/contracts-research-preflight`, no hand-mapped field and no local payload parse: client +251, container +157, Screen 02 panel +471, Screen 05 boundary +282, tests +713, fixture lane +213, browser probe +100, boundary sweep +17/−1. `P08-T01…T12` all pass; tsc 0, research suite 198/198, build 0, browser probe 8/8 with 0 console output and 0 px overflow at 1280 and 660. `requested_spec_digest` is never sent (asserted on the POST body) and no digest is computed on the surface; any change to the requested spec drops the held token; EXPIRED/STALE/NOT_FOUND clear it rather than resending. Scope taken deliberately narrow: the eight-step declaration surface is P10's (the generated schema says the requested spec is producer-side, not a live endpoint), and Screen 05 renders the structural boundary only — purge, embargo, inner folds, θ* and the gap scan stay P14's and are named as absent rather than invented. Open: **FD-P08-01** — `r2Ledger` is red because the two new control-api routes have no capability-inventory entry, codex-owned, same class as the closed FD-P07-02; **CG-P08-01** — recorded for P10, run creation will need a caller-scoped admission field like `may_activate`. [Claude P08 composition](./research_loop/evidence/P08/frontend-composition-claude.md) |
+| [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P08 packet](./research_loop/evidence/P08/README.md); bounded HMD private reader, shared immutable snapshot, requested→effective/fold/resource manifest, token expiry/freshness assertion and exact two-route same-origin OpenAPI are proven. No raw candle/holdout/worker path exists; generic Data Catalog routes cannot replay an opaque P08 snapshot ID. P10 owns server-side worker binding; rolling remains truthfully `RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED` until a versioned manifest-owned train-width contract is approved, never inferred. · FE_PREFLIGHT_CONSUMER_COMPLETE / Claude — typed Screen 02/05 consumer from `@portal/contracts-research-preflight`, no hand-mapped field and no local payload parse: client +251, container +157, Screen 02 panel +471, Screen 05 boundary +282, tests +713, fixture lane +213, browser probe +100, boundary sweep +17/−1. `P08-T01…T12` all pass; tsc 0, research suite 198/198, build 0, browser probe 8/8 with 0 console output and 0 px overflow at 1280 and 660. `requested_spec_digest` is never sent (asserted on the POST body) and no digest is computed on the surface; any change to the requested spec drops the held token; EXPIRED/STALE/NOT_FOUND clear it rather than resending. Scope taken deliberately narrow: the eight-step declaration surface is P10's (the generated schema says the requested spec is producer-side, not a live endpoint), and Screen 05 renders the structural boundary only — purge, embargo, inner folds, θ* and the gap scan stay P14's and are named as absent rather than invented. **FD-P08-01 resolved:** both controller routes are declared in the R2 ledger and the full frontend suite is now exit 0. **CG-P08-01 resolved in P08 scope:** generated `may_create_run=false` is the explicit server fact until P10 publishes and rechecks its exact create predicate. The [browser/HIFI audit](./research_loop/evidence/P08/frontend-hifi-browser-audit.md) records a valid component-fixture receipt, not a product-route claim; P09/P10/P14 retain their route/screen ownership. [Claude P08 composition](./research_loop/evidence/P08/frontend-composition-claude.md) |
 | [P09](#rl-p09) | P02,P04 | 00/12 | 05 | PLANNED / unassigned / — |
 | [P10](#rl-p10) | P06–P09 | 02 | 05 | PLANNED / unassigned / — |
 | [P11](#rl-p11) | P06,P09,P10 | 03 | 06 | PLANNED / unassigned / — |
@@ -4292,6 +4313,23 @@ KiB document ceilings fail typed rather than truncate or fall through to a
 database error. Full details and explicit non-run visual/worker gates are in
 the [P08 evidence packet](./research_loop/evidence/P08/README.md).
 
+**P08 authority amendment — 2026-09-20 (`FD-P08-01`, `CG-P08-01` closed in
+P08 scope):** The two P08 controller routes are now declared in the R2
+capability inventory with their exact interaction class, owner, test owner and
+evidence; no route is silently outside the ledger.  `ResearchPreflightV1` also
+now publishes required server fact `may_create_run`.  It is `false` for every
+caller in P08 because P08 has no run-creation route.  This is a negative
+authority statement, not a browser inference from an opaque token, object
+lifecycle, preflight success or browser-held role.  P10 is allowed to return
+`true` only after it publishes a durable create route whose server-side
+predicate is evaluated again at the write boundary.  That predicate must bind
+the authenticated actor and workspace, the exact unexpired caller-owned
+preflight token, its immutable requested/effective/dataset/version digests and
+the current policy grant; it must return a typed `403` on refusal and must not
+trust a client-supplied `may_create_run`.  The P08 contract remains
+`PREFLIGHT_ONLY`: no worker, queue, reservation or create-run action was added
+by this amendment.
+
 <a id="rl-p09"></a>
 ### P09 — Frontend foundation, Journey Map và Engine Atlas
 
@@ -4315,7 +4353,7 @@ the [P08 evidence packet](./research_loop/evidence/P08/README.md).
 **Test IDs bắt buộc:** `P10-T01…T14`, `V11-P10-DR/BR/GX` và source tests applicable theo §13.3.
 
 - **Goal:** Tất cả controls wizard8steps đi vào effective worker request và legacy read model đúng.
-- **To-do BE:** Existing facade202 + legacy fields, durable producer intent before ACK; preflight/version binding, route validators; same client_intent_id recovery after transport timeout; old request backward compatibility.
+- **To-do BE:** Existing facade202 + legacy fields, durable producer intent before ACK; preflight/version binding, route validators; same client_intent_id recovery after transport timeout; old request backward compatibility. **`CG-P08-01` binding:** compute `may_create_run` from one server-owned predicate and reevaluate that exact predicate inside the create transaction; bind actor/workspace, unexpired caller-owned opaque preflight token and all immutable manifest/version digests. Browser input may request a create but can never assert admission. Publish typed denied/unavailable outcomes and preserve the P08 `false` state until this route is live.
 - **To-do FE/consumer:** Full02 normal/advanced route config/presets/sweep/pin/seed/review, scratch disclosure, double-click/stale token/reload. Không bỏ trường input để POST pass; preview và serializer cùng canonical model.
 - **Tests BE:** Real Delta submit→worker→storage; old/new requests; duplicate/unknown outcome; invalid bounds/schedule/aliases/null defaults; readback strategy/alpha/run seed và RunSync summary.
 - **Tests FE/browser:** All S02 tests; every required control→request→effective persisted value; bound/scratch; version change preserves valid input; errors/focus/back-forward; actual no-stub journey.

@@ -315,6 +315,11 @@ export class ResearchPreflightService {
       schema_version: "research.preflight.v1",
       preflight_token: record.preflightToken,
       expires_at_utc_ms: record.expiresAt.getTime(),
+      // P08 is deliberately preflight-only.  Publish the negative authority
+      // rather than making a client infer it from a token, an object state or
+      // a browser-held role.  P10 may change this only alongside a create
+      // route that evaluates the same server-side predicate at execution.
+      may_create_run: false,
       requested_spec_digest: record.requestedSpecDigest,
       effective_spec_digest: record.effectiveSpecDigest,
       dataset_binding_digest: record.datasetBindingDigest,

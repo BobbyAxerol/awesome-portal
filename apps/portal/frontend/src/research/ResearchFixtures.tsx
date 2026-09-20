@@ -376,6 +376,7 @@ const FIXTURE_PREFLIGHT: PreflightResponse = {
   schema_version: "research.preflight.v1",
   preflight_token: "pf_01HZQ7FIXTURE",
   expires_at_utc_ms: FX_2026,
+  may_create_run: false,
   requested_spec_digest: "sha256:66e09b4410",
   effective_spec_digest: "sha256:3b81c7aa15",
   dataset_binding_digest: "sha256:9d44f2c880",

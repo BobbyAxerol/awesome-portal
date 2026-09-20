@@ -36,6 +36,7 @@ describe("P08 published Research preflight contract", () => {
     expect(generated).toContain("researchPreflightGetV1");
     expect(generated).toContain("RESEARCH_PREFLIGHT_STALE");
     expect(generated).toContain("CLOSED_BARS_ONLY");
+    expect(generated).toContain("may_create_run: boolean");
     for (const typedPanelField of ["Topology", "ResourceEstimate", "DatasetBinding", "Quality", "Warmup"]) {
       expect(generated).toContain(typedPanelField);
     }
@@ -49,6 +50,8 @@ describe("P08 published Research preflight contract", () => {
     }
     expect(document).toContain("sealed-holdout values");
     expect(document).toContain("PREFLIGHT_ONLY");
+    expect(document).toContain("may_create_run");
+    expect(document).toContain("P10 may return true only");
     expect(document).not.toContain("private_dsn");
     expect(document).toContain("propertyNames");
   });

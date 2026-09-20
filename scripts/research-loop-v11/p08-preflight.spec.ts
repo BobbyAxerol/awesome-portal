@@ -159,10 +159,10 @@ describe("Research Loop P08 · data snapshots, effective spec and preflight", ()
     await seedIdentity();
     const spec = requested();
     const result = await service.create(admin, scopeA, spec, "p08-request");
-    expect(result).toMatchObject({ schema_version: "research.preflight.v1", requested_spec_digest: sha256ResearchJson(spec), capability: { preflight_admission: "PREFLIGHT_ONLY" } });
+    expect(result).toMatchObject({ schema_version: "research.preflight.v1", may_create_run: false, requested_spec_digest: sha256ResearchJson(spec), capability: { preflight_admission: "PREFLIGHT_ONLY" } });
     expect(result.snapshot.closed_bar_policy).toBe("CLOSED_BARS_ONLY");
     expect(client.calls[0]).toMatchObject({ requiredColumns: ["open", "high", "low", "close", "volume"], warmupBars: 0, requiresFunding: false });
-    expect(await service.get(scopeA, result.preflight_token)).toMatchObject({ manifest_digest: result.manifest_digest });
+    expect(await service.get(scopeA, result.preflight_token)).toMatchObject({ manifest_digest: result.manifest_digest, may_create_run: false });
     await expectResearchError(
       service.assertFreshForRequestedSpec(scopeA, result.preflight_token, requested({ random_seed: 43 })),
       "RESEARCH_PREFLIGHT_STALE",

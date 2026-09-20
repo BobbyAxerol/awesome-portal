@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-20",
- "route_count": 142,
+ "route_count": 144,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1392,6 +1392,26 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "BE-R2-8: authenticated HTTP + fresh-PG writer/readback + canonical schema/FE reader tests. Typed client exists; no product capture form is claimed or deployed.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/preflights",
+   "controller": "research/preflight.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P08 creates one bounded, immutable Research preflight manifest from a caller-scoped requested_spec. It does not create a run, start a worker, expose raw market rows, or reserve compute. The typed Screen 02/05 consumer exists; P09 owns the first product-route receipt and P10 owns run creation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/preflights/:preflight_token",
+   "controller": "research/preflight.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P08 reopens only the caller-and-workspace-scoped immutable preflight metadata behind its opaque token. It is an explicit interaction read, not a raw snapshot, replay, worker, or run API. The typed Screen 02/05 consumer exists; P09 owns the first product-route receipt and P10 owns run creation.",
    "owner": "codex",
    "test_owner": "codex"
   },

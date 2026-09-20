@@ -386,6 +386,44 @@ Nguồn bài học (lịch sử, không phải tuyên bố runtime hiện tại)
 5. Sau phase chạy teardown scoped, giữ evidence theo retention, ghi `NO_ACTION_NEEDED` hoặc exact cleanup còn cần quyền. Required cleanup trong scope chưa xong thì phase chưa đóng; maintenance bên ngoài được ghi riêng, không tự nâng quyền.
 6. Report và row phase cùng commit; không viết “đã build/deploy/test” khi chưa thực hiện. Contributor handoff theo A6; merge/dev/main/stable vẫn theo quyết định Bobby. P24 là rehearsal + review packet, không tự release production.
 
+### A13.4. Browser-first HiFi reconciliation và visual receipt bắt buộc
+
+Quy tắc này áp dụng cho **mọi phase có ownership UI**, bất kể Codex, Claude
+hay Thanhvuong là người sửa. Unit/snapshot test xanh không thay thế việc đối
+chiếu màn thực với source UX.
+
+1. Trước khi sửa TSX/CSS, đọc **cả** screen spec, HTML HiFi đúng số màn, COR
+   liên quan và named DTO/action contract. Lập một matrix ngắn trong evidence:
+   `HiFi element/interaction/copy → component/panel → DTO hoặc action → browser assertion → trạng thái/owner`.
+   Không map một bảng HTML sang generic envelope để nói là đã implement.
+2. Trước khi đóng phase, chạy browser trên build production-like và đối chiếu
+   trực tiếp **cả HTML HiFi lẫn implementation hiện tại** tại ít nhất `1280px`
+   và `660px` (cộng viewport riêng nêu trong spec). Kiểm console/network,
+   horizontal overflow, keyboard/focus/a11y cơ bản, deep-link/back/refresh và
+   mọi state owned: loading, empty, partial, stale, denied, unavailable,
+   terminal. Screenshot đơn lẻ không đủ evidence.
+3. Receipt phải phân biệt rõ ba mức, không được dùng lẫn: 
+   `COMPONENT_FIXTURE_BROWSER_RECEIPT`, `PRODUCT_ROUTE_BROWSER_RECEIPT`, và
+   `REAL_API_E2E_RECEIPT`. Fixture/mocked Portal API chỉ chứng minh presentation
+   và typed mapping; nó không phải product route hay data thật.
+4. Screenshot/trace/storage state giữ private, không commit. Markdown evidence
+   commit chỉ ghi command, build SHA, route/lane, browser version, dimensions,
+   SHA-256, console/network outcome và retention. Không dùng `--update-snapshots`
+   hoặc đổi baseline rộng để che visual regression.
+5. Nếu HTML HiFi và screen spec/COR mâu thuẫn, dừng tại `VISUAL_DECISION_REQUIRED`:
+   ghi source/ảnh hưởng và xin decision trước. Không âm thầm chọn một phiên bản,
+   không bịa endpoint/state machine để khớp bố cục. Một nhóm visual có thể là
+   presentational substage chỉ khi document rõ nó không đổi server authority.
+6. Phase chỉ claim “HiFi screen complete” khi named product route đã mount và
+   có `PRODUCT_ROUTE_BROWSER_RECEIPT`. Foundation/panel phase phải ghi đúng
+   phần chưa thuộc scope và owner phase kế tiếp; giữ rich composition trong
+   state typed nhưng không gọi fixture lane là màn production.
+
+Receipt cross-phase đầu tiên theo rule này là
+[P03–P08 browser audit](./evidence/P08/frontend-hifi-browser-audit.md). Các
+phase kế tiếp phải cập nhật matrix/receipt của chính phase mình, không copy
+kết luận cũ khi source HTML, contract, build hoặc route đã đổi.
+
 # B. NGUYÊN VĂN RULES GỐC — REFERENCE ĐƯỢC BẢO TOÀN
 
 Các bản sau được chép **đầy đủ, nguyên văn** từ ZIP Bobby cung cấp. File thật là `AGENTS.md` (số nhiều), không có `AGENT.md` số ít trong archive. Để đủ ngữ cảnh contributor/domain, có thêm `CONTRIBUTOR_AGENT_RULES.md` và `apps/portal/AGENTS.md`.

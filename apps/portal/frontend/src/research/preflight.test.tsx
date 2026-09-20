@@ -82,6 +82,7 @@ function preflight(overrides: Partial<PreflightResponse> = {}): PreflightRespons
     schema_version: "research.preflight.v1",
     preflight_token: "pf_01HZQ7",
     expires_at_utc_ms: Y2026,
+    may_create_run: false,
     requested_spec_digest: "sha256:req",
     effective_spec_digest: "sha256:eff",
     dataset_binding_digest: "sha256:bind",
