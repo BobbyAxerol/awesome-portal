@@ -201,3 +201,103 @@ test("Screen 14 does not overflow a 660px viewport", async ({ page }) => {
 
   await screen14.screenshot({ path: `${OUT}/s14-clean-660.png` });
 });
+
+test("Screens 02 and 05 hold their preflight composition in the browser", async ({ page }) => {
+  const noise: string[] = [];
+  page.on("console", (m) => {
+    if (m.type() === "error" || m.type() === "warning") noise.push(`${m.type()}: ${m.text()}`);
+  });
+  page.on("pageerror", (e) => noise.push(`pageerror: ${e}`));
+
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/research/_fixtures");
+  await settle(page);
+
+  const preflights = page.locator("[data-screen='preflight']");
+  await expect(preflights).toHaveCount(3);
+  const held = preflights.nth(0);
+
+  // Half-open intervals, written as half-open.
+  await expect(held.locator("[data-fact='logical range']")).toContainText(
+    "[2022-01-01T00:00:00.000Z, 2026-01-01T00:00:00.000Z)",
+  );
+  await expect(held.locator("[data-warmup]")).toContainText("BOUNDARY_ONLY_NOT_FIT");
+
+  // Measured counters, including the ones that are zero.
+  await expect(held.locator("[data-quality]")).toContainText("2 · 2 missing bars");
+  await expect(held.locator("[data-quality]")).toContainText("SNAPSHOT_INTEGRITY_ONLY");
+
+  // The scope wording is the limit of the compute claim.
+  await expect(held.locator("[data-resource-estimate]")).toContainText(
+    "per_study_per_fold_per_seed; no product-wide trial claim is implied",
+  );
+  // Grouped, exact, and still in bytes — no "1.4 MB" hiding 402,560 of them.
+  await expect(held.locator("[data-resource-estimate]")).toContainText("268,435,456 bytes");
+  await expect(held.locator("[data-fact='rows / bytes']")).toContainText("8,766 rows");
+
+  // Four axes stay four chips.
+  await expect(held.locator("[data-axis]")).toHaveCount(4);
+
+  // The refused instance keeps every panel and shows no metadata.
+  const refused = preflights.nth(1);
+  await expect(refused.locator("[data-research-panel='snapshot quality']")).toBeVisible();
+  await expect(refused.locator("[data-quality]")).toHaveCount(0);
+
+  // The dropped-preview instance says why.
+  await expect(preflights.nth(2).locator("[data-cleared-note]")).toContainText(
+    "run preflight again before creating a run",
+  );
+
+  // Screen 05: the seal is hatched, never the OOS colour, and never an emoji.
+  const splits = page.locator("[data-screen='split-boundary']");
+  await expect(splits).toHaveCount(3);
+  const sealed = splits.nth(0);
+  await expect(sealed.locator("[data-segment='sealed']").first()).toBeVisible();
+  const sealBg = await sealed
+    .locator("[data-segment='sealed']")
+    .first()
+    .evaluate((n) => getComputedStyle(n).backgroundImage);
+  expect(sealBg).toContain("repeating-linear-gradient");
+  await expect(sealed.locator("[data-evaluation-state]")).toHaveText("NOT_EVALUATED");
+  expect(await sealed.locator("button").count()).toBe(0);
+
+  // The unsealed protocol says so rather than drawing an empty seal.
+  await expect(splits.nth(1).locator("[data-no-seal]")).toHaveText(
+    "advanced_walk_forward declares no sealed holdout.",
+  );
+
+  await held.screenshot({ path: `${OUT}/s02-preflight.png` });
+  await sealed.screenshot({ path: `${OUT}/s05-split.png` });
+
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("Screens 02 and 05 do not overflow a 660px viewport", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 660, height: 900 });
+  await page.goto("/research/_fixtures");
+  await settle(page);
+
+  const preflight = page.locator("[data-screen='preflight']").first();
+  await expect(preflight).toBeVisible();
+  const split = page.locator("[data-screen='split-boundary']").first();
+  await expect(split).toBeVisible();
+
+  for (const frame of [preflight, split]) {
+    const contained = await frame.evaluate(
+      (node) => node.getBoundingClientRect().right <= window.innerWidth + 1,
+    );
+    expect(contained).toBe(true);
+  }
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, `page overflows by ${overflow}px`).toBeLessThanOrEqual(1);
+
+  await preflight.screenshot({ path: `${OUT}/s02-preflight-660.png` });
+  await split.screenshot({ path: `${OUT}/s05-split-660.png` });
+});

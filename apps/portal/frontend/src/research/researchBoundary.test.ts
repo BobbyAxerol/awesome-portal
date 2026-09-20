@@ -70,7 +70,7 @@ describe("no internal identifier or direct source access on the Research surface
    * under the Portal's own API prefix. An absolute URL here would be an
    * analyser or engine address, which is precisely what P07's handoff forbids.
    */
-  const NETWORK_MODULES = ["alphaImportClient.ts"];
+  const NETWORK_MODULES = ["alphaImportClient.ts", "preflightClient.ts"];
 
   it("keeps requests inside the one module allowed to make them", () => {
     const callers = SOURCES.filter((f) => /\bfetch\s*\(/.test(codeOf(f.text))).map((f) => f.name);
@@ -86,6 +86,21 @@ describe("no internal identifier or direct source access on the Research surface
       expect(base).not.toBeNull();
       expect(base![1].startsWith("/api/v1/")).toBe(true);
     }
+  });
+
+  /*
+   * Research Light matches the hi-fi value for value, so a component that needs
+   * a raw hex is a component reaching for a colour the palette does not name —
+   * and that colour will not follow the theme. Caught on the P08 panels, where
+   * the seal, the train band and the OOS band all had documented tokens
+   * (`--role-holdout`, `--viz-train`, `--role-oos`) that the first draft
+   * bypassed by copying the hi-fi's literals.
+   */
+  it("uses palette tokens rather than raw hex", () => {
+    const offenders = SOURCES.filter((f) => /#[0-9a-fA-F]{3,8}\b/.test(codeOf(f.text))).map(
+      (f) => f.name,
+    );
+    expect(offenders, `raw hex in: ${offenders.join(", ")}`).toEqual([]);
   });
 
   it("types no attempt field beyond ordinal, state and message", async () => {

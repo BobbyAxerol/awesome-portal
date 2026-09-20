@@ -15,6 +15,8 @@
 import { useState } from "react";
 
 import { AlphaImport, awaitingStep } from "./AlphaImport";
+import { PreflightPanel } from "./PreflightPanel";
+import { SplitBoundary } from "./SplitBoundary";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { EngineAtlas, type AtlasTab, ATLAS_TABS } from "./EngineAtlas";
 import { QueuePanel } from "./QueuePanel";
@@ -27,6 +29,7 @@ import type {
   SourceResponse,
 } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
+import type { PreflightResponse, Topology, UtcRange } from "./preflightClient";
 import { RESEARCH_ARTIFACT_STATES } from "./artifacts";
 import { RESEARCH_JOB_STATES } from "./scheduler";
 import { researchState, type ResearchOutcome } from "./state";
@@ -301,6 +304,179 @@ function AlphaImportFixture({
   );
 }
 
+/* ------------------------------------------------------- P08 Screens 02/05 */
+
+function fixtureRange(startMs: number, endMs: number): UtcRange {
+  return {
+    start_utc: new Date(startMs).toISOString(),
+    end_exclusive_utc: new Date(endMs).toISOString(),
+    start_utc_ms: startMs,
+    end_exclusive_utc_ms: endMs,
+  };
+}
+
+const FX_2022 = Date.UTC(2022, 0, 1);
+const FX_2023 = Date.UTC(2023, 0, 1);
+const FX_2024 = Date.UTC(2024, 0, 1);
+const FX_2025 = Date.UTC(2025, 0, 1);
+const FX_2026 = Date.UTC(2026, 0, 1);
+
+const FIXTURE_THREE_WINDOW: Topology = {
+  protocol: "three_window_decay",
+  topology_digest: "sha256:4bc21f0a9e",
+  folds: [
+    {
+      fold_id: "fold_01",
+      train: fixtureRange(FX_2022, FX_2023),
+      outer_oos: fixtureRange(FX_2023, FX_2024),
+      state: "BOUNDARY_FIXED_NOT_EVALUATED",
+    },
+    {
+      fold_id: "fold_02",
+      train: fixtureRange(FX_2022, FX_2024),
+      outer_oos: fixtureRange(FX_2024, FX_2025),
+      state: "BOUNDARY_FIXED_NOT_EVALUATED",
+    },
+  ],
+  sealed_holdout: {
+    ...fixtureRange(FX_2025, FX_2026),
+    snapshot_read_state: "OPAQUE_SNAPSHOT_ONLY",
+    evaluation_state: "NOT_EVALUATED",
+    disclosure:
+      "The seal caps this run's certificate at B — unlock is a one-time audited read that creates a sibling attempt.",
+  },
+};
+
+const FIXTURE_ADVANCED: Topology = {
+  protocol: "advanced_walk_forward",
+  frequency: "quarterly",
+  window_mode: "expanding",
+  topology_digest: "sha256:7c1a9e3b02",
+  folds: FIXTURE_THREE_WINDOW.folds,
+  sealed_holdout: null,
+};
+
+const FIXTURE_CAPABILITY = {
+  engine_release_id: "er_quantbt_1_1_1",
+  engine_catalog_digest: "sha256:c25a1d77b4",
+  execution_route: "signal_notional",
+  required_input_class: "ohlcv",
+  route_axes: {
+    engine: "ENGINE_SUPPORTED",
+    integration: "INTEGRATED",
+    evidence: "EVIDENCE_COMPLETE",
+    admission: "ADMITTED",
+  },
+  preflight_admission: "PREFLIGHT_ONLY" as const,
+  optimization_mode: "per_fold_causal",
+  optimization_schedule: "endpoint",
+};
+
+const FIXTURE_PREFLIGHT: PreflightResponse = {
+  schema_version: "research.preflight.v1",
+  preflight_token: "pf_01HZQ7FIXTURE",
+  expires_at_utc_ms: FX_2026,
+  requested_spec_digest: "sha256:66e09b4410",
+  effective_spec_digest: "sha256:3b81c7aa15",
+  dataset_binding_digest: "sha256:9d44f2c880",
+  manifest_digest: "sha256:11ab07dd3e",
+  effective_spec: {
+    schema_version: "research.effective-spec.v1",
+    requested_spec_digest: "sha256:66e09b4410",
+    engine: FIXTURE_CAPABILITY,
+    data_binding: {
+      snapshot_id: "snap_btcusdt_4h_2022_2026",
+      snapshot_content_hash: "sha256:aa91b3ce77",
+      market_content_hash: "sha256:4f1c2b9ae0",
+      source_manifest_digest: "sha256:07dd11ab3e",
+      timezone: "UTC",
+      calendar_policy: "24x7",
+      closed_bar_policy: "CLOSED_BARS_ONLY",
+      columns: ["open", "high", "low", "close", "volume"],
+      warmup_bars: 120,
+      range_start_utc_ms: FX_2022,
+      range_end_exclusive_utc_ms: FX_2026,
+    },
+    topology: FIXTURE_THREE_WINDOW,
+    optimization: {
+      mode: "per_fold_causal",
+      schedule: "endpoint",
+      trial_count: 400,
+      early_stopping: 200,
+      random_seed: 42,
+      scope: "per_study_per_fold_per_seed",
+    },
+    intent: {
+      kind: "NEW",
+      reproduction_semantics: "reproduce the declared spec exactly",
+      upgrade_semantics: "an upgraded release produces a new effective spec",
+    },
+  },
+  dataset_binding: {
+    schema_version: "research.dataset-binding.v1",
+    snapshot_id: "snap_btcusdt_4h_2022_2026",
+    snapshot_content_hash: "sha256:aa91b3ce77",
+    market_content_hash: "sha256:4f1c2b9ae0",
+    source_manifest_digest: "sha256:07dd11ab3e",
+    dataset_id: "ds_btcusdt_4h",
+    symbol: "BTCUSDT",
+    timeframe: "4h",
+    range_start_utc_ms: FX_2022,
+    range_end_exclusive_utc_ms: FX_2026,
+    timezone: "UTC",
+    calendar_policy: "24x7",
+    closed_bar_policy: "CLOSED_BARS_ONLY",
+  },
+  snapshot: {
+    snapshot_id: "snap_btcusdt_4h_2022_2026",
+    snapshot_content_hash: "sha256:aa91b3ce77",
+    market_content_hash: "sha256:4f1c2b9ae0",
+    source_manifest_digest: "sha256:07dd11ab3e",
+    row_count: 8766,
+    byte_count: 1402560,
+    query: fixtureRange(FX_2022 - 1_728_000_000, FX_2026),
+    logical_range: fixtureRange(FX_2022, FX_2026),
+    warmup: {
+      ...fixtureRange(FX_2022 - 1_728_000_000, FX_2022),
+      requested_bars: 120,
+      state: "BOUNDARY_ONLY_NOT_FIT",
+    },
+    timezone: "UTC",
+    calendar_policy: "24x7",
+    closed_bar_policy: "CLOSED_BARS_ONLY",
+    columns: ["open", "high", "low", "close", "volume"],
+    quality: {
+      rows: 8766,
+      gaps: 2,
+      duplicates: 0,
+      gap_ratio: 0.00023,
+      passed: true,
+      reason_codes: ["VENUE_MAINTENANCE"],
+      missing_bar_count: 2,
+      state: "SNAPSHOT_INTEGRITY_ONLY",
+    },
+    provenance: { reader_class: "historical", sealed: true },
+  },
+  topology: FIXTURE_THREE_WINDOW,
+  resource_estimate: {
+    schema_version: "research.resource-estimate.v1",
+    scope: "per_study_per_fold_per_seed; no product-wide trial claim is implied",
+    trial_count: 400,
+    seed_count: 1,
+    outer_fold_count: 2,
+    evaluation_count: 800,
+    raw_frame_bytes: 1402560,
+    snapshot_bytes: 1402560,
+    estimated_memory_bytes: 268435456,
+    estimated_scratch_bytes: 134217728,
+    estimated_cpu_seconds: 5400,
+    admission_state: "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING",
+    disclosure:
+      "This is a preflight estimate for the declared study scope. It is not a reservation and it does not queue engine time.",
+  },
+  capability: FIXTURE_CAPABILITY,
+};
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
@@ -464,6 +640,43 @@ export default function ResearchFixtures() {
           <AlphaImportFixture parse={FIXTURE_SOURCE} gates={fixtureGates(3)} />
           <AlphaImportFixture parse={FIXTURE_SOURCE_INCOMPLETE} gates={fixtureGates(1)} />
           <AlphaImportFixture parse={null} gates={null} />
+        </div>
+      </Section>
+
+      <Section title="P08 · Screen 02 preflight — held, refused and not yet run">
+        <div className="flex flex-col gap-4">
+          <PreflightPanel
+            preflight={FIXTURE_PREFLIGHT}
+            state={researchState({ kind: "ok", rowCount: 1 })}
+          />
+          <PreflightPanel
+            preflight={null}
+            state={researchState({ kind: "transport", status: 503, retryable: false })}
+          />
+          <PreflightPanel
+            preflight={null}
+            state={awaitingStep(
+              "The declaration changed after this preview was taken — run preflight again before creating a run.",
+            )}
+            clearedBecause="The declaration changed after this preview was taken — run preflight again before creating a run."
+          />
+        </div>
+      </Section>
+
+      <Section title="P08 · Screen 05 split boundary — sealed and unsealed protocols">
+        <div className="flex flex-col gap-4">
+          <SplitBoundary
+            topology={FIXTURE_THREE_WINDOW}
+            state={researchState({ kind: "ok", rowCount: 1 })}
+          />
+          <SplitBoundary
+            topology={FIXTURE_ADVANCED}
+            state={researchState({ kind: "ok", rowCount: 1 })}
+          />
+          <SplitBoundary
+            topology={null}
+            state={awaitingStep("No preflight has been run for this declaration.")}
+          />
         </div>
       </Section>
     </div>
