@@ -25,6 +25,7 @@ import {
   type ResearchAlphaRegistryRecord,
   type ResearchPreflightManifestInput,
   type ResearchPreflightManifestRecord,
+  type ResearchJourneyRegistryRecord,
   type ResearchAttemptInput,
   type ResearchAttemptRecord,
   type ResearchDurableJobClaim,
@@ -121,6 +122,13 @@ interface PreflightManifestRow {
   snapshot: Record<string, unknown> | string;
   expires_at: Date;
   created_at: Date;
+}
+
+interface JourneyDescriptorRegistryRow {
+  descriptor_id: string;
+  schema_version: string;
+  revision: string | number;
+  content_sha256: string;
 }
 
 interface RunRow {
@@ -375,6 +383,54 @@ export class ResearchMetadataRepository {
   private readonly metadataAdmissionWaiters: Array<() => void> = [];
 
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
+
+  /**
+   * P09 reads the one immutable global descriptor only after the caller's
+   * workspace scope has been established.  The scoped, read-only transaction
+   * keeps this small registry from becoming an unreviewed public catalogue.
+   */
+  async loadJourneyDescriptor(scope: ResearchScope): Promise<ResearchJourneyRegistryRecord> {
+    this.assertScope(scope);
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<JourneyDescriptorRegistryRow>(
+        `SELECT descriptor_id, schema_version, revision, content_sha256
+           FROM research.journey_descriptor_registry
+          WHERE descriptor_id = 'quantbt_journey'
+          ORDER BY revision DESC
+          LIMIT 1`,
+      );
+      const row = result.rows[0];
+      if (!row) {
+        throw new ResearchMetadataError(
+          "RESEARCH_ATTEMPT_NOT_FOUND",
+          "Research Journey descriptor is not installed.",
+          404,
+        );
+      }
+      return {
+        descriptorId: row.descriptor_id,
+        schemaVersion: row.schema_version,
+        revision: asNumber(row.revision),
+        contentSha256: row.content_sha256,
+      };
+    });
+  }
+
+  /** P02 only requires a study qualifier when the exact run proves ambiguity. */
+  async isTrialAmbiguous(scope: ResearchScope, runId: string, trialId: string): Promise<boolean> {
+    this.assertScope(scope);
+    requireOpaqueId(runId, "runId");
+    requireOpaqueId(trialId, "trialId");
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<{ count: string | number }>(
+        `SELECT count(DISTINCT study_id) AS count
+           FROM research.trial_index
+          WHERE workspace_id = $1 AND run_id = $2 AND trial_id = $3`,
+        [scope.workspaceId, runId, trialId],
+      );
+      return asNumber(result.rows[0]?.count ?? 0) > 1;
+    });
+  }
 
   async registerAlphaVersion(
     scope: ResearchScope,

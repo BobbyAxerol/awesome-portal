@@ -31,6 +31,7 @@ import { LocalRealtimeError } from "./execution/profile-realtime.service";
 import { ResearchMetadataError } from "./research/contracts";
 import { ResearchAlphaImportError } from "./research/alpha-import.error";
 import { ResearchPreflightError } from "./research/preflight.error";
+import { ResearchFoundationError } from "./research/foundation.error";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -69,6 +70,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof ResearchMetadataError ||
       exception instanceof ResearchAlphaImportError ||
       exception instanceof ResearchPreflightError
+      || exception instanceof ResearchFoundationError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

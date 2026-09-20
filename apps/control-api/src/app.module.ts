@@ -113,6 +113,9 @@ import { ResearchAlphaAnalysisClient } from "./research/alpha-analysis.client";
 import { ResearchPreflightController } from "./research/preflight.controller";
 import { ResearchPreflightSnapshotClient } from "./research/preflight.client";
 import { ResearchPreflightService } from "./research/preflight.service";
+import { ResearchFoundationController } from "./research/foundation.controller";
+import { ResearchFoundationAtlasClient } from "./research/foundation.client";
+import { ResearchFoundationService } from "./research/foundation.service";
 
 @Module({})
 export class AppModule {
@@ -161,6 +164,7 @@ export class AppModule {
         ExecutionMarketCandlesController,
         ResearchAlphaImportController,
         ResearchPreflightController,
+        ResearchFoundationController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -213,6 +217,8 @@ export class AppModule {
         ResearchAlphaImportService,
         ResearchPreflightSnapshotClient,
         ResearchPreflightService,
+        ResearchFoundationAtlasClient,
+        ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to
         // NATS, schedule a child or mount a route at bootstrap; P10 supplies
         // the named producer and deployment-bound transport adapter.

@@ -129,6 +129,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_alpha_source_reference: boolean;
       has_research_preflight_manifests: boolean;
       has_research_preflight_immutable_guard: boolean;
+      has_research_journey_descriptor_registry: boolean;
+      has_research_journey_descriptor_immutable_guard: boolean;
       research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
@@ -209,6 +211,12 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
             WHERE tgname = 'research_preflight_manifests_immutable_guard'
               AND NOT tgisinternal
          ) AS has_research_preflight_immutable_guard,
+         to_regclass('research.journey_descriptor_registry') IS NOT NULL AS has_research_journey_descriptor_registry,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_journey_descriptor_registry_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_journey_descriptor_immutable_guard,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
@@ -267,6 +275,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_alpha_source_reference ||
       !row.has_research_preflight_manifests ||
       !row.has_research_preflight_immutable_guard ||
+      !row.has_research_journey_descriptor_registry ||
+      !row.has_research_journey_descriptor_immutable_guard ||
       row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
@@ -318,6 +328,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_alpha_source_reference=${row.has_research_alpha_source_reference}, ` +
         `research_preflight_manifests=${row.has_research_preflight_manifests}, ` +
         `research_preflight_immutable_guard=${row.has_research_preflight_immutable_guard}, ` +
+        `research_journey_descriptor_registry=${row.has_research_journey_descriptor_registry}, ` +
+        `research_journey_descriptor_immutable_guard=${row.has_research_journey_descriptor_immutable_guard}, ` +
         `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,

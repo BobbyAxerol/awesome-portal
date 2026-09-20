@@ -63,6 +63,9 @@ const EnvSchema = z.object({
   RESEARCH_PREFLIGHT_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(10 * 60),
   RESEARCH_PREFLIGHT_TIMEOUT_MS: z.coerce.number().int().min(250).max(15_000).default(5_000),
   RESEARCH_PREFLIGHT_MAXIMUM_ACTIVE_MANIFESTS_PER_ACTOR: z.coerce.number().int().min(1).max(16).default(8),
+  // P09 has one bounded, read-only private Atlas request. It neither imports
+  // an engine per browser view nor starts a worker/runner.
+  RESEARCH_FOUNDATION_ATLAS_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),

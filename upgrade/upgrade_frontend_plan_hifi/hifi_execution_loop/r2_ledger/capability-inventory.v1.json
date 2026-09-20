@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-20",
- "route_count": 144,
+ "route_count": 146,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1392,6 +1392,26 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "BE-R2-8: authenticated HTTP + fresh-PG writer/readback + canonical schema/FE reader tests. Typed client exists; no product capture form is claimed or deployed.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/journey",
+   "controller": "research/foundation.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P09 serves the immutable Journey descriptor plus P02 inspection-only cursor semantics through one session/workspace-scoped same-origin read. It has no write, worker, source-data, engine or Execution authority; Claude owns the first mounted S00 product receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/quantbt/atlas",
+   "controller": "research/foundation.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P09 reads the already-loaded P04 manifest through a bounded signed private GET and exposes current/historical, route and mode facts only. It cannot import or dispatch QuantBT; Claude owns the first mounted S12 product receipt.",
    "owner": "codex",
    "test_owner": "codex"
   },

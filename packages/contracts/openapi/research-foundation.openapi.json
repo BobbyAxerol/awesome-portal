@@ -1,0 +1,91 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Foundation API",
+    "version": "1.0.0",
+    "description": "P09 same-origin, read-only Journey and Engine Atlas contracts. Browser consumers receive only bounded descriptor and manifest facts. They never receive private Portal URLs, internal principals, engine handles, worker controls, raw source bytes, market rows or a dispatch surface."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/research/journey": {
+      "get": {
+        "operationId": "researchJourneyGetV1",
+        "summary": "Read the pinned Research Journey descriptor and P02 inspection cursor",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/RunId" },
+          { "$ref": "#/components/parameters/Fold" }, { "$ref": "#/components/parameters/Study" },
+          { "$ref": "#/components/parameters/Trial" }, { "$ref": "#/components/parameters/Pick" },
+          { "$ref": "#/components/parameters/Params" }, { "$ref": "#/components/parameters/Trade" },
+          { "$ref": "#/components/parameters/Seq" }, { "$ref": "#/components/parameters/EventSeq" },
+          { "$ref": "#/components/parameters/Mode" }, { "$ref": "#/components/parameters/Schedule" },
+          { "$ref": "#/components/parameters/Route" }, { "$ref": "#/components/parameters/PlaybackOrdinal" }
+        ],
+        "responses": {
+          "200": { "description": "Pinned descriptor and canonical inspection state", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JourneyResponse" } } } },
+          "304": { "description": "The private descriptor representation has not changed", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } } },
+          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/quantbt/atlas": {
+      "get": {
+        "operationId": "researchEngineAtlasGetV1",
+        "summary": "Read the current or retained historical Engine Atlas manifest",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/ReleaseId" },
+          { "$ref": "#/components/parameters/Route" }, { "$ref": "#/components/parameters/Mode" }
+        ],
+        "responses": {
+          "200": { "description": "Manifest-selected Engine Atlas facts", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AtlasResponse" } } } },
+          "304": { "description": "The private Atlas representation has not changed", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } } },
+          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" }, "502": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "headers": { "ETag": { "description": "Private, representation-specific validator; never a permission or source cursor.", "schema": { "type": "string", "maxLength": 128 } } },
+    "parameters": {
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
+      "RunId": { "name": "run_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "ReleaseId": { "name": "release_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Fold": { "name": "fold", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Study": { "name": "study", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Trial": { "name": "trial", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Pick": { "name": "pick", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Params": { "name": "params", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Trade": { "name": "trade", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Seq": { "name": "seq", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "EventSeq": { "name": "event_seq", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Mode": { "name": "mode", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Schedule": { "name": "schedule", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "Route": { "name": "route", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "PlaybackOrdinal": { "name": "playback_ordinal", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } }
+    },
+    "responses": { "Problem": { "description": "Typed same-origin refusal; no private source/transport/worker fact is disclosed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } },
+    "schemas": {
+      "WorkspaceId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+      "Identifier": { "type": "string", "minLength": 1, "maxLength": 191, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$" },
+      "JourneyCard": { "type": "object", "additionalProperties": false, "required": ["card_id", "title", "description", "target_kind", "target_key", "availability"], "properties": { "card_id": { "$ref": "#/components/schemas/Identifier" }, "title": { "type": "string", "maxLength": 191 }, "description": { "type": "string", "maxLength": 1024 }, "target_kind": { "enum": ["SHIPPED", "RESEARCH_SCREEN", "EXECUTION_HANDOFF"] }, "target_key": { "$ref": "#/components/schemas/Identifier" }, "availability": { "enum": ["AVAILABLE", "PLANNED", "DEPENDENCY_REQUIRED"] } } },
+      "JourneyPhase": { "type": "object", "additionalProperties": false, "required": ["phase_id", "ordinal", "title", "description", "cards"], "properties": { "phase_id": { "$ref": "#/components/schemas/Identifier" }, "ordinal": { "type": "integer", "minimum": 1, "maximum": 24 }, "title": { "type": "string", "maxLength": 191 }, "description": { "type": "string", "maxLength": 1024 }, "cards": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/components/schemas/JourneyCard" } } } },
+      "JourneyDescriptor": { "type": "object", "additionalProperties": false, "required": ["schema_version", "descriptor_id", "revision", "content_sha256", "phases"], "properties": { "schema_version": { "const": "research.journey.v1" }, "descriptor_id": { "const": "quantbt_journey" }, "revision": { "const": 1 }, "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "phases": { "type": "array", "minItems": 8, "maxItems": 8, "items": { "$ref": "#/components/schemas/JourneyPhase" } } } },
+      "InspectionCursor": { "type": "object", "additionalProperties": false, "required": ["cursor", "canonical_query", "pick_effect", "ambiguity_state"], "properties": { "cursor": { "type": "object", "additionalProperties": false, "properties": { "fold": { "$ref": "#/components/schemas/Identifier" }, "study": { "$ref": "#/components/schemas/Identifier" }, "trial": { "$ref": "#/components/schemas/Identifier" }, "pick": { "$ref": "#/components/schemas/Identifier" }, "params": { "$ref": "#/components/schemas/Identifier" }, "trade": { "$ref": "#/components/schemas/Identifier" }, "seq": { "$ref": "#/components/schemas/Identifier" }, "mode": { "$ref": "#/components/schemas/Identifier" }, "schedule": { "$ref": "#/components/schemas/Identifier" }, "route": { "$ref": "#/components/schemas/Identifier" }, "playback_ordinal": { "$ref": "#/components/schemas/Identifier" } } }, "canonical_query": { "type": "string", "maxLength": 4096 }, "pick_effect": { "const": "INSPECTION_ONLY" }, "ambiguity_state": { "enum": ["NOT_APPLICABLE", "RESOLVED", "UNRESOLVED_NO_RUN_CONTEXT"] } } },
+      "JourneyResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "descriptor", "inspection", "etag"], "properties": { "schema_version": { "const": "research.journey-response.v1" }, "descriptor": { "$ref": "#/components/schemas/JourneyDescriptor" }, "inspection": { "$ref": "#/components/schemas/InspectionCursor" }, "etag": { "type": "string", "maxLength": 128 } } },
+      "CapabilityAxes": { "type": "object", "additionalProperties": false, "required": ["engine", "integration", "evidence", "admission"], "properties": { "engine": { "type": "string", "maxLength": 64 }, "integration": { "type": "string", "maxLength": 64 }, "evidence": { "type": "string", "maxLength": 64 }, "admission": { "type": "string", "maxLength": 64 } } },
+      "AtlasRoute": { "type": "object", "additionalProperties": false, "required": ["route_id", "family", "execution_contract", "backend", "report_levels", "default_for_new_runs", "axes", "reason", "required_input_class"], "properties": { "route_id": { "$ref": "#/components/schemas/Identifier" }, "family": { "type": "string", "maxLength": 128 }, "execution_contract": { "type": "string", "maxLength": 191 }, "backend": { "type": "string", "maxLength": 191 }, "report_levels": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "maxLength": 64 } }, "default_for_new_runs": { "type": "boolean" }, "axes": { "$ref": "#/components/schemas/CapabilityAxes" }, "reason": { "type": "string", "maxLength": 1024 }, "required_input_class": { "type": "string", "maxLength": 191 } } },
+      "AtlasMode": { "type": "object", "additionalProperties": false, "required": ["mode_id", "display_name", "valid_schedules", "default_schedule", "objective_summary", "suspect", "artifact_fields", "when_to_use", "rules"], "properties": { "mode_id": { "$ref": "#/components/schemas/Identifier" }, "display_name": { "type": "string", "maxLength": 191 }, "valid_schedules": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "maxLength": 191 } }, "default_schedule": { "type": "string", "maxLength": 191 }, "objective_summary": { "type": "string", "maxLength": 1024 }, "suspect": { "type": "string", "maxLength": 1024 }, "artifact_fields": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "maxLength": 191 } }, "when_to_use": { "type": "string", "maxLength": 1024 }, "rules": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "maxLength": 1024 } } } },
+      "AtlasRelease": { "type": "object", "additionalProperties": false, "required": ["release_id", "package", "expected_version", "verified"], "properties": { "release_id": { "$ref": "#/components/schemas/Identifier" }, "package": { "type": "string", "maxLength": 191 }, "expected_version": { "type": "string", "maxLength": 191 }, "installed_version": { "type": ["string", "null"], "maxLength": 191 }, "native_package": { "type": ["string", "null"], "maxLength": 191 }, "native_expected_version": { "type": ["string", "null"], "maxLength": 191 }, "native_installed_version": { "type": ["string", "null"], "maxLength": 191 }, "verified": { "type": "boolean" }, "detail": { "type": ["string", "null"], "maxLength": 1024 } } },
+      "HistoricalRelease": { "type": "object", "additionalProperties": false, "required": ["release_id", "package", "version", "status"], "properties": { "release_id": { "$ref": "#/components/schemas/Identifier" }, "package": { "type": "string", "maxLength": 191 }, "version": { "type": "string", "maxLength": 191 }, "status": { "const": "HISTORICAL_IDENTITY_RETAINED" } } },
+      "Atlas": { "type": "object", "additionalProperties": false, "required": ["schema_version", "manifest_revision", "current_release", "historical_releases", "routes", "modes", "claims", "evidence_contract"], "properties": { "schema_version": { "const": "research-engine-atlas.v1" }, "manifest_revision": { "type": "integer", "minimum": 1 }, "current_release": { "$ref": "#/components/schemas/AtlasRelease" }, "historical_releases": { "type": "array", "maxItems": 8, "items": { "$ref": "#/components/schemas/HistoricalRelease" } }, "routes": { "type": "array", "minItems": 14, "maxItems": 14, "items": { "$ref": "#/components/schemas/AtlasRoute" } }, "modes": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/AtlasMode" } }, "claims": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "type": "object", "additionalProperties": true } }, "evidence_contract": { "type": "object", "additionalProperties": true } } },
+      "AtlasResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "selected_release_id", "selected_release_kind", "atlas", "etag"], "properties": { "schema_version": { "const": "research.engine-atlas-response.v1" }, "selected_release_id": { "$ref": "#/components/schemas/Identifier" }, "selected_release_kind": { "enum": ["CURRENT", "HISTORICAL"] }, "atlas": { "$ref": "#/components/schemas/Atlas" }, "etag": { "type": "string", "maxLength": 128 } } },
+      "Problem": { "type": "object", "additionalProperties": false, "required": ["error", "request_id"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "enum": ["SESSION_REQUIRED", "REQUEST_REJECTED", "RESEARCH_FOUNDATION_INVALID", "RESEARCH_FOUNDATION_NOT_FOUND", "RESEARCH_FOUNDATION_CURSOR_STUDY_REQUIRED", "RESEARCH_FOUNDATION_DESCRIPTOR_MISMATCH", "RESEARCH_FOUNDATION_RELEASE_NOT_FOUND", "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND", "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND", "RESEARCH_FOUNDATION_UNAVAILABLE", "RESEARCH_FOUNDATION_REJECTED"] }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "minLength": 1, "maxLength": 128 } } }
+    }
+  }
+}

@@ -58,6 +58,21 @@ async def analyze_imported_alpha(
         raise HTTPException(status_code=400, detail="invalid single-file import contract") from exc
 
 
+@router.get("/engine-atlas")
+async def read_engine_atlas(request: Request) -> dict[str, object]:
+    """Return the already-loaded P04 manifest document to Control API only.
+
+    This route imports no QuantBT package, starts no engine and performs no
+    side effect.  The public descriptive P04 route remains unchanged; P09's
+    browser-facing consumer must use Control API's same-origin boundary.
+    """
+    try:
+        require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    return request.app.state.research_engine_catalog.public_document().model_dump(mode="json")
+
+
 @router.post("/preflight-snapshots")
 async def create_preflight_snapshot(
     request: Request,

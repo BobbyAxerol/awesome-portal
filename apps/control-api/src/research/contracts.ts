@@ -263,6 +263,14 @@ export interface ResearchAlphaActivation {
   replayed: boolean;
 }
 
+/** P09 immutable global registry pin, read only through a workspace scope. */
+export interface ResearchJourneyRegistryRecord {
+  descriptorId: string;
+  schemaVersion: string;
+  revision: number;
+  contentSha256: string;
+}
+
 /** P08 persisted metadata only; the snapshot ref never contains a filesystem path. */
 export interface ResearchPreflightManifestInput {
   preflightToken: string;
