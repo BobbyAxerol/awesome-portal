@@ -42,6 +42,10 @@ describe("1 — same-origin DTO only; no direct path, data or engine request", (
       .join("\n");
     expect(code).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|axios|EventSource|WebSocket/);
     expect(code).not.toMatch(/file:\/\/|\/var\/|\/srv\/|postgres|parquet|s3:\/\//i);
+    // Kept as a local smoke check only. This narrow, per-file form is what gave
+    // false confidence once already: it passed here while `scheduler.ts` next
+    // door typed and rendered a lease epoch. The authoritative sweep across the
+    // whole Research surface is `researchBoundary.test.ts`.
     expect(code).not.toMatch(/hmac|lease_epoch|worker_id|relation_cursor/i);
   });
 });
