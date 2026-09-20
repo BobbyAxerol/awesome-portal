@@ -221,6 +221,10 @@ const FIXTURE_REGISTRATION: RegistrationResponse = {
   supersedes: "av_0_2_0",
   alpha_revision: 7,
   replayed: false,
+  /* The admitted branch. `may_activate` is the server's answer for this
+     caller, so the fixture states one rather than leaving the lane unable to
+     show the control at all. */
+  may_activate: true,
 };
 
 const FIXTURE_REGISTRY: RegistryEntry[] = [
@@ -233,6 +237,9 @@ const FIXTURE_REGISTRY: RegistryEntry[] = [
     source_digest_prefix: "sha256:11ab",
     alpha_revision: 6,
     registered_at_utc_ms: 1789836572369,
+    /* Already active: there is nothing left to activate, so the server would
+       not admit it either. */
+    may_activate: false,
   },
   {
     alpha_id: "delta_rsi_polynomial",
@@ -243,6 +250,7 @@ const FIXTURE_REGISTRY: RegistryEntry[] = [
     source_digest_prefix: "sha256:07dd",
     alpha_revision: 2,
     registered_at_utc_ms: 1789236572369,
+    may_activate: false,
   },
 ];
 
@@ -255,12 +263,10 @@ function AlphaImportFixture({
   parse,
   gates,
   registration,
-  activationAdmitted = false,
 }: {
   parse: SourceResponse | null;
   gates: GatesResponse | null;
   registration?: RegistrationResponse | null;
-  activationAdmitted?: boolean;
 }) {
   const [sourceText, setSourceText] = useState("def run(ctx):\n    ...\n");
   const [alphaId, setAlphaId] = useState("delta_rsi_polynomial");
@@ -290,7 +296,7 @@ function AlphaImportFixture({
       onRunGates={noop}
       onRegister={noop}
       onActivate={noop}
-      activationAdmitted={activationAdmitted}
+      activationAdmitted={registration?.may_activate ?? false}
     />
   );
 }
@@ -454,7 +460,6 @@ export default function ResearchFixtures() {
             parse={FIXTURE_SOURCE}
             gates={fixtureGates(null)}
             registration={FIXTURE_REGISTRATION}
-            activationAdmitted
           />
           <AlphaImportFixture parse={FIXTURE_SOURCE} gates={fixtureGates(3)} />
           <AlphaImportFixture parse={FIXTURE_SOURCE_INCOMPLETE} gates={fixtureGates(1)} />
