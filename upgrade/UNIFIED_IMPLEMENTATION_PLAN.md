@@ -3426,8 +3426,9 @@ contracts; this is planned layer sequencing rather than hidden EDS-01 debt.
 <a id="research-loop-v11"></a>
 # 13. Research Loop V1.1 — chỉ mục triển khai 24 phase, kế thừa Execution v1.1.1
 
-**Owner:** Bobby. **Ngày lập:** 2026-09-19. **Trạng thái:** `PLAN_WRITTEN / IMPLEMENTATION_NOT_STARTED`.
-Lệnh hiện tại duyệt viết plan/rules, **chưa khởi động P01 hay deploy**.
+**Owner:** Bobby. **Ngày lập:** 2026-09-19. **Trạng thái:** `ACTIVE / P01–P06 approved foundation outputs recorded; P03–P06 HiFi composition recovery ready for Claude`.
+P01–P06 đã có evidence/commit riêng; owner amendment ngày 2026-09-20 mở
+frontend composition theo contract-first vertical slice, không cấp quyền deploy.
 Workspace soạn plan: `/home/bobby/portal-research`, nhánh `docs/research-loop-plan`,
 base kiểm tra `533162635f56584d630e3d971d77d50860595f15`. Đây là source baseline,
 không phải chứng nhận runtime production hoặc QuantBT 1.1.1 đã active.
@@ -3492,6 +3493,44 @@ im lặng bản dễ làm. Các điều chỉnh dưới đây không đổi hi-f
   Đủ loading/empty/partial/stale/denied/unavailable/terminal; giữ bố cục ở mọi state.
   Sửa spacing/layout/copy khác source cần COR/owner decision trước thực hiện.
 
+#### 13.2.1. Contract-first vertical slice — owner amendment 2026-09-20
+
+Handoff backend **không còn là lý do để hoãn TSX/HiFi composition tới cuối
+campaign**. Ngay khi một phase đã freeze named DTO, state semantics và authority
+boundary, frontend có thể và phải dựng phần composition/panel/tab thuộc scope
+đó song song với backend phase kế tiếp. Handoff giữ vai trò safety contract;
+không phải giới hạn mỹ thuật hoặc lý do thay màn giàu thông tin bằng envelope.
+
+Áp dụng ngay cho P03–P06 theo
+[Claude P03–P06 vertical-slice brief](./research_loop/CLAUDE_P03_P06_VERTICAL_SLICE_RECOVERY_BRIEF.md):
+
+1. **P03** dùng state/query/fixture harness đã có để dựng shared Research
+   scope/refusal/panel states; browser không được tự tạo identity, workspace
+   authority hay route API.
+2. **P04** dựng Screen 12 Engine Atlas theo HTML/spec, dùng Atlas DTO/read
+   path thật khi có; 14 cards và bốn axes luôn giữ composition kể cả refused
+   state.
+3. **P05** dựng reusable HIFI artifact/readiness panels từ exact state
+   contract. Chưa có named DTO/action chỉ chặn fetch/download/mutation — không
+   chặn panel, typed unavailable hoặc visual fixture lane được gắn nhãn.
+4. **P06** dựng queue/attempt/retry/finishing panels từ scheduler contract.
+   Chưa có producer/SSE chỉ chặn submit/cancel/live progress activation; không
+   chặn truthful state composition.
+
+P09 vẫn sở hữu shared Research foundation/route normalization, P10 vẫn sở hữu
+named producer/BFF và P11 vẫn sở hữu Progress/SSE/readiness activation. Điều
+đó không cho phép trì hoãn visual work hiện đã có stable input. Frontend không
+được invent action, ETA, percent, source data hay bypass same-origin BFF để
+đổi lấy UI. Khi named product DTO còn thiếu, state fixture chỉ dùng trong
+isolated visual/test lane; product route giữ layout với exact typed
+unavailable/denied/pending truth, không masquerade fixture thành data thật.
+
+Đây là **composition recovery slice**, không reopen P03–P06 backend gates hay
+tạo phase/tracker song song: Claude append evidence vào từng `evidence/P03` …
+`evidence/P06`, cập nhật row board này, và giữ source HTML/spec/COR là UX
+authority. Sau P07, mọi phase áp dụng cùng choreography: contract freeze →
+HiFi composition song song → named BFF/action activation → one phase closeout.
+
 <a id="rl-test-gates"></a>
 ## 13.3. Test và exit gate chung — áp dụng vào từng Pxx
 
@@ -3513,7 +3552,7 @@ rõ mới loại một conditional test; test required chưa chạy là gate ch�
 | G3 — bounded cost/durability | Pagination/count/query plan/row+byte limits; TTL/retention/pins; duplicate/cancel/restart/fencing; no hidden compute in reads | 1/10/20 viewers + same-scope sharing, virtualized rows/chart windows, no implicit jobs, obsolete-response cancellation | Đo theo phase workload; aggregate5GB baseline,8GB không là waiver5GB; user quota riêng |
 | G4 — UI & browser | Named DTO cho từng panel/action, đủ useful current data | Source-layout/copy; all subpanels, responsive1280/660 và viewport riêng spec; keyboard/a11y/console; deep-link/back/forward | Không sửa baseline để xanh; không thay rich screen bằng generic unavailable/JSON |
 | G5 — integration & isolation | Applicable Python/Rust/Control API/PG suites; migrations fresh+upgrade; không đổi execution consumers | `VISUAL_FIXTURE`, `REAL_DELTA_E2E`, `EXECUTION_REGRESSION` tách riêng | Real lane không response stub/HAR fallback; test current unchanged Execution interfaces khi chạm boundary |
-| G6 — delivered dev | Exact image/config/migration/API SHA; env ngoài checkout; host-bound project/data | Browser bundle/build flag/version, login+real route+assets/chart; refresh không trắng; same-origin | Từ phase UI reviewable cần dev receipt; P01–06 harness không tự gọi fullUI PASS |
+| G6 — delivered dev | Exact image/config/migration/API SHA; env ngoài checkout; host-bound project/data | Browser bundle/build flag/version, login+real route+assets/chart; refresh không trắng; same-origin | P01–P02 remain discovery/contract harness only unless owner expands scope. P03–P06 composition introduced under §13.2.1 must earn a scoped browser/dev receipt; inactive action/data lanes remain typed and do not claim full product activation |
 | G7 — closeout & resources | Rollback/restore phù hợp rủi ro; scoped teardown, capacity, cache/evidence retention | FE requests read→mapped→consumed→browser verified, không chỉ một factory đổi tên | Report đủ15mục A4, debt=0 trong scope, cleanup record, coherent commit và owner checkpoint |
 
 **Test economy:** focused gates mỗi slice; full affected-domain gates lúc đóng phase; integration/full required gates
@@ -3547,10 +3586,10 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 |---|---|---|---|---|
 | [P01](#rl-p01) | — | 00–14 inventory | 01 | TECHNICALLY_COMPLETE / Codex + Claude source review / [P01 report](./research_loop/evidence/P01/phase-report.md); matrices verified both directions, 0 defect, 0 omission; systemic `P01-FE-01` state vocabulary + immediate S02/S11 spec gaps closed by P02 amendment; screen implementation remains with owner phase |
 | [P02](#rl-p02) | P01 | 02/11 harness | 01 | CONTRACT_AMENDMENT_COMPLETE / Codex + Claude review / [P02 packet](./research_loop/evidence/P02/phase-report.md); versioned `requested_spec` schema/types map all 24 S02 controls, S02/S11 state semantics specified; no producer/browser/runtime claim |
-| [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; FE_CONSUMER_HARNESS_COMPLETE / Claude — `src/research/` +663 lines, vitest 2430 pass, build exit 0. Generated client and browser acceptance remain P10 by design |
-| [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; FE_ATLAS_DATA_SOURCE_COMPLETE / Claude — atlas data source +540 lines, 41/41, tsc 0; Atlas composition and browser acceptance remain P09 |
-| [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); FE_ARTIFACT_HARNESS_COMPLETE / Claude — artifact harness +337 lines; DTO and screen remain P10/P11 |
-| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced; FE_SCHEDULER_HARNESS_COMPLETE / Claude — scheduler harness +349 lines, full suite 2488 pass, build exit 0 |
+| [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; FE_CONSUMER_HARNESS_COMPLETE / Claude — `src/research/` +663 lines. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: scope/refusal composition now proceeds under §13.2.1; generated client/action activation remains P10 |
+| [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; FE_ATLAS_DATA_SOURCE_COMPLETE / Claude — atlas data source +540 lines, 41/41, tsc 0. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: Screen 12 HiFi composition may start now; P09 retains shared route/foundation closure |
+| [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); FE_ARTIFACT_HARNESS_COMPLETE / Claude — artifact harness +337 lines. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: artifact panels may start now; named DTO/download action activation remains P10/P11 |
+| [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced; FE_SCHEDULER_HARNESS_COMPLETE / Claude — scheduler harness +349 lines, full suite 2488 pass. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: attempt/queue panels may start now; producer/SSE/action activation remains P10/P11 |
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | PLANNED / unassigned / — |
 | [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | PLANNED / unassigned / — |
 | [P09](#rl-p09) | P02,P04 | 00/12 | 05 | PLANNED / unassigned / — |
@@ -3578,8 +3617,11 @@ Phần Bobby làm trước được gắn vào chính row phase, không tạo �
 ## 13.5. Chỉ mục thực thi từng phase
 
 Mỗi mục dưới đây kế thừa G0–G7 và toàn bộ guide, không được dùng danh sách test tóm tắt
-để bỏ test source. “FE” ở foundation là contract/browser harness đã có, không yêu cầu build
-màn tương lai. Mỗi phase phải đóng **BE + consumer trong scope** trước khi bàn giao.
+để bỏ test source. Foundation harness vẫn là output độc lập, nhưng sau contract freeze
+không được dùng nó để trì hoãn HIFI composition đã có screen/panel semantics (§13.2.1).
+Mỗi phase phải đóng **BE + consumer trong scope** trước khi bàn giao; visual recovery
+được ghi as a bounded FE slice trong row/evidence phase gốc, không invent completion của
+downstream BFF/action phase.
 
 <a id="rl-p01"></a>
 ### P01 — Baseline, source inventory và protected boundaries
@@ -3965,18 +4007,22 @@ new submit operation, durable artifact writer or frontend modification.
 All P04 backend/test receipts, bounded cleanup and rollback are in
 [evidence/P04](./research_loop/evidence/P04/README.md). `P04-T01…T13`,
 `V11-P04-DR` and `V11-P04-GX` are satisfied by the packet. `V11-P04-BR` is
-correctly `PENDING_OWNER_PHASE`: P04 makes no new browser screen, and Claude's
-specific Atlas handoff is
-[frontend-handoff-claude.md](./research_loop/evidence/P04/frontend-handoff-claude.md).
-P05/P06/P10 remain explicit owner phases for persistent artifacts, isolated
-work scheduling and named run submission; they are not P04 technical debt.
+correctly `PENDING_OWNER_PHASE` for real browser activation: the P04 backend
+slice made no new browser screen. Under §13.2.1, Claude may now compose Screen
+12 from the specific Atlas handoff at
+[frontend-handoff-claude.md](./research_loop/evidence/P04/frontend-handoff-claude.md),
+without claiming a named submit/producer path. P05/P06/P10 remain explicit
+owner phases for persistent artifacts, isolated work scheduling and named run
+submission; they are not P04 technical debt.
 
 #### P04 Claude frontend closeout — `FE_ATLAS_DATA_SOURCE_COMPLETE`, 2026-09-20
 
 P04's FE to-do is "capability fixtures/types/Atlas data source" with resolved
-backend labels and disabled reasons. The handoff assigns Atlas *composition*
-and browser acceptance to P09, which is correct and untouched here; the data
-source it composes over is not route-dependent and is delivered now.
+backend labels and disabled reasons. The original handoff deferred Atlas
+*composition* and browser acceptance to P09. Section 13.2.1 now opens the
+bounded Screen 12 composition recovery while preserving P09's ownership of
+shared route/foundation closure; the data source it composes over is not
+route-dependent and is delivered now.
 
 `apps/portal/frontend/src/research/atlas.ts` (+232) and `atlas.test.ts` (+308)
 derive display facts from `ResearchEngineAtlasDocument`, consumed from the
@@ -4120,17 +4166,20 @@ not claimable by the P06 scheduler; P10 must supply the real named-producer
 identity rather than infer it from legacy rows. The transport is deliberately a narrow publish-before-ack port, not a new
 runtime NATS client. P10 alone owns wiring the existing named producer/direct
 submit path and deployment-bound NATS credentials, so P06 cannot create a
-second scheduler. P09/P11 own rich consumer/readiness aggregation; no P06
-browser route, timer-based progress, UI mutation or deployment claim exists.
-Those are explicit phase ownership boundaries—not open P06 implementation
-debt. See [P06 evidence](./research_loop/evidence/P06/README.md) for the
-test, cleanup, rollback and Claude handoff receipts.
+second scheduler. P09/P11 own real consumer/readiness aggregation and no P06
+backend browser route, timer-based progress, action or deployment claim exists.
+Section 13.2.1 nevertheless permits the bounded non-actionable HIFI
+queue/attempt composition from the frozen facts. These are explicit phase
+ownership boundaries—not open P06 implementation debt. See
+[P06 evidence](./research_loop/evidence/P06/README.md) for the test, cleanup,
+rollback and Claude handoff receipts.
 
 #### P06 Claude frontend closeout — `FE_SCHEDULER_HARNESS_COMPLETE`, 2026-09-20
 
-The P06 handoff states that no Claude action is required. That is right about
-routes, shell, tokens and HIFI layout, none of which were touched. It is not
-right about P06's own FE to-do in this plan, which asks for a
+The original P06 handoff said no Claude action was required. That was right
+about the closed backend slice's routes, shell, tokens and HIFI layout, none of
+which it touched. The 2026-09-20 amendment opens bounded composition and the
+P06 FE to-do in this plan asks for a
 "queue/cancel/retry/finishing contract harness, worker attempts drawer data" and
 forbids a fabricated ETA — none of which needs an endpoint. Deferring it
 wholesale would have closed P06 with in-scope debt that `RL-C08` and A5 forbid.

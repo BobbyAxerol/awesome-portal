@@ -1,10 +1,18 @@
-# P06 frontend handoff for Claude — no UI mutation in this phase
+# P06 frontend handoff for Claude — original backend slice had no UI mutation
+
+> **Coordination amendment — 2026-09-20.** The title records the original
+> backend slice and remains correct about absent browser producer, NATS, SSE
+> and mutations. It no longer prohibits HIFI-preserving queue/attempt panel
+> composition from P06's frozen state facts. Read the
+> [P03–P06 contract-first vertical-slice brief](../../CLAUDE_P03_P06_VERTICAL_SLICE_RECOVERY_BRIEF.md);
+> do not fabricate action, progress or source data.
 
 P06 intentionally changed no React route, shell, design token, HIFI layout or
 browser API. Do not replace any approved UI with a scheduler placeholder.
 
-When the owning P09/P10/P11 phase introduces the consumer, it must use these
-facts exactly:
+When the owning P09/P10/P11 phase introduces the real consumer, producer or
+realtime activation, it must use these facts exactly. The present recovery
+slice may compose their non-actionable panel states now:
 
 - A logical work item is not a worker attempt. Retries keep the same logical
   job/run and receive a new attempt ordinal/lease epoch.
@@ -24,5 +32,7 @@ facts exactly:
   BFF. Do not call PostgreSQL, Python, NATS, Execution or a new client-side
   scheduler directly.
 
-P06 requires no Claude action now. This is a forward contract handoff, not an
-invitation to alter the existing P01–P06 UI review work.
+At P06 backend closeout, this was a forward-only handoff. The 2026-09-20 owner
+amendment supersedes that choreography: Claude now has the narrow composition
+task in the linked brief, while action, producer, SSE and runtime activation
+remain deferred to P09/P10/P11.

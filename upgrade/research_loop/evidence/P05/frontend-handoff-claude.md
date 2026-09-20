@@ -1,8 +1,16 @@
-# P05 frontend handoff — durable artifact states, not a new screen
+# P05 frontend handoff — durable artifact states; original backend slice had no new screen
 
-P05 changes **no browser route and no UI/UX code**. Its output is a future
-server-side consumer contract for P09/P11. Do not create a direct filesystem,
-database, Python-worker or Rust-reader browser path.
+> **Coordination amendment — 2026-09-20.** The missing named DTO/download
+> action still blocks only data/action activation. It no longer blocks
+> HIFI-preserving artifact panel composition from the frozen state contract;
+> follow the [P03–P06 contract-first vertical-slice brief](../../CLAUDE_P03_P06_VERTICAL_SLICE_RECOVERY_BRIEF.md).
+> Fixtures may be used only in the isolated visual/test lane and may never
+> appear as product truth.
+
+The original P05 **backend** slice changed no browser route or UI/UX code. Its
+output remains the server-side consumer contract for P09/P11; the present
+recovery slice may compose panels from it, but must not create a direct
+filesystem, database, Python-worker or Rust-reader browser path.
 
 ## Consumer boundary
 

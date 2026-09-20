@@ -1,5 +1,11 @@
 # P04 frontend handoff — Engine Atlas only
 
+> **Coordination amendment — 2026-09-20.** The P04 data/authority facts below
+> are unchanged. Screen 12 HiFi composition may now be implemented from them
+> under the [P03–P06 contract-first vertical-slice brief](../../CLAUDE_P03_P06_VERTICAL_SLICE_RECOVERY_BRIEF.md).
+> This does not transfer shared route foundation from P09 or submit authority
+> from P10.
+
 Codex has delivered a read-only, same-origin backend source for S12:
 
 ```text
