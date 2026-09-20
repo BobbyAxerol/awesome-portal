@@ -51,6 +51,7 @@ const ProfileAccess = lazy(() =>
   import("../features/admin/ProfileAccess").then((m) => ({ default: m.ProfileAccess })),
 );
 const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
+const ResearchFixtures = lazy(() => import("../research/ResearchFixtures"));
 const ExecutionPreviewRoute = lazy(() =>
   import("../execution/ExecutionPreviewRoute").then((m) => ({
     default: m.ExecutionPreviewRoute,
@@ -124,6 +125,17 @@ export const ADMIN_PROFILE_ACCESS_ROUTE = "/administration/profile-access";
  * the registry is a hard rule and this route is not nav.
  */
 export const EXECUTION_FIXTURES_ROUTE = "/execution/_fixtures";
+
+/**
+ * Research Loop component fixtures (`RESEARCH_FIXTURES_ROUTE`).
+ *
+ * The same idea on the paper surface: every Research panel in every state, so
+ * the P03–P06 composition can be reviewed before the screens that consume it
+ * are routed. It is not a registry feature, renders no live data, and appears
+ * in no navigation. The page labels itself a fixture lane in its own copy so
+ * it cannot be read as product data.
+ */
+export const RESEARCH_FIXTURES_ROUTE = "/research/_fixtures";
 
 /**
  * `/?new=1` was the standalone QuantBT entry point for a new run. `/` now
@@ -214,6 +226,9 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
 
         {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
         <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />
+
+        {/* Research Loop composition fixtures: components, not a screen. */}
+        <Route path={RESEARCH_FIXTURES_ROUTE} element={<ResearchFixtures />} />
 
         {/* Legacy compatibility. The set of paths comes from the registry; the
             owning module decides how each one translates. */}
