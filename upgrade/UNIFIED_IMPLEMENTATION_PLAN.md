@@ -3590,7 +3590,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; FE_ATLAS_DATA_SOURCE_COMPLETE / Claude — atlas data source +540 lines, 41/41, tsc 0. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: Screen 12 HiFi composition may start now; P09 retains shared route/foundation closure; FE_SCREEN12_COMPOSITION_COMPLETE / Claude — [Screen 12](./research_loop/evidence/P04/frontend-composition-claude.md), 3 tabs, manifest-driven, browser receipt 0 console errors; **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); FE_ARTIFACT_HARNESS_COMPLETE / Claude — artifact harness +337 lines. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: artifact panels may start now; named DTO/download action activation remains P10/P11; FE_ARTIFACT_PANEL_COMPLETE / Claude — [composition](./research_loop/evidence/P05/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced; FE_SCHEDULER_HARNESS_COMPLETE / Claude — scheduler harness +349 lines, full suite 2488 pass. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: attempt/queue panels may start now; producer/SSE/action activation remains P10/P11; FE_QUEUE_PANEL_COMPLETE / Claude — [composition](./research_loop/evidence/P06/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
-| [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | BACKEND_COMPLETE_FE_HANDOFF_PENDING / Codex backend / [P07 evidence](./research_loop/evidence/P07/phase-report.md); private AST analysis, bounded source custody, seven ordered gates, immutable registry binding and ADMIN activation CAS are proven on a fresh disposable PostgreSQL cell. No UI route, browser/dev receipt, worker execution or deployment is claimed; Claude owns the S14 consumer/visual receipt. |
+| [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING / Codex backend / [P07 evidence](./research_loop/evidence/P07/phase-report.md); private AST analysis, bounded source custody, seven ordered gates, immutable registry binding and ADMIN activation CAS are proven on a fresh disposable PostgreSQL cell. The five public same-origin operations and generated typed client are now published; no UI route, browser/dev receipt, worker execution or deployment is claimed; Claude owns the S14 consumer/visual receipt. |
 | [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | PLANNED / unassigned / — |
 | [P09](#rl-p09) | P02,P04 | 00/12 | 05 | PLANNED / unassigned / — |
 | [P10](#rl-p10) | P06–P09 | 02 | 05 | PLANNED / unassigned / — |
@@ -4233,7 +4233,7 @@ contracts, runtime manifests or deploy inputs was modified. Six new files under
 - **Exit gate:** Full14 real backend + browser/dev receipt; gate7 không false causal certificate. P07 không chờ P09 bằng fixture: chỉ tối thiểu local composition trong allowed boundary.
 - **Rollback/handoff:** Disable new import nếu rollback, giữ versions/evidence; không revoke execution alpha. Handoff binding contract cho P08/P10.
 
-**Backend checkpoint — 2026-09-20:** `BACKEND_COMPLETE_FE_HANDOFF_PENDING`.
+**Backend checkpoint — 2026-09-20:** `BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING`.
 The P07 server slice is complete without changing the protected QuantBT kernel:
 Control API owns opaque source custody/TTL/receipt/registry state, Portal API
 performs only HMAC-authenticated AST + restricted-definition analysis, and the
@@ -4242,6 +4242,13 @@ internal principal. The exact P07 `T01…T12` and `V11-P07-DR` matrix passed on
 a fresh self-removing PostgreSQL cell. See the credential-free
 [P07 evidence packet](./research_loop/evidence/P07/README.md) and the precise
 [Claude S14 handoff](./research_loop/evidence/P07/frontend-handoff-claude.md).
+The formerly missing contract is now canonical at
+[`research-alpha-import.openapi.json`](../packages/contracts/openapi/research-alpha-import.openapi.json),
+regenerated as
+[`research-alpha-import.d.ts`](../packages/contracts/generated/research-alpha-import.d.ts).
+Screen 14 is additive at `/research/alphas/import`; it deliberately runs in
+parallel with the legacy QuantBT `/research/quantbt/imports` quarantine inbox.
+No legacy import route is redirected, replaced or deleted in P07.
 Do not call this phase `TECHNICALLY_COMPLETE` until the owning S14 consumer
 has its required browser/dev receipt; that dependency is a delivery gate, not
 unrecorded backend debt.

@@ -1,16 +1,18 @@
 {
   "phase": "P07",
-  "status": "BACKEND_COMPLETE_FE_HANDOFF_PENDING",
+  "status": "BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING",
   "authority_changes": [
     "1723680000040_research-alpha-import-v1.sql adds immutable temporary import-source custody, parser-bound receipts, source-file provenance on AlphaVersion and workspace-local digest claims.",
     "ResearchAlphaImportService and ResearchMetadataRepository own bounded parse/gate/register/activate/list flows, expiry cleanup and activation CAS.",
     "ResearchAlphaAnalysisClient calls only the fixed private Portal API AST analyser with a short-lived signed principal and strict response/timeout bounds.",
     "research_alpha_analyzer.py performs bounded AST/literal analysis and restricted-definition loading without importing or calling submitted strategy code.",
-    "P07 routes are same-origin Control API routes; the Portal API analyser route is private and excluded from public API schema."
+    "P07 routes are same-origin Control API routes; the Portal API analyser route is private and excluded from public API schema.",
+    "CG-P07-01 publishes the canonical five-operation OpenAPI source, generated TypeScript client, fixtures, schema snapshot and frontend type alias; it also version-labels P07 success envelopes and bounds formerly generic admission/version-conflict errors.",
+    "The generated-contract verifier now resolves the repository root from its own location rather than assuming an immutable-image-only /repo mount, so the exact same drift proof runs in a developer worktree and release image."
   ],
   "explicit_non_changes": [
     "No modification to apps/portal/strategy/main.py or another protected QuantBT kernel file.",
-    "No React/TSX, HIFI, shared shell or frontend acceptance change.",
+    "No React/TSX, HIFI, shared shell or frontend acceptance change; the only frontend-side edit is a type-only tsconfig alias for the generated contract.",
     "No worker, NATS, Redis, broker, CLI, Trading System, Execution Edge or direct browser database path.",
     "No runtime container start, deploy, production flag, shared-database migration or release action.",
     "No generic plugin installer, zip/multifile source import, arbitrary source execution or runtime causality claim."

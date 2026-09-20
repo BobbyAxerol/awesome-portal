@@ -1,6 +1,6 @@
 # P07 evidence — Alpha Registry, Import and immutable version binding
 
-Status: `BACKEND_COMPLETE_FE_HANDOFF_PENDING` on 2026-09-20.
+Status: `BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING` on 2026-09-20.
 
 P07 implements the Research-only server authority for one bounded Python
 source file: parse → seven ordered gates → immutable `DRAFT` AlphaVersion →
@@ -16,7 +16,8 @@ Read in this order:
 3. [test-results.json](./test-results.json) — commands, counts and deliberate
    non-run consumer/deploy gates.
 4. [frontend-handoff-claude.md](./frontend-handoff-claude.md) — Screen 14
-   same-origin contract; Claude owns UI and browser receipt.
+   generated same-origin contract plus route decision; Claude owns UI and
+   browser receipt.
 5. [resource-cleanup.json](./resource-cleanup.json) and
    [rollback.md](./rollback.md) — bounded retention and reversal discipline.
 6. [debt-register.json](./debt-register.json) — no P07 backend debt is open;

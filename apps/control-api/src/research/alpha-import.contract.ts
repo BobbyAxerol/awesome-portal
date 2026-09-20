@@ -89,6 +89,7 @@ export interface ResearchAlphaImportGateRow {
 }
 
 export interface ResearchAlphaImportParseResponse {
+  schema_version: "research.alpha-source.v1";
   source_file_ref: string;
   source_digest: string;
   analysis_digest: string;
@@ -97,6 +98,7 @@ export interface ResearchAlphaImportParseResponse {
 }
 
 export interface ResearchAlphaImportGatesResponse {
+  schema_version: "research.alpha-import-gates.v1";
   gate_receipt_id: string;
   source_file_ref: string;
   source_digest: string;
@@ -118,6 +120,7 @@ export interface ResearchAlphaRegistryEntry {
 }
 
 export interface ResearchAlphaImportRegisterResponse {
+  schema_version: "research.alpha-registration.v1";
   alpha_id: string;
   alpha_version_id: string;
   version_label: string;
@@ -129,10 +132,21 @@ export interface ResearchAlphaImportRegisterResponse {
 }
 
 export interface ResearchAlphaActivateResponse {
+  schema_version: "research.alpha-activation.v1";
   alpha_id: string;
   alpha_version_id: string;
   lifecycle_state: "ACTIVE";
   superseded_alpha_version_id: string | null;
   alpha_revision: number;
   replayed: boolean;
+}
+
+/**
+ * The only public registry-list envelope for the Research-owned Alpha Import
+ * routes.  It is deliberately separate from the legacy QuantBT
+ * `/api/v1/alphas*` compatibility surface.
+ */
+export interface ResearchAlphaRegistryListResponse {
+  schema_version: "research.alpha-registry.v1";
+  entries: readonly ResearchAlphaRegistryEntry[];
 }

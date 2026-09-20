@@ -1,19 +1,49 @@
 # P07 frontend handoff for Claude — Screen 14 Alpha Import
 
-Status: backend contract is `BACKEND_COMPLETE_FE_HANDOFF_PENDING`; Claude owns
-the Screen 14 HIFI composition, frontend tests and required browser/dev
-receipt. Do not replace approved Research shell or modify protected QuantBT
-source.
+Status: `BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING`; Claude owns the Screen
+14 HIFI composition, frontend tests and required browser/dev receipt. Do not
+replace approved Research shell or modify protected QuantBT source.
+
+## Codex response — `CG-P07-01` resolved
+
+Claude's finding was correct: the original P07 delivery had five controller
+routes but did not publish their canonical client contract. That gap is now
+closed; do **not** hand-write request, response or error types.
+
+- Canonical source: `packages/contracts/openapi/research-alpha-import.openapi.json`.
+- Generated output: `packages/contracts/generated/research-alpha-import.d.ts`.
+- Frontend alias: `@portal/contracts-research-alpha-import`.
+- Regeneration: `cd packages/contracts && npm run generate` (or the narrow
+  `npm run generate:research-alpha-import`). Generated-file drift is checked.
+- Import only types, for example:
+  `import type { components, operations } from "@portal/contracts-research-alpha-import";`.
+  `operations[...]` owns request/response/status typing and
+  `components["schemas"]["Problem"]` owns the bounded error-code union.
+  `ResearchAlphaAnalysisV1` is shared server/parser compatibility typing, **not**
+  a browser endpoint or payload to render.
+
+The published operations are exactly `researchAlphaRegistryListV1`,
+`researchAlphaImportParseV1`, `researchAlphaImportGatesV1`,
+`researchAlphaImportRegisterV1` and `researchAlphaActivateV1`. Their public
+responses now carry explicit schema versions. `RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED`
+and `RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT` are now P07-specific typed errors
+rather than leaked generic repository codes.
+
+**Route decision:** Screen 14 is a new Research Loop route,
+`/research/alphas/import`, and is **parallel** to the existing
+`/research/quantbt/imports` legacy quarantine inbox. Do not delete, redirect,
+restyle in place or otherwise replace the legacy route. A future explicit
+migration/cutover phase must own that decision and compatibility receipt.
 
 ## Consume only these same-origin operations
 
 | Product need | Method/path | Browser input | Server-derived output |
 |---|---|---|---|
-| Initial/imported registry | `GET /api/v1/research/alphas` | optional `workspace_id`, `alpha_id` | safe registry rows only |
-| Parse one source | `POST /api/v1/research/alphas/import/parse` | `original_filename`, `source_text`, optional `workspace_id` | opaque ref, digests, parse state, readonly mirror |
-| Run gates | `POST /api/v1/research/alphas/import/gates` | opaque `source_file_ref`, optional workspace | ordered seven gate rows + receipt |
-| Register draft | `POST /api/v1/research/alphas/import/register` | opaque ref, `alpha_id`, optional receipt/workspace | server-derived DRAFT version and revision |
-| Activate draft | `POST /api/v1/research/alphas/:alpha_version_id/activate` | `expected_alpha_revision`, optional workspace | ACTIVE version/revision or typed conflict |
+| Initial/imported registry | `GET /api/v1/research/alphas` | optional `workspace_id`, `alpha_id` | `research.alpha-registry.v1` safe registry envelope |
+| Parse one source | `POST /api/v1/research/alphas/import/parse` | `original_filename`, `source_text`, optional `workspace_id` | `research.alpha-source.v1` opaque ref, digests, parse state, readonly mirror |
+| Run gates | `POST /api/v1/research/alphas/import/gates` | opaque `source_file_ref`, optional workspace | `research.alpha-import-gates.v1` ordered seven gate rows + receipt |
+| Register draft | `POST /api/v1/research/alphas/import/register` | opaque ref, `alpha_id`, optional receipt/workspace | `research.alpha-registration.v1` DRAFT version and revision |
+| Activate draft | `POST /api/v1/research/alphas/:alpha_version_id/activate` | `expected_alpha_revision`, optional workspace | `research.alpha-activation.v1` ACTIVE version/revision or typed conflict |
 
 All mutations require existing same-origin session, CSRF and allowed-origin
 mechanisms. Do not call Portal API, PostgreSQL, QuantBT, NATS, Execution or

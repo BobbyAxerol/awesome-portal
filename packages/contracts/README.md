@@ -177,6 +177,20 @@ after fence validation.
 The schema contains no filesystem absolute path, database locator, credential,
 market row or Execution/Trading System authority.
 
+P07 publishes the additive Research-owned Alpha Import contract at
+`openapi/research-alpha-import.openapi.json`, generated as
+`generated/research-alpha-import.d.ts`. It contains exactly five same-origin
+operations: registry list, parse, seven ordered gates, immutable DRAFT
+registration and ADMIN-only activation. `research.alpha-source.v1`,
+`research.alpha-import-gates.v1` and the server-to-private-parser
+`research.alpha-analysis.v1` are canonical component schemas. Browser
+responses never include source bytes, a filesystem path, a parser principal or
+a mutable parsed contract. This contract deliberately runs alongside the
+legacy QuantBT `/api/v1/alphas*` compatibility API; it does not replace or
+shadow it. Regenerate only with `npm run generate` (or the narrow
+`npm run generate:research-alpha-import`) and never hand-maintain the emitted
+TypeScript declarations.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

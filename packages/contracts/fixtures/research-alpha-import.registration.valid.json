@@ -1,0 +1,11 @@
+{
+  "schema_version": "research.alpha-registration.v1",
+  "alpha_id": "alpha-demo",
+  "alpha_version_id": "av_alpha_demo_0_3_0",
+  "version_label": "av_0_3_0",
+  "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "lifecycle_state": "DRAFT",
+  "supersedes": null,
+  "alpha_revision": 1,
+  "replayed": false
+}

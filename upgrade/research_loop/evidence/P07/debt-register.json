@@ -25,10 +25,22 @@
       "status": "RESOLVED",
       "subject": "Least-privilege expiration cleanup without mutable source-row UPDATE authority",
       "evidence": "V11-P07-DR runtime-role negative and bounded DELETE-returning proof"
+    },
+    {
+      "id": "CG-P07-01",
+      "status": "RESOLVED",
+      "subject": "Five P07 same-origin routes lacked a canonical OpenAPI/generated client and two repository failures were not translated into the bounded P07 public error vocabulary.",
+      "evidence": "research-alpha-import.openapi.json, generated/research-alpha-import.d.ts, 134 contract tests, P07 PostgreSQL 8-test matrix and Control API production build"
+    },
+    {
+      "id": "P07-BE-05",
+      "status": "RESOLVED",
+      "subject": "Generated-contract drift verifier was image-path-coupled and could not prove the same contract from a developer worktree.",
+      "evidence": "packages/contracts/tooling/verify-generated.sh now derives repo_root from its own path; full verifier passed from /home/bobby/portal-research/packages/contracts."
     }
   ],
   "later_phase_ownership_not_debt": [
-    "Claude owns Screen 14 same-origin consumer, HIFI composition and browser/dev receipt; P07 remains BACKEND_COMPLETE_FE_HANDOFF_PENDING until that delivery gate passes.",
+    "Claude owns Screen 14 same-origin consumer, HIFI composition and browser/dev receipt; P07 remains BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING until that delivery gate passes.",
     "P08 owns data snapshots/effective spec/preflight.",
     "P10 owns any named worker-side imported-source execution adapter; P07 deliberately refuses to execute uploaded source."
   ]

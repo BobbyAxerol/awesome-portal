@@ -12,9 +12,16 @@
     {
       "gate": "P07 fresh PostgreSQL schema, custody, gates, binding and recovery proof",
       "command": "scripts/research-loop-v11/test-p07-postgres.sh",
-      "result": "1 file passed; 7 tests passed",
+      "result": "1 file passed; 8 tests passed",
       "coverage": ["P07-T01", "P07-T02", "P07-T03", "P07-T04", "P07-T05", "P07-T06", "P07-T07", "P07-T08", "P07-T09", "P07-T10", "P07-T11", "P07-T12", "V11-P07-DR"],
       "notes": "Uses one exact self-removing tmpfs research-p07-postgres-* container. Covers immutable source/actor scope, stale crafted receipt refusal, digest/version conflict, activation CAS, old attempt pinning, bounded expiry cleanup and admission cap."
+    },
+    {
+      "gate": "CG-P07-01 canonical OpenAPI, generated types and schema fixtures",
+      "command": "cd packages/contracts && npm run generate && ./tooling/verify-generated.sh && python3 tooling/snapshot.py --check",
+      "result": "2 files passed; 134 tests passed; full generated-type verifier, output comparison and 167-file snapshot matched",
+      "coverage": ["CG-P07-01", "P07 public response schemas", "P07 generated operation/error type drift"],
+      "notes": "Validates all five success envelopes, exact five-operation boundary, generated type names and the absence of source bytes in success schemas. The verifier derives its checkout root at runtime, so it proves drift in a worktree rather than relying on a /repo image mount."
     },
     {
       "gate": "Control API production source compilation",
@@ -32,7 +39,7 @@
       "gate": "Protected-boundary and patch hygiene",
       "command": "cd apps/portal && sha256sum -c strategy/PROTECTED_SHA256; bash -n scripts/research-loop-v11/test-p07-postgres.sh; git diff --check",
       "result": "PASS",
-      "notes": "strategy/main.py remains byte-identical; no frontend diff is present."
+      "notes": "strategy/main.py remains byte-identical; no frontend UI/TSX diff is present (only a type-only tsconfig alias was added for the generated contract)."
     }
   ],
   "baseline_nonblocking": [

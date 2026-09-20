@@ -1,0 +1,18 @@
+{
+  "schema_version": "research.alpha-import-gates.v1",
+  "gate_receipt_id": "rgate-demo-01",
+  "source_file_ref": "rasrc-demo-01",
+  "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "analysis_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "gates": [
+    { "n": 1, "name": "contract-complete", "state": "PASS", "message": "Contract fields are complete.", "ms": 1 },
+    { "n": 2, "name": "entrypoint-importable", "state": "PASS", "message": "Restricted-definition sandbox loaded the entrypoint without calling strategy code.", "ms": 3 },
+    { "n": 3, "name": "digest-unique", "state": "PASS", "message": "Source digest is not registered in this workspace.", "ms": 1 },
+    { "n": 4, "name": "parameter-space-sane", "state": "PASS", "message": "parameter_space is sane.", "ms": 1 },
+    { "n": 5, "name": "determinism-declared", "state": "PASS", "message": "determinism.seed_required is declared.", "ms": 1 },
+    { "n": 6, "name": "data-contract-known", "state": "PASS", "message": "Data contract is known.", "ms": 1 },
+    { "n": 7, "name": "no-lookahead-static-scan", "state": "PASS", "message": "Static scan is heuristic only.", "ms": 2 }
+  ],
+  "all_pass": true,
+  "static_scan_disclosure": "Static scan — runtime causality is proven per run at Stage 3/4."
+}

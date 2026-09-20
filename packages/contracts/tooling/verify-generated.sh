@@ -2,6 +2,12 @@
 # Runs canonical fixture and generated-type checks after dependencies exist.
 set -eu
 
+# This verifier is invoked from developer worktrees as well as the immutable
+# release image, so it must not assume the image-only `/repo` mount exists.
+contracts_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repo_root=$(CDPATH= cd -- "$contracts_dir/../.." && pwd)
+cd "$contracts_dir"
+
 ./node_modules/.bin/vitest run --no-cache
 node tooling/generate-execution-command-catalog.mjs --check
 
@@ -13,7 +19,7 @@ generate_and_compare() {
   diff -q "${temporary}" "${target_file}"
 }
 
-generate_and_compare /repo/apps/portal/registry/openapi/portal-api.openapi.json generated/portal-api.d.ts
+generate_and_compare "$repo_root/apps/portal/registry/openapi/portal-api.openapi.json" generated/portal-api.d.ts
 generate_and_compare openapi/execution-analytics.openapi.json generated/execution-analytics.d.ts
 generate_and_compare openapi/execution-query-analytics.openapi.json generated/execution-query-analytics.d.ts
 generate_and_compare openapi/execution-analytics-series.openapi.json generated/execution-analytics-series.d.ts
@@ -34,3 +40,4 @@ generate_and_compare openapi/execution-profile-read.openapi.json generated/execu
 generate_and_compare openapi/execution-manager-lists.openapi.json generated/execution-manager-lists.d.ts
 generate_and_compare openapi/execution-contract-authority.openapi.json generated/execution-contract-authority.d.ts
 generate_and_compare openapi/execution-market-context.openapi.json generated/execution-market-context.d.ts
+generate_and_compare openapi/research-alpha-import.openapi.json generated/research-alpha-import.d.ts

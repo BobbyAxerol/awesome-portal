@@ -37,6 +37,9 @@
       "@portal/contracts-screen-data": [
         "../../../packages/contracts/generated/execution-contract-authority.d.ts"
       ],
+      "@portal/contracts-research-alpha-import": [
+        "../../../packages/contracts/generated/research-alpha-import.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

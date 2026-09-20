@@ -1,0 +1,11 @@
+{
+  "schema_version": "research.alpha-source.v1",
+  "source_file_ref": "rasrc-demo-01",
+  "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "analysis_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "parse_ok": true,
+  "mirror": [
+    { "field": "entrypoint", "state": "parsed", "value": "generate_signals" },
+    { "field": "warmup_bars", "state": "parsed", "value": 32 }
+  ]
+}

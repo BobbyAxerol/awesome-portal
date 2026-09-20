@@ -1,0 +1,187 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Alpha Import API",
+    "version": "1.0.0",
+    "description": "Five same-origin, session-scoped P07 operations for the Research Loop Screen 14 Alpha Import wizard. This is additive to — and does not replace or shadow — the legacy QuantBT /api/v1/alphas compatibility API. Browser callers never receive stored source bytes, a filesystem path, an internal principal, or a mutable parsed contract."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/research/alphas": {
+      "get": {
+        "operationId": "researchAlphaRegistryListV1",
+        "summary": "List bounded Research-owned imported Alpha versions",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/AlphaIdOptional" }
+        ],
+        "responses": {
+          "200": { "description": "Research-owned registry entries only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchAlphaRegistryV1" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/alphas/import/parse": {
+      "post": {
+        "operationId": "researchAlphaImportParseV1",
+        "summary": "Accept one bounded Python source document and return a server-derived mirror",
+        "parameters": [{ "$ref": "#/components/parameters/Csrf" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ParseRequest" } } } },
+        "responses": {
+          "201": { "description": "A temporary, actor/workspace-bound parse receipt", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchAlphaSourceV1" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "502": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/alphas/import/gates": {
+      "post": {
+        "operationId": "researchAlphaImportGatesV1",
+        "summary": "Run the ordered seven-gate server validation over one exact source receipt",
+        "parameters": [{ "$ref": "#/components/parameters/Csrf" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GatesRequest" } } } },
+        "responses": {
+          "200": { "description": "Server order is authoritative; later gates are SKIPPED after the first failure", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchAlphaImportGatesV1" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "502": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/alphas/import/register": {
+      "post": {
+        "operationId": "researchAlphaImportRegisterV1",
+        "summary": "Register an immutable DRAFT AlphaVersion from one passing source receipt",
+        "parameters": [{ "$ref": "#/components/parameters/Csrf" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } } } },
+        "responses": {
+          "201": { "description": "Server-derived immutable DRAFT version; replay is explicit", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchAlphaRegistrationV1" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "502": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/alphas/{alpha_version_id}/activate": {
+      "post": {
+        "operationId": "researchAlphaActivateV1",
+        "summary": "ADMIN-only optimistic-CAS activation of a registered DRAFT version",
+        "parameters": [
+          { "$ref": "#/components/parameters/AlphaVersionId" },
+          { "$ref": "#/components/parameters/Csrf" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ActivateRequest" } } } },
+        "responses": {
+          "200": { "description": "The ACTIVE transition or an explicit replay", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchAlphaActivationV1" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "502": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+    },
+    "parameters": {
+      "Csrf": { "name": "x-csrf-token", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } },
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" } },
+      "AlphaIdOptional": { "name": "alpha_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/AlphaId" } },
+      "AlphaVersionId": { "name": "alpha_version_id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/OpaqueId" } }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed same-origin failure. No source bytes, stack, internal parser URL, principal, session material or database details are returned.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      }
+    },
+    "schemas": {
+      "OpaqueId": { "type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$" },
+      "AlphaId": { "type": "string", "minLength": 3, "maxLength": 64, "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+      "ResearchAlphaAnalysisV1": { "$ref": "../schemas/research-alpha-import.v1.schema.json#/$defs/ResearchAlphaAnalysis" },
+      "ResearchAlphaSourceV1": { "$ref": "../schemas/research-alpha-import.v1.schema.json#/$defs/SourceResponse" },
+      "ResearchAlphaImportGatesV1": { "$ref": "../schemas/research-alpha-import.v1.schema.json#/$defs/GatesResponse" },
+      "ResearchAlphaRegistryV1": { "$ref": "../schemas/research-alpha-import.v1.schema.json#/$defs/RegistryListResponse" },
+      "ResearchAlphaRegistrationV1": { "$ref": "../schemas/research-alpha-import.v1.schema.json#/$defs/RegistrationResponse" },
+      "ResearchAlphaActivationV1": { "$ref": "../schemas/research-alpha-import.v1.schema.json#/$defs/ActivationResponse" },
+      "ParseRequest": {
+        "type": "object", "additionalProperties": false,
+        "required": ["original_filename", "source_text"],
+        "properties": {
+          "workspace_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+          "original_filename": { "type": "string", "minLength": 4, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}[.]py$" },
+          "source_text": { "type": "string", "minLength": 1, "maxLength": 262144, "description": "Also bounded to 256 KiB of UTF-8 bytes by the server." }
+        }
+      },
+      "GatesRequest": {
+        "type": "object", "additionalProperties": false,
+        "required": ["source_file_ref"],
+        "properties": {
+          "workspace_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+          "source_file_ref": { "$ref": "#/components/schemas/OpaqueId" }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object", "additionalProperties": false,
+        "required": ["source_file_ref", "alpha_id"],
+        "properties": {
+          "workspace_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+          "source_file_ref": { "$ref": "#/components/schemas/OpaqueId" },
+          "alpha_id": { "$ref": "#/components/schemas/AlphaId" },
+          "gate_receipt_id": { "$ref": "#/components/schemas/OpaqueId" }
+        }
+      },
+      "ActivateRequest": {
+        "type": "object", "additionalProperties": false,
+        "required": ["expected_alpha_revision"],
+        "properties": {
+          "workspace_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+          "expected_alpha_revision": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "Problem": {
+        "type": "object", "additionalProperties": false,
+        "required": ["error", "request_id"],
+        "properties": {
+          "error": {
+            "type": "object", "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "enum": [
+                  "SESSION_REQUIRED", "REQUEST_REJECTED",
+                  "RESEARCH_ALPHA_IMPORT_INVALID", "RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE", "RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED",
+                  "RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND", "RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED", "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED", "RESEARCH_ALPHA_IMPORT_GATES_FAILED",
+                  "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED", "RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT", "RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED",
+                  "RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN", "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT"
+                ]
+              },
+              "message": { "type": "string", "maxLength": 1024 }
+            }
+          },
+          "request_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      }
+    }
+  }
+}

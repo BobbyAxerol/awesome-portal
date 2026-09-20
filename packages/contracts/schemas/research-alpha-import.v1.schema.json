@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/research-alpha-import.v1.schema.json",
+  "title": "Research Alpha Import P07 public responses",
+  "description": "The five same-origin P07 Research Alpha Import operations. Source bytes are accepted only by Parse and never occur in any response. The legacy QuantBT /api/v1/alphas compatibility API is a separate contract and is not represented here.",
+  "oneOf": [
+    { "$ref": "#/$defs/SourceResponse" },
+    { "$ref": "#/$defs/GatesResponse" },
+    { "$ref": "#/$defs/RegistryListResponse" },
+    { "$ref": "#/$defs/RegistrationResponse" },
+    { "$ref": "#/$defs/ActivationResponse" }
+  ],
+  "$defs": {
+    "OpaqueId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+    },
+    "Digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "UtcMilliseconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 8640000000000000
+    },
+    "AlphaId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "AlphaVersionId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 160,
+      "pattern": "^av_[A-Za-z0-9_]+_[0-9]+_[0-9]+_[0-9]+$"
+    },
+    "MirrorField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "state"],
+      "properties": {
+        "field": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "state": { "enum": ["parsed", "missing"] },
+        "value": {}
+      }
+    },
+    "GateRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n", "name", "state", "message", "ms"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 1, "maximum": 7 },
+        "name": {
+          "enum": [
+            "contract-complete",
+            "entrypoint-importable",
+            "digest-unique",
+            "parameter-space-sane",
+            "determinism-declared",
+            "data-contract-known",
+            "no-lookahead-static-scan"
+          ]
+        },
+        "state": { "enum": ["PASS", "FAIL", "SKIPPED"] },
+        "message": { "type": "string", "maxLength": 512 },
+        "ms": { "type": "integer", "minimum": 0, "maximum": 3600000 }
+      }
+    },
+    "ResearchAlphaAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "research.alpha-analysis.v1 is the bounded Control-API↔private-parser document. It is generated for shared type compatibility but is never a browser route or a source-byte export.",
+      "required": ["schema_version", "source_digest", "analysis_digest", "parse_ok", "declared_contract", "mirror", "gate_facts"],
+      "properties": {
+        "schema_version": { "const": "research.alpha-analysis.v1" },
+        "source_digest": { "$ref": "#/$defs/Digest" },
+        "analysis_digest": { "$ref": "#/$defs/Digest" },
+        "parse_ok": { "type": "boolean" },
+        "declared_contract": { "type": "object", "additionalProperties": true },
+        "mirror": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/MirrorField" } },
+        "gate_facts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "contract_complete", "contract_message", "entrypoint_restricted_definition_load", "entrypoint_message",
+            "parameter_space_sane", "parameter_message", "determinism_declared", "determinism_message",
+            "data_contract_known", "data_contract_message", "no_lookahead_static_scan", "no_lookahead_message"
+          ],
+          "properties": {
+            "contract_complete": { "type": "boolean" },
+            "contract_message": { "type": "string", "maxLength": 512 },
+            "entrypoint_restricted_definition_load": { "type": "boolean" },
+            "entrypoint_message": { "type": "string", "maxLength": 512 },
+            "parameter_space_sane": { "type": "boolean" },
+            "parameter_message": { "type": "string", "maxLength": 512 },
+            "determinism_declared": { "type": "boolean" },
+            "determinism_message": { "type": "string", "maxLength": 512 },
+            "data_contract_known": { "type": "boolean" },
+            "data_contract_message": { "type": "string", "maxLength": 512 },
+            "no_lookahead_static_scan": { "type": "boolean" },
+            "no_lookahead_message": { "type": "string", "maxLength": 512 }
+          }
+        }
+      }
+    },
+    "SourceResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "research.alpha-source.v1: the Parse receipt. It intentionally contains a read-only mirror, not source bytes or a mutable declared contract.",
+      "required": ["schema_version", "source_file_ref", "source_digest", "analysis_digest", "parse_ok", "mirror"],
+      "properties": {
+        "schema_version": { "const": "research.alpha-source.v1" },
+        "source_file_ref": { "$ref": "#/$defs/OpaqueId" },
+        "source_digest": { "$ref": "#/$defs/Digest" },
+        "analysis_digest": { "$ref": "#/$defs/Digest" },
+        "parse_ok": { "type": "boolean" },
+        "mirror": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/MirrorField" } }
+      }
+    },
+    "GatesResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "research.alpha-import-gates.v1: server-ordered gates. The client renders this order and must never synthesize PASS or skip state.",
+      "required": ["schema_version", "gate_receipt_id", "source_file_ref", "source_digest", "analysis_digest", "gates", "all_pass", "static_scan_disclosure"],
+      "properties": {
+        "schema_version": { "const": "research.alpha-import-gates.v1" },
+        "gate_receipt_id": { "$ref": "#/$defs/OpaqueId" },
+        "source_file_ref": { "$ref": "#/$defs/OpaqueId" },
+        "source_digest": { "$ref": "#/$defs/Digest" },
+        "analysis_digest": { "$ref": "#/$defs/Digest" },
+        "gates": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "$ref": "#/$defs/GateRow" } },
+        "all_pass": { "type": "boolean" },
+        "static_scan_disclosure": { "const": "Static scan — runtime causality is proven per run at Stage 3/4." }
+      }
+    },
+    "RegistryEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alpha_id", "alpha_version_id", "version_label", "lifecycle_state", "entrypoint", "source_digest_prefix", "alpha_revision", "registered_at_utc_ms"],
+      "properties": {
+        "alpha_id": { "$ref": "#/$defs/AlphaId" },
+        "alpha_version_id": { "$ref": "#/$defs/AlphaVersionId" },
+        "version_label": { "type": "string", "minLength": 4, "maxLength": 64, "pattern": "^av_[0-9]+(?:_[0-9]+){2}$" },
+        "lifecycle_state": { "enum": ["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] },
+        "entrypoint": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "source_digest_prefix": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
+        "alpha_revision": { "type": "integer", "minimum": 1 },
+        "registered_at_utc_ms": { "$ref": "#/$defs/UtcMilliseconds" }
+      }
+    },
+    "RegistryListResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "entries"],
+      "properties": {
+        "schema_version": { "const": "research.alpha-registry.v1" },
+        "entries": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/RegistryEntry" } }
+      }
+    },
+    "RegistrationResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "alpha_id", "alpha_version_id", "version_label", "source_digest", "lifecycle_state", "supersedes", "alpha_revision", "replayed"],
+      "properties": {
+        "schema_version": { "const": "research.alpha-registration.v1" },
+        "alpha_id": { "$ref": "#/$defs/AlphaId" },
+        "alpha_version_id": { "$ref": "#/$defs/AlphaVersionId" },
+        "version_label": { "type": "string", "minLength": 4, "maxLength": 64, "pattern": "^av_[0-9]+(?:_[0-9]+){2}$" },
+        "source_digest": { "$ref": "#/$defs/Digest" },
+        "lifecycle_state": { "const": "DRAFT" },
+        "supersedes": { "type": ["string", "null"], "maxLength": 160 },
+        "alpha_revision": { "type": "integer", "minimum": 1 },
+        "replayed": { "type": "boolean" }
+      }
+    },
+    "ActivationResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "alpha_id", "alpha_version_id", "lifecycle_state", "superseded_alpha_version_id", "alpha_revision", "replayed"],
+      "properties": {
+        "schema_version": { "const": "research.alpha-activation.v1" },
+        "alpha_id": { "$ref": "#/$defs/AlphaId" },
+        "alpha_version_id": { "$ref": "#/$defs/AlphaVersionId" },
+        "lifecycle_state": { "const": "ACTIVE" },
+        "superseded_alpha_version_id": { "type": ["string", "null"], "maxLength": 160 },
+        "alpha_revision": { "type": "integer", "minimum": 1 },
+        "replayed": { "type": "boolean" }
+      }
+    }
+  }
+}

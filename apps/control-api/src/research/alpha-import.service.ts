@@ -67,6 +67,7 @@ export class ResearchAlphaImportService {
       maximumActiveSources: this.config.RESEARCH_ALPHA_IMPORT_MAXIMUM_ACTIVE_SOURCES_PER_ACTOR,
     });
     return {
+      schema_version: "research.alpha-source.v1",
       source_file_ref: source.sourceFileRef,
       source_digest: source.sourceDigest,
       analysis_digest: source.analysisDigest,
@@ -104,6 +105,7 @@ export class ResearchAlphaImportService {
       expiresAt,
     });
     return {
+      schema_version: "research.alpha-import-gates.v1",
       gate_receipt_id: receiptId,
       source_file_ref: source.sourceFileRef,
       source_digest: source.sourceDigest,
@@ -159,6 +161,7 @@ export class ResearchAlphaImportService {
       declaredContract: analysis.declared_contract,
     });
     return {
+      schema_version: "research.alpha-registration.v1",
       alpha_id: registration.alphaId,
       alpha_version_id: registration.alphaVersionId,
       version_label: versionLabel,
@@ -184,6 +187,7 @@ export class ResearchAlphaImportService {
     }
     const activation = await this.repository.activateImportedAlphaVersion(scope, input);
     return {
+      schema_version: "research.alpha-activation.v1",
       alpha_id: activation.alphaId,
       alpha_version_id: activation.alphaVersionId,
       lifecycle_state: "ACTIVE",
@@ -293,6 +297,8 @@ export function asResearchAlphaImportError(error: unknown): never {
       RESEARCH_ALPHA_IMPORT_GATES_REQUIRED: "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED",
       RESEARCH_ALPHA_IMPORT_GATES_FAILED: "RESEARCH_ALPHA_IMPORT_GATES_FAILED",
       RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED: "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED",
+      RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT: "RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT",
+      RESEARCH_ADMISSION_SATURATED: "RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED",
       RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT: "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT",
     } as const;
     const code = mapped[error.code as keyof typeof mapped];

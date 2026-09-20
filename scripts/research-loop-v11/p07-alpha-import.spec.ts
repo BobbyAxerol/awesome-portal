@@ -7,8 +7,9 @@ import type { PortalUser } from "../../apps/control-api/src/domain";
 import {
   type ResearchAlphaAnalysis,
 } from "../../apps/control-api/src/research/alpha-import.contract";
+import { ResearchAlphaImportController } from "../../apps/control-api/src/research/alpha-import.controller";
 import { ResearchAlphaImportError } from "../../apps/control-api/src/research/alpha-import.error";
-import { ResearchAlphaImportService } from "../../apps/control-api/src/research/alpha-import.service";
+import { asResearchAlphaImportError, ResearchAlphaImportService } from "../../apps/control-api/src/research/alpha-import.service";
 import type { ResearchAlphaAnalysisClient } from "../../apps/control-api/src/research/alpha-analysis.client";
 import {
   type ResearchScope,
@@ -185,21 +186,36 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
   it("P07-T01/T08/T12: binds one valid source, ordered gates and provenance to a DRAFT then ACTIVE version", async () => {
     await seedIdentity();
     const { parsed, gates, result } = await register(source());
+    expect(parsed.schema_version).toBe("research.alpha-source.v1");
+    expect(gates.schema_version).toBe("research.alpha-import-gates.v1");
     expect(gates.all_pass).toBe(true);
     expect(gates.gates.map((gate) => gate.n)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(gates.gates.every((gate) => gate.state === "PASS")).toBe(true);
     expect(gates.static_scan_disclosure).toBe("Static scan — runtime causality is proven per run at Stage 3/4.");
-    expect(result).toMatchObject({ lifecycle_state: "DRAFT", replayed: false, alpha_id: "p07-alpha" });
+    expect(result).toMatchObject({ schema_version: "research.alpha-registration.v1", lifecycle_state: "DRAFT", replayed: false, alpha_id: "p07-alpha" });
 
     const activated = await service.activate(admin, scopeA, {
       alphaVersionId: result.alpha_version_id,
       expectedAlphaRevision: result.alpha_revision,
     });
-    expect(activated).toMatchObject({ lifecycle_state: "ACTIVE", replayed: false, alpha_revision: 2 });
+    expect(activated).toMatchObject({ schema_version: "research.alpha-activation.v1", lifecycle_state: "ACTIVE", replayed: false, alpha_revision: 2 });
     expect(await service.list(scopeA)).toMatchObject([{
       alpha_id: "p07-alpha", alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE",
       source_digest_prefix: parsed.source_digest.slice(0, 12),
     }]);
+    const controller = new ResearchAlphaImportController(
+      service,
+      { isMember: async () => true } as never,
+      {} as ControlApiConfig,
+    );
+    const listEnvelope = await controller.list({
+      portalUser: admin,
+      portalWorkspaceId: scopeA.workspaceId,
+    } as never, {});
+    expect(listEnvelope).toMatchObject({
+      schema_version: "research.alpha-registry.v1",
+      entries: [{ alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE" }],
+    });
     const provenance = await pool.query(
       `SELECT version.source_file_ref, version.code_digest, source.source_digest,
               version.declared_contract->>'entrypoint' AS entrypoint
@@ -331,6 +347,22 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
         WHERE workspace_id = $1 AND actor_user_id = $2`,
       [scopeA.workspaceId, scopeA.actorUserId],
     )).rows[0].count).toBe(3);
+  });
+
+  it("P07 public error vocabulary: repository admission and immutable-version conflicts are never leaked as generic metadata codes", () => {
+    for (const [sourceCode, expectedCode, status] of [
+      ["RESEARCH_ADMISSION_SATURATED", "RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED", 503],
+      ["RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT", "RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT", 409],
+    ] as const) {
+      try {
+        asResearchAlphaImportError(new ResearchMetadataError(sourceCode, "bounded test error", status));
+      } catch (error) {
+        expect(error).toBeInstanceOf(ResearchAlphaImportError);
+        expect(error).toMatchObject({ code: expectedCode, status });
+        continue;
+      }
+      throw new Error(`Expected ${sourceCode} to map to the P07 public error vocabulary.`);
+    }
   });
 
   it("P07-T07: activating a new version never changes a previously pinned run/attempt binding", async () => {

@@ -1,0 +1,15 @@
+{
+  "schema_version": "research.alpha-registry.v1",
+  "entries": [
+    {
+      "alpha_id": "alpha-demo",
+      "alpha_version_id": "av_alpha_demo_0_3_0",
+      "version_label": "av_0_3_0",
+      "lifecycle_state": "DRAFT",
+      "entrypoint": "generate_signals",
+      "source_digest_prefix": "aaaaaaaaaaaa",
+      "alpha_revision": 1,
+      "registered_at_utc_ms": 1780000000000
+    }
+  ]
+}

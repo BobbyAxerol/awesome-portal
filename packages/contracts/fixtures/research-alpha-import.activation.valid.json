@@ -1,0 +1,9 @@
+{
+  "schema_version": "research.alpha-activation.v1",
+  "alpha_id": "alpha-demo",
+  "alpha_version_id": "av_alpha_demo_0_3_0",
+  "lifecycle_state": "ACTIVE",
+  "superseded_alpha_version_id": null,
+  "alpha_revision": 2,
+  "replayed": false
+}

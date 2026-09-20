@@ -1,6 +1,6 @@
 # P07 phase report — Alpha Registry, Import and immutable version binding
 
-Status: `BACKEND_COMPLETE_FE_HANDOFF_PENDING` — 2026-09-20.
+Status: `BACKEND_CONTRACT_PUBLISHED_FE_HANDOFF_PENDING` — 2026-09-20.
 
 ## Delivered authority
 
@@ -19,6 +19,32 @@ P07 adds an additive Research schema and a same-origin Control API contract:
   CAS precondition. Existing runs/attempts remain pinned to their old version.
 - `GET /api/v1/research/alphas` is a safe registry strip: it never exposes raw
   stored bytes or an opaque source ref.
+
+## Contract-publication amendment — `CG-P07-01`
+
+The initial server slice omitted the generated public client contract despite
+having all five routes. That delivery defect is resolved in the same P07
+authority, not deferred to a frontend workaround:
+
+- `packages/contracts/openapi/research-alpha-import.openapi.json` is the
+  canonical five-operation OpenAPI source; its emitted TypeScript is
+  `packages/contracts/generated/research-alpha-import.d.ts`.
+- `research.alpha-source.v1`, `research.alpha-import-gates.v1` and
+  `research.alpha-analysis.v1` are explicit shared schemas. The analysis
+  document remains private Control-API↔parser compatibility material; it is
+  not a browser route.
+- Every browser success response has a schema version. The Registry list is
+  now the `research.alpha-registry.v1` envelope rather than an unversioned
+  array, because no browser consumer existed before this publication.
+- Admission saturation and immutable version identity conflict are translated
+  into the bounded P07 public error vocabulary before `HttpErrorFilter` writes
+  a response.
+- The generated-contract drift verifier now derives its repository root from
+  its own path rather than assuming `/repo`; it runs identically from a local
+  worktree and the immutable release image.
+- Screen 14 stays additive at `/research/alphas/import`; legacy
+  `/research/quantbt/imports` remains untouched until an explicitly approved
+  migration phase.
 
 The seven gates are fixed in this order: contract complete,
 restricted-definition entrypoint load, digest uniqueness, parameter-space
