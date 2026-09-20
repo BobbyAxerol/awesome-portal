@@ -107,10 +107,24 @@ const ROUTE_COLUMNS = [
 function RoutesTab({ doc }: { doc: AtlasDocument }) {
   const rows = useMemo(() => allRouteDisplays(doc), [doc]);
   return (
-    <div className="overflow-x-auto">
-      <div style={{ minWidth: 1020 }}>
+    /*
+      No fixed-width track at all.
+
+      It was 1020px — wider than the panel once the Portal sidebar takes 248px —
+      so on the product route the input class and every refusal reason sat
+      behind a horizontal scrollbar. Narrowing it to the column sum only moved
+      the problem to 660px, where the reason then wrapped inside a track wider
+      than the viewport.
+
+      So the columns wrap instead. Alignment across fourteen rows is worth a
+      lot at 1280, where all five still fit on one line; it is worth less than
+      a readable refusal at 660. The fixture lane has no sidebar, which is
+      exactly why it never showed this: a fixture lane is not a product route.
+    */
+    <div>
+      <div>
         <div
-          className="mono flex border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
+          className="mono flex flex-wrap border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
           style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
         >
           {ROUTE_COLUMNS.map((column) => (
@@ -118,7 +132,6 @@ function RoutesTab({ doc }: { doc: AtlasDocument }) {
               {column.key}
             </span>
           ))}
-          <span style={{ flex: 1 }}>input class</span>
         </div>
 
         {rows.map((row) => (
@@ -129,7 +142,7 @@ function RoutesTab({ doc }: { doc: AtlasDocument }) {
             className="flex flex-col gap-1 border-b px-3 py-[7px]"
             style={{ borderColor: "var(--line-soft)" }}
           >
-            <div className="flex items-baseline">
+            <div className="flex flex-wrap items-baseline gap-y-0.5">
             <span
               className="mono text-[11px] font-semibold"
               style={{
@@ -169,19 +182,27 @@ function RoutesTab({ doc }: { doc: AtlasDocument }) {
             >
               {doc.routes.find((r) => r.route_id === row.routeId)?.report_levels.join(" ")}
             </span>
-            <span className="mono flex-1 text-[10px]" style={{ color: "var(--ink-faint)" }}>
-              {doc.routes.find((r) => r.route_id === row.routeId)?.required_input_class}
-            </span>
             </div>
 
             {/* Axes and the engine's own refusal wording get the full row width:
                 squeezed into a residual column the reason truncates, and a
                 truncated refusal is the one thing a disabled route must not do. */}
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pl-[172px]">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:pl-[172px]">
               <AxisChips route={row} />
+              {/* The input class moved here from a residual column on line one:
+                  as `flex:1` after five fixed columns it had ~150px on the
+                  product route and was cut mid-identifier. */}
               <span
-                className="flex-1 text-[10px] leading-[1.5]"
-                style={{ color: "var(--ink-soft)", minWidth: 260 }}
+                className="mono text-[10px]"
+                data-input-class={row.routeId}
+                style={{ color: "var(--ink-faint)" }}
+              >
+                {doc.routes.find((r) => r.route_id === row.routeId)?.required_input_class}
+              </span>
+              <span
+                className="w-full text-[10px] leading-[1.5]"
+                data-route-reason={row.routeId}
+                style={{ color: "var(--ink-soft)" }}
               >
                 {row.reason}
               </span>
@@ -204,47 +225,56 @@ function RoutesTab({ doc }: { doc: AtlasDocument }) {
 
 function ClaimsTab({ doc }: { doc: AtlasDocument }) {
   return (
-    <div className="overflow-x-auto">
-      <div style={{ minWidth: 980 }}>
+    <div>
+      <div>
         <div
-          className="mono flex border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
+          className="mono flex flex-wrap border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
           style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
         >
-          <span style={{ width: 236, flex: "none" }}>execution contract</span>
-          <span style={{ width: 104, flex: "none" }}>engine cert</span>
-          <span style={{ width: 300, flex: "none" }}>numeric guarantee</span>
-          <span style={{ flex: 1 }}>never claims</span>
+          <span style={{ width: 216, flex: "none" }}>execution contract</span>
+          <span style={{ width: 88, flex: "none" }}>engine cert</span>
+          <span style={{ flex: 1 }}>numeric guarantee</span>
         </div>
 
         {doc.claims.map((claim) => (
           <div
             key={claim.contract_id}
             data-contract={claim.contract_id}
-            className="flex items-baseline border-b px-3 py-[6px]"
+            className="flex flex-col gap-0.5 border-b px-3 py-[6px]"
             style={{ borderColor: "var(--line-soft)" }}
           >
+            <div className="flex flex-wrap items-baseline gap-y-0.5">
+              <span
+                className="mono text-[11px] font-semibold"
+                style={{ width: 216, flex: "none" }}
+              >
+                {claim.contract_id}
+              </span>
+              <span
+                className="mono text-[10px]"
+                style={{ width: 88, flex: "none", color: "var(--ink-soft)" }}
+              >
+                {claim.engine_certification}
+              </span>
+              <span
+                className="flex-1 text-[10.5px] leading-[1.5]"
+                style={{ color: "var(--ink-soft)" }}
+              >
+                {claim.numeric_guarantee}
+              </span>
+            </div>
+            {/*
+              The most important column on this tab, and the reason it is a
+              line rather than a column: as a fourth fixed column it needed a
+              980px table, so at 1280 with the sidebar it sat behind a
+              horizontal scrollbar. A contract's honest limit that the reader
+              has to scroll sideways to find is a limit nobody reads — the same
+              defect the route refusal reason had in P04.
+            */}
             <span
-              className="mono text-[11px] font-semibold"
-              style={{ width: 236, flex: "none" }}
-            >
-              {claim.contract_id}
-            </span>
-            <span
-              className="mono text-[10px]"
-              style={{ width: 104, flex: "none", color: "var(--ink-soft)" }}
-            >
-              {claim.engine_certification}
-            </span>
-            <span
-              className="pr-3.5 text-[10.5px] leading-[1.5]"
-              style={{ width: 300, flex: "none", color: "var(--ink-soft)" }}
-            >
-              {claim.numeric_guarantee}
-            </span>
-            {/* The most important column on this tab: the contract's honest limit. */}
-            <span
-              className="flex-1 text-[10.5px] leading-[1.5]"
+              className="text-[10.5px] leading-[1.5]"
               style={{ color: "var(--accent-strong)" }}
+              data-never-claims={claim.contract_id}
             >
               {claim.never_claims}
             </span>
@@ -407,9 +437,24 @@ export interface EngineAtlasProps {
   state: ResearchState;
   tab: AtlasTab;
   onTabChange: (tab: AtlasTab) => void;
+  /**
+   * Which release the server selected for this response (P09).
+   *
+   * Current versus historical is this fact and nothing else — not the presence
+   * of a version string, and not whether the document happens to verify.
+   */
+  selectedReleaseId?: string | null;
+  selectedReleaseKind?: "CURRENT" | "HISTORICAL" | null;
 }
 
-export function EngineAtlas({ doc, state, tab, onTabChange }: EngineAtlasProps) {
+export function EngineAtlas({
+  doc,
+  state,
+  tab,
+  onTabChange,
+  selectedReleaseId = null,
+  selectedReleaseKind = null,
+}: EngineAtlasProps) {
   const release = doc ? currentReleaseLabel(doc.current_release) : null;
   const history = doc ? historicalReleaseLabels(doc) : [];
 
@@ -438,15 +483,47 @@ export function EngineAtlas({ doc, state, tab, onTabChange }: EngineAtlasProps) 
           </p>
         </div>
 
-        {release ? (
+        {release || selectedReleaseId ? (
           <div className="flex flex-col items-end gap-[3px]">
-            <span
-              className="mono text-[10px]"
-              data-release-verified={release.verified}
-              style={{ color: release.isSafeState ? "var(--ink-soft)" : "var(--ink)" }}
-            >
-              {release.text}
-            </span>
+            {selectedReleaseId ? (
+              <span
+                className="mono rounded-[3px] border px-[5px] text-[9px] font-bold leading-[15px]"
+                data-selected-release={selectedReleaseId}
+                data-selected-kind={selectedReleaseKind ?? undefined}
+                style={{
+                  color:
+                    selectedReleaseKind === "HISTORICAL"
+                      ? "var(--role-holdout)"
+                      : "var(--ink-soft)",
+                  borderColor:
+                    selectedReleaseKind === "HISTORICAL"
+                      ? "var(--role-holdout)"
+                      : "var(--line-strong)",
+                }}
+              >
+                {selectedReleaseKind ?? "SELECTED"} · {selectedReleaseId}
+              </span>
+            ) : null}
+            {/* A retained historical identity is not a promise that it runs,
+                so the kind is stated rather than left to the version string. */}
+            {selectedReleaseKind === "HISTORICAL" ? (
+              <span
+                className="text-[10px]"
+                style={{ color: "var(--role-holdout)" }}
+                data-historical-note
+              >
+                Historical identity retained — this release is not installed and cannot run.
+              </span>
+            ) : null}
+            {release ? (
+              <span
+                className="mono text-[10px]"
+                data-release-verified={release.verified}
+                style={{ color: release.isSafeState ? "var(--ink-soft)" : "var(--ink)" }}
+              >
+                {release.text}
+              </span>
+            ) : null}
             {history.map((label) => (
               <span key={label} className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
                 {label}

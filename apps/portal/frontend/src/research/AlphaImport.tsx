@@ -43,6 +43,12 @@ import type {
   RegistryEntry,
   SourceResponse,
 } from "./alphaImportClient";
+import {
+  ANATOMY_SUBSTAGE_NOTE,
+  CODE_ANATOMY,
+  UNLOCK_FOOTER,
+  UNLOCK_MAP,
+} from "./codeAnatomy";
 import { ResearchPanel } from "./ResearchPanel";
 import type { ResearchState } from "./state";
 
@@ -284,6 +290,123 @@ function RegistryChip({ entry }: { entry: RegistryEntry }) {
   );
 }
 
+/**
+ * Code anatomy — decision `S14-VIS-01`.
+ *
+ * A presentation substage beneath parse, never a fourth authority state. It
+ * holds no server fact, changes no enablement, and issues no request: it is the
+ * module contract every import is measured against, open to read at any point
+ * in the wizard.
+ *
+ * Collapsed by default so it does not push the gates below the fold on a first
+ * visit, and rendered with `<details>` so it works without JavaScript state and
+ * is reachable by keyboard for free.
+ */
+function CodeAnatomy() {
+  return (
+    <details className="rounded-[8px] border" style={{ borderColor: "var(--line)" }} data-code-anatomy>
+      <summary
+        className="mono cursor-pointer px-3 py-2 text-[10px] uppercase tracking-[.07em]"
+        style={{ color: "var(--ink-soft)" }}
+      >
+        Code anatomy — standard classes · route unlocks
+      </summary>
+
+      <div className="flex flex-col gap-2.5 px-3 pb-3">
+        {/* Said once, at the top: this is reference, not a step. */}
+        <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-anatomy-note>
+          {ANATOMY_SUBSTAGE_NOTE}
+        </p>
+
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="flex min-w-[300px] flex-[1.5] flex-col gap-2.5">
+            {CODE_ANATOMY.map((entry) => (
+              <section
+                key={entry.section}
+                className="overflow-hidden rounded-[8px] border"
+                style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+                data-anatomy-section={entry.section}
+              >
+                <header
+                  className="flex flex-wrap items-center gap-2 border-b px-3 py-[7px]"
+                  style={{ borderColor: "var(--line-soft)" }}
+                >
+                  <h4
+                    className="text-[10px] font-medium uppercase tracking-[.07em]"
+                    style={{ color: "var(--ink-faint)" }}
+                  >
+                    {entry.section}
+                  </h4>
+                  <span className="ml-auto flex flex-wrap gap-1">
+                    {entry.unlocks.map((item) => (
+                      <span
+                        key={item.label}
+                        data-unlock={item.label}
+                        data-unlock-kind={item.kind}
+                        className="mono rounded-full border px-1.5 text-[8.5px] font-bold leading-[15px]"
+                        style={{
+                          color: item.kind === "gate" ? "var(--role-holdout)" : "var(--good)",
+                          borderColor: item.kind === "gate" ? "var(--role-holdout)" : "var(--good)",
+                          background: "var(--paper-raised)",
+                        }}
+                      >
+                        {item.label}
+                      </span>
+                    ))}
+                  </span>
+                </header>
+                {/* Read-only by construction: a `pre`, not an editor. The
+                    module is authored in the reader's own tooling. */}
+                <pre
+                  className="mono m-0 overflow-x-auto px-3 py-2 text-[10.5px] leading-[1.65]"
+                  style={{ background: "var(--paper)", color: "var(--ink)" }}
+                >
+                  {entry.code}
+                </pre>
+                <p
+                  className="border-t px-3 py-1.5 text-[10.5px] leading-[1.5]"
+                  style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
+                >
+                  {entry.note}
+                </p>
+              </section>
+            ))}
+          </div>
+
+          <aside
+            className="flex min-w-[260px] flex-1 flex-col gap-1.5 rounded-[8px] border px-3.5 py-3"
+            style={{ borderColor: "var(--accent)", background: "var(--accent-soft)" }}
+            data-unlock-map
+          >
+            <h4
+              className="text-[10px] font-bold uppercase tracking-[.07em]"
+              style={{ color: "var(--accent)" }}
+            >
+              declare more → unlock more routes
+            </h4>
+            {UNLOCK_MAP.map((row) => (
+              <span
+                key={row.output}
+                className="flex flex-col gap-px border-b py-[3px]"
+                style={{ borderColor: "var(--line-soft)" }}
+                data-unlock-output={row.output}
+              >
+                <span className="mono text-[10px] font-semibold">{row.output}</span>
+                <span className="text-[10px]" style={{ color: "var(--ink-soft)" }}>
+                  {row.routes}
+                </span>
+              </span>
+            ))}
+            <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+              {UNLOCK_FOOTER}
+            </p>
+          </aside>
+        </div>
+      </div>
+    </details>
+  );
+}
+
 /* ----------------------------------------------------------------- screen */
 
 export interface AlphaImportProps {
@@ -503,6 +626,9 @@ export function AlphaImport(props: AlphaImportProps) {
         >
           {parse ? <MirrorTable mirror={parse.mirror} /> : null}
         </ResearchPanel>
+
+        {/* `S14-VIS-01`: a substage of parse, not a stage of the import. */}
+        <CodeAnatomy />
       </section>
 
       {/* ---------------------------------------------------------- step 2 */}

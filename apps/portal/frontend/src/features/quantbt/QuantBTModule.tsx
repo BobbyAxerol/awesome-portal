@@ -43,6 +43,7 @@ import { RunProgress } from "../runs/RunProgress";
 import { QuantBTSubnav } from "./QuantBTSubnav";
 import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
+import { EngineAtlasRoute, JourneyMapRoute } from "../../research/foundationRoutes";
 import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
@@ -238,6 +239,12 @@ export function QuantBTModule() {
   // active-run context strip above them was a fourth band of chrome before the
   // first control, describing something the reader is not looking at.
   const onTaskRoute = /\/(new|imports|alphas)(\/|$)/.test(location.pathname);
+  // P09's two reference screens carry their own title and subtitle, so the
+  // module caption repeats an identity the reader already has 40px above.
+  // Kept separate from `onTaskRoute` on purpose: widening that regex would
+  // also have dropped the caption from New Run and the import inbox, which are
+  // outside this phase and inside the visual baseline.
+  const onReferenceRoute = /\/(journey|atlas)(\/|$)/.test(location.pathname);
 
   const actions = (
     <>
@@ -288,12 +295,12 @@ export function QuantBTModule() {
         title={feature?.label ?? "QuantBT Backtest"}
         // The module description is orientation for someone arriving, not a
         // caption to reprint on every sub-route.
-        description={onRunRoute ? undefined : feature?.description}
+        description={onRunRoute || onReferenceRoute ? undefined : feature?.description}
         maturity={feature?.maturity ?? "AVAILABLE"}
         dataMode={feature?.data_mode ?? "REAL"}
         actions={actions}
       >
-        {onRunRoute || onTaskRoute ? null : (
+        {onRunRoute || onTaskRoute || onReferenceRoute ? null : (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Chip>{strategies.data?.[0]?.strategy_id ?? "—"}</Chip>
             {activeRunId ? <Chip>current {fmtShortHash(activeRunId)}</Chip> : null}
@@ -308,6 +315,11 @@ export function QuantBTModule() {
           * strategies this module's picker can (and cannot) run. ALPHA_POOL is
           * still COMMISSIONED in the registry, and rendering a working screen
           * there would contradict its own badge. */}
+        {/* P09 · S00 and S12. Both render inside this module's shell and add
+          * none of their own: the journey map is shell-free by construction and
+          * the Atlas is a reference surface, not a stage. */}
+        <Route path="journey" element={<JourneyMapRoute />} />
+        <Route path="atlas" element={<EngineAtlasRoute />} />
         <Route path="imports" element={<ImportInbox />} />
         <Route path="alphas/:alphaId/:version" element={<AlphaVersionDetail />} />
         <Route path="runs" element={<RunLibrary />} />

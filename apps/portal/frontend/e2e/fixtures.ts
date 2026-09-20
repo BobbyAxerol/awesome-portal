@@ -20,6 +20,21 @@ function fixture(relative: string): unknown {
   return JSON.parse(readFileSync(join(REGISTRY, relative), "utf8"));
 }
 
+/**
+ * A response fixture owned by this suite rather than by the registry.
+ *
+ * P09 published no canonical fixture for either foundation read, so these two
+ * are generated from the repository's own sources — the journey descriptor
+ * module and the engine catalog — and regenerated when those change. Recorded
+ * as `CG-P09-02`: the durable fix is for the contract package to publish them
+ * beside the other `*.valid.json` files.
+ */
+function local(name: string): unknown {
+  return JSON.parse(
+    readFileSync(join(dirname(fileURLToPath(import.meta.url)), "research-foundation", name), "utf8"),
+  );
+}
+
 /** Summary fixtures, by the state each one demonstrates. */
 export type SummaryState = "healthy" | "partial" | "unavailable" | "stale" | "empty" | "denied";
 
@@ -176,6 +191,26 @@ export async function stubPortalApi(
     void json(route, fixture("engine-capabilities.v1.json")),
   );
   await page.route("**/api/v1/alphas", (route) => void json(route, fixture("alphas.v1.json")));
+
+  // The QuantBT module header reads these on every route it owns. They were
+  // unstubbed, so the catch-all answered 501 and every QuantBT screen carried
+  // two console errors that had nothing to do with the screen. Empty is the
+  // truthful answer for a fixture environment with no runs.
+  await page.route("**/api/runs", (route) => void json(route, []));
+  await page.route("**/api/strategies", (route) => void json(route, []));
+
+  // P09 · the two Research foundation BFF reads. The journey descriptor is
+  // generated from `journey.descriptor.ts` and the Atlas from
+  // `research-engine-catalog.v1.json`, so the probe renders the facts the
+  // server actually serves rather than a hand-written approximation.
+  await page.route("**/api/v1/research/journey*", (route) =>
+    void json(route, local("journey.json")),
+  );
+  await page.route("**/api/v1/research/quantbt/atlas*", (route) => {
+    const url = new URL(route.request().url());
+    const historical = url.searchParams.get("release_id") === "er_quantbt_108";
+    return void json(route, local(historical ? "atlas-historical.json" : "atlas.json"));
+  });
 
   // Service health, read by the sign-in plate before any session exists. Pinned
   // versions: the strip prints them, so a real deployment's version would

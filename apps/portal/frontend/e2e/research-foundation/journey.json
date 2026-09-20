@@ -1,0 +1,194 @@
+{
+  "schema_version": "research.journey-response.v1",
+  "descriptor": {
+    "schema_version": "research.journey.v1",
+    "descriptor_id": "quantbt_journey",
+    "revision": 1,
+    "phases": [
+      {
+        "phase_id": "access_command",
+        "ordinal": 1,
+        "title": "Access & command",
+        "description": "Start from the existing Portal workspace and command surface.",
+        "cards": [
+          {
+            "card_id": "portal-access",
+            "title": "Portal access",
+            "description": "Workspace-scoped Portal session and permissions.",
+            "target_kind": "SHIPPED",
+            "target_key": "portal_access",
+            "availability": "AVAILABLE"
+          },
+          {
+            "card_id": "command-center",
+            "title": "Command Center",
+            "description": "Existing operational command and audit entry point.",
+            "target_kind": "SHIPPED",
+            "target_key": "command_center",
+            "availability": "AVAILABLE"
+          }
+        ]
+      },
+      {
+        "phase_id": "define",
+        "ordinal": 2,
+        "title": "Define",
+        "description": "Bind an immutable AlphaVersion and declare a research run.",
+        "cards": [
+          {
+            "card_id": "alpha-import",
+            "title": "Import Alpha",
+            "description": "Parse, gate and register one immutable AlphaVersion.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "alpha_import",
+            "availability": "AVAILABLE"
+          },
+          {
+            "card_id": "new-run",
+            "title": "New Run",
+            "description": "Create a compatible requested specification after P10 admission.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "new_run",
+            "availability": "PLANNED"
+          }
+        ]
+      },
+      {
+        "phase_id": "execute",
+        "ordinal": 3,
+        "title": "Execute",
+        "description": "Observe durable run progress without treating a browser as a worker.",
+        "cards": [
+          {
+            "card_id": "run-progress",
+            "title": "Run Progress",
+            "description": "Durable run and child-work lifecycle.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "run_progress",
+            "availability": "PLANNED"
+          },
+          {
+            "card_id": "research-console",
+            "title": "Research Console",
+            "description": "Bounded logs and artifact readiness.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "research_console",
+            "availability": "PLANNED"
+          }
+        ]
+      },
+      {
+        "phase_id": "inspect",
+        "ordinal": 4,
+        "title": "Inspect",
+        "description": "Inspect trials, folds and replay references through an opaque cursor.",
+        "cards": [
+          {
+            "card_id": "trial-review",
+            "title": "Trial Review",
+            "description": "Study-scoped trial and fold inspection.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "trial_review",
+            "availability": "PLANNED"
+          },
+          {
+            "card_id": "trade-replay",
+            "title": "Trade Replay",
+            "description": "Evidence-backed replay when its retained source is available.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "trade_replay",
+            "availability": "DEPENDENCY_REQUIRED"
+          }
+        ]
+      },
+      {
+        "phase_id": "evidence",
+        "ordinal": 5,
+        "title": "Evidence",
+        "description": "Review immutable data, effective specification and evidence boundaries.",
+        "cards": [
+          {
+            "card_id": "preflight",
+            "title": "Data Preflight",
+            "description": "Immutable requested/effective/data manifest metadata.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "preflight",
+            "availability": "AVAILABLE"
+          },
+          {
+            "card_id": "evidence-pack",
+            "title": "Evidence Pack",
+            "description": "Sealed artifacts and explicit completeness states.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "evidence_pack",
+            "availability": "PLANNED"
+          }
+        ]
+      },
+      {
+        "phase_id": "compare",
+        "ordinal": 6,
+        "title": "Compare",
+        "description": "Compare valid, scoped evidence without synthetic history.",
+        "cards": [
+          {
+            "card_id": "comparison",
+            "title": "Compare Runs",
+            "description": "Compare selected run evidence and declared differences.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "compare_runs",
+            "availability": "PLANNED"
+          }
+        ]
+      },
+      {
+        "phase_id": "release",
+        "ordinal": 7,
+        "title": "Release",
+        "description": "Prepare a release candidate only from admitted evidence.",
+        "cards": [
+          {
+            "card_id": "release-candidate",
+            "title": "Release Candidate",
+            "description": "Governed release-candidate preparation and review.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "release_candidate",
+            "availability": "PLANNED"
+          },
+          {
+            "card_id": "execution-handoff",
+            "title": "Execution Handoff",
+            "description": "Explicit handoff into the unchanged Execution governance path.",
+            "target_kind": "EXECUTION_HANDOFF",
+            "target_key": "execution_governance",
+            "availability": "DEPENDENCY_REQUIRED"
+          }
+        ]
+      },
+      {
+        "phase_id": "reference",
+        "ordinal": 8,
+        "title": "Reference",
+        "description": "Use the manifest-driven Engine Atlas as the source of route and mode facts.",
+        "cards": [
+          {
+            "card_id": "engine-atlas",
+            "title": "Engine Atlas",
+            "description": "Current and retained historical QuantBT release capabilities.",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "engine_atlas",
+            "availability": "AVAILABLE"
+          }
+        ]
+      }
+    ],
+    "content_sha256": "ff0525afdc9cadf18881b760fab58a5c8e812768f1e9932fe80cc89091ededd1"
+  },
+  "inspection": {
+    "cursor": {},
+    "canonical_query": "",
+    "pick_effect": "INSPECTION_ONLY",
+    "ambiguity_state": "NOT_APPLICABLE"
+  },
+  "etag": "W/\"journey-ff0525afdc9c\""
+}

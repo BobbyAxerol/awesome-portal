@@ -22,6 +22,7 @@ import {
   awaitingStep,
   type AlphaImportProps,
 } from "./AlphaImport";
+import { ANATOMY_SUBSTAGE_NOTE, CODE_ANATOMY, UNLOCK_MAP } from "./codeAnatomy";
 import type {
   ActivationResponse,
   GateName,
@@ -482,6 +483,66 @@ describe("T06 — activation is a separate, server-admitted act", () => {
       />,
     );
     expect(document.querySelector("[data-lifecycle]")?.getAttribute("data-lifecycle")).toBe("DRAFT");
+  });
+});
+
+describe("S14-VIS-01 — Code anatomy is a presentation substage, not a stage", () => {
+  it("lives under step 1 and adds no step marker", () => {
+    render(<AlphaImport {...props()} />);
+    const step1 = screen.getByLabelText("Step 1 — source");
+    expect(within(step1).getByText(/Code anatomy/)).toBeTruthy();
+    // Still three steps: parse, gates, register/activate.
+    expect(document.querySelectorAll("[data-step-marker]")).toHaveLength(3);
+    expect(document.querySelectorAll("[data-step]")).toHaveLength(3);
+  });
+
+  it("renders every section and unlock row from the reference module", () => {
+    render(<AlphaImport {...props()} />);
+    expect(document.querySelectorAll("[data-anatomy-section]")).toHaveLength(CODE_ANATOMY.length);
+    expect(document.querySelectorAll("[data-unlock-output]")).toHaveLength(UNLOCK_MAP.length);
+    expect(document.querySelector("[data-anatomy-note]")?.textContent).toBe(ANATOMY_SUBSTAGE_NOTE);
+  });
+
+  it("keeps the code read-only — it is reference, not an editor", () => {
+    render(<AlphaImport {...props()} />);
+    const anatomy = document.querySelector("[data-code-anatomy]") as HTMLElement;
+    expect(anatomy.querySelectorAll("input, textarea, select, [contenteditable]")).toHaveLength(0);
+    expect(anatomy.querySelectorAll("pre")).toHaveLength(CODE_ANATOMY.length);
+  });
+
+  it("changes no enablement anywhere in the wizard", () => {
+    // The whole risk of a fourth visual group is that it grows an authority.
+    // Every control's disabled state must be identical with the section open.
+    render(<AlphaImport {...props()} />);
+    const before = Array.from(document.querySelectorAll("[data-action]")).map((node) => [
+      node.getAttribute("data-action"),
+      (node as HTMLButtonElement).disabled,
+    ]);
+
+    const anatomy = document.querySelector("[data-code-anatomy]") as HTMLDetailsElement;
+    fireEvent.click(anatomy.querySelector("summary") as HTMLElement);
+
+    const after = Array.from(document.querySelectorAll("[data-action]")).map((node) => [
+      node.getAttribute("data-action"),
+      (node as HTMLButtonElement).disabled,
+    ]);
+    expect(after).toEqual(before);
+  });
+
+  it("offers no action and issues no request of its own", () => {
+    render(<AlphaImport {...props()} />);
+    const anatomy = document.querySelector("[data-code-anatomy]") as HTMLElement;
+    expect(anatomy.querySelectorAll("[data-action]")).toHaveLength(0);
+    expect(anatomy.querySelectorAll("button")).toHaveLength(0);
+    // A disclosure is keyboard-reachable without a button.
+    expect(anatomy.querySelector("summary")).toBeTruthy();
+  });
+
+  it("names no lifecycle state of its own", () => {
+    render(<AlphaImport {...props()} />);
+    const anatomy = document.querySelector("[data-code-anatomy]") as HTMLElement;
+    expect(anatomy.querySelectorAll("[data-lifecycle]")).toHaveLength(0);
+    expect(anatomy.textContent).not.toMatch(/\bDRAFT\b|\bACTIVE\b|\bSUPERSEDED\b|\bABANDONED\b/);
   });
 });
 

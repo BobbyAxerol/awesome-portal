@@ -70,7 +70,7 @@ describe("no internal identifier or direct source access on the Research surface
    * under the Portal's own API prefix. An absolute URL here would be an
    * analyser or engine address, which is precisely what P07's handoff forbids.
    */
-  const NETWORK_MODULES = ["alphaImportClient.ts", "preflightClient.ts"];
+  const NETWORK_MODULES = ["alphaImportClient.ts", "foundationClient.ts", "preflightClient.ts"];
 
   it("keeps requests inside the one module allowed to make them", () => {
     const callers = SOURCES.filter((f) => /\bfetch\s*\(/.test(codeOf(f.text))).map((f) => f.name);
@@ -82,9 +82,15 @@ describe("no internal identifier or direct source access on the Research surface
       const code = codeOf(SOURCES.find((f) => f.name === name)!.text);
       // No scheme and no protocol-relative host may appear at all.
       expect(code).not.toMatch(/["'`](https?:)?\/\//);
-      const base = /const BASE = "([^"]+)"/.exec(code);
-      expect(base).not.toBeNull();
-      expect(base![1].startsWith("/api/v1/")).toBe(true);
+      /* Every literal path in the module, not just a single `BASE`: P09
+         publishes two endpoints, so a one-constant check would stop covering
+         the second one the moment it was added. */
+      const paths = [...code.matchAll(/["'`](\/[^"'`]*)["'`]/g)].map((m) => m[1]);
+      const apiPaths = paths.filter((value) => value.startsWith("/api"));
+      expect(apiPaths.length, `${name} declares no API path`).toBeGreaterThan(0);
+      for (const value of apiPaths) {
+        expect(value.startsWith("/api/v1/"), `${name}: ${value}`).toBe(true);
+      }
     }
   });
 

@@ -37,10 +37,10 @@ for (const [name, width, height] of [
 
     // Both Atlas instances are present: one with a document, one without.
     const screens = page.locator("[data-screen='engine-atlas']");
-    expect(await screens.count()).toBe(2);
+    await expect(screens).toHaveCount(2);
     const degraded = screens.nth(1);
     await expect(degraded.getByRole("heading", { name: "Engine Atlas" })).toBeVisible();
-    expect(await degraded.getByRole("tab").count()).toBe(3);
+    await expect(degraded.getByRole("tab")).toHaveCount(3);
     await expect(degraded.locator("[data-research-state='unavailable']")).toBeVisible();
 
     // No horizontal page scroll: the wide tables scroll inside their own frame.
@@ -115,7 +115,7 @@ test("Screen 14 holds its fail-closed composition in the browser", async ({ page
   await settle(page);
 
   const screens = page.locator("[data-screen='alpha-import']");
-  expect(await screens.count()).toBe(4);
+  await expect(screens).toHaveCount(4);
 
   // The failing instance: gate 3 red, everything after it SKIPPED, step 3 shut.
   const failing = screens.nth(1);
@@ -261,7 +261,7 @@ test("Screens 02 and 05 hold their preflight composition in the browser", async 
     .evaluate((n) => getComputedStyle(n).backgroundImage);
   expect(sealBg).toContain("repeating-linear-gradient");
   await expect(sealed.locator("[data-evaluation-state]")).toHaveText("NOT_EVALUATED");
-  expect(await sealed.locator("button").count()).toBe(0);
+  await expect(sealed.locator("button")).toHaveCount(0);
 
   // The unsealed protocol says so rather than drawing an empty seal.
   await expect(splits.nth(1).locator("[data-no-seal]")).toHaveText(
