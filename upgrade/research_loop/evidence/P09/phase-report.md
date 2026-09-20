@@ -50,6 +50,25 @@ semantics and the 14-route / 5-mode / 7-claim Atlas shape.  The frontend alias
 modified.  Both routes are declared in the R2 capability inventory as
 `AUTO_READ`, owned/tested by Codex, so the route ledger cannot drift silently.
 
+### P09 contract-tightening amendment — 2026-09-20
+
+`CG-P09-01` is closed at the producer boundary rather than by a frontend
+cast. `CapabilityAxes`, every claim descriptor and the evidence contract are
+now strict shared OpenAPI/Zod shapes matching the P04 catalog vocabulary. The
+Atlas private adapter rejects a widened, missing or misspelled axis/claim
+before it reaches a same-origin response. `claims` remain informational: the
+contract does not make a browser claim, a preflight, or an Atlas card execution
+authority.
+
+`FD-P09-02` is settled as a route-authority decision for P10 consumer work:
+the new Alpha Import product route is `/research/quantbt/alpha-import`, inside
+the QuantBT Research shell. The legacy `/research/quantbt/imports` route is
+preserved unchanged. `/research/alphas/import` is not mounted while
+`ALPHA_POOL` remains `COMMISSIONED`; an import wizard must not silently promote
+that unrelated product surface. Claude owns the presentational mount and its
+browser receipt; no lifecycle state or backend transition changes because of
+this routing decision.
+
 ## Exact verification
 
 | Gate | Command | Result |
@@ -58,7 +77,7 @@ modified.  Both routes are declared in the R2 capability inventory as
 | Control API production build typing | `apps/control-api/node_modules/.bin/tsc -p apps/control-api/tsconfig.build.json --noEmit` | pass |
 | Portal API private route syntax | `python3 -m compileall -q apps/portal/backend/src/portal_api/api/routes_research_internal.py` | pass |
 | Portal API private-route boundary | `PYTHONPATH=apps/portal/backend/src:apps/portal apps/portal/.venv/bin/python -m pytest -q -c apps/portal/backend/pyproject.toml apps/portal/backend/tests/test_research_foundation_private_atlas.py` | 1/1 pass; missing HMAC is `401`, signed private response has 14/5/7 contract shape, public equivalent is `404` |
-| Generated OpenAPI contract | `cd packages/contracts && npm test` | 141/141 pass |
+| Generated OpenAPI contract | `cd packages/contracts && npm test` | 142/142 pass |
 | Generated artifact parity | `cd packages/contracts && ./tooling/verify-generated.sh && python3 tooling/snapshot.py --check` | pass; 172 tracked artifacts |
 | Global route ownership ledger | `cd apps/portal/frontend && npx vitest run src/execution/r2Ledger.test.ts` | 22/22 pass |
 | Diff hygiene | `git diff --check` | pass |
@@ -66,19 +85,22 @@ modified.  Both routes are declared in the R2 capability inventory as
 No image build, dev-stack rebuild, cache warming, source read, runtime profile
 change, deploy or database migration was run outside the disposable P09 proof.
 
-## Explicit remaining P09 ownership
+## Closeout ownership and P08 presentation decision
 
-P09's backend and typed contract are complete.  The phase is **not** called a
-full product exit yet: Claude must mount the lazy Research product routes,
-consume these generated types, retain the existing Execution shell unchanged,
-and collect the required S00/S12 HIFI browser receipts.  This is a named
-frontend acceptance lane, not a backend gap or a reason to invent fixture
-fallbacks.
+P09's backend, typed contract and product composition are complete at this
+revision. Claude mounted the two lazy Research routes, consumed the generated
+types, retained the existing Execution shell and recorded S00/S12 browser/HIFI
+receipts. `CG-P09-02` remains deliberately classified as an **evidence-fixture
+improvement**, not a backend or product-data gap: the current browser fixtures
+are generated from the immutable Journey descriptor and P04 catalog, and may
+not become a local product fallback.
 
-`S14-VIS-01` from P08 is also awaiting Claude's explicit presentation decision:
-retain the three authority states (parse, seven gates, register/activate) and
-render HIFI's **Code anatomy** as a presentational substage under parse.  It
-must not create a fourth lifecycle state, API field or backend transition.
+The P08 presentation decision `S14-VIS-01` is also already recorded in the
+frontend composition: retain the three authority states (parse, seven gates,
+register/activate) and render HIFI's **Code anatomy** as a presentational
+substage under parse. It creates no fourth lifecycle state, API field,
+migration or backend transition. P10 owns the only remaining route/action
+dependency: a preflight cannot be routed until its durable producer exists.
 
 ## Rollback
 

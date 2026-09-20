@@ -28,7 +28,27 @@ describe("P09 published Research foundation contract", () => {
       "RESEARCH_FOUNDATION_CURSOR_STUDY_REQUIRED", "RESEARCH_FOUNDATION_RELEASE_NOT_FOUND",
       "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND", "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND",
       "INSPECTION_ONLY", "HISTORICAL_IDENTITY_RETAINED",
+      "ENGINE_SUPPORTED", "P04_BASELINE_ONLY", "ClaimDescriptor", "research-run-evidence.v1",
     ]) expect(generated).toContain(needle);
+  });
+
+  it("keeps P09 Atlas facts as the exact P04 shapes rather than loose objects", () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      components: { schemas: Record<string, unknown> };
+    };
+    const schemas = openApi.components.schemas as Record<string, {
+      properties?: Record<string, unknown>;
+      items?: { $ref?: string };
+    }>;
+    expect(schemas.Atlas.properties?.claims).toEqual(expect.objectContaining({
+      items: { $ref: "#/components/schemas/ClaimDescriptor" },
+    }));
+    expect(schemas.Atlas.properties?.evidence_contract).toEqual({
+      $ref: "#/components/schemas/EvidenceContract",
+    });
+    expect(schemas.CapabilityAxes.properties?.engine).toEqual({
+      enum: ["ENGINE_SUPPORTED", "ENGINE_PARTIAL", "ENGINE_DEFERRED"],
+    });
   });
 
   it("does not publish a private adapter, raw data, worker or executable engine surface", () => {

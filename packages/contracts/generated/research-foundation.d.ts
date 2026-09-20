@@ -98,11 +98,31 @@ export interface components {
             inspection: components["schemas"]["InspectionCursor"];
             etag: string;
         };
+        /** @description Exact P04 capability-axis vocabulary. P09 deliberately mirrors it rather than widening any manifest fact. */
         CapabilityAxes: {
-            engine: string;
-            integration: string;
-            evidence: string;
-            admission: string;
+            /** @enum {unknown} */
+            engine: "ENGINE_SUPPORTED" | "ENGINE_PARTIAL" | "ENGINE_DEFERRED";
+            /** @enum {unknown} */
+            integration: "ADAPTER_AVAILABLE" | "INTEGRATION_GAP" | "DEFERRED_BY_PORTAL";
+            /** @enum {unknown} */
+            evidence: "EVIDENCE_MAPPED" | "EVIDENCE_GAP" | "NOT_APPLICABLE";
+            /** @enum {unknown} */
+            admission: "P04_BASELINE_ONLY" | "NOT_ADMITTED" | "DEFERRED";
+        };
+        /** @description Exact P04 manifest claim descriptor; it is descriptive and does not authorize a run. */
+        ClaimDescriptor: {
+            contract_id: string;
+            engine_certification: string;
+            numeric_guarantee: string;
+            never_claims: string;
+        };
+        /** @description Exact P04 declared evidence envelope. P09 publishes declaration only; it neither writes evidence nor exposes a worker control. */
+        EvidenceContract: {
+            /** @constant */
+            schema_id: "research-run-evidence.v1";
+            required_fields: ("engine_release_id" | "route_id" | "effective_spec_digest" | "market_data_content_hash" | "report_level" | "selection_resolution" | "result_summary")[];
+            /** @constant */
+            writer_state: "P05_OWNED_NOT_ACTIVE";
         };
         AtlasRoute: {
             route_id: components["schemas"]["Identifier"];
@@ -152,12 +172,8 @@ export interface components {
             historical_releases: components["schemas"]["HistoricalRelease"][];
             routes: components["schemas"]["AtlasRoute"][];
             modes: components["schemas"]["AtlasMode"][];
-            claims: {
-                [key: string]: unknown;
-            }[];
-            evidence_contract: {
-                [key: string]: unknown;
-            };
+            claims: components["schemas"]["ClaimDescriptor"][];
+            evidence_contract: components["schemas"]["EvidenceContract"];
         };
         AtlasResponse: {
             /** @constant */

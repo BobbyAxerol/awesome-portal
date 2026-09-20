@@ -55,6 +55,32 @@ export interface ResearchJourneyResponse {
   etag: string;
 }
 
+/** Exact P04 capability-axis vocabulary, kept strict through the P09 BFF. */
+const CapabilityAxesSchema = z.object({
+  engine: z.enum(["ENGINE_SUPPORTED", "ENGINE_PARTIAL", "ENGINE_DEFERRED"]),
+  integration: z.enum(["ADAPTER_AVAILABLE", "INTEGRATION_GAP", "DEFERRED_BY_PORTAL"]),
+  evidence: z.enum(["EVIDENCE_MAPPED", "EVIDENCE_GAP", "NOT_APPLICABLE"]),
+  admission: z.enum(["P04_BASELINE_ONLY", "NOT_ADMITTED", "DEFERRED"]),
+}).strict();
+
+/** Exact P04 manifest claim. It has no execution authority. */
+const ClaimDescriptorSchema = z.object({
+  contract_id: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/),
+  engine_certification: z.string().regex(/^[A-Z][A-Z0-9_-]{1,63}$/),
+  numeric_guarantee: z.string().min(1).max(400),
+  never_claims: z.string().min(1).max(500),
+}).strict();
+
+/** P04's declared evidence envelope; P09 neither writes it nor starts work. */
+const EvidenceContractSchema = z.object({
+  schema_id: z.literal("research-run-evidence.v1"),
+  required_fields: z.array(z.enum([
+    "engine_release_id", "route_id", "effective_spec_digest", "market_data_content_hash",
+    "report_level", "selection_resolution", "result_summary",
+  ])).length(7).refine((fields) => new Set(fields).size === fields.length, "required_fields must be unique."),
+  writer_state: z.literal("P05_OWNED_NOT_ACTIVE"),
+}).strict();
+
 /** Small strict validation boundary for a private P04 Atlas document. */
 const AtlasRouteSchema = z.object({
   route_id: Identifier,
@@ -63,10 +89,7 @@ const AtlasRouteSchema = z.object({
   backend: z.string().min(1).max(191),
   report_levels: z.array(z.string().min(1).max(64)).min(1).max(16),
   default_for_new_runs: z.boolean(),
-  axes: z.object({
-    engine: z.string().min(1).max(64), integration: z.string().min(1).max(64),
-    evidence: z.string().min(1).max(64), admission: z.string().min(1).max(64),
-  }).strict(),
+  axes: CapabilityAxesSchema,
   reason: z.string().min(1).max(1024),
   required_input_class: z.string().min(1).max(191),
 }).strict();
@@ -98,10 +121,10 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
   }).strict()).max(8),
   routes: z.array(AtlasRouteSchema).length(14),
   modes: z.array(AtlasModeSchema).length(5),
-  // Claims/evidence are already manifest-owned P04 objects. They are passed
-  // through only after the bounded private response parser has accepted them.
-  claims: z.array(z.record(z.unknown())).length(7),
-  evidence_contract: z.record(z.unknown()),
+  // These exact P04 shapes are emitted as shared P09 OpenAPI components too.
+  // A browser may render facts but cannot widen them into run authority.
+  claims: z.array(ClaimDescriptorSchema).length(7),
+  evidence_contract: EvidenceContractSchema,
 }).strict();
 
 export type ResearchEngineAtlasPrivate = z.infer<typeof ResearchEngineAtlasPrivateSchema>;
