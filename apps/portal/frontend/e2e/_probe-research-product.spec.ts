@@ -367,12 +367,18 @@ test("S02 declares, previews and creates a run through the real routes", async (
   await expect(page.locator("[data-created]")).toHaveAttribute("data-created", "run_01HZQ7PROBE");
 
   // The preflight and the create carried the identical requested spec.
+  // The release the form was declared against travels with the spec.
+  const spec = (createCallSpec: Record<string, unknown>) =>
+    (createCallSpec.requested_spec as Record<string, unknown>).client as Record<string, unknown>;
+
   const preflightCall = sent.find((r) => r.url.includes("/preflights"))!;
   const createCall = sent.find((r) => r.url.endsWith("/research/runs"))!;
   expect(createCall.body).toMatchObject({ intent_kind: "NEW", preflight_token: "pf_01HZQ7PROBE" });
   expect((createCall.body as Record<string, unknown>).requested_spec).toEqual(
     (preflightCall.body as Record<string, unknown>).requested_spec,
   );
+
+  expect(spec(createCall.body as Record<string, unknown>).engine_release_id).toBe("er_quantbt_111");
 
   // Nothing derived or private went up.
   const raw = JSON.stringify(createCall.body);
@@ -413,5 +419,93 @@ test("S14 renders on its canonical route and keeps three authority states", asyn
   expect(overflow).toBeLessThanOrEqual(1);
 
   await page.screenshot({ path: `${OUT}/s14-alpha-import-route.png`, fullPage: true });
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S02's four Spec 02 validators fire from the typed response", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(NEW_RUN);
+  await settle(page);
+
+  /* The declaration comes from the registry read, so the validators can only
+     fire once the exact bound version is found. Anything less and the screen
+     must say what it could not read rather than pass silently. */
+  await page.locator("[data-step-pill='context']").click();
+  await page.getByLabel("Alpha", { exact: true }).fill("delta-rsi-polynomial-alpha");
+  await page.getByLabel("Alpha version").fill("av_delta_rsi_polynomial_alpha_1_0_0");
+  await expect(page.locator("[data-declaration-bound]")).toHaveAttribute(
+    "data-declaration-bound",
+    "true",
+  );
+  await expect(page.locator("[data-missing-constraints]")).toHaveCount(0);
+
+  // 1. the entrypoint pin, naming the version and the declared entrypoint
+  await page.locator("[data-step-pill='strategy']").click();
+  await page.getByLabel("Strategy id").fill("something_else");
+  await expect(page.locator("[data-step-card] [data-step-error]")).toContainText(
+    "Strategy is pinned by av_delta_rsi_polynomial_alpha_1_0_0 (entrypoint alpha.delta_rsi:run)",
+  );
+  await page.getByLabel("Strategy id").fill("alpha.delta_rsi:run");
+
+  // 2. the declared timeframe list
+  await page.locator("[data-step-pill='data']").click();
+  await page.getByLabel("Symbol").fill("BTCUSDT");
+  await page.getByLabel("Timeframe").selectOption("1d");
+  await expect(page.locator("[data-step-card] [data-step-error]")).toHaveText(
+    "The strategy declares only 1h, 4h.",
+  );
+  await page.getByLabel("Timeframe").selectOption("4h");
+
+  // 3. the release's published ceiling, and 4. the declared seed requirement
+  await page.locator("[data-step-pill='optimization']").click();
+  await page.getByLabel("Optuna trials").fill("9999");
+  await expect(page.locator("[data-step-card] [data-step-error]")).toHaveText(
+    "The engine release publishes a ceiling of 4000 trials.",
+  );
+  await page.getByLabel("Optuna trials").fill("1");
+  await page.getByLabel("Random seed").fill("");
+  await expect(page.locator("[data-step-card] [data-step-error]")).toHaveText(
+    "The strategy declares determinism.seed_required — a fixed random seed is required.",
+  );
+
+  // The declared parameter space was adopted, not invented.
+  await page.locator("[data-step-pill='parameters']").click();
+  await expect(page.locator("[data-parameter]")).toHaveCount(4);
+  await expect(page.locator("[data-parameter='warmup_bars']")).toContainText("pinned at 120");
+
+  await page.screenshot({ path: `${OUT}/s02-validators.png`, fullPage: true });
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S02 renders the four release-default groups as locked", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(NEW_RUN);
+  await settle(page);
+
+  await page.locator("[data-step-pill='optimization']").click();
+  const groups = await page
+    .locator("[data-default-group]")
+    .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("data-default-group")));
+  expect(groups).toEqual(["study", "sampler", "objective", "candidate_selection"]);
+
+  // Every field is the release's, and a locked one offers no input at all.
+  const sources = await page
+    .locator("[data-default-field]")
+    .evaluateAll((nodes) => [...new Set(nodes.map((n) => n.getAttribute("data-value-source")))]);
+  expect(sources).toEqual(["RELEASE_DEFAULT"]);
+  expect(await page.locator("[data-default-field] input, [data-default-field] select").count()).toBe(0);
+  expect(await page.locator("[data-override-state='LOCKED']").count()).toBeGreaterThan(0);
+
+  // Rendering a default adds nothing to what would be serialized.
+  await expect(page.locator("[data-override-summary]")).toContainText("nothing serialized");
+  await expect(page.locator("[data-submission-constraints]")).toContainText("trials 1");
+
+  await page.screenshot({ path: `${OUT}/s02-release-defaults.png`, fullPage: true });
   expect(noise, noise.join("\n")).toEqual([]);
 });

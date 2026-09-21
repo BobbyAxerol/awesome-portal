@@ -11,12 +11,13 @@
  * no route is offered, and the step says why.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { NewRun } from "./NewRun";
+import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import type { DraftConstraints, RunDraft } from "./runDraft";
+import { type DraftConstraints, type ParameterEntry, type RunDraft, parameterEntriesFrom } from "./runDraft";
 import { useNewRun } from "./useNewRun";
 import { researchState, type ResearchState } from "./state";
 
@@ -52,36 +53,47 @@ export function emptyDraft(): RunDraft {
 }
 
 /**
- * Constraints derived from the Atlas.
+ * Constraints from the two typed reads.
  *
- * `blockedRoutes` carries the engine's own refusal wording for every route the
- * installed release will not admit, so the card can show the reason rather
- * than a generic "unavailable".
+ * Every field is `null` until a response supplies it. There is no fallback —
+ * the earlier `Infinity` ceiling read as "no limit", which is a claim about the
+ * release that no response supported. A rule the browser could not read is a
+ * rule it does not enforce, and the step says so; the server still enforces its
+ * own at preflight.
+ *
+ * The version is located by an exact `alpha_version_id` match. An entrypoint is
+ * never inferred from an identifier, and a near-match is not a match: if the
+ * selected version is not in the registry, nothing is declared.
  */
-export function constraintsFrom(atlas: AtlasDocument | null): DraftConstraints {
-  if (atlas === null) {
-    return {
-      declaredTimeframes: [],
-      seedRequired: false,
-      /* Not zero: a ceiling the browser invented would refuse a legal trial
-         count. With no manifest the ceiling is simply not enforced here, and
-         the server still enforces its own at preflight. */
-      trialCeiling: Number.POSITIVE_INFINITY,
-      entrypoint: null,
-      blockedRoutes: {},
-    };
-  }
+export function constraintsFrom(
+  atlas: AtlasDocument | null,
+  registry: readonly RegistryEntry[],
+  alphaVersionId: string,
+): DraftConstraints {
   const blocked: Record<string, string> = {};
-  for (const route of atlas.routes) {
+  for (const route of atlas?.routes ?? []) {
     if (route.axes.admission !== "P04_BASELINE_ONLY") blocked[route.route_id] = route.reason;
   }
+
+  const bound = registry.find((entry) => entry.alpha_version_id === alphaVersionId) ?? null;
+  const declaration = bound?.declaration ?? null;
+
   return {
-    declaredTimeframes: [],
-    seedRequired: false,
-    trialCeiling: Number.POSITIVE_INFINITY,
-    entrypoint: null,
+    declaredTimeframes: declaration ? declaration.timeframes : null,
+    seedRequired: declaration ? declaration.determinism.seed_required : null,
+    trialCeiling: atlas ? atlas.current_release.trial_ceiling : null,
+    entrypoint: declaration ? declaration.entrypoint : null,
     blockedRoutes: blocked,
   };
+}
+
+/** The declared parameter space of the bound version, or none. */
+export function parametersFor(
+  registry: readonly RegistryEntry[],
+  alphaVersionId: string,
+): readonly ParameterEntry[] {
+  const bound = registry.find((entry) => entry.alpha_version_id === alphaVersionId);
+  return bound ? parameterEntriesFrom(bound.declaration.parameter_space) : [];
 }
 
 export function NewRunRoute() {
@@ -116,9 +128,78 @@ export function NewRunRoute() {
     };
   }, []);
 
+  const [registry, setRegistry] = useState<readonly RegistryEntry[]>([]);
+  const [registryState, setRegistryState] = useState<ResearchState>(() =>
+    researchState({ kind: "in-flight", hasAcceptedResponse: false }),
+  );
+
+  useEffect(() => {
+    let live = true;
+    alphaImportApi
+      .registry()
+      .then((response) => {
+        if (!live) return;
+        setRegistry(response.entries);
+        setRegistryState(researchState({ kind: "ok", rowCount: response.entries.length }));
+      })
+      .catch((error: unknown) => {
+        if (!live) return;
+        const refusal = toRefusal(error);
+        setRegistryState({
+          state: refusal.state,
+          reason: refusal.message,
+          mayRetry: refusal.mayRetry,
+          retainsContent: false,
+        });
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const document = atlas?.atlas ?? null;
-  const limits = useMemo(() => constraintsFrom(document), [document]);
-  const run = useNewRun(emptyDraft(), limits);
+  const [draft, setDraft] = useState<RunDraft>(emptyDraft);
+  const limits = useMemo(
+    () => constraintsFrom(document, registry, draft.alphaVersionId),
+    [document, registry, draft.alphaVersionId],
+  );
+  const run = useNewRun(draft, limits);
+
+  /*
+   * Binding a version adopts its declared parameter space, once.
+   *
+   * The browser never adds, removes or widens an entry — it adopts the surface
+   * the server projected and then lets the reader narrow within it. Re-running
+   * on every render would throw away those narrowings, so this fires only when
+   * the selected version changes.
+   */
+  const adoptedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (adoptedFor.current === run.draft.alphaVersionId) return;
+    const declared = parametersFor(registry, run.draft.alphaVersionId);
+    if (declared.length === 0 && run.draft.parameters.length === 0) return;
+    adoptedFor.current = run.draft.alphaVersionId;
+    run.patch({ parameters: declared });
+  }, [registry, run]);
+
+  /*
+   * The release the form was built from travels with the declaration.
+   *
+   * `client.engine_release_id` is the identity of the manifest whose routes,
+   * ceilings and defaults this draft was declared against — so it is adopted
+   * from the Atlas rather than left empty. `config_digest` stays empty: no
+   * response publishes one and the browser must not compute a digest, which is
+   * recorded rather than papered over.
+   */
+  useEffect(() => {
+    const releaseId = document?.current_release.release_id;
+    if (releaseId && run.draft.engineReleaseId !== releaseId) {
+      run.patch({ engineReleaseId: releaseId });
+    }
+  }, [document, run]);
+
+  /* Keeps this component's copy of the draft in step with the controller's. */
+  useEffect(() => setDraft(run.draft), [run.draft]);
 
   return (
     <NewRun
@@ -127,6 +208,8 @@ export function NewRunRoute() {
       limits={limits}
       atlas={document}
       atlasState={atlasState}
+      declarationState={registryState}
+      declarationBound={registry.some((e) => e.alpha_version_id === run.draft.alphaVersionId)}
       preflight={run.preflight.preflight}
       preflightState={run.preflight.preflightState}
       clearedBecause={run.preflight.clearedBecause}

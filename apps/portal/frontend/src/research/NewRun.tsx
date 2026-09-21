@@ -33,10 +33,12 @@ import {
   STEPS,
   SWEEP_CEILING,
   blockingProblems,
+  missingConstraints,
   parameterStatus,
   pinnedCount,
   sweptCount,
 } from "./runDraft";
+import type { AtlasRelease } from "./foundationClient";
 import type { RunCreateResponse } from "./runCreateClient";
 import type { PreflightResponse } from "./preflightClient";
 import type { ResearchState } from "./state";
@@ -253,7 +255,7 @@ function ContextStep({
         >
           {([
             ["entrypoint", limits.entrypoint ?? null],
-            ["declared timeframes", limits.declaredTimeframes.join(" · ") || null],
+            ["declared timeframes", limits.declaredTimeframes?.join(" · ") || null],
           ] as const).map(([label, value]) => (
             <span key={label} className="flex items-baseline gap-1.5">
               <Label>{label}</Label>
@@ -336,8 +338,10 @@ function StrategyStep({
           protocol is not offered.
         </span>
       </div>
-      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-        seed required: {limits.seedRequired ? "yes" : "no"}
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-seed-required>
+        {/* Three states, not two: a rule that was not read is not a rule that
+            says no. */}
+        seed required: {limits.seedRequired === null ? "not declared" : limits.seedRequired ? "yes" : "no"}
       </span>
     </Card>
   );
@@ -455,7 +459,8 @@ function DataStep({
           <select
             className={INPUT_CLASS}
             style={inputStyle(
-              limits.declaredTimeframes.length > 0 &&
+              limits.declaredTimeframes !== null &&
+                limits.declaredTimeframes.length > 0 &&
                 !limits.declaredTimeframes.includes(draft.timeframe),
             )}
             value={draft.timeframe}
@@ -738,22 +743,123 @@ function ParametersStep({
   );
 }
 
+const GROUP_LABEL: Record<string, string> = {
+  study: "Study",
+  sampler: "Sampler",
+  objective: "Objective & constraints",
+  candidate_selection: "Candidate selection",
+};
+
+/**
+ * The release's own optimizer defaults, in four named groups.
+ *
+ * Every field is `RELEASE_DEFAULT` and carries its `override_state`. They are
+ * rendered read-only and are **never** copied into the draft's override map:
+ * spec 02 §13-1 forbids serializing a default, and the amendment is explicit
+ * that these groups explain the release without authorizing a browser
+ * override. A `LOCKED` row has no input at all, because an input the server
+ * will refuse is a promise the screen cannot keep.
+ */
+function OptimizerDefaults({ release }: { release: AtlasRelease }) {
+  return (
+    <div className="flex flex-col gap-2" data-optimizer-defaults>
+      {release.optimizer_defaults.groups.map((group) => (
+        <section key={group.group_id} data-default-group={group.group_id} className="flex flex-col">
+          <h4
+            className="mono border-b py-1 text-[9.5px] uppercase tracking-[.07em]"
+            style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
+          >
+            {GROUP_LABEL[group.group_id] ?? group.group_id}
+          </h4>
+          {group.fields.map((field) => (
+            <div
+              key={field.field_id}
+              data-default-field={field.field_id}
+              data-value-source={field.value_source}
+              data-override-state={field.override_state}
+              className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 border-b py-[3px] last:border-b-0"
+              style={{ borderColor: "var(--line-soft)" }}
+            >
+              <span className="mono flex-none text-[10px]" style={{ width: 196 }}>
+                {field.field_id}
+              </span>
+              <span className="mono flex-none text-[10.5px]" style={{ width: 132 }}>
+                {field.default_value === null ? (
+                  <span className="italic" style={{ color: "var(--ink-faint)" }}>null</span>
+                ) : (
+                  String(field.default_value)
+                )}
+              </span>
+              <span
+                className="mono flex-none rounded-[3px] border px-1 text-[8.5px] font-bold leading-[14px]"
+                style={{
+                  color: field.override_state === "LOCKED" ? "var(--bad)" : "var(--ink-soft)",
+                  borderColor: field.override_state === "LOCKED" ? "var(--bad)" : "var(--line-strong)",
+                }}
+              >
+                {field.value_source} · {field.override_state}
+              </span>
+              <span className="flex-1 text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
+                {field.detail}
+              </span>
+            </div>
+          ))}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+/** What this release will actually accept today, in its own words. */
+function SubmissionConstraints({ release }: { release: AtlasRelease }) {
+  const limits = release.submission_constraints;
+  return (
+    <div
+      className="flex flex-col gap-1 rounded-[6px] border px-3 py-2"
+      style={{ borderColor: "var(--role-holdout)", background: "var(--paper)" }}
+      data-submission-constraints={limits.profile_id}
+    >
+      <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--role-holdout)" }}>
+        current submission profile · {limits.profile_id}
+      </span>
+      <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
+        trials {limits.accepted_trial_count} · optimizer overrides {limits.optimization_overrides} ·
+        early stopping {limits.early_stopping} · random seed {limits.random_seed}
+      </span>
+      {/* The server's sentence. A richer request is still submittable — its
+          refusal is typed and authoritative, and is not pre-empted here. */}
+      <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+        {limits.reason}
+      </span>
+    </div>
+  );
+}
+
 function OptimizationStep({
   draft,
   patch,
   limits,
+  release,
   error,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   limits: DraftConstraints;
+  release: AtlasRelease | null;
   error: string | null;
 }) {
   const overrides = Object.keys(draft.optimizationConfigOverrides);
   return (
     <Card title="Optimization">
       <div className="flex flex-wrap gap-2.5">
-        <Field label="Optuna trials" hint={`ceiling ${limits.trialCeiling}`}>
+          <Field
+          label="Optuna trials"
+          hint={
+            limits.trialCeiling === null
+              ? "the release's ceiling could not be read"
+              : `ceiling ${limits.trialCeiling}`
+          }
+        >
           <input
             className={INPUT_CLASS}
             style={inputStyle(Boolean(error))}
@@ -771,10 +877,10 @@ function OptimizationStep({
             aria-label="Early stopping"
           />
         </Field>
-        <Field label={limits.seedRequired ? "Random seed *" : "Random seed"}>
+        <Field label={limits.seedRequired === true ? "Random seed *" : "Random seed"}>
           <input
             className={INPUT_CLASS}
-            style={inputStyle(limits.seedRequired && draft.randomSeed.trim() === "")}
+            style={inputStyle(limits.seedRequired === true && draft.randomSeed.trim() === "")}
             value={draft.randomSeed}
             onChange={(e) => patch({ randomSeed: e.target.value })}
             aria-label="Random seed"
@@ -789,7 +895,9 @@ function OptimizationStep({
       >
         <span className="mono text-[9.5px]" data-override-summary style={{ color: "var(--ink-faint)" }}>
           {overrides.length === 0
-            ? `all defaults from ${draft.engineReleaseId} — nothing serialized`
+            ? draft.engineReleaseId
+              ? `all defaults from ${draft.engineReleaseId} — nothing serialized`
+              : "all release defaults — nothing serialized"
             : `${overrides.length} override(s) · rest = release defaults`}
         </span>
         {overrides.map((key) => (
@@ -801,6 +909,18 @@ function OptimizationStep({
           {DEFAULTS_FOOTER}
         </p>
       </div>
+
+      {release ? (
+        <>
+          <SubmissionConstraints release={release} />
+          <OptimizerDefaults release={release} />
+        </>
+      ) : (
+        <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-no-defaults>
+          The release's optimizer defaults are read from the Engine Atlas. It is not available, so
+          no default is shown — the form does not carry a local copy of them.
+        </p>
+      )}
 
       {error ? <ErrorBlock message={error} /> : null}
     </Card>
@@ -926,6 +1046,10 @@ export interface NewRunProps {
   /** The installed release's manifest. The route grid is rendered from it. */
   atlas: AtlasDocument | null;
   atlasState: ResearchState;
+  /** State of the registry read the version's declaration comes from. */
+  declarationState?: ResearchState;
+  /** True when the selected version was found and its declaration adopted. */
+  declarationBound?: boolean;
 
   preflight: PreflightResponse | null;
   preflightState: ResearchState;
@@ -948,6 +1072,8 @@ export function NewRun(props: NewRunProps) {
     limits,
     atlas,
     atlasState,
+    declarationState,
+    declarationBound,
     preflight,
     preflightState,
     clearedBecause,
@@ -968,6 +1094,7 @@ export function NewRun(props: NewRunProps) {
     [blocking],
   );
   const errorSteps = useMemo(() => new Set(errorByStep.keys()), [errorByStep]);
+  const missing = useMemo(() => missingConstraints(limits), [limits]);
 
   return (
     <div
@@ -1016,7 +1143,30 @@ export function NewRun(props: NewRunProps) {
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
-          {step === "context" ? <ContextStep draft={draft} patch={patch} limits={limits} /> : null}
+          {step === "context" ? (
+            <>
+              <ContextStep draft={draft} patch={patch} limits={limits} />
+              {/* What could not be read, named. A rule the browser did not get
+                  is not a rule that passed — and a blank space would read as
+                  the second thing. */}
+              {missing.length > 0 ? (
+                <ResearchPanel
+                  title="version declaration"
+                  state={declarationState ?? atlasState}
+                  minBodyHeight={48}
+                >
+                  <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-missing-constraints>
+                    Not read for this declaration: {missing.join(", ")}. The checks that depend on
+                    them do not run here; the server still applies its own at preflight.
+                  </p>
+                </ResearchPanel>
+              ) : (
+                <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-declaration-bound={String(declarationBound ?? false)}>
+                  declaration read for {draft.alphaVersionId}
+                </p>
+              )}
+            </>
+          ) : null}
           {step === "strategy" ? (
             <StrategyStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("strategy") ?? null} />
           ) : null}
@@ -1045,6 +1195,7 @@ export function NewRun(props: NewRunProps) {
               draft={draft}
               patch={patch}
               limits={limits}
+              release={atlas?.current_release ?? null}
               error={errorByStep.get("optimization") ?? null}
             />
           ) : null}

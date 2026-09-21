@@ -212,55 +212,82 @@ Location: `/tmp/claude-1000/-home-bobby/e9193882-3547-4d96-bd79-71735ca75103/scr
 Reproduce: `npm run build`, `npx vite preview --port 4317 --strictPort`, then
 `RESEARCH_SHOT_DIR=<dir> npx playwright test --config=playwright.research-probe.config.ts`.
 
-## Backend requests — three, and the first one blocks real validation
+## Browser-declaration amendment consumed — `BR-P10-01` and `BR-P10-02` closed
 
-### `BR-P10-01` — the alpha version's declaration is not reachable from the browser
+Codex published the facts at `394901d5`, and they are wired.
 
-This is the one that matters. Three of Screen 02's verbatim validators cannot
-fire on real data, because nothing the browser may read carries the facts they
-check:
-
-| validator | fact it needs | published today |
+| Fact | Generated source | Where it lands |
 |---|---|---|
-| "The strategy declares only {list}." | the strategy's declared timeframes | no |
-| "The strategy declares determinism.seed_required — a fixed random seed is required." | `determinism.seed_required` | no |
-| "Strategy is pinned by {av} (entrypoint {entry}) …" | the bound version's entrypoint | no |
-| "The engine release publishes a ceiling of {n} trials." | the release's trial ceiling | no |
+| entrypoint, timeframes, `determinism.seed_required`, parameter space | `RegistryEntry.declaration` | `constraintsFrom()` and the sweep/pin table |
+| trial ceiling (`4000`) | `Atlas.current_release.trial_ceiling` | the ceiling validator |
+| four optimizer default groups | `Atlas.current_release.optimizer_defaults` | step 7, `RELEASE_DEFAULT · LOCKED` |
+| current submission profile | `Atlas.current_release.submission_constraints` | step 7, stated in the server's own words |
 
-`constraintsFrom(atlas)` therefore returns an empty timeframe list, `false` for
-seed-required, a null entrypoint and an **infinite** trial ceiling — deliberately
-infinite rather than zero, because a ceiling the browser invented would refuse a
-legal trial count. The validators are implemented and unit-tested against
-explicit constraints, so the day these facts are published they start firing
-with no component change. Until then they are inert on the product route, and
-that is stated here rather than hidden behind a green suite.
+**The version is located by an exact `alpha_version_id` match.** An entrypoint
+is never inferred from an identifier and a near-match is not a match: if the
+selected version is not in the registry, every declared fact is `null` and the
+screen names which ones it could not read.
 
-Step 6 has the same shape: the parameter table renders and enforces the declared
-space, but `parameter_space` for a bound version is not published either, so the
-table is empty on the real route.
+### `Infinity` is gone, and nothing replaced it
 
-```text
-Backend request
-- Fields needed: for a bound alpha version — entrypoint, declared timeframes,
-  determinism.seed_required and parameter_space (the maximal surface Screen 14
-  already mirrors); for the installed release — the published trial ceiling.
-- UI reason: four spec-02 validators and the whole sweep/pin table have no
-  source without them.
-- Current impact: the validators are inert on the product route; the browser
-  enforces nothing it cannot read, and the server still enforces its own at
-  preflight.
-- Proposed shape: extend the P07 `RegistryEntry` with the version's declaration,
-  and the P09 Atlas release with `trial_ceiling`. Codex decides.
-```
+The old fallback read as "no limit" — a claim about the release that no
+response supported. Every constraint is `null` until a response supplies it, the
+check that depends on it simply does not run, and a panel says *which* facts
+were not read. The server still enforces its own at preflight, so declining to
+guess loosens nothing.
 
-### `BR-P10-02` — the release's optimizer defaults
+`missingConstraints()` is the single place that decides what to name, so the
+screen cannot drift from the validators.
 
-Spec 02 §9 renders `optimization_config` as four grouped tables (study, sampler,
-objective and constraints, candidate selection) with each row marked `default`,
-`OVERRIDE` or `LOCKED`. The override map and its summary are built; the default
-values are not, because the Atlas does not publish the release manifest's
-optimizer defaults. The sparse-override contract is fully honoured either way —
-an untouched field is still not serialized.
+### The four default groups are explained, never editable
+
+Every field renders `RELEASE_DEFAULT` with its `override_state`, and a `LOCKED`
+row carries **no input at all** — an input the server will refuse is a promise
+the screen cannot keep. A test asserts the draft's override map stays empty
+while all four groups are on screen, because spec 02 §13-1 forbids serializing
+a default and the amendment is explicit that these groups explain the release
+without authorizing an override.
+
+`submission_constraints` is stricter than the defaults it sits beside — one
+trial, no optimizer override, null early-stop and null seed. It is stated
+rather than enforced: a richer request stays submittable and the server's typed
+refusal remains authoritative, exactly as the handoff directs.
+
+### Browser receipt: the four validators fire from a typed response
+
+Two new browser tests drive the product route with the registry and Atlas
+answering from generated-shape fixtures, and each validator is triggered
+through the form a reader uses:
+
+| validator | trigger | sentence observed in the browser |
+|---|---|---|
+| entrypoint pin | strategy id ≠ declared entrypoint | `Strategy is pinned by av_delta_rsi_polynomial_alpha_1_0_0 (entrypoint alpha.delta_rsi:run) — …` |
+| declared timeframes | timeframe `1d` | `The strategy declares only 1h, 4h.` |
+| release ceiling | trials `9999` | `The engine release publishes a ceiling of 4000 trials.` |
+| seed requirement | seed cleared | `The strategy declares determinism.seed_required — a fixed random seed is required.` |
+
+The same test asserts the declared parameter space was **adopted** — four rows,
+with the `fixed` declaration arriving pinned at `120` — and that no source
+digest, adapter or provenance field reaches the table.
+
+### Two further display defects found by reading the screenshot
+
+- `all defaults from — nothing serialized` printed a dangling em dash while the
+  release id was empty.
+- `client.engine_release_id` was sent empty although the Atlas had published it.
+  The release the form was declared against now travels with the spec, and the
+  browser probe asserts `er_quantbt_111` arrives in the create body.
+  `config_digest` stays empty: no response publishes one and the browser must
+  not compute a digest. Recorded rather than papered over.
+
+## Remaining backend request — one
+
+### `CG-P10-01` — no published `client.config_digest`
+
+`RequestedSpec.client.config_digest` is a required string, no response
+publishes a value for it, and the browser may not compute a digest. It is sent
+empty. The server accepts that today; if it is meant to identify the client
+configuration, it needs a published source.
 
 ### `CG-P09-02` — still open, unchanged
 

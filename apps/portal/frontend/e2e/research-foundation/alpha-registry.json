@@ -1,0 +1,52 @@
+{
+  "schema_version": "research.alpha-registry.v1",
+  "entries": [
+    {
+      "alpha_id": "delta-rsi-polynomial-alpha",
+      "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_0",
+      "version_label": "av_1_0_0",
+      "lifecycle_state": "ACTIVE",
+      "entrypoint": "alpha.delta_rsi:run",
+      "declaration": {
+        "schema_version": "research.alpha-version-declaration.v1",
+        "entrypoint": "alpha.delta_rsi:run",
+        "timeframes": [
+          "1h",
+          "4h"
+        ],
+        "determinism": {
+          "seed_required": true
+        },
+        "parameter_space": {
+          "rsi_len": {
+            "kind": "int_range",
+            "low": 5,
+            "high": 30,
+            "step": 1
+          },
+          "poly_deg": {
+            "kind": "int_range",
+            "low": 2,
+            "high": 4,
+            "step": 1
+          },
+          "use_atr": {
+            "kind": "categorical",
+            "values": [
+              true,
+              false
+            ]
+          },
+          "warmup_bars": {
+            "kind": "fixed",
+            "value": 120
+          }
+        }
+      },
+      "source_digest_prefix": "sha256:11ab",
+      "alpha_revision": 6,
+      "registered_at_utc_ms": 1789836572369,
+      "may_activate": false
+    }
+  ]
+}

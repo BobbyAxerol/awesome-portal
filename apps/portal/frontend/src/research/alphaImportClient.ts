@@ -41,6 +41,10 @@ export type RegistryEntry = Schemas["RegistryEntry"];
 export type GateName = GateRow["name"];
 export type LifecycleState = RegistryEntry["lifecycle_state"];
 
+/** The bounded, server-projected declaration of one immutable version. */
+export type AlphaVersionDeclaration = Schemas["AlphaVersionDeclaration"];
+export type DeclaredParameter = Schemas["ParameterDeclaration"];
+
 /** The contract's own refusal vocabulary. Not a local list. */
 export type ProblemCode = Schemas["Problem"]["error"]["code"];
 

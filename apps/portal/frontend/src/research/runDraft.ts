@@ -19,6 +19,7 @@
  * wordings for one rule reads as two different rules.
  */
 
+import type { DeclaredParameter } from "./alphaImportClient";
 import type { RequestedSpec } from "./preflightClient";
 
 /* ------------------------------------------------------------------ model */
@@ -27,11 +28,15 @@ export type ParameterDimension = "sweep" | "pin";
 
 export interface ParameterEntry {
   name: string;
-  /** The declared space, from the alpha version. The browser never widens it. */
-  declaredLow: number | string | boolean;
-  declaredHigh: number | string | boolean;
+  /**
+   * The declared space, from the alpha version. The browser never widens it.
+   * `null` is a declarable value in the contract, so it is carried rather than
+   * coerced — a declared `null` is not the same as an absent bound.
+   */
+  declaredLow: number | string | boolean | null;
+  declaredHigh: number | string | boolean | null;
   /** Present when the parameter is categorical rather than numeric. */
-  levels?: readonly (string | number | boolean)[];
+  levels?: readonly (string | number | boolean | null)[];
   dimension: ParameterDimension;
   /** Sweep low, or the pinned value. */
   low: string;
@@ -83,18 +88,37 @@ export interface RunDraft {
   configDigest: string;
 }
 
-/** What the alpha version and the release declare, for validation only. */
+/**
+ * What the alpha version and the release declare, for validation only.
+ *
+ * Every field is nullable for one reason: **a fact the server has not published
+ * is not a fact the browser may supply.** `trialCeiling` used to fall back to
+ * `Infinity`, which reads as "no limit" — a claim about the release that no
+ * response supported. It is `null` now, and the ceiling check simply does not
+ * run, with the step saying the ceiling could not be read. The server still
+ * enforces its own at preflight, so nothing is loosened by declining to guess.
+ */
 export interface DraftConstraints {
-  /** Timeframes the strategy declares. */
-  declaredTimeframes: readonly string[];
-  /** True when the strategy declares `determinism.seed_required`. */
-  seedRequired: boolean;
-  /** The release's published trial ceiling. */
-  trialCeiling: number;
-  /** The entrypoint the bound version pins. */
+  /** Timeframes the strategy declares, or null when none was published. */
+  declaredTimeframes: readonly string[] | null;
+  /** Whether the strategy declares `determinism.seed_required`, or null. */
+  seedRequired: boolean | null;
+  /** The release's published trial ceiling, or null when it was not read. */
+  trialCeiling: number | null;
+  /** The entrypoint the bound version pins, or null. */
   entrypoint: string | null;
   /** Routes the installed release will not run, with the engine's reason. */
   blockedRoutes: Readonly<Record<string, string>>;
+}
+
+/** Facts the browser could not read, named so a panel can say which. */
+export function missingConstraints(limits: DraftConstraints): readonly string[] {
+  const missing: string[] = [];
+  if (limits.declaredTimeframes === null) missing.push("declared timeframes");
+  if (limits.seedRequired === null) missing.push("determinism.seed_required");
+  if (limits.entrypoint === null) missing.push("entrypoint");
+  if (limits.trialCeiling === null) missing.push("trial ceiling");
+  return missing;
 }
 
 /** Spec 02 §8 — the ceiling counts swept dimensions, not entries. */
@@ -151,6 +175,8 @@ export function validateStrategy(draft: RunDraft, limits: DraftConstraints): str
 
 export function validateData(draft: RunDraft, limits: DraftConstraints): string | null {
   if (draft.symbol.trim().length === 0) return "A symbol is required.";
+  /* No declaration read means no rule to enforce — not a rule that passes. */
+  if (limits.declaredTimeframes === null) return null;
   if (
     limits.declaredTimeframes.length > 0 &&
     !limits.declaredTimeframes.includes(draft.timeframe)
@@ -250,10 +276,10 @@ export function validateParameters(draft: RunDraft): string | null {
 
 export function validateOptimization(draft: RunDraft, limits: DraftConstraints): string | null {
   const trials = asNumber(draft.optunaTrials);
-  if (trials !== null && trials > limits.trialCeiling) {
+  if (limits.trialCeiling !== null && trials !== null && trials > limits.trialCeiling) {
     return `The engine release publishes a ceiling of ${limits.trialCeiling} trials.`;
   }
-  if (limits.seedRequired && draft.randomSeed.trim() === "") {
+  if (limits.seedRequired === true && draft.randomSeed.trim() === "") {
     return "The strategy declares determinism.seed_required — a fixed random seed is required.";
   }
   return null;
@@ -362,4 +388,54 @@ export function serializeRequestedSpec(draft: RunDraft): RequestedSpec {
     };
   }
   return spec;
+}
+
+/* ------------------------------------------------- declaration projection */
+
+/**
+ * Builds the sweep/pin table from the version's declared parameter space.
+ *
+ * The browser never adds, removes or widens an entry: the declared space is
+ * the maximal surface, and every row here exists because the server projected
+ * it. A `fixed` declaration is rendered as a pin at its declared value with no
+ * room to move — it is a parameter the alpha already decided.
+ */
+export function parameterEntriesFrom(
+  space: Readonly<Record<string, DeclaredParameter>>,
+): readonly ParameterEntry[] {
+  return Object.entries(space)
+    /* Stable order: the browser has no opinion about which parameter matters,
+       and a map's insertion order is not a declaration. */
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([name, declared]) => {
+      if (declared.kind === "categorical") {
+        return {
+          name,
+          declaredLow: declared.values[0],
+          declaredHigh: declared.values[declared.values.length - 1],
+          levels: declared.values,
+          dimension: "sweep" as const,
+          low: String(declared.values[0]),
+          high: String(declared.values[declared.values.length - 1]),
+        };
+      }
+      if (declared.kind === "fixed") {
+        return {
+          name,
+          declaredLow: declared.value,
+          declaredHigh: declared.value,
+          dimension: "pin" as const,
+          low: String(declared.value),
+          high: "",
+        };
+      }
+      return {
+        name,
+        declaredLow: declared.low,
+        declaredHigh: declared.high,
+        dimension: "sweep" as const,
+        low: String(declared.low),
+        high: String(declared.high),
+      };
+    });
 }

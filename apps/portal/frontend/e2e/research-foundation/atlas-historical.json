@@ -4,7 +4,7 @@
   "selected_release_kind": "HISTORICAL",
   "atlas": {
     "schema_version": "research-engine-atlas.v1",
-    "manifest_revision": 1,
+    "manifest_revision": 2,
     "current_release": {
       "release_id": "er_quantbt_111",
       "package": "quantbt-engine",
@@ -14,7 +14,239 @@
       "native_expected_version": "0.4.2",
       "native_installed_version": "0.4.2",
       "verified": true,
-      "detail": null
+      "detail": null,
+      "trial_ceiling": 4000,
+      "optimizer_defaults": {
+        "schema_version": "research.optimizer-defaults.v1",
+        "groups": [
+          {
+            "group_id": "study",
+            "fields": [
+              {
+                "field_id": "n_trials",
+                "default_value": 300,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default; P10 fixed qualification does not accept a caller override."
+              },
+              {
+                "field_id": "directions",
+                "default_value": [
+                  "maximize"
+                ],
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default direction tuple."
+              },
+              {
+                "field_id": "seed",
+                "default_value": 42,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig deterministic default."
+              },
+              {
+                "field_id": "n_jobs",
+                "default_value": 1,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal adapter locks single-process optimizer execution until dedupe is certified."
+              },
+              {
+                "field_id": "early_stopping_rounds",
+                "default_value": null,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "early_stopping_min_trials",
+                "default_value": 0,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "early_stopping_min_delta",
+                "default_value": 0.0001,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "show_progress_bar",
+                "default_value": true,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "duplicate_policy",
+                "default_value": "prune",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "exception_policy",
+                "default_value": "raise",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              }
+            ]
+          },
+          {
+            "group_id": "sampler",
+            "fields": [
+              {
+                "field_id": "name",
+                "default_value": "tpe",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT SamplerConfig default."
+              },
+              {
+                "field_id": "constraint_mode",
+                "default_value": "sampler",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT SamplerConfig default."
+              }
+            ]
+          },
+          {
+            "group_id": "objective",
+            "fields": [
+              {
+                "field_id": "optimization_mode",
+                "default_value": "mode_1_decay",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default."
+              },
+              {
+                "field_id": "optimization_schedule",
+                "default_value": "global",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default."
+              },
+              {
+                "field_id": "optuna_trials",
+                "default_value": 400,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default; the current P10 submission profile still accepts exactly one qualification trial."
+              },
+              {
+                "field_id": "optuna_early_stopping",
+                "default_value": 200,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default."
+              },
+              {
+                "field_id": "random_seed",
+                "default_value": 42,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default."
+              },
+              {
+                "field_id": "scoring_backend",
+                "default_value": "endpoint",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "min_trades_per_year",
+                "default_value": 100,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "trade_penalty_factor",
+                "default_value": 0.5,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "use_numba",
+                "default_value": true,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              }
+            ]
+          },
+          {
+            "group_id": "candidate_selection",
+            "fields": [
+              {
+                "field_id": "candidate_selection_metric",
+                "default_value": "robust_decay",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Three-window validation requires robust_decay."
+              },
+              {
+                "field_id": "top_is_fraction",
+                "default_value": 0.1,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "top_is_k",
+                "default_value": null,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "decay_lambda",
+                "default_value": 0.5,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "decay_gamma",
+                "default_value": 0.5,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "candidate_decay_lambda",
+                "default_value": null,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "candidate_decay_gamma",
+                "default_value": null,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              }
+            ]
+          }
+        ]
+      },
+      "submission_constraints": {
+        "profile_id": "p10.fixed-qualification.v1",
+        "optimization_overrides": "FORBIDDEN",
+        "accepted_trial_count": 1,
+        "early_stopping": "MUST_BE_NULL",
+        "random_seed": "MUST_BE_NULL",
+        "reason": "The current P10 adapter is a fixed-parameter qualification path. Release defaults describe the pinned engine and Portal protocol; they do not grant browser override authority."
+      }
     },
     "historical_releases": [
       {
@@ -457,5 +689,5 @@
       "writer_state": "P05_OWNED_NOT_ACTIVE"
     }
   },
-  "etag": "W/\"atlas-probe-hist\""
+  "etag": "W/\"atlas-historical\""
 }

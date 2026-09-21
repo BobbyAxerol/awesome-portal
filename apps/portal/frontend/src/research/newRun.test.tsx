@@ -18,21 +18,25 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NewRun, UNKNOWN_OUTCOME_NOTE } from "./NewRun";
-import { constraintsFrom, emptyDraft } from "./NewRunRoute";
+import { constraintsFrom, emptyDraft, parametersFor } from "./NewRunRoute";
 import {
   RUN_CREATE_PROBLEM_CODES,
   newClientIntentId,
   outcomeIsUnknown,
   toRunCreateRefusal,
 } from "./runCreateClient";
+import type { RegistryEntry } from "./alphaImportClient";
 import {
   type DraftConstraints,
   type RunDraft,
   SWEEP_CEILING,
   blockingProblems,
+  missingConstraints,
   parameterStatus,
   serializeRequestedSpec,
+  validateData,
   validateOptimization,
+  validateStrategy,
   validateWindows,
 } from "./runDraft";
 import { useNewRun } from "./useNewRun";
@@ -344,12 +348,23 @@ describe("P10-T04 — the release's ceilings are the engine's, not the browser's
     expect(validateOptimization(draft({ randomSeed: "" }), { ...LIMITS, seedRequired: false })).toBeNull();
   });
 
-  it("enforces no ceiling it cannot read", () => {
-    // With no manifest the browser must not invent a limit; the server still
-    // enforces its own at preflight.
-    const noAtlas = constraintsFrom(null);
-    expect(noAtlas.trialCeiling).toBe(Number.POSITIVE_INFINITY);
+  it("enforces no ceiling it cannot read, and claims none either", () => {
+    // `Infinity` was the old fallback and it read as "no limit" — a claim about
+    // the release that no response supported. `null` says the ceiling was not
+    // read; the server still enforces its own at preflight.
+    const noAtlas = constraintsFrom(null, [], "");
+    expect(noAtlas.trialCeiling).toBeNull();
     expect(validateOptimization(draft({ optunaTrials: "99999" }), noAtlas)).toBeNull();
+    expect(missingConstraints(noAtlas)).toContain("trial ceiling");
+  });
+
+  it("uses the release's published finite ceiling once the Atlas is read", () => {
+    const withAtlas = constraintsFrom(ATLAS, [], "");
+    expect(withAtlas.trialCeiling).toBe(ATLAS.current_release.trial_ceiling);
+    expect(Number.isFinite(withAtlas.trialCeiling as number)).toBe(true);
+    expect(validateOptimization(draft({ optunaTrials: "99999" }), withAtlas)).toBe(
+      `The engine release publishes a ceiling of ${ATLAS.current_release.trial_ceiling} trials.`,
+    );
   });
 
   it("reports blocking problems in the spec's order", () => {
@@ -358,6 +373,188 @@ describe("P10-T04 — the release's ceilings are the engine's, not the browser's
       LIMITS,
     );
     expect(problems.map((p) => p.step)).toEqual(["route", "data", "optimization"]);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * The browser declaration amendment
+ * ---------------------------------------------------------------------- */
+
+/** A registry entry as the server projects it, with its safe declaration. */
+function entryWithDeclaration(overrides: Partial<RegistryEntry> = {}): RegistryEntry {
+  return {
+    alpha_id: "delta_rsi",
+    alpha_version_id: "av_0_3_0",
+    version_label: "av_0_3_0",
+    lifecycle_state: "ACTIVE",
+    entrypoint: "alpha.delta_rsi:run",
+    declaration: {
+      schema_version: "research.alpha-version-declaration.v1",
+      entrypoint: "alpha.delta_rsi:run",
+      timeframes: ["1h", "4h"],
+      determinism: { seed_required: true },
+      parameter_space: {
+        rsi_len: { kind: "int_range", low: 5, high: 30, step: 1 },
+        poly_deg: { kind: "int_range", low: 2, high: 4, step: 1 },
+        use_atr: { kind: "categorical", values: [true, false] },
+        warmup: { kind: "fixed", value: 120 },
+      },
+    },
+    source_digest_prefix: "sha256:11ab",
+    alpha_revision: 6,
+    registered_at_utc_ms: 1789836572369,
+    may_activate: false,
+    ...overrides,
+  };
+}
+
+describe("P10-T11 — all four Spec 02 validators activate from the typed response", () => {
+  const registry = [entryWithDeclaration()];
+  const limits = constraintsFrom(ATLAS, registry, "av_0_3_0");
+
+  it("reads every declared fact rather than falling back", () => {
+    expect(limits.declaredTimeframes).toEqual(["1h", "4h"]);
+    expect(limits.seedRequired).toBe(true);
+    expect(limits.entrypoint).toBe("alpha.delta_rsi:run");
+    expect(limits.trialCeiling).toBe(4000);
+    expect(missingConstraints(limits)).toEqual([]);
+  });
+
+  it("fires the timeframe rule with the declared list", () => {
+    expect(validateData(draft({ timeframe: "1d" }), limits)).toBe(
+      "The strategy declares only 1h, 4h.",
+    );
+  });
+
+  it("fires the seed rule because the declaration asks for it", () => {
+    expect(validateOptimization(draft({ randomSeed: "" }), limits)).toBe(
+      "The strategy declares determinism.seed_required — a fixed random seed is required.",
+    );
+  });
+
+  it("fires the pin rule with the declared entrypoint", () => {
+    expect(validateStrategy(draft({ strategyId: "something_else" }), limits)).toBe(
+      "Strategy is pinned by av_0_3_0 (entrypoint alpha.delta_rsi:run) — switch to scratch in Context to explore other strategies.",
+    );
+  });
+
+  it("fires the ceiling rule with the release's published number", () => {
+    expect(validateOptimization(draft({ optunaTrials: "9999" }), limits)).toBe(
+      "The engine release publishes a ceiling of 4000 trials.",
+    );
+  });
+
+  it("declares nothing when the selected version is not in the registry", () => {
+    // A near-match is not a match, and an entrypoint is never inferred from an
+    // identifier. Everything is null and the screen says which.
+    const absent = constraintsFrom(ATLAS, registry, "av_0_4_0");
+    expect(absent.declaredTimeframes).toBeNull();
+    expect(absent.seedRequired).toBeNull();
+    expect(absent.entrypoint).toBeNull();
+    expect(missingConstraints(absent)).toEqual([
+      "declared timeframes",
+      "determinism.seed_required",
+      "entrypoint",
+    ]);
+    // The ceiling still came from the Atlas: one read failing does not erase
+    // the other.
+    expect(absent.trialCeiling).toBe(4000);
+  });
+});
+
+describe("P10-T12 — the declared parameter space is adopted, never invented", () => {
+  it("projects every declared kind into a row", () => {
+    const rows = parametersFor([entryWithDeclaration()], "av_0_3_0");
+    expect(rows.map((r) => r.name)).toEqual(["poly_deg", "rsi_len", "use_atr", "warmup"]);
+
+    const categorical = rows.find((r) => r.name === "use_atr")!;
+    expect(categorical.levels).toEqual([true, false]);
+
+    // A `fixed` declaration is a parameter the alpha already decided, so it
+    // arrives pinned at its value with nowhere to move.
+    const fixed = rows.find((r) => r.name === "warmup")!;
+    expect(fixed.dimension).toBe("pin");
+    expect(fixed.low).toBe("120");
+    expect(parameterStatus(fixed).tone).not.toBe("refused");
+  });
+
+  it("refuses a widening of the declared range", () => {
+    const rows = parametersFor([entryWithDeclaration()], "av_0_3_0");
+    const rsi = { ...rows.find((r) => r.name === "rsi_len")!, low: "1", high: "99" };
+    expect(parameterStatus(rsi).text).toBe("outside the declared space — refused");
+  });
+
+  it("adopts nothing when no version is bound", () => {
+    expect(parametersFor([entryWithDeclaration()], "av_9_9_9")).toEqual([]);
+  });
+
+  it("renders the normalized declaration without leaking a raw binding field", () => {
+    view({
+      draft: draft({ parameters: parametersFor([entryWithDeclaration()], "av_0_3_0") }),
+      limits: constraintsFrom(ATLAS, [entryWithDeclaration()], "av_0_3_0"),
+    });
+    goToStep("parameters");
+    const table = document.querySelector("[data-parameter-table]") as HTMLElement;
+    expect(table.textContent).toContain("rsi_len");
+    // Nothing from the source, the adapter or the provenance reaches the page.
+    for (const leaked of ["source_digest", "sha256:", "adapter", "alpha.delta_rsi:run"]) {
+      expect(table.textContent, leaked).not.toContain(leaked);
+    }
+  });
+});
+
+describe("P10-T13 — the four release-default groups stay locked", () => {
+  it("renders all four named groups from the Atlas", () => {
+    view();
+    goToStep("optimization");
+    const groups = Array.from(document.querySelectorAll("[data-default-group]")).map((n) =>
+      n.getAttribute("data-default-group"),
+    );
+    expect(groups).toEqual(["study", "sampler", "objective", "candidate_selection"]);
+  });
+
+  it("marks every field RELEASE_DEFAULT and offers no input for a locked one", () => {
+    view();
+    goToStep("optimization");
+    const fields = Array.from(document.querySelectorAll("[data-default-field]"));
+    expect(fields.length).toBeGreaterThan(0);
+    for (const field of fields) {
+      expect(field.getAttribute("data-value-source")).toBe("RELEASE_DEFAULT");
+      // A default is explained, never edited here: an input the server would
+      // refuse is a promise the screen cannot keep.
+      expect(field.querySelectorAll("input, select, textarea")).toHaveLength(0);
+    }
+    expect(document.querySelectorAll('[data-override-state="LOCKED"]').length).toBeGreaterThan(0);
+  });
+
+  it("never serializes a release default as a browser override", () => {
+    // The draft's override map is what goes on the wire. Rendering the release's
+    // defaults must not add a single key to it.
+    const spec = serializeRequestedSpec(draft());
+    expect(spec.optimization_config).toEqual({});
+    view();
+    goToStep("optimization");
+    expect(document.querySelector("[data-override-summary]")?.textContent).toContain(
+      "nothing serialized",
+    );
+  });
+
+  it("states the current submission profile in the server's own words", () => {
+    view();
+    goToStep("optimization");
+    const panel = document.querySelector("[data-submission-constraints]") as HTMLElement;
+    expect(panel.getAttribute("data-submission-constraints")).toBe("p10.fixed-qualification.v1");
+    expect(panel.textContent).toContain("trials 1");
+    expect(panel.textContent).toContain("optimizer overrides FORBIDDEN");
+  });
+
+  it("shows no default at all when the Atlas is unavailable", () => {
+    view({ atlas: null, atlasState: researchState({ kind: "transport", status: 503, retryable: false }) });
+    goToStep("optimization");
+    expect(document.querySelectorAll("[data-default-group]")).toHaveLength(0);
+    expect(document.querySelector("[data-no-defaults]")?.textContent).toContain(
+      "does not carry a local copy",
+    );
   });
 });
 

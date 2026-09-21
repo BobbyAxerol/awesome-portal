@@ -211,8 +211,10 @@ export async function stubPortalApi(
   // generated from `journey.descriptor.ts` and the Atlas from
   // `research-engine-catalog.v1.json`, so the probe renders the facts the
   // server actually serves rather than a hand-written approximation.
+  // P07 registry, now carrying the safe version declaration Screen 02's
+  // validators read. Generated from the same shape the contract publishes.
   await page.route("**/api/v1/research/alphas*", (route) =>
-    void json(route, { schema_version: "research.alpha-registry.v1", entries: [] }),
+    void json(route, local("alpha-registry.json")),
   );
 
   await page.route("**/api/v1/research/journey*", (route) =>

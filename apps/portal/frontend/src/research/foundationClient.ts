@@ -40,6 +40,11 @@ export type AtlasResponse = Schemas["AtlasResponse"];
 export type FoundationAtlas = Schemas["Atlas"];
 export type AtlasReleaseKind = AtlasResponse["selected_release_kind"];
 
+/** The installed release, including the P10 policy facts it publishes. */
+export type AtlasRelease = Schemas["AtlasRelease"];
+export type AtlasOptimizerGroup = Schemas["AtlasOptimizerGroup"];
+export type AtlasOptimizerDefaultField = Schemas["AtlasOptimizerDefaultField"];
+
 /** The contract's own refusal vocabulary. Not a local list. */
 export type FoundationProblemCode = Schemas["Problem"]["error"]["code"];
 
