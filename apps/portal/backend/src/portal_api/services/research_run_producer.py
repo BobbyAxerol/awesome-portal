@@ -17,6 +17,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -42,6 +43,26 @@ class ResearchRunProducerError(RuntimeError):
     """A bounded producer failure, safe for the durable worker to classify."""
 
 
+@dataclass(frozen=True, slots=True)
+class TapeWindowCounts:
+    """Measured rows copied into the confined child tape by P10.
+
+    Counts are deliberately split by semantic time role.  They attest the
+    derived tape, not physical Parquet row-group I/O: Arrow may have had to
+    read a neighbouring row group before P10 removed rows at the holdout
+    boundary.  P14 publishes that physical-I/O limitation explicitly.
+    """
+
+    warmup_bars: int
+    warmup_start: pd.Timestamp | None
+    is_bars: int
+    outer_oos_bars: int
+
+    @property
+    def total_bars(self) -> int:
+        return self.warmup_bars + self.is_bars + self.outer_oos_bars
+
+
 def _utc_timestamp(value: object, *, label: str) -> pd.Timestamp:
     try:
         timestamp = pd.Timestamp(value)
@@ -63,6 +84,16 @@ def _sha256_file(path: Path) -> str:
     except OSError as exc:
         raise ResearchRunProducerError("P10 immutable preflight snapshot is unavailable") from exc
     return digest.hexdigest()
+
+
+def _sha256_canonical_json(value: object) -> str:
+    """Hash a public, bounded P14 fact with the same canonical bytes as P11."""
+
+    try:
+        encoded = json.dumps(canonicalize(value), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ResearchRunProducerError("P14 source fact is not serializable") from exc
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _timestamp_index_column(schema: pa.Schema) -> str:
@@ -172,12 +203,15 @@ class ResearchRunProducerExecutor:
         assert isinstance(windows, dict)  # enforced by the private DTO
         is_window = windows["is"]
         oos_window = windows["oos"]
-        assert isinstance(is_window, dict) and isinstance(oos_window, dict)
+        holdout_window = windows["holdout"]
+        assert isinstance(is_window, dict) and isinstance(oos_window, dict) and isinstance(holdout_window, dict)
         is_start = _utc_timestamp(is_window.get("start"), label="IS start")
         oos_start = _utc_timestamp(oos_window.get("start"), label="OOS start")
         oos_end = _utc_timestamp(oos_window.get("end_exclusive"), label="OOS end")
-        if is_start >= oos_start or oos_start >= oos_end:
-            raise ResearchRunProducerError("P10 IS/OOS boundary is invalid")
+        holdout_start = _utc_timestamp(holdout_window.get("start"), label="holdout start")
+        holdout_end = _utc_timestamp(holdout_window.get("end_exclusive"), label="holdout end")
+        if is_start >= oos_start or oos_start >= oos_end or oos_end != holdout_start or holdout_start >= holdout_end:
+            raise ResearchRunProducerError("P10 three-window chronology is invalid")
 
         job_directory = self.market_root / request.job_id / request.worker_attempt_id
         tape_path = job_directory / "is_oos_only.parquet"
@@ -188,9 +222,11 @@ class ResearchRunProducerExecutor:
             shutil.rmtree(job_directory)
         job_directory.mkdir(mode=0o700, parents=True)
         try:
-            row_count = self._write_is_oos_tape(
+            tape_counts = self._write_is_oos_tape(
                 frame_path=frame_path,
                 tape_path=tape_path,
+                is_start=is_start,
+                oos_start=oos_start,
                 oos_end=oos_end,
             )
             # P08 already verified the requested warmup policy.  A valid
@@ -199,7 +235,7 @@ class ResearchRunProducerExecutor:
             # P08 manifest.  The producer's own invariant is narrower: enough
             # IS/OOS rows to run the fixed adapter, and no row at/after OOS
             # end (the sealed holdout boundary).
-            if row_count < 2:
+            if tape_counts.total_bars < 2 or tape_counts.is_bars < 1 or tape_counts.outer_oos_bars < 1:
                 raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded IS/OOS tape")
             os.chmod(tape_path, 0o600)
             # The tape is now verified, bounded and holdout-free.  This is the
@@ -303,6 +339,19 @@ class ResearchRunProducerExecutor:
                 "enforced_limits": child.enforced_limits,
             },
         }
+        split_source = self._p14_split_source(
+            request=request,
+            tape_counts=tape_counts,
+            is_start=is_start,
+            oos_start=oos_start,
+            oos_end=oos_end,
+            holdout_end=holdout_end,
+            source_transform_digest=(
+                child.evidence_source.get("source", {}).get("source_transform_digest")
+                if isinstance(child.evidence_source, dict) else None
+            ),
+        )
+        receipt_document["split_source"] = split_source
         if child.evidence_source is not None:
             # The evidence receipt is generated while the confined child owns
             # the full result. It is copied into the sealed bundle and later
@@ -319,6 +368,113 @@ class ResearchRunProducerExecutor:
             "status": "COMPLETED",
             "research_receipt": receipt_document,
             "research_evidence": child.evidence_source,
+            "research_split": split_source,
+        }
+
+    @staticmethod
+    def _p14_split_source(
+        *,
+        request: ResearchRunProducerRequest,
+        tape_counts: TapeWindowCounts,
+        is_start: pd.Timestamp,
+        oos_start: pd.Timestamp,
+        oos_end: pd.Timestamp,
+        holdout_end: pd.Timestamp,
+        source_transform_digest: object,
+    ) -> dict[str, Any]:
+        """Build P14's exact current-adapter chronology receipt.
+
+        This is intentionally not a generic WFO/fold schema.  The installed
+        adapter publishes one fixed-profile IS/OOS observation and no search
+        trace, purge/embargo, gap scan, holdout evaluation, release seal or
+        unlock authority.  Encoding those absences here prevents a later
+        reader from mistaking a visual placeholder for an engine fact.
+        """
+
+        if not isinstance(source_transform_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", source_transform_digest):
+            raise ResearchRunProducerError("P14 fixed adapter did not publish its OOS source transform digest")
+        research = request.research
+
+        def range_document(start: pd.Timestamp, end: pd.Timestamp) -> dict[str, int]:
+            return {
+                "start_utc_ms": int(start.value // 1_000_000),
+                "end_exclusive_utc_ms": int(end.value // 1_000_000),
+            }
+
+        absence = lambda reason: {"state": "NOT_PUBLISHED", "reason_code": reason}
+        if tape_counts.warmup_bars:
+            if tape_counts.warmup_start is None:
+                raise ResearchRunProducerError("P14 warmup count is missing its exact source start")
+            warmup: dict[str, Any] = {
+                "state": "AVAILABLE",
+                "bars": tape_counts.warmup_bars,
+                "data_role": "WARMUP_NOT_SCORED",
+                "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+                **range_document(tape_counts.warmup_start, is_start),
+            }
+        else:
+            warmup = {"state": "NOT_APPLICABLE", "bars": 0, "reason_code": "P08_WARMUP_NOT_REQUESTED"}
+
+        parameter_bundle_digest = _sha256_canonical_json(dict(research.p04_parameters))
+        return {
+            "schema_version": "research.p14.split-source.v1",
+            "source": {
+                "execution_adapter_id": "p04.delta-rsi.v1",
+                "engine_version": "1.1.1",
+                "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
+                "source_transform_digest": source_transform_digest,
+                "manifest_digest": research.manifest_digest,
+                "physical_io": {
+                    "state": "NOT_ATTESTED",
+                    "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED",
+                },
+            },
+            "protocol": {
+                "kind": "THREE_WINDOW_CURRENT",
+                "fold_plan": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_FOLD_PLAN"),
+                "selection": {
+                    "state": "FIXED_PROFILE_NO_SEARCH",
+                    "parameter_bundle_digest": parameter_bundle_digest,
+                    "strict_outer_oos": {
+                        "state": "NOT_ASSERTED",
+                        "reason_code": "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
+                    },
+                },
+            },
+            "timeline": range_document(is_start, holdout_end),
+            "windows": {
+                "warmup": warmup,
+                "is": {
+                    **range_document(is_start, oos_start),
+                    "bars": tape_counts.is_bars,
+                    "data_role": "IS_CALIBRATION_HISTORY",
+                    "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+                },
+                "outer_oos": {
+                    **range_document(oos_start, oos_end),
+                    "bars": tape_counts.outer_oos_bars,
+                    "data_role": "OUTER_OOS_OBSERVATION",
+                    "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+                    "evaluation_state": "P04_OBSERVED_AFTER_FIXED_PROFILE",
+                },
+                "holdout": {
+                    **range_document(oos_end, holdout_end),
+                    "bars": None,
+                    "data_role": "HOLDOUT",
+                    "child_input_state": "NOT_EXPOSED_TO_CHILD_TAPE",
+                    "evaluation_state": "NOT_EVALUATED",
+                    "result_exposure_state": "NOT_EXPOSED",
+                    "snapshot_integrity_state": "P08_METADATA_BOUND",
+                },
+            },
+            "absences": {
+                "purge": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_PURGE"),
+                "embargo": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EMBARGO"),
+                "inner_folds": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_INNER_FOLDS"),
+                "theta_per_fold": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_THETA_PER_FOLD"),
+                "gap_scan": absence("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_GAP_SCAN"),
+                "holdout_unlock": absence("DR01_HOLDOUT_UNLOCK_AUTHORITY_NOT_PUBLISHED"),
+            },
         }
 
     @staticmethod
@@ -327,7 +483,9 @@ class ResearchRunProducerExecutor:
         frame_path: Path,
         tape_path: Path,
         oos_end: pd.Timestamp,
-    ) -> int:
+        is_start: pd.Timestamp,
+        oos_start: pd.Timestamp,
+    ) -> TapeWindowCounts:
         """Write a bounded P08 warmup+IS+OOS tape without reading holdout.
 
         `iter_batches` caps the in-memory frame slice at 65,536 records.  The
@@ -344,7 +502,10 @@ class ResearchRunProducerExecutor:
 
         temporary = tape_path.with_suffix(".partial")
         writer: pq.ParquetWriter | None = None
-        row_count = 0
+        warmup_bars = 0
+        warmup_start: pd.Timestamp | None = None
+        is_bars = 0
+        outer_oos_bars = 0
         try:
             for batch in parquet.iter_batches(batch_size=65_536):
                 table = pa.Table.from_batches([batch])
@@ -358,13 +519,25 @@ class ResearchRunProducerExecutor:
                 if writer is None:
                     writer = pq.ParquetWriter(temporary, filtered.schema, compression="snappy")
                 writer.write_table(filtered)
-                row_count += filtered.num_rows
+                filtered_timestamps = timestamps[mask]
+                warmup_mask = filtered_timestamps < is_start
+                warmup_bars += int(warmup_mask.sum())
+                if bool(warmup_mask.any()):
+                    candidate = pd.Timestamp(filtered_timestamps[warmup_mask][0])
+                    warmup_start = candidate if warmup_start is None else min(warmup_start, candidate)
+                is_bars += int(((filtered_timestamps >= is_start) & (filtered_timestamps < oos_start)).sum())
+                outer_oos_bars += int(((filtered_timestamps >= oos_start) & (filtered_timestamps < oos_end)).sum())
             if writer is None:
                 raise ResearchRunProducerError("P10 immutable snapshot has no allowed IS/OOS rows")
             writer.close()
             writer = None
             os.replace(temporary, tape_path)
-            return row_count
+            return TapeWindowCounts(
+                warmup_bars=warmup_bars,
+                warmup_start=warmup_start,
+                is_bars=is_bars,
+                outer_oos_bars=outer_oos_bars,
+            )
         except ResearchRunProducerError:
             raise
         except (OSError, pa.ArrowException, TypeError, ValueError) as exc:

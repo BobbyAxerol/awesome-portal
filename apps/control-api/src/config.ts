@@ -89,6 +89,11 @@ const EnvSchema = z.object({
   // while the browser Hub remains dark until the same release's migration and
   // generated contract have been reviewed.
   FEATURE_RESEARCH_EVIDENCE: z.enum(["true", "false"]).default("false"),
+  // P14 is a separately gated read-only chronology surface. Source terminal
+  // receipts may be persisted for recovery while browser Split reads remain
+  // dark; this flag never enables a producer, worker, holdout value or
+  // holdout-unlock mutation.
+  FEATURE_RESEARCH_SPLIT: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),

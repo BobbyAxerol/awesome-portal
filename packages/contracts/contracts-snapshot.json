@@ -1,6 +1,6 @@
 {
   "file_digests": {
-    "README.md": "sha256:cf3eda93d9fe05102698fdedbdcfe45872941ee28025435879eabe37f9a6655e",
+    "README.md": "sha256:6ce767d1ebc8a9d2b190bb5648724fbc6d26fa8fac0c9adee95ed62d2d470a4a",
     "fixtures/command.valid.json": "sha256:9792bac391b74bfd6a2581768d6ea60ae0e880f9504063d82a52c4f8893f39ce",
     "fixtures/event.valid.json": "sha256:c245b69c773d205d6edec800db8cee5410769b0d8e256905ea8827fcf08ae11e",
     "fixtures/execution-account-broker-360.ready.valid.json": "sha256:7b8afa95f7f294ca4f2c3c54a72ace6f8d2fb0a6b7d492a37896d9a84456d856",
@@ -117,6 +117,7 @@
     "generated/research-progress.d.ts": "sha256:944bdf1c2a89f301f4fa91508d54348699f4fe5555dc70c508ef284adec86304",
     "generated/research-run-create.d.ts": "sha256:6f8ac71a7f81cec8778ff8734dbed064c1a226fe2aca27d95de412f576146b24",
     "generated/research-run-library.d.ts": "sha256:2f6e02e132f3bfb3bb7d3ad0eade90061bf2ac21e0b4d359fdbecddff9350695",
+    "generated/research-split.d.ts": "sha256:d11b810e209f13d29b2ce51863fdf21c35d9b5efdc7038195d9c29d31b1cfe4f",
     "openapi/execution-analytics-series.openapi.json": "sha256:d1cb7c1c900060853f104ae716f34c7503bfaeaf060357eb6268095d4e95364c",
     "openapi/execution-analytics.openapi.json": "sha256:e4c3c321989c187b40e9a2caec0f63ee40b2df63fa844d566afe2a33aec7ab65",
     "openapi/execution-canary.openapi.json": "sha256:9a6a31cd42f2c92b35baab5afaf3ec2c60cf5fdc4dd9e429f50c568193a9d006",
@@ -142,7 +143,8 @@
     "openapi/research-progress.openapi.json": "sha256:1f19498b2a6abd4a4c2f479562f3846f45b2e79ae30f5bf6725b50dd14edc9cf",
     "openapi/research-run-create.openapi.json": "sha256:5d42f875f2b8793fa4ea41c921ec5e8620b8d9702e3dd947cabe24b27c079b17",
     "openapi/research-run-library.openapi.json": "sha256:6d4fa8345e17d8cc802ead37dabac39b204a90bb1c9b76b5c1f9edaf127b13d2",
-    "package.json": "sha256:a198c7af181d651c994de2cfe7ef9a366a04cf49eca5fb0311ebd01753784f83",
+    "openapi/research-split.openapi.json": "sha256:a030cf478970f81ec9b4eaa1a7d3927271ebbbf73629b53d3aa984c04ccc13db",
+    "package.json": "sha256:cb64cd5566595e112a82d4fee025b76f1d6fe10904c30a51e8fee68c2de92a7b",
     "schemas/command-envelope.v1.schema.json": "sha256:53c6f3ccf66d1b74de59945fe33f480ae58bb00ae500b7696d0411d8094d4cb1",
     "schemas/common.v1.schema.json": "sha256:a74a2c08ff7e87f8cb9110932099c66520bb942788000f5499c594d1c6ef5f88",
     "schemas/event-envelope.v1.schema.json": "sha256:527a2d5128758d088bfcd9e86291ac1a0be1b993821c90be2bd2a36890d10a95",

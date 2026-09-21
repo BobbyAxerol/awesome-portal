@@ -25,6 +25,11 @@ export const TEST_TABLES = [
   "research.run_evidence_series_v1",
   "research.run_evidence_projections_v1",
   "research.run_evidence_sources_v1",
+  // P14 chronology source/projection rows are immutable dependants of the
+  // exact P10/P11 run attempt. Name them explicitly so stale truth never
+  // leaks between disposable test cells.
+  "research.run_split_projections_v1",
+  "research.run_split_sources_v1",
   // P11 event/snapshot materialisations are dependants of the exact P10/P06
   // run and worker attempt. Keep them visible and first in the bounded test
   // cleanup list rather than relying on incidental CASCADE behavior.
@@ -164,9 +169,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_evidence_source_guard: boolean;
       has_research_evidence_projection_guard: boolean;
       has_research_evidence_series_guard: boolean;
+      has_research_split_sources: boolean;
+      has_research_split_projections: boolean;
+      has_research_split_source_guard: boolean;
+      has_research_split_projection_guard: boolean;
       research_role_can_read_legacy_run_models: boolean;
       research_role_can_write_run_library_search: boolean;
       research_role_can_write_evidence: boolean;
+      research_role_can_write_split: boolean;
       research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
@@ -285,9 +295,22 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
             WHERE tgname = 'research_run_evidence_series_v1_immutable_guard'
              AND NOT tgisinternal
          ) AS has_research_evidence_series_guard,
+         to_regclass('research.run_split_sources_v1') IS NOT NULL AS has_research_split_sources,
+         to_regclass('research.run_split_projections_v1') IS NOT NULL AS has_research_split_projections,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_split_sources_v1_immutable_guard'
+             AND NOT tgisinternal
+         ) AS has_research_split_source_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_split_projections_v1_immutable_guard'
+             AND NOT tgisinternal
+         ) AS has_research_split_projection_guard,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'SELECT') AS research_role_can_read_legacy_run_models,
          has_table_privilege('portal_research_runtime', 'research.run_library_search_documents', 'INSERT') AS research_role_can_write_run_library_search,
          has_table_privilege('portal_research_runtime', 'research.run_evidence_sources_v1', 'INSERT') AS research_role_can_write_evidence,
+         has_table_privilege('portal_research_runtime', 'research.run_split_sources_v1', 'INSERT') AS research_role_can_write_split,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
@@ -299,7 +322,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 24 ||
+      row.migration_count < 25 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
@@ -360,14 +383,19 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_evidence_source_guard ||
       !row.has_research_evidence_projection_guard ||
       !row.has_research_evidence_series_guard ||
+      !row.has_research_split_sources ||
+      !row.has_research_split_projections ||
+      !row.has_research_split_source_guard ||
+      !row.has_research_split_projection_guard ||
       !row.research_role_can_read_legacy_run_models ||
       row.research_role_can_write_run_library_search ||
       !row.research_role_can_write_evidence ||
+      !row.research_role_can_write_split ||
       row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
-        `Control API test migration gate did not reach Research P13 evidence plane ` +
+        `Control API test migration gate did not reach Research P14 split plane ` +
         `(count=${row.migration_count}, has_f0=${row.has_f0}, ` +
         `hash_only_policy=${row.has_hash_only_policy}, ` +
         `hash_only_constraint=${row.has_hash_only_constraint}, ` +
@@ -428,9 +456,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_evidence_source_guard=${row.has_research_evidence_source_guard}, ` +
         `research_evidence_projection_guard=${row.has_research_evidence_projection_guard}, ` +
         `research_evidence_series_guard=${row.has_research_evidence_series_guard}, ` +
+        `research_split_sources=${row.has_research_split_sources}, ` +
+        `research_split_projections=${row.has_research_split_projections}, ` +
+        `research_split_source_guard=${row.has_research_split_source_guard}, ` +
+        `research_split_projection_guard=${row.has_research_split_projection_guard}, ` +
         `research_role_can_read_legacy_run_models=${row.research_role_can_read_legacy_run_models}, ` +
         `research_role_can_write_run_library_search=${row.research_role_can_write_run_library_search}, ` +
         `research_role_can_write_evidence=${row.research_role_can_write_evidence}, ` +
+        `research_role_can_write_split=${row.research_role_can_write_split}, ` +
         `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,

@@ -1,0 +1,16 @@
+{
+  "schema_version": "research.phase-test-results.v1",
+  "phase": "P14",
+  "date_utc": "2026-09-21",
+  "status": "BACKEND_AND_TYPED_CONTRACT_COMPLETE",
+  "results": [
+    {"name": "control-api-build", "status": "PASS", "command": "npm --prefix apps/control-api run build"},
+    {"name": "p14-control-units", "status": "PASS", "tests": 6},
+    {"name": "p14-disposable-postgres", "status": "PASS", "tests": 1, "cleanup": "one focused P14 scenario in a named tmpfs container; trap removes it"},
+    {"name": "p14-affected-portal-python", "status": "PASS", "tests": 19, "runtime": "/home/bobby/pool_alpha/.venv Python 3.12.13"},
+    {"name": "generated-contract", "status": "PASS", "tests": 155},
+    {"name": "r2-route-ledger", "status": "PASS", "tests": 22},
+    {"name": "screen05-browser-hifi", "status": "PENDING_FRONTEND_OWNER"},
+    {"name": "runtime-deployment-real-run", "status": "NOT_CLAIMED_FEATURE_DARK"}
+  ]
+}

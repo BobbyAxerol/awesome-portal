@@ -44,6 +44,16 @@ P04_PARAMETERS: dict[str, int | float] = {
 }
 
 
+def _object_keys(value: object) -> set[str]:
+    """Return JSON object keys without treating harmless value substrings as fields."""
+
+    if isinstance(value, dict):
+        return set(value).union(*( _object_keys(item) for item in value.values()))
+    if isinstance(value, list):
+        return set().union(*( _object_keys(item) for item in value))
+    return set()
+
+
 @pytest.fixture
 def anyio_backend() -> str:
     """The P10 worker tests exercise asyncio broker/task semantics only.
@@ -224,6 +234,22 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
     assert evidence["direct"]["initial_equity"] == evidence["equity_points"][0]["equity"]
     assert evidence["direct"]["final_equity"] == evidence["equity_points"][-1]["equity"]
     assert len(json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode("utf-8")) <= 28 * 1024
+    # P14 consumes the exact tape construction facts and must preserve the
+    # difference between semantic child-tape exclusion and an unproven
+    # physical Parquet row-group I/O boundary.
+    split = result["research_split"]
+    assert split is not None
+    assert receipt["split_source"] == split
+    assert split["schema_version"] == "research.p14.split-source.v1"
+    assert split["windows"]["holdout"]["child_input_state"] == "NOT_EXPOSED_TO_CHILD_TAPE"
+    assert split["windows"]["holdout"]["evaluation_state"] == "NOT_EVALUATED"
+    assert split["windows"]["holdout"]["result_exposure_state"] == "NOT_EXPOSED"
+    assert split["source"]["physical_io"] == {
+        "state": "NOT_ATTESTED",
+        "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED",
+    }
+    assert split["protocol"]["selection"]["state"] == "FIXED_PROFILE_NO_SEARCH"
+    assert len(json.dumps(split, sort_keys=True, separators=(",", ":")).encode("utf-8")) <= 16 * 1024
 
     # The sealed bundle is a future authorized read surface, not a copy of the
     # private Control-API-to-worker envelope.  Keep the user-reviewable spec
@@ -257,9 +283,9 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
     ):
         assert opaque_private_value not in serialized_public_artifacts
 
-    evidence_text = json.dumps(evidence, sort_keys=True)
+    public_keys = _object_keys(evidence).union(_object_keys(split))
     for forbidden in ("market_path", "snapshot_id", "worker_attempt_id", "lease_epoch", "open", "high", "low", "close"):
-        assert forbidden not in evidence_text
+        assert forbidden not in public_keys
 
     assert not list(market_root.rglob("*.parquet"))
     assert not list((tmp_path / "engine-output").rglob("*.parquet"))

@@ -222,6 +222,19 @@ and per-fold facts remain typed rather than being replaced with zero. Generate
 only with `npm run generate` (or `npm run generate:research-evidence`) and
 never hand-maintain emitted types.
 
+P14 publishes the additive Split / chronology contract at
+`openapi/research-split.openapi.json`, generated as
+`generated/research-split.d.ts`. It contains exactly one same-origin,
+workspace-scoped read operation for an immutable current-P04 three-window
+projection. The terminal P10/P11 receipt retains UTC half-open boundaries,
+measured child-tape consumption and exact digests. It explicitly retains the
+facts the current source does **not** publish: advanced fold plan, strict
+outer-OOS selection, purge/embargo, gap scan, source seal and holdout unlock.
+It never exposes a raw holdout value, snapshot/Parquet path, worker/lease,
+physical-I/O assertion, source relation or command. Regenerate only with
+`npm run generate` (or `npm run generate:research-split`) and never
+hand-maintain emitted types.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

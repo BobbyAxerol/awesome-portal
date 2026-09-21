@@ -40,8 +40,11 @@ port="$("${DOCKER[@]}" port "$container" 5432/tcp | sed -n 's/.*:\([0-9][0-9]*\)
 [[ "$port" =~ ^[0-9]+$ ]] || { echo "P13 could not determine disposable PostgreSQL port." >&2; exit 1; }
 
 cd "$root/apps/control-api"
+# Match individual test IDs, not the shared P11 describe block: P14 remains a
+# separately scoped proof and must not make the P13 gate heavier.
 TEST_DATABASE_URL="postgres://portal:portal@127.0.0.1:${port}/portal_control_test" \
   ./node_modules/.bin/vitest run --config ../../scripts/research-loop-v11/vitest.p13.config.mts \
+  -t 'P11-T|P13-T' \
   ../../scripts/research-loop-v11/p11-progress.spec.ts
 
 echo "P13 isolated PostgreSQL Evidence Flow proof: PASS"

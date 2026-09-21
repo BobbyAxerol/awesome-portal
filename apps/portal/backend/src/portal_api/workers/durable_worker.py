@@ -294,6 +294,7 @@ class DurableQuantWorker:
             engine_dir = engine_root / run_id
             self._artifact_store.stage_directory(engine_dir, temp_dir)
             evidence_digest: str | None = None
+            split_digest: str | None = None
             if is_research_producer:
                 shutil.rmtree(engine_root)
                 if progress_journal is not None:
@@ -325,6 +326,19 @@ class DurableQuantWorker:
                             research_dir / "evidence-source.json",
                             evidence_digest,
                         )
+                    source_split = result.get("research_split")
+                    if source_split is not None:
+                        if not isinstance(source_split, dict):
+                            raise DurableRunError("P14 source split receipt is invalid")
+                        # The terminal chronology receipt is persisted before
+                        # its digest can enter P11. It has no raw rows,
+                        # holdout values, source path or unlock authority.
+                        split_digest = progress_journal.store_split_source(source_split)
+                        progress_journal.emit("artifact_writing", {"name": "research/split-source.json"})
+                        progress_journal.export_split_source_to(
+                            research_dir / "split-source.json",
+                            split_digest,
+                        )
             bundle = self._artifact_store.commit_bundle(
                 run_id=run_id,
                 attempt_id=attempt.run_attempt_id,
@@ -334,6 +348,7 @@ class DurableQuantWorker:
                         "research/progress-journal.ndjson",
                         "research/progress-receipt.json",
                         *(("research/evidence-source.json",) if evidence_digest is not None else ()),
+                        *(("research/split-source.json",) if split_digest is not None else ()),
                     )
                     if progress_journal is not None else ()
                 ),
@@ -347,6 +362,8 @@ class DurableQuantWorker:
                 sealed_names = ["research/progress-journal.ndjson", "research/progress-receipt.json"]
                 if evidence_digest is not None:
                     sealed_names.append("research/evidence-source.json")
+                if split_digest is not None:
+                    sealed_names.append("research/split-source.json")
                 for name in sealed_names:
                     digest = bundle.files.get(name)
                     if digest is None:
@@ -369,6 +386,8 @@ class DurableQuantWorker:
                 }
                 if evidence_digest is not None:
                     completion_payload["evidence_digest"] = evidence_digest
+                if split_digest is not None:
+                    completion_payload["split_digest"] = split_digest
                 progress_journal.emit("run_completed", completion_payload)
             # The source journal is fsync'd before the local attempt is made
             # terminal.  Otherwise a crash in this tiny window would leave a

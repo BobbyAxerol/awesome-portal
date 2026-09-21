@@ -134,6 +134,16 @@ describe("P13 Evidence Flow activation guard", () => {
   });
 });
 
+describe("P14 Split truth activation guard", () => {
+  it("keeps the read-only chronology BFF dark independently of source-side terminal receipts", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_SPLIT).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_SPLIT: "true",
+    }).FEATURE_RESEARCH_SPLIT).toBe("true");
+  });
+});
+
 describe("Execution realtime feature dependencies", () => {
   const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
     ...baseEnv(),

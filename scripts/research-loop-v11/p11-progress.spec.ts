@@ -22,8 +22,11 @@ import { ResearchRunAdmissionService } from "../../apps/control-api/src/research
 import { ResearchRunCreateService } from "../../apps/control-api/src/research/run-create.service";
 import { ResearchEvidenceRepository } from "../../apps/control-api/src/research/evidence.repository";
 import { ResearchEvidenceService } from "../../apps/control-api/src/research/evidence.service";
+import { ResearchSplitRepository } from "../../apps/control-api/src/research/split.repository";
+import { ResearchSplitService } from "../../apps/control-api/src/research/split.service";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
 import { p13EvidenceSourceFixture } from "../../apps/control-api/test/research-evidence.fixture";
+import { p14SplitSourceFixture } from "../../apps/control-api/test/research-split.fixture";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
 const scope: ResearchScope = { workspaceId: "p11-workspace", actorUserId: "p11-admin" };
@@ -152,6 +155,11 @@ class FakeEvidenceService {
   async ingest(): Promise<void> { /* source receipt absent by design */ }
 }
 
+/** P14 is likewise terminal-only; legacy P11 corpus intentionally omits it. */
+class FakeSplitService {
+  async ingest(): Promise<void> { /* source receipt absent by design */ }
+}
+
 function snapshot(
   runId: string,
   workerAttemptId: string,
@@ -209,10 +217,12 @@ function ingress(input: {
   eventType: "run_started" | "heartbeat" | "run_completed" | "run_failed";
   progress?: ResearchProgressSnapshot;
   evidence?: ReturnType<typeof p13EvidenceSourceFixture>;
+  split?: ReturnType<typeof p14SplitSourceFixture>;
 }): ResearchProgressIngress {
   const payload = input.eventType === "run_completed" ? {
     usage: USAGE,
     ...(input.evidence ? { evidence_digest: sha256ResearchJson(input.evidence) } : {}),
+    ...(input.split ? { split_digest: sha256ResearchJson(input.split) } : {}),
   }
     : input.eventType === "run_failed" ? { code: "ENGINE_ERROR", message: "source contradiction", usage: USAGE }
       : {};
@@ -235,6 +245,7 @@ function ingress(input: {
     },
     snapshot: input.progress ?? snapshot(input.runId, input.workerAttemptId, input.leaseEpoch, input.sequence),
     ...(input.evidence ? { evidence: input.evidence } : {}),
+    ...(input.split ? { split: input.split } : {}),
   });
 }
 
@@ -266,6 +277,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       new ResearchProgressFanout(),
       new FakeProgressPortalClient() as never,
       new FakeEvidenceService() as never,
+      new FakeSplitService() as never,
       config,
     );
   }, 60_000);
@@ -322,7 +334,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
 
     const rehydrated = new ResearchProgressService(
       new ResearchProgressRepository(pool), metadata, new ResearchProgressFanout(),
-      new FakeProgressPortalClient() as never, new FakeEvidenceService() as never, config,
+      new FakeProgressPortalClient() as never, new FakeEvidenceService() as never, new FakeSplitService() as never, config,
     );
     const read = await rehydrated.read(admin, scope, run.runId);
     expect(read).toMatchObject({
@@ -430,6 +442,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       new ResearchProgressFanout(),
       new FakeProgressPortalClient() as never,
       evidenceService,
+      new FakeSplitService() as never,
       config,
     );
     const source = p13EvidenceSourceFixture();
@@ -479,6 +492,76 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     expect(persisted.rows[0]).toEqual({ sources: "1", projections: "1", series: "4" });
     await expect(pool.query(
       `UPDATE research.run_evidence_projections_v1
+          SET readiness = 'COMPLETE'
+        WHERE workspace_id = $1 AND run_id = $2`,
+      [scope.workspaceId, run.runId],
+    )).rejects.toThrow(/immutable/i);
+  });
+
+  it("P14-T01/T04/T06/T10/T13: persists exact current-source chronology and never manufactures holdout authority", async () => {
+    const run = await createDispatchedRun();
+    const manifest = await pool.query<{ manifest_digest: string }>(
+      `SELECT manifest_digest FROM research.run_producers
+        WHERE workspace_id = $1 AND run_id = $2 AND worker_attempt_id = $3`,
+      [scope.workspaceId, run.runId, run.workerAttemptId],
+    );
+    const manifestDigest = manifest.rows[0]?.manifest_digest;
+    if (!manifestDigest) throw new Error("P14 fixture did not retain immutable producer manifest");
+    const splitRepository = new ResearchSplitRepository(pool);
+    const splitService = new ResearchSplitService(splitRepository, {
+      ...config,
+      FEATURE_RESEARCH_SPLIT: "true",
+    } as ControlApiConfig);
+    const p14Service = new ResearchProgressService(
+      progress,
+      metadata,
+      new ResearchProgressFanout(),
+      new FakeProgressPortalClient() as never,
+      new FakeEvidenceService() as never,
+      splitService,
+      config,
+    );
+    const source = p14SplitSourceFixture({ manifestDigest });
+    const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: 2, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+    const terminal = ingress({
+      ...run, sequence: 1, eventType: "run_completed", progress: completed, split: source,
+    });
+    await p14Service.ingest(terminal);
+    await p14Service.ingest(terminal); // terminal delivery is at-least-once.
+
+    const detail = await splitService.detail(scope, run.runId);
+    expect(detail).toMatchObject({
+      availability: { state: "AVAILABLE", reason_code: null },
+      readiness: "PARTIAL",
+      revision: expect.stringMatching(/^p14r1_[0-9a-f]{64}$/),
+      protocol: { kind: "THREE_WINDOW_CURRENT", selection: { state: "FIXED_PROFILE_NO_SEARCH" } },
+      actions: { holdout_unlock: { state: "NOT_PUBLISHED", href: null } },
+      windows: {
+        holdout: {
+          child_input_state: "NOT_EXPOSED_TO_CHILD_TAPE",
+          evaluation_state: "NOT_EVALUATED",
+          result_exposure_state: "NOT_EXPOSED",
+        },
+      },
+    });
+    expect(JSON.stringify(detail)).not.toContain("worker_attempt_id");
+    expect(JSON.stringify(detail)).not.toContain("lease_epoch");
+    expect(JSON.stringify(detail)).not.toContain("source_payload");
+
+    const persisted = await pool.query<{ sources: string; projections: string }>(
+      `SELECT
+         (SELECT count(*) FROM research.run_split_sources_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS sources,
+         (SELECT count(*) FROM research.run_split_projections_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS projections`,
+      [scope.workspaceId, run.runId],
+    );
+    expect(persisted.rows[0]).toEqual({ sources: "1", projections: "1" });
+    await expect(pool.query(
+      `UPDATE research.run_split_projections_v1
           SET readiness = 'COMPLETE'
         WHERE workspace_id = $1 AND run_id = $2`,
       [scope.workspaceId, run.runId],

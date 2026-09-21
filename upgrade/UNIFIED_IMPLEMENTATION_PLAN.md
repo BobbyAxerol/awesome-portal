@@ -3618,7 +3618,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P11](#rl-p11) | P06,P09,P10 | 03 | 06 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P11 packet](./research_loop/evidence/P11/README.md): source-owned fsync journal + bounded recovery relay, exact P10/P06 lease ingress, immutable PostgreSQL event/snapshot materialisation, public fence-free same-origin BFF/SSE/console/cancel contract, 20-viewer cap and feature-dark overlay/runbook are proven. Fresh disposable PostgreSQL P10→P11 integration covers duplicate/gap/stale lease/restart/cancel-vs-seal; no deployment or real-run claim. **FE_S03_PRODUCT_CONSUMER_PENDING / Claude** — follow [P11 handoff](./research_loop/evidence/P11/frontend-handoff-claude.md); browser/HIFI/real activation gates remain unclaimed. · FE_RUN_PROGRESS_MOUNTED / Claude — Screen 03 mounted at `/research/quantbt/runs/:runId/progress` as a sibling of the legacy workspace (a P11 run id is not a legacy run). Typed only from the generated progress contract: composition +768, tests +731, container +382, client +217, route +35, probe +145, fixtures +32, boundary sweep +24/−2. `P11-T01…T10` pass; tsc 0, research suite 339/339, full frontend suite **163 files / 0 failures**, build 0, product browser probe 29/29 with 0 console output and 0 px overflow at 1280 and 660. **The stream is an accelerator, the poll is the floor:** a browser test deletes `EventSource` from the window and the screen still renders every block on the 5-second floor, with no banner. Seven stream exits are each tested — terminal snapshot never opens one; `run_completed`/`run_failed`, a typed gap, `auth.expired`, a transport error, unmount and a hidden tab all close it, and a gap replaces state from the snapshot rather than stitching the hole. A frame at or below the applied sequence is dropped. Nothing local makes a fact: a null `eta_s` renders 'not reported', completion requires `readiness.mandatory === "SEALED"`, decimals are printed unparsed, and a test asserts no `Date.now()` anywhere. `reader_href` is null by contract so a sealed artifact is rich and unlinked with the reason stated. No retry is offered — `P12_OWNED_NO_P11_RETRY_ROUTE` is printed instead; a cancellation CAS shows the Portal terminal truth without overwriting the source fact. The boundary sweep's blanket `EventSource` ban became a checked allowlist: one module may open one, it may contain no URL literal or scheme, and the client builds the URL from the contract's path. Two defects came from the screenshot — a running fold whose band collapsed to zero width (now bounded by the snapshot's own `updated_at_utc_ms`) and two disabled controls with no reason. **Fixture receipts only** — no worker ran; `V11-P11-DR/BR/GX`, a deployment and `PRODUCT_ACTIVE` are not claimed. **`CG-P11-01` / `CG-P11-02` resolved:** generated typed `fold_timeline` and `methodology_certificate` now carry exact source fact or explicit `NOT_PUBLISHED`; P04 remains one honest fold band/no cert until it publishes facts. See [display-fact amendment](./research_loop/evidence/P11/contract-amendment-display-facts.md). [Claude P11 composition](./research_loop/evidence/P11/frontend-composition-claude.md) |
 | [P12](#rl-p12) | P05,P09–P11 | 01 | 06 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P12 packet](./research_loop/evidence/P12/README.md): feature-dark, same-origin, bounded persisted-library/query/sparkline contracts, keyset/search/legacy compatibility and fresh PostgreSQL proof are complete. **FE_S01_PRODUCT_CONSUMER_PENDING / Claude** — follow [P12 handoff](./research_loop/evidence/P12/frontend-handoff-claude.md); no browser/real-run/deployment acceptance is claimed. |
 | [P13](#rl-p13) | P05,P09–P11 | 04 | 07 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P13 packet](./research_loop/evidence/P13/README.md): P04 terminal source receipt → fsync P11 digest relay → append-only Portal projection/lazy-series BFF is proven on a fresh PostgreSQL cell and feature-dark by default. No artifact/raw-market/worker/Execution/CLI reader exists. **FE_S04_PRODUCT_CONSUMER_PENDING / Claude** — follow [P13 handoff](./research_loop/evidence/P13/frontend-handoff-claude.md), complete P12 first without touching Codex-owned files, then use the generated contract and direct browser-vs-HiFi receipt; no fixture route is product acceptance. |
-| [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | PLANNED / unassigned / — |
+| [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P14 packet](./research_loop/evidence/P14/README.md); additive, feature-dark current-P04 three-window source receipt travels only alongside the digest-bound P11 terminal callback, then becomes an immutable Portal projection and one authenticated same-origin BFF. The reader preserves UTC-ms, exact digest/revision/ETag, semantic child-tape exclusion, `NOT_ATTESTED` physical Parquet-I/O and `NOT_ASSERTED` strict-OOS facts; it does not read raw holdout/Parquet, create a seal/unlock/governance action or imply WFO. P14 source/Python, Control API, generated contract, route ledger and fresh PostgreSQL proof pass. Screen-05 rich product route/browser/HiFi receipt remains Claude-owned and is not claimed while `FEATURE_RESEARCH_SPLIT=false`. |
 | [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | PLANNED / unassigned / — |
 | [P16](#rl-p16) | P13–P15 | 07 | 08 | PLANNED / unassigned / — |
 | [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | PLANNED / unassigned / — |
@@ -4618,13 +4618,66 @@ and [handoff](./research_loop/evidence/P13/frontend-handoff-claude.md).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
 **Test IDs bắt buộc:** `P14-T01…T13`, `V11-P14-DR/BR/GX` và source tests applicable theo §13.3.
 
-- **Goal:** Thể hiện đúng IS/OOS/holdout và causal claims theo evidence, không dựng approval mới.
-- **To-do BE:** Authoritative folds/windows/time roles; warmup/purge/embargo; exposure and seal read model. DR01 xác minh actual unlock actor/API trước nối mutation; không tự create governance.
-- **To-do FE/consumer:** Full05 timeline/windowed folds/quality drawer/highlights and valid links; readonly seal metadata works separately; correct source state and never-claim disclosures.
-- **Tests BE:** Future perturbation/prefix invariance đúng asserted route; strict selector boundaries; half-open/timezone; snapshot integrity≠evaluated≠viewed; duplicate/race/unauthorized unlock nếu actual supported.
-- **Tests FE/browser:** All S05 tests; viewport compression doesn't alter intervals; real-source labels and loading/withheld states; navigating không evaluate raw sealed holdout; no fixture-success unlock.
-- **Exit gate:** Chronology/fold evidence and readonly seal integration PASS; unlock/claim acceptance chỉ khi DR01 resolved. Mandatory unresolved action blocks its acceptance, không tự N/A/complete phase.
-- **Rollback/handoff:** Disable Research unlock intake if rollback, never re-seal viewed data. Checkpoint07: P13/P14 + scope/numeric/holdout decision record.
+- **Goal:** Thể hiện đúng IS/OOS/holdout và causal claims của **current
+  installed P04 source**, không dựng approval mới. P14 is a source-fact
+  reader, not a generic WFO, historical-candle or holdout-access feature.
+- **To-do BE:** P10 records the exact semantic three-window boundaries while
+  it builds the confined child tape; P11 fsyncs one bounded immutable terminal
+  source sidecar and its digest; relay/Control API validate the pair and
+  persist a manifest-bound immutable source/projection. Publish one named,
+  session/workspace-scoped same-origin `GET /api/v1/quantbt/runs/:runId/split`
+  BFF with UTC milliseconds, exact SHA-256/revision/ETag, bounded admission
+  and typed availability. Current source facts are: optional warmup, IS,
+  observed fixed-profile outer OOS, metadata-bound holdout not exposed to the
+  child/no result, `NOT_ATTESTED` physical Parquet row-group I/O, and
+  `NOT_ASSERTED` strict-OOS selection. Fold plan, purge, embargo, inner folds,
+  theta, gap scan, source seal and unlock are exact `NOT_PUBLISHED` facts.
+  DR01 is therefore **not an unresolved mutation**: no source actor/API exists
+  today and P14 must not create one.
+- **To-do FE/consumer:** Full05 timeline/windowed visual groups/quality drawer
+  and valid links consume only the generated P14 client. Keep the rich Screen
+  shell in all states. The HiFi's four visual groups remain three authority
+  stages plus a presentational Code Anatomy substage; do not create a fourth
+  backend state. Show typed current-source absences inside their panels; no
+  browser date math, raw holdout request, fake fold segments or unlock button.
+- **Tests BE:** Exact half-open contiguous UTC chronology; source digest
+  pairing/oversize/nonterminal refusal; semantic IS/OOS child-tape counts;
+  P04 real isolated child proof; manifest/lease binding; duplicate terminal
+  idempotence; immutable update/delete refusal; wrong-workspace/ETag;
+  physical-I/O and no-holdout/no-path/no-lease leakage. Do not claim a
+  future-perturbation or strict-selector proof that the fixed source does not
+  publish.
+- **Tests FE/browser:** All applicable S05 tests; viewport compression cannot
+  alter intervals; direct browser HiFi comparison at 1280px/660px; loading,
+  pending, legacy, typed absence/error and ETag refresh; navigation never
+  evaluates/reveals raw holdout. A fixture result is not product or real-source
+  acceptance.
+- **Exit gate:** Backend closes only when P10→P11→relay→immutable projection
+  and generated contract proofs pass, feature remains dark, and every absent
+  source capability has an exact typed fact rather than a placeholder. P14
+  does **not** claim Screen-05 browser/product acceptance until Claude returns
+  its separate receipt. A later source revision that publishes WFO/seal/unlock
+  must add a versioned contract/relation and a dedicated action phase; it may
+  not reinterpret P14 history.
+- **Rollback/handoff:** Deploy `FEATURE_RESEARCH_SPLIT=false` only; retain
+  append-only source/projection facts and P11 receipt. Never re-seal/view raw
+  holdout or delete evidence. Checkpoint07: P13/P14 source/UTC/digest/holdout
+  decision record; [P14 packet](./research_loop/evidence/P14/README.md).
+
+**P14 implementation journal — 2026-09-21:** Codex delivered the additive,
+feature-dark current-source backend and generated contract. P10 derives a
+semantic child-tape receipt from the immutable P08 windows; P11 stores it
+atomically (`0600`, canonical SHA-256, fsync) before its terminal event; the
+relay attaches it only when the event digest matches. Control API validates
+the terminal pairing, binds it to the exact P10 immutable manifest and worker
+attempt, stores append-only source/projection rows behind RLS/runtime-role,
+finite transaction budgets and 2-active/8-queued read admission, then exposes
+one ETag-aware BFF. No direct database/source snapshot/Parquet/Execution/CLI
+route, raw holdout, physical-I/O assertion, WFO fold, new governance state or
+mutation was added. Python targeted source tests, Control API build/units,
+generated-contract verification and a fresh disposable PostgreSQL P11→P14
+proof pass. Screen-05 composition and browser/HiFi acceptance remain
+Claude-owned; see [P14 handoff](./research_loop/evidence/P14/frontend-handoff-claude.md).
 
 <a id="rl-p15"></a>
 ### P15 — Search, complete trial ledger và diagnostics

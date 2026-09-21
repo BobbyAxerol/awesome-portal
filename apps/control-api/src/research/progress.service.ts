@@ -20,6 +20,7 @@ import { ResearchProgressPortalClient } from "./progress.portal-client";
 import { ResearchProgressRepository, type ProgressIngressScope, type ProgressRunRead } from "./progress.repository";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchEvidenceService } from "./evidence.service";
+import { ResearchSplitService } from "./split.service";
 
 const ACTIVE_JOB_STATES = new Set(["QUEUED", "CLAIMED", "RUNNING"]);
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
@@ -77,6 +78,7 @@ export class ResearchProgressService {
     private readonly fanout: ResearchProgressFanout,
     private readonly portal: ResearchProgressPortalClient,
     private readonly evidence: ResearchEvidenceService,
+    private readonly split: ResearchSplitService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
@@ -88,6 +90,10 @@ export class ResearchProgressService {
     // fails, the P11 event remains persisted and the source relay can retry
     // the same digest-bound payload without rerunning QuantBT.
     await this.evidence.ingest(ingressScope, input);
+    // P14 follows the same terminal-only idempotent sidecar rule as P13.
+    // Its reader has a separate feature flag; persisting a verified source
+    // receipt does not activate a browser route or any holdout operation.
+    await this.split.ingest(ingressScope, input);
     await this.applyLifecycle(ingressScope, input);
     if (persisted.inserted) {
       this.fanout.publish(input.run_id, { event: persisted.event, snapshot: persisted.snapshot });

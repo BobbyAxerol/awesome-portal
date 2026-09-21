@@ -142,6 +142,17 @@ class ResearchProgressRelay:
                         body["evidence"] = self.journal.read_evidence_source(evidence_digest)
                     except Exception as exc:  # journal remains recovery authority
                         raise ResearchProgressRelayError("P13 terminal evidence source is unavailable") from exc
+                # P14 is a separate digest-bound terminal receipt. It never
+                # travels on non-terminal events and does not give the relay a
+                # holdout-read, unlock or worker-control capability.
+                split_digest = payload.get("split_digest") if isinstance(payload, dict) else None
+                if split_digest is not None:
+                    if not isinstance(split_digest, str):
+                        raise ResearchProgressRelayError("P14 terminal split digest is invalid")
+                    try:
+                        body["split"] = self.journal.read_split_source(split_digest)
+                    except Exception as exc:  # journal remains recovery authority
+                        raise ResearchProgressRelayError("P14 terminal split source is unavailable") from exc
             try:
                 await asyncio.to_thread(self._post, body)
             except ResearchProgressRelayError:

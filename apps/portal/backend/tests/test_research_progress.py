@@ -124,6 +124,32 @@ def test_p13_evidence_receipt_is_fsynced_digest_bound_and_recovers_only_staging_
         journal.store_evidence_source({**source, "direct": {"final_equity": "102"}})
 
 
+def test_p14_split_receipt_is_fsynced_digest_bound_and_has_no_mutation_channel(tmp_path: Path) -> None:
+    """P14 recovery treats chronology truth as one immutable terminal sidecar."""
+
+    source = {
+        "schema_version": "research.p14.split-source.v1",
+        "source": {"execution_adapter_id": "p04.delta-rsi.v1"},
+        "windows": {"holdout": {"child_input_state": "NOT_EXPOSED_TO_CHILD_TAPE"}},
+    }
+    journal = _journal(tmp_path)
+    staging = journal.root / "split-source.partial"
+    staging.write_text("interrupted", encoding="utf-8")
+    digest = journal.store_split_source(source)
+    expected = hashlib.sha256(
+        json.dumps(source, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    assert digest == expected
+    assert journal.read_split_source(digest) == source
+    assert not staging.exists()
+
+    target = tmp_path / "sealed" / "split-source.json"
+    assert journal.export_split_source_to(target, digest) == source
+    assert target.stat().st_mode & 0o777 == 0o600
+    with pytest.raises(ResearchProgressError, match="cannot replace"):
+        journal.store_split_source({**source, "timeline": {"start_utc_ms": 1}})
+
+
 def test_source_journal_rejects_unknown_payloads_before_they_can_replay(tmp_path: Path) -> None:
     journal = _journal(tmp_path)
     with pytest.raises(ResearchProgressError, match="payload shape"):

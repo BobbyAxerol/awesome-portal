@@ -22,6 +22,10 @@ const DecimalSchema = z.string().regex(/^[0-9]+(?:\.[0-9]+)?$/).max(96);
 const SignedDecimalSchema = z.string().regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(96);
 const MAX_SNAPSHOT_BYTES = 256 * 1_024;
 const MAX_EVIDENCE_BYTES = 28 * 1_024;
+// P14's split receipt is deliberately much smaller than P13's evidence
+// passport. It carries only time-role/consumption facts, never a market row,
+// a fold artifact path, a worker custody value, or a holdout value.
+const MAX_SPLIT_BYTES = 16 * 1_024;
 const JsonObjectSchema = z.record(z.string(), z.unknown()).superRefine((value, context) => {
   const encoded = JSON.stringify(value);
   if (encoded === undefined || Buffer.byteLength(encoded, "utf8") > 2_048) {
@@ -249,6 +253,112 @@ export const ResearchEvidenceSourceSchema = z.object({
   }
 });
 
+const ResearchSplitRangeShape = z.object({
+  start_utc_ms: UtcMsSchema,
+  end_exclusive_utc_ms: UtcMsSchema,
+}).strict();
+
+const ResearchSplitRangeSchema = ResearchSplitRangeShape.superRefine((value, context) => {
+  if (value.end_exclusive_utc_ms <= value.start_utc_ms) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "split range must be half-open and non-empty" });
+  }
+});
+
+const ResearchSplitAbsenceSchema = z.object({
+  state: z.literal("NOT_PUBLISHED"),
+  reason_code: z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/),
+}).strict();
+
+/**
+ * P14 is intentionally a current-adapter receipt, rather than a generic
+ * source schema. The installed P04 Delta adapter performs one fixed-profile
+ * three-window qualification. It does not publish an advanced fold artifact,
+ * a selection trace, a seal/unlock authority, or a physical-I/O proof. Those
+ * absences are part of the immutable source fact, not browser inference.
+ */
+export const ResearchSplitSourceSchema = z.object({
+  schema_version: z.literal("research.p14.split-source.v1"),
+  source: z.object({
+    execution_adapter_id: z.literal("p04.delta-rsi.v1"),
+    engine_version: z.string().regex(/^1\.1\.1$/),
+    input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
+    source_transform_digest: DigestSchema,
+    manifest_digest: DigestSchema,
+    physical_io: z.object({
+      state: z.literal("NOT_ATTESTED"),
+      reason_code: z.literal("P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED"),
+    }).strict(),
+  }).strict(),
+  protocol: z.object({
+    kind: z.literal("THREE_WINDOW_CURRENT"),
+    fold_plan: ResearchSplitAbsenceSchema,
+    selection: z.object({
+      state: z.literal("FIXED_PROFILE_NO_SEARCH"),
+      parameter_bundle_digest: DigestSchema,
+      strict_outer_oos: z.object({
+        state: z.literal("NOT_ASSERTED"),
+        reason_code: z.literal("P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS"),
+      }).strict(),
+    }).strict(),
+  }).strict(),
+  timeline: ResearchSplitRangeSchema,
+  windows: z.object({
+    // P08 may bind an optional warmup range.  P10 can attest that it was
+    // copied into the child tape, but it remains explicitly not scored.  A
+    // zero-row warmup is not silently folded into IS history.
+    warmup: z.discriminatedUnion("state", [
+      ResearchSplitRangeShape.extend({
+        state: z.literal("AVAILABLE"),
+        bars: z.number().int().positive().max(2_000_000),
+        data_role: z.literal("WARMUP_NOT_SCORED"),
+        child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
+      }).strict(),
+      z.object({
+        state: z.literal("NOT_APPLICABLE"),
+        bars: z.literal(0),
+        reason_code: z.literal("P08_WARMUP_NOT_REQUESTED"),
+      }).strict(),
+    ]),
+    is: ResearchSplitRangeShape.extend({
+      bars: z.number().int().positive().max(2_000_000),
+      data_role: z.literal("IS_CALIBRATION_HISTORY"),
+      child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
+    }).strict(),
+    outer_oos: ResearchSplitRangeShape.extend({
+      bars: z.number().int().positive().max(2_000_000),
+      data_role: z.literal("OUTER_OOS_OBSERVATION"),
+      child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
+      evaluation_state: z.literal("P04_OBSERVED_AFTER_FIXED_PROFILE"),
+    }).strict(),
+    holdout: ResearchSplitRangeShape.extend({
+      bars: z.null(),
+      data_role: z.literal("HOLDOUT"),
+      child_input_state: z.literal("NOT_EXPOSED_TO_CHILD_TAPE"),
+      evaluation_state: z.literal("NOT_EVALUATED"),
+      result_exposure_state: z.literal("NOT_EXPOSED"),
+      snapshot_integrity_state: z.literal("P08_METADATA_BOUND"),
+    }).strict(),
+  }).strict(),
+  absences: z.object({
+    purge: ResearchSplitAbsenceSchema,
+    embargo: ResearchSplitAbsenceSchema,
+    inner_folds: ResearchSplitAbsenceSchema,
+    theta_per_fold: ResearchSplitAbsenceSchema,
+    gap_scan: ResearchSplitAbsenceSchema,
+    holdout_unlock: ResearchSplitAbsenceSchema,
+  }).strict(),
+}).strict().superRefine((value, context) => {
+  const { is, outer_oos: outerOos, holdout } = value.windows;
+  if (
+    value.timeline.start_utc_ms !== is.start_utc_ms
+    || is.end_exclusive_utc_ms !== outerOos.start_utc_ms
+    || outerOos.end_exclusive_utc_ms !== holdout.start_utc_ms
+    || value.timeline.end_exclusive_utc_ms !== holdout.end_exclusive_utc_ms
+  ) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "P14 three-window chronology is not contiguous" });
+  }
+});
+
 /**
  * P11 deliberately accepts a small, event-specific vocabulary.  The callback
  * principal is private, but it is still not a licence to place source paths,
@@ -312,6 +422,10 @@ function validatePayload(
       // nevertheless in the journal event, so a retry cannot attach a new
       // document to an already persisted terminal fact.
       evidence_digest: DigestSchema.optional(),
+      // P14 uses the same terminal-only, immutable sidecar pattern. Its
+      // document is a bounded chronology/holdout receipt, never an unlock or
+      // a raw holdout payload.
+      split_digest: DigestSchema.optional(),
     }).strict(),
     run_failed: z.object({
       code: z.string().min(1).max(160),
@@ -456,6 +570,7 @@ export const ResearchProgressIngressSchema = z.object({
   event: ResearchProgressEventSchema,
   snapshot: ResearchProgressSnapshotSchema,
   evidence: ResearchEvidenceSourceSchema.optional(),
+  split: ResearchSplitSourceSchema.optional(),
 }).strict().superRefine((value, context) => {
   const event = value.event;
   const snapshot = value.snapshot;
@@ -470,6 +585,9 @@ export const ResearchProgressIngressSchema = z.object({
   const terminalEvidenceDigest = value.event.event_type === "run_completed"
     ? value.event.payload.evidence_digest
     : undefined;
+  const terminalSplitDigest = value.event.event_type === "run_completed"
+    ? value.event.payload.split_digest
+    : undefined;
   if (value.evidence !== undefined && value.event.event_type !== "run_completed") {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence is only valid on terminal completion" });
   }
@@ -478,6 +596,15 @@ export const ResearchProgressIngressSchema = z.object({
   }
   if (value.evidence !== undefined && Buffer.byteLength(JSON.stringify(value.evidence), "utf8") > MAX_EVIDENCE_BYTES) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence document exceeds its bounded transport budget" });
+  }
+  if (value.split !== undefined && value.event.event_type !== "run_completed") {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "split receipt is only valid on terminal completion" });
+  }
+  if ((terminalSplitDigest === undefined) !== (value.split === undefined)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "split document and terminal digest must be paired" });
+  }
+  if (value.split !== undefined && Buffer.byteLength(JSON.stringify(value.split), "utf8") > MAX_SPLIT_BYTES) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "split document exceeds its bounded transport budget" });
   }
 });
 
@@ -499,6 +626,7 @@ export type ResearchProgressEvent = z.infer<typeof ResearchProgressEventSchema>;
 export type ResearchProgressSnapshot = z.infer<typeof ResearchProgressSnapshotSchema>;
 export type ResearchProgressIngress = z.infer<typeof ResearchProgressIngressSchema>;
 export type ResearchEvidenceSource = z.infer<typeof ResearchEvidenceSourceSchema>;
+export type ResearchSplitSource = z.infer<typeof ResearchSplitSourceSchema>;
 export type ResearchProgressReadQuery = z.infer<typeof ResearchProgressReadQuerySchema>;
 export type ResearchProgressPageQuery = z.infer<typeof ResearchProgressPageQuerySchema>;
 export type ResearchProgressCancelRequest = z.infer<typeof ResearchProgressCancelRequestSchema>;

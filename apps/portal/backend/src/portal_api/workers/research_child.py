@@ -149,6 +149,12 @@ def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_ut
 
     import pandas as pd
 
+    # Keep the engine adapter inside the isolated child entry point.  P13
+    # evidence needs only its pinned version string; importing it here avoids
+    # widening module import side effects for journal-only helpers while still
+    # making the child receipt self-contained.
+    from portal_api.adapters.quantbt import QuantBTGateway
+
     start = pd.Timestamp(oos_start_utc_ms, unit="ms", tz="UTC")
     equity_series = result.equity.reindex(market.index).astype(float)
     mask = equity_series.index >= start
