@@ -170,8 +170,17 @@ Four survived a green unit suite:
 | build | `npm run build` | **exit 0** |
 | browser probe | `npx playwright test --config=playwright.research-probe.config.ts` | **21 passed**, 0 console errors or warnings |
 
+| visual regression | `npm run e2e:visual` | **exit 1 — 33 failed / 299 passed**, identical to the pre-existing set |
+
 Every exit code above was read from the command itself, not from the tail of a
 pipeline.
+
+The visual failures are the drift recorded in the P09 packet: `7441c572`
+widened Tailwind's `content` glob after the last baseline update, shifting
+computed layout about a pixel app-wide. Compared by name against the set
+measured on a clean worktree at `cac85b43`, the two are **identical** — 25
+distinct tests, `comm` empty in both directions. This change set moves the
+visual baseline by zero tests.
 
 ## Browser receipt — the real product routes
 
@@ -202,6 +211,62 @@ pipeline.
 Location: `/tmp/claude-1000/-home-bobby/e9193882-3547-4d96-bd79-71735ca75103/scratchpad/research-shots-p10/`.
 Reproduce: `npm run build`, `npx vite preview --port 4317 --strictPort`, then
 `RESEARCH_SHOT_DIR=<dir> npx playwright test --config=playwright.research-probe.config.ts`.
+
+## Backend requests — three, and the first one blocks real validation
+
+### `BR-P10-01` — the alpha version's declaration is not reachable from the browser
+
+This is the one that matters. Three of Screen 02's verbatim validators cannot
+fire on real data, because nothing the browser may read carries the facts they
+check:
+
+| validator | fact it needs | published today |
+|---|---|---|
+| "The strategy declares only {list}." | the strategy's declared timeframes | no |
+| "The strategy declares determinism.seed_required — a fixed random seed is required." | `determinism.seed_required` | no |
+| "Strategy is pinned by {av} (entrypoint {entry}) …" | the bound version's entrypoint | no |
+| "The engine release publishes a ceiling of {n} trials." | the release's trial ceiling | no |
+
+`constraintsFrom(atlas)` therefore returns an empty timeframe list, `false` for
+seed-required, a null entrypoint and an **infinite** trial ceiling — deliberately
+infinite rather than zero, because a ceiling the browser invented would refuse a
+legal trial count. The validators are implemented and unit-tested against
+explicit constraints, so the day these facts are published they start firing
+with no component change. Until then they are inert on the product route, and
+that is stated here rather than hidden behind a green suite.
+
+Step 6 has the same shape: the parameter table renders and enforces the declared
+space, but `parameter_space` for a bound version is not published either, so the
+table is empty on the real route.
+
+```text
+Backend request
+- Fields needed: for a bound alpha version — entrypoint, declared timeframes,
+  determinism.seed_required and parameter_space (the maximal surface Screen 14
+  already mirrors); for the installed release — the published trial ceiling.
+- UI reason: four spec-02 validators and the whole sweep/pin table have no
+  source without them.
+- Current impact: the validators are inert on the product route; the browser
+  enforces nothing it cannot read, and the server still enforces its own at
+  preflight.
+- Proposed shape: extend the P07 `RegistryEntry` with the version's declaration,
+  and the P09 Atlas release with `trial_ceiling`. Codex decides.
+```
+
+### `BR-P10-02` — the release's optimizer defaults
+
+Spec 02 §9 renders `optimization_config` as four grouped tables (study, sampler,
+objective and constraints, candidate selection) with each row marked `default`,
+`OVERRIDE` or `LOCKED`. The override map and its summary are built; the default
+values are not, because the Atlas does not publish the release manifest's
+optimizer defaults. The sparse-override contract is fully honoured either way —
+an untouched field is still not serialized.
+
+### `CG-P09-02` — still open, unchanged
+
+No canonical fixture is published for the two foundation reads, so the browser
+receipt uses fixtures generated from `journey.descriptor.ts` and
+`research-engine-catalog.v1.json`. Valid current evidence; not product truth.
 
 ## Not claimed
 
