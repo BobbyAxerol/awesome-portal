@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 
@@ -93,6 +94,34 @@ def test_completion_is_rejected_before_mandatory_seal(tmp_path: Path) -> None:
     with pytest.raises(ResearchProgressError, match="mandatory seal"):
         journal.emit("run_completed", {"usage": _USAGE})
     assert journal.snapshot()["status"] == "RUNNING"
+
+
+def test_p13_evidence_receipt_is_fsynced_digest_bound_and_recovers_only_staging_bytes(tmp_path: Path) -> None:
+    """P13 receipt recovery never replaces the immutable source fact."""
+
+    source = {
+        "schema_version": "research.p13.evidence-source.v1",
+        "source": {"execution_adapter_id": "p04.delta-rsi.v1"},
+        "direct": {"final_equity": "101"},
+    }
+    journal = _journal(tmp_path)
+    # A crash can leave only a staging file: retrying the same receipt is safe
+    # because no immutable `evidence-source.json` exists yet.
+    staging = journal.root / "evidence-source.partial"
+    staging.write_text("interrupted", encoding="utf-8")
+    digest = journal.store_evidence_source(source)
+    expected = hashlib.sha256(
+        json.dumps(source, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    assert digest == expected
+    assert journal.read_evidence_source(digest) == source
+    assert not staging.exists()
+
+    target = tmp_path / "sealed" / "evidence-source.json"
+    assert journal.export_evidence_source_to(target, digest) == source
+    assert target.stat().st_mode & 0o777 == 0o600
+    with pytest.raises(ResearchProgressError, match="cannot replace"):
+        journal.store_evidence_source({**source, "direct": {"final_equity": "102"}})
 
 
 def test_source_journal_rejects_unknown_payloads_before_they_can_replay(tmp_path: Path) -> None:

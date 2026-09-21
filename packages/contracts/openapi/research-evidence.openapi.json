@@ -1,0 +1,74 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Evidence Flow API",
+    "version": "1.0.0",
+    "description": "P13 same-origin Screen-04 Evidence Flow Hub. The Hub reads a compact immutable Portal projection and lazy bounded chart series. It never runs QuantBT, scans an artifact/Parquet file, exposes a worker/source path, or lets a browser supply a projection revision."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/quantbt/runs/{runId}/evidence": {
+      "get": {
+        "operationId": "researchEvidenceHubGetV1",
+        "summary": "Read compact immutable Evidence Flow Hub state for one run",
+        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/IfNoneMatch" }],
+        "responses": {
+          "200": { "description": "Hub summary at one immutable projection revision", "headers": { "ETag": { "$ref": "#/components/headers/Etag" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EvidenceHub" } } } },
+          "304": { "description": "The exact immutable revision has not changed" },
+          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "403": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/quantbt/runs/{runId}/evidence/series": {
+      "get": {
+        "operationId": "researchEvidenceSeriesGetV1",
+        "summary": "Read one bounded lazy Evidence Flow chart series",
+        "description": "The selected named series carries the same immutable revision semantics as the Hub. A source absence is returned as a typed empty array, never as zero data.",
+        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/SeriesKind" }, { "$ref": "#/components/parameters/IfNoneMatch" }],
+        "responses": {
+          "200": { "description": "At most 192 display values from one named evidence series", "headers": { "ETag": { "$ref": "#/components/headers/Etag" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EvidenceSeries" } } } },
+          "304": { "description": "The exact immutable revision has not changed" },
+          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "403": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "headers": { "Etag": { "description": "Quoted immutable P13 projection revision.", "schema": { "type": "string", "pattern": "^\\\"p13r1_[0-9a-f]{64}\\\"$" } } },
+    "parameters": {
+      "RunId": { "name": "runId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/RunId" } },
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
+      "SeriesKind": { "name": "kind", "in": "query", "required": true, "schema": { "$ref": "#/components/schemas/SeriesKind" } },
+      "IfNoneMatch": { "name": "If-None-Match", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 96 } }
+    },
+    "responses": { "Problem": { "description": "Typed same-origin refusal. It never discloses a database relation, source transport, artifact path, worker identity, lease, raw market data or credential.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } },
+    "schemas": {
+      "WorkspaceId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+      "RunId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "Revision": { "type": "string", "pattern": "^p13r1_[0-9a-f]{64}$" },
+      "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "ExactDecimal": { "type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
+      "Availability": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "PENDING_SOURCE_CALLBACK", "LEGACY_METADATA_ONLY", "NOT_APPLICABLE"] }, "reason_code": { "anyOf": [{ "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,159}$" }, { "type": "null" }] } } },
+      "SeriesKind": { "enum": ["EQUITY_OOS", "MONTHLY_RETURNS", "ROLLING_RETURNS_20", "RETURN_DISTRIBUTION"] },
+      "Problem": { "type": "object", "additionalProperties": false, "required": ["error"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "maxLength": 128 } } },
+      "Metric": { "type": "object", "additionalProperties": false, "required": ["key", "label", "unit", "scope", "frequency", "origin", "definition_id", "value", "availability"], "properties": { "key": { "enum": ["INITIAL_EQUITY", "FINAL_EQUITY", "NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "BARS_PROCESSED", "BENCHMARK_RETURN_FRACTION", "FUNDING_TOTAL"] }, "label": { "type": "string", "minLength": 1, "maxLength": 96 }, "unit": { "enum": ["CURRENCY", "FRACTION", "COUNT"] }, "scope": { "enum": ["OOS", "IS_PLUS_OOS", "NOT_PUBLISHED"] }, "frequency": { "enum": ["RUN_FINAL", "PER_OBSERVATION", "CALENDAR_MONTH"] }, "origin": { "enum": ["ENGINE_DIRECT", "SOURCE_DERIVED", "NOT_PUBLISHED"] }, "definition_id": { "type": "string", "pattern": "^research\\.metric\\.v1\\.[a-z0-9_.-]{2,96}$" }, "value": { "anyOf": [{ "$ref": "#/components/schemas/ExactDecimal" }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "Warning": { "type": "object", "additionalProperties": false, "required": ["definition_id", "state", "reason_code", "copy"], "properties": { "definition_id": { "type": "string", "pattern": "^research\\.warning\\.v1\\.[a-z0-9_.-]{2,96}$" }, "state": { "enum": ["ACTIVE", "NOT_APPLICABLE"] }, "reason_code": { "anyOf": [{ "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,159}$" }, { "type": "null" }] }, "copy": { "type": "string", "minLength": 1, "maxLength": 512 } } },
+      "Claim": { "type": "object", "additionalProperties": false, "required": ["state", "text", "cursor", "methodology_certificate", "availability"], "properties": { "state": { "enum": ["ISSUED", "NOT_ISSUED", "FORECAST", "NOT_PUBLISHED"] }, "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 1024 }, { "type": "null" }] }, "cursor": { "anyOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] }, "methodology_certificate": { "type": "object", "additionalProperties": false, "required": ["state", "grade", "issued_at_utc_ms", "reason_code"], "properties": { "state": { "enum": ["ISSUED", "NOT_ISSUED", "NOT_PUBLISHED"] }, "grade": { "anyOf": [{ "enum": ["A", "B", "C", "D"] }, { "type": "null" }] }, "issued_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "reason_code": { "anyOf": [{ "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,159}$" }, { "type": "null" }] } } }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "Stage": { "type": "object", "additionalProperties": false, "required": ["key", "state", "started_at_utc_ms", "completed_at_utc_ms"], "properties": { "key": { "enum": ["S1", "S2", "S3", "S4", "S5"] }, "state": { "enum": ["PENDING", "RUNNING", "DONE"] }, "started_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "completed_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] } } },
+      "SeriesLink": { "type": "object", "additionalProperties": false, "required": ["kind", "availability", "href"], "properties": { "kind": { "$ref": "#/components/schemas/SeriesKind" }, "availability": { "$ref": "#/components/schemas/Availability" }, "href": { "anyOf": [{ "type": "string", "pattern": "^/api/v1/quantbt/runs/[A-Za-z0-9][A-Za-z0-9._-]{0,127}/evidence/series\\?kind=[A-Z0-9_]+$" }, { "type": "null" }] } } },
+      "EvidenceHub": { "type": "object", "additionalProperties": false, "required": ["schema_version", "read_authority", "run_id", "revision", "etag", "availability", "readiness", "as_of_utc_ms", "metric_registry_version", "core", "metrics", "claim", "stages", "series", "warnings", "source_absences"], "properties": {
+        "schema_version": { "const": "research.evidence-hub.v1" }, "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "revision": { "anyOf": [{ "$ref": "#/components/schemas/Revision" }, { "type": "null" }] }, "etag": { "anyOf": [{ "type": "string", "pattern": "^\\\"p13r1_[0-9a-f]{64}\\\"$" }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" }, "readiness": { "enum": ["COMPLETE", "PARTIAL", "NOT_READY"] }, "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "metric_registry_version": { "const": "research.metric-registry.v1" },
+        "core": { "type": "object", "additionalProperties": false, "required": ["source_adapter_id", "engine_version", "input_scope", "source_transform_digest", "requested_spec_digest", "effective_spec_digest", "dataset_binding_digest", "manifest_digest", "data"], "properties": { "source_adapter_id": { "anyOf": [{ "const": "p04.delta-rsi.v1" }, { "type": "null" }] }, "engine_version": { "anyOf": [{ "const": "1.1.1" }, { "type": "null" }] }, "input_scope": { "anyOf": [{ "const": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" }, { "type": "null" }] }, "source_transform_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "requested_spec_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "effective_spec_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "dataset_binding_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "manifest_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "data": { "type": "object", "additionalProperties": false, "required": ["dataset_id", "symbol", "timeframe", "oos_observation_count"], "properties": { "dataset_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] }, "symbol": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] }, "timeframe": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 191 }, { "type": "null" }] }, "oos_observation_count": { "anyOf": [{ "type": "integer", "minimum": 1, "maximum": 2000000 }, { "type": "null" }] } } } } },
+        "metrics": { "type": "array", "minItems": 8, "maxItems": 8, "items": { "$ref": "#/components/schemas/Metric" } }, "claim": { "$ref": "#/components/schemas/Claim" }, "stages": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/Stage" } }, "series": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/components/schemas/SeriesLink" } }, "warnings": { "type": "array", "maxItems": 8, "items": { "$ref": "#/components/schemas/Warning" } }, "source_absences": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/Availability" } }
+      } },
+      "EquityPoint": { "type": "object", "additionalProperties": false, "required": ["at_utc_ms", "equity", "drawdown_fraction"], "properties": { "at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "equity": { "$ref": "#/components/schemas/ExactDecimal" }, "drawdown_fraction": { "$ref": "#/components/schemas/ExactDecimal" } } },
+      "MonthlyReturnPoint": { "type": "object", "additionalProperties": false, "required": ["month_start_utc_ms", "return_fraction"], "properties": { "month_start_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "return_fraction": { "$ref": "#/components/schemas/ExactDecimal" } } },
+      "RollingReturnPoint": { "type": "object", "additionalProperties": false, "required": ["at_utc_ms", "return_fraction"], "properties": { "at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "return_fraction": { "$ref": "#/components/schemas/ExactDecimal" } } },
+      "DistributionBucket": { "type": "object", "additionalProperties": false, "required": ["lower_inclusive", "upper_exclusive", "count"], "properties": { "lower_inclusive": { "$ref": "#/components/schemas/ExactDecimal" }, "upper_exclusive": { "$ref": "#/components/schemas/ExactDecimal" }, "count": { "type": "string", "pattern": "^[0-9]+$" } } },
+      "EvidenceSeries": { "type": "object", "additionalProperties": false, "required": ["schema_version", "run_id", "revision", "etag", "kind", "availability", "source_sample", "values"], "properties": { "schema_version": { "const": "research.evidence-series.v1" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "revision": { "anyOf": [{ "$ref": "#/components/schemas/Revision" }, { "type": "null" }] }, "etag": { "anyOf": [{ "type": "string", "pattern": "^\\\"p13r1_[0-9a-f]{64}\\\"$" }, { "type": "null" }] }, "kind": { "$ref": "#/components/schemas/SeriesKind" }, "availability": { "$ref": "#/components/schemas/Availability" }, "source_sample": { "type": "object", "additionalProperties": false, "required": ["source_observation_count", "emitted_point_count", "sampling"], "properties": { "source_observation_count": { "anyOf": [{ "type": "integer", "minimum": 1, "maximum": 2000000 }, { "type": "null" }] }, "emitted_point_count": { "type": "integer", "minimum": 0, "maximum": 192 }, "sampling": { "anyOf": [{ "enum": ["FULL", "EXTREMA_BUCKET_V1"] }, { "type": "null" }] } } }, "values": { "type": "array", "maxItems": 192, "items": { "oneOf": [{ "$ref": "#/components/schemas/EquityPoint" }, { "$ref": "#/components/schemas/MonthlyReturnPoint" }, { "$ref": "#/components/schemas/RollingReturnPoint" }, { "$ref": "#/components/schemas/DistributionBucket" }] } } } }
+    }
+  }
+}

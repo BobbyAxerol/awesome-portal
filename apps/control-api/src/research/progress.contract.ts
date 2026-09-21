@@ -15,7 +15,13 @@ export const ResearchProgressRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
 const UtcMsSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const DecimalSchema = z.string().regex(/^[0-9]+(?:\.[0-9]+)?$/).max(96);
+// Research evidence may legitimately contain a negative return or drawdown.
+// Keep it as a decimal string across the private worker boundary: JSON number
+// values would silently turn a finite value into `NaN`/scientific notation in
+// one of the later projection readers.
+const SignedDecimalSchema = z.string().regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(96);
 const MAX_SNAPSHOT_BYTES = 256 * 1_024;
+const MAX_EVIDENCE_BYTES = 28 * 1_024;
 const JsonObjectSchema = z.record(z.string(), z.unknown()).superRefine((value, context) => {
   const encoded = JSON.stringify(value);
   if (encoded === undefined || Buffer.byteLength(encoded, "utf8") > 2_048) {
@@ -122,6 +128,128 @@ const ClaimSchema = z.object({
 }).strict();
 
 /**
+ * P13's source receipt is deliberately bounded and terminal-only.  It is not
+ * a market-data export: it carries a sampled equity passport plus the exact
+ * scalar facts that were calculated while QuantBT still held the full
+ * in-memory result.  Portal may derive display projections from it, but it
+ * never re-runs the engine or opens a worker/artifact path on a browser read.
+ */
+const ResearchEvidencePointSchema = z.object({
+  at_utc_ms: UtcMsSchema,
+  equity: DecimalSchema,
+  drawdown_fraction: SignedDecimalSchema,
+}).strict();
+
+const ResearchEvidenceMonthlyReturnSchema = z.object({
+  month_start_utc_ms: UtcMsSchema,
+  return_fraction: SignedDecimalSchema,
+}).strict();
+
+const ResearchEvidenceRollingReturnSchema = z.object({
+  at_utc_ms: UtcMsSchema,
+  return_fraction: SignedDecimalSchema,
+}).strict();
+
+const ResearchEvidenceDistributionBucketSchema = z.object({
+  lower_inclusive: SignedDecimalSchema,
+  upper_exclusive: SignedDecimalSchema,
+  count: z.string().regex(/^[0-9]+$/).max(24),
+}).strict();
+
+const ResearchEvidenceAvailabilitySchema = z.object({
+  state: z.enum(["NOT_PUBLISHED", "NOT_APPLICABLE"]),
+  reason_code: z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/),
+}).strict();
+
+export const ResearchEvidenceSourceSchema = z.object({
+  schema_version: z.literal("research.p13.evidence-source.v1"),
+  source: z.object({
+    execution_adapter_id: z.literal("p04.delta-rsi.v1"),
+    engine_version: z.string().regex(/^1\.1\.1$/),
+    input_scope: z.literal("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"),
+    oos_observation_count: z.number().int().positive().max(2_000_000),
+    emitted_equity_points: z.number().int().positive().max(192),
+    chart_sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]),
+    source_transform_digest: DigestSchema,
+  }).strict(),
+  direct: z.object({
+    initial_equity: DecimalSchema,
+    final_equity: DecimalSchema,
+    num_trades: z.string().regex(/^[0-9]+$/).max(24),
+    bars: z.string().regex(/^[0-9]+$/).max(24),
+  }).strict(),
+  derived: z.object({
+    net_return_fraction: SignedDecimalSchema,
+    max_drawdown_fraction: SignedDecimalSchema,
+    monthly_returns: z.array(ResearchEvidenceMonthlyReturnSchema).max(120),
+    rolling_returns_20_observations: z.array(ResearchEvidenceRollingReturnSchema).max(192),
+    return_distribution: z.object({
+      state: z.enum(["AVAILABLE", "NOT_APPLICABLE"]),
+      reason_code: z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/).nullable(),
+      buckets: z.array(ResearchEvidenceDistributionBucketSchema).max(16),
+    }).strict(),
+  }).strict(),
+  equity_points: z.array(ResearchEvidencePointSchema).min(1).max(192),
+  unavailable: z.object({
+    benchmark: ResearchEvidenceAvailabilitySchema,
+    funding: ResearchEvidenceAvailabilitySchema,
+    audited_fills: ResearchEvidenceAvailabilitySchema,
+    per_fold_metrics: ResearchEvidenceAvailabilitySchema,
+  }).strict(),
+}).strict().superRefine((value, context) => {
+  if (value.source.emitted_equity_points !== value.equity_points.length) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count is inconsistent" });
+  }
+  if (value.source.emitted_equity_points > value.source.oos_observation_count) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count exceeds OOS observations" });
+  }
+  if (
+    (value.source.chart_sampling === "FULL" && value.source.emitted_equity_points !== value.source.oos_observation_count)
+    || (value.source.chart_sampling === "EXTREMA_BUCKET_V1" && value.source.emitted_equity_points >= value.source.oos_observation_count)
+  ) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence sampling declaration is inconsistent" });
+  }
+  if (
+    value.direct.initial_equity !== value.equity_points[0]?.equity
+    || value.direct.final_equity !== value.equity_points[value.equity_points.length - 1]?.equity
+  ) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "direct evidence endpoints do not reconcile to the OOS series" });
+  }
+  for (let index = 1; index < value.equity_points.length; index += 1) {
+    if (value.equity_points[index]!.at_utc_ms <= value.equity_points[index - 1]!.at_utc_ms) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence points must be strictly chronological" });
+      break;
+    }
+  }
+  for (let index = 1; index < value.derived.monthly_returns.length; index += 1) {
+    if (value.derived.monthly_returns[index]!.month_start_utc_ms
+      <= value.derived.monthly_returns[index - 1]!.month_start_utc_ms) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "monthly evidence must be strictly chronological" });
+      break;
+    }
+  }
+  for (let index = 1; index < value.derived.rolling_returns_20_observations.length; index += 1) {
+    if (value.derived.rolling_returns_20_observations[index]!.at_utc_ms
+      <= value.derived.rolling_returns_20_observations[index - 1]!.at_utc_ms) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "rolling evidence must be strictly chronological" });
+      break;
+    }
+  }
+  const distribution = value.derived.return_distribution;
+  if (
+    (distribution.state === "AVAILABLE"
+      && (distribution.reason_code !== null || distribution.buckets.length === 0))
+    || (distribution.state === "NOT_APPLICABLE"
+      && (distribution.reason_code === null || distribution.buckets.length !== 0))
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "return-distribution availability and payload are inconsistent",
+    });
+  }
+});
+
+/**
  * P11 deliberately accepts a small, event-specific vocabulary.  The callback
  * principal is private, but it is still not a licence to place source paths,
  * raw market rows, arbitrary stdout or future worker controls in the browser
@@ -176,7 +304,15 @@ function validatePayload(
     }).strict(),
     heartbeat: z.object({}).strict(),
     seal_started: z.object({}).strict(),
-    run_completed: z.object({ usage: UsageSchema, claim: ClaimSchema.optional() }).strict(),
+    run_completed: z.object({
+      usage: UsageSchema,
+      claim: ClaimSchema.optional(),
+      // The immutable source document travels at ingress top-level because it
+      // is intentionally larger than P11's 2 KiB event budget.  Its digest is
+      // nevertheless in the journal event, so a retry cannot attach a new
+      // document to an already persisted terminal fact.
+      evidence_digest: DigestSchema.optional(),
+    }).strict(),
     run_failed: z.object({
       code: z.string().min(1).max(160),
       message: z.string().max(1_024),
@@ -319,6 +455,7 @@ export const ResearchProgressIngressSchema = z.object({
   lease_epoch: z.number().int().positive().max(2_147_483_647),
   event: ResearchProgressEventSchema,
   snapshot: ResearchProgressSnapshotSchema,
+  evidence: ResearchEvidenceSourceSchema.optional(),
 }).strict().superRefine((value, context) => {
   const event = value.event;
   const snapshot = value.snapshot;
@@ -329,6 +466,18 @@ export const ResearchProgressIngressSchema = z.object({
     snapshot.latest_sequence < event.sequence
   ) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "progress ingress identity is inconsistent" });
+  }
+  const terminalEvidenceDigest = value.event.event_type === "run_completed"
+    ? value.event.payload.evidence_digest
+    : undefined;
+  if (value.evidence !== undefined && value.event.event_type !== "run_completed") {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence is only valid on terminal completion" });
+  }
+  if ((terminalEvidenceDigest === undefined) !== (value.evidence === undefined)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence document and terminal digest must be paired" });
+  }
+  if (value.evidence !== undefined && Buffer.byteLength(JSON.stringify(value.evidence), "utf8") > MAX_EVIDENCE_BYTES) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence document exceeds its bounded transport budget" });
   }
 });
 
@@ -349,6 +498,7 @@ export const ResearchProgressCancelRequestSchema = z.object({
 export type ResearchProgressEvent = z.infer<typeof ResearchProgressEventSchema>;
 export type ResearchProgressSnapshot = z.infer<typeof ResearchProgressSnapshotSchema>;
 export type ResearchProgressIngress = z.infer<typeof ResearchProgressIngressSchema>;
+export type ResearchEvidenceSource = z.infer<typeof ResearchEvidenceSourceSchema>;
 export type ResearchProgressReadQuery = z.infer<typeof ResearchProgressReadQuerySchema>;
 export type ResearchProgressPageQuery = z.infer<typeof ResearchProgressPageQuerySchema>;
 export type ResearchProgressCancelRequest = z.infer<typeof ResearchProgressCancelRequestSchema>;

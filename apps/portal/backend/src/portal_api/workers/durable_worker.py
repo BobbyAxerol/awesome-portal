@@ -293,6 +293,7 @@ class DurableQuantWorker:
                 raise DurableRunCancelled("P11 cancellation was requested before artifact seal")
             engine_dir = engine_root / run_id
             self._artifact_store.stage_directory(engine_dir, temp_dir)
+            evidence_digest: str | None = None
             if is_research_producer:
                 shutil.rmtree(engine_root)
                 if progress_journal is not None:
@@ -311,12 +312,29 @@ class DurableQuantWorker:
                         research_dir / "progress-receipt.json",
                         progress_journal.snapshot(),
                     )
+                    source_evidence = result.get("research_evidence")
+                    if source_evidence is not None:
+                        if not isinstance(source_evidence, dict):
+                            raise DurableRunError("P13 source evidence receipt is invalid")
+                        # Write the receipt before the terminal event. A lost
+                        # Control callback can then be retried from the P11
+                        # journal without reopening QuantBT or an artifact.
+                        evidence_digest = progress_journal.store_evidence_source(source_evidence)
+                        progress_journal.emit("artifact_writing", {"name": "research/evidence-source.json"})
+                        progress_journal.export_evidence_source_to(
+                            research_dir / "evidence-source.json",
+                            evidence_digest,
+                        )
             bundle = self._artifact_store.commit_bundle(
                 run_id=run_id,
                 attempt_id=attempt.run_attempt_id,
                 temp_dir=temp_dir,
                 required_files=(
-                    ("research/progress-journal.ndjson", "research/progress-receipt.json")
+                    (
+                        "research/progress-journal.ndjson",
+                        "research/progress-receipt.json",
+                        *(("research/evidence-source.json",) if evidence_digest is not None else ()),
+                    )
                     if progress_journal is not None else ()
                 ),
                 manifest_extra={"engine": {"status": "COMPLETED"}},
@@ -326,7 +344,10 @@ class DurableQuantWorker:
                     bundle_digest=bundle.bundle_sha256,
                     bundle_bytes=sum((temp_dir / name).stat().st_size for name in bundle.files),
                 )
-                for name in ("research/progress-journal.ndjson", "research/progress-receipt.json"):
+                sealed_names = ["research/progress-journal.ndjson", "research/progress-receipt.json"]
+                if evidence_digest is not None:
+                    sealed_names.append("research/evidence-source.json")
+                for name in sealed_names:
                     digest = bundle.files.get(name)
                     if digest is None:
                         raise DurableRunError("P11 mandatory progress artifact was not sealed")
@@ -338,14 +359,17 @@ class DurableQuantWorker:
                     })
                 progress_journal.emit("stage_completed", {"stage": "S5"})
             if progress_journal is not None:
-                progress_journal.emit("run_completed", {
+                completion_payload = {
                     # P11 only carries bounded, measured receipt fields into
                     # Control API's durable P06 closeout.  It does not infer
                     # metrics from stdout, a console tail, or filesystem
                     # paths.  A field absent from the fixed P04 receipt stays
                     # zero rather than becoming a guessed measurement.
                     "usage": self._p11_usage(result),
-                })
+                }
+                if evidence_digest is not None:
+                    completion_payload["evidence_digest"] = evidence_digest
+                progress_journal.emit("run_completed", completion_payload)
             # The source journal is fsync'd before the local attempt is made
             # terminal.  Otherwise a crash in this tiny window would leave a
             # sealed bundle and a SUCCEEDED attempt with no recoverable P11

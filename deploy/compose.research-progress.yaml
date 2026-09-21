@@ -10,6 +10,9 @@ services:
     environment:
       FEATURE_RESEARCH_RUN_PRODUCER: ${CONTROL_API_FEATURE_RESEARCH_RUN_PRODUCER:-false}
       FEATURE_RESEARCH_PROGRESS: ${CONTROL_API_FEATURE_RESEARCH_PROGRESS:-false}
+      # P13 is a read-only same-origin Hub over already immutable terminal
+      # receipts. It neither starts a worker nor changes P10/P11 flags.
+      FEATURE_RESEARCH_EVIDENCE: ${CONTROL_API_FEATURE_RESEARCH_EVIDENCE:-false}
       RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: ${CONTROL_API_RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS:-1500}
 
   # The worker owns source journalling and the private, at-least-once callback.

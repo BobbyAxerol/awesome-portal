@@ -20,7 +20,10 @@ import type { ResearchRequestedSpec } from "../../apps/control-api/src/research/
 import { ResearchMetadataRepository } from "../../apps/control-api/src/research/repository";
 import { ResearchRunAdmissionService } from "../../apps/control-api/src/research/run-admission.service";
 import { ResearchRunCreateService } from "../../apps/control-api/src/research/run-create.service";
+import { ResearchEvidenceRepository } from "../../apps/control-api/src/research/evidence.repository";
+import { ResearchEvidenceService } from "../../apps/control-api/src/research/evidence.service";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
+import { p13EvidenceSourceFixture } from "../../apps/control-api/test/research-evidence.fixture";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
 const scope: ResearchScope = { workspaceId: "p11-workspace", actorUserId: "p11-admin" };
@@ -144,6 +147,11 @@ class FakeProgressPortalClient {
   async requestCancellation(): Promise<"REQUESTED"> { return "REQUESTED"; }
 }
 
+/** P13 is a terminal sidecar; P11's own regression corpus has no receipt. */
+class FakeEvidenceService {
+  async ingest(): Promise<void> { /* source receipt absent by design */ }
+}
+
 function snapshot(
   runId: string,
   workerAttemptId: string,
@@ -200,8 +208,12 @@ function ingress(input: {
   sequence: number;
   eventType: "run_started" | "heartbeat" | "run_completed" | "run_failed";
   progress?: ResearchProgressSnapshot;
+  evidence?: ReturnType<typeof p13EvidenceSourceFixture>;
 }): ResearchProgressIngress {
-  const payload = input.eventType === "run_completed" ? { usage: USAGE }
+  const payload = input.eventType === "run_completed" ? {
+    usage: USAGE,
+    ...(input.evidence ? { evidence_digest: sha256ResearchJson(input.evidence) } : {}),
+  }
     : input.eventType === "run_failed" ? { code: "ENGINE_ERROR", message: "source contradiction", usage: USAGE }
       : {};
   return ResearchProgressIngressSchema.parse({
@@ -222,6 +234,7 @@ function ingress(input: {
       payload,
     },
     snapshot: input.progress ?? snapshot(input.runId, input.workerAttemptId, input.leaseEpoch, input.sequence),
+    ...(input.evidence ? { evidence: input.evidence } : {}),
   });
 }
 
@@ -252,6 +265,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       metadata,
       new ResearchProgressFanout(),
       new FakeProgressPortalClient() as never,
+      new FakeEvidenceService() as never,
       config,
     );
   }, 60_000);
@@ -307,7 +321,8 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     expect(events.rows).toEqual([{ source_sequence: "1" }]);
 
     const rehydrated = new ResearchProgressService(
-      new ResearchProgressRepository(pool), metadata, new ResearchProgressFanout(), new FakeProgressPortalClient() as never, config,
+      new ResearchProgressRepository(pool), metadata, new ResearchProgressFanout(),
+      new FakeProgressPortalClient() as never, new FakeEvidenceService() as never, config,
     );
     const read = await rehydrated.read(admin, scope, run.runId);
     expect(read).toMatchObject({
@@ -400,5 +415,73 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     expect(ResearchProgressIngressSchema.safeParse(invalid).success).toBe(false);
     const rows = await pool.query(`SELECT 1 FROM research.run_progress_events WHERE workspace_id = $1`, [scope.workspaceId]);
     expect(rows.rowCount).toBe(0);
+  });
+
+  it("P13-T01/T03/T05/T09/T13: binds one terminal source receipt, preserves a single revision, and rejects immutable mutation", async () => {
+    const run = await createDispatchedRun();
+    const evidenceRepository = new ResearchEvidenceRepository(pool);
+    const evidenceService = new ResearchEvidenceService(evidenceRepository, {
+      ...config,
+      FEATURE_RESEARCH_EVIDENCE: "true",
+    } as ControlApiConfig);
+    const p13Service = new ResearchProgressService(
+      progress,
+      metadata,
+      new ResearchProgressFanout(),
+      new FakeProgressPortalClient() as never,
+      evidenceService,
+      config,
+    );
+    const source = p13EvidenceSourceFixture();
+    const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: 2, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+    const terminal = ingress({
+      ...run,
+      sequence: 1,
+      eventType: "run_completed",
+      progress: completed,
+      evidence: source,
+    });
+
+    await p13Service.ingest(terminal);
+    // At-least-once terminal delivery must retain the exact receipt/revision,
+    // rather than append a second chart or recompute a metric on a read.
+    await p13Service.ingest(terminal);
+
+    const hub = await evidenceService.hub(scope, run.runId);
+    expect(hub).toMatchObject({
+      availability: { state: "AVAILABLE", reason_code: null },
+      readiness: "PARTIAL",
+      revision: expect.stringMatching(/^p13r1_[0-9a-f]{64}$/),
+    });
+    expect(hub.metrics.find((metric) => metric.key === "FINAL_EQUITY")).toMatchObject({ value: "110" });
+    expect(hub.source_absences.benchmark).toEqual({
+      state: "NOT_PUBLISHED",
+      reason_code: "P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK",
+    });
+    const equity = await evidenceService.series(scope, run.runId, "EQUITY_OOS");
+    expect(equity).toMatchObject({
+      revision: hub.revision,
+      source_sample: { source_observation_count: 3, emitted_point_count: 3, sampling: "FULL" },
+    });
+
+    const persisted = await pool.query<{ sources: string; projections: string; series: string }>(
+      `SELECT
+         (SELECT count(*) FROM research.run_evidence_sources_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS sources,
+         (SELECT count(*) FROM research.run_evidence_projections_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS projections,
+         (SELECT count(*) FROM research.run_evidence_series_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS series`,
+      [scope.workspaceId, run.runId],
+    );
+    expect(persisted.rows[0]).toEqual({ sources: "1", projections: "1", series: "4" });
+    await expect(pool.query(
+      `UPDATE research.run_evidence_projections_v1
+          SET readiness = 'COMPLETE'
+        WHERE workspace_id = $1 AND run_id = $2`,
+      [scope.workspaceId, run.runId],
+    )).rejects.toThrow(/immutable/i);
   });
 });

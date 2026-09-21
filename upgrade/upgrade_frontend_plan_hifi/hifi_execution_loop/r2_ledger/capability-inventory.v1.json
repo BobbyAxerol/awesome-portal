@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 155,
+ "route_count": 157,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1572,6 +1572,26 @@
     "consumer": "TYPED_FRONTEND_PORT",
     "unused_capability": true,
     "evidence": "P12 lazy Screen-01 sparkline boundary validates the session/workspace-scoped run ID and returns at most 24 exact decimal strings. Current P12 refuses artifact/Parquet reads, so an unavailable series is explicit rather than a fabricated curve; Claude owns placeholder and browser evidence.",
+    "owner": "codex",
+    "test_owner": "codex"
+  },
+  {
+    "route": "GET /api/v1/quantbt/runs/:runId/evidence",
+    "controller": "research/evidence.controller.ts",
+    "interaction_class": "AUTO_READ",
+    "consumer": "TYPED_FRONTEND_PORT",
+    "unused_capability": true,
+    "evidence": "P13 bounded same-origin Evidence Flow Hub reads only one immutable Portal projection under session/workspace scope. It never starts QuantBT, scans an artifact/Parquet dataset, exposes worker or lease identity, or lets the browser choose a revision; Claude owns the Screen 04 rich typed consumer and browser receipt.",
+    "owner": "codex",
+    "test_owner": "codex"
+  },
+  {
+    "route": "GET /api/v1/quantbt/runs/:runId/evidence/series",
+    "controller": "research/evidence.controller.ts",
+    "interaction_class": "INTERACTION_READ",
+    "consumer": "TYPED_FRONTEND_PORT",
+    "unused_capability": true,
+    "evidence": "P13 lazy named Evidence Flow chart read returns one at-most-192-value exact-decimal series bound to the Hub revision. It rejects relation/cursor/path/worker input and represents source absence as a typed empty series; Claude owns Screen 04 drilldown, revision rejection and browser evidence.",
     "owner": "codex",
     "test_owner": "codex"
   }

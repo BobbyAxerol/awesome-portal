@@ -14,6 +14,7 @@ raw market row or broker detail.
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -33,6 +34,7 @@ _FOLD_SEGMENT_KINDS = ("search", "oos", "freeze_tick")
 _FOLD_SEGMENT_STATES = {"RUNNING", "DONE", "FAILED"}
 _METHODOLOGY_CERTIFICATE_GRADES = {"A", "B", "C", "D"}
 _MAX_EVENT_BYTES = 2_048
+_MAX_EVIDENCE_BYTES = 28 * 1024
 # The control-plane compact projection must remain cheap to page and fan out.
 # This is deliberately larger than a single event (it carries up to 256 fold
 # summaries and 128 artifact cards) but substantially below Fastify's default
@@ -283,8 +285,13 @@ def _validate_payload(event_type: str, payload: dict[str, Any]) -> None:
             raise ResearchProgressError("P11 budget percentage is invalid")
         return
     if event_type == "run_completed":
-        _exact_payload(payload, event_type=event_type, required={"usage"}, optional={"claim"})
+        _exact_payload(payload, event_type=event_type, required={"usage"}, optional={"claim", "evidence_digest"})
         _valid_usage(payload.get("usage"))
+        evidence_digest = payload.get("evidence_digest")
+        if evidence_digest is not None and (
+            not isinstance(evidence_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", evidence_digest)
+        ):
+            raise ResearchProgressError("P13 completion evidence digest is invalid")
         claim = payload.get("claim")
         if claim is not None:
             if not isinstance(claim, dict):
@@ -369,6 +376,7 @@ class ResearchProgressJournal:
         self._segments.mkdir(mode=0o700, exist_ok=True)
         self._lock_path = self.root / "journal.lock"
         self._snapshot_path = self.root / "snapshot.json"
+        self._evidence_path = self.root / "evidence-source.json"
         self._ensure_snapshot()
 
     def snapshot(self) -> dict[str, Any]:
@@ -376,6 +384,78 @@ class ResearchProgressJournal:
 
         with self._locked():
             return self._read_snapshot()
+
+    def store_evidence_source(self, source: dict[str, Any]) -> str:
+        """Durably persist one bounded P13 source receipt before completion.
+
+        This is source-side recovery data, analogous to the P11 journal, not
+        a user-download endpoint.  The relay reads it only when it sees the
+        terminal journal event that carries the returned digest.
+        """
+
+        if not isinstance(source, dict) or source.get("schema_version") != "research.p13.evidence-source.v1":
+            raise ResearchProgressError("P13 evidence source receipt is invalid")
+        try:
+            encoded = json.dumps(canonicalize(source), sort_keys=True, separators=(",", ":")).encode("utf-8")
+        except (TypeError, ValueError) as exc:
+            raise ResearchProgressError("P13 evidence source receipt is not serializable") from exc
+        if len(encoded) == 0 or len(encoded) > _MAX_EVIDENCE_BYTES:
+            raise ResearchProgressError("P13 evidence source receipt exceeds its bounded budget")
+        digest = hashlib.sha256(encoded).hexdigest()
+        with self._locked():
+            if self._evidence_path.exists():
+                existing = self._evidence_path.read_bytes()
+                if hashlib.sha256(existing).hexdigest() != digest:
+                    raise ResearchProgressError("P13 source evidence cannot replace an immutable receipt")
+                return digest
+            temporary = self._evidence_path.with_suffix(".partial")
+            # A power loss may leave only the private staging file.  It has
+            # never become a source fact, so retrying this exact receipt may
+            # replace that staging byte without touching the immutable file.
+            temporary.unlink(missing_ok=True)
+            with temporary.open("wb") as handle:
+                handle.write(encoded)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, self._evidence_path)
+            os.chmod(self._evidence_path, 0o600)
+        return digest
+
+    def read_evidence_source(self, expected_digest: str) -> dict[str, Any]:
+        """Return the exact terminal evidence document after digest binding."""
+
+        if not re.fullmatch(r"[0-9a-f]{64}", expected_digest):
+            raise ResearchProgressError("P13 evidence digest is invalid")
+        with self._locked():
+            try:
+                encoded = self._evidence_path.read_bytes()
+            except OSError as exc:
+                raise ResearchProgressError("P13 terminal evidence source receipt is unavailable") from exc
+        if hashlib.sha256(encoded).hexdigest() != expected_digest:
+            raise ResearchProgressError("P13 terminal evidence source digest is inconsistent")
+        try:
+            value = json.loads(encoded.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ResearchProgressError("P13 terminal evidence source receipt is corrupt") from exc
+        if not isinstance(value, dict) or value.get("schema_version") != "research.p13.evidence-source.v1":
+            raise ResearchProgressError("P13 terminal evidence source receipt is invalid")
+        return value
+
+    def export_evidence_source_to(self, destination: Path, expected_digest: str) -> dict[str, Any]:
+        """Copy the verified, bounded receipt into the sealed P10 bundle."""
+
+        value = self.read_evidence_source(expected_digest)
+        destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        temporary = destination.with_suffix(destination.suffix + ".partial")
+        encoded = json.dumps(canonicalize(value), sort_keys=True, separators=(",", ":")).encode("utf-8")
+        temporary.unlink(missing_ok=True)
+        with temporary.open("wb") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
+        os.chmod(destination, 0o600)
+        return value
 
     def emit(self, event_type: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """Append one source event and atomically publish its projection."""

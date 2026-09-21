@@ -1,0 +1,18 @@
+{
+  "schema_version": "research.phase-changes.v1",
+  "phase": "P13",
+  "areas": [
+    "bounded P04 terminal evidence receipt and fsync journal sidecar",
+    "P11 digest-paired relay/ingress materialisation",
+    "additive immutable PostgreSQL source/projection/lazy-series relations",
+    "same-origin Hub and named-series BFF with generated OpenAPI declarations",
+    "feature-dark compose/example/runbook and route ownership ledger",
+    "focused unit, disposable PostgreSQL and affected Python proofs"
+  ],
+  "excluded": [
+    "frontend TSX/CSS/HiFi changes",
+    "runtime activation/deployment",
+    "artifact or raw market browsing",
+    "Execution Edge, Trading System, broker, Redis, direct DB or CLI changes"
+  ]
+}

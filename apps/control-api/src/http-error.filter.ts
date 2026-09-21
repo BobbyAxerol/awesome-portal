@@ -35,6 +35,7 @@ import { ResearchFoundationError } from "./research/foundation.error";
 import { ResearchRunCreateError } from "./research/run-create.error";
 import { ResearchProgressError } from "./research/progress.error";
 import { ResearchRunLibraryError } from "./research/run-library.error";
+import { ResearchEvidenceError } from "./research/evidence.error";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -77,6 +78,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       || exception instanceof ResearchRunCreateError
       || exception instanceof ResearchProgressError
       || exception instanceof ResearchRunLibraryError
+      || exception instanceof ResearchEvidenceError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

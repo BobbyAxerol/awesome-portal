@@ -19,6 +19,7 @@ import { ResearchProgressFanout, type ResearchProgressEnvelope } from "./progres
 import { ResearchProgressPortalClient } from "./progress.portal-client";
 import { ResearchProgressRepository, type ProgressIngressScope, type ProgressRunRead } from "./progress.repository";
 import { ResearchMetadataRepository } from "./repository";
+import { ResearchEvidenceService } from "./evidence.service";
 
 const ACTIVE_JOB_STATES = new Set(["QUEUED", "CLAIMED", "RUNNING"]);
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
@@ -75,6 +76,7 @@ export class ResearchProgressService {
     private readonly metadata: ResearchMetadataRepository,
     private readonly fanout: ResearchProgressFanout,
     private readonly portal: ResearchProgressPortalClient,
+    private readonly evidence: ResearchEvidenceService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
@@ -82,6 +84,10 @@ export class ResearchProgressService {
     this.requireEnabled();
     const ingressScope = await this.progress.resolveIngress(input);
     const persisted = await this.progress.persistIngress(ingressScope, input);
+    // P13 is a terminal sidecar only. If its own immutable write temporarily
+    // fails, the P11 event remains persisted and the source relay can retry
+    // the same digest-bound payload without rerunning QuantBT.
+    await this.evidence.ingest(ingressScope, input);
     await this.applyLifecycle(ingressScope, input);
     if (persisted.inserted) {
       this.fanout.publish(input.run_id, { event: persisted.event, snapshot: persisted.snapshot });

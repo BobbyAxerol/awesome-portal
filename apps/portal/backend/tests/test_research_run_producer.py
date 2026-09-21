@@ -213,6 +213,17 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
     assert receipt["input_scope"] == "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY"
     assert receipt["p04_parameters"] == P04_PARAMETERS
     assert receipt["engine"]["bars"] < identity.row_count
+    # P13 derives its compact evidence passport while the confined child still
+    # holds the full QuantBT result. It must be receipt-sized, reconcile its
+    # endpoints, and never turn the sealed P10 bundle into a market-data copy.
+    evidence = result["research_evidence"]
+    assert evidence is not None
+    assert receipt["evidence_source"] == evidence
+    assert evidence["schema_version"] == "research.p13.evidence-source.v1"
+    assert evidence["source"]["oos_observation_count"] >= evidence["source"]["emitted_equity_points"] >= 1
+    assert evidence["direct"]["initial_equity"] == evidence["equity_points"][0]["equity"]
+    assert evidence["direct"]["final_equity"] == evidence["equity_points"][-1]["equity"]
+    assert len(json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode("utf-8")) <= 28 * 1024
 
     # The sealed bundle is a future authorized read surface, not a copy of the
     # private Control-API-to-worker envelope.  Keep the user-reviewable spec
@@ -245,6 +256,10 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
         payload["research"]["work_digest"],
     ):
         assert opaque_private_value not in serialized_public_artifacts
+
+    evidence_text = json.dumps(evidence, sort_keys=True)
+    for forbidden in ("market_path", "snapshot_id", "worker_attempt_id", "lease_epoch", "open", "high", "low", "close"):
+        assert forbidden not in evidence_text
 
     assert not list(market_root.rglob("*.parquet"))
     assert not list((tmp_path / "engine-output").rglob("*.parquet"))

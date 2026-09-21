@@ -209,6 +209,19 @@ self-contained in local, CI and release-image containers. The P08 contract
 test requires its parsed JSON to remain exactly equal to the immutable P02
 evidence copy; P02 remains the freeze authority.
 
+P13 publishes the additive Research Evidence Flow contract at
+`openapi/research-evidence.openapi.json`, generated as
+`generated/research-evidence.d.ts`. It contains exactly two same-origin
+read operations: an immutable compact Evidence Hub and one named, bounded lazy
+series. The source receipt is emitted only by the confined P04/P10 child at
+terminal completion, digest-bound to the P11 event, then projected in Portal
+storage. The browser never receives a worker attempt, lease, artifact path,
+raw OHLCV row, credential or a relation/revision input. Exact decimals and
+UTC milliseconds are retained; unavailable benchmark, funding, audited-fill
+and per-fold facts remain typed rather than being replaced with zero. Generate
+only with `npm run generate` (or `npm run generate:research-evidence`) and
+never hand-maintain emitted types.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

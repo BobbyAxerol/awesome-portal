@@ -420,6 +420,13 @@ chiếu màn thực với source UX.
    phần chưa thuộc scope và owner phase kế tiếp; giữ rich composition trong
    state typed nhưng không gọi fixture lane là màn production.
 
+7. Với một màn đã có named lazy BFF (ví dụ P13 Hub + series), browser receipt
+   phải đối chiếu **cả** HiFi HTML và implementation cùng revision contract:
+   assert active/inactive network calls, source-state panel-local, và từ chối
+   series revision khác Hub revision. Không được dùng một screenshot giống
+   HiFi để thay cho kiểm tra request shape, stale-response rejection hoặc
+   exact-value rendering.
+
 Receipt cross-phase đầu tiên theo rule này là
 [P03–P08 browser audit](./evidence/P08/frontend-hifi-browser-audit.md). Các
 phase kế tiếp phải cập nhật matrix/receipt của chính phase mình, không copy

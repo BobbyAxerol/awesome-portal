@@ -130,6 +130,9 @@ import { ResearchProgressPortalClient } from "./research/progress.portal-client"
 import { ResearchRunLibraryController } from "./research/run-library.controller";
 import { ResearchRunLibraryRepository } from "./research/run-library.repository";
 import { ResearchRunLibraryService } from "./research/run-library.service";
+import { ResearchEvidenceController } from "./research/evidence.controller";
+import { ResearchEvidenceRepository } from "./research/evidence.repository";
+import { ResearchEvidenceService } from "./research/evidence.service";
 
 @Module({})
 export class AppModule {
@@ -184,6 +187,7 @@ export class AppModule {
         ResearchProgressController,
         ResearchProgressIngressController,
         ResearchRunLibraryController,
+        ResearchEvidenceController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -245,6 +249,8 @@ export class AppModule {
         ResearchProgressService,
         ResearchRunLibraryRepository,
         ResearchRunLibraryService,
+        ResearchEvidenceRepository,
+        ResearchEvidenceService,
         ResearchFoundationAtlasClient,
         ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to

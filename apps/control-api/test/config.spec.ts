@@ -121,6 +121,19 @@ describe("P12 Run Library activation guard", () => {
   });
 });
 
+describe("P13 Evidence Flow activation guard", () => {
+  it("keeps the browser reader dark by default while allowing a reviewed retained-evidence read rollout", () => {
+    // P13 materialisation is bound to a P11 terminal callback. The reader can
+    // safely be enabled later for already immutable receipts, so it must not
+    // force a new P10/P11 worker activation merely to browse retained facts.
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_EVIDENCE).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_EVIDENCE: "true",
+    }).FEATURE_RESEARCH_EVIDENCE).toBe("true");
+  });
+});
+
 describe("Execution realtime feature dependencies", () => {
   const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
     ...baseEnv(),

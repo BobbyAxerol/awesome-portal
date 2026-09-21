@@ -128,6 +128,20 @@ class ResearchProgressRelay:
                 "event": event,
                 "snapshot": snapshot,
             }
+            # P13 evidence is a separate bounded document: carrying it in
+            # every progress event would make a transient callback outage
+            # expensive and would violate P11's small event vocabulary.  The
+            # terminal event's digest binds this one document immutably.
+            if event.get("event_type") == "run_completed":
+                payload = event.get("payload")
+                evidence_digest = payload.get("evidence_digest") if isinstance(payload, dict) else None
+                if evidence_digest is not None:
+                    if not isinstance(evidence_digest, str):
+                        raise ResearchProgressRelayError("P13 terminal evidence digest is invalid")
+                    try:
+                        body["evidence"] = self.journal.read_evidence_source(evidence_digest)
+                    except Exception as exc:  # journal remains recovery authority
+                        raise ResearchProgressRelayError("P13 terminal evidence source is unavailable") from exc
             try:
                 await asyncio.to_thread(self._post, body)
             except ResearchProgressRelayError:

@@ -1,0 +1,11 @@
+{
+  "schema_version": "research.phase-debt-register.v1",
+  "phase": "P13",
+  "in_scope_backend_debt": [],
+  "typed_source_boundaries": [
+    "P04 does not publish benchmark, funding, audited fills or per-fold metrics.",
+    "P13 does not own fold/holdout, search/selection, replay, report or artifact fields.",
+    "Screen-04 frontend browser/product acceptance is Claude-owned and remains pending while the feature is dark."
+  ],
+  "rollback": "Disable FEATURE_RESEARCH_EVIDENCE through signed deployment; retain immutable evidence."
+}

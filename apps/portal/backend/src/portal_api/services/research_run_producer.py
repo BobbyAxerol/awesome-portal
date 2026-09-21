@@ -174,8 +174,9 @@ class ResearchRunProducerExecutor:
         oos_window = windows["oos"]
         assert isinstance(is_window, dict) and isinstance(oos_window, dict)
         is_start = _utc_timestamp(is_window.get("start"), label="IS start")
+        oos_start = _utc_timestamp(oos_window.get("start"), label="OOS start")
         oos_end = _utc_timestamp(oos_window.get("end_exclusive"), label="OOS end")
-        if is_start >= oos_end:
+        if is_start >= oos_start or oos_start >= oos_end:
             raise ResearchRunProducerError("P10 IS/OOS boundary is invalid")
 
         job_directory = self.market_root / request.job_id / request.worker_attempt_id
@@ -213,6 +214,7 @@ class ResearchRunProducerExecutor:
                 market_path=tape_path,
                 artifact_root=artifact_root,
                 p04_parameters=dict(research.p04_parameters),
+                oos_start_utc_ms=int(oos_start.value // 1_000_000),
             )
             # P10 has one server-installed fixed qualification, not a generic
             # optimizer.  S2 therefore records preparation of that exact one
@@ -301,6 +303,12 @@ class ResearchRunProducerExecutor:
                 "enforced_limits": child.enforced_limits,
             },
         }
+        if child.evidence_source is not None:
+            # The evidence receipt is generated while the confined child owns
+            # the full result. It is copied into the sealed bundle and later
+            # relayed through P11; it is not an artifact path or a database
+            # source and does not expand P10's private input capability.
+            receipt_document["evidence_source"] = child.evidence_source
         receipt_path = engine_directory / "research" / "p10-receipt.json"
         receipt_path.write_text(
             json.dumps(canonicalize(receipt_document), sort_keys=True, indent=2) + "\n",
@@ -310,6 +318,7 @@ class ResearchRunProducerExecutor:
         return {
             "status": "COMPLETED",
             "research_receipt": receipt_document,
+            "research_evidence": child.evidence_source,
         }
 
     @staticmethod

@@ -84,6 +84,11 @@ const EnvSchema = z.object({
   // release can still keep this new BFF route dark until its migration and
   // generated contract are deployed together.
   FEATURE_RESEARCH_RUN_LIBRARY: z.enum(["true", "false"]).default("false"),
+  // P13 reader activation is independent from source materialisation. A
+  // deployed worker can durably relay a bounded terminal evidence receipt
+  // while the browser Hub remains dark until the same release's migration and
+  // generated contract have been reviewed.
+  FEATURE_RESEARCH_EVIDENCE: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
