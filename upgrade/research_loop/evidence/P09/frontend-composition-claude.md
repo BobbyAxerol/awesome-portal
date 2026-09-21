@@ -259,7 +259,19 @@ $ comm -23 head-fails.txt mine-fails.txt   # failing at HEAD but not here
 
 Both empty. This change set moves the visual baseline by zero tests.
 
-### The mechanism
+### The mechanism proposed here was wrong — see the 2026-09-21 classification
+
+> **Correction, 2026-09-21.** The Tailwind explanation below is disproven.
+> Codex replaced the glob with a reviewed safelist and the failure set changed
+> by **zero tests**, and the same mismatches reproduce in a clean worktree at
+> `6fbe5a7c` — the commit that recorded the baselines, which *precedes*
+> `7441c572`. The cause is environmental: the baselines do not reproduce on this
+> host at their own recording commit. Full evidence and classification:
+> [`VISUAL_BASELINE_MISMATCH_20260921.md`](../../../upgrade_frontend_plan_hifi/hifi_execution_loop/VISUAL_BASELINE_MISMATCH_20260921.md).
+> The attribution that these failures are **not** caused by P09 still stands —
+> that was measured separately and independently.
+
+### The mechanism originally proposed (disproven)
 
 `7441c572` (Planning) widened Tailwind's `content` glob to scan the embedded
 Planning source tree:
