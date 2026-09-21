@@ -33,6 +33,7 @@ class InternalPortalPrincipal:
     username: str
     role: str
     expires_at: int
+    authn_methods: tuple[str, ...]
 
 
 def require_internal_principal(headers: Mapping[str, str]) -> InternalPortalPrincipal:
@@ -68,6 +69,7 @@ def require_internal_principal(headers: Mapping[str, str]) -> InternalPortalPrin
     username = payload.get("username")
     role = payload.get("role")
     expires_at = payload.get("exp")
+    authn_methods = payload.get("authnMethods")
     if (
         payload.get("policyVersion") != "auth-policy-v1"
         or not isinstance(principal_id, str)
@@ -75,6 +77,14 @@ def require_internal_principal(headers: Mapping[str, str]) -> InternalPortalPrin
         or not isinstance(username, str)
         or not _USERNAME_RE.fullmatch(username)
         or role not in {"ADMIN", "USER"}
+        or not isinstance(authn_methods, list)
+        or not authn_methods
+        or len(authn_methods) > 8
+        or any(
+            not isinstance(method, str)
+            or not re.fullmatch(r"[a-z][a-z0-9_:-]{1,63}", method)
+            for method in authn_methods
+        )
         or not isinstance(expires_at, int)
         or isinstance(expires_at, bool)
         or expires_at < int(time.time())
@@ -85,6 +95,7 @@ def require_internal_principal(headers: Mapping[str, str]) -> InternalPortalPrin
         username=username,
         role=role,
         expires_at=expires_at,
+        authn_methods=tuple(authn_methods),
     )
 
 

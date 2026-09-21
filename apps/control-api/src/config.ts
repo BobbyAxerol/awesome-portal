@@ -66,6 +66,11 @@ const EnvSchema = z.object({
   // P09 has one bounded, read-only private Atlas request. It neither imports
   // an engine per browser view nor starts a worker/runner.
   RESEARCH_FOUNDATION_ATLAS_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
+  // P10 is dark by default. A release can expose all preceding Research reads
+  // without accepting a browser-originated run until the bounded producer,
+  // Portal private route and durable worker are deployed as one approved unit.
+  FEATURE_RESEARCH_RUN_PRODUCER: z.enum(["true", "false"]).default("false"),
+  RESEARCH_RUN_PRODUCER_LEASE_SECONDS: z.coerce.number().int().min(15).max(300).default(90),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),

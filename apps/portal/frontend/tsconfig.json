@@ -46,6 +46,9 @@
       "@portal/contracts-research-foundation": [
         "../../../packages/contracts/generated/research-foundation.d.ts"
       ],
+      "@portal/contracts-research-run-create": [
+        "../../../packages/contracts/generated/research-run-create.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

@@ -334,6 +334,89 @@ export interface ResearchAttemptRecord {
   runId: string;
 }
 
+/**
+ * P10's durable producer record.  This is intentionally not a browser DTO:
+ * `legacyRequest` is the exact compatibility envelope sent to Portal API,
+ * while lease/snapshot transport facts remain server-only.
+ */
+export interface ResearchRunProducerInput {
+  attemptId: string;
+  runId: string;
+  jobId: string;
+  commandId: string;
+  clientIntentId: string;
+  /** Full canonical browser command identity; distinct from worker workDigest. */
+  requestPayloadDigest: string;
+  intentKind: ResearchIntentKind;
+  alphaId: string;
+  alphaVersionId: string;
+  executionAdapterId: "p04.delta-rsi.v1";
+  adapterContractDigest: string;
+  preflightToken: string;
+  requestedSpecDigest: string;
+  effectiveSpecDigest: string;
+  datasetBindingDigest: string;
+  manifestDigest: string;
+  snapshotId: string;
+  snapshotContentHash: string;
+  workDigest: string;
+  engineReleaseId: string;
+  legacyRequest: Record<string, unknown>;
+  cost: ResearchJobCost;
+  queueClass: ResearchQueueClass;
+  resourceClass: string;
+  attemptLimit: number;
+}
+
+export interface ResearchRunProducerRecord {
+  runId: string;
+  attemptId: string;
+  jobId: string;
+  clientIntentId: string;
+  alphaId: string;
+  alphaVersionId: string;
+  executionAdapterId: "p04.delta-rsi.v1";
+  adapterContractDigest: string;
+  requestedSpecDigest: string;
+  effectiveSpecDigest: string;
+  datasetBindingDigest: string;
+  manifestDigest: string;
+  snapshotId: string;
+  snapshotContentHash: string;
+  workDigest: string;
+  legacyRequest: Record<string, unknown>;
+  dispatchState: "PENDING" | "DISPATCHED";
+  workerAttemptId: string | null;
+  leaseEpoch: number | null;
+  portalReceipt: Record<string, unknown> | null;
+}
+
+/** P10 can only claim a server-installed P04 adapter, never arbitrary source. */
+export interface ResearchExecutionAdapterBinding {
+  alphaId: string;
+  alphaVersionId: string;
+  adapterId: "p04.delta-rsi.v1";
+  contractDigest: string;
+}
+
+/**
+ * Server-owned input for installing the one P10 executable binding.  It is
+ * deliberately not a browser DTO and has no code/path/command field: the
+ * service supplies constants pinned to the protected Portal Delta package.
+ */
+export interface ResearchP04DeltaBindingInput {
+  alphaId: string;
+  alphaVersionId: string;
+  alphaName: string;
+  executionSubjectId: string;
+  adapterId: "p04.delta-rsi.v1";
+  adapterContractDigest: string;
+  codeDigest: string;
+  entrypoint: string;
+  dependencyRef: string;
+  declaredContract: Record<string, unknown>;
+}
+
 export interface ResearchTrialInput {
   studyId: string;
   runId: string;

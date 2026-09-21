@@ -116,6 +116,11 @@ import { ResearchPreflightService } from "./research/preflight.service";
 import { ResearchFoundationController } from "./research/foundation.controller";
 import { ResearchFoundationAtlasClient } from "./research/foundation.client";
 import { ResearchFoundationService } from "./research/foundation.service";
+import { ResearchRunAdmissionService } from "./research/run-admission.service";
+import { ResearchRunCreateController } from "./research/run-create.controller";
+import { ResearchRunCreateService } from "./research/run-create.service";
+import { ResearchP04DeltaBindingController } from "./research/p04-delta-binding.controller";
+import { ResearchP04DeltaBindingService } from "./research/p04-delta-binding.service";
 
 @Module({})
 export class AppModule {
@@ -165,6 +170,8 @@ export class AppModule {
         ResearchAlphaImportController,
         ResearchPreflightController,
         ResearchFoundationController,
+        ResearchRunCreateController,
+        ResearchP04DeltaBindingController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -217,6 +224,9 @@ export class AppModule {
         ResearchAlphaImportService,
         ResearchPreflightSnapshotClient,
         ResearchPreflightService,
+        ResearchRunAdmissionService,
+        ResearchRunCreateService,
+        ResearchP04DeltaBindingService,
         ResearchFoundationAtlasClient,
         ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to

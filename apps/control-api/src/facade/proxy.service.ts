@@ -39,6 +39,20 @@ export interface ProxyInput {
   user: PortalUser;
   workspaceId: string;
   idempotencyKey: string | undefined;
+  /**
+   * Server-only P10 marker.  It cannot be populated by FacadeController or a
+   * browser: ResearchRunCreateService constructs it after durable admission.
+   * Portal uses the matching signed authn method to select its non-ProcessPool
+   * durable route.
+   */
+  researchRunProducer?: {
+    runId: string;
+    jobId: string;
+    workerAttemptId: string;
+    leaseEpoch: number;
+  };
+  /** Retry a durable outbox record only when no upstream response was stored. */
+  retryPending?: boolean;
 }
 
 interface ProxyResult {
@@ -237,7 +251,9 @@ export class PortalProxyService {
       accessSubject: null,
       accessEmail: null,
       role: input.user.role,
-      authnMethods: ["portal_session"],
+      authnMethods: input.researchRunProducer
+        ? ["portal_session", "research_run_producer"]
+        : ["portal_session"],
       sessionId: "facade",
       mustChangePassword: input.user.mustChangePassword,
       issuedAt: new Date().toISOString(),
@@ -247,6 +263,13 @@ export class PortalProxyService {
   }
 
   async handleWrite(input: ProxyInput): Promise<WriteRecord> {
+    if (input.researchRunProducer && (input.method !== "POST" || input.path !== "/api/runs")) {
+      throw new FacadeError(
+        "UPSTREAM_PATH_INVALID",
+        "The Research producer may submit only the fixed Portal run route.",
+        400,
+      );
+    }
     const idempotencyKey =
       input.idempotencyKey ??
       `auto_${createHash("sha256")
@@ -263,6 +286,12 @@ export class PortalProxyService {
         .update(JSON.stringify(existing.payloadJson))
         .digest("hex");
       if (existing.payloadJson.payload_hash === payloadHash || samePayload === payloadHash) {
+        // A lost connection after outbox persistence is an unknown transport
+        // outcome, not an implicit 200.  P10 may resend the exact body with
+        // the same idempotency key; recorded responses still replay normally.
+        if (existing.responseStatus == null && input.retryPending === true) {
+          return this.retryPendingWrite(input, idempotencyKey, existing.aggregateType);
+        }
         await this.outbox.markPublished(idempotencyKey);
         await this.audit.record({
           eventId: randomId("evt"),
@@ -391,6 +420,77 @@ export class PortalProxyService {
       idempotencyKey,
       replayed: false,
     };
+  }
+
+  private async retryPendingWrite(
+    input: ProxyInput,
+    idempotencyKey: string,
+    aggregateType: string,
+  ): Promise<WriteRecord> {
+    const result = await this.proxy(input);
+    const responseJson = this.parseWriteResponse(result.body);
+    await this.seedLegacyRunIfAccepted(input, aggregateType, result.status, responseJson);
+    await this.outbox.storeResponse({
+      idempotencyKey,
+      responseJson,
+      responseStatus: result.status,
+    });
+    await this.outbox.markPublished(idempotencyKey);
+    await this.audit.record({
+      eventId: randomId("evt"),
+      eventType: `${aggregateType}.command.v1`,
+      actorUserId: input.user.userId,
+      workspaceId: input.workspaceId,
+      requestId: input.requestId,
+      idempotencyKey,
+      aggregateType,
+      aggregateId: null,
+      aggregateVersion: null,
+      result: result.status < 400 ? "SUCCESS" : "FAILURE",
+      reasonCode: result.status < 400 ? "PENDING_TRANSPORT_RECOVERED" : `UPSTREAM_${result.status}`,
+      metadata: { upstreamStatus: result.status, retryPending: true },
+    });
+    return { status: result.status, body: responseJson, idempotencyKey, replayed: true };
+  }
+
+  private parseWriteResponse(body: Buffer): Record<string, unknown> | null {
+    if (body.length > this.config.OUTBOX_MAX_RESPONSE_BYTES) return { truncated: true };
+    try {
+      const parsed: unknown = JSON.parse(body.toString("utf8"));
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : { truncated: true };
+    } catch {
+      return { truncated: true };
+    }
+  }
+
+  private async seedLegacyRunIfAccepted(
+    input: ProxyInput,
+    aggregateType: string,
+    status: number,
+    responseJson: Record<string, unknown> | null,
+  ): Promise<void> {
+    if (aggregateType !== "run" || input.method !== "POST" || status !== 202) return;
+    const runId = typeof responseJson?.run_id === "string" ? responseJson.run_id : null;
+    if (!runId) return;
+    const bodyJson = (() => {
+      try {
+        return JSON.parse(typeof input.body === "string" ? input.body : "{}") as Record<string, unknown>;
+      } catch {
+        return {};
+      }
+    })();
+    await this.runs.upsert({
+      runId,
+      workspaceId: input.workspaceId,
+      ownerUserId: input.user.userId,
+      status: "QUEUED",
+      protocol: typeof bodyJson.protocol === "string" ? bodyJson.protocol : null,
+      strategyId: typeof bodyJson.strategy_id === "string" ? bodyJson.strategy_id : null,
+      datasetId: typeof bodyJson.dataset_id === "string" ? bodyJson.dataset_id : null,
+      sourceCursor: input.requestId,
+    });
   }
 
   private requirePrincipalSecret(): string {

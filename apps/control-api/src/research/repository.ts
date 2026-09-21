@@ -30,10 +30,14 @@ import {
   type ResearchAttemptRecord,
   type ResearchDurableJobClaim,
   type ResearchDurableJobInput,
+  type ResearchExecutionAdapterBinding,
+  type ResearchP04DeltaBindingInput,
   type ResearchJobOutboxClaim,
   type ResearchJobOutboxMessage,
   type ResearchReadinessClass,
   type ResearchRunKind,
+  type ResearchRunProducerInput,
+  type ResearchRunProducerRecord,
   type ResearchRunRelationship,
   type ResearchScope,
   type ResearchTrialInput,
@@ -151,6 +155,38 @@ interface DurableJobRow {
   cancel_version: string | number;
   requested_by_user_id: string;
   state: string;
+}
+
+interface ExecutionAdapterBindingRow {
+  alpha_id: string;
+  alpha_version_id: string;
+  lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
+  declared_contract: Record<string, unknown> | string;
+  adapter_id: "p04.delta-rsi.v1" | null;
+  contract_digest: string | null;
+}
+
+interface RunProducerRow {
+  run_id: string;
+  attempt_id: string;
+  job_id: string;
+  client_intent_id: string;
+  alpha_id: string;
+  alpha_version_id: string;
+  execution_adapter_id: "p04.delta-rsi.v1";
+  adapter_contract_digest: string;
+  requested_spec_digest: string;
+  effective_spec_digest: string;
+  dataset_binding_digest: string;
+  manifest_digest: string;
+  snapshot_id: string;
+  snapshot_content_hash: string;
+  work_digest: string;
+  legacy_request: Record<string, unknown> | string;
+  dispatch_state: "PENDING" | "DISPATCHED";
+  worker_attempt_id: string | null;
+  lease_epoch: string | number | null;
+  portal_receipt: Record<string, unknown> | string | null;
 }
 
 interface ResearchJobCostRow {
@@ -312,6 +348,22 @@ function digestJson(value: Record<string, unknown>): string {
   return createHash("sha256").update(encoded).digest("hex");
 }
 
+/** Stable deep JSON identity for persisted P10 compatibility envelopes. */
+function canonicalResearchDocument(value: unknown): string {
+  const normalize = (entry: unknown): unknown => {
+    if (Array.isArray(entry)) return entry.map(normalize);
+    if (entry && typeof entry === "object") {
+      return Object.fromEntries(
+        Object.entries(entry as Record<string, unknown>)
+          .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+          .map(([key, nested]) => [key, normalize(nested)]),
+      );
+    }
+    return entry;
+  };
+  return JSON.stringify(normalize(value));
+}
+
 function requireJobKind(value: string): asserts value is ResearchDurableJobInput["jobKind"] {
   if (!["PRIMARY", "AUDIT", "DIAGNOSTIC", "EXPORT", "VERIFY", "PROJECTION"].includes(value)) {
     throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research job kind is unsupported.", 400);
@@ -363,6 +415,33 @@ function rowToAttempt(row: AttemptRow, runId: string): ResearchAttemptRecord {
     state: row.state,
     alphaVersionId: row.alpha_version_id,
     runId,
+  };
+}
+
+function rowToRunProducer(row: RunProducerRow): ResearchRunProducerRecord {
+  return {
+    runId: row.run_id,
+    attemptId: row.attempt_id,
+    jobId: row.job_id,
+    clientIntentId: row.client_intent_id,
+    alphaId: row.alpha_id,
+    alphaVersionId: row.alpha_version_id,
+    executionAdapterId: row.execution_adapter_id,
+    adapterContractDigest: row.adapter_contract_digest,
+    requestedSpecDigest: row.requested_spec_digest,
+    effectiveSpecDigest: row.effective_spec_digest,
+    datasetBindingDigest: row.dataset_binding_digest,
+    manifestDigest: row.manifest_digest,
+    snapshotId: row.snapshot_id,
+    snapshotContentHash: row.snapshot_content_hash,
+    workDigest: row.work_digest,
+    legacyRequest: decodeObject(row.legacy_request, "Research run producer legacy request"),
+    dispatchState: row.dispatch_state,
+    workerAttemptId: row.worker_attempt_id,
+    leaseEpoch: row.lease_epoch == null ? null : asNumber(row.lease_epoch),
+    portalReceipt: row.portal_receipt == null
+      ? null
+      : decodeObject(row.portal_receipt, "Research run producer Portal receipt"),
   };
 }
 
@@ -523,6 +602,172 @@ export class ResearchMetadataRepository {
         code_digest: input.codeDigest,
       });
       return { alphaId: input.alphaId, alphaVersionId: input.alphaVersionId, replayed: false };
+    });
+  }
+
+  /**
+   * Install (or verify) P10's one source-controlled P04 binding.
+   *
+   * Unlike P07 this does not accept an import source, source reference, code
+   * text or dependency from a caller. The service supplies a fixed protected
+   * Delta descriptor.  The DB records its identity once per workspace so a
+   * P08 manifest can reference it and P10 can later prove the exact adapter
+   * that was admitted. Existing user/import Alpha versions are never
+   * overwritten or promoted by this helper.
+   */
+  async ensureP04DeltaBinding(
+    scope: ResearchScope,
+    input: ResearchP04DeltaBindingInput,
+  ): Promise<{
+    alphaId: string;
+    alphaVersionId: string;
+    adapterContractDigest: string;
+    alphaRevision: number;
+    replayed: boolean;
+  }> {
+    this.assertScope(scope);
+    requireAlphaId(input.alphaId);
+    requireOpaqueId(input.alphaVersionId, "alphaVersionId");
+    requireText(input.alphaName, "P04 alpha name", 240);
+    requireText(input.executionSubjectId, "P04 executionSubjectId", 240);
+    requireDigest(input.adapterContractDigest, "P04 adapterContractDigest");
+    requireDigest(input.codeDigest, "P04 codeDigest");
+    requireText(input.entrypoint, "P04 entrypoint", 512);
+    requireText(input.dependencyRef, "P04 dependencyRef", 512);
+    if (input.adapterId !== "p04.delta-rsi.v1") {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Only the installed P04 Delta adapter may be bound.", 400);
+    }
+    requireBoundedObject(input.declaredContract, "P04 declared contract", RESEARCH_DB_BUDGET.maxConfigJsonBytes);
+
+    return this.withScopedWrite(scope, async (client) => {
+      // This lock has a constant server-owned discriminator; it cannot become
+      // a user-selected lock namespace. It serializes first installation
+      // without taking a broad workspace table lock.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1 || ':p04-delta-binding'))", [scope.workspaceId]);
+
+      await client.query(
+        `INSERT INTO research.alphas
+           (workspace_id, alpha_id, name, owner_user_id, execution_subject_id)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (workspace_id, alpha_id) DO NOTHING`,
+        [scope.workspaceId, input.alphaId, input.alphaName, scope.actorUserId, input.executionSubjectId],
+      );
+      const alpha = await client.query<{
+        name: string;
+        execution_subject_id: string;
+        active_version_id: string | null;
+        revision: string | number;
+      }>(
+        `SELECT name, execution_subject_id, active_version_id, revision
+           FROM research.alphas
+          WHERE workspace_id = $1 AND alpha_id = $2
+          FOR UPDATE`,
+        [scope.workspaceId, input.alphaId],
+      );
+      const alphaRow = alpha.rows[0];
+      if (!alphaRow || alphaRow.name !== input.alphaName || alphaRow.execution_subject_id !== input.executionSubjectId) {
+        throw new ResearchMetadataError(
+          "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT",
+          "The P04 strategy identity is already bound to a different immutable Alpha record.",
+          409,
+        );
+      }
+
+      const insertedVersion = await client.query<{ alpha_version_id: string }>(
+        `INSERT INTO research.alpha_versions
+           (workspace_id, alpha_version_id, alpha_id, code_digest, entrypoint,
+            dependency_ref, declared_contract, lifecycle_state, registered_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE', $8)
+         ON CONFLICT (workspace_id, alpha_version_id) DO NOTHING
+         RETURNING alpha_version_id`,
+        [
+          scope.workspaceId, input.alphaVersionId, input.alphaId,
+          input.codeDigest, input.entrypoint, input.dependencyRef,
+          JSON.stringify(input.declaredContract), scope.actorUserId,
+        ],
+      );
+      let replayed = insertedVersion.rowCount === 0;
+      if (replayed) {
+        const existing = await client.query<AlphaImportVersionRow>(
+          `SELECT alpha_id, alpha_version_id, source_file_ref, code_digest,
+                  entrypoint, dependency_ref, lifecycle_state,
+                  declared_contract = $3::jsonb AS matches_declared_contract
+             FROM research.alpha_versions
+            WHERE workspace_id = $1 AND alpha_version_id = $2`,
+          [scope.workspaceId, input.alphaVersionId, JSON.stringify(input.declaredContract)],
+        );
+        const row = existing.rows[0];
+        if (!row || row.alpha_id !== input.alphaId || row.source_file_ref !== null ||
+            row.code_digest !== input.codeDigest || row.entrypoint !== input.entrypoint ||
+            row.dependency_ref !== input.dependencyRef || row.lifecycle_state !== "ACTIVE" ||
+            !row.matches_declared_contract) {
+          throw new ResearchMetadataError(
+            "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT",
+            "The installed P04 AlphaVersion cannot be rebound to different code or contract metadata.",
+            409,
+          );
+        }
+      }
+
+      if (alphaRow.active_version_id === null) {
+        const activated = await client.query<{ revision: string | number }>(
+          `UPDATE research.alphas
+              SET active_version_id = $3, revision = revision + 1, updated_at = now()
+            WHERE workspace_id = $1 AND alpha_id = $2 AND active_version_id IS NULL
+            RETURNING revision`,
+          [scope.workspaceId, input.alphaId, input.alphaVersionId],
+        );
+        if (activated.rowCount !== 1 || !activated.rows[0]) {
+          throw new ResearchMetadataError("RESEARCH_CONCURRENT_TRANSACTION", "The P04 Alpha activation changed during installation.", 409);
+        }
+        alphaRow.revision = activated.rows[0].revision;
+      } else if (alphaRow.active_version_id !== input.alphaVersionId) {
+        throw new ResearchMetadataError(
+          "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT",
+          "The P04 Alpha already has a different active version and will not be replaced automatically.",
+          409,
+        );
+      }
+
+      const bound = await client.query(
+        `INSERT INTO research.execution_adapter_bindings
+           (workspace_id, alpha_version_id, adapter_id, contract_digest, installed_by_user_id)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (workspace_id, alpha_version_id) DO NOTHING
+         RETURNING alpha_version_id`,
+        [scope.workspaceId, input.alphaVersionId, input.adapterId, input.adapterContractDigest, scope.actorUserId],
+      );
+      if (bound.rowCount === 0) {
+        const existing = await client.query<{ adapter_id: string; contract_digest: string }>(
+          `SELECT adapter_id, contract_digest
+             FROM research.execution_adapter_bindings
+            WHERE workspace_id = $1 AND alpha_version_id = $2`,
+          [scope.workspaceId, input.alphaVersionId],
+        );
+        const row = existing.rows[0];
+        if (!row || row.adapter_id !== input.adapterId || row.contract_digest !== input.adapterContractDigest) {
+          throw new ResearchMetadataError(
+            "RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT",
+            "The P04 AlphaVersion is already bound to a different execution adapter contract.",
+            409,
+          );
+        }
+        replayed = true;
+      }
+
+      await this.audit(client, scope, replayed ? "RESEARCH_P04_DELTA_BINDING_REPLAYED" : "RESEARCH_P04_DELTA_BINDING_INSTALLED", "alpha_version", input.alphaVersionId, {
+        alpha_id: input.alphaId,
+        adapter_id: input.adapterId,
+        adapter_contract_digest: input.adapterContractDigest,
+        protected_code_digest: input.codeDigest,
+      });
+      return {
+        alphaId: input.alphaId,
+        alphaVersionId: input.alphaVersionId,
+        adapterContractDigest: input.adapterContractDigest,
+        alphaRevision: asNumber(alphaRow.revision),
+        replayed,
+      };
     });
   }
 
@@ -1024,12 +1269,24 @@ export class ResearchMetadataRepository {
     requireOpaqueId(alphaVersionId, "alphaVersionId");
     return this.withScopedRead(scope, async (client) => {
       const result = await client.query<AlphaVersionDataContractRow>(
-        `SELECT alpha_id, alpha_version_id, declared_contract
-           FROM research.alpha_versions
-          WHERE workspace_id = $1
-            AND alpha_id = $2
-            AND alpha_version_id = $3
-            AND source_file_ref IS NOT NULL`,
+        `SELECT version.alpha_id, version.alpha_version_id, version.declared_contract
+           FROM research.alpha_versions version
+          WHERE version.workspace_id = $1
+            AND version.alpha_id = $2
+            AND version.alpha_version_id = $3
+            -- P07 imported versions retain a source receipt. P10's one
+            -- server-installed Delta version has no user source at all, but
+            -- it is safe to use for P08 only when an immutable adapter
+            -- binding explicitly names it.
+            AND (
+              version.source_file_ref IS NOT NULL
+              OR EXISTS (
+                SELECT 1
+                  FROM research.execution_adapter_bindings binding
+                 WHERE binding.workspace_id = version.workspace_id
+                   AND binding.alpha_version_id = version.alpha_version_id
+              )
+            )`,
         [scope.workspaceId, alphaId, alphaVersionId],
       );
       const row = result.rows[0];
@@ -1041,6 +1298,418 @@ export class ResearchMetadataRepository {
         alphaVersionId: row.alpha_version_id,
         declaredContract: decodeObject(row.declared_contract, "AlphaVersion data contract"),
       };
+    });
+  }
+
+  /**
+   * P10's executor truth boundary.  An ACTIVE imported AlphaVersion alone is
+   * not executable: only a server-installed binding can name an actual
+   * allowlisted child adapter.  This read never returns source bytes or paths.
+   */
+  async loadRunAdapterEligibility(
+    scope: ResearchScope,
+    alphaId: string,
+    alphaVersionId: string,
+  ): Promise<{
+    alphaId: string;
+    alphaVersionId: string;
+    lifecycleState: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
+    declaredContract: Record<string, unknown>;
+    binding: ResearchExecutionAdapterBinding | null;
+  } | null> {
+    this.assertScope(scope);
+    requireAlphaId(alphaId);
+    requireOpaqueId(alphaVersionId, "alphaVersionId");
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<ExecutionAdapterBindingRow>(
+        `SELECT version.alpha_id, version.alpha_version_id, version.lifecycle_state,
+                version.declared_contract, binding.adapter_id, binding.contract_digest
+           FROM research.alpha_versions version
+           JOIN research.execution_adapter_bindings binding
+             ON binding.workspace_id = version.workspace_id
+            AND binding.alpha_version_id = version.alpha_version_id
+          WHERE version.workspace_id = $1
+            AND version.alpha_id = $2
+            AND version.alpha_version_id = $3`,
+        [scope.workspaceId, alphaId, alphaVersionId],
+      );
+      const row = result.rows[0];
+      if (!row) return null;
+      const declaredContract = decodeObject(row.declared_contract, "Research AlphaVersion execution contract");
+      const binding = row.adapter_id === "p04.delta-rsi.v1" && typeof row.contract_digest === "string"
+        ? {
+            alphaId: row.alpha_id,
+            alphaVersionId: row.alpha_version_id,
+            adapterId: row.adapter_id,
+            contractDigest: row.contract_digest,
+          } satisfies ResearchExecutionAdapterBinding
+        : null;
+      return {
+        alphaId: row.alpha_id,
+        alphaVersionId: row.alpha_version_id,
+        lifecycleState: row.lifecycle_state,
+        declaredContract,
+        binding,
+      };
+    });
+  }
+
+  /**
+   * Persist the P10 bridge after the immutable attempt/job identities already
+   * exist.  There is no acknowledgement before this record is present, and a
+   * retry with the same client intent must either return this exact identity or
+   * fail a typed payload-conflict check.
+   */
+  async createOrReplayRunProducer(
+    scope: ResearchScope,
+    input: ResearchRunProducerInput,
+  ): Promise<{ producer: ResearchRunProducerRecord; replayed: boolean }> {
+    this.assertScope(scope);
+    this.assertRunProducerInput(input);
+    return this.withScopedWrite(scope, async (client) => {
+      const inserted = await client.query<RunProducerRow>(
+        `INSERT INTO research.run_producers
+           (workspace_id, run_id, attempt_id, job_id, actor_user_id, client_intent_id,
+            intent_kind, preflight_token, alpha_id, alpha_version_id,
+            execution_adapter_id, adapter_contract_digest,
+            requested_spec_digest, effective_spec_digest, dataset_binding_digest,
+            manifest_digest, snapshot_id, snapshot_content_hash, work_digest,
+            legacy_request)
+         VALUES ($1, $2, $3, $4, $5, $6,
+                 $7, $8, $9, $10, $11, $12,
+                 $13, $14, $15, $16, $17, $18, $19, $20::jsonb)
+         ON CONFLICT (workspace_id, client_intent_id) DO NOTHING
+         RETURNING run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                   alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                   requested_spec_digest, effective_spec_digest,
+                   dataset_binding_digest, manifest_digest, snapshot_id,
+                   snapshot_content_hash, work_digest, legacy_request,
+                   dispatch_state, worker_attempt_id, lease_epoch, portal_receipt`,
+        [
+          scope.workspaceId, input.runId, input.attemptId, input.jobId,
+          scope.actorUserId, input.clientIntentId, input.intentKind,
+          input.preflightToken, input.alphaId, input.alphaVersionId,
+          input.executionAdapterId, input.adapterContractDigest,
+          input.requestedSpecDigest, input.effectiveSpecDigest,
+          input.datasetBindingDigest, input.manifestDigest, input.snapshotId,
+          input.snapshotContentHash, input.workDigest, JSON.stringify(input.legacyRequest),
+        ],
+      );
+      if (inserted.rowCount === 1 && inserted.rows[0]) {
+        await this.audit(client, scope, "RESEARCH_RUN_PRODUCER_ACCEPTED", "run", input.runId, {
+          client_intent_id: input.clientIntentId,
+          job_id: input.jobId,
+          preflight_token: input.preflightToken,
+          execution_adapter_id: input.executionAdapterId,
+          work_digest: input.workDigest,
+        });
+        return { producer: rowToRunProducer(inserted.rows[0]), replayed: false };
+      }
+      const existing = await client.query<RunProducerRow>(
+        `SELECT run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                requested_spec_digest, effective_spec_digest,
+                dataset_binding_digest, manifest_digest, snapshot_id,
+                snapshot_content_hash, work_digest, legacy_request,
+                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt
+           FROM research.run_producers
+          WHERE workspace_id = $1 AND client_intent_id = $2`,
+        [scope.workspaceId, input.clientIntentId],
+      );
+      const row = existing.rows[0];
+      if (!row) {
+        throw new ResearchMetadataError(
+          "RESEARCH_CONCURRENT_TRANSACTION",
+          "The Research producer could not be re-read after a concurrent write.",
+          503,
+        );
+      }
+      const producer = rowToRunProducer(row);
+      if (!this.matchesRunProducer(producer, input)) {
+        throw new ResearchMetadataError(
+          "RESEARCH_IDEMPOTENCY_PAYLOAD_CONFLICT",
+          "That client intent is already bound to a different Research run request.",
+          409,
+        );
+      }
+      await this.audit(client, scope, "RESEARCH_RUN_PRODUCER_REPLAYED", "run", producer.runId, {
+        client_intent_id: input.clientIntentId,
+        job_id: producer.jobId,
+        dispatch_state: producer.dispatchState,
+      });
+      return { producer, replayed: true };
+    });
+  }
+
+  /**
+   * P10's all-or-nothing browser acceptance boundary.
+   *
+   * The attempt, logical run, durable job and producer bridge commit in one
+   * scoped PostgreSQL transaction.  A process death therefore leaves either
+   * no accepted browser intent or a complete retryable identity -- never an
+   * orphan job that a later scheduler could accidentally execute.
+   */
+  async createOrReplayRunProducerIntent(
+    scope: ResearchScope,
+    input: ResearchRunProducerInput,
+  ): Promise<{ producer: ResearchRunProducerRecord; replayed: boolean }> {
+    this.assertScope(scope);
+    this.assertRunProducerInput(input);
+    return this.withScopedWrite(scope, async (client) => {
+      const attempt = await client.query<ExistingAttemptRow>(
+        `INSERT INTO research.attempts
+           (workspace_id, attempt_id, alpha_version_id, parent_attempt_id,
+            client_intent_id, request_payload_digest, intent_kind, reason,
+            space_signature, state, created_by_user_id)
+         VALUES ($1, $2, $3, NULL, $4, $5, $6, NULL, NULL, 'DRAFT', $7)
+         ON CONFLICT (workspace_id, client_intent_id) DO NOTHING
+         RETURNING workspace_id, attempt_id, client_intent_id, draft_revision,
+                   state, alpha_version_id, request_payload_digest`,
+        [
+          scope.workspaceId, input.attemptId, input.alphaVersionId,
+          input.clientIntentId, input.requestPayloadDigest, input.intentKind,
+          scope.actorUserId,
+        ],
+      );
+
+      if (attempt.rowCount === 1 && attempt.rows[0]) {
+        await client.query(
+          `INSERT INTO research.runs
+             (workspace_id, run_id, attempt_id, run_kind, relationship_kind,
+              logical_run_key, request_spec_digest, effective_spec_digest,
+              engine_release_id, dataset_binding_digest, state, submitted_by_user_id)
+           VALUES ($1, $2, $3, 'PRIMARY', 'PRIMARY', 'primary',
+                   $4, $5, $6, $7, 'QUEUED', $8)`,
+          [
+            scope.workspaceId, input.runId, input.attemptId,
+            input.requestedSpecDigest, input.effectiveSpecDigest,
+            input.engineReleaseId, input.datasetBindingDigest, scope.actorUserId,
+          ],
+        );
+        await client.query(
+          `INSERT INTO research.jobs
+             (workspace_id, job_id, run_id, command_id, logical_work_key, work_digest,
+              job_kind, readiness_class, queue_class, cost_estimate, resource_class,
+              attempt_limit, state, requested_by_user_id)
+           VALUES ($1, $2, $3, $4, 'primary', $5,
+                   'PRIMARY', 'MANDATORY', $6, $7::jsonb, $8, $9, 'QUEUED', $10)`,
+          [
+            scope.workspaceId, input.jobId, input.runId, input.commandId,
+            input.workDigest, input.queueClass,
+            JSON.stringify(this.jobCostDatabaseShape(input.cost)), input.resourceClass,
+            input.attemptLimit, scope.actorUserId,
+          ],
+        );
+        const producer = await client.query<RunProducerRow>(
+          `INSERT INTO research.run_producers
+             (workspace_id, run_id, attempt_id, job_id, actor_user_id, client_intent_id,
+              intent_kind, preflight_token, alpha_id, alpha_version_id,
+              execution_adapter_id, adapter_contract_digest,
+              requested_spec_digest, effective_spec_digest, dataset_binding_digest,
+              manifest_digest, snapshot_id, snapshot_content_hash, work_digest,
+              legacy_request)
+           VALUES ($1, $2, $3, $4, $5, $6,
+                   $7, $8, $9, $10, $11, $12,
+                   $13, $14, $15, $16, $17, $18, $19, $20::jsonb)
+           RETURNING run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                     alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                     requested_spec_digest, effective_spec_digest,
+                     dataset_binding_digest, manifest_digest, snapshot_id,
+                     snapshot_content_hash, work_digest, legacy_request,
+                     dispatch_state, worker_attempt_id, lease_epoch, portal_receipt`,
+          [
+            scope.workspaceId, input.runId, input.attemptId, input.jobId,
+            scope.actorUserId, input.clientIntentId, input.intentKind,
+            input.preflightToken, input.alphaId, input.alphaVersionId,
+            input.executionAdapterId, input.adapterContractDigest,
+            input.requestedSpecDigest, input.effectiveSpecDigest,
+            input.datasetBindingDigest, input.manifestDigest, input.snapshotId,
+            input.snapshotContentHash, input.workDigest, JSON.stringify(input.legacyRequest),
+          ],
+        );
+        const row = producer.rows[0];
+        if (!row) throw new ResearchMetadataError("RESEARCH_CONCURRENT_TRANSACTION", "Research producer was not recorded.", 503);
+        await client.query(
+          `UPDATE research.attempts SET state = 'QUEUED', updated_at = now()
+            WHERE workspace_id = $1 AND attempt_id = $2`,
+          [scope.workspaceId, input.attemptId],
+        );
+        await this.enqueueOutboxEvent(client, scope, {
+          jobId: input.jobId,
+          eventType: "RESEARCH_JOB_QUEUED",
+          deliveryGeneration: 1,
+          payload: this.outboxPayload(input.jobId, input.runId, input.queueClass, "primary", input.workDigest),
+        });
+        await this.recordJobEvent(client, scope, input.jobId, null, "JOB_QUEUED", {
+          queue_class: input.queueClass,
+          logical_work_key: "primary",
+          work_digest: input.workDigest,
+          producer: "research.run-producer.v1",
+        });
+        await this.audit(client, scope, "RESEARCH_RUN_PRODUCER_ACCEPTED", "run", input.runId, {
+          client_intent_id: input.clientIntentId,
+          job_id: input.jobId,
+          preflight_token: input.preflightToken,
+          execution_adapter_id: input.executionAdapterId,
+          work_digest: input.workDigest,
+        });
+        return { producer: rowToRunProducer(row), replayed: false };
+      }
+
+      const existingAttempt = await client.query<ExistingAttemptRow>(
+        `SELECT workspace_id, attempt_id, client_intent_id, draft_revision, state,
+                alpha_version_id, request_payload_digest
+           FROM research.attempts
+          WHERE workspace_id = $1 AND client_intent_id = $2
+          FOR UPDATE`,
+        [scope.workspaceId, input.clientIntentId],
+      );
+      const priorAttempt = existingAttempt.rows[0];
+      if (!priorAttempt) {
+        throw new ResearchMetadataError("RESEARCH_CONCURRENT_TRANSACTION", "Research producer retry could not reload its durable intent.", 503);
+      }
+      if (priorAttempt.request_payload_digest !== input.requestPayloadDigest ||
+          priorAttempt.alpha_version_id !== input.alphaVersionId) {
+        throw new ResearchMetadataError("RESEARCH_IDEMPOTENCY_PAYLOAD_CONFLICT", "That client intent is already bound to a different Research request.", 409);
+      }
+      const existingProducer = await client.query<RunProducerRow>(
+        `SELECT run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                requested_spec_digest, effective_spec_digest,
+                dataset_binding_digest, manifest_digest, snapshot_id,
+                snapshot_content_hash, work_digest, legacy_request,
+                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt
+           FROM research.run_producers
+          WHERE workspace_id = $1 AND client_intent_id = $2
+          FOR UPDATE`,
+        [scope.workspaceId, input.clientIntentId],
+      );
+      const row = existingProducer.rows[0];
+      if (!row) {
+        throw new ResearchMetadataError("RESEARCH_CONCURRENT_TRANSACTION", "Research intent is incomplete; it was never acknowledged and must be retried with a new intent.", 503);
+      }
+      const producer = rowToRunProducer(row);
+      if (!this.matchesRunProducer(producer, input)) {
+        throw new ResearchMetadataError("RESEARCH_IDEMPOTENCY_PAYLOAD_CONFLICT", "That client intent is already bound to a different Research run request.", 409);
+      }
+      await this.audit(client, scope, "RESEARCH_RUN_PRODUCER_REPLAYED", "run", producer.runId, {
+        client_intent_id: input.clientIntentId,
+        job_id: producer.jobId,
+        dispatch_state: producer.dispatchState,
+      });
+      return { producer, replayed: true };
+    });
+  }
+
+  /** Persist the exact P06 claim used by the P10 Portal dispatch. */
+  async recordRunProducerClaim(
+    scope: ResearchScope,
+    input: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch"> & { runId: string },
+  ): Promise<ResearchRunProducerRecord> {
+    this.assertScope(scope);
+    this.assertClaim(input);
+    requireOpaqueId(input.runId, "runId");
+    return this.withScopedWrite(scope, async (client) => {
+      const updated = await client.query<RunProducerRow>(
+        `UPDATE research.run_producers producer
+            SET worker_attempt_id = $4, lease_epoch = $5, updated_at = now()
+           FROM research.jobs job
+          WHERE producer.workspace_id = $1 AND producer.run_id = $2 AND producer.job_id = $3
+            AND producer.dispatch_state = 'PENDING'
+            -- A P10 transport-unknown retry may legitimately get a fresh P06
+            -- lease after recovery. Bind only to the *current* DB-fenced job
+            -- lease; never require the old, expired producer lease to match.
+            AND job.workspace_id = producer.workspace_id
+            AND job.job_id = producer.job_id
+            AND job.current_worker_attempt_id = $4
+            AND job.current_lease_epoch = $5
+          RETURNING producer.run_id, producer.attempt_id, producer.job_id, producer.client_intent_id, producer.alpha_id,
+                    producer.alpha_version_id, producer.execution_adapter_id, producer.adapter_contract_digest,
+                    producer.requested_spec_digest, producer.effective_spec_digest,
+                    producer.dataset_binding_digest, producer.manifest_digest, producer.snapshot_id,
+                    producer.snapshot_content_hash, producer.work_digest, producer.legacy_request,
+                    producer.dispatch_state, producer.worker_attempt_id, producer.lease_epoch, producer.portal_receipt`,
+        [scope.workspaceId, input.runId, input.jobId, input.workerAttemptId, input.leaseEpoch],
+      );
+      const row = updated.rows[0];
+      if (!row) {
+        const existing = await client.query<RunProducerRow>(
+          `SELECT run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                  alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                  requested_spec_digest, effective_spec_digest,
+                  dataset_binding_digest, manifest_digest, snapshot_id,
+                  snapshot_content_hash, work_digest, legacy_request,
+                  dispatch_state, worker_attempt_id, lease_epoch, portal_receipt
+             FROM research.run_producers
+            WHERE workspace_id = $1 AND run_id = $2 AND job_id = $3`,
+          [scope.workspaceId, input.runId, input.jobId],
+        );
+        const replay = existing.rows[0];
+        if (replay && replay.worker_attempt_id === input.workerAttemptId &&
+            replay.lease_epoch != null && asNumber(replay.lease_epoch) === input.leaseEpoch) {
+          return rowToRunProducer(replay);
+        }
+        throw new ResearchMetadataError(
+          "RESEARCH_JOB_STATE_CONFLICT",
+          "The Research producer cannot be bound to a different worker lease.",
+          409,
+        );
+      }
+      return rowToRunProducer(row);
+    });
+  }
+
+  /** Store only Portal's bounded 202 receipt after the private route accepts it. */
+  async recordRunProducerDispatched(
+    scope: ResearchScope,
+    input: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch"> & {
+      runId: string;
+      receipt: Record<string, unknown>;
+    },
+  ): Promise<ResearchRunProducerRecord> {
+    this.assertScope(scope);
+    this.assertClaim(input);
+    requireOpaqueId(input.runId, "runId");
+    requireBoundedObject(input.receipt, "Research Portal dispatch receipt", RESEARCH_DB_BUDGET.maxSmallMetadataJsonBytes);
+    return this.withScopedWrite(scope, async (client) => {
+      const updated = await client.query<RunProducerRow>(
+        `UPDATE research.run_producers
+            SET dispatch_state = 'DISPATCHED', portal_receipt = $6::jsonb,
+                updated_at = now()
+          WHERE workspace_id = $1 AND run_id = $2 AND job_id = $3
+            AND worker_attempt_id = $4 AND lease_epoch = $5
+            AND dispatch_state = 'PENDING'
+          RETURNING run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                    alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                    requested_spec_digest, effective_spec_digest,
+                    dataset_binding_digest, manifest_digest, snapshot_id,
+                    snapshot_content_hash, work_digest, legacy_request,
+                    dispatch_state, worker_attempt_id, lease_epoch, portal_receipt`,
+        [scope.workspaceId, input.runId, input.jobId, input.workerAttemptId, input.leaseEpoch, JSON.stringify(input.receipt)],
+      );
+      const row = updated.rows[0];
+      if (row) return rowToRunProducer(row);
+      const existing = await client.query<RunProducerRow>(
+        `SELECT run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                requested_spec_digest, effective_spec_digest,
+                dataset_binding_digest, manifest_digest, snapshot_id,
+                snapshot_content_hash, work_digest, legacy_request,
+                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt
+           FROM research.run_producers
+          WHERE workspace_id = $1 AND run_id = $2 AND job_id = $3`,
+        [scope.workspaceId, input.runId, input.jobId],
+      );
+      const replay = existing.rows[0];
+      if (replay && replay.dispatch_state === "DISPATCHED" && replay.worker_attempt_id === input.workerAttemptId &&
+          replay.lease_epoch != null && asNumber(replay.lease_epoch) === input.leaseEpoch) {
+        return rowToRunProducer(replay);
+      }
+      throw new ResearchMetadataError(
+        "RESEARCH_JOB_STATE_CONFLICT",
+        "The Research producer dispatch receipt no longer matches its worker lease.",
+        409,
+      );
     });
   }
 
@@ -1184,6 +1853,15 @@ export class ResearchMetadataRepository {
           WHERE ctid IN (
             SELECT ctid FROM research.preflight_manifests
              WHERE workspace_id = $1 AND actor_user_id = $2 AND expires_at <= now()
+               -- A P10 producer pins the immutable manifest used to accept
+               -- its durable intent. Expiry removes abandoned preflights,
+               -- never the evidence needed to replay/recover an accepted run.
+               AND NOT EXISTS (
+                 SELECT 1 FROM research.run_producers producer
+                  WHERE producer.workspace_id = research.preflight_manifests.workspace_id
+                    AND producer.preflight_token = research.preflight_manifests.preflight_token
+                    AND producer.actor_user_id = research.preflight_manifests.actor_user_id
+               )
              ORDER BY expires_at ASC, preflight_token ASC
              LIMIT $3
           )`,
@@ -1647,10 +2325,11 @@ export class ResearchMetadataRepository {
    */
   async claimNextDurableJob(
     scope: ResearchScope,
-    input: { workerId: string; leaseSeconds?: number },
+    input: { workerId: string; leaseSeconds?: number; jobId?: string },
   ): Promise<ResearchDurableJobClaim | null> {
     this.assertScope(scope);
     requireOpaqueId(input.workerId, "workerId");
+    if (input.jobId != null) requireOpaqueId(input.jobId, "jobId");
     const leaseSeconds = input.leaseSeconds ?? 60;
     requirePositiveSafeInteger(leaseSeconds, "leaseSeconds", RESEARCH_SCHEDULER_BUDGET.maximumLeaseSeconds);
     return this.withScopedWrite(scope, async (client) => {
@@ -1661,6 +2340,7 @@ export class ResearchMetadataRepository {
                 j.cancel_version, j.requested_by_user_id, j.state
            FROM research.jobs j
           WHERE j.workspace_id = $1
+            AND ($2::text IS NULL OR j.job_id = $2)
             AND (j.state = 'QUEUED' OR (j.state = 'RETRY_WAIT' AND j.retry_not_before <= now()))
             AND j.work_digest IS NOT NULL
             AND (
@@ -1683,7 +2363,7 @@ export class ResearchMetadataRepository {
             j.job_id
           FOR UPDATE SKIP LOCKED
           LIMIT 1`,
-        [scope.workspaceId],
+        [scope.workspaceId, input.jobId ?? null],
       );
       const job = candidate.rows[0];
       if (!job) return null;
@@ -3363,6 +4043,70 @@ export class ResearchMetadataRepository {
       datasetBindingDigest: input.datasetBindingDigest,
     })) requireDigest(value, label);
     if (input.spaceSignature) requireDigest(input.spaceSignature, "spaceSignature");
+  }
+
+  private assertRunProducerInput(input: ResearchRunProducerInput): void {
+    this.assertAttemptInput({
+      attemptId: input.attemptId,
+      runId: input.runId,
+      clientIntentId: input.clientIntentId,
+      requestPayloadDigest: input.requestPayloadDigest,
+      alphaVersionId: input.alphaVersionId,
+      intentKind: input.intentKind,
+      requestSpecDigest: input.requestedSpecDigest,
+      effectiveSpecDigest: input.effectiveSpecDigest,
+      engineReleaseId: input.engineReleaseId,
+      datasetBindingDigest: input.datasetBindingDigest,
+    });
+    for (const [label, value] of Object.entries({
+      jobId: input.jobId,
+      commandId: input.commandId,
+      alphaId: input.alphaId,
+      alphaVersionId: input.alphaVersionId,
+      preflightToken: input.preflightToken,
+      snapshotId: input.snapshotId,
+    })) requireOpaqueId(value, label);
+    requireAlphaId(input.alphaId);
+    if (!input.preflightToken.startsWith("rpft_")) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "preflightToken has an invalid prefix.", 400);
+    }
+    if (!/^dss_[0-9a-f]{32}$/.test(input.snapshotId)) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "snapshotId has an invalid P08 identity.", 400);
+    }
+    if (input.executionAdapterId !== "p04.delta-rsi.v1") {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research execution adapter is unsupported.", 400);
+    }
+    for (const [label, value] of Object.entries({
+      adapterContractDigest: input.adapterContractDigest,
+      manifestDigest: input.manifestDigest,
+      snapshotContentHash: input.snapshotContentHash,
+      workDigest: input.workDigest,
+    })) requireDigest(value, label);
+    requireBoundedObject(input.legacyRequest, "Research run legacy request", RESEARCH_DB_BUDGET.maxPreflightManifestBytes);
+    assertJobCost(input.cost);
+    requireQueueClass(input.queueClass);
+    requireText(input.resourceClass, "Research producer resourceClass", 128);
+    requirePositiveSafeInteger(input.attemptLimit, "Research producer attemptLimit", RESEARCH_SCHEDULER_BUDGET.retryAttemptLimitMaximum);
+  }
+
+  private matchesRunProducer(
+    record: ResearchRunProducerRecord,
+    input: ResearchRunProducerInput,
+  ): boolean {
+    return (
+      record.alphaId === input.alphaId &&
+      record.alphaVersionId === input.alphaVersionId &&
+      record.executionAdapterId === input.executionAdapterId &&
+      record.adapterContractDigest === input.adapterContractDigest &&
+      record.requestedSpecDigest === input.requestedSpecDigest &&
+      record.effectiveSpecDigest === input.effectiveSpecDigest &&
+      record.datasetBindingDigest === input.datasetBindingDigest &&
+      record.manifestDigest === input.manifestDigest &&
+      record.snapshotId === input.snapshotId &&
+      record.snapshotContentHash === input.snapshotContentHash &&
+      record.workDigest === input.workDigest &&
+      canonicalResearchDocument(record.legacyRequest) === canonicalResearchDocument(input.legacyRequest)
+    );
   }
 
   private assertDurableJobInput(input: ResearchDurableJobInput): void {

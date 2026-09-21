@@ -84,9 +84,16 @@ def _run_p04_delta_smoke(receipt: dict[str, Any]) -> dict[str, Any]:
     from portal_api.adapters.quantbt import QuantBTGateway
     from strategy.delta_rsi import generate_signals
 
+    parameters = receipt.get("p04_parameters", _P04_DELTA_PARAMS)
+    if not isinstance(parameters, dict) or set(parameters) != set(_P04_DELTA_PARAMS):
+        raise ValueError("P04 child receipt has an invalid parameter map")
+    for name, expected in _P04_DELTA_PARAMS.items():
+        value = parameters.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value != expected:
+            raise ValueError("P04 child receipt parameter map does not match installed profile")
     market_path = _safe_path(str(receipt["market_path"]), label="market_path")
     market = pd.read_parquet(market_path)
-    signal = generate_signals(market, dict(_P04_DELTA_PARAMS))["pos_weight"]
+    signal = generate_signals(market, dict(parameters))["pos_weight"]
     endpoint = QuantBTGateway().signal_notional_endpoint(
         initial_capital=20_000,
         leverage=3,

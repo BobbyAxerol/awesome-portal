@@ -16,6 +16,7 @@ import {
 } from "./preflight.contract";
 import { ResearchPreflightError } from "./preflight.error";
 import { asResearchPreflightError, ResearchPreflightService } from "./preflight.service";
+import { ResearchRunAdmissionService } from "./run-admission.service";
 
 interface PreflightRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -29,6 +30,7 @@ interface PreflightRequest extends FastifyRequest {
 export class ResearchPreflightController {
   constructor(
     @Inject(ResearchPreflightService) private readonly service: ResearchPreflightService,
+    @Inject(ResearchRunAdmissionService) private readonly runAdmission: ResearchRunAdmissionService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
@@ -41,12 +43,23 @@ export class ResearchPreflightController {
     if (!parsed.success) this.invalid();
     const workspaceId = await this.workspace(request, parsed.data.workspace_id);
     try {
-      return await this.service.create(
+      const scope = { workspaceId, actorUserId: request.portalUser.userId };
+      const response = await this.service.create(
         request.portalUser,
-        { workspaceId, actorUserId: request.portalUser.userId },
+        scope,
         parsed.data.requested_spec,
         this.requestId(request),
       );
+      return {
+        ...response,
+        // P08 keeps its immutable response shape; P10 now supplies the one
+        // server-owned predicate that this same response may expose.
+        may_create_run: await this.runAdmission.mayCreate(
+          request.portalUser,
+          scope,
+          response.preflight_token,
+        ),
+      };
     } catch (error) {
       return asResearchPreflightError(error);
     }
@@ -63,10 +76,19 @@ export class ResearchPreflightController {
     if (!token.success || !query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
     try {
-      return await this.service.get(
-        { workspaceId, actorUserId: request.portalUser.userId },
+      const scope = { workspaceId, actorUserId: request.portalUser.userId };
+      const response = await this.service.get(
+        scope,
         token.data,
       );
+      return {
+        ...response,
+        may_create_run: await this.runAdmission.mayCreate(
+          request.portalUser,
+          scope,
+          response.preflight_token,
+        ),
+      };
     } catch (error) {
       return asResearchPreflightError(error);
     }

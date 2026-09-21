@@ -57,9 +57,13 @@ class ResearchChildReceipt:
     lease_epoch: int
     market_path: Path
     artifact_root: Path
+    # P10 carries these server-owned values explicitly rather than asking the
+    # child to assume UI defaults.  P06 callers that predate P10 retain the
+    # protected default profile through the dataclass default below.
+    p04_parameters: dict[str, int | float] | None = None
 
     def as_payload(self) -> dict[str, Any]:
-        return {
+        payload = {
             "schema_version": "research.p06.child-receipt.v1",
             "task": "P04_DELTA_SMOKE",
             "job_id": self.job_id,
@@ -71,6 +75,9 @@ class ResearchChildReceipt:
             # not write it in P06; P05 reservation/fence remains the writer.
             "artifact_root": str(self.artifact_root),
         }
+        if self.p04_parameters is not None:
+            payload["p04_parameters"] = self.p04_parameters
+        return payload
 
 
 @dataclass(frozen=True, slots=True)

@@ -32,6 +32,7 @@ import { ResearchMetadataError } from "./research/contracts";
 import { ResearchAlphaImportError } from "./research/alpha-import.error";
 import { ResearchPreflightError } from "./research/preflight.error";
 import { ResearchFoundationError } from "./research/foundation.error";
+import { ResearchRunCreateError } from "./research/run-create.error";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -71,6 +72,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof ResearchAlphaImportError ||
       exception instanceof ResearchPreflightError
       || exception instanceof ResearchFoundationError
+      || exception instanceof ResearchRunCreateError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

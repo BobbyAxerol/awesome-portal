@@ -3614,7 +3614,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | BACKEND_AND_CONTRACT_COMPLETE / Codex / [P07 evidence](./research_loop/evidence/P07/phase-report.md); private AST analysis, bounded source custody, seven ordered gates, immutable registry binding and ADMIN activation CAS are proven on a fresh disposable PostgreSQL cell. The five public same-origin operations and generated typed client are published. `may_activate` is required, caller-specific server admission and is evaluated by the exact same predicate as activation; **CG-P07-01 resolved**. All five Control API routes are registered with truthful P07/P09 ownership in the R2 capability inventory; **FD-P07-02 resolved**. · FE_SCREEN14_COMPOSITION_COMPLETE / Claude — Screen 14 is built against `@portal/contracts-research-alpha-import` with zero hand-written types or error strings; tsc 0, research suite 158/158, full frontend suite 158 files/0 failures, build 0 and browser probe 6/6 with 0 console output and 0 px overflow at 1280 and 660. `/research/quantbt/imports` is untouched; `ResearchAlphaAnalysis` is never imported, rendered or requested. No product route is mounted — P09 owns that — so the only render today is the labelled fixture lane. Screen 14 T07 (prefill Screen 02 from `av_`) is **NOT_RUN_BY_DESIGN**, explicitly owned by P10 New Run; it is neither a P07 pass nor a hidden failure. [Claude S14 composition](./research_loop/evidence/P07/frontend-composition-claude.md) |
 | [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P08 packet](./research_loop/evidence/P08/README.md); bounded HMD private reader, shared immutable snapshot, requested→effective/fold/resource manifest, token expiry/freshness assertion and exact two-route same-origin OpenAPI are proven. No raw candle/holdout/worker path exists; generic Data Catalog routes cannot replay an opaque P08 snapshot ID. P10 owns server-side worker binding; rolling remains truthfully `RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED` until a versioned manifest-owned train-width contract is approved, never inferred. · FE_PREFLIGHT_CONSUMER_COMPLETE / Claude — typed Screen 02/05 consumer from `@portal/contracts-research-preflight`, no hand-mapped field and no local payload parse: client +251, container +157, Screen 02 panel +471, Screen 05 boundary +282, tests +713, fixture lane +213, browser probe +100, boundary sweep +17/−1. `P08-T01…T12` all pass; tsc 0, research suite 198/198, build 0, browser probe 8/8 with 0 console output and 0 px overflow at 1280 and 660. `requested_spec_digest` is never sent (asserted on the POST body) and no digest is computed on the surface; any change to the requested spec drops the held token; EXPIRED/STALE/NOT_FOUND clear it rather than resending. Scope taken deliberately narrow: the eight-step declaration surface is P10's (the generated schema says the requested spec is producer-side, not a live endpoint), and Screen 05 renders the structural boundary only — purge, embargo, inner folds, θ* and the gap scan stay P14's and are named as absent rather than invented. **FD-P08-01 resolved:** both controller routes are declared in the R2 ledger and the full frontend suite is now exit 0. **CG-P08-01 resolved in P08 scope:** generated `may_create_run=false` is the explicit server fact until P10 publishes and rechecks its exact create predicate. The [browser/HIFI audit](./research_loop/evidence/P08/frontend-hifi-browser-audit.md) records a valid component-fixture receipt, not a product-route claim; P09/P10/P14 retain their route/screen ownership. [Claude P08 composition](./research_loop/evidence/P08/frontend-composition-claude.md) |
 | [P09](#rl-p09) | P02,P04 | 00/12 | 05 | **P09_SCOPE_COMPLETE** / [P09 packet](./research_loop/evidence/P09/phase-report.md): Codex has proven two authenticated same-origin reads, revisioned immutable Journey descriptor, P02 inspection/cursor compatibility, bounded signed private Atlas adapter, generated declarations and R2 ledger. Claude has mounted S00 at `/research/quantbt/journey` and S12 at `/research/quantbt/atlas` inside exactly one QuantBT shell, with typed-only consumers and browser/HIFI receipts. **`CG-P09-01` resolved:** exact P04 axes, claim and evidence shapes are now generated rather than narrowed by frontend code. **`FD-P09-02` resolved:** S14's future canonical product route is `/research/quantbt/alpha-import`; legacy `/research/quantbt/imports` remains unchanged and `/research/alphas/import` stays unmounted while `ALPHA_POOL` is `COMMISSIONED`. **`S14-VIS-01` resolved:** three authority states (parse → seven gates → register/activate); Code anatomy is a presentation-only parse substage. `CG-P09-02` is an evidence-fixture improvement only: generated source fixtures are valid current evidence but must never become product truth. `FD-P09-03` remains correctly owned by P10: a preflight route requires its producer and remains `NOT ROUTED`, not `SOON`. The unrelated pre-existing visual-baseline drift is recorded in [Claude P09 composition](./research_loop/evidence/P09/frontend-composition-claude.md), not attributed to P09. |
-| [P10](#rl-p10) | P06–P09 | 02 | 05 | PLANNED / unassigned / — |
+| [P10](#rl-p10) | P06–P09 | 02 | 05 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P10 packet](./research_loop/evidence/P10/README.md): exact server-owned P04 Delta binding, actor-scoped preflight re-admission, one durable intent before the signed Portal compatibility hop, isolated `quant.run.requested.research` subject and bounded P08 IS/OOS-only child are proven. Intake is **dark by default** at both services; no runtime/container/deploy change occurred. **FE_S02_PRODUCT_ROUTE_PENDING / Claude:** consume the generated same-origin client, preserve all HIFI controls and render typed current-adapter refusal; no fixture-only product receipt is claimed. |
 | [P11](#rl-p11) | P06,P09,P10 | 03 | 06 | PLANNED / unassigned / — |
 | [P12](#rl-p12) | P05,P09–P11 | 01 | 06 | PLANNED / unassigned / — |
 | [P13](#rl-p13) | P05,P09–P11 | 04 | 07 | PLANNED / unassigned / — |
@@ -4385,6 +4385,64 @@ not infer activation from the route.
 - **Tests FE/browser:** All S02 tests; every required control→request→effective persisted value; bound/scratch; version change preserves valid input; errors/focus/back-forward; actual no-stub journey.
 - **Exit gate:** 100%required wizard mappings and real durable run; no direct compute fallback hoặc fake success; legacy consumer compatibility vẫn xanh.
 - **Rollback/handoff:** Rollback wizard intake flag, giữ jobs/schema/old client. Checkpoint05: P09/P10, exact dev candidate + payload/worker parity.
+
+#### P10 backend/contract closeout — `BACKEND_AND_TYPED_CONTRACT_COMPLETE`, 2026-09-21
+
+P10 now provides one additive, fail-closed New Run path without changing the
+legacy `/api/runs` request model or activating a runtime service:
+
+- `POST /api/v1/research/run-producer/p04-delta/install` installs/replays the
+  **one compiled, immutable** `p04.delta-rsi.v1` binding.  It accepts no
+  uploaded source, path, child command, adapter ID or version selector.
+- `POST /api/v1/research/runs` accepts only the P02 canonical requested spec,
+  a caller-owned P08 opaque token and an idempotency intent.  The same
+  server-owned predicate supplies P08's `may_create_run` fact and rechecks it
+  inside creation; the browser cannot assert admission, select a worker,
+  provide a snapshot path, lease, digest or private principal.
+- The PostgreSQL transaction records exactly one attempt, run, job and P10
+  producer bridge before the signed Portal hop.  A lost hop is the typed
+  `RESEARCH_RUN_TRANSPORT_UNKNOWN`, and retrying the *same* intent reconciles
+  the fenced durable job instead of creating a second logical run.
+- Portal accepts the P10 envelope only with a short-lived signed internal
+  principal containing `research_run_producer`, publishes only
+  `quant.run.requested.research`, and never falls through to the legacy
+  ProcessPool.  The actual worker keeps P10 scratch/derived tape attempt-local,
+  sends only bounded P08 warmup+IS+OOS rows to the isolated Delta child, seals
+  a content-addressed bundle with a sanitized audit config/receipt (never the
+  preflight token, job/worker/lease fence, snapshot locator/hash or work
+  digest), then removes temporary copies.  A terminal
+  observation publish cannot rewrite an already sealed success/failure; P11
+  owns durable event/progress projection and reconciliation.
+
+The current installed adapter deliberately supports only the exact fixed
+Delta qualification profile (`signal_notional`, `three_window_decay`, fixed
+P04 parameter map).  Rich route parameters, optimization overrides,
+clone/reproduce and engine-upgrade intents are retained in the canonical
+requested spec but return a typed adapter-unavailable outcome until their
+owner phases P12/P19 install a real, versioned adapter.  This is a truthful
+current-capability boundary, not a hidden form narrowing or a generic Python
+launcher.
+
+**P10 verification:** the [P10 evidence packet](./research_loop/evidence/P10/README.md)
+records a fresh disposable PostgreSQL proof (4/4), direct immutable binding,
+idempotent unknown-transport recovery, real P08 snapshot→P06 isolated child,
+private HTTP principal rejection/acceptance, worker subject isolation and
+scratch cleanup.  It also records Control API build, contract generation/tests,
+R2 ledger and P02 legacy-facade regression.  No browser component, HIFI CSS,
+image build, dev-stack rebuild, deploy, broker connection or feature flag was
+changed by this closeout.
+
+**Claude handoff / P08 visual decision:** Screen 02 may now consume only
+`@portal/contracts-research-run-create` through the same-origin BFF.  It must
+keep the full HIFI composition, send CSRF with the canonical requested spec,
+and render server denial/refusal/unknown outcomes verbatim; `may_create_run`
+is display-only and submission must re-handle denial.  Do not manufacture
+worker/snapshot/lease fields or a local success path.  The remaining S14/P08
+visual question is resolved as `S14-VIS-01`: retain the three authority states
+**parse → seven gates → register/activate**; render **Code anatomy** only as a
+presentation substage below parse, never as a fourth lifecycle/API/backend
+state.  Claude should acknowledge that decision in the next product-route
+browser receipt rather than add a new contract.
 
 <a id="rl-p11"></a>
 ### P11 — Progress, console và artifact readiness

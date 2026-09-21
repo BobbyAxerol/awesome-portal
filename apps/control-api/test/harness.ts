@@ -11,6 +11,10 @@ export const TEST_TABLES = [
   // listing it keeps test cleanup bounded and makes a new relation visible to
   // the shared harness rather than relying on an incidental CASCADE path.
   "research.audit_log",
+  // P10 producer rows reference the immutable binding, run, attempt, job and
+  // preflight records. They must be truncated before all of those parents so
+  // each disposable test cell proves P10 cleanup rather than inheriting rows.
+  "research.run_producers",
   "research.preflight_manifests",
   "research.command_dedup",
   "research.release_candidates",
@@ -36,6 +40,7 @@ export const TEST_TABLES = [
   // bytes or immutable digest claims behind in a shared database cell.
   "research.import_sessions",
   "research.alpha_digest_claims",
+  "research.execution_adapter_bindings",
   "research.alpha_versions",
   "research.import_sources",
   "research.alphas",

@@ -171,10 +171,15 @@ class AttemptRegistry:
         attempts = self.attempts(run_id)
         return attempts[-1] if attempts else None
 
-    def create_attempt(self, run_id: str) -> RunAttempt:
+    def create_attempt(self, run_id: str, *, attempt_id: str | None = None) -> RunAttempt:
         self.run_intent(run_id)
-        attempt_id = f"ra_{secrets.token_hex(13)}"
-        attempt = RunAttempt(run_attempt_id=attempt_id, run_id=run_id, status="QUEUED")
+        selected_attempt_id = attempt_id or f"ra_{secrets.token_hex(13)}"
+        if not selected_attempt_id or len(selected_attempt_id) > 160:
+            raise DurableRunError("attempt id is invalid")
+        existing = self.attempt(run_id, selected_attempt_id)
+        if existing is not None:
+            return existing
+        attempt = RunAttempt(run_attempt_id=selected_attempt_id, run_id=run_id, status="QUEUED")
         attempt.record("created")
         self._save(attempt)
         return attempt

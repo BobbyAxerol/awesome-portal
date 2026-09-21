@@ -49,6 +49,7 @@ from portal_api.services.portal_links import PortalLinksService
 from portal_api.services.portal_registry import PortalRegistryService
 from portal_api.services.research_engine_catalog import ResearchEngineCatalogService
 from portal_api.services.research_preflight_snapshot import ResearchPreflightSnapshotService
+from portal_api.services.job_broker import JobBroker, NatsJetStreamBroker
 from portal_api.services.portal_overview import (
     PortalSummaryContractError,
     PortalSummaryService,
@@ -105,16 +106,23 @@ def create_app(
     quantbt_gateway: QuantBTGateway | None = None,
     artifact_repository: ArtifactRepository | None = None,
     portal_registry_repository: PortalRegistryRepository | None = None,
+    research_run_publisher: JobBroker | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         try:
+            if application.state.research_run_publisher_connect_on_start:
+                await application.state.research_run_publisher.connect()
             yield
         finally:
             try:
                 await application.state.portal_summary_service.aclose()
             finally:
-                application.state.run_manager.shutdown()
+                try:
+                    application.state.run_manager.shutdown()
+                finally:
+                    if application.state.research_run_publisher_owned:
+                        await application.state.research_run_publisher.close()
 
     app = FastAPI(
         title="QuantBT Backtest Portal API",
@@ -166,6 +174,27 @@ def create_app(
     app.state.snapshot_store = SnapshotStore(
         Path(os.getenv("PORTAL_SNAPSHOT_ROOT", str(Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs")) / "snapshots")))
     )
+    # P10 is opt-in at both Control API and Portal deployment boundaries. The
+    # intake route does not open a broker connection while dark, which lets a
+    # Research-read deployment remain independent of NATS availability.
+    producer_enabled = os.getenv("PORTAL_FEATURE_RESEARCH_RUN_PRODUCER", "false").strip().lower() == "true"
+    app.state.research_run_publisher_owned = False
+    app.state.research_run_publisher_connect_on_start = False
+    app.state.research_run_publisher = research_run_publisher
+    if producer_enabled and research_run_publisher is None:
+        servers = [
+            item.strip()
+            for item in os.getenv("NATS_URL", "nats://portal-nats:4222").split(",")
+            if item.strip()
+        ]
+        app.state.research_run_publisher = NatsJetStreamBroker(
+            servers,
+            # The API only publishes a P10 request.  A durable consumer is
+            # owned by durable_worker_main, not by every Portal API replica.
+            consumer=None,
+        )
+        app.state.research_run_publisher_owned = True
+        app.state.research_run_publisher_connect_on_start = True
     # P08 is a private, metadata-only source snapshot authority.  It is not a
     # worker, browser route, direct engine caller, or activation flag: Control
     # API remains the public BFF and owns preflight token/manifest custody.

@@ -23,6 +23,9 @@ from portal_api.services.durable_runs import (
     AttemptRegistry,
 )
 from portal_api.services.job_broker import NatsJetStreamBroker
+from portal_api.services.data_catalog import SnapshotStore
+from portal_api.services.research_run_producer import ResearchRunProducerExecutor
+from portal_api.services.research_supervisor import IsolatedResearchSupervisor
 from portal_api.workers.durable_worker import (
     DurableQuantWorker,
     execute_run_in_process,
@@ -53,11 +56,32 @@ async def run() -> None:
     await broker.connect()
     registry = AttemptRegistry(artifact_root / "durable")
     store = ContentAddressedArtifactStore(artifact_root / "durable-store")
+    research_executor = None
+    if os.getenv("PORTAL_FEATURE_RESEARCH_RUN_PRODUCER", "false").strip().lower() == "true":
+        snapshot_root = Path(
+            os.getenv("PORTAL_SNAPSHOT_ROOT", str(artifact_root / "snapshots"))
+        )
+        market_root = Path(
+            os.getenv("PORTAL_RESEARCH_P10_MARKET_ROOT", str(artifact_root / "p10-market"))
+        )
+        scratch_root = Path(
+            os.getenv("PORTAL_RESEARCH_P10_SCRATCH_ROOT", str(artifact_root / "p10-scratch"))
+        )
+        market_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        research_executor = ResearchRunProducerExecutor(
+            snapshots=SnapshotStore(snapshot_root),
+            supervisor=IsolatedResearchSupervisor(
+                scratch_root,
+                allowed_market_root=market_root,
+            ),
+            market_root=market_root,
+        )
     worker = DurableQuantWorker(
         broker=broker,
         registry=registry,
         artifact_store=store,
         executor=execute_run_in_process,
+        research_executor=research_executor,
         lease_seconds=_parse_seconds("PORTAL_WORKER_LEASE_SECONDS", DEFAULT_LEASE_SECONDS),
         grace_seconds=_parse_seconds("PORTAL_WORKER_GRACE_SECONDS", DEFAULT_GRACE_SECONDS),
     )
