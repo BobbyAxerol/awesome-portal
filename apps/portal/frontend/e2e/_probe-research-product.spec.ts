@@ -18,6 +18,8 @@ const OUT = process.env.RESEARCH_SHOT_DIR ?? "/tmp/research-shots";
 
 const JOURNEY = "/research/quantbt/journey";
 const ATLAS = "/research/quantbt/atlas";
+const NEW_RUN = "/research/quantbt/runs/new";
+const ALPHA_IMPORT = "/research/quantbt/alpha-import";
 
 function recorder(page: import("@playwright/test").Page) {
   const noise: string[] = [];
@@ -146,13 +148,18 @@ test("an unrouted card is drawn and says so", async ({ page }) => {
   await page.goto(JOURNEY);
   await settle(page);
 
-  // `alpha_import` is AVAILABLE server-side but this build serves no route for
-  // it, so the card is present and honest rather than missing.
+  // `alpha_import` is now routed (`FD-P09-02` resolved), so the card is a link.
   const card = page.locator("[data-card='alpha-import']");
   await expect(card).toBeVisible();
-  await expect(card).toHaveAttribute("data-card-availability", "AVAILABLE");
-  await expect(card).toHaveAttribute("data-card-unreachable", "NOT ROUTED");
-  expect(await card.evaluate((n) => n.tagName)).not.toBe("A");
+  await expect(card).toHaveAttribute("href", ALPHA_IMPORT);
+
+  // `preflight` is still AVAILABLE server-side with no screen of its own — a
+  // preflight is declared inside Screen 02. The card stays drawn and honest.
+  const unrouted = page.locator("[data-card='preflight']");
+  await expect(unrouted).toBeVisible();
+  await expect(unrouted).toHaveAttribute("data-card-availability", "AVAILABLE");
+  await expect(unrouted).toHaveAttribute("data-card-unreachable", "NOT ROUTED");
+  expect(await unrouted.evaluate((n) => n.tagName)).not.toBe("A");
 
   // A reachable card is a real link resolved through the owned map.
   const atlasCard = page.locator("[data-card='engine-atlas']");
@@ -245,5 +252,166 @@ test("reduced motion is honoured on both product routes", async ({ page }) => {
     );
     expect(moving, `${path} keeps ${moving} animated elements under reduced motion`).toBe(0);
   }
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+
+for (const [name, width] of [
+  ["laptop", 1280],
+  ["mobile", 660],
+] as const) {
+  test(`S02 New Run renders all eight steps on its product route at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(NEW_RUN);
+    await settle(page);
+
+    await expect(page.locator("[data-screen='new-run']")).toBeVisible();
+    await expect(page.locator("[data-step-pill]")).toHaveCount(8);
+
+    /* All eight are actually on screen, not eight in the DOM with two behind a
+       scrollbar — a wizard whose first step is invisible reads as one that
+       starts at step three. */
+    const hidden = await page.locator("[data-step-pill]").evaluateAll((nodes) =>
+      nodes.filter((node) => {
+        const bar = node.parentElement!.getBoundingClientRect();
+        const box = node.getBoundingClientRect();
+        return box.left < bar.left - 1 || box.right > bar.right + 1;
+      }).length,
+    );
+    expect(hidden, `${hidden} step pills are clipped by the wizard bar`).toBe(0);
+    // One shell, the Portal's.
+    await expect(page.locator(".portal-shell")).toHaveCount(1);
+
+    // The route grid is the installed release's, read from the Atlas.
+    await page.locator("[data-step-pill='route']").click();
+    await expect(page.locator("[data-route-card]")).toHaveCount(14);
+    /* A route the release will not admit is shown with the engine's own
+       reason. The expected string comes from the manifest rather than from
+       this file: asserting a remembered sentence would pass while the screen
+       printed a different one. */
+    const manifest = (await page.evaluate(async () => {
+      const response = await fetch("/api/v1/research/quantbt/atlas");
+      return response.json();
+    })) as { atlas: { routes: { route_id: string; reason: string; axes: { admission: string } }[] } };
+    const blocked = manifest.atlas.routes.find((r) => r.axes.admission !== "P04_BASELINE_ONLY")!;
+    const deferred = page.locator(`[data-route-card='${blocked.route_id}']`);
+    await expect(deferred).toBeDisabled();
+    expect(await deferred.getAttribute("title")).toBe(blocked.reason);
+    await expect(deferred).toContainText(blocked.reason);
+
+    // Every step opens and reports its own problems where they can be fixed.
+    for (const step of ["context", "strategy", "data", "windows", "parameters", "optimization", "review"]) {
+      await page.locator(`[data-step-pill='${step}']`).click();
+      await expect(page.locator(`[data-step-pill='${step}']`)).toHaveAttribute("aria-selected", "true");
+    }
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `page overflows by ${overflow}px`).toBeLessThanOrEqual(1);
+
+    await page.screenshot({ path: `${OUT}/s02-new-run-${name}.png`, fullPage: true });
+    expect(noise, noise.join("\n")).toEqual([]);
+  });
+}
+
+test("S02 declares, previews and creates a run through the real routes", async ({ page }) => {
+  const noise = recorder(page);
+  const sent: { url: string; body: unknown }[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/api/v1/research/")) {
+      sent.push({ url: request.url(), body: JSON.parse(request.postData() ?? "{}") });
+    }
+  });
+
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(NEW_RUN);
+  await settle(page);
+
+  // Fill the declaration through the form the reader uses.
+  await page.locator("[data-step-pill='context']").click();
+  await page.getByLabel("Alpha", { exact: true }).fill("delta_rsi");
+  await page.getByLabel("Alpha version").fill("av_0_3_0");
+  await page.locator("[data-step-pill='strategy']").click();
+  await page.getByLabel("Strategy id").fill("delta_rsi_polynomial");
+  await page.locator("[data-step-pill='data']").click();
+  await page.getByLabel("Dataset").fill("ds_btcusdt_4h");
+  await page.getByLabel("Symbol").fill("BTCUSDT");
+  await page.locator("[data-step-pill='windows']").click();
+  for (const [label, value] of [
+    ["IS start", "2022-01-01T00:00"],
+    ["IS end exclusive", "2024-01-01T00:00"],
+    ["OOS start", "2024-01-01T00:00"],
+    ["OOS end exclusive", "2025-01-01T00:00"],
+    ["Holdout start", "2025-01-01T00:00"],
+    ["Holdout end exclusive", "2026-01-01T00:00"],
+  ] as const) {
+    await page.getByLabel(label).fill(value);
+  }
+  await page.locator("[data-step-pill='optimization']").click();
+  await page.getByLabel("Optuna trials").fill("400");
+  await page.getByLabel("Random seed").fill("42");
+
+  await page.locator("[data-step-pill='review']").click();
+  await expect(page.locator("[data-blocking]")).toHaveCount(0);
+
+  await page.locator("[data-action='preflight']").click();
+  await expect(page.locator("[data-may-create]")).toHaveAttribute("data-may-create", "true");
+
+  await page.locator("[data-action='create-run']").click();
+  await expect(page.locator("[data-created]")).toHaveAttribute("data-created", "run_01HZQ7PROBE");
+
+  // The preflight and the create carried the identical requested spec.
+  const preflightCall = sent.find((r) => r.url.includes("/preflights"))!;
+  const createCall = sent.find((r) => r.url.endsWith("/research/runs"))!;
+  expect(createCall.body).toMatchObject({ intent_kind: "NEW", preflight_token: "pf_01HZQ7PROBE" });
+  expect((createCall.body as Record<string, unknown>).requested_spec).toEqual(
+    (preflightCall.body as Record<string, unknown>).requested_spec,
+  );
+
+  // Nothing derived or private went up.
+  const raw = JSON.stringify(createCall.body);
+  for (const forbidden of ["effective_spec_digest", "lease_epoch", "worker_id", "adapter_id"]) {
+    expect(raw, forbidden).not.toContain(forbidden);
+  }
+
+  await page.screenshot({ path: `${OUT}/s02-new-run-created.png`, fullPage: true });
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S14 renders on its canonical route and keeps three authority states", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(ALPHA_IMPORT);
+  await settle(page);
+
+  await expect(page.locator("[data-screen='alpha-import']")).toBeVisible();
+  // `S14-VIS-01`: three authority states, and Code anatomy is not a fourth.
+  await expect(page.locator("[data-step-marker]")).toHaveCount(3);
+  await expect(page.locator("[data-code-anatomy]")).toHaveCount(1);
+  await expect(page.locator(".portal-shell")).toHaveCount(1);
+
+  const before = await page
+    .locator("[data-action]")
+    .evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-action"), (n as HTMLButtonElement).disabled]));
+  await page.locator("[data-code-anatomy] summary").click();
+  const after = await page
+    .locator("[data-action]")
+    .evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-action"), (n as HTMLButtonElement).disabled]));
+  expect(after, "opening Code anatomy changed an enablement").toEqual(before);
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  await page.screenshot({ path: `${OUT}/s14-alpha-import-route.png`, fullPage: true });
   expect(noise, noise.join("\n")).toEqual([]);
 });

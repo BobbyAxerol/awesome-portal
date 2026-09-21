@@ -22,14 +22,30 @@
  *  - an unverified or unknown installed version is a safe state, not a claim.
  */
 
-import type { components } from "@portal/contracts";
+/*
+ * Typed from the contract the browser actually reads.
+ *
+ * P04 published this document through the Portal API and P09 republished it
+ * through the Research foundation BFF, which is now the only route a browser
+ * uses. Two generated descriptions of one document is one too many: the screen
+ * followed P04's while the client returned P09's, so a checked narrowing had
+ * to sit between them (`CG-P09-01`). Pointing this module at the foundation
+ * contract removes that layer entirely — there is one type, and it is the one
+ * the response satisfies.
+ *
+ * What P09 leaves wider than P04 is the schedule vocabulary: `valid_schedules`
+ * and `default_schedule` are plain strings here. Screen 12 renders both as
+ * text, so nothing is lost on this surface; a consumer that needs to *branch*
+ * on a schedule should ask for the enum rather than re-narrow it locally.
+ */
+import type { components } from "@portal/contracts-research-foundation";
 
-export type AtlasDocument = components["schemas"]["ResearchEngineAtlasDocument"];
-export type AtlasRoute = components["schemas"]["ResearchRoutePublic"];
+export type AtlasDocument = components["schemas"]["Atlas"];
+export type AtlasRoute = components["schemas"]["AtlasRoute"];
 export type AtlasAxes = components["schemas"]["CapabilityAxes"];
-export type AtlasMode = components["schemas"]["ModeDescriptor"];
-export type CurrentRelease = components["schemas"]["ReleaseRuntimePublic"];
-export type HistoricalRelease = components["schemas"]["HistoricalReleasePublic"];
+export type AtlasMode = components["schemas"]["AtlasMode"];
+export type CurrentRelease = components["schemas"]["AtlasRelease"];
+export type HistoricalRelease = components["schemas"]["HistoricalRelease"];
 
 /** Which axis holds a route back. Order matters: the first blocker is reported. */
 export type BlockingAxis = "engine" | "integration" | "evidence" | "admission";

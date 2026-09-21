@@ -70,7 +70,12 @@ describe("no internal identifier or direct source access on the Research surface
    * under the Portal's own API prefix. An absolute URL here would be an
    * analyser or engine address, which is precisely what P07's handoff forbids.
    */
-  const NETWORK_MODULES = ["alphaImportClient.ts", "foundationClient.ts", "preflightClient.ts"];
+  const NETWORK_MODULES = [
+    "alphaImportClient.ts",
+    "foundationClient.ts",
+    "preflightClient.ts",
+    "runCreateClient.ts",
+  ];
 
   it("keeps requests inside the one module allowed to make them", () => {
     const callers = SOURCES.filter((f) => /\bfetch\s*\(/.test(codeOf(f.text))).map((f) => f.name);

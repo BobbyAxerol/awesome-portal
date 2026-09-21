@@ -199,10 +199,22 @@ export async function stubPortalApi(
   await page.route("**/api/runs", (route) => void json(route, []));
   await page.route("**/api/strategies", (route) => void json(route, []));
 
+  // P08/P10 · the preflight preview and the run producer. Both answer the
+  // product route's own writes, so Screen 02 can be driven end to end without
+  // a backend.
+  await page.route("**/api/v1/research/preflights*", (route) =>
+    void json(route, local("preflight.json")),
+  );
+  await page.route("**/api/v1/research/runs", (route) => void json(route, local("run-create.json")));
+
   // P09 · the two Research foundation BFF reads. The journey descriptor is
   // generated from `journey.descriptor.ts` and the Atlas from
   // `research-engine-catalog.v1.json`, so the probe renders the facts the
   // server actually serves rather than a hand-written approximation.
+  await page.route("**/api/v1/research/alphas*", (route) =>
+    void json(route, { schema_version: "research.alpha-registry.v1", entries: [] }),
+  );
+
   await page.route("**/api/v1/research/journey*", (route) =>
     void json(route, local("journey.json")),
   );

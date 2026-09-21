@@ -17,14 +17,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EngineAtlasRoute, JourneyMapRoute, atlasQueryFromSearch } from "./foundationRoutes";
 import { JourneyMap } from "./JourneyMap";
-import { narrowAtlas } from "./atlasDocument";
 import type { AtlasDocument } from "./atlas";
 import {
   FOUNDATION_PROBLEM_CODES,
   JourneyLinkConflict,
   SEQ_ALIAS_CONFLICT,
   type AtlasResponse,
-  type FoundationAtlas,
   type JourneyResponse,
   __resetFoundationCaches,
   journeyQueryFromSearch,
@@ -191,7 +189,7 @@ function atlas(overrides: Partial<AtlasResponse> = {}): AtlasResponse {
     schema_version: "research.engine-atlas-response.v1",
     selected_release_id: "er_quantbt_1_1_1",
     selected_release_kind: "CURRENT",
-    atlas: ATLAS_DOC as unknown as FoundationAtlas,
+    atlas: ATLAS_DOC,
     etag: 'W/"atlas-1"',
     ...overrides,
   };
@@ -277,9 +275,12 @@ describe("P09-T02 — target_key is presentation data, never a path", () => {
     expect(resolveScreenRoute("engine_atlas")).toBe("/research/quantbt/atlas");
     expect(resolveScreenRoute("journey_map")).toBe("/research/quantbt/journey");
     expect(resolveScreenRoute("not_a_screen")).toBeNull();
-    // Absent on purpose: the registry still marks ALPHA_POOL commissioned, and
-    // a preflight needs a producer this phase does not have.
-    expect(resolveScreenRoute("alpha_import")).toBeNull();
+    // `FD-P09-02` resolved: Screen 14 and Screen 02 are served under QuantBT,
+    // not under the still-COMMISSIONED ALPHA_POOL feature.
+    expect(resolveScreenRoute("alpha_import")).toBe("/research/quantbt/alpha-import");
+    expect(resolveScreenRoute("new_run")).toBe("/research/quantbt/runs/new");
+    // Still absent: a preflight is declared inside Screen 02, so there is no
+    // separate screen to route to.
     expect(resolveScreenRoute("preflight")).toBeNull();
   });
 
@@ -466,35 +467,25 @@ describe("P09-T04 — the Atlas renders from the manifest response", () => {
   });
 });
 
-describe("P09-T05 — a widened field is checked, never cast", () => {
-  it("accepts a document that carries every claim fact", () => {
-    const result = narrowAtlas(ATLAS_DOC as unknown as FoundationAtlas);
-    expect(result.ok).toBe(true);
-  });
-
-  it("names the missing path rather than printing undefined in a certification", () => {
-    const thin = {
-      ...ATLAS_DOC,
-      claims: [{ contract_id: "close_target_v2" }],
-    } as unknown as FoundationAtlas;
-    const result = narrowAtlas(thin);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.missing).toContain("claims[0].engine_certification");
-      expect(result.missing).toContain("claims[0].numeric_guarantee");
-      expect(result.missing).toContain("claims[0].never_claims");
-    }
-  });
-
-  it("renders the screen as partial, not empty, when a fact is absent", async () => {
-    const thin = { ...ATLAS_DOC, claims: [{ contract_id: "x" }] } as unknown as FoundationAtlas;
-    stub(() => [200, atlas({ atlas: thin }), 'W/"atlas-thin"']);
+describe("P09-T05 — the Atlas needs no narrowing layer", () => {
+  it("renders the response document directly, with claims fully typed", async () => {
+    // `CG-P09-01` closed: the foundation contract now types `claims` and
+    // `evidence_contract`, and `atlas.ts` reads that same contract. The checked
+    // narrowing that stood between the two generated descriptions is gone, and
+    // this test exists so it cannot creep back as a silent cast.
+    stub(() => [200, atlas(), 'W/"atlas-1"']);
     renderAt("/research/quantbt/atlas", <EngineAtlasRoute />);
+    await waitFor(() => expect(document.querySelector("[data-screen='engine-atlas']")).toBeTruthy());
 
-    await waitFor(() =>
-      expect(document.querySelector("[data-research-state='partial']")).toBeTruthy(),
-    );
-    expect(document.body.textContent).toContain("claims[0].engine_certification");
+    const source = readFileSync(join(process.cwd(), "src", "research", "foundationRoutes.tsx"), "utf8");
+    expect(source).not.toMatch(/narrowAtlas|as unknown as/);
+  });
+
+  it("types the Atlas from the contract the browser reads", () => {
+    const source = readFileSync(join(process.cwd(), "src", "research", "atlas.ts"), "utf8");
+    expect(source).toContain('@portal/contracts-research-foundation');
+    // Two generated descriptions of one document is one too many.
+    expect(source).not.toMatch(/from "@portal\/contracts"/);
   });
 });
 
@@ -601,7 +592,6 @@ describe("P09-T08 — the surface builds no DTO and makes no outside request", (
     "foundationRoutes.tsx",
     "JourneyMap.tsx",
     "screenRoutes.ts",
-    "atlasDocument.ts",
   ];
 
   function codeOf(name: string): string {

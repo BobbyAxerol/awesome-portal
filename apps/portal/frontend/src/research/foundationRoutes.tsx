@@ -21,7 +21,6 @@ import { useLocation } from "react-router-dom";
 
 import { EngineAtlas, tabFromHash, type AtlasTab } from "./EngineAtlas";
 import { JourneyMap } from "./JourneyMap";
-import { narrowAtlas } from "./atlasDocument";
 import type { AtlasDocument } from "./atlas";
 import {
   type AtlasQuery,
@@ -163,16 +162,10 @@ export function EngineAtlasRoute() {
     [JSON.stringify(query)],
   );
 
-  const narrowed = read.data ? narrowAtlas(read.data.atlas) : null;
-  const document: AtlasDocument | null = narrowed?.ok ? narrowed.document : null;
-
-  /* The envelope arrived but a fact S12 renders is absent. That is `partial`
-     with the missing paths named — not an empty screen, and not a claims table
-     printing `undefined` where a certification belongs. */
-  const state: ResearchState =
-    narrowed && !narrowed.ok
-      ? researchState({ kind: "ok", rowCount: 1, declaredUnavailable: narrowed.missing })
-      : read.state;
+  /* No narrowing layer any more: `atlas.ts` is typed from this same contract,
+     so the response *is* the document S12 renders (`CG-P09-01`). */
+  const document: AtlasDocument | null = read.data?.atlas ?? null;
+  const state: ResearchState = read.state;
 
   return (
     <EngineAtlas

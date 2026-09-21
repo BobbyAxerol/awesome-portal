@@ -33,6 +33,10 @@ import { QUANTBT_ROOT } from "../features/quantbt/routes";
 const SCREEN_ROUTES: Readonly<Record<string, string>> = {
   journey_map: `${QUANTBT_ROOT}/journey`,
   engine_atlas: `${QUANTBT_ROOT}/atlas`,
+  /* `FD-P09-02` resolved in plan §13: Screen 14's canonical route is under
+     QuantBT, not under the still-COMMISSIONED ALPHA_POOL feature. */
+  alpha_import: `${QUANTBT_ROOT}/alpha-import`,
+  new_run: `${QUANTBT_ROOT}/runs/new`,
   command_center: "/",
   portal_access: "/administration/profile-access",
 };

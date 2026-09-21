@@ -44,6 +44,8 @@ import { QuantBTSubnav } from "./QuantBTSubnav";
 import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
 import { EngineAtlasRoute, JourneyMapRoute } from "../../research/foundationRoutes";
+import { AlphaImportRoute } from "../../research/AlphaImportRoute";
+import { NewRunRoute } from "../../research/NewRunRoute";
 import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
@@ -209,6 +211,9 @@ function LegacyTabRedirect() {
  * Module
  * ---------------------------------------------------------------------- */
 
+/** Path segments under `runs/` that name a screen rather than a run. */
+const RESERVED_RUN_SEGMENTS = new Set(["new"]);
+
 export function QuantBTModule() {
   const feature = useFeature("QUANTBT_RESEARCH");
   const location = useLocation();
@@ -222,7 +227,13 @@ export function QuantBTModule() {
   // construction, instead of tracking a second copy of the selection.
   const activeRunId = useMemo(() => {
     const match = /\/runs\/([^/]+)/.exec(location.pathname);
-    return match ? decodeURIComponent(match[1]) : null;
+    if (!match) return null;
+    const segment = decodeURIComponent(match[1]);
+    /* `runs/new` is Screen 02, not a run. Without this the module read "new"
+       as a run id and fetched `/api/runs/new` on every visit — a request for a
+       run that cannot exist, and two console errors on a screen that had not
+       created anything yet. */
+    return RESERVED_RUN_SEGMENTS.has(segment) ? null : segment;
   }, [location.pathname]);
 
   const activeRun = useQuery({
@@ -234,7 +245,7 @@ export function QuantBTModule() {
   // On a run route the passport strip below carries run, status, protocol,
   // strategy, instrument and created-at. Repeating three of those in the module
   // header printed the same identity twice, 40px apart.
-  const onRunRoute = /\/runs\/[^/]+/.test(location.pathname);
+  const onRunRoute = activeRunId !== null;
   // New Run and the import inbox are their own tasks with their own headings; the
   // active-run context strip above them was a fourth band of chrome before the
   // first control, describing something the reader is not looking at.
@@ -244,7 +255,7 @@ export function QuantBTModule() {
   // Kept separate from `onTaskRoute` on purpose: widening that regex would
   // also have dropped the caption from New Run and the import inbox, which are
   // outside this phase and inside the visual baseline.
-  const onReferenceRoute = /\/(journey|atlas)(\/|$)/.test(location.pathname);
+  const onReferenceRoute = /\/(journey|atlas|alpha-import|runs\/new)(\/|$)/.test(location.pathname);
 
   const actions = (
     <>
@@ -320,6 +331,13 @@ export function QuantBTModule() {
           * the Atlas is a reference surface, not a stage. */}
         <Route path="journey" element={<JourneyMapRoute />} />
         <Route path="atlas" element={<EngineAtlasRoute />} />
+        {/* P10 · Screen 02. A static segment, so it wins over `runs/:runId/*`
+          * without depending on declaration order. */}
+        <Route path="runs/new" element={<NewRunRoute />} />
+        {/* Screen 14's canonical route, resolved as `FD-P09-02`: under QuantBT
+          * rather than under the still-COMMISSIONED ALPHA_POOL feature.
+          * Legacy `imports` below is untouched. */}
+        <Route path="alpha-import" element={<AlphaImportRoute />} />
         <Route path="imports" element={<ImportInbox />} />
         <Route path="alphas/:alphaId/:version" element={<AlphaVersionDetail />} />
         <Route path="runs" element={<RunLibrary />} />
