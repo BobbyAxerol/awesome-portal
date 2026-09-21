@@ -6,6 +6,7 @@
  * the browser has no editable entrypoint/parameter/data-contract fields.
  */
 import { z } from "zod";
+import type { ResearchAlphaVersionDeclaration } from "./alpha-version-declaration";
 
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional();
 const SourceFileRefSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/);
@@ -114,6 +115,8 @@ export interface ResearchAlphaRegistryEntry {
   version_label: string;
   lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   entrypoint: string;
+  /** Safe immutable declaration used by typed New Run validators; never raw source or provenance. */
+  declaration: ResearchAlphaVersionDeclaration;
   source_digest_prefix: string;
   alpha_revision: number;
   registered_at_utc_ms: number;

@@ -75,4 +75,20 @@ describe("P07 published Research Alpha Import contract", () => {
     const generated = readFileSync(generatedPath, "utf8");
     expect(generated).toContain("may_activate: boolean");
   });
+
+  it("publishes only the bounded Alpha declaration Screen 02 may validate", () => {
+    const schema = json(schemaPath) as { $defs: Record<string, { properties?: Record<string, unknown> }> };
+    const declaration = schema.$defs.AlphaVersionDeclaration;
+    expect(declaration.properties).toEqual(expect.objectContaining({
+      schema_version: { const: "research.alpha-version-declaration.v1" },
+      determinism: expect.any(Object),
+      parameter_space: expect.any(Object),
+    }));
+    expect(declaration.properties).not.toHaveProperty("source_file_ref");
+    expect(declaration.properties).not.toHaveProperty("protected_kernel_sha256");
+
+    const generated = readFileSync(generatedPath, "utf8");
+    expect(generated).toContain("AlphaVersionDeclaration");
+    expect(generated).toContain("declaration:");
+  });
 });

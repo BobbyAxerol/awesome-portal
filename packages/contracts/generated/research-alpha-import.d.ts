@@ -130,6 +130,41 @@ export interface components {
             request_id: string;
         };
         AlphaVersionId: string;
+        DeclarationScalar: string | number | boolean | null;
+        ParameterDeclaration: {
+            /** @constant */
+            kind: "fixed";
+            value: components["schemas"]["DeclarationScalar"];
+        } | {
+            /** @constant */
+            kind: "int_range";
+            low: number;
+            high: number;
+            step: number;
+        } | {
+            /** @constant */
+            kind: "float_range";
+            low: number;
+            high: number;
+            step: number;
+        } | {
+            /** @constant */
+            kind: "categorical";
+            values: components["schemas"]["DeclarationScalar"][];
+        };
+        /** @description Safe immutable projection of the AlphaVersion declaration. It is a validator input, not raw source, provenance, an adapter command or a mutable contract. */
+        AlphaVersionDeclaration: {
+            /** @constant */
+            schema_version: "research.alpha-version-declaration.v1";
+            entrypoint: string;
+            timeframes: string[];
+            determinism: {
+                seed_required: boolean;
+            };
+            parameter_space: {
+                [key: string]: components["schemas"]["ParameterDeclaration"];
+            };
+        };
         UtcMilliseconds: number;
         RegistryEntry: {
             alpha_id: components["schemas"]["AlphaId"];
@@ -138,6 +173,7 @@ export interface components {
             /** @enum {unknown} */
             lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
             entrypoint: string;
+            declaration: components["schemas"]["AlphaVersionDeclaration"];
             source_digest_prefix: string;
             alpha_revision: number;
             registered_at_utc_ms: components["schemas"]["UtcMilliseconds"];

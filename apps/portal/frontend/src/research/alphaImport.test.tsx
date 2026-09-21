@@ -51,6 +51,13 @@ const GATE_NAMES: readonly GateName[] = [
 ];
 
 const DISCLOSURE = "Static scan — runtime causality is proven per run at Stage 3/4." as const;
+const DECLARATION: RegistryEntry["declaration"] = {
+  schema_version: "research.alpha-version-declaration.v1",
+  entrypoint: "alpha.delta_rsi:run",
+  timeframes: ["1h", "4h"],
+  determinism: { seed_required: true },
+  parameter_space: { rsi_len: { kind: "int_range", low: 5, high: 30, step: 1 } },
+};
 
 function sourceResponse(overrides: Partial<SourceResponse> = {}): SourceResponse {
   return {
@@ -130,18 +137,19 @@ function activation(overrides: Partial<ActivationResponse> = {}): ActivationResp
 }
 
 function entry(overrides: Partial<RegistryEntry> = {}): RegistryEntry {
-  return {
+  const base: RegistryEntry = {
     alpha_id: "delta_rsi_polynomial",
     alpha_version_id: "av_0_2_0",
     version_label: "av_0_2_0",
     lifecycle_state: "ACTIVE",
     entrypoint: "alpha.delta_rsi:run",
+    declaration: DECLARATION,
     source_digest_prefix: "sha256:11ab",
     alpha_revision: 6,
     registered_at_utc_ms: 1789836572369,
     may_activate: true,
-    ...overrides,
   };
+  return { ...base, ...overrides, declaration: overrides.declaration ?? base.declaration };
 }
 
 const OK = researchState({ kind: "ok", rowCount: 1 });

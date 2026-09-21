@@ -4,6 +4,7 @@ import { Pool } from "../../apps/control-api/node_modules/pg";
 import type { ControlApiConfig } from "../../apps/control-api/src/config";
 import type { PortalUser } from "../../apps/control-api/src/domain";
 import type { ResearchScope } from "../../apps/control-api/src/research/contracts";
+import { ResearchAlphaImportService } from "../../apps/control-api/src/research/alpha-import.service";
 import { P04_DELTA_BINDING } from "../../apps/control-api/src/research/p04-delta.binding";
 import { ResearchP04DeltaBindingService } from "../../apps/control-api/src/research/p04-delta-binding.service";
 import { sha256ResearchJson } from "../../apps/control-api/src/research/preflight.service";
@@ -220,6 +221,31 @@ describe("Research Loop P10 · New Run durable producer", () => {
         warmup_bars: 300,
       },
     });
+    // BR-P10-01: the one installed binding is browser-discoverable through the
+    // P07 registry, but only as the safe declaration needed by the New Run
+    // validators. It never turns into source, a child command or provenance.
+    const registry = await new ResearchAlphaImportService(
+      repository,
+      {} as never,
+      {} as ControlApiConfig,
+    ).list(admin, scope);
+    expect(registry).toMatchObject([{
+      alpha_id: P04_DELTA_BINDING.alphaId,
+      alpha_version_id: P04_DELTA_BINDING.alphaVersionId,
+      lifecycle_state: "ACTIVE",
+      declaration: {
+        schema_version: "research.alpha-version-declaration.v1",
+        entrypoint: "strategy.delta_rsi:generate_signals",
+        timeframes: ["1h", "4h", "1d"],
+        determinism: { seed_required: false },
+        parameter_space: {
+          window: { kind: "int_range", low: 20, high: 60, step: 2 },
+          rvol: { kind: "float_range", low: 1, high: 2.5, step: 0.1 },
+        },
+      },
+    }]);
+    expect(JSON.stringify(registry)).not.toContain("protected_kernel_sha256");
+    expect(JSON.stringify(registry)).not.toContain("source_file_ref");
   });
 
   it("P10-T04/T05/T06/T08: persists one immutable intent before the signed compatibility hop and replays it", async () => {

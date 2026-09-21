@@ -4444,6 +4444,30 @@ presentation substage below parse, never as a fourth lifecycle/API/backend
 state.  Claude should acknowledge that decision in the next product-route
 browser receipt rather than add a new contract.
 
+**P10 browser-contract amendment — `BR-P10-01/02` closed, 2026-09-21:** the
+generated P07 registry contract now exposes a bounded, safe Alpha-version
+declaration (entrypoint, declared timeframes, `seed_required` and declared
+parameter space), including normalized P04 shorthand ranges. It never projects
+source bytes/path, adapter, protected-kernel or provenance fields; corrupt
+stored data fails typed rather than being guessed in a browser. The P09 current
+Atlas now exposes the verified finite trial ceiling (`4000`), the four named
+Study/Sampler/Objective/Candidate-selection release-default groups and the
+current P10 submission constraints. Those groups are all `RELEASE_DEFAULT` and
+`LOCKED`; they explain the release but never authorize a browser override.
+Claude must wire these generated facts into the existing Screen 02 validators
+and preserve typed unavailable/partial/denied states instead of using
+`Infinity` or fabricated declaration values. The exact handoff is
+[P10 frontend handoff](./research_loop/evidence/P10/frontend-handoff-claude.md).
+
+**Visual-gate correction:** `7441c572`'s broad embedded-Planning Tailwind scan
+was replaced with a reviewed explicit safelist, restoring Portal scan locality
+without a snapshot update or a weaker threshold. The Planning Board matrix
+passes unchanged. The final immutable Chromium result is **220 pass / 28
+screenshot mismatch**: three `planning-reports` Mermaid differences reproduce
+at baseline commit `6a712c53`; the remaining screenshot-only baseline/renderer
+differences stay visible for a separate visual-owner review with pinned
+browser/font evidence. They are not relabelled as P10 passes or refreshed here.
+
 <a id="rl-p11"></a>
 ### P11 — Progress, console và artifact readiness
 

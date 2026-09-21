@@ -106,6 +106,43 @@ const AtlasModeSchema = z.object({
   rules: z.array(z.string().min(1).max(1024)).min(1).max(4),
 }).strict();
 
+/** Scalar-only release default values: no arbitrary config object reaches a browser. */
+const AtlasOptimizerDefaultScalarSchema = z.union([
+  z.string().max(191), z.number().finite(), z.boolean(), z.null(),
+]);
+const AtlasOptimizerDefaultValueSchema = z.union([
+  AtlasOptimizerDefaultScalarSchema,
+  z.array(AtlasOptimizerDefaultScalarSchema).min(1).max(16),
+]);
+const AtlasOptimizerDefaultFieldSchema = z.object({
+  field_id: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/),
+  default_value: AtlasOptimizerDefaultValueSchema,
+  value_source: z.literal("RELEASE_DEFAULT"),
+  override_state: z.enum(["LOCKED", "OVERRIDE_ALLOWED"]),
+  detail: z.string().min(1).max(400),
+}).strict();
+const AtlasOptimizerGroupSchema = z.object({
+  group_id: z.enum(["study", "sampler", "objective", "candidate_selection"]),
+  fields: z.array(AtlasOptimizerDefaultFieldSchema).min(1).max(24),
+}).strict();
+const AtlasOptimizerDefaultsSchema = z.object({
+  schema_version: z.literal("research.optimizer-defaults.v1"),
+  groups: z.tuple([
+    AtlasOptimizerGroupSchema.extend({ group_id: z.literal("study") }),
+    AtlasOptimizerGroupSchema.extend({ group_id: z.literal("sampler") }),
+    AtlasOptimizerGroupSchema.extend({ group_id: z.literal("objective") }),
+    AtlasOptimizerGroupSchema.extend({ group_id: z.literal("candidate_selection") }),
+  ]),
+}).strict();
+const AtlasSubmissionConstraintsSchema = z.object({
+  profile_id: z.literal("p10.fixed-qualification.v1"),
+  optimization_overrides: z.literal("FORBIDDEN"),
+  accepted_trial_count: z.literal(1),
+  early_stopping: z.literal("MUST_BE_NULL"),
+  random_seed: z.literal("MUST_BE_NULL"),
+  reason: z.string().min(1).max(500),
+}).strict();
+
 export const ResearchEngineAtlasPrivateSchema = z.object({
   schema_version: z.literal("research-engine-atlas.v1"),
   manifest_revision: z.number().int().positive(),
@@ -114,6 +151,9 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
     installed_version: z.string().max(191).nullable().optional(), native_package: z.string().max(191).nullable().optional(),
     native_expected_version: z.string().max(191).nullable().optional(), native_installed_version: z.string().max(191).nullable().optional(),
     verified: z.boolean(), detail: z.string().max(1024).nullable().optional(),
+    trial_ceiling: z.number().int().positive().max(100_000),
+    optimizer_defaults: AtlasOptimizerDefaultsSchema,
+    submission_constraints: AtlasSubmissionConstraintsSchema,
   }).strict(),
   historical_releases: z.array(z.object({
     release_id: Identifier, package: z.string().min(1).max(191), version: z.string().min(1).max(191),

@@ -47,6 +47,9 @@ function atlasFixture(): ResearchEngineAtlasPrivate {
       native_expected_version: (current.native_dependency as { version?: string } | undefined)?.version ?? null,
       native_installed_version: (current.native_dependency as { version?: string } | undefined)?.version ?? null,
       verified: true, detail: null,
+      trial_ceiling: current.trial_ceiling as number,
+      optimizer_defaults: current.optimizer_defaults as ResearchEngineAtlasPrivate["current_release"]["optimizer_defaults"],
+      submission_constraints: current.submission_constraints as ResearchEngineAtlasPrivate["current_release"]["submission_constraints"],
     },
     historical_releases: catalog.releases.filter((release) => release.role === "historical_reader").map((release) => ({
       release_id: release.release_id as string, package: release.package as string,
@@ -159,6 +162,27 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     await expect(service.atlas(user, { route: "route_unknown" })).rejects.toMatchObject({ code: "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND" });
     await expect(service.atlas(user, { mode: "mode_unknown" })).rejects.toMatchObject({ code: "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND" });
     expect(atlasClient.read).toHaveBeenCalledTimes(4);
+  });
+
+  it("P10 amendment: carries release defaults and fixed-admission truth without inventing browser override authority", async () => {
+    const response = await service.atlas(user, {});
+    expect(response.atlas.current_release).toMatchObject({
+      trial_ceiling: 4000,
+      optimizer_defaults: {
+        schema_version: "research.optimizer-defaults.v1",
+        groups: [
+          { group_id: "study" }, { group_id: "sampler" },
+          { group_id: "objective" }, { group_id: "candidate_selection" },
+        ],
+      },
+      submission_constraints: {
+        profile_id: "p10.fixed-qualification.v1",
+        optimization_overrides: "FORBIDDEN",
+        accepted_trial_count: 1,
+      },
+    });
+    expect(response.atlas.current_release.optimizer_defaults.groups.flatMap((group) => group.fields)
+      .every((field) => field.value_source === "RELEASE_DEFAULT" && field.override_state === "LOCKED")).toBe(true);
   });
 
   it("P09-DR: registry is immutable and the runtime role cannot alter it", async () => {

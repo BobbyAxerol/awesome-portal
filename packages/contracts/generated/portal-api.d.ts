@@ -1807,6 +1807,45 @@ export interface components {
          * @enum {string}
          */
         OptimizationSchedule: "global" | "per_fold_decay" | "per_fold_causal";
+        /** OptimizerDefaultField */
+        OptimizerDefaultField: {
+            /** Default Value */
+            default_value: string | number | boolean | (string | number | boolean | null)[] | null;
+            /** Detail */
+            detail: string;
+            /** Field Id */
+            field_id: string;
+            /**
+             * Override State
+             * @enum {string}
+             */
+            override_state: "LOCKED" | "OVERRIDE_ALLOWED";
+            /**
+             * Value Source
+             * @constant
+             */
+            value_source: "RELEASE_DEFAULT";
+        };
+        /** OptimizerDefaultGroup */
+        OptimizerDefaultGroup: {
+            /** Fields */
+            fields: components["schemas"]["OptimizerDefaultField"][];
+            /**
+             * Group Id
+             * @enum {string}
+             */
+            group_id: "study" | "sampler" | "objective" | "candidate_selection";
+        };
+        /** OptimizerDefaults */
+        OptimizerDefaults: {
+            /** Groups */
+            groups: components["schemas"]["OptimizerDefaultGroup"][];
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "research.optimizer-defaults.v1";
+        };
         /** ParameterSpaceConfig */
         ParameterSpaceConfig: {
             [key: string]: components["schemas"]["ParameterSpec"];
@@ -2214,10 +2253,14 @@ export interface components {
             native_installed_version?: string | null;
             /** Native Package */
             native_package?: string | null;
+            optimizer_defaults: components["schemas"]["OptimizerDefaults"];
             /** Package */
             package: string;
             /** Release Id */
             release_id: string;
+            submission_constraints: components["schemas"]["SubmissionConstraints"];
+            /** Trial Ceiling */
+            trial_ceiling: number;
             /** Verified */
             verified: boolean;
         };
@@ -2261,6 +2304,90 @@ export interface components {
             required_input_class: string;
             /** Route Id */
             route_id: string;
+        };
+        /**
+         * ResearchRunProducerEnvelope
+         * @description The server-owned P08/P10 immutable facts needed by the worker.
+         */
+        ResearchRunProducerEnvelope: {
+            /** Adapter Contract Digest */
+            adapter_contract_digest: string;
+            /** Alpha Id */
+            alpha_id: string;
+            /** Alpha Version Id */
+            alpha_version_id: string;
+            /** Client Intent Id */
+            client_intent_id: string;
+            /** Dataset Binding Digest */
+            dataset_binding_digest: string;
+            /** Effective Spec Digest */
+            effective_spec_digest: string;
+            /**
+             * Execution Adapter Id
+             * @constant
+             */
+            execution_adapter_id: "p04.delta-rsi.v1";
+            /**
+             * Intent Kind
+             * @constant
+             */
+            intent_kind: "NEW";
+            /** Manifest Digest */
+            manifest_digest: string;
+            /** P04 Parameters */
+            p04_parameters: {
+                [key: string]: number;
+            };
+            /** Preflight Token */
+            preflight_token: string;
+            /** Requested Spec */
+            requested_spec: {
+                [key: string]: unknown;
+            };
+            /** Requested Spec Digest */
+            requested_spec_digest: string;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "research.run-producer.v1";
+            /** Snapshot Content Hash */
+            snapshot_content_hash: string;
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Work Digest */
+            work_digest: string;
+        };
+        /**
+         * ResearchRunProducerRequest
+         * @description Exact private payload sent by Control API through the existing facade.
+         */
+        ResearchRunProducerRequest: {
+            /** Dataset Id */
+            dataset_id: string;
+            /** Job Id */
+            job_id: string;
+            /** Lease Epoch */
+            lease_epoch: number;
+            /**
+             * Protocol
+             * @constant
+             */
+            protocol: "three_window_decay";
+            research: components["schemas"]["ResearchRunProducerEnvelope"];
+            /**
+             * Research Contract Version
+             * @constant
+             */
+            research_contract_version: "research.run-request.v1";
+            /** Run Id */
+            run_id: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Worker Attempt Id */
+            worker_attempt_id: string;
+            /** Workspace Id */
+            workspace_id: string;
         };
         /** ResourceProfile */
         ResourceProfile: {
@@ -2365,6 +2492,39 @@ export interface components {
             };
             /** Version */
             version: string;
+        };
+        /**
+         * SubmissionConstraints
+         * @description Exact current New Run admission, intentionally distinct from defaults.
+         */
+        SubmissionConstraints: {
+            /**
+             * Accepted Trial Count
+             * @constant
+             */
+            accepted_trial_count: 1;
+            /**
+             * Early Stopping
+             * @constant
+             */
+            early_stopping: "MUST_BE_NULL";
+            /**
+             * Optimization Overrides
+             * @constant
+             */
+            optimization_overrides: "FORBIDDEN";
+            /**
+             * Profile Id
+             * @constant
+             */
+            profile_id: "p10.fixed-qualification.v1";
+            /**
+             * Random Seed
+             * @constant
+             */
+            random_seed: "MUST_BE_NULL";
+            /** Reason */
+            reason: string;
         };
         /** SummaryLinkItem */
         SummaryLinkItem: {
@@ -2712,7 +2872,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PortalRunRequest"];
+                "application/json": components["schemas"]["PortalRunRequest"] | components["schemas"]["ResearchRunProducerRequest"];
             };
         };
         responses: {

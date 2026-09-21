@@ -88,6 +88,32 @@ intents.  The submitted canonical spec is never silently rewritten to make a
 form appear accepted.  P12/P19 own the additive versioned adapter/lineage work;
 P11 owns structured status, progress and terminal reconciliation.
 
+## Browser declaration and optimizer-default amendment
+
+`BR-P10-01` and `BR-P10-02` are closed at the server contract boundary without
+opening a source, worker or runtime-control path:
+
+- every P07 `RegistryEntry` now contains a validated,
+  `research.alpha-version-declaration.v1` safe projection: entrypoint,
+  1–12 declared timeframes, `determinism.seed_required` and at most 12
+  declared parameter definitions. P04's reviewed shorthand ranges normalize
+  to the same browser union. Source bytes/paths, binding identity,
+  protected-kernel hash, adapter and provenance fields are never projected;
+  corrupt persisted JSON returns a typed 502 rather than a guessed declaration.
+- the P09 current Atlas release now publishes the exact finite trial ceiling
+  (`4000`), four named optimizer-default groups (Study, Sampler, Objective,
+  Candidate selection), and current P10 submission constraints. The catalog
+  validates the ceiling against the actual certified capability and rejects a
+  historical release that carries current-only policy facts.
+- all current fields are `RELEASE_DEFAULT` and `LOCKED`. They are explanatory
+  release facts, not client-selectable defaults. The separate current P10
+  submission constraint remains exact: one trial, no optimizer override,
+  early-stop override or random-seed override.
+
+The generated P07/P09 contracts are the only browser inputs for the Spec 02
+declaration/sweep/pin/default panels. The Claude handoff records the exact
+typed wiring task; no TSX or HIFI composition changed in this backend slice.
+
 ## Verification
 
 | Gate | Command | Result |
@@ -96,10 +122,32 @@ P11 owns structured status, progress and terminal reconciliation.
 | P08 preflight regression after P10 binding lookup | `./scripts/research-loop-v11/test-p08-postgres.sh` | 10/10 pass on a uniquely named disposable PostgreSQL container; validates imported and P10-bound AlphaVersion lookup |
 | Real sealed P08 snapshot → actual P06 Delta child; tamper rejection; sanitized artifact projection; exact private ingress; worker isolation/cleanup; terminal-observation loss | `cd apps/portal/backend && PYTHONPATH=src:.. ../.venv/bin/python -m pytest -q tests/test_research_run_producer.py tests/test_durable_worker.py` | 15 passed |
 | Control API type/build boundary | `cd apps/control-api && npm run build` | pass |
-| Generated named browser contract | `cd packages/contracts && npm run generate:research-run-create && npm test` | generation pass; 142/142 pass |
+| Generated named browser contract | `cd packages/contracts && npm run generate:research-run-create && npm test` | generation pass; 143/143 pass |
 | Global route ownership ledger | `cd apps/portal/frontend && npm test -- src/execution/r2Ledger.test.ts` | 22/22 pass |
 | Unchanged P02 facade/regression | `./scripts/research-loop-v11/test-p02-compatibility.sh` | static contract pass; 63/63 pass in disposable PostgreSQL proof |
 | Diff hygiene | `git diff --check` | pass |
+
+### Visual-gate root-cause evidence
+
+Commit `7441c572` broadened the Portal Tailwind content scan to the complete
+embedded Planning source tree. That made the generated Portal CSS depend on a
+sibling feature tree, which is an invalid cross-feature build boundary whether
+or not a given browser happens to render a visible shift. The repair restores
+the Portal-local scan and retains only the reviewed shared Planning primitives
+in an explicit safelist (including the lazy `feature-loading` fallback). It is
+guarded by a static unit test; no snapshot was re-recorded and no visual
+threshold was weakened. The affected Planning Board matrix passes unchanged.
+
+The final immutable Chromium run is deliberately recorded accurately: **220
+passed / 28 screenshot mismatches**, not a false all-green claim. Three are
+the `planning-reports` one/two-pixel Mermaid differences that reproduce from a
+clean temporary worktree at baseline commit `6a712c53`; they therefore predate
+this repair. The other screenshot-only mismatches are existing cross-product
+baseline/renderer follow-up, not inputs to this backend/contract change and
+were not re-recorded or threshold-masked here. They require a dedicated visual
+owner decision with a pinned browser/font evidence capture before any baseline
+refresh. This keeps the gate honest while removing the unsafe global Tailwind
+scan that made diagnosis impossible.
 
 ### Environment-only legacy runner observation
 

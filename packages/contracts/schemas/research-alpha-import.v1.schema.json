@@ -70,6 +70,92 @@
         "ms": { "type": "integer", "minimum": 0, "maximum": 3600000 }
       }
     },
+    "DeclarationScalar": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
+    "ParameterDeclaration": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "fixed" },
+            "value": { "$ref": "#/$defs/DeclarationScalar" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "low", "high", "step"],
+          "properties": {
+            "kind": { "const": "int_range" },
+            "low": { "type": "integer" },
+            "high": { "type": "integer" },
+            "step": { "type": "integer", "minimum": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "low", "high", "step"],
+          "properties": {
+            "kind": { "const": "float_range" },
+            "low": { "type": "number" },
+            "high": { "type": "number" },
+            "step": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "values"],
+          "properties": {
+            "kind": { "const": "categorical" },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": { "$ref": "#/$defs/DeclarationScalar" }
+            }
+          }
+        }
+      ]
+    },
+    "AlphaVersionDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Safe immutable projection of the AlphaVersion declaration. It is a validator input, not raw source, provenance, an adapter command or a mutable contract.",
+      "required": ["schema_version", "entrypoint", "timeframes", "determinism", "parameter_space"],
+      "properties": {
+        "schema_version": { "const": "research.alpha-version-declaration.v1" },
+        "entrypoint": { "type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z][A-Za-z0-9_.:]{0,159}$" },
+        "timeframes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[1-9][0-9]*(?:m|h|d|w)$" }
+        },
+        "determinism": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["seed_required"],
+          "properties": { "seed_required": { "type": "boolean" } }
+        },
+        "parameter_space": {
+          "type": "object",
+          "maxProperties": 12,
+          "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$" },
+          "additionalProperties": { "$ref": "#/$defs/ParameterDeclaration" }
+        }
+      }
+    },
     "ResearchAlphaAnalysis": {
       "type": "object",
       "additionalProperties": false,
@@ -140,13 +226,14 @@
     "RegistryEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["alpha_id", "alpha_version_id", "version_label", "lifecycle_state", "entrypoint", "source_digest_prefix", "alpha_revision", "registered_at_utc_ms", "may_activate"],
+      "required": ["alpha_id", "alpha_version_id", "version_label", "lifecycle_state", "entrypoint", "declaration", "source_digest_prefix", "alpha_revision", "registered_at_utc_ms", "may_activate"],
       "properties": {
         "alpha_id": { "$ref": "#/$defs/AlphaId" },
         "alpha_version_id": { "$ref": "#/$defs/AlphaVersionId" },
         "version_label": { "type": "string", "minLength": 4, "maxLength": 64, "pattern": "^av_[0-9]+(?:_[0-9]+){2}$" },
         "lifecycle_state": { "enum": ["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] },
         "entrypoint": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "declaration": { "$ref": "#/$defs/AlphaVersionDeclaration" },
         "source_digest_prefix": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
         "alpha_revision": { "type": "integer", "minimum": 1 },
         "registered_at_utc_ms": { "$ref": "#/$defs/UtcMilliseconds" },

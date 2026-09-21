@@ -303,6 +303,7 @@ export interface ResearchAlphaRegistryRecord {
   versionLabel: string;
   lifecycleState: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   entrypoint: string;
+  declaredContract: Record<string, unknown>;
   sourceDigestPrefix: string;
   alphaRevision: number;
   registeredAt: Date;

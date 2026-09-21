@@ -3,7 +3,7 @@
   "info": {
     "title": "Portal Research Alpha Import API",
     "version": "1.0.0",
-    "description": "Five same-origin, session-scoped P07 operations for the Research Loop Screen 14 Alpha Import wizard. This is additive to — and does not replace or shadow — the legacy QuantBT /api/v1/alphas compatibility API. Browser callers never receive stored source bytes, a filesystem path, an internal principal, or a mutable parsed contract."
+    "description": "Five same-origin, session-scoped P07 operations for the Research Loop Screen 14 Alpha Import wizard. This is additive to — and does not replace or shadow — the legacy QuantBT /api/v1/alphas compatibility API. Browser callers never receive stored source bytes, a filesystem path, an internal principal, or a mutable parsed contract. Registry entries include only a bounded immutable declaration projection for New Run validation."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],

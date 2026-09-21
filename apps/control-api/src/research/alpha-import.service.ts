@@ -14,6 +14,10 @@ import {
   type ResearchAlphaImportRegisterResponse,
   type ResearchAlphaRegistryEntry,
 } from "./alpha-import.contract";
+import {
+  projectResearchAlphaVersionDeclaration,
+  ResearchAlphaVersionDeclarationError,
+} from "./alpha-version-declaration";
 import { ResearchAlphaAnalysisClient } from "./alpha-analysis.client";
 import { ResearchAlphaImportError } from "./alpha-import.error";
 import { type ResearchScope, ResearchMetadataError } from "./contracts";
@@ -213,17 +217,29 @@ export class ResearchAlphaImportService {
     alphaId?: string,
   ): Promise<readonly ResearchAlphaRegistryEntry[]> {
     const rows = await this.repository.listImportedAlphaVersions(scope, alphaId);
-    return rows.map((row) => ({
-      alpha_id: row.alphaId,
-      alpha_version_id: row.alphaVersionId,
-      version_label: row.versionLabel,
-      lifecycle_state: row.lifecycleState,
-      entrypoint: row.entrypoint,
-      source_digest_prefix: row.sourceDigestPrefix,
-      alpha_revision: row.alphaRevision,
-      registered_at_utc_ms: row.registeredAt.getTime(),
-      may_activate: mayActivateResearchAlpha(user),
-    }));
+    try {
+      return rows.map((row) => ({
+        alpha_id: row.alphaId,
+        alpha_version_id: row.alphaVersionId,
+        version_label: row.versionLabel,
+        lifecycle_state: row.lifecycleState,
+        entrypoint: row.entrypoint,
+        declaration: projectResearchAlphaVersionDeclaration(row.declaredContract, row.entrypoint),
+        source_digest_prefix: row.sourceDigestPrefix,
+        alpha_revision: row.alphaRevision,
+        registered_at_utc_ms: row.registeredAt.getTime(),
+        may_activate: mayActivateResearchAlpha(user),
+      }));
+    } catch (error) {
+      if (error instanceof ResearchAlphaVersionDeclarationError) {
+        throw new ResearchAlphaImportError(
+          "RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED",
+          "An immutable Alpha declaration is incompatible with the published safe registry contract.",
+          502,
+        );
+      }
+      throw error;
+    }
   }
 
   private async analyzeStoredSource(

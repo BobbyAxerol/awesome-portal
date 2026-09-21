@@ -13,6 +13,10 @@ import httpx
 import numpy as np
 import pytest
 from jsonschema import Draft202012Validator
+from quantbt.optimization.config import (
+    OptimizationConfig as QuantBTOptimizationConfig,
+    SamplerConfig,
+)
 
 from golden_fixture import generate_golden_signals, load_golden
 from portal_api.adapters.quantbt import (
@@ -20,11 +24,16 @@ from portal_api.adapters.quantbt import (
     QuantBTGateway,
 )
 from portal_api.main import create_app
+from portal_api.domain.requests import (
+    OptimizationConfig as PortalOptimizationConfig,
+    ThreeWindowConfig,
+)
 from portal_api.services.engine_capabilities import installed_dist_info_record_hash
 from portal_api.services.research_engine_catalog import (
     FROZEN_CLAIM_IDS,
     FROZEN_EVIDENCE_FIELDS,
     FROZEN_MODE_IDS,
+    FROZEN_OPTIMIZER_GROUP_IDS,
     FROZEN_ROUTE_IDS,
     ResearchEngineCatalogError,
     ResearchEngineCatalogLoadError,
@@ -95,6 +104,119 @@ def test_p04_t01_release_provenance_current_and_historical_identity() -> None:
     assert document.evidence_contract.schema_id == "research-run-evidence.v1"
     assert document.evidence_contract.required_fields == FROZEN_EVIDENCE_FIELDS
     assert document.evidence_contract.writer_state == "P05_OWNED_NOT_ACTIVE"
+
+
+def test_p10_atlas_publishes_real_release_defaults_without_widening_fixed_admission() -> None:
+    """BR-P10-02: Browser facts are exact, but do not become run authority."""
+
+    current = next(release for release in _service().catalog.releases if release.role == "current")
+    assert current.trial_ceiling == 4_000
+    assert current.optimizer_defaults is not None
+    assert current.submission_constraints is not None
+    assert tuple(group.group_id for group in current.optimizer_defaults.groups) == FROZEN_OPTIMIZER_GROUP_IDS
+
+    fields = {
+        group.group_id: {field.field_id: field.default_value for field in group.fields}
+        for group in current.optimizer_defaults.groups
+    }
+    # These are the defaults actually declared by the pinned QuantBT / Portal
+    # configuration classes. The current P10 producer remains narrower.
+    assert fields["study"] == {
+        "n_trials": 300,
+        "directions": ("maximize",),
+        "seed": 42,
+        "n_jobs": 1,
+        "early_stopping_rounds": None,
+        "early_stopping_min_trials": 0,
+        "early_stopping_min_delta": 0.0001,
+        "show_progress_bar": True,
+        "duplicate_policy": "prune",
+        "exception_policy": "raise",
+    }
+    assert fields["sampler"] == {"name": "tpe", "constraint_mode": "sampler"}
+    assert fields["objective"] == {
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "optuna_trials": 400,
+        "optuna_early_stopping": 200,
+        "random_seed": 42,
+        "scoring_backend": "endpoint",
+        "min_trades_per_year": 100,
+        "trade_penalty_factor": 0.5,
+        "use_numba": True,
+    }
+    assert fields["candidate_selection"] == {
+        "candidate_selection_metric": "robust_decay",
+        "top_is_fraction": 0.1,
+        "top_is_k": None,
+        "decay_lambda": 0.5,
+        "decay_gamma": 0.5,
+        "candidate_decay_lambda": None,
+        "candidate_decay_gamma": None,
+    }
+    quantbt = QuantBTOptimizationConfig(study_name="catalog-default-proof")
+    sampler = SamplerConfig()
+    three_window = ThreeWindowConfig()
+    portal_optimization = PortalOptimizationConfig()
+    assert fields["study"] == {
+        "n_trials": quantbt.n_trials,
+        "directions": quantbt.directions,
+        "seed": quantbt.seed,
+        "n_jobs": quantbt.n_jobs,
+        "early_stopping_rounds": quantbt.early_stopping_rounds,
+        "early_stopping_min_trials": quantbt.early_stopping_min_trials,
+        "early_stopping_min_delta": quantbt.early_stopping_min_delta,
+        "show_progress_bar": quantbt.show_progress_bar,
+        "duplicate_policy": quantbt.duplicate_policy,
+        "exception_policy": quantbt.exception_policy,
+    }
+    assert fields["sampler"] == {
+        "name": sampler.name,
+        "constraint_mode": sampler.constraint_mode,
+    }
+    assert fields["objective"] == {
+        "optimization_mode": str(three_window.optimization_mode),
+        "optimization_schedule": str(three_window.optimization_schedule),
+        "optuna_trials": three_window.optuna_trials,
+        "optuna_early_stopping": three_window.optuna_early_stopping,
+        "random_seed": three_window.random_seed,
+        "scoring_backend": portal_optimization.scoring_backend,
+        "min_trades_per_year": portal_optimization.min_trades_per_year,
+        "trade_penalty_factor": portal_optimization.trade_penalty_factor,
+        "use_numba": portal_optimization.use_numba,
+    }
+    assert fields["candidate_selection"] == {
+        "candidate_selection_metric": portal_optimization.candidate_selection_metric,
+        "top_is_fraction": portal_optimization.top_is_fraction,
+        "top_is_k": portal_optimization.top_is_k,
+        "decay_lambda": portal_optimization.decay_lambda,
+        "decay_gamma": portal_optimization.decay_gamma,
+        "candidate_decay_lambda": portal_optimization.candidate_decay_lambda,
+        "candidate_decay_gamma": portal_optimization.candidate_decay_gamma,
+    }
+    assert all(
+        field.value_source == "RELEASE_DEFAULT" and field.override_state == "LOCKED"
+        for group in current.optimizer_defaults.groups
+        for field in group.fields
+    )
+    assert current.submission_constraints.profile_id == "p10.fixed-qualification.v1"
+    assert current.submission_constraints.optimization_overrides == "FORBIDDEN"
+    assert current.submission_constraints.accepted_trial_count == 1
+    assert current.submission_constraints.early_stopping == "MUST_BE_NULL"
+    assert current.submission_constraints.random_seed == "MUST_BE_NULL"
+
+
+def test_p10_atlas_rejects_drift_between_release_ceiling_and_certified_capability(
+    tmp_path: Path,
+) -> None:
+    def mutate(source: dict[str, object]) -> None:
+        releases = source["releases"]
+        assert isinstance(releases, list)
+        current = next(item for item in releases if isinstance(item, dict) and item["role"] == "current")
+        current["trial_ceiling"] = 3_999
+
+    with pytest.raises(ResearchEngineCatalogLoadError, match="trial ceiling does not match"):
+        ResearchEngineCatalogService(_root(tmp_path, mutate))
 
 
 def test_p04_atlas_uses_startup_provenance_observation_not_per_request_probe(

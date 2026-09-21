@@ -89,6 +89,21 @@ const ATLAS: AtlasDocument = {
     native_expected_version: null,
     native_installed_version: null,
     detail: null,
+    trial_ceiling: 4000,
+    optimizer_defaults: {
+      schema_version: "research.optimizer-defaults.v1",
+      groups: [
+        { group_id: "study", fields: [{ field_id: "n_trials", default_value: 300, value_source: "RELEASE_DEFAULT", override_state: "LOCKED", detail: "Fixture release default." }] },
+        { group_id: "sampler", fields: [{ field_id: "name", default_value: "tpe", value_source: "RELEASE_DEFAULT", override_state: "LOCKED", detail: "Fixture release default." }] },
+        { group_id: "objective", fields: [{ field_id: "optuna_trials", default_value: 400, value_source: "RELEASE_DEFAULT", override_state: "LOCKED", detail: "Fixture release default." }] },
+        { group_id: "candidate_selection", fields: [{ field_id: "candidate_selection_metric", default_value: "robust_decay", value_source: "RELEASE_DEFAULT", override_state: "LOCKED", detail: "Fixture release default." }] },
+      ],
+    },
+    submission_constraints: {
+      profile_id: "p10.fixed-qualification.v1", optimization_overrides: "FORBIDDEN",
+      accepted_trial_count: 1, early_stopping: "MUST_BE_NULL", random_seed: "MUST_BE_NULL",
+      reason: "Fixture fixed-qualification profile.",
+    },
   },
   historical_releases: [],
   routes: [

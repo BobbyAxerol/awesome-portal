@@ -146,6 +146,57 @@ export interface components {
             when_to_use: string;
             rules: string[];
         };
+        AtlasOptimizerDefaultScalar: string | number | boolean | null;
+        AtlasOptimizerDefaultValue: components["schemas"]["AtlasOptimizerDefaultScalar"] | components["schemas"]["AtlasOptimizerDefaultScalar"][];
+        AtlasOptimizerDefaultField: {
+            field_id: string;
+            default_value: components["schemas"]["AtlasOptimizerDefaultValue"];
+            /** @constant */
+            value_source: "RELEASE_DEFAULT";
+            /** @enum {unknown} */
+            override_state: "LOCKED" | "OVERRIDE_ALLOWED";
+            detail: string;
+        };
+        AtlasOptimizerGroup: {
+            /** @enum {unknown} */
+            group_id: "study" | "sampler" | "objective" | "candidate_selection";
+            fields: components["schemas"]["AtlasOptimizerDefaultField"][];
+        };
+        AtlasOptimizerDefaults: {
+            /** @constant */
+            schema_version: "research.optimizer-defaults.v1";
+            groups: [
+                components["schemas"]["AtlasOptimizerGroup"] & {
+                    /** @constant */
+                    group_id?: "study";
+                },
+                components["schemas"]["AtlasOptimizerGroup"] & {
+                    /** @constant */
+                    group_id?: "sampler";
+                },
+                components["schemas"]["AtlasOptimizerGroup"] & {
+                    /** @constant */
+                    group_id?: "objective";
+                },
+                components["schemas"]["AtlasOptimizerGroup"] & {
+                    /** @constant */
+                    group_id?: "candidate_selection";
+                }
+            ];
+        };
+        AtlasSubmissionConstraints: {
+            /** @constant */
+            profile_id: "p10.fixed-qualification.v1";
+            /** @constant */
+            optimization_overrides: "FORBIDDEN";
+            /** @constant */
+            accepted_trial_count: 1;
+            /** @constant */
+            early_stopping: "MUST_BE_NULL";
+            /** @constant */
+            random_seed: "MUST_BE_NULL";
+            reason: string;
+        };
         AtlasRelease: {
             release_id: components["schemas"]["Identifier"];
             package: string;
@@ -156,6 +207,9 @@ export interface components {
             native_installed_version?: string | null;
             verified: boolean;
             detail?: string | null;
+            trial_ceiling: number;
+            optimizer_defaults: components["schemas"]["AtlasOptimizerDefaults"];
+            submission_constraints: components["schemas"]["AtlasSubmissionConstraints"];
         };
         HistoricalRelease: {
             release_id: components["schemas"]["Identifier"];

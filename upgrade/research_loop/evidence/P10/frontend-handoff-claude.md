@@ -3,9 +3,65 @@
 Backend is ready for a typed product consumer; it has not changed any TSX, CSS,
 shell or HIFI composition.
 
+## P10 browser-declaration amendment — `BR-P10-01` and `BR-P10-02` closed
+
+The browser now has the facts required to activate the four verbatim Spec 02
+validators and render the optimizer-default panels without inventing a policy.
+They are **server-projected, generated types** — not a permission to inspect
+raw Alpha source or to loosen P10 admission.
+
+| Product fact | Generated source | Browser rule |
+|---|---|---|
+| Alpha entrypoint, declared timeframes, `determinism.seed_required`, parameter space | `RegistryEntry.declaration` from `GET /api/v1/research/alphas` | Find the exact selected immutable AlphaVersion; use only this safe declaration for the declaration/pin/sweep validators. |
+| Release trial ceiling | `Atlas.current_release.trial_ceiling` from `GET /api/v1/research/quantbt/atlas` | Use the published finite ceiling. Do not retain `Infinity` once the current Atlas is available. |
+| Four optimizer default groups | `Atlas.current_release.optimizer_defaults` | Render Study, Sampler, Objective and Candidate selection as `RELEASE_DEFAULT · LOCKED`; do not serialize them as a browser override. |
+| P10 submission restriction | `Atlas.current_release.submission_constraints` | This is stricter than the display defaults: current P10 accepts exactly one trial and no optimizer override, early-stop or random-seed override. Let the server's typed refusal remain authoritative for a richer request. |
+
+`RegistryEntry.declaration` is a bounded safe projection. It excludes source
+bytes, paths, adapter/provenance facts, protected kernel hashes and execution
+inputs. A malformed stored declaration is an exact typed server refusal; the
+client must not repair or guess it.
+
+### Required integration
+
+1. Fetch the existing typed registry and Atlas reads in the Screen 02
+   container. Locate the exact bound version by the selected
+   `alpha_version_id`; do not call the legacy `/api/v1/alphas` API or infer an
+   entrypoint from an identifier.
+2. Feed `declaration.timeframes`, `declaration.determinism.seed_required`,
+   `declaration.entrypoint`, `declaration.parameter_space` and
+   `current_release.trial_ceiling` to the existing typed `constraintsFrom` / New
+   Run validation boundary.
+3. If the typed read is unavailable, partial, denied, or does not contain the
+   selected version, preserve the HIFI composition in its documented state and
+   do not manufacture a ceiling, parameter range, seed rule or entrypoint.
+4. Add focused tests proving all four spec validators become active from a
+   real generated response; P04's normalized declaration renders without
+   leaking raw binding fields; and all four default groups retain their
+   `LOCKED` presentation.
+
+This amendment closes the backend declaration/default gap only. It does not
+claim that the product route is wired or that rich P10 requests are accepted.
+
+## Visual baseline boundary
+
+The unsafe cross-feature Tailwind scan introduced by `7441c572` has been
+replaced with a Portal-local scan plus an explicit reviewed Planning safelist;
+do not restore the sibling-tree glob. The immutable Planning Board matrix is
+green without a snapshot update. A separate immutable Chromium run still has
+28 screenshot-only baseline/renderer mismatches (three `planning-reports`
+Mermaid differences reproduce at baseline `6a712c53`). Do not re-record or
+weaken those snapshots while wiring this consumer. A visual owner must make a
+separate pinned browser/font evidence decision.
+
 ## Use only the generated contract
 
-Generate/consume `@portal/contracts-research-run-create` for:
+Generate/consume these three packages only:
+
+- `@portal/contracts-research-alpha-import` for the safe selected
+  `RegistryEntry.declaration`;
+- `@portal/contracts-research-foundation` for the current Atlas policy facts;
+- `@portal/contracts-research-run-create` for:
 
 - `POST /api/v1/research/runs`;
 - its exact `research.run-create.v1` request/response/error shape.
@@ -46,4 +102,3 @@ lease epoch, adapter ID, effective digest or private principal.
 
 Record a product-route browser/HIFI receipt only after this consumer is mounted.
 Fixture proof is not a substitute for that receipt.
-

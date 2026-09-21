@@ -2564,6 +2564,141 @@
         "title": "OptimizationSchedule",
         "type": "string"
       },
+      "OptimizerDefaultField": {
+        "additionalProperties": false,
+        "properties": {
+          "default_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "detail": {
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Detail",
+            "type": "string"
+          },
+          "field_id": {
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Field Id",
+            "type": "string"
+          },
+          "override_state": {
+            "enum": [
+              "LOCKED",
+              "OVERRIDE_ALLOWED"
+            ],
+            "title": "Override State",
+            "type": "string"
+          },
+          "value_source": {
+            "const": "RELEASE_DEFAULT",
+            "title": "Value Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_id",
+          "default_value",
+          "value_source",
+          "override_state",
+          "detail"
+        ],
+        "title": "OptimizerDefaultField",
+        "type": "object"
+      },
+      "OptimizerDefaultGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/OptimizerDefaultField"
+            },
+            "maxItems": 24,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "group_id": {
+            "enum": [
+              "study",
+              "sampler",
+              "objective",
+              "candidate_selection"
+            ],
+            "title": "Group Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_id",
+          "fields"
+        ],
+        "title": "OptimizerDefaultGroup",
+        "type": "object"
+      },
+      "OptimizerDefaults": {
+        "additionalProperties": false,
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/OptimizerDefaultGroup"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Groups",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "research.optimizer-defaults.v1",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "groups"
+        ],
+        "title": "OptimizerDefaults",
+        "type": "object"
+      },
       "ParameterSpaceConfig": {
         "additionalProperties": {
           "$ref": "#/components/schemas/ParameterSpec"
@@ -3791,6 +3926,9 @@
             ],
             "title": "Native Package"
           },
+          "optimizer_defaults": {
+            "$ref": "#/components/schemas/OptimizerDefaults"
+          },
           "package": {
             "title": "Package",
             "type": "string"
@@ -3798,6 +3936,13 @@
           "release_id": {
             "title": "Release Id",
             "type": "string"
+          },
+          "submission_constraints": {
+            "$ref": "#/components/schemas/SubmissionConstraints"
+          },
+          "trial_ceiling": {
+            "title": "Trial Ceiling",
+            "type": "integer"
           },
           "verified": {
             "title": "Verified",
@@ -3808,7 +3953,10 @@
           "release_id",
           "package",
           "expected_version",
-          "verified"
+          "verified",
+          "trial_ceiling",
+          "optimizer_defaults",
+          "submission_constraints"
         ],
         "title": "ReleaseRuntimePublic",
         "type": "object"
@@ -3927,6 +4075,211 @@
           "required_input_class"
         ],
         "title": "ResearchRoutePublic",
+        "type": "object"
+      },
+      "ResearchRunProducerEnvelope": {
+        "additionalProperties": false,
+        "description": "The server-owned P08/P10 immutable facts needed by the worker.",
+        "properties": {
+          "adapter_contract_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Adapter Contract Digest",
+            "type": "string"
+          },
+          "alpha_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Alpha Id",
+            "type": "string"
+          },
+          "alpha_version_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Alpha Version Id",
+            "type": "string"
+          },
+          "client_intent_id": {
+            "maxLength": 191,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Client Intent Id",
+            "type": "string"
+          },
+          "dataset_binding_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Dataset Binding Digest",
+            "type": "string"
+          },
+          "effective_spec_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Effective Spec Digest",
+            "type": "string"
+          },
+          "execution_adapter_id": {
+            "const": "p04.delta-rsi.v1",
+            "title": "Execution Adapter Id",
+            "type": "string"
+          },
+          "intent_kind": {
+            "const": "NEW",
+            "title": "Intent Kind",
+            "type": "string"
+          },
+          "manifest_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Manifest Digest",
+            "type": "string"
+          },
+          "p04_parameters": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "maxProperties": 8,
+            "minProperties": 8,
+            "title": "P04 Parameters",
+            "type": "object"
+          },
+          "preflight_token": {
+            "maxLength": 191,
+            "pattern": "^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Preflight Token",
+            "type": "string"
+          },
+          "requested_spec": {
+            "additionalProperties": true,
+            "maxProperties": 64,
+            "minProperties": 1,
+            "title": "Requested Spec",
+            "type": "object"
+          },
+          "requested_spec_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Requested Spec Digest",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "research.run-producer.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "snapshot_content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Content Hash",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^dss_[0-9a-f]{32}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "work_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Work Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "client_intent_id",
+          "intent_kind",
+          "preflight_token",
+          "requested_spec",
+          "requested_spec_digest",
+          "effective_spec_digest",
+          "dataset_binding_digest",
+          "manifest_digest",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "alpha_id",
+          "alpha_version_id",
+          "execution_adapter_id",
+          "adapter_contract_digest",
+          "p04_parameters",
+          "work_digest"
+        ],
+        "title": "ResearchRunProducerEnvelope",
+        "type": "object"
+      },
+      "ResearchRunProducerRequest": {
+        "additionalProperties": false,
+        "description": "Exact private payload sent by Control API through the existing facade.",
+        "properties": {
+          "dataset_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "job_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "lease_epoch": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Lease Epoch",
+            "type": "integer"
+          },
+          "protocol": {
+            "const": "three_window_decay",
+            "title": "Protocol",
+            "type": "string"
+          },
+          "research": {
+            "$ref": "#/components/schemas/ResearchRunProducerEnvelope"
+          },
+          "research_contract_version": {
+            "const": "research.run-request.v1",
+            "title": "Research Contract Version",
+            "type": "string"
+          },
+          "run_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "strategy_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "worker_attempt_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Worker Attempt Id",
+            "type": "string"
+          },
+          "workspace_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "dataset_id",
+          "protocol",
+          "research_contract_version",
+          "run_id",
+          "workspace_id",
+          "job_id",
+          "worker_attempt_id",
+          "lease_epoch",
+          "research"
+        ],
+        "title": "ResearchRunProducerRequest",
         "type": "object"
       },
       "ResourceProfile": {
@@ -4234,6 +4587,53 @@
           "parameter_space"
         ],
         "title": "StrategyResponse",
+        "type": "object"
+      },
+      "SubmissionConstraints": {
+        "additionalProperties": false,
+        "description": "Exact current New Run admission, intentionally distinct from defaults.",
+        "properties": {
+          "accepted_trial_count": {
+            "const": 1,
+            "title": "Accepted Trial Count",
+            "type": "integer"
+          },
+          "early_stopping": {
+            "const": "MUST_BE_NULL",
+            "title": "Early Stopping",
+            "type": "string"
+          },
+          "optimization_overrides": {
+            "const": "FORBIDDEN",
+            "title": "Optimization Overrides",
+            "type": "string"
+          },
+          "profile_id": {
+            "const": "p10.fixed-qualification.v1",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "random_seed": {
+            "const": "MUST_BE_NULL",
+            "title": "Random Seed",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id",
+          "optimization_overrides",
+          "accepted_trial_count",
+          "early_stopping",
+          "random_seed",
+          "reason"
+        ],
+        "title": "SubmissionConstraints",
         "type": "object"
       },
       "SummaryLinkItem": {
@@ -4740,7 +5140,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PortalRunRequest"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PortalRunRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ResearchRunProducerRequest"
+                  }
+                ],
+                "title": "Payload"
               }
             }
           },

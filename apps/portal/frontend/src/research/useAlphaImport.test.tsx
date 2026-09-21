@@ -26,6 +26,13 @@ const REGISTRY_ENTRY: RegistryEntry = {
   version_label: "av_0_2_0",
   lifecycle_state: "ACTIVE",
   entrypoint: "alpha.delta_rsi:run",
+  declaration: {
+    schema_version: "research.alpha-version-declaration.v1",
+    entrypoint: "alpha.delta_rsi:run",
+    timeframes: ["1h", "4h"],
+    determinism: { seed_required: true },
+    parameter_space: { rsi_len: { kind: "int_range", low: 5, high: 30, step: 1 } },
+  },
   source_digest_prefix: "sha256:11ab",
   alpha_revision: 6,
   registered_at_utc_ms: 1789836572369,

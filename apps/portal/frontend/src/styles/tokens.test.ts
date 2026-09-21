@@ -118,6 +118,23 @@ describe("U02 token gate", () => {
     expect(colorBlock.match(/#[0-9a-fA-F]{3,8}\b/g)).toBeNull();
   });
 
+  it("keeps embedded Planning within an explicit Portal primitive safelist", () => {
+    const config = readFileSync(join(ROOT, "tailwind.config.js"), "utf8");
+    // Do not scan a sibling feature tree: Tailwind discovery order is global
+    // output, so that seemingly local change invalidates unrelated Portal
+    // visual baselines. The confirmed Planning primitives are retained by
+    // name instead.
+    expect(config).not.toContain("../../../features/roadmap-task-board/frontend/src/**/*.{ts,tsx}");
+    for (const primitive of [
+      "modal-backdrop", "modal-panel", "modal-head", "modal-body",
+      "toast-stack", "toast", "chart-figure", "definition-list",
+      "state-loading", "state-empty", "state-failed",
+      "feature-loading",
+    ]) {
+      expect(config).toContain(`\"${primitive}\"`);
+    }
+  });
+
   it("mirrors tokens.css values in the canvas token module, per theme", () => {
     const css = readFileSync(join(SRC, "styles/tokens.css"), "utf8");
     for (const theme of ["research", "operations"] as const) {

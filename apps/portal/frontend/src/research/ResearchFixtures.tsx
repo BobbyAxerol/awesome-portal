@@ -60,6 +60,24 @@ const FIXTURE_ATLAS: AtlasDocument = {
     native_expected_version: "0.4.2",
     native_installed_version: "0.4.2",
     detail: null,
+    trial_ceiling: 4000,
+    optimizer_defaults: {
+      schema_version: "research.optimizer-defaults.v1",
+      groups: [
+        { group_id: "study", fields: [{ field_id: "n_trials", default_value: 300, value_source: "RELEASE_DEFAULT", override_state: "LOCKED", detail: "Fixture release default." }] },
+        { group_id: "sampler", fields: [{ field_id: "name", default_value: "tpe", value_source: "RELEASE_DEFAULT", override_state: "LOCKED", detail: "Fixture release default." }] },
+        { group_id: "objective", fields: [{ field_id: "optuna_trials", default_value: 400, value_source: "RELEASE_DEFAULT", override_state: "LOCKED", detail: "Fixture release default." }] },
+        { group_id: "candidate_selection", fields: [{ field_id: "candidate_selection_metric", default_value: "robust_decay", value_source: "RELEASE_DEFAULT", override_state: "LOCKED", detail: "Fixture release default." }] },
+      ],
+    },
+    submission_constraints: {
+      profile_id: "p10.fixed-qualification.v1",
+      optimization_overrides: "FORBIDDEN",
+      accepted_trial_count: 1,
+      early_stopping: "MUST_BE_NULL",
+      random_seed: "MUST_BE_NULL",
+      reason: "Fixture fixed-qualification profile.",
+    },
   },
   historical_releases: [
     {
@@ -237,6 +255,13 @@ const FIXTURE_REGISTRY: RegistryEntry[] = [
     version_label: "av_0_2_0",
     lifecycle_state: "ACTIVE",
     entrypoint: "alpha.delta_rsi:run",
+    declaration: {
+      schema_version: "research.alpha-version-declaration.v1",
+      entrypoint: "alpha.delta_rsi:run",
+      timeframes: ["1h", "4h"],
+      determinism: { seed_required: true },
+      parameter_space: { rsi_len: { kind: "int_range", low: 5, high: 30, step: 1 } },
+    },
     source_digest_prefix: "sha256:11ab",
     alpha_revision: 6,
     registered_at_utc_ms: 1789836572369,
@@ -250,6 +275,13 @@ const FIXTURE_REGISTRY: RegistryEntry[] = [
     version_label: "av_0_1_0",
     lifecycle_state: "SUPERSEDED",
     entrypoint: "alpha.delta_rsi:run",
+    declaration: {
+      schema_version: "research.alpha-version-declaration.v1",
+      entrypoint: "alpha.delta_rsi:run",
+      timeframes: ["1h", "4h"],
+      determinism: { seed_required: true },
+      parameter_space: { rsi_len: { kind: "int_range", low: 5, high: 30, step: 1 } },
+    },
     source_digest_prefix: "sha256:07dd",
     alpha_revision: 2,
     registered_at_utc_ms: 1789236572369,

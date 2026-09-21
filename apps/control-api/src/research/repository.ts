@@ -101,6 +101,7 @@ interface AlphaImportRegistryRow {
   version_label: string;
   lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   entrypoint: string;
+  declared_contract: Record<string, unknown> | string;
   source_digest_prefix: string;
   alpha_revision: string | number;
   registered_at: Date;
@@ -1225,6 +1226,7 @@ export class ResearchMetadataRepository {
                 COALESCE('av_' || replace(version.declared_contract->>'version', '.', '_'), version.alpha_version_id) AS version_label,
                 version.lifecycle_state,
                 version.entrypoint,
+                version.declared_contract,
                 substring(COALESCE(source.source_digest, version.code_digest) FROM 1 FOR 12) AS source_digest_prefix,
                 alpha.revision AS alpha_revision,
                 version.registered_at
@@ -1234,7 +1236,19 @@ export class ResearchMetadataRepository {
            LEFT JOIN research.import_sources source
              ON source.workspace_id = version.workspace_id AND source.source_file_ref = version.source_file_ref
           WHERE version.workspace_id = $1
-            AND version.source_file_ref IS NOT NULL
+            -- P07 imported versions retain a source receipt. P10's one
+            -- installed P04 binding is also safe to disclose as a declaration
+            -- only: it is explicitly bound, never exposes source/path/bytes,
+            -- and lets Screen 02 choose its one admitted version by typed ID.
+            AND (
+              version.source_file_ref IS NOT NULL
+              OR EXISTS (
+                SELECT 1
+                  FROM research.execution_adapter_bindings binding
+                 WHERE binding.workspace_id = version.workspace_id
+                   AND binding.alpha_version_id = version.alpha_version_id
+              )
+            )
             AND ($2::text IS NULL OR version.alpha_id = $2)
           ORDER BY version.registered_at DESC, version.alpha_version_id DESC
           LIMIT 200`,
@@ -1246,6 +1260,7 @@ export class ResearchMetadataRepository {
         versionLabel: row.version_label,
         lifecycleState: row.lifecycle_state,
         entrypoint: row.entrypoint,
+        declaredContract: decodeObject(row.declared_contract, "AlphaVersion declared contract"),
         sourceDigestPrefix: row.source_digest_prefix,
         alphaRevision: asNumber(row.alpha_revision),
         registeredAt: row.registered_at,

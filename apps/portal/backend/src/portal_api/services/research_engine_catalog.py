@@ -30,6 +30,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from portal_api.adapters.quantbt import PUBLIC_ROUTE_FACTORIES, QuantBTGateway
 from portal_api.services.engine_capabilities import (
     EngineCapabilityError,
+    EngineCapabilityLoadError,
+    EngineCapabilityService,
     installed_dist_info_record_hash,
 )
 
@@ -63,6 +65,12 @@ FROZEN_EVIDENCE_FIELDS = (
     "selection_resolution",
     "result_summary",
 )
+FROZEN_OPTIMIZER_GROUP_IDS = (
+    "study",
+    "sampler",
+    "objective",
+    "candidate_selection",
+)
 
 
 class ResearchEngineCatalogError(ValueError):
@@ -90,6 +98,38 @@ class NativeDependency(CatalogModel):
     platform_marker: str = Field(min_length=3, max_length=180)
 
 
+OptimizerDefaultScalar = str | int | float | bool | None
+
+
+class OptimizerDefaultField(CatalogModel):
+    field_id: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    default_value: OptimizerDefaultScalar | tuple[OptimizerDefaultScalar, ...]
+    value_source: Literal["RELEASE_DEFAULT"]
+    override_state: Literal["LOCKED", "OVERRIDE_ALLOWED"]
+    detail: str = Field(min_length=1, max_length=400)
+
+
+class OptimizerDefaultGroup(CatalogModel):
+    group_id: Literal["study", "sampler", "objective", "candidate_selection"]
+    fields: tuple[OptimizerDefaultField, ...] = Field(min_length=1, max_length=24)
+
+
+class OptimizerDefaults(CatalogModel):
+    schema_version: Literal["research.optimizer-defaults.v1"]
+    groups: tuple[OptimizerDefaultGroup, ...] = Field(min_length=4, max_length=4)
+
+
+class SubmissionConstraints(CatalogModel):
+    """Exact current New Run admission, intentionally distinct from defaults."""
+
+    profile_id: Literal["p10.fixed-qualification.v1"]
+    optimization_overrides: Literal["FORBIDDEN"]
+    accepted_trial_count: Literal[1]
+    early_stopping: Literal["MUST_BE_NULL"]
+    random_seed: Literal["MUST_BE_NULL"]
+    reason: str = Field(min_length=1, max_length=500)
+
+
 class EngineRelease(CatalogModel):
     release_id: str = Field(pattern=r"^[a-z][a-z0-9_]{2,63}$")
     role: Literal["current", "historical_reader"]
@@ -98,6 +138,11 @@ class EngineRelease(CatalogModel):
     dist_info_record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     wheel_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     native_dependency: NativeDependency | None = None
+    # Current-release descriptive defaults. They are not a run admission:
+    # submission_constraints makes that distinction explicit for the browser.
+    trial_ceiling: int | None = Field(default=None, ge=1, le=100_000)
+    optimizer_defaults: OptimizerDefaults | None = None
+    submission_constraints: SubmissionConstraints | None = None
 
 
 class CapabilityAxes(CatalogModel):
@@ -189,6 +234,9 @@ class ReleaseRuntimePublic(CatalogModel):
     native_installed_version: str | None = None
     verified: bool
     detail: str | None = None
+    trial_ceiling: int
+    optimizer_defaults: OptimizerDefaults
+    submission_constraints: SubmissionConstraints
 
 
 class HistoricalReleasePublic(CatalogModel):
@@ -337,11 +385,14 @@ class ResearchEngineCatalogService:
             raise ResearchEngineCatalogLoadError(
                 "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID", "catalog domain model is invalid"
             ) from exc
-        self._validate_semantics(catalog)
+        self._validate_semantics(catalog, self._capability_trial_ceiling(catalog))
         return catalog, hashlib.sha256(raw).hexdigest()
 
     @staticmethod
-    def _validate_semantics(catalog: ResearchEngineCatalog) -> None:
+    def _validate_semantics(
+        catalog: ResearchEngineCatalog,
+        capability_trial_ceiling: int,
+    ) -> None:
         release_ids = [release.release_id for release in catalog.releases]
         if len(release_ids) != len(set(release_ids)):
             raise ResearchEngineCatalogLoadError(
@@ -352,6 +403,51 @@ class ResearchEngineCatalogService:
             raise ResearchEngineCatalogLoadError(
                 "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID", "exactly one current release is required"
             )
+        current_release = current[0]
+        if (
+            current_release.trial_ceiling is None
+            or current_release.optimizer_defaults is None
+            or current_release.submission_constraints is None
+        ):
+            raise ResearchEngineCatalogLoadError(
+                "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
+                "current release must publish trial ceiling, optimizer defaults and submission constraints",
+            )
+        if current_release.trial_ceiling != capability_trial_ceiling:
+            raise ResearchEngineCatalogLoadError(
+                "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
+                "current release trial ceiling does not match the certified three-window capability",
+            )
+        if current_release.submission_constraints.optimization_overrides != "FORBIDDEN":
+            raise ResearchEngineCatalogLoadError(
+                "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
+                "current fixed-qualification admission cannot advertise optimization overrides",
+            )
+        groups = tuple(group.group_id for group in current_release.optimizer_defaults.groups)
+        if groups != FROZEN_OPTIMIZER_GROUP_IDS:
+            raise ResearchEngineCatalogLoadError(
+                "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
+                "optimizer default groups must be the exact ordered public vocabulary",
+            )
+        if any(
+            field.override_state != "LOCKED"
+            for group in current_release.optimizer_defaults.groups
+            for field in group.fields
+        ):
+            raise ResearchEngineCatalogLoadError(
+                "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
+                "current fixed-qualification defaults must be explicitly locked",
+            )
+        for historical in catalog.releases:
+            if historical.role == "historical_reader" and (
+                historical.trial_ceiling is not None
+                or historical.optimizer_defaults is not None
+                or historical.submission_constraints is not None
+            ):
+                raise ResearchEngineCatalogLoadError(
+                    "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
+                    "historical reader releases cannot carry current submission defaults",
+                )
         route_ids = tuple(route.route_id for route in catalog.routes)
         if len(route_ids) != len(set(route_ids)) or set(route_ids) != set(FROZEN_ROUTE_IDS):
             raise ResearchEngineCatalogLoadError(
@@ -388,6 +484,38 @@ class ResearchEngineCatalogService:
                 "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
                 "evidence fields must equal the frozen P04 evidence envelope",
             )
+
+    def _capability_trial_ceiling(self, catalog: ResearchEngineCatalog) -> int:
+        """Bind the Atlas ceiling to the certified existing capability manifest.
+
+        Keeping two independently edited manifests in agreement at startup is
+        cheaper and safer than allowing the UI to display a ceiling the engine
+        capability authority will later reject.
+        """
+
+        current = next(release for release in catalog.releases if release.role == "current")
+        try:
+            capabilities = EngineCapabilityService(self._registry_root).manifest
+        except EngineCapabilityLoadError as exc:
+            raise ResearchEngineCatalogLoadError(
+                "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
+                "certified engine capability manifest cannot validate Atlas trial ceiling",
+            ) from exc
+        matching = [
+            capability
+            for capability in capabilities.capabilities
+            if capability.engine_release_id == current.release_id
+            and capability.protocol == "three_window_decay"
+            and capability.certified
+            and capability.requirements.resource_profile is not None
+            and capability.requirements.resource_profile.max_optuna_trials is not None
+        ]
+        if len(matching) != 1:
+            raise ResearchEngineCatalogLoadError(
+                "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
+                "exactly one certified three-window capability with a trial ceiling is required",
+            )
+        return matching[0].requirements.resource_profile.max_optuna_trials
 
     def validate_mode_schedule(self, *, mode_id: str, schedule: str) -> ModeDescriptor:
         mode = next((item for item in self._catalog.modes if item.mode_id == mode_id), None)
@@ -472,6 +600,11 @@ class ResearchEngineCatalogService:
             native_installed_version=native_installed_version,
             verified=verified,
             detail=detail,
+            # _validate_semantics proves current release fields are present
+            # before runtime observation is constructed.
+            trial_ceiling=release.trial_ceiling,  # type: ignore[arg-type]
+            optimizer_defaults=release.optimizer_defaults,  # type: ignore[arg-type]
+            submission_constraints=release.submission_constraints,  # type: ignore[arg-type]
         )
 
     def public_document(self) -> ResearchEngineAtlasDocument:
@@ -514,6 +647,7 @@ __all__ = [
     "FROZEN_CLAIM_IDS",
     "FROZEN_EVIDENCE_FIELDS",
     "FROZEN_MODE_IDS",
+    "FROZEN_OPTIMIZER_GROUP_IDS",
     "FROZEN_ROUTE_IDS",
     "ResearchEngineAtlasDocument",
     "ResearchEngineCatalog",

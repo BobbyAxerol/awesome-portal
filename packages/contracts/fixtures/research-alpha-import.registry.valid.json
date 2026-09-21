@@ -7,6 +7,15 @@
       "version_label": "av_0_3_0",
       "lifecycle_state": "DRAFT",
       "entrypoint": "generate_signals",
+      "declaration": {
+        "schema_version": "research.alpha-version-declaration.v1",
+        "entrypoint": "generate_signals",
+        "timeframes": ["1h"],
+        "determinism": { "seed_required": true },
+        "parameter_space": {
+          "window": { "kind": "int_range", "low": 8, "high": 64, "step": 1 }
+        }
+      },
       "source_digest_prefix": "aaaaaaaaaaaa",
       "alpha_revision": 1,
       "registered_at_utc_ms": 1780000000000,

@@ -29,6 +29,8 @@ describe("P09 published Research foundation contract", () => {
       "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND", "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND",
       "INSPECTION_ONLY", "HISTORICAL_IDENTITY_RETAINED",
       "ENGINE_SUPPORTED", "P04_BASELINE_ONLY", "ClaimDescriptor", "research-run-evidence.v1",
+      "AtlasOptimizerDefaults", "research.optimizer-defaults.v1", "LOCKED",
+      "p10.fixed-qualification.v1", "trial_ceiling",
     ]) expect(generated).toContain(needle);
   });
 
@@ -49,6 +51,11 @@ describe("P09 published Research foundation contract", () => {
     expect(schemas.CapabilityAxes.properties?.engine).toEqual({
       enum: ["ENGINE_SUPPORTED", "ENGINE_PARTIAL", "ENGINE_DEFERRED"],
     });
+    expect(schemas.AtlasRelease.properties).toEqual(expect.objectContaining({
+      trial_ceiling: { type: "integer", minimum: 1, maximum: 100000 },
+      optimizer_defaults: { $ref: "#/components/schemas/AtlasOptimizerDefaults" },
+      submission_constraints: { $ref: "#/components/schemas/AtlasSubmissionConstraints" },
+    }));
   });
 
   it("does not publish a private adapter, raw data, worker or executable engine surface", () => {
