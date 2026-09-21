@@ -45,7 +45,7 @@ const FORBIDDEN: [string, RegExp][] = [
   ["work digest", /work[_ ]?digest/i],
   ["scheduler credential", /\b(hmac|secret|credential|api[_ ]?key|bearer)\b/i],
   ["storage locator", /\/var\/|\/srv\/|file:\/\/|s3:\/\/|\.parquet|postgres(ql)?:\/\//i],
-  ["direct source access", /XMLHttpRequest|EventSource|WebSocket|\bnats\b/i],
+  ["direct source access", /XMLHttpRequest|WebSocket|\bnats\b/i],
   ["digest computation", /createHash|subtle\.digest|sha256\s*\(/i],
 ];
 
@@ -74,8 +74,34 @@ describe("no internal identifier or direct source access on the Research surface
     "alphaImportClient.ts",
     "foundationClient.ts",
     "preflightClient.ts",
+    "progressClient.ts",
     "runCreateClient.ts",
   ];
+
+  /*
+   * P11 introduced the surface's first stream, so `EventSource` moved from a
+   * blanket ban to an allowlist for the same reason `fetch` did: the rule was
+   * never "no stream", it is "no direct dependency". One module may open one,
+   * and the URL it opens is built by the client from the contract's own path —
+   * checked below, alongside every other request target.
+   */
+  const STREAM_MODULES = ["useRunProgress.ts"];
+
+  it("opens a stream only in the one module allowed to", () => {
+    const openers = SOURCES.filter((f) => /new EventSource\s*\(/.test(codeOf(f.text))).map(
+      (f) => f.name,
+    );
+    expect(openers.sort()).toEqual([...STREAM_MODULES].sort());
+  });
+
+  it("builds every stream URL in the client, never inline", () => {
+    for (const name of STREAM_MODULES) {
+      const code = codeOf(SOURCES.find((f) => f.name === name)!.text);
+      /* The module may pass a URL the client built; it may not write one. */
+      expect(code, name).not.toMatch(/new EventSource\s*\(\s*["'`]/);
+      expect(code, name).not.toMatch(/["'`](https?:)?\/\//);
+    }
+  });
 
   it("keeps requests inside the one module allowed to make them", () => {
     const callers = SOURCES.filter((f) => /\bfetch\s*\(/.test(codeOf(f.text))).map((f) => f.name);

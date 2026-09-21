@@ -46,6 +46,7 @@ import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
 import { EngineAtlasRoute, JourneyMapRoute } from "../../research/foundationRoutes";
 import { AlphaImportRoute } from "../../research/AlphaImportRoute";
 import { NewRunRoute } from "../../research/NewRunRoute";
+import { RunProgressRoute } from "../../research/RunProgressRoute";
 import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
@@ -233,7 +234,12 @@ export function QuantBTModule() {
        as a run id and fetched `/api/runs/new` on every visit — a request for a
        run that cannot exist, and two console errors on a screen that had not
        created anything yet. */
-    return RESERVED_RUN_SEGMENTS.has(segment) ? null : segment;
+    if (RESERVED_RUN_SEGMENTS.has(segment)) return null;
+    /* Screen 03 reads a P11 run through its own contract. The legacy passport
+       fetch would ask `/api/runs/{id}` for a run that legacy store never had,
+       which is the same defect one level down. */
+    if (/\/runs\/[^/]+\/progress(\/|$)/.test(location.pathname)) return null;
+    return segment;
   }, [location.pathname]);
 
   const activeRun = useQuery({
@@ -255,7 +261,7 @@ export function QuantBTModule() {
   // Kept separate from `onTaskRoute` on purpose: widening that regex would
   // also have dropped the caption from New Run and the import inbox, which are
   // outside this phase and inside the visual baseline.
-  const onReferenceRoute = /\/(journey|atlas|alpha-import|runs\/new)(\/|$)/.test(location.pathname);
+  const onReferenceRoute = /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/progress)(\/|$)/.test(location.pathname);
 
   const actions = (
     <>
@@ -334,6 +340,10 @@ export function QuantBTModule() {
         {/* P10 · Screen 02. A static segment, so it wins over `runs/:runId/*`
           * without depending on declaration order. */}
         <Route path="runs/new" element={<NewRunRoute />} />
+        {/* P11 · Screen 03. A sibling of the legacy workspace, not a child of
+          * it: a P11 run id is not a legacy run, and routing it through
+          * `RunWorkspace` would fetch one that does not exist. */}
+        <Route path="runs/:runId/progress" element={<RunProgressRoute />} />
         {/* Screen 14's canonical route, resolved as `FD-P09-02`: under QuantBT
           * rather than under the still-COMMISSIONED ALPHA_POOL feature.
           * Legacy `imports` below is untouched. */}

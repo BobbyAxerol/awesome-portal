@@ -207,6 +207,41 @@ export async function stubPortalApi(
   );
   await page.route("**/api/v1/research/runs", (route) => void json(route, local("run-create.json")));
 
+  /*
+   * P11 · the progress stream.
+   *
+   * One heartbeat and then end-of-body. EventSource sees the close as an
+   * error, which is precisely the handover the screen must perform: close the
+   * stream and fall back to the 5-second poll floor rather than letting the
+   * native reconnect spin. Leaving the route unstubbed would have produced a
+   * 501 and two console errors that say nothing about the screen.
+   */
+  await page.route("**/api/v1/research/runs/*/events*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: { "cache-control": "no-store" },
+      body:
+        'data: {"schema_version":"research.progress-stream.v1","event_type":"research.progress.heartbeat","terminal":false}\n\n',
+    }),
+  );
+
+  // P11 · the progress read and console page.
+  await page.route("**/api/v1/research/runs/*/progress*", (route) =>
+    void json(route, local("progress-read.json")),
+  );
+  await page.route("**/api/v1/research/runs/*/console*", (route) =>
+    void json(route, local("progress-console.json")),
+  );
+  await page.route("**/api/v1/research/runs/*/cancel", (route) =>
+    void json(route, {
+      schema_version: "research.progress-cancel.v1",
+      run_id: "run_01HZQ7PROBE",
+      status: "CANCEL_REQUESTED",
+      source_marker: "REQUESTED",
+    }),
+  );
+
   // P09 · the two Research foundation BFF reads. The journey descriptor is
   // generated from `journey.descriptor.ts` and the Atlas from
   // `research-engine-catalog.v1.json`, so the probe renders the facts the

@@ -509,3 +509,141 @@ test("S02 renders the four release-default groups as locked", async ({ page }) =
   await page.screenshot({ path: `${OUT}/s02-release-defaults.png`, fullPage: true });
   expect(noise, noise.join("\n")).toEqual([]);
 });
+
+const RUN_PROGRESS = "/research/quantbt/runs/run_01HZQ7PROBE/progress";
+
+for (const [name, width] of [
+  ["laptop", 1280],
+  ["mobile", 660],
+] as const) {
+  test(`S03 Run Progress renders every block on its product route at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(RUN_PROGRESS);
+    await settle(page);
+
+    await expect(page.locator("[data-screen='run-progress']")).toBeVisible();
+    await expect(page.locator(".portal-shell")).toHaveCount(1);
+
+    // Five stages, in order, and never a sixth.
+    const stages = await page
+      .locator("[data-stage]")
+      .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("data-stage")));
+    expect(stages).toEqual(["S1", "S2", "S3", "S4", "S5"]);
+    await expect(page.locator("[data-stage='S3']")).toHaveAttribute("aria-disabled", "true");
+
+    // The server's own numbers, printed and not recomputed.
+    await expect(page.locator("[data-tqdm]")).toHaveText(
+      "fold 07/32 · study 7 · trial 214/400 · best J₁ 1.049 · prune 12%",
+    );
+    await expect(page.locator("[data-budget]")).toContainText("12.500/60.000 core-min");
+    await expect(page.locator("[data-fold]")).toHaveCount(3);
+    await expect(page.locator("[data-artifact]")).toHaveCount(3);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `page overflows by ${overflow}px`).toBeLessThanOrEqual(1);
+
+    await page.screenshot({ path: `${OUT}/s03-progress-${name}.png`, fullPage: true });
+    expect(noise, noise.join("\n")).toEqual([]);
+  });
+}
+
+test("S03 is correct on the poll floor with no stream at all", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  // Remove EventSource entirely: spec 03 §1.1 says the stream is an
+  // accelerator and the poll is the floor, so the screen must be right without
+  // it ever existing.
+  await page.addInitScript(() => {
+    // @ts-expect-error deliberate removal for the test
+    delete window.EventSource;
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_PROGRESS);
+  await settle(page);
+
+  await expect(page.locator("[data-screen='run-progress']")).toBeVisible();
+  await expect(page.locator("[data-transport]")).toHaveAttribute("data-transport", "poll");
+  await expect(page.locator("[data-transport]")).toContainText("poll floor 5s");
+  // A dropped stream is a dot and a label, never a banner (pitfall 5).
+  expect(await page.locator("[data-screen='run-progress'] [role='alert']").count()).toBe(0);
+  await expect(page.locator("[data-tqdm]")).toContainText("trial 214/400");
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S03 keeps artifacts unlinked and states why", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_PROGRESS);
+  await settle(page);
+
+  const sealed = page.locator("[data-artifact='trials.parquet']");
+  await expect(sealed).toHaveAttribute("data-artifact-state", "SEALED");
+  await expect(sealed).toContainText("1.2 MB");
+  // reader_href is null by contract: readiness is not authorization.
+  expect(await page.locator("[data-artifacts] a").count()).toBe(0);
+  await expect(page.locator("[data-artifact-no-reader]")).toBeVisible();
+
+  // The claim is a dashed forecast while the source has not sealed.
+  await expect(page.locator("[data-claim]")).toHaveAttribute("data-claim", "FORECAST");
+  const border = await page.locator("[data-claim]").evaluate((n) => getComputedStyle(n).borderStyle);
+  expect(border).toBe("dashed");
+  await expect(page.locator("[data-readiness]")).toContainText("mandatory PENDING");
+});
+
+test("S03 console is a bounded log region, and cancel confirms once", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_PROGRESS);
+  await settle(page);
+
+  const box = page.locator("[data-console-box]");
+  await expect(box).toHaveAttribute("role", "log");
+  await expect(box).toHaveAttribute("aria-live", "polite");
+
+  // Backfill is a bounded page keyed on after_seq, never a full history.
+  const consoleCalls: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("/console")) consoleCalls.push(r.url());
+  });
+  await page.locator("[data-action='load-older']").click();
+  await expect(page.locator("[data-console-line]")).toHaveCount(3);
+  expect(consoleCalls.some((u) => /after_seq=\d+/.test(u) && /limit=500/.test(u))).toBe(true);
+
+  // Cancel is one confirm step, and there is no retry to offer.
+  await page.locator("[data-action='cancel']").click();
+  await expect(page.locator("[data-action='cancel-confirm']")).toBeVisible();
+  await expect(page.locator("[data-retry-reason]")).toHaveText("P12_OWNED_NO_P11_RETRY_ROUTE");
+
+  await page.screenshot({ path: `${OUT}/s03-console.png`, fullPage: true });
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S03 honours reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_PROGRESS);
+  await settle(page);
+
+  const moving = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("[data-screen='run-progress'] *"))
+      .map((node) => {
+        const style = getComputedStyle(node);
+        const longest = (value: string) =>
+          Math.max(0, ...value.split(",").map((part) => Number.parseFloat(part) || 0));
+        return Math.max(longest(style.animationDuration), longest(style.transitionDuration));
+      })
+      .filter((seconds) => seconds > 0.001).length,
+  );
+  expect(moving, `${moving} elements still animate under reduced motion`).toBe(0);
+});

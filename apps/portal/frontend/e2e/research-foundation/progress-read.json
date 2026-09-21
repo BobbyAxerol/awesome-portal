@@ -1,0 +1,129 @@
+{
+  "schema_version": "research.progress-read.v1",
+  "run_id": "run_01HZQ7PROBE",
+  "availability": "AVAILABLE",
+  "current": {
+    "job_state": "running",
+    "effective_status": "RUNNING",
+    "terminal_resolution": "PENDING",
+    "source_latest_sequence": 40,
+    "retention_floor_sequence": 1,
+    "last_received_at_utc_ms": 1789836582000,
+    "may_cancel": true,
+    "may_retry": false,
+    "retry_reason": "P12_OWNED_NO_P11_RETRY_ROUTE"
+  },
+  "progress": {
+    "schema_version": "research.progress-snapshot.v1",
+    "run_id": "run_01HZQ7PROBE",
+    "status": "RUNNING",
+    "created_at_utc_ms": 1789836572000,
+    "updated_at_utc_ms": 1789836582000,
+    "latest_sequence": 40,
+    "retention_floor_sequence": 1,
+    "stages": [
+      {
+        "key": "S1",
+        "state": "DONE",
+        "started_at_utc_ms": 1789836572000,
+        "completed_at_utc_ms": 1789836575000
+      },
+      {
+        "key": "S2",
+        "state": "RUNNING",
+        "started_at_utc_ms": 1789836575000,
+        "completed_at_utc_ms": null
+      },
+      {
+        "key": "S3",
+        "state": "PENDING",
+        "started_at_utc_ms": null,
+        "completed_at_utc_ms": null
+      },
+      {
+        "key": "S4",
+        "state": "PENDING",
+        "started_at_utc_ms": null,
+        "completed_at_utc_ms": null
+      },
+      {
+        "key": "S5",
+        "state": "PENDING",
+        "started_at_utc_ms": null,
+        "completed_at_utc_ms": null
+      }
+    ],
+    "overall": {
+      "pct": 42,
+      "elapsed_s": 610,
+      "eta_s": 880,
+      "trials_done": 214,
+      "trials_declared": 400,
+      "tqdm_line": "fold 07/32 · study 7 · trial 214/400 · best J₁ 1.049 · prune 12%"
+    },
+    "budget": {
+      "used": "12.500",
+      "cap": "60.000",
+      "unit": "core-min",
+      "pct": 20
+    },
+    "folds": [
+      {
+        "fold": 1,
+        "state": "DONE",
+        "started_at_utc_ms": 1789836572000,
+        "completed_at_utc_ms": 1789836576000
+      },
+      {
+        "fold": 2,
+        "state": "DONE",
+        "started_at_utc_ms": 1789836576000,
+        "completed_at_utc_ms": 1789836580000
+      },
+      {
+        "fold": 3,
+        "state": "RUNNING",
+        "started_at_utc_ms": 1789836580000,
+        "completed_at_utc_ms": null
+      }
+    ],
+    "artifacts": [
+      {
+        "name": "trials.parquet",
+        "state": "SEALED",
+        "size": "1.2 MB",
+        "digest": "sha256:aa91b3ce7742aa11",
+        "reader_href": null
+      },
+      {
+        "name": "selection_trace.json",
+        "state": "WRITING",
+        "size": null,
+        "digest": null,
+        "reader_href": null
+      },
+      {
+        "name": "claim.json",
+        "state": "PENDING",
+        "size": null,
+        "digest": null,
+        "reader_href": null
+      }
+    ],
+    "claim": {
+      "state": "FORECAST",
+      "text": "mode_1_decay × per_fold_causal ⇒ STRICT_OUTER_OOS_AFTER_FROZEN_SELECTION · cert ceiling B — issued only if every stage seals.",
+      "cursor": null
+    },
+    "readiness": {
+      "mandatory": "PENDING",
+      "optional": "NOT_APPLICABLE"
+    },
+    "failure": null,
+    "source": {
+      "kind": "DURABLE_P10",
+      "coverage": "ACTUAL_HOOKS",
+      "partial": false
+    }
+  }
+}

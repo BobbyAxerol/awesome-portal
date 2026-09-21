@@ -1,0 +1,33 @@
+{
+  "schema_version": "research.progress-console.v1",
+  "run_id": "run_01HZQ7PROBE",
+  "after_seq": 0,
+  "source_latest_sequence": 40,
+  "retention_floor_sequence": 1,
+  "lines": [
+    {
+      "sequence": 38,
+      "occurred_at_utc_ms": 1789836580000,
+      "tone": "COMPLETE",
+      "text": "fold_03 trial 212 state=COMPLETE",
+      "trial": 212,
+      "fold": 3
+    },
+    {
+      "sequence": 39,
+      "occurred_at_utc_ms": 1789836581000,
+      "tone": "WARN",
+      "text": "fold_03 trial 213 state=PRUNED",
+      "trial": 213,
+      "fold": 3
+    },
+    {
+      "sequence": 40,
+      "occurred_at_utc_ms": 1789836582000,
+      "tone": "COMPLETE",
+      "text": "fold_03 trial 214 state=COMPLETE",
+      "trial": 214,
+      "fold": 3
+    }
+  ]
+}
