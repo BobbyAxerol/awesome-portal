@@ -35,6 +35,7 @@ from portal_api.services.research_supervisor import (
     ResearchChildReceipt,
     ResearchSupervisorError,
 )
+from portal_api.services.research_progress import ResearchProgressJournal
 
 
 class ResearchRunProducerError(RuntimeError):
@@ -105,6 +106,8 @@ class ResearchRunProducerExecutor:
         request_json: dict[str, Any],
         run_id: str,
         artifact_root: Path,
+        *,
+        progress_journal: ResearchProgressJournal | None = None,
     ) -> dict[str, Any]:
         try:
             request = ResearchRunProducerRequest.model_validate(request_json)
@@ -112,14 +115,45 @@ class ResearchRunProducerExecutor:
             raise ResearchRunProducerError("P10 durable request no longer satisfies its private contract") from exc
         if request.run_id != run_id:
             raise ResearchRunProducerError("P10 durable run identity does not match its worker envelope")
-        return await asyncio.to_thread(self._execute_sync, request, artifact_root)
+        return await asyncio.to_thread(
+            self._execute_sync,
+            request,
+            artifact_root,
+            progress_journal,
+        )
+
+    async def execute_with_progress(
+        self,
+        request_json: dict[str, Any],
+        run_id: str,
+        artifact_root: Path,
+        progress_journal: ResearchProgressJournal,
+    ) -> dict[str, Any]:
+        """Explicit P11 hook; plain test executors retain the three-arg API.
+
+        Keeping this separate means a generic/mocked executor cannot acquire
+        implied progress authority merely because P11 is enabled.
+        """
+
+        return await self(
+            request_json,
+            run_id,
+            artifact_root,
+            progress_journal=progress_journal,
+        )
 
     def _execute_sync(
         self,
         request: ResearchRunProducerRequest,
         artifact_root: Path,
+        progress_journal: ResearchProgressJournal | None = None,
     ) -> dict[str, Any]:
+        def progress(event_type: str, payload: dict[str, Any] | None = None) -> None:
+            if progress_journal is not None:
+                progress_journal.emit(event_type, payload)
+
         research = request.research
+        progress("stage_started", {"stage": "S1"})
         try:
             identity, _ = self.snapshots.describe(research.snapshot_id)
         except DataCatalogError as exc:
@@ -167,6 +201,10 @@ class ResearchRunProducerExecutor:
             if row_count < 2:
                 raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded IS/OOS tape")
             os.chmod(tape_path, 0o600)
+            # The tape is now verified, bounded and holdout-free.  This is the
+            # real S1 hook, not a timer/progress estimate in a browser.
+            progress("stage_completed", {"stage": "S1"})
+            progress("stage_started", {"stage": "S2"})
             receipt = ResearchChildReceipt(
                 job_id=request.job_id,
                 run_id=request.run_id,
@@ -176,7 +214,31 @@ class ResearchRunProducerExecutor:
                 artifact_root=artifact_root,
                 p04_parameters=dict(research.p04_parameters),
             )
+            # P10 has one server-installed fixed qualification, not a generic
+            # optimizer.  S2 therefore records preparation of that exact one
+            # study and never invents a sweep/trial count.
+            progress("stage_completed", {"stage": "S2"})
+            progress("stage_started", {"stage": "S3"})
+            # The private request has already fixed the P04 parameter map and
+            # the child receipt is immutable from this point onward.
+            progress("stage_completed", {"stage": "S3"})
+            progress("stage_started", {"stage": "S4"})
             child = self.supervisor.run_p04_delta_qualification(receipt)
+            progress("trial_completed", {
+                "fold": 1,
+                "trial": 1,
+                "state": "COMPLETE",
+                "overall_pct": 80,
+                "tqdm_line": "fixed P04 qualification completed · trial 1/1",
+                "console": {
+                    "tone": "COMPLETE",
+                    "text": "fixed P04 qualification completed",
+                    "fold": 1,
+                    "trial": 1,
+                },
+            })
+            progress("fold_completed", {"fold": 1})
+            progress("stage_completed", {"stage": "S4"})
         except ResearchSupervisorError as exc:
             raise ResearchRunProducerError("P10 isolated Delta qualification failed") from exc
         finally:

@@ -1,0 +1,110 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Run Library API",
+    "version": "1.0.0",
+    "description": "P12 same-origin Screen-01 persisted Run Library. It reads a bounded Portal PostgreSQL projection only; it does not execute QuantBT, scan Parquet/artifacts, or disclose source/worker/private transport inputs. Cursor tokens are opaque and bound to the exact workspace, filter, sort and page size."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/quantbt/runs": {
+      "get": {
+        "operationId": "researchRunLibraryListV1",
+        "summary": "List persisted Research runs in created-descending keyset order",
+        "description": "At most 50 rows. Exact totals, counters and claim ledger are server-computed in the same read snapshot. ids polling is mutually exclusive with pagination and library filters. The result never assigns an OOS metric, certificate, claim, sparkline or source fact that persisted Research data did not publish.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/RunLibraryQuery" },
+          { "$ref": "#/components/parameters/RunLibraryStatus" },
+          { "$ref": "#/components/parameters/RunLibraryMode" },
+          { "$ref": "#/components/parameters/RunLibraryAlpha" },
+          { "$ref": "#/components/parameters/RunLibraryIds" },
+          { "$ref": "#/components/parameters/RunLibraryCursor" },
+          { "$ref": "#/components/parameters/RunLibraryBefore" },
+          { "$ref": "#/components/parameters/RunLibraryLimit" }
+        ],
+        "responses": {
+          "200": { "description": "One bounded historical Library page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RunLibraryResponse" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/quantbt/runs/{runId}/sparkline": {
+      "get": {
+        "operationId": "researchRunLibrarySparklineV1",
+        "summary": "Read at most 24 explicitly published display points for one run",
+        "description": "P12 currently returns a typed unavailable/legacy state instead of reading a worker artifact or Parquet file. A later named series contract may publish exact points without changing the Library list contract.",
+        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": { "description": "At most 24 exact decimal display points, or an honest unavailable state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RunSparklineResponse" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "parameters": {
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
+      "RunId": { "name": "runId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/RunId" } },
+      "RunLibraryQuery": { "name": "q", "in": "query", "required": false, "schema": { "type": "string", "minLength": 1, "maxLength": 96 } },
+      "RunLibraryStatus": { "name": "status", "in": "query", "required": false, "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 7, "uniqueItems": true, "items": { "$ref": "#/components/schemas/RunStatus" } } },
+      "RunLibraryMode": { "name": "mode", "in": "query", "required": false, "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9_:-]{1,120}$" } } },
+      "RunLibraryAlpha": { "name": "alpha", "in": "query", "required": false, "style": "form", "explode": true, "schema": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "anyOf": [{ "$ref": "#/components/schemas/AlphaId" }, { "const": "scratch" }] } } },
+      "RunLibraryIds": { "name": "ids", "in": "query", "required": false, "style": "form", "explode": true, "description": "Visible-running-row poll only. Mutually exclusive with filters and cursors.", "schema": { "type": "array", "maxItems": 50, "uniqueItems": true, "items": { "$ref": "#/components/schemas/RunId" } } },
+      "RunLibraryCursor": { "name": "cursor", "in": "query", "required": false, "description": "Opaque after cursor; binds workspace/filter/sort/limit.", "schema": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+      "RunLibraryBefore": { "name": "before", "in": "query", "required": false, "description": "Opaque before cursor; mutually exclusive with cursor.", "schema": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+      "RunLibraryLimit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 50 } }
+    },
+    "responses": {
+      "Problem": { "description": "Typed same-origin refusal. It never discloses a database relation, raw SQL, source transport, worker identity, artifact path, mTLS material or delegated credential.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "WorkspaceId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+      "RunId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+      "AlphaId": { "type": "string", "minLength": 3, "maxLength": 64, "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "ExactDecimal": { "type": "string", "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$" },
+      "Problem": { "type": "object", "additionalProperties": false, "required": ["error"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "maxLength": 128 } } },
+      "Availability": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "LEGACY_METADATA_ONLY", "PENDING_SOURCE_CALLBACK"] }, "reason_code": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] } } },
+      "RunStatus": { "enum": ["COMPLETED", "RUNNING", "FAILED", "QUEUED", "DRAFT", "CANCELLED", "RECOVERY_REQUIRED"] },
+      "StageCell": { "type": "object", "additionalProperties": false, "required": ["key", "state", "tip", "tooltip_source", "availability"], "properties": { "key": { "enum": ["S1", "S2", "S3", "S4", "S5"] }, "state": { "enum": ["done", "cap", "blocked", "run", "pend"] }, "tip": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 1024 }, { "type": "null" }] }, "tooltip_source": { "enum": ["SOURCE_VERBATIM", "DERIVED_FROM_PERSISTED_STATE", "NOT_PUBLISHED"] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "MetricCell": { "type": "object", "additionalProperties": false, "required": ["key", "label", "role", "value", "tone", "availability"], "properties": { "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$" }, "label": { "type": "string", "minLength": 1, "maxLength": 96 }, "role": { "enum": ["OOS_SHARPE", "DECAY", "TRADE_COUNT", "PROGRESS", "TRIALS", "ELAPSED", "FAILED_AT", "FAILURE_REASON", "RUNTIME"] }, "value": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 192 }, { "type": "null" }] }, "tone": { "enum": ["DEFAULT", "BAD", "ACCENT"] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "AlphaBinding": { "type": "object", "additionalProperties": false, "required": ["alpha_id", "alpha_name", "alpha_version_id", "av", "digest"], "properties": { "alpha_id": { "$ref": "#/components/schemas/AlphaId" }, "alpha_name": { "type": "string", "minLength": 1, "maxLength": 240 }, "alpha_version_id": { "type": "string", "minLength": 1, "maxLength": 160 }, "av": { "type": "string", "minLength": 1, "maxLength": 160 }, "digest": { "$ref": "#/components/schemas/Digest" } } },
+      "RunRelationship": { "type": "object", "additionalProperties": false, "required": ["kind", "logical_run_key", "parent_run_id", "technical_retry_count"], "properties": { "kind": { "enum": ["PRIMARY", "AUDIT_OF_SELECTION", "DIAGNOSTIC_OF_RUN", "REPRODUCTION_OF_RUN", "EXPORT_OF_RUN", "VERIFY_OF_RUN", "PROJECTION_OF_RUN", "LEGACY_UNKNOWN"] }, "logical_run_key": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 256 }, { "type": "null" }] }, "parent_run_id": { "anyOf": [{ "$ref": "#/components/schemas/RunId" }, { "type": "null" }] }, "technical_retry_count": { "type": "integer", "minimum": 0 } } },
+      "RunLibraryItem": { "type": "object", "additionalProperties": false, "required": ["run_id", "attempt_id", "source_kind", "row_kind", "relationship", "status", "mode", "strategy_id", "binding", "binding_availability", "rc", "instrument", "created_at_utc_ms", "certificate", "claim", "stages", "stats", "superseded_note", "comparison", "sparkline", "source_updated_at_utc_ms"], "properties": {
+        "run_id": { "$ref": "#/components/schemas/RunId" }, "attempt_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] }, "source_kind": { "enum": ["RESEARCH_DURABLE", "LEGACY_1_0_8_METADATA"] }, "row_kind": { "enum": ["LOGICAL_RUN", "WORKER_CHILD", "AUDIT_CHILD", "REPRODUCTION_CHILD", "LEGACY_RUN"] }, "relationship": { "$ref": "#/components/schemas/RunRelationship" }, "status": { "$ref": "#/components/schemas/RunStatus" },
+        "mode": { "type": "object", "additionalProperties": false, "required": ["display", "key", "availability"], "properties": { "display": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 240 }, { "type": "null" }] }, "key": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 120 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+        "strategy_id": { "type": "object", "additionalProperties": false, "required": ["value", "availability"], "properties": { "value": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 192 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+        "binding": { "anyOf": [{ "$ref": "#/components/schemas/AlphaBinding" }, { "type": "null" }] }, "binding_availability": { "$ref": "#/components/schemas/Availability" }, "rc": { "type": "null" },
+        "instrument": { "type": "object", "additionalProperties": false, "required": ["display", "availability"], "properties": { "display": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 192 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+        "created_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
+        "certificate": { "type": "object", "additionalProperties": false, "required": ["grade", "availability"], "properties": { "grade": { "anyOf": [{ "enum": ["A", "B", "C", "D"] }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+        "claim": { "type": "object", "additionalProperties": false, "required": ["text", "availability"], "properties": { "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 1024 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+        "stages": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/StageCell" } }, "stats": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/components/schemas/MetricCell" } },
+        "superseded_note": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 1024 }, { "type": "null" }] },
+        "comparison": { "type": "object", "additionalProperties": false, "required": ["key", "availability"], "properties": { "key": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+        "sparkline": { "type": "object", "additionalProperties": false, "required": ["kind", "availability"], "properties": { "kind": { "anyOf": [{ "enum": ["oos_equity", "search_progress", "failed"] }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } }, "source_updated_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }
+      } },
+      "RunLibraryResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "read_authority", "items", "page", "counters", "claim_ledger", "filter_catalog", "as_of_utc_ms"], "properties": {
+        "schema_version": { "const": "research.run-library.v1" }, "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" }, "items": { "type": "array", "maxItems": 50, "items": { "$ref": "#/components/schemas/RunLibraryItem" } },
+        "page": { "type": "object", "additionalProperties": false, "required": ["limit", "total_rows", "filtered_rows", "next_cursor", "prev_cursor", "has_more", "has_previous", "order"], "properties": { "limit": { "type": "integer", "minimum": 1, "maximum": 50 }, "total_rows": { "type": "integer", "minimum": 0 }, "filtered_rows": { "type": "integer", "minimum": 0 }, "next_cursor": { "anyOf": [{ "type": "string" }, { "type": "null" }] }, "prev_cursor": { "anyOf": [{ "type": "string" }, { "type": "null" }] }, "has_more": { "type": "boolean" }, "has_previous": { "type": "boolean" }, "order": { "const": "CREATED_AT_DESC_RUN_ID_DESC" } } },
+        "counters": { "type": "object", "additionalProperties": false, "required": ["logical_runs", "worker_children", "technical_retries", "legacy_metadata_rows"], "properties": { "logical_runs": { "type": "integer", "minimum": 0 }, "worker_children": { "type": "integer", "minimum": 0 }, "technical_retries": { "type": "integer", "minimum": 0 }, "legacy_metadata_rows": { "type": "integer", "minimum": 0 } } },
+        "claim_ledger": { "type": "object", "additionalProperties": false, "required": ["issued", "not_issued", "pending_source", "failed"], "properties": { "issued": { "type": "integer", "minimum": 0 }, "not_issued": { "type": "integer", "minimum": 0 }, "pending_source": { "type": "integer", "minimum": 0 }, "failed": { "type": "integer", "minimum": 0 } } },
+        "filter_catalog": { "type": "object", "additionalProperties": false, "required": ["alphas", "modes", "scratch_available"], "properties": { "alphas": { "type": "array", "maxItems": 200, "items": { "type": "object", "additionalProperties": false, "required": ["alpha_id", "alpha_name"], "properties": { "alpha_id": { "$ref": "#/components/schemas/AlphaId" }, "alpha_name": { "type": "string", "minLength": 1, "maxLength": 240 } } } }, "modes": { "type": "array", "maxItems": 32, "items": { "type": "object", "additionalProperties": false, "required": ["key", "display"], "properties": { "key": { "type": "string", "minLength": 1, "maxLength": 120 }, "display": { "type": "string", "minLength": 1, "maxLength": 240 } } } }, "scratch_available": { "type": "boolean" } } },
+        "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }
+      } },
+      "RunSparklineResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "run_id", "values", "availability", "source_revision"], "properties": { "schema_version": { "const": "research.run-sparkline.v1" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "values": { "type": "array", "maxItems": 24, "items": { "$ref": "#/components/schemas/ExactDecimal" } }, "availability": { "$ref": "#/components/schemas/Availability" }, "source_revision": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] } } }
+    }
+  }
+}

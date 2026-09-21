@@ -14,6 +14,16 @@ export const TEST_TABLES = [
   // P10 producer rows reference the immutable binding, run, attempt, job and
   // preflight records. They must be truncated before all of those parents so
   // each disposable test cell proves P10 cleanup rather than inheriting rows.
+  // P12's trigger-maintained search projection has no FK to individual runs.
+  // PostgreSQL TRUNCATE does not invoke row triggers, so clean it explicitly
+  // before its source rows; a reused test run ID must never inherit an old
+  // display-safe search document.
+  "research.run_library_search_documents",
+  // P11 event/snapshot materialisations are dependants of the exact P10/P06
+  // run and worker attempt. Keep them visible and first in the bounded test
+  // cleanup list rather than relying on incidental CASCADE behavior.
+  "research.run_progress_events",
+  "research.run_progress_snapshots",
   "research.run_producers",
   "research.preflight_manifests",
   "research.command_dedup",
@@ -136,6 +146,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_preflight_immutable_guard: boolean;
       has_research_journey_descriptor_registry: boolean;
       has_research_journey_descriptor_immutable_guard: boolean;
+      has_research_progress_events: boolean;
+      has_research_progress_snapshots: boolean;
+      has_research_progress_event_guard: boolean;
+      has_research_run_library_view: boolean;
+      has_research_run_library_search_documents: boolean;
+      has_research_run_library_search_index: boolean;
+      research_role_can_read_legacy_run_models: boolean;
+      research_role_can_write_run_library_search: boolean;
       research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
@@ -222,6 +240,22 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
             WHERE tgname = 'research_journey_descriptor_registry_immutable_guard'
               AND NOT tgisinternal
          ) AS has_research_journey_descriptor_immutable_guard,
+         to_regclass('research.run_progress_events') IS NOT NULL AS has_research_progress_events,
+         to_regclass('research.run_progress_snapshots') IS NOT NULL AS has_research_progress_snapshots,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_progress_events_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_progress_event_guard,
+         to_regclass('research.run_library_rows_v1') IS NOT NULL AS has_research_run_library_view,
+         to_regclass('research.run_library_search_documents') IS NOT NULL AS has_research_run_library_search_documents,
+         EXISTS (
+           SELECT 1 FROM pg_indexes
+            WHERE schemaname = 'research'
+              AND indexname = 'research_run_library_search_documents_trgm_idx'
+         ) AS has_research_run_library_search_index,
+         has_table_privilege('portal_research_runtime', 'public.run_read_models', 'SELECT') AS research_role_can_read_legacy_run_models,
+         has_table_privilege('portal_research_runtime', 'research.run_library_search_documents', 'INSERT') AS research_role_can_write_run_library_search,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
@@ -282,6 +316,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_preflight_immutable_guard ||
       !row.has_research_journey_descriptor_registry ||
       !row.has_research_journey_descriptor_immutable_guard ||
+      !row.has_research_progress_events ||
+      !row.has_research_progress_snapshots ||
+      !row.has_research_progress_event_guard ||
+      !row.has_research_run_library_view ||
+      !row.has_research_run_library_search_documents ||
+      !row.has_research_run_library_search_index ||
+      !row.research_role_can_read_legacy_run_models ||
+      row.research_role_can_write_run_library_search ||
       row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
@@ -335,6 +377,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_preflight_immutable_guard=${row.has_research_preflight_immutable_guard}, ` +
         `research_journey_descriptor_registry=${row.has_research_journey_descriptor_registry}, ` +
         `research_journey_descriptor_immutable_guard=${row.has_research_journey_descriptor_immutable_guard}, ` +
+        `research_progress_events=${row.has_research_progress_events}, ` +
+        `research_progress_snapshots=${row.has_research_progress_snapshots}, ` +
+        `research_progress_event_guard=${row.has_research_progress_event_guard}, ` +
+        `research_run_library_view=${row.has_research_run_library_view}, ` +
+        `research_run_library_search_documents=${row.has_research_run_library_search_documents}, ` +
+        `research_run_library_search_index=${row.has_research_run_library_search_index}, ` +
+        `research_role_can_read_legacy_run_models=${row.research_role_can_read_legacy_run_models}, ` +
+        `research_role_can_write_run_library_search=${row.research_role_can_write_run_library_search}, ` +
         `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,

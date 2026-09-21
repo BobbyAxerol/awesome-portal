@@ -1,0 +1,232 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Progress API",
+    "version": "1.0.0",
+    "description": "P11 same-origin progress, bounded structured console, SSE and cooperative cancellation contracts. PostgreSQL materialises a source-owned structured journal. The browser receives neither private source transport metadata nor a worker fencing handle."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/research/runs/{runId}/progress": {
+      "get": {
+        "operationId": "researchProgressGetV1",
+        "summary": "Read the compact durable progress snapshot for one Research run",
+        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": { "description": "Current durable snapshot or an honest pending-source state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProgressRead" } } } },
+          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/runs/{runId}/events": {
+      "get": {
+        "operationId": "researchProgressStreamV1",
+        "summary": "Open one bounded same-origin SSE progress stream",
+        "description": "Last-Event-ID is an optional numeric progress sequence when after_seq is absent. Terminal, auth-expired and gap frames close the stream; the client must use snapshot polling rather than retrying indefinitely.",
+        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/AfterSeq" }, { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/LastEventId" }],
+        "responses": {
+          "200": {
+            "description": "SSE frames named research.progress.snapshot, research.progress, research.progress.heartbeat, research.progress.gap or auth.expired",
+            "content": { "text/event-stream": { "schema": { "type": "string" } } },
+            "x-sse-event-schemas": {
+              "research.progress.snapshot": { "$ref": "#/components/schemas/ProgressRead" },
+              "research.progress": { "$ref": "#/components/schemas/ProgressStreamEvent" },
+              "research.progress.heartbeat": { "$ref": "#/components/schemas/ProgressHeartbeat" },
+              "research.progress.gap": { "$ref": "#/components/schemas/ProgressTerminalFrame" },
+              "auth.expired": { "$ref": "#/components/schemas/ProgressTerminalFrame" }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/runs/{runId}/console": {
+      "get": {
+        "operationId": "researchProgressConsoleGetV1",
+        "summary": "Read at most 500 explicit structured console observations",
+        "description": "Console observations are worker-emitted structured event payloads only; Portal never derives Research state by parsing process output.",
+        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/AfterSeq" }, { "$ref": "#/components/parameters/Limit" }],
+        "responses": {
+          "200": { "description": "One bounded structured console page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsolePage" } } } },
+          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/research/runs/{runId}/cancel": {
+      "post": {
+        "operationId": "researchProgressCancelV1",
+        "summary": "ADMIN-only cooperative cancellation of the current durable run",
+        "description": "P11 records one database cancellation compare-and-set then requests a narrow source marker. A pending marker is truthful and does not activate retry or arbitrary commands.",
+        "parameters": [{ "$ref": "#/components/parameters/RunId" }, { "$ref": "#/components/parameters/Csrf" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CancelRequest" } } } },
+        "responses": {
+          "202": { "description": "Cancellation has a durable outcome or pending source-marker reconciliation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CancelResponse" } } } },
+          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "parameters": {
+      "RunId": { "name": "runId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/RunId" } },
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
+      "AfterSeq": { "name": "after_seq", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 0, "maximum": 9007199254740991, "default": 0 } },
+      "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 500, "default": 500 } },
+      "LastEventId": { "name": "Last-Event-ID", "in": "header", "required": false, "schema": { "type": "string", "pattern": "^[0-9]{1,16}$" } },
+      "Csrf": { "name": "x-csrf-token", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } }
+    },
+    "responses": {
+      "Problem": { "description": "Typed same-origin refusal. No private source transport, worker handle, secret, process output or artifact-store location is disclosed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "RunId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+      "WorkspaceId": { "type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$" },
+      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "Decimal": { "type": "string", "maxLength": 96, "pattern": "^[0-9]+(?:\\.[0-9]+)?$" },
+      "Problem": {
+        "type": "object", "additionalProperties": false, "required": ["error"],
+        "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "maxLength": 128 } }
+      },
+      "Stage": {
+        "type": "object", "additionalProperties": false, "required": ["key", "state", "started_at_utc_ms", "completed_at_utc_ms"],
+        "properties": { "key": { "enum": ["S1", "S2", "S3", "S4", "S5"] }, "state": { "enum": ["PENDING", "RUNNING", "DONE"] }, "started_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "completed_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] } }
+      },
+      "Artifact": {
+        "type": "object", "additionalProperties": false, "required": ["name", "state", "size", "digest", "reader_href"],
+        "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 256 }, "state": { "enum": ["PENDING", "WRITING", "SEALED", "ABORTED"] }, "size": { "anyOf": [{ "type": "string", "pattern": "^[0-9]+$" }, { "type": "null" }] }, "digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "reader_href": { "type": "null", "description": "P11 has no artifact reader route; a later named, authorized reader contract owns links." } }
+      },
+      "ProgressFoldSegment": {
+        "type": "object", "additionalProperties": false, "required": ["kind", "state", "started_at_utc_ms", "completed_at_utc_ms"],
+        "description": "A source-observed per-fold phase. Times are never inferred from whole-fold events.",
+        "properties": { "kind": { "enum": ["search", "oos", "freeze_tick"] }, "state": { "enum": ["RUNNING", "DONE", "FAILED"] }, "started_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "completed_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] } }
+      },
+      "ProgressFoldTimeline": {
+        "type": "object", "additionalProperties": false, "required": ["state", "reason_code", "segments"],
+        "description": "Current P04 is truthfully NOT_PUBLISHED until a source emits actual per-fold segment facts. COMPLETE means search, OOS and freeze tick are all source-observed and done.",
+        "properties": { "state": { "enum": ["NOT_PUBLISHED", "PARTIAL", "COMPLETE"] }, "reason_code": { "anyOf": [{ "enum": ["SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS", "SOURCE_PARTIALLY_PUBLISHED_PER_FOLD_SEGMENT_FACTS"] }, { "type": "null" }] }, "segments": { "type": "array", "maxItems": 3, "items": { "$ref": "#/components/schemas/ProgressFoldSegment" } } }
+      },
+      "ProgressMethodologyCertificate": {
+        "type": "object", "additionalProperties": false, "required": ["state", "grade", "issued_at_utc_ms", "reason_code"],
+        "description": "Methodology A–D certificate fact only. It is distinct from the engine L0–L4 capability axis and must never be derived from claim text or a ceiling.",
+        "properties": { "state": { "enum": ["NOT_PUBLISHED", "NOT_ISSUED", "ISSUED"] }, "grade": { "anyOf": [{ "enum": ["A", "B", "C", "D"] }, { "type": "null" }] }, "issued_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "reason_code": { "anyOf": [{ "enum": ["SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE", "SOURCE_DECLARED_METHODOLOGY_CERTIFICATE_NOT_ISSUED"] }, { "type": "null" }] } }
+      },
+      "ProgressSnapshot": {
+        "type": "object", "additionalProperties": false,
+        "description": "Compact current projection, capped at 256 KiB by source, ingress and PostgreSQL. It is not an artifact or full-history transport.",
+        "required": ["schema_version", "run_id", "status", "created_at_utc_ms", "updated_at_utc_ms", "latest_sequence", "retention_floor_sequence", "stages", "overall", "budget", "folds", "artifacts", "claim", "readiness", "failure", "source"],
+        "properties": {
+          "schema_version": { "const": "research.progress-snapshot.v1" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "status": { "enum": ["QUEUED", "RUNNING", "FINISHING", "COMPLETED", "FAILED"] }, "created_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "updated_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "latest_sequence": { "$ref": "#/components/schemas/UtcMilliseconds" }, "retention_floor_sequence": { "$ref": "#/components/schemas/UtcMilliseconds" },
+          "stages": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/Stage" } },
+          "overall": { "type": "object", "additionalProperties": false, "required": ["pct", "elapsed_s", "eta_s", "trials_done", "trials_declared", "tqdm_line"], "properties": { "pct": { "type": "integer", "minimum": 0, "maximum": 100 }, "elapsed_s": { "$ref": "#/components/schemas/UtcMilliseconds" }, "eta_s": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "trials_done": { "$ref": "#/components/schemas/UtcMilliseconds" }, "trials_declared": { "type": "integer", "minimum": 1 }, "tqdm_line": { "type": "string", "minLength": 1, "maxLength": 512 } } },
+          "budget": { "type": "object", "additionalProperties": false, "required": ["used", "cap", "unit", "pct"], "properties": { "used": { "$ref": "#/components/schemas/Decimal" }, "cap": { "anyOf": [{ "$ref": "#/components/schemas/Decimal" }, { "type": "null" }] }, "unit": { "const": "core-min" }, "pct": { "type": "integer", "minimum": 0, "maximum": 100 } } },
+          "folds": { "type": "array", "maxItems": 256, "items": { "type": "object", "additionalProperties": false, "required": ["fold", "state", "started_at_utc_ms", "completed_at_utc_ms"], "properties": { "fold": { "type": "integer", "minimum": 1 }, "state": { "enum": ["RUNNING", "DONE", "FAILED"] }, "started_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "completed_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "fold_timeline": { "$ref": "#/components/schemas/ProgressFoldTimeline", "description": "Optional only for a pre-amendment historical snapshot; absence has the documented NOT_PUBLISHED meaning and is not permission to synthesize segments." } } } },
+          "artifacts": { "type": "array", "maxItems": 128, "items": { "$ref": "#/components/schemas/Artifact" } },
+          "claim": { "type": "object", "additionalProperties": false, "required": ["state", "text", "cursor"], "properties": { "state": { "enum": ["FORECAST", "NOT_ISSUED", "ISSUED"] }, "text": { "type": "string", "maxLength": 1024 }, "cursor": { "anyOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] }, "methodology_certificate": { "$ref": "#/components/schemas/ProgressMethodologyCertificate", "description": "Optional only for a pre-amendment historical snapshot; it must not be inferred from the claim text, engine capability or a methodology ceiling." } } },
+          "readiness": { "type": "object", "additionalProperties": false, "required": ["mandatory", "optional"], "properties": { "mandatory": { "enum": ["PENDING", "SEALING", "SEALED", "FAILED"] }, "optional": { "enum": ["NOT_APPLICABLE", "PENDING", "READY", "FAILED"] } } },
+          "failure": { "anyOf": [{ "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 } } }, { "type": "null" }] },
+          "source": { "type": "object", "additionalProperties": false, "required": ["kind", "coverage", "partial"], "properties": { "kind": { "const": "DURABLE_P10" }, "coverage": { "enum": ["ACTUAL_HOOKS", "PENDING_SOURCE_CALLBACK"] }, "partial": { "type": "boolean" } } },
+          "mandatory_bundle": { "type": "object", "additionalProperties": false, "required": ["digest", "size"], "properties": { "digest": { "$ref": "#/components/schemas/Digest" }, "size": { "type": "string", "pattern": "^[0-9]+$" } } }
+        }
+      },
+      "ProgressEventEnvelope": {
+        "type": "object", "required": ["schema_version", "run_id", "sequence", "event_type", "occurred_at_utc_ms", "payload"],
+        "properties": { "schema_version": { "const": "research.progress-event.v1" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "sequence": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }, "event_type": { "type": "string" }, "occurred_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "payload": { "type": "object" } }
+      },
+      "ProgressEmptyPayload": { "type": "object", "additionalProperties": false },
+      "ProgressStagePayload": { "type": "object", "additionalProperties": false, "required": ["stage"], "properties": { "stage": { "enum": ["S1", "S2", "S3", "S4", "S5"] } } },
+      "ProgressConsoleObservation": { "type": "object", "additionalProperties": false, "required": ["tone", "text"], "properties": { "tone": { "enum": ["INFO", "COMPLETE", "WARN", "ERROR"] }, "text": { "type": "string", "minLength": 1, "maxLength": 1024 }, "fold": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] }, "trial": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] } } },
+      "ProgressTrialPayload": { "type": "object", "additionalProperties": false, "required": ["fold", "trial"], "properties": { "fold": { "type": "integer", "minimum": 1 }, "trial": { "type": "integer", "minimum": 1 }, "state": { "enum": ["COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"] }, "overall_pct": { "type": "integer", "minimum": 0, "maximum": 100 }, "tqdm_line": { "type": "string", "minLength": 1, "maxLength": 512 }, "console": { "$ref": "#/components/schemas/ProgressConsoleObservation" } } },
+      "ProgressFoldPayload": { "type": "object", "additionalProperties": false, "required": ["fold"], "properties": { "fold": { "type": "integer", "minimum": 1 } } },
+      "ProgressFoldSegmentPayload": { "type": "object", "additionalProperties": false, "required": ["fold", "kind", "state", "started_at_utc_ms", "completed_at_utc_ms"], "properties": { "fold": { "type": "integer", "minimum": 1 }, "kind": { "enum": ["search", "oos", "freeze_tick"] }, "state": { "enum": ["RUNNING", "DONE", "FAILED"] }, "started_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "completed_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] } } },
+      "ProgressArtifactWritingPayload": { "type": "object", "additionalProperties": false, "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 256 } } },
+      "ProgressArtifactSealedPayload": { "type": "object", "additionalProperties": false, "required": ["name", "size", "digest", "reader_href"], "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 256 }, "size": { "type": "string", "pattern": "^[0-9]+$" }, "digest": { "$ref": "#/components/schemas/Digest" }, "reader_href": { "type": "null", "description": "P11 has no artifact reader route; a later named, authorized reader contract owns links." } } },
+      "ProgressBudgetPayload": { "type": "object", "additionalProperties": false, "required": ["used", "cap", "pct"], "properties": { "used": { "$ref": "#/components/schemas/Decimal" }, "cap": { "anyOf": [{ "$ref": "#/components/schemas/Decimal" }, { "type": "null" }] }, "pct": { "type": "integer", "minimum": 0, "maximum": 100 } } },
+      "ProgressUsage": { "type": "object", "additionalProperties": false, "required": ["peak_rss_bytes", "cpu_seconds", "scratch_bytes", "fd_peak"], "properties": { "peak_rss_bytes": { "type": "integer", "minimum": 0, "maximum": 4294967296 }, "cpu_seconds": { "type": "integer", "minimum": 0, "maximum": 45 }, "scratch_bytes": { "type": "integer", "minimum": 0, "maximum": 4294967296 }, "fd_peak": { "type": "integer", "minimum": 0, "maximum": 65536 } } },
+      "ProgressIssuedClaim": { "type": "object", "additionalProperties": false, "required": ["state", "text", "cursor"], "properties": { "state": { "const": "ISSUED" }, "text": { "type": "string", "minLength": 1, "maxLength": 1024 }, "cursor": { "anyOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] }, "methodology_certificate": { "$ref": "#/components/schemas/ProgressMethodologyCertificate" } } },
+      "ProgressCompletedPayload": { "type": "object", "additionalProperties": false, "required": ["usage"], "properties": { "usage": { "$ref": "#/components/schemas/ProgressUsage" }, "claim": { "$ref": "#/components/schemas/ProgressIssuedClaim" } } },
+      "ProgressFailedPayload": { "type": "object", "additionalProperties": false, "required": ["code", "message", "usage"], "properties": { "code": { "type": "string", "minLength": 1, "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 }, "usage": { "$ref": "#/components/schemas/ProgressUsage" } } },
+      "ProgressRunStartedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "run_started" }, "payload": { "$ref": "#/components/schemas/ProgressEmptyPayload" } } }] },
+      "ProgressStageStartedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "stage_started" }, "payload": { "$ref": "#/components/schemas/ProgressStagePayload" } } }] },
+      "ProgressStageCompletedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "stage_completed" }, "payload": { "$ref": "#/components/schemas/ProgressStagePayload" } } }] },
+      "ProgressTrialCompletedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "trial_completed" }, "payload": { "$ref": "#/components/schemas/ProgressTrialPayload" } } }] },
+      "ProgressFoldCompletedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "fold_completed" }, "payload": { "$ref": "#/components/schemas/ProgressFoldPayload" } } }] },
+      "ProgressFoldSegmentObservedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "fold_segment_observed" }, "payload": { "$ref": "#/components/schemas/ProgressFoldSegmentPayload" } } }] },
+      "ProgressArtifactWritingEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "artifact_writing" }, "payload": { "$ref": "#/components/schemas/ProgressArtifactWritingPayload" } } }] },
+      "ProgressArtifactSealedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "artifact_sealed" }, "payload": { "$ref": "#/components/schemas/ProgressArtifactSealedPayload" } } }] },
+      "ProgressBudgetTickEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "budget_tick" }, "payload": { "$ref": "#/components/schemas/ProgressBudgetPayload" } } }] },
+      "ProgressHeartbeatEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "heartbeat" }, "payload": { "$ref": "#/components/schemas/ProgressEmptyPayload" } } }] },
+      "ProgressSealStartedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "seal_started" }, "payload": { "$ref": "#/components/schemas/ProgressEmptyPayload" } } }] },
+      "ProgressRunCompletedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "run_completed" }, "payload": { "$ref": "#/components/schemas/ProgressCompletedPayload" } } }] },
+      "ProgressRunFailedEvent": { "allOf": [{ "$ref": "#/components/schemas/ProgressEventEnvelope" }, { "type": "object", "required": ["event_type", "payload"], "properties": { "event_type": { "const": "run_failed" }, "payload": { "$ref": "#/components/schemas/ProgressFailedPayload" } } }] },
+      "ProgressEvent": {
+        "description": "Typed public event union. The browser may narrow by event_type without parsing arbitrary source strings; ingress independently rejects unknown keys.",
+        "oneOf": [
+          { "$ref": "#/components/schemas/ProgressRunStartedEvent" },
+          { "$ref": "#/components/schemas/ProgressStageStartedEvent" },
+          { "$ref": "#/components/schemas/ProgressStageCompletedEvent" },
+          { "$ref": "#/components/schemas/ProgressTrialCompletedEvent" },
+          { "$ref": "#/components/schemas/ProgressFoldCompletedEvent" },
+          { "$ref": "#/components/schemas/ProgressFoldSegmentObservedEvent" },
+          { "$ref": "#/components/schemas/ProgressArtifactWritingEvent" },
+          { "$ref": "#/components/schemas/ProgressArtifactSealedEvent" },
+          { "$ref": "#/components/schemas/ProgressBudgetTickEvent" },
+          { "$ref": "#/components/schemas/ProgressHeartbeatEvent" },
+          { "$ref": "#/components/schemas/ProgressSealStartedEvent" },
+          { "$ref": "#/components/schemas/ProgressRunCompletedEvent" },
+          { "$ref": "#/components/schemas/ProgressRunFailedEvent" }
+        ],
+        "discriminator": {
+          "propertyName": "event_type",
+          "mapping": {
+            "run_started": "#/components/schemas/ProgressRunStartedEvent",
+            "stage_started": "#/components/schemas/ProgressStageStartedEvent",
+            "stage_completed": "#/components/schemas/ProgressStageCompletedEvent",
+            "trial_completed": "#/components/schemas/ProgressTrialCompletedEvent",
+            "fold_completed": "#/components/schemas/ProgressFoldCompletedEvent",
+            "fold_segment_observed": "#/components/schemas/ProgressFoldSegmentObservedEvent",
+            "artifact_writing": "#/components/schemas/ProgressArtifactWritingEvent",
+            "artifact_sealed": "#/components/schemas/ProgressArtifactSealedEvent",
+            "budget_tick": "#/components/schemas/ProgressBudgetTickEvent",
+            "heartbeat": "#/components/schemas/ProgressHeartbeatEvent",
+            "seal_started": "#/components/schemas/ProgressSealStartedEvent",
+            "run_completed": "#/components/schemas/ProgressRunCompletedEvent",
+            "run_failed": "#/components/schemas/ProgressRunFailedEvent"
+          }
+        }
+      },
+      "ProgressRead": {
+        "type": "object", "additionalProperties": false, "required": ["schema_version", "run_id", "availability", "current", "progress"],
+        "properties": { "schema_version": { "const": "research.progress-read.v1" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "availability": { "enum": ["AVAILABLE", "PENDING_SOURCE_CALLBACK"] }, "current": { "type": "object", "additionalProperties": false, "required": ["job_state", "effective_status", "terminal_resolution", "source_latest_sequence", "retention_floor_sequence", "last_received_at_utc_ms", "may_cancel", "may_retry", "retry_reason"], "properties": { "job_state": { "type": "string", "maxLength": 64 }, "effective_status": { "enum": ["QUEUED", "RUNNING", "FINISHING", "COMPLETED", "FAILED", "CANCELLED"] }, "terminal_resolution": { "enum": ["SOURCE", "CONTROL_CANCELLATION", "PENDING"] }, "source_latest_sequence": { "$ref": "#/components/schemas/UtcMilliseconds" }, "retention_floor_sequence": { "$ref": "#/components/schemas/UtcMilliseconds" }, "last_received_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "may_cancel": { "type": "boolean" }, "may_retry": { "const": false }, "retry_reason": { "const": "P12_OWNED_NO_P11_RETRY_ROUTE" } } }, "progress": { "anyOf": [{ "$ref": "#/components/schemas/ProgressSnapshot" }, { "type": "null" }] } }
+      },
+      "ProgressStreamEvent": {
+        "type": "object", "additionalProperties": false, "required": ["event", "snapshot"],
+        "properties": { "event": { "$ref": "#/components/schemas/ProgressEvent" }, "snapshot": { "anyOf": [{ "$ref": "#/components/schemas/ProgressSnapshot" }, { "type": "null" }] } }
+      },
+      "ProgressHeartbeat": {
+        "type": "object", "additionalProperties": false, "required": ["schema_version", "event_type", "terminal"],
+        "properties": { "schema_version": { "const": "research.progress-stream.v1" }, "event_type": { "const": "research.progress.heartbeat" }, "terminal": { "const": false } }
+      },
+      "ProgressTerminalFrame": {
+        "type": "object", "additionalProperties": false, "required": ["schema_version", "event_type", "terminal", "reconnect_required"],
+        "properties": { "schema_version": { "const": "research.progress-stream.v1" }, "event_type": { "enum": ["research.progress.gap", "auth.expired"] }, "terminal": { "const": true }, "reconnect_required": { "const": false }, "reason_code": { "type": "string", "maxLength": 160 } }
+      },
+      "ConsoleLine": {
+        "type": "object", "additionalProperties": false, "required": ["sequence", "occurred_at_utc_ms", "tone", "text", "trial", "fold"],
+        "properties": { "sequence": { "$ref": "#/components/schemas/UtcMilliseconds" }, "occurred_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "tone": { "enum": ["INFO", "COMPLETE", "WARN", "ERROR"] }, "text": { "type": "string", "minLength": 1, "maxLength": 1024 }, "trial": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] }, "fold": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] } }
+      },
+      "ConsolePage": {
+        "type": "object", "additionalProperties": false, "required": ["schema_version", "run_id", "after_seq", "source_latest_sequence", "retention_floor_sequence", "lines"],
+        "properties": { "schema_version": { "const": "research.progress-console.v1" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "after_seq": { "$ref": "#/components/schemas/UtcMilliseconds" }, "source_latest_sequence": { "$ref": "#/components/schemas/UtcMilliseconds" }, "retention_floor_sequence": { "$ref": "#/components/schemas/UtcMilliseconds" }, "lines": { "type": "array", "maxItems": 500, "items": { "$ref": "#/components/schemas/ConsoleLine" } } }
+      },
+      "CancelRequest": { "type": "object", "additionalProperties": false, "properties": { "workspace_id": { "$ref": "#/components/schemas/WorkspaceId" }, "reason": { "type": "string", "minLength": 1, "maxLength": 256, "default": "cancelled by portal operator" } } },
+      "CancelResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "run_id", "status", "source_marker"], "properties": { "schema_version": { "const": "research.progress-cancel.v1" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "status": { "enum": ["CANCELLED", "CANCEL_REQUESTED", "ALREADY_TERMINAL"] }, "source_marker": { "enum": ["REQUESTED", "NOT_REQUIRED", "PENDING_RECONCILIATION"] } } }
+    }
+  }
+}

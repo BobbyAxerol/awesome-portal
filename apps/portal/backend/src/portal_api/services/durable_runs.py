@@ -53,6 +53,17 @@ class DurableRunError(PortalDomainError):
     code = "DURABLE_RUN_FAILED"
 
 
+class DurableRunCancelled(DurableRunError):
+    """A Control-API cancellation fence observed by the owning worker.
+
+    This is intentionally distinct from an asyncio cancellation.  It lets the
+    worker preserve the exact P06/P10 terminal vocabulary rather than trying
+    to infer a user cancellation from a message string.
+    """
+
+    code = "CANCELLED"
+
+
 @dataclass(frozen=True, slots=True)
 class RunIntent:
     run_id: str
@@ -132,6 +143,9 @@ class AttemptRegistry:
     def _attempt_path(self, run_id: str, attempt_id: str) -> Path:
         return self.run_dir(run_id) / "attempts" / f"{attempt_id}.json"
 
+    def _cancellation_path(self, run_id: str, attempt_id: str) -> Path:
+        return self.run_dir(run_id) / "cancellations" / f"{attempt_id}.json"
+
     def create_run_intent(self, intent: RunIntent) -> None:
         run_dir = self.run_dir(intent.run_id)
         if run_dir.exists():
@@ -170,6 +184,64 @@ class AttemptRegistry:
     def latest_attempt(self, run_id: str) -> RunAttempt | None:
         attempts = self.attempts(run_id)
         return attempts[-1] if attempts else None
+
+    def request_cancellation(
+        self,
+        run_id: str,
+        attempt_id: str,
+        *,
+        lease_epoch: int,
+        requested_at: str | None = None,
+    ) -> str:
+        """Persist one narrow cancellation marker for the exact P10 lease.
+
+        The Control API owns the job-state CAS.  The worker-side marker merely
+        gives the Python child a bounded, shared-volume observation point; it
+        never changes a durable attempt by itself.  A later/reclaimed lease is
+        therefore protected from an old cancellation request.
+        """
+
+        if not isinstance(lease_epoch, int) or isinstance(lease_epoch, bool) or lease_epoch < 1:
+            raise DurableRunError("cancellation lease epoch is invalid")
+        intent = self.run_intent(run_id)
+        payload = intent.get("payload")
+        if not isinstance(payload, dict) or payload.get("lease_epoch") != lease_epoch:
+            raise DurableRunError("cancellation lease epoch does not own this run")
+        attempt = self.attempt(run_id, attempt_id)
+        if attempt is None:
+            raise DurableRunError("cancellation attempt was not found")
+        if attempt.status in TERMINAL_ATTEMPT_STATES:
+            return "ALREADY_TERMINAL"
+        path = self._cancellation_path(run_id, attempt_id)
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self._write_json(path, {
+            "schema_version": "research.p11.cancel-marker.v1",
+            "run_id": run_id,
+            "attempt_id": attempt_id,
+            "lease_epoch": lease_epoch,
+            "requested_at": requested_at or datetime.now(UTC).isoformat(),
+        })
+        os.chmod(path.parent, 0o700)
+        os.chmod(path, 0o600)
+        return "REQUESTED"
+
+    def cancellation_requested(self, run_id: str, attempt_id: str, *, lease_epoch: int) -> bool:
+        """Return true only for the exact current marker/lease pair."""
+
+        path = self._cancellation_path(run_id, attempt_id)
+        if not path.is_file():
+            return False
+        try:
+            marker = self._read_json(path)
+        except (OSError, json.JSONDecodeError):
+            # A corrupt marker must not become an implicit cancel authority.
+            return False
+        return (
+            marker.get("schema_version") == "research.p11.cancel-marker.v1"
+            and marker.get("run_id") == run_id
+            and marker.get("attempt_id") == attempt_id
+            and marker.get("lease_epoch") == lease_epoch
+        )
 
     def create_attempt(self, run_id: str, *, attempt_id: str | None = None) -> RunAttempt:
         self.run_intent(run_id)
@@ -268,6 +340,7 @@ __all__ = [
     "ATTEMPT_STATES",
     "DEFAULT_GRACE_SECONDS",
     "DEFAULT_LEASE_SECONDS",
+    "DurableRunCancelled",
     "DurableRunError",
     "AttemptRegistry",
     "RUN_STATES",

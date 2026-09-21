@@ -43,3 +43,6 @@ generate_and_compare openapi/execution-market-context.openapi.json generated/exe
 generate_and_compare openapi/research-alpha-import.openapi.json generated/research-alpha-import.d.ts
 generate_and_compare openapi/research-preflight.openapi.json generated/research-preflight.d.ts
 generate_and_compare openapi/research-foundation.openapi.json generated/research-foundation.d.ts
+generate_and_compare openapi/research-run-create.openapi.json generated/research-run-create.d.ts
+generate_and_compare openapi/research-progress.openapi.json generated/research-progress.d.ts
+generate_and_compare openapi/research-run-library.openapi.json generated/research-run-library.d.ts

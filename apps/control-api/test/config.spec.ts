@@ -21,6 +21,19 @@ function baseEnv(): NodeJS.ProcessEnv {
   };
 }
 
+/** P11 is a non-local feature guard, so exercise it with the same independent
+ * signing-key precondition production requires rather than weakening that
+ * global configuration invariant in a unit test. */
+function p11Env(): NodeJS.ProcessEnv {
+  return {
+    ...baseEnv(),
+    QUERY_CURSOR_KEYS_JSON:
+      '{"query-k1":"query-progress-test-key-that-is-longer-than-thirty-two-bytes"}',
+    GOVERNANCE_APPLY_KEYS_JSON:
+      '{"governance-k1":"governance-progress-test-key-longer-than-thirty-two-bytes"}',
+  };
+}
+
 function keyFile(name: string, keyId: string, secret: string): string {
   const folder = mkdtempSync(join(tmpdir(), "portal-control-api-config-"));
   folders.push(folder);
@@ -80,6 +93,31 @@ describe("Control API non-local signing keyrings", () => {
       GOVERNANCE_APPLY_KEYS_JSON:
         '{"governance-k1":"inline-governance-secret-longer-than-thirty-two-bytes"}',
     })).toThrow(/QUERY_CURSOR_KEYS_FILE could not be read/);
+  });
+});
+
+describe("P11 Research Progress activation guard", () => {
+  it("stays dark by default and requires the complete P10 producer tuple when enabled", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_PROGRESS).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_PROGRESS: "true",
+    })).toThrow(/FEATURE_RESEARCH_PROGRESS=true requires FEATURE_RESEARCH_RUN_PRODUCER=true/);
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_RUN_PRODUCER: "true",
+      FEATURE_RESEARCH_PROGRESS: "true",
+    }).RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS).toBe(1_500);
+  });
+});
+
+describe("P12 Run Library activation guard", () => {
+  it("stays dark independently while preserving the existing signed cursor precondition", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_RUN_LIBRARY).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_RUN_LIBRARY: "true",
+    }).FEATURE_RESEARCH_RUN_LIBRARY).toBe("true");
   });
 });
 

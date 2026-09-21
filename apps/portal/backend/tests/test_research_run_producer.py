@@ -20,13 +20,15 @@ from portal_api.services.data_catalog import (
     ReleaseManifestRef,
     SnapshotStore,
 )
-from portal_api.services.durable_runs import AttemptRegistry
+from portal_api.services.durable_runs import AttemptRegistry, RunIntent
 from portal_api.services.job_broker import InMemoryJobBroker
+from portal_api.services.research_progress import ResearchProgressJournal
 from portal_api.services.research_run_producer import (
     ResearchRunProducerError,
     ResearchRunProducerExecutor,
 )
 from portal_api.services.research_supervisor import IsolatedResearchSupervisor
+import portal_api.workers.durable_worker as durable_worker_module
 from portal_api.workers.durable_worker import DurableQuantWorker
 
 
@@ -40,6 +42,19 @@ P04_PARAMETERS: dict[str, int | float] = {
     "len_vol": 16,
     "slpercent": 1.3,
 }
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    """The P10 worker tests exercise asyncio broker/task semantics only.
+
+    Running an additional Trio parametrisation does not add transport
+    coverage here and is not supported by the namespace-isolated child test
+    harness.  Pinning the backend also keeps the P11 crash-window proofs
+    deterministic in CI and local shells.
+    """
+
+    return "asyncio"
 
 
 def _signed_internal_principal(secret: str, *, methods: list[str]) -> str:
@@ -368,6 +383,199 @@ async def test_p10_t11_terminal_observation_loss_does_not_rewrite_a_sealed_succe
     assert attempt is not None and attempt.status == "SUCCEEDED"
     assert attempt.artifacts_sha256 is not None
     assert not list(store.temp_dir("rrun_p10_terminal_loss", "rwa_p10_terminal_loss").iterdir())
+    await worker.stop()
+
+
+def _seed_p11_source_journal(
+    *,
+    registry: AttemptRegistry,
+    store: ContentAddressedArtifactStore,
+    run_id: str,
+    attempt_id: str,
+    terminal: bool,
+) -> ResearchProgressJournal:
+    """Build only durable P11 facts; never invoke an engine for recovery tests."""
+
+    journal = ResearchProgressJournal(
+        registry.root,
+        run_id=run_id,
+        attempt_id=attempt_id,
+        lease_epoch=1,
+    )
+    journal.emit("run_started")
+    if not terminal:
+        return journal
+
+    journal.emit("stage_started", {"stage": "S5"})
+    temp = store.temp_dir(run_id, attempt_id)
+    journal_path = temp / "research" / "progress-journal.ndjson"
+    receipt_path = temp / "research" / "progress-receipt.json"
+    journal_path.parent.mkdir(parents=True)
+    journal_path.write_text('{"source":"test"}\n', encoding="utf-8")
+    receipt_path.write_text('{"source":"test"}\n', encoding="utf-8")
+    bundle = store.commit_bundle(
+        run_id=run_id,
+        attempt_id=attempt_id,
+        temp_dir=temp,
+        required_files=("research/progress-journal.ndjson", "research/progress-receipt.json"),
+    )
+    bundle_bytes = sum((temp / name).stat().st_size for name in bundle.files)
+    journal.mark_mandatory_sealed(
+        bundle_digest=bundle.bundle_sha256,
+        bundle_bytes=bundle_bytes,
+    )
+    for name in ("research/progress-journal.ndjson", "research/progress-receipt.json"):
+        journal.emit("artifact_writing", {"name": name})
+        journal.emit("artifact_sealed", {
+            "name": name,
+            "size": str((temp / name).stat().st_size),
+            "digest": bundle.files[name],
+            "reader_href": None,
+        })
+    journal.emit("stage_completed", {"stage": "S5"})
+    journal.emit("run_completed", {
+        "usage": {
+            "peak_rss_bytes": 0,
+            "cpu_seconds": 0,
+            "scratch_bytes": 0,
+            "fd_peak": 0,
+        }
+    })
+    return journal
+
+
+@pytest.mark.anyio
+async def test_p11_terminal_source_reconciles_local_attempt_without_reexecution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Crash after source terminal / before local ledger is a no-execute recovery."""
+
+    monkeypatch.setenv("PORTAL_FEATURE_RESEARCH_PROGRESS", "true")
+    monkeypatch.setattr(
+        durable_worker_module.ResearchProgressRelay,
+        "from_environment",
+        classmethod(lambda _cls, **_kwargs: None),
+    )
+    broker = InMemoryJobBroker()
+    registry = AttemptRegistry(tmp_path / "runs")
+    store = ContentAddressedArtifactStore(tmp_path / "artifacts")
+    run_id, attempt_id = "rrun_p11_crash", "rwa_p11_crash"
+    payload = _request(
+        snapshot_id="dss_0123456789abcdef0123456789abcdef",
+        snapshot_content_hash="a" * 64,
+        run_id=run_id,
+        job_id="rjob_p11_crash",
+        worker_attempt_id=attempt_id,
+    )
+    registry.create_run_intent(RunIntent(
+        run_id=run_id,
+        run_spec_sha256="a" * 64,
+        workspace_id="p10-workspace",
+        created_at="2026-09-21T00:00:00Z",
+        payload=payload,
+    ))
+    registry.create_attempt(run_id, attempt_id=attempt_id)
+    journal = _seed_p11_source_journal(
+        registry=registry,
+        store=store,
+        run_id=run_id,
+        attempt_id=attempt_id,
+        terminal=True,
+    )
+    research_calls = 0
+
+    async def research_executor(_request_json: dict, _run_id: str, _artifact_root: Path) -> dict:
+        nonlocal research_calls
+        research_calls += 1
+        raise AssertionError("a terminal P11 source journal must not execute again")
+
+    worker = DurableQuantWorker(
+        broker=broker,
+        registry=registry,
+        artifact_store=store,
+        research_executor=research_executor,
+    )
+    await worker.start()
+    await broker.publish("quant.run.requested.research", {
+        "schema_version": "research.run-producer-job.v1",
+        "run_id": run_id,
+        "run_attempt_id": attempt_id,
+        "lease_epoch": 1,
+        "request_json": payload,
+    })
+    attempt = registry.attempt(run_id, attempt_id)
+    assert attempt is not None and attempt.status == "SUCCEEDED"
+    assert attempt.artifacts_sha256 == journal.snapshot()["mandatory_bundle"]["digest"]
+    assert research_calls == 0
+    assert [subject for subject, _payload in broker.published].count("quant.run.succeeded") == 1
+    await worker.stop()
+
+
+@pytest.mark.anyio
+async def test_p11_reclaimed_nonterminal_source_is_fenced_not_reexecuted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P11 has no in-place retry semantics: a P12 retry needs a new attempt."""
+
+    monkeypatch.setenv("PORTAL_FEATURE_RESEARCH_PROGRESS", "true")
+    monkeypatch.setattr(
+        durable_worker_module.ResearchProgressRelay,
+        "from_environment",
+        classmethod(lambda _cls, **_kwargs: None),
+    )
+    broker = InMemoryJobBroker()
+    registry = AttemptRegistry(tmp_path / "runs")
+    store = ContentAddressedArtifactStore(tmp_path / "artifacts")
+    run_id, attempt_id = "rrun_p11_fence", "rwa_p11_fence"
+    payload = _request(
+        snapshot_id="dss_0123456789abcdef0123456789abcdef",
+        snapshot_content_hash="a" * 64,
+        run_id=run_id,
+        job_id="rjob_p11_fence",
+        worker_attempt_id=attempt_id,
+    )
+    registry.create_run_intent(RunIntent(
+        run_id=run_id,
+        run_spec_sha256="b" * 64,
+        workspace_id="p10-workspace",
+        created_at="2026-09-21T00:00:00Z",
+        payload=payload,
+    ))
+    registry.create_attempt(run_id, attempt_id=attempt_id)
+    journal = _seed_p11_source_journal(
+        registry=registry,
+        store=store,
+        run_id=run_id,
+        attempt_id=attempt_id,
+        terminal=False,
+    )
+    research_calls = 0
+
+    async def research_executor(_request_json: dict, _run_id: str, _artifact_root: Path) -> dict:
+        nonlocal research_calls
+        research_calls += 1
+        raise AssertionError("a non-terminal reclaimed journal must not execute in place")
+
+    worker = DurableQuantWorker(
+        broker=broker,
+        registry=registry,
+        artifact_store=store,
+        research_executor=research_executor,
+    )
+    await worker.start()
+    await broker.publish("quant.run.requested.research", {
+        "schema_version": "research.run-producer-job.v1",
+        "run_id": run_id,
+        "run_attempt_id": attempt_id,
+        "lease_epoch": 1,
+        "request_json": payload,
+    })
+    attempt = registry.attempt(run_id, attempt_id)
+    assert attempt is not None and attempt.status == "LEASE_LOST"
+    assert journal.snapshot()["status"] == "RUNNING"
+    assert research_calls == 0
     await worker.stop()
 
 

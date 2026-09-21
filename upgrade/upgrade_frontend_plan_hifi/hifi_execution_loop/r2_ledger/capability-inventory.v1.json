@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
- "generated_at": "2026-09-20",
- "route_count": 148,
+ "generated_at": "2026-09-21",
+ "route_count": 155,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1504,6 +1504,76 @@
    "evidence": "P07 ADMIN-only CAS activation. may_activate is server-derived from this exact policy, while P09 owns the first mounted product-route/browser receipt.",
    "owner": "codex",
    "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/runs/:runId/progress",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P11 same-origin snapshot read projects only the committed structured worker journal under session/workspace scope. It has no source path, worker lease, broker, CLI or raw-console authority; Claude owns the S03 consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/runs/:runId/events",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P11 bounded SSE read replays persisted sequence facts and has typed terminal/backpressure frames. It is session/workspace checked and deliberately exposes neither internal lease fields nor a browser retry/command protocol; Claude owns S03 stream cleanup evidence.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/runs/:runId/console",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P11 returns at most 500 explicit structured console observations from the immutable progress journal. It never parses or returns raw stdout, source paths, full logs or worker connection metadata; Claude owns the S03 bounded console-ring receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/runs/:runId/cancel",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P11 ADMIN-only, CSRF/origin-protected cancellation first wins the Control API durable-job CAS, then attempts a narrow private marker for the exact current lease. It cannot retry, start a worker, alter a sealed artifact or become a generic CLI route; Claude owns the S03 cancel-race receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+    "route": "POST /internal/research/progress/events",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "P11 infrastructure-only private callback: it requires the short-lived signed research_progress_writer principal and the exact current P10/P06 lease before materialising a worker journal event. It is forbidden to browser, facade, Execution Edge, source database and CLI callers by design.",
+    "owner": "codex",
+    "test_owner": "codex"
+  },
+  {
+    "route": "GET /api/v1/quantbt/runs",
+    "controller": "research/run-library.controller.ts",
+    "interaction_class": "AUTO_READ",
+    "consumer": "TYPED_FRONTEND_PORT",
+    "unused_capability": true,
+    "evidence": "P12 bounded same-origin persisted Run Library reader: signed opaque keysets, exact workspace-scoped totals, trigger-maintained search projection and explicit legacy/metric absence. It cannot scan artifacts/Parquet, read a worker/source database or create a run; Claude owns the S01 typed product consumer and browser receipt.",
+    "owner": "codex",
+    "test_owner": "codex"
+  },
+  {
+    "route": "GET /api/v1/quantbt/runs/:runId/sparkline",
+    "controller": "research/run-library.controller.ts",
+    "interaction_class": "INTERACTION_READ",
+    "consumer": "TYPED_FRONTEND_PORT",
+    "unused_capability": true,
+    "evidence": "P12 lazy Screen-01 sparkline boundary validates the session/workspace-scoped run ID and returns at most 24 exact decimal strings. Current P12 refuses artifact/Parquet reads, so an unavailable series is explicit rather than a fabricated curve; Claude owns placeholder and browser evidence.",
+    "owner": "codex",
+    "test_owner": "codex"
   }
  ],
  "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",

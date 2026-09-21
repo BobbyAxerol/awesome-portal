@@ -1,0 +1,27 @@
+# Research Loop P11 optional progress/runtime overlay.
+#
+# Apply only after the base production compose and stable-runtime overlay.  It
+# is intentionally inert by default: P11 needs the exact P10 producer, a
+# shared durable artifact volume, matching private HMAC secret and a forward
+# migration in the same approved change window.  This file publishes no port,
+# creates no service, and cannot enable a browser route by itself.
+services:
+  control-api:
+    environment:
+      FEATURE_RESEARCH_RUN_PRODUCER: ${CONTROL_API_FEATURE_RESEARCH_RUN_PRODUCER:-false}
+      FEATURE_RESEARCH_PROGRESS: ${CONTROL_API_FEATURE_RESEARCH_PROGRESS:-false}
+      RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: ${CONTROL_API_RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS:-1500}
+
+  # The worker owns source journalling and the private, at-least-once callback.
+  # It uses the existing portal-artifacts named volume from stable-runtime;
+  # neither the browser nor a Trading System/Execution Edge service is added.
+  quant-worker-py:
+    environment:
+      PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: ${PORTAL_FEATURE_RESEARCH_RUN_PRODUCER:-false}
+      PORTAL_FEATURE_RESEARCH_PROGRESS: ${PORTAL_FEATURE_RESEARCH_PROGRESS:-false}
+      CONTROL_API_INTERNAL_URL: ${CONTROL_API_INTERNAL_URL:-http://control-api:4000}
+      # Production base compose requires this value. The local fallback only
+      # preserves the existing disposable-development default so `config -q`
+      # can validate this dark overlay without inventing a secret file.
+      INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:-local-dev-principal-secret-0123456789}
+      PORTAL_RESEARCH_PROGRESS_RELAY_TIMEOUT_SECONDS: ${PORTAL_RESEARCH_PROGRESS_RELAY_TIMEOUT_SECONDS:-1.5}

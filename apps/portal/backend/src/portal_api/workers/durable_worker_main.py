@@ -25,6 +25,7 @@ from portal_api.services.durable_runs import (
 from portal_api.services.job_broker import NatsJetStreamBroker
 from portal_api.services.data_catalog import SnapshotStore
 from portal_api.services.research_run_producer import ResearchRunProducerExecutor
+from portal_api.services.research_progress_recovery import ResearchProgressRecovery
 from portal_api.services.research_supervisor import IsolatedResearchSupervisor
 from portal_api.workers.durable_worker import (
     DurableQuantWorker,
@@ -88,12 +89,24 @@ async def run() -> None:
     await worker.start()
 
     stop = asyncio.Event()
+    progress_recovery_task: asyncio.Task[None] | None = None
+    if os.getenv("PORTAL_FEATURE_RESEARCH_PROGRESS", "false").strip().lower() == "true":
+        # P11 callbacks are at-least-once.  This tiny bounded reconciler is
+        # what makes a source journal useful after a worker/Control-API
+        # restart instead of merely during the original in-process run.
+        recovery = ResearchProgressRecovery(artifact_root / "durable")
+        progress_recovery_task = asyncio.create_task(recovery.run_until(stop))
     loop = asyncio.get_running_loop()
     for signum in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(signum, stop.set)
 
     logger.info("durable quant worker started (nats=%s)", servers)
     await stop.wait()
+    if progress_recovery_task is not None:
+        try:
+            await progress_recovery_task
+        except asyncio.CancelledError:
+            pass
     await worker.stop()
     logger.info("durable quant worker stopped")
 

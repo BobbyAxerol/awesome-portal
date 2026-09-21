@@ -1,0 +1,404 @@
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { Pool } from "../../apps/control-api/node_modules/pg";
+
+import type { ControlApiConfig } from "../../apps/control-api/src/config";
+import type { PortalUser } from "../../apps/control-api/src/domain";
+import type { ResearchScope } from "../../apps/control-api/src/research/contracts";
+import { P04_DELTA_BINDING } from "../../apps/control-api/src/research/p04-delta.binding";
+import { ResearchP04DeltaBindingService } from "../../apps/control-api/src/research/p04-delta-binding.service";
+import {
+  ResearchProgressIngressSchema,
+  type ResearchProgressIngress,
+  type ResearchProgressSnapshot,
+} from "../../apps/control-api/src/research/progress.contract";
+import { ResearchProgressError } from "../../apps/control-api/src/research/progress.error";
+import { ResearchProgressFanout } from "../../apps/control-api/src/research/progress.fanout";
+import { ResearchProgressRepository } from "../../apps/control-api/src/research/progress.repository";
+import { ResearchProgressService } from "../../apps/control-api/src/research/progress.service";
+import { sha256ResearchJson } from "../../apps/control-api/src/research/preflight.service";
+import type { ResearchRequestedSpec } from "../../apps/control-api/src/research/preflight.contract";
+import { ResearchMetadataRepository } from "../../apps/control-api/src/research/repository";
+import { ResearchRunAdmissionService } from "../../apps/control-api/src/research/run-admission.service";
+import { ResearchRunCreateService } from "../../apps/control-api/src/research/run-create.service";
+import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
+
+const DATABASE_URL = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
+const scope: ResearchScope = { workspaceId: "p11-workspace", actorUserId: "p11-admin" };
+const admin: PortalUser = {
+  userId: scope.actorUserId,
+  username: "p11-admin",
+  displayName: "P11 Admin",
+  role: "ADMIN",
+  status: "ACTIVE",
+  mustChangePassword: false,
+  failedLoginCount: 0,
+  lockedUntil: null,
+  sessionVersion: 1,
+  createdAt: new Date("2026-09-21T00:00:00.000Z"),
+  updatedAt: new Date("2026-09-21T00:00:00.000Z"),
+  disabledAt: null,
+  accountRevision: 1,
+  archivedAt: null,
+};
+
+const config = {
+  FEATURE_RESEARCH_RUN_PRODUCER: "true",
+  FEATURE_RESEARCH_PROGRESS: "true",
+  RESEARCH_RUN_PRODUCER_LEASE_SECONDS: 15,
+  RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: 1_500,
+} as ControlApiConfig;
+
+const USAGE = {
+  peak_rss_bytes: 1_024,
+  cpu_seconds: 1,
+  scratch_bytes: 0,
+  fd_peak: 4,
+};
+
+function requested(): ResearchRequestedSpec {
+  return {
+    schema_version: "research.requested-spec.v1",
+    alpha_binding: { alpha_id: P04_DELTA_BINDING.alphaId, alpha_version_id: P04_DELTA_BINDING.alphaVersionId },
+    not_publishable: false,
+    strategy_id: P04_DELTA_BINDING.alphaId,
+    execution_route: "signal_notional",
+    route_params: {},
+    data: { dataset_id: "crypto-binance-1m", symbol: "BTCUSDT", timeframe: "1h" },
+    protocol: "three_window_decay",
+    windows: {
+      is: { start: "2025-01-01T00:00:00Z", end_exclusive: "2025-01-04T00:00:00Z" },
+      oos: { start: "2025-01-04T00:00:00Z", end_exclusive: "2025-01-06T00:00:00Z" },
+      holdout: { start: "2025-01-06T00:00:00Z", end_exclusive: "2025-01-08T00:00:00Z" },
+    },
+    optimization_mode: "mode_1_decay",
+    optimization_schedule: "global",
+    parameter_space_overrides: [],
+    optuna_trials: 1,
+    early_stopping: null,
+    random_seed: null,
+    optimization_config: {},
+    client: { engine_release_id: "er_quantbt_111", config_digest: "a".repeat(64) },
+  } as ResearchRequestedSpec;
+}
+
+async function seedIdentity(pool: Pool): Promise<void> {
+  await pool.query(
+    `INSERT INTO portal_users (user_id, username, display_name, role, status, must_change_password)
+     VALUES ($1, 'p11-admin', 'P11 Admin', 'ADMIN', 'ACTIVE', false)`,
+    [scope.actorUserId],
+  );
+  await pool.query(
+    `INSERT INTO workspaces (workspace_id, name, owner_user_id) VALUES ($1, 'P11 Workspace', $2)`,
+    [scope.workspaceId, scope.actorUserId],
+  );
+  await pool.query(
+    `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'OWNER')`,
+    [scope.workspaceId, scope.actorUserId],
+  );
+}
+
+async function seedManifest(repository: ResearchMetadataRepository, spec: ResearchRequestedSpec): Promise<void> {
+  const requestedDigest = sha256ResearchJson(spec);
+  const effectiveSpec = {
+    schema_version: "research.effective-spec.v1",
+    requested_spec_digest: requestedDigest,
+    engine: { engine_release_id: "er_quantbt_111", execution_route: "signal_notional" },
+  };
+  const datasetBinding = {
+    schema_version: "research.dataset-binding.v1",
+    snapshot_id: "dss_0123456789abcdef0123456789abcdef",
+    snapshot_content_hash: "b".repeat(64),
+    source_manifest_digest: "d".repeat(64),
+  };
+  const topology = { schema_version: "research.topology.v1", topology_digest: "c".repeat(64) };
+  const resourceEstimate = { schema_version: "research.resource-estimate.v1", trial_count: 1 };
+  const snapshot = {
+    snapshot_id: "dss_0123456789abcdef0123456789abcdef",
+    snapshot_content_hash: "b".repeat(64),
+    source_manifest_digest: "d".repeat(64),
+  };
+  await repository.storePreflightManifest(scope, {
+    preflightToken: "rpft_p11_manifest",
+    requestedSpecDigest: requestedDigest,
+    effectiveSpecDigest: sha256ResearchJson(effectiveSpec),
+    datasetBindingDigest: sha256ResearchJson(datasetBinding),
+    manifestDigest: sha256ResearchJson({ requestedDigest, effectiveSpec, datasetBinding, topology, snapshot }),
+    requestedSpec: spec as unknown as Record<string, unknown>,
+    effectiveSpec,
+    datasetBinding,
+    topology,
+    resourceEstimate,
+    snapshot,
+    expiresAt: new Date(Date.now() + 60_000),
+  }, 4);
+}
+
+class FakePrivatePortalProxy {
+  async handleWrite(input: Record<string, unknown>) {
+    const body = JSON.parse(String(input.body)) as { run_id: string };
+    return { status: 202, body: { run_id: body.run_id }, idempotencyKey: String(input.idempotencyKey), replayed: false };
+  }
+}
+
+class FakeProgressPortalClient {
+  async requestCancellation(): Promise<"REQUESTED"> { return "REQUESTED"; }
+}
+
+function snapshot(
+  runId: string,
+  workerAttemptId: string,
+  leaseEpoch: number,
+  sequence: number,
+  overrides: Partial<ResearchProgressSnapshot> = {},
+): ResearchProgressSnapshot {
+  return {
+    schema_version: "research.progress-snapshot.v1",
+    run_id: runId,
+    attempt_id: workerAttemptId,
+    lease_epoch: leaseEpoch,
+    status: "RUNNING",
+    created_at_utc_ms: 1_725_000_000_000,
+    updated_at_utc_ms: 1_725_000_000_000 + sequence,
+    latest_sequence: sequence,
+    retention_floor_sequence: 0,
+    stages: ["S1", "S2", "S3", "S4", "S5"].map((key) => ({
+      key: key as "S1" | "S2" | "S3" | "S4" | "S5",
+      state: key === "S1" ? "RUNNING" : "PENDING",
+      started_at_utc_ms: key === "S1" ? 1_725_000_000_000 : null,
+      completed_at_utc_ms: null,
+    })),
+    overall: { pct: 0, elapsed_s: sequence, eta_s: null, trials_done: 0, trials_declared: 1, tqdm_line: "running" },
+    budget: { used: "0", cap: null, unit: "core-min", pct: 0 },
+    folds: [],
+    artifacts: [],
+    claim: {
+      state: "NOT_ISSUED",
+      text: "P11 has no release claim.",
+      cursor: null,
+      // The fixture models the current P04 source: it has not published a
+      // methodology certificate fact. Do not make a certificate out of this
+      // claim's prose merely to satisfy the new display contract.
+      methodology_certificate: {
+        state: "NOT_PUBLISHED",
+        grade: null,
+        issued_at_utc_ms: null,
+        reason_code: "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE",
+      },
+    },
+    readiness: { mandatory: "PENDING", optional: "NOT_APPLICABLE" },
+    failure: null,
+    source: { kind: "DURABLE_P10", coverage: "ACTUAL_HOOKS", partial: false },
+    ...overrides,
+  };
+}
+
+function ingress(input: {
+  runId: string;
+  jobId: string;
+  workerAttemptId: string;
+  leaseEpoch: number;
+  sequence: number;
+  eventType: "run_started" | "heartbeat" | "run_completed" | "run_failed";
+  progress?: ResearchProgressSnapshot;
+}): ResearchProgressIngress {
+  const payload = input.eventType === "run_completed" ? { usage: USAGE }
+    : input.eventType === "run_failed" ? { code: "ENGINE_ERROR", message: "source contradiction", usage: USAGE }
+      : {};
+  return ResearchProgressIngressSchema.parse({
+    schema_version: "research.progress-ingress.v1",
+    workspace_id: scope.workspaceId,
+    run_id: input.runId,
+    job_id: input.jobId,
+    worker_attempt_id: input.workerAttemptId,
+    lease_epoch: input.leaseEpoch,
+    event: {
+      schema_version: "research.progress-event.v1",
+      run_id: input.runId,
+      attempt_id: input.workerAttemptId,
+      lease_epoch: input.leaseEpoch,
+      sequence: input.sequence,
+      event_type: input.eventType,
+      occurred_at_utc_ms: 1_725_000_000_000 + input.sequence,
+      payload,
+    },
+    snapshot: input.progress ?? snapshot(input.runId, input.workerAttemptId, input.leaseEpoch, input.sequence),
+  });
+}
+
+async function expectProgressError(promise: Promise<unknown>, code: string): Promise<void> {
+  try {
+    await promise;
+  } catch (error) {
+    expect(error).toBeInstanceOf(ResearchProgressError);
+    expect((error as ResearchProgressError).code).toBe(code);
+    return;
+  }
+  throw new Error(`Expected P11 ${code}.`);
+}
+
+describe("Research Loop P11 · durable progress journal materialisation", () => {
+  let pool: Pool;
+  let metadata: ResearchMetadataRepository;
+  let progress: ResearchProgressRepository;
+  let service: ResearchProgressService;
+
+  beforeAll(async () => {
+    await migrateTestDatabase(DATABASE_URL);
+    pool = new Pool({ connectionString: DATABASE_URL });
+    metadata = new ResearchMetadataRepository(pool);
+    progress = new ResearchProgressRepository(pool);
+    service = new ResearchProgressService(
+      progress,
+      metadata,
+      new ResearchProgressFanout(),
+      new FakeProgressPortalClient() as never,
+      config,
+    );
+  }, 60_000);
+
+  afterEach(async () => { await truncateAll(pool); });
+  afterAll(async () => { await pool?.end(); });
+
+  async function createDispatchedRun() {
+    await seedIdentity(pool);
+    await new ResearchP04DeltaBindingService(metadata).install(admin, scope);
+    const spec = requested();
+    await seedManifest(metadata, spec);
+    const producer = new ResearchRunCreateService(
+      metadata,
+      new ResearchRunAdmissionService(metadata, config),
+      new FakePrivatePortalProxy() as never,
+      config,
+    );
+    const created = await producer.create(admin, scope, {
+      schema_version: "research.run-create.v1",
+      client_intent_id: "p11-current-intent",
+      preflight_token: "rpft_p11_manifest",
+      requested_spec: spec,
+      intent_kind: "NEW",
+    }, "p11-request");
+    const row = await pool.query<{ job_id: string; worker_attempt_id: string; lease_epoch: string | number }>(
+      `SELECT job_id, worker_attempt_id, lease_epoch
+         FROM research.run_producers
+        WHERE workspace_id = $1 AND run_id = $2`,
+      [scope.workspaceId, created.run_id],
+    );
+    const current = row.rows[0];
+    if (!current?.worker_attempt_id || current.lease_epoch === null) throw new Error("P10 fixture did not create a fenced lease.");
+    return {
+      runId: created.run_id,
+      jobId: current.job_id,
+      workerAttemptId: current.worker_attempt_id,
+      leaseEpoch: Number(current.lease_epoch),
+    };
+  }
+
+  it("P11-T01/T02/T07/T11: persists exact progress once, survives service restart, and rejects gaps or stale leases", async () => {
+    const run = await createDispatchedRun();
+    const first = ingress({ ...run, sequence: 1, eventType: "run_started" });
+    expect(await service.ingest(first)).toEqual({ accepted: true, latest_sequence: 1 });
+    // At-least-once source delivery is exact: one immutable sequence and one
+    // idempotent P06 RUNNING transition, not a second state mutation.
+    expect(await service.ingest(first)).toEqual({ accepted: true, latest_sequence: 1 });
+    const events = await pool.query(
+      `SELECT source_sequence FROM research.run_progress_events WHERE workspace_id = $1 AND run_id = $2`,
+      [scope.workspaceId, run.runId],
+    );
+    expect(events.rows).toEqual([{ source_sequence: "1" }]);
+
+    const rehydrated = new ResearchProgressService(
+      new ResearchProgressRepository(pool), metadata, new ResearchProgressFanout(), new FakeProgressPortalClient() as never, config,
+    );
+    const read = await rehydrated.read(admin, scope, run.runId);
+    expect(read).toMatchObject({
+      availability: "AVAILABLE",
+      current: { effective_status: "RUNNING", source_latest_sequence: 1 },
+      progress: { latest_sequence: 1, status: "RUNNING" },
+    });
+    expect(JSON.stringify(read)).not.toContain("attempt_id");
+    expect(JSON.stringify(read)).not.toContain("lease_epoch");
+
+    const gap = ingress({ ...run, sequence: 3, eventType: "heartbeat" });
+    await expectProgressError(service.ingest(gap), "RESEARCH_PROGRESS_CONFLICT");
+    const expiredLate = ingress({
+      ...run,
+      sequence: 3,
+      eventType: "heartbeat",
+      progress: snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 3, {
+        // A source that says its floor is 3 cannot later invent/resend a
+        // previously unseen sequence 3. Only a proven immutable duplicate is
+        // legal below the exact next cursor.
+        retention_floor_sequence: 3,
+      }),
+    });
+    await expectProgressError(service.ingest(expiredLate), "RESEARCH_PROGRESS_CONFLICT");
+    const stale = ingress({ ...run, leaseEpoch: run.leaseEpoch + 1, sequence: 2, eventType: "heartbeat" });
+    await expectProgressError(service.ingest(stale), "RESEARCH_PROGRESS_STALE_LEASE");
+
+    const second = ingress({ ...run, sequence: 2, eventType: "heartbeat" });
+    await service.ingest(second);
+    const publicPage = await service.events(scope, run.runId, 0, 500);
+    expect(publicPage.events.map((item) => item.sequence)).toEqual([1, 2]);
+    expect(JSON.stringify(publicPage)).not.toContain("worker_attempt_id");
+    expect(JSON.stringify(publicPage)).not.toContain("lease_epoch");
+  });
+
+  it("P11-T04/T05/T06/T12: cancellation wins a source completion race without turning an unsealed run into success", async () => {
+    const run = await createDispatchedRun();
+    await service.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));
+    await metadata.requestDurableJobCancellation(scope, { jobId: run.jobId, reason: "operator requested stop" });
+
+    const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 2, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: 2, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+    await service.ingest(ingress({ ...run, sequence: 2, eventType: "run_completed", progress: completed }));
+    const read = await service.read(admin, scope, run.runId);
+    expect(read.current).toMatchObject({
+      job_state: "CANCELLED",
+      effective_status: "CANCELLED",
+      terminal_resolution: "CONTROL_CANCELLATION",
+    });
+    // Source completion remains visible as a source fact, but never becomes a
+    // false portal success after cancellation CAS won the race.
+    expect(read.progress).toMatchObject({ status: "COMPLETED", readiness: { mandatory: "SEALED" } });
+    expect(read.progress).not.toHaveProperty("attempt_id");
+    expect(read.progress).not.toHaveProperty("lease_epoch");
+
+    // A current worker identity alone is not permission to append a new,
+    // contradictory terminal source fact after Control cancellation closed
+    // the job. The cancellation-race completion above is the sole exception;
+    // rejection happens before the immutable event insert.
+    await expectProgressError(service.ingest(ingress({
+      ...run,
+      sequence: 3,
+      eventType: "run_failed",
+      progress: snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 3, {
+        status: "FAILED",
+        failure: { code: "ENGINE_ERROR", message: "source contradiction" },
+      }),
+    })), "RESEARCH_PROGRESS_CONFLICT");
+    const immutable = await pool.query<{ source_sequence: string }>(
+      `SELECT source_sequence FROM research.run_progress_events
+        WHERE workspace_id = $1 AND run_id = $2 ORDER BY source_sequence`,
+      [scope.workspaceId, run.runId],
+    );
+    expect(immutable.rows).toEqual([{ source_sequence: "1" }, { source_sequence: "2" }]);
+  });
+
+  it("P11-T06: rejects an unsealed completion at the contract boundary before it can touch P06", async () => {
+    const run = await createDispatchedRun();
+    const invalid = {
+      ...ingress({ ...run, sequence: 1, eventType: "run_completed" }),
+      snapshot: snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
+        status: "COMPLETED",
+        readiness: { mandatory: "PENDING", optional: "NOT_APPLICABLE" },
+      }),
+    };
+    expect(ResearchProgressIngressSchema.safeParse(invalid).success).toBe(false);
+    const rows = await pool.query(`SELECT 1 FROM research.run_progress_events WHERE workspace_id = $1`, [scope.workspaceId]);
+    expect(rows.rowCount).toBe(0);
+  });
+});

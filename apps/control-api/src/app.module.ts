@@ -121,6 +121,15 @@ import { ResearchRunCreateController } from "./research/run-create.controller";
 import { ResearchRunCreateService } from "./research/run-create.service";
 import { ResearchP04DeltaBindingController } from "./research/p04-delta-binding.controller";
 import { ResearchP04DeltaBindingService } from "./research/p04-delta-binding.service";
+import { ResearchProgressController } from "./research/progress.controller";
+import { ResearchProgressIngressController } from "./research/progress-ingress.controller";
+import { ResearchProgressService } from "./research/progress.service";
+import { ResearchProgressRepository } from "./research/progress.repository";
+import { ResearchProgressFanout } from "./research/progress.fanout";
+import { ResearchProgressPortalClient } from "./research/progress.portal-client";
+import { ResearchRunLibraryController } from "./research/run-library.controller";
+import { ResearchRunLibraryRepository } from "./research/run-library.repository";
+import { ResearchRunLibraryService } from "./research/run-library.service";
 
 @Module({})
 export class AppModule {
@@ -172,6 +181,9 @@ export class AppModule {
         ResearchFoundationController,
         ResearchRunCreateController,
         ResearchP04DeltaBindingController,
+        ResearchProgressController,
+        ResearchProgressIngressController,
+        ResearchRunLibraryController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -227,6 +239,12 @@ export class AppModule {
         ResearchRunAdmissionService,
         ResearchRunCreateService,
         ResearchP04DeltaBindingService,
+        ResearchProgressRepository,
+        ResearchProgressFanout,
+        ResearchProgressPortalClient,
+        ResearchProgressService,
+        ResearchRunLibraryRepository,
+        ResearchRunLibraryService,
         ResearchFoundationAtlasClient,
         ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to

@@ -71,6 +71,19 @@ const EnvSchema = z.object({
   // Portal private route and durable worker are deployed as one approved unit.
   FEATURE_RESEARCH_RUN_PRODUCER: z.enum(["true", "false"]).default("false"),
   RESEARCH_RUN_PRODUCER_LEASE_SECONDS: z.coerce.number().int().min(15).max(300).default(90),
+  // P11 is an explicitly deployed, additive callback/read plane.  It stays
+  // dark until the Python worker journal, shared durable volume and Control
+  // API migration are deployed as one compatibility unit.  The short timeout
+  // bounds the private cancellation marker hop; worker journal persistence
+  // remains the source recovery authority if that hop is unavailable.
+  FEATURE_RESEARCH_PROGRESS: z.enum(["true", "false"]).default("false"),
+  RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
+  // P12 is a persisted, same-origin history reader. It is deliberately
+  // independent of the P10 producer/P11 callback flags: old and completed
+  // Research rows remain safely browsable after workers are stopped, while a
+  // release can still keep this new BFF route dark until its migration and
+  // generated contract are deployed together.
+  FEATURE_RESEARCH_RUN_LIBRARY: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -372,6 +385,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.AUTH_MODE === "dev" && !["local"].includes(config.PORTAL_ENV)) {
     throw new Error("AUTH_MODE=dev is only allowed with PORTAL_ENV=local");
+  }
+  if (config.FEATURE_RESEARCH_PROGRESS === "true") {
+    if (config.FEATURE_RESEARCH_RUN_PRODUCER !== "true") {
+      throw new Error("FEATURE_RESEARCH_PROGRESS=true requires FEATURE_RESEARCH_RUN_PRODUCER=true");
+    }
+    if (!config.INTERNAL_PRINCIPAL_SECRET) {
+      throw new Error("FEATURE_RESEARCH_PROGRESS=true requires INTERNAL_PRINCIPAL_SECRET");
+    }
   }
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
     throw new Error(

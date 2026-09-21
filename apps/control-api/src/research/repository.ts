@@ -2498,7 +2498,25 @@ export class ResearchMetadataRepository {
           RETURNING wa.worker_attempt_id`,
         [scope.workspaceId, claim.workerAttemptId, claim.leaseEpoch, claim.jobId],
       );
-      if (worker.rowCount !== 1) this.throwLeaseRejected();
+      if (worker.rowCount !== 1) {
+        // P11's source relay is at-least-once.  A callback can time out after
+        // this exact transition committed, so accepting the same current
+        // RUNNING lease is necessary for recovery; a different/reclaimed
+        // lease still receives the normal fence rejection.
+        const replay = await client.query(
+          `SELECT 1
+             FROM research.worker_attempts wa
+             JOIN research.jobs j
+               ON j.workspace_id = wa.workspace_id AND j.job_id = wa.job_id
+            WHERE wa.workspace_id = $1 AND wa.worker_attempt_id = $2
+              AND wa.lease_epoch = $3 AND wa.job_id = $4 AND wa.state = 'RUNNING'
+              AND j.current_worker_attempt_id = wa.worker_attempt_id
+              AND j.current_lease_epoch = wa.lease_epoch AND j.state = 'RUNNING'`,
+          [scope.workspaceId, claim.workerAttemptId, claim.leaseEpoch, claim.jobId],
+        );
+        if (replay.rowCount === 1) return;
+        this.throwLeaseRejected();
+      }
       await client.query(
         `UPDATE research.jobs SET state = 'RUNNING', updated_at = now()
           WHERE workspace_id = $1 AND job_id = $2`,
@@ -2647,6 +2665,17 @@ export class ResearchMetadataRepository {
       );
       const job = selected.rows[0];
       if (!job) throw new ResearchMetadataError("RESEARCH_JOB_NOT_FOUND", "The Research job was not found.", 404);
+      if (["SUCCEEDED", "FAILED", "CANCELLED"].includes(job.state)) {
+        // Same terminal callback after a lost HTTP acknowledgement is a no-op;
+        // a conflicting terminal event remains fenced rather than rewriting
+        // already sealed Research evidence.
+        if (job.state === input.outcome) return { outcome: input.outcome };
+        throw new ResearchMetadataError(
+          "RESEARCH_JOB_STATE_CONFLICT",
+          "The Research job already reached a different terminal state.",
+          409,
+        );
+      }
       const outcome = job.state === "CANCEL_REQUESTED" ? "CANCELLED" : input.outcome;
       const worker = await client.query(
         `UPDATE research.worker_attempts
