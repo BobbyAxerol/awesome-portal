@@ -45,6 +45,9 @@ export type Claim = HubSchemas["Claim"];
 export type Stage = HubSchemas["Stage"];
 export type SeriesLink = HubSchemas["SeriesLink"];
 export type Availability = HubSchemas["Availability"];
+export type RunIdentity = HubSchemas["RunIdentity"];
+export type FoldNavigation = HubSchemas["FoldNavigation"];
+export type HeaderTextFact = HubSchemas["HeaderTextFact"];
 export type EquityPoint = HubSchemas["EquityPoint"];
 export type MonthlyReturnPoint = HubSchemas["MonthlyReturnPoint"];
 export type RollingReturnPoint = HubSchemas["RollingReturnPoint"];
@@ -161,6 +164,13 @@ export function seriesMatchesHub(hub: EvidenceHub, series: EvidenceSeries): bool
   if (hub.revision === null || series.revision === null) return false;
   return hub.revision === series.revision;
 }
+
+/*
+ * The Hub's ETag is a weak semantic validator (`W/"p13h1_…"`); `revision`
+ * (`p13r1_…`) is what binds a series to its projection. The client resends
+ * whichever string the server sent, verbatim, and never derives one from the
+ * other — they answer different questions.
+ */
 
 export const REVISION_MISMATCH =
   "this chart answered at a different projection revision than the summary above it, so it was discarded rather than drawn beside numbers it does not belong to.";

@@ -1,8 +1,8 @@
 {
   "schema_version": "research.evidence-series.v1",
   "run_id": "R-WFO-118",
-  "revision": "rev_7",
-  "etag": "\"rev_7\"",
+  "revision": "p13r1_7d21ab",
+  "etag": "\"p13r1_7d21ab\"",
   "kind": "MONTHLY_RETURNS",
   "availability": {
     "state": "AVAILABLE",

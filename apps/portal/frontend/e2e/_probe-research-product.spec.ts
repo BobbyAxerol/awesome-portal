@@ -1041,7 +1041,24 @@ for (const [name, width, height] of [
     await expect(page.locator("[data-screen='evidence-flow']")).toBeVisible();
     await expect(page.locator("[data-claim-strip]")).toHaveAttribute("data-claim-strip", "ISSUED");
     await expect(page.locator("[data-run-id]")).toHaveText("R-WFO-118");
-    await expect(page.locator("[data-revision]")).toContainText("rev_7");
+    await expect(page.locator("[data-revision]")).toContainText("p13r1_");
+
+    // The amendment's header facts, each on its own availability.
+    await expect(page.locator("[data-run-status='READY']")).toBeVisible();
+    await expect(page.locator("[data-run-identity] [data-header-value='mode']")).toContainText("mode_1_decay");
+    // A selected route id is not a route contract: the contract is absent.
+    await expect(page.locator("[data-header-fact='route contract'] [data-withheld]")).toHaveAttribute(
+      "data-withheld",
+      "NOT_PUBLISHED",
+    );
+    // A seed nobody selected is a real answer, not a missing one.
+    await expect(page.locator("[data-header-fact='seed'] [data-withheld]")).toHaveAttribute(
+      "data-withheld",
+      "NOT_APPLICABLE",
+    );
+    // The fold selector is bounded by the folds P11 observed.
+    await expect(page.locator("[data-fold-bound]")).toContainText("of 5 observed");
+    await expect(page.locator("[data-fold-select] option")).toHaveCount(5);
 
     // Seven tabs, one selected, one panel.
     await expect(page.locator("[role='tab']")).toHaveCount(7);

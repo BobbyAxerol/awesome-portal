@@ -2,8 +2,8 @@
   "schema_version": "research.evidence-hub.v1",
   "read_authority": "PORTAL_PERSISTED_RESEARCH",
   "run_id": "R-WFO-118",
-  "revision": "rev_7",
-  "etag": "\"rev_7\"",
+  "revision": "p13r1_7d21ab",
+  "etag": "W/\"p13h1_4c9a2f\"",
   "availability": {
     "state": "AVAILABLE",
     "reason_code": null
@@ -25,6 +25,89 @@
       "symbol": "BTCUSDT",
       "timeframe": "4h",
       "oos_observation_count": 2190
+    },
+    "run_identity": {
+      "status": {
+        "value": "READY",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "binding": {
+        "alpha_id": "alpha_momentum_btc",
+        "alpha_name": "alpha_momentum_btc",
+        "alpha_version_id": "av_0_9_3",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "created_at_utc_ms": {
+        "value": 1789836572000,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "mode": {
+        "value": "mode_1_decay \u00b7 per_fold_causal",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "schedule": {
+        "value": "per_fold_causal",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "route": {
+        "id": {
+          "value": "close_target_v2",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "contract": {
+          "value": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P13_ROUTE_CONTRACT_NOT_PUBLISHED"
+          }
+        }
+      },
+      "config_digest": {
+        "value": "sha256:88ae0231bc44",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "seed": {
+        "value": null,
+        "availability": {
+          "state": "NOT_APPLICABLE",
+          "reason_code": "P02_RANDOM_SEED_NOT_SELECTED"
+        }
+      }
+    },
+    "fold_navigation": {
+      "observed_folds": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "published_fold_count": 5,
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
     }
   },
   "metrics": [
@@ -143,7 +226,7 @@
   ],
   "claim": {
     "state": "ISSUED",
-    "text": "STRICT_OUTER_OOS — OOS read once after freeze · holdout sealed caps ≤ B",
+    "text": "STRICT_OUTER_OOS \u2014 OOS read once after freeze \u00b7 holdout sealed caps \u2264 B",
     "cursor": null,
     "methodology_certificate": {
       "state": "ISSUED",
@@ -227,7 +310,7 @@
       "definition_id": "warn.below_promotion_min_bars",
       "state": "ACTIVE",
       "reason_code": null,
-      "copy": "below promotion min bars — the run is shorter than the promotion floor, so the claim is capped."
+      "copy": "below promotion min bars \u2014 the run is shorter than the promotion floor, so the claim is capped."
     },
     {
       "definition_id": "warn.funding_unmodelled",

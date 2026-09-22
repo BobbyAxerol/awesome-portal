@@ -98,6 +98,35 @@ function hub(overrides: Partial<EvidenceHub> = {}): EvidenceHub {
         timeframe: "4h",
         oos_observation_count: 2190,
       },
+      run_identity: {
+        status: { value: "READY", availability: AVAILABLE },
+        binding: {
+          alpha_id: "alpha_momentum_btc",
+          alpha_name: "alpha_momentum_btc",
+          alpha_version_id: "av_0_9_3",
+          availability: AVAILABLE,
+        },
+        created_at_utc_ms: { value: 1789836572000, availability: AVAILABLE },
+        mode: { value: "mode_1_decay · per_fold_causal", availability: AVAILABLE },
+        schedule: { value: "per_fold_causal", availability: AVAILABLE },
+        route: {
+          id: { value: "close_target_v2", availability: AVAILABLE },
+          contract: {
+            value: null,
+            availability: { state: "NOT_PUBLISHED", reason_code: "P13_ROUTE_CONTRACT_NOT_PUBLISHED" },
+          },
+        },
+        config_digest: { value: "sha256:88ae0231bc44", availability: AVAILABLE },
+        seed: {
+          value: null,
+          availability: { state: "NOT_APPLICABLE", reason_code: "P02_RANDOM_SEED_NOT_SELECTED" },
+        },
+      },
+      fold_navigation: {
+        observed_folds: [1, 2, 3, 5],
+        published_fold_count: 4,
+        availability: AVAILABLE,
+      },
     },
     metrics: [
       metric(),
@@ -689,16 +718,96 @@ describe("P13-T08 — the surface requests only the four named operations", () =
 });
 
 /* -------------------------------------------------------------------------
- * P13-T09 — the cursor promises nothing the source did not publish
+ * P13-T09 — the run identity amendment
  * ---------------------------------------------------------------------- */
 
-describe("P13-T09 — an unbounded fold step says it is unbounded", () => {
-  it("names the missing fold plan beside the fold it is showing", () => {
+describe("P13-T09 — the header is the Hub's own, fact by fact", () => {
+  it("renders the durable status rather than inferring one", () => {
     const { container } = view();
-    const bound = container.querySelector("[data-fold-bound]");
-    expect(bound?.textContent).toContain("not published");
-    expect(bound?.querySelector("[data-withheld]")?.getAttribute("title")).toBe(
-      "P13_PUBLISHES_NO_FOLD_PLAN",
+    expect(container.querySelector("[data-run-status='READY']")).toBeTruthy();
+    // `READY` is the run's lifecycle word. Nothing rewrites it to COMPLETED.
+    expect(container.querySelector("[data-run-status='COMPLETED']")).toBeNull();
+  });
+
+  it("does not upgrade a selected route id into a route contract", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-header-value='route']")?.textContent).toBe("close_target_v2");
+    const contract = container.querySelector("[data-header-fact='route contract'] [data-withheld]");
+    expect(contract?.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
+    expect(contract?.getAttribute("title")).toBe("P13_ROUTE_CONTRACT_NOT_PUBLISHED");
+  });
+
+  it("treats a deliberately unselected seed as an answer, not a gap", () => {
+    const { container } = view();
+    const seed = container.querySelector("[data-header-fact='seed'] [data-withheld]");
+    expect(seed?.getAttribute("data-withheld")).toBe("NOT_APPLICABLE");
+    expect(seed?.textContent).toContain("not applicable");
+    expect(seed?.textContent).not.toContain("not published");
+  });
+
+  it("keeps the header when an older responder sends no identity at all", () => {
+    const base = hub();
+    const { run_identity, ...core } = base.core;
+    void run_identity;
+    const { container } = view({ hub: { ...base, core } });
+    // The shell stands, the run is still named, and nothing was invented.
+    expect(container.querySelector("[data-run-header]")).toBeTruthy();
+    expect(container.querySelector("[data-run-id]")?.textContent).toBe("R-WFO-118");
+    expect(container.querySelector("[data-run-identity]")).toBeNull();
+  });
+});
+
+describe("P13-T10 — the fold selector is bounded by what P11 observed", () => {
+  it("counts the observed set and offers exactly its members", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-fold-bound]")?.textContent).toContain("of 4 observed");
+    expect(container.querySelectorAll("[data-fold-select] option")).toHaveLength(4);
+  });
+
+  it("steps within the observed set rather than by one", () => {
+    const onFold = vi.fn();
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, fold: 3 }, onFold });
+    fireEvent.click(container.querySelector("[data-action='fold-next']") as Element);
+    // The set is [1,2,3,5]: after 3 comes 5, not 4.
+    expect(onFold).toHaveBeenCalledWith(5);
+  });
+
+  it("disables both edges at the ends of the observed set", () => {
+    const first = view({ cursor: { ...DEFAULT_CURSOR, fold: 1 } });
+    expect((first.container.querySelector("[data-action='fold-previous']") as HTMLButtonElement).disabled).toBe(true);
+    cleanup();
+    const last = view({ cursor: { ...DEFAULT_CURSOR, fold: 5 } });
+    expect((last.container.querySelector("[data-action='fold-next']") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("disables the controls with the server's reason when no set is published", () => {
+    const { container } = view({
+      hub: hub({
+        core: {
+          ...hub().core,
+          fold_navigation: {
+            observed_folds: [],
+            published_fold_count: null,
+            availability: { state: "PENDING_SOURCE_CALLBACK", reason_code: "P11_HAS_NOT_OBSERVED_A_FOLD_YET" },
+          },
+        },
+      }),
+    });
+    expect((container.querySelector("[data-action='fold-next']") as HTMLButtonElement).disabled).toBe(true);
+    expect(container.querySelector("[data-fold-bound]")?.textContent).toContain("pending source");
+    expect(container.querySelector("[data-action='fold-next']")?.getAttribute("title")).toBe(
+      "P11_HAS_NOT_OBSERVED_A_FOLD_YET",
     );
+  });
+
+  it("says so when the cursor names a fold outside the observed set", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, fold: 40 } });
+    expect(container.querySelector("[data-fold-bound]")?.textContent).toContain("not in the observed set");
+    expect((container.querySelector("[data-action='fold-next']") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("asks no other screen's operation to bound itself", () => {
+    const code = codeOf("EvidenceFlow.tsx") + codeOf("useEvidence.ts") + codeOf("evidenceClient.ts");
+    expect(code).not.toMatch(/current-source\/split|researchCurrentSourceSplitGetV1|run-library/);
   });
 });

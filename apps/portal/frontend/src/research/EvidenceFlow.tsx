@@ -31,6 +31,7 @@ import {
   type EquityPoint,
   type EvidenceHub,
   type EvidenceSeries,
+  type FoldNavigation,
   type Metric,
   type MonthlyReturnPoint,
   type RollingReturnPoint,
@@ -180,6 +181,42 @@ function Chip({
   );
 }
 
+/**
+ * One fact in the run header.
+ *
+ * Every field of `run_identity` carries its own availability, so each is
+ * rendered or withheld on its own terms — a run whose requested spec could not
+ * be parsed still shows its status and its binding. `NOT_APPLICABLE` is not a
+ * gap: a seed that was deliberately not selected is a real answer, and it says
+ * so rather than printing nothing or a zero.
+ */
+function HeaderFact({
+  label,
+  value,
+  availability,
+  mono = true,
+}: {
+  label: string;
+  value: string | null;
+  availability: Availability;
+  mono?: boolean;
+}) {
+  return (
+    <span className="flex items-baseline gap-1" data-header-fact={label}>
+      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        {label}
+      </span>
+      {isAvailable(availability) && value !== null ? (
+        <span className={mono ? "mono text-[10px]" : "text-[10px]"} data-header-value={label}>
+          {value}
+        </span>
+      ) : (
+        <Withheld availability={availability} />
+      )}
+    </span>
+  );
+}
+
 /* ------------------------------------------------------------ claim strip */
 
 /**
@@ -275,6 +312,7 @@ function RunHeader({
 }) {
   const [copied, setCopied] = useState(false);
   const { core } = hub;
+  const identity = core.run_identity;
 
   const copyLink = useCallback(() => {
     const href = `${window.location.origin}${window.location.pathname}${deepDiveHref("", cursor)}`;
@@ -293,6 +331,35 @@ function RunHeader({
         <span className="mono text-[15px] font-bold" data-run-id>
           {hub.run_id}
         </span>
+
+        {/*
+          * `run_identity` is additive and optional while the responder rolls
+          * out. An older responder that does not send it leaves the header
+          * thinner — the shell stays, and nothing is invented to fill it.
+          */}
+        {identity ? (
+          <>
+            {isAvailable(identity.status.availability) && identity.status.value !== null ? (
+              <Chip data-run-status={identity.status.value} tone="var(--accent)" border="var(--accent)">
+                {identity.status.value.toLowerCase()}
+              </Chip>
+            ) : (
+              <Withheld availability={identity.status.availability} what="status" />
+            )}
+
+            {isAvailable(identity.binding.availability) && identity.binding.alpha_name !== null ? (
+              <Chip
+                data-binding={identity.binding.alpha_version_id ?? ""}
+                title={`${identity.binding.alpha_id ?? ""} · ${identity.binding.alpha_version_id ?? ""}`}
+              >
+                {identity.binding.alpha_name}
+                {identity.binding.alpha_version_id ? ` · ${identity.binding.alpha_version_id}` : ""}
+              </Chip>
+            ) : (
+              <Withheld availability={identity.binding.availability} what="binding" />
+            )}
+          </>
+        ) : null}
 
         {core.engine_version !== null ? (
           <Chip data-engine={core.engine_version}>quantbt-engine {core.engine_version}</Chip>
@@ -314,6 +381,51 @@ function RunHeader({
           as of {new Date(hub.as_of_utc_ms).toISOString()}
         </span>
       </div>
+
+      {identity ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" data-run-identity>
+          <HeaderFact
+            label="created"
+            value={
+              identity.created_at_utc_ms.value === null
+                ? null
+                : new Date(identity.created_at_utc_ms.value).toISOString()
+            }
+            availability={identity.created_at_utc_ms.availability}
+          />
+          <HeaderFact label="mode" value={identity.mode.value} availability={identity.mode.availability} />
+          <HeaderFact
+            label="schedule"
+            value={identity.schedule.value}
+            availability={identity.schedule.availability}
+          />
+          <HeaderFact label="route" value={identity.route.id.value} availability={identity.route.id.availability} />
+          {/*
+            * A selected route id is not a route contract. The contract is
+            * published as absent, and printing the id under that label would
+            * upgrade a choice into an assertion about what the route enforces.
+            */}
+          <HeaderFact
+            label="route contract"
+            value={identity.route.contract.value}
+            availability={identity.route.contract.availability}
+          />
+          <HeaderFact
+            label="config digest"
+            value={identity.config_digest.value}
+            availability={identity.config_digest.availability}
+          />
+          {/*
+            * `seed` null with NOT_APPLICABLE is a real selected null — the run
+            * asked for no fixed seed — not a fact the source failed to send.
+            */}
+          <HeaderFact
+            label="seed"
+            value={identity.seed.value === null ? null : String(identity.seed.value)}
+            availability={identity.seed.availability}
+          />
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         {core.input_scope !== null ? (
@@ -572,13 +684,33 @@ function StageTabs({
 
 function CursorBar({
   cursor,
+  folds,
   onFold,
   onReset,
 }: {
   cursor: EvidenceCursor;
+  folds: FoldNavigation | undefined;
   onFold: (fold: number) => void;
   onReset: () => void;
 }) {
+  /*
+   * The step buttons are bound to the folds P11 actually observed, and to
+   * nothing else. This is a published observed set, not the source's complete
+   * fold plan: the label says "observed" so the selector cannot be read as a
+   * promise about folds nobody has seen. With no published set the controls
+   * are disabled and carry the server's reason, rather than letting a reader
+   * walk to fold 40 of a five-fold run while the screen looks like it agreed.
+   */
+  const published = folds !== undefined && isAvailable(folds.availability) ? folds.observed_folds : [];
+  const index = published.indexOf(cursor.fold);
+  const atFirst = published.length === 0 || index <= 0;
+  const atLast = published.length === 0 || index === published.length - 1 || index === -1;
+  const step = (delta: number) => {
+    if (index === -1) return;
+    const next = published[index + delta];
+    if (next !== undefined) onFold(next);
+  };
+
   return (
     <div
       className="flex flex-wrap items-center gap-2.5 rounded-[6px] border px-3 py-1.5"
@@ -592,25 +724,57 @@ function CursorBar({
       <span className="mono text-[10.5px]" data-cursor-fold>
         fold {cursor.fold}
       </span>
-      {/*
-        * How many folds there are is not published on this screen, so the
-        * step buttons cannot be bounded and the bar says so. Without this the
-        * reader could walk to "fold 40" of a five-fold run and the screen
-        * would look like it agreed.
-        */}
       <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-fold-bound>
-        of <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_FOLD_PLAN" }} />
+        {published.length > 0 ? (
+          <>
+            of {published.length} observed
+            {index === -1 ? " — this fold is not in the observed set" : ""}
+          </>
+        ) : (
+          <>
+            of{" "}
+            <Withheld
+              availability={folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }}
+              what="observed folds"
+            />
+          </>
+        )}
       </span>
+
+      {/* The published members, so a reader can reach one without stepping. */}
+      {published.length > 1 ? (
+        <select
+          className="mono rounded-[4px] border px-1 text-[10px]"
+          style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+          data-fold-select
+          aria-label="observed fold"
+          value={index === -1 ? "" : String(cursor.fold)}
+          onChange={(event) => onFold(Number(event.target.value))}
+        >
+          {index === -1 ? <option value="">—</option> : null}
+          {published.map((fold) => (
+            <option key={fold} value={String(fold)}>
+              fold {fold}
+            </option>
+          ))}
+        </select>
+      ) : null}
 
       <button
         type="button"
         aria-label="previous fold"
         data-action="fold-previous"
-        disabled={cursor.fold <= 1}
-        title={cursor.fold <= 1 ? "this is the first fold" : "previous fold"}
-        onClick={() => onFold(cursor.fold - 1)}
+        disabled={atFirst}
+        title={
+          published.length === 0
+            ? unavailableReason(folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null })
+            : atFirst
+              ? "this is the first observed fold"
+              : "previous observed fold"
+        }
+        onClick={() => step(-1)}
         className="mono text-[11px]"
-        style={{ opacity: cursor.fold <= 1 ? 0.35 : 1, cursor: cursor.fold <= 1 ? "not-allowed" : "pointer" }}
+        style={{ opacity: atFirst ? 0.35 : 1, cursor: atFirst ? "not-allowed" : "pointer" }}
       >
         ‹
       </button>
@@ -618,8 +782,17 @@ function CursorBar({
         type="button"
         aria-label="next fold"
         data-action="fold-next"
-        onClick={() => onFold(cursor.fold + 1)}
+        disabled={atLast}
+        title={
+          published.length === 0
+            ? unavailableReason(folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null })
+            : atLast
+              ? "this is the last observed fold"
+              : "next observed fold"
+        }
+        onClick={() => step(1)}
         className="mono text-[11px]"
+        style={{ opacity: atLast ? 0.35 : 1, cursor: atLast ? "not-allowed" : "pointer" }}
       >
         ›
       </button>
@@ -1444,7 +1617,12 @@ export function EvidenceFlow({
       ) : null}
 
       {hub ? <StageTabs cursor={cursor} hub={hub} onStage={onStage} /> : null}
-      <CursorBar cursor={cursor} onFold={onFold} onReset={onResetCursor} />
+      <CursorBar
+        cursor={cursor}
+        folds={hub?.core.fold_navigation}
+        onFold={onFold}
+        onReset={onResetCursor}
+      />
 
       <ResearchPanel
         title={STAGE_LABEL[cursor.stage]}
