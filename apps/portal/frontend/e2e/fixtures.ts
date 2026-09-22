@@ -262,6 +262,31 @@ export async function stubPortalApi(
   });
 
   /*
+   * P16 · the freeze detail, its explicit verification and the retained check.
+   *
+   * The verify route is a POST, so a probe can assert that nothing but a click
+   * reaches it.
+   */
+  await page.route("**/api/v1/quantbt/runs/*/freeze/verify*", (route) =>
+    void json(route, local("freeze-verification.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/freeze*", (route) =>
+    void json(route, local("freeze-detail.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/current-source/freeze*", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED",
+          message: "This run was produced by the fixed P04 profile, which the retained-source lane does not admit.",
+        },
+      }),
+    }),
+  );
+
+  /*
    * P15 · the search detail and the retained trial ledger.
    *
    * Same shape as P14: the fixed-profile run is answered in full, and the

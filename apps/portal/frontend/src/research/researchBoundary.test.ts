@@ -80,6 +80,7 @@ describe("no internal identifier or direct source access on the Research surface
     "evidenceClient.ts",
     "splitClient.ts",
     "searchClient.ts",
+    "freezeClient.ts",
   ];
 
   /*

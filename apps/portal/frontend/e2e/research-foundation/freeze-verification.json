@@ -1,0 +1,56 @@
+{
+  "schema_version": "research.freeze-verification.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "R-WFO-118",
+  "freeze_revision": "p16r1_31bb90",
+  "verified_at_utc_ms": 1781913600000,
+  "result": "PARTIAL_MATCH",
+  "integrity": {
+    "state": "PARTIAL",
+    "verification_scope": "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+    "checks": [
+      {
+        "key": "P04_ADAPTER_CONTRACT",
+        "state": "MATCH",
+        "expected_digest": "sha256:adapter0198fe",
+        "observed_digest": "sha256:adapter0198fe",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      {
+        "key": "P10_MANIFEST_BINDING",
+        "state": "MATCH",
+        "expected_digest": "sha256:c25a1d77b0e4",
+        "observed_digest": "sha256:c25a1d77b0e4",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      {
+        "key": "P04_FIXED_PARAMETER_BUNDLE",
+        "state": "MATCH",
+        "expected_digest": "sha256:bundle0142ab",
+        "observed_digest": "sha256:bundle0142ab",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      }
+    ],
+    "source_artifact_bytes": {
+      "state": "NOT_ATTESTED",
+      "reason_code": "P10_ARTIFACT_BYTES_NOT_ATTESTED",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P10_ARTIFACT_BYTES_NOT_ATTESTED"
+      }
+    },
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  }
+}

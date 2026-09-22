@@ -1572,3 +1572,124 @@ test("S06 walks back to the hub and to S05 with the cursor intact", async ({ pag
   await expect(page.locator("[data-cursor-fold]")).toContainText("fold 2");
   await expect(page.locator("[data-cursor-params]")).toContainText("prm_3b81c7");
 });
+
+/* ------------------------------------------------------------------ P16 */
+
+/*
+ * S07 Freeze on `/research/quantbt/runs/:runId/freeze`.
+ *
+ * Two questions only a browser settles here: does a row of matched digests
+ * ever read as a verified chain, and can anything except a click reach the one
+ * POST this surface has.
+ */
+const FREEZE = "/research/quantbt/runs/R-WFO-118/freeze";
+
+for (const [name, width, height] of [
+  ["laptop", 1280, 1000],
+  ["mobile", 660, 1000],
+] as const) {
+  test(`S07 Freeze renders every block on its product route at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width, height });
+    await page.goto(FREEZE);
+    await settle(page);
+
+    await expect(page.locator("[data-screen='freeze-detail']")).toBeVisible();
+    await expect(page.locator("[data-integrity='PARTIAL']")).toBeVisible();
+    await expect(page.locator("[data-check]")).toHaveCount(3);
+    await expect(page.locator("[data-frozen-parameter]")).toHaveCount(3);
+    await expect(page.locator("[data-panel='ordering']")).toBeVisible();
+    await expect(page.locator("[data-panel='what-if']")).toBeVisible();
+    await expect(page.locator("[data-window-row]")).toHaveCount(3);
+
+    await expect(page.locator(".portal-shell")).toHaveCount(1);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+
+    await page.screenshot({ path: `${OUT}/s07-freeze-${name}.png`, fullPage: true });
+    expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+  });
+}
+
+test("S07 never lets three matches read as a verified chain", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(FREEZE);
+  await settle(page);
+
+  // The scope travels with the marks, on screen, not only in a tooltip.
+  await expect(page.locator("[data-verification-scope='PORTAL_RETAINED_DIGEST_BINDING_ONLY']")).toBeVisible();
+  await expect(page.locator("[data-scope-note]")).toContainText("not a check of the source artifact");
+  await expect(page.locator("[data-integrity] [data-gap-fact='source artifact bytes']")).toHaveAttribute(
+    "data-gap-state",
+    "NOT_ATTESTED",
+  );
+
+  const text = (await page.locator("[data-screen='freeze-detail']").textContent()) ?? "";
+  expect(text).not.toMatch(/chain intact|fully verified|integrity verified/i);
+});
+
+test("S07 writes only when the reader clicks verify", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+
+  const writes: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() !== "GET") writes.push(`${request.method()} ${request.url()}`);
+  });
+
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(`${FREEZE}#stage=freeze&fold=2`);
+  await settle(page);
+
+  // Mount, a hash carrying a fold, a full render: still no write.
+  expect(writes, "a write fired without a click").toEqual([]);
+
+  await page.locator("[data-action='verify']").click();
+  await expect(page.locator("[data-verify-result='PARTIAL_MATCH']")).toBeVisible();
+  expect(writes.filter((entry) => entry.startsWith("POST")).length).toBe(1);
+  expect(writes[0]).toContain("/freeze/verify");
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+});
+
+test("S07 offers no control for a question the source cannot answer", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(FREEZE);
+  await settle(page);
+
+  await expect(page.locator("[data-what-if='NOT_APPLICABLE']")).toBeVisible();
+  await expect(page.locator("input[type='range']")).toHaveCount(0);
+  await expect(page.locator("[data-may-submit='false']")).toBeVisible();
+  await expect(page.locator("[data-may-create='false']")).toBeVisible();
+
+  // One button on the screen, and it is the verification.
+  const actions = await page
+    .locator("[data-screen='freeze-detail'] button[data-action]")
+    .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("data-action")));
+  expect(actions).toEqual(["verify"]);
+
+  // The ordering panel shows windows, never a verdict.
+  await expect(page.locator("[data-ordering-state='NOT_ASSERTED']")).toBeVisible();
+  await expect(page.locator("[data-panel='ordering'] [data-verdict]")).toHaveCount(0);
+});
+
+test("S07 keeps the retained custody refusal inside its panel", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(FREEZE);
+  await settle(page);
+
+  await expect(page.locator("[data-retained='refused']")).toBeVisible();
+  await expect(page.locator("[data-retained-refusal]")).toContainText("does not admit");
+  await expect(page.locator("[data-integrity='PARTIAL']")).toBeVisible();
+  await expect(page.locator("[data-panel='frozen-parameters']")).toBeVisible();
+});

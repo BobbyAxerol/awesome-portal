@@ -1,0 +1,255 @@
+{
+  "schema_version": "research.freeze-detail.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "R-WFO-118",
+  "revision": "p16r1_31bb90",
+  "etag": "\"p16r1_31bb90\"",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "readiness": "PARTIAL",
+  "as_of_utc_ms": 1781827200000,
+  "provenance": {
+    "source_adapter_id": "p04.delta-rsi.v1",
+    "adapter_contract_digest": "sha256:adapter0198fe",
+    "p14_split_revision": "p14r1_55aa10",
+    "source_split_digest": "sha256:split01bb72",
+    "requested_spec_digest": "sha256:88ae0231bc44",
+    "effective_spec_digest": "sha256:88ae0231bc44",
+    "dataset_binding_digest": "sha256:5b31c7d90e12",
+    "manifest_digest": "sha256:c25a1d77b0e4"
+  },
+  "freeze": {
+    "source_profile": {
+      "state": "FIXED_PROFILE_NO_SELECTION_ARTIFACT",
+      "reason_code": "P04_HAS_NO_SELECTION_ARTIFACT",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "inspection": {
+      "requested_fold": 1,
+      "state": "NOT_APPLICABLE",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_HAS_NO_FOLD_SELECTION_ARTIFACT"
+      }
+    },
+    "selection": {
+      "state": "FIXED_PARAMETER_PROFILE",
+      "selection_artifact_ref": null,
+      "selected_trial_ref": null,
+      "selection_sequence": null,
+      "parameter_bundle_digest": "sha256:bundle0142ab",
+      "strict_outer_oos": {
+        "state": "NOT_ASSERTED",
+        "reason_code": "P04_ASSERTS_NO_STRICT_SELECTOR",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P04_ASSERTS_NO_STRICT_SELECTOR"
+        }
+      },
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "ordering": {
+      "state": "NOT_ASSERTED",
+      "reason_code": "P04_ASSERTS_NO_ORDERING",
+      "wall_clock": {
+        "state": "NOT_ASSERTED",
+        "reason_code": "P04_PUBLISHES_NO_WALL_CLOCK_ORDER",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P04_PUBLISHES_NO_WALL_CLOCK_ORDER"
+        }
+      },
+      "data_time": {
+        "state": "AVAILABLE",
+        "chronology_kind": "THREE_WINDOW_CURRENT",
+        "is": {
+          "start_utc_ms": 1704153600000,
+          "end_exclusive_utc_ms": 1747267200000,
+          "bars": 2994,
+          "data_role": "IS_CALIBRATION_HISTORY",
+          "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+          "evaluation_state": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "outer_oos": {
+          "start_utc_ms": 1747267200000,
+          "end_exclusive_utc_ms": 1764547200000,
+          "bars": 1200,
+          "data_role": "OUTER_OOS_OBSERVATION",
+          "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+          "evaluation_state": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "holdout": {
+          "start_utc_ms": 1764547200000,
+          "end_exclusive_utc_ms": 1773187200000,
+          "bars": null,
+          "data_role": "HOLDOUT",
+          "child_input_state": "NOT_EXPOSED_TO_CHILD_TAPE",
+          "evaluation_state": null,
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "frozen_parameters": [
+      {
+        "name": "rsi_len",
+        "kind": "NUMERIC",
+        "minimum": "5",
+        "maximum": "40",
+        "step": "1",
+        "frozen_value": "14",
+        "position_percent": 25.7,
+        "bound_state": "WITHIN_DECLARED_RANGE"
+      },
+      {
+        "name": "atr_mult",
+        "kind": "NUMERIC",
+        "minimum": "0.50",
+        "maximum": "4.00",
+        "step": "0.25",
+        "frozen_value": "2.00",
+        "position_percent": 42.9,
+        "bound_state": "WITHIN_DECLARED_RANGE"
+      },
+      {
+        "name": "entry_z",
+        "kind": "NUMERIC",
+        "minimum": "0.80",
+        "maximum": "3.20",
+        "step": "0.10",
+        "frozen_value": "1.60",
+        "position_percent": 33.3,
+        "bound_state": "WITHIN_DECLARED_RANGE"
+      }
+    ],
+    "integrity": {
+      "state": "PARTIAL",
+      "verification_scope": "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+      "checks": [
+        {
+          "key": "P04_ADAPTER_CONTRACT",
+          "state": "MATCH",
+          "expected_digest": "sha256:adapter0198fe",
+          "observed_digest": "sha256:adapter0198fe",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "P10_MANIFEST_BINDING",
+          "state": "MATCH",
+          "expected_digest": "sha256:c25a1d77b0e4",
+          "observed_digest": "sha256:c25a1d77b0e4",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "P04_FIXED_PARAMETER_BUNDLE",
+          "state": "MATCH",
+          "expected_digest": "sha256:bundle0142ab",
+          "observed_digest": "sha256:bundle0142ab",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      ],
+      "source_artifact_bytes": {
+        "state": "NOT_ATTESTED",
+        "reason_code": "P10_ARTIFACT_BYTES_NOT_ATTESTED",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P10_ARTIFACT_BYTES_NOT_ATTESTED"
+        }
+      },
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "what_if": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_PUBLISHES_NO_OBJECTIVE_DEFINITION",
+      "grid": {
+        "state": "NOT_APPLICABLE",
+        "effective_cell_count": null,
+        "objective_definition": null,
+        "availability": {
+          "state": "NOT_APPLICABLE",
+          "reason_code": "P04_PUBLISHES_NO_GRID"
+        }
+      },
+      "actions": {
+        "diagnostic_evaluate": {
+          "state": "NOT_APPLICABLE",
+          "may_submit": false,
+          "href": null,
+          "availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P16_ENQUEUES_NO_EVALUATION"
+          }
+        },
+        "sibling_draft": {
+          "state": "NOT_APPLICABLE",
+          "may_create": false,
+          "href": null,
+          "availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P16_CREATES_NO_SIBLING"
+          }
+        }
+      },
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_PUBLISHES_NO_OBJECTIVE_DEFINITION"
+      }
+    }
+  },
+  "source_absences": {
+    "artifact_bytes": {
+      "state": "NOT_ATTESTED",
+      "reason_code": "P10_ARTIFACT_BYTES_NOT_ATTESTED",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P10_ARTIFACT_BYTES_NOT_ATTESTED"
+      }
+    },
+    "selection_artifact": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_HAS_NO_SELECTION_ARTIFACT",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_HAS_NO_SELECTION_ARTIFACT"
+      }
+    }
+  }
+}
