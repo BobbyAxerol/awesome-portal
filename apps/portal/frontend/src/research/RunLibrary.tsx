@@ -427,14 +427,15 @@ function RunCard({
            * pointed at a URL that would 404 — the reader learns the evidence
            * view exists and is not open yet, which is the true state.
            */
-          <span
+          /* P13 opened Screen 04, so this is a link again. */
+          <Link
+            to={`/research/quantbt/runs/${encodeURIComponent(item.run_id)}/evidence`}
             className="mono text-[10px] uppercase"
-            data-open-evidence="UNPUBLISHED"
-            title="Screen 04 (run evidence) has no published route yet, so this link would go nowhere."
-            style={{ color: "var(--ink-faint)", opacity: 0.55, cursor: "not-allowed" }}
+            style={{ color: "var(--accent)" }}
+            data-open-evidence={item.run_id}
           >
             open evidence →
-          </span>
+          </Link>
         )}
       </header>
 

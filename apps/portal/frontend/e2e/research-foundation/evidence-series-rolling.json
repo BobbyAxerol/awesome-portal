@@ -1,0 +1,402 @@
+{
+  "schema_version": "research.evidence-series.v1",
+  "run_id": "R-WFO-118",
+  "revision": "rev_7",
+  "etag": "\"rev_7\"",
+  "kind": "ROLLING_RETURNS_20",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "source_sample": {
+    "source_observation_count": 2190,
+    "emitted_point_count": 96,
+    "sampling": "TAIL_WINDOW_V1"
+  },
+  "values": [
+    {
+      "at_utc_ms": 1704067200000,
+      "return_fraction": "-0.03636"
+    },
+    {
+      "at_utc_ms": 1704412800000,
+      "return_fraction": "0.01818"
+    },
+    {
+      "at_utc_ms": 1704758400000,
+      "return_fraction": "-0.00455"
+    },
+    {
+      "at_utc_ms": 1705104000000,
+      "return_fraction": "-0.02727"
+    },
+    {
+      "at_utc_ms": 1705449600000,
+      "return_fraction": "0.02727"
+    },
+    {
+      "at_utc_ms": 1705795200000,
+      "return_fraction": "0.00455"
+    },
+    {
+      "at_utc_ms": 1706140800000,
+      "return_fraction": "-0.01818"
+    },
+    {
+      "at_utc_ms": 1706486400000,
+      "return_fraction": "0.03636"
+    },
+    {
+      "at_utc_ms": 1706832000000,
+      "return_fraction": "0.01364"
+    },
+    {
+      "at_utc_ms": 1707177600000,
+      "return_fraction": "-0.00909"
+    },
+    {
+      "at_utc_ms": 1707523200000,
+      "return_fraction": "-0.03182"
+    },
+    {
+      "at_utc_ms": 1707868800000,
+      "return_fraction": "0.02273"
+    },
+    {
+      "at_utc_ms": 1708214400000,
+      "return_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1708560000000,
+      "return_fraction": "-0.02273"
+    },
+    {
+      "at_utc_ms": 1708905600000,
+      "return_fraction": "0.03182"
+    },
+    {
+      "at_utc_ms": 1709251200000,
+      "return_fraction": "0.00909"
+    },
+    {
+      "at_utc_ms": 1709596800000,
+      "return_fraction": "-0.01364"
+    },
+    {
+      "at_utc_ms": 1709942400000,
+      "return_fraction": "-0.03636"
+    },
+    {
+      "at_utc_ms": 1710288000000,
+      "return_fraction": "0.01818"
+    },
+    {
+      "at_utc_ms": 1710633600000,
+      "return_fraction": "-0.00455"
+    },
+    {
+      "at_utc_ms": 1710979200000,
+      "return_fraction": "-0.02727"
+    },
+    {
+      "at_utc_ms": 1711324800000,
+      "return_fraction": "0.02727"
+    },
+    {
+      "at_utc_ms": 1711670400000,
+      "return_fraction": "0.00455"
+    },
+    {
+      "at_utc_ms": 1712016000000,
+      "return_fraction": "-0.01818"
+    },
+    {
+      "at_utc_ms": 1712361600000,
+      "return_fraction": "0.03636"
+    },
+    {
+      "at_utc_ms": 1712707200000,
+      "return_fraction": "0.01364"
+    },
+    {
+      "at_utc_ms": 1713052800000,
+      "return_fraction": "-0.00909"
+    },
+    {
+      "at_utc_ms": 1713398400000,
+      "return_fraction": "-0.03182"
+    },
+    {
+      "at_utc_ms": 1713744000000,
+      "return_fraction": "0.02273"
+    },
+    {
+      "at_utc_ms": 1714089600000,
+      "return_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1714435200000,
+      "return_fraction": "-0.02273"
+    },
+    {
+      "at_utc_ms": 1714780800000,
+      "return_fraction": "0.03182"
+    },
+    {
+      "at_utc_ms": 1715126400000,
+      "return_fraction": "0.00909"
+    },
+    {
+      "at_utc_ms": 1715472000000,
+      "return_fraction": "-0.01364"
+    },
+    {
+      "at_utc_ms": 1715817600000,
+      "return_fraction": "-0.03636"
+    },
+    {
+      "at_utc_ms": 1716163200000,
+      "return_fraction": "0.01818"
+    },
+    {
+      "at_utc_ms": 1716508800000,
+      "return_fraction": "-0.00455"
+    },
+    {
+      "at_utc_ms": 1716854400000,
+      "return_fraction": "-0.02727"
+    },
+    {
+      "at_utc_ms": 1717200000000,
+      "return_fraction": "0.02727"
+    },
+    {
+      "at_utc_ms": 1717545600000,
+      "return_fraction": "0.00455"
+    },
+    {
+      "at_utc_ms": 1717891200000,
+      "return_fraction": "-0.01818"
+    },
+    {
+      "at_utc_ms": 1718236800000,
+      "return_fraction": "0.03636"
+    },
+    {
+      "at_utc_ms": 1718582400000,
+      "return_fraction": "0.01364"
+    },
+    {
+      "at_utc_ms": 1718928000000,
+      "return_fraction": "-0.00909"
+    },
+    {
+      "at_utc_ms": 1719273600000,
+      "return_fraction": "-0.03182"
+    },
+    {
+      "at_utc_ms": 1719619200000,
+      "return_fraction": "0.02273"
+    },
+    {
+      "at_utc_ms": 1719964800000,
+      "return_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1720310400000,
+      "return_fraction": "-0.02273"
+    },
+    {
+      "at_utc_ms": 1720656000000,
+      "return_fraction": "0.03182"
+    },
+    {
+      "at_utc_ms": 1721001600000,
+      "return_fraction": "0.00909"
+    },
+    {
+      "at_utc_ms": 1721347200000,
+      "return_fraction": "-0.01364"
+    },
+    {
+      "at_utc_ms": 1721692800000,
+      "return_fraction": "-0.03636"
+    },
+    {
+      "at_utc_ms": 1722038400000,
+      "return_fraction": "0.01818"
+    },
+    {
+      "at_utc_ms": 1722384000000,
+      "return_fraction": "-0.00455"
+    },
+    {
+      "at_utc_ms": 1722729600000,
+      "return_fraction": "-0.02727"
+    },
+    {
+      "at_utc_ms": 1723075200000,
+      "return_fraction": "0.02727"
+    },
+    {
+      "at_utc_ms": 1723420800000,
+      "return_fraction": "0.00455"
+    },
+    {
+      "at_utc_ms": 1723766400000,
+      "return_fraction": "-0.01818"
+    },
+    {
+      "at_utc_ms": 1724112000000,
+      "return_fraction": "0.03636"
+    },
+    {
+      "at_utc_ms": 1724457600000,
+      "return_fraction": "0.01364"
+    },
+    {
+      "at_utc_ms": 1724803200000,
+      "return_fraction": "-0.00909"
+    },
+    {
+      "at_utc_ms": 1725148800000,
+      "return_fraction": "-0.03182"
+    },
+    {
+      "at_utc_ms": 1725494400000,
+      "return_fraction": "0.02273"
+    },
+    {
+      "at_utc_ms": 1725840000000,
+      "return_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1726185600000,
+      "return_fraction": "-0.02273"
+    },
+    {
+      "at_utc_ms": 1726531200000,
+      "return_fraction": "0.03182"
+    },
+    {
+      "at_utc_ms": 1726876800000,
+      "return_fraction": "0.00909"
+    },
+    {
+      "at_utc_ms": 1727222400000,
+      "return_fraction": "-0.01364"
+    },
+    {
+      "at_utc_ms": 1727568000000,
+      "return_fraction": "-0.03636"
+    },
+    {
+      "at_utc_ms": 1727913600000,
+      "return_fraction": "0.01818"
+    },
+    {
+      "at_utc_ms": 1728259200000,
+      "return_fraction": "-0.00455"
+    },
+    {
+      "at_utc_ms": 1728604800000,
+      "return_fraction": "-0.02727"
+    },
+    {
+      "at_utc_ms": 1728950400000,
+      "return_fraction": "0.02727"
+    },
+    {
+      "at_utc_ms": 1729296000000,
+      "return_fraction": "0.00455"
+    },
+    {
+      "at_utc_ms": 1729641600000,
+      "return_fraction": "-0.01818"
+    },
+    {
+      "at_utc_ms": 1729987200000,
+      "return_fraction": "0.03636"
+    },
+    {
+      "at_utc_ms": 1730332800000,
+      "return_fraction": "0.01364"
+    },
+    {
+      "at_utc_ms": 1730678400000,
+      "return_fraction": "-0.00909"
+    },
+    {
+      "at_utc_ms": 1731024000000,
+      "return_fraction": "-0.03182"
+    },
+    {
+      "at_utc_ms": 1731369600000,
+      "return_fraction": "0.02273"
+    },
+    {
+      "at_utc_ms": 1731715200000,
+      "return_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1732060800000,
+      "return_fraction": "-0.02273"
+    },
+    {
+      "at_utc_ms": 1732406400000,
+      "return_fraction": "0.03182"
+    },
+    {
+      "at_utc_ms": 1732752000000,
+      "return_fraction": "0.00909"
+    },
+    {
+      "at_utc_ms": 1733097600000,
+      "return_fraction": "-0.01364"
+    },
+    {
+      "at_utc_ms": 1733443200000,
+      "return_fraction": "-0.03636"
+    },
+    {
+      "at_utc_ms": 1733788800000,
+      "return_fraction": "0.01818"
+    },
+    {
+      "at_utc_ms": 1734134400000,
+      "return_fraction": "-0.00455"
+    },
+    {
+      "at_utc_ms": 1734480000000,
+      "return_fraction": "-0.02727"
+    },
+    {
+      "at_utc_ms": 1734825600000,
+      "return_fraction": "0.02727"
+    },
+    {
+      "at_utc_ms": 1735171200000,
+      "return_fraction": "0.00455"
+    },
+    {
+      "at_utc_ms": 1735516800000,
+      "return_fraction": "-0.01818"
+    },
+    {
+      "at_utc_ms": 1735862400000,
+      "return_fraction": "0.03636"
+    },
+    {
+      "at_utc_ms": 1736208000000,
+      "return_fraction": "0.01364"
+    },
+    {
+      "at_utc_ms": 1736553600000,
+      "return_fraction": "-0.00909"
+    },
+    {
+      "at_utc_ms": 1736899200000,
+      "return_fraction": "-0.03182"
+    }
+  ]
+}

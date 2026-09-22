@@ -49,6 +49,12 @@
       "@portal/contracts-research-progress": [
         "../../../packages/contracts/generated/research-progress.d.ts"
       ],
+      "@portal/contracts-research-evidence": [
+        "../../../packages/contracts/generated/research-evidence.d.ts"
+      ],
+      "@portal/contracts-research-current-source": [
+        "../../../packages/contracts/generated/research-current-source.d.ts"
+      ],
       "@portal/contracts-research-run-library": [
         "../../../packages/contracts/generated/research-run-library.d.ts"
       ],

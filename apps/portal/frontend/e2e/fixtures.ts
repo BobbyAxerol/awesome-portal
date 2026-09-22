@@ -262,6 +262,41 @@ export async function stubPortalApi(
   });
 
   /*
+   * P13 · the Evidence Flow hub and its lazy series.
+   *
+   * The series handler answers per `kind`, so a probe can assert that a tab
+   * read only what it draws. The retained-source passport answers a typed
+   * refusal: this fixture run is the fixed P04 profile, which the RS-02 lane
+   * admits nothing of — exactly the case the panel has to state rather than
+   * escalate.
+   */
+  await page.route("**/api/v1/quantbt/runs/*/evidence/series*", (route) => {
+    const kind = new URL(route.request().url()).searchParams.get("kind");
+    const file =
+      kind === "MONTHLY_RETURNS"
+        ? "evidence-series-monthly.json"
+        : kind === "ROLLING_RETURNS_20"
+          ? "evidence-series-rolling.json"
+          : "evidence-series-equity.json";
+    return void json(route, local(file));
+  });
+  await page.route("**/api/v1/quantbt/runs/*/evidence*", (route) =>
+    void json(route, local("evidence-hub.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/current-source/evidence*", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED",
+          message: "This run was produced by the fixed P04 profile, which the retained-source lane does not admit.",
+        },
+      }),
+    }),
+  );
+
+  /*
    * P12 · the Run Library list and the lazy sparkline.
    *
    * Registered list-first: Playwright matches the most recently added handler

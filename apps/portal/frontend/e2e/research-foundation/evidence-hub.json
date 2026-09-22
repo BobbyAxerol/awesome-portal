@@ -1,0 +1,253 @@
+{
+  "schema_version": "research.evidence-hub.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "R-WFO-118",
+  "revision": "rev_7",
+  "etag": "\"rev_7\"",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "readiness": "COMPLETE",
+  "as_of_utc_ms": 1789836590000,
+  "metric_registry_version": "research.metric-registry.v2",
+  "core": {
+    "source_adapter_id": "p04.delta-rsi.v1",
+    "engine_version": "1.1.1",
+    "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
+    "source_transform_digest": "sha256:9f2c18d4aa71",
+    "requested_spec_digest": "sha256:88ae0231bc44",
+    "effective_spec_digest": "sha256:88ae0231bc44",
+    "dataset_binding_digest": "sha256:5b31c7d90e12",
+    "manifest_digest": "sha256:c25a1d77b0e4",
+    "data": {
+      "dataset_id": "ds_btcusdt_4h",
+      "symbol": "BTCUSDT",
+      "timeframe": "4h",
+      "oos_observation_count": 2190
+    }
+  },
+  "metrics": [
+    {
+      "key": "INITIAL_EQUITY",
+      "label": "initial equity",
+      "unit": "CURRENCY",
+      "scope": "OOS",
+      "frequency": "RUN_FINAL",
+      "origin": "ENGINE_DIRECT",
+      "definition_id": "def.initial_equity.v1",
+      "value": "100000.00",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "FINAL_EQUITY",
+      "label": "final equity",
+      "unit": "CURRENCY",
+      "scope": "OOS",
+      "frequency": "RUN_FINAL",
+      "origin": "ENGINE_DIRECT",
+      "definition_id": "def.final_equity.v1",
+      "value": "128400.00",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "NET_RETURN_FRACTION",
+      "label": "net return",
+      "unit": "FRACTION",
+      "scope": "OOS",
+      "frequency": "RUN_FINAL",
+      "origin": "ENGINE_DIRECT",
+      "definition_id": "def.net_return.v1",
+      "value": "0.28400",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "MAX_DRAWDOWN_FRACTION",
+      "label": "max drawdown",
+      "unit": "FRACTION",
+      "scope": "OOS",
+      "frequency": "RUN_FINAL",
+      "origin": "SOURCE_DERIVED",
+      "definition_id": "def.max_drawdown.v1",
+      "value": "-0.09600",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "TRADE_COUNT",
+      "label": "trades",
+      "unit": "COUNT",
+      "scope": "IS_PLUS_OOS",
+      "frequency": "RUN_FINAL",
+      "origin": "ENGINE_DIRECT",
+      "definition_id": "def.trade_count.v1",
+      "value": "214",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "BARS_PROCESSED",
+      "label": "bars processed",
+      "unit": "COUNT",
+      "scope": "IS_PLUS_OOS",
+      "frequency": "RUN_FINAL",
+      "origin": "ENGINE_DIRECT",
+      "definition_id": "def.bars.v1",
+      "value": "8760",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    {
+      "key": "BENCHMARK_RETURN_FRACTION",
+      "label": "benchmark return",
+      "unit": "FRACTION",
+      "scope": "NOT_PUBLISHED",
+      "frequency": "RUN_FINAL",
+      "origin": "NOT_PUBLISHED",
+      "definition_id": "def.benchmark.v1",
+      "value": null,
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_SOURCE_PUBLISHES_NO_BENCHMARK"
+      }
+    },
+    {
+      "key": "FUNDING_TOTAL",
+      "label": "funding total",
+      "unit": "CURRENCY",
+      "scope": "NOT_PUBLISHED",
+      "frequency": "RUN_FINAL",
+      "origin": "NOT_PUBLISHED",
+      "definition_id": "def.funding.v1",
+      "value": null,
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "SPOT_ROUTE_HAS_NO_FUNDING"
+      }
+    }
+  ],
+  "claim": {
+    "state": "ISSUED",
+    "text": "STRICT_OUTER_OOS — OOS read once after freeze · holdout sealed caps ≤ B",
+    "cursor": null,
+    "methodology_certificate": {
+      "state": "ISSUED",
+      "grade": "B",
+      "issued_at_utc_ms": 1789836580000,
+      "reason_code": null
+    },
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "stages": [
+    {
+      "key": "S1",
+      "state": "DONE",
+      "started_at_utc_ms": 1789830000000,
+      "completed_at_utc_ms": 1789831000000
+    },
+    {
+      "key": "S2",
+      "state": "DONE",
+      "started_at_utc_ms": 1789831000000,
+      "completed_at_utc_ms": 1789833000000
+    },
+    {
+      "key": "S3",
+      "state": "DONE",
+      "started_at_utc_ms": 1789833000000,
+      "completed_at_utc_ms": 1789833500000
+    },
+    {
+      "key": "S4",
+      "state": "DONE",
+      "started_at_utc_ms": 1789833500000,
+      "completed_at_utc_ms": 1789836000000
+    },
+    {
+      "key": "S5",
+      "state": "DONE",
+      "started_at_utc_ms": 1789836000000,
+      "completed_at_utc_ms": 1789836500000
+    }
+  ],
+  "series": [
+    {
+      "kind": "EQUITY_OOS",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
+      "href": "/api/v1/quantbt/runs/R-WFO-118/evidence/series?kind=EQUITY_OOS"
+    },
+    {
+      "kind": "MONTHLY_RETURNS",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
+      "href": "/api/v1/quantbt/runs/R-WFO-118/evidence/series?kind=MONTHLY_RETURNS"
+    },
+    {
+      "kind": "ROLLING_RETURNS_20",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
+      "href": "/api/v1/quantbt/runs/R-WFO-118/evidence/series?kind=ROLLING_RETURNS_20"
+    },
+    {
+      "kind": "RETURN_DISTRIBUTION",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_CHILD_PUBLISHED_NO_HISTOGRAM"
+      },
+      "href": null
+    }
+  ],
+  "warnings": [
+    {
+      "definition_id": "warn.below_promotion_min_bars",
+      "state": "ACTIVE",
+      "reason_code": null,
+      "copy": "below promotion min bars — the run is shorter than the promotion floor, so the claim is capped."
+    },
+    {
+      "definition_id": "warn.funding_unmodelled",
+      "state": "NOT_APPLICABLE",
+      "reason_code": "SPOT_ROUTE_HAS_NO_FUNDING",
+      "copy": "funding is not modelled on this route"
+    }
+  ],
+  "source_absences": {
+    "benchmark": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_SOURCE_PUBLISHES_NO_BENCHMARK"
+    },
+    "audited_fills": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_HAS_NO_BROKER_EVIDENCE"
+    },
+    "per_fold_metrics": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_CHILD_PUBLISHES_RUN_FINAL_ONLY"
+    }
+  }
+}

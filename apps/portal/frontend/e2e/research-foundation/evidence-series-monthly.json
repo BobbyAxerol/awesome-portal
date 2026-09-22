@@ -1,0 +1,70 @@
+{
+  "schema_version": "research.evidence-series.v1",
+  "run_id": "R-WFO-118",
+  "revision": "rev_7",
+  "etag": "\"rev_7\"",
+  "kind": "MONTHLY_RETURNS",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "source_sample": {
+    "source_observation_count": 13,
+    "emitted_point_count": 13,
+    "sampling": "FULL"
+  },
+  "values": [
+    {
+      "month_start_utc_ms": 1704067200000,
+      "return_fraction": "-0.0800"
+    },
+    {
+      "month_start_utc_ms": 1706745600000,
+      "return_fraction": "0.0700"
+    },
+    {
+      "month_start_utc_ms": 1709251200000,
+      "return_fraction": "0.0300"
+    },
+    {
+      "month_start_utc_ms": 1711929600000,
+      "return_fraction": "-0.0100"
+    },
+    {
+      "month_start_utc_ms": 1714521600000,
+      "return_fraction": "-0.0500"
+    },
+    {
+      "month_start_utc_ms": 1717200000000,
+      "return_fraction": "0.1000"
+    },
+    {
+      "month_start_utc_ms": 1719792000000,
+      "return_fraction": "0.0600"
+    },
+    {
+      "month_start_utc_ms": 1722470400000,
+      "return_fraction": "0.0200"
+    },
+    {
+      "month_start_utc_ms": 1725148800000,
+      "return_fraction": "-0.0200"
+    },
+    {
+      "month_start_utc_ms": 1727740800000,
+      "return_fraction": "-0.0600"
+    },
+    {
+      "month_start_utc_ms": 1730419200000,
+      "return_fraction": "0.0900"
+    },
+    {
+      "month_start_utc_ms": 1733011200000,
+      "return_fraction": "0.0500"
+    },
+    {
+      "month_start_utc_ms": 1735689600000,
+      "return_fraction": "0.0100"
+    }
+  ]
+}

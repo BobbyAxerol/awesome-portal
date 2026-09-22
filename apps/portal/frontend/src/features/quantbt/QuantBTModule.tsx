@@ -48,6 +48,7 @@ import { AlphaImportRoute } from "../../research/AlphaImportRoute";
 import { NewRunRoute } from "../../research/NewRunRoute";
 import { RunProgressRoute } from "../../research/RunProgressRoute";
 import { RunLibraryRoute } from "../../research/RunLibraryRoute";
+import { EvidenceFlowRoute } from "../../research/EvidenceFlowRoute";
 import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
@@ -239,7 +240,7 @@ export function QuantBTModule() {
     /* Screen 03 reads a P11 run through its own contract. The legacy passport
        fetch would ask `/api/runs/{id}` for a run that legacy store never had,
        which is the same defect one level down. */
-    if (/\/runs\/[^/]+\/progress(\/|$)/.test(location.pathname)) return null;
+    if (/\/runs\/[^/]+\/(progress|evidence)(\/|$)/.test(location.pathname)) return null;
     return segment;
   }, [location.pathname]);
 
@@ -262,7 +263,9 @@ export function QuantBTModule() {
   // Kept separate from `onTaskRoute` on purpose: widening that regex would
   // also have dropped the caption from New Run and the import inbox, which are
   // outside this phase and inside the visual baseline.
-  const onReferenceRoute = /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/progress)(\/|$)/.test(location.pathname) || /\/runs$/.test(location.pathname);
+  const onReferenceRoute =
+    /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/(progress|evidence))(\/|$)/.test(location.pathname) ||
+    /\/runs$/.test(location.pathname);
 
   const actions = (
     <>
@@ -345,6 +348,8 @@ export function QuantBTModule() {
           * it: a P11 run id is not a legacy run, and routing it through
           * `RunWorkspace` would fetch one that does not exist. */}
         <Route path="runs/:runId/progress" element={<RunProgressRoute />} />
+        {/* P13 · Screen 04, beside the legacy workspace rather than over it. */}
+        <Route path="runs/:runId/evidence" element={<EvidenceFlowRoute />} />
         {/* Screen 14's canonical route, resolved as `FD-P09-02`: under QuantBT
           * rather than under the still-COMMISSIONED ALPHA_POOL feature.
           * Legacy `imports` below is untouched. */}

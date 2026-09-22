@@ -1,0 +1,618 @@
+{
+  "schema_version": "research.evidence-series.v1",
+  "run_id": "R-WFO-118",
+  "revision": "rev_7",
+  "etag": "\"rev_7\"",
+  "kind": "EQUITY_OOS",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "source_sample": {
+    "source_observation_count": 2190,
+    "emitted_point_count": 120,
+    "sampling": "EXTREMA_BUCKET_V1"
+  },
+  "values": [
+    {
+      "at_utc_ms": 1704067200000,
+      "equity": "98888.89",
+      "drawdown_fraction": "-0.01111"
+    },
+    {
+      "at_utc_ms": 1704326400000,
+      "equity": "99328.40",
+      "drawdown_fraction": "-0.00672"
+    },
+    {
+      "at_utc_ms": 1704585600000,
+      "equity": "98776.57",
+      "drawdown_fraction": "-0.01223"
+    },
+    {
+      "at_utc_ms": 1704844800000,
+      "equity": "99764.34",
+      "drawdown_fraction": "-0.00236"
+    },
+    {
+      "at_utc_ms": 1705104000000,
+      "equity": "99764.34",
+      "drawdown_fraction": "-0.00236"
+    },
+    {
+      "at_utc_ms": 1705363200000,
+      "equity": "98766.69",
+      "drawdown_fraction": "-0.01233"
+    },
+    {
+      "at_utc_ms": 1705622400000,
+      "equity": "99315.40",
+      "drawdown_fraction": "-0.00685"
+    },
+    {
+      "at_utc_ms": 1705881600000,
+      "equity": "98874.00",
+      "drawdown_fraction": "-0.01126"
+    },
+    {
+      "at_utc_ms": 1706140800000,
+      "equity": "99972.60",
+      "drawdown_fraction": "-0.00027"
+    },
+    {
+      "at_utc_ms": 1706400000000,
+      "equity": "100083.68",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1706659200000,
+      "equity": "99194.04",
+      "drawdown_fraction": "-0.00889"
+    },
+    {
+      "at_utc_ms": 1706918400000,
+      "equity": "99855.34",
+      "drawdown_fraction": "-0.00228"
+    },
+    {
+      "at_utc_ms": 1707177600000,
+      "equity": "99522.49",
+      "drawdown_fraction": "-0.00561"
+    },
+    {
+      "at_utc_ms": 1707436800000,
+      "equity": "100738.87",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1707696000000,
+      "equity": "100962.74",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1707955200000,
+      "equity": "100177.47",
+      "drawdown_fraction": "-0.00778"
+    },
+    {
+      "at_utc_ms": 1708214400000,
+      "equity": "100956.63",
+      "drawdown_fraction": "-0.00006"
+    },
+    {
+      "at_utc_ms": 1708473600000,
+      "equity": "100732.28",
+      "drawdown_fraction": "-0.00228"
+    },
+    {
+      "at_utc_ms": 1708732800000,
+      "equity": "102075.38",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1708992000000,
+      "equity": "102415.63",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1709251200000,
+      "equity": "101732.86",
+      "drawdown_fraction": "-0.00667"
+    },
+    {
+      "at_utc_ms": 1709510400000,
+      "equity": "102637.15",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1709769600000,
+      "equity": "102523.11",
+      "drawdown_fraction": "-0.00111"
+    },
+    {
+      "at_utc_ms": 1710028800000,
+      "equity": "101383.96",
+      "drawdown_fraction": "-0.01221"
+    },
+    {
+      "at_utc_ms": 1710288000000,
+      "equity": "101834.56",
+      "drawdown_fraction": "-0.00782"
+    },
+    {
+      "at_utc_ms": 1710547200000,
+      "equity": "101268.81",
+      "drawdown_fraction": "-0.01333"
+    },
+    {
+      "at_utc_ms": 1710806400000,
+      "equity": "102281.50",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1711065600000,
+      "equity": "102281.50",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1711324800000,
+      "equity": "101258.68",
+      "drawdown_fraction": "-0.01343"
+    },
+    {
+      "at_utc_ms": 1711584000000,
+      "equity": "101821.23",
+      "drawdown_fraction": "-0.00795"
+    },
+    {
+      "at_utc_ms": 1711843200000,
+      "equity": "101368.69",
+      "drawdown_fraction": "-0.01236"
+    },
+    {
+      "at_utc_ms": 1712102400000,
+      "equity": "102495.01",
+      "drawdown_fraction": "-0.00138"
+    },
+    {
+      "at_utc_ms": 1712361600000,
+      "equity": "102608.90",
+      "drawdown_fraction": "-0.00028"
+    },
+    {
+      "at_utc_ms": 1712620800000,
+      "equity": "101696.82",
+      "drawdown_fraction": "-0.00916"
+    },
+    {
+      "at_utc_ms": 1712880000000,
+      "equity": "102374.79",
+      "drawdown_fraction": "-0.00256"
+    },
+    {
+      "at_utc_ms": 1713139200000,
+      "equity": "102033.55",
+      "drawdown_fraction": "-0.00588"
+    },
+    {
+      "at_utc_ms": 1713398400000,
+      "equity": "103280.62",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1713657600000,
+      "equity": "103510.13",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1713916800000,
+      "equity": "102705.06",
+      "drawdown_fraction": "-0.00778"
+    },
+    {
+      "at_utc_ms": 1714176000000,
+      "equity": "103503.87",
+      "drawdown_fraction": "-0.00006"
+    },
+    {
+      "at_utc_ms": 1714435200000,
+      "equity": "103273.86",
+      "drawdown_fraction": "-0.00228"
+    },
+    {
+      "at_utc_ms": 1714694400000,
+      "equity": "104650.85",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1714953600000,
+      "equity": "104999.69",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1715212800000,
+      "equity": "104299.69",
+      "drawdown_fraction": "-0.00667"
+    },
+    {
+      "at_utc_ms": 1715472000000,
+      "equity": "105226.80",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1715731200000,
+      "equity": "105109.88",
+      "drawdown_fraction": "-0.00111"
+    },
+    {
+      "at_utc_ms": 1715990400000,
+      "equity": "103941.99",
+      "drawdown_fraction": "-0.01221"
+    },
+    {
+      "at_utc_ms": 1716249600000,
+      "equity": "104403.95",
+      "drawdown_fraction": "-0.00782"
+    },
+    {
+      "at_utc_ms": 1716508800000,
+      "equity": "103823.93",
+      "drawdown_fraction": "-0.01333"
+    },
+    {
+      "at_utc_ms": 1716768000000,
+      "equity": "104862.17",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1717027200000,
+      "equity": "104862.17",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1717286400000,
+      "equity": "103813.55",
+      "drawdown_fraction": "-0.01343"
+    },
+    {
+      "at_utc_ms": 1717545600000,
+      "equity": "104390.29",
+      "drawdown_fraction": "-0.00795"
+    },
+    {
+      "at_utc_ms": 1717804800000,
+      "equity": "103926.33",
+      "drawdown_fraction": "-0.01236"
+    },
+    {
+      "at_utc_ms": 1718064000000,
+      "equity": "105081.07",
+      "drawdown_fraction": "-0.00138"
+    },
+    {
+      "at_utc_ms": 1718323200000,
+      "equity": "105197.83",
+      "drawdown_fraction": "-0.00028"
+    },
+    {
+      "at_utc_ms": 1718582400000,
+      "equity": "104262.74",
+      "drawdown_fraction": "-0.00916"
+    },
+    {
+      "at_utc_ms": 1718841600000,
+      "equity": "104957.82",
+      "drawdown_fraction": "-0.00256"
+    },
+    {
+      "at_utc_ms": 1719100800000,
+      "equity": "104607.96",
+      "drawdown_fraction": "-0.00588"
+    },
+    {
+      "at_utc_ms": 1719360000000,
+      "equity": "105886.50",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1719619200000,
+      "equity": "106121.81",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1719878400000,
+      "equity": "105296.42",
+      "drawdown_fraction": "-0.00778"
+    },
+    {
+      "at_utc_ms": 1720137600000,
+      "equity": "106115.39",
+      "drawdown_fraction": "-0.00006"
+    },
+    {
+      "at_utc_ms": 1720396800000,
+      "equity": "105879.58",
+      "drawdown_fraction": "-0.00228"
+    },
+    {
+      "at_utc_ms": 1720656000000,
+      "equity": "107291.30",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1720915200000,
+      "equity": "107648.94",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1721174400000,
+      "equity": "106931.28",
+      "drawdown_fraction": "-0.00667"
+    },
+    {
+      "at_utc_ms": 1721433600000,
+      "equity": "107881.78",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1721692800000,
+      "equity": "107761.91",
+      "drawdown_fraction": "-0.00111"
+    },
+    {
+      "at_utc_ms": 1721952000000,
+      "equity": "106564.56",
+      "drawdown_fraction": "-0.01221"
+    },
+    {
+      "at_utc_ms": 1722211200000,
+      "equity": "107038.18",
+      "drawdown_fraction": "-0.00782"
+    },
+    {
+      "at_utc_ms": 1722470400000,
+      "equity": "106443.52",
+      "drawdown_fraction": "-0.01333"
+    },
+    {
+      "at_utc_ms": 1722729600000,
+      "equity": "107507.96",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1722988800000,
+      "equity": "107507.96",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1723248000000,
+      "equity": "106432.88",
+      "drawdown_fraction": "-0.01343"
+    },
+    {
+      "at_utc_ms": 1723507200000,
+      "equity": "107024.17",
+      "drawdown_fraction": "-0.00795"
+    },
+    {
+      "at_utc_ms": 1723766400000,
+      "equity": "106548.51",
+      "drawdown_fraction": "-0.01236"
+    },
+    {
+      "at_utc_ms": 1724025600000,
+      "equity": "107732.38",
+      "drawdown_fraction": "-0.00138"
+    },
+    {
+      "at_utc_ms": 1724284800000,
+      "equity": "107852.08",
+      "drawdown_fraction": "-0.00028"
+    },
+    {
+      "at_utc_ms": 1724544000000,
+      "equity": "106893.40",
+      "drawdown_fraction": "-0.00916"
+    },
+    {
+      "at_utc_ms": 1724803200000,
+      "equity": "107606.02",
+      "drawdown_fraction": "-0.00256"
+    },
+    {
+      "at_utc_ms": 1725062400000,
+      "equity": "107247.33",
+      "drawdown_fraction": "-0.00588"
+    },
+    {
+      "at_utc_ms": 1725321600000,
+      "equity": "108558.13",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1725580800000,
+      "equity": "108799.38",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1725840000000,
+      "equity": "107953.16",
+      "drawdown_fraction": "-0.00778"
+    },
+    {
+      "at_utc_ms": 1726099200000,
+      "equity": "108792.79",
+      "drawdown_fraction": "-0.00006"
+    },
+    {
+      "at_utc_ms": 1726358400000,
+      "equity": "108551.03",
+      "drawdown_fraction": "-0.00228"
+    },
+    {
+      "at_utc_ms": 1726617600000,
+      "equity": "109998.38",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1726876800000,
+      "equity": "110365.04",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1727136000000,
+      "equity": "109629.27",
+      "drawdown_fraction": "-0.00667"
+    },
+    {
+      "at_utc_ms": 1727395200000,
+      "equity": "110603.76",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1727654400000,
+      "equity": "110480.86",
+      "drawdown_fraction": "-0.00111"
+    },
+    {
+      "at_utc_ms": 1727913600000,
+      "equity": "109253.30",
+      "drawdown_fraction": "-0.01221"
+    },
+    {
+      "at_utc_ms": 1728172800000,
+      "equity": "109738.87",
+      "drawdown_fraction": "-0.00782"
+    },
+    {
+      "at_utc_ms": 1728432000000,
+      "equity": "109129.21",
+      "drawdown_fraction": "-0.01333"
+    },
+    {
+      "at_utc_ms": 1728691200000,
+      "equity": "110220.50",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1728950400000,
+      "equity": "110220.50",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1729209600000,
+      "equity": "109118.29",
+      "drawdown_fraction": "-0.01343"
+    },
+    {
+      "at_utc_ms": 1729468800000,
+      "equity": "109724.51",
+      "drawdown_fraction": "-0.00795"
+    },
+    {
+      "at_utc_ms": 1729728000000,
+      "equity": "109236.84",
+      "drawdown_fraction": "-0.01236"
+    },
+    {
+      "at_utc_ms": 1729987200000,
+      "equity": "110450.59",
+      "drawdown_fraction": "-0.00138"
+    },
+    {
+      "at_utc_ms": 1730246400000,
+      "equity": "110573.31",
+      "drawdown_fraction": "-0.00028"
+    },
+    {
+      "at_utc_ms": 1730505600000,
+      "equity": "109590.43",
+      "drawdown_fraction": "-0.00916"
+    },
+    {
+      "at_utc_ms": 1730764800000,
+      "equity": "110321.04",
+      "drawdown_fraction": "-0.00256"
+    },
+    {
+      "at_utc_ms": 1731024000000,
+      "equity": "109953.30",
+      "drawdown_fraction": "-0.00588"
+    },
+    {
+      "at_utc_ms": 1731283200000,
+      "equity": "111297.17",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1731542400000,
+      "equity": "111544.50",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1731801600000,
+      "equity": "110676.93",
+      "drawdown_fraction": "-0.00778"
+    },
+    {
+      "at_utc_ms": 1732060800000,
+      "equity": "111537.75",
+      "drawdown_fraction": "-0.00006"
+    },
+    {
+      "at_utc_ms": 1732320000000,
+      "equity": "111289.89",
+      "drawdown_fraction": "-0.00228"
+    },
+    {
+      "at_utc_ms": 1732579200000,
+      "equity": "112773.76",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1732838400000,
+      "equity": "113149.67",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1733097600000,
+      "equity": "112395.34",
+      "drawdown_fraction": "-0.00667"
+    },
+    {
+      "at_utc_ms": 1733356800000,
+      "equity": "113394.41",
+      "drawdown_fraction": "0.00000"
+    },
+    {
+      "at_utc_ms": 1733616000000,
+      "equity": "113268.41",
+      "drawdown_fraction": "-0.00111"
+    },
+    {
+      "at_utc_ms": 1733875200000,
+      "equity": "112009.88",
+      "drawdown_fraction": "-0.01221"
+    },
+    {
+      "at_utc_ms": 1734134400000,
+      "equity": "112507.70",
+      "drawdown_fraction": "-0.00782"
+    },
+    {
+      "at_utc_ms": 1734393600000,
+      "equity": "111882.66",
+      "drawdown_fraction": "-0.01333"
+    },
+    {
+      "at_utc_ms": 1734652800000,
+      "equity": "113001.48",
+      "drawdown_fraction": "-0.00347"
+    },
+    {
+      "at_utc_ms": 1734912000000,
+      "equity": "113001.48",
+      "drawdown_fraction": "-0.00347"
+    }
+  ]
+}

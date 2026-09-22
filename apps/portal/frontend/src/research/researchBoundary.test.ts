@@ -77,6 +77,7 @@ describe("no internal identifier or direct source access on the Research surface
     "progressClient.ts",
     "runCreateClient.ts",
     "runLibraryClient.ts",
+    "evidenceClient.ts",
   ];
 
   /*

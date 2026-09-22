@@ -977,13 +977,11 @@ test("S01 beats the pulse only for a running run and offers evidence honestly", 
     "/research/quantbt/runs/R-WFO-119/progress",
   );
 
-  // A settled card offers evidence as refused rather than pointing at a route
-  // that would 404. It is never an anchor, so it cannot be followed.
+  // P13 opened Screen 04, so a settled card links to it — the refusal this
+  // test used to assert is gone because the route it named now exists.
   const evidence = page.locator("[data-run='R-WFO-118'] [data-open-evidence]");
-  await expect(evidence).toHaveAttribute("data-open-evidence", "UNPUBLISHED");
-  await expect(evidence).toHaveAttribute("title", /no published route yet/);
-  await expect(page.locator("[data-open-evidence]")).toHaveCount(3);
-  await expect(page.locator("a[data-open-evidence]")).toHaveCount(0);
+  await expect(evidence).toHaveAttribute("href", "/research/quantbt/runs/R-WFO-118/evidence");
+  await expect(page.locator("a[data-open-evidence]")).toHaveCount(3);
 });
 
 test("S01 draws the claim ledger as a bar of the families it counted", async ({ page }) => {
@@ -1001,4 +999,285 @@ test("S01 draws the claim ledger as a bar of the families it counted", async ({ 
     .locator("[data-ledger-segment]")
     .evaluateAll((nodes) => nodes.map((n) => (n as HTMLElement).getBoundingClientRect().width));
   for (const width of widths) expect(width).toBeGreaterThan(0);
+});
+
+/* ------------------------------------------------------------------ P13 */
+
+/*
+ * S04 Evidence Flow hub on `/research/quantbt/runs/:runId/evidence`.
+ *
+ * The fixture answers the Hub, three of its four series and a typed refusal
+ * from the retained-source lane, so every claim below is about what the screen
+ * does with facts it was actually given: it reads only what the open tab
+ * draws, it keeps one cursor across seven tabs, and it names each absence for
+ * what it is.
+ */
+/*
+ * The retained-source lane answers this fixture run with a typed 404, which
+ * Chrome logs at error level before any application code sees it. That one
+ * line is the refusal working, so it is named here rather than silenced: any
+ * other console output still fails the test.
+ */
+const PASSPORT_404 = "error: Failed to load resource: the server responded with a status of 404 (Not Found)";
+
+function withoutPassportRefusal(noise: string[]): string[] {
+  return noise.filter((line) => line !== PASSPORT_404);
+}
+
+const EVIDENCE = "/research/quantbt/runs/R-WFO-118/evidence";
+
+for (const [name, width, height] of [
+  ["laptop", 1280, 1000],
+  ["mobile", 660, 1000],
+] as const) {
+  test(`S04 Evidence hub renders every block on its product route at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width, height });
+    await page.goto(EVIDENCE);
+    await settle(page);
+
+    await expect(page.locator("[data-screen='evidence-flow']")).toBeVisible();
+    await expect(page.locator("[data-claim-strip]")).toHaveAttribute("data-claim-strip", "ISSUED");
+    await expect(page.locator("[data-run-id]")).toHaveText("R-WFO-118");
+    await expect(page.locator("[data-revision]")).toContainText("rev_7");
+
+    // Seven tabs, one selected, one panel.
+    await expect(page.locator("[role='tab']")).toHaveCount(7);
+    await expect(page.locator("[aria-selected='true']")).toHaveCount(1);
+    await expect(page.locator("[data-panel='summary']")).toBeVisible();
+    await expect(page.locator("[data-cursor-bar]")).toBeVisible();
+
+    // Eight registry metrics, and the two the source withheld say so.
+    await expect(page.locator("[data-metric]")).toHaveCount(8);
+    await expect(page.locator("[data-metric-value='FINAL_EQUITY']")).toHaveText("128400.00");
+    await expect(page.locator("[data-metric='BENCHMARK_RETURN_FRACTION']")).toContainText("not published");
+    await expect(page.locator("[data-metric='FUNDING_TOTAL']")).toContainText("not applicable");
+
+    // The charts the Hub published, drawn; the one it did not, named.
+    await expect(page.locator("[data-series-panel='EQUITY_OOS']")).toHaveAttribute("data-series-state", "ready");
+    // Equity and its underwater restatement: two panes, one response.
+    await expect(page.locator("[data-chart='equity'] canvas")).toHaveCount(2);
+    await expect(page.locator("[data-series-panel='RETURN_DISTRIBUTION']")).toContainText("not applicable");
+
+    // One shell: the Portal's.
+    await expect(page.locator(".portal-shell")).toHaveCount(1);
+    await expect(page.locator("[data-screen='evidence-flow'] nav")).toHaveCount(0);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+
+    await page.screenshot({ path: `${OUT}/s04-evidence-${name}.png`, fullPage: true });
+    expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+  });
+}
+
+test("S04 reads only the series the open tab draws", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+
+  const reads: string[] = [];
+  page.on("request", (request) => {
+    const url = request.url();
+    if (url.includes("/evidence")) reads.push(url.replace(/^https?:\/\/[^/]+/, ""));
+  });
+
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(EVIDENCE);
+  await settle(page);
+
+  // The Hub, and the three series the summary tab draws. The distribution is
+  // NOT_APPLICABLE, so it is never asked for: the only possible answer is no.
+  await expect.poll(() => reads.filter((u) => u.includes("kind=")).length).toBe(3);
+  expect(reads.some((u) => u.includes("kind=RETURN_DISTRIBUTION"))).toBe(false);
+  expect(reads.filter((u) => u === "/api/v1/quantbt/runs/R-WFO-118/evidence").length).toBe(1);
+  // One passport read, and it is a different operation on a different path.
+  expect(reads.filter((u) => u.includes("/current-source/evidence")).length).toBe(1);
+
+  // A tab that draws no series costs no request.
+  const before = reads.length;
+  await page.locator("[data-tab='claim']").click();
+  await settle(page);
+  await expect(page.locator("[data-panel='claim']")).toBeVisible();
+  expect(reads.length, "a claim tab asked for a series").toBe(before);
+
+  // Coming back does not re-read what is already in hand.
+  await page.locator("[data-tab='summary']").click();
+  await settle(page);
+  expect(reads.length).toBe(before);
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+});
+
+test("S04 keeps one cursor across seven tabs and replaces rather than pushes", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(`${EVIDENCE}#stage=execute&fold=4&trial=143&params=prm_7c1a9e`);
+  await settle(page);
+
+  // A deep link lands where it says.
+  await expect(page.locator("[data-panel='execute']")).toBeVisible();
+  await expect(page.locator("[data-cursor-fold]")).toContainText("fold 4");
+  await expect(page.locator("[data-cursor-trial]")).toContainText("#143");
+
+  const entries = await page.evaluate(() => history.length);
+  await page.locator("[data-tab='search']").click();
+  await settle(page);
+
+  // The stage moved; nothing else did; and no history entry was spent on it.
+  await expect(page).toHaveURL(/stage=search/);
+  await expect(page).toHaveURL(/fold=4/);
+  await expect(page).toHaveURL(/params=prm_7c1a9e/);
+  await expect(page.locator("[data-carried-cursor]")).toContainText("fold=4");
+  expect(await page.evaluate(() => history.length)).toBe(entries);
+
+  // A hard refresh restores the same question from the URL alone.
+  await page.reload();
+  await settle(page);
+  await expect(page.locator("[data-panel='search']")).toBeVisible();
+  await expect(page.locator("[data-cursor-fold]")).toContainText("fold 4");
+});
+
+test("S04 says what it was never given, in the words of the state it is in", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(EVIDENCE);
+  await settle(page);
+
+  // The retained-source lane refused this profile: the panel states it and the
+  // rest of the hub is untouched.
+  await expect(page.locator("[data-passport='refused']")).toBeVisible();
+  await expect(page.locator("[data-passport-refusal]")).toContainText("does not admit");
+  await expect(page.locator("[data-metrics]")).toBeVisible();
+
+  // Panels the contract does not fill keep their frame and their reason.
+  await expect(page.locator("[data-gap='per-fold-verdict']")).toBeVisible();
+  await expect(page.locator("[data-gap='behavior-tiles']")).toBeVisible();
+
+  await page.locator("[data-tab='claim']").click();
+  await settle(page);
+  await expect(page.locator("[data-gap='cert-chain']")).toBeVisible();
+  await expect(page.locator("[data-gap='artifact-manifest']")).toBeVisible();
+  // The Hub's own declared absences are listed, each with its reason.
+  await expect(page.locator("[data-absence]")).toHaveCount(3);
+  await expect(page.locator("[data-absence='benchmark'] [data-withheld]")).toHaveAttribute(
+    "data-withheld",
+    "NOT_PUBLISHED",
+  );
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+});
+
+test("S04 opens the dataset drawer, traps focus and gives it back", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(EVIDENCE);
+  await settle(page);
+
+  await page.locator("[data-action='dataset-drawer']").click();
+  const drawer = page.locator("[data-drawer='dataset']");
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toHaveAttribute("aria-modal", "true");
+  await expect(drawer.locator("[data-drawer-row='manifest digest']")).toContainText("sha256:c25a1d77b0e4");
+  // The drawer states what it was not given instead of drawing a coverage bar.
+  await expect(drawer.locator("[data-gap='dataset-coverage']")).toBeVisible();
+
+  // Focus is inside the drawer, not behind it.
+  expect(await page.evaluate(() => document.activeElement?.closest("[data-drawer]") !== null)).toBe(true);
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).toHaveCount(0);
+});
+
+test("S04 is operable by keyboard and every control is named", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(EVIDENCE);
+  await settle(page);
+
+  await page.locator("[data-tab='summary']").focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator("[data-panel='split']")).toBeVisible();
+  await page.keyboard.press("End");
+  await expect(page.locator("[data-panel='atlas']")).toBeVisible();
+  await page.keyboard.press("Home");
+  await expect(page.locator("[data-panel='summary']")).toBeVisible();
+
+  const unnamed = await page.evaluate(() => {
+    const root = document.querySelector("[data-screen='evidence-flow']");
+    if (!root) return ["no screen"];
+    return [...root.querySelectorAll("button, a")]
+      .filter((el) => {
+        const label =
+          el.getAttribute("aria-label") ?? el.getAttribute("title") ?? (el.textContent ?? "").trim();
+        return label.length === 0;
+      })
+      .map((el) => el.outerHTML.slice(0, 120));
+  });
+  expect(unnamed, unnamed.join("\n")).toEqual([]);
+});
+
+test("S04 discards a chart answered at another revision", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+
+  // The equity series answers at a stale revision, every time. The screen must
+  // discard it, reread the hub, try once more and then say so — not spin.
+  let equityReads = 0;
+  await page.route("**/api/v1/quantbt/runs/*/evidence/series*", async (route) => {
+    const kind = new URL(route.request().url()).searchParams.get("kind");
+    if (kind !== "EQUITY_OOS") return route.fallback();
+    equityReads += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        schema_version: "research.evidence-series.v1",
+        run_id: "R-WFO-118",
+        revision: "rev_6",
+        etag: '"rev_6"',
+        kind: "EQUITY_OOS",
+        availability: { state: "AVAILABLE", reason_code: null },
+        source_sample: { source_observation_count: 2190, emitted_point_count: 1, sampling: "FULL" },
+        values: [{ at_utc_ms: 1704067200000, equity: "100000.00", drawdown_fraction: "0.000" }],
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(EVIDENCE);
+  await settle(page);
+
+  await expect(page.locator("[data-series-panel='EQUITY_OOS']")).toHaveAttribute(
+    "data-series-state",
+    "revision-mismatch",
+  );
+  await expect(page.locator("[data-series-mismatch]")).toContainText("discarded");
+  // Exactly one retry, then it stops.
+  expect(equityReads, "retried a mismatch in a loop").toBe(2);
+  // The chart is gone; the metrics it does not belong to are not.
+  await expect(page.locator("[data-chart='equity']")).toHaveCount(0);
+  await expect(page.locator("[data-metric-value='FINAL_EQUITY']")).toHaveText("128400.00");
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+});
+
+test("S01's open evidence link reaches S04", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  await page.locator("[data-run='R-WFO-118'] [data-open-evidence]").click();
+  await settle(page);
+  await expect(page.locator("[data-screen='evidence-flow']")).toBeVisible();
+  await expect(page).toHaveURL(/\/runs\/R-WFO-118\/evidence#stage=summary&fold=1/);
 });
