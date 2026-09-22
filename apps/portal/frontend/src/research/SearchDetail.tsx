@@ -412,6 +412,14 @@ export function SearchScreen({
         >
           ← S1 Split
         </Link>
+        <Link
+          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/freeze`, cursor)}
+          className="mono"
+          style={{ color: "var(--accent)" }}
+          data-action="next-stage"
+        >
+          S3 · Freeze →
+        </Link>
       </nav>
 
       <div className="flex flex-col gap-1">

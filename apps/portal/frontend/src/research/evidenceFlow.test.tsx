@@ -603,9 +603,11 @@ describe("P13-T05 — seven tabs over one cursor", () => {
   it("carries the cursor into a deep dive it cannot yet open", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "search", fold: 4 } });
     expect(container.querySelector("[data-carried-cursor]")?.textContent).toContain("fold=4");
-    // Screen 06 has no route: the affordance is refused, never a dead link.
-    expect(container.querySelector("[data-deep-dive='search']")).toBeTruthy();
-    expect(container.querySelector("a[data-deep-dive]")).toBeNull();
+    // P15 opened Screen 06, so this is a link that carries the cursor.
+    const dive = container.querySelector("[data-deep-dive='search']");
+    expect(dive?.tagName).toBe("A");
+    expect(dive?.getAttribute("href")).toContain("/runs/R-WFO-118/search#");
+    expect(dive?.getAttribute("href")).toContain("fold=4");
   });
 });
 
@@ -754,6 +756,29 @@ describe("P13-T09 — the header is the Hub's own, fact by fact", () => {
     expect(container.querySelector("[data-run-header]")).toBeTruthy();
     expect(container.querySelector("[data-run-id]")?.textContent).toBe("R-WFO-118");
     expect(container.querySelector("[data-run-identity]")).toBeNull();
+  });
+});
+
+describe("P13-T11 — a deep dive is a link once its screen exists", () => {
+  it("still refuses the one screen that has no route", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "execute" } });
+    const dive = container.querySelector("[data-deep-dive='execute']");
+    expect(dive?.tagName).toBe("SPAN");
+    expect(dive?.getAttribute("title")).toContain("no published route yet");
+  });
+
+  it("links the three that do", () => {
+    for (const [stage, path] of [
+      ["split", "split"],
+      ["search", "search"],
+      ["freeze", "freeze"],
+    ] as const) {
+      const { container, unmount } = view({ cursor: { ...DEFAULT_CURSOR, stage } });
+      const dive = container.querySelector(`[data-deep-dive='${stage}']`);
+      expect(dive?.tagName, stage).toBe("A");
+      expect(dive?.getAttribute("href"), stage).toContain(`/runs/R-WFO-118/${path}#`);
+      unmount();
+    }
   });
 });
 

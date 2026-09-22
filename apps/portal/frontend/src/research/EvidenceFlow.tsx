@@ -71,11 +71,17 @@ const STAGE_LABEL: Record<EvidenceStage, string> = {
   atlas: "Atlas",
 };
 
-/** Where each stage tab's deep dive lives, and whether that screen exists yet. */
+/**
+ * Where each stage tab's deep dive lives, and whether that screen exists yet.
+ *
+ * P14, P15 and P16 opened three of these, so they are links now. A panel that
+ * still said "no published route" for a screen that exists would be exactly
+ * the stale absence the re-read rule was written for.
+ */
 const DEEP_DIVE: Partial<Record<EvidenceStage, { screen: string; path: string | null }>> = {
-  split: { screen: "05 Split", path: null },
-  search: { screen: "06 Search", path: null },
-  freeze: { screen: "07 Freeze", path: null },
+  split: { screen: "05 Split", path: "split" },
+  search: { screen: "06 Search", path: "search" },
+  freeze: { screen: "07 Freeze", path: "freeze" },
   execute: { screen: "08 Execute", path: null },
 };
 
@@ -1376,7 +1382,17 @@ function SummaryTab({
   );
 }
 
-function StagePreviewTab({ stage, cursor, hub }: { stage: EvidenceStage; cursor: EvidenceCursor; hub: EvidenceHub }) {
+function StagePreviewTab({
+  stage,
+  cursor,
+  hub,
+  runId,
+}: {
+  stage: EvidenceStage;
+  cursor: EvidenceCursor;
+  hub: EvidenceHub;
+  runId: string;
+}) {
   const dive = DEEP_DIVE[stage];
   const key = { split: "S1", search: "S2", freeze: "S3", execute: "S4" }[stage as "split" | "search" | "freeze" | "execute"];
   const row = hub.stages.find((entry) => entry.key === key);
@@ -1414,7 +1430,16 @@ function StagePreviewTab({ stage, cursor, hub }: { stage: EvidenceStage; cursor:
         reason={`the Evidence contract publishes this stage's timeline, not its content. Fold boundaries, the search surface, the digest chain and the route contract are each a separate named read this screen does not perform.`}
       />
 
-      {dive ? (
+      {dive && dive.path !== null ? (
+        <Link
+          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/${dive.path}`, cursor)}
+          data-deep-dive={stage}
+          className="mono self-start rounded-[6px] border px-3 py-1 text-[10px] uppercase"
+          style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+        >
+          open deep dive → {dive.screen}
+        </Link>
+      ) : dive ? (
         <span
           data-deep-dive={stage}
           title={`Screen ${dive.screen} has no published route yet, so this link would go nowhere.`}
@@ -1662,7 +1687,7 @@ export function EvidenceFlow({
             ) : cursor.stage === "atlas" ? (
               <AtlasTab />
             ) : (
-              <StagePreviewTab stage={cursor.stage} cursor={cursor} hub={hub} />
+              <StagePreviewTab stage={cursor.stage} cursor={cursor} hub={hub} runId={runId} />
             )}
           </div>
         ) : null}

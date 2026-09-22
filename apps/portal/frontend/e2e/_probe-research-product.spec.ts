@@ -1693,3 +1693,35 @@ test("S07 keeps the retained custody refusal inside its panel", async ({ page })
   await expect(page.locator("[data-integrity='PARTIAL']")).toBeVisible();
   await expect(page.locator("[data-panel='frozen-parameters']")).toBeVisible();
 });
+
+test("the evidence chain walks 04 → 05 → 06 → 07 and back, carrying one cursor", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+
+  // Start at the hub on a published fold, then walk out through each stage.
+  await page.goto(`${EVIDENCE}#stage=split&fold=3`);
+  await settle(page);
+  await page.locator("[data-deep-dive='split']").click();
+  await settle(page);
+  await expect(page.locator("[data-screen='split-detail']")).toBeVisible();
+  await expect(page).toHaveURL(/fold=3/);
+
+  await page.locator("[data-action='next-stage']").click();
+  await settle(page);
+  await expect(page.locator("[data-screen='search-detail']")).toBeVisible();
+  await expect(page).toHaveURL(/fold=3/);
+
+  await page.locator("[data-action='next-stage']").click();
+  await settle(page);
+  await expect(page.locator("[data-screen='freeze-detail']")).toBeVisible();
+  await expect(page).toHaveURL(/fold=3/);
+
+  // And the way back lands on the hub with the same fold selected.
+  await page.locator("[data-action='back-to-hub']").click();
+  await settle(page);
+  await expect(page.locator("[data-screen='evidence-flow']")).toBeVisible();
+  await expect(page.locator("[data-cursor-fold]")).toContainText("fold 3");
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+});

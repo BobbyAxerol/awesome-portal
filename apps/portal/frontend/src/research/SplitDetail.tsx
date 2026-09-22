@@ -596,6 +596,16 @@ export function SplitScreen({
         <span className="mono" style={{ color: "var(--ink-faint)" }}>
           Stage 1 · Split
         </span>
+        <span style={{ color: "var(--line-strong)" }}>·</span>
+        {/* The next stage, carrying this cursor — spec 05 §1 outbound. */}
+        <Link
+          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/search`, cursor)}
+          className="mono"
+          style={{ color: "var(--accent)" }}
+          data-action="next-stage"
+        >
+          S2 · Search →
+        </Link>
       </nav>
 
       <div className="flex flex-col gap-1">
