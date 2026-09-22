@@ -262,6 +262,28 @@ export async function stubPortalApi(
   });
 
   /*
+   * P14 · the split detail, and the retained-source fold read it may ask for.
+   *
+   * This fixture run is the fixed P04 profile, so the current-source split
+   * refuses it — the case Screen 05 must keep inside its fold panel.
+   */
+  await page.route("**/api/v1/quantbt/runs/*/split*", (route) =>
+    void json(route, local("split-detail.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/current-source/split*", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED",
+          message: "This run was produced by the fixed P04 profile, which the retained-source lane does not admit.",
+        },
+      }),
+    }),
+  );
+
+  /*
    * P13 · the Evidence Flow hub and its lazy series.
    *
    * The series handler answers per `kind`, so a probe can assert that a tab

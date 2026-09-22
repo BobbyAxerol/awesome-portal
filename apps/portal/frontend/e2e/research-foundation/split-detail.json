@@ -1,0 +1,189 @@
+{
+  "schema_version": "research.split-detail.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "R-WFO-118",
+  "revision": "p14r1_55aa10",
+  "etag": "\"p14r1_55aa10\"",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "readiness": "COMPLETE",
+  "as_of_utc_ms": 1781827200000,
+  "provenance": {
+    "source_adapter_id": "p04.delta-rsi.v1",
+    "engine_version": "1.1.1",
+    "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
+    "source_transform_digest": "sha256:9f2c18d4aa71",
+    "requested_spec_digest": "sha256:88ae0231bc44",
+    "effective_spec_digest": "sha256:88ae0231bc44",
+    "dataset_binding_digest": "sha256:5b31c7d90e12",
+    "manifest_digest": "sha256:c25a1d77b0e4"
+  },
+  "timeline": {
+    "start_utc_ms": 1704067200000,
+    "end_exclusive_utc_ms": 1773187200000
+  },
+  "protocol": {
+    "kind": "THREE_WINDOW_CURRENT",
+    "selection": {
+      "state": "FIXED_PROFILE_NO_SEARCH",
+      "parameter_bundle_digest": "sha256:bundle0142ab",
+      "strict_outer_oos": {
+        "state": "NOT_ASSERTED",
+        "reason_code": "P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR"
+        }
+      }
+    },
+    "fold_plan": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_FOLD_PLAN",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_FOLD_PLAN"
+      }
+    },
+    "inner_folds": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_INNER_FOLDS",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_INNER_FOLDS"
+      }
+    },
+    "purge": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_PURGE",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_PURGE"
+      }
+    },
+    "embargo": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_EMBARGO",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_EMBARGO"
+      }
+    },
+    "theta_per_fold": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_THETA_PER_FOLD",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_THETA_PER_FOLD"
+      }
+    },
+    "gap_scan": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P08_PUBLISHES_NO_GAP_SCAN",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P08_PUBLISHES_NO_GAP_SCAN"
+      }
+    }
+  },
+  "windows": {
+    "warmup": {
+      "state": "AVAILABLE",
+      "start_utc_ms": 1704067200000,
+      "end_exclusive_utc_ms": 1704153600000,
+      "bars": 6,
+      "data_role": "WARMUP_NOT_SCORED",
+      "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "is": {
+      "start_utc_ms": 1704153600000,
+      "end_exclusive_utc_ms": 1747267200000,
+      "bars": 2994,
+      "data_role": "IS_CALIBRATION_HISTORY",
+      "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "outer_oos": {
+      "start_utc_ms": 1747267200000,
+      "end_exclusive_utc_ms": 1764547200000,
+      "bars": 1200,
+      "data_role": "OUTER_OOS_OBSERVATION",
+      "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+      "evaluation_state": "P04_OBSERVED_AFTER_FIXED_PROFILE",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "holdout": {
+      "start_utc_ms": 1764547200000,
+      "end_exclusive_utc_ms": 1773187200000,
+      "bars": null,
+      "data_role": "HOLDOUT",
+      "child_input_state": "NOT_EXPOSED_TO_CHILD_TAPE",
+      "evaluation_state": "NOT_EVALUATED",
+      "result_exposure_state": "NOT_EXPOSED",
+      "snapshot_integrity_state": "P08_METADATA_BOUND",
+      "physical_io": {
+        "state": "NOT_ATTESTED",
+        "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED"
+      },
+      "source_seal": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P08_PUBLISHES_NO_SEAL_RECORD",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P08_PUBLISHES_NO_SEAL_RECORD"
+        }
+      },
+      "unlock": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P14_PUBLISHES_NO_UNLOCK_RECORD",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P14_PUBLISHES_NO_UNLOCK_RECORD"
+        }
+      },
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    }
+  },
+  "actions": {
+    "holdout_unlock": {
+      "state": "NOT_PUBLISHED",
+      "href": null,
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P14_PUBLISHES_NO_UNLOCK_ACTION"
+      }
+    }
+  },
+  "source_absences": {
+    "physical_holdout_io": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED"
+      }
+    },
+    "gap_scan": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P08_PUBLISHES_NO_GAP_SCAN",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P08_PUBLISHES_NO_GAP_SCAN"
+      }
+    }
+  }
+}

@@ -1298,3 +1298,144 @@ test("S01's open evidence link reaches S04", async ({ page }) => {
   await expect(page.locator("[data-screen='evidence-flow']")).toBeVisible();
   await expect(page).toHaveURL(/\/runs\/R-WFO-118\/evidence#stage=summary&fold=1/);
 });
+
+/* ------------------------------------------------------------------ P14 */
+
+/*
+ * S05 Split on `/research/quantbt/runs/:runId/split`.
+ *
+ * The fixture publishes the three windows plus a metadata-bound holdout, and
+ * refuses the retained-source fold read — so the browser can be asked the two
+ * questions that matter here: is every published boundary drawn from the
+ * server's own timestamps, and does the screen ever describe the holdout as
+ * something it is not.
+ */
+const SPLIT = "/research/quantbt/runs/R-WFO-118/split";
+
+for (const [name, width, height] of [
+  ["laptop", 1280, 1000],
+  ["mobile", 660, 1000],
+] as const) {
+  test(`S05 Split renders every block on its product route at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width, height });
+    await page.goto(SPLIT);
+    await settle(page);
+
+    await expect(page.locator("[data-screen='split-detail']")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "S1 · Split — how the data was cut" })).toBeVisible();
+    await expect(page.locator("[data-subtitle]")).toContainText("nothing on this screen can read the sealed holdout");
+    await expect(page.locator("[data-protocol-strip]")).toBeVisible();
+
+    // Three windows and the holdout, each from its own published span.
+    await expect(page.locator("[data-window='warmup']")).toHaveCount(1);
+    await expect(page.locator("[data-window='is']")).toHaveCount(1);
+    await expect(page.locator("[data-window='outer_oos']")).toHaveCount(1);
+    await expect(page.locator("[data-window='holdout']")).toHaveCount(1);
+    await expect(page.locator("[data-window-legend='is']")).toContainText("2994 bars");
+
+    // Every protocol fact the source withheld keeps its row.
+    await expect(page.locator("[data-protocol-absences] [data-absent]")).toHaveCount(6);
+    await expect(page.locator("[data-rules-footer]")).toContainText("it never recomputes a date");
+
+    await expect(page.locator(".portal-shell")).toHaveCount(1);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+
+    await page.screenshot({ path: `${OUT}/s05-split-${name}.png`, fullPage: true });
+    expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+  });
+}
+
+test("S05 draws each window where the server put it", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(SPLIT);
+  await settle(page);
+
+  // The windows are laid out in published order and do not overlap: IS ends
+  // where outer OOS begins, which ends where the holdout begins.
+  const geometry = await page.evaluate(() =>
+    ["warmup", "is", "outer_oos", "holdout"].map((key) => {
+      const node = document.querySelector(`[data-window='${key}']`) as HTMLElement | null;
+      return node ? { key, left: parseFloat(node.style.left), width: parseFloat(node.style.width) } : null;
+    }),
+  );
+  const [warmup, is, oos, holdout] = geometry as { key: string; left: number; width: number }[];
+  expect(warmup.left).toBe(0);
+  expect(is.left).toBeGreaterThan(warmup.left);
+  expect(Math.abs(is.left + is.width - oos.left)).toBeLessThan(0.5);
+  expect(Math.abs(oos.left + oos.width - holdout.left)).toBeLessThan(0.5);
+
+  // The one-day warmup against an eight-hundred-day axis is sub-pixel: it is
+  // floored to a hairline and marked, never dropped.
+  expect(warmup.width).toBeGreaterThan(0);
+  await expect(page.locator("[data-hairline-badge='warmup']")).toBeVisible();
+});
+
+test("S05 describes the holdout and offers no way into it", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+
+  // Anything the screen asks for is recorded: nothing may ask for holdout
+  // content, an unlock, or an evaluation.
+  const asked: string[] = [];
+  page.on("request", (request) => asked.push(request.url()));
+
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(SPLIT);
+  await settle(page);
+
+  await expect(page.locator("[data-holdout-integrity='P08_METADATA_BOUND']")).toBeVisible();
+  await expect(page.locator("[data-holdout-evaluation='NOT_EVALUATED']")).toBeVisible();
+  await expect(page.locator("[data-holdout]")).not.toContainText("SEALED");
+  await expect(page.locator("[data-action-unlock]")).toHaveAttribute("data-action-unlock", "NOT_PUBLISHED");
+  await expect(page.locator("button[data-action-unlock], a[data-action-unlock]")).toHaveCount(0);
+
+  // Clicking the refused affordance cannot start anything.
+  const before = asked.length;
+  await page.locator("[data-action-unlock]").click();
+  await settle(page);
+  expect(asked.length).toBe(before);
+  expect(asked.some((url) => /unlock|holdout|evaluate/i.test(url))).toBe(false);
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+});
+
+test("S05 keeps a fold refusal inside the fold panel", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(SPLIT);
+  await settle(page);
+
+  await expect(page.locator("[data-fold-anatomy='refused']")).toBeVisible();
+  await expect(page.locator("[data-fold-refusal]")).toContainText("does not admit");
+  // The rest of the screen is a screen.
+  await expect(page.locator("[data-window-anatomy]")).toBeVisible();
+  await expect(page.locator("[data-holdout]")).toBeVisible();
+  await expect(page.locator("[data-gap='inner-folds']")).toBeVisible();
+});
+
+test("S05 carries the cursor back to the hub and reads it from the hash", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(`${SPLIT}#stage=split&fold=4&params=prm_7c1a9e`);
+  await settle(page);
+
+  const back = page.locator("[data-action='back-to-hub']");
+  await expect(back).toHaveAttribute("href", /\/runs\/R-WFO-118\/evidence#/);
+  await expect(back).toHaveAttribute("href", /fold=4/);
+  await expect(back).toHaveAttribute("href", /params=prm_7c1a9e/);
+
+  await back.click();
+  await settle(page);
+  await expect(page.locator("[data-screen='evidence-flow']")).toBeVisible();
+  await expect(page.locator("[data-cursor-fold]")).toContainText("fold 4");
+});
