@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 168,
+ "route_count": 172,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1642,6 +1642,46 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P17 bounded same-origin route-aware replay reader consumes only the immutable P13 OOS equity sample receipt under session/workspace scope. Its signed opaque cursors bind workspace/run/revision and select retrospective equity samples only; it never starts QuantBT, reads source/worker/artifact/Parquet paths, exposes custody values or cursor inputs, synthesizes order/fill/trade/position/candle history, or creates a command channel. Claude owns the Screen 08 typed consumer and browser/HiFi receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/report",
+   "controller": "research/report.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P18 session/workspace-scoped immutable Report reader returns a Portal-sealed P13--P17 fixed-profile core plus a separate mutable annotation source. It never reruns QuantBT, reads an artifact/source path, exposes an opaque replay cursor or treats an annotation as frozen proof; Claude owns Screen 09 print/browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/report/exports",
+   "controller": "research/report.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P18 same-origin CSRF/origin-protected request creates at most one caller-owned bounded JSON/CSV transform job for a sealed report revision. It never starts a QuantBT run, modifies business evidence, opens a source/archive path or accepts a browser filename.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/report/exports/:jobId",
+   "controller": "research/report.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P18 caller-owned export status is workspace- and user-bound. It exposes no worker lease, source path, raw artifact metadata or bytes before READY; foreign job IDs are indistinguishable from absent ones.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/report/exports/:jobId/download",
+   "controller": "research/report.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P18 authenticated bounded download reads only a caller-owned READY row after SHA-256 verification. Server-derived JSON/CSV attachment names, private no-store headers and a 512 KiB hard limit prevent path/CSV/scratch-disk exposure; it has no command or compute effect.",
    "owner": "codex",
    "test_owner": "codex"
   },

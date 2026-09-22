@@ -145,6 +145,9 @@ import { ResearchReplayService } from "./research/replay.service";
 import { ResearchCurrentSourceController } from "./research/current-source.controller";
 import { ResearchCurrentSourceRepository } from "./research/current-source.repository";
 import { ResearchCurrentSourceService } from "./research/current-source.service";
+import { ResearchReportController } from "./research/report.controller";
+import { ResearchReportRepository } from "./research/report.repository";
+import { ResearchReportService } from "./research/report.service";
 
 @Module({})
 export class AppModule {
@@ -205,6 +208,7 @@ export class AppModule {
         ResearchFreezeController,
         ResearchReplayController,
         ResearchCurrentSourceController,
+        ResearchReportController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -278,6 +282,8 @@ export class AppModule {
         // separately accepted dev slice supplies sealed current-engine rows.
         ResearchCurrentSourceRepository,
         ResearchCurrentSourceService,
+        ResearchReportRepository,
+        ResearchReportService,
         ResearchFoundationAtlasClient,
         ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to

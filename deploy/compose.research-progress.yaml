@@ -22,6 +22,14 @@ services:
       # a source/worker/diagnostic path or reads source artifact bytes.
       FEATURE_RESEARCH_FREEZE: ${CONTROL_API_FEATURE_RESEARCH_FREEZE:-false}
       FEATURE_RESEARCH_REPLAY: ${CONTROL_API_FEATURE_RESEARCH_REPLAY:-false}
+      # P18 is a Portal-local immutable report/export projection. This flag
+      # only admits the reader and terminal-sidecar assembly; it never starts
+      # the explicit export worker, QuantBT, an artifact reader or a source
+      # connection. Keep dark until the generated Screen-09 consumer and
+      # browser/print evidence are accepted.
+      FEATURE_RESEARCH_REPORTS: ${CONTROL_API_FEATURE_RESEARCH_REPORTS:-false}
+      RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES: ${CONTROL_API_RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES:-524288}
+      RESEARCH_REPORT_EXPORT_LEASE_SECONDS: ${CONTROL_API_RESEARCH_REPORT_EXPORT_LEASE_SECONDS:-90}
       RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: ${CONTROL_API_RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS:-1500}
 
   # The worker owns source journalling and the private, at-least-once callback.

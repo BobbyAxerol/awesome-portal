@@ -179,6 +179,22 @@ describe("P17 route-aware Replay activation guard", () => {
   });
 });
 
+describe("P18 Report / reproducible export activation guard", () => {
+  it("stays dark by default and requires every sealed P13--P17 reader before its report surface can be admitted", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_REPORTS).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_REPORTS: "true",
+    })).toThrow(/FEATURE_RESEARCH_REPORTS=true requires/);
+    const config = loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_EVIDENCE: "true", FEATURE_RESEARCH_SPLIT: "true",
+      FEATURE_RESEARCH_SEARCH: "true", FEATURE_RESEARCH_FREEZE: "true",
+      FEATURE_RESEARCH_REPLAY: "true", FEATURE_RESEARCH_REPORTS: "true",
+    });
+    expect(config.RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES).toBe(512 * 1024);
+    expect(config.RESEARCH_REPORT_EXPORT_LEASE_SECONDS).toBe(90);
+  });
+});
+
 describe("Execution realtime feature dependencies", () => {
   const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
     ...baseEnv(),

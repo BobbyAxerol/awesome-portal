@@ -12,7 +12,8 @@
     "bootstrap": "node dist/cli/bootstrap.js",
     "probe:d3-assertions": "node dist/cli/execution-d3-assertions.js",
     "sweep:shared-read-cache": "node dist/cli/execution-shared-read-cache-sweep.js",
-    "reseed:durable-mirror": "node dist/cli/execution-durable-mirror-reseed.js"
+    "reseed:durable-mirror": "node dist/cli/execution-durable-mirror-reseed.js",
+    "worker:research-report-export": "node dist/cli/research-report-export-worker.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",

@@ -114,6 +114,14 @@ const EnvSchema = z.object({
   // bounded importer, generated client and Screen 04--08 acceptance land as
   // one reviewed dev slice.
   FEATURE_RESEARCH_CURRENT_SOURCE: z.enum(["true", "false"]).default("false"),
+  // P18 is a persisted Report/Export projection.  It is independently dark
+  // until the source readers, the additive migration and the generated
+  // consumer contract are accepted together.  Enabling it never starts
+  // QuantBT, a renderer daemon, a source adapter or an export worker: the
+  // one-shot bounded worker is invoked explicitly by deployment automation.
+  FEATURE_RESEARCH_REPORTS: z.enum(["true", "false"]).default("false"),
+  RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(512 * 1024),
+  RESEARCH_REPORT_EXPORT_LEASE_SECONDS: z.coerce.number().int().min(15).max(300).default(90),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -426,6 +434,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.FEATURE_RESEARCH_REPLAY === "true" && config.FEATURE_RESEARCH_EVIDENCE !== "true") {
     throw new Error("FEATURE_RESEARCH_REPLAY=true requires FEATURE_RESEARCH_EVIDENCE=true");
+  }
+  if (config.FEATURE_RESEARCH_REPORTS === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_EVIDENCE", config.FEATURE_RESEARCH_EVIDENCE],
+      ["FEATURE_RESEARCH_SPLIT", config.FEATURE_RESEARCH_SPLIT],
+      ["FEATURE_RESEARCH_SEARCH", config.FEATURE_RESEARCH_SEARCH],
+      ["FEATURE_RESEARCH_FREEZE", config.FEATURE_RESEARCH_FREEZE],
+      ["FEATURE_RESEARCH_REPLAY", config.FEATURE_RESEARCH_REPLAY],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_REPORTS=true requires: ${missing.join(", ")}`);
+    }
   }
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
     throw new Error(

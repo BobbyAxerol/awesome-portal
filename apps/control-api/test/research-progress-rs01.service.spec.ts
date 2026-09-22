@@ -50,12 +50,16 @@ function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<strin
       : vi.fn().mockResolvedValue(undefined),
   };
   const split = { ingest: vi.fn().mockResolvedValue(undefined) };
+  // P18 is dark in these RS-01 recovery cases. Keeping the sidecar explicit
+  // proves Progress does not construct/export a report unless its own feature
+  // is admitted in the deployment config.
+  const reports = { materializeTerminal: vi.fn().mockResolvedValue(false) };
   const service = new ResearchProgressService(
     progress as never, metadata as never, fanout as never, {} as never,
-    evidence as never, split as never,
+    evidence as never, split as never, reports as never,
     { FEATURE_RESEARCH_PROGRESS: "true", RESEARCH_RUN_PRODUCER_LEASE_SECONDS: 60 } as never,
   );
-  return { service, progress, metadata, fanout, evidence, split };
+  return { service, progress, metadata, fanout, evidence, split, reports };
 }
 
 describe("RS-01 terminal materialization and retry recovery", () => {

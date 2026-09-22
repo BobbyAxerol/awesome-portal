@@ -21,6 +21,7 @@ import { ResearchProgressRepository, type ProgressIngressScope, type ProgressRun
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchEvidenceService } from "./evidence.service";
 import { ResearchSplitService } from "./split.service";
+import { ResearchReportService } from "./report.service";
 
 const ACTIVE_JOB_STATES = new Set(["QUEUED", "CLAIMED", "RUNNING"]);
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
@@ -81,6 +82,7 @@ export class ResearchProgressService {
     private readonly portal: ResearchProgressPortalClient,
     private readonly evidence: ResearchEvidenceService,
     private readonly split: ResearchSplitService,
+    private readonly reports: ResearchReportService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
@@ -96,6 +98,11 @@ export class ResearchProgressService {
     // Its reader has a separate feature flag; persisting a verified source
     // receipt does not activate a browser route or any holdout operation.
     await this.split.ingest(ingressScope, input);
+    // P18 is an optional terminal sidecar over the already persisted P13--17
+    // projections. It is never an engine/export trigger: a duplicate sealed
+    // completion callback is the only recovery path if report assembly needs
+    // retrying after a transient local failure.
+    await this.reports.materializeTerminal(ingressScope, input);
     await this.applyLifecycle(ingressScope, input);
     const isTerminal = input.event.event_type === "run_completed" || input.event.event_type === "run_failed";
     if (isTerminal) await this.progress.markTerminalMaterialized(ingressScope, input);

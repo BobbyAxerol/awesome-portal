@@ -19,6 +19,11 @@ export const TEST_TABLES = [
   // before its source rows; a reused test run ID must never inherit an old
   // display-safe search document.
   "research.run_library_search_documents",
+  // P18 report manifests are immutable dependants of a run; annotations and
+  // bounded export jobs must be reset explicitly in disposable test cells.
+  "research.run_report_export_jobs_v1",
+  "research.run_report_annotations_v1",
+  "research.run_report_manifests_v1",
   // P13 source/projection/series use explicit immutable foreign-key order.
   // Keep them visible in test cleanup: a future reader must not inherit an
   // evidence revision merely because PostgreSQL happened to CASCADE it.
@@ -271,11 +276,24 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('research.run_progress_events') IS NOT NULL AS has_research_progress_events,
          to_regclass('research.run_progress_snapshots') IS NOT NULL AS has_research_progress_snapshots,
          to_regclass('research.run_terminal_materializations_v1') IS NOT NULL AS has_research_terminal_materializations,
+         to_regclass('research.run_report_manifests_v1') IS NOT NULL AS has_research_report_manifests,
+         to_regclass('research.run_report_annotations_v1') IS NOT NULL AS has_research_report_annotations,
+         to_regclass('research.run_report_export_jobs_v1') IS NOT NULL AS has_research_report_export_jobs,
          EXISTS (
            SELECT 1 FROM pg_trigger
             WHERE tgname = 'research_run_terminal_materializations_v1_immutable_guard'
               AND NOT tgisinternal
          ) AS has_research_terminal_materialization_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_report_manifests_v1_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_report_manifest_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_report_export_jobs_v1_guard'
+              AND NOT tgisinternal
+         ) AS has_research_report_export_guard,
          EXISTS (
            SELECT 1 FROM pg_trigger
             WHERE tgname = 'research_run_progress_events_immutable_guard'
@@ -337,6 +355,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          has_table_privilege('portal_research_runtime', 'research.run_library_search_documents', 'INSERT') AS research_role_can_write_run_library_search,
          has_table_privilege('portal_research_runtime', 'research.run_evidence_sources_v1', 'INSERT') AS research_role_can_write_evidence,
          has_table_privilege('portal_research_runtime', 'research.run_split_sources_v1', 'INSERT') AS research_role_can_write_split,
+         has_table_privilege('portal_research_runtime', 'research.run_report_manifests_v1', 'INSERT') AS research_role_can_write_reports,
+         has_table_privilege('portal_research_runtime', 'research.run_report_export_jobs_v1', 'UPDATE') AS research_role_can_update_report_exports,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
@@ -401,6 +421,11 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_progress_snapshots ||
       !row.has_research_terminal_materializations ||
       !row.has_research_terminal_materialization_guard ||
+      !row.has_research_report_manifests ||
+      !row.has_research_report_annotations ||
+      !row.has_research_report_export_jobs ||
+      !row.has_research_report_manifest_guard ||
+      !row.has_research_report_export_guard ||
       !row.has_research_progress_event_guard ||
       !row.has_research_run_library_view ||
       !row.has_research_run_library_search_documents ||
@@ -420,11 +445,13 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       row.research_role_can_write_run_library_search ||
       !row.research_role_can_write_evidence ||
       !row.research_role_can_write_split ||
+      !row.research_role_can_write_reports ||
+      !row.research_role_can_update_report_exports ||
       row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
-        `Control API test migration gate did not reach Research P14 split plane ` +
+        `Control API test migration gate did not reach Research P18 report plane ` +
         `(count=${row.migration_count}, has_f0=${row.has_f0}, ` +
         `hash_only_policy=${row.has_hash_only_policy}, ` +
         `hash_only_constraint=${row.has_hash_only_constraint}, ` +
