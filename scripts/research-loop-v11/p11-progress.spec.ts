@@ -26,6 +26,7 @@ import { ResearchSplitRepository } from "../../apps/control-api/src/research/spl
 import { ResearchSplitService } from "../../apps/control-api/src/research/split.service";
 import { ResearchSearchService } from "../../apps/control-api/src/research/search.service";
 import { ResearchFreezeService } from "../../apps/control-api/src/research/freeze.service";
+import { ResearchReplayService } from "../../apps/control-api/src/research/replay.service";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
 import { p13EvidenceSourceFixture } from "../../apps/control-api/test/research-evidence.fixture";
 import { p14SplitSourceFixture } from "../../apps/control-api/test/research-split.fixture";
@@ -653,6 +654,119 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     // P15 adds no second source receipt/table and no new worker sidecar: it
     // reads the exact immutable P14 projection already persisted for the run.
     expect(persisted.rows[0]).toEqual({ sources: "1", projections: "1" });
+  });
+
+  it("P17-T01/T04/T05/T07/T10/T11/T12/T14: reads bounded sealed OOS samples with revision-bound direct seek and never creates an execution ledger, job or replay state", async () => {
+    const run = await createDispatchedRun();
+    const evidenceRepository = new ResearchEvidenceRepository(pool);
+    const evidenceService = new ResearchEvidenceService(evidenceRepository, {
+      ...config,
+      FEATURE_RESEARCH_EVIDENCE: "true",
+    } as ControlApiConfig);
+    const p13Service = new ResearchProgressService(
+      progress,
+      metadata,
+      new ResearchProgressFanout(),
+      new FakeProgressPortalClient() as never,
+      evidenceService,
+      new FakeSplitService() as never,
+      config,
+    );
+    const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: 2, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+    await p13Service.ingest(ingress({
+      ...run,
+      sequence: 1,
+      eventType: "run_completed",
+      progress: completed,
+      evidence: p13EvidenceSourceFixture(),
+    }));
+
+    const replay = new ResearchReplayService(evidenceService, {
+      ...config,
+      FEATURE_RESEARCH_EVIDENCE: "true",
+      FEATURE_RESEARCH_REPLAY: "true",
+      QUERY_CURSOR_ACTIVE_KEY_ID: "p17-test",
+      QUERY_CURSOR_KEYS_JSON: '{"p17-test":"p17-test-cursor-secret-at-least-thirty-two-bytes"}',
+      QUERY_CURSOR_TTL_SECONDS: 600,
+    } as ControlApiConfig);
+    const first = await replay.detail(scope, run.runId, { limit: 2 });
+    expect(first).toMatchObject({
+      availability: { state: "AVAILABLE", reason_code: null },
+      readiness: "PARTIAL",
+      route: {
+        id: "signal_notional",
+        state: "RETROSPECTIVE_EQUITY_ONLY",
+        replay_contract: "P17_CURRENT_P04_EQUITY_SAMPLE_V1",
+      },
+      equity_replay: {
+        state: "AVAILABLE",
+        source_observation_count: 3,
+        emitted_point_count: 3,
+        sampling: "FULL",
+        page: { has_more: true, has_previous: false, order: "SOURCE_CHRONOLOGICAL_SAMPLE_ORDINAL_ASC" },
+        state_at_cursor: { state: "NOT_SELECTED", semantics: "NO_SELECTED_PLAYHEAD" },
+      },
+    });
+    expect(first.equity_replay.items.map((item) => item.playback_ordinal)).toEqual([0, 1]);
+    expect(first.route_capabilities.orders).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER",
+    });
+    expect(first.route_capabilities.fills).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS",
+    });
+    expect(JSON.stringify(first)).not.toMatch(/"(order|fill|trade|position|event)_id"/);
+
+    const selectedCursor = first.equity_replay.items[1]?.playback_cursor;
+    if (!selectedCursor) throw new Error("P17 fixture did not issue a direct-seek cursor");
+    const direct = await replay.detail(scope, run.runId, { at: selectedCursor, limit: 2 });
+    expect(direct.equity_replay.state_at_cursor).toMatchObject({
+      state: "AVAILABLE_RETROSPECTIVE_EQUITY_SAMPLE",
+      semantics: "RETROSPECTIVE_EQUITY_NOT_EXECUTION_STATE",
+      playback_ordinal: 1,
+      equity: "98",
+      execution_state: {
+        state: "NOT_PUBLISHED",
+        reason_code: "P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS",
+      },
+    });
+    expect(direct.equity_replay.items.map((item) => item.playback_ordinal)).toEqual([0, 1]);
+    const pageCursor = first.equity_replay.page.next_cursor;
+    if (!pageCursor) throw new Error("P17 fixture did not issue a next-page cursor");
+    const next = await replay.detail(scope, run.runId, { cursor: pageCursor, limit: 2 });
+    expect(next.equity_replay.items.map((item) => item.playback_ordinal)).toEqual([2]);
+
+    const persisted = await pool.query<{
+      evidence_sources: string;
+      evidence_projections: string;
+      replay_table: string | null;
+      jobs: string;
+      progress_events: string;
+    }>(
+      `SELECT
+         (SELECT count(*) FROM research.run_evidence_sources_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS evidence_sources,
+         (SELECT count(*) FROM research.run_evidence_projections_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS evidence_projections,
+         to_regclass('research.run_replay_receipts_v1')::text AS replay_table,
+         (SELECT count(*) FROM research.run_producers WHERE workspace_id = $1 AND run_id = $2)::text AS jobs,
+         (SELECT count(*) FROM research.run_progress_events WHERE workspace_id = $1 AND run_id = $2)::text AS progress_events`,
+      [scope.workspaceId, run.runId],
+    );
+    // P17 is only a bounded reader over the existing P13 receipt. Seeking
+    // cannot create a queue item, a replay snapshot or a synthetic execution
+    // event sequence; source chronology remains the retained equity sample.
+    expect(persisted.rows[0]).toEqual({
+      evidence_sources: "1",
+      evidence_projections: "1",
+      replay_table: null,
+      jobs: "1",
+      progress_events: "1",
+    });
   });
 
   it("P16-T01/T02/T03/T06/T08/T11/T13/T14: verifies retained current-P04 bindings without creating a freeze receipt, job or source read", async () => {

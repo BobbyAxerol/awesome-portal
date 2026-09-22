@@ -164,6 +164,21 @@ describe("P16 Freeze / integrity activation guard", () => {
   });
 });
 
+describe("P17 route-aware Replay activation guard", () => {
+  it("stays dark by default and cannot expose its retained evidence reader without P13", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_REPLAY).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_REPLAY: "true",
+    })).toThrow(/FEATURE_RESEARCH_REPLAY=true requires FEATURE_RESEARCH_EVIDENCE=true/);
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_EVIDENCE: "true",
+      FEATURE_RESEARCH_REPLAY: "true",
+    }).FEATURE_RESEARCH_REPLAY).toBe("true");
+  });
+});
+
 describe("Execution realtime feature dependencies", () => {
   const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
     ...baseEnv(),

@@ -3621,7 +3621,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P14 packet](./research_loop/evidence/P14/README.md); additive, feature-dark current-P04 three-window source receipt travels only alongside the digest-bound P11 terminal callback, then becomes an immutable Portal projection and one authenticated same-origin BFF. The reader preserves UTC-ms, exact digest/revision/ETag, semantic child-tape exclusion, `NOT_ATTESTED` physical Parquet-I/O and `NOT_ASSERTED` strict-OOS facts; it does not read raw holdout/Parquet, create a seal/unlock/governance action or imply WFO. P14 source/Python, Control API, generated contract, route ledger and fresh PostgreSQL proof pass. Screen-05 rich product route/browser/HiFi receipt remains Claude-owned and is not claimed while `FEATURE_RESEARCH_SPLIT=false`. |
 | [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex / [P15 packet](./research_loop/evidence/P15/README.md): one feature-dark same-origin BFF reads only immutable P10/P14 current-P04 facts; exact fixed parameter profile, declared-not-executed request and all search/ledger/diagnostic gaps are typed. It adds no fake study/trial/selection, source sidecar, DB table, worker, raw data read or runtime activation. Generic optimizer-ledger acceptance remains **SOURCE_CAPABILITY_BLOCKED**, not implementation debt, until a separately versioned source contract publishes actual study/trial/evaluation/selection facts. FE Screen-06 ownership is Claude's; see the handoff. |
 | [P16](#rl-p16) | P13–P15 | 07 | 08 | **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex** / [P16 packet](./research_loop/evidence/P16/README.md): feature-dark same-origin Freeze BFF reads one immutable P10/P14 current-P04 receipt and verifies exactly three retained digest bindings (P04 adapter, P10↔P14 manifest, fixed parameter bundle). `PARTIAL_MATCH` is deliberately **not** an artifact-byte/causal-ordering/selection/what-if PASS; all unavailable source facts remain individually typed. It adds no table, migration, cache, worker, diagnostic job, source/artifact/Parquet read, parameter mutation or Execution path. **P16-B generic integrity + what-if is SOURCE_CAPABILITY_BLOCKED** pending a separately versioned installed source contract. Screen-07 generated consumer/browser HiFi receipt remains Claude-owned; see handoff. |
-| [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | PLANNED / unassigned / — |
+| [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex** / [P17 packet](./research_loop/evidence/P17/README.md): feature-dark, session/workspace-scoped same-origin Replay reader exposes one bounded, immutable P13 OOS equity-sample window plus revision-bound page/playhead cursors. It explicitly calls the selected sample `RETROSPECTIVE_EQUITY_NOT_EXECUTION_STATE`, creates no replay state/table/job and preserves all missing execution surfaces as individually typed source gaps. **Full generic event/order/fill/trade/position replay and Screen-08 browser receipt remain SOURCE_CAPABILITY_BLOCKED / Claude-owned**, not silently passed. |
 | [P18](#rl-p18) | P13–P17 | 09 | 09 | PLANNED / unassigned / — |
 | [P19](#rl-p19) | P07,P10,P12,P15 | 10 | 10 | PLANNED / unassigned / — |
 | [P20](#rl-p20) | P13,P15,P18,P19 | 13 | 10 | PLANNED / unassigned / — |
@@ -4794,6 +4794,37 @@ stay visibly `NOT_APPLICABLE` until a versioned source contract publishes them.
 - **Tests FE/browser:** All S08 tests; all applicable subpanels, charts/trades synchronized; reveal hides future outcomes in playhead panels, retrospective summary labelled; deep-link fresh tab; large-window DOM/memory bounds.
 - **Exit gate:** Source accounting/IDs match; seek bounded even late range; preserved layout+truthful conditional panels; observed history not relabelled authoritative Trading replay.
 - **Rollback/handoff:** Rollback reader/index version, retain artifacts; handoff source order/checkpoint/financial reconciliation for Report.
+
+#### P17 current-source compatibility amendment — 2026-09-22
+
+The installed `p04.delta-rsi.v1` path has exactly one sealed current-source
+fact usable on Screen 08: P13's immutable OOS equity samples. It does **not**
+publish an execution order/fill/trade/position/event ledger, event sequence,
+same-timestamp ordering, candle/trade windows, OCO relationship, funding,
+MAE/MFE, fold capital convention, child-audit replay provenance or an
+execution-state snapshot. P11 progress sequence is a worker lifecycle record,
+not an execution ledger, and must not be re-labelled as one.
+
+| Slice | Decision | Completion / boundary |
+|---|---|---|
+| **P17-A — current-source equity playhead** | **Complete in this phase.** `GET /api/v1/quantbt/runs/{runId}/execute/replay` reads only P13 Hub + `EQUITY_OOS` through the Portal evidence service, emits at most 100 of the retained 192 display samples, uses signed revision/workspace/run-bound cursors, and supports a direct `at` playhead cursor. | The returned selected value is explicitly `RETROSPECTIVE_EQUITY_NOT_EXECUTION_STATE`; it is not an account/position/order state. Cursor seek is a read only: no engine invoke, worker, queue item, cache, table, migration, source DB/artifact/raw-market access or command. |
+| **P17-B — generic route-aware execution replay** | **SOURCE_CAPABILITY_BLOCKED, not P17-A debt.** The original complete `P17-T01…T14` expectations for fills/OCO/funding/multi-leg/MAE-MFE/fold resets/event order cannot be truthfully tested against P04 because the fact set is absent. | A future versioned source receipt must publish bounded retained records with original IDs, route/fold scope, sequence ordering semantics, checkpoint/retention rules and exact financial/candle inputs. A distinct integration phase must then add a new discriminated contract; no direct worker/database/artifact read or frontend inference is allowed. |
+
+**Contract and operational rules:** the route remains
+`FEATURE_RESEARCH_REPLAY=false` by default and depends on
+`FEATURE_RESEARCH_EVIDENCE=true`. `cursor`, `before`, and `at` are mutually
+exclusive opaque Portal cursors, never browser-provided relation/source IDs.
+Availability, sampling (`FULL` versus `EXTREMA_BUCKET_V1`), exact decimal
+strings, UTC milliseconds, source observation count and the P13 revision are
+preserved. A missing/changed evidence revision invalidates old cursors rather
+than attempting a best-effort replay.
+
+**Frontend handoff:** Claude owns Screen 08's HiFi composition, generated
+consumer, browser audit and visual/resource receipts. The rich shell stays in
+place, but all unsupported execution panels must display their named typed
+reason rather than a fake ledger; local playback is presentation only and must
+not issue a request per animation frame. See
+[P17 handoff](./research_loop/evidence/P17/frontend-handoff-claude.md).
 
 <a id="rl-p18"></a>
 ### P18 — Report, print và reproducible export

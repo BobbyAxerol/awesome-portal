@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 161,
+ "route_count": 162,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1632,6 +1632,16 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P16 explicit same-origin CSRF/origin-protected retained-binding re-read. It persists no verification receipt, writes no business data, opens no artifact/source path, queues no diagnostic and has no command effect; PARTIAL_MATCH is deliberately not an artifact-integrity PASS.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/execute/replay",
+   "controller": "research/replay.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P17 bounded same-origin route-aware replay reader consumes only the immutable P13 OOS equity sample receipt under session/workspace scope. Its signed opaque cursors bind workspace/run/revision and select retrospective equity samples only; it never starts QuantBT, reads source/worker/artifact/Parquet paths, exposes custody values or cursor inputs, synthesizes order/fill/trade/position/candle history, or creates a command channel. Claude owns the Screen 08 typed consumer and browser/HiFi receipt.",
    "owner": "codex",
    "test_owner": "codex"
   }

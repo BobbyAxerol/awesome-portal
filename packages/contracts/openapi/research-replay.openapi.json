@@ -1,0 +1,83 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Replay API",
+    "version": "1.0.0",
+    "description": "P17 same-origin, read-only route-aware replay BFF. The installed P04 Delta source publishes only a sealed bounded OOS equity sample series. It does not publish execution orders, fills, trades, positions, event streams, candles, OCO/leg/funding facts, MAE/MFE inputs or execution state snapshots. The API preserves those absences rather than synthesizing a ledger or starting QuantBT when a user seeks."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/quantbt/runs/{runId}/execute/replay": {
+      "get": {
+        "operationId": "researchReplayDetailGetV1",
+        "summary": "Read one bounded immutable route-aware retrospective replay window",
+        "parameters": [
+          { "$ref": "#/components/parameters/RunId" },
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/Cursor" },
+          { "$ref": "#/components/parameters/Before" },
+          { "$ref": "#/components/parameters/At" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/IfNoneMatch" }
+        ],
+        "responses": {
+          "200": { "description": "Bounded current-source equity samples and route-specific typed source absences", "headers": { "ETag": { "$ref": "#/components/headers/Etag" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Replay" } } } },
+          "304": { "description": "The exact immutable P17 replay revision has not changed" },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "headers": { "Etag": { "description": "Quoted immutable P17 replay revision.", "schema": { "type": "string", "pattern": "^\\\"p17r1_[0-9a-f]{64}\\\"$" } } },
+    "parameters": {
+      "RunId": { "name": "runId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/RunId" } },
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
+      "Cursor": { "name": "cursor", "in": "query", "required": false, "description": "Opaque signed next-page source-sample cursor; mutually exclusive with before and at.", "schema": { "$ref": "#/components/schemas/Cursor" } },
+      "Before": { "name": "before", "in": "query", "required": false, "description": "Opaque signed previous-page source-sample cursor; mutually exclusive with cursor and at.", "schema": { "$ref": "#/components/schemas/Cursor" } },
+      "At": { "name": "at", "in": "query", "required": false, "description": "Opaque signed direct-seek cursor for exactly one source equity sample; mutually exclusive with cursor and before.", "schema": { "$ref": "#/components/schemas/Cursor" } },
+      "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 100 } },
+      "IfNoneMatch": { "name": "If-None-Match", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 96 } }
+    },
+    "responses": {
+      "Problem": { "description": "Typed same-origin refusal. No source relation, artifact path, raw market row, worker identity, source cursor, credential, command or compute authority is disclosed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "WorkspaceId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+      "RunId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+      "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "ExactDecimal": { "type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$", "maxLength": 96 },
+      "ReasonCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,159}$" },
+      "Cursor": { "type": "string", "pattern": "^kc1\\.[A-Za-z0-9_-]{1,32}\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$", "maxLength": 4096 },
+      "Availability": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "PENDING_SOURCE_CALLBACK", "LEGACY_METADATA_ONLY", "NOT_APPLICABLE"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] } } },
+      "SourceGap": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code", "availability"], "properties": { "state": { "enum": ["NOT_PUBLISHED", "NOT_APPLICABLE", "NOT_ASSERTED"] }, "reason_code": { "$ref": "#/components/schemas/ReasonCode" }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "ReplayPoint": { "type": "object", "additionalProperties": false, "required": ["playback_ordinal", "at_utc_ms", "equity", "drawdown_fraction", "playback_cursor"], "properties": { "playback_ordinal": { "type": "integer", "minimum": 0, "maximum": 2000000 }, "at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "equity": { "$ref": "#/components/schemas/ExactDecimal" }, "drawdown_fraction": { "$ref": "#/components/schemas/ExactDecimal" }, "playback_cursor": { "$ref": "#/components/schemas/Cursor" } } },
+      "StateAtCursor": { "type": "object", "additionalProperties": false, "required": ["state", "semantics", "playback_ordinal", "at_utc_ms", "equity", "drawdown_fraction", "source_sampling", "execution_state", "availability"], "properties": { "state": { "enum": ["AVAILABLE_RETROSPECTIVE_EQUITY_SAMPLE", "NOT_SELECTED", "NOT_PUBLISHED"] }, "semantics": { "enum": ["RETROSPECTIVE_EQUITY_NOT_EXECUTION_STATE", "NO_SELECTED_PLAYHEAD", "SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE"] }, "playback_ordinal": { "anyOf": [{ "type": "integer", "minimum": 0, "maximum": 2000000 }, { "type": "null" }] }, "at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "equity": { "anyOf": [{ "$ref": "#/components/schemas/ExactDecimal" }, { "type": "null" }] }, "drawdown_fraction": { "anyOf": [{ "$ref": "#/components/schemas/ExactDecimal" }, { "type": "null" }] }, "source_sampling": { "anyOf": [{ "enum": ["FULL", "EXTREMA_BUCKET_V1"] }, { "type": "null" }] }, "execution_state": { "$ref": "#/components/schemas/SourceGap" }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "ReplayPage": { "type": "object", "additionalProperties": false, "required": ["limit", "next_cursor", "prev_cursor", "has_more", "has_previous", "order"], "properties": { "limit": { "type": "integer", "minimum": 1, "maximum": 100 }, "next_cursor": { "anyOf": [{ "$ref": "#/components/schemas/Cursor" }, { "type": "null" }] }, "prev_cursor": { "anyOf": [{ "$ref": "#/components/schemas/Cursor" }, { "type": "null" }] }, "has_more": { "type": "boolean" }, "has_previous": { "type": "boolean" }, "order": { "const": "SOURCE_CHRONOLOGICAL_SAMPLE_ORDINAL_ASC" } } },
+      "ReplayWindow": { "type": "object", "additionalProperties": false, "required": ["state", "source_observation_count", "emitted_point_count", "sampling", "items", "page", "state_at_cursor", "availability"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED"] }, "source_observation_count": { "anyOf": [{ "type": "integer", "minimum": 1, "maximum": 2000000 }, { "type": "null" }] }, "emitted_point_count": { "anyOf": [{ "type": "integer", "minimum": 0, "maximum": 192 }, { "type": "null" }] }, "sampling": { "anyOf": [{ "enum": ["FULL", "EXTREMA_BUCKET_V1"] }, { "type": "null" }] }, "items": { "type": "array", "maxItems": 100, "items": { "$ref": "#/components/schemas/ReplayPoint" } }, "page": { "$ref": "#/components/schemas/ReplayPage" }, "state_at_cursor": { "$ref": "#/components/schemas/StateAtCursor" }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "RouteCapability": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code", "availability"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "Replay": { "type": "object", "additionalProperties": false, "required": ["schema_version", "read_authority", "run_id", "revision", "etag", "availability", "readiness", "as_of_utc_ms", "provenance", "route", "equity_replay", "route_capabilities", "source_absences"], "properties": {
+        "schema_version": { "const": "research.replay.v1" },
+        "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" },
+        "run_id": { "$ref": "#/components/schemas/RunId" },
+        "revision": { "anyOf": [{ "type": "string", "pattern": "^p17r1_[0-9a-f]{64}$" }, { "type": "null" }] },
+        "etag": { "anyOf": [{ "type": "string", "pattern": "^\\\"p17r1_[0-9a-f]{64}\\\"$" }, { "type": "null" }] },
+        "availability": { "$ref": "#/components/schemas/Availability" },
+        "readiness": { "enum": ["PARTIAL", "NOT_READY"] },
+        "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
+        "provenance": { "type": "object", "additionalProperties": false, "required": ["source_adapter_id", "evidence_revision", "source_transform_digest", "input_scope"], "properties": { "source_adapter_id": { "anyOf": [{ "const": "p04.delta-rsi.v1" }, { "type": "null" }] }, "evidence_revision": { "anyOf": [{ "type": "string", "pattern": "^p13r1_[0-9a-f]{64}$" }, { "type": "null" }] }, "source_transform_digest": { "anyOf": [{ "type": "string", "pattern": "^[0-9a-f]{64}$" }, { "type": "null" }] }, "input_scope": { "anyOf": [{ "const": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY" }, { "type": "null" }] } } },
+        "route": { "type": "object", "additionalProperties": false, "required": ["id", "state", "replay_contract", "availability"], "properties": { "id": { "anyOf": [{ "const": "signal_notional" }, { "type": "null" }] }, "state": { "enum": ["RETROSPECTIVE_EQUITY_ONLY", "PENDING_SOURCE_CALLBACK", "LEGACY_METADATA_ONLY", "NOT_PUBLISHED"] }, "replay_contract": { "anyOf": [{ "const": "P17_CURRENT_P04_EQUITY_SAMPLE_V1" }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+        "equity_replay": { "$ref": "#/components/schemas/ReplayWindow" },
+        "route_capabilities": { "type": "object", "additionalProperties": false, "required": ["orders", "fills", "trades", "positions", "execution_events", "candle_windows", "sl_tp_ambiguity", "oco_tree", "multi_leg", "funding", "mae_mfe", "fold_capital", "child_audit_provenance"], "properties": { "orders": { "$ref": "#/components/schemas/RouteCapability" }, "fills": { "$ref": "#/components/schemas/RouteCapability" }, "trades": { "$ref": "#/components/schemas/RouteCapability" }, "positions": { "$ref": "#/components/schemas/RouteCapability" }, "execution_events": { "$ref": "#/components/schemas/RouteCapability" }, "candle_windows": { "$ref": "#/components/schemas/RouteCapability" }, "sl_tp_ambiguity": { "$ref": "#/components/schemas/RouteCapability" }, "oco_tree": { "$ref": "#/components/schemas/RouteCapability" }, "multi_leg": { "$ref": "#/components/schemas/RouteCapability" }, "funding": { "$ref": "#/components/schemas/RouteCapability" }, "mae_mfe": { "$ref": "#/components/schemas/RouteCapability" }, "fold_capital": { "$ref": "#/components/schemas/RouteCapability" }, "child_audit_provenance": { "$ref": "#/components/schemas/RouteCapability" } } },
+        "source_absences": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/SourceGap" } }
+      } },
+      "Problem": { "type": "object", "additionalProperties": false, "required": ["error"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "maxLength": 128 } } }
+    }
+  }
+}

@@ -104,6 +104,10 @@ const EnvSchema = z.object({
   // opens an artifact, starts a worker or diagnostic job, reads a source data
   // store, or changes frozen parameters.
   FEATURE_RESEARCH_FREEZE: z.enum(["true", "false"]).default("false"),
+  // P17 is a feature-dark, read-only replay view over P13's bounded sealed
+  // equity samples. It neither replays QuantBT nor derives orders/fills from
+  // equity; its signed cursors remain Portal-local and evidence-bound.
+  FEATURE_RESEARCH_REPLAY: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -413,6 +417,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     if (!config.INTERNAL_PRINCIPAL_SECRET) {
       throw new Error("FEATURE_RESEARCH_PROGRESS=true requires INTERNAL_PRINCIPAL_SECRET");
     }
+  }
+  if (config.FEATURE_RESEARCH_REPLAY === "true" && config.FEATURE_RESEARCH_EVIDENCE !== "true") {
+    throw new Error("FEATURE_RESEARCH_REPLAY=true requires FEATURE_RESEARCH_EVIDENCE=true");
   }
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
     throw new Error(

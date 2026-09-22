@@ -140,6 +140,8 @@ import { ResearchSearchController } from "./research/search.controller";
 import { ResearchSearchService } from "./research/search.service";
 import { ResearchFreezeController } from "./research/freeze.controller";
 import { ResearchFreezeService } from "./research/freeze.service";
+import { ResearchReplayController } from "./research/replay.controller";
+import { ResearchReplayService } from "./research/replay.service";
 
 @Module({})
 export class AppModule {
@@ -198,6 +200,7 @@ export class AppModule {
         ResearchSplitController,
         ResearchSearchController,
         ResearchFreezeController,
+        ResearchReplayController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -265,6 +268,7 @@ export class AppModule {
         ResearchSplitService,
         ResearchSearchService,
         ResearchFreezeService,
+        ResearchReplayService,
         ResearchFoundationAtlasClient,
         ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to
