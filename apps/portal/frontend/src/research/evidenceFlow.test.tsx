@@ -687,3 +687,18 @@ describe("P13-T08 — the surface requests only the four named operations", () =
     expect(code).not.toMatch(/toFixed\(/);
   });
 });
+
+/* -------------------------------------------------------------------------
+ * P13-T09 — the cursor promises nothing the source did not publish
+ * ---------------------------------------------------------------------- */
+
+describe("P13-T09 — an unbounded fold step says it is unbounded", () => {
+  it("names the missing fold plan beside the fold it is showing", () => {
+    const { container } = view();
+    const bound = container.querySelector("[data-fold-bound]");
+    expect(bound?.textContent).toContain("not published");
+    expect(bound?.querySelector("[data-withheld]")?.getAttribute("title")).toBe(
+      "P13_PUBLISHES_NO_FOLD_PLAN",
+    );
+  });
+});

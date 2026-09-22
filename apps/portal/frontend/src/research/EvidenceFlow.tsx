@@ -592,6 +592,15 @@ function CursorBar({
       <span className="mono text-[10.5px]" data-cursor-fold>
         fold {cursor.fold}
       </span>
+      {/*
+        * How many folds there are is not published on this screen, so the
+        * step buttons cannot be bounded and the bar says so. Without this the
+        * reader could walk to "fold 40" of a five-fold run and the screen
+        * would look like it agreed.
+        */}
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-fold-bound>
+        of <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_FOLD_PLAN" }} />
+      </span>
 
       <button
         type="button"
