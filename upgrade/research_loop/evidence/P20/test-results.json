@@ -1,0 +1,41 @@
+{
+  "phase": "P20",
+  "status": "BACKEND_AND_TYPED_CONTRACT_COMPLETE",
+  "feature_state": "DARK",
+  "executed": [
+    {
+      "command": "npm --prefix apps/control-api test -- research-compare.contract.spec.ts research-compare.controller.spec.ts research-compare.service.spec.ts config.spec.ts",
+      "result": "PASS",
+      "files": 4,
+      "tests": 29
+    },
+    {
+      "command": "TEST_DATABASE_URL=postgres://portal:portal@127.0.0.1:55435/postgres npm --prefix apps/control-api test -- research-compare-migration.spec.ts",
+      "result": "PASS",
+      "files": 1,
+      "tests": 2,
+      "isolation": "UUID database in temporary loopback-only PostgreSQL container; container deleted after test"
+    },
+    {
+      "command": "npm --prefix apps/control-api run build",
+      "result": "PASS"
+    },
+    {
+      "command": "npm --prefix packages/contracts test",
+      "result": "PASS",
+      "files": 13,
+      "tests": 170
+    },
+    {
+      "command": "npm --prefix apps/portal/frontend test -- src/execution/r2Ledger.test.ts",
+      "result": "PASS",
+      "files": 1,
+      "tests": 22
+    }
+  ],
+  "not_claimed": [
+    "S13 product browser/HiFi receipt",
+    "V11-P20-DR real Delta pair/runtime evidence",
+    "feature activation or deployment"
+  ]
+}

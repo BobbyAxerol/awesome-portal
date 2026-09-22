@@ -127,6 +127,11 @@ const EnvSchema = z.object({
   // evidence after a worker stop, but requires the retained P12 Library lane
   // so the two screens keep one truthful definition of a logical run/retry.
   FEATURE_RESEARCH_LINEAGE: z.enum(["true", "false"]).default("false"),
+  // P20 is an independently dark, persisted-only Compare reader. It can
+  // calculate one bounded exact-timestamp correlation only from already
+  // sealed local observations; it never triggers QuantBT, source I/O,
+  // selection, approval, publication or an Execution command.
+  FEATURE_RESEARCH_COMPARE: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -454,6 +459,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.FEATURE_RESEARCH_LINEAGE === "true" && config.FEATURE_RESEARCH_RUN_LIBRARY !== "true") {
     throw new Error("FEATURE_RESEARCH_LINEAGE=true requires FEATURE_RESEARCH_RUN_LIBRARY=true");
+  }
+  if (config.FEATURE_RESEARCH_COMPARE === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_RUN_LIBRARY", config.FEATURE_RESEARCH_RUN_LIBRARY],
+      ["FEATURE_RESEARCH_EVIDENCE", config.FEATURE_RESEARCH_EVIDENCE],
+      ["FEATURE_RESEARCH_SPLIT", config.FEATURE_RESEARCH_SPLIT],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_COMPARE=true requires: ${missing.join(", ")}`);
+    }
   }
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
     throw new Error(

@@ -195,6 +195,22 @@ describe("P18 Report / reproducible export activation guard", () => {
   });
 });
 
+describe("P20 Compare activation guard", () => {
+  it("stays dark by default and requires the retained Library, Evidence and Split readers", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_COMPARE).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_COMPARE: "true",
+    })).toThrow(/FEATURE_RESEARCH_COMPARE=true requires/);
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_RUN_LIBRARY: "true",
+      FEATURE_RESEARCH_EVIDENCE: "true",
+      FEATURE_RESEARCH_SPLIT: "true",
+      FEATURE_RESEARCH_COMPARE: "true",
+    }).FEATURE_RESEARCH_COMPARE).toBe("true");
+  });
+});
+
 describe("Execution realtime feature dependencies", () => {
   const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
     ...baseEnv(),

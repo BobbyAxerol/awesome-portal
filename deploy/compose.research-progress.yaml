@@ -33,6 +33,11 @@ services:
       # P19 is a read-only, bounded attempt lineage projection. It does not
       # start a worker, mutation route, source transport, or promotion policy.
       FEATURE_RESEARCH_LINEAGE: ${CONTROL_API_FEATURE_RESEARCH_LINEAGE:-false}
+      # P20 Compare reads only existing Portal-persisted requested/evidence/
+      # split/current-source facts. It can compute one bounded exact-time
+      # correlation locally, never starts QuantBT or changes selection,
+      # governance, publication or Execution.
+      FEATURE_RESEARCH_COMPARE: ${CONTROL_API_FEATURE_RESEARCH_COMPARE:-false}
       RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: ${CONTROL_API_RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS:-1500}
 
   # The worker owns source journalling and the private, at-least-once callback.

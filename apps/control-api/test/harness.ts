@@ -11,6 +11,11 @@ export const TEST_TABLES = [
   // listing it keeps test cleanup bounded and makes a new relation visible to
   // the shared harness rather than relying on an incidental CASCADE path.
   "research.audit_log",
+  // P20 cache rows are operational only, but still reference an Alpha. Keep
+  // them explicit and first: a reused disposable database must never return a
+  // prior test's derived compare response merely because its truth rows were
+  // truncated later in this list.
+  "research.compare_projection_cache_v1",
   // P10 producer rows reference the immutable binding, run, attempt, job and
   // preflight records. They must be truncated before all of those parents so
   // each disposable test cell proves P10 cleanup rather than inheriting rows.
@@ -187,10 +192,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_split_projections: boolean;
       has_research_split_source_guard: boolean;
       has_research_split_projection_guard: boolean;
+      has_research_compare_cache: boolean;
+      has_research_compare_cache_expiry_index: boolean;
       research_role_can_read_legacy_run_models: boolean;
       research_role_can_write_run_library_search: boolean;
       research_role_can_write_evidence: boolean;
       research_role_can_write_split: boolean;
+      research_role_can_write_compare_cache: boolean;
+      research_role_can_update_compare_cache: boolean;
       research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
@@ -355,10 +364,18 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
             WHERE tgname = 'research_run_split_projections_v1_immutable_guard'
              AND NOT tgisinternal
          ) AS has_research_split_projection_guard,
+         to_regclass('research.compare_projection_cache_v1') IS NOT NULL AS has_research_compare_cache,
+         EXISTS (
+           SELECT 1 FROM pg_indexes
+            WHERE schemaname = 'research'
+              AND indexname = 'research_compare_projection_cache_expiry_idx'
+         ) AS has_research_compare_cache_expiry_index,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'SELECT') AS research_role_can_read_legacy_run_models,
          has_table_privilege('portal_research_runtime', 'research.run_library_search_documents', 'INSERT') AS research_role_can_write_run_library_search,
          has_table_privilege('portal_research_runtime', 'research.run_evidence_sources_v1', 'INSERT') AS research_role_can_write_evidence,
          has_table_privilege('portal_research_runtime', 'research.run_split_sources_v1', 'INSERT') AS research_role_can_write_split,
+         has_table_privilege('portal_research_runtime', 'research.compare_projection_cache_v1', 'INSERT') AS research_role_can_write_compare_cache,
+         has_table_privilege('portal_research_runtime', 'research.compare_projection_cache_v1', 'UPDATE') AS research_role_can_update_compare_cache,
          has_table_privilege('portal_research_runtime', 'research.run_report_manifests_v1', 'INSERT') AS research_role_can_write_reports,
          has_table_privilege('portal_research_runtime', 'research.run_report_export_jobs_v1', 'UPDATE') AS research_role_can_update_report_exports,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
@@ -445,10 +462,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_split_projections ||
       !row.has_research_split_source_guard ||
       !row.has_research_split_projection_guard ||
+      !row.has_research_compare_cache ||
+      !row.has_research_compare_cache_expiry_index ||
       !row.research_role_can_read_legacy_run_models ||
       row.research_role_can_write_run_library_search ||
       !row.research_role_can_write_evidence ||
       !row.research_role_can_write_split ||
+      !row.research_role_can_write_compare_cache ||
+      row.research_role_can_update_compare_cache ||
       !row.research_role_can_write_reports ||
       !row.research_role_can_update_report_exports ||
       row.research_role_can_write_execution ||
@@ -523,10 +544,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_split_projections=${row.has_research_split_projections}, ` +
         `research_split_source_guard=${row.has_research_split_source_guard}, ` +
         `research_split_projection_guard=${row.has_research_split_projection_guard}, ` +
+        `research_compare_cache=${row.has_research_compare_cache}, ` +
+        `research_compare_cache_expiry_index=${row.has_research_compare_cache_expiry_index}, ` +
         `research_role_can_read_legacy_run_models=${row.research_role_can_read_legacy_run_models}, ` +
         `research_role_can_write_run_library_search=${row.research_role_can_write_run_library_search}, ` +
         `research_role_can_write_evidence=${row.research_role_can_write_evidence}, ` +
         `research_role_can_write_split=${row.research_role_can_write_split}, ` +
+        `research_role_can_write_compare_cache=${row.research_role_can_write_compare_cache}, ` +
+        `research_role_can_update_compare_cache=${row.research_role_can_update_compare_cache}, ` +
         `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,

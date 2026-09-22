@@ -1,0 +1,100 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Compare API",
+    "version": "1.0.0",
+    "description": "P20 named same-origin Compare reader. It consumes Portal-persisted Research facts only. It never exposes raw relations/cursors/artifact paths, starts QuantBT, changes a selection, publishes, approves or executes a command. Correlation is server-derived only from sealed exact-timestamp raw returns and is explicitly labelled PORTAL_DERIVED."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/research/alphas/{alphaId}/compare": {
+      "get": {
+        "operationId": "researchCompareGetV1",
+        "summary": "Read bounded comparisons inside one Alpha",
+        "description": "mode=attempts returns a claim-first ladder; mode=markets returns bounded small multiples only; mode=pair requires exactly two opaque same-Alpha run IDs. A mismatched key returns state REFUSED and pair:null, so no pair metric/chart exists for a consumer to render. Browser code must never compute a correlation, fill a missing timestamp, treat a rank as a promotion, or use a direct-source relation/cursor.",
+        "parameters": [
+          { "$ref": "#/components/parameters/AlphaId" },
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/Mode" },
+          { "$ref": "#/components/parameters/Runs" }
+        ],
+        "responses": {
+          "200": { "description": "One bounded persisted Compare projection.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompareResponse" } } } },
+          "304": { "description": "Unchanged ETag." },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "parameters": {
+      "AlphaId": { "name": "alphaId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/AlphaId" } },
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
+      "Mode": { "name": "mode", "in": "query", "required": false, "schema": { "enum": ["attempts", "markets", "pair"] } },
+      "Runs": { "name": "runs", "in": "query", "required": false, "description": "Comma-separated two opaque Research run IDs; valid only with pair mode (or inferred pair mode).", "schema": { "type": "string", "minLength": 3, "maxLength": 2048 } }
+    },
+    "responses": {
+      "Problem": { "description": "Typed same-origin refusal. It never discloses a source relation, raw config/source payload, worker/lease identity, artifact path, cursor, credential, selection or governance control.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "WorkspaceId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+      "AlphaId": { "type": "string", "minLength": 3, "maxLength": 64, "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+      "OpaqueId": { "type": "string", "minLength": 1, "maxLength": 191, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$" },
+      "RunId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+      "Decimal": { "type": "string", "maxLength": 96, "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
+      "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "ReasonCode": { "type": "string", "minLength": 3, "maxLength": 160, "pattern": "^[A-Z][A-Z0-9_]{2,159}$" },
+      "Problem": { "type": "object", "additionalProperties": false, "required": ["error"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "maxLength": 128 } } },
+      "Availability": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "PARTIAL", "NOT_APPLICABLE"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] } } },
+      "ComparisonContractKey": { "type": "object", "additionalProperties": false, "required": ["symbol", "timeframe", "route", "protocol", "availability"], "properties": { "symbol": { "anyOf": [{ "type": "string", "maxLength": 64 }, { "type": "null" }] }, "timeframe": { "anyOf": [{ "type": "string", "maxLength": 160 }, { "type": "null" }] }, "route": { "anyOf": [{ "type": "string", "maxLength": 160 }, { "type": "null" }] }, "protocol": { "anyOf": [{ "type": "string", "maxLength": 160 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "Claim": { "type": "object", "additionalProperties": false, "required": ["family", "rank", "origin", "text", "availability"], "properties": { "family": { "enum": ["STRICT_OUTER_OOS", "SELECTION_ADJUSTED_OOS", "WALK_FORWARD_OOS_COMPATIBILITY", "NONE_FULL_SAMPLE_CALIBRATION", "NOT_PUBLISHED"] }, "rank": { "anyOf": [{ "type": "integer", "minimum": 1, "maximum": 4 }, { "type": "null" }] }, "origin": { "enum": ["SOURCE_ATTESTED", "PORTAL_DERIVED_FROM_SOURCE_PROTOCOL", "NOT_PUBLISHED"] }, "text": { "anyOf": [{ "type": "string", "maxLength": 1024 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "Metric": { "type": "object", "additionalProperties": false, "required": ["key", "definition_id", "scope", "value", "availability"], "properties": { "key": { "enum": ["NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "OOS_SHARPE", "DECAY"] }, "definition_id": { "type": "string", "maxLength": 160 }, "scope": { "type": "string", "maxLength": 160 }, "value": { "anyOf": [{ "$ref": "#/components/schemas/Decimal" }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "Run": { "type": "object", "additionalProperties": false, "required": ["run_id", "attempt_id", "alpha_version_id", "alpha_version_label", "run_state", "created_at_utc_ms", "comparison_contract_key", "claim", "original_metrics", "provenance"], "properties": { "run_id": { "$ref": "#/components/schemas/RunId" }, "attempt_id": { "$ref": "#/components/schemas/OpaqueId" }, "alpha_version_id": { "$ref": "#/components/schemas/OpaqueId" }, "alpha_version_label": { "type": "string", "maxLength": 160 }, "run_state": { "enum": ["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"] }, "created_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "comparison_contract_key": { "$ref": "#/components/schemas/ComparisonContractKey" }, "claim": { "$ref": "#/components/schemas/Claim" }, "original_metrics": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/Metric" } }, "provenance": { "type": "object", "additionalProperties": false, "required": ["requested_spec_digest", "effective_spec_digest", "dataset_binding_digest", "manifest_digest", "evidence_revision", "split_revision", "current_source_revision"], "properties": { "requested_spec_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "effective_spec_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "dataset_binding_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "manifest_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "evidence_revision": { "anyOf": [{ "type": "string", "maxLength": 160 }, { "type": "null" }] }, "split_revision": { "anyOf": [{ "type": "string", "maxLength": 160 }, { "type": "null" }] }, "current_source_revision": { "anyOf": [{ "type": "string", "maxLength": 160 }, { "type": "null" }] } } } } },
+      "Coverage": { "type": "object", "additionalProperties": false, "required": ["state", "total_attempts", "reason_code"], "properties": { "state": { "enum": ["COMPLETE", "PARTIAL"] }, "total_attempts": { "type": "integer", "minimum": 0 }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] } } },
+      "AttemptResult": { "type": "object", "additionalProperties": false, "required": ["mode", "attempts", "coverage", "trajectory"], "properties": { "mode": { "const": "attempts" }, "attempts": { "type": "array", "maxItems": 128, "items": { "$ref": "#/components/schemas/Run" } }, "coverage": { "$ref": "#/components/schemas/Coverage" }, "trajectory": { "type": "object", "additionalProperties": false, "required": ["template_id", "text", "availability"], "properties": { "template_id": { "const": "P20_ATTEMPT_TRAJECTORY_V1" }, "text": { "const": "claims rank before numbers — inspection never selects, promotes, approves, or publishes a run." }, "availability": { "$ref": "#/components/schemas/Availability" } } } } },
+      "MarketResult": { "type": "object", "additionalProperties": false, "required": ["mode", "caption", "cards", "coverage"], "properties": { "mode": { "const": "markets" }, "caption": { "const": "different contract keys — small multiples only; an overlay across keys would be a comparison lie." }, "cards": { "type": "array", "maxItems": 24, "items": { "type": "object", "additionalProperties": false, "required": ["run", "chart"], "properties": { "run": { "$ref": "#/components/schemas/Run" }, "chart": { "$ref": "#/components/schemas/MarketChart" } } } }, "coverage": { "$ref": "#/components/schemas/Coverage" } } },
+      "MarketChart": { "type": "object", "additionalProperties": false, "required": ["state", "sampling", "source_observation_count", "emitted_point_count", "points", "availability"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED"] }, "sampling": { "enum": ["FULL", "RETENTION_STRIDE_V1", "EXTREMA_BUCKET_V1", "TAIL_WINDOW_V1", "NOT_APPLICABLE"] }, "source_observation_count": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] }, "emitted_point_count": { "type": "integer", "minimum": 0, "maximum": 192 }, "points": { "type": "array", "maxItems": 192, "items": { "type": "object", "additionalProperties": false, "required": ["at_utc_ms", "equity"], "properties": { "at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "equity": { "$ref": "#/components/schemas/Decimal" } } } }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "PairResult": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/PairComparableResult" },
+          { "$ref": "#/components/schemas/PairRefusedResult" }
+        ]
+      },
+      "PairComparableResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode", "state", "refusal", "pair"],
+        "properties": {
+          "mode": { "const": "pair" },
+          "state": { "enum": ["AVAILABLE", "PARTIAL"] },
+          "refusal": { "type": "null" },
+          "pair": { "$ref": "#/components/schemas/PairData" }
+        }
+      },
+      "PairRefusedResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode", "state", "refusal", "pair"],
+        "properties": {
+          "mode": { "const": "pair" },
+          "state": { "const": "REFUSED" },
+          "refusal": { "$ref": "#/components/schemas/PairRefusal" },
+          "pair": { "type": "null" }
+        }
+      },
+      "PairRefusal": { "type": "object", "additionalProperties": false, "required": ["code", "message", "left_key", "right_key"], "properties": { "code": { "enum": ["P20_CONTRACT_KEY_MISMATCH", "P20_SOURCE_SCOPE_MISMATCH"] }, "message": { "const": "these two runs do not share a ComparisonContractKey (symbol · timeframe · route · protocol) — a side-by-side would be a comparison lie, so the button refuses." }, "left_key": { "$ref": "#/components/schemas/ComparisonContractKey" }, "right_key": { "$ref": "#/components/schemas/ComparisonContractKey" } } },
+      "PairData": { "type": "object", "additionalProperties": false, "required": ["key", "runs", "intentional_differences", "weaker_claim", "common_window", "correlation", "overlay"], "properties": { "key": { "$ref": "#/components/schemas/ComparisonContractKey" }, "runs": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/components/schemas/Run" } }, "intentional_differences": { "type": "array", "maxItems": 16, "items": { "type": "object", "additionalProperties": false, "required": ["path", "before", "after"], "properties": { "path": { "enum": ["alpha_version", "parameter_space_overrides", "random_seed", "optimization_mode", "optimization_schedule", "engine_config_digest"] }, "before": { "anyOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] }, "after": { "anyOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] } } } }, "weaker_claim": { "type": "object", "additionalProperties": false, "required": ["family", "rank", "availability"], "properties": { "family": { "enum": ["STRICT_OUTER_OOS", "SELECTION_ADJUSTED_OOS", "WALK_FORWARD_OOS_COMPATIBILITY", "NONE_FULL_SAMPLE_CALIBRATION", "NOT_PUBLISHED"] }, "rank": { "anyOf": [{ "type": "integer", "minimum": 1, "maximum": 4 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } }, "common_window": { "$ref": "#/components/schemas/CommonWindow" }, "correlation": { "$ref": "#/components/schemas/Correlation" }, "overlay": { "$ref": "#/components/schemas/Overlay" } } },
+      "CommonWindow": { "type": "object", "additionalProperties": false, "required": ["state", "definition_id", "left_source_observation_count", "right_source_observation_count", "matched_observation_count", "start_utc_ms", "end_utc_ms", "metrics", "availability"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED"] }, "definition_id": { "const": "research.compare-common-window.v1" }, "left_source_observation_count": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] }, "right_source_observation_count": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] }, "matched_observation_count": { "type": "integer", "minimum": 0 }, "start_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "end_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "metrics": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "object", "additionalProperties": false, "required": ["key", "definition_id", "left_value", "right_value", "delta", "availability"], "properties": { "key": { "enum": ["NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT"] }, "definition_id": { "type": "string", "maxLength": 160 }, "left_value": { "anyOf": [{ "$ref": "#/components/schemas/Decimal" }, { "type": "null" }] }, "right_value": { "anyOf": [{ "$ref": "#/components/schemas/Decimal" }, { "type": "null" }] }, "delta": { "anyOf": [{ "$ref": "#/components/schemas/Decimal" }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } } }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "Correlation": { "type": "object", "additionalProperties": false, "required": ["state", "source_label", "formula_id", "formula_version", "value", "n", "common_window_start_utc_ms", "common_window_end_utc_ms", "missing_policy", "availability"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED"] }, "source_label": { "enum": ["PORTAL_DERIVED", "NOT_PUBLISHED"] }, "formula_id": { "const": "pearson-product-moment-correlation" }, "formula_version": { "const": "p20.raw-return-v1" }, "value": { "anyOf": [{ "$ref": "#/components/schemas/Decimal" }, { "type": "null" }] }, "n": { "type": "integer", "minimum": 0 }, "common_window_start_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "common_window_end_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "missing_policy": { "const": "INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL" }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "Overlay": { "type": "object", "additionalProperties": false, "required": ["state", "sampling", "source_observation_count", "emitted_point_count", "points", "availability"], "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED"] }, "sampling": { "enum": ["FULL", "RETENTION_STRIDE_V1", "EXTREMA_BUCKET_V1", "TAIL_WINDOW_V1", "NOT_APPLICABLE"] }, "source_observation_count": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] }, "emitted_point_count": { "type": "integer", "minimum": 0, "maximum": 192 }, "points": { "type": "array", "maxItems": 192, "items": { "type": "object", "additionalProperties": false, "required": ["at_utc_ms", "left_equity", "right_equity"], "properties": { "at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "left_equity": { "$ref": "#/components/schemas/Decimal" }, "right_equity": { "$ref": "#/components/schemas/Decimal" } } } }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "CompareResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "read_authority", "alpha", "revision", "etag", "availability", "as_of_utc_ms", "result", "source_absences"], "properties": { "schema_version": { "const": "research.compare.v1" }, "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" }, "alpha": { "type": "object", "additionalProperties": false, "required": ["alpha_id", "name"], "properties": { "alpha_id": { "$ref": "#/components/schemas/AlphaId" }, "name": { "type": "string", "maxLength": 240 } } }, "revision": { "type": "string", "pattern": "^p20r1_[0-9a-f]{64}$" }, "etag": { "type": "string", "pattern": "^\\\"p20r1_[0-9a-f]{64}\\\"$" }, "availability": { "$ref": "#/components/schemas/Availability" }, "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "result": { "oneOf": [{ "$ref": "#/components/schemas/AttemptResult" }, { "$ref": "#/components/schemas/MarketResult" }, { "$ref": "#/components/schemas/PairResult" }] }, "source_absences": { "type": "object", "additionalProperties": false, "required": ["structured_claim_family", "full_resolution_outer_oos_returns"], "properties": { "structured_claim_family": { "$ref": "#/components/schemas/Availability" }, "full_resolution_outer_oos_returns": { "$ref": "#/components/schemas/Availability" } } } } }
+    }
+  }
+}
