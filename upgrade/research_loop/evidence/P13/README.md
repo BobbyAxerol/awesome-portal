@@ -10,6 +10,13 @@ Read [phase-report.md](./phase-report.md) for the exact proof and
 [frontend-handoff-claude.md](./frontend-handoff-claude.md) before touching
 Screen 04.
 
+**2026-09-22 additive contract amendment:**
+[Hub-owned run identity and fold navigation](./contract-amendment-run-identity-fold-navigation.md)
+closes `CG-P13-01` and `CG-P13-02`. Screen 04 now receives its own durable
+header facts and a bounded P11 observed-fold selector in the Hub; it must not
+compose Screen 01/P14 reads to fill either gap. The Hub uses a weak semantic
+`p13h1_*` ETag while its `p13r1_*` revision continues to pin lazy series.
+
 ## Delivered boundary
 
 P13 publishes exactly two authenticated, same-origin read operations:

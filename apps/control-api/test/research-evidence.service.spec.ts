@@ -8,6 +8,58 @@ import { p13EvidenceSourceFixture } from "./research-evidence.fixture";
 const scope = { workspaceId: "p13-workspace", actorUserId: "p13-user" };
 const ingressScope = { ...scope, jobId: "job_p13", workerAttemptId: "attempt_p13", leaseEpoch: 1 };
 
+function requestedSpec(seed: number | null = 42) {
+  return {
+    schema_version: "research.requested-spec.v1" as const,
+    alpha_binding: { alpha_id: "alpha-p13", alpha_version_id: "av_p13" },
+    not_publishable: false,
+    strategy_id: "strategy-p13",
+    execution_route: "signal_notional" as const,
+    route_params: {},
+    data: { dataset_id: "ds_p13", symbol: "BTCUSDT", timeframe: "1h" },
+    protocol: "advanced" as const,
+    walk_forward: {
+      start: "2025-01-01T00:00:00Z", end_exclusive: "2025-02-01T00:00:00Z",
+      split_mode: "rolling", frequency: "weekly", window_mode: "expanding",
+    },
+    optimization_mode: "mode_p13",
+    optimization_schedule: "schedule_p13",
+    parameter_space_overrides: [],
+    optuna_trials: 12,
+    early_stopping: null,
+    random_seed: seed,
+    optimization_config: {},
+    client: { engine_release_id: "er_quantbt_1_1_1", config_digest: "e".repeat(64) },
+  };
+}
+
+function progressSnapshot(folds: number[]) {
+  return {
+    schema_version: "research.progress-snapshot.v1" as const,
+    run_id: "run_p13",
+    attempt_id: "attempt_p13",
+    lease_epoch: 1,
+    status: "COMPLETED" as const,
+    created_at_utc_ms: 1_725_000_000_000,
+    updated_at_utc_ms: 1_725_000_120_000,
+    latest_sequence: 9,
+    retention_floor_sequence: 0,
+    stages: ["S1", "S2", "S3", "S4", "S5"].map((key) => ({
+      key, state: "DONE" as const, started_at_utc_ms: 1_725_000_000_000, completed_at_utc_ms: 1_725_000_120_000,
+    })),
+    overall: { pct: 100, elapsed_s: 120, eta_s: null, trials_done: 12, trials_declared: 12, tqdm_line: "complete" },
+    budget: { used: "2", cap: null, unit: "core-min" as const, pct: 100 },
+    folds: folds.map((fold) => ({
+      fold, state: "DONE" as const, started_at_utc_ms: 1_725_000_000_000, completed_at_utc_ms: 1_725_000_120_000,
+    })),
+    artifacts: [],
+    claim: { state: "ISSUED" as const, text: "evidence claim", cursor: null },
+    readiness: { mandatory: "SEALED" as const, optional: "NOT_APPLICABLE" as const },
+    failure: null,
+    source: { kind: "DURABLE_P10" as const, coverage: "ACTUAL_HOOKS" as const, partial: false },
+  };
+}
+
 describe("P13 Evidence Flow projection authority", () => {
   it("binds a terminal source receipt to its digest and persists bounded lazy vectors", async () => {
     const persist = vi.fn().mockResolvedValue(undefined);
@@ -63,6 +115,84 @@ describe("P13 Evidence Flow projection authority", () => {
     });
     expect(hub.series.find((item) => item.kind === "ROLLING_RETURNS_20")).toMatchObject({
       availability: { state: "NOT_APPLICABLE", reason_code: "P04_OOS_OBSERVATIONS_BELOW_ROLLING_WINDOW" },
+    });
+  });
+
+  it("publishes one Hub-owned run header and an observed fold selector without a second screen read", async () => {
+    const evidence = p13EvidenceSourceFixture();
+    const digest = sha256ResearchJson(evidence);
+    const persist = vi.fn().mockResolvedValue(undefined);
+    const repository = { persist, hub: vi.fn(), series: vi.fn() };
+    const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
+    await service.ingest(ingressScope, {
+      run_id: "run_p13", event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: digest } }, evidence,
+    } as unknown as ResearchProgressIngress);
+    const write = persist.mock.calls[0]?.[1];
+    const row = {
+      kind: "DURABLE" as const, runId: "run_p13",
+      runState: "READY", runCreatedAtUtcMs: 1_725_000_000_000,
+      alphaId: "alpha-p13", alphaName: "P13 Alpha", alphaVersionId: "av_p13",
+      requestedSpec: requestedSpec(),
+      requestedSpecDigest: "a".repeat(64), effectiveSpecDigest: "b".repeat(64), datasetBindingDigest: "c".repeat(64),
+      manifestDigest: "d".repeat(64), progressSnapshot: progressSnapshot([1, 2, 3]), jobState: "SUCCEEDED",
+      revision: write.projectionRevision, projection: write.projection, readiness: write.readiness,
+      sourceEvidenceDigest: digest, receivedAt: new Date(), asOfUtcMs: 1_725_000_000_000,
+    };
+    repository.hub.mockResolvedValue(row);
+
+    const first = await service.hub(scope, "run_p13");
+    expect(first.core.run_identity).toMatchObject({
+      status: { value: "READY", availability: { state: "AVAILABLE" } },
+      binding: { alpha_id: "alpha-p13", alpha_name: "P13 Alpha", alpha_version_id: "av_p13", availability: { state: "AVAILABLE" } },
+      created_at_utc_ms: { value: 1_725_000_000_000, availability: { state: "AVAILABLE" } },
+      mode: { value: "mode_p13", availability: { state: "AVAILABLE" } },
+      schedule: { value: "schedule_p13", availability: { state: "AVAILABLE" } },
+      route: {
+        id: { value: "signal_notional", availability: { state: "AVAILABLE" } },
+        contract: { value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P13_ROUTE_CONTRACT_NOT_PUBLISHED" } },
+      },
+      config_digest: { value: "e".repeat(64), availability: { state: "AVAILABLE" } },
+      seed: { value: 42, availability: { state: "AVAILABLE" } },
+    });
+    expect(first.core.fold_navigation).toEqual({
+      observed_folds: [1, 2, 3], published_fold_count: 3, availability: { state: "AVAILABLE", reason_code: null },
+    });
+    expect(first.etag).toMatch(/^W\/"p13h1_[0-9a-f]{64}"$/);
+
+    repository.hub.mockResolvedValue({ ...row, progressSnapshot: progressSnapshot([1, 2, 3, 4]) });
+    const changed = await service.hub(scope, "run_p13");
+    expect(changed.revision).toBe(first.revision);
+    expect(changed.etag).not.toBe(first.etag);
+    expect(changed.core.fold_navigation).toMatchObject({ observed_folds: [1, 2, 3, 4], published_fold_count: 4 });
+  });
+
+  it("keeps an unannounced complete fold topology typed absent rather than inventing a bound", async () => {
+    const evidence = p13EvidenceSourceFixture();
+    const digest = sha256ResearchJson(evidence);
+    const persist = vi.fn().mockResolvedValue(undefined);
+    const repository = { persist, hub: vi.fn(), series: vi.fn() };
+    const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
+    await service.ingest(ingressScope, {
+      run_id: "run_p13", event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: digest } }, evidence,
+    } as unknown as ResearchProgressIngress);
+    const write = persist.mock.calls[0]?.[1];
+    repository.hub.mockResolvedValue({
+      kind: "DURABLE", runId: "run_p13",
+      runState: "READY", runCreatedAtUtcMs: 1_725_000_000_000,
+      alphaId: "alpha-p13", alphaName: "P13 Alpha", alphaVersionId: "av_p13",
+      requestedSpec: requestedSpec(null),
+      requestedSpecDigest: "a".repeat(64), effectiveSpecDigest: "b".repeat(64), datasetBindingDigest: "c".repeat(64),
+      manifestDigest: "d".repeat(64), progressSnapshot: progressSnapshot([]), jobState: "SUCCEEDED",
+      revision: write.projectionRevision, projection: write.projection, readiness: write.readiness,
+      sourceEvidenceDigest: digest, receivedAt: new Date(), asOfUtcMs: 1,
+    });
+    const hub = await service.hub(scope, "run_p13");
+    expect(hub.core.fold_navigation).toEqual({
+      observed_folds: [], published_fold_count: null,
+      availability: { state: "NOT_PUBLISHED", reason_code: "P13_PROGRESS_FOLD_SET_NOT_PUBLISHED" },
+    });
+    expect(hub.core.run_identity?.seed).toEqual({
+      value: null, availability: { state: "NOT_APPLICABLE", reason_code: "P02_RANDOM_SEED_NOT_SELECTED" },
     });
   });
 

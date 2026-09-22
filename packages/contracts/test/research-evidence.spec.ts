@@ -25,12 +25,14 @@ describe("P13 published Research Evidence Flow contract", () => {
       "researchEvidenceHubGetV1", "researchEvidenceSeriesGetV1", "EvidenceHub", "EvidenceSeries",
       "PORTAL_PERSISTED_RESEARCH", "EQUITY_OOS", "MONTHLY_RETURNS", "ROLLING_RETURNS_20",
       "RETURN_DISTRIBUTION", "PENDING_SOURCE_CALLBACK", "LEGACY_METADATA_ONLY",
-      "source_transform_digest", "metric_registry_version",
+      "source_transform_digest", "metric_registry_version", "RunIdentity", "FoldNavigation",
+      "run_identity", "fold_navigation", "published_fold_count", "observed_folds",
     ]) expect(generated).toContain(needle);
     const openApi = readFileSync(openApiPath, "utf8");
     expect(openApi).toContain('"maxItems": 192');
     expect(openApi).toContain('"ExactDecimal"');
     expect(openApi).toContain('"If-None-Match"');
+    expect(openApi).toContain('p13h1_');
   });
 
   it("does not turn the Hub into an artifact, raw-market, worker or control surface", () => {

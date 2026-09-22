@@ -38,6 +38,12 @@ export interface EvidenceProjectionWrite {
 export interface EvidenceHubRow {
   kind: "DURABLE" | "LEGACY";
   runId: string;
+  /** Durable run identity for the Screen-04 header; never worker/job identity. */
+  runState: string | null;
+  runCreatedAtUtcMs: number | null;
+  alphaId: string | null;
+  alphaName: string | null;
+  alphaVersionId: string | null;
   requestedSpec: JsonValue;
   requestedSpecDigest: string | null;
   effectiveSpecDigest: string | null;
@@ -74,6 +80,11 @@ export interface EvidenceReadBundle {
 
 interface HubQueryRow {
   run_id: string;
+  run_state: string | null;
+  run_created_at_utc_ms: string | number | null;
+  alpha_id: string | null;
+  alpha_name: string | null;
+  alpha_version_id: string | null;
   requested_spec: JsonValue;
   requested_spec_digest: string | null;
   effective_spec_digest: string | null;
@@ -111,6 +122,10 @@ function asSafeNonNegative(value: string | number | null, label: string): number
     throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", `Evidence ${label} is incompatible.`, 503);
   }
   return numeric;
+}
+
+function asNullableSafeNonNegative(value: string | number | null | undefined, label: string): number | null {
+  return value === null || value === undefined ? null : asSafeNonNegative(value, label);
 }
 
 function asArray(value: JsonValue): unknown[] | null {
@@ -303,6 +318,11 @@ export class ResearchEvidenceRepository {
       const asOfUtcMs = asSafeNonNegative(timestamp.rows[0]?.as_of_utc_ms ?? null, "snapshot timestamp");
       const durable = await client.query<HubQueryRow>(
         `SELECT producer.run_id,
+                durable_run.state AS run_state,
+                floor(extract(epoch FROM durable_run.created_at) * 1000)::bigint AS run_created_at_utc_ms,
+                producer.alpha_id,
+                alpha.name AS alpha_name,
+                producer.alpha_version_id,
                 preflight.requested_spec,
                 producer.requested_spec_digest,
                 producer.effective_spec_digest,
@@ -316,8 +336,12 @@ export class ResearchEvidenceRepository {
                 projection.source_evidence_digest,
                 projection.received_at
            FROM research.run_producers producer
+           JOIN research.runs durable_run
+             ON durable_run.workspace_id = producer.workspace_id AND durable_run.run_id = producer.run_id
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
+           LEFT JOIN research.alphas alpha
+             ON alpha.workspace_id = producer.workspace_id AND alpha.alpha_id = producer.alpha_id
            LEFT JOIN research.preflight_manifests preflight
              ON preflight.workspace_id = producer.workspace_id
             AND preflight.preflight_token = producer.preflight_token
@@ -344,6 +368,11 @@ export class ResearchEvidenceRepository {
         return {
           kind: "DURABLE" as const,
           runId: row.run_id,
+          runState: row.run_state,
+          runCreatedAtUtcMs: asNullableSafeNonNegative(row.run_created_at_utc_ms, "run creation timestamp"),
+          alphaId: row.alpha_id,
+          alphaName: row.alpha_name,
+          alphaVersionId: row.alpha_version_id,
           requestedSpec: row.requested_spec,
           requestedSpecDigest: row.requested_spec_digest,
           effectiveSpecDigest: row.effective_spec_digest,
@@ -365,7 +394,9 @@ export class ResearchEvidenceRepository {
       );
       if (legacy.rowCount !== 1) return null;
       return {
-        kind: "LEGACY" as const, runId, requestedSpec: null,
+        kind: "LEGACY" as const, runId,
+        runState: null, runCreatedAtUtcMs: null, alphaId: null, alphaName: null, alphaVersionId: null,
+        requestedSpec: null,
         requestedSpecDigest: null, effectiveSpecDigest: null, datasetBindingDigest: null, manifestDigest: null,
         progressSnapshot: null, jobState: null, revision: null, projection: null, readiness: null,
         sourceEvidenceDigest: null, receivedAt: null, asOfUtcMs,

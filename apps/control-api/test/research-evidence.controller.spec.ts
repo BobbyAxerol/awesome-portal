@@ -21,7 +21,7 @@ function reply() {
 describe("P13 Evidence Flow same-origin boundary", () => {
   it("passes only the session-resolved scope and named series kind to the reader", async () => {
     const service = {
-      hub: vi.fn().mockResolvedValue({ etag: `"p13r1_${"a".repeat(64)}"` }),
+      hub: vi.fn().mockResolvedValue({ etag: `W/"p13h1_${"a".repeat(64)}"` }),
       series: vi.fn().mockResolvedValue({ etag: null }),
     };
     const workspaces = { isMember: vi.fn().mockResolvedValue(true) };
@@ -31,7 +31,7 @@ describe("P13 Evidence Flow same-origin boundary", () => {
     expect(service.hub).toHaveBeenCalledWith(
       { workspaceId: "p13-workspace", actorUserId: "p13-user" }, "run_p13", expect.any(AbortSignal),
     );
-    expect(hubReply.header).toHaveBeenCalledWith("etag", `"p13r1_${"a".repeat(64)}"`);
+    expect(hubReply.header).toHaveBeenCalledWith("etag", `W/"p13h1_${"a".repeat(64)}"`);
 
     await controller.series(request as never, reply() as never, "run_p13", { kind: "EQUITY_OOS" });
     expect(service.series).toHaveBeenCalledWith(

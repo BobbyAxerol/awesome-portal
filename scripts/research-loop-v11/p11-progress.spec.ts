@@ -163,6 +163,11 @@ class FakeSplitService {
   async ingest(): Promise<void> { /* source receipt absent by design */ }
 }
 
+/** P18 is a terminal sidecar too; this P11/P13 harness only asserts its call shape. */
+class FakeReportService {
+  async materializeTerminal(): Promise<void> { /* report assembly is covered by its own P18 corpus */ }
+}
+
 function snapshot(
   runId: string,
   workerAttemptId: string,
@@ -281,6 +286,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       new FakeProgressPortalClient() as never,
       new FakeEvidenceService() as never,
       new FakeSplitService() as never,
+      new FakeReportService() as never,
       config,
     );
   }, 60_000);
@@ -337,7 +343,8 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
 
     const rehydrated = new ResearchProgressService(
       new ResearchProgressRepository(pool), metadata, new ResearchProgressFanout(),
-      new FakeProgressPortalClient() as never, new FakeEvidenceService() as never, new FakeSplitService() as never, config,
+      new FakeProgressPortalClient() as never, new FakeEvidenceService() as never, new FakeSplitService() as never,
+      new FakeReportService() as never, config,
     );
     const read = await rehydrated.read(admin, scope, run.runId);
     expect(read).toMatchObject({
@@ -446,6 +453,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       new FakeProgressPortalClient() as never,
       evidenceService,
       new FakeSplitService() as never,
+      new FakeReportService() as never,
       config,
     );
     const source = p13EvidenceSourceFixture();
@@ -473,6 +481,29 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       availability: { state: "AVAILABLE", reason_code: null },
       readiness: "PARTIAL",
       revision: expect.stringMatching(/^p13r1_[0-9a-f]{64}$/),
+      etag: expect.stringMatching(/^W\/"p13h1_[0-9a-f]{64}"$/),
+    });
+    expect(hub.core.run_identity).toMatchObject({
+      status: { value: "READY", availability: { state: "AVAILABLE", reason_code: null } },
+      binding: {
+        alpha_id: P04_DELTA_BINDING.alphaId,
+        alpha_name: expect.any(String),
+        alpha_version_id: P04_DELTA_BINDING.alphaVersionId,
+        availability: { state: "AVAILABLE", reason_code: null },
+      },
+      created_at_utc_ms: { value: expect.any(Number), availability: { state: "AVAILABLE", reason_code: null } },
+      mode: { value: "mode_1_decay", availability: { state: "AVAILABLE", reason_code: null } },
+      schedule: { value: "global", availability: { state: "AVAILABLE", reason_code: null } },
+      route: {
+        id: { value: "signal_notional", availability: { state: "AVAILABLE", reason_code: null } },
+        contract: { value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P13_ROUTE_CONTRACT_NOT_PUBLISHED" } },
+      },
+      config_digest: { value: "a".repeat(64), availability: { state: "AVAILABLE", reason_code: null } },
+      seed: { value: null, availability: { state: "NOT_APPLICABLE", reason_code: "P02_RANDOM_SEED_NOT_SELECTED" } },
+    });
+    expect(hub.core.fold_navigation).toEqual({
+      observed_folds: [], published_fold_count: null,
+      availability: { state: "NOT_PUBLISHED", reason_code: "P13_PROGRESS_FOLD_SET_NOT_PUBLISHED" },
     });
     expect(hub.metrics.find((metric) => metric.key === "FINAL_EQUITY")).toMatchObject({ value: "110" });
     expect(hub.source_absences.benchmark).toEqual({
@@ -522,6 +553,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       new FakeProgressPortalClient() as never,
       new FakeEvidenceService() as never,
       splitService,
+      new FakeReportService() as never,
       config,
     );
     const source = p14SplitSourceFixture({ manifestDigest });
@@ -592,6 +624,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       new FakeProgressPortalClient() as never,
       new FakeEvidenceService() as never,
       splitService,
+      new FakeReportService() as never,
       config,
     );
     const fixture = p14SplitSourceFixture({ manifestDigest });
@@ -670,6 +703,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       new FakeProgressPortalClient() as never,
       evidenceService,
       new FakeSplitService() as never,
+      new FakeReportService() as never,
       config,
     );
     const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
@@ -790,6 +824,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       new FakeProgressPortalClient() as never,
       new FakeEvidenceService() as never,
       splitService,
+      new FakeReportService() as never,
       config,
     );
     const fixture = p14SplitSourceFixture({ manifestDigest });

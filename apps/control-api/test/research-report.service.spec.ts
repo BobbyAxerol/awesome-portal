@@ -19,7 +19,7 @@ function hubFixture() {
   return {
     schema_version: "research.evidence-hub.v1",
     read_authority: "PORTAL_PERSISTED_RESEARCH",
-    run_id: "run_p18", revision: `p13r1_${digest("a")}`, etag: `"p13r1_${digest("a")}"`,
+    run_id: "run_p18", revision: `p13r1_${digest("a")}`, etag: `W/"p13h1_${digest("a")}"`,
     availability: availability(), readiness: "PARTIAL", as_of_utc_ms: 1_727_000_000_000,
     metric_registry_version: "research.metric-registry.v2",
     core: {

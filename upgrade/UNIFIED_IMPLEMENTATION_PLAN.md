@@ -4633,6 +4633,21 @@ composition/browser acceptance is Claude-owned and remains unclaimed while
 the feature flag is false; see the [P13 packet](./research_loop/evidence/P13/README.md)
 and [handoff](./research_loop/evidence/P13/frontend-handoff-claude.md).
 
+**P13 contract amendment — 2026-09-22 (`CG-P13-01`, `CG-P13-02` closed):**
+The one same-origin Hub now owns Screen-04's fact-shaped durable run header
+(`research.runs` status/created time, reconciled producer/alpha binding and
+P08 parsed mode/schedule/route id/config digest/seed) and its bounded P11
+**observed** fold selector. It does not compose Screen 01 or P14/RS-02, so
+one response cannot mix distinct freshness/profile/revision facts. Current
+P02 still publishes no route-contract statement: that exact field remains
+`NOT_PUBLISHED`, never inferred from `execution_route`. The observed fold set
+is not a full source plan/boundary assertion. `revision` remains immutable
+`p13r1_*` for lazy-series binding; Hub cache validation is now weak
+`W/"p13h1_*"` over the complete semantic Hub snapshot. See the
+[P13 contract amendment](./research_loop/evidence/P13/contract-amendment-run-identity-fold-navigation.md).
+Fresh P11/P13 PostgreSQL proof now covers these joins and the corrected report
+sidecar test constructor; no runtime feature was activated.
+
 <a id="rl-p14"></a>
 ### P14 — Split, chronology và holdout truth
 

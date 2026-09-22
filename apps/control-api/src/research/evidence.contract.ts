@@ -90,12 +90,88 @@ const StageSummarySchema = z.object({
   completed_at_utc_ms: UtcMsSchema.nullable(),
 }).strict();
 
+/**
+ * P13 header facts are deliberately fact-shaped rather than raw nullable
+ * strings.  A Screen-04 consumer must be able to distinguish a fact that was
+ * not published from a run whose selected configuration is genuinely null
+ * (for example an intentionally unspecified random seed).
+ */
+const HeaderTextFactSchema = z.object({
+  value: z.string().min(1).max(191).nullable(),
+  availability: ResearchEvidenceAvailabilitySchema,
+}).strict();
+
+const HeaderDigestFactSchema = z.object({
+  value: DigestSchema.nullable(),
+  availability: ResearchEvidenceAvailabilitySchema,
+}).strict();
+
+const HeaderUtcFactSchema = z.object({
+  value: UtcMsSchema.nullable(),
+  availability: ResearchEvidenceAvailabilitySchema,
+}).strict();
+
+const HeaderSeedFactSchema = z.object({
+  value: z.number().int().min(0).max(2_147_483_647).nullable(),
+  availability: ResearchEvidenceAvailabilitySchema,
+}).strict();
+
+const RunIdentitySchema = z.object({
+  /** Durable Research-run lifecycle, never an inferred worker/job status. */
+  status: z.object({
+    value: z.enum(["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"]).nullable(),
+    availability: ResearchEvidenceAvailabilitySchema,
+  }).strict(),
+  binding: z.object({
+    alpha_id: z.string().min(1).max(191).nullable(),
+    alpha_name: z.string().min(1).max(240).nullable(),
+    alpha_version_id: z.string().min(1).max(191).nullable(),
+    availability: ResearchEvidenceAvailabilitySchema,
+  }).strict(),
+  created_at_utc_ms: HeaderUtcFactSchema,
+  mode: HeaderTextFactSchema,
+  schedule: HeaderTextFactSchema,
+  route: z.object({
+    id: HeaderTextFactSchema,
+    /** The current P02 request publishes a route id, not a route-contract fact. */
+    contract: HeaderTextFactSchema,
+  }).strict(),
+  config_digest: HeaderDigestFactSchema,
+  seed: HeaderSeedFactSchema,
+}).strict();
+
+const FoldNavigationSchema = z.object({
+  /**
+   * A bounded observed set from the P11 snapshot, not an assertion that this
+   * is the source's complete planned fold topology.  It is safe for prev/next
+   * navigation only within the published set.
+   */
+  observed_folds: z.array(z.number().int().positive().max(2_147_483_647)).max(256),
+  published_fold_count: z.number().int().positive().max(256).nullable(),
+  availability: ResearchEvidenceAvailabilitySchema,
+}).strict().superRefine((value, context) => {
+  if (value.availability.state === "AVAILABLE") {
+    if (value.published_fold_count !== value.observed_folds.length || value.observed_folds.length === 0) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "available fold navigation must declare its exact observed count" });
+    }
+    for (let index = 1; index < value.observed_folds.length; index += 1) {
+      if (value.observed_folds[index]! <= value.observed_folds[index - 1]!) {
+        context.addIssue({ code: z.ZodIssueCode.custom, message: "observed folds must be strictly ascending" });
+        break;
+      }
+    }
+  } else if (value.published_fold_count !== null || value.observed_folds.length !== 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "unavailable fold navigation must not carry a partial selector" });
+  }
+});
+
 export const ResearchEvidenceHubResponseSchema = z.object({
   schema_version: z.literal("research.evidence-hub.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
   run_id: ResearchEvidenceRunIdSchema,
   revision: z.string().regex(/^p13r1_[0-9a-f]{64}$/).nullable(),
-  etag: z.string().regex(/^"p13r1_[0-9a-f]{64}"$/).nullable(),
+  /** Weak semantic ETag for the full Hub; `revision` still pins lazy series. */
+  etag: z.string().regex(/^W\/"p13h1_[0-9a-f]{64}"$/).nullable(),
   availability: ResearchEvidenceAvailabilitySchema,
   readiness: z.enum(["COMPLETE", "PARTIAL", "NOT_READY"]),
   as_of_utc_ms: UtcMsSchema,
@@ -115,6 +191,13 @@ export const ResearchEvidenceHubResponseSchema = z.object({
       timeframe: z.string().min(1).max(191).nullable(),
       oos_observation_count: z.number().int().positive().max(2_000_000).nullable(),
     }).strict(),
+    /**
+     * Optional only for bounded rolling deploy compatibility.  New Control
+     * readers always emit both fields; consumers must render typed absence if
+     * an older Hub responder has not yet been rolled forward.
+     */
+    run_identity: RunIdentitySchema.optional(),
+    fold_navigation: FoldNavigationSchema.optional(),
   }).strict(),
   metrics: z.array(MetricSchema).length(8),
   claim: ClaimSchema,

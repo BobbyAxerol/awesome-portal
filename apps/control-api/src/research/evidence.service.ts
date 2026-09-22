@@ -27,6 +27,7 @@ import {
   type EvidenceSeriesRow,
 } from "./evidence.repository";
 import { sha256ResearchJson } from "./preflight.service";
+import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import {
   ResearchEvidenceSourceSchema,
   ResearchProgressSnapshotSchema,
@@ -64,6 +65,12 @@ const SERIES_KINDS: readonly ResearchEvidenceSeriesKind[] = [
   "EQUITY_OOS", "MONTHLY_RETURNS", "ROLLING_RETURNS_20", "RETURN_DISTRIBUTION",
 ];
 
+const DURABLE_RUN_STATES = [
+  "DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED",
+] as const;
+
+type DurableRunState = typeof DURABLE_RUN_STATES[number];
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
@@ -74,6 +81,14 @@ function availability(state: Availability["state"], reasonCode: string | null): 
 
 function notPublished(reason: string): Availability {
   return availability("NOT_PUBLISHED", reason);
+}
+
+function notApplicable(reason: string): Availability {
+  return availability("NOT_APPLICABLE", reason);
+}
+
+function isDurableRunState(value: string | null | undefined): value is DurableRunState {
+  return typeof value === "string" && (DURABLE_RUN_STATES as readonly string[]).includes(value);
 }
 
 const StoredUnavailableSchema = z.object({
@@ -377,6 +392,8 @@ export class ResearchEvidenceService {
     const requested = asRecord(row.requestedSpec);
     const data = asRecord(requested?.data);
     const progress = this.progress(row.progressSnapshot);
+    const runIdentity = this.runIdentity(row, fallback);
+    const foldNavigation = this.foldNavigation(row, progress, fallback);
     const revision = row.revision;
     const sourceAbsences = projection
       ? Object.fromEntries(Object.entries(projection.unavailable).map(([key, value]) => [key, sourceAbsenceAvailability(value)]))
@@ -424,12 +441,16 @@ export class ResearchEvidenceService {
       };
     });
     const warnings = projection ? this.warnings(projection, sourceAbsences) : [];
-    return {
+    const response = {
       schema_version: "research.evidence-hub.v1",
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: row.runId,
       revision,
-      etag: revision ? `"${revision}"` : null,
+      // `revision` pins immutable evidence vectors.  The Hub also carries
+      // current durable identity/progress facts, so its HTTP validator names
+      // the full semantic Hub snapshot instead of pretending the projection
+      // revision alone covers those fields.
+      etag: null,
       availability: hubAvailability,
       readiness: projection ? row.readiness : "NOT_READY",
       as_of_utc_ms: row.asOfUtcMs,
@@ -449,6 +470,8 @@ export class ResearchEvidenceService {
           timeframe: typeof data?.timeframe === "string" ? data.timeframe : null,
           oos_observation_count: projection?.source.oos_observation_count ?? null,
         },
+        run_identity: runIdentity,
+        fold_navigation: foldNavigation,
       },
       metrics,
       claim: this.claim(progress, hubAvailability),
@@ -456,6 +479,142 @@ export class ResearchEvidenceService {
       series,
       warnings,
       source_absences: sourceAbsences,
+    };
+    // `as_of_utc_ms` is a transaction-observation timestamp, not a document
+    // fact.  A weak validator may omit it while still invalidating whenever
+    // any displayed value changes; a strong ETag would be invalid because the
+    // timestamp changes even for an identical semantic Hub.
+    const { as_of_utc_ms: _asOfUtcMs, etag: _etag, ...semanticSnapshot } = response;
+    return {
+      ...response,
+      etag: `W/"p13h1_${sha256ResearchJson(semanticSnapshot)}"`,
+    };
+  }
+
+  /**
+   * One Hub read supplies its own header facts.  It must not compose Screen
+   * 01's list item or a P14/RS-02 split response: those are independently
+   * versioned reads and could disagree with this repeatable-read snapshot.
+   */
+  private runIdentity(row: EvidenceHubRow, fallback: Availability) {
+    const durableFallback = row.kind === "DURABLE"
+      ? notPublished("P13_DURABLE_RUN_IDENTITY_NOT_PUBLISHED")
+      : fallback;
+    const requestedParsed = row.kind === "DURABLE"
+      ? ResearchRequestedSpecSchema.safeParse(row.requestedSpec)
+      : null;
+    const requestedAvailability = requestedParsed?.success
+      ? availability("AVAILABLE", null)
+      : row.kind === "DURABLE"
+        ? notPublished("P13_REQUESTED_SPEC_INCOMPATIBLE")
+        : fallback;
+
+    const runState = isDurableRunState(row.runState ?? null) ? row.runState : null;
+    const statusAvailability = runState ? availability("AVAILABLE", null) : durableFallback;
+    const createdAt = row.runCreatedAtUtcMs ?? null;
+    const createdAtAvailability = createdAt === null ? durableFallback : availability("AVAILABLE", null);
+
+    const bindingPresent = Boolean(
+      row.alphaId && row.alphaName && row.alphaVersionId
+      && row.alphaId.length <= 191 && row.alphaName.length <= 240 && row.alphaVersionId.length <= 191,
+    );
+    const requestedBinding = requestedParsed?.success ? requestedParsed.data.alpha_binding : undefined;
+    // `undefined` means P02 did not yield a parseable requested spec, so the
+    // durable binding remains the only fact we can evaluate.  `null` is the
+    // explicit scratch-run declaration.  Keep those cases distinct: treating
+    // either as a generic falsy value could accidentally publish a binding
+    // whose immutable requested spec explicitly says there is none.
+    const bindingMatchesRequested = requestedBinding === undefined
+      ? true
+      : requestedBinding === null
+        ? false
+        : bindingPresent
+          && requestedBinding.alpha_id === row.alphaId
+          && requestedBinding.alpha_version_id === row.alphaVersionId;
+    const bindingAvailability = bindingPresent && bindingMatchesRequested
+      ? availability("AVAILABLE", null)
+      : requestedBinding === null
+        ? notApplicable("P13_SCRATCH_RUN_HAS_NO_PUBLISHABLE_ALPHA_BINDING")
+        : bindingPresent
+          ? notPublished("P13_ALPHA_BINDING_INCOMPATIBLE")
+          : durableFallback;
+
+    const requested = requestedParsed?.success ? requestedParsed.data : null;
+    return {
+      status: { value: runState, availability: statusAvailability },
+      binding: {
+        alpha_id: bindingAvailability.state === "AVAILABLE" ? row.alphaId : null,
+        alpha_name: bindingAvailability.state === "AVAILABLE" ? row.alphaName : null,
+        alpha_version_id: bindingAvailability.state === "AVAILABLE" ? row.alphaVersionId : null,
+        availability: bindingAvailability,
+      },
+      created_at_utc_ms: { value: createdAt, availability: createdAtAvailability },
+      mode: {
+        value: requested?.optimization_mode ?? null,
+        availability: requested ? availability("AVAILABLE", null) : requestedAvailability,
+      },
+      schedule: {
+        value: requested?.optimization_schedule ?? null,
+        availability: requested ? availability("AVAILABLE", null) : requestedAvailability,
+      },
+      route: {
+        id: {
+          value: requested?.execution_route ?? null,
+          availability: requested ? availability("AVAILABLE", null) : requestedAvailability,
+        },
+        // P02 publishes the selected route ID and validated parameters; it
+        // does not publish a distinct route-contract/capability statement.
+        contract: {
+          value: null,
+          availability: notPublished("P13_ROUTE_CONTRACT_NOT_PUBLISHED"),
+        },
+      },
+      config_digest: {
+        value: requested?.client.config_digest ?? null,
+        availability: requested ? availability("AVAILABLE", null) : requestedAvailability,
+      },
+      seed: requested
+        ? requested.random_seed === null
+          ? { value: null, availability: notApplicable("P02_RANDOM_SEED_NOT_SELECTED") }
+          : { value: requested.random_seed, availability: availability("AVAILABLE", null) }
+        : { value: null, availability: requestedAvailability },
+    };
+  }
+
+  /**
+   * This is an observed P11 fold set, deliberately not a claim that P14 has
+   * published the complete planned topology/boundaries.  It gives Screen 04
+   * a safe finite selector without teaching it to call another screen's BFF.
+   */
+  private foldNavigation(
+    row: EvidenceHubRow,
+    progress: ResearchProgressSnapshot | null,
+    fallback: Availability,
+  ) {
+    if (!progress) {
+      return { observed_folds: [], published_fold_count: null, availability: fallback };
+    }
+    const observedFolds = progress.folds.map((fold) => fold.fold);
+    const strictAscending = observedFolds.every((fold, index) => index === 0 || fold > observedFolds[index - 1]!);
+    if (!strictAscending) {
+      return {
+        observed_folds: [], published_fold_count: null,
+        availability: notPublished("P13_PROGRESS_FOLD_SET_INCOMPATIBLE"),
+      };
+    }
+    if (observedFolds.length === 0) {
+      const pending = progress.status === "QUEUED" || progress.status === "RUNNING" || progress.status === "FINISHING";
+      return {
+        observed_folds: [], published_fold_count: null,
+        availability: pending
+          ? availability("PENDING_SOURCE_CALLBACK", "P13_PROGRESS_FOLD_SET_PENDING")
+          : notPublished("P13_PROGRESS_FOLD_SET_NOT_PUBLISHED"),
+      };
+    }
+    return {
+      observed_folds: observedFolds,
+      published_fold_count: observedFolds.length,
+      availability: availability("AVAILABLE", null),
     };
   }
 

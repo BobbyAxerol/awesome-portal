@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read compact immutable Evidence Flow Hub state for one run */
+        /** Read compact Evidence Flow Hub state for one run */
         get: operations["researchEvidenceHubGetV1"];
         put?: never;
         post?: never;
@@ -64,6 +64,49 @@ export interface components {
                 message: string;
             };
             request_id?: string;
+        };
+        HeaderTextFact: {
+            value: string | null;
+            availability: components["schemas"]["Availability"];
+        };
+        HeaderDigestFact: {
+            value: components["schemas"]["Digest"] | null;
+            availability: components["schemas"]["Availability"];
+        };
+        HeaderUtcFact: {
+            value: components["schemas"]["UtcMilliseconds"] | null;
+            availability: components["schemas"]["Availability"];
+        };
+        HeaderSeedFact: {
+            value: number | null;
+            availability: components["schemas"]["Availability"];
+        };
+        RunIdentity: {
+            status: {
+                value: ("DRAFT" | "QUEUED" | "RUNNING" | "SEALING" | "READY" | "FAILED" | "CANCELLED" | "RECOVERY_REQUIRED") | null;
+                availability: components["schemas"]["Availability"];
+            };
+            binding: {
+                alpha_id: string | null;
+                alpha_name: string | null;
+                alpha_version_id: string | null;
+                availability: components["schemas"]["Availability"];
+            };
+            created_at_utc_ms: components["schemas"]["HeaderUtcFact"];
+            mode: components["schemas"]["HeaderTextFact"];
+            schedule: components["schemas"]["HeaderTextFact"];
+            route: {
+                id: components["schemas"]["HeaderTextFact"];
+                contract: components["schemas"]["HeaderTextFact"];
+            };
+            config_digest: components["schemas"]["HeaderDigestFact"];
+            seed: components["schemas"]["HeaderSeedFact"];
+        };
+        /** @description Observed P11 snapshot set only; it does not assert a complete source fold plan or boundaries. */
+        FoldNavigation: {
+            observed_folds: number[];
+            published_fold_count: number | null;
+            availability: components["schemas"]["Availability"];
         };
         Metric: {
             /** @enum {unknown} */
@@ -144,6 +187,10 @@ export interface components {
                     timeframe: string | null;
                     oos_observation_count: number | null;
                 };
+                /** @description Optional during a bounded rolling deployment; new Hub responders always emit it. */
+                run_identity?: components["schemas"]["RunIdentity"];
+                /** @description Optional during a bounded rolling deployment; it bounds only the published observed P11 fold set. */
+                fold_navigation?: components["schemas"]["FoldNavigation"];
             };
             metrics: components["schemas"]["Metric"][];
             claim: components["schemas"]["Claim"];
@@ -214,8 +261,10 @@ export interface components {
     };
     requestBodies: never;
     headers: {
-        /** @description Quoted immutable P13 projection revision. */
-        Etag: string;
+        /** @description Weak semantic validator for the full Hub representation. The separate `revision` field still pins immutable evidence series. */
+        HubEtag: string;
+        /** @description Quoted immutable P13 evidence-series revision. */
+        SeriesEtag: string;
     };
     pathItems: never;
 }
@@ -236,17 +285,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Hub summary at one immutable projection revision */
+            /** @description Hub summary whose lazy series remain pinned to one immutable evidence revision */
             200: {
                 headers: {
-                    ETag: components["headers"]["Etag"];
+                    ETag: components["headers"]["HubEtag"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["EvidenceHub"];
                 };
             };
-            /** @description The exact immutable revision has not changed */
+            /** @description The Hub's semantic representation has not changed */
             304: {
                 headers: {
                     [name: string]: unknown;
@@ -280,7 +329,7 @@ export interface operations {
             /** @description At most 192 display values from one named evidence series */
             200: {
                 headers: {
-                    ETag: components["headers"]["Etag"];
+                    ETag: components["headers"]["SeriesEtag"];
                     [name: string]: unknown;
                 };
                 content: {

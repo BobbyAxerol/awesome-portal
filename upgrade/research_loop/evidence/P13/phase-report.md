@@ -111,3 +111,22 @@ revision/availability/sampling disclosure and are not backfilled into R1/R2.
 Benchmark, audited fills and route-ledger facts remain exact typed gaps. See
 [RS-02 matrix](../RS-02/field-action-coverage-matrix.md); browser integration
 belongs to RS-03.
+
+## Screen-04 identity/fold contract amendment — 2026-09-22
+
+`CG-P13-01` and `CG-P13-02` are closed by the additive
+[Hub-owned run identity and fold navigation amendment](./contract-amendment-run-identity-fold-navigation.md).
+The Hub reads durable `research.runs`/producer/alpha/preflight/P11 snapshot
+facts inside its existing repeatable-read boundary; it does not fan out to the
+Run Library or current-source split BFF. It publishes a fact-shaped identity
+header plus a strictly ascending **observed** fold set, never an invented full
+fold plan. P02 still does not publish a route-contract fact, so that precise
+slot remains typed `NOT_PUBLISHED`.
+
+Because the Hub also contains current identity/progress facts while lazy
+series remain immutable at `p13r1_*`, its HTTP validator is now a weak
+semantic `W/"p13h1_*"` ETag over the full response (excluding observation
+timestamp). `revision` continues to be the only series-binding field. The
+fresh P11/P13 PostgreSQL proof now covers the new real joins and corrected a
+stale harness constructor so the P18 report sidecar cannot consume the config
+argument unnoticed.
