@@ -4,7 +4,7 @@ import { Pool } from "../../apps/control-api/node_modules/pg";
 import type { ControlApiConfig } from "../../apps/control-api/src/config";
 import type { PortalUser } from "../../apps/control-api/src/domain";
 import type { ResearchScope } from "../../apps/control-api/src/research/contracts";
-import { P04_DELTA_BINDING } from "../../apps/control-api/src/research/p04-delta.binding";
+import { P04_DELTA_BINDING, P04_DELTA_FIXED_PARAMETERS } from "../../apps/control-api/src/research/p04-delta.binding";
 import { ResearchP04DeltaBindingService } from "../../apps/control-api/src/research/p04-delta-binding.service";
 import {
   ResearchProgressIngressSchema,
@@ -24,6 +24,7 @@ import { ResearchEvidenceRepository } from "../../apps/control-api/src/research/
 import { ResearchEvidenceService } from "../../apps/control-api/src/research/evidence.service";
 import { ResearchSplitRepository } from "../../apps/control-api/src/research/split.repository";
 import { ResearchSplitService } from "../../apps/control-api/src/research/split.service";
+import { ResearchSearchService } from "../../apps/control-api/src/research/search.service";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
 import { p13EvidenceSourceFixture } from "../../apps/control-api/test/research-evidence.fixture";
 import { p14SplitSourceFixture } from "../../apps/control-api/test/research-split.fixture";
@@ -566,5 +567,90 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
         WHERE workspace_id = $1 AND run_id = $2`,
       [scope.workspaceId, run.runId],
     )).rejects.toThrow(/immutable/i);
+  });
+
+  it("P15-T01/T03/T06/T08/T11/T13/T14: exposes the exact fixed P04 profile without inventing a study, trial ledger or diagnostics", async () => {
+    const run = await createDispatchedRun();
+    const manifest = await pool.query<{ manifest_digest: string }>(
+      `SELECT manifest_digest FROM research.run_producers
+        WHERE workspace_id = $1 AND run_id = $2 AND worker_attempt_id = $3`,
+      [scope.workspaceId, run.runId, run.workerAttemptId],
+    );
+    const manifestDigest = manifest.rows[0]?.manifest_digest;
+    if (!manifestDigest) throw new Error("P15 fixture did not retain immutable producer manifest");
+    const splitRepository = new ResearchSplitRepository(pool);
+    const splitService = new ResearchSplitService(splitRepository, {
+      ...config,
+      FEATURE_RESEARCH_SPLIT: "true",
+    } as ControlApiConfig);
+    const p14Service = new ResearchProgressService(
+      progress,
+      metadata,
+      new ResearchProgressFanout(),
+      new FakeProgressPortalClient() as never,
+      new FakeEvidenceService() as never,
+      splitService,
+      config,
+    );
+    const fixture = p14SplitSourceFixture({ manifestDigest });
+    const source = {
+      ...fixture,
+      protocol: {
+        ...fixture.protocol,
+        selection: {
+          ...fixture.protocol.selection,
+          parameter_bundle_digest: sha256ResearchJson(P04_DELTA_FIXED_PARAMETERS),
+        },
+      },
+    };
+    const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: 2, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+    await p14Service.ingest(ingress({
+      ...run, sequence: 1, eventType: "run_completed", progress: completed, split: source,
+    }));
+
+    const search = new ResearchSearchService(splitRepository, {
+      ...config,
+      FEATURE_RESEARCH_SEARCH: "true",
+    } as ControlApiConfig);
+    const detail = await search.detail(scope, run.runId, { fold: 1 });
+    expect(detail).toMatchObject({
+      availability: { state: "AVAILABLE", reason_code: null },
+      source_profile: { state: "FIXED_PROFILE_NO_SEARCH" },
+      requested_optimizer: { state: "DECLARED_NOT_EXECUTED", mode: "mode_1_decay", schedule: "global" },
+      fixed_profile: { state: "FIXED_PROFILE_NO_SEARCH", parameters: expect.any(Array) },
+      selection: { state: "FIXED_PARAMETER_PROFILE", selected_trial_ref: null },
+      inspection: { requested_fold: 1, state: "NOT_APPLICABLE" },
+      ledger: {
+        state: "NOT_APPLICABLE",
+        reason_code: "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY",
+        total_rows: null,
+        sampled_rows: null,
+        page: null,
+      },
+      diagnostics: { state: "NOT_APPLICABLE" },
+    });
+    expect(detail.fixed_profile.state).toBe("FIXED_PROFILE_NO_SEARCH");
+    if (detail.fixed_profile.state !== "FIXED_PROFILE_NO_SEARCH") throw new Error("P15 fixed profile was not published");
+    expect(detail.fixed_profile.parameters).toHaveLength(Object.keys(P04_DELTA_FIXED_PARAMETERS).length);
+    expect(detail.fixed_profile.parameters.find((parameter) => parameter.name === "slpercent")).toMatchObject({
+      minimum: "0.7", maximum: "2.5", step: "0.1", effective_value: "1.3",
+    });
+    for (const privateNeedle of [
+      "worker_attempt_id", "lease_epoch", "source_payload", "artifact_store_path", "market_path", "raw_ohlcv",
+    ]) expect(JSON.stringify(detail)).not.toContain(privateNeedle);
+    const persisted = await pool.query<{ sources: string; projections: string }>(
+      `SELECT
+         (SELECT count(*) FROM research.run_split_sources_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS sources,
+         (SELECT count(*) FROM research.run_split_projections_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS projections`,
+      [scope.workspaceId, run.runId],
+    );
+    // P15 adds no second source receipt/table and no new worker sidecar: it
+    // reads the exact immutable P14 projection already persisted for the run.
+    expect(persisted.rows[0]).toEqual({ sources: "1", projections: "1" });
   });
 });

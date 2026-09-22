@@ -25,10 +25,19 @@ export interface SplitProjectionWrite {
 export interface SplitHubRow {
   kind: "DURABLE" | "LEGACY";
   runId: string;
+  /**
+   * P15 consumes only this immutable P10 binding identifier; it never reads
+   * the private producer envelope or an artifact path. Keeping it beside the
+   * P14 hub lets later source-as-is readers reject a static declaration that
+   * does not match the historical producer contract.
+   */
+  adapterContractDigest: string | null;
   requestedSpecDigest: string | null;
   effectiveSpecDigest: string | null;
   datasetBindingDigest: string | null;
   manifestDigest: string | null;
+  /** Internal bounded P10 request; readers extract only validated public facts. */
+  legacyRequest: JsonValue;
   progressSnapshot: JsonValue;
   jobState: string | null;
   revision: string | null;
@@ -41,10 +50,12 @@ export interface SplitHubRow {
 
 interface HubQueryRow {
   run_id: string;
+  adapter_contract_digest: string | null;
   requested_spec_digest: string | null;
   effective_spec_digest: string | null;
   dataset_binding_digest: string | null;
   manifest_digest: string | null;
+  legacy_request: JsonValue;
   progress_snapshot: JsonValue;
   job_state: string | null;
   projection_revision: string | null;
@@ -152,10 +163,12 @@ export class ResearchSplitRepository {
       const asOfUtcMs = asSafeNonNegative(timestamp.rows[0]?.as_of_utc_ms ?? null, "snapshot timestamp");
       const durable = await client.query<HubQueryRow>(
         `SELECT producer.run_id,
+                producer.adapter_contract_digest,
                 producer.requested_spec_digest,
                 producer.effective_spec_digest,
                 producer.dataset_binding_digest,
                 producer.manifest_digest,
+                producer.legacy_request,
                 snapshot.snapshot AS progress_snapshot,
                 job.state AS job_state,
                 projection.projection_revision,
@@ -187,10 +200,12 @@ export class ResearchSplitRepository {
       if (row) {
         return {
           kind: "DURABLE" as const, runId: row.run_id,
+          adapterContractDigest: row.adapter_contract_digest,
           requestedSpecDigest: row.requested_spec_digest,
           effectiveSpecDigest: row.effective_spec_digest,
           datasetBindingDigest: row.dataset_binding_digest,
           manifestDigest: row.manifest_digest,
+          legacyRequest: row.legacy_request,
           progressSnapshot: row.progress_snapshot,
           jobState: row.job_state,
           revision: row.projection_revision,
@@ -208,7 +223,9 @@ export class ResearchSplitRepository {
       if (legacy.rowCount !== 1) return null;
       return {
         kind: "LEGACY" as const, runId,
+        adapterContractDigest: null,
         requestedSpecDigest: null, effectiveSpecDigest: null, datasetBindingDigest: null, manifestDigest: null,
+        legacyRequest: null,
         progressSnapshot: null, jobState: null, revision: null, projection: null, readiness: null,
         sourceSplitDigest: null, receivedAt: null, asOfUtcMs,
       };

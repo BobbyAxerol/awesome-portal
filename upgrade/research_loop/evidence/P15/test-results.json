@@ -1,0 +1,17 @@
+{
+  "schema_version": "research.phase-test-results.v1",
+  "phase": "P15",
+  "date_utc": "2026-09-22",
+  "status": "BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE",
+  "results": [
+    {"name": "control-api-build", "status": "PASS", "command": "npm --prefix apps/control-api run build"},
+    {"name": "p15-control-units", "status": "PASS", "tests": 21, "coverage": "exact fixed profile; adapter/bundle mismatch; pending/legacy propagation; feature dark; workspace/ETag/fold/query bounds"},
+    {"name": "p15-disposable-postgres", "status": "PASS", "tests": 1, "cleanup": "one named tmpfs PostgreSQL container; trap removes exactly it"},
+    {"name": "generated-contract", "status": "PASS", "coverage": "P15 generated OpenAPI byte check and typed public-surface proof"},
+    {"name": "contracts-snapshot", "status": "PASS", "tracked_files": 184},
+    {"name": "r2-route-ledger", "status": "PASS", "coverage": "new P15 route owns class/consumer/evidence"},
+    {"name": "screen06-browser-hifi", "status": "PENDING_FRONTEND_OWNER"},
+    {"name": "generic-optimizer-source", "status": "SOURCE_CAPABILITY_BLOCKED", "reason": "P04 fixed_qualification_v1 publishes no study/trial/evaluation/selection/diagnostics facts"},
+    {"name": "runtime-deployment-real-run", "status": "NOT_CLAIMED_FEATURE_DARK"}
+  ]
+}

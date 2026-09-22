@@ -144,6 +144,16 @@ describe("P14 Split truth activation guard", () => {
   });
 });
 
+describe("P15 Search truth activation guard", () => {
+  it("keeps the fixed-profile Search reader dark independently of P10/P11 worker flags", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_SEARCH).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_SEARCH: "true",
+    }).FEATURE_RESEARCH_SEARCH).toBe("true");
+  });
+});
+
 describe("Execution realtime feature dependencies", () => {
   const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
     ...baseEnv(),

@@ -94,6 +94,11 @@ const EnvSchema = z.object({
   // dark; this flag never enables a producer, worker, holdout value or
   // holdout-unlock mutation.
   FEATURE_RESEARCH_SPLIT: z.enum(["true", "false"]).default("false"),
+  // P15 reads only the immutable P14/P10 current-P04 receipt and its pinned
+  // static declaration. It starts no search, does not scan artifacts/Parquet
+  // and cannot turn the fixed qualification into an optimizer. Keep it dark
+  // until its generated contract and Screen-06 consumer are accepted.
+  FEATURE_RESEARCH_SEARCH: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),

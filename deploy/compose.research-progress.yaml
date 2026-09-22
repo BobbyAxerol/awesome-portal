@@ -14,6 +14,10 @@ services:
       # receipts. It neither starts a worker nor changes P10/P11 flags.
       FEATURE_RESEARCH_EVIDENCE: ${CONTROL_API_FEATURE_RESEARCH_EVIDENCE:-false}
       FEATURE_RESEARCH_SPLIT: ${CONTROL_API_FEATURE_RESEARCH_SPLIT:-false}
+      # P15 is a current-source reader over P10/P14 immutable facts only. It
+      # does not activate a generic optimizer, a worker or artifact/Parquet
+      # access. Keep false until its generated Screen-06 consumer is accepted.
+      FEATURE_RESEARCH_SEARCH: ${CONTROL_API_FEATURE_RESEARCH_SEARCH:-false}
       RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: ${CONTROL_API_RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS:-1500}
 
   # The worker owns source journalling and the private, at-least-once callback.

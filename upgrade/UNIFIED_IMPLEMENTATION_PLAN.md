@@ -3619,7 +3619,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P12](#rl-p12) | P05,P09–P11 | 01 | 06 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P12 packet](./research_loop/evidence/P12/README.md): feature-dark, same-origin, bounded persisted-library/query/sparkline contracts, keyset/search/legacy compatibility and fresh PostgreSQL proof are complete. **FE_S01_PRODUCT_CONSUMER_PENDING / Claude** — follow [P12 handoff](./research_loop/evidence/P12/frontend-handoff-claude.md); no browser/real-run/deployment acceptance is claimed. |
 | [P13](#rl-p13) | P05,P09–P11 | 04 | 07 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P13 packet](./research_loop/evidence/P13/README.md): P04 terminal source receipt → fsync P11 digest relay → append-only Portal projection/lazy-series BFF is proven on a fresh PostgreSQL cell and feature-dark by default. No artifact/raw-market/worker/Execution/CLI reader exists. **FE_S04_PRODUCT_CONSUMER_PENDING / Claude** — follow [P13 handoff](./research_loop/evidence/P13/frontend-handoff-claude.md), complete P12 first without touching Codex-owned files, then use the generated contract and direct browser-vs-HiFi receipt; no fixture route is product acceptance. |
 | [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P14 packet](./research_loop/evidence/P14/README.md); additive, feature-dark current-P04 three-window source receipt travels only alongside the digest-bound P11 terminal callback, then becomes an immutable Portal projection and one authenticated same-origin BFF. The reader preserves UTC-ms, exact digest/revision/ETag, semantic child-tape exclusion, `NOT_ATTESTED` physical Parquet-I/O and `NOT_ASSERTED` strict-OOS facts; it does not read raw holdout/Parquet, create a seal/unlock/governance action or imply WFO. P14 source/Python, Control API, generated contract, route ledger and fresh PostgreSQL proof pass. Screen-05 rich product route/browser/HiFi receipt remains Claude-owned and is not claimed while `FEATURE_RESEARCH_SPLIT=false`. |
-| [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | PLANNED / unassigned / — |
+| [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex / [P15 packet](./research_loop/evidence/P15/README.md): one feature-dark same-origin BFF reads only immutable P10/P14 current-P04 facts; exact fixed parameter profile, declared-not-executed request and all search/ledger/diagnostic gaps are typed. It adds no fake study/trial/selection, source sidecar, DB table, worker, raw data read or runtime activation. Generic optimizer-ledger acceptance remains **SOURCE_CAPABILITY_BLOCKED**, not implementation debt, until a separately versioned source contract publishes actual study/trial/evaluation/selection facts. FE Screen-06 ownership is Claude's; see the handoff. |
 | [P16](#rl-p16) | P13–P15 | 07 | 08 | PLANNED / unassigned / — |
 | [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | PLANNED / unassigned / — |
 | [P18](#rl-p18) | P13–P17 | 09 | 09 | PLANNED / unassigned / — |
@@ -4693,6 +4693,41 @@ Claude-owned; see [P14 handoff](./research_loop/evidence/P14/frontend-handoff-cl
 - **Tests FE/browser:** All S06 tests; all modes/schedules supported; >sample-cap pages reachable; nonselected pick→Freeze/Report still θ*; formula labels actual config; narrow/widen boundary and responsive spec overflow.
 - **Exit gate:** Every required panel/field/action closed; full-ledger source counts reconcile; derived raw-sufficient work done; no selection recomputation in query layer.
 - **Rollback/handoff:** Rollback reader transform/version, retain original trial ledger. Handoff selected target/population/diagnostic schemas cho P16.
+
+#### P15 current-source compatibility amendment — 2026-09-22
+
+P04 is an installed **fixed-parameter qualification**, not a generic optimizer:
+the bounded P10 admission rejects parameter overrides, random seed, early
+stopping, optimizer configuration and a trial count other than one. Its P11
+`trial 1/1` progress counter is an execution progress fact, **not** a study,
+candidate, selected trial, raw best, objective score or historical trial
+ledger. P14 additionally publishes `FIXED_PROFILE_NO_SEARCH` and does not
+assert strict outer-OOS selection. Neither the browser nor this BFF may upgrade
+those facts by using an old runner, a source database, a worker journal,
+artifact/Parquet file or a synthetic fixture.
+
+This makes the original generic P15 goal two explicit, non-interchangeable
+gates:
+
+| Gate | Current decision / implementation | Completion condition |
+|---|---|---|
+| **P15-A — fixed current-source truth** | **Complete in this phase.** `GET /api/v1/quantbt/runs/{runId}/search` consumes one session/workspace-scoped immutable P14 projection and its P10 bound contract. It publishes exact decimal fixed parameters, digest/revision/ETag, declared-but-not-executed mode/schedule, a null selected trial and individually typed `NOT_APPLICABLE` study/ledger/diagnostic panels. | Generated contract, membership/ETag/feature-dark tests, fresh PostgreSQL P10→P14→P15 proof, route ownership ledger and Screen-06 handoff all pass. No P15 source relation, cache, worker, migration or runtime service exists. |
+| **P15-B — generic optimizer ledger** | **SOURCE_CAPABILITY_BLOCKED, not waived and not represented as P15-A success.** Current P04 publishes no study ID, trial/evaluation identities, raw parameter samples, objective components/directions, sampler/seed/constraint/selection trace, population totals or diagnostics. | A future installed adapter must publish a new versioned, immutable source contract and bounded retained relation for those exact facts. It must be integrated as a new reader/projection revision, with source/engine evidence, before `P15-T01…T14`, real browser Screen-06 modes or the generic P15 exit gate can be claimed. |
+
+`P15-A` is deliberately a complete, stable compatibility surface rather than a
+temporary hand-mapped UI. It verifies the immutable P04 adapter and parameter
+bundle digests before exposing any static declaration; a mismatch is typed
+`NOT_PUBLISHED`, never silently reinterpreted. Pending and legacy retained rows
+keep their availability state inside nested absences. The feature defaults
+dark (`FEATURE_RESEARCH_SEARCH=false`) and has no dependency that activates a
+worker, source read, optimizer, execution profile or command.
+
+Claude must use the generated `researchSearchDetailGetV1` type only. The
+Screen-06 composition keeps the HiFi shell, but each optimizer-only panel must
+render its typed source reason rather than hiding the screen or substituting a
+fixture. The complete five-mode Screen-06 fixture lane may remain a clearly
+labelled visual/interaction harness; it cannot be called product truth for a
+P04 run.
 
 <a id="rl-p16"></a>
 ### P16 — Freeze, integrity verification và what-if

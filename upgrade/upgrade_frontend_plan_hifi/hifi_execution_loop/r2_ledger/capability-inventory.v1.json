@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 157,
+ "route_count": 158,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1596,16 +1596,26 @@
     "test_owner": "codex"
   },
   {
-    "route": "GET /api/v1/quantbt/runs/:runId/split",
+   "route": "GET /api/v1/quantbt/runs/:runId/split",
     "controller": "research/split.controller.ts",
     "interaction_class": "AUTO_READ",
     "consumer": "TYPED_FRONTEND_PORT",
     "unused_capability": true,
     "evidence": "P14 bounded same-origin Split reader returns one immutable current-P04 chronology projection under session/workspace scope. It retains typed non-publication for advanced folds, purge/embargo, strict selection, source seal and holdout unlock; it never reads snapshot/Parquet data, exposes a worker/lease/path, returns a holdout result or creates an action channel. Claude owns Screen 05 typed consumer and browser receipt.",
-    "owner": "codex",
-    "test_owner": "codex"
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/search",
+   "controller": "research/search.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P15 bounded same-origin Search reader consumes only the immutable P10/P14 current-P04 projection. It publishes the exact fixed parameter profile plus typed study/ledger/diagnostic absences; it cannot start an optimizer, infer a trial from progress, scan worker/artifact/Parquet data, expose a cursor/lease/source path, or create an action channel. Claude owns Screen 06 typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
   }
  ],
  "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",
- "code_inventory_updated_at": "2026-09-20"
+ "code_inventory_updated_at": "2026-09-22"
 }
