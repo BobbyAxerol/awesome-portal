@@ -1,0 +1,16 @@
+{
+  "schema_version": "research.phase-debt-register.v1",
+  "phase": "RS-03",
+  "in_scope_backend_debt": [],
+  "frontend_acceptance_pending": [
+    "Claude must wire only generated RS-02 named operations into the rich S04-S08 compositions.",
+    "Claude must inspect HiFi and product in a browser at 1280px and 660px, then return route-specific browser receipts."
+  ],
+  "explicit_source_truth_boundaries": [
+    "No raw P05 source-artifact bytes or physical holdout I/O are published by a GET.",
+    "Warmup, purge, embargo and strict outer-OOS methodology remain typed source facts when unpublished.",
+    "Objective decomposition, prune reason, importance, orders, fills, candles and broker state are not fabricated."
+  ],
+  "next_owner": "Claude for RS-03 rich consumer/browser acceptance; Bobby for combined P18 entry decision.",
+  "rollback": "Keep FEATURE_RESEARCH_CURRENT_SOURCE disabled or use the compatible pre-RS02 reader; retain immutable imported rows and seals."
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": "research.rs03-test-results.v1",
+  "phase": "RS-03",
+  "status": "BACKEND_INDEPENDENT_ACCEPTANCE_PASS_FEATURE_DARK_PENDING_CLAUDE",
+  "feature_state": "DARK",
+  "runs": [
+    {
+      "name": "fresh_postgresql_authenticated_named_bff_acceptance",
+      "result": "PASS",
+      "tests": 3,
+      "command": "bash scripts/research-loop-v11/test-rs03-postgres.sh",
+      "checks": [
+        "six named current-source operations",
+        "session/workspace authority",
+        "ETag 304 versus no-store cursor reads",
+        "opaque relation-bound cursor/playhead",
+        "200-row input bound and under-1-MiB response",
+        "raw retained payload sentinel cannot escape"
+      ],
+      "cleanup_verification": "The script owns one exact tmpfs-only research-rs03-postgres-* container and removes it in its EXIT trap."
+    },
+    {
+      "name": "rs02_focused_bff_and_custody_regression",
+      "result": "PASS",
+      "tests": 13
+    },
+    {
+      "name": "control_api_production_build",
+      "result": "PASS"
+    }
+  ],
+  "not_claimed": [
+    "Claude rich UI or browser/HiFi acceptance",
+    "runtime activation, deployment or feature-flag change",
+    "P18 entry or product release",
+    "unpublished source facts"
+  ]
+}

@@ -4982,8 +4982,19 @@ and the [Claude handoff](./research_loop/evidence/RS-02/frontend-handoff-claude.
 - **Exit:** A01–A12 closed by evidence/explicit genuine authority decision;
   original phase rows/journals agree, Claude receipts reviewed, Bobby review
   before P18. Main/stable/production release remains separate authority.
+- **Backend independent-acceptance amendment (2026-09-22):** one fresh,
+  disposable PostgreSQL cell now proves the actual authenticated Control-API
+  path from a session/workspace scope through the immutable local seal to all
+  six named S04–S08 reads. It asserts 401/hidden foreign workspace, 304 only
+  for immutable representations, private/no-store for renewable cursor pages,
+  opaque relation-bound playheads, 200-row input rejection, exact schema
+  parsing, UTC/exact strings, under-1-MiB documents and no arbitrary retained
+  JSON escape. It creates no runtime feature, browser consumer, source call,
+  engine run or deployment. Detailed evidence is
+  [RS-03](./research_loop/evidence/RS-03/README.md).
 - **Guide/rollback:** audit §5 RS-03; rollback reader/UI contract version,
-  never delete evidence. **Status: PROPOSED.**
+  never delete evidence. **Status: BACKEND_INDEPENDENT_ACCEPTANCE_COMPLETE ·
+  FEATURE_DARK · CLAUDE_RS03_INTEGRATION_PENDING.**
 
 **Execution rule for this checkpoint:** no new P25–P27 campaign; these are
 repair slices within P13–P17. Do not convert scope-reduction amendments into
