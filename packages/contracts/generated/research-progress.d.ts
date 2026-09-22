@@ -441,6 +441,11 @@ export interface components {
                 effective_status: "QUEUED" | "RUNNING" | "FINISHING" | "COMPLETED" | "FAILED" | "CANCELLED";
                 /** @enum {unknown} */
                 terminal_resolution: "SOURCE" | "CONTROL_CANCELLATION" | "PENDING";
+                /**
+                 * @description Optional during additive RS-01 client rollout; server emits it for every current read.
+                 * @enum {unknown}
+                 */
+                terminal_materialization?: "NOT_REQUIRED" | "PENDING" | "READY";
                 source_latest_sequence: components["schemas"]["UtcMilliseconds"];
                 retention_floor_sequence: components["schemas"]["UtcMilliseconds"];
                 last_received_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;

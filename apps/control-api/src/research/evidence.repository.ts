@@ -1,9 +1,11 @@
 /** P13 immutable source-evidence persistence and bounded reader. */
 
 import { Inject, Injectable } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 
 import { CONTROL_API_POOL } from "../tokens";
+import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bounded-read";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchEvidenceError } from "./evidence.error";
 import type { ProgressIngressScope } from "./progress.repository";
@@ -27,7 +29,7 @@ export interface EvidenceProjectionWrite {
     reasonCode: string | null;
     sourceObservationCount: number | null;
     emittedPointCount: number;
-    sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
+    sampling: "FULL" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "FULL_RETURN_HISTOGRAM_V2" | null;
     values: unknown[];
     digest: string;
   }>;
@@ -58,8 +60,16 @@ export interface EvidenceSeriesRow {
   reasonCode: string | null;
   sourceObservationCount: number | null;
   emittedPointCount: number;
-  sampling: "FULL" | "EXTREMA_BUCKET_V1" | null;
+  sampling: "FULL" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "FULL_RETURN_HISTOGRAM_V2" | null;
+  /** Canonical digest of `values`, verified before a reader receives it. */
+  digest: string;
   values: JsonValue;
+}
+
+export interface EvidenceReadBundle {
+  hub: EvidenceHubRow | null;
+  /** Each row is pinned to `hub.revision` inside one repeatable-read txn. */
+  series: Map<EvidenceSeriesRow["kind"], EvidenceSeriesRow>;
 }
 
 interface HubQueryRow {
@@ -89,6 +99,7 @@ interface SeriesQueryRow {
   emitted_point_count: string | number;
   sampling: EvidenceSeriesRow["sampling"];
   series_payload: JsonValue;
+  series_digest: string;
 }
 
 const MAXIMUM_CONCURRENT_EVIDENCE_READS = 2;
@@ -111,6 +122,26 @@ function asArray(value: JsonValue): unknown[] | null {
   }
 }
 
+/** Match the source/projection canonical JSON identity exactly. */
+function canonicalJson(value: unknown): string {
+  const normalize = (entry: unknown): unknown => {
+    if (Array.isArray(entry)) return entry.map(normalize);
+    if (entry && typeof entry === "object") {
+      return Object.fromEntries(
+        Object.entries(entry as Record<string, unknown>)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, normalize(nested)]),
+      );
+    }
+    return entry;
+  };
+  return JSON.stringify(normalize(value));
+}
+
+function sha256Json(value: unknown): string {
+  return createHash("sha256").update(canonicalJson(value), "utf8").digest("hex");
+}
+
 /**
  * P13 does not use generic tables or `SELECT *`: every path is an exact
  * workspace/run/revision key, takes a finite DB role/timeout, and never
@@ -118,8 +149,14 @@ function asArray(value: JsonValue): unknown[] | null {
  */
 @Injectable()
 export class ResearchEvidenceRepository {
-  private activeReads = 0;
-  private readonly waiters: Array<() => void> = [];
+  private readonly readAdmission = new BoundedResearchReadAdmission<ResearchEvidenceError>({
+    maximumActive: MAXIMUM_CONCURRENT_EVIDENCE_READS,
+    maximumQueued: MAXIMUM_QUEUED_EVIDENCE_READS,
+    waitTimeoutMs: RESEARCH_DB_BUDGET.boundedReadQueueWaitMs,
+    unavailable: () => new ResearchEvidenceError(
+      "RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence read admission is temporarily saturated.", 503,
+    ),
+  });
 
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
@@ -152,15 +189,47 @@ export class ResearchEvidenceRepository {
           ],
         );
       }
-      const projectionExisting = await client.query<{ projection_digest: string }>(
-        `SELECT projection_digest
+      const projectionExisting = await client.query<{ projection_digest: string; source_evidence_digest: string }>(
+        `SELECT projection_digest, source_evidence_digest
            FROM research.run_evidence_projections_v1
           WHERE workspace_id = $1 AND run_id = $2 AND worker_attempt_id = $3 AND projection_revision = $4`,
         [scope.workspaceId, write.runId, scope.workerAttemptId, write.projectionRevision],
       );
       if (projectionExisting.rowCount === 1) {
-        if (projectionExisting.rows[0]!.projection_digest !== write.projectionDigest) {
+        if (
+          projectionExisting.rows[0]!.projection_digest !== write.projectionDigest
+          || projectionExisting.rows[0]!.source_evidence_digest !== write.sourceEvidenceDigest
+        ) {
           throw new ResearchEvidenceError("RESEARCH_EVIDENCE_CONFLICT", "Evidence projection revision conflicts with immutable source facts.", 409);
+        }
+        const existingSeries = await client.query<{
+          series_kind: EvidenceProjectionWrite["series"][number]["kind"];
+          series_digest: string;
+          emitted_point_count: string | number;
+          source_observation_count: string | number | null;
+          sampling: EvidenceProjectionWrite["series"][number]["sampling"];
+        }>(
+          `SELECT series_kind, series_digest, emitted_point_count, source_observation_count, sampling
+             FROM research.run_evidence_series_v1
+            WHERE workspace_id = $1 AND run_id = $2 AND worker_attempt_id = $3 AND projection_revision = $4`,
+          [scope.workspaceId, write.runId, scope.workerAttemptId, write.projectionRevision],
+        );
+        if (existingSeries.rowCount !== write.series.length) {
+          throw new ResearchEvidenceError("RESEARCH_EVIDENCE_CONFLICT", "Evidence projection is missing an immutable series binding.", 409);
+        }
+        const expected = new Map(write.series.map((item) => [item.kind, item]));
+        for (const item of existingSeries.rows) {
+          const expectedItem = expected.get(item.series_kind);
+          if (
+            !expectedItem
+            || item.series_digest !== expectedItem.digest
+            || Number(item.emitted_point_count) !== expectedItem.emittedPointCount
+            || (item.source_observation_count === null ? null : Number(item.source_observation_count))
+              !== expectedItem.sourceObservationCount
+            || item.sampling !== expectedItem.sampling
+          ) {
+            throw new ResearchEvidenceError("RESEARCH_EVIDENCE_CONFLICT", "Evidence series conflicts with immutable projection identity.", 409);
+          }
         }
         return;
       }
@@ -191,8 +260,43 @@ export class ResearchEvidenceRepository {
     });
   }
 
-  async hub(scope: ResearchScope, runId: string): Promise<EvidenceHubRow | null> {
+  async hub(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<EvidenceHubRow | null> {
+    return this.withScopedRead(scope, (client) => this.readHub(client, scope, runId), signal);
+  }
+
+  /** Read Hub and selected series from one repeatable-read revision fence. */
+  async bundle(
+    scope: ResearchScope,
+    runId: string,
+    kinds: readonly EvidenceSeriesRow["kind"][],
+    signal?: AbortSignal,
+  ): Promise<EvidenceReadBundle> {
     return this.withScopedRead(scope, async (client) => {
+      const hub = await this.readHub(client, scope, runId);
+      if (!hub?.revision || kinds.length === 0) return { hub, series: new Map() };
+      const requested = [...new Set(kinds)];
+      const result = await client.query<SeriesQueryRow>(
+        `SELECT projection_revision, series_kind, availability_state, reason_code,
+                source_observation_count, emitted_point_count, sampling, series_payload, series_digest
+           FROM research.run_evidence_series_v1
+          WHERE workspace_id = $1 AND run_id = $2 AND projection_revision = $3
+            AND series_kind = ANY($4::text[])
+          ORDER BY series_kind ASC`,
+        [scope.workspaceId, runId, hub.revision, requested],
+      );
+      const series = new Map<EvidenceSeriesRow["kind"], EvidenceSeriesRow>();
+      for (const row of result.rows) {
+        const parsed = this.mapSeries(row);
+        if (parsed.revision !== hub.revision) {
+          throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence bundle revision is incompatible.", 503);
+        }
+        series.set(parsed.kind, parsed);
+      }
+      return { hub, series };
+    }, signal);
+  }
+
+  private async readHub(client: PoolClient, scope: ResearchScope, runId: string): Promise<EvidenceHubRow | null> {
       const timestamp = await client.query<TimestampRow>(
         "SELECT floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms",
       );
@@ -266,7 +370,6 @@ export class ResearchEvidenceRepository {
         progressSnapshot: null, jobState: null, revision: null, projection: null, readiness: null,
         sourceEvidenceDigest: null, receivedAt: null, asOfUtcMs,
       };
-    });
   }
 
   async series(
@@ -277,7 +380,8 @@ export class ResearchEvidenceRepository {
     return this.withScopedRead(scope, async (client) => {
       const result = await client.query<SeriesQueryRow>(
         `SELECT series.projection_revision, series.series_kind, series.availability_state, series.reason_code,
-                series.source_observation_count, series.emitted_point_count, series.sampling, series.series_payload
+                series.source_observation_count, series.emitted_point_count, series.sampling, series.series_payload,
+                series.series_digest
            FROM research.run_producers producer
            JOIN research.run_evidence_projections_v1 projection
              ON projection.workspace_id = producer.workspace_id AND projection.run_id = producer.run_id
@@ -292,31 +396,42 @@ export class ResearchEvidenceRepository {
         [scope.workspaceId, runId, kind],
       );
       const row = result.rows[0];
-      if (!row) return null;
-      const values = asArray(row.series_payload);
-      if (!values || values.length > 192) {
-        throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence series is incompatible.", 503);
-      }
-      const emittedPointCount = asSafeNonNegative(row.emitted_point_count, "series point count");
-      if (emittedPointCount !== values.length) {
-        throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence series count is incompatible.", 503);
-      }
-      return {
-        revision: row.projection_revision,
-        kind: row.series_kind,
-        availabilityState: row.availability_state,
-        reasonCode: row.reason_code,
-        sourceObservationCount: row.source_observation_count === null
-          ? null : asSafeNonNegative(row.source_observation_count, "series source count"),
-        emittedPointCount,
-        sampling: row.sampling,
-        values,
-      };
+      return row ? this.mapSeries(row) : null;
     });
   }
 
-  private async withScopedRead<T>(scope: ResearchScope, work: (client: PoolClient) => Promise<T>): Promise<T> {
-    const release = await this.acquireReadAdmission();
+  private mapSeries(row: SeriesQueryRow): EvidenceSeriesRow {
+    const values = asArray(row.series_payload);
+    if (!values || values.length > 192) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence series is incompatible.", 503);
+    }
+    const emittedPointCount = asSafeNonNegative(row.emitted_point_count, "series point count");
+    if (emittedPointCount !== values.length) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence series count is incompatible.", 503);
+    }
+    if (sha256Json(values) !== row.series_digest) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence series integrity is incompatible.", 503);
+    }
+    return {
+      revision: row.projection_revision,
+      kind: row.series_kind,
+      availabilityState: row.availability_state,
+      reasonCode: row.reason_code,
+      sourceObservationCount: row.source_observation_count === null
+        ? null : asSafeNonNegative(row.source_observation_count, "series source count"),
+      emittedPointCount,
+      sampling: row.sampling,
+      digest: row.series_digest,
+      values,
+    };
+  }
+
+  private async withScopedRead<T>(
+    scope: ResearchScope,
+    work: (client: PoolClient) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    const release = await this.readAdmission.acquire(signal);
     try {
       return await this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
         const membership = await client.query(
@@ -327,7 +442,7 @@ export class ResearchEvidenceRepository {
           throw new ResearchEvidenceError("RESEARCH_EVIDENCE_FORBIDDEN", "Access denied.", 403);
         }
         return work(client);
-      });
+      }, signal);
     } finally {
       release();
     }
@@ -338,11 +453,22 @@ export class ResearchEvidenceRepository {
     actorUserId: string,
     readOnly: boolean,
     work: (client: PoolClient) => Promise<T>,
+    signal?: AbortSignal,
   ): Promise<T> {
     let client: PoolClient | undefined;
     let began = false;
     try {
-      client = await this.pool.connect();
+      // RS-01 bounds viewer reads only. Terminal-sidecar writes retain their
+      // existing recovery semantics: a transient write failure is retried from
+      // the sealed source callback, not silently converted into read shedding.
+      client = readOnly
+        ? await acquireResearchPoolClient(
+          this.pool.connect(),
+          RESEARCH_DB_BUDGET.boundedReadAcquireTimeoutMs,
+          () => new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence database acquisition timed out.", 503),
+          signal,
+        )
+        : await this.pool.connect();
       await client.query(readOnly ? "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY" : "BEGIN");
       began = true;
       try {
@@ -375,24 +501,4 @@ export class ResearchEvidenceRepository {
     }
   }
 
-  private async acquireReadAdmission(): Promise<() => void> {
-    if (this.activeReads < MAXIMUM_CONCURRENT_EVIDENCE_READS) {
-      this.activeReads += 1;
-      return () => this.releaseReadAdmission();
-    }
-    if (this.waiters.length >= MAXIMUM_QUEUED_EVIDENCE_READS) {
-      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence read admission is temporarily saturated.", 503);
-    }
-    await new Promise<void>((resolve) => this.waiters.push(resolve));
-    return () => this.releaseReadAdmission();
-  }
-
-  private releaseReadAdmission(): void {
-    const next = this.waiters.shift();
-    if (next) {
-      next();
-      return;
-    }
-    this.activeReads -= 1;
-  }
 }

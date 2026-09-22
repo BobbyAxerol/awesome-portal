@@ -1,7 +1,11 @@
 {
   "schema_version": "research.phase-debt-register.v1",
   "phase": "P17",
+  "audit_status": "RS01_REPLAY_CORRECTNESS_REMEDIATED; ORIGINAL_PHASE_ACCEPTANCE_PENDING_RS02_RS03",
   "in_scope_backend_debt": [],
+  "rs01_repairs": [
+    "A05/A06/A08: one revision-pinned bundle, no-store replay HTTP, typed cursor-expiry recovery and scoped cancellable admission are implemented."
+  ],
   "typed_source_boundaries": [
     "P17-A reads one retained P13 OOS equity sample series; a selected sample is never an execution account, position, order, fill, trade or event state.",
     "Current P04 publishes no execution ledger, source event order, OCO/partial-fill/multi-leg/funding/candle/MAE-MFE facts, fold capital convention or child-audit replay provenance.",

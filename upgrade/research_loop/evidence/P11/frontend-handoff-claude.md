@@ -1,5 +1,12 @@
 # P11 frontend handoff — Screen 03 Run Progress
 
+> **RS-01 amendment (2026-09-22):** regenerate `research-progress.d.ts`.
+> `current.terminal_materialization=PENDING` renders as **FINISHING / finalizing
+> durable evidence** inside the rich existing shell, even when the source
+> snapshot says completed. Only `READY` permits terminal completion UI; this is
+> a server fact, never a timer/progress inference. See
+> [RS-01 handoff](../RS-01/frontend-handoff-claude.md).
+
 The backend and generated P11 contract are ready. This handoff deliberately
 does **not** ask for a global UI refactor or a deployment. Work only in the
 Research Screen-03 composition/routes/tests you own; do not modify the worker,

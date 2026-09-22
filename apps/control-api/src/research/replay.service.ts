@@ -81,9 +81,14 @@ export class ResearchReplayService {
     });
   }
 
-  async detail(scope: ResearchScope, runId: string, query: ResearchReplayReadQuery): Promise<ResearchReplayResponse> {
+  async detail(
+    scope: ResearchScope,
+    runId: string,
+    query: ResearchReplayReadQuery,
+    signal?: AbortSignal,
+  ): Promise<ResearchReplayResponse> {
     this.requireEnabled();
-    const { hub, series } = await this.readEvidence(scope, runId);
+    const { hub, series } = await this.readEvidence(scope, runId, signal);
     const response = this.mapResponse(scope, runId, query, hub, series);
     const parsed = ResearchReplayResponseSchema.safeParse(response);
     if (!parsed.success || Buffer.byteLength(JSON.stringify(response), "utf8") > RESPONSE_MAX_BYTES) {
@@ -101,10 +106,17 @@ export class ResearchReplayService {
   private async readEvidence(
     scope: ResearchScope,
     runId: string,
+    signal?: AbortSignal,
   ): Promise<{ hub: ResearchEvidenceHubResponse; series: ResearchEvidenceSeriesResponse }> {
     try {
-      const hub = await this.evidence.hub(scope, runId);
-      const series = await this.evidence.series(scope, runId, ResearchEvidenceSeriesKindSchema.enum.EQUITY_OOS);
+      const bundle = signal
+        ? await this.evidence.bundle(scope, runId, [ResearchEvidenceSeriesKindSchema.enum.EQUITY_OOS], signal)
+        : await this.evidence.bundle(scope, runId, [ResearchEvidenceSeriesKindSchema.enum.EQUITY_OOS]);
+      const hub = bundle.hub;
+      const series = bundle.series.get(ResearchEvidenceSeriesKindSchema.enum.EQUITY_OOS);
+      if (!series || series.revision !== hub.revision) {
+        throw new ResearchReplayError("RESEARCH_REPLAY_UNAVAILABLE", "Replay evidence revision is incompatible.", 503);
+      }
       return { hub, series };
     } catch (error) {
       if (error instanceof ResearchReplayError) throw error;
@@ -175,12 +187,20 @@ export class ResearchReplayService {
     );
     const sampling = series.source_sample.sampling;
     const sourceObservationCount = series.source_sample.source_observation_count;
-    if (sourceIsAvailable && (!sampling || !sourceObservationCount || sourceObservationCount < samples.length)) {
+    if (
+      sourceIsAvailable
+      && (
+        (sampling !== "FULL" && sampling !== "EXTREMA_BUCKET_V1")
+        || !sourceObservationCount
+        || sourceObservationCount < samples.length
+      )
+    ) {
       throw new ResearchReplayError("RESEARCH_REPLAY_UNAVAILABLE", "Replay evidence source sampling is incompatible.", 503);
     }
-    const window = sourceIsAvailable && revision && sampling && sourceObservationCount
+    const replaySampling = sampling === "FULL" || sampling === "EXTREMA_BUCKET_V1" ? sampling : null;
+    const window = sourceIsAvailable && revision && replaySampling && sourceObservationCount
       ? this.window(
-        scope.workspaceId, runId, revision, query, samples, sourceObservationCount, sampling, executionStateGap,
+        scope.workspaceId, runId, revision, query, samples, sourceObservationCount, replaySampling, executionStateGap,
       )
       : this.absentWindow(query.limit, replayAvailability, executionStateGap);
     const absenceAvailability = sourceIsAvailable ? undefined : compatibilityAvailability;
@@ -377,6 +397,12 @@ export class ResearchReplayService {
     query: ResearchReplayReadQuery,
     count: number,
   ): PageSelection {
+    if (query.at_ordinal !== undefined) {
+      this.assertOrdinal(query.at_ordinal, count);
+      const half = Math.floor(query.limit / 2);
+      const start = Math.max(0, Math.min(query.at_ordinal - half, Math.max(0, count - query.limit)));
+      return { start, end: Math.min(count, start + query.limit), selectedOrdinal: query.at_ordinal };
+    }
     if (query.at) {
       const ordinal = this.decodePlayhead(workspaceId, runId, revision, query.at);
       this.assertOrdinal(ordinal, count);
@@ -478,10 +504,18 @@ export class ResearchReplayService {
   }
 
   private cursorError(error: unknown): ResearchReplayError {
-    const message = error instanceof QueryContractError && error.code === "CURSOR_EXPIRED"
-      ? "Replay cursor expired; reload the current immutable replay page."
-      : "Replay cursor is invalid for this workspace, run, revision or window.";
-    return new ResearchReplayError("RESEARCH_REPLAY_CURSOR_INVALID", message, 400);
+    if (error instanceof QueryContractError && error.code === "CURSOR_EXPIRED") {
+      return new ResearchReplayError(
+        "RESEARCH_REPLAY_CURSOR_EXPIRED",
+        "Replay cursor expired; discard it and refetch the canonical page or use at_ordinal.",
+        409,
+      );
+    }
+    return new ResearchReplayError(
+      "RESEARCH_REPLAY_CURSOR_INVALID",
+      "Replay cursor is invalid for this workspace, run, revision or window.",
+      400,
+    );
   }
 
   private routeGap(reasonCode: string, unavailable?: Availability) {

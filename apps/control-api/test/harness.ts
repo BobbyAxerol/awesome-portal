@@ -25,6 +25,8 @@ export const TEST_TABLES = [
   "research.run_evidence_series_v1",
   "research.run_evidence_projections_v1",
   "research.run_evidence_sources_v1",
+  // RS-01 terminal checkpoint is an immutable dependant of the source event.
+  "research.run_terminal_materializations_v1",
   // P14 chronology source/projection rows are immutable dependants of the
   // exact P10/P11 run attempt. Name them explicitly so stale truth never
   // leaks between disposable test cells.
@@ -159,6 +161,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_journey_descriptor_immutable_guard: boolean;
       has_research_progress_events: boolean;
       has_research_progress_snapshots: boolean;
+      has_research_terminal_materializations: boolean;
+      has_research_terminal_materialization_guard: boolean;
       has_research_progress_event_guard: boolean;
       has_research_run_library_view: boolean;
       has_research_run_library_search_documents: boolean;
@@ -166,6 +170,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_evidence_sources: boolean;
       has_research_evidence_projections: boolean;
       has_research_evidence_series: boolean;
+      has_research_evidence_r2_sampling_constraints: boolean;
       has_research_evidence_source_guard: boolean;
       has_research_evidence_projection_guard: boolean;
       has_research_evidence_series_guard: boolean;
@@ -265,6 +270,12 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          ) AS has_research_journey_descriptor_immutable_guard,
          to_regclass('research.run_progress_events') IS NOT NULL AS has_research_progress_events,
          to_regclass('research.run_progress_snapshots') IS NOT NULL AS has_research_progress_snapshots,
+         to_regclass('research.run_terminal_materializations_v1') IS NOT NULL AS has_research_terminal_materializations,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_terminal_materializations_v1_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_terminal_materialization_guard,
          EXISTS (
            SELECT 1 FROM pg_trigger
             WHERE tgname = 'research_run_progress_events_immutable_guard'
@@ -280,6 +291,21 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('research.run_evidence_sources_v1') IS NOT NULL AS has_research_evidence_sources,
          to_regclass('research.run_evidence_projections_v1') IS NOT NULL AS has_research_evidence_projections,
          to_regclass('research.run_evidence_series_v1') IS NOT NULL AS has_research_evidence_series,
+         (
+           EXISTS (
+             SELECT 1
+             FROM pg_constraint
+             WHERE conname = 'run_evidence_series_v1_sampling_check'
+               AND pg_get_constraintdef(oid) LIKE '%TAIL_WINDOW_V1%'
+               AND pg_get_constraintdef(oid) LIKE '%FULL_RETURN_HISTOGRAM_V2%'
+           )
+           AND EXISTS (
+             SELECT 1
+             FROM pg_constraint
+             WHERE conname = 'run_evidence_series_v1_source_observation_count_check'
+               AND pg_get_constraintdef(oid) LIKE '%>= 0%'
+           )
+         ) AS has_research_evidence_r2_sampling_constraints,
          EXISTS (
            SELECT 1 FROM pg_trigger
             WHERE tgname = 'research_run_evidence_sources_v1_immutable_guard'
@@ -373,6 +399,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_journey_descriptor_immutable_guard ||
       !row.has_research_progress_events ||
       !row.has_research_progress_snapshots ||
+      !row.has_research_terminal_materializations ||
+      !row.has_research_terminal_materialization_guard ||
       !row.has_research_progress_event_guard ||
       !row.has_research_run_library_view ||
       !row.has_research_run_library_search_documents ||
@@ -380,6 +408,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_evidence_sources ||
       !row.has_research_evidence_projections ||
       !row.has_research_evidence_series ||
+      !row.has_research_evidence_r2_sampling_constraints ||
       !row.has_research_evidence_source_guard ||
       !row.has_research_evidence_projection_guard ||
       !row.has_research_evidence_series_guard ||
@@ -446,6 +475,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_journey_descriptor_immutable_guard=${row.has_research_journey_descriptor_immutable_guard}, ` +
         `research_progress_events=${row.has_research_progress_events}, ` +
         `research_progress_snapshots=${row.has_research_progress_snapshots}, ` +
+        `research_terminal_materializations=${row.has_research_terminal_materializations}, ` +
+        `research_terminal_materialization_guard=${row.has_research_terminal_materialization_guard}, ` +
         `research_progress_event_guard=${row.has_research_progress_event_guard}, ` +
         `research_run_library_view=${row.has_research_run_library_view}, ` +
         `research_run_library_search_documents=${row.has_research_run_library_search_documents}, ` +
@@ -453,6 +484,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_evidence_sources=${row.has_research_evidence_sources}, ` +
         `research_evidence_projections=${row.has_research_evidence_projections}, ` +
         `research_evidence_series=${row.has_research_evidence_series}, ` +
+        `research_evidence_r2_sampling_constraints=${row.has_research_evidence_r2_sampling_constraints}, ` +
         `research_evidence_source_guard=${row.has_research_evidence_source_guard}, ` +
         `research_evidence_projection_guard=${row.has_research_evidence_projection_guard}, ` +
         `research_evidence_series_guard=${row.has_research_evidence_series_guard}, ` +

@@ -12,6 +12,8 @@ describe("P17 route-aware Replay request and response contracts", () => {
     for (const invalid of [
       { cursor, before: cursor },
       { cursor, at: cursor },
+      { cursor, at_ordinal: 4 },
+      { at: cursor, at_ordinal: 4 },
       { before: cursor, at: cursor },
       { limit: 101 },
       { limit: 0 },

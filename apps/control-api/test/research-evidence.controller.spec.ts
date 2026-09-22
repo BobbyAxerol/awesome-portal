@@ -6,6 +6,7 @@ const request = {
   portalUser: { userId: "p13-user" },
   portalWorkspaceId: "p13-workspace",
   headers: {},
+  raw: { once: vi.fn(), off: vi.fn() },
 };
 
 function reply() {
@@ -27,12 +28,14 @@ describe("P13 Evidence Flow same-origin boundary", () => {
     const controller = new ResearchEvidenceController(service as never, workspaces as never);
     const hubReply = reply();
     await controller.hub(request as never, hubReply as never, "run_p13", {});
-    expect(service.hub).toHaveBeenCalledWith({ workspaceId: "p13-workspace", actorUserId: "p13-user" }, "run_p13");
+    expect(service.hub).toHaveBeenCalledWith(
+      { workspaceId: "p13-workspace", actorUserId: "p13-user" }, "run_p13", expect.any(AbortSignal),
+    );
     expect(hubReply.header).toHaveBeenCalledWith("etag", `"p13r1_${"a".repeat(64)}"`);
 
     await controller.series(request as never, reply() as never, "run_p13", { kind: "EQUITY_OOS" });
     expect(service.series).toHaveBeenCalledWith(
-      { workspaceId: "p13-workspace", actorUserId: "p13-user" }, "run_p13", "EQUITY_OOS",
+      { workspaceId: "p13-workspace", actorUserId: "p13-user" }, "run_p13", "EQUITY_OOS", expect.any(AbortSignal),
     );
   });
 

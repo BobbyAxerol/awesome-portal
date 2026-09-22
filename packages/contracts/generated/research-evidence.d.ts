@@ -72,7 +72,7 @@ export interface components {
             /** @enum {unknown} */
             unit: "CURRENCY" | "FRACTION" | "COUNT";
             /** @enum {unknown} */
-            scope: "OOS" | "IS_PLUS_OOS" | "NOT_PUBLISHED";
+            scope: "OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "NOT_PUBLISHED";
             /** @enum {unknown} */
             frequency: "RUN_FINAL" | "PER_OBSERVATION" | "CALENDAR_MONTH";
             /** @enum {unknown} */
@@ -127,8 +127,8 @@ export interface components {
             /** @enum {unknown} */
             readiness: "COMPLETE" | "PARTIAL" | "NOT_READY";
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
-            /** @constant */
-            metric_registry_version: "research.metric-registry.v1";
+            /** @enum {unknown} */
+            metric_registry_version: "research.metric-registry.v1" | "research.metric-registry.v2";
             core: {
                 source_adapter_id: "p04.delta-rsi.v1" | null;
                 engine_version: "1.1.1" | null;
@@ -172,6 +172,13 @@ export interface components {
             upper_exclusive: components["schemas"]["ExactDecimal"];
             count: string;
         };
+        CorrectedDistributionBucket: {
+            lower_inclusive: components["schemas"]["ExactDecimal"];
+            upper: components["schemas"]["ExactDecimal"];
+            /** @enum {unknown} */
+            upper_inclusive: "true" | "false";
+            count: string;
+        };
         EvidenceSeries: {
             /** @constant */
             schema_version: "research.evidence-series.v1";
@@ -183,9 +190,9 @@ export interface components {
             source_sample: {
                 source_observation_count: number | null;
                 emitted_point_count: number;
-                sampling: ("FULL" | "EXTREMA_BUCKET_V1") | null;
+                sampling: ("FULL" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "FULL_RETURN_HISTOGRAM_V2") | null;
             };
-            values: (components["schemas"]["EquityPoint"] | components["schemas"]["MonthlyReturnPoint"] | components["schemas"]["RollingReturnPoint"] | components["schemas"]["DistributionBucket"])[];
+            values: (components["schemas"]["EquityPoint"] | components["schemas"]["MonthlyReturnPoint"] | components["schemas"]["RollingReturnPoint"] | components["schemas"]["DistributionBucket"] | components["schemas"]["CorrectedDistributionBucket"])[];
         };
     };
     responses: {

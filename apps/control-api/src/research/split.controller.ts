@@ -33,13 +33,26 @@ export class ResearchSplitController {
     const query = ResearchSplitReadQuerySchema.safeParse(rawQuery);
     if (!query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    const body = await this.service.detail({ workspaceId, actorUserId: request.portalUser.userId }, runId);
+    const body = await this.withAbort(request, (signal) => this.service.detail(
+      { workspaceId, actorUserId: request.portalUser.userId }, runId, signal,
+    ));
     if (body.etag) {
       reply.header("etag", body.etag);
       const candidate = request.headers["if-none-match"];
       if (!Array.isArray(candidate) && candidate === body.etag) return reply.code(304).send();
     }
     return reply.send(body);
+  }
+
+  private async withAbort<T>(request: FastifyRequest, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    const abort = new AbortController();
+    const onAborted = () => abort.abort();
+    request.raw.once("aborted", onAborted);
+    try {
+      return await work(abort.signal);
+    } finally {
+      request.raw.off("aborted", onAborted);
+    }
   }
 
   private runId(raw: string): string {

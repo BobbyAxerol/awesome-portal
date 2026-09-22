@@ -4,6 +4,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
 
 import { CONTROL_API_POOL } from "../tokens";
+import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bounded-read";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchSplitError } from "./split.error";
 import type { ProgressIngressScope } from "./progress.repository";
@@ -85,8 +86,14 @@ function asSafeNonNegative(value: string | number | null, label: string): number
  */
 @Injectable()
 export class ResearchSplitRepository {
-  private activeReads = 0;
-  private readonly waiters: Array<() => void> = [];
+  private readonly readAdmission = new BoundedResearchReadAdmission<ResearchSplitError>({
+    maximumActive: MAXIMUM_CONCURRENT_SPLIT_READS,
+    maximumQueued: MAXIMUM_QUEUED_SPLIT_READS,
+    waitTimeoutMs: RESEARCH_DB_BUDGET.boundedReadQueueWaitMs,
+    unavailable: () => new ResearchSplitError(
+      "RESEARCH_SPLIT_UNAVAILABLE", "Split read admission is temporarily saturated.", 503,
+    ),
+  });
 
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
@@ -155,7 +162,7 @@ export class ResearchSplitRepository {
     });
   }
 
-  async hub(scope: ResearchScope, runId: string): Promise<SplitHubRow | null> {
+  async hub(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<SplitHubRow | null> {
     return this.withScopedRead(scope, async (client) => {
       const timestamp = await client.query<TimestampRow>(
         "SELECT floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms",
@@ -229,11 +236,15 @@ export class ResearchSplitRepository {
         progressSnapshot: null, jobState: null, revision: null, projection: null, readiness: null,
         sourceSplitDigest: null, receivedAt: null, asOfUtcMs,
       };
-    });
+    }, signal);
   }
 
-  private async withScopedRead<T>(scope: ResearchScope, work: (client: PoolClient) => Promise<T>): Promise<T> {
-    const release = await this.acquireReadAdmission();
+  private async withScopedRead<T>(
+    scope: ResearchScope,
+    work: (client: PoolClient) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    const release = await this.readAdmission.acquire(signal);
     try {
       return await this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
         const membership = await client.query(
@@ -244,7 +255,7 @@ export class ResearchSplitRepository {
           throw new ResearchSplitError("RESEARCH_SPLIT_FORBIDDEN", "Access denied.", 403);
         }
         return work(client);
-      });
+      }, signal);
     } finally {
       release();
     }
@@ -255,11 +266,22 @@ export class ResearchSplitRepository {
     actorUserId: string,
     readOnly: boolean,
     work: (client: PoolClient) => Promise<T>,
+    signal?: AbortSignal,
   ): Promise<T> {
     let client: PoolClient | undefined;
     let began = false;
     try {
-      client = await this.pool.connect();
+      // The bounded acquire deadline protects interactive readers. A durable
+      // terminal-sidecar write retains the existing P11 retry path instead of
+      // inheriting viewer-shedding semantics.
+      client = readOnly
+        ? await acquireResearchPoolClient(
+          this.pool.connect(),
+          RESEARCH_DB_BUDGET.boundedReadAcquireTimeoutMs,
+          () => new ResearchSplitError("RESEARCH_SPLIT_UNAVAILABLE", "Split database acquisition timed out.", 503),
+          signal,
+        )
+        : await this.pool.connect();
       await client.query(readOnly ? "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY" : "BEGIN");
       began = true;
       try {
@@ -292,24 +314,4 @@ export class ResearchSplitRepository {
     }
   }
 
-  private async acquireReadAdmission(): Promise<() => void> {
-    if (this.activeReads < MAXIMUM_CONCURRENT_SPLIT_READS) {
-      this.activeReads += 1;
-      return () => this.releaseReadAdmission();
-    }
-    if (this.waiters.length >= MAXIMUM_QUEUED_SPLIT_READS) {
-      throw new ResearchSplitError("RESEARCH_SPLIT_UNAVAILABLE", "Split read admission is temporarily saturated.", 503);
-    }
-    await new Promise<void>((resolve) => this.waiters.push(resolve));
-    return () => this.releaseReadAdmission();
-  }
-
-  private releaseReadAdmission(): void {
-    const next = this.waiters.shift();
-    if (next) {
-      next();
-      return;
-    }
-    this.activeReads -= 1;
-  }
 }

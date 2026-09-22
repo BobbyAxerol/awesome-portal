@@ -1,7 +1,12 @@
 {
   "schema_version": "research.phase-debt-register.v1",
   "phase": "P13",
+  "audit_status": "RS01_CORRECTNESS_REMEDIATED; ORIGINAL_PHASE_ACCEPTANCE_PENDING_RS02_RS03",
   "in_scope_backend_debt": [],
+  "rs01_repairs": [
+    "A01/A02/A04/A05: R2 financial math, byte bound and complete immutable series identity are repaired without rewriting R1 history.",
+    "R1 historical metric labels remain readable; R2 uses the versioned registry and exact source scope facts."
+  ],
   "typed_source_boundaries": [
     "P04 does not publish benchmark, funding, audited fills or per-fold metrics.",
     "P13 does not own fold/holdout, search/selection, replay, report or artifact fields.",

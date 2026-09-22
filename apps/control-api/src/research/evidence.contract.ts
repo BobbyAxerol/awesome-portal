@@ -55,7 +55,7 @@ const MetricSchema = z.object({
   ]),
   label: z.string().min(1).max(96),
   unit: z.enum(["CURRENCY", "FRACTION", "COUNT"]),
-  scope: z.enum(["OOS", "IS_PLUS_OOS", "NOT_PUBLISHED"]),
+  scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "NOT_PUBLISHED"]),
   frequency: z.enum(["RUN_FINAL", "PER_OBSERVATION", "CALENDAR_MONTH"]),
   origin: z.enum(["ENGINE_DIRECT", "SOURCE_DERIVED", "NOT_PUBLISHED"]),
   definition_id: z.string().regex(/^research\.metric\.v1\.[a-z0-9_.-]{2,96}$/),
@@ -99,7 +99,7 @@ export const ResearchEvidenceHubResponseSchema = z.object({
   availability: ResearchEvidenceAvailabilitySchema,
   readiness: z.enum(["COMPLETE", "PARTIAL", "NOT_READY"]),
   as_of_utc_ms: UtcMsSchema,
-  metric_registry_version: z.literal("research.metric-registry.v1"),
+  metric_registry_version: z.enum(["research.metric-registry.v1", "research.metric-registry.v2"]),
   core: z.object({
     source_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
     engine_version: z.string().regex(/^1\.1\.1$/).nullable(),
@@ -146,6 +146,18 @@ const DistributionPointSchema = z.object({
   upper_exclusive: DecimalSchema,
   count: z.string().regex(/^[0-9]+$/),
 }).strict();
+const CorrectedDistributionPointSchema = z.object({
+  lower_inclusive: DecimalSchema,
+  upper: DecimalSchema,
+  upper_inclusive: z.enum(["true", "false"]),
+  count: z.string().regex(/^[0-9]+$/),
+}).strict();
+export const ResearchEvidenceSamplingSchema = z.enum([
+  "FULL",
+  "EXTREMA_BUCKET_V1",
+  "TAIL_WINDOW_V1",
+  "FULL_RETURN_HISTOGRAM_V2",
+]);
 
 export const ResearchEvidenceSeriesResponseSchema = z.object({
   schema_version: z.literal("research.evidence-series.v1"),
@@ -155,11 +167,17 @@ export const ResearchEvidenceSeriesResponseSchema = z.object({
   kind: ResearchEvidenceSeriesKindSchema,
   availability: ResearchEvidenceAvailabilitySchema,
   source_sample: z.object({
-    source_observation_count: z.number().int().positive().max(2_000_000).nullable(),
+    source_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
     emitted_point_count: z.number().int().nonnegative().max(192),
-    sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]).nullable(),
+    sampling: ResearchEvidenceSamplingSchema.nullable(),
   }).strict(),
-  values: z.array(z.union([EquityPointSchema, MonthlyPointSchema, RollingPointSchema, DistributionPointSchema])).max(192),
+  values: z.array(z.union([
+    EquityPointSchema,
+    MonthlyPointSchema,
+    RollingPointSchema,
+    DistributionPointSchema,
+    CorrectedDistributionPointSchema,
+  ])).max(192),
 }).strict().superRefine((value, context) => {
   if (value.source_sample.emitted_point_count !== value.values.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence emitted point count is inconsistent" });
@@ -173,7 +191,7 @@ export const ResearchEvidenceSeriesResponseSchema = z.object({
       ? MonthlyPointSchema
       : value.kind === "ROLLING_RETURNS_20"
         ? RollingPointSchema
-        : DistributionPointSchema;
+        : z.union([DistributionPointSchema, CorrectedDistributionPointSchema]);
   for (const item of value.values) {
     if (!itemSchema.safeParse(item).success) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence series item does not match its named kind" });

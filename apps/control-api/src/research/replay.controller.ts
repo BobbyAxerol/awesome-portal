@@ -32,14 +32,26 @@ export class ResearchReplayController {
     const runId = this.runId(rawRunId);
     const query = this.query(rawQuery);
     const workspaceId = await this.workspace(request, query.workspace_id);
-    const body = await this.service.detail(
-      { workspaceId, actorUserId: request.portalUser.userId }, runId, query,
-    );
-    if (body.etag) {
-      reply.header("etag", body.etag);
-      const candidate = request.headers["if-none-match"];
-      if (!Array.isArray(candidate) && candidate === body.etag) return reply.code(304).send();
+    // Stop waiting in the Research-owned queue when the caller has already
+    // gone away.  This never cancels a shared-pool query that is running; the
+    // repository's finite statement/acquire budgets still own that boundary.
+    const abort = new AbortController();
+    const onAborted = () => abort.abort();
+    request.raw.once("aborted", onAborted);
+    let body: Awaited<ReturnType<ResearchReplayService["detail"]>>;
+    try {
+      body = await this.service.detail(
+        { workspaceId, actorUserId: request.portalUser.userId }, runId, query, abort.signal,
+      );
+    } finally {
+      request.raw.off("aborted", onAborted);
     }
+    // Navigation tokens have a short security TTL.  A content revision is
+    // useful in the JSON body, but it is not an HTTP representation validator
+    // for cursor-bearing responses: a 304 could make a browser reuse an
+    // expired next/previous token.  Keep this private, no-store and let the
+    // client refetch/recover from the typed cursor expiry instead.
+    reply.header("cache-control", "private, no-store");
     return reply.send(body);
   }
 

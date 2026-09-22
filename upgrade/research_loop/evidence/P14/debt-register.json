@@ -1,7 +1,11 @@
 {
   "schema_version": "research.phase-debt-register.v1",
   "phase": "P14",
+  "audit_status": "RS01_CHRONOLOGY_REMEDIATED; ORIGINAL_PHASE_ACCEPTANCE_PENDING_RS02_RS03",
   "in_scope_backend_debt": [],
+  "rs01_repairs": [
+    "A03: individual range semantics, cross-window chronology and paired transform-digest binding are enforced."
+  ],
   "typed_source_boundaries": [
     "Current P04 publishes a fixed-profile three-window observation, not a generic WFO/fold plan or strict selector proof.",
     "Current P04/P10 do not publish purge, embargo, inner folds, theta-per-fold, gap scan, source seal or holdout unlock authority.",

@@ -86,3 +86,11 @@ read or a frontend inference.
 Claude owns Screen 07. Read [frontend-handoff-claude.md](./frontend-handoff-claude.md)
 before touching it and return a browser/HiFi receipt plus only focused
 `CG-P16-*` requests for genuinely missing typed source facts.
+
+## RS-01 corrective amendment — 2026-09-22
+
+No P16 integrity fact/action changes in RS-01. The retained P14 source is now
+semantically range-validated and its bounded reader can be cancelled without a
+late pool-client leak. Artifact-byte verification, historical binding and any
+valid diagnostic remain RS-02-owned rather than being inferred from this
+repair.

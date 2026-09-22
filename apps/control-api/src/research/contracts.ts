@@ -30,6 +30,10 @@ export const RESEARCH_DB_BUDGET = Object.freeze({
   statementTimeoutMs: 1_500,
   lockTimeoutMs: 500,
   idleTransactionTimeoutMs: 2_000,
+  // Per-Research BFF only.  Do not turn an exhausted shared pool into an
+  // unbounded queue; callers fail typed and a late pool client is released.
+  boundedReadQueueWaitMs: 750,
+  boundedReadAcquireTimeoutMs: 750,
   maxConfigJsonBytes: 65_536,
   maxSmallMetadataJsonBytes: 16_384,
   maxArtifactManifestMetadataBytes: 262_144,

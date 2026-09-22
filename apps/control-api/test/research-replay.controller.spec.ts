@@ -9,7 +9,7 @@ function reply() {
 }
 
 describe("P17 Replay controller", () => {
-  it("keeps replay same-origin/session-scoped, forwards only bounded typed navigation and honors immutable ETag", async () => {
+  it("keeps replay same-origin/session-scoped, forwards only bounded typed navigation and never HTTP-caches cursors", async () => {
     const etag = `"p17r1_${"a".repeat(64)}"`;
     const service = { detail: vi.fn().mockResolvedValue({ etag }) };
     const workspaces = { isMember: vi.fn().mockResolvedValue(true) };
@@ -17,12 +17,13 @@ describe("P17 Replay controller", () => {
     const response = reply();
     await controller.detail({
       portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: { "if-none-match": etag },
+      raw: { once: vi.fn(), off: vi.fn() },
     } as never, response as never, "run_p17", { limit: "20" });
     expect(service.detail).toHaveBeenCalledWith(
-      { workspaceId: "workspace", actorUserId: "user" }, "run_p17", { limit: 20 },
+      { workspaceId: "workspace", actorUserId: "user" }, "run_p17", { limit: 20 }, expect.any(AbortSignal),
     );
-    expect(response.header).toHaveBeenCalledWith("etag", etag);
-    expect(response.code).toHaveBeenCalledWith(304);
+    expect(response.header).toHaveBeenCalledWith("cache-control", "private, no-store");
+    expect(response.code).not.toHaveBeenCalled();
   });
 
   it("does not disclose cross-workspace runs or accept browser-selected route/source authority", async () => {
@@ -31,12 +32,12 @@ describe("P17 Replay controller", () => {
       { isMember: vi.fn().mockResolvedValue(false) } as never,
     );
     await expect(controller.detail({
-      portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: {},
+      portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: {}, raw: { once: vi.fn(), off: vi.fn() },
     } as never, reply() as never, "run_p17", { workspace_id: "other" })).rejects.toMatchObject({
       code: "RESEARCH_REPLAY_NOT_FOUND", status: 404,
     });
     await expect(controller.detail({
-      portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: {},
+      portalUser: { userId: "user" }, portalWorkspaceId: "workspace", headers: {}, raw: { once: vi.fn(), off: vi.fn() },
     } as never, reply() as never, "run_p17", { route: "reactive" })).rejects.toMatchObject({
       code: "RESEARCH_REPLAY_INVALID", status: 400,
     });

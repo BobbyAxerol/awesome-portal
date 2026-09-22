@@ -401,6 +401,17 @@ verify pure math/contracts; DB test only on own disposable cell.
 preserve old and new receipts. Additive migrations only; no update/delete
 of historical evidence to retrofit numbers.
 
+#### RS-01 delivery amendment — 2026-09-22
+
+**Implemented by Terra after Bobby approval.** The exact delivery is recorded
+in [RS-01 evidence](./evidence/RS-01/phase-report.md), not inferred from this
+audit text. A01–A08 are repaired with independent Python numerical/receipt
+tests, focused Control API contracts/services/controllers, fresh disposable
+PostgreSQL migration/grant proof, durable retry/restart proof and generated
+declarations. R1 historical receipts remain readable; R2 is additive. The
+slice remains feature-dark and does not claim P13–P17, RS-02 or RS-03 product
+acceptance. Original reports/handoffs are amended in the same change.
+
 ### RS-02 — Complete current-source adapters, retained data và P13–P17 read models
 
 **Owner đề xuất:** Terra backend, Claude composition song song. **Entry:**

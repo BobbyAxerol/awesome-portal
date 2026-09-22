@@ -1,6 +1,7 @@
 {
   "schema_version": "research.phase-debt-register.v1",
   "phase": "P15",
+  "audit_status": "ORIGINAL_PHASE_ACCEPTANCE_PENDING_RS02_RS03",
   "in_scope_backend_debt": [],
   "typed_source_boundaries": [
     "Installed P04 is fixed_qualification_v1 and does not create an optimizer study, historical trial ledger or engine selection artifact.",

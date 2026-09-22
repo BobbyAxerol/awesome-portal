@@ -86,9 +86,9 @@ export class ResearchSplitService {
     await this.repository.persist(scope, this.buildWrite(input.run_id, input.event.sequence, source.data, sourceDigest));
   }
 
-  async detail(scope: ResearchScope, runId: string): Promise<ResearchSplitResponse> {
+  async detail(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchSplitResponse> {
     this.requireEnabled();
-    const row = await this.repository.hub(scope, runId);
+    const row = await this.repository.hub(scope, runId, signal);
     if (!row) {
       throw new ResearchSplitError("RESEARCH_SPLIT_NOT_FOUND", "Research run was not found.", 404);
     }

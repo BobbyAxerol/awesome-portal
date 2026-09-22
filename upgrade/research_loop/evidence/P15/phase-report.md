@@ -105,3 +105,11 @@ Claude's exact typed-only consumer, HiFi browser audit and state rules are in
 [frontend-handoff-claude.md](./frontend-handoff-claude.md). The handoff must
 be implemented after Claude commits/reconciles current P12 files, without
 staging/resetting Codex files.
+
+## RS-01 corrective amendment — 2026-09-22
+
+No P15 source capability or browser field is invented by RS-01. Its retained
+P14 read path now receives the Research-only cancellable admission/deadline
+boundary and semantically valid chronology only. Complete trial/evaluation
+ledger work remains RS-02; this amendment must not turn fixed-profile
+compatibility into an optimizer claim.

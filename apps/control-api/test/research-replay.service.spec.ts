@@ -32,7 +32,7 @@ function evidenceFixture(pointCount = 120, options: { availability?: "AVAILABLE"
   const series = {
     schema_version: "research.evidence-series.v1",
     run_id: "run_p17",
-    revision: `p13r1_${"c".repeat(64)}`,
+    revision: `p13r1_${"a".repeat(64)}`,
     kind: "EQUITY_OOS",
     availability: {
       state: availability,
@@ -48,6 +48,15 @@ function evidenceFixture(pointCount = 120, options: { availability?: "AVAILABLE"
   return { hub, series };
 }
 
+function evidenceReader(fixture: ReturnType<typeof evidenceFixture>) {
+  return {
+    bundle: vi.fn().mockResolvedValue({
+      hub: fixture.hub,
+      series: new Map([["EQUITY_OOS", fixture.series]]),
+    }),
+  };
+}
+
 function enabledConfig() {
   return {
     FEATURE_RESEARCH_REPLAY: "true",
@@ -60,7 +69,7 @@ function enabledConfig() {
 describe("P17 route-aware, current-source replay authority", () => {
   it("preserves exact source sample order and supports a direct late seek without compute, ledger synthesis or source-path access", async () => {
     const fixture = evidenceFixture();
-    const evidence = { hub: vi.fn().mockResolvedValue(fixture.hub), series: vi.fn().mockResolvedValue(fixture.series) };
+    const evidence = evidenceReader(fixture);
     const service = new ResearchReplayService(evidence as never, enabledConfig() as never);
 
     const first = await service.detail(scope, "run_p17", { limit: 10 });
@@ -90,14 +99,13 @@ describe("P17 route-aware, current-source replay authority", () => {
     });
     expect(sought.equity_replay.items.map((item) => item.playback_ordinal)).toContain(90);
     // Both operations are bounded P13 reads; P17 owns no worker/compute API.
-    expect(evidence.hub).toHaveBeenCalled();
-    expect(evidence.series).toHaveBeenCalledWith(scope, "run_p17", "EQUITY_OOS");
-    expect(Object.keys(evidence)).toEqual(["hub", "series"]);
+    expect(evidence.bundle).toHaveBeenCalledWith(scope, "run_p17", ["EQUITY_OOS"]);
+    expect(Object.keys(evidence)).toEqual(["bundle"]);
   });
 
   it("binds page/playhead cursors to the exact workspace, run and evidence revision and refuses cross-scope reuse", async () => {
     const fixture = evidenceFixture(20);
-    const evidence = { hub: vi.fn().mockResolvedValue(fixture.hub), series: vi.fn().mockResolvedValue(fixture.series) };
+    const evidence = evidenceReader(fixture);
     const service = new ResearchReplayService(evidence as never, enabledConfig() as never);
     const first = await service.detail(scope, "run_p17", { limit: 5 });
     await expect(service.detail({ ...scope, workspaceId: "other-workspace" }, "run_p17", {
@@ -110,7 +118,7 @@ describe("P17 route-aware, current-source replay authority", () => {
 
   it("returns current-source absences rather than inventing execution history when a terminal receipt has no replay series", async () => {
     const fixture = evidenceFixture(0, { availability: "NOT_PUBLISHED" });
-    const evidence = { hub: vi.fn().mockResolvedValue(fixture.hub), series: vi.fn().mockResolvedValue(fixture.series) };
+    const evidence = evidenceReader(fixture);
     const service = new ResearchReplayService(evidence as never, enabledConfig() as never);
     const result = await service.detail(scope, "run_p17", { limit: 10 });
     expect(result).toMatchObject({
@@ -129,7 +137,7 @@ describe("P17 route-aware, current-source replay authority", () => {
   it("keeps an otherwise available foreign/legacy evidence series typed as unsupported rather than exposing it or failing open", async () => {
     const fixture = evidenceFixture(3);
     fixture.hub.core.source_adapter_id = null;
-    const evidence = { hub: vi.fn().mockResolvedValue(fixture.hub), series: vi.fn().mockResolvedValue(fixture.series) };
+    const evidence = evidenceReader(fixture);
     const service = new ResearchReplayService(evidence as never, enabledConfig() as never);
     await expect(service.detail(scope, "run_p17", { limit: 10 })).resolves.toMatchObject({
       revision: null,
@@ -141,10 +149,44 @@ describe("P17 route-aware, current-source replay authority", () => {
   });
 
   it("fails closed while the independently deployed P17 reader is dark", async () => {
-    const service = new ResearchReplayService({ hub: vi.fn(), series: vi.fn() } as never, {
+    const service = new ResearchReplayService({ bundle: vi.fn() } as never, {
       ...enabledConfig(), FEATURE_RESEARCH_REPLAY: "false",
     } as never);
     await expect(service.detail(scope, "run_p17", { limit: 10 })).rejects.toMatchObject({
+      code: "RESEARCH_REPLAY_UNAVAILABLE", status: 503,
+    });
+  });
+
+  it("uses the stable at_ordinal locator without weakening cursor binding", async () => {
+    const fixture = evidenceFixture(20);
+    const service = new ResearchReplayService(evidenceReader(fixture) as never, enabledConfig() as never);
+    const result = await service.detail(scope, "run_p17", { limit: 5, at_ordinal: 13 });
+    expect(result.equity_replay.state_at_cursor).toMatchObject({ playback_ordinal: 13 });
+  });
+
+  it("returns a typed renewal/refetch error after cursor expiry while stable at_ordinal remains usable", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
+    try {
+      const fixture = evidenceFixture(20);
+      const service = new ResearchReplayService(evidenceReader(fixture) as never, enabledConfig() as never);
+      const first = await service.detail(scope, "run_p17", { limit: 5 });
+      vi.setSystemTime(new Date("2025-01-01T00:16:00Z"));
+      await expect(service.detail(scope, "run_p17", {
+        limit: 5, cursor: first.equity_replay.page.next_cursor!,
+      })).rejects.toMatchObject({ code: "RESEARCH_REPLAY_CURSOR_EXPIRED", status: 409 });
+      await expect(service.detail(scope, "run_p17", { limit: 5, at_ordinal: 5 }))
+        .resolves.toMatchObject({ equity_replay: { state_at_cursor: { playback_ordinal: 5 } } });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("fails closed if a bundle tries to mix Hub and series revisions", async () => {
+    const fixture = evidenceFixture(20);
+    fixture.series.revision = `p13r1_${"d".repeat(64)}`;
+    const service = new ResearchReplayService(evidenceReader(fixture) as never, enabledConfig() as never);
+    await expect(service.detail(scope, "run_p17", { limit: 5 })).rejects.toMatchObject({
       code: "RESEARCH_REPLAY_UNAVAILABLE", status: 503,
     });
   });

@@ -102,3 +102,14 @@ Claude should use the generated contract only and follow
 amendment. A later activation owner must follow the dark-runbook; no caller
 should bypass it with a manual release-dir edit or a direct service/database
 connection.
+
+## RS-01 corrective amendment — 2026-09-22
+
+Terminal source completion is now not enough to make the public state
+`COMPLETED`: the immutable `run_terminal_materializations_v1` checkpoint must
+be visible after evidence/split sidecars and durable lifecycle application.
+Until then the BFF exposes `FINISHING` plus `terminal_materialization=PENDING`.
+An exact duplicate terminal callback is an allowed recovery input: it may
+re-fanout after the checkpoint but never reruns QuantBT or rewrites a journal
+fact. The additive migration/grants and retry/restart proof are recorded in
+[RS-01](../RS-01/phase-report.md).

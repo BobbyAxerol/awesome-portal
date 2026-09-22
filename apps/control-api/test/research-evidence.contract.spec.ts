@@ -55,4 +55,56 @@ describe("P13 Evidence Flow contracts", () => {
       availability: { state: "NOT_APPLICABLE", reason_code: "P04_OOS_OBSERVATIONS_BELOW_ROLLING_WINDOW" },
     }).success).toBe(false);
   });
+
+  it("requires corrected R2 coverage and an explicit inclusive final histogram boundary", () => {
+    const legacy = p13EvidenceSourceFixture();
+    const corrected = {
+      ...legacy,
+      source: {
+        ...legacy.source,
+        evidence_transform_revision: "P13_SOURCE_R2" as const,
+        direct_metric_scopes: {
+          initial_equity: "OOS_EQUITY_SERIES" as const,
+          final_equity: "OOS_EQUITY_SERIES" as const,
+          num_trades: "FULL_CHILD_TAPE" as const,
+          bars: "FULL_CHILD_TAPE" as const,
+        },
+        series_metadata: {
+          equity_oos: { source_observation_count: 3, emitted_point_count: 3, sampling: "FULL" as const },
+          monthly_returns: { source_observation_count: 3, emitted_point_count: 1, total_period_count: 1, omitted_leading_period_count: 1, omitted_transport_period_count: 0, sampling: "FULL" as const },
+          rolling_returns_20: { source_observation_count: 0, emitted_point_count: 0, sampling: "NOT_APPLICABLE" as const, window_observations: 20 as const },
+          return_distribution: { source_observation_count: 3, emitted_point_count: 2, sampling: "FULL_RETURN_HISTOGRAM_V2" as const },
+        },
+      },
+      derived: {
+        ...legacy.derived,
+        return_distribution: {
+          state: "AVAILABLE" as const,
+          reason_code: null,
+          buckets: [
+            { lower_inclusive: "0", upper: "0.1", upper_inclusive: "false" as const, count: "1" },
+            { lower_inclusive: "0.1", upper: "0.2", upper_inclusive: "true" as const, count: "2" },
+          ],
+        },
+      },
+    };
+    expect(ResearchEvidenceSourceSchema.safeParse(corrected).success).toBe(true);
+    expect(ResearchEvidenceSourceSchema.safeParse({
+      ...corrected,
+      source: { ...corrected.source, series_metadata: undefined },
+    }).success).toBe(false);
+    expect(ResearchEvidenceSourceSchema.safeParse({
+      ...corrected,
+      derived: {
+        ...corrected.derived,
+        return_distribution: {
+          ...corrected.derived.return_distribution,
+          buckets: [
+            { lower_inclusive: "0", upper: "0.1", upper_inclusive: "true", count: "1" },
+            { lower_inclusive: "0.1", upper: "0.2", upper_inclusive: "false", count: "2" },
+          ],
+        },
+      },
+    }).success).toBe(false);
+  });
 });

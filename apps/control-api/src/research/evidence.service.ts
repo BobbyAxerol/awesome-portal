@@ -15,14 +15,16 @@ import {
 } from "./evidence.contract";
 import { ResearchEvidenceError } from "./evidence.error";
 import {
-  RESEARCH_METRIC_DEFINITIONS,
   RESEARCH_METRIC_REGISTRY_VERSION,
   RESEARCH_WARNING_DEFINITIONS,
+  researchMetricDefinitions,
+  type ResearchMetricRegistryVersion,
 } from "./evidence-metric-registry";
 import {
   ResearchEvidenceRepository,
   type EvidenceHubRow,
   type EvidenceProjectionWrite,
+  type EvidenceSeriesRow,
 } from "./evidence.repository";
 import { sha256ResearchJson } from "./preflight.service";
 import {
@@ -42,10 +44,20 @@ type Availability = {
 interface StoredProjection {
   schema_version: "research.evidence-projection.v1";
   source: ResearchEvidenceSource["source"];
+  /** Bound into the immutable projection digest; never reconstructed on read. */
+  source_evidence_digest?: string;
+  transform_revision?: "P13_SOURCE_R1" | "P13_SOURCE_R2";
+  metric_registry_version?: ResearchMetricRegistryVersion;
   direct: ResearchEvidenceSource["direct"];
   derived: Pick<ResearchEvidenceSource["derived"], "net_return_fraction" | "max_drawdown_fraction">;
   unavailable: ResearchEvidenceSource["unavailable"];
   series: Record<ResearchEvidenceSeriesKind, Availability>;
+  series_identity?: Record<ResearchEvidenceSeriesKind, {
+    digest: string;
+    source_observation_count: number | null;
+    emitted_point_count: number;
+    sampling: "FULL" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "FULL_RETURN_HISTOGRAM_V2" | null;
+  }>;
 }
 
 const SERIES_KINDS: readonly ResearchEvidenceSeriesKind[] = [
@@ -74,11 +86,6 @@ const StoredSeriesAvailabilitySchema = z.object({
   reason_code: z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/).nullable(),
 }).strict();
 
-/**
- * The durable projection deliberately omits source vectors.  Do not validate
- * it by fabricating a miniature source receipt: that would silently change
- * its actual OOS count/sampling declaration during a reader rollout.
- */
 const StoredProjectionSchema = z.object({
   schema_version: z.literal("research.evidence-projection.v1"),
   source: z.object({
@@ -89,6 +96,19 @@ const StoredProjectionSchema = z.object({
     emitted_equity_points: z.number().int().positive().max(192),
     chart_sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]),
     source_transform_digest: z.string().regex(/^[0-9a-f]{64}$/),
+    evidence_transform_revision: z.literal("P13_SOURCE_R2").optional(),
+    /** Deprecated R1 broad label; R2 publishes per-fact scopes below. */
+    direct_metrics_scope: z.literal("FULL_CHILD_TAPE").optional(),
+    direct_metric_scopes: z.object({
+      initial_equity: z.literal("OOS_EQUITY_SERIES"),
+      final_equity: z.literal("OOS_EQUITY_SERIES"),
+      num_trades: z.literal("FULL_CHILD_TAPE"),
+      bars: z.literal("FULL_CHILD_TAPE"),
+    }).strict().optional(),
+    // The source receipt itself is validated before it reaches this private
+    // projection.  Keep the stored reader compatible with additive R2
+    // metadata without asking it to fabricate a replacement receipt.
+    series_metadata: z.unknown().optional(),
   }).strict(),
   direct: z.object({
     initial_equity: z.string().regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(96),
@@ -112,7 +132,23 @@ const StoredProjectionSchema = z.object({
     ROLLING_RETURNS_20: StoredSeriesAvailabilitySchema,
     RETURN_DISTRIBUTION: StoredSeriesAvailabilitySchema,
   }).strict(),
-}).strict();
+  source_evidence_digest: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+  transform_revision: z.enum(["P13_SOURCE_R1", "P13_SOURCE_R2"]).optional(),
+  metric_registry_version: z.enum(["research.metric-registry.v1", RESEARCH_METRIC_REGISTRY_VERSION]).optional(),
+  series_identity: z.object({
+    EQUITY_OOS: z.object({ digest: z.string().regex(/^[0-9a-f]{64}$/), source_observation_count: z.number().int().positive(), emitted_point_count: z.number().int().nonnegative(), sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]).nullable() }).strict(),
+    MONTHLY_RETURNS: z.object({ digest: z.string().regex(/^[0-9a-f]{64}$/), source_observation_count: z.number().int().positive(), emitted_point_count: z.number().int().nonnegative(), sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1", "TAIL_WINDOW_V1"]).nullable() }).strict(),
+    ROLLING_RETURNS_20: z.object({ digest: z.string().regex(/^[0-9a-f]{64}$/), source_observation_count: z.number().int().nonnegative(), emitted_point_count: z.number().int().nonnegative(), sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]).nullable() }).strict(),
+    RETURN_DISTRIBUTION: z.object({ digest: z.string().regex(/^[0-9a-f]{64}$/), source_observation_count: z.number().int().nonnegative(), emitted_point_count: z.number().int().nonnegative(), sampling: z.literal("FULL_RETURN_HISTOGRAM_V2").nullable() }).strict(),
+  }).strict().optional(),
+}).strict().superRefine((value, context) => {
+  if (value.transform_revision === "P13_SOURCE_R2" && !value.source.direct_metric_scopes) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "P13 R2 projection omits direct metric scope" });
+  }
+  if (value.metric_registry_version === "research.metric-registry.v2" && value.transform_revision !== "P13_SOURCE_R2") {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "P13 metric registry v2 requires corrected source transform" });
+  }
+});
 
 function parseProjection(value: unknown): StoredProjection | null {
   const parsed = StoredProjectionSchema.safeParse(value);
@@ -149,9 +185,9 @@ export class ResearchEvidenceService {
     await this.repository.persist(scope, write);
   }
 
-  async hub(scope: ResearchScope, runId: string): Promise<ResearchEvidenceHubResponse> {
+  async hub(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchEvidenceHubResponse> {
     this.requireEnabled();
-    const row = await this.repository.hub(scope, runId);
+    const row = await this.repository.hub(scope, runId, signal);
     if (!row) {
       throw new ResearchEvidenceError("RESEARCH_EVIDENCE_NOT_FOUND", "Research run was not found.", 404);
     }
@@ -167,37 +203,73 @@ export class ResearchEvidenceService {
     scope: ResearchScope,
     runId: string,
     kind: ResearchEvidenceSeriesKind,
+    signal?: AbortSignal,
   ): Promise<ResearchEvidenceSeriesResponse> {
     this.requireEnabled();
-    // Check logical visibility first, including a durable run whose source
-    // callback has not arrived. A missing chart is a typed source state, not
-    // a misleading 404 on a valid run.
-    const hub = await this.repository.hub(scope, runId);
-    if (!hub) {
-      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_NOT_FOUND", "Research run was not found.", 404);
+    // A standalone chart read still gets the same repeatable-read revision
+    // fence as Replay.  A missing chart remains a typed source state rather
+    // than a misleading 404 on an otherwise valid run.
+    const bundle = await this.bundle(scope, runId, [kind], signal);
+    const row = bundle.series.get(kind);
+    if (!row) {
+      // `bundle()` always creates an explicit absence for the requested kind.
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence series bundle is incomplete.", 503);
     }
-    const stored = await this.repository.series(scope, runId, kind);
-    const response = stored
-      ? {
-        schema_version: "research.evidence-series.v1" as const,
-        run_id: runId,
-        revision: stored.revision,
-        etag: `"${stored.revision}"`,
-        kind,
-        availability: availability(stored.availabilityState, stored.reasonCode),
-        source_sample: {
-          source_observation_count: stored.sourceObservationCount,
-          emitted_point_count: stored.emittedPointCount,
-          sampling: stored.sampling,
-        },
-        values: stored.values,
-      }
-      : this.absentSeries(hub, kind);
-    const parsed = ResearchEvidenceSeriesResponseSchema.safeParse(response);
+    const parsed = ResearchEvidenceSeriesResponseSchema.safeParse(row);
     if (!parsed.success) {
       throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence series response is incompatible.", 503);
     }
     return parsed.data;
+  }
+
+  /**
+   * Read a Hub and named series behind one repository revision fence.  Replay
+   * and any future multi-panel BFF must use this instead of composing `hub()`
+   * and `series()` in separate transactions.
+   */
+  async bundle(
+    scope: ResearchScope,
+    runId: string,
+    kinds: readonly ResearchEvidenceSeriesKind[],
+    signal?: AbortSignal,
+  ): Promise<{ hub: ResearchEvidenceHubResponse; series: Map<ResearchEvidenceSeriesKind, ResearchEvidenceSeriesResponse> }> {
+    this.requireEnabled();
+    const stored = await this.repository.bundle(scope, runId, kinds, signal);
+    if (!stored.hub) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_NOT_FOUND", "Research run was not found.", 404);
+    }
+    const hub = this.mapHub(stored.hub);
+    const parsedHub = ResearchEvidenceHubResponseSchema.safeParse(hub);
+    if (!parsedHub.success) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence Hub response is incompatible.", 503);
+    }
+    const values = new Map<ResearchEvidenceSeriesKind, ResearchEvidenceSeriesResponse>();
+    const projection = stored.hub.projection ? parseProjection(stored.hub.projection) : null;
+    if (stored.hub.projection && !projection) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence bundle projection is incompatible.", 503);
+    }
+    if (projection?.source_evidence_digest && projection.source_evidence_digest !== stored.hub.sourceEvidenceDigest) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence bundle source binding is incompatible.", 503);
+    }
+    for (const kind of kinds) {
+      const row = stored.series.get(kind);
+      const expectedIdentity = projection?.series_identity?.[kind];
+      if (row && expectedIdentity && (
+        row.digest !== expectedIdentity.digest
+        || row.sourceObservationCount !== expectedIdentity.source_observation_count
+        || row.emittedPointCount !== expectedIdentity.emitted_point_count
+        || row.sampling !== expectedIdentity.sampling
+      )) {
+        throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence bundle series binding is incompatible.", 503);
+      }
+      const response = row ? this.mapStoredSeries(runId, row) : this.absentSeries(stored.hub, kind);
+      const parsed = ResearchEvidenceSeriesResponseSchema.safeParse(response);
+      if (!parsed.success || (row && parsed.data.revision !== parsedHub.data.revision)) {
+        throw new ResearchEvidenceError("RESEARCH_EVIDENCE_UNAVAILABLE", "Evidence bundle is incompatible.", 503);
+      }
+      values.set(kind, parsed.data);
+    }
+    return { hub: parsedHub.data, series: values };
   }
 
   private buildWrite(
@@ -210,20 +282,27 @@ export class ResearchEvidenceService {
     const series: EvidenceProjectionWrite["series"] = [
       {
         kind: "EQUITY_OOS", availabilityState: "AVAILABLE", reasonCode: null,
-        sourceObservationCount: source.source.oos_observation_count,
+        sourceObservationCount: source.source.series_metadata?.equity_oos.source_observation_count
+          ?? source.source.oos_observation_count,
         emittedPointCount: source.equity_points.length, sampling: source.source.chart_sampling,
         values: source.equity_points, digest: sha256ResearchJson(source.equity_points),
       },
       {
         kind: "MONTHLY_RETURNS", availabilityState: "AVAILABLE", reasonCode: null,
-        sourceObservationCount: source.source.oos_observation_count,
-        emittedPointCount: source.derived.monthly_returns.length, sampling: source.source.chart_sampling,
+        sourceObservationCount: source.source.series_metadata?.monthly_returns.source_observation_count
+          ?? source.source.oos_observation_count,
+        emittedPointCount: source.derived.monthly_returns.length,
+        sampling: source.source.series_metadata?.monthly_returns.sampling ?? source.source.chart_sampling,
         values: source.derived.monthly_returns, digest: sha256ResearchJson(source.derived.monthly_returns),
       },
       {
         kind: "ROLLING_RETURNS_20", availabilityState: "AVAILABLE", reasonCode: null,
-        sourceObservationCount: source.source.oos_observation_count,
-        emittedPointCount: source.derived.rolling_returns_20_observations.length, sampling: source.source.chart_sampling,
+        sourceObservationCount: source.source.series_metadata?.rolling_returns_20.source_observation_count
+          ?? source.source.oos_observation_count,
+        emittedPointCount: source.derived.rolling_returns_20_observations.length,
+        sampling: source.source.series_metadata?.rolling_returns_20.sampling === "NOT_APPLICABLE"
+          ? null
+          : source.source.series_metadata?.rolling_returns_20.sampling ?? source.source.chart_sampling,
         values: source.derived.rolling_returns_20_observations,
         digest: sha256ResearchJson(source.derived.rolling_returns_20_observations),
       },
@@ -231,9 +310,10 @@ export class ResearchEvidenceService {
         kind: "RETURN_DISTRIBUTION",
         availabilityState: distribution.state,
         reasonCode: distribution.reason_code,
-        sourceObservationCount: source.source.oos_observation_count,
+        sourceObservationCount: source.source.series_metadata?.return_distribution.source_observation_count
+          ?? source.source.oos_observation_count,
         emittedPointCount: distribution.buckets.length,
-        sampling: null,
+        sampling: source.source.series_metadata?.return_distribution.sampling ?? null,
         values: distribution.buckets,
         digest: sha256ResearchJson(distribution.buckets),
       },
@@ -243,9 +323,16 @@ export class ResearchEvidenceService {
       rolling.availabilityState = "NOT_APPLICABLE";
       rolling.reasonCode = "P04_OOS_OBSERVATIONS_BELOW_ROLLING_WINDOW";
     }
+    const transformRevision = source.source.evidence_transform_revision ?? "P13_SOURCE_R1";
+    const metricRegistryVersion: ResearchMetricRegistryVersion = transformRevision === "P13_SOURCE_R2"
+      ? RESEARCH_METRIC_REGISTRY_VERSION
+      : "research.metric-registry.v1";
     const projection: StoredProjection = {
       schema_version: "research.evidence-projection.v1",
       source: source.source,
+      source_evidence_digest: sourceDigest,
+      transform_revision: transformRevision,
+      metric_registry_version: metricRegistryVersion,
       direct: source.direct,
       derived: {
         net_return_fraction: source.derived.net_return_fraction,
@@ -256,6 +343,15 @@ export class ResearchEvidenceService {
         state: item.availabilityState,
         reason_code: item.reasonCode,
       }])) as StoredProjection["series"],
+      // A projection revision names exactly these series bytes and their
+      // source sampling declarations.  Changing only a chart series must no
+      // longer accidentally reuse an older Hub revision.
+      series_identity: Object.fromEntries(series.map((item) => [item.kind, {
+        digest: item.digest,
+        source_observation_count: item.sourceObservationCount,
+        emitted_point_count: item.emittedPointCount,
+        sampling: item.sampling,
+      }])) as StoredProjection["series_identity"],
     };
     const projectionDigest = sha256ResearchJson(projection);
     return {
@@ -300,7 +396,8 @@ export class ResearchEvidenceService {
       BENCHMARK_RETURN_FRACTION: null,
       FUNDING_TOTAL: null,
     } : {};
-    const metrics = RESEARCH_METRIC_DEFINITIONS.map((definition) => {
+    const metricRegistryVersion = projection?.metric_registry_version ?? "research.metric-registry.v1";
+    const metrics = researchMetricDefinitions(metricRegistryVersion).map((definition) => {
       const missing = definition.key === "BENCHMARK_RETURN_FRACTION"
         ? sourceAbsences.benchmark as Availability
         : definition.key === "FUNDING_TOTAL"
@@ -336,7 +433,7 @@ export class ResearchEvidenceService {
       availability: hubAvailability,
       readiness: projection ? row.readiness : "NOT_READY",
       as_of_utc_ms: row.asOfUtcMs,
-      metric_registry_version: RESEARCH_METRIC_REGISTRY_VERSION,
+      metric_registry_version: metricRegistryVersion,
       core: {
         source_adapter_id: projection?.source.execution_adapter_id ?? null,
         engine_version: projection?.source.engine_version ?? null,
@@ -373,6 +470,23 @@ export class ResearchEvidenceService {
       availability,
       source_sample: { source_observation_count: null, emitted_point_count: 0, sampling: null },
       values: [],
+    };
+  }
+
+  private mapStoredSeries(runId: string, stored: EvidenceSeriesRow) {
+    return {
+      schema_version: "research.evidence-series.v1" as const,
+      run_id: runId,
+      revision: stored.revision,
+      etag: `"${stored.revision}"`,
+      kind: stored.kind,
+      availability: availability(stored.availabilityState, stored.reasonCode),
+      source_sample: {
+        source_observation_count: stored.sourceObservationCount,
+        emitted_point_count: stored.emittedPointCount,
+        sampling: stored.sampling,
+      },
+      values: stored.values,
     };
   }
 

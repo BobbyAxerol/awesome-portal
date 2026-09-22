@@ -90,3 +90,13 @@ The required consumer work is in [frontend-handoff-claude.md](./frontend-handoff
 Claude must return a direct browser/HiFi receipt and any genuine missing fact
 as one focused `CG-P14-*` request; do not modify the P14 backend or map fields
 by hand.
+
+## RS-01 corrective amendment — 2026-09-22
+
+The original receipt now has semantic range validation: non-positive,
+inverted, overlapping or non-contiguous warmup/IS/OOS windows are rejected,
+and the paired P13/P14 source transform digests must agree. This closes A03
+without inferring a new fold, holdout or selection fact. P14's database reads
+also inherit the scoped cancellable Research admission boundary. See
+[RS-01](../RS-01/phase-report.md); full source-supported Screen-05 coverage
+remains RS-02/RS-03 work.

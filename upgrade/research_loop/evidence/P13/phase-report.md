@@ -88,3 +88,15 @@ read an unauthorized artifact or fabricate a display value. The required
 consumer sequence is in [frontend-handoff-claude.md](./frontend-handoff-claude.md).
 Claude must return a browser/HiFi receipt and any missing fact as one focused
 `CG-P13-*` request; do not change P13 backend directly.
+
+## RS-01 corrective amendment — 2026-09-22
+
+The original P13 narrow-slice closeout is superseded for correctness by
+[RS-01](../RS-01/phase-report.md). R1 rows remain readable unchanged; R2 now
+binds source receipt digest, transform revision, metric registry revision and
+every series digest/count/sampling. Monthly values use prior calendar-month
+close, ratios are exact decimals, histogram closure is explicit, and receipt
+bytes are capped before journal persistence. Hub/series/replay use a single
+repeatable-read bundle and reject mismatched stored series bytes/identity.
+This closes A01/A02/A04/A05 in the repair slice only; rich S04 coverage and
+remaining current-source facts still belong to RS-02/RS-03.

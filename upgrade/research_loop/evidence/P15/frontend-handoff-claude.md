@@ -1,5 +1,11 @@
 # P15 frontend handoff — Screen 06 Search and Selection
 
+> **RS-01 amendment (2026-09-22):** no optimizer data is published. Preserve
+> rich fixed-profile composition and its panel-local typed absences; the shared
+> retained read is now cancellable/bounded server-side, which needs no browser
+> retry loop or custom timeout policy. See
+> [RS-01 handoff](../RS-01/frontend-handoff-claude.md).
+
 **Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
 [P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
 and Unified checkpoint before using this handoff. The v1 facts below describe

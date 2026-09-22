@@ -154,10 +154,52 @@ const ResearchEvidenceRollingReturnSchema = z.object({
   return_fraction: SignedDecimalSchema,
 }).strict();
 
-const ResearchEvidenceDistributionBucketSchema = z.object({
+const LegacyResearchEvidenceDistributionBucketSchema = z.object({
   lower_inclusive: SignedDecimalSchema,
   upper_exclusive: SignedDecimalSchema,
   count: z.string().regex(/^[0-9]+$/).max(24),
+}).strict();
+
+// Historical P13_SOURCE_R1 receipts used an upper-exclusive label even though
+// the source placed the maximum value in the final bucket.  Keep them readable
+// as immutable history; P13_SOURCE_R2 makes the final boundary explicit.
+const CorrectedResearchEvidenceDistributionBucketSchema = z.object({
+  lower_inclusive: SignedDecimalSchema,
+  upper: SignedDecimalSchema,
+  upper_inclusive: z.enum(["true", "false"]),
+  count: z.string().regex(/^[0-9]+$/).max(24),
+}).strict();
+
+const ResearchEvidenceDistributionBucketSchema = z.union([
+  LegacyResearchEvidenceDistributionBucketSchema,
+  CorrectedResearchEvidenceDistributionBucketSchema,
+]);
+
+const ResearchEvidenceSeriesMetadataSchema = z.object({
+  equity_oos: z.object({
+    source_observation_count: z.number().int().positive().max(2_000_000),
+    emitted_point_count: z.number().int().positive().max(192),
+    sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]),
+  }).strict(),
+  monthly_returns: z.object({
+    source_observation_count: z.number().int().positive().max(2_000_000),
+    emitted_point_count: z.number().int().nonnegative().max(120),
+    total_period_count: z.number().int().nonnegative().max(2_000_000),
+    omitted_leading_period_count: z.number().int().nonnegative().max(2_000_000),
+    omitted_transport_period_count: z.number().int().nonnegative().max(2_000_000),
+    sampling: z.enum(["FULL", "TAIL_WINDOW_V1"]),
+  }).strict(),
+  rolling_returns_20: z.object({
+    source_observation_count: z.number().int().nonnegative().max(2_000_000),
+    emitted_point_count: z.number().int().nonnegative().max(192),
+    sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1", "NOT_APPLICABLE"]),
+    window_observations: z.literal(20),
+  }).strict(),
+  return_distribution: z.object({
+    source_observation_count: z.number().int().nonnegative().max(2_000_000),
+    emitted_point_count: z.number().int().nonnegative().max(16),
+    sampling: z.literal("FULL_RETURN_HISTOGRAM_V2"),
+  }).strict(),
 }).strict();
 
 const ResearchEvidenceAvailabilitySchema = z.object({
@@ -175,6 +217,19 @@ export const ResearchEvidenceSourceSchema = z.object({
     emitted_equity_points: z.number().int().positive().max(192),
     chart_sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]),
     source_transform_digest: DigestSchema,
+    // Additive correction marker.  Its absence denotes an immutable R1
+    // receipt; it is never inferred from values during a read.
+    evidence_transform_revision: z.literal("P13_SOURCE_R2").optional(),
+    /** R2 makes mixed metric population explicit instead of one broad label. */
+    direct_metric_scopes: z.object({
+      initial_equity: z.literal("OOS_EQUITY_SERIES"),
+      final_equity: z.literal("OOS_EQUITY_SERIES"),
+      num_trades: z.literal("FULL_CHILD_TAPE"),
+      bars: z.literal("FULL_CHILD_TAPE"),
+    }).strict().optional(),
+    /** Retained only so sealed R1 receipts remain readable. */
+    direct_metrics_scope: z.literal("FULL_CHILD_TAPE").optional(),
+    series_metadata: ResearchEvidenceSeriesMetadataSchema.optional(),
   }).strict(),
   direct: z.object({
     initial_equity: DecimalSchema,
@@ -204,6 +259,10 @@ export const ResearchEvidenceSourceSchema = z.object({
   if (value.source.emitted_equity_points !== value.equity_points.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count is inconsistent" });
   }
+  const isCorrectedR2 = value.source.evidence_transform_revision === "P13_SOURCE_R2";
+  if (isCorrectedR2 && (!value.source.direct_metric_scopes || !value.source.series_metadata)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "P13 R2 evidence must declare per-metric scope and series coverage" });
+  }
   if (value.source.emitted_equity_points > value.source.oos_observation_count) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count exceeds OOS observations" });
   }
@@ -212,6 +271,35 @@ export const ResearchEvidenceSourceSchema = z.object({
     || (value.source.chart_sampling === "EXTREMA_BUCKET_V1" && value.source.emitted_equity_points >= value.source.oos_observation_count)
   ) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence sampling declaration is inconsistent" });
+  }
+  const metadata = value.source.series_metadata;
+  if (metadata) {
+    if (
+      metadata.equity_oos.source_observation_count !== value.source.oos_observation_count
+      || metadata.equity_oos.emitted_point_count !== value.equity_points.length
+      || metadata.equity_oos.sampling !== value.source.chart_sampling
+      || metadata.monthly_returns.emitted_point_count !== value.derived.monthly_returns.length
+      || metadata.rolling_returns_20.emitted_point_count !== value.derived.rolling_returns_20_observations.length
+      || metadata.return_distribution.emitted_point_count !== value.derived.return_distribution.buckets.length
+    ) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence series metadata is inconsistent" });
+    }
+    if (
+      metadata.monthly_returns.total_period_count
+        !== metadata.monthly_returns.emitted_point_count + metadata.monthly_returns.omitted_transport_period_count
+      || (metadata.monthly_returns.sampling === "FULL" && metadata.monthly_returns.omitted_transport_period_count !== 0)
+      || (metadata.monthly_returns.sampling === "TAIL_WINDOW_V1" && metadata.monthly_returns.omitted_transport_period_count === 0)
+    ) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "monthly evidence coverage is inconsistent" });
+    }
+    if (isCorrectedR2 && (
+      metadata.equity_oos.emitted_point_count > 32
+      || metadata.monthly_returns.emitted_point_count > 32
+      || metadata.rolling_returns_20.emitted_point_count > 16
+      || metadata.return_distribution.emitted_point_count > 12
+    )) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "P13 R2 series exceeds its source byte-budget cap" });
+    }
   }
   if (
     value.direct.initial_equity !== value.equity_points[0]?.equity
@@ -251,6 +339,21 @@ export const ResearchEvidenceSourceSchema = z.object({
       message: "return-distribution availability and payload are inconsistent",
     });
   }
+  if (isCorrectedR2 && distribution.state === "AVAILABLE") {
+    const corrected = distribution.buckets.map((bucket) => (
+      "upper" in bucket && "upper_inclusive" in bucket ? bucket : null
+    ));
+    if (
+      corrected.some((bucket) => bucket === null)
+      || corrected.at(-1)?.upper_inclusive !== "true"
+      || corrected.slice(0, -1).some((bucket) => bucket?.upper_inclusive !== "false")
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "P13 R2 distribution must publish corrected final-boundary closure",
+      });
+    }
+  }
 });
 
 const ResearchSplitRangeShape = z.object({
@@ -258,11 +361,42 @@ const ResearchSplitRangeShape = z.object({
   end_exclusive_utc_ms: UtcMsSchema,
 }).strict();
 
-const ResearchSplitRangeSchema = ResearchSplitRangeShape.superRefine((value, context) => {
-  if (value.end_exclusive_utc_ms <= value.start_utc_ms) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "split range must be half-open and non-empty" });
-  }
-});
+function refineSplitRange<T extends z.ZodTypeAny>(schema: T): T {
+  return schema.superRefine((value, context) => {
+    const range = value as { start_utc_ms: number; end_exclusive_utc_ms: number };
+    if (range.end_exclusive_utc_ms <= range.start_utc_ms) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "split range must be half-open and non-empty" });
+    }
+  }) as unknown as T;
+}
+
+const ResearchSplitRangeSchema = refineSplitRange(ResearchSplitRangeShape);
+
+const ResearchWarmupRangeSchema = refineSplitRange(ResearchSplitRangeShape.extend({
+  state: z.literal("AVAILABLE"),
+  bars: z.number().int().positive().max(2_000_000),
+  data_role: z.literal("WARMUP_NOT_SCORED"),
+  child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
+}).strict());
+const ResearchIsRangeSchema = refineSplitRange(ResearchSplitRangeShape.extend({
+  bars: z.number().int().positive().max(2_000_000),
+  data_role: z.literal("IS_CALIBRATION_HISTORY"),
+  child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
+}).strict());
+const ResearchOuterOosRangeSchema = refineSplitRange(ResearchSplitRangeShape.extend({
+  bars: z.number().int().positive().max(2_000_000),
+  data_role: z.literal("OUTER_OOS_OBSERVATION"),
+  child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
+  evaluation_state: z.literal("P04_OBSERVED_AFTER_FIXED_PROFILE"),
+}).strict());
+const ResearchHoldoutRangeSchema = refineSplitRange(ResearchSplitRangeShape.extend({
+  bars: z.null(),
+  data_role: z.literal("HOLDOUT"),
+  child_input_state: z.literal("NOT_EXPOSED_TO_CHILD_TAPE"),
+  evaluation_state: z.literal("NOT_EVALUATED"),
+  result_exposure_state: z.literal("NOT_EXPOSED"),
+  snapshot_integrity_state: z.literal("P08_METADATA_BOUND"),
+}).strict());
 
 const ResearchSplitAbsenceSchema = z.object({
   state: z.literal("NOT_PUBLISHED"),
@@ -306,38 +440,19 @@ export const ResearchSplitSourceSchema = z.object({
     // P08 may bind an optional warmup range.  P10 can attest that it was
     // copied into the child tape, but it remains explicitly not scored.  A
     // zero-row warmup is not silently folded into IS history.
-    warmup: z.discriminatedUnion("state", [
-      ResearchSplitRangeShape.extend({
-        state: z.literal("AVAILABLE"),
-        bars: z.number().int().positive().max(2_000_000),
-        data_role: z.literal("WARMUP_NOT_SCORED"),
-        child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
-      }).strict(),
+    // `ResearchWarmupRangeSchema` carries a semantic refinement, so this is
+    // a normal union rather than Zod's object-only discriminated helper.
+    warmup: z.union([
+      ResearchWarmupRangeSchema,
       z.object({
         state: z.literal("NOT_APPLICABLE"),
         bars: z.literal(0),
         reason_code: z.literal("P08_WARMUP_NOT_REQUESTED"),
       }).strict(),
     ]),
-    is: ResearchSplitRangeShape.extend({
-      bars: z.number().int().positive().max(2_000_000),
-      data_role: z.literal("IS_CALIBRATION_HISTORY"),
-      child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
-    }).strict(),
-    outer_oos: ResearchSplitRangeShape.extend({
-      bars: z.number().int().positive().max(2_000_000),
-      data_role: z.literal("OUTER_OOS_OBSERVATION"),
-      child_input_state: z.literal("EXPOSED_TO_CHILD_TAPE"),
-      evaluation_state: z.literal("P04_OBSERVED_AFTER_FIXED_PROFILE"),
-    }).strict(),
-    holdout: ResearchSplitRangeShape.extend({
-      bars: z.null(),
-      data_role: z.literal("HOLDOUT"),
-      child_input_state: z.literal("NOT_EXPOSED_TO_CHILD_TAPE"),
-      evaluation_state: z.literal("NOT_EVALUATED"),
-      result_exposure_state: z.literal("NOT_EXPOSED"),
-      snapshot_integrity_state: z.literal("P08_METADATA_BOUND"),
-    }).strict(),
+    is: ResearchIsRangeSchema,
+    outer_oos: ResearchOuterOosRangeSchema,
+    holdout: ResearchHoldoutRangeSchema,
   }).strict(),
   absences: z.object({
     purge: ResearchSplitAbsenceSchema,
@@ -348,9 +463,11 @@ export const ResearchSplitSourceSchema = z.object({
     holdout_unlock: ResearchSplitAbsenceSchema,
   }).strict(),
 }).strict().superRefine((value, context) => {
-  const { is, outer_oos: outerOos, holdout } = value.windows;
+  const { is, outer_oos: outerOos, holdout, warmup } = value.windows;
+  const expectedTimelineStart = warmup.state === "AVAILABLE" ? warmup.start_utc_ms : is.start_utc_ms;
   if (
-    value.timeline.start_utc_ms !== is.start_utc_ms
+    value.timeline.start_utc_ms !== expectedTimelineStart
+    || (warmup.state === "AVAILABLE" && warmup.end_exclusive_utc_ms !== is.start_utc_ms)
     || is.end_exclusive_utc_ms !== outerOos.start_utc_ms
     || outerOos.end_exclusive_utc_ms !== holdout.start_utc_ms
     || value.timeline.end_exclusive_utc_ms !== holdout.end_exclusive_utc_ms
@@ -605,6 +722,13 @@ export const ResearchProgressIngressSchema = z.object({
   }
   if (value.split !== undefined && Buffer.byteLength(JSON.stringify(value.split), "utf8") > MAX_SPLIT_BYTES) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "split document exceeds its bounded transport budget" });
+  }
+  if (
+    value.evidence !== undefined
+    && value.split !== undefined
+    && value.evidence.source.source_transform_digest !== value.split.source.source_transform_digest
+  ) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence and split receipts bind different source transforms" });
   }
 });
 

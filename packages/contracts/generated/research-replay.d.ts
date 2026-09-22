@@ -161,6 +161,8 @@ export interface components {
         Before: components["schemas"]["Cursor"];
         /** @description Opaque signed direct-seek cursor for exactly one source equity sample; mutually exclusive with cursor and before. */
         At: components["schemas"]["Cursor"];
+        /** @description Stable public sample ordinal. Re-resolved under current workspace/run/revision authority; use after typed cursor expiry. */
+        AtOrdinal: number;
         Limit: number;
         IfNoneMatch: string;
     };
@@ -183,11 +185,11 @@ export interface operations {
                 before?: components["parameters"]["Before"];
                 /** @description Opaque signed direct-seek cursor for exactly one source equity sample; mutually exclusive with cursor and before. */
                 at?: components["parameters"]["At"];
+                /** @description Stable public sample ordinal. Re-resolved under current workspace/run/revision authority; use after typed cursor expiry. */
+                at_ordinal?: components["parameters"]["AtOrdinal"];
                 limit?: components["parameters"]["Limit"];
             };
-            header?: {
-                "If-None-Match"?: components["parameters"]["IfNoneMatch"];
-            };
+            header?: never;
             path: {
                 runId: components["parameters"]["RunId"];
             };
@@ -195,27 +197,20 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded current-source equity samples and route-specific typed source absences */
+            /** @description Bounded current-source equity samples and route-specific typed source absences. Cache-Control is private, no-store because navigation cursors expire. */
             200: {
                 headers: {
-                    ETag: components["headers"]["Etag"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Replay"];
                 };
             };
-            /** @description The exact immutable P17 replay revision has not changed */
-            304: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };

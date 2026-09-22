@@ -18,16 +18,16 @@
           { "$ref": "#/components/parameters/Cursor" },
           { "$ref": "#/components/parameters/Before" },
           { "$ref": "#/components/parameters/At" },
-          { "$ref": "#/components/parameters/Limit" },
-          { "$ref": "#/components/parameters/IfNoneMatch" }
+          { "$ref": "#/components/parameters/AtOrdinal" },
+          { "$ref": "#/components/parameters/Limit" }
         ],
         "responses": {
-          "200": { "description": "Bounded current-source equity samples and route-specific typed source absences", "headers": { "ETag": { "$ref": "#/components/headers/Etag" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Replay" } } } },
-          "304": { "description": "The exact immutable P17 replay revision has not changed" },
+          "200": { "description": "Bounded current-source equity samples and route-specific typed source absences. Cache-Control is private, no-store because navigation cursors expire.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Replay" } } } },
           "400": { "$ref": "#/components/responses/Problem" },
           "401": { "$ref": "#/components/responses/Problem" },
           "403": { "$ref": "#/components/responses/Problem" },
           "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
           "503": { "$ref": "#/components/responses/Problem" }
         }
       }
@@ -42,6 +42,7 @@
       "Cursor": { "name": "cursor", "in": "query", "required": false, "description": "Opaque signed next-page source-sample cursor; mutually exclusive with before and at.", "schema": { "$ref": "#/components/schemas/Cursor" } },
       "Before": { "name": "before", "in": "query", "required": false, "description": "Opaque signed previous-page source-sample cursor; mutually exclusive with cursor and at.", "schema": { "$ref": "#/components/schemas/Cursor" } },
       "At": { "name": "at", "in": "query", "required": false, "description": "Opaque signed direct-seek cursor for exactly one source equity sample; mutually exclusive with cursor and before.", "schema": { "$ref": "#/components/schemas/Cursor" } },
+      "AtOrdinal": { "name": "at_ordinal", "in": "query", "required": false, "description": "Stable public sample ordinal. Re-resolved under current workspace/run/revision authority; use after typed cursor expiry.", "schema": { "type": "integer", "minimum": 0, "maximum": 2000000 } },
       "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 100 } },
       "IfNoneMatch": { "name": "If-None-Match", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 96 } }
     },

@@ -33,6 +33,8 @@ export interface ResearchProgressReadResponse {
     job_state: string;
     effective_status: "QUEUED" | "RUNNING" | "FINISHING" | "COMPLETED" | "FAILED" | "CANCELLED";
     terminal_resolution: "SOURCE" | "CONTROL_CANCELLATION" | "PENDING";
+    /** Journal terminal fact exists but sidecars/lifecycle may still be retrying. */
+    terminal_materialization: "NOT_REQUIRED" | "PENDING" | "READY";
     source_latest_sequence: number;
     retention_floor_sequence: number;
     last_received_at_utc_ms: number | null;
@@ -95,7 +97,12 @@ export class ResearchProgressService {
     // receipt does not activate a browser route or any holdout operation.
     await this.split.ingest(ingressScope, input);
     await this.applyLifecycle(ingressScope, input);
-    if (persisted.inserted) {
+    const isTerminal = input.event.event_type === "run_completed" || input.event.event_type === "run_failed";
+    if (isTerminal) await this.progress.markTerminalMaterialized(ingressScope, input);
+    // Duplicate terminal delivery is the recovery mechanism after a sidecar
+    // or fanout failure.  The immutable journal sequence makes the repeated
+    // notification idempotent for SSE consumers.
+    if (persisted.inserted || isTerminal) {
       this.fanout.publish(input.run_id, { event: persisted.event, snapshot: persisted.snapshot });
     }
     return { accepted: true, latest_sequence: input.snapshot.latest_sequence };
@@ -234,6 +241,7 @@ export class ResearchProgressService {
         terminal_resolution: current.jobState === "CANCELLED"
           ? "CONTROL_CANCELLATION"
           : current.progress ? "SOURCE" : "PENDING",
+        terminal_materialization: current.terminalMaterialization,
         source_latest_sequence: current.sourceLatestSequence,
         retention_floor_sequence: current.retentionFloorSequence,
         last_received_at_utc_ms: current.receivedAt?.valueOf() ?? null,
@@ -247,6 +255,9 @@ export class ResearchProgressService {
 
   private effectiveStatus(current: ProgressRunRead): ResearchProgressReadResponse["current"]["effective_status"] {
     if (current.jobState === "CANCELLED") return "CANCELLED";
+    if ((current.jobState === "FAILED" || current.jobState === "SUCCEEDED") && current.terminalMaterialization !== "READY") {
+      return "FINISHING";
+    }
     if (current.jobState === "FAILED") return "FAILED";
     if (current.jobState === "SUCCEEDED") return "COMPLETED";
     if (current.progress) return current.progress.status;

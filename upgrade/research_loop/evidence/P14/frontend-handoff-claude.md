@@ -1,5 +1,10 @@
 # P14 frontend handoff — Screen 05 Split, chronology and holdout truth
 
+> **RS-01 amendment (2026-09-22):** invalid chronology and a P13/P14 transform
+> mismatch are now server refusals. Keep the S05 shell and render the typed
+> panel state; never calculate replacement ranges. No new client field/action
+> exists. See [RS-01 handoff](../RS-01/frontend-handoff-claude.md).
+
 **Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
 [P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
 and Unified checkpoint before using this handoff. The v1 facts below describe

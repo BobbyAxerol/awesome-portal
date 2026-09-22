@@ -36,7 +36,9 @@ export class ResearchEvidenceController {
     const query = ResearchEvidenceReadQuerySchema.safeParse(rawQuery);
     if (!query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    const body = await this.service.hub({ workspaceId, actorUserId: request.portalUser.userId }, runId);
+    const body = await this.withAbort(request, (signal) => this.service.hub(
+      { workspaceId, actorUserId: request.portalUser.userId }, runId, signal,
+    ));
     return this.conditional(reply, request, body.etag, body);
   }
 
@@ -51,9 +53,9 @@ export class ResearchEvidenceController {
     const query = ResearchEvidenceSeriesQuerySchema.safeParse(rawQuery);
     if (!query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    const body = await this.service.series(
-      { workspaceId, actorUserId: request.portalUser.userId }, runId, query.data.kind,
-    );
+    const body = await this.withAbort(request, (signal) => this.service.series(
+      { workspaceId, actorUserId: request.portalUser.userId }, runId, query.data.kind, signal,
+    ));
     return this.conditional(reply, request, body.etag, body);
   }
 
@@ -64,6 +66,17 @@ export class ResearchEvidenceController {
       if (!Array.isArray(candidate) && candidate === etag) return reply.code(304).send();
     }
     return reply.send(body);
+  }
+
+  private async withAbort<T>(request: FastifyRequest, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    const abort = new AbortController();
+    const onAborted = () => abort.abort();
+    request.raw.once("aborted", onAborted);
+    try {
+      return await work(abort.signal);
+    } finally {
+      request.raw.off("aborted", onAborted);
+    }
   }
 
   private runId(raw: string): string {

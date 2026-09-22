@@ -83,3 +83,14 @@ immutable evidence remains retained and no P17 data rollback exists.
 requires new versioned source evidence and must not be filled through direct
 DB/artifact access or browser inference. Claude owns Screen 08 consumption;
 see [frontend-handoff-claude.md](./frontend-handoff-claude.md).
+
+## RS-01 corrective amendment — 2026-09-22
+
+The original ETag statement is replaced by the [RS-01](../RS-01/phase-report.md)
+cache/cursor rule: replay responses are `Cache-Control: private, no-store` and
+never 304, because a cursor-bearing page cannot safely reuse an HTTP body.
+Opaque cursor expiry is `409 RESEARCH_REPLAY_CURSOR_EXPIRED`; an explicit
+`at_ordinal` is the safe public re-location input. Replay now receives a
+single revision-pinned Hub/series bundle and scoped cancellation/admission.
+This closes A05/A06/A08 correctness only; execution-ledger source facts and
+full S08 acceptance remain RS-02/RS-03 work.

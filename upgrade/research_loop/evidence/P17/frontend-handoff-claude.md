@@ -1,5 +1,12 @@
 # P17 frontend handoff — Screen 08 Execute / Replay
 
+> **RS-01 amendment (2026-09-22):** regenerate `research-replay.d.ts`. Replay
+> is `Cache-Control: private, no-store`; do not expect a conditional/304 path.
+> On typed `409 RESEARCH_REPLAY_CURSOR_EXPIRED`, discard the opaque token and
+> offer one bounded refetch/recovery. `at_ordinal` may restore an explicit
+> public deep link only; never derive/retry it in a loop. Keep the rich replay
+> shell/source-gap panels. See [RS-01 handoff](../RS-01/frontend-handoff-claude.md).
+
 **Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
 [P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
 and Unified checkpoint before using this handoff. The v1 facts below describe

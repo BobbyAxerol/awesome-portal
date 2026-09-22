@@ -25,13 +25,19 @@ export const ResearchReplayReadQuerySchema = z.object({
   before: CursorSchema.optional(),
   /** Select a single opaque source-sample playhead and return a bounded window around it. */
   at: CursorSchema.optional(),
+  /**
+   * Stable, non-secret inspection locator.  Unlike signed cursors it survives
+   * cursor TTL/key rotation and is resolved again under the caller's current
+   * workspace/run/revision authority.
+   */
+  at_ordinal: z.coerce.number().int().nonnegative().max(2_000_000).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(100),
 }).strict().superRefine((value, context) => {
-  const selected = [value.cursor, value.before, value.at].filter((item) => item !== undefined);
+  const selected = [value.cursor, value.before, value.at, value.at_ordinal].filter((item) => item !== undefined);
   if (selected.length > 1) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "cursor, before and at are mutually exclusive",
+      message: "cursor, before, at and at_ordinal are mutually exclusive",
       path: ["cursor"],
     });
   }

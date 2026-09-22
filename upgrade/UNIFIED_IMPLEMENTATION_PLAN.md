@@ -4890,7 +4890,29 @@ Missing Portal adapters/retention/read models must not become permanent
 - **Exit:** regressions fixed with new evidence, generated contract/inventory
   consistent, immutable old runs readable; no full P13–P17 completion claim.
 - **Guide/rollback:** audit §5 RS-01; append versions, retain history; no runtime
-  activation or global Execution pool-policy changes. **Status: PROPOSED.**
+  activation or global Execution pool-policy changes. **Status: BACKEND_REMEDIATED ·
+  FEATURE_DARK · CLAUDE_CONSUMER_REVIEW_PENDING.**
+
+**RS-01 delivery amendment — 2026-09-22.** A01–A08 are repaired only inside
+the Research-owned Python receipt / Control-API / generated-contract boundary:
+monthly returns now use prior-month close and UTC calendar periods; exact
+decimal ratios and histogram closure are explicit; every R2 retained series
+contributes an immutable source/transform/metric-registry/series-digest
+identity; one repeatable-read bundle serves Hub/series/replay; replay is
+`private, no-store` and never 304s a cursor-bearing response; cursor expiry is
+typed `409 RESEARCH_REPLAY_CURSOR_EXPIRED` with safe `at_ordinal` recovery;
+terminal sidecars must checkpoint before completion/fanout and an exact
+redelivery re-fanouts without rerunning QuantBT; and a scoped 2-active/8-queued
+Research read admission has 750 ms wait/acquire ceilings, cancellation and late
+client release. R1 receipts/metric labels remain readable unchanged.
+
+Evidence is retained in [RS-01 report](./research_loop/evidence/RS-01/phase-report.md),
+[test results](./research_loop/evidence/RS-01/test-results.json) and
+[Claude handoff](./research_loop/evidence/RS-01/frontend-handoff-claude.md).
+The fresh disposable PostgreSQL proof, synthetic numerical proofs and focused
+contract suites pass. This is **not** P13–P17/RS-02/RS-03 acceptance and does
+not authorize runtime activation, source expansion, a global pool change,
+deployment or a browser-complete claim.
 
 <a id="rl-rs-02"></a>
 #### RS-02 — Complete current-source adapters, retained data và screen read models

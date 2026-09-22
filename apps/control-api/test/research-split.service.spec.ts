@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { sha256ResearchJson } from "../src/research/preflight.service";
 import { ResearchSplitService } from "../src/research/split.service";
-import type { ResearchProgressIngress } from "../src/research/progress.contract";
+import { ResearchSplitSourceSchema, type ResearchProgressIngress } from "../src/research/progress.contract";
 import { p14SplitSourceFixture } from "./research-split.fixture";
 
 const scope = {
@@ -40,5 +40,23 @@ describe("P14 Split projection authority", () => {
     await expect(service.ingest(scope, {
       run_id: "run_p14", event: { event_type: "run_completed", sequence: 9, payload: { split_digest: "0".repeat(64) } }, split: p14SplitSourceFixture(),
     } as unknown as ResearchProgressIngress)).rejects.toMatchObject({ code: "RESEARCH_SPLIT_CONFLICT", status: 409 });
+  });
+
+  it("rejects inverted, zero-length and warmup-misaligned windows before immutable persistence", () => {
+    const inverted = p14SplitSourceFixture();
+    inverted.windows.outer_oos.end_exclusive_utc_ms = inverted.windows.outer_oos.start_utc_ms;
+    expect(ResearchSplitSourceSchema.safeParse(inverted).success).toBe(false);
+
+    const misaligned = p14SplitSourceFixture();
+    misaligned.timeline.start_utc_ms += 1;
+    expect(ResearchSplitSourceSchema.safeParse(misaligned).success).toBe(false);
+
+    const warmup = p14SplitSourceFixture();
+    (warmup.windows as { warmup: unknown }).warmup = {
+      state: "AVAILABLE", start_utc_ms: warmup.timeline.start_utc_ms,
+      end_exclusive_utc_ms: warmup.windows.is.start_utc_ms - 1,
+      bars: 1, data_role: "WARMUP_NOT_SCORED", child_input_state: "EXPOSED_TO_CHILD_TAPE",
+    };
+    expect(ResearchSplitSourceSchema.safeParse(warmup).success).toBe(false);
   });
 });

@@ -1,5 +1,12 @@
 # P13 frontend handoff — Screen 04 Evidence Flow Hub
 
+> **RS-01 amendment (2026-09-22):** regenerate `research-evidence.d.ts`. For
+> R2 render generated registry labels/scopes, exact decimals and
+> `series_metadata` sampling/coverage/omission facts. Never derive monthly,
+> rolling or histogram values/endpoints in TSX, or present R1 wording as R2
+> truth. Digest/revision mismatch stays a panel-local typed unavailable state.
+> See [RS-01 handoff](../RS-01/frontend-handoff-claude.md).
+
 **Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
 [P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
 and Unified checkpoint before using this handoff. The v1 facts below describe

@@ -39,6 +39,7 @@ interface ReadRunRow {
   source_latest_sequence: string | number | null;
   retention_floor_sequence: string | number | null;
   received_at: Date | null;
+  terminal_materialized: boolean;
 }
 
 interface ProgressEventRow {
@@ -101,6 +102,7 @@ export interface ProgressRunRead {
   retentionFloorSequence: number;
   receivedAt: Date | null;
   hasCurrentAttempt: boolean;
+  terminalMaterialization: "NOT_REQUIRED" | "PENDING" | "READY";
 }
 
 /** Server-only P06 lease facts used solely by the P11 cancel marker hop. */
@@ -273,13 +275,42 @@ export class ResearchProgressRepository {
     });
   }
 
+  /**
+   * Commit only after terminal evidence/split/lifecycle have all succeeded.
+   * It is immutable and idempotent, so an acknowledgement-loss retry never
+   * re-computes QuantBT yet can republish the already durable terminal fact.
+   */
+  async markTerminalMaterialized(scope: ProgressIngressScope, input: ResearchProgressIngress): Promise<void> {
+    if (input.event.event_type !== "run_completed" && input.event.event_type !== "run_failed") return;
+    const digest = sha256(input.event);
+    await this.withTransaction(scope.workspaceId, scope.actorUserId, false, async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO research.run_terminal_materializations_v1
+           (workspace_id, run_id, worker_attempt_id, source_sequence, event_digest, materialization_revision)
+         VALUES ($1, $2, $3, $4, $5, 'research.terminal-materialization.v1')
+         ON CONFLICT (workspace_id, run_id, worker_attempt_id, source_sequence) DO NOTHING`,
+        [scope.workspaceId, input.run_id, scope.workerAttemptId, input.event.sequence, digest],
+      );
+      if (inserted.rowCount !== 0) return;
+      const existing = await client.query<{ event_digest: string }>(
+        `SELECT event_digest FROM research.run_terminal_materializations_v1
+          WHERE workspace_id = $1 AND run_id = $2 AND worker_attempt_id = $3 AND source_sequence = $4`,
+        [scope.workspaceId, input.run_id, scope.workerAttemptId, input.event.sequence],
+      );
+      if (existing.rowCount !== 1 || existing.rows[0]!.event_digest !== digest) {
+        throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research terminal materialization conflicts with its immutable event.", 409);
+      }
+    });
+  }
+
   async readRun(scope: ResearchScope, runId: string): Promise<ProgressRunRead> {
     return this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
       const result = await client.query<ReadRunRow>(
         `SELECT producer.run_id, producer.attempt_id, producer.job_id,
                 producer.worker_attempt_id, producer.lease_epoch, job.state AS job_state,
                 producer.created_at, snapshot.snapshot, snapshot.source_latest_sequence,
-                snapshot.retention_floor_sequence, snapshot.received_at
+                snapshot.retention_floor_sequence, snapshot.received_at,
+                (terminal.source_sequence IS NOT NULL) AS terminal_materialized
            FROM research.run_producers producer
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
@@ -287,6 +318,11 @@ export class ResearchProgressRepository {
              ON snapshot.workspace_id = producer.workspace_id
             AND snapshot.run_id = producer.run_id
             AND snapshot.worker_attempt_id = producer.worker_attempt_id
+          LEFT JOIN research.run_terminal_materializations_v1 terminal
+             ON terminal.workspace_id = snapshot.workspace_id
+            AND terminal.run_id = snapshot.run_id
+            AND terminal.worker_attempt_id = snapshot.worker_attempt_id
+            AND terminal.source_sequence = snapshot.source_latest_sequence
           WHERE producer.workspace_id = $1 AND producer.run_id = $2
           ORDER BY producer.created_at DESC
           LIMIT 1`,
@@ -312,6 +348,9 @@ export class ResearchProgressRepository {
         retentionFloorSequence: row.retention_floor_sequence === null ? 0 : asSafeNumber(row.retention_floor_sequence, "retention floor"),
         receivedAt: row.received_at,
         hasCurrentAttempt: row.worker_attempt_id !== null && row.lease_epoch !== null,
+        terminalMaterialization: TERMINAL_JOB_STATES.has(row.job_state)
+          ? (row.terminal_materialized ? "READY" : "PENDING")
+          : "NOT_REQUIRED",
       };
     });
   }

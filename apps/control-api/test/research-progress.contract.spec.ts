@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   ResearchProgressEventSchema,
+  ResearchProgressIngressSchema,
   ResearchProgressSnapshotSchema,
   toPublicResearchProgressEvent,
   toPublicResearchProgressSnapshot,
 } from "../src/research/progress.contract";
 import { ResearchProgressFanout } from "../src/research/progress.fanout";
+import { sha256ResearchJson } from "../src/research/preflight.service";
+import { p13EvidenceSourceFixture } from "./research-evidence.fixture";
+import { p14SplitSourceFixture } from "./research-split.fixture";
 
 const event = {
   schema_version: "research.progress-event.v1" as const,
@@ -185,5 +189,42 @@ describe("P11 progress contracts", () => {
     expect(() => fanout.subscribe("run_p11", () => undefined)).toThrow(/bounded viewer limit/);
     for (const unsubscribe of unsubs) unsubscribe();
     expect(fanout.diagnostics("run_p11")).toEqual({ active_viewers: 0, maximum_viewers: 20 });
+  });
+
+  it("rejects terminal sidecars that bind different source transforms before either can persist", () => {
+    const evidence = p13EvidenceSourceFixture();
+    const split = p14SplitSourceFixture();
+    const completed = {
+      ...snapshot,
+      status: "COMPLETED" as const,
+      readiness: { mandatory: "SEALED" as const, optional: "NOT_APPLICABLE" as const },
+    };
+    const ingress = {
+      schema_version: "research.progress-ingress.v1" as const,
+      workspace_id: "workspace_p11",
+      run_id: event.run_id,
+      job_id: "job_p11",
+      worker_attempt_id: event.attempt_id,
+      lease_epoch: event.lease_epoch,
+      event: {
+        ...event,
+        event_type: "run_completed" as const,
+        payload: {
+          usage: { peak_rss_bytes: 1, cpu_seconds: 1, scratch_bytes: 0, fd_peak: 1 },
+          evidence_digest: sha256ResearchJson(evidence),
+          split_digest: sha256ResearchJson(split),
+        },
+      },
+      snapshot: completed,
+      evidence,
+      split,
+    };
+    expect(ResearchProgressIngressSchema.safeParse(ingress).success).toBe(true);
+    const mismatchedSplit = { ...split, source: { ...split.source, source_transform_digest: "b".repeat(64) } };
+    expect(ResearchProgressIngressSchema.safeParse({
+      ...ingress,
+      event: { ...ingress.event, payload: { ...ingress.event.payload, split_digest: sha256ResearchJson(mismatchedSplit) } },
+      split: mismatchedSplit,
+    }).success).toBe(false);
   });
 });
