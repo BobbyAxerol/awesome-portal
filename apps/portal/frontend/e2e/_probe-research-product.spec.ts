@@ -647,3 +647,284 @@ test("S03 honours reduced motion", async ({ page }) => {
   );
   expect(moving, `${moving} elements still animate under reduced motion`).toBe(0);
 });
+
+/* ------------------------------------------------------------------ P12 */
+
+/*
+ * S01 Run Library on `/research/quantbt/runs`.
+ *
+ * The fixture answers the two published operations — `GET /api/v1/quantbt/runs`
+ * and its `/sparkline` — with four rows chosen so every typed state the handoff
+ * names is on screen at once: a completed run with an issued certificate, a
+ * running one whose claim is `PENDING_SOURCE_CALLBACK`, a failed one carrying a
+ * superseded note and a different `comparison.key`, and a
+ * `LEGACY_1_0_8_METADATA` row with no binding, no certificate and no key.
+ */
+const RUN_LIBRARY = "/research/quantbt/runs";
+
+for (const [name, width, height] of [
+  ["laptop", 1280, 900],
+  ["mobile", 660, 900],
+] as const) {
+  test(`S01 Run Library renders every block on its product route at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width, height });
+    await page.goto(RUN_LIBRARY);
+    await settle(page);
+
+    await expect(page.locator("[data-screen='run-library']")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Run library" })).toBeVisible();
+    await expect(page.locator("[data-screen='run-library']")).toContainText(
+      "The library renders them; it ranks nothing.",
+    );
+
+    // Header, filter bar, ledger, cards, compare-less footer: the whole
+    // composition, not a subset that happens to fit.
+    await expect(page.locator("[data-filter-bar]")).toBeVisible();
+    await expect(page.locator("[data-counter]")).toContainText("4 of 4 runs");
+    await expect(page.locator("[data-claim-ledger]")).toContainText(
+      "claims · 1 issued · 1 not issued · 1 pending · 1 failed",
+    );
+    await expect(page.locator("[data-run]")).toHaveCount(4);
+    // Five evidence cells per card — S1…S5, present even where unpublished.
+    await expect(page.locator("[data-run='R-WFO-118'] [data-stage-cell]")).toHaveCount(5);
+    await expect(page.locator("[data-screen='run-library']")).toContainText(
+      "Nothing here is scored against anything else.",
+    );
+
+    // One shell: the Portal's. The screen adds no second navigation.
+    await expect(page.locator(".portal-shell")).toHaveCount(1);
+    await expect(page.locator("[data-screen='run-library'] nav")).toHaveCount(0);
+    await expect(page.locator("[data-screen='run-library'] aside")).toHaveCount(0);
+
+    // Nothing is cut off sideways at either width.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+
+    await page.screenshot({ path: `${OUT}/s01-run-library-${name}.png`, fullPage: true });
+    expect(noise, noise.join("\n")).toEqual([]);
+  });
+}
+
+test("S01 says what each row withheld instead of filling it in", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  // The legacy row keeps its card and states the reason; it is never dressed
+  // as current engine evidence.
+  const legacy = page.locator("[data-run='R-LEGACY-07']");
+  await expect(legacy).toHaveAttribute("data-source-kind", "LEGACY_1_0_8_METADATA");
+  // No binding chip is drawn at all — the row is not given a version it never
+  // had. What stands in its place names the reason.
+  await expect(legacy.locator("[data-binding]")).toHaveCount(0);
+  await expect(
+    legacy.locator("[data-withheld='LEGACY_METADATA_ONLY']").first(),
+  ).toBeVisible();
+  await expect(legacy.locator("[data-certificate]")).toHaveCount(0);
+
+  // An unpublished metric is withheld with its reason — never 0, "-" or "N/A".
+  const decay = page.locator("[data-run='R-WFO-118'] [data-metric='DECAY']");
+  await expect(decay).toContainText("not published");
+  await expect(decay).not.toContainText("0");
+  await expect(decay.locator("[data-withheld]")).toHaveAttribute("data-withheld", "NOT_PUBLISHED");
+
+  // A claim the source has not called back on is pending, not absent and not
+  // a quiet success.
+  const running = page.locator("[data-run='R-WFO-119']");
+  await expect(running.locator("[data-status]")).toHaveAttribute("data-status", "RUNNING");
+  await expect(running.locator("[data-claim]")).toContainText(
+    "claim pending — engine issues it at Stage 5, never before",
+  );
+  expect(await running.locator("[data-certificate]").count()).toBe(0);
+
+  // A derived tooltip is labelled as derived, so nobody reads it as the
+  // engine's own words.
+  await expect(
+    page.locator("[data-run='R-WFO-118'] [data-stage-cell='S3']"),
+  ).toHaveAttribute("data-tooltip-source", "DERIVED_FROM_PERSISTED_STATE");
+
+  // `rc: null` reserves nothing.
+  expect(await page.locator("[data-rc]").count()).toBe(0);
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S01 keeps its filters and selection in the URL across reload and back", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  await page.locator("[data-filter-status='RUNNING']").click();
+  await expect(page).toHaveURL(/status=RUNNING/);
+
+  // A reload restores the same question from the URL alone.
+  await page.reload();
+  await settle(page);
+  await expect(page.locator("[data-filter-status='RUNNING']")).toHaveAttribute(
+    "data-selected",
+    "true",
+  );
+
+  // Selection is navigation and pushes; a filter is a view and replaces, so
+  // back undoes the selection without walking the filter back too.
+  await page.locator("[data-compare-check='R-WFO-118']").click();
+  await expect(page).toHaveURL(/sel=R-WFO-118/);
+  await page.goBack();
+  await settle(page);
+  await expect(page).toHaveURL(/status=RUNNING/);
+  await expect(page).not.toHaveURL(/sel=/);
+  await expect(page.locator("[data-compare-bar]")).toHaveCount(0);
+});
+
+test("S01 refuses a two-card compare across contract keys and allows it within one", async ({
+  page,
+}) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  await page.locator("[data-compare-check='R-WFO-118']").click();
+  await expect(page.locator("[data-compare-bar]")).toHaveAttribute("data-compare-bar", "pending");
+
+  // R-WFO-120 is ETHUSDT·1h: a different ComparisonContractKey.
+  await page.locator("[data-compare-check='R-WFO-120']").click();
+  await expect(page.locator("[data-compare-bar]")).toHaveAttribute("data-compare-bar", "refused");
+  await expect(page.locator("[data-compare-refusal]")).toContainText("comparison lie");
+  await expect(page.locator("[data-action='open-compare']")).toBeDisabled();
+
+  // R-WFO-119 shares 118's key, so the same pair of clicks is allowed.
+  await page.locator("[data-compare-check='R-WFO-120']").click();
+  await page.locator("[data-compare-check='R-WFO-119']").click();
+  await expect(page.locator("[data-compare-bar]")).toHaveAttribute("data-compare-bar", "ready");
+  await expect(page.locator("[data-action='open-compare']")).toBeVisible();
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S01 polls only visible running rows and stops when the tab is hidden", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+
+  const polls: string[] = [];
+  page.on("request", (request) => {
+    const url = request.url();
+    if (url.includes("/api/v1/quantbt/runs") && url.includes("ids=")) polls.push(url);
+  });
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  // One running card is visible, so one poll starts — and it carries only the
+  // ids, never a filter or a cursor.
+  await expect.poll(() => polls.length).toBeGreaterThan(0);
+  for (const url of polls) {
+    expect(url).toContain("ids=R-WFO-119");
+    expect(url).not.toMatch(/[?&](status|mode|alpha|q|cursor|before)=/);
+  }
+  const started = polls.length;
+
+  await page.clock.runFor(10_500);
+  await expect.poll(() => polls.length).toBeGreaterThan(started);
+  const beforeHidden = polls.length;
+
+  // Hidden means hidden: no interval per card, and no asking a tab nobody is
+  // looking at.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.clock.runFor(60_000);
+  expect(polls.length, "polled while hidden").toBe(beforeHidden);
+
+  // Leaving the route tears the interval down for good.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+  });
+  await page.goto(JOURNEY);
+  await settle(page);
+  const afterLeaving = polls.length;
+  await page.clock.runFor(60_000);
+  expect(polls.length, "polled after unmount").toBe(afterLeaving);
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S01 reads a sparkline only for a visible row whose series exists", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/sparkline")) asked.push(request.url());
+  });
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  await expect.poll(() => asked.length).toBeGreaterThan(0);
+  // The legacy row publishes no series, so the only possible answer would be
+  // "no" — the lazy read is never sent for it.
+  expect(asked.some((url) => url.includes("R-LEGACY-07"))).toBe(false);
+  await expect(page.locator("[data-run='R-LEGACY-07'] [data-sparkline-placeholder]")).toHaveAttribute(
+    "data-sparkline-placeholder",
+    "NOT_PUBLISHED",
+  );
+
+  // Asked once per row, and never again on a re-observe.
+  const once = new Set(asked.map((url) => new URL(url).pathname));
+  expect(asked.length).toBe(once.size);
+  await expect(page.locator("[data-run='R-WFO-118'] [data-sparkline-values]")).toHaveAttribute(
+    "data-sparkline-values",
+    "8",
+  );
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S01 is reachable and operable by keyboard", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  const check = page.locator("[data-compare-check='R-WFO-118']");
+  await check.focus();
+  await page.keyboard.press("Space");
+  await expect(page).toHaveURL(/sel=R-WFO-118/);
+  await expect(check).toBeChecked();
+
+  // The filter chips are real buttons, so they answer Enter.
+  await page.locator("[data-filter-status='FAILED']").focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/status=FAILED/);
+
+  // Every control the screen offers carries an accessible name.
+  const unnamed = await page.evaluate(() => {
+    const root = document.querySelector("[data-screen='run-library']");
+    if (!root) return ["no screen"];
+    return [...root.querySelectorAll("button, a, input")]
+      .filter((el) => {
+        const label =
+          el.getAttribute("aria-label") ??
+          el.getAttribute("title") ??
+          (el.textContent ?? "").trim();
+        return label.length === 0;
+      })
+      .map((el) => el.outerHTML.slice(0, 120));
+  });
+  expect(unnamed, unnamed.join("\n")).toEqual([]);
+});

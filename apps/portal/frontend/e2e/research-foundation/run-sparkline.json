@@ -1,0 +1,19 @@
+{
+  "schema_version": "research.run-sparkline.v1",
+  "run_id": "R-WFO-118",
+  "values": [
+    "1.00",
+    "1.02",
+    "1.01",
+    "1.06",
+    "1.09",
+    "1.12",
+    "1.10",
+    "1.18"
+  ],
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "source_revision": "rev_1"
+}

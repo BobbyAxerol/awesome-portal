@@ -261,6 +261,21 @@ export async function stubPortalApi(
     return void json(route, local(historical ? "atlas-historical.json" : "atlas.json"));
   });
 
+  /*
+   * P12 · the Run Library list and the lazy sparkline.
+   *
+   * Registered list-first: Playwright matches the most recently added handler
+   * first, and the sparkline URL also matches the list glob. The two paths are
+   * the ones `research-run-library.openapi.json` publishes, so a handler that
+   * stops matching is a signal the client drifted off the contract.
+   */
+  await page.route("**/api/v1/quantbt/runs*", (route) =>
+    void json(route, local("run-library.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/sparkline*", (route) =>
+    void json(route, local("run-sparkline.json")),
+  );
+
   // Service health, read by the sign-in plate before any session exists. Pinned
   // versions: the strip prints them, so a real deployment's version would
   // rewrite the baseline on every release.

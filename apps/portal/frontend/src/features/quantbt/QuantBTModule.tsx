@@ -47,6 +47,7 @@ import { EngineAtlasRoute, JourneyMapRoute } from "../../research/foundationRout
 import { AlphaImportRoute } from "../../research/AlphaImportRoute";
 import { NewRunRoute } from "../../research/NewRunRoute";
 import { RunProgressRoute } from "../../research/RunProgressRoute";
+import { RunLibraryRoute } from "../../research/RunLibraryRoute";
 import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
@@ -213,7 +214,7 @@ function LegacyTabRedirect() {
  * ---------------------------------------------------------------------- */
 
 /** Path segments under `runs/` that name a screen rather than a run. */
-const RESERVED_RUN_SEGMENTS = new Set(["new"]);
+const RESERVED_RUN_SEGMENTS = new Set(["new", "legacy"]);
 
 export function QuantBTModule() {
   const feature = useFeature("QUANTBT_RESEARCH");
@@ -261,7 +262,7 @@ export function QuantBTModule() {
   // Kept separate from `onTaskRoute` on purpose: widening that regex would
   // also have dropped the caption from New Run and the import inbox, which are
   // outside this phase and inside the visual baseline.
-  const onReferenceRoute = /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/progress)(\/|$)/.test(location.pathname);
+  const onReferenceRoute = /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/progress)(\/|$)/.test(location.pathname) || /\/runs$/.test(location.pathname);
 
   const actions = (
     <>
@@ -350,7 +351,11 @@ export function QuantBTModule() {
         <Route path="alpha-import" element={<AlphaImportRoute />} />
         <Route path="imports" element={<ImportInbox />} />
         <Route path="alphas/:alphaId/:version" element={<AlphaVersionDetail />} />
-        <Route path="runs" element={<RunLibrary />} />
+        {/* P12 · Screen 01 on the canonical route spec 01 names. The screen it
+          * replaces is not deleted — it stays reachable at `runs/legacy`, so
+          * the swap is one line to reverse. */}
+        <Route path="runs" element={<RunLibraryRoute />} />
+        <Route path="runs/legacy" element={<RunLibrary />} />
         <Route path="runs/:runId/*" element={<RunWorkspace />} />
         <Route path=":tab" element={<LegacyTabRedirect />} />
         <Route index element={<ResolveDefaultRun />} />

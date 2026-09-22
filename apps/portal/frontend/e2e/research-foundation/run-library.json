@@ -1,0 +1,698 @@
+{
+  "schema_version": "research.run-library.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "items": [
+    {
+      "run_id": "R-WFO-118",
+      "attempt_id": null,
+      "source_kind": "RESEARCH_DURABLE",
+      "row_kind": "LOGICAL_RUN",
+      "relationship": {
+        "kind": "PRIMARY",
+        "logical_run_key": "lrk_1",
+        "parent_run_id": null,
+        "technical_retry_count": 0
+      },
+      "status": "COMPLETED",
+      "mode": {
+        "display": "mode_1_decay · per_fold_causal",
+        "key": "mode_1_decay",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "strategy_id": {
+        "value": "delta_rsi",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "binding": {
+        "alpha_id": "alpha_momentum_btc",
+        "alpha_name": "alpha_momentum_btc",
+        "alpha_version_id": "av_0_9_3",
+        "av": "av_0_9_3",
+        "digest": "sha256:aa91b3ce77"
+      },
+      "binding_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
+      "rc": null,
+      "instrument": {
+        "display": "BTCUSDT · 4h",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "created_at_utc_ms": 1789836572000,
+      "certificate": {
+        "grade": "B",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "claim": {
+        "text": "STRICT_OUTER_OOS — OOS read once after freeze · holdout sealed caps ≤ B",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "stages": [
+        {
+          "key": "S1",
+          "state": "done",
+          "tip": "S1 Split — done",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S2",
+          "state": "cap",
+          "tip": "S2 Search — strict schedule, no cap",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S3",
+          "state": "done",
+          "tip": "S3 Freeze — reached",
+          "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S4",
+          "state": "done",
+          "tip": "S4 Execute — replayed",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S5",
+          "state": "done",
+          "tip": "S5 Claim — issued",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      ],
+      "stats": [
+        {
+          "key": "oos_sharpe",
+          "label": "OOS sharpe",
+          "role": "OOS_SHARPE",
+          "value": "1.049",
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "decay",
+          "label": "Δ decay",
+          "role": "DECAY",
+          "value": null,
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_METRIC"
+          }
+        },
+        {
+          "key": "trades",
+          "label": "trades",
+          "role": "TRADE_COUNT",
+          "value": "214",
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      ],
+      "superseded_note": null,
+      "comparison": {
+        "key": "BTCUSDT·4h·close_target_v2·walk_forward",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "sparkline": {
+        "kind": "oos_equity",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "source_updated_at_utc_ms": 1789836582000
+    },
+    {
+      "run_id": "R-WFO-119",
+      "attempt_id": null,
+      "source_kind": "RESEARCH_DURABLE",
+      "row_kind": "LOGICAL_RUN",
+      "relationship": {
+        "kind": "PRIMARY",
+        "logical_run_key": "lrk_1",
+        "parent_run_id": null,
+        "technical_retry_count": 0
+      },
+      "status": "RUNNING",
+      "mode": {
+        "display": "mode_1_decay · per_fold_causal",
+        "key": "mode_1_decay",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "strategy_id": {
+        "value": "delta_rsi",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "binding": {
+        "alpha_id": "alpha_momentum_btc",
+        "alpha_name": "alpha_momentum_btc",
+        "alpha_version_id": "av_0_9_3",
+        "av": "av_0_9_3",
+        "digest": "sha256:aa91b3ce77"
+      },
+      "binding_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
+      "rc": null,
+      "instrument": {
+        "display": "BTCUSDT · 4h",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "created_at_utc_ms": 1789836572000,
+      "certificate": {
+        "grade": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "SOURCE_DID_NOT_PUBLISH_METRIC"
+        }
+      },
+      "claim": {
+        "text": null,
+        "availability": {
+          "state": "PENDING_SOURCE_CALLBACK",
+          "reason_code": null
+        }
+      },
+      "stages": [
+        {
+          "key": "S1",
+          "state": "done",
+          "tip": "S1 Split — done",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S2",
+          "state": "run",
+          "tip": "S2 Search — running",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S3",
+          "state": "pend",
+          "tip": null,
+          "tooltip_source": "NOT_PUBLISHED",
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_METRIC"
+          }
+        },
+        {
+          "key": "S4",
+          "state": "pend",
+          "tip": null,
+          "tooltip_source": "NOT_PUBLISHED",
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_METRIC"
+          }
+        },
+        {
+          "key": "S5",
+          "state": "pend",
+          "tip": null,
+          "tooltip_source": "NOT_PUBLISHED",
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_METRIC"
+          }
+        }
+      ],
+      "stats": [
+        {
+          "key": "progress",
+          "label": "progress",
+          "role": "PROGRESS",
+          "value": "42%",
+          "tone": "ACCENT",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "trials",
+          "label": "trials",
+          "role": "TRIALS",
+          "value": "214/400",
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "elapsed",
+          "label": "elapsed",
+          "role": "ELAPSED",
+          "value": "610s",
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      ],
+      "superseded_note": null,
+      "comparison": {
+        "key": "BTCUSDT·4h·close_target_v2·walk_forward",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "sparkline": {
+        "kind": "search_progress",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "source_updated_at_utc_ms": 1789836582000
+    },
+    {
+      "run_id": "R-WFO-120",
+      "attempt_id": null,
+      "source_kind": "RESEARCH_DURABLE",
+      "row_kind": "LOGICAL_RUN",
+      "relationship": {
+        "kind": "PRIMARY",
+        "logical_run_key": "lrk_1",
+        "parent_run_id": null,
+        "technical_retry_count": 0
+      },
+      "status": "FAILED",
+      "mode": {
+        "display": "mode_1_decay · per_fold_causal",
+        "key": "mode_1_decay",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "strategy_id": {
+        "value": "delta_rsi",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "binding": {
+        "alpha_id": "alpha_momentum_btc",
+        "alpha_name": "alpha_momentum_btc",
+        "alpha_version_id": "av_0_9_3",
+        "av": "av_0_9_3",
+        "digest": "sha256:aa91b3ce77"
+      },
+      "binding_availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
+      "rc": null,
+      "instrument": {
+        "display": "BTCUSDT · 4h",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "created_at_utc_ms": 1789836572000,
+      "certificate": {
+        "grade": "D",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "claim": {
+        "text": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "SOURCE_DID_NOT_PUBLISH_METRIC"
+        }
+      },
+      "stages": [
+        {
+          "key": "S1",
+          "state": "done",
+          "tip": "S1 Split — done",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S2",
+          "state": "cap",
+          "tip": "S2 Search — strict schedule, no cap",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S3",
+          "state": "done",
+          "tip": "S3 Freeze — reached",
+          "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S4",
+          "state": "done",
+          "tip": "S4 Execute — replayed",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S5",
+          "state": "done",
+          "tip": "S5 Claim — issued",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      ],
+      "stats": [
+        {
+          "key": "failed_at",
+          "label": "failed at",
+          "role": "FAILED_AT",
+          "value": "S2",
+          "tone": "BAD",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "reason",
+          "label": "reason",
+          "role": "FAILURE_REASON",
+          "value": "RuntimeBudgetError",
+          "tone": "BAD",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "runtime",
+          "label": "runtime",
+          "role": "RUNTIME",
+          "value": "318s",
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      ],
+      "superseded_note": "att_00 · replaced by this attempt after a config fix — kept for lineage, may never support an approval",
+      "comparison": {
+        "key": "ETHUSDT·1h·close_target_v2·walk_forward",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "sparkline": {
+        "kind": "failed",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "source_updated_at_utc_ms": 1789836582000
+    },
+    {
+      "run_id": "R-LEGACY-07",
+      "attempt_id": null,
+      "source_kind": "LEGACY_1_0_8_METADATA",
+      "row_kind": "LEGACY_RUN",
+      "relationship": {
+        "kind": "PRIMARY",
+        "logical_run_key": "lrk_1",
+        "parent_run_id": null,
+        "technical_retry_count": 0
+      },
+      "status": "COMPLETED",
+      "mode": {
+        "display": "mode_1_decay · per_fold_causal",
+        "key": "mode_1_decay",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "strategy_id": {
+        "value": "delta_rsi",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "binding": null,
+      "binding_availability": {
+        "state": "LEGACY_METADATA_ONLY",
+        "reason_code": "LEGACY_1_0_8_HAS_NO_BINDING"
+      },
+      "rc": null,
+      "instrument": {
+        "display": "BTCUSDT · 4h",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "created_at_utc_ms": 1789836572000,
+      "certificate": {
+        "grade": null,
+        "availability": {
+          "state": "LEGACY_METADATA_ONLY",
+          "reason_code": "LEGACY_1_0_8_HAS_NO_CERTIFICATE"
+        }
+      },
+      "claim": {
+        "text": null,
+        "availability": {
+          "state": "LEGACY_METADATA_ONLY",
+          "reason_code": "LEGACY_1_0_8_HAS_NO_CLAIM"
+        }
+      },
+      "stages": [
+        {
+          "key": "S1",
+          "state": "done",
+          "tip": "S1 Split — done",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S2",
+          "state": "cap",
+          "tip": "S2 Search — strict schedule, no cap",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S3",
+          "state": "done",
+          "tip": "S3 Freeze — reached",
+          "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S4",
+          "state": "done",
+          "tip": "S4 Execute — replayed",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "S5",
+          "state": "done",
+          "tip": "S5 Claim — issued",
+          "tooltip_source": "SOURCE_VERBATIM",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      ],
+      "stats": [
+        {
+          "key": "oos_sharpe",
+          "label": "OOS sharpe",
+          "role": "OOS_SHARPE",
+          "value": "1.049",
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "decay",
+          "label": "Δ decay",
+          "role": "DECAY",
+          "value": null,
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "SOURCE_DID_NOT_PUBLISH_METRIC"
+          }
+        },
+        {
+          "key": "trades",
+          "label": "trades",
+          "role": "TRADE_COUNT",
+          "value": "214",
+          "tone": "DEFAULT",
+          "availability": {
+            "state": "AVAILABLE",
+            "reason_code": null
+          }
+        }
+      ],
+      "superseded_note": null,
+      "comparison": {
+        "key": null,
+        "availability": {
+          "state": "LEGACY_METADATA_ONLY",
+          "reason_code": "LEGACY_1_0_8_HAS_NO_COMPARISON_KEY"
+        }
+      },
+      "sparkline": {
+        "kind": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "SOURCE_DID_NOT_PUBLISH_SERIES"
+        }
+      },
+      "source_updated_at_utc_ms": 1789836582000
+    }
+  ],
+  "page": {
+    "limit": 50,
+    "total_rows": 4,
+    "filtered_rows": 4,
+    "next_cursor": null,
+    "prev_cursor": null,
+    "has_more": false,
+    "has_previous": false,
+    "order": "CREATED_AT_DESC_RUN_ID_DESC"
+  },
+  "counters": {
+    "logical_runs": 4,
+    "worker_children": 0,
+    "technical_retries": 0,
+    "legacy_metadata_rows": 1
+  },
+  "claim_ledger": {
+    "issued": 1,
+    "not_issued": 1,
+    "pending_source": 1,
+    "failed": 1
+  },
+  "filter_catalog": {
+    "alphas": [
+      {
+        "alpha_id": "alpha_momentum_btc",
+        "alpha_name": "alpha_momentum_btc"
+      }
+    ],
+    "modes": [
+      {
+        "key": "mode_1_decay",
+        "display": "mode_1"
+      }
+    ],
+    "scratch_available": true
+  },
+  "as_of_utc_ms": 1789836590000
+}
