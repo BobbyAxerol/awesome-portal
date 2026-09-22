@@ -69,16 +69,32 @@ const CERT_TONE: Record<string, string> = {
 
 /* ------------------------------------------------------------------ parts */
 
-/** A fact the server withheld. Never `0`, `—` or a plausible default. */
-function Withheld({ availability }: { availability: Availability }) {
+/**
+ * A fact the server withheld. Never `0`, `—` or a plausible default.
+ *
+ * Each withheld state gets its own words. They are not synonyms: a row whose
+ * alpha binding was never recorded by the 1.0.8 engine is a different fact
+ * from one the current engine has not published yet, and a claim waiting on a
+ * source callback is a third. `what` names the field, because a header that
+ * withholds two facts otherwise reads as the same phrase twice.
+ */
+const WITHHELD_WORDS: Record<Availability["state"], string> = {
+  AVAILABLE: "available",
+  NOT_PUBLISHED: "not published",
+  LEGACY_METADATA_ONLY: "legacy metadata",
+  PENDING_SOURCE_CALLBACK: "pending source",
+};
+
+function Withheld({ availability, what }: { availability: Availability; what?: string }) {
   return (
     <span
-      className="italic"
+      className="mono text-[10px] italic leading-[16px]"
       style={{ color: "var(--ink-faint)" }}
       data-withheld={availability.state}
       title={unavailableReason(availability)}
     >
-      {availability.state === "PENDING_SOURCE_CALLBACK" ? "pending source" : "not published"}
+      {what ? `${what} — ` : ""}
+      {WITHHELD_WORDS[availability.state]}
     </span>
   );
 }
@@ -122,10 +138,20 @@ function StatusPill({ status }: { status: RunLibraryItem["status"] }) {
           : "var(--ink-faint)";
   return (
     <span
-      className="mono rounded-full border px-[6px] text-[8.5px] font-bold uppercase leading-[15px]"
+      className="mono inline-flex items-center gap-[4px] rounded-full border px-[6px] text-[8.5px] font-bold uppercase leading-[15px]"
       data-status={status}
       style={{ color: tone, borderColor: tone }}
     >
+      {/* The dot beats only while the run does. Spec 01 §3.4 gives it to
+          RUNNING alone, so a still pill is itself a fact. `motion-safe`
+          leaves it steady for a reader who asked for no motion. */}
+      {status === "RUNNING" ? (
+        <span
+          data-pulse
+          className="motion-safe:animate-pulse inline-block h-[5px] w-[5px] rounded-full"
+          style={{ background: tone }}
+        />
+      ) : null}
       {status}
     </span>
   );
@@ -249,12 +275,22 @@ function Sparkline({
           ))}
         </span>
       ) : (
+        /*
+         * The placeholder keeps the series' footprint, so a card with no
+         * series is the same height as one with a series — but it says which
+         * kind of nothing it is rather than being an empty grey box a reader
+         * would read as "still loading".
+         */
         <span
-          className="block h-[26px] w-[150px] rounded-[2px]"
+          className="mono flex h-[26px] w-[150px] items-center justify-center rounded-[2px] text-[9px] italic"
           data-sparkline-placeholder={item.sparkline.availability.state}
           title={unavailableReason(item.sparkline.availability)}
-          style={{ background: "var(--paper-sunken)" }}
-        />
+          style={{ background: "var(--paper-sunken)", color: "var(--ink-faint)" }}
+        >
+          {item.sparkline.availability.state === "AVAILABLE"
+            ? "reads when visible"
+            : WITHHELD_WORDS[item.sparkline.availability.state]}
+        </span>
       )}
     </div>
   );
@@ -334,7 +370,7 @@ function RunCard({
         {isAvailable(item.mode.availability) && item.mode.display !== null ? (
           <Chip data-mode={item.mode.key ?? ""}>{item.mode.display}</Chip>
         ) : (
-          <Withheld availability={item.mode.availability} />
+          <Withheld availability={item.mode.availability} what="mode" />
         )}
 
         {item.binding ? (
@@ -349,7 +385,7 @@ function RunCard({
             scratch
           </Chip>
         ) : (
-          <Withheld availability={item.binding_availability} />
+          <Withheld availability={item.binding_availability} what="binding" />
         )}
 
         {isAvailable(item.instrument.availability) && item.instrument.display !== null ? (
@@ -384,7 +420,22 @@ function RunCard({
           >
             watch progress →
           </Link>
-        ) : null}
+        ) : (
+          /*
+           * Spec 01 §2.5 row 10 sends a settled run to Screen 04. That screen
+           * has no route yet, so the affordance is shown refused rather than
+           * pointed at a URL that would 404 — the reader learns the evidence
+           * view exists and is not open yet, which is the true state.
+           */
+          <span
+            className="mono text-[10px] uppercase"
+            data-open-evidence="UNPUBLISHED"
+            title="Screen 04 (run evidence) has no published route yet, so this link would go nowhere."
+            style={{ color: "var(--ink-faint)", opacity: 0.55, cursor: "not-allowed" }}
+          >
+            open evidence →
+          </span>
+        )}
       </header>
 
       {legacy ? (
@@ -487,6 +538,57 @@ function CompareBar({
       </button>
     </div>
   );
+}
+
+/* ------------------------------------------------------------- grouping */
+
+interface RunGroup {
+  key: string;
+  title: string;
+  sub: string;
+  rows: readonly RunLibraryItem[];
+}
+
+/**
+ * Groups the loaded page by alpha binding (spec 01 §2.4).
+ *
+ * Only the page in hand is grouped, and the header says so: with keyset
+ * paging the next page may carry more rows of the same alpha, so a count here
+ * is a count of what is loaded, never of the library. Ordering inside a group
+ * is the order the server sent, so grouping never becomes a re-rank.
+ */
+export function groupRuns(items: readonly RunLibraryItem[]): RunGroup[] {
+  const groups = new Map<string, RunGroup>();
+  for (const item of items) {
+    const bound = item.binding;
+    const scratch = bound === null && isAvailable(item.binding_availability);
+    const key = bound ? `a:${bound.alpha_id}:${bound.av}` : scratch ? "zz:scratch" : "zz:withheld";
+    const strategy =
+      isAvailable(item.strategy_id.availability) && item.strategy_id.value !== null
+        ? item.strategy_id.value
+        : null;
+
+    const existing = groups.get(key);
+    if (existing) {
+      (existing.rows as RunLibraryItem[]).push(item);
+      continue;
+    }
+    groups.set(key, {
+      key,
+      title: bound ? `${bound.alpha_name} · ${bound.av}` : scratch ? "scratch" : "binding not published",
+      sub: bound
+        ? strategy === null
+          ? "runs below share one immutable code artifact"
+          : `strategy ${strategy} · runs below share one immutable code artifact`
+        : scratch
+          ? "iterate freely · NOT_PUBLISHABLE"
+          : `${item.binding_availability.state.toLowerCase().replace(/_/g, " ")} — these rows name no alpha version, so they share nothing that could be called one`,
+      rows: [item],
+    });
+  }
+  /* Scratch and unbound rows sort last: they can never support an approval,
+     so they do not belong above the rows that can. */
+  return [...groups.values()].sort((left, right) => left.key.localeCompare(right.key));
 }
 
 /* ----------------------------------------------------------------- screen */
@@ -675,7 +777,36 @@ export function RunLibrary(props: RunLibraryProps) {
         ) : null}
 
         {response ? (
-          <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-claim-ledger>
+          <span className="mono ml-auto flex items-center gap-2 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-claim-ledger>
+            {/* Spec 01 §2.3 item 10: the ledger is a bar as well as a caption,
+                so the shape of the page's claim families is readable without
+                doing arithmetic. Each segment is sized by its own count, and
+                a family with no rows takes no width rather than a sliver. */}
+            <span className="flex h-[10px] w-[86px] overflow-hidden rounded-[2px]" data-ledger-bar>
+              {(
+                [
+                  ["issued", response.claim_ledger.issued, "var(--good)"],
+                  ["not-issued", response.claim_ledger.not_issued, "var(--ink-mute)"],
+                  ["pending", response.claim_ledger.pending_source, "var(--role-holdout)"],
+                  ["failed", response.claim_ledger.failed, "var(--bad)"],
+                ] as const
+              ).map(([family, count, tone]) => {
+                const total =
+                  response.claim_ledger.issued +
+                  response.claim_ledger.not_issued +
+                  response.claim_ledger.pending_source +
+                  response.claim_ledger.failed;
+                if (count === 0 || total === 0) return null;
+                return (
+                  <span
+                    key={family}
+                    data-ledger-segment={family}
+                    title={`${count} ${family.replace("-", " ")}`}
+                    style={{ background: tone, width: `${(count / total) * 100}%` }}
+                  />
+                );
+              })}
+            </span>
             claims · {response.claim_ledger.issued} issued · {response.claim_ledger.not_issued} not
             issued · {response.claim_ledger.pending_source} pending · {response.claim_ledger.failed} failed
           </span>
@@ -695,16 +826,44 @@ export function RunLibrary(props: RunLibraryProps) {
           </p>
         ) : (
           <div className="flex flex-col gap-2.5" data-runs>
-            {items.map((item) => (
-              <RunCard
-                key={item.run_id}
-                item={item}
-                selected={filters.sel.includes(item.run_id)}
-                onToggle={onToggleSel}
-                sparkline={sparklines.get(item.run_id)}
-                onVisible={onVisible}
-              />
-            ))}
+            {(filters.group ? groupRuns(items) : [{ key: "all", title: "", sub: "", rows: items }]).map(
+              (group) => (
+                <div key={group.key} className="flex flex-col gap-2.5">
+                  {filters.group ? (
+                    <div
+                      className="flex flex-wrap items-baseline gap-2.5 px-[2px] pt-1.5"
+                      data-group={group.key}
+                    >
+                      <span className="mono text-[11px] font-bold">{group.title}</span>
+                      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+                        {group.sub}
+                      </span>
+                      <span
+                        className="mono text-[9.5px]"
+                        style={{ color: "var(--ink-faint)" }}
+                        data-group-count
+                      >
+                        {group.rows.length} of this page
+                      </span>
+                      <span
+                        className="h-px flex-1 self-center"
+                        style={{ background: "var(--line)" }}
+                      />
+                    </div>
+                  ) : null}
+                  {group.rows.map((item) => (
+                    <RunCard
+                      key={item.run_id}
+                      item={item}
+                      selected={filters.sel.includes(item.run_id)}
+                      onToggle={onToggleSel}
+                      sparkline={sparklines.get(item.run_id)}
+                      onVisible={onVisible}
+                    />
+                  ))}
+                </div>
+              ),
+            )}
           </div>
         )}
       </ResearchPanel>

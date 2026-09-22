@@ -928,3 +928,77 @@ test("S01 is reachable and operable by keyboard", async ({ page }) => {
   });
   expect(unnamed, unnamed.join("\n")).toEqual([]);
 });
+
+test("S01 groups the loaded page by alpha and says that is what it grouped", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  // Off by default: the server's order stands.
+  await expect(page.locator("[data-group]")).toHaveCount(0);
+
+  await page.locator("[data-filter-group]").click();
+  await expect(page).toHaveURL(/group=1/);
+  // Three bindings on this page: one alpha, and the legacy row whose binding
+  // was never published — which is not the same thing as scratch.
+  await expect(page.locator("[data-group]")).toHaveCount(2);
+  await expect(page.locator("[data-group='a:alpha_momentum_btc:av_0_9_3']")).toContainText(
+    "runs below share one immutable code artifact",
+  );
+  await expect(page.locator("[data-group='zz:withheld']")).toContainText("binding not published");
+  // A count of the page is labelled as a count of the page: with keyset
+  // paging the next page may carry more of the same alpha.
+  await expect(page.locator("[data-group-count]").first()).toContainText("of this page");
+
+  // Grouping is a view, so it survives a reload and does not push history.
+  await page.reload();
+  await settle(page);
+  await expect(page.locator("[data-group]")).toHaveCount(2);
+  expect(noise, noise.join("\n")).toEqual([]);
+});
+
+test("S01 beats the pulse only for a running run and offers evidence honestly", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  // One pulse, on the one running card.
+  await expect(page.locator("[data-pulse]")).toHaveCount(1);
+  await expect(page.locator("[data-run='R-WFO-119'] [data-pulse]")).toBeVisible();
+
+  // The running card links to Screen 03, which exists.
+  await expect(page.locator("[data-run='R-WFO-119'] [data-open]")).toHaveAttribute(
+    "href",
+    "/research/quantbt/runs/R-WFO-119/progress",
+  );
+
+  // A settled card offers evidence as refused rather than pointing at a route
+  // that would 404. It is never an anchor, so it cannot be followed.
+  const evidence = page.locator("[data-run='R-WFO-118'] [data-open-evidence]");
+  await expect(evidence).toHaveAttribute("data-open-evidence", "UNPUBLISHED");
+  await expect(evidence).toHaveAttribute("title", /no published route yet/);
+  await expect(page.locator("[data-open-evidence]")).toHaveCount(3);
+  await expect(page.locator("a[data-open-evidence]")).toHaveCount(0);
+});
+
+test("S01 draws the claim ledger as a bar of the families it counted", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(RUN_LIBRARY);
+  await settle(page);
+
+  // Four families, four counts, four segments — and no sliver for a family
+  // with nothing in it.
+  await expect(page.locator("[data-ledger-segment]")).toHaveCount(4);
+  await expect(page.locator("[data-ledger-segment='issued']")).toHaveAttribute("title", "1 issued");
+  const widths = await page
+    .locator("[data-ledger-segment]")
+    .evaluateAll((nodes) => nodes.map((n) => (n as HTMLElement).getBoundingClientRect().width));
+  for (const width of widths) expect(width).toBeGreaterThan(0);
+});

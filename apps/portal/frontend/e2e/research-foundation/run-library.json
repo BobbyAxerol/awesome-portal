@@ -15,7 +15,7 @@
       },
       "status": "COMPLETED",
       "mode": {
-        "display": "mode_1_decay · per_fold_causal",
+        "display": "mode_1_decay \u00b7 per_fold_causal",
         "key": "mode_1_decay",
         "availability": {
           "state": "AVAILABLE",
@@ -42,7 +42,7 @@
       },
       "rc": null,
       "instrument": {
-        "display": "BTCUSDT · 4h",
+        "display": "BTCUSDT \u00b7 4h",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
@@ -57,7 +57,7 @@
         }
       },
       "claim": {
-        "text": "STRICT_OUTER_OOS — OOS read once after freeze · holdout sealed caps ≤ B",
+        "text": "STRICT_OUTER_OOS \u2014 OOS read once after freeze \u00b7 holdout sealed caps \u2264 B",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
@@ -67,7 +67,7 @@
         {
           "key": "S1",
           "state": "done",
-          "tip": "S1 Split — done",
+          "tip": "S1 Split \u2014 done",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -77,7 +77,7 @@
         {
           "key": "S2",
           "state": "cap",
-          "tip": "S2 Search — strict schedule, no cap",
+          "tip": "S2 Search \u2014 strict schedule, no cap",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -87,7 +87,7 @@
         {
           "key": "S3",
           "state": "done",
-          "tip": "S3 Freeze — reached",
+          "tip": "S3 Freeze \u2014 reached",
           "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
           "availability": {
             "state": "AVAILABLE",
@@ -97,7 +97,7 @@
         {
           "key": "S4",
           "state": "done",
-          "tip": "S4 Execute — replayed",
+          "tip": "S4 Execute \u2014 replayed",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -107,7 +107,7 @@
         {
           "key": "S5",
           "state": "done",
-          "tip": "S5 Claim — issued",
+          "tip": "S5 Claim \u2014 issued",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -129,7 +129,7 @@
         },
         {
           "key": "decay",
-          "label": "Δ decay",
+          "label": "\u0394 decay",
           "role": "DECAY",
           "value": null,
           "tone": "DEFAULT",
@@ -152,7 +152,7 @@
       ],
       "superseded_note": null,
       "comparison": {
-        "key": "BTCUSDT·4h·close_target_v2·walk_forward",
+        "key": "BTCUSDT\u00b74h\u00b7close_target_v2\u00b7walk_forward",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
@@ -180,7 +180,7 @@
       },
       "status": "RUNNING",
       "mode": {
-        "display": "mode_1_decay · per_fold_causal",
+        "display": "mode_1_decay \u00b7 per_fold_causal",
         "key": "mode_1_decay",
         "availability": {
           "state": "AVAILABLE",
@@ -207,7 +207,7 @@
       },
       "rc": null,
       "instrument": {
-        "display": "BTCUSDT · 4h",
+        "display": "BTCUSDT \u00b7 4h",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
@@ -232,7 +232,7 @@
         {
           "key": "S1",
           "state": "done",
-          "tip": "S1 Split — done",
+          "tip": "S1 Split \u2014 done",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -242,7 +242,7 @@
         {
           "key": "S2",
           "state": "run",
-          "tip": "S2 Search — running",
+          "tip": "S2 Search \u2014 running",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -317,7 +317,7 @@
       ],
       "superseded_note": null,
       "comparison": {
-        "key": "BTCUSDT·4h·close_target_v2·walk_forward",
+        "key": "BTCUSDT\u00b74h\u00b7close_target_v2\u00b7walk_forward",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
@@ -345,7 +345,7 @@
       },
       "status": "FAILED",
       "mode": {
-        "display": "mode_1_decay · per_fold_causal",
+        "display": "mode_1_decay \u00b7 per_fold_causal",
         "key": "mode_1_decay",
         "availability": {
           "state": "AVAILABLE",
@@ -372,7 +372,7 @@
       },
       "rc": null,
       "instrument": {
-        "display": "BTCUSDT · 4h",
+        "display": "BTCUSDT \u00b7 4h",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
@@ -397,7 +397,7 @@
         {
           "key": "S1",
           "state": "done",
-          "tip": "S1 Split — done",
+          "tip": "S1 Split \u2014 done",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -407,7 +407,7 @@
         {
           "key": "S2",
           "state": "cap",
-          "tip": "S2 Search — strict schedule, no cap",
+          "tip": "S2 Search \u2014 strict schedule, no cap",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -417,7 +417,7 @@
         {
           "key": "S3",
           "state": "done",
-          "tip": "S3 Freeze — reached",
+          "tip": "S3 Freeze \u2014 reached",
           "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
           "availability": {
             "state": "AVAILABLE",
@@ -427,7 +427,7 @@
         {
           "key": "S4",
           "state": "done",
-          "tip": "S4 Execute — replayed",
+          "tip": "S4 Execute \u2014 replayed",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -437,7 +437,7 @@
         {
           "key": "S5",
           "state": "done",
-          "tip": "S5 Claim — issued",
+          "tip": "S5 Claim \u2014 issued",
           "tooltip_source": "SOURCE_VERBATIM",
           "availability": {
             "state": "AVAILABLE",
@@ -480,9 +480,9 @@
           }
         }
       ],
-      "superseded_note": "att_00 · replaced by this attempt after a config fix — kept for lineage, may never support an approval",
+      "superseded_note": "att_00 \u00b7 replaced by this attempt after a config fix \u2014 kept for lineage, may never support an approval",
       "comparison": {
-        "key": "ETHUSDT·1h·close_target_v2·walk_forward",
+        "key": "ETHUSDT\u00b71h\u00b7close_target_v2\u00b7walk_forward",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
@@ -510,18 +510,18 @@
       },
       "status": "COMPLETED",
       "mode": {
-        "display": "mode_1_decay · per_fold_causal",
-        "key": "mode_1_decay",
+        "display": null,
+        "key": null,
         "availability": {
-          "state": "AVAILABLE",
-          "reason_code": null
+          "state": "LEGACY_METADATA_ONLY",
+          "reason_code": "LEGACY_1_0_8_HAS_NO_MODE"
         }
       },
       "strategy_id": {
-        "value": "delta_rsi",
+        "value": null,
         "availability": {
-          "state": "AVAILABLE",
-          "reason_code": null
+          "state": "LEGACY_METADATA_ONLY",
+          "reason_code": "LEGACY_1_0_8_HAS_NO_STRATEGY"
         }
       },
       "binding": null,
@@ -531,7 +531,7 @@
       },
       "rc": null,
       "instrument": {
-        "display": "BTCUSDT · 4h",
+        "display": "BTCUSDT \u00b7 4h",
         "availability": {
           "state": "AVAILABLE",
           "reason_code": null
@@ -555,52 +555,52 @@
       "stages": [
         {
           "key": "S1",
-          "state": "done",
-          "tip": "S1 Split — done",
-          "tooltip_source": "SOURCE_VERBATIM",
+          "state": "pend",
+          "tip": null,
+          "tooltip_source": "NOT_PUBLISHED",
           "availability": {
-            "state": "AVAILABLE",
-            "reason_code": null
+            "state": "LEGACY_METADATA_ONLY",
+            "reason_code": "LEGACY_1_0_8_HAS_NO_STAGE_TRAIL"
           }
         },
         {
           "key": "S2",
-          "state": "cap",
-          "tip": "S2 Search — strict schedule, no cap",
-          "tooltip_source": "SOURCE_VERBATIM",
+          "state": "pend",
+          "tip": null,
+          "tooltip_source": "NOT_PUBLISHED",
           "availability": {
-            "state": "AVAILABLE",
-            "reason_code": null
+            "state": "LEGACY_METADATA_ONLY",
+            "reason_code": "LEGACY_1_0_8_HAS_NO_STAGE_TRAIL"
           }
         },
         {
           "key": "S3",
-          "state": "done",
-          "tip": "S3 Freeze — reached",
-          "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+          "state": "pend",
+          "tip": null,
+          "tooltip_source": "NOT_PUBLISHED",
           "availability": {
-            "state": "AVAILABLE",
-            "reason_code": null
+            "state": "LEGACY_METADATA_ONLY",
+            "reason_code": "LEGACY_1_0_8_HAS_NO_STAGE_TRAIL"
           }
         },
         {
           "key": "S4",
-          "state": "done",
-          "tip": "S4 Execute — replayed",
-          "tooltip_source": "SOURCE_VERBATIM",
+          "state": "pend",
+          "tip": null,
+          "tooltip_source": "NOT_PUBLISHED",
           "availability": {
-            "state": "AVAILABLE",
-            "reason_code": null
+            "state": "LEGACY_METADATA_ONLY",
+            "reason_code": "LEGACY_1_0_8_HAS_NO_STAGE_TRAIL"
           }
         },
         {
           "key": "S5",
-          "state": "done",
-          "tip": "S5 Claim — issued",
-          "tooltip_source": "SOURCE_VERBATIM",
+          "state": "pend",
+          "tip": null,
+          "tooltip_source": "NOT_PUBLISHED",
           "availability": {
-            "state": "AVAILABLE",
-            "reason_code": null
+            "state": "LEGACY_METADATA_ONLY",
+            "reason_code": "LEGACY_1_0_8_HAS_NO_STAGE_TRAIL"
           }
         }
       ],
@@ -609,33 +609,33 @@
           "key": "oos_sharpe",
           "label": "OOS sharpe",
           "role": "OOS_SHARPE",
-          "value": "1.049",
+          "value": null,
           "tone": "DEFAULT",
           "availability": {
-            "state": "AVAILABLE",
-            "reason_code": null
+            "state": "LEGACY_METADATA_ONLY",
+            "reason_code": "LEGACY_1_0_8_HAS_NO_METRIC"
           }
         },
         {
           "key": "decay",
-          "label": "Δ decay",
+          "label": "\u0394 decay",
           "role": "DECAY",
           "value": null,
           "tone": "DEFAULT",
           "availability": {
-            "state": "NOT_PUBLISHED",
-            "reason_code": "SOURCE_DID_NOT_PUBLISH_METRIC"
+            "state": "LEGACY_METADATA_ONLY",
+            "reason_code": "LEGACY_1_0_8_HAS_NO_METRIC"
           }
         },
         {
           "key": "trades",
           "label": "trades",
           "role": "TRADE_COUNT",
-          "value": "214",
+          "value": null,
           "tone": "DEFAULT",
           "availability": {
-            "state": "AVAILABLE",
-            "reason_code": null
+            "state": "LEGACY_METADATA_ONLY",
+            "reason_code": "LEGACY_1_0_8_HAS_NO_METRIC"
           }
         }
       ],
