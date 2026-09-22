@@ -1,5 +1,13 @@
 # P14 frontend handoff — Screen 05 Split, chronology and holdout truth
 
+**Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
+[P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
+and Unified checkpoint before using this handoff. The v1 facts below describe
+a partial fixed-profile surface, not full screen/backend acceptance or proof
+that QuantBT lacks the omitted capabilities. Preserve your rich composition;
+consume new generated contracts per panel when published. No backend/runtime
+change is authorized by this audit note. Finish/preserve your P12 work.
+
 Backend and generated P14 contracts are ready, but **feature/runtime remains
 dark**. Work only in the Research Screen-05 composition, route, client and
 tests you own. Do not modify P14 Control API, OpenAPI, migration, PostgreSQL
@@ -45,16 +53,17 @@ Keep Screen-05's complete HiFi shell in every state; replace only the content
 inside individual panels, never the entire route with a generic unavailable
 envelope.
 
-The HiFi has four **visual** groups. Preserve three functional authority states
-(source chronology / observed OOS / sealed holdout) and make **Code Anatomy**
-a presentational substage, not a fourth server state or an implied gate.
+Audit A11 corrects a copied instruction: **Code Anatomy/import stages belong
+to S14, not this screen.** Follow S05's protocol, fold anatomy, inner folds,
+holdout and gap-scan layout. Do not invent a SEALED state from metadata-bound
+holdout, and do not add an import wizard or a new authority stage.
 
 | Generated fact | Required presentation rule |
 |---|---|
 | `timeline`, `windows.is`, `windows.outer_oos` | show server UTC-ms boundaries/counts exactly; do not calculate alternate labels or resize time intervals |
 | `windows.warmup` | when `AVAILABLE`, label non-scored copied input; when `NOT_APPLICABLE`, preserve panel layout with its exact reason |
 | `windows.holdout` | show metadata-bound, not exposed/not evaluated/not exposed; no result, preview, click-through, raw request or unlock affordance |
-| `source.physical_io` / holdout source absence | say only `NOT_ATTESTED`; semantic tape exclusion is not a physical Parquet row-group proof |
+| `windows.holdout.physical_io` / holdout source absence | say only `NOT_ATTESTED`; semantic tape exclusion is not a physical Parquet row-group proof |
 | `selection.strict_outer_oos.state=NOT_ASSERTED` | preserve the distinction from a failed/passed strict selector; no pass badge or source-grade claim |
 | fold/purge/embargo/inner/theta/gap/seal/unlock `NOT_PUBLISHED` | retain local card/drawer with typed reason. Do not render a faux timeline, zero/empty quality result, policy gate or disabled-but-posting button |
 | `PENDING_SOURCE_CALLBACK`, legacy, `400/401/403/404/503` | keep breadcrumb/timeline shell and use the existing typed error grammar; do not expose raw server text/relation/worker detail |

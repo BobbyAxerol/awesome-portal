@@ -1,5 +1,13 @@
 # P17 frontend handoff — Screen 08 Execute / Replay
 
+**Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
+[P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
+and Unified checkpoint before using this handoff. The v1 facts below describe
+a partial fixed-profile surface, not full screen/backend acceptance or proof
+that QuantBT lacks the omitted capabilities. Preserve your rich composition;
+consume new generated contracts per panel when published. No backend/runtime
+change is authorized by this audit note. Finish/preserve your P12 work.
+
 P17 backend is ready but feature-dark. Work only in Screen-08 composition,
 route, generated client and tests you own. Do not modify P17 Control API,
 P13 evidence reader, OpenAPI, PostgreSQL, deployment overlays, source adapter,

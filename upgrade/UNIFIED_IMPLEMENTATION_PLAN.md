@@ -3617,12 +3617,12 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P10](#rl-p10) | P06–P09 | 02 | 05 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P10 packet](./research_loop/evidence/P10/README.md): exact server-owned P04 Delta binding, actor-scoped preflight re-admission, one durable intent before the signed Portal compatibility hop, isolated `quant.run.requested.research` subject and bounded P08 IS/OOS-only child are proven. Intake is **dark by default** at both services; no runtime/container/deploy change occurred. **FE_S02_PRODUCT_ROUTE_PENDING / Claude:** consume the generated same-origin client, preserve all HIFI controls and render typed current-adapter refusal; no fixture-only product receipt is claimed. · FE_NEW_RUN_MOUNTED / Claude — Screen 02 mounted at `/research/quantbt/runs/new` and Screen 14 at its canonical `/research/quantbt/alpha-import`, both inside the one QuantBT shell; legacy `/research/quantbt/imports` untouched. Typed only from `@portal/contracts-research-run-create` plus P08's `may_create_run`: composition +1156, tests +657, draft/validators/serializer +365, client +200, container +162, route +143, S14 route +43, probe +145, fixtures +12, and `atlasDocument.ts` **−70 deleted**. `P10-T01…T10` pass; tsc 0, research suite 275/275, full frontend suite **162 files / 0 failures**, build 0, product browser probe 21/21 with 0 console output and 0 px overflow at 1280 and 660 — including a real declare → preflight → create producing `QUEUED`. **One serializer** feeds preview, preflight and submit (a test asserts no second definition exists, and the probe compares the two request bodies); no untouched default is serialized and no digest is computed. The route grid is manifest-driven — a blocked route is drawn disabled with the engine's own sentence, read from the manifest at test time rather than hardcoded. `may_create_run` is rendered as display state and never gates submit, so a typed `CREATE_FORBIDDEN` is a normal atomic re-admission outcome; an unknown transport outcome is never retried, and the same `client_intent_id` is reused so the server answers `replayed`; an adapter refusal leaves rich route parameters exactly as declared. **`S14-VIS-01` confirmed on the product route**: three authority states, and a browser test asserts opening Code anatomy changes no control's enablement. **`CG-P09-01` fully closed**: `atlas.ts` now types from the contract the browser reads and the narrowing layer is gone. Four defects were found by reading the screenshots — a request for a run named `new`, a wizard bar hiding steps 1–2 behind a scrollbar, bare `×` and `PUBLISHABLE ·` separators with no value, and a pin claimed with no version bound. [Claude P10 composition](./research_loop/evidence/P10/frontend-composition-claude.md) Visual regression is **exit 1 — 33 failed / 299 passed**, identical by name to the pre-existing set measured at `cac85b43` (`comm` empty both directions), so P10 moves the baseline by zero tests. Open backend requests: **BR-P10-01** — a bound version's entrypoint, declared timeframes, `determinism.seed_required` and `parameter_space`, plus the release's trial ceiling, are not reachable from the browser, so four verbatim spec-02 validators and the sweep/pin table are inert on the product route (implemented and unit-tested, so they start firing the day the facts are published); **BR-P10-02** — the release manifest's optimizer defaults are unpublished, so §9's four grouped default tables render only their override map. · **BR-P10-01/02 consumed (2026-09-21):** the four Spec 02 validators now fire from `RegistryEntry.declaration` and `Atlas.current_release.trial_ceiling`, proven in the browser on the product route — the pin names the bound version and its declared entrypoint, the timeframe rule quotes the declared list, the ceiling quotes 4000 and the seed rule quotes the declaration. The declared parameter space is adopted, never invented, and no source/adapter/provenance field reaches the table. The `Infinity` fallback is deleted: every constraint is `null` until a response supplies it, the dependent check does not run, and a panel names exactly which facts were unread. All four `optimizer_defaults` groups render `RELEASE_DEFAULT · LOCKED` with no input on a locked row, and a test asserts the override map stays empty while they are on screen; `submission_constraints` is stated, not enforced, so the server's typed refusal stays authoritative. research suite 291/291, full frontend suite 162 files / 0 failures, tsc 0, build 0, product browser probe 23/23. Open: **CG-P10-01** — `client.config_digest` is required but unpublished, sent empty, and the browser may not compute one. Visual snapshots were not re-recorded and no threshold was widened. |
 | [P11](#rl-p11) | P06,P09,P10 | 03 | 06 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P11 packet](./research_loop/evidence/P11/README.md): source-owned fsync journal + bounded recovery relay, exact P10/P06 lease ingress, immutable PostgreSQL event/snapshot materialisation, public fence-free same-origin BFF/SSE/console/cancel contract, 20-viewer cap and feature-dark overlay/runbook are proven. Fresh disposable PostgreSQL P10→P11 integration covers duplicate/gap/stale lease/restart/cancel-vs-seal; no deployment or real-run claim. **FE_S03_PRODUCT_CONSUMER_PENDING / Claude** — follow [P11 handoff](./research_loop/evidence/P11/frontend-handoff-claude.md); browser/HIFI/real activation gates remain unclaimed. · FE_RUN_PROGRESS_MOUNTED / Claude — Screen 03 mounted at `/research/quantbt/runs/:runId/progress` as a sibling of the legacy workspace (a P11 run id is not a legacy run). Typed only from the generated progress contract: composition +768, tests +731, container +382, client +217, route +35, probe +145, fixtures +32, boundary sweep +24/−2. `P11-T01…T10` pass; tsc 0, research suite 339/339, full frontend suite **163 files / 0 failures**, build 0, product browser probe 29/29 with 0 console output and 0 px overflow at 1280 and 660. **The stream is an accelerator, the poll is the floor:** a browser test deletes `EventSource` from the window and the screen still renders every block on the 5-second floor, with no banner. Seven stream exits are each tested — terminal snapshot never opens one; `run_completed`/`run_failed`, a typed gap, `auth.expired`, a transport error, unmount and a hidden tab all close it, and a gap replaces state from the snapshot rather than stitching the hole. A frame at or below the applied sequence is dropped. Nothing local makes a fact: a null `eta_s` renders 'not reported', completion requires `readiness.mandatory === "SEALED"`, decimals are printed unparsed, and a test asserts no `Date.now()` anywhere. `reader_href` is null by contract so a sealed artifact is rich and unlinked with the reason stated. No retry is offered — `P12_OWNED_NO_P11_RETRY_ROUTE` is printed instead; a cancellation CAS shows the Portal terminal truth without overwriting the source fact. The boundary sweep's blanket `EventSource` ban became a checked allowlist: one module may open one, it may contain no URL literal or scheme, and the client builds the URL from the contract's path. Two defects came from the screenshot — a running fold whose band collapsed to zero width (now bounded by the snapshot's own `updated_at_utc_ms`) and two disabled controls with no reason. **Fixture receipts only** — no worker ran; `V11-P11-DR/BR/GX`, a deployment and `PRODUCT_ACTIVE` are not claimed. **`CG-P11-01` / `CG-P11-02` resolved:** generated typed `fold_timeline` and `methodology_certificate` now carry exact source fact or explicit `NOT_PUBLISHED`; P04 remains one honest fold band/no cert until it publishes facts. See [display-fact amendment](./research_loop/evidence/P11/contract-amendment-display-facts.md). [Claude P11 composition](./research_loop/evidence/P11/frontend-composition-claude.md) |
 | [P12](#rl-p12) | P05,P09–P11 | 01 | 06 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P12 packet](./research_loop/evidence/P12/README.md): feature-dark, same-origin, bounded persisted-library/query/sparkline contracts, keyset/search/legacy compatibility and fresh PostgreSQL proof are complete. **FE_S01_PRODUCT_CONSUMER_PENDING / Claude** — follow [P12 handoff](./research_loop/evidence/P12/frontend-handoff-claude.md); no browser/real-run/deployment acceptance is claimed. |
-| [P13](#rl-p13) | P05,P09–P11 | 04 | 07 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P13 packet](./research_loop/evidence/P13/README.md): P04 terminal source receipt → fsync P11 digest relay → append-only Portal projection/lazy-series BFF is proven on a fresh PostgreSQL cell and feature-dark by default. No artifact/raw-market/worker/Execution/CLI reader exists. **FE_S04_PRODUCT_CONSUMER_PENDING / Claude** — follow [P13 handoff](./research_loop/evidence/P13/frontend-handoff-claude.md), complete P12 first without touching Codex-owned files, then use the generated contract and direct browser-vs-HiFi receipt; no fixture route is product acceptance. |
-| [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P14 packet](./research_loop/evidence/P14/README.md); additive, feature-dark current-P04 three-window source receipt travels only alongside the digest-bound P11 terminal callback, then becomes an immutable Portal projection and one authenticated same-origin BFF. The reader preserves UTC-ms, exact digest/revision/ETag, semantic child-tape exclusion, `NOT_ATTESTED` physical Parquet-I/O and `NOT_ASSERTED` strict-OOS facts; it does not read raw holdout/Parquet, create a seal/unlock/governance action or imply WFO. P14 source/Python, Control API, generated contract, route ledger and fresh PostgreSQL proof pass. Screen-05 rich product route/browser/HiFi receipt remains Claude-owned and is not claimed while `FEATURE_RESEARCH_SPLIT=false`. |
-| [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex / [P15 packet](./research_loop/evidence/P15/README.md): one feature-dark same-origin BFF reads only immutable P10/P14 current-P04 facts; exact fixed parameter profile, declared-not-executed request and all search/ledger/diagnostic gaps are typed. It adds no fake study/trial/selection, source sidecar, DB table, worker, raw data read or runtime activation. Generic optimizer-ledger acceptance remains **SOURCE_CAPABILITY_BLOCKED**, not implementation debt, until a separately versioned source contract publishes actual study/trial/evaluation/selection facts. FE Screen-06 ownership is Claude's; see the handoff. |
-| [P16](#rl-p16) | P13–P15 | 07 | 08 | **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex** / [P16 packet](./research_loop/evidence/P16/README.md): feature-dark same-origin Freeze BFF reads one immutable P10/P14 current-P04 receipt and verifies exactly three retained digest bindings (P04 adapter, P10↔P14 manifest, fixed parameter bundle). `PARTIAL_MATCH` is deliberately **not** an artifact-byte/causal-ordering/selection/what-if PASS; all unavailable source facts remain individually typed. It adds no table, migration, cache, worker, diagnostic job, source/artifact/Parquet read, parameter mutation or Execution path. **P16-B generic integrity + what-if is SOURCE_CAPABILITY_BLOCKED** pending a separately versioned installed source contract. Screen-07 generated consumer/browser HiFi receipt remains Claude-owned; see handoff. |
-| [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex** / [P17 packet](./research_loop/evidence/P17/README.md): feature-dark, session/workspace-scoped same-origin Replay reader exposes one bounded, immutable P13 OOS equity-sample window plus revision-bound page/playhead cursors. It explicitly calls the selected sample `RETROSPECTIVE_EQUITY_NOT_EXECUTION_STATE`, creates no replay state/table/job and preserves all missing execution surfaces as individually typed source gaps. **Full generic event/order/fill/trade/position replay and Screen-08 browser receipt remain SOURCE_CAPABILITY_BLOCKED / Claude-owned**, not silently passed. |
-| [P18](#rl-p18) | P13–P17 | 09 | 09 | PLANNED / unassigned / — |
+| [P13](#rl-p13) | P05,P09–P11 | 04 | 07 | **AUDIT_REOPENED / 2026-09-22** — [Astra checkpoint](#rl-p13-p17-audit). Retain the feature-dark immutable receipt/Hub/series foundation and [historical P13 evidence](./research_loop/evidence/P13/README.md). A01/A02/A04/A05/A07 and source-supported metric/envelope coverage need remediation; previous narrow-slice PASS does not close the original phase. FE S04 remains Claude-owned, pending named-contract integration and browser/real-API receipt. |
+| [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | **AUDIT_REOPENED / 2026-09-22** — preserve [P14 receipt](./research_loop/evidence/P14/README.md), UTC/source-digest/holdout boundaries and feature-dark defaults. A03 range-validation, warmup/data-use proof, supported fold mapping and S05 handoff require remediation. No unlock/strict-OOS/physical-I/O assertion is newly authorized. Original source/browser gates are not closed by the fixed smoke profile. |
+| [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | **AUDIT_REOPENED / 2026-09-22** — [P15 fixed-run compatibility](./research_loop/evidence/P15/README.md) remains useful. A09: installed QuantBT WFO/optimizer artifacts are proven; missing Portal producer/retention/ledger integration is not a blanket engine source gap. Complete supported full-ledger/diagnostic contracts via RS-02; Claude keeps rich S06 composition and consumes generated facts. |
+| [P16](#rl-p16) | P13–P15 | 07 | 08 | **AUDIT_REOPENED / 2026-09-22** — preserve [P16 partial binding verifier](./research_loop/evidence/P16/README.md); never relabel `PARTIAL_MATCH` as artifact integrity PASS. A10: expected-byte verification, historical bindings and supported diagnostic/reuse paths remain implementation work. P05/P11 foundations already exist. S07 FE/product receipt pending; no runtime activation. |
+| [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | **AUDIT_REOPENED / 2026-09-22** — preserve [P17 retrospective-equity compatibility](./research_loop/evidence/P17/README.md). A05/A06/A08: revision coherence, ETag/cursor/deep-link and read-cost fixes; A09: retain/map actual route-supported outputs rather than waiting for an engine upgrade. No invented fills or execution state. Full route/FE acceptance remains open. |
+| [P18](#rl-p18) | P13–P17 | 09 | 09 | **PLANNED / ENTRY_HELD_FOR_P13_P17_REMEDIATION** — [RS-01…03](#rl-p13-p17-audit), then Bobby review; do not carry incorrect numbers/revisions or incomplete retained evidence into Report. |
 | [P19](#rl-p19) | P07,P10,P12,P15 | 10 | 10 | PLANNED / unassigned / — |
 | [P20](#rl-p20) | P13,P15,P18,P19 | 13 | 10 | PLANNED / unassigned / — |
 | [P21](#rl-p21) | P07,P16–P19 | 11 composer | 11 | PLANNED / unassigned / — |
@@ -4582,6 +4582,10 @@ a runtime flag or claim real QuantBT/deployment evidence.
 <a id="rl-p13"></a>
 ### P13 — Evidence Flow Hub và metric projections
 
+**Current status — 2026-09-22: `AUDIT_REOPENED`.** The journal below records
+the original narrow implementation, not full phase acceptance. Follow the
+[Astra remediation checkpoint](#rl-p13-p17-audit) before claiming completion.
+
 **Đọc chi tiết:** [Guide P13](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p13); [spec S04](./research_loop/release-v1.1/docs/screens/04_evidence_flow.md) + [HTML 04](<./research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html>).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
 **Test IDs bắt buộc:** `P13-T01…T13`, `V11-P13-DR/BR/GX` và source tests applicable theo §13.3.
@@ -4614,6 +4618,11 @@ and [handoff](./research_loop/evidence/P13/frontend-handoff-claude.md).
 <a id="rl-p14"></a>
 ### P14 — Split, chronology và holdout truth
 
+**Current status — 2026-09-22: `AUDIT_REOPENED`.** Fixed-P04 compatibility is
+retained; range/data-use and original source-supported scope must be completed
+under the [Astra checkpoint](#rl-p13-p17-audit). Missing adapter output is not
+proof of engine-wide unavailability.
+
 **Đọc chi tiết:** [Guide P14](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p14); [spec S05](./research_loop/release-v1.1/docs/screens/05_s1_split.md) + [HTML 05](<./research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html>).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
 **Test IDs bắt buộc:** `P14-T01…T13`, `V11-P14-DR/BR/GX` và source tests applicable theo §13.3.
@@ -4636,9 +4645,10 @@ and [handoff](./research_loop/evidence/P13/frontend-handoff-claude.md).
   today and P14 must not create one.
 - **To-do FE/consumer:** Full05 timeline/windowed visual groups/quality drawer
   and valid links consume only the generated P14 client. Keep the rich Screen
-  shell in all states. The HiFi's four visual groups remain three authority
-  stages plus a presentational Code Anatomy substage; do not create a fourth
-  backend state. Show typed current-source absences inside their panels; no
+  shell in all states. Use S05's protocol/fold anatomy, inner folds, holdout
+  and gap-scan structure; the former Code Anatomy/import-stage instruction
+  was copied from S14 and is withdrawn by audit A11. This does not introduce
+  a seal or authority state. Show typed current-source absences inside panels; no
   browser date math, raw holdout request, fake fold segments or unlock button.
 - **Tests BE:** Exact half-open contiguous UTC chronology; source digest
   pairing/oversize/nonterminal refusal; semantic IS/OOS child-tape counts;
@@ -4670,7 +4680,7 @@ semantic child-tape receipt from the immutable P08 windows; P11 stores it
 atomically (`0600`, canonical SHA-256, fsync) before its terminal event; the
 relay attaches it only when the event digest matches. Control API validates
 the terminal pairing, binds it to the exact P10 immutable manifest and worker
-attempt, stores append-only source/projection rows behind RLS/runtime-role,
+attempt, stores append-only source/projection rows behind scoped membership queries and runtime-role grants,
 finite transaction budgets and 2-active/8-queued read admission, then exposes
 one ETag-aware BFF. No direct database/source snapshot/Parquet/Execution/CLI
 route, raw holdout, physical-I/O assertion, WFO fold, new governance state or
@@ -4695,6 +4705,12 @@ Claude-owned; see [P14 handoff](./research_loop/evidence/P14/frontend-handoff-cl
 - **Rollback/handoff:** Rollback reader transform/version, retain original trial ledger. Handoff selected target/population/diagnostic schemas cho P16.
 
 #### P15 current-source compatibility amendment — 2026-09-22
+
+**Audit supersession:** the following is the historical fixed-profile slice
+description. Its blanket `SOURCE_CAPABILITY_BLOCKED` classification does not
+close the original optimizer scope: real installed-engine WFO artifacts pass
+the audit probe. A09 and [RS-02](#rl-rs-02) own Portal integration; status is
+`AUDIT_REOPENED`, not debt-free full P15 completion.
 
 P04 is an installed **fixed-parameter qualification**, not a generic optimizer:
 the bounded P10 admission rejects parameter overrides, random seed, early
@@ -4745,6 +4761,12 @@ P04 run.
 - **Rollback/handoff:** Disable diagnostic creation only, retain original/grids. Checkpoint08: P15/P16 + trial→freeze invariants and dev evidence.
 
 #### P16 current-source compatibility amendment — 2026-09-22
+
+**Audit supersession:** retain this historical v1 partial-verifier contract,
+but not its blanket “not implementation debt” conclusion. A10 identifies
+existing P05/P11 artifact foundations that must be integrated; supported
+selection/diagnostic facts require A09 mapping. [RS-01/02](#rl-p13-p17-audit)
+close the implementation gaps before original P16 acceptance.
 
 The original P16 target assumes an installed optimizer source with an immutable
 selection artifact, expected artifact bytes, causal wall-clock order, a
@@ -4797,6 +4819,12 @@ stay visibly `NOT_APPLICABLE` until a versioned source contract publishes them.
 
 #### P17 current-source compatibility amendment — 2026-09-22
 
+**Audit supersession:** this records the v1 sampled-equity slice only.
+`SOURCE_CAPABILITY_BLOCKED` is not a valid engine-wide conclusion: public
+positions/returns and WFO artifacts exist but are not retained by this adapter.
+A05/A06/A08/A09 and [RS-01/02](#rl-p13-p17-audit) are open. Keep retrospective
+labels and preserve actual route-specific gaps; do not fabricate a ledger.
+
 The installed `p04.delta-rsi.v1` path has exactly one sealed current-source
 fact usable on Screen 08: P13's immutable OOS equity samples. It does **not**
 publish an execution order/fill/trade/position/event ledger, event sequence,
@@ -4825,6 +4853,84 @@ place, but all unsupported execution panels must display their named typed
 reason rather than a fake ledger; local playback is presentation only and must
 not issue a request per animation frame. See
 [P17 handoff](./research_loop/evidence/P17/frontend-handoff-claude.md).
+
+<a id="rl-p13-p17-audit"></a>
+### P13–P17 cross-review checkpoint — Astra, trước P18
+
+**2026-09-22 / `AUDIT_COMPLETE · REMEDIATION_PROPOSED · AWAITING_BOBBY_APPROVAL`.**
+Bobby requested independent review before Terra continues. Audit baseline is
+`742b1e9d` on shared `docs/research-loop-plan`, five backend phase commits from
+`bd1d70c5`. Claude's unfinished P12 work is preserved. This checkpoint changes
+documentation/status only; no code/runtime/feature/deployment change occurred.
+
+**Detailed findings, source proof, exact to-do/tests/rollback and prompts:**
+[P13–P17 Astra audit and remediation guide](./research_loop/P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md).
+Keep this Unified Plan as the only live board; the linked document is its
+detailed implementation/audit appendix, not a second phase tracker.
+
+**Verdict:** do not enter P18 yet. Twelve finding groups include reproducible
+monthly/histogram errors, receipt overflow, invalid split windows, incomplete
+revision binding, mixed-revision Replay and ETag/cursor defects. Terminal
+retry/fanout and acquire-deadline issues also need failure proof. Most
+importantly, the fixed P04 smoke path has been mistaken for engine capability
+limits: an existing real QuantBT 1.1.1 WFO artifact test passed locally.
+Missing Portal adapters/retention/read models must not become permanent
+`SOURCE_GAP` panels. Preserve genuine route/authority absences.
+
+<a id="rl-rs-01"></a>
+#### RS-01 — Correctness, immutable consistency và bounded recovery
+
+- **Goal/owner:** Terra backend after Bobby approval; fix A01–A08 plus scoped
+  historical-binding/reason corrections. Claude can finish P12/composition.
+- **To-do:** independent financial/window oracles, end-to-end byte budget,
+  complete immutable revision identity, coherent reads, ETag/cursor renewal,
+  terminal materialisation/retry/fanout, bounded acquire/cancellation.
+- **Tests:** precise reproductions in audit §3; targeted Python/TS/contracts;
+  disposable PG fault/restart/membership/immutable checks; bounded read-cost.
+- **Exit:** regressions fixed with new evidence, generated contract/inventory
+  consistent, immutable old runs readable; no full P13–P17 completion claim.
+- **Guide/rollback:** audit §5 RS-01; append versions, retain history; no runtime
+  activation or global Execution pool-policy changes. **Status: PROPOSED.**
+
+<a id="rl-rs-02"></a>
+#### RS-02 — Complete current-source adapters, retained data và screen read models
+
+- **Goal/owner:** Terra backend after RS-01 and Bobby approval; Claude rich UI
+  composition in parallel. Close A09–A11 and remaining field/action coverage.
+- **To-do:** exact source→retention→DTO→panel matrix; bounded public QuantBT
+  tune/WFO/route admission; reuse P05 disk-first/Rust reader, TS authority,
+  Python compute adapter only; complete P13 metrics, P14 folds/data-use, P15
+  full ledger, P16 artifact verifier/diagnostics, P17 actual retained replay.
+- **Tests:** actual Delta/public-source integration and supplementary valid
+  route profiles; full totals/numerical/selection/seek/expected-byte invariants;
+  scoped budgets/auth/history. No engine-on-GET, fake ledger or new holdout gate.
+- **Exit:** required source-supported fields/actions implemented, published and
+  tested; no Portal implementation gap relabelled missing engine capability.
+- **Guide/rollback:** audit §5 RS-02 including 2A/2B/2C; versioned/additive
+  admission/artifacts/readers, preserve fixed-run v1. **Status: PROPOSED.**
+
+<a id="rl-rs-03"></a>
+#### RS-03 — Rich consumer integration, independent acceptance và P18 entry
+
+- **Goal/owner:** Claude FE-first + Terra backend verification after named
+  contracts are ready and Bobby approves this slice; no serialized UI wait.
+- **To-do:** close S04–S08 per-field/action matrix; use generated facts and
+  shared cursor correctly; retain HiFi layout, correct S05 handoff; browser
+  compare at 1280/660 and real API cross-screen journeys; exact dev build.
+- **Tests:** all 68 original P13–P17 gate IDs + 15 V11 DR/BR/GX IDs and every
+  applicable screen-spec test; distinguish synthetic/source/DB/API/pixel lanes.
+  Reuse sealed results, do not recompute every test or re-record global baselines.
+- **Exit:** A01–A12 closed by evidence/explicit genuine authority decision;
+  original phase rows/journals agree, Claude receipts reviewed, Bobby review
+  before P18. Main/stable/production release remains separate authority.
+- **Guide/rollback:** audit §5 RS-03; rollback reader/UI contract version,
+  never delete evidence. **Status: PROPOSED.**
+
+**Execution rule for this checkpoint:** no new P25–P27 campaign; these are
+repair slices within P13–P17. Do not convert scope-reduction amendments into
+original phase PASS. Actor/source/route gaps must be precise and proven;
+installed-capability evidence does not itself authorize new runtime admission.
+Terra/Claude prompts and audit command/results are in the appendix §§6–7.
 
 <a id="rl-p18"></a>
 ### P18 — Report, print và reproducible export

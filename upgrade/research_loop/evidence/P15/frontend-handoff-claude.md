@@ -1,5 +1,13 @@
 # P15 frontend handoff — Screen 06 Search and Selection
 
+**Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
+[P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
+and Unified checkpoint before using this handoff. The v1 facts below describe
+a partial fixed-profile surface, not full screen/backend acceptance or proof
+that QuantBT lacks the omitted capabilities. Preserve your rich composition;
+consume new generated contracts per panel when published. No backend/runtime
+change is authorized by this audit note. Finish/preserve your P12 work.
+
 P15 backend/current-source contract is ready but feature/runtime is dark.
 Implement only Research Screen-06 client/composition/tests you own. Do not
 modify P15 Control API, P10/P11/P14 source chain, P04 binding, migrations,

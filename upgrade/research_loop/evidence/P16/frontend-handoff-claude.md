@@ -1,5 +1,13 @@
 # P16 frontend handoff — Screen 07 Freeze / integrity / what-if
 
+**Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
+[P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
+and Unified checkpoint before using this handoff. The v1 facts below describe
+a partial fixed-profile surface, not full screen/backend acceptance or proof
+that QuantBT lacks the omitted capabilities. Preserve your rich composition;
+consume new generated contracts per panel when published. No backend/runtime
+change is authorized by this audit note. Finish/preserve your P12 work.
+
 P16 backend and generated contracts are ready, but runtime remains dark. Work
 only in Screen-07 composition, route, client and tests you own. Do not modify
 P16 Control API, OpenAPI, P10/P11/P14 source chain, migration, PostgreSQL role,

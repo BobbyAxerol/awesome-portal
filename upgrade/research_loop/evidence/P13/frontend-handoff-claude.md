@@ -1,5 +1,13 @@
 # P13 frontend handoff — Screen 04 Evidence Flow Hub
 
+**Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
+[P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
+and Unified checkpoint before using this handoff. The v1 facts below describe
+a partial fixed-profile surface, not full screen/backend acceptance or proof
+that QuantBT lacks the omitted capabilities. Preserve your rich composition;
+consume new generated contracts per panel when published. No backend/runtime
+change is authorized by this audit note. Finish/preserve your P12 work.
+
 Backend and generated P13 contracts are ready, but **feature/runtime remains
 dark**. Work only in the Research Screen-04 composition, route, client and
 tests you own. Do not modify P13 Control API, migrations, runtime role grants,
