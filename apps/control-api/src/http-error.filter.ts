@@ -44,6 +44,7 @@ import { ResearchCurrentSourceError } from "./research/current-source.error";
 import { ResearchReportError } from "./research/report.error";
 import { ResearchLineageError } from "./research/lineage.error";
 import { ResearchCompareError } from "./research/compare.error";
+import { ResearchReleaseCandidateError } from "./research/release-candidate.error";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -95,6 +96,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       || exception instanceof ResearchReportError
       || exception instanceof ResearchLineageError
       || exception instanceof ResearchCompareError
+      || exception instanceof ResearchReleaseCandidateError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

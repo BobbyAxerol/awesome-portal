@@ -11,6 +11,14 @@ export const TEST_TABLES = [
   // listing it keeps test cleanup bounded and makes a new relation visible to
   // the shared harness rather than relying on an incidental CASCADE path.
   "research.audit_log",
+  // P21 local Release Candidate evidence must be discarded before its legacy
+  // compatibility row and all source parents.  Keeping the full four-table
+  // plane named prevents a reusable test database from inheriting a local
+  // seal, delivery state or retention pin across an unrelated test.
+  "research.release_candidate_retention_pins_v1",
+  "research.release_candidate_delivery_states_v1",
+  "research.release_candidate_packs_v1",
+  "research.release_candidate_drafts_v1",
   // P20 cache rows are operational only, but still reference an Alpha. Keep
   // them explicit and first: a reused disposable database must never return a
   // prior test's derived compare response merely because its truth rows were
@@ -194,12 +202,15 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_research_split_projection_guard: boolean;
       has_research_compare_cache: boolean;
       has_research_compare_cache_expiry_index: boolean;
+      has_research_release_candidate_plane: boolean;
       research_role_can_read_legacy_run_models: boolean;
       research_role_can_write_run_library_search: boolean;
       research_role_can_write_evidence: boolean;
       research_role_can_write_split: boolean;
       research_role_can_write_compare_cache: boolean;
       research_role_can_update_compare_cache: boolean;
+      research_role_can_write_release_candidate_packs: boolean;
+      research_role_can_update_release_candidate_delivery: boolean;
       research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
@@ -370,12 +381,24 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
             WHERE schemaname = 'research'
               AND indexname = 'research_compare_projection_cache_expiry_idx'
          ) AS has_research_compare_cache_expiry_index,
+         (
+           to_regclass('research.release_candidate_drafts_v1') IS NOT NULL
+           AND to_regclass('research.release_candidate_packs_v1') IS NOT NULL
+           AND to_regclass('research.release_candidate_delivery_states_v1') IS NOT NULL
+           AND to_regclass('research.release_candidate_retention_pins_v1') IS NOT NULL
+           AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_drafts_v1_guard' AND NOT tgisinternal)
+           AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_packs_v1_immutable_guard' AND NOT tgisinternal)
+           AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_delivery_states_v1_guard' AND NOT tgisinternal)
+           AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_retention_pins_v1_immutable_guard' AND NOT tgisinternal)
+         ) AS has_research_release_candidate_plane,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'SELECT') AS research_role_can_read_legacy_run_models,
          has_table_privilege('portal_research_runtime', 'research.run_library_search_documents', 'INSERT') AS research_role_can_write_run_library_search,
          has_table_privilege('portal_research_runtime', 'research.run_evidence_sources_v1', 'INSERT') AS research_role_can_write_evidence,
          has_table_privilege('portal_research_runtime', 'research.run_split_sources_v1', 'INSERT') AS research_role_can_write_split,
          has_table_privilege('portal_research_runtime', 'research.compare_projection_cache_v1', 'INSERT') AS research_role_can_write_compare_cache,
          has_table_privilege('portal_research_runtime', 'research.compare_projection_cache_v1', 'UPDATE') AS research_role_can_update_compare_cache,
+         has_table_privilege('portal_research_runtime', 'research.release_candidate_packs_v1', 'INSERT') AS research_role_can_write_release_candidate_packs,
+         has_table_privilege('portal_research_runtime', 'research.release_candidate_delivery_states_v1', 'UPDATE') AS research_role_can_update_release_candidate_delivery,
          has_table_privilege('portal_research_runtime', 'research.run_report_manifests_v1', 'INSERT') AS research_role_can_write_reports,
          has_table_privilege('portal_research_runtime', 'research.run_report_export_jobs_v1', 'UPDATE') AS research_role_can_update_report_exports,
          has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
@@ -389,7 +412,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 25 ||
+      row.migration_count < 57 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
@@ -464,12 +487,15 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_research_split_projection_guard ||
       !row.has_research_compare_cache ||
       !row.has_research_compare_cache_expiry_index ||
+      !row.has_research_release_candidate_plane ||
       !row.research_role_can_read_legacy_run_models ||
       row.research_role_can_write_run_library_search ||
       !row.research_role_can_write_evidence ||
       !row.research_role_can_write_split ||
       !row.research_role_can_write_compare_cache ||
       row.research_role_can_update_compare_cache ||
+      !row.research_role_can_write_release_candidate_packs ||
+      row.research_role_can_update_release_candidate_delivery ||
       !row.research_role_can_write_reports ||
       !row.research_role_can_update_report_exports ||
       row.research_role_can_write_execution ||
@@ -546,12 +572,15 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `research_split_projection_guard=${row.has_research_split_projection_guard}, ` +
         `research_compare_cache=${row.has_research_compare_cache}, ` +
         `research_compare_cache_expiry_index=${row.has_research_compare_cache_expiry_index}, ` +
+        `research_release_candidate_plane=${row.has_research_release_candidate_plane}, ` +
         `research_role_can_read_legacy_run_models=${row.research_role_can_read_legacy_run_models}, ` +
         `research_role_can_write_run_library_search=${row.research_role_can_write_run_library_search}, ` +
         `research_role_can_write_evidence=${row.research_role_can_write_evidence}, ` +
         `research_role_can_write_split=${row.research_role_can_write_split}, ` +
         `research_role_can_write_compare_cache=${row.research_role_can_write_compare_cache}, ` +
         `research_role_can_update_compare_cache=${row.research_role_can_update_compare_cache}, ` +
+        `research_role_can_write_release_candidate_packs=${row.research_role_can_write_release_candidate_packs}, ` +
+        `research_role_can_update_release_candidate_delivery=${row.research_role_can_update_release_candidate_delivery}, ` +
         `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,

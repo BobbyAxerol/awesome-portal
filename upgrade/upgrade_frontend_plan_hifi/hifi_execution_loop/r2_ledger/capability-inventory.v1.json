@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 174,
+ "route_count": 178,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1702,6 +1702,46 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P20 bounded same-origin Compare reader scopes all run IDs to one Alpha/workspace and returns attempts, market small multiples, or an exact two-run pair only. A mismatched ComparisonContractKey is REFUSED with pair:null; correlation is Portal-derived only from sealed local exact-timestamp raw returns with formula/version/n/missing-policy disclosure. It cannot read a browser-supplied relation/cursor/source path, start QuantBT, mutate evidence, choose/publish/promote a run, approve a gate, or issue an Execution command. Claude owns Screen 13 typed product/browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/release-candidate",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P21 same-origin Screen-11 composer reads a bounded Portal-persisted run/Alpha/selection/audit/evidence view and returns exactly 17 source-built fields plus 12 evidence items. It does not expose a source relation/cursor/path/worker identity, invoke QuantBT, or represent a local seal as delivery or approval; Claude owns the typed S11 consumer and browser/HiFi receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "PATCH /api/v1/quantbt/runs/:runId/release-candidate/draft",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P21 same-origin CSRF/origin-protected actor-local declaration CAS. It changes only bounded known-limitations/proposed-use-restrictions under source-fingerprint and revision fences; it cannot seal, publish, approve, start QuantBT, change a bound Alpha/version, or call Execution.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/release-candidate/seal",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P21 same-origin CSRF/origin-protected local seal stores one idempotent immutable Portal evidence pack and retention pins. Its only returned lifecycle is NOT_DELIVERED/NOT_APPROVED; P22 owns all downstream publication, Governance and Execution effects.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/release-candidates/:releaseCandidateId",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P21 workspace-scoped immutable local pack read returns frozen 17/12 evidence plus a separately typed downstream delivery/approval state. It exposes neither a generic research relation nor any mutable approval surface; a foreign RC is indistinguishable from absent.",
    "owner": "codex",
    "test_owner": "codex"
   },

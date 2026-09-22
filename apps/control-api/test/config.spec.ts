@@ -211,6 +211,23 @@ describe("P20 Compare activation guard", () => {
   });
 });
 
+describe("P21 Release Candidate local-seal activation guard", () => {
+  it("stays dark by default and requires retained Report plus Lineage definitions", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_RELEASE_CANDIDATES).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_RELEASE_CANDIDATES: "true",
+    })).toThrow(/FEATURE_RESEARCH_RELEASE_CANDIDATES=true requires/);
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_EVIDENCE: "true", FEATURE_RESEARCH_SPLIT: "true",
+      FEATURE_RESEARCH_SEARCH: "true", FEATURE_RESEARCH_FREEZE: "true",
+      FEATURE_RESEARCH_REPLAY: "true", FEATURE_RESEARCH_REPORTS: "true",
+      FEATURE_RESEARCH_RUN_LIBRARY: "true", FEATURE_RESEARCH_LINEAGE: "true",
+      FEATURE_RESEARCH_RELEASE_CANDIDATES: "true",
+    }).FEATURE_RESEARCH_RELEASE_CANDIDATES).toBe("true");
+  });
+});
+
 describe("Execution realtime feature dependencies", () => {
   const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
     ...baseEnv(),

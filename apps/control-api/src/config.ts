@@ -132,6 +132,11 @@ const EnvSchema = z.object({
   // sealed local observations; it never triggers QuantBT, source I/O,
   // selection, approval, publication or an Execution command.
   FEATURE_RESEARCH_COMPARE: z.enum(["true", "false"]).default("false"),
+  // P21 composes a Portal-local immutable Release Candidate evidence pack
+  // from already retained facts. It has no publish, approval, Execution,
+  // worker, artifact-byte, or source-data transport authority. P22 alone
+  // may later deliver an already sealed pack to Governance.
+  FEATURE_RESEARCH_RELEASE_CANDIDATES: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -468,6 +473,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     ].filter(([, value]) => value !== "true").map(([name]) => name);
     if (missing.length > 0) {
       throw new Error(`FEATURE_RESEARCH_COMPARE=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_RELEASE_CANDIDATES === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_REPORTS", config.FEATURE_RESEARCH_REPORTS],
+      ["FEATURE_RESEARCH_LINEAGE", config.FEATURE_RESEARCH_LINEAGE],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_RELEASE_CANDIDATES=true requires: ${missing.join(", ")}`);
     }
   }
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {

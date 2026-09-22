@@ -38,6 +38,11 @@ services:
       # correlation locally, never starts QuantBT or changes selection,
       # governance, publication or Execution.
       FEATURE_RESEARCH_COMPARE: ${CONTROL_API_FEATURE_RESEARCH_COMPARE:-false}
+      # P21 composes a Portal-local, immutable evidence pack only. It does
+      # not publish, approve, open a worker, read artifact bytes, or contact
+      # Execution. Keep dark until its generated Screen-11 consumer and
+      # focused backend acceptance are jointly accepted.
+      FEATURE_RESEARCH_RELEASE_CANDIDATES: ${CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATES:-false}
       RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: ${CONTROL_API_RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS:-1500}
 
   # The worker owns source journalling and the private, at-least-once callback.
