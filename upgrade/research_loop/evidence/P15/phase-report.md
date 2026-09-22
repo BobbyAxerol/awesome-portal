@@ -113,3 +113,12 @@ P14 read path now receives the Research-only cancellable admission/deadline
 boundary and semantically valid chronology only. Complete trial/evaluation
 ledger work remains RS-02; this amendment must not turn fixed-profile
 compatibility into an optimizer claim.
+
+## RS-02 delivery amendment — 2026-09-22
+
+For the specifically admitted Advanced-WFO source, the old fixed-profile
+compatibility limitation is supplemented—not reinterpreted—by a full retained
+trial/candidate/selection ledger with bounded opaque keysets. Objective
+decomposition, pruning, importance and interaction facts remain typed source
+gaps. The product may display the complete available ledger without claiming a
+generic optimizer. See [RS-02 matrix](../RS-02/field-action-coverage-matrix.md).

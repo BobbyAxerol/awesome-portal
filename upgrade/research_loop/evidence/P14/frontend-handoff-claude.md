@@ -95,3 +95,11 @@ revision, reading chain, mapping matrix, browser command/build SHA/routes/
 viewports, console/network result, test counts, source gaps and no-debt
 conclusion. Do not stage/reset/reformat the currently owned P12 files while
 starting Screen 05. If blocked, send exactly one minimal `CG-P14-*` request.
+
+## RS-02 consumer amendment — 2026-09-22
+
+For an admitted Advanced-WFO run, use the generated current-source `split`
+operation rather than the older generic receipt for actual fold windows. Do
+not change the rich S05 anatomy: unavailable warmup/purge/embargo/strict-OOS/
+physical-I/O facts stay in their existing panel as exact typed gaps. Details:
+[RS-02 handoff](../RS-02/frontend-handoff-claude.md).

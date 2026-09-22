@@ -100,3 +100,12 @@ without inferring a new fold, holdout or selection fact. P14's database reads
 also inherit the scoped cancellable Research admission boundary. See
 [RS-01](../RS-01/phase-report.md); full source-supported Screen-05 coverage
 remains RS-02/RS-03 work.
+
+## RS-02 delivery amendment — 2026-09-22
+
+The admitted Advanced-WFO lane now retains its actual factual folds and serves
+them through the named current-source Split DTO. This does not upgrade missing
+warmup, purge, embargo, strict outer-OOS, physical holdout-I/O, seal or unlock
+facts. They remain panel-local typed source gaps; no generic chronology or
+holdout interpretation is introduced. See the
+[RS-02 matrix](../RS-02/field-action-coverage-matrix.md).

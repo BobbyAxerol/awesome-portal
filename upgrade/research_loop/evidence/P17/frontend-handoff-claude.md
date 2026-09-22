@@ -88,3 +88,12 @@ revision, mapping matrix, browser command/build SHA/routes/viewports,
 console/network result, test counts, source gaps and a no-debt conclusion. A
 missing fact gets one focused `CG-P17-*` request with exact expected/actual
 typed shape.
+
+## RS-02 consumer amendment — 2026-09-22
+
+For an admitted Advanced-WFO run, use generated current-source `replay` for
+local retrospective observation/return samples. The only seek input is a
+previously minted opaque `at` playhead; do not send `at_ordinal`, a relation or
+a source cursor. Preserve model-only/replay gaps for orders/fills/candles and
+avoid any request on each play frame. Details:
+[RS-02 handoff](../RS-02/frontend-handoff-claude.md).

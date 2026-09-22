@@ -100,3 +100,14 @@ bytes are capped before journal persistence. Hub/series/replay use a single
 repeatable-read bundle and reject mismatched stored series bytes/identity.
 This closes A01/A02/A04/A05 in the repair slice only; rich S04 coverage and
 remaining current-source facts still belong to RS-02/RS-03.
+
+## RS-02 delivery amendment — 2026-09-22
+
+For the admitted Advanced-WFO source only, S04 now has a separate additive
+current-source reader: direct retained observations/returns/model positions
+and seal-time monthly, rolling-20 and distribution facts are published through
+the named RS-02 evidence/series DTOs. The source facts retain their own
+revision/availability/sampling disclosure and are not backfilled into R1/R2.
+Benchmark, audited fills and route-ledger facts remain exact typed gaps. See
+[RS-02 matrix](../RS-02/field-action-coverage-matrix.md); browser integration
+belongs to RS-03.

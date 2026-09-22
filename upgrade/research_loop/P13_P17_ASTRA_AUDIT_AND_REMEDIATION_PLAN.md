@@ -487,6 +487,18 @@ select compatible read revision, never drop artifacts/source identities or
 break old fixed-run readers. New Research feature stays dark until scoped dev
 acceptance; no production/Execution activation in this slice.
 
+**RS-02 delivery note — 2026-09-22.** The backend remediation is delivered as
+an additive feature-dark lane. It admits the exact public QuantBT
+Advanced-WFO profile, retains P05-verified `OBSERVATION`/`FOLD`/`TRIAL`/
+`CANDIDATE`/`SELECTION` relations once under immutable local custody, and
+serves six generated named S04–S08 BFF operations from PostgreSQL only. It
+does not use direct Trading/Execution/database access or run an engine during
+a GET. Fact gaps named in the matrix remain typed rather than inferred. Focused
+source, service/controller, generated-contract, Rust-reader and route-ledger
+tests pass; the isolated fresh-PostgreSQL script is committed as the remaining
+environmental acceptance gate before any activation. This is not RS-03
+browser/product acceptance.
+
 ### RS-03 — Claude contract integration, independent acceptance và P18 entry
 
 **Owner đề xuất:** Claude FE-first; Terra backend verification/fixes. **Entry:**

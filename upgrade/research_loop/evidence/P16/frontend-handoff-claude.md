@@ -93,3 +93,11 @@ mapping matrix, browser command/build SHA/routes/viewports, console/network
 result, test counts, source gaps and no-debt conclusion. If a source fact is
 needed, send exactly one focused `CG-P16-*` request with locator and
 expected/actual typed shape; do not hand-map it.
+
+## RS-02 consumer amendment — 2026-09-22
+
+For an admitted Advanced-WFO run, generated current-source `freeze` adds a
+local immutable manifest/count/batch-receipt check. Render `MATCH` narrowly as
+Portal retained custody, never as an artifact-byte/causal/selection/broker
+certificate. Keep what-if unavailable and do not introduce a POST. Details:
+[RS-02 handoff](../RS-02/frontend-handoff-claude.md).

@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 162,
+ "route_count": 168,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1642,6 +1642,66 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P17 bounded same-origin route-aware replay reader consumes only the immutable P13 OOS equity sample receipt under session/workspace scope. Its signed opaque cursors bind workspace/run/revision and select retrospective equity samples only; it never starts QuantBT, reads source/worker/artifact/Parquet paths, exposes custody values or cursor inputs, synthesizes order/fill/trade/position/candle history, or creates a command channel. Claude owns the Screen 08 typed consumer and browser/HiFi receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/evidence",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named retained-current-source Evidence Hub read: session/workspace scoped Portal-local sealed QuantBT 1.1.1 Advanced WFO facts only. It does not invoke QuantBT, reopen private P05 bytes, expose a relation/artifact/lease input, or replace P13 fixed-run v1.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/evidence/series",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named lazy current-source series read returns at most 192 retained/derived exact-decimal points. Sampling metadata is server-owned; the browser cannot request a raw relation, a source path, an artifact cursor or a recomputation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/split",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named Split read maps only retained Advanced WFO fold facts and exact typed data-use absences. It cannot infer purge, embargo, holdout access or source semantics not published by the engine.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/search",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named Search drill-down returns the bounded retained trial/candidate ledger with private no-store relation-bound cursors. It cannot start an optimizer, scan P05 directly or turn a trial choice into a mutation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/freeze",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named Freeze read verifies immutable Portal-retained manifest, row-count and batch-receipt facts. GET never reopens private source artifact bytes, changes frozen selection or queues a what-if evaluation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/replay",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named Replay drill-down returns retained research-model observations and opaque relation-bound playheads, private/no-store. It never fabricates broker orders, fills or candles and does not claim execution state.",
    "owner": "codex",
    "test_owner": "codex"
   }

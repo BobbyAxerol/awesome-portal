@@ -104,3 +104,12 @@ viewports, test counts, console/network outcome, source gaps and a clear
 no-debt conclusion. If blocked by a missing server fact, send exactly one
 minimal `CG-P13-*` request with source locator and expected/actual; do not
 silently downgrade the screen.
+
+## RS-02 consumer amendment — 2026-09-22
+
+For the admitted Advanced-WFO profile, prefer the generated current-source
+`evidence` and `evidenceSeries` operations documented in
+[RS-02 handoff](../RS-02/frontend-handoff-claude.md). Use returned direct or
+seal-time-derived values and their sampling/availability labels; never merge
+them into an R1/R2 fixture or calculate a replacement metric in TSX. Preserve
+benchmark/audited-fill/route-ledger panels as typed gaps.

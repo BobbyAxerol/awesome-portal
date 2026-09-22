@@ -235,6 +235,23 @@ physical-I/O assertion, source relation or command. Regenerate only with
 `npm run generate` (or `npm run generate:research-split`) and never
 hand-maintain emitted types.
 
+RS-02 publishes `openapi/research-current-source.openapi.json`, generated as
+`generated/research-current-source.d.ts`. It is a parallel, versioned lane
+for explicitly sealed QuantBT 1.1.1 Advanced WFO artifacts, not a rewrite of
+P04/P13--P17 fixed-run contracts. It exposes six named same-origin reads for
+Evidence, bounded evidence series, Split, Search, Freeze and Replay. Full
+source rows are retained locally once in bounded P05-derived batches; callers
+cannot select a table/path/revision or make QuantBT compute on a GET. Original
+source IDs, UTC milliseconds and exact decimal strings are preserved. Model
+positions/returns are available where retained; route orders, audited fills,
+candles and any un-emitted methodology fact stay typed absences. Cursors are
+Portal-signed, workspace/run/revision/operation bound, and replay is
+`private, no-store`; a browser may use only a minted opaque playhead, never a
+raw source ordinal. Freeze verifies the immutable Portal-retained manifest,
+row counts and canonical local batch receipt; it never reopens private P05
+bytes during a GET. Regenerate from the OpenAPI only; do not hand-maintain the
+emitted declarations.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields

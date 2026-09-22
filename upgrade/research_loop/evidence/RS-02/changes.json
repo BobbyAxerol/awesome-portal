@@ -1,0 +1,15 @@
+{
+  "schema_version": "research.rs02-changes.v1",
+  "phase": "RS-02",
+  "backend_surfaces": [
+    "bounded QuantBT Advanced-WFO current-source Python adapter",
+    "additive append-only PostgreSQL custody migration",
+    "named Control-API S04-S08 retained-data BFFs",
+    "generated research-current-source OpenAPI declaration",
+    "P05 Rust reader conformance proof and isolated PostgreSQL acceptance script"
+  ],
+  "frontend_files_changed_by_backend": [],
+  "runtime_or_deployment_changed": false,
+  "historical_rows_mutated": false,
+  "protected_execution_or_trading_source_changed": false
+}

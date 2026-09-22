@@ -98,3 +98,11 @@ viewports, console/network result, test counts, source gaps and no-debt
 conclusion. If a factual source gap is found, send one focused `CG-P15-*`
 request with source locator and expected/actual generated shape; do not write a
 manual field/parser or modify backend ownership.
+
+## RS-02 consumer amendment — 2026-09-22
+
+For an admitted Advanced-WFO run, use generated current-source `search` for
+the full retained trials/candidates/selection ledger and its opaque keysets.
+Do not treat it as a generic optimizer: objective/prune/importance/interaction
+panels still require their typed source gaps. Keep selected, raw-best and
+inspected concepts visually distinct. Details: [RS-02 handoff](../RS-02/frontend-handoff-claude.md).

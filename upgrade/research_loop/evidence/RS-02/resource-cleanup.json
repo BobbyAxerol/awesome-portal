@@ -1,0 +1,17 @@
+{
+  "schema_version": "research.rs02-resource-cleanup.v1",
+  "phase": "RS-02",
+  "resources_created_in_this_worktree": [],
+  "deferred_disposable_test_resource": {
+    "script": "scripts/research-loop-v11/test-rs02-postgres.sh",
+    "storage": "tmpfs",
+    "cleanup": "EXIT trap removes only the exact uniquely named container"
+  },
+  "cleanup_action": "NO_BROAD_PRUNE_REQUIRED",
+  "not_touched": [
+    "dev/stable/production databases",
+    "runtime containers, volumes, images and secrets",
+    "Execution/Trading System/source infrastructure",
+    "Claude-owned uncommitted frontend files"
+  ]
+}

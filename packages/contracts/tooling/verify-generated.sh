@@ -51,3 +51,4 @@ generate_and_compare openapi/research-split.openapi.json generated/research-spli
 generate_and_compare openapi/research-search.openapi.json generated/research-search.d.ts
 generate_and_compare openapi/research-freeze.openapi.json generated/research-freeze.d.ts
 generate_and_compare openapi/research-replay.openapi.json generated/research-replay.d.ts
+generate_and_compare openapi/research-current-source.openapi.json generated/research-current-source.d.ts

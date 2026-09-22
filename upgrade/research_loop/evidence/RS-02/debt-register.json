@@ -1,0 +1,14 @@
+{
+  "schema_version": "research.phase-debt-register.v1",
+  "phase": "RS-02",
+  "in_scope_backend_debt": [],
+  "environmental_acceptance_gate": [],
+  "explicit_source_truth_boundaries": [
+    "Raw source artifact bytes and physical holdout I/O are not published.",
+    "Warmup/purge/embargo/strict outer-OOS methodology is not published.",
+    "Objective decomposition, pruning, importance and interaction facts are not published.",
+    "Authoritative execution orders, fills, candles and broker state are not published."
+  ],
+  "next_owner": "Claude RS-03 consumer/browser acceptance and Bobby for a separate scoped activation decision",
+  "rollback": "Keep FEATURE_RESEARCH_CURRENT_SOURCE disabled or select the compatible pre-RS02 reader; retain immutable imported rows and seals."
+}

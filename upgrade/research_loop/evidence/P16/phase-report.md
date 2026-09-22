@@ -94,3 +94,12 @@ semantically range-validated and its bounded reader can be cancelled without a
 late pool-client leak. Artifact-byte verification, historical binding and any
 valid diagnostic remain RS-02-owned rather than being inferred from this
 repair.
+
+## RS-02 delivery amendment — 2026-09-22
+
+The admitted Advanced-WFO lane now provides local immutable verification of
+the sealed manifest, exact relation counts and retained batch receipt. A
+`MATCH` proves only that Portal-local retained custody; it does not attest P05
+artifact bytes, causal ordering, selection correctness or broker state. What-if
+remains `NOT_PUBLISHED`, and no GET enqueues an evaluation. See the
+[RS-02 matrix](../RS-02/field-action-coverage-matrix.md).

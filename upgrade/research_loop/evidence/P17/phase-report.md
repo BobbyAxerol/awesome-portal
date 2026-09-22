@@ -94,3 +94,12 @@ Opaque cursor expiry is `409 RESEARCH_REPLAY_CURSOR_EXPIRED`; an explicit
 single revision-pinned Hub/series bundle and scoped cancellation/admission.
 This closes A05/A06/A08 correctness only; execution-ledger source facts and
 full S08 acceptance remain RS-02/RS-03 work.
+
+## RS-02 delivery amendment — 2026-09-22
+
+The admitted Advanced-WFO lane now serves bounded retrospective model
+observation/return samples and relation-bound opaque playheads from local
+retained data. It never accepts a raw source ordinal or exposes an internal
+relation/cursor. Orders, fills, candles, broker state and authoritative live
+execution replay remain typed source gaps. See the
+[RS-02 matrix](../RS-02/field-action-coverage-matrix.md).

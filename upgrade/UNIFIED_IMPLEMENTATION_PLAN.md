@@ -4929,7 +4929,44 @@ deployment or a browser-complete claim.
 - **Exit:** required source-supported fields/actions implemented, published and
   tested; no Portal implementation gap relabelled missing engine capability.
 - **Guide/rollback:** audit §5 RS-02 including 2A/2B/2C; versioned/additive
-  admission/artifacts/readers, preserve fixed-run v1. **Status: PROPOSED.**
+  admission/artifacts/readers, preserve fixed-run v1. **Status:
+  BACKEND_COMPLETE · FEATURE_DARK · DISPOSABLE_DB_GATE_PASS ·
+  CLAUDE_RS03_INTEGRATION_PENDING.**
+
+**RS-02 delivery amendment — 2026-09-22.** The additive
+`research.current-source.v1` lane now admits only the installed public
+QuantBT Advanced-WFO profile `rs02.quantbt-advanced-wfo.v1` /
+`rs02.delta-wfo-global.v1`; it rejects legacy/fixed/wrong-mode/wrong-schedule
+requests rather than falling back. Its confined Python producer reads the
+P05-sealed Advanced-WFO artifact once, emits bounded relation batches
+(`OBSERVATION`, `FOLD`, `TRIAL`, `CANDIDATE`, `SELECTION`) and retains them in
+append-only PostgreSQL under one shared custody lock. A seal verifies dense
+per-relation ordinals, contiguous batch receipts, exact table counts and a
+canonical retained-import digest before any named reader can see it. The
+existing P05 Rust reader remains independently conformance-tested; RS-02 does
+not invent a second Rust network service or move compute/query authority out
+of the bounded Python producer / TypeScript BFF boundary.
+
+Six generated named same-origin read operations now cover S04–S08: evidence,
+one series, split, full retained search ledger, local freeze verification and
+retrospective replay. They preserve exact decimals, UTC milliseconds,
+availability/freshness/revision metadata, 200-row/1-MiB bounds and opaque
+relation-bound cursors. The browser cannot supply a raw ordinal, table name,
+artifact path, source cursor or source query. Source-supported facts are
+direct or seal-time derived; actual missing facts remain panel-level typed
+states (for example raw source artifact bytes, WFO methodology conventions,
+objective/pruning/importance and orders/fills/candles). All GETs are local
+retained reads—no engine, QuantBT artifact, direct database, source, broker,
+CLI or Execution request runs on behalf of a viewer.
+
+Focused Python, Control-API, OpenAPI/generation, Rust-reader, ownership-ledger
+and isolated PostgreSQL gates pass. The PostgreSQL gate used only an exact
+tmpfs container name and its `EXIT` trap removed it; a post-run exact-name
+query was empty. It is not a license to activate the feature: RS-03 and a
+separate scoped runtime decision remain required. See
+[RS-02 evidence](./research_loop/evidence/RS-02/README.md), per-screen
+[coverage matrix](./research_loop/evidence/RS-02/field-action-coverage-matrix.md)
+and the [Claude handoff](./research_loop/evidence/RS-02/frontend-handoff-claude.md).
 
 <a id="rl-rs-03"></a>
 #### RS-03 — Rich consumer integration, independent acceptance và P18 entry

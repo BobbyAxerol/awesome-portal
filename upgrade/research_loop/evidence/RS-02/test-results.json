@@ -1,0 +1,50 @@
+{
+  "schema_version": "research.rs02-test-results.v1",
+  "phase": "RS-02",
+  "status": "BACKEND_PASS_FEATURE_DARK_PENDING_RS03",
+  "feature_state": "DARK",
+  "runs": [
+    {
+      "name": "real_confined_quantbt_advanced_wfo_adapter",
+      "result": "PASS",
+      "tests": 6
+    },
+    {
+      "name": "control_api_current_source_build_and_units",
+      "result": "PASS",
+      "tests": 13
+    },
+    {
+      "name": "p05_rust_artifact_reader",
+      "result": "PASS",
+      "tests": 5
+    },
+    {
+      "name": "generated_contract_workspace_and_snapshot",
+      "result": "PASS",
+      "tests": 164,
+      "checks": [
+        "npm run generate:research-current-source",
+        "python3 tooling/snapshot.py --check",
+        "bash tooling/verify-generated.sh"
+      ]
+    },
+    {
+      "name": "route_ownership_ledger",
+      "result": "PASS",
+      "tests": 22
+    },
+    {
+      "name": "isolated_postgresql_migration_grant_immutability",
+      "result": "PASS",
+      "tests": 2,
+      "command": "bash scripts/research-loop-v11/test-rs02-postgres.sh",
+      "cleanup_verification": "No container matching ^/research-rs02-postgres- remained after the EXIT trap."
+    }
+  ],
+  "not_claimed": [
+    "RS-03 browser/product acceptance",
+    "runtime activation or deployment; RS-03 browser/product acceptance is a separate gate",
+    "facts not published by the sealed Advanced-WFO source"
+  ]
+}

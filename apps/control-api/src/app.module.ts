@@ -142,6 +142,9 @@ import { ResearchFreezeController } from "./research/freeze.controller";
 import { ResearchFreezeService } from "./research/freeze.service";
 import { ResearchReplayController } from "./research/replay.controller";
 import { ResearchReplayService } from "./research/replay.service";
+import { ResearchCurrentSourceController } from "./research/current-source.controller";
+import { ResearchCurrentSourceRepository } from "./research/current-source.repository";
+import { ResearchCurrentSourceService } from "./research/current-source.service";
 
 @Module({})
 export class AppModule {
@@ -201,6 +204,7 @@ export class AppModule {
         ResearchSearchController,
         ResearchFreezeController,
         ResearchReplayController,
+        ResearchCurrentSourceController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -269,6 +273,11 @@ export class AppModule {
         ResearchSearchService,
         ResearchFreezeService,
         ResearchReplayService,
+        // RS-02 has no source/runtime side effect at module registration.
+        // Its private importer and browser reads remain feature-dark until a
+        // separately accepted dev slice supplies sealed current-engine rows.
+        ResearchCurrentSourceRepository,
+        ResearchCurrentSourceService,
         ResearchFoundationAtlasClient,
         ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to

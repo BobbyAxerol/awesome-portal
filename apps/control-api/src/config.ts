@@ -108,6 +108,12 @@ const EnvSchema = z.object({
   // equity samples. It neither replays QuantBT nor derives orders/fills from
   // equity; its signed cursors remain Portal-local and evidence-bound.
   FEATURE_RESEARCH_REPLAY: z.enum(["true", "false"]).default("false"),
+  // RS-02 is a separate current-engine lane. It can read only an already
+  // sealed local artifact/revision, never starts QuantBT, calls an artifact
+  // path, or changes P04/P13--P17 fixed-run routing. Keep it dark until the
+  // bounded importer, generated client and Screen 04--08 acceptance land as
+  // one reviewed dev slice.
+  FEATURE_RESEARCH_CURRENT_SOURCE: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
