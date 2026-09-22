@@ -148,6 +148,9 @@ import { ResearchCurrentSourceService } from "./research/current-source.service"
 import { ResearchReportController } from "./research/report.controller";
 import { ResearchReportRepository } from "./research/report.repository";
 import { ResearchReportService } from "./research/report.service";
+import { ResearchLineageController } from "./research/lineage.controller";
+import { ResearchLineageRepository } from "./research/lineage.repository";
+import { ResearchLineageService } from "./research/lineage.service";
 
 @Module({})
 export class AppModule {
@@ -209,6 +212,7 @@ export class AppModule {
         ResearchReplayController,
         ResearchCurrentSourceController,
         ResearchReportController,
+        ResearchLineageController,
       ],
       providers: [
         ExecutionLocalReadAuthority,
@@ -284,6 +288,8 @@ export class AppModule {
         ResearchCurrentSourceService,
         ResearchReportRepository,
         ResearchReportService,
+        ResearchLineageRepository,
+        ResearchLineageService,
         ResearchFoundationAtlasClient,
         ResearchFoundationService,
         // P06 owns only transactional outbox ordering. It does not connect to

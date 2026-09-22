@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 172,
+ "route_count": 173,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1682,6 +1682,16 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P18 authenticated bounded download reads only a caller-owned READY row after SHA-256 verification. Server-derived JSON/CSV attachment names, private no-store headers and a 512 KiB hard limit prevent path/CSV/scratch-disk exposure; it has no command or compute effect.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/alphas/:alphaId/lineage",
+   "controller": "research/lineage.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P19 bounded same-origin Attempt Lineage reader returns only scoped Portal-persisted Alpha/version/attempt/run/exposure facts and server-normalized immutable semantic diffs. It cannot submit, fork, reproduce or upgrade a run; choose a promotion from lifecycle/recency/metrics; reset a gate; read QuantBT/worker/artifact/source storage; or expose raw config, paths, credentials, leases or cursors. Claude owns Screen 10 typed product/browser receipt.",
    "owner": "codex",
    "test_owner": "codex"
   },

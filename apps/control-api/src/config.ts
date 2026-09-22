@@ -122,6 +122,11 @@ const EnvSchema = z.object({
   FEATURE_RESEARCH_REPORTS: z.enum(["true", "false"]).default("false"),
   RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(512 * 1024),
   RESEARCH_REPORT_EXPORT_LEASE_SECONDS: z.coerce.number().int().min(15).max(300).default(90),
+  // P19 is a separately admitted, persisted-only Screen-10 reader.  It is
+  // intentionally independent from active workers and can render historical
+  // evidence after a worker stop, but requires the retained P12 Library lane
+  // so the two screens keep one truthful definition of a logical run/retry.
+  FEATURE_RESEARCH_LINEAGE: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -446,6 +451,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     if (missing.length > 0) {
       throw new Error(`FEATURE_RESEARCH_REPORTS=true requires: ${missing.join(", ")}`);
     }
+  }
+  if (config.FEATURE_RESEARCH_LINEAGE === "true" && config.FEATURE_RESEARCH_RUN_LIBRARY !== "true") {
+    throw new Error("FEATURE_RESEARCH_LINEAGE=true requires FEATURE_RESEARCH_RUN_LIBRARY=true");
   }
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
     throw new Error(
