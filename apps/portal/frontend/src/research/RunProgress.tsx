@@ -21,13 +21,17 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type {
-  Artifact,
-  ConsoleLine,
-  EffectiveStatus,
-  ProgressRead,
-  ProgressSnapshot,
-  Stage,
+import {
+  NOT_PUBLISHED_CERTIFICATE,
+  NOT_PUBLISHED_TIMELINE,
+  type Artifact,
+  type ConsoleLine,
+  type EffectiveStatus,
+  type FoldSegment,
+  type MethodologyCertificate,
+  type ProgressRead,
+  type ProgressSnapshot,
+  type Stage,
 } from "./progressClient";
 import { ResearchPanel } from "./ResearchPanel";
 import type { Transport } from "./useRunProgress";
@@ -59,6 +63,13 @@ const STAGE_LABEL: Record<Stage["key"], string> = {
   S3: "Freeze",
   S4: "Execute",
   S5: "Claim",
+};
+
+/** Spec 03 §2.4: search is mist, OOS is teal, the freeze tick is gold. */
+const SEGMENT_TONE: Record<FoldSegment["kind"], string> = {
+  search: "var(--viz-train)",
+  oos: "var(--role-oos)",
+  freeze_tick: "var(--role-holdout)",
 };
 
 const TONE_COLOR: Record<ConsoleLine["tone"], string> = {
@@ -307,12 +318,26 @@ function FoldGantt({
           );
         }
 
+        /*
+         * The source owns the segmentation.
+         *
+         * `COMPLETE` is the only state that may be drawn as a full
+         * Search → OOS → freeze Gantt. `PARTIAL` draws exactly the segments
+         * that exist and names the condition — the gaps are not filled,
+         * because splitting a whole-fold span would describe a method the
+         * source never observed. `NOT_PUBLISHED`, and an absent field on a
+         * pre-amendment snapshot, keep the single whole-fold band.
+         */
+        const timeline = fold.fold_timeline ?? NOT_PUBLISHED_TIMELINE;
+        const segmented = timeline.state === "COMPLETE" || timeline.state === "PARTIAL";
+
         return (
           <button
             key={fold.fold}
             type="button"
             data-fold={fold.fold}
             data-fold-state={fold.state}
+            data-fold-timeline={timeline.state}
             data-selected={selected}
             onClick={() => onPick(fold.fold)}
             className="flex items-center gap-2.5 border-b py-1 text-left last:border-b-0"
@@ -328,15 +353,36 @@ function FoldGantt({
                 outline: selected ? "1.5px solid var(--accent)" : undefined,
               }}
             >
-              <span
-                className="absolute inset-y-0 rounded-[2px]"
-                style={{
-                  left: `${left}%`,
-                  width: `${width}%`,
-                  background: running ? "var(--viz-train)" : "var(--role-oos)",
-                }}
-                data-fold-band={fold.fold}
-              />
+              {segmented ? (
+                timeline.segments.map((segment) => {
+                  const segStart = segment.started_at_utc_ms;
+                  const segEnd = segment.completed_at_utc_ms ?? now;
+                  return (
+                    <span
+                      key={segment.kind}
+                      className="absolute inset-y-0 rounded-[2px]"
+                      data-fold-segment={`${fold.fold}:${segment.kind}`}
+                      data-segment-state={segment.state}
+                      title={`${segment.kind} · ${segment.state}`}
+                      style={{
+                        left: `${((segStart - t0) / span) * 100}%`,
+                        width: `${Math.max(1, ((segEnd - segStart) / span) * 100)}%`,
+                        background: SEGMENT_TONE[segment.kind],
+                      }}
+                    />
+                  );
+                })
+              ) : (
+                <span
+                  className="absolute inset-y-0 rounded-[2px]"
+                  style={{
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    background: running ? "var(--viz-train)" : "var(--role-oos)",
+                  }}
+                  data-fold-band={fold.fold}
+                />
+              )}
             </span>
             <span
               className="mono flex-none pl-2 text-[9px]"
@@ -347,6 +393,12 @@ function FoldGantt({
           </button>
         );
       })}
+      {folds.some((f) => (f.fold_timeline ?? NOT_PUBLISHED_TIMELINE).state === "PARTIAL") ? (
+        <p className="text-[9.5px]" style={{ color: "var(--role-holdout)" }} data-timeline-partial>
+          Some folds published only part of their Search / OOS / freeze facts. The published
+          segments are drawn as they are; the gaps are not filled.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -523,6 +575,32 @@ function ArtifactsStrip({ artifacts }: { artifacts: readonly Artifact[] }) {
   );
 }
 
+/**
+ * The methodology certificate chip.
+ *
+ * A run certificate fact, not an engine capability, a preflight ceiling or a
+ * token inside the claim prose. `ISSUED` with a real grade is the only state
+ * that authorises the chip; every other state omits it rather than recovering
+ * a grade by parsing anything.
+ */
+function CertificateChip({ certificate }: { certificate: MethodologyCertificate }) {
+  if (certificate.state !== "ISSUED" || certificate.grade === null) return null;
+  return (
+    <span
+      className="mono rounded-[3px] border px-[5px] text-[9px] font-bold leading-[15px]"
+      data-certificate={certificate.grade}
+      style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+      title={
+        certificate.issued_at_utc_ms === null
+          ? undefined
+          : `issued ${new Date(certificate.issued_at_utc_ms).toISOString()}`
+      }
+    >
+      cert {certificate.grade}
+    </span>
+  );
+}
+
 function ClaimPassport({
   claim,
   status,
@@ -531,6 +609,7 @@ function ClaimPassport({
   status: EffectiveStatus;
 }) {
   const issued = claim.state === "ISSUED";
+  const certificate = claim.methodology_certificate ?? NOT_PUBLISHED_CERTIFICATE;
   const notIssued = claim.state === "NOT_ISSUED";
   const tone = notIssued ? "var(--bad)" : "var(--role-holdout)";
   return (
@@ -552,6 +631,7 @@ function ClaimPassport({
           {claim.state === "NOT_ISSUED" ? "NOT ISSUED" : claim.state}
         </span>
         <StatusPill status={status} />
+        <CertificateChip certificate={certificate} />
       </span>
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)", opacity: issued ? 1 : 0.85 }}>
         {/* The server builds this sentence for both states; the page never

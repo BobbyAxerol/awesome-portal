@@ -41,6 +41,32 @@ export type Artifact = Schemas["Artifact"];
 export type EffectiveStatus = ProgressRead["current"]["effective_status"];
 export type ClaimState = ProgressSnapshot["claim"]["state"];
 
+/**
+ * The two source-owned display facts added by the P11 amendment.
+ *
+ * Both are optional in the OpenAPI **only** so a snapshot persisted before the
+ * amendment stays decodable. An absent field means exactly `NOT_PUBLISHED`; it
+ * is not a licence to synthesize a timeline or a grade.
+ */
+export type FoldTimeline = Schemas["ProgressFoldTimeline"];
+export type FoldSegment = Schemas["ProgressFoldSegment"];
+export type MethodologyCertificate = Schemas["ProgressMethodologyCertificate"];
+
+/** The documented meaning of an absent `fold_timeline`. */
+export const NOT_PUBLISHED_TIMELINE: FoldTimeline = {
+  state: "NOT_PUBLISHED",
+  reason_code: "SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS",
+  segments: [],
+};
+
+/** The documented meaning of an absent `methodology_certificate`. */
+export const NOT_PUBLISHED_CERTIFICATE: MethodologyCertificate = {
+  state: "NOT_PUBLISHED",
+  grade: null,
+  issued_at_utc_ms: null,
+  reason_code: "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE",
+};
+
 const BASE = "/api/v1/research/runs";
 
 function runPath(runId: string, suffix: string): string {

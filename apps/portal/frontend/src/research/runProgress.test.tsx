@@ -299,6 +299,121 @@ describe("P11-T01b — a running fold is visible", () => {
   });
 });
 
+describe("P11-T01c — the source owns the segmentation and the certificate", () => {
+  const segments = [
+    { kind: "search" as const, state: "DONE" as const, started_at_utc_ms: 1789836572000, completed_at_utc_ms: 1789836576000 },
+    { kind: "oos" as const, state: "DONE" as const, started_at_utc_ms: 1789836576000, completed_at_utc_ms: 1789836579000 },
+    { kind: "freeze_tick" as const, state: "DONE" as const, started_at_utc_ms: 1789836579000, completed_at_utc_ms: 1789836580000 },
+  ];
+
+  function withTimeline(timeline: unknown) {
+    return read({}, {
+      updated_at_utc_ms: 1789836590000,
+      folds: [
+        {
+          fold: 1,
+          state: "DONE",
+          started_at_utc_ms: 1789836572000,
+          completed_at_utc_ms: 1789836580000,
+          ...(timeline === undefined ? {} : { fold_timeline: timeline }),
+        } as ProgressSnapshot["folds"][number],
+      ],
+    });
+  }
+
+  it("draws a full Gantt only when the source says COMPLETE", () => {
+    view({ read: withTimeline({ state: "COMPLETE", reason_code: null, segments }) });
+    expect(document.querySelectorAll("[data-fold-segment]")).toHaveLength(3);
+    expect(document.querySelector("[data-fold-band]")).toBeNull();
+  });
+
+  it("draws exactly the published segments on PARTIAL and names the condition", () => {
+    view({
+      read: withTimeline({
+        state: "PARTIAL",
+        reason_code: "SOURCE_PARTIALLY_PUBLISHED_PER_FOLD_SEGMENT_FACTS",
+        segments: segments.slice(0, 1),
+      }),
+    });
+    // One fact exists; the other two are not invented to complete the picture.
+    expect(document.querySelectorAll("[data-fold-segment]")).toHaveLength(1);
+    expect(document.querySelector("[data-timeline-partial]")?.textContent).toContain(
+      "the gaps are not filled",
+    );
+  });
+
+  it("keeps the whole-fold band on NOT_PUBLISHED", () => {
+    view({
+      read: withTimeline({
+        state: "NOT_PUBLISHED",
+        reason_code: "SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS",
+        segments: [],
+      }),
+    });
+    expect(document.querySelectorAll("[data-fold-segment]")).toHaveLength(0);
+    expect(document.querySelector("[data-fold-band]")).toBeTruthy();
+  });
+
+  it("treats an absent field exactly as NOT_PUBLISHED", () => {
+    // Optional only so a pre-amendment snapshot decodes; not a licence to
+    // synthesize a timeline.
+    view({ read: withTimeline(undefined) });
+    expect(document.querySelector("[data-fold]")?.getAttribute("data-fold-timeline")).toBe(
+      "NOT_PUBLISHED",
+    );
+    expect(document.querySelector("[data-fold-band]")).toBeTruthy();
+  });
+
+  it("shows an A–D chip only for an issued certificate with a grade", () => {
+    const issued = read(
+      { current: { ...read().current, effective_status: "COMPLETED", may_cancel: false } },
+      {
+        status: "COMPLETED",
+        claim: {
+          state: "ISSUED",
+          text: "STRICT_OUTER_OOS_AFTER_FROZEN_SELECTION",
+          cursor: "cur_9",
+          methodology_certificate: {
+            state: "ISSUED",
+            grade: "B",
+            issued_at_utc_ms: 1789836590000,
+            reason_code: null,
+          },
+        },
+      },
+    );
+    view({ read: issued });
+    expect(document.querySelector("[data-certificate]")?.getAttribute("data-certificate")).toBe("B");
+  });
+
+  it("omits the chip for every other certificate state", () => {
+    for (const certificate of [
+      { state: "NOT_PUBLISHED" as const, grade: null, issued_at_utc_ms: null, reason_code: "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE" as const },
+      { state: "NOT_ISSUED" as const, grade: null, issued_at_utc_ms: null, reason_code: "SOURCE_DECLARED_METHODOLOGY_CERTIFICATE_NOT_ISSUED" as const },
+      /* An ISSUED state with no grade is still not a chip: the grade is the
+         fact, and the state alone cannot stand in for it. */
+      { state: "ISSUED" as const, grade: null, issued_at_utc_ms: null, reason_code: null },
+    ]) {
+      cleanup();
+      view({
+        read: read({}, { claim: { state: "FORECAST", text: "t", cursor: null, methodology_certificate: certificate } }),
+      });
+      expect(document.querySelector("[data-certificate]"), certificate.state).toBeNull();
+    }
+  });
+
+  it("omits the chip when the field is absent entirely", () => {
+    view();
+    expect(document.querySelector("[data-certificate]")).toBeNull();
+  });
+
+  it("recovers a grade from nothing else — not prose, not a ceiling", () => {
+    const code = codeOf("RunProgress.tsx");
+    // The chip reads `certificate.grade` and nothing else.
+    expect(code).not.toMatch(/cert ceiling|claim\.text.*grade|parse.*grade/i);
+  });
+});
+
 describe("P11-T02 — a sealed artifact is readiness, not authorization", () => {
   it("renders a sealed card rich and unlinked", () => {
     view();
