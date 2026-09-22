@@ -1,0 +1,11 @@
+{
+  "schema_version": "research.phase-debt-register.v1",
+  "phase": "P16",
+  "in_scope_backend_debt": [],
+  "typed_source_boundaries": [
+    "P16-A verifies exactly three Portal-retained bindings; PARTIAL_MATCH never attests source artifact bytes, source wall-clock ordering, selection or what-if evaluation.",
+    "Current P04 is fixed-parameter and publishes no candidate/study/trial/selection artifact, causal method timestamps, diagnostic grid/job or sibling-draft relation.",
+    "Screen-07 frontend browser/product receipt remains Claude-owned while FEATURE_RESEARCH_FREEZE=false."
+  ],
+  "rollback": "Disable FEATURE_RESEARCH_FREEZE through signed deployment; retain immutable P10/P14 facts and add no cleanup action."
+}

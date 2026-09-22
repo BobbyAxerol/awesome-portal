@@ -38,6 +38,7 @@ import { ResearchRunLibraryError } from "./research/run-library.error";
 import { ResearchEvidenceError } from "./research/evidence.error";
 import { ResearchSplitError } from "./research/split.error";
 import { ResearchSearchError } from "./research/search.error";
+import { ResearchFreezeError } from "./research/freeze.error";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -83,6 +84,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       || exception instanceof ResearchEvidenceError
       || exception instanceof ResearchSplitError
       || exception instanceof ResearchSearchError
+      || exception instanceof ResearchFreezeError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

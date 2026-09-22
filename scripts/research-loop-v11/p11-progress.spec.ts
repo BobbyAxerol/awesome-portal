@@ -25,6 +25,7 @@ import { ResearchEvidenceService } from "../../apps/control-api/src/research/evi
 import { ResearchSplitRepository } from "../../apps/control-api/src/research/split.repository";
 import { ResearchSplitService } from "../../apps/control-api/src/research/split.service";
 import { ResearchSearchService } from "../../apps/control-api/src/research/search.service";
+import { ResearchFreezeService } from "../../apps/control-api/src/research/freeze.service";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
 import { p13EvidenceSourceFixture } from "../../apps/control-api/test/research-evidence.fixture";
 import { p14SplitSourceFixture } from "../../apps/control-api/test/research-split.fixture";
@@ -652,5 +653,89 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     // P15 adds no second source receipt/table and no new worker sidecar: it
     // reads the exact immutable P14 projection already persisted for the run.
     expect(persisted.rows[0]).toEqual({ sources: "1", projections: "1" });
+  });
+
+  it("P16-T01/T02/T03/T06/T08/T11/T13/T14: verifies retained current-P04 bindings without creating a freeze receipt, job or source read", async () => {
+    const run = await createDispatchedRun();
+    const manifest = await pool.query<{ manifest_digest: string }>(
+      `SELECT manifest_digest FROM research.run_producers
+        WHERE workspace_id = $1 AND run_id = $2 AND worker_attempt_id = $3`,
+      [scope.workspaceId, run.runId, run.workerAttemptId],
+    );
+    const manifestDigest = manifest.rows[0]?.manifest_digest;
+    if (!manifestDigest) throw new Error("P16 fixture did not retain immutable producer manifest");
+    const splitRepository = new ResearchSplitRepository(pool);
+    const splitService = new ResearchSplitService(splitRepository, {
+      ...config,
+      FEATURE_RESEARCH_SPLIT: "true",
+    } as ControlApiConfig);
+    const p14Service = new ResearchProgressService(
+      progress,
+      metadata,
+      new ResearchProgressFanout(),
+      new FakeProgressPortalClient() as never,
+      new FakeEvidenceService() as never,
+      splitService,
+      config,
+    );
+    const fixture = p14SplitSourceFixture({ manifestDigest });
+    const source = {
+      ...fixture,
+      protocol: {
+        ...fixture.protocol,
+        selection: {
+          ...fixture.protocol.selection,
+          parameter_bundle_digest: sha256ResearchJson(P04_DELTA_FIXED_PARAMETERS),
+        },
+      },
+    };
+    const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: 2, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+    await p14Service.ingest(ingress({
+      ...run, sequence: 1, eventType: "run_completed", progress: completed, split: source,
+    }));
+
+    const freeze = new ResearchFreezeService(splitRepository, {
+      ...config,
+      FEATURE_RESEARCH_FREEZE: "true",
+    } as ControlApiConfig);
+    const detail = await freeze.detail(scope, run.runId, { fold: 1 });
+    expect(detail).toMatchObject({
+      availability: { state: "AVAILABLE", reason_code: null },
+      readiness: "PARTIAL",
+      revision: expect.stringMatching(/^p16r1_[0-9a-f]{64}$/),
+      freeze: {
+        inspection: { requested_fold: 1, state: "NOT_APPLICABLE" },
+        selection: { state: "FIXED_PARAMETER_PROFILE", selected_trial_ref: null, selection_artifact_ref: null },
+        ordering: { state: "NOT_ASSERTED", data_time: { chronology_kind: "THREE_WINDOW_CURRENT" } },
+        integrity: {
+          state: "PARTIAL",
+          verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+          source_artifact_bytes: { state: "NOT_ATTESTED" },
+        },
+        what_if: { state: "NOT_APPLICABLE", actions: { diagnostic_evaluate: { may_submit: false }, sibling_draft: { may_create: false } } },
+      },
+    });
+    expect(detail.freeze.integrity.checks.map((check) => check.state)).toEqual(["MATCH", "MATCH", "MATCH"]);
+    expect(detail.freeze.frozen_parameters).toHaveLength(Object.keys(P04_DELTA_FIXED_PARAMETERS).length);
+    await expect(freeze.verify(scope, run.runId, { fold: 1 })).resolves.toMatchObject({
+      result: "PARTIAL_MATCH", freeze_revision: detail.revision,
+    });
+    expect(JSON.stringify(detail)).not.toMatch(/"worker_attempt_id"|"lease_epoch"|"artifact_store_path"|"raw_ohlcv"|"diagnostic_job"/);
+
+    const persisted = await pool.query<{ sources: string; projections: string; freeze_table: string | null }>(
+      `SELECT
+         (SELECT count(*) FROM research.run_split_sources_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS sources,
+         (SELECT count(*) FROM research.run_split_projections_v1 WHERE workspace_id = $1 AND run_id = $2)::text AS projections,
+         to_regclass('research.run_freeze_receipts_v1')::text AS freeze_table`,
+      [scope.workspaceId, run.runId],
+    );
+    // P16 does not persist a new “verification” row and cannot enqueue work:
+    // it reads the one immutable P14 receipt already retained for the run.
+    expect(persisted.rows[0]).toEqual({ sources: "1", projections: "1", freeze_table: null });
   });
 });

@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 158,
+ "route_count": 161,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1612,6 +1612,26 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P15 bounded same-origin Search reader consumes only the immutable P10/P14 current-P04 projection. It publishes the exact fixed parameter profile plus typed study/ledger/diagnostic absences; it cannot start an optimizer, infer a trial from progress, scan worker/artifact/Parquet data, expose a cursor/lease/source path, or create an action channel. Claude owns Screen 06 typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/freeze",
+   "controller": "research/freeze.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P16 bounded same-origin Freeze reader consumes one immutable P10/P14 current-P04 receipt and returns only three retained digest-binding checks. It never reads source artifact bytes, starts a worker or diagnostic, changes frozen parameters, exposes source/custody inputs, or creates a command path. Claude owns Screen 07 typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/freeze/verify",
+   "controller": "research/freeze.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P16 explicit same-origin CSRF/origin-protected retained-binding re-read. It persists no verification receipt, writes no business data, opens no artifact/source path, queues no diagnostic and has no command effect; PARTIAL_MATCH is deliberately not an artifact-integrity PASS.",
    "owner": "codex",
    "test_owner": "codex"
   }

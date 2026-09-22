@@ -18,6 +18,9 @@ services:
       # does not activate a generic optimizer, a worker or artifact/Parquet
       # access. Keep false until its generated Screen-06 consumer is accepted.
       FEATURE_RESEARCH_SEARCH: ${CONTROL_API_FEATURE_RESEARCH_SEARCH:-false}
+      # P16 verifies only Portal-retained P04/P10/P14 digests. It never starts
+      # a source/worker/diagnostic path or reads source artifact bytes.
+      FEATURE_RESEARCH_FREEZE: ${CONTROL_API_FEATURE_RESEARCH_FREEZE:-false}
       RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: ${CONTROL_API_RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS:-1500}
 
   # The worker owns source journalling and the private, at-least-once callback.

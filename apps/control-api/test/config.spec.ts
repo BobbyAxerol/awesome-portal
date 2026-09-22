@@ -154,6 +154,16 @@ describe("P15 Search truth activation guard", () => {
   });
 });
 
+describe("P16 Freeze / integrity activation guard", () => {
+  it("stays dark independently while allowing only a retained immutable-binding reader", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_FREEZE).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_FREEZE: "true",
+    }).FEATURE_RESEARCH_FREEZE).toBe("true");
+  });
+});
+
 describe("Execution realtime feature dependencies", () => {
   const executionEdgeEnv = (): NodeJS.ProcessEnv => ({
     ...baseEnv(),

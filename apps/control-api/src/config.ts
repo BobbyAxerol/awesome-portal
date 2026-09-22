@@ -99,6 +99,11 @@ const EnvSchema = z.object({
   // and cannot turn the fixed qualification into an optimizer. Keep it dark
   // until its generated contract and Screen-06 consumer are accepted.
   FEATURE_RESEARCH_SEARCH: z.enum(["true", "false"]).default("false"),
+  // P16 is a feature-dark, retained-fact verifier. It only compares the
+  // immutable P04/P10/P14 digest bindings already held by Portal; it never
+  // opens an artifact, starts a worker or diagnostic job, reads a source data
+  // store, or changes frozen parameters.
+  FEATURE_RESEARCH_FREEZE: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),

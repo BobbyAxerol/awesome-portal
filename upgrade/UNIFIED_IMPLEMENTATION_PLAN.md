@@ -3620,7 +3620,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P13](#rl-p13) | P05,P09–P11 | 04 | 07 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex** / [P13 packet](./research_loop/evidence/P13/README.md): P04 terminal source receipt → fsync P11 digest relay → append-only Portal projection/lazy-series BFF is proven on a fresh PostgreSQL cell and feature-dark by default. No artifact/raw-market/worker/Execution/CLI reader exists. **FE_S04_PRODUCT_CONSUMER_PENDING / Claude** — follow [P13 handoff](./research_loop/evidence/P13/frontend-handoff-claude.md), complete P12 first without touching Codex-owned files, then use the generated contract and direct browser-vs-HiFi receipt; no fixture route is product acceptance. |
 | [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P14 packet](./research_loop/evidence/P14/README.md); additive, feature-dark current-P04 three-window source receipt travels only alongside the digest-bound P11 terminal callback, then becomes an immutable Portal projection and one authenticated same-origin BFF. The reader preserves UTC-ms, exact digest/revision/ETag, semantic child-tape exclusion, `NOT_ATTESTED` physical Parquet-I/O and `NOT_ASSERTED` strict-OOS facts; it does not read raw holdout/Parquet, create a seal/unlock/governance action or imply WFO. P14 source/Python, Control API, generated contract, route ledger and fresh PostgreSQL proof pass. Screen-05 rich product route/browser/HiFi receipt remains Claude-owned and is not claimed while `FEATURE_RESEARCH_SPLIT=false`. |
 | [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex / [P15 packet](./research_loop/evidence/P15/README.md): one feature-dark same-origin BFF reads only immutable P10/P14 current-P04 facts; exact fixed parameter profile, declared-not-executed request and all search/ledger/diagnostic gaps are typed. It adds no fake study/trial/selection, source sidecar, DB table, worker, raw data read or runtime activation. Generic optimizer-ledger acceptance remains **SOURCE_CAPABILITY_BLOCKED**, not implementation debt, until a separately versioned source contract publishes actual study/trial/evaluation/selection facts. FE Screen-06 ownership is Claude's; see the handoff. |
-| [P16](#rl-p16) | P13–P15 | 07 | 08 | PLANNED / unassigned / — |
+| [P16](#rl-p16) | P13–P15 | 07 | 08 | **BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE / Codex** / [P16 packet](./research_loop/evidence/P16/README.md): feature-dark same-origin Freeze BFF reads one immutable P10/P14 current-P04 receipt and verifies exactly three retained digest bindings (P04 adapter, P10↔P14 manifest, fixed parameter bundle). `PARTIAL_MATCH` is deliberately **not** an artifact-byte/causal-ordering/selection/what-if PASS; all unavailable source facts remain individually typed. It adds no table, migration, cache, worker, diagnostic job, source/artifact/Parquet read, parameter mutation or Execution path. **P16-B generic integrity + what-if is SOURCE_CAPABILITY_BLOCKED** pending a separately versioned installed source contract. Screen-07 generated consumer/browser HiFi receipt remains Claude-owned; see handoff. |
 | [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | PLANNED / unassigned / — |
 | [P18](#rl-p18) | P13–P17 | 09 | 09 | PLANNED / unassigned / — |
 | [P19](#rl-p19) | P07,P10,P12,P15 | 10 | 10 | PLANNED / unassigned / — |
@@ -4743,6 +4743,42 @@ P04 run.
 - **Tests FE/browser:** All S07 tests; advancing fake timer cannot PASS real verifier; slider/mount no POST/job; nonselected pick still frozen passport; new intent explicit; undefined/queued grid states truthful.
 - **Exit gate:** Expected bytes checked, original θ/digests immutable; diagnostic job/data/resource provenance fully traceable; DR02 copy/definition settled.
 - **Rollback/handoff:** Disable diagnostic creation only, retain original/grids. Checkpoint08: P15/P16 + trial→freeze invariants and dev evidence.
+
+#### P16 current-source compatibility amendment — 2026-09-22
+
+The original P16 target assumes an installed optimizer source with an immutable
+selection artifact, expected artifact bytes, causal wall-clock order, a
+precomputed diagnostic grid and a bounded sibling-draft admission. The current
+P04 adapter is a single **fixed-parameter qualification**. P10 refuses
+parameter overrides, trials other than one, random seed, optimizer
+configuration and early stopping; P14 explicitly says
+`FIXED_PROFILE_NO_SEARCH`, `NOT_ASSERTED` strict outer-OOS, and
+`NOT_ATTESTED` physical I/O. A P11 progress counter is not an optimizer pool,
+selection, exact evaluation or integrity artifact.
+
+Accordingly this phase has two exact gates, neither is silently substituted for
+the other:
+
+| Gate | Current decision / implementation | Completion condition |
+|---|---|---|
+| **P16-A — retained current-source Freeze verifier** | **Complete in this phase.** `GET /api/v1/quantbt/runs/{runId}/freeze` reads one session/workspace-scoped immutable P14 projection and returns frozen P04 values only when all three retained bindings match: compiled P04 adapter digest, P10 producer manifest ↔ P14 source manifest, and static P04 parameter-bundle digest. `POST …/freeze/verify` is an origin/CSRF-protected re-read only: no audit row, job, source access or mutation. A mismatch returns typed `BLOCKED`, removes the local parameter table and never remaps it over another immutable bundle. | Generated contract, feature-dark/membership/ETag/CSRF tests, capability ledger, and fresh PostgreSQL P10→P14→P16 proof pass. `PARTIAL_MATCH` remains visibly partial because P16 cannot see source artifact bytes. |
+| **P16-B — full artifact integrity, causal ordering and what-if** | **SOURCE_CAPABILITY_BLOCKED, not implementation debt and not a P16-A success claim.** Current P04/P10/P11/P14 publish no source artifact byte digest/receipt, candidate population, selection artifact/reference/sequence, wall-clock source events, exact evaluation identity/grid/objective, diagnostic admission or sibling-draft relation. | A future installed source adapter must publish a new versioned immutable source contract for those facts and a bounded retained projection. It must be integrated in a distinct reader/projection revision before generic P16 `T01…T14`, a “chain intact” claim, sliders, grid preview, diagnostic job or draft action can be accepted. |
+
+`P16-A` is intentionally a complete compatibility contract, not a temporary
+manual mapping. It has one named generated GET and one explicit re-read POST;
+both accept only a run, optional workspace and bounded inspection fold. No
+browser can choose a source relation/revision/cursor, path, artifact, raw
+market input, worker custody value, parameter override or job. The deployed
+feature remains dark (`FEATURE_RESEARCH_FREEZE=false`) and is independent of
+P10/P11 worker activation.
+
+Claude must consume only `researchFreezeDetailGetV1` and
+`researchFreezeVerifyPostV1`. Screen 07 retains its rich HiFi shell, but for a
+real P04 run it must render static parameter/data-time facts plus typed source
+gaps. `PARTIAL_MATCH` must read as “Portal retained binding matched; source
+artifact bytes are not attested,” never “chain intact.” Sliders, what-if grid,
+diagnostic evaluation and sibling draft are not hidden client mutations; they
+stay visibly `NOT_APPLICABLE` until a versioned source contract publishes them.
 
 <a id="rl-p17"></a>
 ### P17 — Route-aware replay và state-at-cursor

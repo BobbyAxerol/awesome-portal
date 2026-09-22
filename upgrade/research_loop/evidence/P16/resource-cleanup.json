@@ -1,0 +1,14 @@
+{
+  "schema_version": "research.phase-resource-cleanup.v1",
+  "phase": "P16",
+  "runtime_change": "NONE",
+  "test_resources": [
+    {
+      "resource": "research-p16-postgres-*",
+      "type": "one disposable PostgreSQL 16 tmpfs container",
+      "cleanup": "shell EXIT trap removes exactly the named container on pass/fail; post-run read-only listing found no matching container",
+      "result": "PASS"
+    }
+  ],
+  "broad_cleanup": "NOT_RUN; no prune, volume/image/cache deletion, restart or runtime cleanup is required or permitted."
+}
