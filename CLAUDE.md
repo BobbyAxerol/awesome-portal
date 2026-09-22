@@ -330,6 +330,35 @@ không tự chọn mô tả tiện lợi.
    là đã làm. Hai trạng thái đó khác nhau, và gộp chúng là cách một gói biến
    mất khỏi tầm mắt.
 
+9. **Đọc lại handoff và Unified plan của các phase ĐÃ làm, trước mỗi lần bắt
+   đầu việc mới** (Bobby chốt 2026-09-22). Không chỉ đọc handoff của phase sắp
+   làm — đọc lại cả những phase mình đã đóng, vì backend vá tiếp vào đó:
+
+   ```bash
+   # 1. packet/handoff nào vừa đổi trong các phase mình đã làm
+   git log --since="7 days ago" --name-only --pretty=format: -- \
+     upgrade/research_loop/evidence/*/README.md \
+     upgrade/research_loop/evidence/*/*handoff* \
+     upgrade/research_loop/evidence/*/*amendment* | sort -u
+
+   # 2. dòng board của các phase đó trong Unified §13 có gì mới
+   git log -p --since="7 days ago" -- upgrade/UNIFIED_IMPLEMENTATION_PLAN.md | grep "^+| \[P"
+
+   # 3. contract nào vừa regenerate
+   git log --since="7 days ago" --name-only --pretty=format: -- packages/contracts/generated | sort -u
+   ```
+
+   **Vì sao có luật này.** Ngày 2026-09-22, ngay sau khi tôi đóng P13 và gửi hai
+   request `CG-P13-01`/`CG-P13-02`, codex publish
+   `contract-amendment-run-identity-fold-navigation.md` và sửa thẳng
+   `evidence/P13/README.md`. Nếu tôi chỉ đọc handoff của phase kế tiếp thì màn 04
+   sẽ đứng yên với hai ô "not published" trong khi server đã trả lời rồi — và
+   một ô "not published" sai là một lời nói dối, đúng loại mà §3.3 cấm.
+
+   Một amendment đến sau **thắng** handoff gốc của phase đó, nhưng **không** xoá
+   critique/addendum cũ (A13.1). Khi đọc xong, ghi vào receipt của phase là đã
+   đọc bản nào — không phải "đã đọc handoff", mà đúng tên file và commit.
+
 ## 8. Scale refine — bắt buộc cho mỗi màn Execution Loop
 
 Hi-fi mô tả trạng thái đẹp ở 1440px với dữ liệu mẫu nhỏ. Thực tế: nhiều alpha,
