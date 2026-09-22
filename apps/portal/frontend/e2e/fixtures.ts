@@ -262,6 +262,29 @@ export async function stubPortalApi(
   });
 
   /*
+   * P15 · the search detail and the retained trial ledger.
+   *
+   * Same shape as P14: the fixed-profile run is answered in full, and the
+   * retained lane refuses it — which is what puts the ledger's own reason
+   * code on screen instead of an empty chart.
+   */
+  await page.route("**/api/v1/quantbt/runs/*/search*", (route) =>
+    void json(route, local("search-detail.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/current-source/search*", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED",
+          message: "This run was produced by the fixed P04 profile, which the retained-source lane does not admit.",
+        },
+      }),
+    }),
+  );
+
+  /*
    * P14 · the split detail, and the retained-source fold read it may ask for.
    *
    * This fixture run is the fixed P04 profile, so the current-source split

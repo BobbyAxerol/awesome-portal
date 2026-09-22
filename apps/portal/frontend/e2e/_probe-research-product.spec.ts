@@ -1439,3 +1439,136 @@ test("S05 carries the cursor back to the hub and reads it from the hash", async 
   await expect(page.locator("[data-screen='evidence-flow']")).toBeVisible();
   await expect(page.locator("[data-cursor-fold]")).toContainText("fold 4");
 });
+
+/* ------------------------------------------------------------------ P15 */
+
+/*
+ * S06 Search & Selection on `/research/quantbt/runs/:runId/search`.
+ *
+ * The run was qualified against a fixed profile rather than searched, so the
+ * browser is asked the question this screen exists to answer: does an absent
+ * optimizer ever look like a broken one, or like a study that found nothing.
+ */
+const SEARCH = "/research/quantbt/runs/R-WFO-118/search";
+
+for (const [name, width, height] of [
+  ["laptop", 1280, 1000],
+  ["mobile", 660, 1000],
+] as const) {
+  test(`S06 Search renders every block on its product route at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width, height });
+    await page.goto(SEARCH);
+    await settle(page);
+
+    await expect(page.locator("[data-screen='search-detail']")).toBeVisible();
+    await expect(page.locator("[data-source-profile='FIXED_PROFILE_NO_SEARCH']")).toBeVisible();
+    await expect(page.locator("[data-requested-optimizer]")).toContainText("declared not executed");
+
+    // Stage A, the freeze line and Stage B all keep their place.
+    await expect(page.locator("[data-stage='A']")).toBeVisible();
+    await expect(page.locator("[data-freeze-line]")).toBeVisible();
+    await expect(page.locator("[data-stage='B']")).toBeVisible();
+
+    // The one panel with content, and the seven that state their absence.
+    await expect(page.locator("[data-parameter]")).toHaveCount(4);
+    await expect(page.locator("[data-effective='atr_mult']")).toHaveText("2.00");
+    await expect(page.locator("[data-panel='scatter']")).toBeVisible();
+    await expect(page.locator("[data-panel='importance']")).toBeVisible();
+
+    await expect(page.locator(".portal-shell")).toHaveCount(1);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+
+    await page.screenshot({ path: `${OUT}/s06-search-${name}.png`, fullPage: true });
+    expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+  });
+}
+
+test("S06 never draws an empty study, and never a zero", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(SEARCH);
+  await settle(page);
+
+  // No chart anywhere on the screen: not an empty one, not a placeholder axis.
+  await expect(page.locator("[data-screen='search-detail'] canvas")).toHaveCount(0);
+  await expect(page.locator("[data-screen='search-detail'] svg")).toHaveCount(0);
+
+  // Each empty panel carries the server's own reason code.
+  const reasons = await page.locator("[data-gap-reason]").allTextContents();
+  expect(reasons.length).toBe(7);
+  for (const reason of reasons) expect(reason).toMatch(/^P04_/);
+
+  // A question that does not arise reads differently from a fact nobody sent.
+  await expect(page.locator("[data-panel='scatter']")).toHaveAttribute("data-panel-state", "NOT_APPLICABLE");
+  await expect(page.locator("[data-panel='importance']")).toHaveAttribute("data-panel-state", "NOT_PUBLISHED");
+
+  // Nothing offers a count of nothing.
+  const body = (await page.locator("[data-screen='search-detail']").textContent()) ?? "";
+  expect(body).not.toMatch(/\b0 trials\b|\b0 candidates\b|\bno results found\b/i);
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+});
+
+test("S06 points at no trial, because none exists", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(SEARCH);
+  await settle(page);
+
+  await expect(page.locator("[data-selection-state='FIXED_PARAMETER_PROFILE']")).toBeVisible();
+  await expect(page.locator("[data-selected-ref]")).toContainText("none published");
+  await expect(page.locator("[data-selected-trial]")).toHaveCount(0);
+  await expect(page.locator("[data-action='pick-trial'], [data-action='freeze']")).toHaveCount(0);
+
+  // The ledger panel states the contract's reason, not a row count.
+  await expect(page.locator("[data-ledger='refused']")).toBeVisible();
+  await expect(page.locator("[data-ledger-refusal]")).toContainText("P04_RAN_NO_TRIALS");
+  await expect(page.locator("[data-ledger-gap-state='NOT_APPLICABLE']")).toBeVisible();
+});
+
+test("S06 sends the cursor's fold and is told this source has no optimizer fold", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/search")) asked.push(request.url().replace(/^https?:\/\/[^/]+/, ""));
+  });
+
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(`${SEARCH}#stage=search&fold=3`);
+  await settle(page);
+
+  expect(asked.some((url) => url.includes("fold=3"))).toBe(true);
+  // And nothing else is ever sent: no relation, cursor, revision or command.
+  for (const url of asked) expect(url).not.toMatch(/relation|revision|cursor|command|optimi[sz]er=/);
+
+  await expect(page.locator("[data-panel='inspection']")).toHaveAttribute(
+    "data-inspection-state",
+    "NOT_APPLICABLE",
+  );
+  await expect(page.locator("[data-panel='inspection']")).toContainText("no optimizer fold");
+});
+
+test("S06 walks back to the hub and to S05 with the cursor intact", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(`${SEARCH}#stage=search&fold=2&params=prm_3b81c7`);
+  await settle(page);
+
+  await expect(page.locator("[data-action='back-to-split']")).toHaveAttribute("href", /fold=2/);
+  await page.locator("[data-action='back-to-hub']").click();
+  await settle(page);
+  await expect(page.locator("[data-screen='evidence-flow']")).toBeVisible();
+  await expect(page.locator("[data-cursor-fold]")).toContainText("fold 2");
+  await expect(page.locator("[data-cursor-params]")).toContainText("prm_3b81c7");
+});

@@ -49,6 +49,9 @@
       "@portal/contracts-research-progress": [
         "../../../packages/contracts/generated/research-progress.d.ts"
       ],
+      "@portal/contracts-research-search": [
+        "../../../packages/contracts/generated/research-search.d.ts"
+      ],
       "@portal/contracts-research-split": [
         "../../../packages/contracts/generated/research-split.d.ts"
       ],

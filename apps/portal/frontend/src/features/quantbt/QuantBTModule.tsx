@@ -50,6 +50,7 @@ import { RunProgressRoute } from "../../research/RunProgressRoute";
 import { RunLibraryRoute } from "../../research/RunLibraryRoute";
 import { EvidenceFlowRoute } from "../../research/EvidenceFlowRoute";
 import { SplitRoute } from "../../research/SplitRoute";
+import { SearchRoute } from "../../research/SearchRoute";
 import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
@@ -241,7 +242,7 @@ export function QuantBTModule() {
     /* Screen 03 reads a P11 run through its own contract. The legacy passport
        fetch would ask `/api/runs/{id}` for a run that legacy store never had,
        which is the same defect one level down. */
-    if (/\/runs\/[^/]+\/(progress|evidence|split)(\/|$)/.test(location.pathname)) return null;
+    if (/\/runs\/[^/]+\/(progress|evidence|split|search)(\/|$)/.test(location.pathname)) return null;
     return segment;
   }, [location.pathname]);
 
@@ -265,7 +266,7 @@ export function QuantBTModule() {
   // also have dropped the caption from New Run and the import inbox, which are
   // outside this phase and inside the visual baseline.
   const onReferenceRoute =
-    /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/(progress|evidence|split))(\/|$)/.test(location.pathname) ||
+    /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/(progress|evidence|split|search))(\/|$)/.test(location.pathname) ||
     /\/runs$/.test(location.pathname);
 
   const actions = (
@@ -353,6 +354,8 @@ export function QuantBTModule() {
         <Route path="runs/:runId/evidence" element={<EvidenceFlowRoute />} />
         {/* P14 · Screen 05, the first deep dive out of the hub. */}
         <Route path="runs/:runId/split" element={<SplitRoute />} />
+        {/* P15 · Screen 06. */}
+        <Route path="runs/:runId/search" element={<SearchRoute />} />
         {/* Screen 14's canonical route, resolved as `FD-P09-02`: under QuantBT
           * rather than under the still-COMMISSIONED ALPHA_POOL feature.
           * Legacy `imports` below is untouched. */}

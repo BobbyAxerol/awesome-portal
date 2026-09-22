@@ -1,0 +1,217 @@
+{
+  "schema_version": "research.search-detail.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "R-WFO-118",
+  "revision": "p15r1_7742aa",
+  "etag": "\"p15r1_7742aa\"",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "readiness": "PARTIAL",
+  "as_of_utc_ms": 1789836590000,
+  "provenance": {
+    "source_adapter_id": "p04.delta-rsi.v1",
+    "adapter_contract_digest": "sha256:adapter0198fe",
+    "engine_version": "1.1.1",
+    "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
+    "source_transform_digest": "sha256:9f2c18d4aa71",
+    "requested_spec_digest": "sha256:88ae0231bc44",
+    "effective_spec_digest": "sha256:88ae0231bc44",
+    "dataset_binding_digest": "sha256:5b31c7d90e12",
+    "manifest_digest": "sha256:c25a1d77b0e4"
+  },
+  "source_profile": {
+    "state": "FIXED_PROFILE_NO_SEARCH",
+    "reason_code": null,
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "requested_optimizer": {
+    "mode": "mode_1_decay",
+    "schedule": "per_fold_causal",
+    "state": "DECLARED_NOT_EXECUTED",
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "fixed_profile": {
+    "state": "FIXED_PROFILE_NO_SEARCH",
+    "adapter_contract_digest": "sha256:adapter0198fe",
+    "parameter_bundle_digest": "sha256:bundle0142ab",
+    "parameters": [
+      {
+        "name": "rsi_len",
+        "kind": "NUMERIC",
+        "minimum": "5",
+        "maximum": "40",
+        "step": "1",
+        "effective_value": "14",
+        "position_percent": 25.7,
+        "bound_state": "WITHIN_DECLARED_RANGE"
+      },
+      {
+        "name": "atr_mult",
+        "kind": "NUMERIC",
+        "minimum": "0.50",
+        "maximum": "4.00",
+        "step": "0.25",
+        "effective_value": "2.00",
+        "position_percent": 42.9,
+        "bound_state": "WITHIN_DECLARED_RANGE"
+      },
+      {
+        "name": "entry_z",
+        "kind": "NUMERIC",
+        "minimum": "0.80",
+        "maximum": "3.20",
+        "step": "0.10",
+        "effective_value": "1.60",
+        "position_percent": 33.3,
+        "bound_state": "WITHIN_DECLARED_RANGE"
+      },
+      {
+        "name": "exit_z",
+        "kind": "NUMERIC",
+        "minimum": "0.10",
+        "maximum": "1.50",
+        "step": "0.05",
+        "effective_value": "0.45",
+        "position_percent": 25,
+        "bound_state": "WITHIN_DECLARED_RANGE"
+      }
+    ],
+    "strict_outer_oos": {
+      "state": "NOT_ASSERTED",
+      "reason_code": "P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR",
+      "availability": {
+        "state": "NOT_ASSERTED",
+        "reason_code": "P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR"
+      }
+    },
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "selection": {
+    "state": "FIXED_PARAMETER_PROFILE",
+    "selected_trial_ref": null,
+    "parameter_bundle_digest": "sha256:bundle0142ab",
+    "selection_trace": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_SELECTION_TRACE",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_SELECTION_TRACE"
+      }
+    },
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "inspection": {
+    "requested_fold": 1,
+    "state": "NOT_APPLICABLE",
+    "availability": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_HAS_NO_OPTIMIZER_FOLD"
+    }
+  },
+  "ledger": {
+    "state": "NOT_APPLICABLE",
+    "reason_code": "P04_RAN_NO_TRIALS",
+    "total_rows": null,
+    "sampled_rows": null,
+    "page": null,
+    "availability": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_RAN_NO_TRIALS"
+    }
+  },
+  "diagnostics": {
+    "state": "NOT_APPLICABLE",
+    "availability": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_RAN_NO_TRIALS"
+    },
+    "scatter": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_RAN_NO_TRIALS",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_RAN_NO_TRIALS"
+      }
+    },
+    "distributions": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_RAN_NO_TRIALS",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_RAN_NO_TRIALS"
+      }
+    },
+    "parameter_frequency": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_RAN_NO_TRIALS",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_RAN_NO_TRIALS"
+      }
+    },
+    "progression": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_RAN_NO_TRIALS",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_RAN_NO_TRIALS"
+      }
+    },
+    "prune_reasons": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_RAN_NO_TRIALS",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_RAN_NO_TRIALS"
+      }
+    },
+    "importance": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_IMPORTANCE",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_IMPORTANCE"
+      }
+    },
+    "interactions": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_INTERACTIONS",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_INTERACTIONS"
+      }
+    }
+  },
+  "source_absences": {
+    "objective_components": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_OBJECTIVE_COMPONENTS",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_OBJECTIVE_COMPONENTS"
+      }
+    },
+    "candidate_pool": {
+      "state": "NOT_APPLICABLE",
+      "reason_code": "P04_RAN_NO_TRIALS",
+      "availability": {
+        "state": "NOT_APPLICABLE",
+        "reason_code": "P04_RAN_NO_TRIALS"
+      }
+    }
+  }
+}
