@@ -53,6 +53,17 @@ These are source/phase boundaries, not hidden fallbacks. P13 or a later named, a
 
 See the detailed report for exact scoped coverage and the explicit frontend tests that are not claimed by backend evidence.
 
-## Next owner
+## Current closure and next owner
 
-Claude must first read the full P11 handoff plus display-fact amendment, this packet, [the P12 frontend handoff](./frontend-handoff-claude.md), Screen-01 spec and the corresponding HiFi HTML. Regenerate and consume only `research-run-library.d.ts`; preserve the rich Screen-01 composition in every typed state. The shared rule is now explicit in [`CLAUDE-FOR-thanhvuong.md` A13.1](../../CLAUDE-FOR-thanhvuong.md#A131-Phối-hợp-theo-thế-mạnh-không-khóa-role): a later handoff never erases a prior Codex critique/addendum.
+Claude's typed Screen-01 consumer is now mounted and its fixture/browser
+receipt is recorded in [frontend-composition-claude.md](./frontend-composition-claude.md).
+The approved canonical route is `/research/quantbt/runs`; the legacy reader
+remains at `/research/quantbt/runs/legacy`. The Codex decision, current-head
+P12 gates and truthful `claim_ledger` ruling are in
+[p12-closure-codex.md](./p12-closure-codex.md).
+
+The next frontend owner may start P13 after reading the full P11 handoff plus
+display-fact amendment, this packet, the P12 closure, the P13 handoff, Screen
+04 spec and its HiFi HTML. Continue consuming only generated contracts and
+preserve rich composition in every typed state. The shared rule is explicit in
+[`CLAUDE-FOR-thanhvuong.md` A13.1](../../CLAUDE-FOR-thanhvuong.md#A131-Phối-hợp-theo-thế-mạnh-không-khóa-role): a later handoff never erases a prior Codex critique/addendum.
