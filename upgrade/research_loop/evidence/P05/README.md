@@ -25,3 +25,19 @@ Read this packet in order:
 `P06` may consume the sealed DTO only through its lease-scoped durable worker
 protocol. `P09/P11` own browser composition; `P10` owns named producer/read
 operation cutover from the legacy compatibility paths.
+
+## RF01-B3 addendum — artifact states the browser can see (2026-09-23)
+
+The authority's `research.artifacts.state` has six values:
+`PENDING`, `WRITING`, `SEALED`, `ABORTED`, `CORRUPT`, `MISSING`. `PENDING`
+exists only on revision-zero rows inherited from P03; a revisioned P05 row is
+reserved directly in `WRITING`. `CORRUPT`/`MISSING` are reachable only from
+`SEALED` through the integrity downgrade.
+
+Since RF01-B3 these rows reach the browser in exactly one place: the
+`retained_artifacts` list of the P11 progress read
+(`packages/contracts/openapi/research-progress.openapi.json`,
+`ProgressRetainedArtifact`), locator-free and bounded at 128. The
+`artifacts` list inside the progress snapshot is a different set — the bundle
+files the source journals — and its `PENDING` is that file's pre-write state,
+not an authority state. The two lists share no key and are not merged.

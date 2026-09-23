@@ -4241,6 +4241,22 @@ campaign sau khi Bobby tự merge qua PR.
   | RF01-B4 | B-05 | Codec `p02-cursor.v2`: nhận `stage` (7 giá trị, chỉ để trình bày), mọi giá trị trên dây là `Identifier` opaque — một màn chỉ được hiểu `fold` là số khi đối chiếu với tập mà contract của chính nó công bố; cập nhật `cursor-codec.md`, `p02-contract.mjs`, `foundation.contract.ts` `InspectionCursor`/`canonical_query`, OpenAPI + generated; journey endpoint nhận và trả lại `stage` | codec test (trùng, không hỗ trợ, `seq`≠`event_seq`, trial mơ hồ cần `study`, `stage`) và journey round-trip xanh |
   | RF01-B5 | B-06 | Append ghi chú đóng gate vào debt register P02–P05 (không sửa dòng cũ), trỏ tới phase/commit đã đóng | mỗi gate có trạng thái hiện tại + bằng chứng |
 
+  **RF01-B3 implementation note (Claude, 2026-09-23 — thay cách làm, giữ mục tiêu).**
+  Khi làm, hai tập "artifact" hoá ra là hai thứ khác nhau không có khoá nối:
+  `progress.artifacts` là các file bundle mà source journal (`research/progress-journal.ndjson`,
+  `progress-receipt.json`, `evidence-source.json`, `split-source.json`), còn `research.artifacts`
+  là các bảng Parquet được giữ lại (`table_kind`). Chép `CORRUPT`/`MISSING` của authority đè lên
+  file bundle sẽ là tự bịa một phép nối. Vì vậy RF01-B3 thêm một danh sách **riêng**
+  `retained_artifacts` vào `research.progress-read.v1` (additive, optional cho client cũ; server
+  luôn phát, `[]` khi chưa có bảng): đọc từ `research.artifacts` trong cùng transaction với
+  snapshot, tối đa 128, sắp theo `table_kind` rồi `artifact_id`, sáu trạng thái của authority,
+  `total_rows`/`total_bytes` là chuỗi số nguyên (không mất chính xác bigint), `sealed_at_utc_ms`,
+  `reader_href: null`; **không** mang `storage_locator`, `artifact_id`, `manifest_digest`,
+  `worker_attempt_id`, `lease_epoch`. `progress.artifacts` giữ nguyên nghĩa bundle-readiness.
+  Điều kiện "Xong khi" đọc lại thành: một bảng bị đánh `CORRUPT` ở authority xuất hiện đúng trong
+  `retained_artifacts` của read S03 — PG proof `RF01-B3` trong `p11-progress.spec.ts` chứng minh
+  điều này cùng với không rò locator/digest. RF01-F6 vẽ `retained_artifacts` qua `ArtifactPanel`.
+
 - **To-do FE/consumer:**
 
   | ID | Finding | Việc cụ thể | Xong khi |
