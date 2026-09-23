@@ -84,6 +84,18 @@ describe("P09 published Research foundation contract", () => {
     expect(schemas.AtlasHistoricalIdentity.properties.facts_state).toEqual({ const: "NOT_PUBLISHED" });
   });
 
+  it("RF-03: types engine-supported but Portal-not-admitted schedules with a sourced reason", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      components: { schemas: Record<string, any> };
+    };
+    expect(document.components.schemas.AtlasMode.properties.invalid_schedules).toMatchObject({
+      items: { required: ["schedule", "admission", "reason", "source"], properties: {
+        admission: { const: "NOT_ADMITTED" },
+      } },
+    });
+    expect(readFileSync(generatedPath, "utf8")).toContain("invalid_schedules?:");
+  });
+
   it("RF-03: publishes canonical v2 Journey and historical identity response fixtures", () => {
     const fixture = (name: string) => JSON.parse(readFileSync(join(ROOT, "fixtures", name), "utf8")) as Record<string, any>;
     const journey = fixture("research-foundation.journey-v2.valid.json");

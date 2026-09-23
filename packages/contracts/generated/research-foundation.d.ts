@@ -219,6 +219,14 @@ export interface components {
             mode_id: components["schemas"]["Identifier"];
             display_name: string;
             valid_schedules: string[];
+            invalid_schedules?: {
+                /** @enum {unknown} */
+                schedule: "global" | "per_fold_decay" | "per_fold_causal";
+                /** @constant */
+                admission: "NOT_ADMITTED";
+                reason: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            }[];
             default_schedule: string;
             objective_summary: string;
             suspect: string;

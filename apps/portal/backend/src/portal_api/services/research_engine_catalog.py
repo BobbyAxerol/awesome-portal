@@ -296,12 +296,20 @@ class ModeFacts(CatalogModel):
     avoid_when: NotPublishedFact
 
 
+class InvalidSchedule(CatalogModel):
+    schedule: Schedule
+    admission: Literal["NOT_ADMITTED"]
+    reason: str = Field(min_length=1, max_length=400)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+
 class ModeDescriptor(CatalogModel):
     mode_id: str = Field(pattern=r"^mode_[1-5]_[a-z0-9_]+$")
     display_name: str = Field(min_length=1, max_length=120)
     valid_schedules: tuple[
         Literal["global", "per_fold_decay", "per_fold_causal"], ...
     ] = Field(min_length=1)
+    invalid_schedules: tuple[InvalidSchedule, ...] = ()
     default_schedule: Literal["global", "per_fold_decay", "per_fold_causal"]
     objective_summary: str = Field(min_length=1, max_length=500)
     suspect: str = Field(min_length=1, max_length=500)
@@ -315,6 +323,9 @@ class ModeDescriptor(CatalogModel):
     def validate_default_schedule(self) -> "ModeDescriptor":
         if self.default_schedule not in self.valid_schedules:
             raise ValueError("default_schedule must be one of valid_schedules")
+        invalid = tuple(item.schedule for item in self.invalid_schedules)
+        if len(set(invalid)) != len(invalid) or set(invalid) & set(self.valid_schedules):
+            raise ValueError("invalid_schedules must be unique and disjoint from valid_schedules")
         if self.facts is not None:
             fact_schedules = tuple(fact.schedule for fact in self.facts.schedules)
             if fact_schedules != self.valid_schedules:

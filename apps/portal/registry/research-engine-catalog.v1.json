@@ -1,6 +1,6 @@
 {
   "schema_version": "research-engine-catalog.v1",
-  "manifest_revision": 4,
+  "manifest_revision": 5,
   "releases": [
     {
       "release_id": "er_quantbt_108",
@@ -341,6 +341,21 @@
       "mode_id": "mode_1_decay",
       "display_name": "Decay robustness",
       "valid_schedules": ["global", "per_fold_decay"],
+      "invalid_schedules": [
+        {
+          "schedule": "per_fold_causal",
+          "admission": "NOT_ADMITTED",
+          "reason": "QuantBT 1.1.1 supports causal Mode 1 only with robust_decay, inner_split_frequency, inner_window_mode and inner_train_window. The current Portal requested-spec and preflight cannot carry and validate those fields; this pair is descriptive, not a runnable Portal admission.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "532-545",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "causal Mode 1 requires inner_split_frequency, inner_window_mode,"
+            }
+          ]
+        }
+      ],
       "default_schedule": "global",
       "objective_summary": "Ranks OOS stability against IS-to-OOS decay.",
       "suspect": "A high average OOS score with broad decay dispersion requires review.",

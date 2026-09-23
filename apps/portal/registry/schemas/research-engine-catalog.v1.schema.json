@@ -160,6 +160,19 @@
         "mode_id": {"type": "string", "pattern": "^mode_[1-5]_[a-z0-9_]+$"},
         "display_name": {"type": "string", "minLength": 1, "maxLength": 120},
         "valid_schedules": {"type": "array", "minItems": 1, "items": {"enum": ["global", "per_fold_decay", "per_fold_causal"]}},
+        "invalid_schedules": {
+          "type": "array", "maxItems": 3,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["schedule", "admission", "reason", "source"],
+            "properties": {
+              "schedule": {"enum": ["global", "per_fold_decay", "per_fold_causal"]},
+              "admission": {"const": "NOT_ADMITTED"},
+              "reason": {"type": "string", "minLength": 1, "maxLength": 400},
+              "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+            }
+          }
+        },
         "default_schedule": {"enum": ["global", "per_fold_decay", "per_fold_causal"]},
         "objective_summary": {"type": "string", "minLength": 1, "maxLength": 500},
         "suspect": {"type": "string", "minLength": 1, "maxLength": 500},

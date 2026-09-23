@@ -337,6 +337,13 @@ def test_catalog_rejects_route_factory_drift_before_runtime_dispatch(tmp_path: P
 
 def test_p04_t03_valid_and_invalid_mode_schedule_pairs_are_explicit() -> None:
     service = _service()
+    mode_one = next(mode for mode in service.catalog.modes if mode.mode_id == "mode_1_decay")
+    causal = next(item for item in mode_one.invalid_schedules if item.schedule == "per_fold_causal")
+    assert causal.admission == "NOT_ADMITTED"
+    assert "inner_split_frequency" in causal.reason
+    assert causal.source[0].sha256 == "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256"
+    with pytest.raises(ResearchEngineCatalogError, match="not valid"):
+        service.validate_mode_schedule(mode_id="mode_1_decay", schedule="per_fold_causal")
     for mode in service.catalog.modes:
         for schedule in mode.valid_schedules:
             assert service.validate_mode_schedule(mode_id=mode.mode_id, schedule=schedule) == mode

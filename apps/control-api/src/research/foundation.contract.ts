@@ -167,6 +167,12 @@ const AtlasModeSchema = z.object({
   mode_id: Identifier,
   display_name: z.string().min(1).max(191),
   valid_schedules: z.array(z.string().min(1).max(191)).min(1).max(16),
+  invalid_schedules: z.array(z.object({
+    schedule: z.enum(["global", "per_fold_decay", "per_fold_causal"]),
+    admission: z.literal("NOT_ADMITTED"),
+    reason: z.string().min(1).max(400),
+    source: SourcesSchema,
+  }).strict()).max(3).optional(),
   default_schedule: z.string().min(1).max(191),
   objective_summary: z.string().min(1).max(1024),
   suspect: z.string().min(1).max(1024),

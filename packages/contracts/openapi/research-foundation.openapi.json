@@ -1157,6 +1157,24 @@
               "maxLength": 191
             }
           },
+          "invalid_schedules": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["schedule", "admission", "reason", "source"],
+              "properties": {
+                "schedule": {"enum": ["global", "per_fold_decay", "per_fold_causal"]},
+                "admission": {"const": "NOT_ADMITTED"},
+                "reason": {"type": "string", "minLength": 1, "maxLength": 400},
+                "source": {
+                  "type": "array", "minItems": 1, "maxItems": 4,
+                  "items": {"$ref": "#/components/schemas/AtlasSourceLocator"}
+                }
+              }
+            }
+          },
           "default_schedule": {
             "type": "string",
             "maxLength": 191
