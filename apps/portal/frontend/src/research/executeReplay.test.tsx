@@ -22,7 +22,8 @@ import { EXECUTE_RULES_FOOTER, EXECUTE_SUBTITLE, EXECUTE_TITLE, ExecuteScreen, P
 import { DEFAULT_CURSOR } from "./evidenceCursor";
 import {
   REPLAY_REFUSAL_COPY,
-  RETAINED_NOT_ADMITTED,
+  RETAINED_NOT_FOUND,
+  RETAINED_NOT_RETAINED,
   ROUTE_CAPABILITY_KEYS,
   replayApi,
   replayState,
@@ -411,6 +412,19 @@ describe("S08-U06 — refusals speak fixed copy and keep the shell", () => {
     expect(refusal.cursorExpired).toBe(status === 409);
   });
 
+  it("a denial neither confirms the run exists nor names its owner (F-04)", () => {
+    const refusal = toReplayRefusal(new PortalApiError("x", 403, "RESEARCH_REPLAY_FORBIDDEN", null));
+    expect(refusal.message).not.toMatch(/belongs|member|owner/i);
+    expect(refusal.message).toContain("or it doesn't exist");
+  });
+
+  it("on the retained lane, 409 is pending retention and 404 is a scope fact", () => {
+    const pending = toReplayRefusal(new PortalApiError("x", 409, "RESEARCH_CURRENT_SOURCE_CONFLICT", null), "retained");
+    expect([pending.state, pending.message, pending.cursorExpired]).toEqual(["unavailable", RETAINED_NOT_RETAINED, false]);
+    const missing = toReplayRefusal(new PortalApiError("x", 404, "RESEARCH_CURRENT_SOURCE_NOT_FOUND", null), "retained");
+    expect([missing.state, missing.message]).toEqual(["empty", RETAINED_NOT_FOUND]);
+  });
+
   it("while loading, keeps the shell busy and draws no sample, panel or zero", () => {
     renderScreen(controllerOf(null, { inFlight: true }));
     expect(screen.getByText(EXECUTE_TITLE)).toBeTruthy();
@@ -508,7 +522,7 @@ describe("S08-U07 — reads: one on arrival, one bounded recovery, and nothing e
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(jsonResponse(replay()))
-      .mockResolvedValueOnce(jsonResponse({ error: { code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED", message: "x" } }, 409));
+      .mockResolvedValueOnce(jsonResponse({ error: { code: "RESEARCH_CURRENT_SOURCE_CONFLICT", message: "x" } }, 409));
     const { result } = renderHook(() => useReplay("run_p17", null));
     await waitFor(() => expect(result.current.replay).not.toBeNull());
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -516,9 +530,13 @@ describe("S08-U07 — reads: one on arrival, one bounded recovery, and nothing e
     act(() => result.current.ensureRetained());
     await waitFor(() => expect(result.current.retained.state).toBe("refused"));
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    /* A profile refusal is not an expired cursor and must not read like one. */
-    const slot = result.current.retained as { state: "refused"; refusal: { message: string; cursorExpired: boolean } };
-    expect(slot.refusal.message).toBe(RETAINED_NOT_ADMITTED);
+    /* A retained 409 means "not retained yet", not an expired cursor or a changed revision. */
+    const slot = result.current.retained as {
+      state: "refused";
+      refusal: { message: string; cursorExpired: boolean; state: string };
+    };
+    expect(slot.refusal.message).toBe(RETAINED_NOT_RETAINED);
+    expect(slot.refusal.state).toBe("unavailable");
     expect(slot.refusal.cursorExpired).toBe(false);
     expect(String(fetchMock.mock.calls[1]![0])).toBe("/api/v1/quantbt/runs/run_p17/current-source/replay");
   });

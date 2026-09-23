@@ -209,7 +209,8 @@ export const REPLAY_REFUSAL_COPY = {
   network: "The request did not reach the server.",
   400: "This replay position is not valid for this run's evidence. Reopen the replay from the start.",
   401: "Your session has ended. Sign in again to read this replay.",
-  403: "This run belongs to a workspace you are not a member of.",
+  /* Neutral on purpose: a denial must not confirm the run exists or say whose it is (audit F-04). */
+  403: "You don't have access to this in your current workspace, or it doesn't exist.",
   404: "No replay exists for this run in this workspace.",
   409: "The replay position expired. It was discarded and the replay was read again once.",
   503: "Replay is unavailable right now. Nothing on this screen was changed.",
@@ -217,12 +218,16 @@ export const REPLAY_REFUSAL_COPY = {
 } as const;
 
 /**
- * The retained lane refuses a run outside its one admitted profile with 404 or
- * 409. Neither is an expired cursor — that lane is read without one — so it
- * gets its own sentence rather than the replay's 409 copy.
+ * On the retained lane a 409 is not an expired cursor — that lane is read
+ * without one. It means no sealed retained source exists for this run: pending
+ * retention, or a run that predates it (RF-02 found this on the real API). The
+ * sentence is the shared mapper's, word for word, so S08 says what S04–S07 say.
  */
-export const RETAINED_NOT_ADMITTED =
-  "This run is outside the one admitted retained-source profile, so there is no retained model replay to show.";
+export const RETAINED_NOT_RETAINED =
+  "No sealed retained source exists for this run yet — it is pending retention, or the run predates it. Nothing here is taken from the live output instead.";
+
+/** A retained-lane 404: a scope fact, not "deleted". */
+export const RETAINED_NOT_FOUND = "No retained model replay was found for this run in your current workspace.";
 
 export interface ReplayRefusal {
   code: string | null;
@@ -251,10 +256,12 @@ export function toReplayRefusal(error: unknown, lane: "replay" | "retained" = "r
   }
   const { status } = error;
   const denied = status === 401 || status === 403;
-  const notAdmitted = lane === "retained" && (status === 404 || status === 409);
-  const copy = notAdmitted
-    ? RETAINED_NOT_ADMITTED
-    : status === 400 || status === 401 || status === 403 || status === 404 || status === 409 || status === 503
+  const notRetained = lane === "retained" && status === 409;
+  const copy = notRetained
+    ? RETAINED_NOT_RETAINED
+    : lane === "retained" && status === 404
+      ? RETAINED_NOT_FOUND
+      : status === 400 || status === 401 || status === 403 || status === 404 || status === 409 || status === 503
       ? REPLAY_REFUSAL_COPY[status]
       : REPLAY_REFUSAL_COPY.other;
   return {
@@ -264,6 +271,8 @@ export function toReplayRefusal(error: unknown, lane: "replay" | "retained" = "r
     requestId: error.requestId,
     state: denied
       ? "denied"
+      : notRetained
+        ? "unavailable"
       : status === 404
         ? "empty"
         : status === 409
