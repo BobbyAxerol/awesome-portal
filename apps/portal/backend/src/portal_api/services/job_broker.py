@@ -8,8 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Protocol
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,8 +125,22 @@ class NatsJetStreamBroker:
             )
 
         async def consume_loop() -> None:
+            import nats.errors
+
             while True:
-                messages = await self._sub.fetch(1, timeout=30)
+                try:
+                    messages = await self._sub.fetch(1, timeout=30)
+                except nats.errors.TimeoutError:
+                    # An empty queue for 30 s is the normal idle state. Letting
+                    # this escape ended the task, and the worker stopped taking
+                    # work while still looking healthy (RF-02 preview, CG-RF02-02).
+                    continue
+                except asyncio.CancelledError:
+                    raise
+                except Exception:  # noqa: BLE001 - keep consuming; JetStream redelivers
+                    logger.warning("durable job fetch failed; retrying", exc_info=True)
+                    await asyncio.sleep(1)
+                    continue
                 for message in messages:
                     payload = json.loads(message.data.decode("utf-8"))
                     for subscription, handlers in self._handlers.items():

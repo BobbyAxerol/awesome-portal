@@ -779,3 +779,62 @@ def test_rf02_p14_split_source_timeline_starts_at_warmup_when_warmup_exists() ->
         source_transform_digest="e" * 64,
     )
     assert without_warmup["timeline"]["start_utc_ms"] == ms(is_start)
+
+
+def test_rf02_nats_consume_loop_survives_an_idle_queue() -> None:
+    """CG-RF02-02: fetch() raises TimeoutError after 30 s with no message.
+
+    The loop must treat that as idle and keep pulling; before the fix the task
+    died and the worker silently stopped taking work until restarted.
+    """
+
+    import asyncio
+
+    import nats.errors
+
+    from portal_api.services.job_broker import JobMessage, NatsJetStreamBroker
+
+    class FakeMessage:
+        subject = "quant.run.requested.research"
+        data = b'{"run_id": "r1"}'
+        acked = False
+
+        async def ack(self) -> None:
+            self.acked = True
+
+    message = FakeMessage()
+
+    class FakeSubscription:
+        calls = 0
+
+        async def fetch(self, batch: int, timeout: float):
+            self.calls += 1
+            if self.calls <= 2:
+                raise nats.errors.TimeoutError
+            if self.calls == 3:
+                return [message]
+            await asyncio.sleep(3600)
+
+    class FakeJetStream:
+        async def pull_subscribe(self, subject: str, durable: str):
+            return FakeSubscription()
+
+    async def scenario() -> list[JobMessage]:
+        broker = NatsJetStreamBroker(["nats://unused:4222"], consumer="quant-worker-py")
+        broker._js = FakeJetStream()  # type: ignore[attr-defined]
+        received: list[JobMessage] = []
+
+        async def handler(job: JobMessage) -> None:
+            received.append(job)
+
+        await broker.subscribe("quant.run.requested.>", handler)
+        for _ in range(50):
+            if received:
+                break
+            await asyncio.sleep(0.01)
+        broker._task.cancel()  # type: ignore[attr-defined]
+        return received
+
+    received = asyncio.run(scenario())
+    assert [job.payload for job in received] == [{"run_id": "r1"}]
+    assert message.acked
