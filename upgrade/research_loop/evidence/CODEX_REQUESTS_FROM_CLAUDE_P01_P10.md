@@ -123,7 +123,7 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 | `CG-P09-04` | Descriptor v2 = HiFi 00 (8 phases, 28 actual HiFi cards, names verbatim), schema: `revision` integer, `maxItems` ≥ 12, mapping table, `target_fragment`, `requires_run`; new migration row | S00 whole map | DELIVERED `ea221dc2` · `research-foundation.d.ts:JourneyResponse` |
 | `CG-P09-05` | Atlas contract fixes 14/5/7 while the manifest allows 32/8/16 | S12 T06 | DELIVERED `ea221dc2` · `research-foundation.d.ts:Atlas` |
 | `CG-P09-06` | Historical release returns 1.1.1 facts under a 1.0.8 label | S12 historical chip | DELIVERED `ea221dc2` · `research-foundation.d.ts:AtlasResponse` |
-| `CG-P09-02` | Canonical fixtures for journey/atlas/preflight | fixture lanes | PARTIAL `5069b39a` · Journey v2 + historical Atlas pinned; preflight response fixture still OPEN |
+| `CG-P09-02` | Canonical fixtures for journey/atlas/preflight | fixture lanes | DELIVERED `5069b39a` + `b1afae0c` + `1f8fbac9` · generated `research-foundation.d.ts:JourneyResponse/AtlasResponse`, `research-preflight.d.ts:ResearchPreflightV1`; canonical Journey v2, current/historical Atlas and producer-tested preflight response fixtures |
 
 ## P10 — run creation / producer
 
