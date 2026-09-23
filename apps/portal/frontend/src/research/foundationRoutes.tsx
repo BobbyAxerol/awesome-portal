@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { EngineAtlas, tabFromHash, type AtlasTab } from "./EngineAtlas";
+import { EngineAtlas, atlasHash, atlasLocationFromHash, type AtlasLocation, type AtlasTab } from "./EngineAtlas";
 import { JourneyMap } from "./JourneyMap";
 import type { AtlasDocument } from "./atlas";
 import {
@@ -155,12 +155,20 @@ export function EngineAtlasRoute() {
   /* The tab lives in the hash so a link to a specific tab survives a reload
      and a paste, and so it never reaches the server: which tab is open is not
      a fact the Atlas selection depends on. */
-  const [tab, setTab] = useState<AtlasTab>(() => tabFromHash(location.hash));
-  useEffect(() => setTab(tabFromHash(location.hash)), [location.hash]);
-  const onTabChange = useCallback((next: AtlasTab) => {
-    setTab(next);
-    window.history.replaceState(null, "", `#tab=${next}`);
+  /* RF02-F1: the whole spec-12 hash — tab, mode, schedule, route and the run
+     the reader came from — is kept, and every change replaces rather than
+     pushes, so back still leaves the screen. */
+  const [place, setPlace] = useState<AtlasLocation>(() => atlasLocationFromHash(location.hash));
+  useEffect(() => setPlace(atlasLocationFromHash(location.hash)), [location.hash]);
+  const move = useCallback((change: Partial<AtlasLocation>) => {
+    setPlace((previous) => {
+      const next = { ...previous, ...change };
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${atlasHash(next)}`);
+      return next;
+    });
   }, []);
+  const tab = place.tab;
+  const onTabChange = useCallback((next: AtlasTab) => move({ tab: next }), [move]);
   const read = useFoundationRead<AtlasResponse>(
     (signal) => foundationApi.atlas(query, signal),
     [JSON.stringify(query)],
@@ -176,6 +184,8 @@ export function EngineAtlasRoute() {
       doc={document}
       tab={tab}
       onTabChange={onTabChange}
+      location={{ mode: place.mode, schedule: place.schedule, route: place.route, run: place.run }}
+      onLocationChange={move}
       selectedReleaseId={read.data?.selected_release_id ?? null}
       selectedReleaseKind={read.data?.selected_release_kind ?? null}
       state={state}

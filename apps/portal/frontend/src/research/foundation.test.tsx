@@ -462,8 +462,13 @@ describe("P09-T04 — the Atlas renders from the manifest response", () => {
     renderAt("/research/quantbt/atlas", <EngineAtlasRoute />);
     await waitFor(() => expect(document.querySelector("[data-screen='engine-atlas']")).toBeTruthy());
 
-    // Only the three tabs are interactive; the Atlas is read-only.
-    expect(document.querySelectorAll("button")).toHaveLength(3);
+    // The Atlas is read-only: its buttons are tabs, schedule chips and route
+    // rows, which move the reader within the page and change nothing.
+    for (const button of document.querySelectorAll("button")) {
+      const kind = button.getAttribute("role") === "tab" || button.hasAttribute("data-schedule") || button.hasAttribute("data-route-link");
+      expect(kind, button.outerHTML).toBe(true);
+    }
+    expect(document.querySelectorAll('[role="tab"]')).toHaveLength(3);
     expect(document.querySelectorAll("[data-action]")).toHaveLength(0);
   });
 });

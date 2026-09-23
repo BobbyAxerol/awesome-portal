@@ -1549,7 +1549,7 @@ function ClaimTab({ hub }: { hub: EvidenceHub }) {
   );
 }
 
-function AtlasTab() {
+function AtlasTab({ runId }: { runId: string }) {
   return (
     <div className="flex flex-col gap-3">
       <SourceGap
@@ -1558,7 +1558,9 @@ function AtlasTab() {
         reason="the mode × route atlas is published by the Research foundation contract, which this screen does not read. Rather than a preview assembled from nothing, the Atlas itself is one click away and is the same source Screen 12 renders."
       >
         <Link
-          to="/research/quantbt/atlas"
+          /* The run travels in the Atlas hash so its breadcrumb and "open search
+             & selection" can come back to this run (RF02-F1). */
+          to={`/research/quantbt/atlas#tab=modes&run=${encodeURIComponent(runId)}`}
           className="mono self-start rounded-[6px] border px-3 py-1 text-[10px] uppercase"
           style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
           data-action="open-atlas"
@@ -1685,7 +1687,7 @@ export function EvidenceFlow({
             ) : cursor.stage === "claim" ? (
               <ClaimTab hub={hub} />
             ) : cursor.stage === "atlas" ? (
-              <AtlasTab />
+              <AtlasTab runId={runId} />
             ) : (
               <StagePreviewTab stage={cursor.stage} cursor={cursor} hub={hub} runId={runId} />
             )}

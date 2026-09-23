@@ -46,6 +46,22 @@ export type AtlasAxes = components["schemas"]["CapabilityAxes"];
 export type AtlasMode = components["schemas"]["AtlasMode"];
 export type CurrentRelease = components["schemas"]["AtlasRelease"];
 export type HistoricalRelease = components["schemas"]["HistoricalRelease"];
+/** RF02-B1: per mode × schedule engine facts, each with a source locator. */
+export type AtlasModeFacts = components["schemas"]["AtlasModeFacts"];
+export type AtlasScheduleFact = components["schemas"]["AtlasScheduleFact"];
+export type AtlasObjectiveFact = components["schemas"]["AtlasObjectiveFact"];
+export type AtlasReadsFact = components["schemas"]["AtlasReadsFact"];
+export type AtlasNotPublishedFact = components["schemas"]["AtlasNotPublishedFact"];
+export type AtlasSourceLocator = components["schemas"]["AtlasSourceLocator"];
+/** RF02-B2: the walk-forward values New Run may offer. */
+export type AtlasWalkForwardOptions = components["schemas"]["AtlasWalkForwardOptions"];
+
+/** Every schedule the engine names, in its order. A mode admits a subset. */
+export const ENGINE_SCHEDULES = ["global", "per_fold_decay", "per_fold_causal"] as const;
+
+export function isPublished<T extends { state: string }>(fact: T | AtlasNotPublishedFact): fact is T {
+  return fact.state === "PUBLISHED";
+}
 
 /** Which axis holds a route back. Order matters: the first blocker is reported. */
 export type BlockingAxis = "engine" | "integration" | "evidence" | "admission";

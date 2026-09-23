@@ -11,6 +11,7 @@
  * and its reviewer-checklist item 1.
  */
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ArtifactPanel } from "./ArtifactPanel";
@@ -311,12 +312,14 @@ describe("P04 — Engine Atlas composition", () => {
   function renderAtlas(doc: AtlasDocument | null, tab: AtlasTab = "routes", outcome = OUTCOMES.empty) {
     const onTabChange = vi.fn();
     render(
-      <EngineAtlas
-        doc={doc}
-        state={doc ? researchState({ kind: "ok", rowCount: 1 }) : researchState(outcome)}
-        tab={tab}
-        onTabChange={onTabChange}
-      />,
+      <MemoryRouter>
+        <EngineAtlas
+          doc={doc}
+          state={doc ? researchState({ kind: "ok", rowCount: 1 }) : researchState(outcome)}
+          tab={tab}
+          onTabChange={onTabChange}
+        />
+      </MemoryRouter>,
     );
     return onTabChange;
   }
@@ -325,12 +328,14 @@ describe("P04 — Engine Atlas composition", () => {
     renderAtlas(atlasDoc(), "claims");
     const tabs = screen.getAllByRole("tab");
     expect(tabs).toHaveLength(3);
-    expect(tabs.find((t) => t.getAttribute("aria-selected") === "true")?.textContent).toBe("claims");
+    // Spec 12 §1 / HiFi labels, verbatim (RF02-F1).
+    expect(tabs.map((t) => t.textContent)).toEqual(["WFO modes", "Execution routes", "Claims by contract"]);
+    expect(tabs.find((t) => t.getAttribute("aria-selected") === "true")?.textContent).toBe("Claims by contract");
   });
 
   it("changes tab on click without navigating", () => {
     const onTabChange = renderAtlas(atlasDoc(), "modes");
-    fireEvent.click(screen.getByRole("tab", { name: "routes" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Execution routes" }));
     expect(onTabChange).toHaveBeenCalledWith("routes");
   });
 
@@ -368,7 +373,10 @@ describe("P04 — Engine Atlas composition", () => {
     renderAtlas(atlasDoc(), "routes");
     const blocked = document.querySelector("[data-route='arbitrage_triangular']");
     expect(blocked?.textContent).toContain("Schema-only: no adapter in Portal.");
-    expect(within(blocked as HTMLElement).queryByRole("button")).toBeNull();
+    // The only button in the row selects it in the hash (RF02-F1); nothing acts on it.
+    for (const button of within(blocked as HTMLElement).queryAllByRole("button")) {
+      expect(button.hasAttribute("data-route-link")).toBe(true);
+    }
     expect(within(blocked as HTMLElement).queryByRole("link")).toBeNull();
   });
 
@@ -414,13 +422,21 @@ describe("P04 — Engine Atlas composition", () => {
   });
 
   it("offers no run, submit or engine control anywhere on the screen", () => {
-    renderAtlas(atlasDoc(), "routes");
-    // Tabs carry role="tab", so a plain button here would be an action.
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
-    for (const tab of screen.getAllByRole("tab")) {
-      expect(tab.textContent?.toLowerCase()).not.toMatch(/run|submit|execute|start|launch/);
+    for (const tab of ["routes", "modes", "claims"] as const) {
+      cleanup();
+      renderAtlas(atlasDoc(), tab);
+      // Every button moves the reader within the Atlas — a tab, a schedule
+      // chip or a route row — and none of them runs, submits or starts anything.
+      for (const button of screen.queryAllByRole("button")) {
+        const kind = button.getAttribute("role") === "tab" || button.hasAttribute("data-schedule") || button.hasAttribute("data-route-link");
+        expect(kind, button.outerHTML).toBe(true);
+        expect(button.textContent?.toLowerCase()).not.toMatch(/\brun\b|submit|execute|start|launch/);
+      }
+      // Links only go to reading screens: a run list filtered by mode, or a run's Search & Selection.
+      for (const link of screen.queryAllByRole("link")) {
+        expect(link.getAttribute("href")).toMatch(/^\/research\/quantbt\/runs(\?mode=|\/[^/]+\/(search|evidence))/);
+      }
     }
-    expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 });
 

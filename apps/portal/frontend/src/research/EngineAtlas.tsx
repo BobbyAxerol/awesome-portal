@@ -18,11 +18,23 @@
  * palette value for value — no raw hex, and no change to Execution Carbon.
  */
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 
+import { Formula } from "./Formula";
+import { encodeInspectionCursor } from "./inspectionCursor";
 import {
+  ENGINE_SCHEDULES,
+  isPublished,
   type AtlasDocument,
   type AtlasMode,
+  type AtlasModeFacts,
+  type AtlasNotPublishedFact,
+  type AtlasObjectiveFact,
+  type AtlasReadsFact,
+  type AtlasScheduleFact,
+  type AtlasSourceLocator,
+  type CurrentRelease,
   type BlockingAxis,
   type RouteDisplay,
   allRouteDisplays,
@@ -104,7 +116,15 @@ const ROUTE_COLUMNS = [
   { key: "report levels", width: 120 },
 ] as const;
 
-function RoutesTab({ doc }: { doc: AtlasDocument }) {
+function RoutesTab({
+  doc,
+  selectedRoute = null,
+  onRoute,
+}: {
+  doc: AtlasDocument;
+  selectedRoute?: string | null;
+  onRoute?: (route: string) => void;
+}) {
   const rows = useMemo(() => allRouteDisplays(doc), [doc]);
   return (
     /*
@@ -139,6 +159,8 @@ function RoutesTab({ doc }: { doc: AtlasDocument }) {
             key={row.routeId}
             data-route={row.routeId}
             data-admitted={row.admitted}
+            data-selected={row.routeId === selectedRoute || undefined}
+            aria-current={row.routeId === selectedRoute ? "true" : undefined}
             className="flex flex-col gap-1 border-b px-3 py-[7px]"
             style={{ borderColor: "var(--line-soft)" }}
           >
@@ -151,7 +173,15 @@ function RoutesTab({ doc }: { doc: AtlasDocument }) {
                 color: row.admitted ? "var(--ink)" : "var(--ink-soft)",
               }}
             >
-              {row.routeId}
+              <button
+                type="button"
+                className="mono text-left font-semibold"
+                onClick={() => onRoute?.(row.routeId)}
+                data-route-link={row.routeId}
+                style={{ color: "inherit" }}
+              >
+                {row.routeId}
+              </button>
               {row.isDefaultForNewRuns ? (
                 <span className="ml-1.5 text-[9px]" style={{ color: "var(--accent)" }}>
                   default
@@ -296,7 +326,132 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
  * Tab: modes
  * ---------------------------------------------------------------------- */
 
-function ModeCard({ mode }: { mode: AtlasMode }) {
+/** Claim tone by what the chronological claim says (spec 12 §7 chip colours). */
+function claimTone(claim: string): { color: string; border: string } {
+  if (claim.startsWith("strict")) return { color: "var(--good)", border: "var(--good)" };
+  if (claim.startsWith("selection_adjusted")) return { color: "var(--accent-2)", border: "var(--accent-2)" };
+  if (claim.startsWith("not_causal") || claim.includes("retrospective")) return { color: "var(--accent-2)", border: "var(--accent-2)" };
+  return { color: "var(--bad)", border: "var(--bad)" };
+}
+
+function Locators({ sources }: { sources: readonly AtlasSourceLocator[] }) {
+  return (
+    <span className="mono text-[9px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-fact-source>
+      source{" "}
+      {sources.map((source, index) => (
+        <span key={`${source.path}:${source.lines}`} title={`sha256 ${source.sha256} · “${source.anchor}”`}>
+          {index > 0 ? " · " : ""}
+          {source.path}:{source.lines}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function NotPublished({ fact, label }: { fact: AtlasNotPublishedFact; label: string }) {
+  return (
+    <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-not-published={label}>
+      <span className="mono text-[9px] font-bold uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+        not published
+      </span>{" "}
+      {fact.reason}
+    </span>
+  );
+}
+
+function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
+  const tone = claimTone(fact.chronological_validation_claim);
+  return (
+    <div className="flex flex-col gap-1" data-schedule-claim={fact.schedule}>
+      <div className="flex flex-wrap items-baseline gap-1.5">
+        <span
+          className="mono rounded-[3px] border px-[5px] text-[9px] leading-[15px]"
+          style={{ color: tone.color, borderColor: tone.border }}
+          data-claim={fact.chronological_validation_claim}
+        >
+          {fact.chronological_validation_claim}
+        </span>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
+          validation {fact.validation_claim}
+        </span>
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5 text-[10.5px]">
+        <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>causality</dt>
+        <dd className="mono text-[10px]">{fact.causality_claim} · {fact.causality_schedule_v2}</dd>
+        <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>outer OOS</dt>
+        <dd className="text-[10.5px]" data-oos-use={fact.oos_use}>
+          {fact.oos_use === "USED" ? "feeds selection" : "does not feed selection"}
+          {fact.oos_use_condition ? (
+            <span style={{ color: "var(--ink-faint)" }}> — {fact.oos_use_condition}</span>
+          ) : null}
+        </dd>
+        <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>params</dt>
+        <dd className="mono text-[10px]">{fact.params_semantics}</dd>
+        <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>cert cap</dt>
+        <dd>
+          <NotPublished fact={fact.cert_cap} label="cert_cap" />
+        </dd>
+      </dl>
+      <Locators sources={fact.source} />
+    </div>
+  );
+}
+
+function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
+  if (!isPublished<AtlasObjectiveFact>(facts.objective)) {
+    return <NotPublished fact={facts.objective} label="objective" />;
+  }
+  const objective = facts.objective;
+  return (
+    <div className="flex flex-col gap-1.5" data-objective>
+      {objective.stages.map((stage) => (
+        <div key={stage.stage} className="flex flex-col gap-0.5">
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+            {stage.stage} · {stage.formula_id} · {objective.direction}
+          </span>
+          <Formula formula={stage.formula} />
+        </div>
+      ))}
+      {objective.coefficients.length > 0 ? (
+        <table className="text-[10px]" data-objective-terms>
+          <tbody>
+            {objective.coefficients.map((coefficient) => (
+              <tr key={coefficient.name}>
+                <td className="mono pr-3" style={{ color: "var(--ink)" }}>{coefficient.name}</td>
+                <td className="mono pr-3">
+                  {coefficient.release_default ?? (
+                    <span style={{ color: "var(--ink-faint)" }}>unset</span>
+                  )}
+                </td>
+                <td style={{ color: "var(--ink-faint)" }}>{coefficient.note ?? "release default"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
+        selection metric {objective.selection_metrics.join(" · ")}
+      </span>
+      {objective.note ? (
+        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>{objective.note}</span>
+      ) : null}
+      <Locators sources={objective.source} />
+    </div>
+  );
+}
+
+export interface ModeCardProps {
+  mode: AtlasMode;
+  /** The schedule whose claim is shown. Always one the mode lists. */
+  schedule: string;
+  onSchedule: (schedule: string) => void;
+  /** A run to open Search & Selection for, when the Atlas was reached from one. */
+  runId: string | null;
+}
+
+export function ModeCard({ mode, schedule, onSchedule, runId }: ModeCardProps) {
+  const facts = mode.facts ?? null;
+  const fact = facts?.schedules.find((item) => item.schedule === schedule) ?? null;
   return (
     <article
       data-mode={mode.mode_id}
@@ -307,103 +462,197 @@ function ModeCard({ mode }: { mode: AtlasMode }) {
         className="flex flex-wrap items-baseline gap-2.5 border-b pb-2"
         style={{ borderColor: "var(--line-soft)" }}
       >
-        <span className="mono text-[13px] font-bold">{mode.mode_id}</span>
+        <span className="mono text-[12px] font-bold">{mode.mode_id}</span>
         <span className="text-[12px]" style={{ color: "var(--ink-soft)" }}>
           {mode.display_name}
         </span>
-        <span className="ml-auto flex flex-wrap gap-1">
-          {mode.valid_schedules.map((schedule) => (
-            <span
-              key={schedule}
-              className="mono rounded-[3px] border px-[5px] text-[9px] leading-[15px]"
-              style={{
-                borderColor: schedule === mode.default_schedule ? "var(--accent)" : "var(--line)",
-                color: schedule === mode.default_schedule ? "var(--accent)" : "var(--ink-faint)",
-              }}
-            >
-              {schedule}
-            </span>
-          ))}
+        <span className="ml-auto flex flex-wrap gap-1" role="group" aria-label={`${mode.mode_id} schedules`}>
+          {ENGINE_SCHEDULES.map((candidate) => {
+            const valid = mode.valid_schedules.includes(candidate);
+            const selected = valid && candidate === schedule;
+            return valid ? (
+              <button
+                key={candidate}
+                type="button"
+                aria-pressed={selected}
+                data-schedule={candidate}
+                onClick={() => onSchedule(candidate)}
+                className="mono rounded-[3px] border px-[6px] text-[9.5px] leading-[17px]"
+                style={{
+                  borderColor: selected ? "var(--accent)" : "var(--line)",
+                  background: selected ? "var(--accent-soft)" : "var(--paper-raised)",
+                  color: selected ? "var(--accent)" : "var(--ink-soft)",
+                }}
+              >
+                {candidate}
+                {candidate === mode.default_schedule ? " · default" : ""}
+              </button>
+            ) : (
+              /* Invalid schedules are struck through with the reason, never hidden. */
+              <span
+                key={candidate}
+                data-schedule-invalid={candidate}
+                title="Not in this mode's valid schedules in the installed release manifest."
+                className="mono rounded-[3px] border border-dashed px-[6px] text-[9.5px] leading-[17px] line-through"
+                style={{ borderColor: "var(--line)", color: "var(--ink-faint)" }}
+              >
+                {candidate}
+              </span>
+            );
+          })}
         </span>
       </header>
 
-      <div className="flex flex-wrap gap-4.5 pt-2.5">
-        <div className="flex min-w-[300px] flex-[1.1] flex-col gap-1.5">
-          <span
-            className="mono text-[10px] uppercase tracking-[.07em]"
-            style={{ color: "var(--ink-faint)" }}
-          >
+      <div className="flex flex-wrap gap-4 pt-2.5">
+        <div className="flex min-w-[280px] flex-[1.1] flex-col gap-2.5">
+          <span className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+            claim · {mode.mode_id} × {schedule}
+          </span>
+          {fact ? (
+            <ScheduleClaim fact={fact} />
+          ) : (
+            <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-facts-unpublished>
+              This manifest publishes no engine facts for this mode × schedule.
+            </span>
+          )}
+          <span className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
             objective
           </span>
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
             {mode.objective_summary}
           </span>
+          {facts ? <ObjectiveBlock facts={facts} /> : null}
+          {facts && isPublished<AtlasReadsFact>(facts.reads) ? (
+            <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-reads>
+              reads {facts.reads.selection_inputs.join(" · ")} · retains {facts.reads.retention}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex min-w-[260px] flex-1 flex-col gap-2">
+          {/* The failure signature, from the manifest, never paraphrased. */}
+          <div className="border-l-2 pl-2" style={{ borderColor: "var(--bad)" }}>
+            <span
+              className="mono block text-[8.5px] font-bold uppercase tracking-[.08em]"
+              style={{ color: "var(--bad)" }}
+            >
+              suspect
+            </span>
+            <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-suspect>
+              {mode.suspect}
+            </span>
+          </div>
           {mode.artifact_fields.length > 0 ? (
             <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
               artifacts: {mode.artifact_fields.join(" · ")}
             </span>
           ) : null}
-        </div>
-
-        <div className="flex min-w-[280px] flex-1 flex-col gap-2">
-          {/* The failure signature. Verbatim from the engine docs, never paraphrased. */}
-          <div
-            className="border-l-2 pl-2"
-            style={{ borderColor: "var(--ink-soft)" }}
-          >
-            <span
-              className="mono block text-[8.5px] font-bold uppercase tracking-[.08em]"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              suspect
-            </span>
-            <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-              {mode.suspect}
-            </span>
-          </div>
-
           {mode.when_to_use ? (
             <span className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
               {mode.when_to_use}
             </span>
           ) : null}
-
           {mode.rules.map((rule, index) => (
-            <span
-              key={index}
-              className="text-[10.5px] leading-[1.55]"
-              style={{ color: "var(--ink-soft)" }}
-            >
+            <span key={index} className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
               {rule}
             </span>
           ))}
+          {runId ? (
+            <Link
+              to={`/research/quantbt/runs/${encodeURIComponent(runId)}/search#${encodeInspectionCursor({ stage: "search", mode: mode.mode_id, schedule })}`}
+              className="mono self-start text-[10px] font-semibold uppercase tracking-[.06em]"
+              style={{ color: "var(--accent)" }}
+              data-open-search={mode.mode_id}
+            >
+              open search &amp; selection →
+            </Link>
+          ) : (
+            <Link
+              to={`/research/quantbt/runs?mode=${encodeURIComponent(mode.mode_id)}`}
+              className="mono self-start text-[10px] font-semibold uppercase tracking-[.06em]"
+              style={{ color: "var(--accent)" }}
+              data-find-runs={mode.mode_id}
+            >
+              find runs in this mode →
+            </Link>
+          )}
         </div>
       </div>
     </article>
   );
 }
 
-function ModesTab({ doc }: { doc: AtlasDocument }) {
+function ModeTable({ modes }: { modes: readonly AtlasMode[] }) {
+  return (
+    <div className="overflow-x-auto rounded-[6px] border" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-mode-table>
+      <div className="border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
+        <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          when to reach for which mode
+        </span>
+      </div>
+      <table className="w-full border-collapse text-[12px]">
+        <thead>
+          <tr className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+            <th className="px-3 py-1.5 text-left font-normal">mode</th>
+            <th className="px-3 py-1.5 text-left font-normal">use when</th>
+            <th className="px-3 py-1.5 text-left font-normal">avoid when</th>
+          </tr>
+        </thead>
+        <tbody>
+          {modes.map((mode) => (
+            <tr key={mode.mode_id} className="border-t" style={{ borderColor: "var(--line-soft)" }} data-mode-row={mode.mode_id}>
+              <td className="mono px-3 py-[7px] align-top" style={{ width: 190 }}>{mode.mode_id}</td>
+              <td className="px-3 py-[7px] align-top" style={{ color: "var(--ink-soft)" }}>{mode.when_to_use}</td>
+              <td className="px-3 py-[7px] align-top">
+                {mode.facts ? (
+                  <NotPublished fact={mode.facts.avoid_when} label={`avoid_when:${mode.mode_id}`} />
+                ) : (
+                  <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>not published</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ModesTab({
+  doc,
+  schedules,
+  onSchedule,
+  runId,
+}: {
+  doc: AtlasDocument;
+  schedules: Readonly<Record<string, string>>;
+  onSchedule: (modeId: string, schedule: string) => void;
+  runId: string | null;
+}) {
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-wrap gap-3.5">
+        {/* Q4 / D-4: gold, as the HiFi has it — a claim warning, not an accent. */}
         <div
-          className="flex min-w-[420px] flex-[1.4] items-start gap-3 rounded-[6px] border px-3.5 py-2.5"
-          style={{ borderColor: "var(--accent-strong)", background: "var(--accent-soft)" }}
+          className="flex min-w-[min(420px,100%)] flex-[1.4] items-start gap-3 rounded-[6px] border px-3.5 py-2.5"
+          style={{ borderColor: "var(--accent-2)", background: "var(--accent-2-soft)" }}
+          data-rule-one
         >
           <span
             className="mono flex-none text-[10px] font-bold uppercase tracking-[.1em]"
-            style={{ color: "var(--accent-strong)" }}
+            style={{ color: "var(--accent-2)" }}
           >
             rule one
           </span>
-          <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--accent-strong)" }}>
+          <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--accent-2)" }}>
             The claim comes from <span className="mono">mode × schedule</span>, never from the mode
-            alone.
+            alone. <span className="mono">mode_1_decay + per_fold_causal</span> is strict outer OOS;
+            the same mode with <span className="mono">per_fold_decay</span> is selection-adjusted.
+            Click the schedule chips below and watch the claim change.
           </span>
         </div>
         <div
-          className="flex min-w-[360px] flex-1 items-start gap-3 rounded-[6px] border px-3.5 py-2.5"
+          className="flex min-w-[min(360px,100%)] flex-1 items-start gap-3 rounded-[6px] border px-3.5 py-2.5"
           style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
         >
           <span
@@ -420,15 +669,147 @@ function ModesTab({ doc }: { doc: AtlasDocument }) {
       </div>
 
       {doc.modes.map((mode) => (
-        <ModeCard key={mode.mode_id} mode={mode} />
+        <ModeCard
+          key={mode.mode_id}
+          mode={mode}
+          schedule={
+            schedules[mode.mode_id] && mode.valid_schedules.includes(schedules[mode.mode_id]!)
+              ? schedules[mode.mode_id]!
+              : mode.default_schedule
+          }
+          onSchedule={(schedule) => onSchedule(mode.mode_id, schedule)}
+          runId={runId}
+        />
       ))}
+
+      <ModeTable modes={doc.modes} />
+
+      <div className="flex flex-col gap-1" data-screen-rules>
+        <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          rules of this screen
+        </span>
+        <p className="text-[10.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
+          Claim strings are the engine&rsquo;s, rendered verbatim from the mode × schedule matrix —
+          the UI never composes its own. Invalid schedules render struck-through with the reason,
+          never hidden. A real run locks mode and schedule at submit; this atlas exists so nobody
+          learns that the hard way.
+        </p>
+      </div>
     </div>
   );
 }
 
 /* -------------------------------------------------------------------------
+ * Release facts
+ * ---------------------------------------------------------------------- */
+
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="contents">
+      <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>{label}</dt>
+      <dd className="mono text-[10.5px]">{children}</dd>
+    </div>
+  );
+}
+
+/**
+ * The published facts of the selected release (audit F-09): what a researcher
+ * needs before declaring a run, from the same read — trial ceiling, native
+ * package, submission constraints, locked defaults and walk-forward values.
+ */
+function ReleaseFacts({ release }: { release: CurrentRelease }) {
+  const options = release.walk_forward_options ?? null;
+  return (
+    <details className="rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }} data-release-facts>
+      <summary className="mono cursor-pointer text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        release facts · {release.release_id}
+      </summary>
+      <div className="flex flex-wrap gap-x-8 gap-y-3 pt-2">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <Fact label="package">{release.package} · expected {release.expected_version}</Fact>
+          <Fact label="native">
+            {release.native_package ? `${release.native_package} · expected ${release.native_expected_version ?? "not declared"}` : "none declared"}
+          </Fact>
+          <Fact label="trial ceiling">{release.trial_ceiling}</Fact>
+          <Fact label="profile">{release.submission_constraints.profile_id}</Fact>
+          <Fact label="overrides">{release.submission_constraints.optimization_overrides}</Fact>
+          <Fact label="trials accepted">{release.submission_constraints.accepted_trial_count}</Fact>
+          <Fact label="early stopping">{release.submission_constraints.early_stopping}</Fact>
+          <Fact label="random seed">{release.submission_constraints.random_seed}</Fact>
+          {release.config_digest ? <Fact label="config digest">{release.config_digest}</Fact> : null}
+        </dl>
+        <div className="flex min-w-[260px] flex-1 flex-col gap-1">
+          {release.optimizer_defaults.groups.map((group) => (
+            <span key={group.group_id} className="mono text-[10px] leading-[1.6]" data-default-group={group.group_id}>
+              <span style={{ color: "var(--ink-faint)" }}>{group.group_id}</span>{" "}
+              {group.fields.map((field) => (
+                <span key={field.field_id} title={field.detail}>
+                  {field.field_id}={Array.isArray(field.default_value) ? field.default_value.join(",") : String(field.default_value)}
+                  <span style={{ color: "var(--ink-faint)" }}> {field.override_state.toLowerCase()} </span>
+                </span>
+              ))}
+            </span>
+          ))}
+          {options ? (
+            <span className="mono text-[10px] leading-[1.6]" data-walk-forward-options>
+              <span style={{ color: "var(--ink-faint)" }}>walk-forward</span>{" "}
+              frequency {options.frequency.filter((item) => item.admission === "ADMITTED").map((item) => item.value).join("/")} (default {options.frequency_default}) · window{" "}
+              {options.window_mode.map((item) => `${item.value}${item.admission === "ADMITTED" ? "" : " (not admitted)"}`).join("/")}
+            </span>
+          ) : null}
+          <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+            {release.submission_constraints.reason}
+          </span>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+/* -------------------------------------------------------------------------
+ * Location (hash)
+ * ---------------------------------------------------------------------- */
+
+/** Spec 12 §1: the hash carries tab, mode, route — plus the schedule and the run it came from. */
+export interface AtlasLocation {
+  tab: AtlasTab;
+  mode: string | null;
+  schedule: string | null;
+  route: string | null;
+  run: string | null;
+}
+
+const HASH_VALUE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/;
+
+export function atlasLocationFromHash(hash: string): AtlasLocation {
+  const params = new URLSearchParams(hash.replace(/^#/, ""));
+  const read = (key: string) => {
+    const value = params.get(key);
+    return value !== null && HASH_VALUE.test(value) ? value : null;
+  };
+  return { tab: tabFromHash(hash), mode: read("mode"), schedule: read("schedule"), route: read("route"), run: read("run") };
+}
+
+export function atlasHash(location: AtlasLocation): string {
+  const params = new URLSearchParams();
+  params.set("tab", location.tab);
+  for (const key of ["mode", "schedule", "route", "run"] as const) {
+    const value = location[key];
+    if (value) params.set(key, value);
+  }
+  return `#${params.toString()}`;
+}
+
+/* -------------------------------------------------------------------------
  * Screen
  * ---------------------------------------------------------------------- */
+
+/** Spec 12 §1 and the HiFi's tab labels, verbatim. */
+const TAB_LABEL: Record<AtlasTab, string> = {
+  modes: "WFO modes",
+  routes: "Execution routes",
+  claims: "Claims by contract",
+};
 
 export interface EngineAtlasProps {
   /** The published document, or null when it is not available. */
@@ -445,6 +826,9 @@ export interface EngineAtlasProps {
    */
   selectedReleaseId?: string | null;
   selectedReleaseKind?: "CURRENT" | "HISTORICAL" | null;
+  /** RF02-F1: the rest of the hash — mode, schedule, route and the run it came from. */
+  location?: Omit<AtlasLocation, "tab">;
+  onLocationChange?: (change: Partial<Omit<AtlasLocation, "tab">>) => void;
 }
 
 export function EngineAtlas({
@@ -454,9 +838,21 @@ export function EngineAtlas({
   onTabChange,
   selectedReleaseId = null,
   selectedReleaseKind = null,
+  location = { mode: null, schedule: null, route: null, run: null },
+  onLocationChange,
 }: EngineAtlasProps) {
   const release = doc ? currentReleaseLabel(doc.current_release) : null;
   const history = doc ? historicalReleaseLabels(doc) : [];
+  const [schedules, setSchedules] = useState<Record<string, string>>(() =>
+    location.mode && location.schedule ? { [location.mode]: location.schedule } : {},
+  );
+  const onSchedule = useCallback(
+    (modeId: string, schedule: string) => {
+      setSchedules((previous) => ({ ...previous, [modeId]: schedule }));
+      onLocationChange?.({ mode: modeId, schedule });
+    },
+    [onLocationChange],
+  );
 
   return (
     <div
@@ -469,6 +865,21 @@ export function EngineAtlas({
         style={{ borderColor: "var(--line)" }}
       >
         <div className="flex flex-col gap-[3px]">
+          <nav className="flex items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" data-breadcrumb>
+            {location.run ? (
+              <Link to={`/research/quantbt/runs/${encodeURIComponent(location.run)}/evidence`} style={{ color: "var(--accent)" }}>
+                Evidence Flow
+              </Link>
+            ) : (
+              /* Without a run there is no Evidence Flow to return to; the
+                 crumb says where the Atlas sits without pretending to link. */
+              <span style={{ color: "var(--ink-soft)" }} title="Open the Atlas from a run's Evidence Flow to link back to it.">
+                Evidence Flow
+              </span>
+            )}
+            <span style={{ color: "var(--ink-faint)" }}>/</span>
+            <span style={{ color: "var(--ink)" }}>Engine Atlas</span>
+          </nav>
           <h1
             className="text-[22px] font-light tracking-[-.01em]"
             style={{ fontFamily: "Newsreader, Georgia, serif" }}
@@ -480,6 +891,7 @@ export function EngineAtlas({
             style={{ fontFamily: "Newsreader, Georgia, serif", color: "var(--ink-faint)" }}
           >
             Reference, not a stage — modes, execution routes, and what each contract may claim.
+            {doc ? ` Read from ${doc.current_release.release_id}.` : ""}
           </p>
         </div>
 
@@ -533,6 +945,11 @@ export function EngineAtlas({
         ) : null}
       </header>
 
+      {/* A pre-P10 document carries no release facts; nothing is drawn for it. */}
+      {doc?.current_release.submission_constraints && doc.current_release.optimizer_defaults ? (
+        <ReleaseFacts release={doc.current_release} />
+      ) : null}
+
       <div
         className="flex gap-1 self-start rounded-[6px] border p-[5px]"
         style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
@@ -549,13 +966,13 @@ export function EngineAtlas({
               aria-selected={selected}
               data-tab={candidate}
               onClick={() => onTabChange(candidate)}
-              className="mono rounded-[4px] px-2.5 py-1 text-[10px] uppercase tracking-[.06em]"
+              className="rounded-[5px] px-3.5 py-[5px] text-[11.5px] font-medium"
               style={{
-                background: selected ? "var(--accent)" : "transparent",
-                color: selected ? "var(--accent-contrast)" : "var(--ink-soft)",
+                background: selected ? "var(--accent-soft)" : "transparent",
+                color: selected ? "var(--accent)" : "var(--ink-soft)",
               }}
             >
-              {candidate}
+              {TAB_LABEL[candidate]}
             </button>
           );
         })}
@@ -568,10 +985,18 @@ export function EngineAtlas({
         minBodyHeight={160}
       >
         {doc ? (
-          <div role="tabpanel" aria-label={tab}>
-            {tab === "routes" ? <RoutesTab doc={doc} /> : null}
+          <div role="tabpanel" aria-label={TAB_LABEL[tab]}>
+            {tab === "routes" ? (
+              <RoutesTab
+                doc={doc}
+                selectedRoute={location.route}
+                onRoute={(route) => onLocationChange?.({ route })}
+              />
+            ) : null}
             {tab === "claims" ? <ClaimsTab doc={doc} /> : null}
-            {tab === "modes" ? <ModesTab doc={doc} /> : null}
+            {tab === "modes" ? (
+              <ModesTab doc={doc} schedules={schedules} onSchedule={onSchedule} runId={location.run} />
+            ) : null}
           </div>
         ) : null}
       </ResearchPanel>
