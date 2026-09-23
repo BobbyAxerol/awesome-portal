@@ -5,29 +5,107 @@
     "version": "1.0.0",
     "description": "P09 same-origin, read-only Journey and Engine Atlas contracts. Browser consumers receive only bounded descriptor and manifest facts. They never receive private Portal URLs, internal principals, engine handles, worker controls, raw source bytes, market rows or a dispatch surface."
   },
-  "servers": [{ "url": "/" }],
-  "security": [{ "portalSession": [] }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
   "paths": {
     "/api/v1/research/journey": {
       "get": {
         "operationId": "researchJourneyGetV1",
         "summary": "Read the pinned Research Journey descriptor and P02 inspection cursor",
         "parameters": [
-          { "$ref": "#/components/parameters/WorkspaceId" },
-          { "$ref": "#/components/parameters/RunId" },
-          { "$ref": "#/components/parameters/Stage" }, { "$ref": "#/components/parameters/Fold" }, { "$ref": "#/components/parameters/Study" },
-          { "$ref": "#/components/parameters/Trial" }, { "$ref": "#/components/parameters/Pick" },
-          { "$ref": "#/components/parameters/Params" }, { "$ref": "#/components/parameters/Trade" },
-          { "$ref": "#/components/parameters/Seq" }, { "$ref": "#/components/parameters/EventSeq" },
-          { "$ref": "#/components/parameters/Mode" }, { "$ref": "#/components/parameters/Schedule" },
-          { "$ref": "#/components/parameters/Route" }, { "$ref": "#/components/parameters/PlaybackOrdinal" }
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/RunId"
+          },
+          {
+            "$ref": "#/components/parameters/Stage"
+          },
+          {
+            "$ref": "#/components/parameters/Fold"
+          },
+          {
+            "$ref": "#/components/parameters/Study"
+          },
+          {
+            "$ref": "#/components/parameters/Trial"
+          },
+          {
+            "$ref": "#/components/parameters/Pick"
+          },
+          {
+            "$ref": "#/components/parameters/Params"
+          },
+          {
+            "$ref": "#/components/parameters/Trade"
+          },
+          {
+            "$ref": "#/components/parameters/Seq"
+          },
+          {
+            "$ref": "#/components/parameters/EventSeq"
+          },
+          {
+            "$ref": "#/components/parameters/Mode"
+          },
+          {
+            "$ref": "#/components/parameters/Schedule"
+          },
+          {
+            "$ref": "#/components/parameters/Route"
+          },
+          {
+            "$ref": "#/components/parameters/PlaybackOrdinal"
+          }
         ],
         "responses": {
-          "200": { "description": "Pinned descriptor and canonical inspection state", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JourneyResponse" } } } },
-          "304": { "description": "The private descriptor representation has not changed", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } } },
-          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" },
-          "404": { "$ref": "#/components/responses/Problem" }, "409": { "$ref": "#/components/responses/Problem" },
-          "503": { "$ref": "#/components/responses/Problem" }
+          "200": {
+            "description": "Pinned descriptor and canonical inspection state",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The private descriptor representation has not changed",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -36,73 +114,1736 @@
         "operationId": "researchEngineAtlasGetV1",
         "summary": "Read the current or retained historical Engine Atlas manifest",
         "parameters": [
-          { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/ReleaseId" },
-          { "$ref": "#/components/parameters/Route" }, { "$ref": "#/components/parameters/Mode" }
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/ReleaseId"
+          },
+          {
+            "$ref": "#/components/parameters/Route"
+          },
+          {
+            "$ref": "#/components/parameters/Mode"
+          }
         ],
         "responses": {
-          "200": { "description": "Manifest-selected Engine Atlas facts", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AtlasResponse" } } } },
-          "304": { "description": "The private Atlas representation has not changed", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } } },
-          "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" },
-          "404": { "$ref": "#/components/responses/Problem" }, "502": { "$ref": "#/components/responses/Problem" },
-          "503": { "$ref": "#/components/responses/Problem" }
+          "200": {
+            "description": "Manifest-selected Engine Atlas facts",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AtlasResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The private Atlas representation has not changed",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "502": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     }
   },
   "components": {
-    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
-    "headers": { "ETag": { "description": "Private, representation-specific validator; never a permission or source cursor.", "schema": { "type": "string", "maxLength": 128 } } },
-    "parameters": {
-      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
-      "RunId": { "name": "run_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "ReleaseId": { "name": "release_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Stage": { "name": "stage", "in": "query", "required": false, "description": "p02-cursor.v2 presentation-only key: the open evidence tab. It never selects, filters or authorizes a resource.", "schema": { "$ref": "#/components/schemas/CursorStage" } },
-      "Fold": { "name": "fold", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Study": { "name": "study", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Trial": { "name": "trial", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Pick": { "name": "pick", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Params": { "name": "params", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Trade": { "name": "trade", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Seq": { "name": "seq", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "EventSeq": { "name": "event_seq", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Mode": { "name": "mode", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Schedule": { "name": "schedule", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "Route": { "name": "route", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
-      "PlaybackOrdinal": { "name": "playback_ordinal", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } }
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
     },
-    "responses": { "Problem": { "description": "Typed same-origin refusal; no private source/transport/worker fact is disclosed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } },
+    "headers": {
+      "ETag": {
+        "description": "Private, representation-specific validator; never a permission or source cursor.",
+        "schema": {
+          "type": "string",
+          "maxLength": 128
+        }
+      }
+    },
+    "parameters": {
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/WorkspaceId"
+        }
+      },
+      "RunId": {
+        "name": "run_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "ReleaseId": {
+        "name": "release_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Stage": {
+        "name": "stage",
+        "in": "query",
+        "required": false,
+        "description": "p02-cursor.v2 presentation-only key: the open evidence tab. It never selects, filters or authorizes a resource.",
+        "schema": {
+          "$ref": "#/components/schemas/CursorStage"
+        }
+      },
+      "Fold": {
+        "name": "fold",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Study": {
+        "name": "study",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Trial": {
+        "name": "trial",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Pick": {
+        "name": "pick",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Params": {
+        "name": "params",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Trade": {
+        "name": "trade",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Seq": {
+        "name": "seq",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "EventSeq": {
+        "name": "event_seq",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Mode": {
+        "name": "mode",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Schedule": {
+        "name": "schedule",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "Route": {
+        "name": "route",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "PlaybackOrdinal": {
+        "name": "playback_ordinal",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed same-origin refusal; no private source/transport/worker fact is disclosed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
     "schemas": {
-      "WorkspaceId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
-      "Identifier": { "type": "string", "minLength": 1, "maxLength": 191, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$" },
-      "CursorStage": { "enum": ["summary",  "split",  "search",  "freeze",  "execute",  "claim",  "atlas"] },
-      "JourneyCard": { "type": "object", "additionalProperties": false, "required": ["card_id", "title", "description", "target_kind", "target_key", "availability"], "properties": { "card_id": { "$ref": "#/components/schemas/Identifier" }, "title": { "type": "string", "maxLength": 191 }, "description": { "type": "string", "maxLength": 1024 }, "target_kind": { "enum": ["SHIPPED", "RESEARCH_SCREEN", "EXECUTION_HANDOFF"] }, "target_key": { "$ref": "#/components/schemas/Identifier" }, "availability": { "enum": ["AVAILABLE", "PLANNED", "DEPENDENCY_REQUIRED"] } } },
-      "JourneyPhase": { "type": "object", "additionalProperties": false, "required": ["phase_id", "ordinal", "title", "description", "cards"], "properties": { "phase_id": { "$ref": "#/components/schemas/Identifier" }, "ordinal": { "type": "integer", "minimum": 1, "maximum": 24 }, "title": { "type": "string", "maxLength": 191 }, "description": { "type": "string", "maxLength": 1024 }, "cards": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/components/schemas/JourneyCard" } } } },
-      "JourneyDescriptor": { "type": "object", "additionalProperties": false, "required": ["schema_version", "descriptor_id", "revision", "content_sha256", "phases"], "properties": { "schema_version": { "const": "research.journey.v1" }, "descriptor_id": { "const": "quantbt_journey" }, "revision": { "const": 1 }, "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "phases": { "type": "array", "minItems": 8, "maxItems": 8, "items": { "$ref": "#/components/schemas/JourneyPhase" } } } },
-      "InspectionCursor": { "type": "object", "additionalProperties": false, "required": ["cursor", "canonical_query", "pick_effect", "ambiguity_state"], "properties": { "cursor": { "type": "object", "additionalProperties": false, "properties": { "stage": { "$ref": "#/components/schemas/CursorStage" }, "fold": { "$ref": "#/components/schemas/Identifier" }, "study": { "$ref": "#/components/schemas/Identifier" }, "trial": { "$ref": "#/components/schemas/Identifier" }, "pick": { "$ref": "#/components/schemas/Identifier" }, "params": { "$ref": "#/components/schemas/Identifier" }, "trade": { "$ref": "#/components/schemas/Identifier" }, "seq": { "$ref": "#/components/schemas/Identifier" }, "mode": { "$ref": "#/components/schemas/Identifier" }, "schedule": { "$ref": "#/components/schemas/Identifier" }, "route": { "$ref": "#/components/schemas/Identifier" }, "playback_ordinal": { "$ref": "#/components/schemas/Identifier" } } }, "codec": { "const": "p02-cursor.v2", "description": "RF01-B4. Optional for clients deployed before the v2 codec; the server emits it on every read." }, "canonical_query": { "type": "string", "maxLength": 4096 }, "pick_effect": { "const": "INSPECTION_ONLY" }, "ambiguity_state": { "enum": ["NOT_APPLICABLE", "RESOLVED", "UNRESOLVED_NO_RUN_CONTEXT"] } } },
-      "JourneyResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "descriptor", "inspection", "etag"], "properties": { "schema_version": { "const": "research.journey-response.v1" }, "descriptor": { "$ref": "#/components/schemas/JourneyDescriptor" }, "inspection": { "$ref": "#/components/schemas/InspectionCursor" }, "etag": { "type": "string", "maxLength": 128 } } },
-      "CapabilityAxes": { "description": "Exact P04 capability-axis vocabulary. P09 deliberately mirrors it rather than widening any manifest fact.", "type": "object", "additionalProperties": false, "required": ["engine", "integration", "evidence", "admission"], "properties": { "engine": { "enum": ["ENGINE_SUPPORTED", "ENGINE_PARTIAL", "ENGINE_DEFERRED"] }, "integration": { "enum": ["ADAPTER_AVAILABLE", "INTEGRATION_GAP", "DEFERRED_BY_PORTAL"] }, "evidence": { "enum": ["EVIDENCE_MAPPED", "EVIDENCE_GAP", "NOT_APPLICABLE"] }, "admission": { "enum": ["P04_BASELINE_ONLY", "NOT_ADMITTED", "DEFERRED"] } } },
-      "ClaimDescriptor": { "description": "Exact P04 manifest claim descriptor; it is descriptive and does not authorize a run.", "type": "object", "additionalProperties": false, "required": ["contract_id", "engine_certification", "numeric_guarantee", "never_claims"], "properties": { "contract_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$" }, "engine_certification": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,63}$" }, "numeric_guarantee": { "type": "string", "minLength": 1, "maxLength": 400 }, "never_claims": { "type": "string", "minLength": 1, "maxLength": 500 } } },
-      "EvidenceContract": { "description": "Exact P04 declared evidence envelope. P09 publishes declaration only; it neither writes evidence nor exposes a worker control.", "type": "object", "additionalProperties": false, "required": ["schema_id", "required_fields", "writer_state"], "properties": { "schema_id": { "const": "research-run-evidence.v1" }, "required_fields": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": { "enum": ["engine_release_id", "route_id", "effective_spec_digest", "market_data_content_hash", "report_level", "selection_resolution", "result_summary"] } }, "writer_state": { "const": "P05_OWNED_NOT_ACTIVE" } } },
-      "AtlasRoute": { "type": "object", "additionalProperties": false, "required": ["route_id", "family", "execution_contract", "backend", "report_levels", "default_for_new_runs", "axes", "reason", "required_input_class"], "properties": { "route_id": { "$ref": "#/components/schemas/Identifier" }, "family": { "type": "string", "maxLength": 128 }, "execution_contract": { "type": "string", "maxLength": 191 }, "backend": { "type": "string", "maxLength": 191 }, "report_levels": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "maxLength": 64 } }, "default_for_new_runs": { "type": "boolean" }, "axes": { "$ref": "#/components/schemas/CapabilityAxes" }, "reason": { "type": "string", "maxLength": 1024 }, "required_input_class": { "type": "string", "maxLength": 191 } } },
-      "AtlasSourceLocator": { "type": "object", "additionalProperties": false, "required": ["path", "lines", "sha256", "anchor"], "description": "Where a fact is stated in the pinned engine package: file, line range, the file digest carried by the wheel RECORD, and a string that occurs in that range.", "properties": { "path": { "type": "string", "pattern": "^quantbt/[A-Za-z0-9_./-]{1,200}\\.py$" }, "lines": { "type": "string", "pattern": "^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$" }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "anchor": { "type": "string", "minLength": 1, "maxLength": 200 } } },
-      "AtlasNotPublishedFact": { "type": "object", "additionalProperties": false, "required": ["state", "reason"], "properties": { "state": { "const": "NOT_PUBLISHED" }, "reason": { "type": "string", "minLength": 1, "maxLength": 400 }, "source": { "anyOf": [{ "$ref": "#/components/schemas/AtlasSourceLocator" }, { "type": "null" }] } } },
-      "AtlasScheduleFact": { "type": "object", "additionalProperties": false, "required": ["schedule", "validation_claim", "chronological_validation_claim", "causality_claim", "causality_schedule_v2", "oos_use", "params_semantics", "cert_cap", "source"], "properties": { "schedule": { "enum": ["global", "per_fold_decay", "per_fold_causal"] }, "validation_claim": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$" }, "chronological_validation_claim": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$" }, "causality_claim": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$" }, "causality_schedule_v2": { "enum": ["retrospective_global_v2", "trusted_strategy_global_v2", "engine_enforced_per_fold_v2", "engine_enforced_nested_v2"] }, "oos_use": { "enum": ["USED", "NOT_USED"] }, "oos_use_condition": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 300 }, { "type": "null" }] }, "params_semantics": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$" }, "cert_cap": { "$ref": "#/components/schemas/AtlasNotPublishedFact" }, "source": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "$ref": "#/components/schemas/AtlasSourceLocator" } } } },
-      "AtlasObjectiveFact": { "type": "object", "additionalProperties": false, "required": ["state", "direction", "selection_metrics", "stages", "coefficients", "source"], "properties": { "state": { "const": "PUBLISHED" }, "direction": { "enum": ["maximize", "minimize"] }, "selection_metrics": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "type": "string", "minLength": 1, "maxLength": 80 } }, "stages": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "object", "additionalProperties": false, "required": ["stage", "formula_id", "formula"], "properties": { "stage": { "enum": ["is_search", "oos_candidate_selection", "fixed_or_post_selection_evaluation"] }, "formula_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$" }, "formula": { "type": "string", "minLength": 1, "maxLength": 300 } } } }, "coefficients": { "type": "array", "maxItems": 8, "items": { "type": "object", "additionalProperties": false, "required": ["name"], "properties": { "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$" }, "release_default": { "anyOf": [{ "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }, { "type": "null" }], "description": "Exact decimal string; null when the release leaves it unset." }, "note": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 200 }, { "type": "null" }] } } } }, "note": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 300 }, { "type": "null" }] }, "source": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "$ref": "#/components/schemas/AtlasSourceLocator" } } } },
-      "AtlasReadsFact": { "type": "object", "additionalProperties": false, "required": ["state", "selection_inputs", "retention", "source"], "properties": { "state": { "const": "PUBLISHED" }, "selection_inputs": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "type": "string", "minLength": 1, "maxLength": 80 } }, "retention": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,119}$" }, "source": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "$ref": "#/components/schemas/AtlasSourceLocator" } } } },
-      "AtlasModeFacts": { "type": "object", "additionalProperties": false, "required": ["source_release_id", "schedules", "objective", "reads", "avoid_when"], "properties": { "source_release_id": { "type": "string", "pattern": "^er_[a-z0-9_]{1,40}$" }, "schedules": { "type": "array", "minItems": 1, "maxItems": 3, "items": { "$ref": "#/components/schemas/AtlasScheduleFact" } }, "objective": { "oneOf": [{ "$ref": "#/components/schemas/AtlasObjectiveFact" }, { "$ref": "#/components/schemas/AtlasNotPublishedFact" }] }, "reads": { "oneOf": [{ "$ref": "#/components/schemas/AtlasReadsFact" }, { "$ref": "#/components/schemas/AtlasNotPublishedFact" }] }, "avoid_when": { "$ref": "#/components/schemas/AtlasNotPublishedFact" } } },
-      "AtlasMode": { "type": "object", "additionalProperties": false, "required": ["mode_id", "display_name", "valid_schedules", "default_schedule", "objective_summary", "suspect", "artifact_fields", "when_to_use", "rules"], "properties": { "mode_id": { "$ref": "#/components/schemas/Identifier" }, "display_name": { "type": "string", "maxLength": 191 }, "valid_schedules": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "maxLength": 191 } }, "default_schedule": { "type": "string", "maxLength": 191 }, "objective_summary": { "type": "string", "maxLength": 1024 }, "suspect": { "type": "string", "maxLength": 1024 }, "artifact_fields": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "maxLength": 191 } }, "when_to_use": { "type": "string", "maxLength": 1024 }, "rules": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "maxLength": 1024 } }, "facts": { "$ref": "#/components/schemas/AtlasModeFacts", "description": "RF02-B1. Per mode × schedule engine facts, each with a source locator in the pinned QuantBT release. Optional for a manifest written before the facts existed; a fact the source does not state is NOT_PUBLISHED with a reason." } } },
-      "AtlasOptimizerDefaultScalar": { "type": ["string", "number", "boolean", "null"] },
-      "AtlasOptimizerDefaultValue": { "anyOf": [{ "$ref": "#/components/schemas/AtlasOptimizerDefaultScalar" }, { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/components/schemas/AtlasOptimizerDefaultScalar" } }] },
-      "AtlasOptimizerDefaultField": { "type": "object", "additionalProperties": false, "required": ["field_id", "default_value", "value_source", "override_state", "detail"], "properties": { "field_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$" }, "default_value": { "$ref": "#/components/schemas/AtlasOptimizerDefaultValue" }, "value_source": { "const": "RELEASE_DEFAULT" }, "override_state": { "enum": ["LOCKED", "OVERRIDE_ALLOWED"] }, "detail": { "type": "string", "minLength": 1, "maxLength": 400 } } },
-      "AtlasOptimizerGroup": { "type": "object", "additionalProperties": false, "required": ["group_id", "fields"], "properties": { "group_id": { "enum": ["study", "sampler", "objective", "candidate_selection"] }, "fields": { "type": "array", "minItems": 1, "maxItems": 24, "items": { "$ref": "#/components/schemas/AtlasOptimizerDefaultField" } } } },
-      "AtlasOptimizerDefaults": { "type": "object", "additionalProperties": false, "required": ["schema_version", "groups"], "properties": { "schema_version": { "const": "research.optimizer-defaults.v1" }, "groups": { "type": "array", "minItems": 4, "maxItems": 4, "prefixItems": [{ "allOf": [{ "$ref": "#/components/schemas/AtlasOptimizerGroup" }, { "properties": { "group_id": { "const": "study" } } }] }, { "allOf": [{ "$ref": "#/components/schemas/AtlasOptimizerGroup" }, { "properties": { "group_id": { "const": "sampler" } } }] }, { "allOf": [{ "$ref": "#/components/schemas/AtlasOptimizerGroup" }, { "properties": { "group_id": { "const": "objective" } } }] }, { "allOf": [{ "$ref": "#/components/schemas/AtlasOptimizerGroup" }, { "properties": { "group_id": { "const": "candidate_selection" } } }] }], "items": false } } },
-      "AtlasSubmissionConstraints": { "type": "object", "additionalProperties": false, "required": ["profile_id", "optimization_overrides", "accepted_trial_count", "early_stopping", "random_seed", "reason"], "properties": { "profile_id": { "const": "p10.fixed-qualification.v1" }, "optimization_overrides": { "const": "FORBIDDEN" }, "accepted_trial_count": { "const": 1 }, "early_stopping": { "const": "MUST_BE_NULL" }, "random_seed": { "const": "MUST_BE_NULL" }, "reason": { "type": "string", "minLength": 1, "maxLength": 500 } } },
-      "AtlasWalkForwardOptions": { "type": "object", "additionalProperties": false, "required": ["schema_version", "frequency", "frequency_default", "window_mode", "window_mode_default", "split_mode_form", "split_mode_rule", "source"], "properties": { "schema_version": { "const": "research.walk-forward-options.v1" }, "frequency": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "type": "object", "additionalProperties": false, "required": ["value", "admission"], "properties": { "value": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$" }, "admission": { "enum": ["ADMITTED", "NOT_ADMITTED"] }, "reason": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 400 }, { "type": "null" }] } } } }, "frequency_default": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$" }, "window_mode": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "object", "additionalProperties": false, "required": ["value", "admission"], "properties": { "value": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$" }, "admission": { "enum": ["ADMITTED", "NOT_ADMITTED"] }, "reason": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 400 }, { "type": "null" }] } } } }, "window_mode_default": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$" }, "split_mode_form": { "const": "source_instant" }, "split_mode_rule": { "type": "string", "minLength": 1, "maxLength": 400 }, "source": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "$ref": "#/components/schemas/AtlasSourceLocator" } } } },
-      "AtlasRelease": { "type": "object", "additionalProperties": false, "required": ["release_id", "package", "expected_version", "verified", "trial_ceiling", "optimizer_defaults", "submission_constraints"], "properties": { "release_id": { "$ref": "#/components/schemas/Identifier" }, "package": { "type": "string", "maxLength": 191 }, "expected_version": { "type": "string", "maxLength": 191 }, "installed_version": { "type": ["string", "null"], "maxLength": 191 }, "native_package": { "type": ["string", "null"], "maxLength": 191 }, "native_expected_version": { "type": ["string", "null"], "maxLength": 191 }, "native_installed_version": { "type": ["string", "null"], "maxLength": 191 }, "verified": { "type": "boolean" }, "detail": { "type": ["string", "null"], "maxLength": 1024 }, "trial_ceiling": { "type": "integer", "minimum": 1, "maximum": 100000 }, "optimizer_defaults": { "$ref": "#/components/schemas/AtlasOptimizerDefaults" }, "submission_constraints": { "$ref": "#/components/schemas/AtlasSubmissionConstraints" }, "config_digest": { "anyOf": [{ "type": "string", "pattern": "^[0-9a-f]{64}$" }, { "type": "null" }], "description": "CG-P10-01. sha256 of the canonical browser-visible release configuration (release_id, trial_ceiling, optimizer_defaults, submission_constraints, walk_forward_options). A New Run form sends it unchanged as requested_spec.client.config_digest; the browser never computes it." }, "walk_forward_options": { "anyOf": [{ "$ref": "#/components/schemas/AtlasWalkForwardOptions" }, { "type": "null" }], "description": "RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed." } } },
-      "HistoricalRelease": { "type": "object", "additionalProperties": false, "required": ["release_id", "package", "version", "status"], "properties": { "release_id": { "$ref": "#/components/schemas/Identifier" }, "package": { "type": "string", "maxLength": 191 }, "version": { "type": "string", "maxLength": 191 }, "status": { "const": "HISTORICAL_IDENTITY_RETAINED" } } },
-      "Atlas": { "type": "object", "additionalProperties": false, "required": ["schema_version", "manifest_revision", "current_release", "historical_releases", "routes", "modes", "claims", "evidence_contract"], "properties": { "schema_version": { "const": "research-engine-atlas.v1" }, "manifest_revision": { "type": "integer", "minimum": 1 }, "current_release": { "$ref": "#/components/schemas/AtlasRelease" }, "historical_releases": { "type": "array", "maxItems": 8, "items": { "$ref": "#/components/schemas/HistoricalRelease" } }, "routes": { "type": "array", "minItems": 14, "maxItems": 14, "items": { "$ref": "#/components/schemas/AtlasRoute" } }, "modes": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/AtlasMode" } }, "claims": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "$ref": "#/components/schemas/ClaimDescriptor" } }, "evidence_contract": { "$ref": "#/components/schemas/EvidenceContract" } } },
-      "AtlasResponse": { "type": "object", "additionalProperties": false, "required": ["schema_version", "selected_release_id", "selected_release_kind", "atlas", "etag"], "properties": { "schema_version": { "const": "research.engine-atlas-response.v1" }, "selected_release_id": { "$ref": "#/components/schemas/Identifier" }, "selected_release_kind": { "enum": ["CURRENT", "HISTORICAL"] }, "atlas": { "$ref": "#/components/schemas/Atlas" }, "etag": { "type": "string", "maxLength": 128 } } },
-      "Problem": { "type": "object", "additionalProperties": false, "required": ["error", "request_id"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "enum": ["SESSION_REQUIRED", "REQUEST_REJECTED", "RESEARCH_FOUNDATION_INVALID", "RESEARCH_FOUNDATION_NOT_FOUND", "RESEARCH_FOUNDATION_CURSOR_STUDY_REQUIRED", "RESEARCH_FOUNDATION_DESCRIPTOR_MISMATCH", "RESEARCH_FOUNDATION_RELEASE_NOT_FOUND", "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND", "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND", "RESEARCH_FOUNDATION_UNAVAILABLE", "RESEARCH_FOUNDATION_REJECTED"] }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "minLength": 1, "maxLength": 128 } } }
+      "WorkspaceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9._-]{1,128}$"
+      },
+      "Identifier": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 191,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+      },
+      "CursorStage": {
+        "enum": [
+          "summary",
+          "split",
+          "search",
+          "freeze",
+          "execute",
+          "claim",
+          "atlas"
+        ]
+      },
+      "JourneyCard": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "card_id",
+          "title",
+          "description",
+          "target_kind",
+          "target_key",
+          "availability",
+          "requires_run",
+          "target_fragment"
+        ],
+        "properties": {
+          "card_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "target_kind": {
+            "enum": [
+              "SHIPPED",
+              "RESEARCH_SCREEN",
+              "EXECUTION_HANDOFF"
+            ]
+          },
+          "target_key": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "PLANNED",
+              "DEPENDENCY_REQUIRED"
+            ]
+          },
+          "requires_run": {
+            "type": "boolean"
+          },
+          "target_fragment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_=&.-]*$"
+          }
+        }
+      },
+      "JourneyPhase": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "phase_id",
+          "ordinal",
+          "title",
+          "description",
+          "cards"
+        ],
+        "properties": {
+          "phase_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "ordinal": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "cards": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/JourneyCard"
+            }
+          }
+        }
+      },
+      "JourneyMappingRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "shipped",
+          "shipped_target_key",
+          "mine",
+          "mine_target_key",
+          "adds"
+        ],
+        "properties": {
+          "shipped": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "shipped_target_key": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "mine": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "mine_target_key": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "adds": {
+            "type": "string",
+            "maxLength": 512
+          }
+        }
+      },
+      "JourneyDescriptor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "descriptor_id",
+          "revision",
+          "content_sha256",
+          "phases",
+          "mapping"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.journey.v1"
+          },
+          "descriptor_id": {
+            "const": "quantbt_journey"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "phases": {
+            "type": "array",
+            "minItems": 8,
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/components/schemas/JourneyPhase"
+            }
+          },
+          "mapping": {
+            "type": "array",
+            "minItems": 6,
+            "maxItems": 6,
+            "items": {
+              "$ref": "#/components/schemas/JourneyMappingRow"
+            }
+          }
+        }
+      },
+      "InspectionCursor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cursor",
+          "canonical_query",
+          "pick_effect",
+          "ambiguity_state"
+        ],
+        "properties": {
+          "cursor": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "stage": {
+                "$ref": "#/components/schemas/CursorStage"
+              },
+              "fold": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "study": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "trial": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "pick": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "params": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "trade": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "seq": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "mode": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "schedule": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "route": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "playback_ordinal": {
+                "$ref": "#/components/schemas/Identifier"
+              }
+            }
+          },
+          "codec": {
+            "const": "p02-cursor.v2",
+            "description": "RF01-B4. Optional for clients deployed before the v2 codec; the server emits it on every read."
+          },
+          "canonical_query": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "pick_effect": {
+            "const": "INSPECTION_ONLY"
+          },
+          "ambiguity_state": {
+            "enum": [
+              "NOT_APPLICABLE",
+              "RESOLVED",
+              "UNRESOLVED_NO_RUN_CONTEXT"
+            ]
+          }
+        }
+      },
+      "JourneyResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "descriptor",
+          "inspection",
+          "etag"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.journey-response.v1"
+          },
+          "descriptor": {
+            "$ref": "#/components/schemas/JourneyDescriptor"
+          },
+          "inspection": {
+            "$ref": "#/components/schemas/InspectionCursor"
+          },
+          "etag": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "CapabilityAxes": {
+        "description": "Exact P04 capability-axis vocabulary. P09 deliberately mirrors it rather than widening any manifest fact.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "engine",
+          "integration",
+          "evidence",
+          "admission"
+        ],
+        "properties": {
+          "engine": {
+            "enum": [
+              "ENGINE_SUPPORTED",
+              "ENGINE_PARTIAL",
+              "ENGINE_DEFERRED"
+            ]
+          },
+          "integration": {
+            "enum": [
+              "ADAPTER_AVAILABLE",
+              "INTEGRATION_GAP",
+              "DEFERRED_BY_PORTAL"
+            ]
+          },
+          "evidence": {
+            "enum": [
+              "EVIDENCE_MAPPED",
+              "EVIDENCE_GAP",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "admission": {
+            "enum": [
+              "P04_BASELINE_ONLY",
+              "NOT_ADMITTED",
+              "DEFERRED"
+            ]
+          }
+        }
+      },
+      "ClaimDescriptor": {
+        "description": "Exact P04 manifest claim descriptor; it is descriptive and does not authorize a run.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contract_id",
+          "engine_certification",
+          "numeric_guarantee",
+          "never_claims"
+        ],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$"
+          },
+          "engine_certification": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_-]{1,63}$"
+          },
+          "numeric_guarantee": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          },
+          "never_claims": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "EvidenceContract": {
+        "description": "Exact P04 declared evidence envelope. P09 publishes declaration only; it neither writes evidence nor exposes a worker control.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_id",
+          "required_fields",
+          "writer_state"
+        ],
+        "properties": {
+          "schema_id": {
+            "const": "research-run-evidence.v1"
+          },
+          "required_fields": {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "engine_release_id",
+                "route_id",
+                "effective_spec_digest",
+                "market_data_content_hash",
+                "report_level",
+                "selection_resolution",
+                "result_summary"
+              ]
+            }
+          },
+          "writer_state": {
+            "const": "P05_OWNED_NOT_ACTIVE"
+          }
+        }
+      },
+      "AtlasRoute": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "route_id",
+          "family",
+          "execution_contract",
+          "backend",
+          "report_levels",
+          "default_for_new_runs",
+          "axes",
+          "reason",
+          "required_input_class"
+        ],
+        "properties": {
+          "route_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "family": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "execution_contract": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "backend": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "report_levels": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          "default_for_new_runs": {
+            "type": "boolean"
+          },
+          "axes": {
+            "$ref": "#/components/schemas/CapabilityAxes"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "required_input_class": {
+            "type": "string",
+            "maxLength": 191
+          }
+        }
+      },
+      "AtlasSourceLocator": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "lines",
+          "sha256",
+          "anchor"
+        ],
+        "description": "Where a fact is stated in the pinned engine package: file, line range, the file digest carried by the wheel RECORD, and a string that occurs in that range.",
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^quantbt/[A-Za-z0-9_./-]{1,200}\\.py$"
+          },
+          "lines": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "anchor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      },
+      "AtlasNotPublishedFact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reason"
+        ],
+        "properties": {
+          "state": {
+            "const": "NOT_PUBLISHED"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtlasSourceLocator"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "AtlasScheduleFact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schedule",
+          "validation_claim",
+          "chronological_validation_claim",
+          "causality_claim",
+          "causality_schedule_v2",
+          "oos_use",
+          "params_semantics",
+          "cert_cap",
+          "source"
+        ],
+        "properties": {
+          "schedule": {
+            "enum": [
+              "global",
+              "per_fold_decay",
+              "per_fold_causal"
+            ]
+          },
+          "validation_claim": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,79}$"
+          },
+          "chronological_validation_claim": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,79}$"
+          },
+          "causality_claim": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,79}$"
+          },
+          "causality_schedule_v2": {
+            "enum": [
+              "retrospective_global_v2",
+              "trusted_strategy_global_v2",
+              "engine_enforced_per_fold_v2",
+              "engine_enforced_nested_v2"
+            ]
+          },
+          "oos_use": {
+            "enum": [
+              "USED",
+              "NOT_USED"
+            ]
+          },
+          "oos_use_condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "params_semantics": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,79}$"
+          },
+          "cert_cap": {
+            "$ref": "#/components/schemas/AtlasNotPublishedFact"
+          },
+          "source": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/AtlasSourceLocator"
+            }
+          }
+        }
+      },
+      "AtlasObjectiveFact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "direction",
+          "selection_metrics",
+          "stages",
+          "coefficients",
+          "source"
+        ],
+        "properties": {
+          "state": {
+            "const": "PUBLISHED"
+          },
+          "direction": {
+            "enum": [
+              "maximize",
+              "minimize"
+            ]
+          },
+          "selection_metrics": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          "stages": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "stage",
+                "formula_id",
+                "formula"
+              ],
+              "properties": {
+                "stage": {
+                  "enum": [
+                    "is_search",
+                    "oos_candidate_selection",
+                    "fixed_or_post_selection_evaluation"
+                  ]
+                },
+                "formula_id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,79}$"
+                },
+                "formula": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                }
+              }
+            }
+          },
+          "coefficients": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                },
+                "release_default": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Exact decimal string; null when the release leaves it unset."
+                },
+                "note": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/AtlasSourceLocator"
+            }
+          }
+        }
+      },
+      "AtlasReadsFact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "selection_inputs",
+          "retention",
+          "source"
+        ],
+        "properties": {
+          "state": {
+            "const": "PUBLISHED"
+          },
+          "selection_inputs": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          "retention": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,119}$"
+          },
+          "source": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/AtlasSourceLocator"
+            }
+          }
+        }
+      },
+      "AtlasModeFacts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_release_id",
+          "schedules",
+          "objective",
+          "reads",
+          "avoid_when"
+        ],
+        "properties": {
+          "source_release_id": {
+            "type": "string",
+            "pattern": "^er_[a-z0-9_]{1,40}$"
+          },
+          "schedules": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "items": {
+              "$ref": "#/components/schemas/AtlasScheduleFact"
+            }
+          },
+          "objective": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AtlasObjectiveFact"
+              },
+              {
+                "$ref": "#/components/schemas/AtlasNotPublishedFact"
+              }
+            ]
+          },
+          "reads": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AtlasReadsFact"
+              },
+              {
+                "$ref": "#/components/schemas/AtlasNotPublishedFact"
+              }
+            ]
+          },
+          "avoid_when": {
+            "$ref": "#/components/schemas/AtlasNotPublishedFact"
+          }
+        }
+      },
+      "AtlasMode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode_id",
+          "display_name",
+          "valid_schedules",
+          "default_schedule",
+          "objective_summary",
+          "suspect",
+          "artifact_fields",
+          "when_to_use",
+          "rules"
+        ],
+        "properties": {
+          "mode_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "display_name": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "valid_schedules": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "maxLength": 191
+            }
+          },
+          "default_schedule": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "objective_summary": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "suspect": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "artifact_fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "maxLength": 191
+            }
+          },
+          "when_to_use": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "rules": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          },
+          "facts": {
+            "$ref": "#/components/schemas/AtlasModeFacts",
+            "description": "RF02-B1. Per mode × schedule engine facts, each with a source locator in the pinned QuantBT release. Optional for a manifest written before the facts existed; a fact the source does not state is NOT_PUBLISHED with a reason."
+          }
+        }
+      },
+      "AtlasOptimizerDefaultScalar": {
+        "type": [
+          "string",
+          "number",
+          "boolean",
+          "null"
+        ]
+      },
+      "AtlasOptimizerDefaultValue": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/AtlasOptimizerDefaultScalar"
+          },
+          {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "$ref": "#/components/schemas/AtlasOptimizerDefaultScalar"
+            }
+          }
+        ]
+      },
+      "AtlasOptimizerDefaultField": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field_id",
+          "default_value",
+          "value_source",
+          "override_state",
+          "detail"
+        ],
+        "properties": {
+          "field_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$"
+          },
+          "default_value": {
+            "$ref": "#/components/schemas/AtlasOptimizerDefaultValue"
+          },
+          "value_source": {
+            "const": "RELEASE_DEFAULT"
+          },
+          "override_state": {
+            "enum": [
+              "LOCKED",
+              "OVERRIDE_ALLOWED"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          }
+        }
+      },
+      "AtlasOptimizerGroup": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "group_id",
+          "fields"
+        ],
+        "properties": {
+          "group_id": {
+            "enum": [
+              "study",
+              "sampler",
+              "objective",
+              "candidate_selection"
+            ]
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 24,
+            "items": {
+              "$ref": "#/components/schemas/AtlasOptimizerDefaultField"
+            }
+          }
+        }
+      },
+      "AtlasOptimizerDefaults": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "groups"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.optimizer-defaults.v1"
+          },
+          "groups": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "prefixItems": [
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AtlasOptimizerGroup"
+                  },
+                  {
+                    "properties": {
+                      "group_id": {
+                        "const": "study"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AtlasOptimizerGroup"
+                  },
+                  {
+                    "properties": {
+                      "group_id": {
+                        "const": "sampler"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AtlasOptimizerGroup"
+                  },
+                  {
+                    "properties": {
+                      "group_id": {
+                        "const": "objective"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AtlasOptimizerGroup"
+                  },
+                  {
+                    "properties": {
+                      "group_id": {
+                        "const": "candidate_selection"
+                      }
+                    }
+                  }
+                ]
+              }
+            ],
+            "items": false
+          }
+        }
+      },
+      "AtlasSubmissionConstraints": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profile_id",
+          "optimization_overrides",
+          "accepted_trial_count",
+          "early_stopping",
+          "random_seed",
+          "reason"
+        ],
+        "properties": {
+          "profile_id": {
+            "const": "p10.fixed-qualification.v1"
+          },
+          "optimization_overrides": {
+            "const": "FORBIDDEN"
+          },
+          "accepted_trial_count": {
+            "const": 1
+          },
+          "early_stopping": {
+            "const": "MUST_BE_NULL"
+          },
+          "random_seed": {
+            "const": "MUST_BE_NULL"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "AtlasWalkForwardOptions": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "frequency",
+          "frequency_default",
+          "window_mode",
+          "window_mode_default",
+          "split_mode_form",
+          "split_mode_rule",
+          "source"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.walk-forward-options.v1"
+          },
+          "frequency": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "admission"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,31}$"
+                },
+                "admission": {
+                  "enum": [
+                    "ADMITTED",
+                    "NOT_ADMITTED"
+                  ]
+                },
+                "reason": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 400
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "frequency_default": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,31}$"
+          },
+          "window_mode": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "value",
+                "admission"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,31}$"
+                },
+                "admission": {
+                  "enum": [
+                    "ADMITTED",
+                    "NOT_ADMITTED"
+                  ]
+                },
+                "reason": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 400
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "window_mode_default": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,31}$"
+          },
+          "split_mode_form": {
+            "const": "source_instant"
+          },
+          "split_mode_rule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          },
+          "source": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/AtlasSourceLocator"
+            }
+          }
+        }
+      },
+      "AtlasRelease": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "release_id",
+          "package",
+          "expected_version",
+          "verified",
+          "trial_ceiling",
+          "optimizer_defaults",
+          "submission_constraints"
+        ],
+        "properties": {
+          "release_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "package": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "expected_version": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "installed_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 191
+          },
+          "native_package": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 191
+          },
+          "native_expected_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 191
+          },
+          "native_installed_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 191
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1024
+          },
+          "trial_ceiling": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "optimizer_defaults": {
+            "$ref": "#/components/schemas/AtlasOptimizerDefaults"
+          },
+          "submission_constraints": {
+            "$ref": "#/components/schemas/AtlasSubmissionConstraints"
+          },
+          "config_digest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CG-P10-01. sha256 of the canonical browser-visible release configuration (release_id, trial_ceiling, optimizer_defaults, submission_constraints, walk_forward_options). A New Run form sends it unchanged as requested_spec.client.config_digest; the browser never computes it."
+          },
+          "walk_forward_options": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtlasWalkForwardOptions"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed."
+          }
+        }
+      },
+      "HistoricalRelease": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "release_id",
+          "package",
+          "version",
+          "status"
+        ],
+        "properties": {
+          "release_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "package": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "status": {
+            "const": "HISTORICAL_IDENTITY_RETAINED"
+          }
+        }
+      },
+      "Atlas": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "manifest_revision",
+          "current_release",
+          "historical_releases",
+          "routes",
+          "modes",
+          "claims",
+          "evidence_contract"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research-engine-atlas.v1"
+          },
+          "manifest_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "current_release": {
+            "$ref": "#/components/schemas/AtlasRelease"
+          },
+          "historical_releases": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/components/schemas/HistoricalRelease"
+            }
+          },
+          "routes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+              "$ref": "#/components/schemas/AtlasRoute"
+            }
+          },
+          "modes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/components/schemas/AtlasMode"
+            }
+          },
+          "claims": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "$ref": "#/components/schemas/ClaimDescriptor"
+            }
+          },
+          "evidence_contract": {
+            "$ref": "#/components/schemas/EvidenceContract"
+          }
+        }
+      },
+      "AtlasResponse": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "selected_release_id",
+              "selected_release_kind",
+              "atlas",
+              "historical_identity",
+              "etag"
+            ],
+            "properties": {
+              "schema_version": {
+                "const": "research.engine-atlas-response.v1"
+              },
+              "selected_release_id": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "etag": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "selected_release_kind": {
+                "const": "CURRENT"
+              },
+              "atlas": {
+                "$ref": "#/components/schemas/Atlas"
+              },
+              "historical_identity": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "selected_release_id",
+              "selected_release_kind",
+              "atlas",
+              "historical_identity",
+              "etag"
+            ],
+            "properties": {
+              "schema_version": {
+                "const": "research.engine-atlas-response.v1"
+              },
+              "selected_release_id": {
+                "$ref": "#/components/schemas/Identifier"
+              },
+              "etag": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "selected_release_kind": {
+                "const": "HISTORICAL"
+              },
+              "atlas": {
+                "type": "null"
+              },
+              "historical_identity": {
+                "$ref": "#/components/schemas/AtlasHistoricalIdentity"
+              }
+            }
+          }
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "enum": [
+                  "SESSION_REQUIRED",
+                  "REQUEST_REJECTED",
+                  "RESEARCH_FOUNDATION_INVALID",
+                  "RESEARCH_FOUNDATION_NOT_FOUND",
+                  "RESEARCH_FOUNDATION_CURSOR_STUDY_REQUIRED",
+                  "RESEARCH_FOUNDATION_DESCRIPTOR_MISMATCH",
+                  "RESEARCH_FOUNDATION_RELEASE_NOT_FOUND",
+                  "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND",
+                  "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND",
+                  "RESEARCH_FOUNDATION_UNAVAILABLE",
+                  "RESEARCH_FOUNDATION_REJECTED"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "AtlasHistoricalIdentity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "release_id",
+          "package",
+          "version",
+          "status",
+          "facts_state",
+          "facts_reason"
+        ],
+        "properties": {
+          "release_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "package": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "status": {
+            "const": "HISTORICAL_IDENTITY_RETAINED"
+          },
+          "facts_state": {
+            "const": "NOT_PUBLISHED"
+          },
+          "facts_reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          }
+        }
+      }
     }
   }
 }

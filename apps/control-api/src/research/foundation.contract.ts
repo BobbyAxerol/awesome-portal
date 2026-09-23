@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ResearchJourneyDescriptor } from "./journey.descriptor.v2";
 
 const Identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/);
 const WorkspaceId = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional();
@@ -59,13 +60,7 @@ export interface ResearchInspectionCursor {
 
 export interface ResearchJourneyResponse {
   schema_version: "research.journey-response.v1";
-  descriptor: {
-    schema_version: "research.journey.v1";
-    descriptor_id: string;
-    revision: number;
-    content_sha256: string;
-    phases: readonly unknown[];
-  };
+  descriptor: ResearchJourneyDescriptor & { content_sha256: string };
   inspection: ResearchInspectionCursor;
   etag: string;
 }
@@ -254,20 +249,31 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
     release_id: Identifier, package: z.string().min(1).max(191), version: z.string().min(1).max(191),
     status: z.literal("HISTORICAL_IDENTITY_RETAINED"),
   }).strict()).max(8),
-  routes: z.array(AtlasRouteSchema).length(14),
-  modes: z.array(AtlasModeSchema).length(5),
+  routes: z.array(AtlasRouteSchema).min(1).max(32),
+  modes: z.array(AtlasModeSchema).min(1).max(8),
   // These exact P04 shapes are emitted as shared P09 OpenAPI components too.
   // A browser may render facts but cannot widen them into run authority.
-  claims: z.array(ClaimDescriptorSchema).length(7),
+  claims: z.array(ClaimDescriptorSchema).min(1).max(16),
   evidence_contract: EvidenceContractSchema,
 }).strict();
 
 export type ResearchEngineAtlasPrivate = z.infer<typeof ResearchEngineAtlasPrivateSchema>;
 
-export interface ResearchAtlasResponse {
+export type ResearchAtlasResponse = {
   schema_version: "research.engine-atlas-response.v1";
   selected_release_id: string;
-  selected_release_kind: "CURRENT" | "HISTORICAL";
+  selected_release_kind: "CURRENT";
   atlas: ResearchEngineAtlasPrivate;
+  historical_identity: null;
   etag: string;
-}
+} | {
+  schema_version: "research.engine-atlas-response.v1";
+  selected_release_id: string;
+  selected_release_kind: "HISTORICAL";
+  atlas: null;
+  historical_identity: ResearchEngineAtlasPrivate["historical_releases"][number] & {
+    facts_state: "NOT_PUBLISHED";
+    facts_reason: string;
+  };
+  etag: string;
+};

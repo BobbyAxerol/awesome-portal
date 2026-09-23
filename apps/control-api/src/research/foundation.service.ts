@@ -21,7 +21,7 @@ import {
   RESEARCH_JOURNEY_DESCRIPTOR_REVISION,
   RESEARCH_JOURNEY_DESCRIPTOR_SHA256,
   RESEARCH_JOURNEY_SCHEMA_VERSION,
-} from "./journey.descriptor";
+} from "./journey.descriptor.v2";
 import { ResearchMetadataRepository } from "./repository";
 
 @Injectable()
@@ -54,6 +54,7 @@ export class ResearchFoundationService {
         revision: RESEARCH_JOURNEY_DESCRIPTOR.revision,
         content_sha256: registry.contentSha256,
         phases: RESEARCH_JOURNEY_DESCRIPTOR.phases,
+        mapping: RESEARCH_JOURNEY_DESCRIPTOR.mapping,
       },
       inspection,
       etag: this.etag("journey", `${registry.revision}:${registry.contentSha256}:${inspection.canonical_query}`),
@@ -63,6 +64,24 @@ export class ResearchFoundationService {
   async atlas(user: PortalUser, query: ResearchAtlasQuery): Promise<ResearchAtlasResponse> {
     const atlas = await this.atlasClient.read(user);
     const selected = this.selectAtlasRelease(atlas, query.release_id);
+    if (selected.kind === "HISTORICAL") {
+      if (query.route || query.mode) {
+        throw new ResearchFoundationError("RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND", "Historical route and mode facts are not published for this retained identity.", 404);
+      }
+      const historical = atlas.historical_releases.find((release) => release.release_id === selected.releaseId)!;
+      return {
+        schema_version: "research.engine-atlas-response.v1",
+        selected_release_id: selected.releaseId,
+        selected_release_kind: "HISTORICAL",
+        atlas: null,
+        historical_identity: {
+          ...historical,
+          facts_state: "NOT_PUBLISHED",
+          facts_reason: "Only the historical release identity is retained; route, mode and claim facts for that release are not published.",
+        },
+        etag: this.etag("atlas", `${atlas.manifest_revision}:${selected.releaseId}:historical-identity`),
+      };
+    }
     if (query.route && !atlas.routes.some((route) => route.route_id === query.route)) {
       throw new ResearchFoundationError(
         "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND",
@@ -82,6 +101,7 @@ export class ResearchFoundationService {
       selected_release_id: selected.releaseId,
       selected_release_kind: selected.kind,
       atlas,
+      historical_identity: null,
       etag: this.etag(
         "atlas",
         `${atlas.manifest_revision}:${selected.releaseId}:${query.route ?? ""}:${query.mode ?? ""}`,

@@ -15,7 +15,7 @@ import { ResearchFoundationError } from "../../apps/control-api/src/research/fou
 import { ResearchFoundationService } from "../../apps/control-api/src/research/foundation.service";
 import {
   RESEARCH_JOURNEY_DESCRIPTOR_SHA256,
-} from "../../apps/control-api/src/research/journey.descriptor";
+} from "../../apps/control-api/src/research/journey.descriptor.v2";
 import { ResearchMetadataRepository } from "../../apps/control-api/src/research/repository";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
 import { Pool } from "../../apps/control-api/node_modules/pg";
@@ -108,12 +108,22 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     });
     expect(response).toMatchObject({
       schema_version: "research.journey-response.v1",
-      descriptor: { revision: 1, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+      descriptor: { revision: 2, content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
       inspection: {
         canonical_query: "?run_id=run-p09&study=study-p09&trial=trial-p09&pick=pick-p09&seq=42",
         pick_effect: "INSPECTION_ONLY", ambiguity_state: "NOT_APPLICABLE",
       },
     });
+    expect(response.descriptor.phases).toHaveLength(8);
+    expect(response.descriptor.phases.map((phase: any) => phase.cards.length)).toEqual([3, 3, 2, 2, 2, 9, 3, 4]);
+    expect(response.descriptor.mapping).toHaveLength(6);
+    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === "claim")).toMatchObject({
+      availability: "AVAILABLE", requires_run: true, target_fragment: "stage=claim",
+    });
+    expect(response.descriptor.phases.flatMap((phase: any) => phase.cards).find((card: any) => card.card_id === "execute-replay")).toMatchObject({ availability: "PLANNED" });
+    expect((await pool.query("SELECT revision, content_sha256 FROM research.journey_descriptor_registry ORDER BY revision")).rows).toEqual([
+      { revision: "1", content_sha256: expect.any(String) }, { revision: "2", content_sha256: RESEARCH_JOURNEY_DESCRIPTOR_SHA256 },
+    ]);
     expect(response.inspection.cursor).not.toHaveProperty("event_seq");
     expect(response.inspection.codec).toBe("p02-cursor.v2");
     expect(response.etag).toMatch(/^W\/"research-journey-[0-9a-f]{24}"$/);
@@ -130,6 +140,17 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     expect(ResearchJourneyQuerySchema.safeParse({ stage: "deploy" }).success).toBe(false);
     expect(ResearchJourneyQuerySchema.safeParse({ stage: "atlas", fold: "3" }).success).toBe(true);
     expect((await pool.query(`SELECT count(*)::integer AS count FROM research.audit_log`)).rows[0].count).toBe(0);
+  });
+
+  it("CG-P09-05: accepts the manifest's bounded 32/8/16 catalogue, rejects larger documents", () => {
+    const expanded = {
+      ...atlas,
+      routes: Array.from({ length: 32 }, (_, index) => ({ ...atlas.routes[0], route_id: `route_${index}` })),
+      modes: Array.from({ length: 8 }, (_, index) => ({ ...atlas.modes[0], mode_id: `mode_${index}` })),
+      claims: Array.from({ length: 16 }, (_, index) => ({ ...atlas.claims[0], contract_id: `claim_${index}` })),
+    };
+    expect(ResearchEngineAtlasPrivateSchema.safeParse(expanded).success).toBe(true);
+    expect(ResearchEngineAtlasPrivateSchema.safeParse({ ...expanded, routes: [...expanded.routes, expanded.routes[0]] }).success).toBe(false);
   });
 
   it("P09-T02/T09: rejects divergent aliases and a known ambiguous trial without guessing study", async () => {
@@ -172,10 +193,18 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
 
   it("P09-T03/T04: selects only a manifest current/historical release and exact route/mode", async () => {
     const historical = atlas.historical_releases[0]!;
-    const response = await service.atlas(user, {
-      release_id: historical.release_id, route: atlas.routes[0]!.route_id, mode: atlas.modes[0]!.mode_id,
+    const historicalResponse = await service.atlas(user, { release_id: historical.release_id });
+    expect(historicalResponse).toMatchObject({
+      selected_release_id: historical.release_id, selected_release_kind: "HISTORICAL", atlas: null,
+      historical_identity: { release_id: historical.release_id, facts_state: "NOT_PUBLISHED" },
     });
-    expect(response).toMatchObject({ selected_release_id: historical.release_id, selected_release_kind: "HISTORICAL" });
+    await expect(service.atlas(user, { release_id: historical.release_id, route: atlas.routes[0]!.route_id })).rejects.toMatchObject({
+      code: "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND",
+    });
+    const response = await service.atlas(user, { route: atlas.routes[0]!.route_id, mode: atlas.modes[0]!.mode_id });
+    expect(response).toMatchObject({ selected_release_id: atlas.current_release.release_id, selected_release_kind: "CURRENT" });
+    expect(response.atlas).not.toBeNull();
+    if (!response.atlas) throw new Error("current Atlas facts required");
 
     // RF02-B1: per mode × schedule facts cross the BFF intact, and the
     // private-document boundary accepts the null-bearing shape Python's
@@ -206,7 +235,7 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
     await expect(service.atlas(user, { release_id: "er_unknown" })).rejects.toMatchObject({ code: "RESEARCH_FOUNDATION_RELEASE_NOT_FOUND" });
     await expect(service.atlas(user, { route: "route_unknown" })).rejects.toMatchObject({ code: "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND" });
     await expect(service.atlas(user, { mode: "mode_unknown" })).rejects.toMatchObject({ code: "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND" });
-    expect(atlasClient.read).toHaveBeenCalledTimes(4);
+    expect(atlasClient.read).toHaveBeenCalledTimes(6);
   });
 
   it("P10 amendment: carries release defaults and fixed-admission truth without inventing browser override authority", async () => {

@@ -63,6 +63,27 @@ describe("P09 published Research foundation contract", () => {
     }));
   });
 
+  it("RF-03: sizes the manifest catalogue and distinguishes current facts from historical identity", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      components: { schemas: Record<string, any> };
+    };
+    const schemas = document.components.schemas;
+    expect(schemas.Atlas.properties.routes).toMatchObject({ minItems: 1, maxItems: 32 });
+    expect(schemas.Atlas.properties.modes).toMatchObject({ minItems: 1, maxItems: 8 });
+    expect(schemas.Atlas.properties.claims).toMatchObject({ minItems: 1, maxItems: 16 });
+    expect(schemas.AtlasResponse.oneOf[0].properties).toMatchObject({
+      selected_release_kind: { const: "CURRENT" },
+      atlas: { $ref: "#/components/schemas/Atlas" },
+      historical_identity: { type: "null" },
+    });
+    expect(schemas.AtlasResponse.oneOf[1].properties).toMatchObject({
+      selected_release_kind: { const: "HISTORICAL" },
+      atlas: { type: "null" },
+      historical_identity: { $ref: "#/components/schemas/AtlasHistoricalIdentity" },
+    });
+    expect(schemas.AtlasHistoricalIdentity.properties.facts_state).toEqual({ const: "NOT_PUBLISHED" });
+  });
+
   it("does not publish a private adapter, raw data, worker or executable engine surface", () => {
     const document = readFileSync(openApiPath, "utf8");
     for (const forbidden of [

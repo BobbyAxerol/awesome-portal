@@ -55,6 +55,8 @@ export interface components {
             target_key: components["schemas"]["Identifier"];
             /** @enum {unknown} */
             availability: "AVAILABLE" | "PLANNED" | "DEPENDENCY_REQUIRED";
+            requires_run: boolean;
+            target_fragment: string | null;
         };
         JourneyPhase: {
             phase_id: components["schemas"]["Identifier"];
@@ -63,15 +65,22 @@ export interface components {
             description: string;
             cards: components["schemas"]["JourneyCard"][];
         };
+        JourneyMappingRow: {
+            shipped: string;
+            shipped_target_key: components["schemas"]["Identifier"];
+            mine: string;
+            mine_target_key: components["schemas"]["Identifier"];
+            adds: string;
+        };
         JourneyDescriptor: {
             /** @constant */
             schema_version: "research.journey.v1";
             /** @constant */
             descriptor_id: "quantbt_journey";
-            /** @constant */
-            revision: 1;
+            revision: number;
             content_sha256: string;
             phases: components["schemas"]["JourneyPhase"][];
+            mapping: components["schemas"]["JourneyMappingRow"][];
         };
         InspectionCursor: {
             cursor: {
@@ -332,10 +341,20 @@ export interface components {
             /** @constant */
             schema_version: "research.engine-atlas-response.v1";
             selected_release_id: components["schemas"]["Identifier"];
-            /** @enum {unknown} */
-            selected_release_kind: "CURRENT" | "HISTORICAL";
-            atlas: components["schemas"]["Atlas"];
             etag: string;
+            /** @constant */
+            selected_release_kind: "CURRENT";
+            atlas: components["schemas"]["Atlas"];
+            historical_identity: null;
+        } | {
+            /** @constant */
+            schema_version: "research.engine-atlas-response.v1";
+            selected_release_id: components["schemas"]["Identifier"];
+            etag: string;
+            /** @constant */
+            selected_release_kind: "HISTORICAL";
+            atlas: null;
+            historical_identity: components["schemas"]["AtlasHistoricalIdentity"];
         };
         Problem: {
             error: {
@@ -344,6 +363,16 @@ export interface components {
                 message: string;
             };
             request_id: string;
+        };
+        AtlasHistoricalIdentity: {
+            release_id: components["schemas"]["Identifier"];
+            package: string;
+            version: string;
+            /** @constant */
+            status: "HISTORICAL_IDENTITY_RETAINED";
+            /** @constant */
+            facts_state: "NOT_PUBLISHED";
+            facts_reason: string;
         };
     };
     responses: {
