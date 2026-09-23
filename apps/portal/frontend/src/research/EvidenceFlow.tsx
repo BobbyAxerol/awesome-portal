@@ -1048,18 +1048,22 @@ function EquityChart({ series }: { series: EvidenceSeries }) {
         * reader and a reader who wants the exact number both get the server's
         * own strings.
         */}
-      <table className="sr-only" data-chart-table="equity">
-        <caption>OOS equity and drawdown, exact values</caption>
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.at_utc_ms}>
-              <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
-              <td>{point.equity}</td>
-              <td>{point.drawdown_fraction}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* A table ignores width:1px, so a real run's long exact decimals pushed
+          the page sideways; the clipping box is the wrapper (RF-02 real-API lane). */}
+      <div className="sr-only">
+        <table data-chart-table="equity">
+          <caption>OOS equity and drawdown, exact values</caption>
+          <tbody>
+            {points.map((point) => (
+              <tr key={point.at_utc_ms}>
+                <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
+                <td>{point.equity}</td>
+                <td>{point.drawdown_fraction}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1131,16 +1135,18 @@ function RollingChart({ series }: { series: EvidenceSeries }) {
   return (
     <div data-chart="rolling">
       <EChart option={option} height={170} />
-      <table className="sr-only" data-chart-table="rolling">
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.at_utc_ms}>
-              <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
-              <td>{point.return_fraction}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="sr-only">
+        <table data-chart-table="rolling">
+          <tbody>
+            {points.map((point) => (
+              <tr key={point.at_utc_ms}>
+                <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
+                <td>{point.return_fraction}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1191,16 +1197,18 @@ function DistributionChart({ series }: { series: EvidenceSeries }) {
   return (
     <div data-chart="distribution">
       <EChart option={option} height={180} />
-      <table className="sr-only" data-chart-table="distribution">
-        <tbody>
-          {buckets.map((bucket) => (
-            <tr key={label(bucket)}>
-              <th scope="row">{label(bucket)}</th>
-              <td>{bucket.count}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="sr-only">
+        <table data-chart-table="distribution">
+          <tbody>
+            {buckets.map((bucket) => (
+              <tr key={label(bucket)}>
+                <th scope="row">{label(bucket)}</th>
+                <td>{bucket.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
