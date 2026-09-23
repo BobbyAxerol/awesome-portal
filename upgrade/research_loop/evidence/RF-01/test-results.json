@@ -1,0 +1,23 @@
+{
+  "phase": "RF-01",
+  "date": "2026-09-23",
+  "lane_note": "Unit/contract/PostgreSQL results are real executions on this worktree. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT over repository fixtures, not a real-API receipt.",
+  "results": [
+    { "gate": "scripts/verify-workspace.sh (pre-commit hook)", "scope": "every RF-01 commit", "result": "PASS", "note": "ends 'Portal monorepo verification passed.'" },
+    { "gate": "scripts/research-loop-v11/test-route-inventory.sh", "scope": "RF01-B2 live route gate", "result": "PASS" },
+    { "gate": "scripts/research-loop-v11/test-p01-capture.sh", "scope": "P01 T01–T08 at its capture commit", "result": "PASS" },
+    { "gate": "portal-api pytest backend/tests", "scope": "RF01-B1 (P04-T08 rewrite, compat parity, M0 freeze)", "result": "PASS" },
+    { "gate": "control-api vitest research-progress-rs01/contract/controller", "scope": "RF01-B3", "result": "PASS", "counts": "13/13" },
+    { "gate": "packages/contracts vitest research-progress + research-foundation", "scope": "RF01-B3/B4 generated vocabulary", "result": "PASS", "counts": "3/3 + 4/4" },
+    { "gate": "packages/contracts tooling/snapshot.py --check", "scope": "generated ↔ OpenAPI", "result": "PASS", "counts": "198 tracked files" },
+    { "gate": "scripts/research-loop-v11/test-p11-postgres.sh", "scope": "RF01-B3 disposable PostgreSQL (empty list, six states, bigint, no locator)", "result": "PASS", "counts": "9/9" },
+    { "gate": "scripts/research-loop-v11/test-p09-postgres.sh", "scope": "RF01-B4 journey round-trip with stage and opaque fold/trial", "result": "PASS", "counts": "6/6" },
+    { "gate": "node scripts/research-loop-v11/p02-compatibility.mjs + test-p02-postgres.sh", "scope": "RF01-B4 codec cases", "result": "PASS", "counts": "static PASS; 63/63" },
+    { "gate": "scripts/research-loop-v11/test-p02-python-pin.sh", "scope": "environment pin (not RF-01)", "result": "FAIL_PRE_EXISTING", "note": "fails identically on a clean worktree at HEAD before RF-01 code: dev image local/portal-portal-api:dev carries quantbt-engine 1.0.8, the pin says 1.1.1. Recorded in README; owned by the RF-02 preview-stack image." },
+    { "gate": "apps/portal/frontend vitest (full)", "scope": "RF01-F1…F6", "result": "PASS", "counts": "2957 passed, 1 skipped, 170 files" },
+    { "gate": "apps/portal/frontend tsc --noEmit", "result": "PASS" },
+    { "gate": "apps/portal/frontend npm run build", "result": "PASS" },
+    { "gate": "playwright -c playwright.research-probe.config.ts", "scope": "fixture + product + RF-01 receipts at 1280/660", "result": "PASS", "counts": "87/87" }
+  ],
+  "known_flake": "src/app/PortalShell.test.tsx 'mounts QuantBT under its canonical route' can exceed its 15 s waitFor under full-suite load (documented in the test); it passed in the final full run and 3/3 isolated reruns. Not touched by RF-01."
+}

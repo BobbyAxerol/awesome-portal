@@ -115,3 +115,14 @@ capture:
    handoff places on it. Axes and reason now take the full row width on their
    own line.
 2. **A run-on status line** in the queue panel — recorded in the P06 packet.
+
+## Correction — RF01-F6, 2026-09-23 (audit F-08)
+
+The "Typed inactive" paragraph above is historical and no longer true. P09
+mounted Screen 12 on its product route (`/research/quantbt/atlas`) over the
+same-origin Control API read `GET /api/v1/research/quantbt/atlas`
+(`foundationClient.ts`, `foundationRoutes.tsx`). The Python public route was
+retired in RF01-B1 (`a0d0004d`); the internal `/internal/research/engine-atlas`
+is the Control API's only source. What remains open for Screen 12 is spec-12
+completeness (per mode×schedule facts, verbatim tabs, KaTeX), owned by
+RF02-B1/RF02-F1 — see `P04/debt-register.json` `closure_notes` for P04-DG-03.

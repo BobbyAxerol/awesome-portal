@@ -1,0 +1,24 @@
+{
+  "phase": "RF-01",
+  "open_implementation_debt": [],
+  "resolved_closeouts": [
+    { "id": "B-01", "status": "RESOLVED", "evidence": "a0d0004d" },
+    { "id": "B-02", "status": "RESOLVED", "evidence": "e5daa7e2" },
+    { "id": "B-03", "status": "RESOLVED", "evidence": "c0166746, 9607844a; P11 PG case RF01-B3" },
+    { "id": "B-05", "status": "RESOLVED", "evidence": "c7cc1ceb, dbe569e8; P02 + P09 PG" },
+    { "id": "B-06", "status": "RESOLVED", "evidence": "dbe569e8 closure_notes P02–P05" },
+    { "id": "F-01", "status": "RESOLVED", "evidence": "inspectionCursor.ts; evidenceCursor adapter; S00↔S04 round-trip" },
+    { "id": "F-02", "status": "RESOLVED", "evidence": "ResearchPanel.recovery; S05 503 browser receipt" },
+    { "id": "F-03", "status": "RESOLVED", "evidence": "auth/sessionExpiry + AuthGate; S12 401 browser receipt" },
+    { "id": "F-04", "status": "RESOLVED", "evidence": "state.ts + fixtures.ts copy; S04 403 browser receipt" },
+    { "id": "F-05", "status": "RESOLVED", "evidence": "researchRefusal.ts serves S01, S03–S07" },
+    { "id": "F-07", "status": "RESOLVED", "evidence": "S03 RetainedTables via ArtifactPanel; P05 receipt correction" },
+    { "id": "F-08", "status": "RESOLVED", "evidence": "P04 receipt correction" }
+  ],
+  "explicit_downstream_gates": [
+    { "id": "RF01-DG-01", "owner": "RF-02", "state": "PLANNED", "subject": "B-04 Atlas mode facts, F-10 walk-forward controls, isolated preview stack, real-API receipts" },
+    { "id": "RF01-DG-02", "owner": "RF-02 B3", "state": "PLANNED", "subject": "test-p02-python-pin.sh against an image built from this branch (pre-existing environment gap)" },
+    { "id": "RF01-DG-03", "owner": "Bobby (optional decision)", "state": "NOT_REQUIRED", "subject": "whether the contract-code mappers of S00/S12, S02, S14 should also move server text into details; their handoffs currently require it verbatim" }
+  ],
+  "interpretation": "Downstream gates are other phases' entry criteria or an optional owner decision, not unresolved RF-01 defects."
+}

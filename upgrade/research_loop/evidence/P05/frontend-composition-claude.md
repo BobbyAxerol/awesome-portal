@@ -26,3 +26,24 @@ alone. The cursor is never decoded.
 
 **Data lane:** typed inactive. No artifact DTO exists yet; P10/P11 own it. The
 panel takes facts as props, so wiring it later changes no composition.
+
+## Correction — RF01-F6, 2026-09-23 (audit F-07)
+
+The opening line above ("used by Run Progress and Evidence Flow") was not true
+when written: until RF01-F6 `ArtifactPanel` was used only by the fixture lane,
+and Screen 03 drew its bundle files with its own strip. The "Data lane: typed
+inactive" note is also superseded.
+
+Now:
+
+- RF01-B3 (`c0166746`) publishes `retained_artifacts` on the P11 progress read
+  — the authority's six states, locator-free, bounded at 128.
+- RF01-F6 renders each retained table on Screen 03 through `ArtifactPanel`
+  (`RunProgress.tsx` `RetainedTables`), with `registered: true` (the rows are
+  the authority's) and `serverAdmittedExport: false` (no reader route is
+  published), so the P05 export rule holds where artifacts actually appear.
+- The vocabulary in `artifacts.ts` is six states: `PENDING` joined for
+  revision-zero rows inherited from P03. There is still no `READY`.
+- Evidence Flow (Screen 04) does not render artifacts; it never used this panel.
+- The bundle strip on Screen 03 stays: it shows the source-journaled bundle
+  files, a different set with no key into the retained tables.
