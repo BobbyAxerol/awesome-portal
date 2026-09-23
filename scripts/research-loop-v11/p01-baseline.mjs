@@ -1065,8 +1065,55 @@ function selfTest() {
   }
 }
 
+/*
+ * RF01-B2 — the live route gate.
+ *
+ * P01's `--verify` is a point-in-time proof: it is exact at the commit that
+ * recorded `baseline.json` and drifts by design afterwards (see
+ * `test-p01-capture.sh`). This mode is the part that must stay live. It runs
+ * at HEAD, in every Research phase gate, and checks three things: no static
+ * route is declared twice, the protected kernel still matches its manifest,
+ * and the static route set equals the committed ledger. A new route therefore
+ * appears in review as a ledger diff instead of silently.
+ */
+const LIVE_ROUTE_LEDGER = `${evidenceDirectory}/route-inventory.live.json`;
+
+function liveRouteLedger() {
+  const routes = routeInventory().map((route) => ({ method: route.method, path: route.path, owner: route.owner }));
+  const protectedManifest = parseProtectedManifest(read(PROTECTED_MANIFEST_PATH));
+  return {
+    schema: "research-loop.live-route-ledger.v1",
+    statement: "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
+    protected_kernel_sha256: protectedManifest.sha256,
+    route_count: routes.length,
+    routes,
+  };
+}
+
+function checkLiveRoutes() {
+  const routes = routeInventory();
+  const collisions = findRouteCollisions(routes);
+  assert.equal(collisions.length, 0, `static route collision(s): ${collisions.map((collision) => `${collision.key} [${collision.owners.join(" | ")}]`).join(", ")}`);
+  const protectedManifest = parseProtectedManifest(read(PROTECTED_MANIFEST_PATH));
+  assert.equal(protectedManifest.sha256, sha256File(PROTECTED_PATH), "protected kernel SHA mismatch");
+  const current = liveRouteLedger();
+  const ledgerPath = path.join(root, LIVE_ROUTE_LEDGER);
+  assert.ok(fs.existsSync(ledgerPath), `${LIVE_ROUTE_LEDGER} is missing; run --write-live-routes`);
+  const recorded = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
+  const key = (route) => `${route.method} ${route.path} ${route.owner}`;
+  const was = new Set(recorded.routes.map(key));
+  const now = new Set(current.routes.map(key));
+  const added = [...now].filter((entry) => !was.has(entry));
+  const removed = [...was].filter((entry) => !now.has(entry));
+  assert.ok(
+    added.length === 0 && removed.length === 0,
+    `static route set differs from ${LIVE_ROUTE_LEDGER}; review and run --write-live-routes.\n  added: ${added.join("; ") || "none"}\n  removed: ${removed.join("; ") || "none"}`,
+  );
+  return { route_count: current.route_count, collisions: 0, protected_kernel: "MATCH" };
+}
+
 function usage() {
-  process.stderr.write("Usage: node scripts/research-loop-v11/p01-baseline.mjs --write|--verify|--self-test\n");
+  process.stderr.write("Usage: node scripts/research-loop-v11/p01-baseline.mjs --write|--verify|--self-test|--live-routes|--write-live-routes\n");
   process.exitCode = 2;
 }
 
@@ -1076,6 +1123,14 @@ if (command === "--write") {
   process.stdout.write(JSON.stringify({ status: "WRITTEN", screens: generated.screens.length, fields: generated.fields.length, actions: generated.actions.length, routes: generated.routes.length }) + "\n");
 } else if (command === "--verify") {
   process.stdout.write(`${JSON.stringify({ status: "PASS", ...verifyArtifacts() })}\n`);
+} else if (command === "--live-routes") {
+  process.stdout.write(`${JSON.stringify({ status: "PASS", ...checkLiveRoutes() })}\n`);
+} else if (command === "--write-live-routes") {
+  const ledger = liveRouteLedger();
+  const collisions = findRouteCollisions(routeInventory());
+  assert.equal(collisions.length, 0, `refusing to record a ledger with route collision(s): ${collisions.map((collision) => collision.key).join(", ")}`);
+  fs.writeFileSync(path.join(root, LIVE_ROUTE_LEDGER), `${JSON.stringify(ledger, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ status: "WRITTEN", route_count: ledger.route_count })}\n`);
 } else if (command === "--self-test") {
   process.stdout.write(`${JSON.stringify({ status: "PASS", ...selfTest() })}\n`);
 } else {

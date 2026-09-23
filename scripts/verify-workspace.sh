@@ -1770,6 +1770,7 @@ bash -n \
 # generated type could change locally and leave the record behind it; nine files
 # had drifted that way before this check existed. Digest-only, no container.
 python3 "${ROOT_DIR}/packages/contracts/tooling/snapshot.py" --check
+"${ROOT_DIR}/scripts/research-loop-v11/test-route-inventory.sh"
 python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-iam-verify.py" \
   "${ROOT_DIR}/scripts/test_execution_iam_verify.py" \

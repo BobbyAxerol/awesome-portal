@@ -1,0 +1,1133 @@
+{
+  "schema": "research-loop.live-route-ledger.v1",
+  "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
+  "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+  "route_count": 225,
+  "routes": [
+    {
+      "method": "DELETE",
+      "path": "/api/admin/profile-access/:grant_id",
+      "owner": "apps/control-api/src/admin/governance-grants.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/access/self",
+      "owner": "apps/control-api/src/admin/owner-access.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/accounts",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/accounts/:user_id",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/profile-access",
+      "owner": "apps/control-api/src/admin/governance-grants.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/profile-access/activity",
+      "owner": "apps/control-api/src/admin/governance-grants.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/step-up",
+      "owner": "apps/control-api/src/admin/owner-step-up.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/context",
+      "owner": "apps/control-api/src/auth/auth.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/csrf",
+      "owner": "apps/control-api/src/auth/auth.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/capabilities/walk-forward",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/config/options",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control/healthz",
+      "owner": "apps/control-api/src/health/health.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control/readyz",
+      "owner": "apps/control-api/src/health/health.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/datasets",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/diagnostics",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ready",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/:run_id/events",
+      "owner": "apps/control-api/src/facade/facade.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/audit",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/config",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/console",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/events",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/export",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/fold-plan",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/ledger",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/presentation/{mode}",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/progress",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/selection/trace",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/series/{segment}",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/summary",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/wfo/candidates",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/wfo/folds",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/wfo/parameters",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/wfo/trials",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/strategies",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/strategies/{strategy_id}",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/alphas",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_alphas.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/alphas/{alpha_id}",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_alphas.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/alphas/{alpha_id}/versions/{version}",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_alphas.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/alphas/{alpha_id}/versions/{version}/verify",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_alphas.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/alphas/imports",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_alphas.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/data/catalog",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_data.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/data/snapshots",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_data.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/data/snapshots/{snapshot_id}/quality",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_data.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/data/snapshots/{snapshot_id}/series",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_data.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/activation/capabilities",
+      "owner": "apps/control-api/src/activation/activation.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/activation/plans/:plan_id",
+      "owner": "apps/control-api/src/activation/activation.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/adapters/:environment/:capabilityId",
+      "owner": "apps/control-api/src/execution/profile-read-adapter.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/alphas",
+      "owner": "apps/control-api/src/manager-lists/manager-lists.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/alphas/:alphaId/query-analytics",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/alphas/:alphaId/stage-drift",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/alphas/equity-sparklines",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/broker-bindings",
+      "owner": "apps/control-api/src/manager-lists/manager-lists.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/broker-bindings/:binding_id",
+      "owner": "apps/control-api/src/manager-lists/manager-lists.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/broker-bindings/:bindingId/exposure",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/command-center",
+      "owner": "apps/control-api/src/command-center/command-center.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/command-center/realtime-snapshot",
+      "owner": "apps/control-api/src/execution/realtime.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/command-center/stream",
+      "owner": "apps/control-api/src/execution/realtime.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/commands/catalog",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/commands/tasks",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/compositions/admin-action-drawer",
+      "owner": "apps/control-api/src/execution/operational-composition.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/compositions/approvals/:approval_id",
+      "owner": "apps/control-api/src/execution/operational-composition.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/compositions/command-center",
+      "owner": "apps/control-api/src/execution/operational-composition.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/compositions/exit-reviews/:review_id",
+      "owner": "apps/control-api/src/execution/operational-composition.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/compositions/incidents/:incident_id",
+      "owner": "apps/control-api/src/execution/operational-composition.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/compositions/operations",
+      "owner": "apps/control-api/src/execution/operational-composition.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/compositions/waivers",
+      "owner": "apps/control-api/src/execution/operational-composition.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/contract-authority",
+      "owner": "apps/control-api/src/execution/contract-authority.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/current-source/:environment/screens/:screenId",
+      "owner": "apps/control-api/src/execution/current-source.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/current-source/:environment/screens/:screenId/sources/:sourceId/relations/:relation",
+      "owner": "apps/control-api/src/execution/current-source.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/deployments/:deployment_id/canary",
+      "owner": "apps/control-api/src/canary/canary.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/deployments/:deployment_id/certification",
+      "owner": "apps/control-api/src/sandbox/sandbox-certification.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/deployments/:deployment_id/live",
+      "owner": "apps/control-api/src/live/live-operations.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/deployments/:deploymentId/query-analytics",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/deployments/paper/:deploymentId/projection/:panel",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/derivations/alphas/:alpha_id/activity",
+      "owner": "apps/control-api/src/execution/portal-derivations.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/derivations/conditional-groups/:group_id",
+      "owner": "apps/control-api/src/execution/portal-derivations.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/derivations/deployments/:deployment_id/execution-quality",
+      "owner": "apps/control-api/src/execution/portal-derivations.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/derivations/portfolios/:portfolio_id/capital",
+      "owner": "apps/control-api/src/execution/portal-derivations.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/derivations/source-health",
+      "owner": "apps/control-api/src/execution/portal-derivations.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/durable-mirror/integrity",
+      "owner": "apps/control-api/src/execution/durable-mirror-integrity.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/approvals",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/approvals/:approval_id/live",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/approvals/:approval_id/r1",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/approvals/:approval_id/r2",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/approvals/history",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/exit-reviews/:review_id",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/review-capture-capabilities",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/waivers",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/history/:environment/:relationKey",
+      "owner": "apps/control-api/src/execution/profile-history.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/live-gates/:approvalId/query-analytics",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/manager/current/:operationId",
+      "owner": "apps/control-api/src/execution/maximum-data-operation.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/manager/deployments",
+      "owner": "apps/control-api/src/execution/maximum-data-operation.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/manager/operations",
+      "owner": "apps/control-api/src/execution/maximum-data-operation.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/market/candles",
+      "owner": "apps/control-api/src/execution/market-context.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/market/latest",
+      "owner": "apps/control-api/src/execution/market-context.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/market/venue-candles",
+      "owner": "apps/control-api/src/execution/market-candles.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/operations",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/operations/:operation_id",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/operations/incidents/:incident_id",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/orders/:orderId/funnel",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/portfolios",
+      "owner": "apps/control-api/src/manager-lists/manager-lists.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/portfolios/:portfolioId/capital-ledger",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/portfolios/:portfolioId/correlation",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/portfolios/:portfolioId/cross-equity",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/portfolios/:portfolioId/query-analytics",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/profiles/:environment/realtime-snapshot",
+      "owner": "apps/control-api/src/execution/realtime.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/profiles/:environment/stream",
+      "owner": "apps/control-api/src/execution/realtime.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/realtime/diagnostics",
+      "owner": "apps/control-api/src/execution/realtime.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/resources/accounts/:accountId/:relation",
+      "owner": "apps/control-api/src/execution/subject-activity.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/resources/accounts/:resource_id",
+      "owner": "apps/control-api/src/resource-read/resource-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/resources/alphas/:alphaId/:relation",
+      "owner": "apps/control-api/src/execution/subject-activity.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/resources/alphas/:resource_id",
+      "owner": "apps/control-api/src/resource-read/resource-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/resources/bindings/:resource_id",
+      "owner": "apps/control-api/src/resource-read/resource-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/resources/portfolios/:resource_id",
+      "owner": "apps/control-api/src/resource-read/resource-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/runtime-manifest",
+      "owner": "apps/control-api/src/execution/runtime-manifest.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screen-contracts",
+      "owner": "apps/control-api/src/screen-bff/screen-bff.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screen-contracts/:screen_id",
+      "owner": "apps/control-api/src/screen-bff/screen-bff.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screens/accounts/:account_id",
+      "owner": "apps/control-api/src/profile-read/profile-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screens/blotter",
+      "owner": "apps/control-api/src/paper-read/paper-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screens/live",
+      "owner": "apps/control-api/src/profile-read/profile-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screens/paper",
+      "owner": "apps/control-api/src/paper-read/paper-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screens/paper/:deployment_id",
+      "owner": "apps/control-api/src/paper-read/paper-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screens/paper/:deployment_id/vn-market",
+      "owner": "apps/control-api/src/paper-read/paper-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/screens/sandbox",
+      "owner": "apps/control-api/src/profile-read/profile-read.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/views/equity-chart",
+      "owner": "apps/control-api/src/execution/financial-chart.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/views/observed-timeline",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/views/risk-decisions",
+      "owner": "apps/control-api/src/execution/financial-chart.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/capabilities",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_portal.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/links",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_portal.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/registry",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_portal.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/summary",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_portal.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs",
+      "owner": "apps/control-api/src/research/run-library.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/current-source/evidence",
+      "owner": "apps/control-api/src/research/current-source.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/current-source/evidence/series",
+      "owner": "apps/control-api/src/research/current-source.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/current-source/freeze",
+      "owner": "apps/control-api/src/research/current-source.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/current-source/replay",
+      "owner": "apps/control-api/src/research/current-source.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/current-source/search",
+      "owner": "apps/control-api/src/research/current-source.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/current-source/split",
+      "owner": "apps/control-api/src/research/current-source.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/evidence",
+      "owner": "apps/control-api/src/research/evidence.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/evidence/series",
+      "owner": "apps/control-api/src/research/evidence.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/execute/replay",
+      "owner": "apps/control-api/src/research/replay.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/freeze",
+      "owner": "apps/control-api/src/research/freeze.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/release-candidate",
+      "owner": "apps/control-api/src/research/release-candidate.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/report",
+      "owner": "apps/control-api/src/research/report.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/report/exports/:jobId",
+      "owner": "apps/control-api/src/research/report.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/report/exports/:jobId/download",
+      "owner": "apps/control-api/src/research/report.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/search",
+      "owner": "apps/control-api/src/research/search.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/sparkline",
+      "owner": "apps/control-api/src/research/run-library.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/quantbt/runs/:runId/split",
+      "owner": "apps/control-api/src/research/split.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/alphas",
+      "owner": "apps/control-api/src/research/alpha-import.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/alphas/:alphaId/compare",
+      "owner": "apps/control-api/src/research/compare.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/alphas/:alphaId/lineage",
+      "owner": "apps/control-api/src/research/lineage.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/journey",
+      "owner": "apps/control-api/src/research/foundation.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/preflights/:preflight_token",
+      "owner": "apps/control-api/src/research/preflight.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/quantbt/atlas",
+      "owner": "apps/control-api/src/research/foundation.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/release-candidates/:releaseCandidateId",
+      "owner": "apps/control-api/src/research/release-candidate.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/runs/:runId/console",
+      "owner": "apps/control-api/src/research/progress.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/runs/:runId/events",
+      "owner": "apps/control-api/src/research/progress.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/runs/:runId/progress",
+      "owner": "apps/control-api/src/research/progress.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workspaces",
+      "owner": "apps/control-api/src/facade/facade.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workspaces/:workspace_id/runs",
+      "owner": "apps/control-api/src/facade/facade.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/research/engine-atlas",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/accounts/:user_id",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/quantbt/runs/:runId/release-candidate/draft",
+      "owner": "apps/control-api/src/research/release-candidate.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/accounts",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/accounts/:user_id/activation",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/accounts/:user_id/archive",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/accounts/:user_id/disable",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/accounts/:user_id/enable",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/accounts/:user_id/revoke-sessions",
+      "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/profile-access",
+      "owner": "apps/control-api/src/admin/governance-grants.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/step-up",
+      "owner": "apps/control-api/src/admin/owner-step-up.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/change-password",
+      "owner": "apps/control-api/src/auth/auth.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "owner": "apps/control-api/src/auth/auth.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "owner": "apps/control-api/src/auth/auth.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/runs",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/runs/{run_id}/cancel",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_runs.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/runs/preflight",
+      "owner": "apps/portal/backend/src/portal_api/api/routes.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/alphas/import",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_alphas.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/activation/plans",
+      "owner": "apps/control-api/src/activation/activation.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/activation/plans/:plan_id/apply",
+      "owner": "apps/control-api/src/activation/activation.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/activation/plans/:plan_id/verify",
+      "owner": "apps/control-api/src/activation/activation.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/alphas/:alphaId/insight-previews",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/approvals/:approvalId/capital-preview",
+      "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/commands/plans",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/commands/tasks/:task_id/plan",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/commands/tasks/:task_id/run",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/approvals",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/canary-envelopes",
+      "owner": "apps/control-api/src/canary/canary.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/paper-exit/create",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/r2/capture",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/sandbox-certifications",
+      "owner": "apps/control-api/src/sandbox/sandbox-certification.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/sandbox-certifications/:certification_id/decisions",
+      "owner": "apps/control-api/src/sandbox/sandbox-certification.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/sandbox-certifications/:certification_id/promotion-plans",
+      "owner": "apps/control-api/src/sandbox/sandbox-certification.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/sandbox-certifications/:certification_id/submit",
+      "owner": "apps/control-api/src/sandbox/sandbox-certification.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/governance/sandbox/capture-note",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/:operation_id/acknowledge",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/:operation_id/apply",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/:operation_id/resolve",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/incidents",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/incidents/:incident_id/acknowledge",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/incidents/:incident_id/annotations",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/incidents/:incident_id/assign",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/incidents/:incident_id/evidence",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/incidents/:incident_id/mitigate",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/incidents/:incident_id/operations",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/execution/operations/incidents/:incident_id/resolve",
+      "owner": "apps/control-api/src/operations/incident.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/quantbt/runs/:runId/freeze/verify",
+      "owner": "apps/control-api/src/research/freeze.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/quantbt/runs/:runId/release-candidate/seal",
+      "owner": "apps/control-api/src/research/release-candidate.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/quantbt/runs/:runId/report/exports",
+      "owner": "apps/control-api/src/research/report.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/alphas/:alpha_version_id/activate",
+      "owner": "apps/control-api/src/research/alpha-import.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/alphas/import/gates",
+      "owner": "apps/control-api/src/research/alpha-import.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/alphas/import/parse",
+      "owner": "apps/control-api/src/research/alpha-import.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/alphas/import/register",
+      "owner": "apps/control-api/src/research/alpha-import.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/preflights",
+      "owner": "apps/control-api/src/research/preflight.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/run-producer/p04-delta/install",
+      "owner": "apps/control-api/src/research/p04-delta-binding.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/runs",
+      "owner": "apps/control-api/src/research/run-create.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/research/runs/:runId/cancel",
+      "owner": "apps/control-api/src/research/progress.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/alpha-analysis",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/preflight-snapshots",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/{run_id}/cancel",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/events",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
+    }
+  ]
+}

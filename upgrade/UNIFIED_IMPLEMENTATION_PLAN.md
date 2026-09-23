@@ -3685,6 +3685,20 @@ downstream BFF/action phase.
   accepted UI or backend contract. A real browser/artifact review is a later
   approved gate, not a missing P01 visual pass.
 
+#### P01 baseline rule amendment — RF01-B2, 2026-09-23
+
+Bobby chọn Q2: P01 là **bản chụp lịch sử**. `p01-baseline.mjs --verify` chỉ
+đúng tại commit ghi `baseline.json`; từ nay kiểm nó bằng
+`scripts/research-loop-v11/test-p01-capture.sh`, chạy verifier của chính commit
+đó trong một worktree tạm (PASS, T01–T08). Phần phải sống là
+`test-route-inventory.sh`: không route tĩnh nào khai báo hai lần, protected
+kernel khớp manifest, và tập route bằng ledger đã commit
+`evidence/P01/route-inventory.live.json` (225 route tại lúc ghi). Gate này nằm
+trong `scripts/verify-workspace.sh`, nên chạy ở mọi commit. Hai phép thử âm
+đã chứng minh nó đỏ: một route trùng `/api/v1/research/quantbt/atlas` và một
+route mới chưa ghi ledger. Một change thêm/bớt route ghi lại bằng
+`p01-baseline.mjs --write-live-routes` trong chính change đó.
+
 #### P01 Claude review result — 2026-09-19, `SOURCE_REVIEW_PASS_WITH_ONE_FINDING`
 
 Discrepancy-only review of `screen-action-matrix.csv` and `screen-field-matrix.csv`
