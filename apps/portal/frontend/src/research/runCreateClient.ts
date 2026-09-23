@@ -27,7 +27,10 @@ import { reportSessionExpired } from "../auth/sessionExpiry";
 
 type Schemas = components["schemas"];
 
-export type RunCreateRequest = Schemas["RunCreateRequest"];
+/** `requested_spec` without the generated `$defs` block (see `preflightClient.ts`, CG-P02-01). */
+export type RunCreateRequest = Omit<Schemas["RunCreateRequest"], "requested_spec"> & {
+  requested_spec: Omit<Schemas["RunCreateRequest"]["requested_spec"], "$defs">;
+};
 export type RunCreateResponse = Schemas["RunCreateResponse"];
 export type IntentKind = RunCreateRequest["intent_kind"];
 export type RunCreateProblemCode = Schemas["Problem"]["error"]["code"];

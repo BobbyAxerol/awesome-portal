@@ -33,6 +33,7 @@ import {
   STEPS,
   SWEEP_CEILING,
   blockingProblems,
+  effectiveStrategyId,
   missingConstraints,
   parameterStatus,
   pinnedCount,
@@ -304,11 +305,15 @@ function StrategyStep({
 }) {
   return (
     <Card title="Strategy &amp; protocol">
-      <Field label="strategy_id" hint={draft.bound ? "pinned by the bound version" : "free while scratch"}>
+      <Field
+        label="strategy_id"
+        hint={draft.bound ? "pinned to the bound alpha_id — the server admits no other" : "free while scratch"}
+      >
         <input
           className={INPUT_CLASS}
           style={inputStyle(Boolean(error))}
-          value={draft.strategyId}
+          value={effectiveStrategyId(draft)}
+          readOnly={draft.bound}
           onChange={(e) => patch({ strategyId: e.target.value })}
           aria-label="Strategy id"
         />
@@ -1081,10 +1086,10 @@ function ReviewRail({
         </Row>
         <Row label="execution route">{draft.executionRoute}</Row>
         <Row label="strategy_id">
-          {draft.strategyId ? (
+          {effectiveStrategyId(draft) ? (
             <>
-              {draft.strategyId}
-              {draft.bound ? " (pinned by av)" : ""}
+              {effectiveStrategyId(draft)}
+              {draft.bound ? " (pinned by alpha_id)" : ""}
             </>
           ) : (
             <span className="italic" style={{ color: "var(--ink-faint)" }}>not declared</span>
@@ -1115,7 +1120,7 @@ function ReviewRail({
           )}
         </Row>
         <Row label="trials · stop · seed">
-          {draft.optunaTrials || "0"} · {draft.earlyStopping || "none"} ·{" "}
+          {draft.optunaTrials || "not set"} · {draft.earlyStopping || "none"} ·{" "}
           {draft.randomSeed || "none"}
         </Row>
         <Row label="optimization_config">

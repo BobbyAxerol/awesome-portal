@@ -31,8 +31,18 @@ import { reportSessionExpired } from "../auth/sessionExpiry";
 
 type Schemas = components["schemas"];
 
-export type RequestedSpec = Schemas["RequestedSpec"];
-export type CreateRequest = Schemas["CreateRequest"];
+/**
+ * The requested spec as it goes on the wire.
+ *
+ * The generated declaration carries the JSON-Schema `$defs` block as a required
+ * property; the Control API's strict parser refuses any payload that contains
+ * it, so every preflight built from the generated type was a 400 (CG-P02-01,
+ * RF-04 FE-S02-01). Until the contract drops it, the wire type does.
+ */
+export type RequestedSpec = Omit<Schemas["RequestedSpec"], "$defs">;
+export type CreateRequest = Omit<Schemas["CreateRequest"], "requested_spec"> & {
+  requested_spec: RequestedSpec;
+};
 export type PreflightResponse = Schemas["ResearchPreflightV1"];
 
 export type EffectiveSpec = Schemas["EffectiveSpec"];

@@ -221,7 +221,6 @@ function spec(overrides: Partial<RequestedSpec> = {}): RequestedSpec {
     random_seed: 42,
     optimization_config: {},
     client: { engine_release_id: "er_quantbt_1_1_1", config_digest: "sha256:cfg" },
-    $defs: {} as RequestedSpec["$defs"],
     ...overrides,
   };
 }

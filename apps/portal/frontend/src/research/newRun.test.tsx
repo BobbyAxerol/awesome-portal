@@ -31,7 +31,9 @@ import {
   type RunDraft,
   SWEEP_CEILING,
   blockingProblems,
+  isUntouched,
   missingConstraints,
+  parameterEntriesFrom,
   parameterStatus,
   serializeRequestedSpec,
   validateData,
@@ -408,6 +410,38 @@ function entryWithDeclaration(overrides: Partial<RegistryEntry> = {}): RegistryE
   };
 }
 
+describe("RF-04 FE-S02-01 — the payload the server actually admits", () => {
+  const declared = parameterEntriesFrom({
+    window: { kind: "range", low: 10, high: 60, step: 2 },
+    fixed_k: { kind: "fixed", value: 3 },
+  } as never);
+
+  it("never carries the generated $defs block", () => {
+    expect("$defs" in serializeRequestedSpec(draft())).toBe(false);
+  });
+
+  it("sends no override for a row the reader did not change", () => {
+    const spec = serializeRequestedSpec(draft({ parameters: declared }));
+    expect(spec.parameter_space_overrides).toEqual([]);
+    expect(declared.every(isUntouched)).toBe(true);
+  });
+
+  it("sends exactly the rows the reader changed", () => {
+    const edited = declared.map((row) => (row.name === "window" ? { ...row, high: "40" } : row));
+    const spec = serializeRequestedSpec(draft({ parameters: edited }));
+    expect(spec.parameter_space_overrides).toEqual([{ name: "window", kind: "sweep", low: 10, high: 40 }]);
+  });
+
+  it("requires a whole trial count of at least 1 instead of sending 0", () => {
+    for (const value of ["", "0", "1.5", "-2"]) {
+      expect(validateOptimization(draft({ optunaTrials: value }), LIMITS)).toBe(
+        "Trials must be a whole number of at least 1.",
+      );
+    }
+    expect(validateOptimization(draft({ optunaTrials: "1" }), LIMITS)).toBeNull();
+  });
+});
+
 describe("P10-T11 — all four Spec 02 validators activate from the typed response", () => {
   const registry = [entryWithDeclaration()];
   const limits = constraintsFrom(ATLAS, registry, "av_0_3_0");
@@ -432,9 +466,13 @@ describe("P10-T11 — all four Spec 02 validators activate from the typed respon
     );
   });
 
-  it("fires the pin rule with the declared entrypoint", () => {
-    expect(validateStrategy(draft({ strategyId: "something_else" }), limits)).toBe(
-      "Strategy is pinned by av_0_3_0 (entrypoint alpha.delta_rsi:run) — switch to scratch in Context to explore other strategies.",
+  it("pins a bound run's strategy to its alpha_id, the value the server admits", () => {
+    // run-admission.service.ts admits a create only when strategy_id equals the
+    // bound alpha_id; demanding the entrypoint made every real create fail.
+    expect(validateStrategy(draft({ strategyId: "something_else" }), limits)).toBeNull();
+    expect(serializeRequestedSpec(draft({ strategyId: "something_else" })).strategy_id).toBe("delta_rsi");
+    expect(validateStrategy(draft({ bound: false, strategyId: "" }), limits)).toBe(
+      "A strategy id is required while scratch.",
     );
   });
 

@@ -11,6 +11,7 @@
  * no route is offered, and the step says why.
  */
 
+import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { NewRun } from "./NewRun";
@@ -200,6 +201,30 @@ export function NewRunRoute() {
       run.patch({ engineReleaseId: releaseId, configDigest });
     }
   }, [document, run]);
+
+  /*
+   * An empty trials field is filled with the count the release's
+   * submission profile accepts (`accepted_trial_count`), so a fresh draft is
+   * one the server admits. The reader can still change it; it is never
+   * overwritten after that.
+   */
+  const accepted = document?.current_release.submission_constraints?.accepted_trial_count;
+  useEffect(() => {
+    if (accepted !== undefined && run.draft.optunaTrials === "") {
+      run.patch({ optunaTrials: String(accepted) });
+    }
+  }, [accepted, run]);
+
+  /*
+   * Spec 02 T26 / §outbound: a created run leaves the form for its own
+   * progress screen. The form used to stay put with the run id in a panel and
+   * no way forward — a dead end after the one action the screen exists for.
+   */
+  const navigate = useNavigate();
+  const createdId = run.created?.run_id ?? null;
+  useEffect(() => {
+    if (createdId) navigate(`/research/quantbt/runs/${encodeURIComponent(createdId)}/progress`);
+  }, [createdId, navigate]);
 
   /* Keeps this component's copy of the draft in step with the controller's. */
   useEffect(() => setDraft(run.draft), [run.draft]);

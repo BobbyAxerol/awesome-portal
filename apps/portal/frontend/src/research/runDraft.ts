@@ -158,19 +158,20 @@ export function validateRoute(draft: RunDraft, limits: DraftConstraints): string
   return blocked ?? null;
 }
 
-export function validateStrategy(draft: RunDraft, limits: DraftConstraints): string | null {
-  if (!draft.bound) return null;
-  if (limits.entrypoint === null) return null;
-  /* Nothing is pinned until a version is actually bound. Without this the
-     message read "pinned by  (entrypoint …)" — a claim about a version the
-     reader has not chosen, with the gap where its id belongs. */
-  if (draft.alphaVersionId.trim() === "") return null;
-  /* A bound version pins its entrypoint; picking another strategy is only
-     possible by switching to scratch, and the note says exactly that. */
-  if (draft.strategyId !== limits.entrypoint) {
-    return `Strategy is pinned by ${draft.alphaVersionId} (entrypoint ${limits.entrypoint}) — switch to scratch in Context to explore other strategies.`;
-  }
+export function validateStrategy(draft: RunDraft, _limits: DraftConstraints): string | null {
+  /* A bound run's strategy is pinned by construction: the Control API admits a
+     create only when `strategy_id` equals the bound `alpha_id`
+     (`run-admission.service.ts`), so the serializer sends exactly that and
+     there is nothing to get wrong. The earlier rule demanded the entrypoint
+     instead, which the server refused (RF-04, FE-S02-01; DQ-07). */
+  if (draft.bound) return null;
+  if (draft.strategyId.trim() === "") return "A strategy id is required while scratch.";
   return null;
+}
+
+/** The strategy a draft is sent with: the bound alpha, or the scratch choice. */
+export function effectiveStrategyId(draft: RunDraft): string {
+  return draft.bound ? draft.alphaId : draft.strategyId;
 }
 
 export function validateData(draft: RunDraft, limits: DraftConstraints): string | null {
@@ -276,6 +277,11 @@ export function validateParameters(draft: RunDraft): string | null {
 
 export function validateOptimization(draft: RunDraft, limits: DraftConstraints): string | null {
   const trials = asNumber(draft.optunaTrials);
+  /* An empty field used to be sent as `optuna_trials: 0`, which the server
+     refuses with a generic 400. A count is required and is a whole number. */
+  if (trials === null || !Number.isInteger(trials) || trials < 1) {
+    return "Trials must be a whole number of at least 1.";
+  }
   if (limits.trialCeiling !== null && trials !== null && trials > limits.trialCeiling) {
     return `The engine release publishes a ceiling of ${limits.trialCeiling} trials.`;
   }
@@ -314,6 +320,21 @@ function interval(window: WindowDraft) {
   return { start: window.start, end_exclusive: window.endExclusive };
 }
 
+/**
+ * Whether a row still says exactly what the declaration projected.
+ *
+ * Spec 02 §13-1: an untouched default is never serialized. Sending all eight
+ * declared ranges as overrides read, to the server, as eight edits — and the
+ * P10 profile admits none, so create was refused for a draft the reader never
+ * changed (RF-04, FE-S02-01).
+ */
+export function isUntouched(entry: ParameterEntry): boolean {
+  if (entry.dimension === "sweep") {
+    return entry.low === String(entry.declaredLow) && entry.high === String(entry.declaredHigh);
+  }
+  return !entry.levels && entry.declaredLow === entry.declaredHigh && entry.low === String(entry.declaredLow);
+}
+
 function overrideValue(entry: ParameterEntry): RequestedSpec["parameter_space_overrides"][number] {
   if (entry.dimension === "pin") {
     const raw = entry.levels ? entry.low : (asNumber(entry.low) ?? entry.low);
@@ -347,7 +368,7 @@ export function serializeRequestedSpec(draft: RunDraft): RequestedSpec {
       ? { alpha_id: draft.alphaId, alpha_version_id: draft.alphaVersionId }
       : null,
     not_publishable: !draft.bound,
-    strategy_id: draft.strategyId,
+    strategy_id: effectiveStrategyId(draft),
     execution_route: draft.executionRoute,
     route_params: draft.routeParams,
     data: {
@@ -358,8 +379,9 @@ export function serializeRequestedSpec(draft: RunDraft): RequestedSpec {
     protocol: draft.protocol,
     optimization_mode: draft.optimizationMode,
     optimization_schedule: draft.optimizationSchedule,
-    parameter_space_overrides: draft.parameters.map(overrideValue),
-    optuna_trials: asNumber(draft.optunaTrials) ?? 0,
+    parameter_space_overrides: draft.parameters.filter((entry) => !isUntouched(entry)).map(overrideValue),
+    /* Validation blocks preflight until this is a whole number ≥ 1. */
+    optuna_trials: asNumber(draft.optunaTrials) ?? 1,
     early_stopping: asNumber(draft.earlyStopping),
     random_seed: asNumber(draft.randomSeed),
     optimization_config: { ...draft.optimizationConfigOverrides },
@@ -367,7 +389,6 @@ export function serializeRequestedSpec(draft: RunDraft): RequestedSpec {
       engine_release_id: draft.engineReleaseId,
       config_digest: draft.configDigest,
     },
-    $defs: {} as RequestedSpec["$defs"],
   };
 
   /* Only the protocol's own windows are sent. Carrying both would ask the
