@@ -1,0 +1,32 @@
+# RF02-B3 · isolated Research preview stack (Q6, Bobby 2026-09-23).
+#
+# Applied on top of compose.yaml and deploy/compose.research-progress.yaml by
+# scripts/research-preview/preview.sh only. It never runs against dev
+# (`portal`, :8080), stable (`portal-stable-v1-0-1`, :18081) or the Execution
+# probe (`portal-probe`, :8090): the script fixes the compose project name,
+# refuses those ports, and keeps every secret in a host-bound env file outside
+# the checkout. Volumes are namespaced by the project, so the preview has its
+# own PostgreSQL, NATS, MinIO and artifact store.
+#
+# What it turns on: the Research reads and producer that S01–S07, S02 and S12
+# need (P10/P11 producer and progress, run library, evidence, split, search,
+# freeze, retained current source) and the approved historical market data,
+# read-only. What it leaves dark: P17–P21 (replay, reports, lineage, compare,
+# release candidates) — those belong to the Thanhvuong campaign.
+services:
+  portal-api:
+    environment:
+      PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_HISTORICAL_DATA_MODE:?preview needs PORTAL_HISTORICAL_DATA_MODE}
+
+  control-api:
+    environment:
+      PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:?preview needs PORTAL_PUBLIC_ORIGIN}
+      FEATURE_RESEARCH_RUN_LIBRARY: ${CONTROL_API_FEATURE_RESEARCH_RUN_LIBRARY:-false}
+      FEATURE_RESEARCH_CURRENT_SOURCE: ${CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE:-false}
+
+  # The preview's own bootstrap list: the owner plus one automation account
+  # for the real-API browser receipt. No credential is in this file; the
+  # one-time activation credentials are printed by `preview.sh activate`.
+  control-api-bootstrap:
+    volumes:
+      - ./deploy/research-preview/bootstrap-users.preview.yaml:/opt/control-api/bootstrap-users.yaml:ro
