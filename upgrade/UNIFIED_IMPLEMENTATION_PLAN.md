@@ -3610,6 +3610,8 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P03](#rl-p03) | P02 | nền | 02 | BACKEND_FOUNDATION_COMPLETE / Codex backend / [P03 packet](./research_loop/evidence/P03/phase-report.md); additive schema + scoped role + repository + T01–T11 PASS; FE_CONSUMER_HARNESS_COMPLETE / Claude — `src/research/` +663 lines. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: scope/refusal composition now proceeds under §13.2.1; generated client/action activation remains P10; FE_PANEL_BOUNDARY_COMPLETE / Claude — [composition](./research_loop/evidence/P03/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P04](#rl-p04) | P02 | nền/12 | 02 | BACKEND_COMPLETE / Codex / [P04 packet](./research_loop/evidence/P04/phase-report.md); QuantBT 1.1.1+native provenance, 14-route descriptive Atlas, exact P04 admission and real Delta/resource evidence PASS; FE_ATLAS_DATA_SOURCE_COMPLETE / Claude — atlas data source +540 lines, 41/41, tsc 0. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: Screen 12 HiFi composition may start now; P09 retains shared route/foundation closure; FE_SCREEN12_COMPOSITION_COMPLETE / Claude — [Screen 12](./research_loop/evidence/P04/frontend-composition-claude.md), 3 tabs, manifest-driven, browser receipt 0 console errors; **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P05](#rl-p05) | P03,P04 | nền | 03 | TECHNICALLY_COMPLETE / Codex backend / bounded Parquet, immutable Control-API authority, Rust reader and recovery evidence closed; [P05 evidence](./research_loop/evidence/P05/README.md); FE_ARTIFACT_HARNESS_COMPLETE / Claude — artifact harness +337 lines. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: artifact panels may start now; named DTO/download action activation remains P10/P11; FE_ARTIFACT_PANEL_COMPLETE / Claude — [composition](./research_loop/evidence/P05/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
+| [RF-01](#rl-rf-01) | P01–P05, P09, P11 | nền · 00/03/04–07/12 dùng chung | 03R | **PLANNED · AWAITING_BOBBY_APPROVAL** / Claude (backend + frontend, Bobby giao 2026-09-23) / [P01–P05 audit](./research_loop/evidence/AUDIT_P01_P05_CLAUDE_2026-09-23.md) · [checkpoint](#rl-p01-p05-audit): một route Atlas, gate route sống, một bộ trạng thái artifact, một codec cursor, một ngữ pháp refusal/đăng nhập lại. Chờ Q1, Q2, Q7. |
+| [RF-02](#rl-rf-02) | RF-01 | 02 · 12 · lane real-API | 03R | **PLANNED · AWAITING_BOBBY_APPROVAL** / Claude (backend + frontend) / [checkpoint](#rl-p01-p05-audit): S12 đúng spec 12, S02 phủ 24/24 control, stack preview cô lập (không dùng `dev-portal`) và receipt real-API đầu tiên. Chờ Q4, Q5, Q6. |
 | [P06](#rl-p06) | P03–P05 | nền/03 | 03 | TECHNICALLY_COMPLETE / Codex backend / [P06 evidence](./research_loop/evidence/P06/README.md): PostgreSQL logical-work/lease/outbox authority, real namespace-isolated QuantBT Delta child and retry/cancel/recovery proof are closed; no browser, named producer, NATS deployment or direct-submit cutover was introduced; FE_SCHEDULER_HARNESS_COMPLETE / Claude — scheduler harness +349 lines, full suite 2488 pass. `FE_COMPOSITION_RECOVERY_READY_FOR_CLAUDE`: attempt/queue panels may start now; producer/SSE/action activation remains P10/P11; FE_QUEUE_PANEL_COMPLETE / Claude — [composition](./research_loop/evidence/P06/frontend-composition-claude.md); **FE_COMPOSITION_RECOVERY_COMPLETE** / Claude — R1 closeout: no lease epoch/worker identity/work digest on the browser surface, boundary sweep + DOM probe |
 | [P07](#rl-p07) | P03,P04,P06 | 14 | 04 | BACKEND_AND_CONTRACT_COMPLETE / Codex / [P07 evidence](./research_loop/evidence/P07/phase-report.md); private AST analysis, bounded source custody, seven ordered gates, immutable registry binding and ADMIN activation CAS are proven on a fresh disposable PostgreSQL cell. The five public same-origin operations and generated typed client are published. `may_activate` is required, caller-specific server admission and is evaluated by the exact same predicate as activation; **CG-P07-01 resolved**. All five Control API routes are registered with truthful P07/P09 ownership in the R2 capability inventory; **FD-P07-02 resolved**. · FE_SCREEN14_COMPOSITION_COMPLETE / Claude — Screen 14 is built against `@portal/contracts-research-alpha-import` with zero hand-written types or error strings; tsc 0, research suite 158/158, full frontend suite 158 files/0 failures, build 0 and browser probe 6/6 with 0 console output and 0 px overflow at 1280 and 660. `/research/quantbt/imports` is untouched; `ResearchAlphaAnalysis` is never imported, rendered or requested. No product route is mounted — P09 owns that — so the only render today is the labelled fixture lane. Screen 14 T07 (prefill Screen 02 from `av_`) is **NOT_RUN_BY_DESIGN**, explicitly owned by P10 New Run; it is neither a P07 pass nor a hidden failure. [Claude S14 composition](./research_loop/evidence/P07/frontend-composition-claude.md) |
 | [P08](#rl-p08) | P03–P05 | 02/05 nền | 04 | BACKEND_AND_TYPED_CONTRACT_COMPLETE / Codex backend / [P08 packet](./research_loop/evidence/P08/README.md); bounded HMD private reader, shared immutable snapshot, requested→effective/fold/resource manifest, token expiry/freshness assertion and exact two-route same-origin OpenAPI are proven. No raw candle/holdout/worker path exists; generic Data Catalog routes cannot replay an opaque P08 snapshot ID. P10 owns server-side worker binding; rolling remains truthfully `RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED` until a versioned manifest-owned train-width contract is approved, never inferred. · FE_PREFLIGHT_CONSUMER_COMPLETE / Claude — typed Screen 02/05 consumer from `@portal/contracts-research-preflight`, no hand-mapped field and no local payload parse: client +251, container +157, Screen 02 panel +471, Screen 05 boundary +282, tests +713, fixture lane +213, browser probe +100, boundary sweep +17/−1. `P08-T01…T12` all pass; tsc 0, research suite 198/198, build 0, browser probe 8/8 with 0 console output and 0 px overflow at 1280 and 660. `requested_spec_digest` is never sent (asserted on the POST body) and no digest is computed on the surface; any change to the requested spec drops the held token; EXPIRED/STALE/NOT_FOUND clear it rather than resending. Scope taken deliberately narrow: the eight-step declaration surface is P10's (the generated schema says the requested spec is producer-side, not a live endpoint), and Screen 05 renders the structural boundary only — purge, embargo, inner folds, θ* and the gap scan stay P14's and are named as absent rather than invented. **FD-P08-01 resolved:** both controller routes are declared in the R2 ledger and the full frontend suite is now exit 0. **CG-P08-01 resolved in P08 scope:** generated `may_create_run=false` is the explicit server fact until P10 publishes and rechecks its exact create predicate. The [browser/HIFI audit](./research_loop/evidence/P08/frontend-hifi-browser-audit.md) records a valid component-fixture receipt, not a product-route claim; P09/P10/P14 retain their route/screen ownership. [Claude P08 composition](./research_loop/evidence/P08/frontend-composition-claude.md) |
@@ -4154,6 +4156,121 @@ part that needs no endpoint, so it is delivered now and P10/P11 inherit it.
 Gates: 58/58 at this point, `tsc -b` exit 0. A test greps the module for any
 filesystem path, database locator, HMAC key, lease epoch or worker identity and
 finds none.
+
+<a id="rl-p01-p05-audit"></a>
+### P01–P05 foundation audit checkpoint — Claude, 2026-09-23
+
+**`AUDIT_COMPLETE · REMEDIATION_PLANNED · AWAITING_BOBBY_APPROVAL`.** Bobby giao
+Claude rà soát và sửa **cả backend lẫn frontend** của P01–P05 (board không có
+P00; campaign Research bắt đầu từ P01). Baseline audit: `30fb9f21` trên
+`docs/research-loop-plan`. Checkpoint này chỉ đổi tài liệu; chưa có code,
+runtime, flag hay deployment nào thay đổi.
+
+**Findings chi tiết, bằng chứng và ảnh chụp:**
+[P01–P05 audit](./research_loop/evidence/AUDIT_P01_P05_CLAUDE_2026-09-23.md).
+Unified Plan vẫn là board sống duy nhất; file audit là phụ lục chi tiết, không
+phải tracker thứ hai.
+
+**Verdict.** Backend của P01–P05 đạt đúng phạm vi đã khai báo và contract
+generated khớp OpenAPI. Lỗi nằm ở **mối nối giữa các phase** — thứ không phase
+đơn lẻ nào sở hữu: một route Atlas khai báo hai lần mà gate P01 không còn bắt
+được; hai bộ trạng thái artifact cho cùng một khái niệm; hai cursor khác nhau
+cho cùng một journey; năm bản sao hàm map refusal không ai giữ ngữ nghĩa P03;
+và harness P03/P05 được dựng nhưng màn sản phẩm không dùng. Mười sáu finding
+(`B-01…B-06`, `F-01…F-10`) được chia vào hai repair phase dưới đây theo thứ tự
+phụ thuộc: **RF-01** sửa contract/authority/ngữ nghĩa dùng chung; **RF-02**
+hoàn tất các màn nền (S12, S02) và mở lane real-API đầu tiên.
+
+**Quyết định cần Bobby trước khi vào RF-01**
+
+| # | Quyết định | Khuyến nghị của Claude |
+|---|---|---|
+| Q1 | B-01: gỡ route Python công khai `GET /api/v1/research/quantbt/atlas` | Gỡ; giữ `/internal/research/engine-atlas` mà Control API đang dùng; ghi vào runbook rằng Research chỉ đọc qua Control API |
+| Q2 | B-02: số phận gate P01 | P01 giữ là bản chụp lịch sử tại commit của nó; thêm một gate **sống** kiểm route collision/protected-kernel chạy ở mọi phase |
+| Q3 | F-06: query keys P03 | Hoãn có ghi nhận, nối khi Portal có workspace selector |
+| Q4 | D-1…D-4 (lệch HiFi có chủ ý của S12, xem audit §4) | Duyệt D-1…D-3; D-4 trả Rule One về vàng như HiFi |
+| Q5 | Thư viện công thức cho S12 (spec 12 T02 ghi KaTeX lazy) | Duyệt thêm KaTeX như dependency pinned, lazy chunk riêng; fallback chuỗi mono |
+| Q6 | Lane xem bằng mắt / real-API (P01-GAP-03) | Stack preview cô lập + hostname riêng sau Cloudflare Access — **không** dùng `dev-portal` (lý do dưới) |
+| Q7 | Module dùng chung với campaign Thanhvuong | Bobby ghi lock/handoff note trước khi RF-01 chạm `ResearchPanel`, `state`, `evidenceCursor`; RF-01 chỉ thay đổi **additive**, giữ API cũ đến khi PR của Thanhvuong được tích hợp |
+
+**Vì sao không đẩy campaign lên `dev-portal.primusspark.com`.** Hostname này
+([cloudflared template](../deploy/cloudflared/config.example.yml)) trỏ vào stack
+`dev` và **không có Cloudflare Access policy** — chỉ có login riêng của dev
+Control API. Đẩy `docs/research-loop-plan` lên đó sẽ: (1) thay build `dev` mà
+Bobby/Thanhvuong đang dùng; (2) chạy migration Research của campaign vào DB
+namespace của `dev` trước khi có PR `docs/research-loop-plan → dev`, mà các
+migration này additive và không có down; (3) bật `FEATURE_RESEARCH_*` trên một
+host công khai; (4) đi vòng qua luồng feature → `dev` → `main`. Thay vào đó RF-02
+dựng stack preview cô lập (compose project, cổng, Postgres và env riêng, host-bound
+ngoài checkout) và, nếu Bobby muốn xem từ xa, một hostname một-label mới (ví dụ
+`research-preview.primusspark.com`) **có Access**. `dev-portal` chỉ nhận
+campaign sau khi Bobby tự merge qua PR.
+
+<a id="rl-rf-01"></a>
+### RF-01 — Foundation contract, authority và integration truth
+
+**Đọc chi tiết:** [P01–P05 audit](./research_loop/evidence/AUDIT_P01_P05_CLAUDE_2026-09-23.md) §2–§3; [Guide P01](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p01)–[P05](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p05); [P01 packet](./research_loop/evidence/P01/README.md) (baseline rule, route inventory); [P02 cursor codec](./research_loop/evidence/P02/cursor-codec.md) + [contract freeze](./research_loop/evidence/P02/contract-freeze.json); [P03 schema & authorization](./research_loop/evidence/P03/schema-and-authorization.md); [Research Screen State Semantics v1](./research_loop/release-v1.1/docs/RESEARCH_SCREEN_STATE_SEMANTICS_V1.md); [P05 packet](./research_loop/evidence/P05/README.md) + migration `1723680000038_research-artifact-authority.sql`; [P09 packet](./research_loop/evidence/P09/phase-report.md) (journey cursor); [P11 packet](./research_loop/evidence/P11/README.md) + `research-progress.openapi.json`; [spec 03](./research_loop/release-v1.1/docs/screens/03_run_progress.md), [spec 04 §3](./research_loop/release-v1.1/docs/screens/04_evidence_flow.md); gateway [`portal.conf`](../deploy/nginx/portal.conf) + [`.env.production.example`](../deploy/.env.production.example); [Thanhvuong P17–P21 handoff](./research_loop/THANHVUONG_P17_P21_FRONTEND_HANDOFF.md) + [`CLAUDE-FOR-thanhvuong.md` A0](./research_loop/CLAUDE-FOR-thanhvuong.md).
+**Entry:** Bobby duyệt checkpoint này và Q1, Q2, Q7; P01–P05 ở trạng thái đã đóng; lock note cho module dùng chung đã được ghi.
+**Owner:** Claude, backend + frontend (Bobby giao 2026-09-23). Codex/Terra review theo regime Unified.
+**Test IDs bắt buộc:** `RF01-T01…T14`, `V11-RF01-DR/BR/GX` và mọi source test của P01–P05/P09/P11 bị chạm theo §13.3.
+
+- **Goal:** Mỗi sự thật nền chỉ có **một** authority và **một** cách hiển thị: một route Atlas, một gate route còn sống, một bộ trạng thái artifact từ bảng authority tới màn hình, một codec cursor được backend kiểm và frontend dùng chung, một ngữ pháp refusal/đăng nhập lại cho mọi màn Research. Các màn phía sau thừa hưởng hành vi đúng thay vì tự dựng lại.
+- **To-do BE:**
+
+  | ID | Finding | Việc cụ thể | Xong khi |
+  |---|---|---|---|
+  | RF01-B1 | B-01 | Gỡ `research_quantbt_atlas` khỏi `apps/portal/backend/src/portal_api/api/routes_research.py` và include trong `main.py`; giữ `/internal/research/engine-atlas`; regenerate `portal-api.d.ts`; ghi vào runbook rollback gateway rằng dưới `PORTAL_WEB_UPSTREAM=portal-api:8000` các route Research trả refusal có kiểu, không trả một shape khác | route inventory 0 collision; Control API Atlas không đổi byte |
+  | RF01-B2 | B-02 | Theo Q2: đánh dấu `p01-baseline.mjs --verify` gắn với `source_capture_commit`; thêm `scripts/research-loop-v11/test-route-inventory.sh` (collision, protected-kernel SHA, diff route tĩnh so với allowlist commit trong repo) và gọi nó trong gate của mọi phase Research | gate sống xanh ở HEAD; cố tình thêm route trùng thì gate đỏ |
+  | RF01-B3 | B-03 | `research-progress` `Artifact.state` thêm `CORRUPT`, `MISSING` (additive), lấy từ bảng authority P05 cho cùng run/artifact; luật projection: sau khi seal, trạng thái authority thắng event tiến trình; P05 README ghi `PENDING` là tiền trạng thái của mặt progress, không phải trạng thái authority; OpenAPI + generated + snapshot cũ vẫn đọc được | một artifact bị đánh `CORRUPT` ở authority xuất hiện đúng trong snapshot S03 |
+  | RF01-B4 | B-05 | Codec `p02-cursor.v2`: nhận `stage` (7 giá trị, chỉ để trình bày), mọi giá trị trên dây là `Identifier` opaque — một màn chỉ được hiểu `fold` là số khi đối chiếu với tập mà contract của chính nó công bố; cập nhật `cursor-codec.md`, `p02-contract.mjs`, `foundation.contract.ts` `InspectionCursor`/`canonical_query`, OpenAPI + generated; journey endpoint nhận và trả lại `stage` | codec test (trùng, không hỗ trợ, `seq`≠`event_seq`, trial mơ hồ cần `study`, `stage`) và journey round-trip xanh |
+  | RF01-B5 | B-06 | Append ghi chú đóng gate vào debt register P02–P05 (không sửa dòng cũ), trỏ tới phase/commit đã đóng | mỗi gate có trạng thái hiện tại + bằng chứng |
+
+- **To-do FE/consumer:**
+
+  | ID | Finding | Việc cụ thể | Xong khi |
+  |---|---|---|---|
+  | RF01-F1 | F-04 | Copy `denied` trung tính trong `state.ts` + fixtures: không xác nhận object tồn tại hay thuộc ai | test copy + ảnh fixture |
+  | RF01-F2 | F-02 | `ResearchPanel` thêm prop `recovery` (additive) hiện ở `unavailable`/`failed-retryable`/`stale`; chuyển nút "reread" của S04–S07 sang đó; luật FE-P03-01 cho content action (Export) giữ nguyên | S05 gặp 503 có đúng một nút thử lại |
+  | RF01-F3 | F-03 | Helper dùng chung: `401` chuyển sang luồng `AccessProblemScreen` `SESSION_EXPIRED` sẵn có, giữ return URL; không dựng màn mới | S12 gặp 401 có đường đăng nhập lại |
+  | RF01-F4 | F-05 | Một `researchRefusal.ts` (`toResearchRefusal`): bảng code P03 → problem code của từng contract → status; copy trên màn cố định, text server chỉ ở phần chi tiết; thay năm bản sao ở client P12–P16, giữ tên cũ dạng re-export tới khi PR Thanhvuong vào | 503 `RESEARCH_ADMISSION_SATURATED` hiện `failed-retryable`; không màn nào in thẳng `error.message` |
+  | RF01-F5 | F-01 | Một `inspectionCursor.ts` hiện thực đúng codec v2 (lỗi codec hiện thành notice trong panel, không lặng lẽ bỏ key); `evidenceCursor` thành adapter giữ API; `foundationClient` dùng chung | S00 → S04 → S07 → S00 giữ `study/pick/trade/event_seq/mode/playback_ordinal` |
+  | RF01-F6 | F-07/F-08 | Sửa receipt P04 ("typed inactive") và P05 ("used by Run Progress"); S03 vẽ artifact qua `ArtifactPanel` trên bộ trạng thái đã thống nhất ở RF01-B3 | S03 hiện đủ `PENDING/WRITING/SEALED/CORRUPT/MISSING/ABORTED` |
+
+- **Tests BE:** route-inventory gate (âm tính + dương tính); Python: route công khai đã gỡ, route internal còn phục vụ; Control API atlas byte-identical; `research-progress` contract/service test + PostgreSQL tạm (fresh + upgrade) với artifact bị đánh `CORRUPT`/`MISSING` sau seal; snapshot cũ đọc được; codec v2 unit + journey endpoint round-trip; generated-contract verifier; boundary sweep (không lease epoch/worker identity/work digest).
+- **Tests FE/browser:** unit cho `researchRefusal`, `inspectionCursor`, `ResearchPanel.recovery`, copy `denied`; browser 1280/660: S05 503 → thử lại, S12 401 → đăng nhập lại, S03 artifact `CORRUPT`/`MISSING`, cursor round-trip S00↔S04–S07; mọi màn Research không in text server; 0 lỗi console, 0 tràn ngang; toàn bộ suite frontend + probe xanh; một test compile chứng minh API cũ của `ResearchPanel`/`state`/`evidenceCursor` vẫn dùng được.
+- **Exit gate:** `test-route-inventory.sh` xanh và nằm trong gate phase; route Atlas Python công khai đã gỡ và runbook ghi rõ; generated contract khớp OpenAPI; một bộ trạng thái artifact từ authority → contract → S03; một codec cursor ở backend và frontend; một mapper refusal và đường đăng nhập lại dùng cho mọi màn Research; receipt browser 1280/660 ghi rõ lane (`PRODUCT_ROUTE_BROWSER_RECEIPT`); debt trong scope = 0; commit theo từng bước, push lên `origin` và `primus-origin`; **không** merge vào `dev`/`main`.
+- **Rollback/handoff:** Mọi thay đổi contract là additive/versioned; migration (nếu có) chỉ thêm; revert theo từng commit. Gỡ route Python revert được bằng một commit. Handoff: ghi chú module dùng chung cho Thanhvuong (Bobby ghi lock trước, Claude ghi addendum API sau), rồi mở RF-02.
+
+<a id="rl-rf-02"></a>
+### RF-02 — Foundation consumer completeness, Atlas và real-API lane
+
+**Đọc chi tiết:** [P01–P05 audit](./research_loop/evidence/AUDIT_P01_P05_CLAUDE_2026-09-23.md) §3–§5; [spec 12](./research_loop/release-v1.1/docs/screens/12_engine_atlas.md) + [HTML 12](<./research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html>); [spec 02](./research_loop/release-v1.1/docs/screens/02_new_run.md) + [HTML 02](<./research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html>); [P02 requested-spec field map](./research_loop/evidence/P02/requested-spec-field-map.v1.json); [P04 packet](./research_loop/evidence/P04/README.md) (engine catalog, 4 axes); [P09 packet](./research_loop/evidence/P09/phase-report.md) (foundation Atlas); [P10 packet](./research_loop/evidence/P10/README.md) (Atlas limits cho S02); [P01-GAP-03](./research_loop/evidence/P01/findings-decision-register.json) (lane browser thật); [cloudflared template](../deploy/cloudflared/config.example.yml); [§13.3.1 browser-first HiFi](#rl-test-gates).
+**Entry:** RF-01 exit xanh; Bobby duyệt Q4, Q5, Q6; nguồn QuantBT 1.1.1 cho các fact Atlas mới đã được chỉ ra (file/section cụ thể của package hoặc tài liệu engine đã pin).
+**Owner:** Claude, backend + frontend. Bobby thực hiện phần Cloudflare (DNS + Access) nếu Q6 chọn hostname.
+**Test IDs bắt buộc:** `RF02-T01…T16`, `V11-RF02-DR/BR/GX`, spec 12 `T01…T10`, spec 02 các test chạm walk-forward.
+
+- **Goal:** Hoàn tất những gì P02 và P04 hứa trên màn hình — S12 đúng spec 12 kể cả tương tác "bấm schedule, claim đổi theo", S02 phủ đủ 24/24 control của field map P02 (dựng thật hoặc từ chối có kiểu) — và tạo **receipt real-API đầu tiên** cho các màn nền trong một lane preview cô lập để Bobby duyệt bằng mắt.
+- **To-do BE:**
+
+  | ID | Finding | Việc cụ thể | Xong khi |
+  |---|---|---|---|
+  | RF02-B1 | B-04 | Mở rộng manifest `research-engine-catalog` và `AtlasMode` (additive): theo từng mode × schedule — `claims` (validation / chronological), `cert_cap`, `oos_use`; theo mode — `objective` (id công thức, danh sách term, hệ số gắn release), `reads` (mô tả dữ liệu dùng), `avoid_when`. **Mỗi fact có source locator** trong package/tài liệu QuantBT 1.1.1 đã pin; fact không có nguồn là `NOT_PUBLISHED`, không bịa | contract test + fixture sinh từ manifest; reviewer đối chiếu từng locator |
+  | RF02-B2 | F-10 | Công bố tập giá trị hợp lệ của `walk_forward.split_mode`/`window_mode` (và mặc định) trong Atlas/preflight; preflight từ chối giá trị ngoài tập bằng refusal có kiểu | S02 lấy giá trị từ contract, không hardcode |
+  | RF02-B3 | §5 / Q6 | Stack preview `portal-probe-research`: compose project, cổng, Postgres, env **riêng** (host-bound ngoài checkout); chạy migration của campaign; bật `FEATURE_RESEARCH_*` chỉ ở stack này; seed bằng một run P04 Delta thật đi qua producer P10 → P11 → P13 (hoặc phát lại receipt đã giữ); ghi image/config/migration SHA. Hostname một-label có Access nếu Q6 duyệt; **không** chạm `dev-portal` | đăng nhập + đi được S01→S07, S02, S12 bằng dữ liệu thật; teardown có ghi nhận |
+
+- **To-do FE/consumer:**
+
+  | ID | Finding | Việc cụ thể | Xong khi |
+  |---|---|---|---|
+  | RF02-F1 | F-09 | S12 theo spec 12: tab verbatim "WFO modes · Execution routes · Claims by contract"; breadcrumb "Evidence Flow / Engine Atlas"; hash `#tab=&mode=&route=` giữ đủ key; deep-link sang S06 mang mode + schedule (T03); mode card với chip schedule đổi claim/cert cap từ RF02-B1; công thức objective (KaTeX lazy theo Q5, fallback mono); bảng "when to reach for which mode"; panel release facts (`optimizer_defaults`, `submission_constraints`, `trial_ceiling`, phiên bản native); Rule One theo Q4 | spec 12 T01–T10 xanh, copy diff = 0 |
+  | RF02-F2 | F-10 | S02: control `window_mode`/`split_mode` lấy giá trị từ RF02-B2; route sub-form của route chưa admitted hiện "route not admitted" có lý do, không có input; bảng 24/24 control → dựng thật hoặc từ chối có kiểu | field-map test 24/24 |
+  | RF02-F3 | F-06 | Theo Q3: ghi deferral có điều kiện kích hoạt (workspace selector) vào receipt P03, hoặc nối query keys nếu Bobby chọn làm ngay | quyết định được ghi và test tương ứng |
+  | RF02-F4 | P01-GAP-03 | Receipt `REAL_API_E2E_RECEIPT` trên stack preview cho S01–S07, S02, S12 ở 1280/660: đối chiếu HiFi, console/network, request chỉ tới BFF đã công bố; Bobby xem trực tiếp trên host preview | receipt real-API tách riêng khỏi fixture; ảnh + trace lưu riêng tư |
+
+- **Tests BE:** manifest → contract → fixture cho mọi fact Atlas mới, fact thiếu nguồn phải ra `NOT_PUBLISHED`; preflight nhận/từ chối `split_mode`/`window_mode`; stack preview: migration fresh, health, login, đọc thật qua Control API, không request nào tới `/internal/*` từ browser; teardown không đụng `dev`/`stable`.
+- **Tests FE/browser:** spec 12 T01–T10 (3 tab + hash, KaTeX + fallback, deep-link S06, route DEFERRED không có nút, claims đủ + footer, route thứ 15 tự mọc, bảng cuộn ở 660, axe 0 serious, reduced-motion, copy diff = 0); S02 walk-forward + route chưa admitted; lane real-API tách khỏi lane fixture; 0 lỗi console, 0 tràn ngang; toàn bộ suite xanh.
+- **Exit gate:** S12 đạt spec 12 và mọi fact mới có nguồn; S02 phủ 24/24 control; stack preview tái lập được từ tài liệu và có receipt real-API đầu tiên cho các màn nền; P01-GAP-03 chuyển sang đóng với bằng chứng; Bobby xem HiFi trên host preview và ghi duyệt/lệch; debt trong scope = 0; commit theo bước, push `origin` + `primus-origin`; không merge `dev`/`main`; tài nguyên preview có quyết định giữ hoặc teardown.
+- **Rollback/handoff:** Field Atlas mới là additive, client cũ bỏ qua được; tắt stack preview không ảnh hưởng `dev`/`stable`; hostname preview gỡ bằng một thay đổi Cloudflare. Handoff: receipt real-API và công thức lane preview cho P23 (verification toàn chuỗi) và cho Thanhvuong dùng lại khi test S08–S11.
 
 <a id="rl-p06"></a>
 ### P06 — Durable scheduler, isolated workers và retry
