@@ -14,6 +14,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  ACTIVATION_NOT_ADMITTED,
   AlphaImport,
   DRAFT_NOTE,
   FAIL_CLOSED_NOTE,
@@ -751,5 +752,60 @@ describe("panel frames survive every state", () => {
     // take the user's pasted source away with it.
     expect(screen.getByLabelText("Alpha source text")).toBeTruthy();
     expect(document.querySelector("[data-dropzone]")).toBeTruthy();
+  });
+});
+
+describe("RF-04 FE-S14-07 — no write is posted twice, and a refusal sits by its button", () => {
+  it("keeps every write button inert while one request is in flight", () => {
+    render(<AlphaImport {...props({ sourceText: "x = 1", parse: sourceResponse(), parseState: OK, busyStep: "gates" })} />);
+    expect(action("parse").disabled).toBe(true);
+    expect(action("run-gates").disabled).toBe(true);
+  });
+
+  it("does not re-arm a step that already succeeded for these bytes", () => {
+    render(
+      <AlphaImport
+        {...props({
+          sourceText: "x = 1",
+          alphaId: "delta",
+          parse: sourceResponse(),
+          parseState: OK,
+          gates: gatesResponse(),
+          gatesState: OK,
+          registration: registration(),
+          registerState: OK,
+        })}
+      />,
+    );
+    expect(action("parse").disabled).toBe(true);
+    expect(action("run-gates").disabled).toBe(true);
+    expect(action("register").disabled).toBe(true);
+  });
+
+  it("prints the activation refusal beside Activate and stops offering it", () => {
+    const refusal = toRefusal(new PortalApiError("Only an ADMIN may activate.", 403, "FORBIDDEN", null));
+    render(
+      <AlphaImport
+        {...props({ registration: registration(), registerState: OK, activationAdmitted: true, activationRefusal: refusal })}
+      />,
+    );
+    expect(document.querySelector("[data-activation-refusal]")?.textContent).toBe(refusal.message);
+    if (!refusal.mayRetry) expect(action("activate").disabled).toBe(true);
+  });
+
+  it("says why Activate is absent for an account that may not activate", () => {
+    render(<AlphaImport {...props({ registration: registration({ may_activate: false }), registerState: OK })} />);
+    expect(screen.getByText(ACTIVATION_NOT_ADMITTED)).toBeTruthy();
+  });
+
+  it("shows the activation's revision once activated", () => {
+    render(
+      <AlphaImport
+        {...props({ registration: registration(), registerState: OK, activation: activation() })}
+      />,
+    );
+    const block = document.querySelector("[data-registration]") as HTMLElement;
+    expect(block.textContent).toContain("rev 8");
+    expect(block.textContent).not.toContain("rev 7");
   });
 });

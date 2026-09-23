@@ -145,6 +145,18 @@ describe("Q4 / D-4 and the release facts panel", () => {
     expect(rule.textContent).toContain("Click the schedule chips below and watch the claim change.");
   });
 
+  it("names only mode × schedule pairs the release admits (DQ-10)", () => {
+    view("modes");
+    const text = (document.querySelector("[data-rule-one]") as HTMLElement).textContent ?? "";
+    const mode1 = DOC.modes.find((mode) => mode.mode_id === "mode_1_decay")!;
+    const valid = mode1.facts!.schedules.map((fact) => fact.schedule);
+    for (const schedule of ["per_fold_decay", "global"]) {
+      expect(text).toContain(schedule);
+      expect(valid).toContain(schedule);
+    }
+    expect(text).not.toContain("per_fold_causal");
+  });
+
   it("publishes the release facts a researcher needs before declaring a run", () => {
     view("routes");
     const facts = document.querySelector("[data-release-facts]") as HTMLElement;

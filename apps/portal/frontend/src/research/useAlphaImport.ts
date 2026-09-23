@@ -33,7 +33,7 @@ const IDLE = {
   register: awaitingStep("Registration opens once all seven gates pass."),
 } as const;
 
-type Step = "parse" | "gates" | "register" | "activate";
+export type Step = "parse" | "gates" | "register" | "activate";
 
 export interface AlphaImportController {
   sourceText: string;
@@ -64,6 +64,10 @@ export interface AlphaImportController {
   onRegister: () => void;
   onActivate: () => void;
   activationAdmitted: boolean;
+  /** The step whose request is in flight; every write button is inert meanwhile. */
+  busyStep: Step | null;
+  /** A refusal of the activate request, shown beside the button that caused it. */
+  activationRefusal: ImportRefusal | null;
 }
 
 export function useAlphaImport(workspaceId?: string): AlphaImportController {
@@ -139,7 +143,7 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
   }, []);
 
   const onParse = useCallback(() => {
-    if (sourceText.trim().length === 0) return;
+    if (pending !== null || sourceText.trim().length === 0) return;
     setPending("parse");
     setRefusal(null);
     setGates(null);
@@ -156,10 +160,10 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
         setPending(null);
       })
       .catch(fail);
-  }, [fail, fileName, sourceText, workspaceId]);
+  }, [fail, fileName, pending, sourceText, workspaceId]);
 
   const onRunGates = useCallback(() => {
-    if (!parse?.parse_ok) return;
+    if (pending !== null || !parse?.parse_ok) return;
     setPending("gates");
     setRefusal(null);
     setRegistration(null);
@@ -171,10 +175,10 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
         setPending(null);
       })
       .catch(fail);
-  }, [fail, parse, workspaceId]);
+  }, [fail, parse, pending, workspaceId]);
 
   const onRegister = useCallback(() => {
-    if (!parse || !gates?.all_pass || alphaId.trim().length === 0) return;
+    if (pending !== null || !parse || !gates?.all_pass || alphaId.trim().length === 0) return;
     setPending("register");
     setRefusal(null);
     alphaImportApi
@@ -190,10 +194,10 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
         loadRegistry();
       })
       .catch(fail);
-  }, [alphaId, fail, gates, loadRegistry, parse, workspaceId]);
+  }, [alphaId, fail, gates, loadRegistry, parse, pending, workspaceId]);
 
   const onActivate = useCallback(() => {
-    if (!registration) return;
+    if (pending !== null || !registration) return;
     setPending("activate");
     setRefusal(null);
     alphaImportApi
@@ -209,7 +213,7 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
         loadRegistry();
       })
       .catch(fail);
-  }, [fail, loadRegistry, registration, workspaceId]);
+  }, [fail, loadRegistry, pending, registration, workspaceId]);
 
   /* Which step the outstanding refusal belongs to. Attaching it to every panel
      would claim three failures where one happened. */
@@ -270,5 +274,7 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
     /* The generated RegistrationResponse is the only authority for this
        affordance; never infer it from a browser-held role or lifecycle. */
     activationAdmitted: registration?.may_activate === true,
+    busyStep: pending,
+    activationRefusal: lastAttempted === "activate" && pending === null ? refusal : null,
   };
 }

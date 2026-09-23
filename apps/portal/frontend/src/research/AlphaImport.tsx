@@ -442,7 +442,15 @@ export interface AlphaImportProps {
   onActivate: () => void;
   /** True only when the server itself admitted activation for this actor. */
   activationAdmitted: boolean;
+  /** The step in flight. Every write button is inert while one is outstanding. */
+  busyStep?: "parse" | "gates" | "register" | "activate" | null;
+  /** A refusal of the activate request, shown beside its button. */
+  activationRefusal?: ImportRefusal | null;
 }
+
+/** Shown when a DRAFT is registered but this account may not activate it. */
+export const ACTIVATION_NOT_ADMITTED =
+  "Activation needs a workspace ADMIN. This account can register a draft but not activate it.";
 
 export function AlphaImport(props: AlphaImportProps) {
   const {
@@ -469,7 +477,13 @@ export function AlphaImport(props: AlphaImportProps) {
     onRegister,
     onActivate,
     activationAdmitted,
+    busyStep = null,
+    activationRefusal = null,
   } = props;
+  /* RF-04 FE-S14-07: a button stays pressable neither while its request is in
+     flight nor after it succeeded for these bytes — both re-posted the same
+     write. Changing the bytes drops every receipt and re-arms the chain. */
+  const busy = busyStep !== null ? "A request is in flight." : null;
 
   const reducedMotion =
     typeof window !== "undefined" &&
@@ -608,7 +622,9 @@ export function AlphaImport(props: AlphaImportProps) {
             action="parse"
             onClick={onParse}
             reason={
-              sourceText.trim().length === 0 ? "Drop a .py file or paste the module first." : null
+              sourceText.trim().length === 0
+                ? "Drop a .py file or paste the module first."
+                : busy ?? (parse !== null ? "Parsed. Change the module to parse it again." : null)
             }
           />
           {parse ? (
@@ -644,7 +660,7 @@ export function AlphaImport(props: AlphaImportProps) {
               ? "Parse a source first — the gates run against the server's parse receipt."
               : !parsedOk
                 ? "The parse did not complete. The mirror above shows which fields are missing."
-                : null
+                : busy ?? (gates !== null ? "The gates ran for these bytes." : null)
           }
         />
 
@@ -700,7 +716,7 @@ export function AlphaImport(props: AlphaImportProps) {
                     ? "All seven gates must pass."
                     : alphaId.trim().length === 0
                       ? "Name the alpha this version belongs to."
-                      : null
+                      : busy ?? (registration !== null ? "Registered." : null)
             }
           />
         </div>
@@ -721,7 +737,8 @@ export function AlphaImport(props: AlphaImportProps) {
                   {lifecycle}
                 </span>
                 <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-                  rev {registration.alpha_revision}
+                  {/* After activation the revision is the activation's, not the registration's. */}
+                  rev {activation?.alpha_revision ?? registration.alpha_revision}
                 </span>
                 {registration.replayed ? (
                   <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
@@ -759,12 +776,31 @@ export function AlphaImport(props: AlphaImportProps) {
         {/* Activation is a separate, permissioned act — never implied by a
             successful registration, and never offered unless the server said so. */}
         {activationAdmitted && lifecycle === "DRAFT" ? (
-          <StepButton
-            label="Activate this version"
-            action="activate"
-            onClick={onActivate}
-            reason={activationPending ? "Activation is in flight." : null}
-          />
+          <>
+            <StepButton
+              label="Activate this version"
+              action="activate"
+              onClick={onActivate}
+              reason={
+                activationPending
+                  ? "Activation is in flight."
+                  : activationRefusal && !activationRefusal.mayRetry
+                    ? "The server refused this activation."
+                    : busy
+              }
+            />
+            {/* The refusal sits beside the button that caused it, not in the
+                page banner two thousand pixels above. */}
+            {activationRefusal ? (
+              <p role="alert" className="text-[10.5px]" style={{ color: "var(--bad)" }} data-activation-refusal>
+                {activationRefusal.message}
+              </p>
+            ) : null}
+          </>
+        ) : registration && lifecycle === "DRAFT" ? (
+          <p className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-activation-not-admitted>
+            {ACTIVATION_NOT_ADMITTED}
+          </p>
         ) : null}
       </section>
 

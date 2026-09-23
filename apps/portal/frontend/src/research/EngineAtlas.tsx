@@ -647,10 +647,14 @@ function ModesTab({
             rule one
           </span>
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink)" }}>
+            {/* DQ-10 (2026-09-23): the example names only pairs this release
+                admits. The HiFi's `mode_1_decay + per_fold_causal` is not in the
+                QuantBT 1.1.1 manifest, so the sentence contradicted the struck
+                chip right below it (CG-P04-02). */}
             The claim comes from <span className="mono">mode × schedule</span>, never from the mode
-            alone. <span className="mono">mode_1_decay + per_fold_causal</span> is strict outer OOS;
-            the same mode with <span className="mono">per_fold_decay</span> is selection-adjusted.
-            Click the schedule chips below and watch the claim change.
+            alone. <span className="mono">mode_1_decay + per_fold_decay</span> is selection-adjusted
+            outer OOS; the same mode with <span className="mono">global</span> is a global calibration,
+            not causal. Click the schedule chips below and watch the claim change.
           </span>
         </div>
         <div

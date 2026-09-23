@@ -38,6 +38,8 @@ export function AlphaImportRoute() {
       onRegister={controller.onRegister}
       onActivate={controller.onActivate}
       activationAdmitted={controller.activationAdmitted}
+      busyStep={controller.busyStep}
+      activationRefusal={controller.activationRefusal}
     />
   );
 }
