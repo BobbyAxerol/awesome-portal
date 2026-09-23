@@ -13,7 +13,9 @@ export default defineConfig({
   reporter: "list",
   use: {
     ...devices["Desktop Chrome"],
-    baseURL: process.env.RESEARCH_PREVIEW_ORIGIN ?? "http://localhost:8095",
+    // The browser may reach the stack on loopback while writes still carry the
+    // stack's public Origin (RESEARCH_PREVIEW_ORIGIN), which the Control API checks.
+    baseURL: process.env.RESEARCH_PREVIEW_BASE_URL ?? process.env.RESEARCH_PREVIEW_ORIGIN ?? "http://localhost:8095",
     extraHTTPHeaders: { "x-dev-access-email": "claude-preview@azdag.com" },
   },
 });

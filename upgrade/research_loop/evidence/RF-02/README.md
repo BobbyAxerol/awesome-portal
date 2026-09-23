@@ -47,6 +47,17 @@ pattern as `dev-portal` (runbook: research-preview.md): origin set, images
 rebuilt from `e39bacfa`, loopback nginx vhost installed; the Cloudflare Tunnel
 rule is Bobby's step.
 
+### Receipt re-run on the published build (2026-09-23)
+
+After the public hostname went live and the worker fix `5b2cf660` landed,
+the real-API lane ran again on images built from `5b2cf660`: **16/16 PASS**
+(S01–S07, S02, S12 at 1280/660), browser on loopback with the public Origin
+(`RESEARCH_PREVIEW_BASE_URL` + `RESEARCH_PREVIEW_ORIGIN`). Evidence in
+`~/.config/portal-research-preview/receipts/5b2cf660/`. Bobby's workspace has
+its own real run, `rrun_80d3c2f4cd15e8a3b04c7f8e2adee9ed`, COMPLETED after an
+idle worker — the case `5b2cf660` fixes; four runs stranded by that bug were
+cancelled through the published cancel route.
+
 ## Decisions — taken by Claude on Bobby's delegation (2026-09-23)
 
 Bobby: "Duyệt bạn cứ chốt đi, rồi tôi xem sau, kiểu gì cũng sửa tiếp." Each

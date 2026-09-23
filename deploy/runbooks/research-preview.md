@@ -35,6 +35,10 @@ new password is kept in `claude-preview.password` beside the env file):
 node scripts/research-preview/seed-run.mjs   # install P04 binding → preflight → run → follow progress
 ```
 
+`preview.sh activate` re-issues one-time credentials for **every** listed user,
+so it also resets an account already activated (claude-preview included);
+re-activate the ones you need afterwards.
+
 It uses only published same-origin routes and prints identifiers and states,
 never a credential. Build notes: the approved Historical Market Data reader
 wheel must be staged at `vendor/hmd-reader/` (ignored); `AUTH_MODE=dev` is only
