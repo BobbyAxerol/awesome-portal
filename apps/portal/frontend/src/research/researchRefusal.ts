@@ -43,7 +43,7 @@ export interface ResearchRefusal {
   sessionExpired: boolean;
 }
 
-type Kind = "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "UNAVAILABLE" | "INVALID";
+type Kind = "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "UNAVAILABLE" | "INVALID" | "NOT_RETAINED";
 
 /**
  * The codes the five evidence-reading surfaces publish, spelled out rather
@@ -81,6 +81,17 @@ const SURFACE_CODES: Record<string, Kind> = {
   RESEARCH_PROGRESS_NOT_FOUND: "NOT_FOUND",
   RESEARCH_PROGRESS_UNAVAILABLE: "UNAVAILABLE",
   RESEARCH_PROGRESS_INVALID: "INVALID",
+  /* RS-02 retained current source (S04–S07 passports and retained lanes).
+     On these reads CONFLICT means "no sealed retained artifact for this run"
+     — PENDING_RETENTION or a legacy run — not a revision that moved. Found on
+     the RF-02 real-API lane, where "This changed since it was read" was a
+     false sentence about a run whose retention had simply not happened. */
+  RESEARCH_CURRENT_SOURCE_CONFLICT: "NOT_RETAINED",
+  RESEARCH_CURRENT_SOURCE_FORBIDDEN: "FORBIDDEN",
+  RESEARCH_CURRENT_SOURCE_NOT_FOUND: "NOT_FOUND",
+  RESEARCH_CURRENT_SOURCE_UNAVAILABLE: "UNAVAILABLE",
+  RESEARCH_CURRENT_SOURCE_INVALID: "INVALID",
+  RESEARCH_CURRENT_SOURCE_CURSOR_EXPIRED: "CONFLICT",
 };
 
 /** Every surface code this mapper classifies, for exhaustiveness tests. */
@@ -92,6 +103,13 @@ const KIND_STATE: Record<Kind, ResearchState["state"]> = {
   CONFLICT: "stale",
   UNAVAILABLE: "unavailable",
   INVALID: "terminal",
+  NOT_RETAINED: "unavailable",
+};
+
+/** Kinds whose sentence is more specific than their state's. */
+const KIND_COPY: Partial<Record<Kind, string>> = {
+  NOT_RETAINED:
+    "No sealed retained source exists for this run yet — it is pending retention, or the run predates it. Nothing here is taken from the live output instead.",
 };
 
 /**
@@ -153,9 +171,12 @@ export function toResearchRefusal(error: unknown): ResearchRefusal {
     mayRetry = frozen.mayRetry;
     message = frozen.reason;
   } else {
-    state = code !== null && code in SURFACE_CODES ? KIND_STATE[SURFACE_CODES[code]] : stateOfStatus(status);
+    const kind = code !== null && code in SURFACE_CODES ? SURFACE_CODES[code] : null;
+    state = kind ? KIND_STATE[kind] : stateOfStatus(status);
     mayRetry = state === "unavailable" || state === "stale" || state === "failed-retryable";
-    message = sessionExpired ? REFUSAL_COPY.session : REFUSAL_COPY[state] ?? REFUSAL_COPY.terminal;
+    message = sessionExpired
+      ? REFUSAL_COPY.session
+      : (kind ? KIND_COPY[kind] : undefined) ?? REFUSAL_COPY[state] ?? REFUSAL_COPY.terminal;
   }
   const closed = state === "denied" || state === "empty";
 

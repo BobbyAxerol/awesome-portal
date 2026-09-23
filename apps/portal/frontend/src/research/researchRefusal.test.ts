@@ -53,7 +53,17 @@ describe("RF01-F4 — one mapper behind the five historical names", () => {
     expect(toResearchRefusal(api(500, "RESEARCH_SEARCH_NOT_FOUND")).state).toBe("empty");
     expect(toResearchRefusal(api(400, "RESEARCH_EVIDENCE_UNAVAILABLE")).state).toBe("unavailable");
     expect(toResearchRefusal(api(503, "RESEARCH_FREEZE_INVALID")).state).toBe("terminal");
-    expect(RESEARCH_SURFACE_CODES).toHaveLength(28);
+    expect(RESEARCH_SURFACE_CODES).toHaveLength(34);
+  });
+
+  it("says a retained source that does not exist yet is pending, never that it changed", () => {
+    const refusal = toResearchRefusal(
+      api(409, "RESEARCH_CURRENT_SOURCE_CONFLICT", "Current QuantBT output is PENDING_RETENTION; a sealed retained artifact is required."),
+    );
+    expect(refusal.state).toBe("unavailable");
+    expect(refusal.message).toMatch(/pending retention/);
+    expect(refusal.message).not.toMatch(/changed since/);
+    expect(refusal.detail).toContain("PENDING_RETENTION");
   });
 
   it.each([

@@ -861,7 +861,13 @@ function MetricTile({ metric }: { metric: Metric }) {
       {shown ? (
         /* The server's string, printed. No `Number()` stands between the
            engine's value and the reader's eye. */
-        <span className="mono text-[17px] font-semibold" data-metric-value={metric.key}>
+        /* Exact decimals can run to dozens of digits on a real run (RF-02
+           real-API lane: 47). They wrap; they are never cut or rounded. */
+        <span
+          className="mono text-[17px] font-semibold leading-[1.25]"
+          style={{ overflowWrap: "anywhere" }}
+          data-metric-value={metric.key}
+        >
           {metric.value}
         </span>
       ) : (
@@ -1153,8 +1159,24 @@ function DistributionChart({ series }: { series: EvidenceSeries }) {
       baseOption({
         ...noChartApparatus(),
         grid: { left: 50, right: 18, top: 16, bottom: 46 },
-        xAxis: { type: "category", data: buckets.map(label), axisLabel: { fontSize: 8, rotate: 40 } },
+        /* The tick names a bucket by its lower edge at 3 significant digits —
+           a place on the axis, not a value. The exact edges, as the server
+           sent them, are in the tooltip and the table below (RF-02 real-API
+           lane: raw 20-digit edges overprinted each other). */
+        xAxis: {
+          type: "category",
+          data: buckets.map(label),
+          axisLabel: {
+            fontSize: 8,
+            rotate: 40,
+            formatter: (value: string) => {
+              const lower = Number(value.slice(1, value.indexOf(",")));
+              return Number.isFinite(lower) ? lower.toPrecision(3) : value;
+            },
+          },
+        },
         yAxis: { type: "value", axisLabel: { fontSize: 9 } },
+        // The item tooltip names the category — the exact bucket label.
         tooltip: { trigger: "item" },
         series: [
           {
