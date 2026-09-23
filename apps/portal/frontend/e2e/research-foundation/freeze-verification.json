@@ -52,5 +52,6 @@
       "state": "AVAILABLE",
       "reason_code": null
     }
-  }
+  },
+  "verification_scope": "PORTAL_RETAINED_DIGEST_BINDING_ONLY"
 }

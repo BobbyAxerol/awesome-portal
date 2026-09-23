@@ -1808,3 +1808,87 @@ for (const [screen, path, marker] of [
     await expect(strip.locator("[data-provenance-digest='effective_spec_digest']")).toBeVisible();
   });
 }
+
+test("S05 ticks are presentation: density follows width, facts do not", async ({ page }) => {
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+
+  const reads: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/v1/")) reads.push(request.url());
+  });
+
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(SPLIT);
+  await settle(page);
+
+  const read = async () => ({
+    ticks: await page.locator("[data-tick]").allTextContents(),
+    start: await page.locator("[data-timeline-start]").textContent(),
+    end: await page.locator("[data-timeline-end]").textContent(),
+    geometry: await page.evaluate(() =>
+      ["warmup", "is", "outer_oos", "holdout"].map((key) => {
+        const node = document.querySelector(`[data-window='${key}']`) as HTMLElement | null;
+        return node ? `${key}:${node.style.left}:${node.style.width}` : `${key}:absent`;
+      }),
+    ),
+    legend: await page.locator("[data-window-legend='is']").textContent(),
+  });
+
+  const wide = await read();
+  expect(wide.ticks.length).toBe(5);
+  for (const label of wide.ticks) expect(label).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  const requestsAfterWide = reads.length;
+
+  // The same page, narrower. Per the P14 ruling this may change labels and
+  // nothing else.
+  await page.setViewportSize({ width: 660, height: 1000 });
+  await settle(page);
+  const narrow = await read();
+
+  expect(narrow.ticks.length).toBeLessThan(wide.ticks.length);
+  expect(narrow.ticks[0]).toBe(wide.ticks[0]);
+  expect(narrow.ticks[narrow.ticks.length - 1]).toBe(wide.ticks[wide.ticks.length - 1]);
+
+  // Every semantic fact is byte-identical across the resize…
+  expect(narrow.start).toBe(wide.start);
+  expect(narrow.end).toBe(wide.end);
+  expect(narrow.geometry).toEqual(wide.geometry);
+  expect(narrow.legend).toBe(wide.legend);
+
+  // …and the resize cost no read at all.
+  expect(reads.length, "a viewport change issued a request").toBe(requestsAfterWide);
+  // No tick ever reaches the URL.
+  expect(page.url()).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+});
+
+test("S06 shows an unbound selection metric as unpublished, never as a default", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(SEARCH);
+  await settle(page);
+
+  await expect(page.locator("[data-metric-state='NOT_PUBLISHED']")).toBeVisible();
+  await expect(page.locator("[data-metric-value]")).toHaveCount(0);
+  // The installed catalogue's current default must never appear here: a
+  // release's present setting is not evidence about a past request.
+  const body = (await page.locator("[data-screen='search-detail']").textContent()) ?? "";
+  expect(body).not.toMatch(/robust_decay|inferred/i);
+});
+
+test("S07 verification result carries its own scope", async ({ page }) => {
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(FREEZE);
+  await settle(page);
+
+  await page.locator("[data-action='verify']").click();
+  await expect(page.locator("[data-verify-result='PARTIAL_MATCH']")).toBeVisible();
+  await expect(page.locator("[data-verify-scope='PORTAL_RETAINED_DIGEST_BINDING_ONLY']")).toContainText(
+    "this verification covers",
+  );
+});

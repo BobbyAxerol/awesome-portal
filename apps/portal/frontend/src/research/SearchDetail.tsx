@@ -477,6 +477,43 @@ export function SearchScreen({
             </span>
           </span>
 
+          {/*
+            * The candidate-selection metric, as a run-bound fact or as an
+            * absence. The installed catalogue's current default is deliberately
+            * not what this shows: a release's present setting is not evidence
+            * about a request made in the past, and a mode name is not evidence
+            * of a metric. So `NOT_PUBLISHED` keeps its reason and no chip, no
+            * value and no "inferred" label appear.
+            */}
+          <span
+            className="flex items-baseline gap-1.5"
+            data-metric-state={detail.requested_optimizer.candidate_selection_metric.state}
+          >
+            <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+              candidate selection metric
+            </span>
+            {detail.requested_optimizer.candidate_selection_metric.state === "CONFIRMED" ? (
+              <>
+                <Chip data-metric-value={detail.requested_optimizer.candidate_selection_metric.value}>
+                  {detail.requested_optimizer.candidate_selection_metric.value}
+                </Chip>
+                <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-metric-provenance>
+                  {detail.requested_optimizer.candidate_selection_metric.provenance
+                    .toLowerCase()
+                    .replace(/_/g, " ")}
+                </span>
+              </>
+            ) : (
+              <span
+                className="mono text-[10px] italic"
+                style={{ color: "var(--ink-faint)" }}
+                title={detail.requested_optimizer.candidate_selection_metric.reason_code}
+              >
+                not published
+              </span>
+            )}
+          </span>
+
           <span className="flex items-baseline gap-1.5" data-selection-state={detail.selection.state}>
             <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
               selection

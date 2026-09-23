@@ -223,11 +223,26 @@ function IntegrityPanel({
       <Gap gap={integrity.source_artifact_bytes} what="source artifact bytes" />
 
       {verify.state === "done" ? (
-        <p className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-verify-result={verify.verification.result}>
-          re-read {iso(verify.verification.verified_at_utc_ms)} ·{" "}
-          {verify.verification.result.toLowerCase().replace(/_/g, " ")} · freeze revision{" "}
-          {verify.verification.freeze_revision ?? "not published"}
-        </p>
+        <div className="flex flex-col gap-0.5" data-verify-result={verify.verification.result}>
+          <p className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
+            re-read {iso(verify.verification.verified_at_utc_ms)} ·{" "}
+            {verify.verification.result.toLowerCase().replace(/_/g, " ")} · freeze revision{" "}
+            {verify.verification.freeze_revision ?? "not published"}
+          </p>
+          {/*
+            * The scope of the answer the reader just asked for, from that
+            * answer — not borrowed from the snapshot beside it. The two agree
+            * today because both describe the same run at the same moment; the
+            * day they do not, this line is the one that is true.
+            */}
+          <p
+            className="mono text-[9px]"
+            style={{ color: "var(--ink-faint)" }}
+            data-verify-scope={verify.verification.verification_scope}
+          >
+            this verification covers {verify.verification.verification_scope.toLowerCase().replace(/_/g, " ")}
+          </p>
+        </div>
       ) : verify.state === "refused" ? (
         <p className="text-[11px]" style={{ color: "var(--bad)" }} data-verify-refusal>
           {verify.refusal.message}

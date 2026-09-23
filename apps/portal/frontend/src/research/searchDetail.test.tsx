@@ -75,6 +75,16 @@ function detail(overrides: Partial<SearchDetail> = {}): SearchDetail {
       mode: "mode_1_decay",
       schedule: "per_fold_causal",
       state: "DECLARED_NOT_EXECUTED",
+      candidate_selection_metric: {
+        state: "NOT_PUBLISHED",
+        value: null,
+        provenance: "NONE",
+        reason_code: "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+        availability: {
+          state: "NOT_PUBLISHED",
+          reason_code: "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+        },
+      },
       availability: AVAILABLE,
     },
     fixed_profile: {
@@ -279,6 +289,42 @@ describe("P15-T01 — the source is described as what it is", () => {
     expect(requested?.getAttribute("data-requested-optimizer")).toBe("DECLARED_NOT_EXECUTED");
     expect(requested?.textContent).toContain("mode_1_decay");
     expect(requested?.textContent).toContain("declared not executed");
+  });
+
+  it("shows an unbound selection metric as unpublished, with its reason", () => {
+    const { container } = view();
+    const metric = container.querySelector("[data-metric-state='NOT_PUBLISHED']");
+    expect(metric?.textContent).toContain("not published");
+    // No value, no chip, no "inferred" label, and nothing from a catalogue.
+    expect(container.querySelector("[data-metric-value]")).toBeNull();
+    expect(container.querySelector("[data-metric-provenance]")).toBeNull();
+    expect(container.textContent).not.toMatch(/robust_decay|inferred/i);
+    expect(metric?.querySelector("[title]")?.getAttribute("title")).toBe(
+      "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+    );
+  });
+
+  it("renders the confirmed branch when a run-bound metric exists", () => {
+    const base = detail();
+    const { container } = view({
+      detail: {
+        ...base,
+        requested_optimizer: {
+          ...base.requested_optimizer,
+          candidate_selection_metric: {
+            state: "CONFIRMED",
+            value: "robust_decay",
+            provenance: "RUN_BOUND_ENGINE_DEFAULT",
+            reason_code: null,
+            availability: { state: "AVAILABLE", reason_code: null },
+          },
+        },
+      } as SearchDetail,
+    });
+    expect(container.querySelector("[data-metric-value='robust_decay']")).toBeTruthy();
+    expect(container.querySelector("[data-metric-provenance]")?.textContent).toContain(
+      "run bound engine default",
+    );
   });
 
   it("offers no mode switcher, because a run is one mode", () => {

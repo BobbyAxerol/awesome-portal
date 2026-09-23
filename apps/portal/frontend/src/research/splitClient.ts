@@ -134,6 +134,43 @@ export function placeInTimeline(
 /** A span too thin to see is still a span: it gets a floor, and says so. */
 export const HAIRLINE_PERCENT = 0.35;
 
+/**
+ * Axis ticks, as presentation metadata.
+ *
+ * The P14 ruling of 2026-09-23 settles what this is and is not: choosing tick
+ * positions inside the published timeline and formatting them in UTC is a
+ * coordinate system for the chart, not a new chronology. So the rules here are
+ * narrow and testable — every tick lies inside the published range, every
+ * label is UTC, the count changes with width and nothing else does. A tick is
+ * never a fold, a seal, a purge edge or a holdout fact, and it never leaves
+ * this module: no hash, no request, no export, no cache key.
+ */
+export function axisTicks(timeline: Range, count: number): { at_utc_ms: number; label: string }[] {
+  const span = timeline.end_exclusive_utc_ms - timeline.start_utc_ms;
+  if (span <= 0 || count < 2) return [];
+  const format = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const ticks: { at_utc_ms: number; label: string }[] = [];
+  for (let index = 0; index < count; index += 1) {
+    /* Evenly spaced inside the published range, endpoints included. The
+       positions come from the server's two timestamps and nothing else. */
+    const at = timeline.start_utc_ms + Math.round((span * index) / (count - 1));
+    ticks.push({ at_utc_ms: at, label: format.format(new Date(at)) });
+  }
+  return ticks;
+}
+
+/** How many ticks a width can carry without the labels colliding. */
+export function tickCountForWidth(width: number): number {
+  if (width < 520) return 2;
+  if (width < 900) return 3;
+  return 5;
+}
+
 /* -------------------------------------------------------------------------
  * Availability presentation
  * ---------------------------------------------------------------------- */

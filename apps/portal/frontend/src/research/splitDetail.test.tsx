@@ -28,9 +28,11 @@ import {
 } from "./SplitDetail";
 import {
   HAIRLINE_PERCENT,
+  axisTicks,
   barsOf,
   hasRange,
   placeInTimeline,
+  tickCountForWidth,
   toSplitRefusal,
   type CurrentSourceSplit,
   type SplitDetail,
@@ -299,6 +301,58 @@ describe("P14-T01 — a span is placed, never recomputed", () => {
     // The holdout publishes a range and a null bar count: both are facts.
     expect(hasRange(document.windows.holdout)).toBe(true);
     expect(barsOf(document.windows.holdout)).toBeNull();
+  });
+
+  /*
+   * The P14 ruling of 2026-09-23 allows UTC tick labels as presentation. What
+   * it forbids is a tick becoming a fact, so that is what these pin.
+   */
+  it("places every tick inside the published range, endpoints included", () => {
+    const ticks = axisTicks({ start_utc_ms: T0, end_exclusive_utc_ms: T0 + 800 * DAY }, 5);
+    expect(ticks).toHaveLength(5);
+    expect(ticks[0].at_utc_ms).toBe(T0);
+    expect(ticks[4].at_utc_ms).toBe(T0 + 800 * DAY);
+    for (const tick of ticks) {
+      expect(tick.at_utc_ms).toBeGreaterThanOrEqual(T0);
+      expect(tick.at_utc_ms).toBeLessThanOrEqual(T0 + 800 * DAY);
+    }
+  });
+
+  it("labels every tick in UTC, never in the reader's zone", () => {
+    const ticks = axisTicks({ start_utc_ms: Date.UTC(2024, 0, 1), end_exclusive_utc_ms: Date.UTC(2024, 0, 3) }, 3);
+    // A reader in UTC-5 would see 2023-12-31 for the first instant if the
+    // label followed the browser; it does not.
+    expect(ticks[0].label).toBe("2024-01-01");
+    expect(ticks[2].label).toBe("2024-01-03");
+    for (const tick of ticks) expect(tick.label).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("thins the ticks at narrow widths and changes nothing else", () => {
+    expect(tickCountForWidth(1280)).toBe(5);
+    expect(tickCountForWidth(660)).toBe(3);
+    expect(tickCountForWidth(420)).toBe(2);
+
+    const timeline = { start_utc_ms: T0, end_exclusive_utc_ms: T0 + 800 * DAY };
+    const wide = axisTicks(timeline, tickCountForWidth(1280));
+    const narrow = axisTicks(timeline, tickCountForWidth(660));
+    // Fewer labels, same endpoints: the coordinate system does not move.
+    expect(narrow.length).toBeLessThan(wide.length);
+    expect(narrow[0].at_utc_ms).toBe(wide[0].at_utc_ms);
+    expect(narrow[narrow.length - 1].at_utc_ms).toBe(wide[wide.length - 1].at_utc_ms);
+  });
+
+  it("refuses to invent a tick for a timeline with no extent", () => {
+    expect(axisTicks({ start_utc_ms: 5, end_exclusive_utc_ms: 5 }, 5)).toEqual([]);
+    expect(axisTicks({ start_utc_ms: 0, end_exclusive_utc_ms: 100 }, 1)).toEqual([]);
+  });
+
+  it("keeps ticks out of the cursor, the request and every retained fact", () => {
+    const code = codeOf("SplitDetail.tsx") + codeOf("splitClient.ts") + codeOf("useSplit.ts");
+    // A tick is never serialized anywhere.
+    expect(code).not.toMatch(/tick[^\n]*(hash|cursor|searchParams|fetch|body|export)/i);
+    expect(code).not.toMatch(/(hash|cursor|query)[^\n]*tick/i);
+    // And never uses the reader's clock.
+    expect(code).not.toMatch(/Date\.now\(\)|toLocaleDateString|toLocaleString/);
   });
 
   it("adds no interval arithmetic anywhere in the screen", () => {

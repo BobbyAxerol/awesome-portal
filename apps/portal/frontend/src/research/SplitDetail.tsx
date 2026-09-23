@@ -17,7 +17,7 @@
  *     drawing it is the lie spec 05 §7 pitfall 2 names.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip } from "./ProvenanceStrip";
@@ -26,10 +26,12 @@ import {
   ABSENT_WORDS,
   HAIRLINE_PERCENT,
   SPLIT_WITHHELD_WORDS,
+  axisTicks,
   barsOf,
   hasRange,
   placeInTimeline,
   reasonOf,
+  tickCountForWidth,
   type AbsentFact,
   type CurrentSourceSplit,
   type Range,
@@ -194,13 +196,38 @@ function WindowAnatomy({
   );
   const holdoutGeometry = holdout ? placeInTimeline(timeline, holdout) : null;
 
+  /*
+   * Tick density follows the width, and nothing else does.
+   *
+   * The P14 ruling allows a chart to choose UTC tick positions inside the
+   * published timeline as presentation. A `ResizeObserver` is what makes that
+   * observable: the labels thin out at 660px while every window keeps the
+   * exact geometry and the exact endpoints it had at 1280px, and no read is
+   * issued to find that out.
+   */
+  const box = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(1280);
+  useEffect(() => {
+    const node = box.current;
+    if (node === null || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      const measured = entries[0]?.contentRect.width;
+      if (typeof measured === "number" && measured > 0) setWidth(measured);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const ticks = useMemo(() => axisTicks(timeline, tickCountForWidth(width)), [timeline, width]);
+
   return (
-    <div className="flex flex-col gap-2" data-window-anatomy>
+    <div className="flex flex-col gap-2" data-window-anatomy ref={box}>
+      {/* The published endpoints, exactly, in text — the ticks below are a
+          coordinate system and never replace them. */}
       <div className="flex justify-between">
-        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-timeline-start>
           {iso(timeline.start_utc_ms)}
         </span>
-        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-timeline-end>
           {iso(timeline.end_exclusive_utc_ms)}
         </span>
       </div>
@@ -252,6 +279,28 @@ function WindowAnatomy({
             </span>
           </span>
         ) : null}
+      </div>
+
+      {/* UTC ticks: presentation only, per the P14 ruling. */}
+      <div className="relative h-[12px]" data-axis data-tick-count={ticks.length}>
+        {ticks.map((tick, index) => (
+          <span
+            key={tick.at_utc_ms}
+            data-tick={tick.label}
+            className="absolute top-0 mono whitespace-nowrap text-[8.5px]"
+            style={{
+              left: `${placeInTimeline(timeline, {
+                start_utc_ms: tick.at_utc_ms,
+                end_exclusive_utc_ms: tick.at_utc_ms,
+              }).leftPercent}%`,
+              transform:
+                index === 0 ? "none" : index === ticks.length - 1 ? "translateX(-100%)" : "translateX(-50%)",
+              color: "var(--ink-faint)",
+            }}
+          >
+            {tick.label}
+          </span>
+        ))}
       </div>
 
       <ul className="flex flex-wrap gap-x-5 gap-y-1">

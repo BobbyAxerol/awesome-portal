@@ -36,6 +36,16 @@
     "availability": {
       "state": "AVAILABLE",
       "reason_code": null
+    },
+    "candidate_selection_metric": {
+      "state": "NOT_PUBLISHED",
+      "value": null,
+      "provenance": "NONE",
+      "reason_code": "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC"
+      }
     }
   },
   "fixed_profile": {

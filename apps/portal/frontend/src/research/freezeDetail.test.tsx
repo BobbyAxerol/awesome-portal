@@ -415,6 +415,7 @@ describe("P16-T03 — one write, from one click", () => {
               freeze_revision: "p16r1_31bb90",
               verified_at_utc_ms: T0 + 901 * DAY,
               result: "PARTIAL_MATCH",
+              verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
               integrity: detail().freeze.integrity,
             },
           ]
@@ -431,6 +432,27 @@ describe("P16-T03 — one write, from one click", () => {
     expect(post?.headers["x-portal-csrf"]).toBe("tok_123");
     // The snapshot is reread only after the typed result.
     await waitFor(() => expect(requested.filter((entry) => entry.method === "GET").length).toBe(2));
+  });
+
+  it("shows the scope the verification itself carried", async () => {
+    const { container } = view({
+      verify: {
+        state: "done",
+        verification: {
+          schema_version: "research.freeze-verification.v1",
+          read_authority: "PORTAL_PERSISTED_RESEARCH",
+          run_id: "R-WFO-118",
+          freeze_revision: "p16r1_31bb90",
+          verified_at_utc_ms: T0 + 901 * DAY,
+          result: "PARTIAL_MATCH",
+          verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+          integrity: detail().freeze.integrity,
+        },
+      },
+    });
+    expect(
+      container.querySelector("[data-verify-scope='PORTAL_RETAINED_DIGEST_BINDING_ONLY']")?.textContent,
+    ).toContain("this verification covers");
   });
 
   it("will not send two verifications at once", async () => {
