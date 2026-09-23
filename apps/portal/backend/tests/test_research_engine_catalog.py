@@ -106,6 +106,14 @@ def test_p04_t01_release_provenance_current_and_historical_identity() -> None:
     assert document.evidence_contract.writer_state == "P05_OWNED_NOT_ACTIVE"
 
 
+def test_rf03_current_atlas_fixture_matches_pinned_public_producer() -> None:
+    fixture = _load(PORTAL_ROOT.parents[1] / "packages" / "contracts" / "fixtures" / "research-foundation.atlas-current.valid.json")
+    assert fixture["schema_version"] == "research.engine-atlas-response.v1"
+    assert fixture["selected_release_kind"] == "CURRENT"
+    assert fixture["historical_identity"] is None
+    assert fixture["atlas"] == _service().public_document().model_dump(mode="json")
+
+
 def test_p10_atlas_publishes_real_release_defaults_without_widening_fixed_admission() -> None:
     """BR-P10-02: Browser facts are exact, but do not become run authority."""
 

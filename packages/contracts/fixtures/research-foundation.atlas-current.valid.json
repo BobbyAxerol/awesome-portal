@@ -1,0 +1,1524 @@
+{
+  "schema_version": "research.engine-atlas-response.v1",
+  "selected_release_id": "er_quantbt_111",
+  "selected_release_kind": "CURRENT",
+  "atlas": {
+    "schema_version": "research-engine-atlas.v1",
+    "manifest_revision": 5,
+    "current_release": {
+      "release_id": "er_quantbt_111",
+      "package": "quantbt-engine",
+      "expected_version": "1.1.1",
+      "installed_version": "1.1.1",
+      "native_package": "quantbt-native",
+      "native_expected_version": "0.4.2",
+      "native_installed_version": "0.4.2",
+      "verified": true,
+      "detail": null,
+      "trial_ceiling": 4000,
+      "optimizer_defaults": {
+        "schema_version": "research.optimizer-defaults.v1",
+        "groups": [
+          {
+            "group_id": "study",
+            "fields": [
+              {
+                "field_id": "n_trials",
+                "default_value": 300,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default; P10 fixed qualification does not accept a caller override."
+              },
+              {
+                "field_id": "directions",
+                "default_value": [
+                  "maximize"
+                ],
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default direction tuple."
+              },
+              {
+                "field_id": "seed",
+                "default_value": 42,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig deterministic default."
+              },
+              {
+                "field_id": "n_jobs",
+                "default_value": 1,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal adapter locks single-process optimizer execution until dedupe is certified."
+              },
+              {
+                "field_id": "early_stopping_rounds",
+                "default_value": null,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "early_stopping_min_trials",
+                "default_value": 0,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "early_stopping_min_delta",
+                "default_value": 0.0001,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "show_progress_bar",
+                "default_value": true,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "duplicate_policy",
+                "default_value": "prune",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              },
+              {
+                "field_id": "exception_policy",
+                "default_value": "raise",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT OptimizationConfig default."
+              }
+            ]
+          },
+          {
+            "group_id": "sampler",
+            "fields": [
+              {
+                "field_id": "name",
+                "default_value": "tpe",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT SamplerConfig default."
+              },
+              {
+                "field_id": "constraint_mode",
+                "default_value": "sampler",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "QuantBT SamplerConfig default."
+              }
+            ]
+          },
+          {
+            "group_id": "objective",
+            "fields": [
+              {
+                "field_id": "optimization_mode",
+                "default_value": "mode_1_decay",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default."
+              },
+              {
+                "field_id": "optimization_schedule",
+                "default_value": "global",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default."
+              },
+              {
+                "field_id": "optuna_trials",
+                "default_value": 400,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default; the current P10 submission profile still accepts exactly one qualification trial."
+              },
+              {
+                "field_id": "optuna_early_stopping",
+                "default_value": 200,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default."
+              },
+              {
+                "field_id": "random_seed",
+                "default_value": 42,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal ThreeWindowConfig default."
+              },
+              {
+                "field_id": "scoring_backend",
+                "default_value": "endpoint",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "min_trades_per_year",
+                "default_value": 100,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "trade_penalty_factor",
+                "default_value": 0.5,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "use_numba",
+                "default_value": true,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              }
+            ]
+          },
+          {
+            "group_id": "candidate_selection",
+            "fields": [
+              {
+                "field_id": "candidate_selection_metric",
+                "default_value": "robust_decay",
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Three-window validation requires robust_decay."
+              },
+              {
+                "field_id": "top_is_fraction",
+                "default_value": 0.1,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "top_is_k",
+                "default_value": null,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "decay_lambda",
+                "default_value": 0.5,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "decay_gamma",
+                "default_value": 0.5,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "candidate_decay_lambda",
+                "default_value": null,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              },
+              {
+                "field_id": "candidate_decay_gamma",
+                "default_value": null,
+                "value_source": "RELEASE_DEFAULT",
+                "override_state": "LOCKED",
+                "detail": "Portal OptimizationConfig default."
+              }
+            ]
+          }
+        ]
+      },
+      "submission_constraints": {
+        "profile_id": "p10.fixed-qualification.v1",
+        "optimization_overrides": "FORBIDDEN",
+        "accepted_trial_count": 1,
+        "early_stopping": "MUST_BE_NULL",
+        "random_seed": "MUST_BE_NULL",
+        "reason": "The current P10 adapter is a fixed-parameter qualification path. Release defaults describe the pinned engine and Portal protocol; they do not grant browser override authority."
+      },
+      "walk_forward_options": {
+        "schema_version": "research.walk-forward-options.v1",
+        "frequency": [
+          {
+            "value": "single",
+            "admission": "ADMITTED",
+            "reason": null
+          },
+          {
+            "value": "yearly",
+            "admission": "ADMITTED",
+            "reason": null
+          },
+          {
+            "value": "semi_yearly",
+            "admission": "ADMITTED",
+            "reason": null
+          },
+          {
+            "value": "quarterly",
+            "admission": "ADMITTED",
+            "reason": null
+          },
+          {
+            "value": "monthly",
+            "admission": "ADMITTED",
+            "reason": null
+          },
+          {
+            "value": "weekly",
+            "admission": "ADMITTED",
+            "reason": null
+          }
+        ],
+        "frequency_default": "quarterly",
+        "window_mode": [
+          {
+            "value": "expanding",
+            "admission": "ADMITTED",
+            "reason": null
+          },
+          {
+            "value": "rolling",
+            "admission": "NOT_ADMITTED",
+            "reason": "Rolling needs a train width the manifest does not own yet; preflight refuses it with RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED rather than inferring one."
+          }
+        ],
+        "window_mode_default": "expanding",
+        "split_mode_form": "source_instant",
+        "split_mode_rule": "The first outer out-of-sample instant in the dataset's source timezone, optionally prefixed walk_forward_. It must lie strictly inside walk_forward.start and end_exclusive; there is no release default to fall back on.",
+        "source": [
+          {
+            "path": "quantbt/walkforward.py",
+            "lines": "349-358",
+            "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+            "anchor": "`expanding` keeps the first train timestamp fixed"
+          },
+          {
+            "path": "quantbt/walkforward.py",
+            "lines": "409-411",
+            "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+            "anchor": "split_frequency: str = \"quarterly\""
+          },
+          {
+            "path": "quantbt/walkforward.py",
+            "lines": "493-498",
+            "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+            "anchor": "raise ValueError(\"window_mode must be expanding or rolling\")"
+          }
+        ]
+      },
+      "config_digest": "909514e09820e9fc8c2a37946c66053aaf7a9106875c73ed97165f7d1d02f452"
+    },
+    "historical_releases": [
+      {
+        "release_id": "er_quantbt_108",
+        "package": "quantbt-engine",
+        "version": "1.0.8",
+        "status": "HISTORICAL_IDENTITY_RETAINED"
+      }
+    ],
+    "routes": [
+      {
+        "route_id": "signal_notional",
+        "family": "signal",
+        "execution_contract": "close_target_v2",
+        "backend": "native_vectorized",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit",
+          "score"
+        ],
+        "default_for_new_runs": true,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "ADAPTER_AVAILABLE",
+          "evidence": "EVIDENCE_MAPPED",
+          "admission": "P04_BASELINE_ONLY"
+        },
+        "reason": "P04 primary technical baseline; a future typed run request still owns workload admission.",
+        "required_input_class": "single_symbol_ohlcv_plus_signal"
+      },
+      {
+        "route_id": "pct_equity",
+        "family": "signal",
+        "execution_contract": "legacy",
+        "backend": "legacy",
+        "report_levels": [
+          "minimal",
+          "standard"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "ADAPTER_AVAILABLE",
+          "evidence": "EVIDENCE_MAPPED",
+          "admission": "P04_BASELINE_ONLY"
+        },
+        "reason": "Retained for comparability with historical artifacts; it is not the new-job default.",
+        "required_input_class": "single_symbol_ohlcv_plus_signal"
+      },
+      {
+        "route_id": "intrabar_bracket",
+        "family": "bracket",
+        "execution_contract": "intrabar_bracket_v1",
+        "backend": "native_intrabar",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Engine constructor is public; Portal has not admitted typed stop/take-profit intent fields in P04.",
+        "required_input_class": "ohlcv_plus_intrabar_intent_tape"
+      },
+      {
+        "route_id": "dca_ladder",
+        "family": "bracket",
+        "execution_contract": "dca_ladder",
+        "backend": "legacy",
+        "report_levels": [
+          "minimal",
+          "standard"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Portal needs a typed ladder and safety-order evidence contract before admission.",
+        "required_input_class": "ohlcv_plus_ladder_levels"
+      },
+      {
+        "route_id": "reactive",
+        "family": "event",
+        "execution_contract": "event_lifecycle",
+        "backend": "native_event",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit",
+          "score"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Reactive is the event_driven strategy facade; no standalone reactive() API is inferred and no strategy callback contract is admitted yet.",
+        "required_input_class": "stateful_strategy_callback"
+      },
+      {
+        "route_id": "event_driven",
+        "family": "event",
+        "execution_contract": "event_lifecycle",
+        "backend": "native_event",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit",
+          "score"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Portal has no admitted typed event command/tape request in P04.",
+        "required_input_class": "event_strategy_or_order_commands"
+      },
+      {
+        "route_id": "native_event_lifecycle",
+        "family": "event",
+        "execution_contract": "event_lifecycle",
+        "backend": "native_event",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Lifecycle commands require a typed Portal order lifecycle contract and audit surface.",
+        "required_input_class": "event_order_commands"
+      },
+      {
+        "route_id": "orders",
+        "family": "tape",
+        "execution_contract": "event_lifecycle",
+        "backend": "native_event",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Explicit order replay is not equivalent to a typed Portal tape evidence contract.",
+        "required_input_class": "order_intent_tape"
+      },
+      {
+        "route_id": "fill_replay",
+        "family": "tape",
+        "execution_contract": "fill_replay",
+        "backend": "native_intrabar",
+        "report_levels": [
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Accounting replay needs source-fill provenance before it can be offered as a Portal run.",
+        "required_input_class": "explicit_fill_tape"
+      },
+      {
+        "route_id": "basket",
+        "family": "multi",
+        "execution_contract": "native_portfolio",
+        "backend": "native_event",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Basket legs and frozen hedge-ratio evidence have no typed Portal schema in P04.",
+        "required_input_class": "multi_leg_basket_spec"
+      },
+      {
+        "route_id": "arbitrage",
+        "family": "multi",
+        "execution_contract": "event_lifecycle",
+        "backend": "native_event",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_PARTIAL",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "QuantBT support is type-specific; Portal must first model the executable specification and engine refusal reason.",
+        "required_input_class": "arbitrage_type_and_spec"
+      },
+      {
+        "route_id": "portfolio",
+        "family": "multi",
+        "execution_contract": "native_portfolio",
+        "backend": "native_portfolio",
+        "report_levels": [
+          "minimal",
+          "standard",
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "INTEGRATION_GAP",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "NOT_ADMITTED"
+        },
+        "reason": "Portfolio exposure and margin require a typed multi-asset request and result schema.",
+        "required_input_class": "portfolio_spec_and_market_matrix"
+      },
+      {
+        "route_id": "nautilus_dca_grid",
+        "family": "validation",
+        "execution_contract": "dca_ladder",
+        "backend": "nautilus_adapter",
+        "report_levels": [
+          "standard",
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "DEFERRED_BY_PORTAL",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "DEFERRED"
+        },
+        "reason": "P04 records the public validation route but deliberately does not admit an external adapter workload.",
+        "required_input_class": "nautilus_dca_grid_spec"
+      },
+      {
+        "route_id": "options",
+        "family": "multi",
+        "execution_contract": "options",
+        "backend": "native_option",
+        "report_levels": [
+          "standard",
+          "audit"
+        ],
+        "default_for_new_runs": false,
+        "axes": {
+          "engine": "ENGINE_SUPPORTED",
+          "integration": "DEFERRED_BY_PORTAL",
+          "evidence": "EVIDENCE_GAP",
+          "admission": "DEFERRED"
+        },
+        "reason": "The engine supports options; Portal has no approved option-chain/package/margin input contract in this release.",
+        "required_input_class": "option_chain_instruments_and_packages"
+      }
+    ],
+    "modes": [
+      {
+        "mode_id": "mode_1_decay",
+        "display_name": "Decay robustness",
+        "valid_schedules": [
+          "global",
+          "per_fold_decay"
+        ],
+        "invalid_schedules": [
+          {
+            "schedule": "per_fold_causal",
+            "admission": "NOT_ADMITTED",
+            "reason": "QuantBT 1.1.1 supports causal Mode 1 only with robust_decay, inner_split_frequency, inner_window_mode and inner_train_window. The current Portal requested-spec and preflight cannot carry and validate those fields; this pair is descriptive, not a runnable Portal admission.",
+            "source": [
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "532-548",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "causal Mode 1 requires inner_split_frequency, inner_window_mode,"
+              }
+            ]
+          }
+        ],
+        "default_schedule": "global",
+        "objective_summary": "Ranks OOS stability against IS-to-OOS decay.",
+        "suspect": "A high average OOS score with broad decay dispersion requires review.",
+        "artifact_fields": [
+          "fold_decay",
+          "top_parameter_frequency"
+        ],
+        "when_to_use": "Use when a frozen candidate pool needs an explicit decay diagnostic.",
+        "rules": [
+          "Do not relabel global output as strict outer OOS.",
+          "Keep selected separate from best."
+        ],
+        "facts": {
+          "source_release_id": "er_quantbt_111",
+          "schedules": [
+            {
+              "schedule": "global",
+              "validation_claim": "walk_forward_oos",
+              "chronological_validation_claim": "not_causal_multi_fold_global_calibration",
+              "causality_claim": "retrospective_global_calibration",
+              "causality_schedule_v2": "retrospective_global_v2",
+              "oos_use": "USED",
+              "oos_use_condition": "With the release-default candidate_selection_metric robust_decay. The engine records NOT_USED for plateau/IS-only/full-sample metrics.",
+              "params_semantics": "single_global_parameter_set",
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1250-1287",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            },
+            {
+              "schedule": "per_fold_decay",
+              "validation_claim": "selection_adjusted_oos",
+              "chronological_validation_claim": "selection_adjusted_outer_oos",
+              "causality_claim": "fold_local_decay_calibration",
+              "causality_schedule_v2": "engine_enforced_per_fold_v2",
+              "oos_use": "USED",
+              "oos_use_condition": null,
+              "params_semantics": "last_completed_fold_selected_params",
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1250-1287",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            }
+          ],
+          "objective": {
+            "state": "PUBLISHED",
+            "direction": "maximize",
+            "selection_metrics": [
+              "robust_decay"
+            ],
+            "stages": [
+              {
+                "stage": "is_search",
+                "formula_id": "mean_is_sharpe_v1",
+                "formula": "mean_is_sharpe"
+              },
+              {
+                "stage": "oos_candidate_selection",
+                "formula_id": "mean_oos_minus_decay_penalties_v1",
+                "formula": "mean_oos_sharpe - candidate_decay_lambda * std_decay - candidate_decay_gamma * max(0, mean_decay)"
+              },
+              {
+                "stage": "fixed_or_post_selection_evaluation",
+                "formula_id": "mean_oos_minus_decay_penalties_v1",
+                "formula": "mean_oos_sharpe - decay_lambda * std_decay - decay_gamma * max(0, mean_decay)"
+              }
+            ],
+            "coefficients": [
+              {
+                "name": "decay_lambda",
+                "release_default": "0.5",
+                "note": null
+              },
+              {
+                "name": "decay_gamma",
+                "release_default": "0.5",
+                "note": null
+              },
+              {
+                "name": "candidate_decay_lambda",
+                "release_default": null,
+                "note": "Unset: falls back to decay_lambda."
+              },
+              {
+                "name": "candidate_decay_gamma",
+                "release_default": null,
+                "note": "Unset: falls back to decay_gamma."
+              }
+            ],
+            "note": null,
+            "source": [
+              {
+                "path": "quantbt/core/research_audit_artifact.py",
+                "lines": "607-709",
+                "sha256": "7a5ad9052251b08a85461b273d3fc1bb67f4b29223edc3dd6221c47903058e84",
+                "anchor": "def _objective_contract("
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "445-455",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "decay_lambda: float = 0.5"
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "680-714",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "if opt_mode == \"mode_4_is_only_robust\" and metric == \"robust_decay\":"
+              }
+            ]
+          },
+          "reads": {
+            "state": "PUBLISHED",
+            "selection_inputs": [
+              "is_metrics",
+              "oos_metrics",
+              "decay_components"
+            ],
+            "retention": "fold_metric_rows",
+            "source": [
+              {
+                "path": "quantbt/core/wfo_evaluation.py",
+                "lines": "35-61",
+                "sha256": "9148c257954c1c29ee4484984cec15c058d5dbc5c93eb0b5bcd9e3187b5566e6",
+                "anchor": "WFO_MODE_EVALUATION_MATRIX_V1"
+              }
+            ]
+          },
+          "avoid_when": {
+            "state": "NOT_PUBLISHED",
+            "reason": "QuantBT 1.1.1 publishes no avoid-when guidance for this mode; the Portal does not write one of its own.",
+            "source": null
+          }
+        }
+      },
+      {
+        "mode_id": "mode_2_sbb",
+        "display_name": "Stationary bootstrap robustness",
+        "valid_schedules": [
+          "global"
+        ],
+        "invalid_schedules": [
+          {
+            "schedule": "per_fold_decay",
+            "admission": "NOT_ADMITTED",
+            "reason": "QuantBT 1.1.1 permits per_fold_decay only for mode_1_decay with robust_decay; this mode is rejected by the pinned engine.",
+            "source": [
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "522-530",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "optimization_schedule='per_fold_decay' currently requires"
+              }
+            ]
+          },
+          {
+            "schedule": "per_fold_causal",
+            "admission": "NOT_ADMITTED",
+            "reason": "QuantBT 1.1.1 permits per_fold_causal only for mode_1_decay with nested inner validation or mode_4_is_only_robust; this mode is rejected by the pinned engine.",
+            "source": [
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "532-536",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "optimization_schedule='per_fold_causal' currently requires"
+              }
+            ]
+          }
+        ],
+        "default_schedule": "global",
+        "objective_summary": "Scores an IS-only stationary bootstrap robustness estimate.",
+        "suspect": "Bootstrap confidence is not out-of-sample proof.",
+        "artifact_fields": [
+          "bootstrap_samples",
+          "bootstrap_decay"
+        ],
+        "when_to_use": "Use for robustness calibration, not to make an OOS claim.",
+        "rules": [
+          "The current Portal proxy is not an engine certificate."
+        ],
+        "facts": {
+          "source_release_id": "er_quantbt_111",
+          "schedules": [
+            {
+              "schedule": "global",
+              "validation_claim": "walk_forward_oos",
+              "chronological_validation_claim": "not_causal_multi_fold_global_calibration",
+              "causality_claim": "retrospective_global_calibration",
+              "causality_schedule_v2": "retrospective_global_v2",
+              "oos_use": "NOT_USED",
+              "oos_use_condition": null,
+              "params_semantics": "single_global_parameter_set",
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1250-1287",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            }
+          ],
+          "objective": {
+            "state": "PUBLISHED",
+            "direction": "maximize",
+            "selection_metrics": [
+              "robust_decay"
+            ],
+            "stages": [
+              {
+                "stage": "is_search",
+                "formula_id": "mean_synthetic_oos_minus_sbb_penalties_v1",
+                "formula": "mean_synthetic_oos_sharpe - sbb_decay_lambda * max(0, mean_decay) - sbb_std_penalty * mean_synthetic_oos_std"
+              },
+              {
+                "stage": "oos_candidate_selection",
+                "formula_id": "mean_oos_minus_decay_penalties_v1",
+                "formula": "mean_oos_sharpe - decay_lambda * std_decay - decay_gamma * max(0, mean_decay)"
+              }
+            ],
+            "coefficients": [
+              {
+                "name": "sbb_decay_lambda",
+                "release_default": "0.5",
+                "note": null
+              },
+              {
+                "name": "sbb_std_penalty",
+                "release_default": "0.1",
+                "note": null
+              },
+              {
+                "name": "decay_lambda",
+                "release_default": "0.5",
+                "note": null
+              },
+              {
+                "name": "decay_gamma",
+                "release_default": "0.5",
+                "note": null
+              }
+            ],
+            "note": null,
+            "source": [
+              {
+                "path": "quantbt/core/research_audit_artifact.py",
+                "lines": "607-709",
+                "sha256": "7a5ad9052251b08a85461b273d3fc1bb67f4b29223edc3dd6221c47903058e84",
+                "anchor": "def _objective_contract("
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "445-455",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "decay_lambda: float = 0.5"
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "680-714",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "if opt_mode == \"mode_4_is_only_robust\" and metric == \"robust_decay\":"
+              }
+            ]
+          },
+          "reads": {
+            "state": "PUBLISHED",
+            "selection_inputs": [
+              "is_return_path",
+              "bootstrap_indices",
+              "replicate_statistics"
+            ],
+            "retention": "one_candidate_fold_return_path_plus_replicate_vector",
+            "source": [
+              {
+                "path": "quantbt/core/wfo_evaluation.py",
+                "lines": "35-61",
+                "sha256": "9148c257954c1c29ee4484984cec15c058d5dbc5c93eb0b5bcd9e3187b5566e6",
+                "anchor": "WFO_MODE_EVALUATION_MATRIX_V1"
+              }
+            ]
+          },
+          "avoid_when": {
+            "state": "NOT_PUBLISHED",
+            "reason": "QuantBT 1.1.1 publishes no avoid-when guidance for this mode; the Portal does not write one of its own.",
+            "source": null
+          }
+        }
+      },
+      {
+        "mode_id": "mode_3_flat_minima",
+        "display_name": "Flat minima",
+        "valid_schedules": [
+          "global"
+        ],
+        "invalid_schedules": [
+          {
+            "schedule": "per_fold_decay",
+            "admission": "NOT_ADMITTED",
+            "reason": "QuantBT 1.1.1 permits per_fold_decay only for mode_1_decay with robust_decay; this mode is rejected by the pinned engine.",
+            "source": [
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "522-530",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "optimization_schedule='per_fold_decay' currently requires"
+              }
+            ]
+          },
+          {
+            "schedule": "per_fold_causal",
+            "admission": "NOT_ADMITTED",
+            "reason": "QuantBT 1.1.1 permits per_fold_causal only for mode_1_decay with nested inner validation or mode_4_is_only_robust; this mode is rejected by the pinned engine.",
+            "source": [
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "532-536",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "optimization_schedule='per_fold_causal' currently requires"
+              }
+            ]
+          }
+        ],
+        "default_schedule": "global",
+        "objective_summary": "Selects a stable plateau rather than a single sharp optimum.",
+        "suspect": "A centroid can be unevaluated and must not be silently promoted as a trial.",
+        "artifact_fields": [
+          "robust_candidates",
+          "selection_target"
+        ],
+        "when_to_use": "Use when parameter stability is more meaningful than one peak score.",
+        "rules": [
+          "Centroid references are explicit.",
+          "No fold-last fallback."
+        ],
+        "facts": {
+          "source_release_id": "er_quantbt_111",
+          "schedules": [
+            {
+              "schedule": "global",
+              "validation_claim": "walk_forward_oos",
+              "chronological_validation_claim": "not_causal_multi_fold_global_calibration",
+              "causality_claim": "retrospective_global_calibration",
+              "causality_schedule_v2": "retrospective_global_v2",
+              "oos_use": "USED",
+              "oos_use_condition": "With the release-default candidate_selection_metric robust_decay. The engine records NOT_USED for plateau/IS-only/full-sample metrics.",
+              "params_semantics": "single_global_parameter_set",
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1250-1287",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            }
+          ],
+          "objective": {
+            "state": "PUBLISHED",
+            "direction": "maximize",
+            "selection_metrics": [
+              "robust_decay"
+            ],
+            "stages": [
+              {
+                "stage": "is_search",
+                "formula_id": "mean_is_sharpe_v1",
+                "formula": "mean_is_sharpe"
+              },
+              {
+                "stage": "oos_candidate_selection",
+                "formula_id": "mean_oos_minus_decay_penalties_v1",
+                "formula": "mean_oos_sharpe - candidate_decay_lambda * std_decay - candidate_decay_gamma * max(0, mean_decay)"
+              },
+              {
+                "stage": "fixed_or_post_selection_evaluation",
+                "formula_id": "mean_oos_minus_decay_penalties_v1",
+                "formula": "mean_oos_sharpe - decay_lambda * std_decay - decay_gamma * max(0, mean_decay)"
+              }
+            ],
+            "coefficients": [
+              {
+                "name": "decay_lambda",
+                "release_default": "0.5",
+                "note": null
+              },
+              {
+                "name": "decay_gamma",
+                "release_default": "0.5",
+                "note": null
+              },
+              {
+                "name": "candidate_decay_lambda",
+                "release_default": null,
+                "note": "Unset: falls back to decay_lambda."
+              },
+              {
+                "name": "candidate_decay_gamma",
+                "release_default": null,
+                "note": "Unset: falls back to decay_gamma."
+              }
+            ],
+            "note": "May replace the deployed candidate with a recorded plateau/medoid selection; its geometry is in selection_metadata.",
+            "source": [
+              {
+                "path": "quantbt/core/research_audit_artifact.py",
+                "lines": "607-709",
+                "sha256": "7a5ad9052251b08a85461b273d3fc1bb67f4b29223edc3dd6221c47903058e84",
+                "anchor": "def _objective_contract("
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "445-455",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "decay_lambda: float = 0.5"
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "680-714",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "if opt_mode == \"mode_4_is_only_robust\" and metric == \"robust_decay\":"
+              }
+            ]
+          },
+          "reads": {
+            "state": "PUBLISHED",
+            "selection_inputs": [
+              "is_metrics",
+              "parameter_coordinates",
+              "plateau_neighborhood"
+            ],
+            "retention": "candidate_metric_rows_and_plateau_coordinates",
+            "source": [
+              {
+                "path": "quantbt/core/wfo_evaluation.py",
+                "lines": "35-61",
+                "sha256": "9148c257954c1c29ee4484984cec15c058d5dbc5c93eb0b5bcd9e3187b5566e6",
+                "anchor": "WFO_MODE_EVALUATION_MATRIX_V1"
+              }
+            ]
+          },
+          "avoid_when": {
+            "state": "NOT_PUBLISHED",
+            "reason": "QuantBT 1.1.1 publishes no avoid-when guidance for this mode; the Portal does not write one of its own.",
+            "source": null
+          }
+        }
+      },
+      {
+        "mode_id": "mode_4_is_only_robust",
+        "display_name": "IS-only robust",
+        "valid_schedules": [
+          "global",
+          "per_fold_causal"
+        ],
+        "invalid_schedules": [
+          {
+            "schedule": "per_fold_decay",
+            "admission": "NOT_ADMITTED",
+            "reason": "QuantBT 1.1.1 permits per_fold_decay only for mode_1_decay with robust_decay; this mode is rejected by the pinned engine.",
+            "source": [
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "522-530",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "optimization_schedule='per_fold_decay' currently requires"
+              }
+            ]
+          }
+        ],
+        "default_schedule": "global",
+        "objective_summary": "Combines robust IS subperiod statistics with explicit penalties.",
+        "suspect": "Good central tendency with high temporal dispersion is a warning, not a pass.",
+        "artifact_fields": [
+          "subperiod_scores",
+          "dispersion"
+        ],
+        "when_to_use": "Use for train-only selection diagnostics or causal per-fold experiments.",
+        "rules": [
+          "Per-fold causal requires its own evidence lane."
+        ],
+        "facts": {
+          "source_release_id": "er_quantbt_111",
+          "schedules": [
+            {
+              "schedule": "global",
+              "validation_claim": "walk_forward_oos",
+              "chronological_validation_claim": "not_causal_multi_fold_global_calibration",
+              "causality_claim": "retrospective_global_calibration",
+              "causality_schedule_v2": "retrospective_global_v2",
+              "oos_use": "NOT_USED",
+              "oos_use_condition": null,
+              "params_semantics": "single_global_parameter_set",
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1250-1287",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            },
+            {
+              "schedule": "per_fold_causal",
+              "validation_claim": "strict_fold_local_retraining",
+              "chronological_validation_claim": "strict_outer_oos_after_frozen_selection",
+              "causality_claim": "strict_fold_local_retraining",
+              "causality_schedule_v2": "engine_enforced_per_fold_v2",
+              "oos_use": "NOT_USED",
+              "oos_use_condition": null,
+              "params_semantics": "last_completed_fold_selected_params",
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1250-1287",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            }
+          ],
+          "objective": {
+            "state": "PUBLISHED",
+            "direction": "maximize",
+            "selection_metrics": [
+              "is_only_robust"
+            ],
+            "stages": [
+              {
+                "stage": "is_search",
+                "formula_id": "mean_is_sharpe_v1",
+                "formula": "mean_is_sharpe"
+              }
+            ],
+            "coefficients": [],
+            "note": "Temporal/plateau selection terms are retained verbatim in selection_metadata; they do not inspect an external OOS tape.",
+            "source": [
+              {
+                "path": "quantbt/core/research_audit_artifact.py",
+                "lines": "607-709",
+                "sha256": "7a5ad9052251b08a85461b273d3fc1bb67f4b29223edc3dd6221c47903058e84",
+                "anchor": "def _objective_contract("
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "445-455",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "decay_lambda: float = 0.5"
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "680-714",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "if opt_mode == \"mode_4_is_only_robust\" and metric == \"robust_decay\":"
+              }
+            ]
+          },
+          "reads": {
+            "state": "PUBLISHED",
+            "selection_inputs": [
+              "is_metrics",
+              "is_subperiod_metrics",
+              "plateau_neighborhood"
+            ],
+            "retention": "is_subperiod_metric_rows_and_plateau_coordinates",
+            "source": [
+              {
+                "path": "quantbt/core/wfo_evaluation.py",
+                "lines": "35-61",
+                "sha256": "9148c257954c1c29ee4484984cec15c058d5dbc5c93eb0b5bcd9e3187b5566e6",
+                "anchor": "WFO_MODE_EVALUATION_MATRIX_V1"
+              }
+            ]
+          },
+          "avoid_when": {
+            "state": "NOT_PUBLISHED",
+            "reason": "QuantBT 1.1.1 publishes no avoid-when guidance for this mode; the Portal does not write one of its own.",
+            "source": null
+          }
+        }
+      },
+      {
+        "mode_id": "mode_5_full_robust",
+        "display_name": "Full-sample robust",
+        "valid_schedules": [
+          "global"
+        ],
+        "invalid_schedules": [
+          {
+            "schedule": "per_fold_decay",
+            "admission": "NOT_ADMITTED",
+            "reason": "QuantBT 1.1.1 permits per_fold_decay only for mode_1_decay with robust_decay; this mode is rejected by the pinned engine.",
+            "source": [
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "522-530",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "optimization_schedule='per_fold_decay' currently requires"
+              }
+            ]
+          },
+          {
+            "schedule": "per_fold_causal",
+            "admission": "NOT_ADMITTED",
+            "reason": "QuantBT 1.1.1 permits per_fold_causal only for mode_1_decay with nested inner validation or mode_4_is_only_robust; this mode is rejected by the pinned engine.",
+            "source": [
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "532-536",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "optimization_schedule='per_fold_causal' currently requires"
+              }
+            ]
+          }
+        ],
+        "default_schedule": "global",
+        "objective_summary": "Calibrates robustness on the full supplied sample.",
+        "suspect": "Full-sample selection must never be described as OOS evidence.",
+        "artifact_fields": [
+          "full_sample_used_for_selection",
+          "robust_candidates"
+        ],
+        "when_to_use": "Use only for calibration where the full-sample label is explicit.",
+        "rules": [
+          "Publication labels must retain the full-sample disclosure."
+        ],
+        "facts": {
+          "source_release_id": "er_quantbt_111",
+          "schedules": [
+            {
+              "schedule": "global",
+              "validation_claim": "none_full_sample_calibration",
+              "chronological_validation_claim": "not_causal_multi_fold_global_calibration",
+              "causality_claim": "retrospective_global_calibration",
+              "causality_schedule_v2": "retrospective_global_v2",
+              "oos_use": "NOT_USED",
+              "oos_use_condition": null,
+              "params_semantics": "single_global_parameter_set",
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1250-1287",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            }
+          ],
+          "objective": {
+            "state": "PUBLISHED",
+            "direction": "maximize",
+            "selection_metrics": [
+              "full_robust",
+              "full_plateau_robust",
+              "full_temporal_robust",
+              "full_best"
+            ],
+            "stages": [
+              {
+                "stage": "is_search",
+                "formula_id": "mean_is_sharpe_v1",
+                "formula": "mean_is_sharpe"
+              }
+            ],
+            "coefficients": [],
+            "note": "Temporal/plateau selection terms are retained verbatim in selection_metadata; they do not inspect an external OOS tape.",
+            "source": [
+              {
+                "path": "quantbt/core/research_audit_artifact.py",
+                "lines": "607-709",
+                "sha256": "7a5ad9052251b08a85461b273d3fc1bb67f4b29223edc3dd6221c47903058e84",
+                "anchor": "def _objective_contract("
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "445-455",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "decay_lambda: float = 0.5"
+              },
+              {
+                "path": "quantbt/walkforward.py",
+                "lines": "680-714",
+                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                "anchor": "if opt_mode == \"mode_4_is_only_robust\" and metric == \"robust_decay\":"
+              }
+            ]
+          },
+          "reads": {
+            "state": "PUBLISHED",
+            "selection_inputs": [
+              "full_is_metrics",
+              "full_sample_plateau",
+              "temporal_components"
+            ],
+            "retention": "full_is_metric_rows_and_parameter_plateau",
+            "source": [
+              {
+                "path": "quantbt/core/wfo_evaluation.py",
+                "lines": "35-61",
+                "sha256": "9148c257954c1c29ee4484984cec15c058d5dbc5c93eb0b5bcd9e3187b5566e6",
+                "anchor": "WFO_MODE_EVALUATION_MATRIX_V1"
+              }
+            ]
+          },
+          "avoid_when": {
+            "state": "NOT_PUBLISHED",
+            "reason": "QuantBT 1.1.1 publishes no avoid-when guidance for this mode; the Portal does not write one of its own.",
+            "source": null
+          }
+        }
+      }
+    ],
+    "claims": [
+      {
+        "contract_id": "close_target_v2",
+        "engine_certification": "L2",
+        "numeric_guarantee": "Signal changes anchor target units at the current price.",
+        "never_claims": "Never claims intrabar stop or take-profit fill semantics."
+      },
+      {
+        "contract_id": "intrabar_bracket_v1",
+        "engine_certification": "L2",
+        "numeric_guarantee": "Bracket intent uses explicit OHLC/intrabar contract fields.",
+        "never_claims": "Never claims venue-exact fill ordering beyond the supplied contract."
+      },
+      {
+        "contract_id": "fill_replay",
+        "engine_certification": "L1",
+        "numeric_guarantee": "Replays supplied accounting fills with the selected accounting backend.",
+        "never_claims": "Never claims signal quality or origin of supplied fills."
+      },
+      {
+        "contract_id": "event_lifecycle",
+        "engine_certification": "L2",
+        "numeric_guarantee": "Models typed event lifecycle commands and resulting fills.",
+        "never_claims": "Never claims broker acknowledgement or external execution."
+      },
+      {
+        "contract_id": "reactive",
+        "engine_certification": "L3",
+        "numeric_guarantee": "Executes the event-driven strategy facade under its selected profile.",
+        "never_claims": "Never claims an invented reactive() route or global callback ordering."
+      },
+      {
+        "contract_id": "native_portfolio",
+        "engine_certification": "L2",
+        "numeric_guarantee": "Computes the declared multi-asset portfolio contract.",
+        "never_claims": "Never claims a Portfolio manager admission or a broker margin guarantee."
+      },
+      {
+        "contract_id": "nautilus",
+        "engine_certification": "L4",
+        "numeric_guarantee": "Validates the declared Nautilus DCA-grid adapter input.",
+        "never_claims": "Never claims cross-engine parity until a typed comparison evidence lane exists."
+      }
+    ],
+    "evidence_contract": {
+      "schema_id": "research-run-evidence.v1",
+      "required_fields": [
+        "engine_release_id",
+        "route_id",
+        "effective_spec_digest",
+        "market_data_content_hash",
+        "report_level",
+        "selection_resolution",
+        "result_summary"
+      ],
+      "writer_state": "P05_OWNED_NOT_ACTIVE"
+    }
+  },
+  "historical_identity": null,
+  "etag": "W/\"research-atlas-9e7cf041bdf5092f61179fc3\""
+}

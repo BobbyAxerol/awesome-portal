@@ -106,6 +106,12 @@ describe("P09 published Research foundation contract", () => {
     const historical = fixture("research-foundation.historical-identity.valid.json");
     expect(historical).toMatchObject({ selected_release_kind: "HISTORICAL", atlas: null,
       historical_identity: { release_id: "er_quantbt_108", facts_state: "NOT_PUBLISHED" } });
+    const current = fixture("research-foundation.atlas-current.valid.json");
+    expect(current).toMatchObject({ selected_release_kind: "CURRENT", historical_identity: null,
+      atlas: { manifest_revision: 5, modes: expect.any(Array), routes: expect.any(Array) } });
+    expect(current.atlas.modes).toHaveLength(5);
+    expect(current.atlas.routes).toHaveLength(14);
+    expect(current.atlas.claims).toHaveLength(7);
   });
 
   it("does not publish a private adapter, raw data, worker or executable engine surface", () => {
