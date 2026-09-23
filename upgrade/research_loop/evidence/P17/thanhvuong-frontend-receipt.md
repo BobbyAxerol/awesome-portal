@@ -21,28 +21,28 @@ CLAUDE.md: tận dụng QuantBT v1.1 hiện có và bám hi-fi.
 | Branch | `feat/thanhvuong/research-p17-p21`, remote duy nhất là `primus-origin` |
 | Base campaign (provisioned) | `30fb9f21473bfa4cd1bd6baecb4b927f2ad8d196` |
 | Base của P17 | `21f9a98b39994f99b2f1366be9227617ecd55011` (docs P16 addendum) |
-| Commit P17 (chưa push) | `b55aed4cff62ec69ce9f3dec51e9779f6d22726b` feat S08 screen · `737d279da27a2a98797cbfdf5fafb8f4e13ec7ad` route + link · `9ee852414a83c7ab5904d42dbf249e7c5e25c6e6` đổi nhãn test |
-| Docs commit | commit chứa file này và một dòng P17 trong Unified §13 |
+| Commit P17 (chưa push) | `b55aed4cff62ec69ce9f3dec51e9779f6d22726b` feat S08 screen · `737d279da27a2a98797cbfdf5fafb8f4e13ec7ad` route + link · `9ee852414a83c7ab5904d42dbf249e7c5e25c6e6` đổi nhãn test · `3cf70794c04c3a7459afdd4399e62cfb83381cef` thêm panel PnL distribution của hi-fi (sửa sau khi so ảnh, §4.1) |
+| Docs commit | `a4c375f5` (bản đầu) và commit cập nhật file này sau `3cf70794`, cùng một dòng P17 trong Unified §13 |
 | Baseline mới | `docs/research-loop-plan` đã tiến `30fb9f21` → `952ad48f75d6bd6757d3359fd127a889a92e28f4` (12 commit, không phải con của `21f9a98b`). **Chưa merge/rebase**. Bobby quyết cách tích hợp (§6) |
 | Push / PR | chưa. Chỉ push khi Bobby yêu cầu; PR vào `docs/research-loop-plan`, không merge/rebase/force-push |
 
-## 2. File đã sửa (`git diff --numstat 21f9a98b 9ee85241`)
+## 2. File đã sửa (`git diff --numstat 21f9a98b 3cf70794 -- apps/portal/frontend`)
 
 | File | + | − | Mục đích |
 |---|---:|---:|---|
 | `src/research/replayClient.ts` | 298 | 0 | Hai operation: `researchReplayDetailGetV1` và `researchCurrentSourceReplayGetV1`. Type lấy từ generated. Word maps, 13 capability keys, copy cố định cho refusal, `toReplayRefusal`, `replayState` |
 | `src/research/replayTransport.ts` | 183 | 0 | Transport store ngoài React (`useSyncExternalStore`): play/pause/step/seek/speed chỉ chạy trên sample đã tải, rAF có scheduler inject được, dừng ở cuối window, tự pause khi tab ẩn |
 | `src/research/useReplay.ts` | 180 | 0 | Đọc window: một GET khi vào, một token điều hướng mỗi lần đọc, 409 → bỏ token và hồi phục **đúng một lần**, lane retained chỉ đọc khi người dùng bấm |
-| `src/research/ExecuteDetail.tsx` | 871 | 0 | Bố cục Screen 08 theo hi-fi (§4) |
+| `src/research/ExecuteDetail.tsx` | 878 | 0 | Bố cục Screen 08 theo hi-fi (§4) |
 | `src/research/ExecuteRoute.tsx` | 40 | 0 | Route trên cursor chung; `seq` trong hash = ordinal + 1, chỉ ghi khi playhead dừng |
-| `src/research/executeReplay.test.tsx` | 550 | 0 | 34 test, nhóm `S08-U01…U08` |
+| `src/research/executeReplay.test.tsx` | 553 | 0 | 34 test, nhóm `S08-U01…U08` |
 | `src/features/quantbt/QuantBTModule.tsx` | 5 | 1 | Mount `runs/:runId/execute`; loại `execute` khỏi lookup `/api/runs/:id` cũ (lookup này trả 501) |
 | `src/research/EvidenceFlow.tsx` | 1 | 1 | Stage 4 deep dive trỏ tới `execute` |
 | `src/research/FreezeDetail.tsx` | 10 | 0 | Breadcrumb S07 thêm link `next: S4 Execute →` (spec 07 dòng 18) |
 | `src/research/evidenceFlow.test.tsx` | 3 | 8 | Test hub: đủ bốn stage có link, tính cả Execute |
 | `src/research/researchBoundary.test.ts` | 1 | 0 | Thêm `replayClient.ts` vào danh sách module được gọi mạng |
 | `tsconfig.json` | 3 | 0 | Alias `@portal/contracts-research-replay` |
-| **Tổng** | **2145** | **10** | 12 file, tất cả thuộc `apps/portal/frontend/**` |
+| **Tổng** | **2155** | **10** | 12 file, tất cả thuộc `apps/portal/frontend/**` |
 
 Không đụng backend, `packages/contracts/**`, OpenAPI, fixture canonical,
 migration, `apps/portal/strategy/**`, control-plane, `package.json` hay lock
@@ -78,7 +78,7 @@ Viewport 1280 và 660. "Browser" = probe trên product route; "Unit" = vitest.
 | Window trước/sau | nút previous/next window | `page.prev_cursor` / `page.next_cursor` → `before` / `cursor` | — | Browser PIN tail: đúng một token mỗi request |
 | Read state at playhead | nút pin | `playback_cursor` → `at` | `state_at_cursor` | Browser PIN: `at` hết hạn → 409 → một lần `at_ordinal=20` → `AVAILABLE_RETROSPECTIVE_EQUITY_SAMPLE` |
 | Event ledger | `SampleLedger` (14 dòng quanh playhead) | `items[]` | gọi là "samples", không phải events | Unit U04; click dòng = seek, 0 request |
-| Trade anatomy / blotter / MAE×MFE / route panel / cost timeline | `AbsentPanel` ×5 | `route_capabilities.*` | `NOT_PUBLISHED` + reason code | Browser `absent-panels=5`; không có dòng order/fill/trade/candle (Unit U04) |
+| Trade anatomy / blotter / MAE×MFE / trade PnL distribution / cost timeline (+ route-aware facts, không có trong hi-fi) | `AbsentPanel` ×6, cùng thứ tự cột với hi-fi | `route_capabilities.*` | `NOT_PUBLISHED` + reason code | Browser `absent-panels=6` ở 1280/660; Unit U04 assert đúng thứ tự, không có dòng order/fill/trade/candle, PnL distribution không có histogram |
 | 13 route capability | `CapabilityGap` | `route_capabilities` (13 khoá) | `NOT_PUBLISHED` + reason code P04 | Browser `CAPS 13` ở 1280/660; Unit U04 |
 | State at playhead | `StateAtCursor` | `state_at_cursor.*`, `.execution_state` | `NOT_SELECTED` nếu không gửi `at`/`at_ordinal` | Unit U02: execution state in là "not published" |
 | Source absences | `SourceAbsences` | `source_absences.execution_state`, `.cross_stream_order` | `NOT_PUBLISHED`, `NOT_ASSERTED` | Unit U04 |
@@ -89,6 +89,30 @@ Viewport 1280 và 660. "Browser" = probe trên product route; "Unit" = vitest.
 | Deep link / hard refresh | `ExecuteRoute` | hash `seq` → `at_ordinal = seq − 1` | — | Browser DEEPLINK `at_ordinal=45`; RELOAD giữ `seq=21` → `at_ordinal=20` |
 | Hub S4 và S07 "next" | `EvidenceFlow`, `FreezeDetail` | — | — | Browser HUB, S07 next href đúng |
 | Hi-fi "Reveal" / "COPY" / nút chứng chỉ | — | không có field | — | Không vẽ. Không có certificate badge nào trên S08 (Guide P17-T08) |
+
+### 4.1 So hi-fi với product — phần tử hi-fi không vẽ hoặc vẽ khác
+
+Evidence: ảnh hi-fi `p17-hifi-08-1280.png` (`959b04f135ac70b3`) đặt cạnh
+product `p17-full-1280.png` (`a6063745decbc1f9`), cùng viewport 1280. Lần so
+này tìm ra một panel bị thiếu: **trade PnL distribution**. Panel đó đã được
+thêm lại ở `3cf70794`. Các phần tử còn lại dưới đây được bỏ có chủ đích:
+không có field nào để vẽ, và vẽ ra sẽ là dữ liệu bịa.
+
+| Phần tử hi-fi | Lý do không vẽ / vẽ khác | Field / fact còn thiếu | Loại |
+|---|---|---|---|
+| Hàng chọn route (`close_target_v2`, `intrabar_bracket_v1`, `event_lifecycle_v2`, `reactive_r2`, `dca_ladder`) | Contract trả **một** route cho run (`route.id=signal_notional`). Product in route đó thành một chip, không có control chọn route | không có danh sách route | source (P17-B) |
+| LENS manager / quant / audit | Không có field nào khác nhau giữa các lens | — | `VISUAL_DECISION_REQUIRED` |
+| FOLD selector, fold chain f1…f5, "play across folds", SCALE DEMO 5/32 folds | Contract không có fold scope; `fold_capital` `NOT_PUBLISHED` | `fold_capital` + fold scope của replay | source (P17-B hàng 7) |
+| Dải IS / OOS / HOLDOUT phía trên chart | Replay không trả ranh giới window | window bounds trên replay | source; có thể lấy từ S07 nếu Codex cho phép dùng chung |
+| Nến + marker S/T/O/F + "causal reveal" | `candle_windows`, `execution_events` `NOT_PUBLISHED`. Product vẽ đường equity và drawdown, gọi là sample | candle window, event stream | source (P17-B hàng 4, 6) |
+| Trade tape (span xanh/đỏ theo trade, "1 / 18 events") | `trades` `NOT_PUBLISHED`. Seek range thay chỗ tape, readout là "sample N of M" | trade ledger | source (P17-B hàng 3) |
+| Readout `bar · event_seq · position` | Chỉ có `t · equity · drawdown`; position không được suy ra | position snapshot | source (P17-B hàng 2) |
+| Event ledger dạng event (`signal_eval`, `target_set`, `acct_post`) | Ledger giữ chỗ nhưng in sample và ghi rõ "samples, not events" | `execution_events` | source |
+| Blotter (bộ lọc long/short/win/loss, sort), anatomy, MAE×MFE scatter, PnL histogram | Panel giữ chỗ, kèm reason code; không có dòng hay điểm nào | `trades`, `mae_mfe`, `orders`, `fills` | source |
+| Cost timeline "ABSENT" | Có, cùng ý nghĩa. Hi-fi viết "portal gap, không phải engine gap"; product chỉ in reason code nguồn trả về, không kết luận thay | `funding` | khớp |
+| Dòng artifact `bars.parquet · events.parquet · ds_…@sha256` và COPY EVIDENCE LINK | Không có field artifact; không có operation copy link (giống quyết định P16) | artifact refs | `VISUAL_DECISION_REQUIRED` |
+| Breadcrumb trong topbar | Product đặt breadcrumb trong trang, dưới header module QuantBT (shell chung, giống P16) | — | ngoài S08, đề xuất task shell riêng |
+| Tiêu đề | §7 | — | `VISUAL_DECISION_REQUIRED` |
 
 ## 5. Receipt thực tế — 2026-09-23 trên workspace Linux
 
@@ -101,15 +125,15 @@ Viewport 1280 và 660. "Browser" = probe trên product route; "Unit" = vitest.
 | `./scripts/verify-contributor-workspace.sh` | exit 0 |
 | Hook active | **Không** (`core.hooksPath` không đặt, như đã ghi ở P16 addendum §3.1). Bù bằng chạy tay, xem §5.5 |
 
-### 5.2 Test lanes (`apps/portal/frontend`, Node v20.20.2, tree = `9ee85241`)
+### 5.2 Test lanes (`apps/portal/frontend`, Node v20.20.2, tree = `3cf70794`)
 
 | Lane | Lệnh | Exit | Kết quả |
 |---|---|---:|---|
 | Typecheck | `npx tsc -b --noEmit` | 0 | PASS |
 | Build | `npm run build` | 0 | PASS (chỉ có cảnh báo chunk size, đã có từ trước) |
-| Unit toàn bộ | `npx vitest run` | 0 | **169 file · 2969 pass · 1 skip** (load 3.6). Flake `PortalShell` ghi ở P16 §3.3 không tái hiện lần này |
+| Unit toàn bộ | `npx vitest run` | 0 | **169 file · 2969 pass · 1 skip**, chạy trên cả `9ee85241` và `3cf70794`. Flake `PortalShell` ghi ở P16 §3.3 không tái hiện lần này |
 | Unit S08 | `npx vitest run src/research/executeReplay.test.tsx` | 0 | 34/34 |
-| Browser toàn Research, 1 worker | `playwright test -c <probe config 127.0.0.1:4417> --workers=1` | 0 | **104/104 PASS** (82 test có sẵn + 22 test probe S08) |
+| Browser toàn Research, 1 worker | `playwright test -c <probe config 127.0.0.1:4417> --workers=1` | 0 | **104/104 PASS** (82 test có sẵn + 22 test probe S08), chạy lại trên `3cf70794` |
 | Browser toàn Research, 2 worker | cùng lệnh, `--workers=2` | 1 | 102 pass, 2 fail: `S01 keeps its filters…` (timeout 1.0m) và `S06 points at no trial`. Hai test này nằm ngoài diff P17. Chạy riêng thì pass 2/2. Ghi lại, không vá |
 
 Playwright 1.62.1, Chromium headless. Preview là `vite preview` riêng của
@@ -142,20 +166,20 @@ Screenshot và log **không commit** (A4.1). Nằm ở `~/tv-shots/p17/` và
 
 | File | SHA-256 | File | SHA-256 |
 |---|---|---|---|
-| `p17-full-1280.png` | `aaac77732ea39aaa` | `p17-full-660.png` | `9ca10ee4a28918dd` |
-| `p17-sampled-1280.png` | `86cd416953db34d1` | `p17-sampled-660.png` | `87f0fe8bb545f637` |
-| `p17-pending_source_callback-1280.png` | `7dc97dd312bbe09a` | `…-660.png` | `4421ae530bc84833` |
-| `p17-legacy_metadata_only-1280.png` | `3b0d3fd1481ba3a8` | `…-660.png` | `468299b3030fef22` |
-| `p17-not_published-1280.png` | `c311fd6a7467a4a9` | `…-660.png` | `7513ad56a6ccbb26` |
-| `p17-refusal-400-1280.png` | `6581e8d145516a23` | `…-660.png` | `6a729fb4c63cec54` |
+| `p17-full-1280.png` | `a6063745decbc1f9` | `p17-full-660.png` | `9200ecf757ba26bb` |
+| `p17-sampled-1280.png` | `6ce7f572d5dfef81` | `p17-sampled-660.png` | `8c88b1cb2f803d03` |
+| `p17-pending_source_callback-1280.png` | `20dc90c398b036b6` | `…-660.png` | `5e884c9a88ccd585` |
+| `p17-legacy_metadata_only-1280.png` | `e140be028c3e3cc8` | `…-660.png` | `80f140ccc1927f63` |
+| `p17-not_published-1280.png` | `1a8520047447fe3c` | `…-660.png` | `198a52415d095a80` |
+| `p17-refusal-400-1280.png` | `1261abe14f0ddc33` | `…-660.png` | `6a729fb4c63cec54` |
 | `p17-refusal-401-1280.png` | `269cb2d887534871` | `…-660.png` | `3af7e2facab05abb` |
-| `p17-refusal-403-1280.png` | `467a292f49c1d77d` | `…-660.png` | `ba7a187afa1b02d5` |
-| `p17-refusal-404-1280.png` | `91538787697f78d1` | `…-660.png` | `6eaf69dc7b8733a5` |
-| `p17-refusal-503-1280.png` | `6a18c9fe6d458b45` | `…-660.png` | `be40113bb4a139e2` |
+| `p17-refusal-403-1280.png` | `13656a437d9f17b7` | `…-660.png` | `ba7a187afa1b02d5` |
+| `p17-refusal-404-1280.png` | `f6e8d40916a33241` | `…-660.png` | `6eaf69dc7b8733a5` |
+| `p17-refusal-503-1280.png` | `6f2e57439739374b` | `…-660.png` | `be40113bb4a139e2` |
 | `p17-loading-1280.png` | `a4be160e70bd593f` | `p17-loading-660.png` | `8cef24904e93b1dc` |
-| `p17-interaction-1280.png` | `a5d0adb686677622` | `probe.log` (39 dòng) | `db66f2bfde86e2cf` |
+| `p17-interaction-1280.png` | `52991788afbba4ac` | `probe.log` (41 dòng) | `033d10f3b0762c91` |
 | hi-fi `p17-hifi-08-1280.png` | `959b04f135ac70b3` | hi-fi `p17-hifi-08-660.png` | `073177f46e8bba0b` |
-| `p17-product-execute-1280.png` | `d0d6ebe8bebc6bd3` | `p17-product-execute-660.png` | `9ac4ff35e74d8db9` |
+| `p17-product-execute-1280.png` (trước `3cf70794`) | `d0d6ebe8bebc6bd3` | `p17-product-execute-660.png` (trước `3cf70794`) | `9ac4ff35e74d8db9` |
 
 ### 5.4 Loại receipt
 
@@ -205,6 +229,7 @@ hoặc cho phép):
 | Input điều hướng | — | Handoff chỉ ghi `cursor`/`before`/`at`; RS-01 cho thêm `at_ordinal` cho deep link | `at_ordinal` chỉ dùng cho deep link và một lần hồi phục | Theo amendment |
 | Nhãn test | — | Guide định nghĩa `P17-T01…T14` với nghĩa khác | Nhóm test cục bộ đổi thành `S08-U01…U08` (`9ee85241`) | Tránh nhầm với ID nghiệm thu |
 | Reveal mode | có | handoff: "if added", chỉ để trình bày | Chưa làm | Tuỳ chọn. Không có state nào để che vì chưa có outcome tương lai ngoài equity |
+| Panel trade PnL distribution | có | — | Bản đầu bỏ sót; đã thêm lại ở `3cf70794`, kèm reason code | Lỗi đã sửa, tìm ra khi so ảnh (§4.1) |
 
 ## 8. Guide `P17-T01…T14` — phần frontend chứng minh được
 
@@ -260,7 +285,7 @@ Không có màu raw ngoài token, không copy asset bên ngoài.
 
 ## 11. Phân loại quyết định (A4.1)
 
-- **(a) Bobby quyết:** cách tích hợp baseline `952ad48f` và xung đột
+- **(a) Bobby quyết:** LENS, dòng artifact + COPY EVIDENCE LINK (§4.1); cách tích hợp baseline `952ad48f` và xung đột
   `FreezeDetail.tsx` (§6); tiêu đề S08 (`VISUAL_DECISION_REQUIRED`); có làm
   Reveal mode không; nối hook cho workspace; cách chạy axe; hai test S01/S06
   flake khi chạy 2 worker có cần `fix/*` riêng không; gom `Chip`/`Card`.
