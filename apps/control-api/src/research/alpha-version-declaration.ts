@@ -20,6 +20,8 @@ export interface ResearchAlphaVersionDeclaration {
   schema_version: "research.alpha-version-declaration.v1";
   entrypoint: string;
   timeframes: readonly string[];
+  required_columns: readonly ("open" | "high" | "low" | "close" | "volume")[];
+  warmup_bars: number;
   determinism: { seed_required: boolean };
   parameter_space: Readonly<Record<string, ResearchAlphaParameterDeclaration>>;
 }
@@ -119,6 +121,18 @@ export function projectResearchAlphaVersionDeclaration(
     throw new ResearchAlphaVersionDeclarationError("declared_contract.timeframes is not a bounded unique timeframe list.");
   }
 
+  const allowedColumns = new Set(["open", "high", "low", "close", "volume"]);
+  if (!Array.isArray(contract.required_columns) || contract.required_columns.length < 1 ||
+      contract.required_columns.length > 5 ||
+      !contract.required_columns.every((item) => typeof item === "string" && allowedColumns.has(item)) ||
+      new Set(contract.required_columns).size !== contract.required_columns.length) {
+    throw new ResearchAlphaVersionDeclarationError("declared_contract.required_columns is not a bounded candle column list.");
+  }
+  if (!Number.isInteger(contract.warmup_bars) || (contract.warmup_bars as number) < 0 ||
+      (contract.warmup_bars as number) > 1_000_000) {
+    throw new ResearchAlphaVersionDeclarationError("declared_contract.warmup_bars is invalid.");
+  }
+
   const determinism = object(contract.determinism, "declared_contract.determinism");
   if (typeof determinism.seed_required !== "boolean") {
     throw new ResearchAlphaVersionDeclarationError("declared_contract.determinism.seed_required is not declared.");
@@ -135,6 +149,8 @@ export function projectResearchAlphaVersionDeclaration(
     schema_version: "research.alpha-version-declaration.v1",
     entrypoint,
     timeframes: [...contract.timeframes] as string[],
+    required_columns: [...contract.required_columns] as ResearchAlphaVersionDeclaration["required_columns"],
+    warmup_bars: contract.warmup_bars as number,
     determinism: { seed_required: determinism.seed_required },
     parameter_space: parameterSpace,
   };

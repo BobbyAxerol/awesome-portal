@@ -130,6 +130,7 @@ export interface components {
             request_id: string;
         };
         AlphaVersionId: string;
+        Digest: string;
         DeclarationScalar: string | number | boolean | null;
         ParameterDeclaration: {
             /** @constant */
@@ -158,6 +159,8 @@ export interface components {
             schema_version: "research.alpha-version-declaration.v1";
             entrypoint: string;
             timeframes: string[];
+            required_columns?: ("open" | "high" | "low" | "close" | "volume")[];
+            warmup_bars?: number;
             determinism: {
                 seed_required: boolean;
             };
@@ -169,6 +172,9 @@ export interface components {
         RegistryEntry: {
             alpha_id: components["schemas"]["AlphaId"];
             alpha_version_id: components["schemas"]["AlphaVersionId"];
+            display_name?: string;
+            strategy_id?: components["schemas"]["AlphaId"];
+            source_digest?: components["schemas"]["Digest"];
             version_label: string;
             /** @enum {unknown} */
             lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
@@ -185,7 +191,6 @@ export interface components {
             schema_version: "research.alpha-registry.v1";
             entries: components["schemas"]["RegistryEntry"][];
         };
-        Digest: string;
         MirrorField: {
             field: string;
             /** @enum {unknown} */

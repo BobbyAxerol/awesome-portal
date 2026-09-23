@@ -98,6 +98,8 @@ interface AlphaImportVersionRow {
 interface AlphaImportRegistryRow {
   alpha_id: string;
   alpha_version_id: string;
+  display_name: string;
+  source_digest: string;
   version_label: string;
   lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   entrypoint: string;
@@ -1227,6 +1229,8 @@ export class ResearchMetadataRepository {
                 version.lifecycle_state,
                 version.entrypoint,
                 version.declared_contract,
+                alpha.name AS display_name,
+                COALESCE(source.source_digest, version.code_digest) AS source_digest,
                 substring(COALESCE(source.source_digest, version.code_digest) FROM 1 FOR 12) AS source_digest_prefix,
                 alpha.revision AS alpha_revision,
                 version.registered_at
@@ -1257,6 +1261,8 @@ export class ResearchMetadataRepository {
       return result.rows.map((row) => ({
         alphaId: row.alpha_id,
         alphaVersionId: row.alpha_version_id,
+        displayName: row.display_name,
+        sourceDigest: row.source_digest,
         versionLabel: row.version_label,
         lifecycleState: row.lifecycle_state,
         entrypoint: row.entrypoint,

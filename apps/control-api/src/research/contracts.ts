@@ -304,6 +304,8 @@ export interface ResearchAlphaVersionDataContract {
 export interface ResearchAlphaRegistryRecord {
   alphaId: string;
   alphaVersionId: string;
+  displayName: string;
+  sourceDigest: string;
   versionLabel: string;
   lifecycleState: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   entrypoint: string;

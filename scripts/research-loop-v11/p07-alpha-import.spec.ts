@@ -201,10 +201,12 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     expect(activated).toMatchObject({ schema_version: "research.alpha-activation.v1", lifecycle_state: "ACTIVE", replayed: false, alpha_revision: 2 });
     expect(await service.list(admin, scopeA)).toMatchObject([{
       alpha_id: "p07-alpha", alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE",
+      display_name: "p07-alpha", strategy_id: "p07-alpha", source_digest: parsed.source_digest,
       source_digest_prefix: parsed.source_digest.slice(0, 12), may_activate: true,
       declaration: {
         schema_version: "research.alpha-version-declaration.v1",
         entrypoint: "generate_signals", timeframes: ["1h"],
+        required_columns: ["open", "high", "low", "close", "volume"], warmup_bars: 32,
         determinism: { seed_required: true },
         parameter_space: { window: { kind: "int_range", low: 8, high: 64, step: 1 } },
       },

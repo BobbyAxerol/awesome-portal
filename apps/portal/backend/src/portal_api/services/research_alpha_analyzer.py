@@ -412,6 +412,7 @@ def _static_lookahead_scan(tree: ast.AST) -> tuple[bool, str]:
 
 def _mirror(contract: dict[str, object]) -> tuple[dict[str, object], ...]:
     fields = (
+        ("version", contract.get("version")),
         ("entrypoint", contract.get("entrypoint")),
         ("timeframes", contract.get("timeframes")),
         ("required_columns", contract.get("required_columns")),

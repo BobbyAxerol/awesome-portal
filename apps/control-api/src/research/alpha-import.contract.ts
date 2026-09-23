@@ -112,6 +112,9 @@ export interface ResearchAlphaImportGatesResponse {
 export interface ResearchAlphaRegistryEntry {
   alpha_id: string;
   alpha_version_id: string;
+  display_name: string;
+  strategy_id: string;
+  source_digest: string;
   version_label: string;
   lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   entrypoint: string;

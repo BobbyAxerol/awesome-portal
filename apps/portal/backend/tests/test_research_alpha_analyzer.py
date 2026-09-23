@@ -73,6 +73,7 @@ def test_p07_t01_valid_contract_is_parseable_without_executing_strategy_body() -
     assert result.gate_facts.parameter_space_sane is True
     assert result.gate_facts.no_lookahead_static_scan is True
     assert result.declared_contract["entrypoint"] == "generate_signals"
+    assert {"field": "version", "state": "parsed", "value": "0.3.0"} in result.mirror
 
 
 @pytest.mark.parametrize(

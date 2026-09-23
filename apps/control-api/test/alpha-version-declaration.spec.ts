@@ -9,6 +9,8 @@ import {
 describe("P10 safe AlphaVersion declaration projection", () => {
   it("normalizes the P07 and installed P04 declaration dialects into one generated union", () => {
     expect(projectResearchAlphaVersionDeclaration({
+      required_columns: ["open", "high", "low", "close", "volume"],
+      warmup_bars: 32,
       schema_version: "research.alpha-source.v1",
       entrypoint: "generate_signals",
       timeframes: ["1h"],
@@ -19,6 +21,8 @@ describe("P10 safe AlphaVersion declaration projection", () => {
       },
     }, "generate_signals")).toEqual({
       schema_version: "research.alpha-version-declaration.v1",
+      required_columns: ["open", "high", "low", "close", "volume"],
+      warmup_bars: 32,
       entrypoint: "generate_signals",
       timeframes: ["1h"],
       determinism: { seed_required: true },
@@ -36,6 +40,8 @@ describe("P10 safe AlphaVersion declaration projection", () => {
       entrypoint: "strategy.delta_rsi:generate_signals",
       timeframes: ["1h", "4h", "1d"],
       determinism: { seed_required: false },
+      required_columns: ["open", "high", "low", "close", "volume"],
+      warmup_bars: 300,
       parameter_space: {
         window: { kind: "int_range", low: 20, high: 60, step: 2 },
         rvol: { kind: "float_range", low: 1, high: 2.5, step: 0.1 },

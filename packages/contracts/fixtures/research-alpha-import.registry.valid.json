@@ -4,6 +4,9 @@
     {
       "alpha_id": "alpha-demo",
       "alpha_version_id": "av_alpha_demo_0_3_0",
+      "display_name": "Alpha demo",
+      "strategy_id": "alpha-demo",
+      "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "version_label": "av_0_3_0",
       "lifecycle_state": "DRAFT",
       "entrypoint": "generate_signals",
@@ -11,6 +14,8 @@
         "schema_version": "research.alpha-version-declaration.v1",
         "entrypoint": "generate_signals",
         "timeframes": ["1h"],
+        "required_columns": ["open", "high", "low", "close", "volume"],
+        "warmup_bars": 32,
         "determinism": { "seed_required": true },
         "parameter_space": {
           "window": { "kind": "int_range", "low": 8, "high": 64, "step": 1 }

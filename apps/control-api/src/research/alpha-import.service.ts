@@ -221,6 +221,9 @@ export class ResearchAlphaImportService {
       return rows.map((row) => ({
         alpha_id: row.alphaId,
         alpha_version_id: row.alphaVersionId,
+        display_name: row.displayName,
+        strategy_id: row.alphaId,
+        source_digest: row.sourceDigest,
         version_label: row.versionLabel,
         lifecycle_state: row.lifecycleState,
         entrypoint: row.entrypoint,
