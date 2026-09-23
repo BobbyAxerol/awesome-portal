@@ -14,6 +14,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import math
 import os
 import shutil
 import time
@@ -632,6 +633,9 @@ class DurableQuantWorker:
                 "SCHEMA_INVALID", "ALPHA_IMPORT_FAILED", "RESOURCE_EXCEEDED",
                 "CANCELLED", "ENGINE_ERROR", "ARTIFACT_COMMIT_FAILED", "LEASE_LOST",
             } else "CAPABILITY_MISMATCH"
+        typed_code = getattr(exc, "code", None)
+        if typed_code in STANDARD_FAILURE_CODES:
+            return typed_code
         message = str(exc)
         if "research producer executor" in message.lower() or "p10" in message.lower():
             return "CAPABILITY_MISMATCH"
@@ -716,9 +720,12 @@ class DurableQuantWorker:
 
         def measurement(name: str, maximum: int) -> int:
             value = resource.get(name, 0)
-            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or (isinstance(value, float) and not math.isfinite(value)) or value < 0):
                 return 0
-            return min(value, maximum)
+            # The child reports CPU seconds as a float. Round upward so a
+            # positive partial second cannot appear as zero usage.
+            return min(math.ceil(value), maximum)
 
         return {
             "peak_rss_bytes": measurement("peak_rss_bytes", 4 * 1024 * 1024 * 1024),

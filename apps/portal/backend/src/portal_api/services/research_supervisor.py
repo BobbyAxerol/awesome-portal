@@ -26,6 +26,10 @@ from typing import Any
 class ResearchSupervisorError(RuntimeError):
     """Typed local supervisor failure; caller maps it to P06 retry policy."""
 
+    def __init__(self, message: str, *, code: str = "ENGINE_ERROR") -> None:
+        super().__init__(message)
+        self.code = code
+
 
 @dataclass(frozen=True, slots=True)
 class ResearchChildLimits:
@@ -225,10 +229,18 @@ class IsolatedResearchSupervisor:
                 return_code = process.wait(timeout=limits.wall_seconds)
             except subprocess.TimeoutExpired as error:
                 self._kill_process_group(process)
-                raise ResearchSupervisorError("P06 child exceeded its wall-clock limit and was killed") from error
+                raise ResearchSupervisorError(
+                    "P06 child exceeded its wall-clock limit and was killed",
+                    code="RESOURCE_EXCEEDED",
+                ) from error
         elapsed = time.monotonic() - started
         after = resource.getrusage(resource.RUSAGE_CHILDREN)
         if return_code != 0:
+            if return_code == -signal.SIGXCPU:
+                raise ResearchSupervisorError(
+                    "P06 child exceeded its CPU limit and was killed",
+                    code="RESOURCE_EXCEEDED",
+                )
             raise ResearchSupervisorError(
                 f"P06 child exited {return_code}: {self._read_tail(stderr_path)!r}"
             )

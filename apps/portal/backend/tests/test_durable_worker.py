@@ -40,6 +40,24 @@ def _intent(run_id: str) -> RunIntent:
 # -------------------------------------------------------- attempt lifecycle
 
 
+def test_rf03_cpu_float_and_typed_resource_failure_remain_visible() -> None:
+    from portal_api.services.research_run_producer import ResearchRunProducerError
+
+    usage = DurableQuantWorker._p11_usage({
+        "research_receipt": {"resource": {"peak_rss_bytes": 1000, "cpu_seconds": 1.25}},
+    })
+    assert usage == {"peak_rss_bytes": 1000, "cpu_seconds": 2, "scratch_bytes": 0, "fd_peak": 0}
+    assert DurableQuantWorker._p11_usage({
+        "research_receipt": {"resource": {"cpu_seconds": float("nan")}},
+    })["cpu_seconds"] == 0
+    assert DurableQuantWorker._classify(
+        ResearchRunProducerError("bounded child exceeded its budget", code="RESOURCE_EXCEEDED")
+    ) == "RESOURCE_EXCEEDED"
+    assert DurableQuantWorker._classify(
+        ResearchRunProducerError("P10 isolated Delta qualification failed")
+    ) == "ENGINE_ERROR"
+
+
 def test_attempt_claim_heartbeat_and_terminal_transitions(tmp_path: Path) -> None:
     registry = AttemptRegistry(tmp_path / "runs")
     registry.create_run_intent(_intent("run_1"))

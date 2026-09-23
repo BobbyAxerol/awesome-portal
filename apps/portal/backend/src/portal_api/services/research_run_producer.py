@@ -42,6 +42,10 @@ from portal_api.services.research_progress import ResearchProgressJournal
 class ResearchRunProducerError(RuntimeError):
     """A bounded producer failure, safe for the durable worker to classify."""
 
+    def __init__(self, message: str, *, code: str = "ENGINE_ERROR") -> None:
+        super().__init__(message)
+        self.code = code
+
 
 @dataclass(frozen=True, slots=True)
 class TapeWindowCounts:
@@ -278,7 +282,12 @@ class ResearchRunProducerExecutor:
             progress("fold_completed", {"fold": 1})
             progress("stage_completed", {"stage": "S4"})
         except ResearchSupervisorError as exc:
-            raise ResearchRunProducerError("P10 isolated Delta qualification failed") from exc
+            raise ResearchRunProducerError(
+                "P10 isolated Delta qualification exceeded its resource budget"
+                if exc.code == "RESOURCE_EXCEEDED"
+                else "P10 isolated Delta qualification failed",
+                code=exc.code,
+            ) from exc
         finally:
             # This tape is a short-lived derived work input, not a second
             # historical store. Its stable identity is the P08 digest retained
