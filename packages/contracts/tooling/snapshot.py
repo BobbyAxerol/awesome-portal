@@ -62,6 +62,8 @@ TRACKED = (
     "schemas/execution-contract-authority.v1.schema.json",
     "schemas/execution-market-context.v1.schema.json",
     "fixtures/problem.valid.json",
+    "fixtures/research-foundation.journey-v2.valid.json",
+    "fixtures/research-foundation.historical-identity.valid.json",
     "fixtures/command.valid.json",
     "fixtures/event.valid.json",
     "fixtures/keyset-page.valid.json",

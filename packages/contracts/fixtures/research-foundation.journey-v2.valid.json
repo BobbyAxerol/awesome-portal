@@ -1,0 +1,407 @@
+{
+  "schema_version": "research.journey-response.v1",
+  "descriptor": {
+    "schema_version": "research.journey.v1",
+    "descriptor_id": "quantbt_journey",
+    "revision": 2,
+    "phases": [
+      {
+        "phase_id": "access_command",
+        "ordinal": 1,
+        "title": "Access & command",
+        "description": "shipped shell — unchanged",
+        "cards": [
+          {
+            "card_id": "login",
+            "title": "01 · Login",
+            "description": "Cloudflare Zero Trust → portal credential → session",
+            "target_kind": "SHIPPED",
+            "target_key": "portal_access",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "command-center",
+            "title": "02 · Command Center",
+            "description": "registry truth, priority items, module KPIs",
+            "target_kind": "SHIPPED",
+            "target_key": "command_center",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "portal-map",
+            "title": "03 · Portal Map",
+            "description": "lifecycle 01→09, persona × status filters",
+            "target_kind": "SHIPPED",
+            "target_key": "portal_map",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          }
+        ]
+      },
+      {
+        "phase_id": "alpha_intake",
+        "ordinal": 2,
+        "title": "Alpha intake",
+        "description": "shipped — quarantine is fail-closed",
+        "cards": [
+          {
+            "card_id": "alpha-imports-shipped",
+            "title": "12 · Alpha imports",
+            "description": "quarantine inbox · digest verification · contract states",
+            "target_kind": "SHIPPED",
+            "target_key": "alpha_imports_legacy",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "alpha-import",
+            "title": "Alpha Import — standardize av_",
+            "description": "single .py contract, 7 fail-closed gates, DRAFT→ACTIVE registry — feeds New Run Context",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "alpha_import",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "alpha-version",
+            "title": "13 · Alpha version",
+            "description": "lifecycle DRAFT→LIVE · artifact identity · read-only",
+            "target_kind": "SHIPPED",
+            "target_key": "alpha_version_legacy",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          }
+        ]
+      },
+      {
+        "phase_id": "pick_run",
+        "ordinal": 3,
+        "title": "Pick a run",
+        "description": "redesign adds the evidence trail to every card",
+        "cards": [
+          {
+            "card_id": "run-library-shipped",
+            "title": "04 · Run Library",
+            "description": "shipped table: id, status, protocol, strategy",
+            "target_kind": "SHIPPED",
+            "target_key": "run_library_legacy",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "run-library",
+            "title": "Run Library — evidence cards",
+            "description": "S1–S5 trail chips, cert + claim on the face, compare guarded by ComparisonContractKey",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "run_library",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          }
+        ]
+      },
+      {
+        "phase_id": "configure",
+        "ordinal": 4,
+        "title": "Configure — New Run, preflight first",
+        "description": "same frozen payload; the redesign adds the claim forecast",
+        "cards": [
+          {
+            "card_id": "new-run-shipped",
+            "title": "05 · New Run",
+            "description": "shipped 6-step form: strategy, data, windows, params, optimization, review",
+            "target_kind": "SHIPPED",
+            "target_key": "new_run_legacy",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "new-run",
+            "title": "New Run — context · route · preflight",
+            "description": "binds alpha · av_ (or scratch = NOT_PUBLISHABLE), 14-route grid with per-route params, sweep/pin per param, fold-plan preview, claim forecast before compute",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "new_run",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          }
+        ]
+      },
+      {
+        "phase_id": "run",
+        "ordinal": 5,
+        "title": "Run it",
+        "description": "redesign adds the forecast claim bar + handoff into evidence",
+        "cards": [
+          {
+            "card_id": "run-progress-shipped",
+            "title": "06 · Run Progress",
+            "description": "stage pipeline, fold 1/20 timeline, per-trial console",
+            "target_kind": "SHIPPED",
+            "target_key": "run_progress_legacy",
+            "availability": "AVAILABLE",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "run-progress",
+            "title": "Run Progress — claims pending",
+            "description": "same console + Gantt, plus the claim passport in forecast state — it flips to issued and hands its cursor to Evidence Flow the moment the run completes",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "run_progress",
+            "availability": "AVAILABLE",
+            "requires_run": true,
+            "target_fragment": null
+          }
+        ]
+      },
+      {
+        "phase_id": "evidence",
+        "ordinal": 6,
+        "title": "Read the evidence",
+        "description": "the redesigned run view — one hub, one cursor, five stages",
+        "cards": [
+          {
+            "card_id": "evidence-hub",
+            "title": "Evidence Flow hub",
+            "description": "claim bar + evidence cursor over 7 stages: Summary · Split · Search · Freeze · Execute · Claim · Atlas",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "evidence_hub",
+            "availability": "AVAILABLE",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "split",
+            "title": "S1 · Split",
+            "description": "fold anatomy, purge/embargo, holdout seal",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "split",
+            "availability": "AVAILABLE",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "search",
+            "title": "S2 · Search & Selection",
+            "description": "search cinema, freeze line, J₁…J₅ in real math, best ≠ selected",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "search_selection",
+            "availability": "AVAILABLE",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "freeze",
+            "title": "S3 · Freeze",
+            "description": "two-axis timeline, digest chain, what-if → new attempt",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "freeze",
+            "availability": "AVAILABLE",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "execute-replay",
+            "title": "S4 · Execute Replay",
+            "description": "candle replay, trade tape, event ledger, MAE×MFE",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "execute_replay",
+            "availability": "PLANNED",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "claim",
+            "title": "S5 · Claim (in hub)",
+            "description": "cert = min of caps, manifest states, window disclosure — lives inside the hub",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "evidence_hub",
+            "availability": "AVAILABLE",
+            "requires_run": true,
+            "target_fragment": "stage=claim"
+          },
+          {
+            "card_id": "attempt-lineage",
+            "title": "Attempt Lineage",
+            "description": "version ledger per av_, 52-attempt scale (probes collapsed), promotion pick",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "attempt_lineage",
+            "availability": "PLANNED",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "engine-atlas",
+            "title": "Engine Atlas",
+            "description": "modes × routes × claims — the support matrix as a reference",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "engine_atlas",
+            "availability": "AVAILABLE",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "compare",
+            "title": "Compare",
+            "description": "within one alpha: methodology trajectory, guarded by ComparisonContractKey",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "compare_runs",
+            "availability": "PLANNED",
+            "requires_run": true,
+            "target_fragment": null
+          }
+        ]
+      },
+      {
+        "phase_id": "promote",
+        "ordinal": 7,
+        "title": "Promote",
+        "description": "compose rc_ → publish → Execution side approves",
+        "cards": [
+          {
+            "card_id": "release-candidate",
+            "title": "Release Candidate & Publish",
+            "description": "lineage rail alpha→av_→run→params→rc_, the 12-item R1 evidence pack, publish → approval-inbox mirror",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "release_candidate",
+            "availability": "PLANNED",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "run-report",
+            "title": "Run Report — one sheet",
+            "description": "printable evidence artifact: claim passport, cert chain, per-fold verdict, digests — attach it to the approval",
+            "target_kind": "RESEARCH_SCREEN",
+            "target_key": "run_report",
+            "availability": "PLANNED",
+            "requires_run": true,
+            "target_fragment": null
+          },
+          {
+            "card_id": "paper-soon",
+            "title": "Paper Trading — SOON",
+            "description": "deployment params must equal the frozen digest, or declare a refit",
+            "target_kind": "SHIPPED",
+            "target_key": "paper_trading",
+            "availability": "DEPENDENCY_REQUIRED",
+            "requires_run": false,
+            "target_fragment": null
+          }
+        ]
+      },
+      {
+        "phase_id": "execution",
+        "ordinal": 8,
+        "title": "Execution side",
+        "description": "reads the published record — nothing here is a research screen",
+        "cards": [
+          {
+            "card_id": "approval-inbox",
+            "title": "Approval Inbox",
+            "description": "reads the rc_ read-model · SLA · assignee pool",
+            "target_kind": "EXECUTION_HANDOFF",
+            "target_key": "approval_inbox",
+            "availability": "DEPENDENCY_REQUIRED",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "gate-r1",
+            "title": "Gate R1 · research evidence",
+            "description": "6 outcomes · conditions & waivers · expiry",
+            "target_kind": "EXECUTION_HANDOFF",
+            "target_key": "gate_r1",
+            "availability": "DEPENDENCY_REQUIRED",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "gate-r2",
+            "title": "Gate R2 · deployment fit",
+            "description": "venue, account, capital — belongs to dc_, not rc_",
+            "target_kind": "EXECUTION_HANDOFF",
+            "target_key": "gate_r2",
+            "availability": "DEPENDENCY_REQUIRED",
+            "requires_run": false,
+            "target_fragment": null
+          },
+          {
+            "card_id": "execution-stages",
+            "title": "Paper / Sandbox / Canary / Live",
+            "description": "deployment params must equal the frozen digest",
+            "target_kind": "EXECUTION_HANDOFF",
+            "target_key": "execution_stages",
+            "availability": "DEPENDENCY_REQUIRED",
+            "requires_run": false,
+            "target_fragment": null
+          }
+        ]
+      }
+    ],
+    "mapping": [
+      {
+        "shipped": "07 · OVERVIEW",
+        "shipped_target_key": "run_overview_legacy",
+        "mine": "Evidence Flow · Summary",
+        "mine_target_key": "evidence_hub",
+        "adds": "adds window disclosure (IS/OOS/holdout), rolling Sharpe & beta, monthly heat, behavior tiles"
+      },
+      {
+        "shipped": "08 · OPTIMIZATION",
+        "shipped_target_key": "run_optimization_legacy",
+        "mine": "S2 · Search & Selection",
+        "mine_target_key": "search_selection",
+        "adds": "adds search cinema, freeze line, per-mode formulas J₁…J₅, θ* journey, 4-state OOS column"
+      },
+      {
+        "shipped": "09 · PARAMETERS",
+        "shipped_target_key": "run_parameters_legacy",
+        "mine": "S3 · Freeze",
+        "mine_target_key": "freeze",
+        "adds": "adds ordering verdict (wall clock vs data time), digest drift check, what-if as sibling attempt"
+      },
+      {
+        "shipped": "10 · EXECUTION",
+        "shipped_target_key": "run_execution_legacy",
+        "mine": "S4 · Execute Replay",
+        "mine_target_key": "execute_replay",
+        "adds": "adds event-level replay transport, causal chain per fill, route-honest not_applicable"
+      },
+      {
+        "shipped": "11 · AUDIT",
+        "shipped_target_key": "run_audit_legacy",
+        "mine": "hub S5 + Release Candidate",
+        "mine_target_key": "release_candidate",
+        "adds": "adds cert chain (min of caps), 7-state artifact manifest, report gate, promotion hooks"
+      },
+      {
+        "shipped": "— no shipped tab",
+        "shipped_target_key": "run_optimization_legacy",
+        "mine": "S1 · Split + Engine Atlas",
+        "mine_target_key": "split",
+        "adds": "fold anatomy, nested inner folds, holdout seal — and the modes × routes reference"
+      }
+    ],
+    "content_sha256": "07d0ed3e7b4cf6fd7ad614a39d646656a931a84ef3aa8ee800cdeddf093071b1"
+  },
+  "inspection": {
+    "cursor": {},
+    "canonical_query": "",
+    "codec": "p02-cursor.v2",
+    "pick_effect": "INSPECTION_ONLY",
+    "ambiguity_state": "NOT_APPLICABLE"
+  },
+  "etag": "W/\"research-journey-c58860ac00f384bfafb2ec03\""
+}

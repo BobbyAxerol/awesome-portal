@@ -84,6 +84,18 @@ describe("P09 published Research foundation contract", () => {
     expect(schemas.AtlasHistoricalIdentity.properties.facts_state).toEqual({ const: "NOT_PUBLISHED" });
   });
 
+  it("RF-03: publishes canonical v2 Journey and historical identity response fixtures", () => {
+    const fixture = (name: string) => JSON.parse(readFileSync(join(ROOT, "fixtures", name), "utf8")) as Record<string, any>;
+    const journey = fixture("research-foundation.journey-v2.valid.json");
+    expect(journey.descriptor).toMatchObject({ revision: 2, content_sha256: expect.stringMatching(/^[0-9a-f]{64}$/) });
+    expect(journey.descriptor.phases.flatMap((phase: any) => phase.cards)).toHaveLength(28);
+    expect(journey.descriptor.mapping).toHaveLength(6);
+    expect(journey.inspection.codec).toBe("p02-cursor.v2");
+    const historical = fixture("research-foundation.historical-identity.valid.json");
+    expect(historical).toMatchObject({ selected_release_kind: "HISTORICAL", atlas: null,
+      historical_identity: { release_id: "er_quantbt_108", facts_state: "NOT_PUBLISHED" } });
+  });
+
   it("does not publish a private adapter, raw data, worker or executable engine surface", () => {
     const document = readFileSync(openApiPath, "utf8");
     for (const forbidden of [
