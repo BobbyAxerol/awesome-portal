@@ -32,6 +32,7 @@ describe("P09 published Research foundation contract", () => {
       "AtlasOptimizerDefaults", "research.optimizer-defaults.v1", "LOCKED",
       "p10.fixed-qualification.v1", "trial_ceiling",
       "CursorStage", "p02-cursor.v2",
+      "AtlasModeFacts", "AtlasScheduleFact", "AtlasSourceLocator", "AtlasNotPublishedFact",
     ]) expect(generated).toContain(needle);
     // RF01-B4: `stage` is the only closed-set cursor key.
     expect(generated).toContain('CursorStage: "summary" | "split" | "search" | "freeze" | "execute" | "claim" | "atlas";');

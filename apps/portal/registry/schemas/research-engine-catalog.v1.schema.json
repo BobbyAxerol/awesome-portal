@@ -163,7 +163,8 @@
         "suspect": {"type": "string", "minLength": 1, "maxLength": 500},
         "artifact_fields": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
         "when_to_use": {"type": "string", "minLength": 1, "maxLength": 400},
-        "rules": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "string", "minLength": 1, "maxLength": 300}}
+        "rules": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+        "facts": {"$ref": "#/$defs/modeFacts"}
       }
     },
     "claim": {
@@ -201,6 +202,108 @@
           }
         },
         "writer_state": {"const": "P05_OWNED_NOT_ACTIVE"}
+      }
+    },
+    "sourceLocator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "lines", "sha256", "anchor"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^quantbt/[A-Za-z0-9_./-]{1,200}\\.py$"},
+        "lines": {"type": "string", "pattern": "^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "anchor": {"type": "string", "minLength": 1, "maxLength": 200}
+      }
+    },
+    "notPublishedFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason"],
+      "properties": {
+        "state": {"const": "NOT_PUBLISHED"},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 400},
+        "source": {"$ref": "#/$defs/sourceLocator"}
+      }
+    },
+    "scheduleFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schedule", "validation_claim", "chronological_validation_claim", "causality_claim", "causality_schedule_v2", "oos_use", "params_semantics", "cert_cap", "source"],
+      "properties": {
+        "schedule": {"enum": ["global", "per_fold_decay", "per_fold_causal"]},
+        "validation_claim": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+        "chronological_validation_claim": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+        "causality_claim": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+        "causality_schedule_v2": {"enum": ["retrospective_global_v2", "trusted_strategy_global_v2", "engine_enforced_per_fold_v2", "engine_enforced_nested_v2"]},
+        "oos_use": {"enum": ["USED", "NOT_USED"]},
+        "oos_use_condition": {"type": "string", "minLength": 1, "maxLength": 300},
+        "params_semantics": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+        "cert_cap": {"$ref": "#/$defs/notPublishedFact"},
+        "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+      }
+    },
+    "objectiveFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "direction", "selection_metrics", "stages", "coefficients", "source"],
+      "properties": {
+        "state": {"const": "PUBLISHED"},
+        "direction": {"enum": ["maximize", "minimize"]},
+        "selection_metrics": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+        "stages": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["stage", "formula_id", "formula"],
+            "properties": {
+              "stage": {"enum": ["is_search", "oos_candidate_selection", "fixed_or_post_selection_evaluation"]},
+              "formula_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+              "formula": {"type": "string", "minLength": 1, "maxLength": 300}
+            }
+          }
+        },
+        "coefficients": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+              "release_default": {"type": ["string", "null"], "pattern": "^-?[0-9]+(\\.[0-9]+)?$"},
+              "note": {"type": "string", "minLength": 1, "maxLength": 200}
+            }
+          }
+        },
+        "note": {"type": "string", "minLength": 1, "maxLength": 300},
+        "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+      }
+    },
+    "readsFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "selection_inputs", "retention", "source"],
+      "properties": {
+        "state": {"const": "PUBLISHED"},
+        "selection_inputs": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+        "retention": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,119}$"},
+        "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+      }
+    },
+    "modeFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_release_id", "schedules", "objective", "reads", "avoid_when"],
+      "properties": {
+        "source_release_id": {"type": "string", "pattern": "^er_[a-z0-9_]{1,40}$"},
+        "schedules": {"type": "array", "minItems": 1, "maxItems": 3, "items": {"$ref": "#/$defs/scheduleFact"}},
+        "objective": {"oneOf": [{"$ref": "#/$defs/objectiveFact"}, {"$ref": "#/$defs/notPublishedFact"}]},
+        "reads": {"oneOf": [{"$ref": "#/$defs/readsFact"}, {"$ref": "#/$defs/notPublishedFact"}]},
+        "avoid_when": {"$ref": "#/$defs/notPublishedFact"}
       }
     }
   }

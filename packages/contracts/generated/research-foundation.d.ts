@@ -143,6 +143,69 @@ export interface components {
             reason: string;
             required_input_class: string;
         };
+        /** @description Where a fact is stated in the pinned engine package: file, line range, the file digest carried by the wheel RECORD, and a string that occurs in that range. */
+        AtlasSourceLocator: {
+            path: string;
+            lines: string;
+            sha256: string;
+            anchor: string;
+        };
+        AtlasNotPublishedFact: {
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            reason: string;
+            source?: components["schemas"]["AtlasSourceLocator"] | null;
+        };
+        AtlasScheduleFact: {
+            /** @enum {unknown} */
+            schedule: "global" | "per_fold_decay" | "per_fold_causal";
+            validation_claim: string;
+            chronological_validation_claim: string;
+            causality_claim: string;
+            /** @enum {unknown} */
+            causality_schedule_v2: "retrospective_global_v2" | "trusted_strategy_global_v2" | "engine_enforced_per_fold_v2" | "engine_enforced_nested_v2";
+            /** @enum {unknown} */
+            oos_use: "USED" | "NOT_USED";
+            oos_use_condition?: string | null;
+            params_semantics: string;
+            cert_cap: components["schemas"]["AtlasNotPublishedFact"];
+            source: components["schemas"]["AtlasSourceLocator"][];
+        };
+        AtlasObjectiveFact: {
+            /** @constant */
+            state: "PUBLISHED";
+            /** @enum {unknown} */
+            direction: "maximize" | "minimize";
+            selection_metrics: string[];
+            stages: {
+                /** @enum {unknown} */
+                stage: "is_search" | "oos_candidate_selection" | "fixed_or_post_selection_evaluation";
+                formula_id: string;
+                formula: string;
+            }[];
+            coefficients: {
+                name: string;
+                /** @description Exact decimal string; null when the release leaves it unset. */
+                release_default?: string | null;
+                note?: string | null;
+            }[];
+            note?: string | null;
+            source: components["schemas"]["AtlasSourceLocator"][];
+        };
+        AtlasReadsFact: {
+            /** @constant */
+            state: "PUBLISHED";
+            selection_inputs: string[];
+            retention: string;
+            source: components["schemas"]["AtlasSourceLocator"][];
+        };
+        AtlasModeFacts: {
+            source_release_id: string;
+            schedules: components["schemas"]["AtlasScheduleFact"][];
+            objective: components["schemas"]["AtlasObjectiveFact"] | components["schemas"]["AtlasNotPublishedFact"];
+            reads: components["schemas"]["AtlasReadsFact"] | components["schemas"]["AtlasNotPublishedFact"];
+            avoid_when: components["schemas"]["AtlasNotPublishedFact"];
+        };
         AtlasMode: {
             mode_id: components["schemas"]["Identifier"];
             display_name: string;
@@ -153,6 +216,8 @@ export interface components {
             artifact_fields: string[];
             when_to_use: string;
             rules: string[];
+            /** @description RF02-B1. Per mode × schedule engine facts, each with a source locator in the pinned QuantBT release. Optional for a manifest written before the facts existed; a fact the source does not state is NOT_PUBLISHED with a reason. */
+            facts?: components["schemas"]["AtlasModeFacts"];
         };
         AtlasOptimizerDefaultScalar: string | number | boolean | null;
         AtlasOptimizerDefaultValue: components["schemas"]["AtlasOptimizerDefaultScalar"] | components["schemas"]["AtlasOptimizerDefaultScalar"][];

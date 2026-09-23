@@ -554,3 +554,85 @@ def test_p04_t07_t13_direct_and_portal_signal_notional_match_on_immutable_delta_
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
+
+
+# RF02-B1 — Atlas mode facts carry verifiable QuantBT 1.1.1 locators ----------
+
+
+def _installed_quantbt_file(relative: str) -> Path:
+    distribution = importlib.metadata.distribution("quantbt-engine")
+    return Path(str(distribution.locate_file(relative)))
+
+
+def test_rf02_t01_every_mode_fact_locator_matches_the_pinned_package() -> None:
+    import base64
+    import hashlib
+
+    distribution = importlib.metadata.distribution("quantbt-engine")
+    assert distribution.version == "1.1.1"
+    record = {entry.split(",")[0]: entry.split(",")[1] for entry in (distribution.read_text("RECORD") or "").splitlines() if entry}
+    locators = []
+    for mode in _service().catalog.modes:
+        facts = mode.facts
+        assert facts is not None, mode.mode_id
+        assert facts.source_release_id == "er_quantbt_111"
+        for fact in facts.schedules:
+            locators.extend(fact.source)
+            assert fact.cert_cap.source is not None
+            locators.append(fact.cert_cap.source)
+        for group in (facts.objective, facts.reads):
+            locators.extend(getattr(group, "source", ()) or ())
+    assert locators
+    for locator in locators:
+        path = _installed_quantbt_file(locator.path)
+        content = path.read_bytes()
+        digest = hashlib.sha256(content).hexdigest()
+        assert digest == locator.sha256, locator.path
+        # The wheel RECORD carries the same digest, urlsafe-base64 without padding.
+        expected_record = "sha256=" + base64.urlsafe_b64encode(bytes.fromhex(digest)).decode().rstrip("=")
+        assert record[locator.path] == expected_record, locator.path
+        first, last = (int(part) for part in locator.lines.split("-"))
+        window = "\n".join(content.decode("utf-8").splitlines()[first - 1 : last])
+        assert locator.anchor in window, (locator.path, locator.lines, locator.anchor)
+
+
+def test_rf02_t02_mode_facts_agree_with_the_engine_objects_they_cite() -> None:
+    from dataclasses import fields
+
+    from quantbt.core.wfo_contracts import resolve_causality_schedule_v2
+    from quantbt.core.wfo_evaluation import WFO_MODE_EVALUATION_MATRIX_V1
+    from quantbt.walkforward import WalkForwardConfig
+
+    defaults = {field.name: field.default for field in fields(WalkForwardConfig)}
+    for mode in _service().catalog.modes:
+        facts = mode.facts
+        assert facts is not None
+        for fact in facts.schedules:
+            resolved = resolve_causality_schedule_v2(
+                optimization_schedule=fact.schedule, optimization_mode=mode.mode_id
+            )
+            assert fact.causality_schedule_v2 == resolved.value, (mode.mode_id, fact.schedule)
+        matrix = WFO_MODE_EVALUATION_MATRIX_V1[mode.mode_id]
+        assert facts.reads.state == "PUBLISHED"
+        assert list(facts.reads.selection_inputs) == list(matrix["selection_inputs"])
+        assert facts.reads.retention == matrix["retention"]
+        assert facts.objective.state == "PUBLISHED"
+        for coefficient in facts.objective.coefficients:
+            engine_default = defaults[coefficient.name]
+            if coefficient.release_default is None:
+                assert engine_default is None, coefficient.name
+            else:
+                assert float(coefficient.release_default) == engine_default, coefficient.name
+        # Nothing the pinned source does not state is filled in.
+        assert facts.avoid_when.state == "NOT_PUBLISHED" and facts.avoid_when.reason
+        assert all(fact.cert_cap.state == "NOT_PUBLISHED" for fact in facts.schedules)
+
+
+def test_rf02_t03_facts_must_describe_exactly_the_admitted_schedules(tmp_path: Path) -> None:
+    def mutate(source: dict[str, object]) -> None:
+        modes = source["modes"]
+        assert isinstance(modes, list)
+        modes[0]["facts"]["schedules"] = modes[0]["facts"]["schedules"][:1]
+
+    with pytest.raises(ResearchEngineCatalogLoadError):
+        ResearchEngineCatalogService(_root(tmp_path, mutate))

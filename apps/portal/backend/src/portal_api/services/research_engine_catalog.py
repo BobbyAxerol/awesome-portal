@@ -168,6 +168,87 @@ class RouteDescriptor(CatalogModel):
     required_input_class: str = Field(min_length=1, max_length=120)
 
 
+Schedule = Literal["global", "per_fold_decay", "per_fold_causal"]
+
+
+class SourceLocator(CatalogModel):
+    """Where a mode fact is stated in the pinned engine package (RF02-B1).
+
+    `sha256` is the file digest the wheel RECORD carries; `anchor` must occur
+    inside `lines`. Both are checked against the installed release in tests,
+    so a fact cannot drift from its source silently.
+    """
+
+    path: str = Field(pattern=r"^quantbt/[A-Za-z0-9_./-]{1,200}\.py$")
+    lines: str = Field(pattern=r"^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    anchor: str = Field(min_length=1, max_length=200)
+
+
+class NotPublishedFact(CatalogModel):
+    state: Literal["NOT_PUBLISHED"]
+    reason: str = Field(min_length=1, max_length=400)
+    source: SourceLocator | None = None
+
+
+class ScheduleFact(CatalogModel):
+    schedule: Schedule
+    validation_claim: str = Field(pattern=r"^[a-z][a-z0-9_]{1,79}$")
+    chronological_validation_claim: str = Field(pattern=r"^[a-z][a-z0-9_]{1,79}$")
+    causality_claim: str = Field(pattern=r"^[a-z][a-z0-9_]{1,79}$")
+    causality_schedule_v2: Literal[
+        "retrospective_global_v2",
+        "trusted_strategy_global_v2",
+        "engine_enforced_per_fold_v2",
+        "engine_enforced_nested_v2",
+    ]
+    oos_use: Literal["USED", "NOT_USED"]
+    oos_use_condition: str | None = Field(default=None, min_length=1, max_length=300)
+    params_semantics: str = Field(pattern=r"^[a-z][a-z0-9_]{1,79}$")
+    cert_cap: NotPublishedFact
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+
+class ObjectiveStage(CatalogModel):
+    stage: Literal["is_search", "oos_candidate_selection", "fixed_or_post_selection_evaluation"]
+    formula_id: str = Field(pattern=r"^[a-z][a-z0-9_]{1,79}$")
+    formula: str = Field(min_length=1, max_length=300)
+
+
+class ObjectiveCoefficient(CatalogModel):
+    name: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    # Exact decimal string, or null when the release leaves it unset.
+    release_default: str | None = Field(default=None, pattern=r"^-?[0-9]+(\.[0-9]+)?$")
+    note: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class ObjectiveFact(CatalogModel):
+    state: Literal["PUBLISHED"]
+    direction: Literal["maximize", "minimize"]
+    selection_metrics: tuple[str, ...] = Field(min_length=1, max_length=8)
+    stages: tuple[ObjectiveStage, ...] = Field(min_length=1, max_length=4)
+    coefficients: tuple[ObjectiveCoefficient, ...] = Field(max_length=8)
+    note: str | None = Field(default=None, min_length=1, max_length=300)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+
+class ReadsFact(CatalogModel):
+    state: Literal["PUBLISHED"]
+    selection_inputs: tuple[str, ...] = Field(min_length=1, max_length=8)
+    retention: str = Field(pattern=r"^[a-z][a-z0-9_]{1,119}$")
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+
+class ModeFacts(CatalogModel):
+    """Per mode × schedule engine facts with source locators (RF02-B1)."""
+
+    source_release_id: str = Field(pattern=r"^er_[a-z0-9_]{1,40}$")
+    schedules: tuple[ScheduleFact, ...] = Field(min_length=1, max_length=3)
+    objective: ObjectiveFact | NotPublishedFact
+    reads: ReadsFact | NotPublishedFact
+    avoid_when: NotPublishedFact
+
+
 class ModeDescriptor(CatalogModel):
     mode_id: str = Field(pattern=r"^mode_[1-5]_[a-z0-9_]+$")
     display_name: str = Field(min_length=1, max_length=120)
@@ -180,11 +261,17 @@ class ModeDescriptor(CatalogModel):
     artifact_fields: tuple[str, ...] = Field(min_length=1, max_length=16)
     when_to_use: str = Field(min_length=1, max_length=400)
     rules: tuple[str, ...] = Field(min_length=1, max_length=4)
+    # RF02-B1: optional so a manifest written before the facts existed still loads.
+    facts: ModeFacts | None = None
 
     @model_validator(mode="after")
     def validate_default_schedule(self) -> "ModeDescriptor":
         if self.default_schedule not in self.valid_schedules:
             raise ValueError("default_schedule must be one of valid_schedules")
+        if self.facts is not None:
+            fact_schedules = tuple(fact.schedule for fact in self.facts.schedules)
+            if fact_schedules != self.valid_schedules:
+                raise ValueError("facts.schedules must describe exactly valid_schedules, in order")
         return self
 
 

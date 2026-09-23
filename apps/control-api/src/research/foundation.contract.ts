@@ -109,6 +109,65 @@ const AtlasRouteSchema = z.object({
   required_input_class: z.string().min(1).max(191),
 }).strict();
 
+/** RF02-B1: where a mode fact is stated in the pinned engine package. */
+const SourceLocatorSchema = z.object({
+  path: z.string().regex(/^quantbt\/[A-Za-z0-9_./-]{1,200}\.py$/),
+  lines: z.string().regex(/^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$/),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  anchor: z.string().min(1).max(200),
+}).strict();
+const SourcesSchema = z.array(SourceLocatorSchema).min(1).max(4);
+const FactToken = z.string().regex(/^[a-z][a-z0-9_]{1,79}$/);
+const NotPublishedFactSchema = z.object({
+  state: z.literal("NOT_PUBLISHED"),
+  reason: z.string().min(1).max(400),
+  source: SourceLocatorSchema.nullable().optional(),
+}).strict();
+const ScheduleFactSchema = z.object({
+  schedule: z.enum(["global", "per_fold_decay", "per_fold_causal"]),
+  validation_claim: FactToken,
+  chronological_validation_claim: FactToken,
+  causality_claim: FactToken,
+  causality_schedule_v2: z.enum([
+    "retrospective_global_v2", "trusted_strategy_global_v2", "engine_enforced_per_fold_v2", "engine_enforced_nested_v2",
+  ]),
+  oos_use: z.enum(["USED", "NOT_USED"]),
+  oos_use_condition: z.string().min(1).max(300).nullable().optional(),
+  params_semantics: FactToken,
+  cert_cap: NotPublishedFactSchema,
+  source: SourcesSchema,
+}).strict();
+const ObjectiveFactSchema = z.object({
+  state: z.literal("PUBLISHED"),
+  direction: z.enum(["maximize", "minimize"]),
+  selection_metrics: z.array(z.string().min(1).max(80)).min(1).max(8),
+  stages: z.array(z.object({
+    stage: z.enum(["is_search", "oos_candidate_selection", "fixed_or_post_selection_evaluation"]),
+    formula_id: FactToken,
+    formula: z.string().min(1).max(300),
+  }).strict()).min(1).max(4),
+  coefficients: z.array(z.object({
+    name: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/),
+    release_default: z.string().regex(/^-?[0-9]+(\.[0-9]+)?$/).nullable().optional(),
+    note: z.string().min(1).max(200).nullable().optional(),
+  }).strict()).max(8),
+  note: z.string().min(1).max(300).nullable().optional(),
+  source: SourcesSchema,
+}).strict();
+const ReadsFactSchema = z.object({
+  state: z.literal("PUBLISHED"),
+  selection_inputs: z.array(z.string().min(1).max(80)).min(1).max(8),
+  retention: z.string().regex(/^[a-z][a-z0-9_]{1,119}$/),
+  source: SourcesSchema,
+}).strict();
+const ModeFactsSchema = z.object({
+  source_release_id: z.string().regex(/^er_[a-z0-9_]{1,40}$/),
+  schedules: z.array(ScheduleFactSchema).min(1).max(3),
+  objective: z.union([ObjectiveFactSchema, NotPublishedFactSchema]),
+  reads: z.union([ReadsFactSchema, NotPublishedFactSchema]),
+  avoid_when: NotPublishedFactSchema,
+}).strict();
+
 const AtlasModeSchema = z.object({
   mode_id: Identifier,
   display_name: z.string().min(1).max(191),
@@ -119,6 +178,8 @@ const AtlasModeSchema = z.object({
   artifact_fields: z.array(z.string().min(1).max(191)).min(1).max(16),
   when_to_use: z.string().min(1).max(1024),
   rules: z.array(z.string().min(1).max(1024)).min(1).max(4),
+  /** RF02-B1, additive: absent on a manifest written before the facts existed. */
+  facts: ModeFactsSchema.optional(),
 }).strict();
 
 /** Scalar-only release default values: no arbitrary config object reaches a browser. */

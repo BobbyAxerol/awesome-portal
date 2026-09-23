@@ -7,6 +7,7 @@ import { loadConfig } from "../../apps/control-api/src/config";
 import type { PortalUser } from "../../apps/control-api/src/domain";
 import { ResearchFoundationAtlasClient } from "../../apps/control-api/src/research/foundation.client";
 import {
+  ResearchEngineAtlasPrivateSchema,
   ResearchJourneyQuerySchema,
   type ResearchEngineAtlasPrivate,
 } from "../../apps/control-api/src/research/foundation.contract";
@@ -174,6 +175,28 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
       release_id: historical.release_id, route: atlas.routes[0]!.route_id, mode: atlas.modes[0]!.mode_id,
     });
     expect(response).toMatchObject({ selected_release_id: historical.release_id, selected_release_kind: "HISTORICAL" });
+
+    // RF02-B1: per mode × schedule facts cross the BFF intact, and the
+    // private-document boundary accepts the null-bearing shape Python's
+    // model_dump emits (unset optional fields arrive as null, not absent).
+    const mode4 = response.atlas.modes.find((mode) => mode.mode_id === "mode_4_is_only_robust")!;
+    expect(mode4.facts?.schedules.map((fact) => fact.schedule)).toEqual(["global", "per_fold_causal"]);
+    expect(mode4.facts?.schedules[1]).toMatchObject({
+      chronological_validation_claim: "strict_outer_oos_after_frozen_selection",
+      oos_use: "NOT_USED",
+      cert_cap: { state: "NOT_PUBLISHED" },
+    });
+    expect(mode4.facts?.avoid_when.state).toBe("NOT_PUBLISHED");
+    const dumped = JSON.parse(JSON.stringify(atlasFixture())) as { modes: Array<{ facts: Record<string, any> }> };
+    for (const mode of dumped.modes) {
+      mode.facts.avoid_when.source = null;
+      for (const fact of mode.facts.schedules) fact.oos_use_condition ??= null;
+      mode.facts.objective.note ??= null;
+    }
+    expect(ResearchEngineAtlasPrivateSchema.safeParse(dumped).success).toBe(true);
+    const invented = JSON.parse(JSON.stringify(atlasFixture())) as { modes: Array<{ facts: Record<string, any> }> };
+    invented.modes[0]!.facts.avoid_when = { state: "PUBLISHED", text: "avoid on Mondays" };
+    expect(ResearchEngineAtlasPrivateSchema.safeParse(invented).success).toBe(false);
     await expect(service.atlas(user, { release_id: "er_unknown" })).rejects.toMatchObject({ code: "RESEARCH_FOUNDATION_RELEASE_NOT_FOUND" });
     await expect(service.atlas(user, { route: "route_unknown" })).rejects.toMatchObject({ code: "RESEARCH_FOUNDATION_ROUTE_NOT_FOUND" });
     await expect(service.atlas(user, { mode: "mode_unknown" })).rejects.toMatchObject({ code: "RESEARCH_FOUNDATION_CAPABILITY_NOT_FOUND" });
