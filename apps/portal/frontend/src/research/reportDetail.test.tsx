@@ -1,5 +1,5 @@
 /**
- * P18 consumer tests — Screen 09 Run Report (S09-U01…).
+ * P18 consumer tests — Screen 09 Run Report (S09-U01…U40).
  *
  * The claims that carry this phase:
  *
@@ -19,7 +19,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ANNOTATION_TITLE, NOPRINT_NOTE, REPORT_PANELS, SERIES_UNAVAILABLE } from "./ReportDetail";
+import {
+  ANNOTATION_TITLE,
+  CHAIN_TITLE,
+  EQUITY_LEGEND_IS,
+  EQUITY_LEGEND_OOS,
+  NOPRINT_NOTE,
+  REPORT_PANELS,
+  SERIES_UNAVAILABLE,
+} from "./ReportDetail";
 import { PRINT_SHEET_ATTRIBUTE, ReportRoute } from "./ReportRoute";
 import { REPORT_REFUSAL_COPY, exportDownloadHref, toReportRefusal, type ExportJob, type ReportDetail } from "./reportClient";
 import { equitySvg } from "./reportEquity";
@@ -627,11 +635,14 @@ describe("S09 Run Report — audit fixes (A1/A2)", () => {
     expect(td).not.toContain("break-all");
     expect(td).not.toContain("anywhere");
     expect(css).toContain(".rr-table td.rr-long { word-break: break-all; }");
+    /* Header cells too: at 660 "Initial equity" and "SCOPE" split before this rule (hi-fi pass). */
+    const th = /\.rr-table th \{([^}]*)\}/.exec(css)![1]!;
+    expect(th).toContain("word-break: normal; overflow-wrap: break-word");
+    /* Artifacts are a hi-fi grid (S09-U39): only the digest slot breaks anywhere. */
     const row = panel("artifacts").querySelector('[data-artifact="RUN_SPEC"]')!;
     expect(row.querySelector("[data-artifact-digest]")!.classList.contains("rr-long")).toBe(true);
-    const cells = [...row.querySelectorAll("td")];
-    expect(cells[0]!.classList.contains("rr-long")).toBe(false);
-    expect(cells[2]!.classList.contains("rr-long")).toBe(false);
+    expect(row.querySelector(".k")!.classList.contains("rr-long")).toBe(false);
+    for (const cell of panel("stages").querySelectorAll("td")) expect(cell.classList.contains("rr-long")).toBe(false);
   });
 
   it("S09-U34 the screen adds no h1: the module header keeps the page's only one", async () => {
@@ -651,6 +662,140 @@ describe("S09 Run Report — audit fixes (A1/A2)", () => {
     const source = readFileSync(join(process.cwd(), "src", "research", "ReportDetail.tsx"), "utf8");
     expect(source).not.toContain('"research.report-verdict-rule.v1"');
     expect(source).toContain("verdictRule={core.provenance.verdict_rule_revision}");
+  });
+});
+
+/* ------------------------------------------------------- hi-fi geometry */
+
+describe("S09 Run Report — hi-fi sheet geometry", () => {
+  async function loaded(detail?: ReportDetail) {
+    server(detail ? { detail: [{ status: 200, body: detail }] } : {});
+    renderRoute();
+    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    return document.querySelector('[data-screen="run-report"] > style')!.textContent ?? "";
+  }
+  const rule = (css: string, selector: string) => {
+    /* The top-level rule for exactly this selector (not a grouped or media copy). */
+    const at = css.indexOf(`\n${selector} {`);
+    expect(at, selector).toBeGreaterThanOrEqual(0);
+    return css.slice(at, css.indexOf("}", at));
+  };
+  const narrow = (css: string) => css.slice(css.indexOf("@media (max-width: 700px)"), css.indexOf("@media print {"));
+  const folded = () => {
+    const detail = report();
+    (detail.frozen_core as { folds: unknown }).folds = {
+      state: "AVAILABLE",
+      reason_code: null,
+      availability: AVAILABLE,
+      rows: [
+        { fold_id: "F1", start_utc_ms: T0, end_exclusive_utc_ms: T0 + 60_000, verdict: "PASS" },
+        { fold_id: "F2", start_utc_ms: T0 + 60_000, end_exclusive_utc_ms: T0 + 120_000, verdict: "WARN" },
+      ],
+    };
+    return detail;
+  };
+
+  it("S09-U36 the passport lays its facts side by side, label over value", async () => {
+    const css = await loaded();
+    const passport = panel("passport");
+    expect(passport.querySelector(":scope > h2.t")?.textContent).toBe("claim passport — sealed source facts, quoted verbatim");
+    const row = passport.querySelector(".facts")!;
+    expect(row.querySelectorAll(":scope > [data-passport-fact]")).toHaveLength(6);
+    const first = row.querySelector('[data-passport-fact="1"]')!;
+    expect([...first.children].map((el) => el.className)).toEqual(["k", "v"]);
+    expect(first.querySelector(".k")?.textContent).toBe("fact 1");
+    expect(first.querySelector(".v")?.textContent).toBe("p04.delta-rsi.v1");
+    expect(css).toContain(".rr-passport .facts { display: flex; flex-wrap: wrap; gap: 8px 26px; padding: 9px 12px; }");
+    expect(rule(css, ".rr-passport .fact .k")).toContain("font-size: 8.5px; text-transform: uppercase");
+    expect(rule(css, ".rr-passport .fact .v")).toContain("font-size: 10.5px");
+    expect(passport.classList.contains("rr-block")).toBe(true);
+  });
+
+  it("S09-U37 identity and the six headline tiles share one row; the footnote closes the tiles", async () => {
+    const css = await loaded();
+    const row = panel("identity").parentElement!;
+    expect(row.classList.contains("rr-idrow")).toBe(true);
+    expect(row.lastElementChild).toBe(panel("headline"));
+    expect(panel("identity").querySelector(".rr-id")).toBeTruthy();
+    const cells = panel("headline").querySelectorAll(":scope > .cell");
+    expect(cells).toHaveLength(6);
+    expect(panel("headline").lastElementChild?.hasAttribute("data-headline-footnote")).toBe(true);
+    expect(rule(css, ".rr-idrow")).toContain("display: flex; gap: 10px");
+    expect(rule(css, ".rr-idcard")).toContain("flex: 1.15 1 0");
+    expect(rule(css, ".rr-id")).toContain("grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; font-family: var(--font-mono); font-size: 10px");
+    expect(rule(css, ".rr-headline .cell")).toContain("flex: 1 1 44%");
+    expect(rule(css, ".rr-headline .v")).toContain("font-size: 15px; font-weight: 600");
+    expect(rule(css, ".rr-headline .foot")).toContain("flex: 1 1 100%; font-size: 9px");
+    expect(narrow(css)).toContain(".rr-idrow, .rr-chainrow, .rr-pp { flex-direction: column; }");
+    expect(css.slice(css.indexOf("@media print {"))).toContain(".rr-idrow, .rr-chainrow, .rr-pp { flex-direction: row; }");
+    /* Metrics (not in the hi-fi) stays right after the row. */
+    const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
+    expect(order.indexOf("metrics")).toBe(order.indexOf("headline") + 1);
+  });
+
+  it("S09-U38 the equity figure prints only server strings on its axes, over a 92px underwater strip", async () => {
+    const css = await loaded();
+    const figure = panel("equity");
+    expect(figure.querySelector("[data-equity-title]")?.textContent).toBe("Equity — stitched OOS");
+    expect(figure.querySelector("[data-equity-counts]")?.textContent).toBe("emitted 3 of 3 source observations · sampling full · UTC");
+    expect([...figure.querySelectorAll("[data-y-label]")].map((el) => el.textContent)).toEqual(["110", "100"]);
+    expect([...figure.querySelectorAll("[data-x-label]")].map((el) => el.textContent)).toEqual(["2024-09-22"]);
+    expect(figure.querySelectorAll("line.rr-eq-grid").length).toBeGreaterThan(0);
+    expect(figure.querySelector('[data-legend="oos"]')?.textContent).toBe(EQUITY_LEGEND_OOS);
+    expect(figure.querySelector('[data-legend="is"]')?.textContent).toBe(EQUITY_LEGEND_IS);
+    expect(figure.querySelector("[data-dd-top]")?.textContent).toBe("0");
+    expect(figure.querySelector("[data-dd-deepest]")?.textContent).toBe("-0.02 fraction");
+    expect(figure.querySelector("[data-boundary]")).toBeNull();
+    expect(rule(css, ".rr-eq-plot")).toContain("height: 215px");
+    expect(rule(css, ".rr-dd-plot")).toContain("height: 92px");
+    expect(rule(css, ".rr-eq-title")).toContain("font-size: 13.5px");
+    expect(rule(css, ".rr-eq-meta")).toContain("font-size: 8.5px");
+    cleanup();
+    forgetHeldReports();
+    await loaded(folded());
+    const withFolds = panel("equity");
+    expect(withFolds.querySelector("[data-equity-title]")?.textContent).toBe("Equity — stitched OOS (2 folds)");
+    expect([...withFolds.querySelectorAll("[data-boundary-label]")].map((el) => el.textContent)).toEqual(["F1", "F2"]);
+    expect(withFolds.querySelectorAll("line[data-boundary]")).toHaveLength(2);
+  });
+
+  it("S09-U39 the certification chain and the key artifacts are two cards in one row", async () => {
+    const css = await loaded();
+    const row = panel("stages").parentElement!;
+    expect(row.classList.contains("rr-chainrow")).toBe(true);
+    expect(row.lastElementChild).toBe(panel("artifacts"));
+    expect(panel("stages").querySelector("h2")?.textContent).toBe(CHAIN_TITLE);
+    const s1 = panel("stages").querySelector('[data-stage="S1"]')!;
+    const cells = [...s1.querySelectorAll("td")];
+    expect(cells.map((cell) => cell.className)).toEqual(["key", "desc", "st"]);
+    expect(cells[0]!.textContent).toBe("S1 · Split");
+    expect(cells[1]!.textContent).toBe("done · started 2024-09-22 10:13Z · completed 2024-09-22 10:13Z");
+    expect(cells[2]!.textContent).toBe("DONE");
+    expect(panel("stages").querySelector("thead")).toBeNull();
+    const grid = panel("artifacts").querySelector(".rr-artgrid")!;
+    expect(grid.querySelectorAll("[data-artifact]")).toHaveLength(7);
+    const trace = grid.querySelector('[data-artifact="SELECTION_TRACE"]')!;
+    expect(trace.querySelector(".k")?.textContent).toBe("selection_trace");
+    expect(trace.querySelector("[data-artifact-digest]")?.getAttribute("data-tone")).toBe("NOT_PUBLISHED");
+    expect(rule(css, ".rr-chainrow > [data-panel=\"stages\"]")).toContain("flex: 1.1 1 0");
+    expect(rule(css, ".rr-chainrow > [data-panel=\"artifacts\"]")).toContain("flex: 1 1 0");
+    expect(rule(css, ".rr-artgrid")).toContain("grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; padding: 7px 12px; font-family: var(--font-mono); font-size: 9.5px");
+  });
+
+  it("S09-U40 promotion and provenance share one two-column card; the footer follows the hi-fi copy", async () => {
+    const css = await loaded();
+    const card = panel("promotion").parentElement!;
+    expect(card.classList.contains("rr-pp")).toBe(true);
+    expect(card.lastElementChild).toBe(panel("provenance"));
+    expect(panel("promotion").querySelector("h2")?.textContent).toBe("Promotion state");
+    expect(panel("provenance").querySelector("h2")?.textContent).toBe("Provenance of this report");
+    expect(rule(css, '.rr-pp > [data-panel="provenance"]')).toContain("border-left: 1px solid var(--line-soft); padding-left: 16px");
+    const spans = [...panel("footer").children].map((el) => el.textContent);
+    expect(spans[0]).toBe("Quant Ecosystem Portal · Research · confidential");
+    expect(spans[1]).toBe(`${RUN} · report 2024-09-22 10:13Z · page prints on letter or A4`);
+    expect(rule(css, ".rr-title")).toContain("font-size: 27px");
+    expect(rule(css, ".rr-meta")).toContain("font-size: 10px");
+    expect(rule(css, ".rr-head")).toContain("border-bottom: 2px solid var(--ink)");
   });
 });
 
@@ -853,7 +998,12 @@ describe("S09 Run Report — pure parts and source rules", () => {
     expect(geometry.drawn).toBe(2);
     expect(geometry.dropped).toBe(1);
     expect(geometry.line.startsWith("M")).toBe(true);
-    expect(geometry.boundaries).toEqual([{ label: "F1", x: expect.any(Number) }]);
+    expect(geometry.boundaries).toEqual([{ label: "F1", x: expect.any(Number), pct: expect.any(Number) }]);
+    /* Axis labels are the server's strings and the points' own UTC days. */
+    expect(geometry.yLabels.map((label) => label.text)).toEqual(["110", "100"]);
+    expect(geometry.xLabels.map((label) => label.text)).toEqual(["2024-09-22"]);
+    expect(geometry.drawdownTop).toBe("0");
+    expect(geometry.deepest?.text).toBe("-0.02");
     const flat = equitySvg([{ at_utc_ms: T0, equity: "100", drawdown_fraction: "0" }]);
     expect(flat.drawn).toBe(1);
     expect(flat.line).not.toContain("NaN");

@@ -19,7 +19,7 @@
  *    export panel are `no-print`, and printing sends no request.
  */
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ResearchPanel } from "./ResearchPanel";
@@ -125,39 +125,51 @@ const SHEET_CSS = `
   border-radius: 6px; background: var(--paper-raised); color: var(--ink); cursor: pointer; }
 .rr-btn:disabled { color: var(--ink-faint); cursor: not-allowed; opacity: .7; }
 .rr-btn:focus-visible, .rr-page a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.rr-sheet { max-width: 880px; margin: 0 auto; padding: 24px 28px 48px; background: var(--paper-raised);
+/* Hi-fi <doc-page>: the sheet spans the same width as the bar above it. */
+.rr-sheet { padding: 24px 28px 40px; background: var(--paper-raised);
   border: 1px solid var(--line); border-top: 0; display: flex; flex-direction: column; gap: 10px; }
 .rr-mono { font-family: var(--font-mono); }
 .rr-keep { break-inside: avoid; }
+/* Header (hi-fi): eyebrow 9px, title 27px, meta 10px; certification box right. */
 .rr-head { display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: flex-start; gap: 16px;
-  border-bottom: 1px solid var(--ink); padding-bottom: 10px; position: relative; }
-.rr-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4px; border-top: 1px solid var(--ink); }
+  border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
 .rr-kicker { font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
-.rr-title { font-family: var(--font-display); font-size: 24px; font-weight: 400; margin: 2px 0 0; }
+.rr-title { font-family: var(--font-display); font-size: 27px; font-weight: 400; letter-spacing: -.01em; line-height: 1.25; margin: 2px 0 0; }
 .rr-runchip { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
-.rr-meta { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-soft); margin-top: 3px; word-break: break-all; }
+.rr-meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); margin-top: 3px; word-break: break-all; }
 .rr-head-text { flex: 1 1 0; min-width: 0; }
 .rr-cert { flex: none; text-align: center; border: 2px solid var(--accent-2); border-radius: 8px; padding: 8px 18px; max-width: 220px; }
 .rr-cert .k { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
 .rr-block { border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
 .rr-block > .t { padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--paper-sunken); font-size: 9.5px;
-  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; border-radius: 5px 5px 0 0; }
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; border-radius: 5px 5px 0 0; margin: 0; }
 .rr-block > .b { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
-.rr-passport { border: 1.5px solid var(--accent-2); border-radius: 8px; padding: 12px 14px; background: var(--paper-raised); }
-.rr-passport .t { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-2); font-weight: 600; }
-.rr-passport .row { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.7; word-break: break-all; }
-.rr-id { display: grid; grid-template-columns: 170px minmax(0, 1fr); row-gap: 3px; column-gap: 14px; }
-.rr-id .k { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
-.rr-id .v { font-family: var(--font-mono); font-size: 10.5px; word-break: break-all; }
-.rr-headline { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-.rr-headline .cell { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
-.rr-headline .k { font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
-.rr-headline .v { font-family: var(--font-mono); font-size: 14px; font-weight: 600; word-break: break-all; }
+/* A block whose body is a flush table or grid, as in the hi-fi cards. */
+.rr-flush > .b { padding: 0; gap: 0; }
+.rr-flush .rr-caption { padding: 5px 12px; border-top: 1px solid var(--line-soft); }
+/* Passport (hi-fi): facts side by side, label over value. */
+.rr-passport .facts { display: flex; flex-wrap: wrap; gap: 8px 26px; padding: 9px 12px; }
+.rr-passport .fact { display: flex; flex-direction: column; min-width: 0; }
+.rr-passport .fact .k { font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
+.rr-passport .fact .v { font-family: var(--font-mono); font-size: 10.5px; }
+.rr-passport .rr-caption { padding: 0 12px 7px; }
+/* Identity + headline (hi-fi): one row, identity 1.15 : tiles 1. */
+.rr-idrow { display: flex; gap: 10px; }
+.rr-idcard { flex: 1.15 1 0; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; }
+.rr-t2 { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; margin: 0 0 4px; }
+.rr-id { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; font-family: var(--font-mono); font-size: 10px; margin: 0; }
+.rr-id .k { color: var(--ink-faint); white-space: nowrap; }
+.rr-id .v { margin: 0; word-break: break-all; }
+.rr-headline { flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+.rr-headline .cell { flex: 1 1 44%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; min-width: 0; }
+.rr-headline .k { font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); }
+.rr-headline .v { font-family: var(--font-mono); font-size: 15px; font-weight: 600; word-break: break-all; }
+.rr-headline .foot { flex: 1 1 100%; font-size: 9px; color: var(--ink-faint); padding: 0 2px; margin: 0; }
 .rr-scroll { overflow-x: auto; }
 .rr-table { width: 100%; border-collapse: collapse; }
 .rr-table thead { display: table-header-group; }
 .rr-table th { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); text-align: left;
-  font-weight: 500; border-bottom: 1px solid var(--ink); padding: 3px 6px; }
+  font-weight: 500; border-bottom: 1px solid var(--ink); padding: 3px 6px; word-break: normal; overflow-wrap: break-word; }
 .rr-table td { font-family: var(--font-mono); font-size: 10px; padding: 3px 6px; border-bottom: 1px solid var(--line-soft);
   vertical-align: top; word-break: normal; overflow-wrap: break-word; }
 /* Words in a cell stay whole. break-word, not anywhere: anywhere lowers the
@@ -174,29 +186,76 @@ const SHEET_CSS = `
 .rr-verdict[data-v="PASS"] { color: var(--good); }
 .rr-verdict[data-v="WARN"] { color: var(--accent-2); }
 .rr-verdict[data-v="DRAG"] { color: var(--bad); }
-.rr-equity svg { display: block; width: 100%; height: 200px; }
-.rr-equity .line { stroke: var(--role-oos); stroke-width: 1.5; fill: none; vector-effect: non-scaling-stroke; }
-.rr-equity .fill { fill: var(--role-oos); fill-opacity: .08; stroke: none; }
-.rr-equity .uw { fill: var(--bad); fill-opacity: .5; stroke: none; }
-.rr-equity .boundary { stroke: var(--accent-2); stroke-dasharray: 3 3; stroke-width: 1; vector-effect: non-scaling-stroke; }
-.rr-equity .blabel { fill: var(--accent-2); font-family: var(--font-mono); font-size: 8px; }
-.rr-equity .frame { fill: var(--paper-sunken); stroke: var(--line); }
-.rr-caption { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); }
+/* Equity (hi-fi): two-sided caption, 215px plot over a 92px underwater strip.
+   Paths stretch in a 1000-unit box; every label is HTML at a percentage. */
+.rr-equity { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin: 0; min-width: 0; }
+.rr-equity figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; margin-bottom: 6px; }
+.rr-eq-title { font-family: var(--font-display); font-size: 13.5px; }
+.rr-eq-meta { font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-faint); }
+.rr-eq-plot, .rr-dd-plot { position: relative; font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); line-height: 1; }
+.rr-eq-plot { height: 215px; }
+.rr-dd-plot { height: 92px; margin-top: 2px; }
+.rr-eq-area { position: absolute; left: var(--rr-gutter); right: 8px; top: 22px; bottom: 18px; }
+.rr-dd-area { position: absolute; left: var(--rr-gutter); right: 8px; top: 6px; bottom: 6px; }
+.rr-eq-area > svg, .rr-dd-area > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.rr-equity path, .rr-equity line { vector-effect: non-scaling-stroke; }
+.rr-eq-grid { stroke: var(--line-soft); stroke-dasharray: 3 3; stroke-width: 1; }
+.rr-eq-axis { stroke: var(--line); stroke-width: 1; }
+.rr-eq-line { stroke: var(--role-oos); stroke-width: 1.6; fill: none; }
+.rr-eq-fill { fill: var(--role-oos); fill-opacity: .06; stroke: none; }
+.rr-eq-fold { stroke: var(--line); stroke-dasharray: 4 3; stroke-width: 1; }
+.rr-dd-fill { fill: var(--role-oos); fill-opacity: .16; stroke: none; }
+.rr-dd-line { stroke: var(--role-oos); stroke-opacity: .8; stroke-width: 1; fill: none; }
+.rr-lbl { position: absolute; white-space: nowrap; }
+.rr-lbl.y { right: calc(100% + 6px); transform: translateY(-50%); }
+.rr-lbl.x { top: calc(100% + 5px); transform: translateX(-50%); }
+.rr-lbl.x.first { transform: none; }
+.rr-lbl.x.last { transform: translateX(-100%); }
+.rr-lbl.fold { top: 2px; margin-left: 3px; font-size: 8px; }
+.rr-eq-legend { position: absolute; top: 0; right: 8px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; font-size: 9.5px; }
+.rr-eq-legend .sw { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; background: var(--role-oos); }
+.rr-eq-legend [data-legend="is"] { opacity: .6; }
+.rr-eq-legend [data-legend="is"] .sw { background: none; border: 1px dashed var(--ink-faint); }
+.rr-dd-mark { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--bad); transform: translate(-50%, -50%); }
+.rr-dd-marklbl { position: absolute; color: var(--bad); font-size: 8.5px; white-space: nowrap; transform: translate(-50%, calc(-100% - 5px)); }
+.rr-eq-frame { fill: var(--paper-sunken); stroke: var(--line); }
+.rr-caption { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); margin: 0; }
 .rr-absent { font-family: var(--font-mono); font-style: italic; color: var(--ink-faint); }
 .rr-reason { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); word-break: break-all; }
-.rr-note { font-size: 10.5px; color: var(--ink-soft); line-height: 1.55; }
-.rr-two { display: flex; flex-wrap: wrap; gap: 10px; }
-.rr-two > * { flex: 1 1 300px; min-width: 0; }
+.rr-note { font-size: 10.5px; color: var(--ink-soft); line-height: 1.55; margin: 0; }
+/* Certification chain + key artifacts (hi-fi): two cards in one row, 1.1 : 1. */
+.rr-chainrow { display: flex; gap: 10px; }
+.rr-chainrow > [data-panel="stages"] { flex: 1.1 1 0; }
+.rr-chainrow > [data-panel="artifacts"] { flex: 1 1 0; }
+.rr-chain td { padding: 4px 12px; font-size: 10.5px; }
+.rr-chain tr:last-child td { border-bottom: 0; }
+.rr-chain td.key { white-space: nowrap; }
+.rr-chain td.desc { font-family: var(--font-body); color: var(--ink-soft); }
+.rr-chain td.st { text-align: right; white-space: nowrap; color: var(--ink-soft); }
+.rr-chain td.st[data-s="RUNNING"] { color: var(--accent); }
+.rr-chain td.st[data-s="PENDING"] { color: var(--ink-faint); }
+.rr-artgrid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; padding: 7px 12px; font-family: var(--font-mono); font-size: 9.5px; }
+.rr-artgrid .k { color: var(--ink-faint); white-space: nowrap; }
+.rr-artgrid [data-tone="NOT_APPLICABLE"] { color: var(--ink-mute); }
+.rr-artgrid [data-tone="NOT_PUBLISHED"] { color: var(--accent-2); }
+.rr-artgrid [data-tone="ABORTED"] { color: var(--bad); }
+/* Promotion + provenance (hi-fi): one card, two columns. */
+.rr-pp { border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; display: flex; gap: 16px; align-items: flex-start; }
+.rr-pp > section { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.rr-pp > [data-panel="provenance"] { border-left: 1px solid var(--line-soft); padding-left: 16px; }
 .rr-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line);
   font-family: var(--font-mono); font-size: 8.5px; color: var(--ink-faint); }
-.rr-screen { max-width: 880px; margin: 10px auto 0; display: flex; flex-direction: column; gap: 10px; }
+.rr-screen { margin: 10px 0 0; display: flex; flex-direction: column; gap: 10px; }
 @media (max-width: 700px) {
   .rr-sheet { padding: 16px 14px 32px; }
-  .rr-headline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rr-id { grid-template-columns: 1fr; }
   .rr-noprint .rr-note { margin-left: 0; }
   .rr-head { flex-wrap: wrap; }
   .rr-head-text { flex: 1 1 100%; }
+  .rr-idrow, .rr-chainrow, .rr-pp { flex-direction: column; }
+  .rr-idrow > *, .rr-chainrow > * { flex: 1 1 auto; }
+  .rr-pp > section { flex: 1 1 auto; width: 100%; }
+  .rr-pp > [data-panel="provenance"] { border-left: 0; padding-left: 0; border-top: 1px solid var(--line-soft); padding-top: 9px; }
 }
 @media print {
   /* Hi-fi <doc-page margin="0.55in">; doc-page is not used, so this route owns the page box. */
@@ -210,10 +269,15 @@ const SHEET_CSS = `
   .rr-sheet { max-width: none; padding: 0; border: 0; }
   .rr-screen { max-width: none; margin: 10px 0 0; }
   .rr-page a { color: inherit !important; text-decoration: none !important; }
-  .rr-headline { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .rr-id { grid-template-columns: 170px minmax(0, 1fr); }
+  .rr-id { grid-template-columns: auto minmax(0, 1fr); }
   .rr-head { flex-wrap: nowrap; }
   .rr-head-text { flex: 1 1 0; }
+  .rr-idrow, .rr-chainrow, .rr-pp { flex-direction: row; }
+  .rr-idcard { flex: 1.15 1 0; }
+  .rr-headline, .rr-pp > section { flex: 1 1 0; }
+  .rr-chainrow > [data-panel="stages"] { flex: 1.1 1 0; }
+  .rr-chainrow > [data-panel="artifacts"] { flex: 1 1 0; }
+  .rr-pp > [data-panel="provenance"] { border-left: 1px solid var(--line-soft); padding-left: 16px; border-top: 0; padding-top: 0; }
 }
 `;
 
@@ -389,28 +453,32 @@ function Header({ runId, report }: { runId: string; report: ReportDetail | null 
 
 function Passport({ core }: { core: FrozenCore }) {
   return (
-    <section className="rr-passport rr-keep" data-panel="passport" aria-label="claim passport">
+    <section className="rr-block rr-passport rr-keep" data-panel="passport" aria-label="claim passport">
       <h2 className="t">{PASSPORT_TITLE}</h2>
-      <div className="mt-1 flex flex-col">
+      <div className="facts">
         {core.passport.map((fact, index) => (
-          <div key={index} className="row rr-long" data-passport-fact={index + 1} data-fact-state={fact.state}>
-            <span style={{ color: "var(--ink-faint)" }}>fact {index + 1} — </span>
-            {fact.state === "AVAILABLE" && fact.text !== null ? (
-              <b>{fact.text}</b>
-            ) : (
-              <Absent state={REPORT_FACT_WORDS[fact.state]} reason={factReason(fact)} />
-            )}
-          </div>
+          <span key={index} className="fact rr-long" data-passport-fact={index + 1} data-fact-state={fact.state}>
+            {/* The contract publishes no key per fact, so the label is its position. */}
+            <span className="k">fact {index + 1}</span>
+            <span className="v">
+              {fact.state === "AVAILABLE" && fact.text !== null ? (
+                fact.text
+              ) : (
+                <Absent state={REPORT_FACT_WORDS[fact.state]} reason={factReason(fact)} />
+              )}
+            </span>
+          </span>
         ))}
       </div>
-      <p className="rr-caption mt-1">{PASSPORT_NOTE}</p>
+      <p className="rr-caption">{PASSPORT_NOTE}</p>
     </section>
   );
 }
 
 function Identity({ core }: { core: FrozenCore }) {
   return (
-    <Block panel="identity" title="identity" className="rr-keep">
+    <section className="rr-idcard" data-panel="identity" aria-label="identity">
+      <h2 className="rr-t2">Identity</h2>
       <dl className="rr-id">
         {core.identity.map((field) => (
           <div key={field.key} className="contents" data-identity={field.key}>
@@ -425,30 +493,28 @@ function Identity({ core }: { core: FrozenCore }) {
           </div>
         ))}
       </dl>
-    </Block>
+    </section>
   );
 }
 
 function HeadlineRow({ core }: { core: FrozenCore }) {
   return (
-    <section className="rr-keep flex flex-col gap-1.5" data-panel="headline" aria-label="headline metrics">
-      <div className="rr-headline">
-        {core.headline.map((cell) => (
-          <div key={cell.key} className="cell" data-headline={cell.key}>
-            <div className="k">{cell.label}</div>
-            {cell.value !== null ? (
-              <div className="v" data-headline-value>
-                {cell.value}
-              </div>
-            ) : (
-              <div data-headline-withheld>
-                <AvailabilityAbsent availability={cell.availability} />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      <p className="rr-caption" data-headline-footnote>
+    <section className="rr-headline" data-panel="headline" aria-label="headline metrics">
+      {core.headline.map((cell) => (
+        <div key={cell.key} className="cell" data-headline={cell.key}>
+          <div className="k">{cell.label}</div>
+          {cell.value !== null ? (
+            <div className="v" data-headline-value>
+              {cell.value}
+            </div>
+          ) : (
+            <div data-headline-withheld>
+              <AvailabilityAbsent availability={cell.availability} />
+            </div>
+          )}
+        </div>
+      ))}
+      <p className="foot" data-headline-footnote>
         {core.headline_footnote}
       </p>
     </section>
@@ -492,79 +558,160 @@ function Metrics({ core }: { core: FrozenCore }) {
   );
 }
 
+/** Hi-fi legend names; the IS account is a series the report does not publish. */
+export const EQUITY_LEGEND_OOS = "Stitched OOS";
+export const EQUITY_LEGEND_IS = "IS account — not published (CG-P18-06)";
+
+function equityTitle(folds: ReportFolds): string {
+  /* The hi-fi names the fold count; only a published fold table can say it. */
+  if (folds.state === "AVAILABLE" && folds.rows.length > 0) {
+    return `Equity — stitched OOS (${folds.rows.length} ${folds.rows.length === 1 ? "fold" : "folds"})`;
+  }
+  return "Equity — stitched OOS";
+}
+
 function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFolds }) {
   const drawable = equity.state === "AVAILABLE" && equity.points.length > 0;
   const boundaries =
     folds.state === "AVAILABLE" ? folds.rows.map((row) => ({ label: row.fold_id, at_utc_ms: row.start_utc_ms })) : [];
   const geometry = drawable ? equitySvg(equity.points, boundaries) : null;
+  const drawn = geometry !== null && geometry.drawn > 0 ? geometry : null;
+  /* The y gutter fits the longest server string printed on either axis. */
+  const gutterChars = drawn
+    ? Math.max(4, ...drawn.yLabels.map((label) => label.text.length), (drawn.drawdownTop ?? "").length, (drawn.deepest?.text ?? "").length)
+    : 4;
+  const gutter = { "--rr-gutter": `calc(${gutterChars}ch + 10px)` } as CSSProperties;
   return (
-    <figure className="rr-block rr-equity rr-keep" style={{ margin: 0 }} data-panel="equity" data-equity-state={equity.state}>
-      <figcaption className="t flex flex-wrap items-baseline justify-between gap-2">
-        <span>equity — stitched OOS, with underwater strip</span>
-        <span className="rr-caption" style={{ textTransform: "none", letterSpacing: 0 }} data-equity-counts>
+    <figure className="rr-equity rr-keep" data-panel="equity" data-equity-state={equity.state}>
+      <figcaption>
+        <span className="rr-eq-title" data-equity-title>
+          {equityTitle(folds)}
+        </span>
+        <span className="rr-eq-meta" data-equity-counts>
           emitted {equity.emitted_point_count} of{" "}
           {equity.source_observation_count ?? "source observations not published"}
           {equity.source_observation_count !== null ? " source observations" : ""} · sampling{" "}
-          {equity.sampling ? words(equity.sampling) : "not published"}
+          {equity.sampling ? words(equity.sampling) : "not published"} · UTC
         </span>
       </figcaption>
-      <div className="b">
-        {geometry && geometry.drawn > 0 ? (
-          <svg
-            viewBox={`0 0 ${geometry.width} ${geometry.height}`}
-            preserveAspectRatio="none"
-            role="img"
-            aria-label={`Stitched OOS equity, ${geometry.drawn} sealed points, with drawdown below`}
-            data-equity-svg
-          >
-            <path className="fill" d={geometry.fill} />
-            <path className="line" d={geometry.line} />
-            <path className="uw" d={geometry.underwater} />
-            {geometry.boundaries.map((mark) => (
-              <g key={mark.label} data-boundary={mark.label}>
-                <line className="boundary" x1={mark.x} x2={mark.x} y1={0} y2={geometry.height} />
-                <text className="blabel" x={mark.x + 3} y={10}>
-                  {mark.label}
-                </text>
-              </g>
-            ))}
-          </svg>
-        ) : (
-          <div data-equity-unavailable>
-            <svg viewBox="0 0 824 200" preserveAspectRatio="none" aria-hidden="true">
-              <rect className="frame" x={0.5} y={0.5} width={823} height={199} rx={4} />
-            </svg>
-            <p className="rr-note mt-1" data-series-unavailable>
-              {SERIES_UNAVAILABLE}
-            </p>
-            <span className="rr-reason" data-reason-code>
-              {equity.availability.reason_code ?? equity.availability.state}
-            </span>
-          </div>
-        )}
-        <p className="rr-caption" data-equity-caption>
-          {folds.state === "AVAILABLE"
-            ? "fold boundaries marked at each fold's start"
-            : `fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]} · ${folds.reason_code ?? factReason(folds)}`}
-          {geometry && geometry.dropped > 0 ? ` · ${geometry.dropped} points did not parse and were not drawn` : ""}
-        </p>
-        {drawable ? (
-          <div className="rr-sr sr-only" data-sr-equity-table>
-            <table>
-              <caption>Sealed equity points, exact values</caption>
-              <tbody>
-                {equity.points.map((point) => (
-                  <tr key={point.at_utc_ms}>
-                    <th scope="row">{iso(point.at_utc_ms)}</th>
-                    <td>{point.equity}</td>
-                    <td>{point.drawdown_fraction}</td>
-                  </tr>
+      {drawn ? (
+        <>
+          <div className="rr-eq-plot" style={gutter} data-equity-plot>
+            <div className="rr-eq-legend" aria-hidden="true" data-equity-legend>
+              <span data-legend="is">
+                <span className="sw" />
+                {EQUITY_LEGEND_IS}
+              </span>
+              <span data-legend="oos">
+                <span className="sw" />
+                {EQUITY_LEGEND_OOS}
+              </span>
+            </div>
+            <div className="rr-eq-area">
+              <svg
+                viewBox={`0 0 ${drawn.width} ${drawn.height}`}
+                preserveAspectRatio="none"
+                role="img"
+                aria-label={`Stitched OOS equity, ${drawn.drawn} sealed points, with drawdown below`}
+                data-equity-svg
+              >
+                {drawn.yLabels.map((label) => (
+                  <line key={label.text} className="rr-eq-grid" x1={0} x2={drawn.width} y1={label.pct * 10} y2={label.pct * 10} />
                 ))}
-              </tbody>
-            </table>
+                <line className="rr-eq-axis" x1={0} x2={drawn.width} y1={drawn.height} y2={drawn.height} />
+                <path className="rr-eq-fill" d={drawn.fill} />
+                {drawn.boundaries.map((mark) => (
+                  <line key={mark.label} className="rr-eq-fold" data-boundary={mark.label} x1={mark.x} x2={mark.x} y1={0} y2={drawn.height} />
+                ))}
+                <path className="rr-eq-line" d={drawn.line} />
+              </svg>
+              <div aria-hidden="true">
+                {drawn.yLabels.map((label) => (
+                  <span key={label.text} className="rr-lbl y" style={{ top: `${label.pct}%` }} data-y-label>
+                    {label.text}
+                  </span>
+                ))}
+                {drawn.xLabels.map((label, index) => (
+                  <span
+                    key={label.text}
+                    className={`rr-lbl x${index === 0 ? " first" : ""}${index === drawn.xLabels.length - 1 && index > 0 ? " last" : ""}`}
+                    style={{ left: `${label.pct}%` }}
+                    data-x-label
+                  >
+                    {label.text}
+                  </span>
+                ))}
+                {drawn.boundaries.map((mark) => (
+                  <span key={mark.label} className="rr-lbl fold" style={{ left: `${mark.pct}%` }} data-boundary-label={mark.label}>
+                    {mark.label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
-        ) : null}
-      </div>
+          <div className="rr-dd-plot" style={gutter} data-underwater>
+            <div className="rr-dd-area">
+              <svg viewBox={`0 0 ${drawn.width} ${drawn.height}`} preserveAspectRatio="none" aria-hidden="true">
+                <line className="rr-eq-grid" x1={0} x2={drawn.width} y1={0} y2={0} />
+                <path className="rr-dd-fill" d={drawn.underwater} />
+                <path className="rr-dd-line" d={drawn.underwaterLine} />
+              </svg>
+              <div aria-hidden="true">
+                {drawn.drawdownTop !== null ? (
+                  <span className="rr-lbl y" style={{ top: "0%" }} data-dd-top>
+                    {drawn.drawdownTop}
+                  </span>
+                ) : null}
+                {drawn.deepest ? (
+                  <>
+                    <span className="rr-lbl y" style={{ top: `${drawn.deepest.yPct}%` }} data-dd-axis>
+                      {drawn.deepest.text}
+                    </span>
+                    <span className="rr-dd-mark" style={{ left: `${drawn.deepest.xPct}%`, top: `${drawn.deepest.yPct}%` }} />
+                    <span className="rr-dd-marklbl" style={{ left: `${drawn.deepest.xPct}%`, top: `${drawn.deepest.yPct}%` }} data-dd-deepest>
+                      {drawn.deepest.text} fraction
+                    </span>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div data-equity-unavailable>
+          <svg viewBox="0 0 1000 215" preserveAspectRatio="none" aria-hidden="true" style={{ display: "block", width: "100%", height: 215 }}>
+            <rect className="rr-eq-frame" x={0.5} y={0.5} width={999} height={214} rx={4} />
+          </svg>
+          <p className="rr-note mt-1" data-series-unavailable>
+            {SERIES_UNAVAILABLE}
+          </p>
+          <span className="rr-reason" data-reason-code>
+            {equity.availability.reason_code ?? equity.availability.state}
+          </span>
+        </div>
+      )}
+      <p className="rr-caption mt-1" data-equity-caption>
+        {folds.state === "AVAILABLE"
+          ? "fold boundaries marked at each fold's start"
+          : `fold boundaries — ${REPORT_WITHHELD_WORDS[folds.availability.state]} · ${folds.reason_code ?? factReason(folds)}`}
+        {geometry && geometry.dropped > 0 ? ` · ${geometry.dropped} points did not parse and were not drawn` : ""}
+      </p>
+      {drawable ? (
+        <div className="rr-sr sr-only" data-sr-equity-table>
+          <table>
+            <caption>Sealed equity points, exact values</caption>
+            <tbody>
+              {equity.points.map((point) => (
+                <tr key={point.at_utc_ms}>
+                  <th scope="row">{iso(point.at_utc_ms)}</th>
+                  <td>{point.equity}</td>
+                  <td>{point.drawdown_fraction}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </figure>
   );
 }
@@ -618,35 +765,34 @@ function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule:
   );
 }
 
+/** Hi-fi "Certification chain — min of the caps": the report publishes no cap, so only the part before the dash. */
+export const CHAIN_TITLE = "Certification chain";
+
+function stageWhen(at: number | null): string {
+  return at !== null ? iso(at) : "no timestamp";
+}
+
 function StageChain({ core }: { core: FrozenCore }) {
   return (
-    <Block panel="stages" title="stage checks — sealed stage timeline">
-      <div className="rr-scroll">
-        <table className="rr-table">
-          <thead>
-            <tr>
-              <th scope="col">stage</th>
-              <th scope="col">state</th>
-              <th scope="col">started</th>
-              <th scope="col">completed</th>
+    <Block panel="stages" title={CHAIN_TITLE} className="rr-flush">
+      <table className="rr-table rr-chain">
+        <tbody>
+          {core.stages.map((stage) => (
+            <tr key={stage.key} data-stage={stage.key} data-stage-state={stage.state}>
+              <td className="key">
+                {stage.key} · {STAGE_LABEL[stage.key]}
+              </td>
+              <td className="desc">
+                {words(stage.state)} · started {stageWhen(stage.started_at_utc_ms)} · completed{" "}
+                {stageWhen(stage.completed_at_utc_ms)}
+              </td>
+              <td className="st" data-s={stage.state}>
+                {stage.state}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {core.stages.map((stage) => (
-              <tr key={stage.key} data-stage={stage.key} data-stage-state={stage.state}>
-                <td>
-                  {stage.key} · {STAGE_LABEL[stage.key]}
-                </td>
-                <td>{stage.state}</td>
-                <td>{stage.started_at_utc_ms !== null ? iso(stage.started_at_utc_ms) : <span className="rr-absent">no timestamp</span>}</td>
-                <td>
-                  {stage.completed_at_utc_ms !== null ? iso(stage.completed_at_utc_ms) : <span className="rr-absent">no timestamp</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
       <p className="rr-caption">
         A stage state is progress, not a pass: the report publishes no per-stage check result or certification cap.
       </p>
@@ -656,34 +802,23 @@ function StageChain({ core }: { core: FrozenCore }) {
 
 function Artifacts({ core }: { core: FrozenCore }) {
   return (
-    <Block panel="artifacts" title="key artifacts & digests">
-      <div className="rr-scroll">
-        <table className="rr-table">
-          <thead>
-            <tr>
-              <th scope="col">artifact</th>
-              <th scope="col">digest</th>
-              <th scope="col">state</th>
-            </tr>
-          </thead>
-          <tbody>
-            {core.artifacts.map((artifact) => (
-              <tr key={artifact.key} data-artifact={artifact.key} data-artifact-state={artifact.state}>
-                <td>{ARTIFACT_LABEL[artifact.key]}</td>
-                <td className="rr-long" data-artifact-digest>
-                  {artifact.digest ?? <span className="rr-absent">not published</span>}
-                </td>
-                <td>
-                  {artifact.state === "SEALED" ? (
-                    ARTIFACT_STATE_WORDS.SEALED
-                  ) : (
-                    <Absent state={ARTIFACT_STATE_WORDS[artifact.state]} reason={factReason(artifact)} />
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <Block panel="artifacts" title="Key artifacts & digests" className="rr-flush">
+      <div className="rr-artgrid">
+        {core.artifacts.map((artifact) => (
+          <div key={artifact.key} className="contents" data-artifact={artifact.key} data-artifact-state={artifact.state}>
+            <span className="k">{ARTIFACT_LABEL[artifact.key]}</span>
+            <span className="rr-long" data-artifact-digest data-tone={artifact.state === "SEALED" ? undefined : artifact.state}>
+              {artifact.state === "SEALED" ? (
+                artifact.digest ?? `${ARTIFACT_STATE_WORDS.SEALED} — digest not published`
+              ) : (
+                <>
+                  {artifact.digest ? `${artifact.digest} · ` : ""}
+                  {ARTIFACT_STATE_WORDS[artifact.state]} — <span data-reason-code>{factReason(artifact)}</span>
+                </>
+              )}
+            </span>
+          </div>
+        ))}
       </div>
       <p className="rr-caption">
         Artifact bytes are not published to the report. The source's identifying digests are in the provenance
@@ -695,12 +830,13 @@ function Artifacts({ core }: { core: FrozenCore }) {
 
 function Promotion({ core }: { core: FrozenCore }) {
   return (
-    <Block panel="promotion" title="promotion state" className="rr-keep">
+    <section data-panel="promotion" aria-label="promotion state">
+      <h2 className="rr-t2">Promotion state</h2>
       <p className="rr-note" data-promotion-line>
         {core.promotion.line}
       </p>
       <AvailabilityAbsent what="promotion" availability={core.promotion.availability} />
-    </Block>
+    </section>
   );
 }
 
@@ -724,7 +860,8 @@ function Provenance({ core }: { core: FrozenCore }) {
   const { provenance } = core;
   const absences = Object.entries(core.source_absences);
   return (
-    <Block panel="provenance" title="provenance of this report" className="rr-keep">
+    <section data-panel="provenance" aria-label="provenance of this report">
+      <h2 className="rr-t2">Provenance of this report</h2>
       <p className="rr-note rr-long" data-provenance-line>
         {provenance.line}
       </p>
@@ -762,17 +899,17 @@ function Provenance({ core }: { core: FrozenCore }) {
           </span>
         ))}
       </div>
-    </Block>
+    </section>
   );
 }
 
 function Footer({ runId, report }: { runId: string; report: ReportDetail | null }) {
   return (
     <footer className="rr-foot" data-panel="footer">
-      <span>Quant Ecosystem Portal · Research</span>
-      <span>
+      <span>Quant Ecosystem Portal · Research · confidential</span>
+      <span className="rr-long">
         {report?.run_id ?? runId}
-        {report ? ` · report sealed ${iso(report.sealed_at_utc_ms)}` : ""} · prints on Letter or A4
+        {report ? ` · report ${iso(report.sealed_at_utc_ms)}` : ""} · page prints on letter or A4
       </span>
     </footer>
   );
@@ -936,17 +1073,19 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
           <>
             {state.state !== "available" ? <ReportNotice controller={controller} minBodyHeight={0} /> : null}
             <Passport core={core} />
-            <Identity core={core} />
-            <HeadlineRow core={core} />
+            <div className="rr-idrow rr-keep">
+              <Identity core={core} />
+              <HeadlineRow core={core} />
+            </div>
             <Metrics core={core} />
             <EquityFigure equity={core.equity} folds={core.folds} />
             <FoldVerdicts folds={core.folds} verdictRule={core.provenance.verdict_rule_revision} />
-            <div className="rr-two">
+            <div className="rr-chainrow">
               <StageChain core={core} />
               <Artifacts core={core} />
             </div>
             <Warnings core={core} />
-            <div className="rr-two rr-keep">
+            <div className="rr-pp rr-keep" data-promotion-provenance>
               <Promotion core={core} />
               <Provenance core={core} />
             </div>
