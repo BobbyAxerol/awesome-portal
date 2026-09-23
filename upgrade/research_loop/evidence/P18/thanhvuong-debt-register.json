@@ -106,6 +106,13 @@
       "state": "OPEN",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-10",
       "what": "409 on GET report not declared in OpenAPI"
+    },
+    {
+      "id": "CG-P18-11",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-11",
+      "what": "identity rows of spec §16.3 + scratch binding (spec T05); added in the 2026-09-23 audit"
     }
   ],
   "source_capability_blocked": [],
@@ -115,7 +122,7 @@
       "id": "P18-FE-DG-01",
       "owner": "Bobby",
       "state": "AWAITING_DECISION",
-      "what": "integrate the moved baseline e39bacfa (now 6a87f77b): EvidenceFlow.tsx merges cleanly; P17 FreezeDetail.tsx conflict remains; S09 to toResearchRefusal + RefusalNote + RESEARCH_REPORT_* in SURFACE_CODES; rerun all tests + 128 probes"
+      "what": "integrate the moved baseline e39bacfa (now 361f68b4; 361f68b4 also touches QuantBTModule.tsx, git merge-file 0 conflicts): EvidenceFlow.tsx merges cleanly; P17 FreezeDetail.tsx conflict remains; S09 to toResearchRefusal + RefusalNote + RESEARCH_REPORT_* in SURFACE_CODES; rerun all tests + 128 probes"
     },
     {
       "id": "P18-FE-DG-02",
@@ -140,6 +147,33 @@
       "owner": "Thanhvuong",
       "state": "BLOCKED_ON_ROUTE",
       "what": "'Release Candidate & Publish' (no-print bar) and Hub 'release candidate -> 11' become links once Screen 11 has a route"
+    }
+  ],
+  "audit_head": "47165016334d8b9298273b2deb2e1ea728bbdcdf",
+  "open_debt": [
+    {
+      "id": "S09-SRONLY-TABLE-HEIGHT",
+      "found_by": "independent audit 2026-09-23, browser on 47165016",
+      "owner": "lead decides (code fix)",
+      "state": "OPEN",
+      "locator": "apps/portal/frontend/src/research/ReportDetail.tsx:538-551 (<table className=\"sr-only\"> of equity points)",
+      "actual": "the 240-row sr-only table measures 4818 px (a table cannot shrink below its rows, so height:1px/overflow:hidden do not clip it); 1280: document scrollHeight 6049 vs .rr-page bottom 3257 (~2800 px blank scroll); print 816: 5746 vs sheet bottom 2611; page.pdf Letter 7 pages, 5 with the table removed (>= 2 trailing blank pages)",
+      "expected": "no blank scroll or blank printed pages; exact points still exposed to assistive tech",
+      "smallest_fix": "wrap the table in <div className=\"sr-only\"> (block box clips) or hide it in print (.no-print / @media print display:none) and cap it with the same wrapper on screen",
+      "test": "unit: the sr-only table has a clipping block ancestor; probe: scrollHeight - .rr-page bottom <= 1 at 1280/660, Letter PDF page count equal with and without the table",
+      "evidence": "~/tv-shots/p18-audit/p18-audit.log GEOMETRY/PDFPAGES lines (f667ebb19ad9e884)"
+    },
+    {
+      "id": "S09-TABLE-WORD-BREAK",
+      "found_by": "independent audit 2026-09-23, screenshot p18-audit-full-1280.png",
+      "owner": "lead decides (code fix)",
+      "state": "OPEN",
+      "locator": "apps/portal/frontend/src/research/ReportDetail.tsx:161-162 (.rr-table td word-break: break-all)",
+      "actual": "every table cell breaks inside ordinary words: artifact state 'seal|ed' (7/7 cells two lines), header 'STAT|E', names 'selection_|trace', 'fill_ledge|r', 'metrics_su|mmary' at 1280 and print 816; clip-audit passes because nothing overflows",
+      "expected": "words and enum labels stay whole; only sealed identifiers (.rr-long) break anywhere",
+      "smallest_fix": ".rr-table td { word-break: normal; overflow-wrap: anywhere } keeping .rr-long on digest/revision cells; optionally white-space: nowrap on the state column",
+      "test": "probe: artifact state cells render on one line (height == single row) at 1280 and Letter; unit: CSS rule has no break-all outside .rr-long",
+      "evidence": "p18-audit-full-1280.png c5f72b4c1de9b74b (same bytes as p18-fix/p18-full-1280.png)"
     }
   ]
 }

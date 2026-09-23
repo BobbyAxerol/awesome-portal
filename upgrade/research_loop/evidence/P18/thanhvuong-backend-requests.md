@@ -6,7 +6,7 @@ Evidence máy đọc được: [thanhvuong-test-results.json](./thanhvuong-test-
 [thanhvuong-debt-register.json](./thanhvuong-debt-register.json).
 
 **Ngày kiểm lại:** 2026-09-23. Kiểm trên nhánh `feat/thanhvuong/research-p17-p21`
-(`aea76f69`) và trên baseline `primus-origin/docs/research-loop-plan` = `e39bacfa`
+(`aea76f69`, kiểm lại ở `47165016`) và trên baseline `primus-origin/docs/research-loop-plan` = `e39bacfa`
 (CLAUDE.md §7.6, §7.9). Lúc đóng packet baseline đã tiến tới `6a87f77b`; kiểm
 lại ở đó cho cùng kết quả.
 
@@ -18,8 +18,18 @@ lại ở đó cho cùng kết quả.
 - Commit `e39bacfa..6a87f77b` (preview RF-02, worker idle fix, auto-login
   preview) không chạm report. Lane preview RF-02 không bật `FEATURE_RESEARCH_REPORTS`.
 
-**Cả mười `CG-P18-*` vẫn mở.** Số `01…09` giữ như báo cáo code (gói A);
-`10` thêm từ receipt browser (gói B, N3).
+**Cả mười một `CG-P18-*` vẫn mở.** Số `01…09` giữ như báo cáo code (gói A);
+`10` thêm từ receipt browser (gói B, N3); `11` thêm ở audit 2026-09-23 (spec
+identity §16.3 / T05 chưa có request).
+
+**Kiểm lại lần hai (audit 2026-09-23):** baseline đã tiến tới `361f68b4`.
+`git diff --stat 361f68b4 47165016 -- packages/contracts/openapi/research-report.openapi.json packages/contracts/generated/research-report.d.ts`
+rỗng; `git ls-tree -r 361f68b4 --name-only | grep -i "fixtures.*report"` exit 1.
+Mọi claim "actual" đã đối chiếu lại với `research-report.d.ts`: GET report khai
+200/304/400/401/403/404/503 (không 409); status GET không 409; download có 409;
+`ReportFact` không key/label; `Promotion.state` hằng `NOT_PUBLISHED`;
+`Provenance.verdict_rule_revision` hằng; `Stage.state` PENDING/RUNNING/DONE;
+`FoldRow` 4 field; `Artifact` không filename. Không request nào thừa.
 
 Luật ghi (handoff campaign `THANHVUONG_P17_P21_FRONTEND_HANDOFF.md` + CLAUDE.md
 §5): mỗi request có locator, actual, expected, đề xuất nhỏ nhất an toàn, test
@@ -34,7 +44,7 @@ sửa backend, contract hay runtime để màn hình xanh.
 Backend request
 - Endpoint/field cần: researchReportDetailGetV1 → frozen_core.passport[].key + .label
 - Lý do UI: hi-fi/spec in passport dạng "key — value"; ReportFact chỉ có state/text/reason_code/availability
-- Ảnh hưởng hiện tại: /research/quantbt/runs/:runId/report khối passport in "fact n of 6"
+- Ảnh hưởng hiện tại: /research/quantbt/runs/:runId/report khối passport in "fact n — value"
 - Đề xuất schema: ReportFact += { key: enum(6), label: string } — additive
 ```
 
@@ -45,7 +55,7 @@ Backend request
 | Expected | Mỗi fact mang `key` ổn định và `label` in được |
 | Đề xuất nhỏ nhất | Thêm `key` (enum 6 giá trị) + `label` vào `ReportFact`, giữ nguyên thứ tự |
 | Test khi có | U05 assert label theo contract; browser: passport in "label — value" |
-| Fallback đang chạy | "fact n of 6 — value" + chú thích vì sao không có tên |
+| Fallback đang chạy | "fact n — value" + chú thích vì sao không có tên |
 
 ### CG-P18-02 — certification grade
 
@@ -163,6 +173,14 @@ Backend request
 
 ### CG-P18-08 — caption "params handoff at each boundary"
 
+```text
+Backend request
+- Endpoint/field cần: params theo fold/boundary (gộp được vào CG-P18-04)
+- Lý do UI: hi-fi/spec §2.6 caption "params handoff at each boundary"
+- Ảnh hưởng hiện tại: caption equity chỉ in trạng thái/reason của folds
+- Đề xuất schema: không field riêng; dùng FoldRow.params của CG-P18-04
+```
+
 | Mục | Nội dung |
 |---|---|
 | Locator | hi-fi caption equity; `FoldRow` |
@@ -210,6 +228,25 @@ Backend request
 | Test khi có | U15 theo xác nhận; nếu không bao giờ 409 thì bỏ nhánh |
 | Fallback đang chạy | 409 → stale; 404 → empty trung tính (F-04) |
 
+### CG-P18-11 — identity theo spec §16.3 và binding cho biến thể scratch (thêm ở audit 2026-09-23)
+
+```text
+Backend request
+- Endpoint/field cần: researchReportDetailGetV1 → frozen_core.identity thêm alpha, alpha_version (+ binding PUBLISHABLE/scratch), protocol, route, runtime authority, optimization, selected params, random seed; hoặc xác nhận P18 không bao giờ có
+- Lý do UI: spec 09 §2.4/§16.3 có 12 nhãn identity; spec T05/§10 cần "scratch — NOT_PUBLISHABLE" và câu promotion scratch
+- Ảnh hưởng hiện tại: identity in 12 hàng của service (run_id, source_adapter, engine_version, input_scope, dataset_id, symbol, timeframe, 5 revision); spec T05 không làm được
+- Đề xuất schema: IdentityField thêm các key trên với value null + availability NOT_PUBLISHED khi nguồn không có — additive
+```
+
+| Mục | Nội dung |
+|---|---|
+| Locator | `report.service.ts` `buildCore` `identity: [...]` (12 key trên); `IdentityField` key là `string` tự do; spec 09 §16.3, §10, T05 |
+| Actual | Không có alpha/alpha_version/binding/protocol/route/runtime authority/optimization/selected params/seed. `config digest` gần nhất là `source_digests.requested_spec_digest`/`effective_spec_digest` (đang in ở provenance) |
+| Expected | Hoặc các key có mặt (value hoặc typed absence), hoặc Codex xác nhận vắng thật để spec T05 được ghi `NOT_APPLICABLE_PROVEN` |
+| Đề xuất nhỏ nhất | Thêm key với `availability NOT_PUBLISHED` + reason; không cần đổi schema (key là string) |
+| Test khi có | U05 assert thứ tự key; biến thể scratch (spec T05) khi có fixture `CG-P18-09` |
+| Fallback đang chạy | In đúng 12 identity service cấp; `CG-P18-03` (strategy) là một phần của request này |
+
 ## 2. Không có hàng source-capability riêng
 
 P18 không có `source-capability-matrix.md`. Các absence nguồn (per-fold rows,
@@ -242,4 +279,5 @@ văn; frontend không cấp ID mới cho chúng ngoài `CG-P18-*` ở trên.
 | CG-P18-08 | Codex | OPEN (gộp được vào 04) |
 | CG-P18-09 | Codex | OPEN |
 | CG-P18-10 | Codex | OPEN |
+| CG-P18-11 | Codex | OPEN (thêm ở audit 2026-09-23) |
 | B1–B6 | Bobby | chờ quyết |

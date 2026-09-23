@@ -15,7 +15,7 @@ không gọi P18 là `VERIFIED`.
 | `thanhvuong-frontend-receipt.md` | receipt này: đã đọc, git, file, mapping hi-fi, so hi-fi, evidence, discrepancy, scale refine, kết luận |
 | [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md) | receipt backend request: `CG-P18-01…10` theo template CLAUDE.md §5 + locator/actual/expected/đề xuất/test/fallback, việc Bobby quyết B1–B6, trạng thái kiểm lại ngày 2026-09-23 |
 | [thanhvuong-test-results.json](./thanhvuong-test-results.json) | evidence máy đọc được: từng gate, lệnh, exit, số đếm, gate chưa chạy, SHA-256 ảnh/PDF/log |
-| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | debt trong scope (rỗng), lỗi đã sửa trong phase, request mở, downstream gate |
+| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | debt trong scope: `open_implementation_debt` rỗng, `open_debt` 2 lỗi audit A1/A2 (§5.5); lỗi đã sửa trong phase, request mở, downstream gate |
 | [thanhvuong-rollback.md](./thanhvuong-rollback.md) | revert từng commit, theo thứ tự mới nhất trước |
 
 Dòng trạng thái ở Unified §13 và implementation note dưới
@@ -25,7 +25,10 @@ Dòng trạng thái ở Unified §13 và implementation note dưới
 `git log -1 --format=%h -- <file>`). Baseline `primus-origin/docs/research-loop-plan`
 = `e39bacfa` như lúc lập plan. Lúc đóng packet (sau `git fetch`) baseline đã tiến
 tới `6a87f77b` (5 commit RF-02/preview, không chạm file S09 nào); cột cuối ghi
-để đối chiếu.
+để đối chiếu. Audit 2026-09-23: baseline tiến tiếp tới `361f68b4`
+("QuantBT opens on the Research Loop screens", chạm `QuantBTModule.tsx`;
+`git merge-file` với merge-base `30fb9f21`: 0 xung đột; contract report không đổi,
+vẫn không có fixture report).
 
 | File | Nhánh (`aea76f69`) | Baseline `e39bacfa` | `6a87f77b` |
 |---|---|---|---|
@@ -55,14 +58,14 @@ rỗng (cũng rỗng với `6a87f77b`). Không có fixture report ở cả ba re
 | T02 | Mode5 / selection-adjusted OOS có scope đúng | **PENDING** — chỉ in nhãn/scope server gửi; cần API thật |
 | T03 | Print downsample chỉ ảnh hưởng display | Một phần: SVG vẽ đúng `points` server cấp, caption in `emitted_point_count` / `source_observation_count` / `sampling`; số headline không đổi (U06, U23; browser full + print). Không có client downsample |
 | T04–T07 | restart / bounded / CSV injection / old engine | Backend (PASS trong [phase-report](./phase-report.md)). Frontend chỉ: filename và `download_href` là của server, không tạo tên file (U17, U24) |
-| T08 | Toàn bộ test S09 | Một phần: spec T01, T02, T07, T09, T10 có; T03 (32 fold), T04 (digest chéo màn bằng fixture), T05/T06 (scratch/FAILED), T08 (axe) **PENDING** (§4.1, §5) |
+| T08 | Toàn bộ test S09 | Một phần: spec T01, T02, T09, T10 có; T07 (copy verbatim) **một phần** — note no-print, câu T10, title §16.1 verbatim, nhưng passport title, meta header, dòng stage và identity key cố ý khác spec vì contract (D1/D2/D5, `CG-P18-01/03/05/11`); T03 (32 fold), T04 (digest chéo màn bằng fixture), T05/T06 (scratch/FAILED), T08 (axe) **PENDING** (§4.1, §5) |
 | T09 | Pick/verify/slider trước Report không đổi θ/metrics/digest | Một phần: browser case 15 `no-mutation-after-inspect` (rời sang `/search` rồi quay lại: text sheet giống hệt, revision giữ, 304). Chứng minh với digest thật cần API thật |
 | T10 | Audit reused-original vs linked-child | **PENDING** — contract chưa có field lineage |
 | T11 | Re-export sau upgrade engine-default | **PENDING** — backend/API thật; frontend in `presentation_revision` tách với `report_revision` |
 | T12 | Warning giữ semantic label ở print và bundle | Một phần: warnings in trong sheet, không ẩn dòng nào, có ở print emulation và PDF (U27, browser print). Bundle download: PENDING API thật |
 | `V11-P18-DR` | Delta/dữ liệu | **PENDING** — không có compute/real data ở lane này |
 | `V11-P18-BR` | Browser/visual/action | Một phần: `PRODUCT_ROUTE_BROWSER_RECEIPT` với API stub, preview riêng, không phải dev host |
-| `V11-P18-GX` | protected hash, no-debt, report | Một phần: hook tay, `git diff --check`, debt register rỗng; không có rebuild/deploy receipt |
+| `V11-P18-GX` | protected hash, no-debt, report | Một phần: hook tay, `git diff --check`, `open_implementation_debt` rỗng nhưng `open_debt` có 2 lỗi audit (§5.5); không có rebuild/deploy receipt |
 
 `READ` khác `IMPLEMENTED` khác `VERIFIED` (A4.1).
 
@@ -154,7 +157,7 @@ file này **không có trong repo** nên `<doc-page>` không upgrade và giữ
 | No-print bar | Hub · RC (link) / Run Report + note; không có nút | Hub (link) · RC (span refused) / Run Report + Print + Export JSON/CSV + Parquet/Archive (disabled) + note | Route 11 chưa có (D7); export theo `exports.formats`/`unavailable_formats` |
 | Tiêu đề | "R-WFO-118 — mom_breakout_v3 on BTCUSDT · 4h"; meta generated/engine | "QuantBT Run Report" + chip run; meta sealed/revision/presentation/source profile | `CG-P18-03`, D2, `VISUAL_DECISION_REQUIRED` |
 | Cert box | Grade "B", góc phải trên | Box "not published · not a field of the report contract", góc phải trên ở 1280 và trên giấy; ở ≤700px được xếp chồng | `CG-P18-02`, `VISUAL_DECISION_REQUIRED`; vị trí sửa ở `aea76f69` (N1) |
-| Claim passport | 6 cột key/value nằm ngang | Danh sách dọc "fact n of 6 — value" + chú thích | `CG-P18-01`, D1 |
+| Claim passport | 6 cột key/value nằm ngang | Danh sách dọc "fact n — value" + chú thích | `CG-P18-01`, D1 |
 | Identity + headline | 2 cột: identity 9 hàng, 4 tile 2×2 | Xếp chồng: identity 12 hàng, 6 tile một hàng (2 cột ở ≤700px) + footnote | contract: identity 12, headline 6 key cố định |
 | Metrics table | không có | có (8 metric) | `frozen_core.metrics` |
 | Equity | echarts IS vs stitched OOS, trục/legend, underwater riêng, boundary fold_01..05 | SVG tĩnh: 1 đường + fill, underwater ở đáy cùng SVG, boundary F1..F5, không trục/legend; caption đếm điểm | `CG-P18-06/08`; spec §18 SVG tĩnh |
@@ -203,6 +206,8 @@ kèm typed absence + reason.
 | Contracts | `npm --prefix packages/contracts run generate:research-report` | 0 | `git status packages/contracts` sạch |
 | Browser toàn Research, 1 worker (tree `93a435bb`) | `playwright test -c <probe config 127.0.0.1:4417> --workers=1` | 0 | **128/128** (fixtures 8, product 74, tvp18 46), 4.6 min |
 | Browser S09 probe, chạy lại sau fix (tree `aea76f69`) | `playwright test -c .tv-probe.config.ts e2e/_probe-research-tvp18.spec.ts --workers=1` | 0 | **46/46**, 3.3 min, 44 dòng RECEIPT đều `overflow=0 noise=0`; clip-audit giờ **assert** `[]` ở screen/print/letter-816/a4-794 |
+| **Browser toàn Research, 1 worker (tree `47165016` = code `aea76f69`, audit 2026-09-23)** | `RESEARCH_SHOT_DIR=~/tv-shots/p18-audit npx playwright test -c .tv-probe.config.ts --workers=1` | 0 | **128/128** (fixtures 8, product 74, tvp18 46), 4.5 min; 44 RECEIPT `overflow=0 noise=0`; spec `586f39fe2d65f5ba` |
+| Browser audit probe (tree `47165016`) | `_probe-research-tvaudit.spec.ts` (tạm, đã xoá) | 0 | 8/8: full/partial 1280/660 16 panel, print 0 request, 404 leak=false; **tìm ra 2 lỗi code** (§5.5) |
 | Browser S09 probe lần đầu (tree `93a435bb`) | cùng lệnh | 1 → 0 | run1 40/4 fail do noise route S06 `/current-source/search` 404 và cookie CSRF; run2 44/44 sau khi gắn nhãn noise theo phase |
 
 Playwright 1.62.1, Chromium 151.0.7922.34 headless. Preview là `vite preview`
@@ -210,8 +215,8 @@ riêng của workspace ở `127.0.0.1:4417`, dựng từ build trên, đã kill 
 khi chạy (`ss -ltnp | grep 4417` rỗng). Không đụng preview 4317–4320 của Bobby.
 Spec probe tạm và config probe **không commit, đã xoá** trên server (bản sao ở
 scratchpad của phiên: spec B `32dc5f08f7ea7061`, spec chạy lại `586f39fe2d65f5ba`).
-**Toàn bộ 128 probe chưa chạy lại trên `aea76f69`**; chỉ probe S09 được chạy lại
-(fix chỉ chạm 3 file S09).
+Toàn bộ 128 probe đã chạy lại trên head `47165016` (code = `aea76f69`) trong
+audit 2026-09-23: 128/128 (§5.5).
 
 ### 5.2 Browser receipt — `PRODUCT_ROUTE_BROWSER_RECEIPT` (API stub)
 
@@ -283,6 +288,26 @@ Danh sách đầy đủ ở [thanhvuong-test-results.json](./thanhvuong-test-res
 
 `core.hooksPath` vẫn không đặt trong workspace (như P16/P17); bù bằng chạy tay.
 
+### 5.5 Audit độc lập 2026-09-23 (head `47165016`)
+
+Audit mắt mới (Opus 5.5) chạy lại browser thật trên head cuối, preview riêng
+`127.0.0.1:4417` (đã kill theo process group, `ss -ltnp | grep 4417` rỗng),
+probe/config tạm đã xoá, `git status --short` rỗng. Evidence ở
+`~/tv-shots/p18-audit/` (121 file, `SHA256SUMS.sha` sha256 `7a887864dd51f184`).
+
+| Mục | Kết quả |
+|---|---|
+| Toàn bộ probe Research | **128/128**, 1 worker, 4.5 min (`playwright.log` `0d921ba246acf9dc`, `probe.log` 112 dòng `32aaa0840aaf7ce5` — trùng byte với lần chạy `p18-fix`) |
+| Ảnh product | `p18-audit-full-1280.png` `c5f72b4c1de9b74b`, `-660` `4f9675d5b4b013db` (trùng byte `p18-fix`: render tất định); print emulation `p18-audit-full-print-1280.png` `6d47ff38b9b3cd4f`; 404 `p18-audit-refusal-404-1280.png` `7968645971986f04` |
+| Print | no-print bar / exports / annotation / notice `none`, warnings `block`, module header `none`, 0 request |
+| a11y nhanh (không phải axe) | 1 `article`, `nav[aria-label=Report actions]`, 0 `th` thiếu `scope`; trang có **2 `h1`** ("QuantBT Backtest" của module header + "QuantBT Run Report") |
+| Bundle | S09 nằm trong chunk `QuantBTModule-*.js` (108 203 B gzip), không có chunk route riêng → spec §14.6 "< 40KB gzip" không đo được, PENDING |
+| **A1 — lỗi code** | Bảng `sr-only` các điểm equity (240 hàng) cao **4 818 px** dù `sr-only`: bảng không co dưới nội dung nên `height:1px` không có tác dụng. 1280: `scrollHeight` 6 049 vs đáy nội dung 3 257 (~2 800 px trống cuối trang); print 816: 5 746 vs đáy sheet 2 611. PDF Letter **7 trang, gỡ bảng này còn 5** → ≥ 2 trang trắng cuối bản in. `ReportDetail.tsx:538-551`. Ghi `open_debt` `S09-SRONLY-TABLE-HEIGHT` |
+| **A2 — lỗi code** | `.rr-table td { word-break: break-all }` (`ReportDetail.tsx:161-162`) bẻ cả chữ thường: cột state artifacts in "seal/ed" (7/7 ô cao 2 dòng), header "STAT/E", tên "selection_/trace", "fill_ledge/r", "metrics_su/mmary" ở 1280 và print 816. Clip-audit không bắt vì không tràn. Ghi `open_debt` `S09-TABLE-WORD-BREAK` |
+
+Hai lỗi A1/A2 **không sửa** trong audit (chỉ được sửa docs); đề xuất nhỏ nhất
+và test ở [debt register](./thanhvuong-debt-register.json).
+
 ## 6. Việc Bobby quyết
 
 Chi tiết và đề xuất: [thanhvuong-backend-requests.md §3](./thanhvuong-backend-requests.md#3-việc-bobby-quyết-không-phải-backend).
@@ -334,18 +359,20 @@ Receipt đầy đủ theo template CLAUDE.md §5:
 `CG-P18-01` passport key/label · `02` certification grade · `03` title theo run ·
 `04` cột per-fold · `05` kết quả từng stage · `06` IS equity series · `07`
 artifact filename/bytes · `08` caption params handoff · `09` fixture canonical
-P18 · `10` 409 trên GET report chưa khai trong OpenAPI. Tất cả OPEN, kiểm lại
-2026-09-23 trên `e39bacfa` (và `6a87f77b`).
+P18 · `10` 409 trên GET report chưa khai trong OpenAPI · `11` identity spec §16.3 +
+binding scratch (thêm ở audit). Tất cả OPEN, kiểm lại 2026-09-23 trên `e39bacfa`,
+`6a87f77b` và (audit) `361f68b4`.
 
 ## 10. Kết luận có phạm vi
 
 - **`P18-A S09 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · đã push, chưa PR`.**
   Frontend bám hi-fi trong giới hạn contract; mọi khối hi-fi giữ chỗ, ô không có
-  field in typed absence + reason code. Không còn lỗi đã biết trong scope S09
-  ngoài các mục mở ở §6.
-- Chưa `VERIFIED`: thiếu `REAL_API_E2E_RECEIPT` (feature-dark), axe, toàn bộ 128
-  probe trên `aea76f69`, tích hợp baseline (B1), `CG-P18-*`, và
-  `VISUAL_DECISION_REQUIRED` tiêu đề/cert (B2).
+  field in typed absence + reason code. Lỗi đã biết trong scope S09: hai lỗi
+  audit A1/A2 (§5.5, `open_debt`), còn lại là các mục mở ở §6.
+- Chưa `VERIFIED`: thiếu `REAL_API_E2E_RECEIPT` (feature-dark), axe, tích hợp
+  baseline (B1), `CG-P18-*`, `VISUAL_DECISION_REQUIRED` tiêu đề/cert (B2), và
+  sửa hai lỗi audit A1 (bảng sr-only làm trang trắng cuối bản in) / A2 (bẻ chữ
+  trong bảng) (§5.5). 128 probe đã chạy lại trên `47165016`: 128/128.
 
 ## 11. Reuse report (v0.5 §11.3)
 

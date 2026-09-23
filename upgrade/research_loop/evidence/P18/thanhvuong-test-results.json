@@ -12,7 +12,7 @@
     "playwright": "1.62.1",
     "chromium": "151.0.7922.34 headless"
   },
-  "lane_note": "Unit, typecheck and build results are real executions in the workspace. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the report API stubbed from the report.service.ts shape (no canonical fixture: CG-P18-09), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). The full 128-probe Research suite ran on 93a435bb; after the aea76f69 fix (3 S09 files) only the S09 probe was rerun (46/46). No REAL_API_E2E_RECEIPT: FEATURE_RESEARCH_REPORTS=false.",
+  "lane_note": "Unit, typecheck and build results are real executions in the workspace. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the report API stubbed from the report.service.ts shape (no canonical fixture: CG-P18-09), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). The full 128-probe Research suite ran on 93a435bb and again, in the 2026-09-23 independent audit, on head 47165016 (code = aea76f69): 128/128. No REAL_API_E2E_RECEIPT: FEATURE_RESEARCH_REPORTS=false.",
   "results": [
     {
       "gate": "npm --prefix packages/contracts run generate:research-report",
@@ -115,6 +115,22 @@
       "exit": 0
     },
     {
+      "gate": "RESEARCH_SHOT_DIR=~/tv-shots/p18-audit npx playwright test -c .tv-probe.config.ts --workers=1 (all Research probes)",
+      "scope": "tree 47165016 (code aea76f69), independent audit 2026-09-23; own vite preview 127.0.0.1:4417 built with npm run build (exit 0); probe spec 586f39fe2d65f5ba",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "128/128 (fixtures 8, product 74, tvp18 46), 4.5 min, 1 worker; 44 RECEIPT lines, all overflow=0 noise=0",
+      "note": "first full run on the final head; probe.log and product PNGs byte-identical to the p18-fix run (deterministic render)"
+    },
+    {
+      "gate": "playwright audit probe _probe-research-tvaudit.spec.ts (temporary, deleted)",
+      "scope": "tree 47165016: full/partial @1280/660 + print emulation, refusal 404, geometry, PDF page count",
+      "result": "PASS_WITH_FINDINGS",
+      "exit": 0,
+      "counts": "8/8",
+      "note": "found A1 (sr-only equity table 4818 px tall: scrollHeight 6049 vs content 3257 at 1280; Letter PDF 7 pages vs 5 without it) and A2 (td word-break break-all splits 'sealed', 'STATE', artifact names). Recorded as open_debt; not fixed (docs-only audit)"
+    },
+    {
       "gate": "git diff --check 19310912 HEAD",
       "scope": "HEAD = aea76f69",
       "result": "PASS",
@@ -147,12 +163,12 @@
       "reason": "focus order and outline solid asserted in the browser; ring style not measured against a token"
     },
     {
-      "gate": "all Research probes (128) on aea76f69",
-      "reason": "aea76f69 touches only ReportDetail.tsx, reportClient.ts (one label) and reportDetail.test.tsx; the S09 probe was rerun (46/46)"
-    },
-    {
       "gate": "spec 09 T03 (32-fold multi-page table), T04 (cross-screen digest via shared fixture), T05/T06 (scratch / FAILED run)",
       "reason": "no canonical fixture (CG-P18-09); no scratch/failed variant in the contract (report seals only at run_completed)"
+    },
+    {
+      "gate": "spec 09 §14.6 route bundle < 40KB gzip",
+      "reason": "S09 ships inside the QuantBTModule chunk (108203 B gzip); no route chunk to measure"
     }
   ],
   "evidence_store": {
@@ -296,7 +312,33 @@
       "probe.log": "36c265155dc9da46",
       "run1.log": "42b791d7c74678c1",
       "run2.log": "a428bf94da92e3aa"
+    },
+    "audit": {
+      "location": "~/tv-shots/p18-audit/ (121 files, not committed)",
+      "SHA256SUMS.sha_sha256_prefix": "7a887864dd51f184",
+      "sha256_prefix": {
+        "playwright.log": "0d921ba246acf9dc",
+        "probe.log (112 lines)": "32aaa0840aaf7ce5",
+        "p18-audit.log": "f667ebb19ad9e884",
+        "build.log": "7d46801eecb02045",
+        "p18-audit-full-1280.png": "c5f72b4c1de9b74b",
+        "p18-audit-full-660.png": "4f9675d5b4b013db",
+        "p18-audit-partial-1280.png": "a5ab1d94adca7957",
+        "p18-audit-partial-660.png": "a3b732ee2fcae6d0",
+        "p18-audit-full-print-1280.png": "6d47ff38b9b3cd4f",
+        "p18-audit-partial-print-1280.png": "ecabf8c87ca47f3f",
+        "p18-audit-print-816-full.png": "3af9322959feef06",
+        "p18-audit-refusal-404-1280.png": "7968645971986f04",
+        "p18-audit-refusal-404-660.png": "2afdc369883ed0f6",
+        "p18-audit-full-letter.pdf (7 pages)": "5cc5f7b40aacb3f1",
+        "p18-audit-partial-letter.pdf (5 pages)": "bcef6fa1868ec798",
+        "p18-print-letter.pdf": "08a4645f7d4b7b2e",
+        "p18-print-a4.pdf": "842fab3150a0895a",
+        "p18-hifi-09-1280-visible.png": "5fd5b53938bbd146",
+        "p18-hifi-09-660-visible.png": "df8cb60d0e8f40c3"
+      }
     }
   },
-  "known_flake": "src/app/PortalShell.test.tsx > 'mounts QuantBT under its canonical route with no nested topbar' fails intermittently in a full vitest run and passes alone (once foundation.test.tsx > P09-T04 instead); both files pass alone 52/52. Recorded at P16/P17; seen in 2 of 4 full runs after 93a435bb and on 6057a4c8 with the fix stashed. Outside the S09 diff, not changed (Bobby B5)."
+  "known_flake": "src/app/PortalShell.test.tsx > 'mounts QuantBT under its canonical route with no nested topbar' fails intermittently in a full vitest run and passes alone (once foundation.test.tsx > P09-T04 instead); both files pass alone 52/52. Recorded at P16/P17; seen in 2 of 4 full runs after 93a435bb and on 6057a4c8 with the fix stashed. Outside the S09 diff, not changed (Bobby B5).",
+  "audit_head": "47165016334d8b9298273b2deb2e1ea728bbdcdf"
 }
