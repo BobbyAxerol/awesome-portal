@@ -1,6 +1,6 @@
 # RF-02 — Foundation consumer completeness, Atlas and the real-API lane
 
-**Status:** `RF02_COMPLETE · REAL_API_E2E_RECEIPT 16/16 · DECISIONS_DELEGATED · BOBBY_VISUAL_REVIEW_LATER`
+**Status:** `RF02_COMPLETE · APPROVED_BY_BOBBY_2026-09-23 · REAL_API_E2E_RECEIPT 16/16`
 **Date:** 2026-09-23 · **Owner:** Claude (backend + frontend; Q4–Q6 approved 2026-09-23)
 **Branch:** `docs/research-loop-plan` — pushed to `origin` and `primus-origin`; not merged into `dev`/`main`.
 **Plan:** [Unified §13 RF-02](../../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-rf-02) · [P01–P05 audit](../AUDIT_P01_P05_CLAUDE_2026-09-23.md)
@@ -36,6 +36,16 @@ Fixture lanes on the same commit: frontend vitest 2975 passed / 1 skipped; resea
 2. **A false sentence** (`53bc7344`): my RF01-F4 mapper said "This changed since it was read" for `RESEARCH_CURRENT_SOURCE_CONFLICT`, which on current-source reads means pending retention. The six current-source codes now have their own meaning.
 3. **Exact decimals** of 47 digits overflowed a metric tile (now wraps, never rounded) and overprinted histogram ticks (ticks now 3 significant digits; exact edges in tooltip/table).
 4. **`sr-only` on a `<table>`** does not clip; the chart companion tables pushed S04 219px wide at 660 (`7de4c68f`).
+
+## Approval
+
+Bobby approved RF-02 on 2026-09-23 ("Duyệt"). The HiFi deviation list below is
+the checklist for the next round of fixes, which he expects.
+
+The preview is published at `research-portal.primusspark.com` on the same
+pattern as `dev-portal` (runbook: research-preview.md): origin set, images
+rebuilt from `e39bacfa`, loopback nginx vhost installed; the Cloudflare Tunnel
+rule is Bobby's step.
 
 ## Decisions — taken by Claude on Bobby's delegation (2026-09-23)
 
