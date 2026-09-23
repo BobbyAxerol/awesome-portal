@@ -70,6 +70,9 @@
       "@portal/contracts-research-run-create": [
         "../../../packages/contracts/generated/research-run-create.d.ts"
       ],
+      "@portal/contracts-research-replay": [
+        "../../../packages/contracts/generated/research-replay.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

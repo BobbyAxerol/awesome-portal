@@ -1,0 +1,871 @@
+/**
+ * Screen 08 — S4 Execute Replay (P17 + RS-02).
+ *
+ * The hi-fi replays a tape: candles, orders, fills, a trade blotter, a causal
+ * chain per fill. The source behind this run publishes one thing of that list
+ * — retrospective equity samples — and a typed absence for every other. The
+ * screen keeps the hi-fi's frame and puts each panel's real answer in it:
+ *
+ *  - **the chart is an equity sample line, never candles.** It is labelled as
+ *    a retrospective sample, and the playhead is a sample, not an account or a
+ *    position. `state_at_cursor.execution_state` is printed as unavailable.
+ *  - **sampled means sampled.** Under `EXTREMA_BUCKET_V1` the line joins
+ *    bucket extrema; the screen says so and draws no point that was not sent.
+ *  - **the transport is local.** Play, pause, step and seek move over the
+ *    window already loaded. Another window is a button the reader presses.
+ *  - **every absent panel keeps its place** and names the reason code the
+ *    route published — no empty blotter, no invented order.
+ *
+ * Nothing on this screen writes. There is no POST, no command and no compute.
+ */
+
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+
+import { EChart } from "../charts/EChart";
+import { baseOption, roleColorsNow } from "../charts/theme";
+import { ProvenanceStrip } from "./ProvenanceStrip";
+import { ResearchPanel } from "./ResearchPanel";
+import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
+import {
+  CAPABILITY_LABEL,
+  REPLAY_GAP_WORDS,
+  REPLAY_WITHHELD_WORDS,
+  ROUTE_CAPABILITY_KEYS,
+  ROUTE_STATE_NOTE,
+  SAMPLING_NOTE,
+  gapReason,
+  type Replay,
+  type ReplayPoint,
+  type RouteCapabilityKey,
+} from "./replayClient";
+import { ReplayTransport, SPEEDS, transportKey, useTransport } from "./replayTransport";
+import type { ReplayController, RetainedReplaySlot } from "./useReplay";
+
+/* --------------------------------------------------------------- verbatim */
+
+/**
+ * Spec 08 §2.1's title — "how orders came to exist" — and the hi-fi's "the
+ * frozen params trading the tape" both claim orders this source never
+ * published. The stage name is kept; the claim after it is the one the
+ * contract supports. Recorded as `VISUAL_DECISION_REQUIRED` in the P17 receipt.
+ */
+export const EXECUTE_TITLE = "S4 · Execute Replay — what this source can replay";
+
+export const EXECUTE_SUBTITLE =
+  "Retrospective equity samples, one at a time. Orders, fills, positions and candles were not published by this source, so each panel below names that absence instead of drawing it.";
+
+/** Spec 08 §2.11, with its one route-only clause restated for this source. */
+export const EXECUTE_RULES_FOOTER =
+  "The transport is the only clock — every panel listens to the same sample. A missing artifact is declared with its reason, never rendered as an empty table. Replays are read-only: nothing here mutates a run, and playing, stepping or seeking never sends a request.";
+
+export const PLAYHEAD_NOTE =
+  "retrospective equity sample — not an execution account, position or order state";
+
+/** Spec 08 §7, verbatim. */
+export const PAUSED_HIDDEN = "paused (tab hidden)";
+
+/* ------------------------------------------------------------------ parts */
+
+function iso(at: number): string {
+  return new Date(at).toISOString().slice(0, 16).replace("T", " ") + "Z";
+}
+
+function words(value: string): string {
+  return value.toLowerCase().replace(/_/g, " ");
+}
+
+function Chip({
+  children,
+  tone = "var(--ink-soft)",
+  border = "var(--line)",
+  ...rest
+}: {
+  children: React.ReactNode;
+  tone?: string;
+  border?: string;
+} & Record<string, unknown>) {
+  return (
+    <span
+      className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]"
+      style={{ color: tone, borderColor: border, background: "var(--paper-raised)" }}
+      {...rest}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Card({
+  title,
+  aside,
+  children,
+  ...rest
+}: {
+  title: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+} & Record<string, unknown>) {
+  return (
+    <section
+      className="flex min-w-0 flex-col gap-2 rounded-[8px] border px-4 py-3"
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+      aria-label={title}
+      {...rest}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          {title}
+        </h3>
+        {aside}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** One named capability the route did not publish, with its code in the title. */
+function CapabilityGap({ replay, capability }: { replay: Replay; capability: RouteCapabilityKey }) {
+  const fact = replay.route_capabilities[capability];
+  return (
+    <span className="flex flex-wrap items-baseline gap-1.5" data-capability={capability} data-capability-state={fact.state}>
+      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        {CAPABILITY_LABEL[capability]}
+      </span>
+      <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} title={gapReason(fact)}>
+        {REPLAY_GAP_WORDS[fact.state]}
+      </span>
+      <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-reason-code>
+        {fact.reason_code ?? fact.availability.reason_code ?? words(fact.availability.state)}
+      </span>
+    </span>
+  );
+}
+
+/** A hi-fi panel the source does not fill, kept at its place with its reasons. */
+function AbsentPanel({
+  id,
+  title,
+  replay,
+  capabilities,
+  note,
+}: {
+  id: string;
+  title: string;
+  replay: Replay;
+  capabilities: readonly RouteCapabilityKey[];
+  note: string;
+}) {
+  return (
+    <Card title={title} data-absent-panel={id}>
+      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+        {note}
+      </p>
+      <div className="flex flex-col gap-1">
+        {capabilities.map((capability) => (
+          <CapabilityGap key={capability} replay={replay} capability={capability} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------- the chart */
+
+const GRID = { left: 64, right: 20 } as const;
+
+/**
+ * Equity and drawdown for the loaded window, drawn once per window. The
+ * playhead is an overlay the transport moves, so a tick never re-sets the
+ * chart option.
+ */
+function SampleChart({ items, transport }: { items: readonly ReplayPoint[]; transport: ReplayTransport }) {
+  const labels = useMemo(() => items.map((point) => iso(point.at_utc_ms)), [items]);
+  const equityOption = useMemo(() => {
+    const role = roleColorsNow();
+    return baseOption({
+      legend: { show: false },
+      dataZoom: [] as never[],
+      animation: false,
+      grid: { left: GRID.left, right: GRID.right, top: 12, bottom: 26 },
+      xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { fontSize: 9 } },
+      yAxis: { type: "value", scale: true, axisLabel: { fontSize: 9 } },
+      tooltip: {
+        trigger: "axis",
+        formatter: (params: unknown) => {
+          const rows = params as { dataIndex: number }[];
+          const point = items[rows[0]?.dataIndex ?? 0];
+          return point
+            ? `sample ${point.playback_ordinal + 1}<br/>${new Date(point.at_utc_ms).toISOString()}<br/>equity ${point.equity}`
+            : "";
+        },
+      },
+      series: [
+        {
+          type: "line",
+          name: "retrospective equity sample",
+          /* A dot per sample: the line between two dots is a join, not data. */
+          showSymbol: items.length <= 120,
+          symbolSize: 3,
+          data: items.map((point) => Number(point.equity)),
+          lineStyle: { width: 1.3, color: role.oos },
+          itemStyle: { color: role.oos },
+        },
+      ],
+    });
+  }, [items, labels]);
+
+  const drawdownOption = useMemo(() => {
+    const tone = roleColorsNow().oos;
+    return baseOption({
+      legend: { show: false },
+      dataZoom: [] as never[],
+      animation: false,
+      grid: { left: GRID.left, right: GRID.right, top: 8, bottom: 22 },
+      xAxis: { type: "category", data: labels, boundaryGap: false, axisLabel: { show: false } },
+      yAxis: { type: "value", axisLabel: { fontSize: 9 } },
+      series: [
+        {
+          type: "line",
+          name: "drawdown",
+          showSymbol: false,
+          areaStyle: { color: /^#[0-9a-f]{6}$/i.test(tone) ? `${tone}22` : tone },
+          data: items.map((point) => Number(point.drawdown_fraction)),
+          lineStyle: { width: 1, color: tone },
+          itemStyle: { color: tone },
+        },
+      ],
+    });
+  }, [items, labels]);
+
+  return (
+    <div className="flex flex-col gap-1" data-chart="replay-equity">
+      <div className="relative">
+        <EChart option={equityOption} height={260} />
+        <Playhead transport={transport} length={items.length} />
+      </div>
+      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        drawdown — restated from the same samples
+      </span>
+      <div className="relative">
+        <EChart option={drawdownOption} height={90} />
+        <Playhead transport={transport} length={items.length} />
+      </div>
+      <table className="sr-only" data-chart-table="replay-equity">
+        <caption>Retrospective equity samples in this window, exact values</caption>
+        <tbody>
+          {items.map((point) => (
+            <tr key={point.playback_ordinal}>
+              <th scope="row">{new Date(point.at_utc_ms).toISOString()}</th>
+              <td>{point.equity}</td>
+              <td>{point.drawdown_fraction}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Playhead({ transport, length }: { transport: ReplayTransport; length: number }) {
+  const { index } = useTransport(transport);
+  if (length === 0) return null;
+  const fraction = length > 1 ? index / (length - 1) : 0;
+  return (
+    <span
+      aria-hidden="true"
+      data-playhead={index}
+      className="pointer-events-none absolute"
+      style={{
+        top: 4,
+        bottom: 20,
+        left: `calc(${GRID.left}px + (100% - ${GRID.left + GRID.right}px) * ${fraction})`,
+        borderLeft: "1px dashed var(--ink-mute)",
+      }}
+    />
+  );
+}
+
+/* ------------------------------------------------------------- transport */
+
+function TransportBar({
+  transport,
+  items,
+  total,
+}: {
+  transport: ReplayTransport;
+  items: readonly ReplayPoint[];
+  total: number | null;
+}) {
+  const snapshot = useTransport(transport);
+  const point = items[snapshot.index];
+  const disabled = items.length < 2;
+  const NO_TRANSPORT = "Fewer than two samples are loaded, so there is nothing to play or step through.";
+  const button = "mono rounded-[6px] border px-2 text-[11px] leading-[24px]";
+  const style = { borderColor: "var(--line)", background: "var(--paper-raised)" };
+  const ordinalText = (at: ReplayPoint | undefined) =>
+    at ? `sample ${at.playback_ordinal + 1} of ${total ?? "not published"}` : "no sample";
+
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2 border-t px-1 pt-2"
+      style={{ borderColor: "var(--line-soft)" }}
+      data-transport
+      data-playing={String(snapshot.playing)}
+    >
+      <button type="button" className={button} style={style} aria-label="window start" disabled={disabled}
+        title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.seek(0)}>
+        ⏮
+      </button>
+      <button type="button" className={button} style={style} aria-label="step back" disabled={disabled}
+        title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.step(-1)}>
+        ◀
+      </button>
+      <button
+        type="button"
+        className={button}
+        style={{ ...style, ...(snapshot.playing ? { borderColor: "var(--accent)", color: "var(--accent)" } : {}) }}
+        aria-label={snapshot.playing ? "pause" : "play"}
+        aria-pressed={snapshot.playing}
+        data-action="play"
+        disabled={disabled}
+        title={disabled ? NO_TRANSPORT : undefined}
+        onClick={() => transport.toggle()}
+      >
+        {snapshot.playing ? "❚❚" : "▶"}
+      </button>
+      <button type="button" className={button} style={style} aria-label="step forward" disabled={disabled}
+        title={disabled ? NO_TRANSPORT : undefined} onClick={() => transport.step(1)}>
+        ▶︎|
+      </button>
+      <button
+        type="button"
+        className={button}
+        style={style}
+        aria-label="window end"
+        disabled={disabled}
+        title={disabled ? NO_TRANSPORT : undefined}
+        onClick={() => transport.seek(items.length - 1)}
+      >
+        ⏭
+      </button>
+      <span className="flex gap-1" role="group" aria-label="speed">
+        {SPEEDS.map((speed) => (
+          <button
+            key={speed}
+            type="button"
+            className={button}
+            aria-pressed={snapshot.speed === speed}
+            data-speed={speed}
+            style={snapshot.speed === speed ? { borderColor: "var(--accent)", color: "var(--accent)", background: "var(--paper-sunken)" } : style}
+            onClick={() => transport.setSpeed(speed)}
+          >
+            {speed}×
+          </button>
+        ))}
+      </span>
+      <input
+        type="range"
+        className="min-w-[120px] flex-1"
+        style={{ accentColor: "var(--accent)" }}
+        min={0}
+        max={Math.max(0, items.length - 1)}
+        value={snapshot.index}
+        disabled={items.length === 0}
+        aria-label="seek within the loaded window"
+        aria-valuetext={ordinalText(point)}
+        data-seek
+        onChange={(event) => transport.seek(Number(event.target.value))}
+      />
+      <span className="mono whitespace-nowrap text-[10px]" style={{ color: "var(--ink-soft)" }} data-readout>
+        {ordinalText(point)}
+        {point ? ` · ${iso(point.at_utc_ms)}` : ""}
+      </span>
+      {snapshot.pausedHidden ? (
+        <Chip data-paused-hidden tone="var(--warn)" border="var(--warn)">
+          {PAUSED_HIDDEN}
+        </Chip>
+      ) : null}
+    </div>
+  );
+}
+
+/** The playhead's own values, from the loaded sample — and what they are not. */
+function PlayheadReadout({ transport, items }: { transport: ReplayTransport; items: readonly ReplayPoint[] }) {
+  const { index } = useTransport(transport);
+  const point = items[index];
+  if (!point) return null;
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1" data-playhead-readout={point.playback_ordinal}>
+      <span className="mono text-[10px]">t {iso(point.at_utc_ms)}</span>
+      <span className="mono text-[10px]">equity {point.equity}</span>
+      <span className="mono text-[10px]">drawdown {point.drawdown_fraction}</span>
+      <span className="mono text-[9.5px] italic" style={{ color: "var(--ink-faint)" }} data-playhead-note>
+        {PLAYHEAD_NOTE}
+      </span>
+    </div>
+  );
+}
+
+/** Spec 08 §2.5's window of ~14 rows around the playhead — of samples, not events. */
+function SampleLedger({ transport, items }: { transport: ReplayTransport; items: readonly ReplayPoint[] }) {
+  const { index } = useTransport(transport);
+  const start = Math.max(0, Math.min(index - 6, items.length - 14));
+  const rows = items.slice(start, start + 14);
+  return (
+    <div className="overflow-x-auto" data-sample-ledger>
+      <table className="w-full min-w-[420px] border-collapse">
+        <thead>
+          <tr className="mono text-left text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+            <th className="py-1 pr-3 font-normal">sample</th>
+            <th className="py-1 pr-3 font-normal">at (UTC)</th>
+            <th className="py-1 pr-3 font-normal">equity</th>
+            <th className="py-1 font-normal">drawdown</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((point, offset) => {
+            const at = start + offset;
+            const current = at === index;
+            return (
+              <tr
+                key={point.playback_ordinal}
+                className="mono text-[10.5px]"
+                data-sample-row={point.playback_ordinal}
+                data-play={String(current)}
+                aria-current={current ? "true" : undefined}
+                style={{ background: current ? "var(--paper-sunken)" : undefined, borderBottom: "1px solid var(--line-soft)" }}
+              >
+                <td className="py-[3px] pr-3">
+                  <button type="button" className="mono underline-offset-2 hover:underline" onClick={() => transport.seek(at)}>
+                    {point.playback_ordinal + 1}
+                  </button>
+                </td>
+                <td className="py-[3px] pr-3">{iso(point.at_utc_ms)}</td>
+                <td className="py-[3px] pr-3">{point.equity}</td>
+                <td className="py-[3px]">{point.drawdown_fraction}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* --------------------------------------------------------- retained lane */
+
+function RetainedReplayPanel({ slot, onRead }: { slot: RetainedReplaySlot; onRead: () => void }) {
+  return (
+    <Card title="retained model replay" data-retained={slot.state}>
+      {slot.state === "idle" ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+            The retained-source lane replays model samples for one admitted Advanced-WFO profile. It is read
+            only when you ask.
+          </p>
+          <button type="button" className="btn-ghost mono text-[10px]" data-action="read-retained" onClick={onRead}>
+            read retained replay
+          </button>
+        </div>
+      ) : slot.state === "loading" ? (
+        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+          reading…
+        </p>
+      ) : slot.state === "refused" ? (
+        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-retained-refusal={slot.refusal.status}>
+          {slot.refusal.message}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <Chip>{slot.replay.replay.source_observation_count} retained observations</Chip>
+            <Chip>{slot.replay.replay.rows.length} in this window</Chip>
+            <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+              engine {slot.replay.provenance.engine_version} · {slot.replay.provenance.profile_id}
+            </span>
+          </div>
+          <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope>
+            {words(slot.replay.replay.state_at_cursor.semantics)}. Model positions are research samples, not
+            broker positions.
+          </p>
+          <div className="flex flex-wrap gap-x-5 gap-y-1">
+            {(["orders", "fills", "candles"] as const).map((key) => (
+              <span key={key} className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-retained-capability={key}>
+                {key} — {REPLAY_GAP_WORDS[slot.replay.route_capabilities[key].state]}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/* ---------------------------------------------------------------- screen */
+
+export interface ExecuteScreenProps {
+  runId: string;
+  cursor: EvidenceCursor;
+  controller: ReplayController;
+  transport: ReplayTransport;
+}
+
+export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteScreenProps) {
+  const { replay, state } = controller;
+  const replayWindow = replay?.equity_replay;
+  const items = useMemo(() => replayWindow?.items ?? [], [replayWindow]);
+  const run = encodeURIComponent(runId);
+  const [pinnedAt, setPinnedAt] = useState<number | null>(null);
+
+  /* A new window places the playhead on the sample the server selected, or at
+     its start. Nothing else moves the playhead but the reader. */
+  useEffect(() => {
+    const selected = replayWindow?.state_at_cursor.playback_ordinal ?? null;
+    const at = selected === null ? 0 : items.findIndex((point) => point.playback_ordinal === selected);
+    transport.load(items.length, Math.max(0, at));
+  }, [items, transport, replayWindow]);
+
+  const snapshot = useTransport(transport);
+  const playheadPoint = items[snapshot.index];
+
+  return (
+    <div className="flex flex-col gap-3" data-screen="execute-replay" data-run={runId}>
+      <nav className="flex flex-wrap items-center gap-1.5 text-[11px]" aria-label="Breadcrumb">
+        <Link
+          to={deepDiveHref(`/research/quantbt/runs/${run}/evidence`, { ...cursor, stage: "execute" })}
+          className="mono"
+          style={{ color: "var(--accent)" }}
+          data-action="back-to-hub"
+        >
+          Evidence Flow
+        </Link>
+        <span style={{ color: "var(--line-strong)" }}>/</span>
+        <span className="mono">{runId}</span>
+        <span style={{ color: "var(--line-strong)" }}>/</span>
+        <span className="mono" style={{ color: "var(--ink-faint)" }}>
+          Stage 4 · Execute Replay
+        </span>
+        <span style={{ color: "var(--line-strong)" }}>·</span>
+        <Link
+          to={deepDiveHref(`/research/quantbt/runs/${run}/freeze`, { ...cursor, stage: "freeze" })}
+          className="mono"
+          style={{ color: "var(--accent)" }}
+          data-action="back-to-freeze"
+        >
+          ← S3 Freeze
+        </Link>
+        <span style={{ color: "var(--line-strong)" }}>·</span>
+        {/* Screen 09 has no route yet; a link would go nowhere. */}
+        <span
+          className="mono"
+          style={{ color: "var(--ink-faint)", opacity: 0.6 }}
+          title="Screen 09 Run Report has no published route yet."
+          data-next="run-report"
+        >
+          next: Run Report →
+        </span>
+      </nav>
+
+      <div className="flex flex-col gap-1">
+        <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
+          {EXECUTE_TITLE}
+        </h1>
+        <p className="text-[13.5px] italic" style={{ color: "var(--ink-mute)" }} data-subtitle>
+          {EXECUTE_SUBTITLE}
+        </p>
+      </div>
+
+      {replay ? <ProvenanceStrip provenance={replay.provenance} /> : null}
+
+      {replay ? (
+        <Card
+          title="execution contract"
+          data-route-state={replay.route.state}
+          aside={
+            <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
+              as of {new Date(replay.as_of_utc_ms).toISOString()}
+            </span>
+          }
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Chip data-route-id tone="var(--accent)" border="var(--accent)">
+              {replay.route.id ?? `route — ${REPLAY_WITHHELD_WORDS[replay.route.availability.state]}`}
+            </Chip>
+            <Chip data-route-state-chip>{words(replay.route.state)}</Chip>
+            {replay.route.replay_contract ? (
+              <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-replay-contract>
+                contract {replay.route.replay_contract}
+              </span>
+            ) : null}
+            <Chip data-readiness={replay.readiness}>readiness {replay.readiness.toLowerCase()}</Chip>
+            <CapabilityGap replay={replay} capability="fold_capital" />
+          </div>
+          <p className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-route-note>
+            <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+              route contract{" "}
+            </span>
+            {ROUTE_STATE_NOTE[replay.route.state]}
+          </p>
+        </Card>
+      ) : null}
+
+      <ResearchPanel
+        title="stitched account — retrospective equity"
+        meta={replay?.revision ? `revision ${replay.revision}` : undefined}
+        state={state}
+        minBodyHeight={280}
+        actions={
+          state.mayRetry ? (
+            <button type="button" className="btn-ghost mono text-[10px]" data-action="reread" onClick={controller.reread}>
+              reread replay
+            </button>
+          ) : undefined
+        }
+      >
+        {replay && replayWindow ? (
+          <div className="flex flex-col gap-2" data-replay-window={replayWindow.state}>
+            {controller.recovered ? (
+              <p className="mono text-[10px]" role="status" style={{ color: "var(--warn)" }} data-recovered>
+                The replay position expired. It was discarded and the replay was read again once.
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2" data-sampling={replayWindow.sampling ?? "none"}>
+              {replayWindow.sampling ? (
+                <Chip
+                  tone={replayWindow.sampling === "FULL" ? "var(--ink-soft)" : "var(--warn)"}
+                  border={replayWindow.sampling === "FULL" ? "var(--line)" : "var(--warn)"}
+                >
+                  sampling {words(replayWindow.sampling)}
+                </Chip>
+              ) : (
+                <Chip>sampling — {REPLAY_WITHHELD_WORDS[replayWindow.availability.state]}</Chip>
+              )}
+              <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-counts>
+                source observations {replayWindow.source_observation_count ?? "not published"} · emitted samples{" "}
+                {replayWindow.emitted_point_count ?? "not published"}
+                {items.length > 0
+                  ? ` · window ${items[0]!.playback_ordinal + 1}–${items.at(-1)!.playback_ordinal + 1}`
+                  : ""}
+              </span>
+              <CapabilityGap replay={replay} capability="candle_windows" />
+            </div>
+            {replayWindow.sampling ? (
+              <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
+                {SAMPLING_NOTE[replayWindow.sampling]}
+              </p>
+            ) : null}
+
+            {items.length > 0 ? (
+              <>
+                <SampleChart items={items} transport={transport} />
+                <TransportBar transport={transport} items={items} total={replayWindow.emitted_point_count} />
+                <PlayheadReadout transport={transport} items={items} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn-ghost mono text-[10px]"
+                    data-action="previous-window"
+                    disabled={!replayWindow.page.has_previous || controller.inFlight}
+                    title={
+                      controller.inFlight
+                        ? "A window is being read."
+                        : !replayWindow.page.has_previous
+                          ? "This window starts at the first sample."
+                          : undefined
+                    }
+                    onClick={controller.previousWindow}
+                  >
+                    ‹ previous window
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost mono text-[10px]"
+                    data-action="next-window"
+                    disabled={!replayWindow.page.has_more || controller.inFlight}
+                    title={
+                      controller.inFlight
+                        ? "A window is being read."
+                        : !replayWindow.page.has_more
+                          ? "This window ends at the last sample."
+                          : undefined
+                    }
+                    onClick={controller.nextWindow}
+                  >
+                    next window ›
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost mono text-[10px]"
+                    data-action="pin-playhead"
+                    disabled={!playheadPoint || snapshot.playing || controller.inFlight}
+                    title={
+                      snapshot.playing
+                        ? "Pause first — the state is read for a resting playhead."
+                        : controller.inFlight
+                          ? "A window is being read."
+                          : !playheadPoint
+                            ? "No sample is under the playhead."
+                            : undefined
+                    }
+                    onClick={() => {
+                      if (!playheadPoint) return;
+                      setPinnedAt(playheadPoint.playback_ordinal);
+                      controller.pin(playheadPoint.playback_cursor, playheadPoint.playback_ordinal);
+                    }}
+                  >
+                    read state at playhead
+                  </button>
+                  <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+                    windows are read only when you ask; playing stops at the end of this one.
+                  </span>
+                </div>
+              </>
+            ) : null}
+
+            <StateAtCursor replay={replay} pinnedAt={pinnedAt} />
+          </div>
+        ) : null}
+      </ResearchPanel>
+
+      {replay ? (
+        <>
+          <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="flex min-w-0 flex-col gap-3">
+              <Card
+                title="event ledger"
+                data-panel="event-ledger"
+                aside={<CapabilityGap replay={replay} capability="execution_events" />}
+              >
+                <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                  No execution event stream was published, so the rows below are the loaded equity samples
+                  around the playhead — samples, not events.
+                </p>
+                {items.length > 0 ? <SampleLedger transport={transport} items={items} /> : null}
+              </Card>
+              <AbsentPanel
+                id="trade-anatomy"
+                title="trade anatomy — entry → exit"
+                replay={replay}
+                capabilities={["orders", "fills", "positions", "child_audit_provenance"]}
+                note="A causal chain links a signal to an order to a fill. None of those links was published for this route, so no chain is drawn and none is inferred from the equity line."
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-3">
+              <AbsentPanel
+                id="trade-blotter"
+                title="trade blotter"
+                replay={replay}
+                capabilities={["trades"]}
+                note="No trade ledger was published. A blotter built from equity changes would be a guess at trades, not this run's trades."
+              />
+              <AbsentPanel
+                id="mae-mfe"
+                title="MAE × MFE — pain vs potential per trade"
+                replay={replay}
+                capabilities={["mae_mfe"]}
+                note="Per-trade excursions need trades and their price paths; neither was published."
+              />
+              <AbsentPanel
+                id="route-panel"
+                title="route-aware facts"
+                replay={replay}
+                capabilities={["sl_tp_ambiguity", "oco_tree", "multi_leg"]}
+                note="Intrabar ambiguity, OCO trees and multi-leg facts are each a separate published relation. The route declared all three."
+              />
+              <AbsentPanel
+                id="cost-timeline"
+                title="cost timeline"
+                replay={replay}
+                capabilities={["funding"]}
+                note="Funding and cost series were not published for this route."
+              />
+            </div>
+          </div>
+
+          <SourceAbsences replay={replay} />
+          <RetainedReplayPanel slot={controller.retained} onRead={controller.ensureRetained} />
+        </>
+      ) : null}
+
+      <footer className="flex flex-col gap-1 border-t pt-3" style={{ borderColor: "var(--line)" }}>
+        <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          rules of this screen
+        </span>
+        <p className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }} data-rules>
+          {EXECUTE_RULES_FOOTER}
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+/** What the server said about the selected playhead — read, never inferred. */
+function StateAtCursor({ replay, pinnedAt }: { replay: Replay; pinnedAt: number | null }) {
+  const at = replay.equity_replay.state_at_cursor;
+  return (
+    <div
+      className="flex flex-col gap-1 rounded-[6px] border px-3 py-2"
+      style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
+      data-state-at-cursor={at.state}
+    >
+      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        state at cursor — from the server
+        {pinnedAt !== null && at.playback_ordinal === pinnedAt ? " · pinned" : ""}
+      </span>
+      <span className="mono text-[10px]">
+        {words(at.state)} · {words(at.semantics)}
+        {at.playback_ordinal !== null ? ` · sample ${at.playback_ordinal + 1}` : ""}
+        {at.equity !== null ? ` · equity ${at.equity}` : ""}
+        {at.drawdown_fraction !== null ? ` · drawdown ${at.drawdown_fraction}` : ""}
+      </span>
+      <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-execution-state={at.execution_state.state}>
+        execution state — {REPLAY_GAP_WORDS[at.execution_state.state]} · {gapReason(at.execution_state)}
+      </span>
+    </div>
+  );
+}
+
+function SourceAbsences({ replay }: { replay: Replay }) {
+  const entries = Object.entries(replay.source_absences);
+  return (
+    <details
+      className="rounded-[8px] border px-4 py-2"
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+      data-source-absences={entries.length}
+    >
+      <summary className="mono cursor-pointer text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        every capability the route declared · {ROUTE_CAPABILITY_KEYS.length} route facts · {entries.length} source absences
+      </summary>
+      <div className="mt-2 flex flex-col gap-1">
+        {ROUTE_CAPABILITY_KEYS.map((key) => (
+          <CapabilityGap key={key} replay={replay} capability={key} />
+        ))}
+        {entries.map(([key, gap]) => (
+          <span key={key} className="mono break-all text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-source-absence={key}>
+            {words(key)} — {REPLAY_GAP_WORDS[gap.state]} · {gapReason(gap)}
+          </span>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+/** Keyboard and page-visibility wiring for the transport, owned by the route. */
+export function useTransportInput(transport: ReplayTransport): void {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (transportKey(transport, event)) event.preventDefault();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") transport.hide();
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [transport]);
+}
