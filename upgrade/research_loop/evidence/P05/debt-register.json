@@ -50,5 +50,30 @@
       "reason": "Replacing legacy FastAPI paths mid-foundation would violate P05 compatibility scope."
     }
   ],
-  "interpretation": "The downstream gates are explicit phase ownership boundaries, not defects, waivers or hidden P05 technical debt."
+  "interpretation": "The downstream gates are explicit phase ownership boundaries, not defects, waivers or hidden P05 technical debt.",
+  "closure_notes": [
+    {
+      "gate_id": "P05-DG-01",
+      "as_of": "2026-09-23",
+      "state_now": "CLOSED",
+      "evidence": "P06 42c11667 — isolated child, durable scheduler/outbox, retry/cancel and whole-workload resource certification (evidence/P06/README.md).",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)"
+    },
+    {
+      "gate_id": "P05-DG-02",
+      "as_of": "2026-09-23",
+      "state_now": "NOT_CONSUMED",
+      "evidence": "The earlier HANDOFF_READY overstated the gate: no browser screen renders P05 artifacts (audit F-07). RF01-B3 c0166746 now publishes retained_artifacts on the P11 progress read in the authority's six-state vocabulary.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)",
+      "remaining": "Screen 03 must render retained_artifacts through ArtifactPanel (RF01-F6) before this gate closes."
+    },
+    {
+      "gate_id": "P05-DG-03",
+      "as_of": "2026-09-23",
+      "state_now": "CLOSED",
+      "evidence": "P10 394901d5 cut named producer/read operations over to the Control API; RF01-B1 a0d0004d removed the last legacy public Python atlas read.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)"
+    }
+  ],
+  "closure_notes_rule": "Append-only. explicit_downstream_gates keep their original phase-close state; the latest closure_notes entry per gate_id is the current state."
 }

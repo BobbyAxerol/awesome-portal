@@ -38,5 +38,30 @@
       "reason": "Claude completed the P01/P02 review; P02 now supplies the typed structural contract, but no browser/product implementation is inferred."
     }
   ],
-  "interpretation": "These are scoped future entry gates, not unresolved P02 implementation defects or waived requirements."
+  "interpretation": "These are scoped future entry gates, not unresolved P02 implementation defects or waived requirements.",
+  "closure_notes": [
+    {
+      "gate_id": "P02-DG-01",
+      "as_of": "2026-09-23",
+      "state_now": "CLOSED",
+      "evidence": "P07 406af6ae introduced the verified signed internal principal (apps/portal/backend/src/portal_api/auth/internal_principal.py); P10 394901d5 routes Research producer writes through it; RF01-B1 a0d0004d proves an unsigned internal read returns 401.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)"
+    },
+    {
+      "gate_id": "P02-DG-02",
+      "as_of": "2026-09-23",
+      "state_now": "CLOSED",
+      "evidence": "P04 9e79ec38 — evidence/P04/delta-real-data.json and resource-results.json record actual pinned QuantBT 1.1.1 Delta compute and resource evidence.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)"
+    },
+    {
+      "gate_id": "P02-DG-03",
+      "as_of": "2026-09-23",
+      "state_now": "PARTIAL",
+      "evidence": "S02 New Run shipped in P10 (de180d39); the p02-cursor.v2 server codec shipped in RF01-B4 c7cc1ceb.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)",
+      "remaining": "Walk-forward split_mode/window_mode controls are not rendered (RF02-B2/RF02-F2); the browser codec is still two modules (RF01-F5); S11 belongs to the P17–P21 campaign."
+    }
+  ],
+  "closure_notes_rule": "Append-only. explicit_downstream_gates keep their original phase-close state; the latest closure_notes entry per gate_id is the current state."
 }

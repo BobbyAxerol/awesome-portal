@@ -50,5 +50,30 @@
       "reason": "Codex did not edit frontend by owner rule."
     }
   ],
-  "interpretation": "Downstream gates are planned ownership boundaries, not P04 defects, waivers or hidden technical debt."
+  "interpretation": "Downstream gates are planned ownership boundaries, not P04 defects, waivers or hidden technical debt.",
+  "closure_notes": [
+    {
+      "gate_id": "P04-DG-01",
+      "as_of": "2026-09-23",
+      "state_now": "CLOSED",
+      "evidence": "P05 sealed durable writer, retention, quota, export and recovery (evidence/P05/README.md).",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)"
+    },
+    {
+      "gate_id": "P04-DG-02",
+      "as_of": "2026-09-23",
+      "state_now": "CLOSED",
+      "evidence": "Scheduler/worker admission: P06 42c11667; typed Research run producer and BFF: P10 394901d5.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)"
+    },
+    {
+      "gate_id": "P04-DG-03",
+      "as_of": "2026-09-23",
+      "state_now": "PARTIAL",
+      "evidence": "Screen 12 Engine Atlas shipped in 72204680 and consumes the P09 same-origin atlas read.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)",
+      "remaining": "Spec 12 is not complete: per mode×schedule claims/cert_cap/oos_use, objective terms, verbatim tabs and KaTeX are owned by RF02-B1/RF02-F1."
+    }
+  ],
+  "closure_notes_rule": "Append-only. explicit_downstream_gates keep their original phase-close state; the latest closure_notes entry per gate_id is the current state."
 }

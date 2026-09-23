@@ -37,5 +37,22 @@
       "reason": "P03 records opaque artifact metadata only; it never writes artifact bytes."
     }
   ],
-  "interpretation": "The downstream gates are future phase entry criteria, not unresolved P03 defects, waivers or hidden technical debt."
+  "interpretation": "The downstream gates are future phase entry criteria, not unresolved P03 defects, waivers or hidden technical debt.",
+  "closure_notes": [
+    {
+      "gate_id": "P03-DG-01",
+      "as_of": "2026-09-23",
+      "state_now": "CLOSED",
+      "evidence": "Principal: P07 406af6ae; engine adapter: P04 9e79ec38; scheduler/worker: P06 42c11667; named BFF/browser DTOs: P09 f022b3e8, P10 394901d5, P11 31f7fba8.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)"
+    },
+    {
+      "gate_id": "P03-DG-02",
+      "as_of": "2026-09-23",
+      "state_now": "CLOSED",
+      "evidence": "Artifact bytes, sealed writer and retention: P05 (evidence/P05/phase-report.md); durable scheduler recovery: P06 42c11667.",
+      "recorded_by": "RF01-B5 (Claude, audit AUDIT_P01_P05_CLAUDE_2026-09-23.md B-06)"
+    }
+  ],
+  "closure_notes_rule": "Append-only. explicit_downstream_gates keep their original phase-close state; the latest closure_notes entry per gate_id is the current state."
 }
