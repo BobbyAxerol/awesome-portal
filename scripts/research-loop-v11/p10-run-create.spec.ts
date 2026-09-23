@@ -331,8 +331,55 @@ describe("Research Loop P10 · New Run durable producer", () => {
       preflight_token: "rpft_p10_unsupported_manifest",
       requested_spec: unsupported,
     }, "p10-unsupported-current"), "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE");
+    const unexecutedMode = requested({ optimization_mode: "mode_2_plateau" });
+    await seedManifest(repository, scope, unexecutedMode, "rpft_p10_mode_manifest");
+    await expectP10Error(service.create(admin, scope, {
+      ...base,
+      client_intent_id: "p10-mode-unsupported",
+      preflight_token: "rpft_p10_mode_manifest",
+      requested_spec: unexecutedMode,
+    }, "p10-mode-unsupported"), "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE");
     expect(proxy.calls).toHaveLength(0);
     expect((await pool.query(`SELECT * FROM research.run_producers`)).rowCount).toBe(0);
+  });
+
+  it("RF-03 CG-P10-03: distinguishes imported DRAFT and ACTIVE unbound versions", async () => {
+    await seedIdentity(pool);
+    await pool.query(
+      `INSERT INTO research.alphas (workspace_id, alpha_id, name, owner_user_id, execution_subject_id)
+       VALUES ($1, 'imported-alpha', 'Imported Alpha', $2, 'research:imported-alpha')`,
+      [scope.workspaceId, scope.actorUserId],
+    );
+    await pool.query(
+      `INSERT INTO research.alpha_versions
+         (workspace_id, alpha_version_id, alpha_id, code_digest, entrypoint,
+          dependency_ref, declared_contract, lifecycle_state, registered_by_user_id)
+       VALUES ($1, 'av_imported_1', 'imported-alpha', $2, 'generate',
+               'research.alpha-source.v1', '{}'::jsonb, 'DRAFT', $3)`,
+      [scope.workspaceId, "a".repeat(64), scope.actorUserId],
+    );
+    const spec = requested({
+      alpha_binding: { alpha_id: "imported-alpha", alpha_version_id: "av_imported_1" },
+      strategy_id: "imported-alpha",
+    });
+    await seedManifest(repository, scope, spec, "rpft_p10_imported_manifest");
+    const proxy = new FakePrivatePortalProxy();
+    const service = createService(repository, proxy);
+    const input = {
+      schema_version: "research.run-create.v1" as const,
+      client_intent_id: "p10-imported-denied",
+      preflight_token: "rpft_p10_imported_manifest",
+      requested_spec: spec,
+      intent_kind: "NEW" as const,
+    };
+    await expectP10Error(service.create(admin, scope, input, "p10-imported-draft"), "RESEARCH_RUN_ALPHA_NOT_ACTIVE");
+    await pool.query(
+      `UPDATE research.alpha_versions SET lifecycle_state = 'ACTIVE'
+        WHERE workspace_id = $1 AND alpha_version_id = 'av_imported_1'`,
+      [scope.workspaceId],
+    );
+    await expectP10Error(service.create(admin, scope, input, "p10-imported-active"), "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE");
+    expect(proxy.calls).toHaveLength(0);
   });
 
   it("P10-T11/T12: transport-unknown leaves one recoverable intent and a later exact retry takes a fresh fenced lease", async () => {

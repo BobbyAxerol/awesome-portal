@@ -1340,7 +1340,7 @@ export class ResearchMetadataRepository {
         `SELECT version.alpha_id, version.alpha_version_id, version.lifecycle_state,
                 version.declared_contract, binding.adapter_id, binding.contract_digest
            FROM research.alpha_versions version
-           JOIN research.execution_adapter_bindings binding
+           LEFT JOIN research.execution_adapter_bindings binding
              ON binding.workspace_id = version.workspace_id
             AND binding.alpha_version_id = version.alpha_version_id
           WHERE version.workspace_id = $1

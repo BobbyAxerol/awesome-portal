@@ -165,6 +165,9 @@ export class ResearchRunAdmissionService {
     if (requested.execution_route !== "signal_notional" || requested.protocol !== "three_window_decay") {
       return "The installed Delta adapter currently accepts only the signal-notional three-window profile.";
     }
+    if (requested.optimization_mode !== "mode_1_decay" || requested.optimization_schedule !== "global") {
+      return "The installed fixed Delta adapter does not execute the requested optimization mode or schedule.";
+    }
     if (requested.route_params && Object.keys(requested.route_params).length !== 0) {
       return "The installed Delta adapter does not accept route-specific parameters in this release.";
     }
