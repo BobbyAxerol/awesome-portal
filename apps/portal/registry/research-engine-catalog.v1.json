@@ -349,7 +349,7 @@
           "source": [
             {
               "path": "quantbt/walkforward.py",
-              "lines": "532-545",
+              "lines": "532-548",
               "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
               "anchor": "causal Mode 1 requires inner_split_frequency, inner_window_mode,"
             }
@@ -524,6 +524,34 @@
       "mode_id": "mode_2_sbb",
       "display_name": "Stationary bootstrap robustness",
       "valid_schedules": ["global"],
+      "invalid_schedules": [
+        {
+          "schedule": "per_fold_decay",
+          "admission": "NOT_ADMITTED",
+          "reason": "QuantBT 1.1.1 permits per_fold_decay only for mode_1_decay with robust_decay; this mode is rejected by the pinned engine.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "522-530",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "optimization_schedule='per_fold_decay' currently requires"
+            }
+          ]
+        },
+        {
+          "schedule": "per_fold_causal",
+          "admission": "NOT_ADMITTED",
+          "reason": "QuantBT 1.1.1 permits per_fold_causal only for mode_1_decay with nested inner validation or mode_4_is_only_robust; this mode is rejected by the pinned engine.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "532-536",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "optimization_schedule='per_fold_causal' currently requires"
+            }
+          ]
+        }
+      ],
       "default_schedule": "global",
       "objective_summary": "Scores an IS-only stationary bootstrap robustness estimate.",
       "suspect": "Bootstrap confidence is not out-of-sample proof.",
@@ -651,6 +679,34 @@
       "mode_id": "mode_3_flat_minima",
       "display_name": "Flat minima",
       "valid_schedules": ["global"],
+      "invalid_schedules": [
+        {
+          "schedule": "per_fold_decay",
+          "admission": "NOT_ADMITTED",
+          "reason": "QuantBT 1.1.1 permits per_fold_decay only for mode_1_decay with robust_decay; this mode is rejected by the pinned engine.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "522-530",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "optimization_schedule='per_fold_decay' currently requires"
+            }
+          ]
+        },
+        {
+          "schedule": "per_fold_causal",
+          "admission": "NOT_ADMITTED",
+          "reason": "QuantBT 1.1.1 permits per_fold_causal only for mode_1_decay with nested inner validation or mode_4_is_only_robust; this mode is rejected by the pinned engine.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "532-536",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "optimization_schedule='per_fold_causal' currently requires"
+            }
+          ]
+        }
+      ],
       "default_schedule": "global",
       "objective_summary": "Selects a stable plateau rather than a single sharp optimum.",
       "suspect": "A centroid can be unevaluated and must not be silently promoted as a trial.",
@@ -787,6 +843,21 @@
       "mode_id": "mode_4_is_only_robust",
       "display_name": "IS-only robust",
       "valid_schedules": ["global", "per_fold_causal"],
+      "invalid_schedules": [
+        {
+          "schedule": "per_fold_decay",
+          "admission": "NOT_ADMITTED",
+          "reason": "QuantBT 1.1.1 permits per_fold_decay only for mode_1_decay with robust_decay; this mode is rejected by the pinned engine.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "522-530",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "optimization_schedule='per_fold_decay' currently requires"
+            }
+          ]
+        }
+      ],
       "default_schedule": "global",
       "objective_summary": "Combines robust IS subperiod statistics with explicit penalties.",
       "suspect": "Good central tendency with high temporal dispersion is a warning, not a pass.",
@@ -926,6 +997,34 @@
       "mode_id": "mode_5_full_robust",
       "display_name": "Full-sample robust",
       "valid_schedules": ["global"],
+      "invalid_schedules": [
+        {
+          "schedule": "per_fold_decay",
+          "admission": "NOT_ADMITTED",
+          "reason": "QuantBT 1.1.1 permits per_fold_decay only for mode_1_decay with robust_decay; this mode is rejected by the pinned engine.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "522-530",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "optimization_schedule='per_fold_decay' currently requires"
+            }
+          ]
+        },
+        {
+          "schedule": "per_fold_causal",
+          "admission": "NOT_ADMITTED",
+          "reason": "QuantBT 1.1.1 permits per_fold_causal only for mode_1_decay with nested inner validation or mode_4_is_only_robust; this mode is rejected by the pinned engine.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "532-536",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "optimization_schedule='per_fold_causal' currently requires"
+            }
+          ]
+        }
+      ],
       "default_schedule": "global",
       "objective_summary": "Calibrates robustness on the full supplied sample.",
       "suspect": "Full-sample selection must never be described as OOS evidence.",

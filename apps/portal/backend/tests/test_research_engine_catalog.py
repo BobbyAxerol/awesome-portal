@@ -337,6 +337,15 @@ def test_catalog_rejects_route_factory_drift_before_runtime_dispatch(tmp_path: P
 
 def test_p04_t03_valid_and_invalid_mode_schedule_pairs_are_explicit() -> None:
     service = _service()
+    schedules = {"global", "per_fold_decay", "per_fold_causal"}
+    for mode in service.catalog.modes:
+        invalid = {item.schedule for item in mode.invalid_schedules}
+        assert set(mode.valid_schedules) | invalid == schedules
+        assert not (set(mode.valid_schedules) & invalid)
+        assert all(item.admission == "NOT_ADMITTED" and item.reason and item.source for item in mode.invalid_schedules)
+        for item in mode.invalid_schedules:
+            with pytest.raises(ResearchEngineCatalogError, match="not valid"):
+                service.validate_mode_schedule(mode_id=mode.mode_id, schedule=item.schedule)
     mode_one = next(mode for mode in service.catalog.modes if mode.mode_id == "mode_1_decay")
     causal = next(item for item in mode_one.invalid_schedules if item.schedule == "per_fold_causal")
     assert causal.admission == "NOT_ADMITTED"
@@ -587,6 +596,8 @@ def test_rf02_t01_every_mode_fact_locator_matches_the_pinned_package() -> None:
             locators.extend(fact.source)
             assert fact.cert_cap.source is not None
             locators.append(fact.cert_cap.source)
+        for invalid in mode.invalid_schedules:
+            locators.extend(invalid.source)
         for group in (facts.objective, facts.reads):
             locators.extend(getattr(group, "source", ()) or ())
     assert locators
