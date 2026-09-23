@@ -1,0 +1,59 @@
+{
+  "phase": "P17",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-09-23",
+  "tree": "002e4098ff996dead286e5c4af5241d2524b2c48",
+  "workspace": { "user": "thanhvuong", "uid": 1001, "branch": "feat/thanhvuong/research-p17-p21", "remote": "primus-origin", "node": "v20.20.2", "playwright": "1.62.1" },
+  "lane_note": "Unit and build results are real executions in the workspace. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the replay API stubbed from the contract spec shape (no canonical fixture: CG-P17-01). No REAL_API_E2E_RECEIPT: FEATURE_RESEARCH_REPLAY=false.",
+  "results": [
+    { "gate": "scripts/verify-contributor-workspace.sh", "result": "PASS", "exit": 0 },
+    { "gate": "npm --prefix packages/contracts run generate:research-replay", "result": "PASS", "exit": 0, "note": "openapi-typescript 7.13.0; git status packages/contracts clean" },
+    { "gate": "apps/portal/frontend npx tsc -b --noEmit", "result": "PASS", "exit": 0 },
+    { "gate": "apps/portal/frontend npm run build", "result": "PASS", "exit": 0, "note": "only the pre-existing chunk-size warning" },
+    { "gate": "apps/portal/frontend npx vitest run (full)", "result": "PASS", "exit": 0, "counts": "169 files, 2971 passed, 1 skipped" },
+    { "gate": "apps/portal/frontend npx vitest run src/research/executeReplay.test.tsx", "scope": "S08-U01..U08", "result": "PASS", "exit": 0, "counts": "36/36" },
+    { "gate": "playwright -c <temp probe config, own preview 127.0.0.1:4417> --workers=1", "scope": "all Research probes: 82 existing + 22 S08", "result": "PASS", "exit": 0, "counts": "104/104" },
+    { "gate": "playwright S08 probe (temp, not committed)", "scope": "10 states x 1280/660, loading, deep link, playback, keys, hidden tab, seek, windows, pin + 409 recovery, retained lane, reload, hub/S07 links", "result": "PASS", "exit": 0, "counts": "22/22; 20/20 state shots overflow 0 noise 0" },
+    { "gate": "playwright all Research probes --workers=2", "result": "FAIL_OUTSIDE_DIFF", "exit": 1, "counts": "102 passed, 2 failed", "note": "S01 'keeps its filters…' (1.0m timeout) and S06 'points at no trial' under load; both pass alone 2/2; files not touched by P17" },
+    { "gate": "bash .githooks/pre-commit (manual)", "scope": "before every P17 commit", "result": "PASS", "exit": 0 },
+    { "gate": "bash .githooks/pre-push (manual)", "scope": "push 21f9a98b..7958f3f0", "result": "PASS", "exit": 0 },
+    { "gate": "git diff --check 21f9a98b HEAD", "result": "PASS", "exit": 0 }
+  ],
+  "not_run": [
+    { "gate": "REAL_API_E2E_RECEIPT", "reason": "backend feature-dark; RF-02 real-API lane (playwright.research-preview.config.ts) exists only on the moved baseline" },
+    { "gate": "axe", "reason": "axe-core not in this branch's lock file; Bobby decides (as P16)" },
+    { "gate": "focus-ring style measurement on transport buttons", "reason": "keys asserted in unit + browser; style not measured" }
+  ],
+  "evidence_store": {
+    "location": "~/tv-shots/p17/ and ~/tv-shots/p17-receipt/ in the thanhvuong workspace (not committed, A4.1)",
+    "sha256_prefix": {
+      "p17-hifi-08-1280.png": "959b04f135ac70b3",
+      "p17-hifi-08-660.png": "073177f46e8bba0b",
+      "p17-full-1280.png": "a6063745decbc1f9",
+      "p17-full-660.png": "9200ecf757ba26bb",
+      "p17-sampled-1280.png": "6ce7f572d5dfef81",
+      "p17-sampled-660.png": "8c88b1cb2f803d03",
+      "p17-pending_source_callback-1280.png": "20dc90c398b036b6",
+      "p17-pending_source_callback-660.png": "5e884c9a88ccd585",
+      "p17-legacy_metadata_only-1280.png": "e140be028c3e3cc8",
+      "p17-legacy_metadata_only-660.png": "80f140ccc1927f63",
+      "p17-not_published-1280.png": "1a8520047447fe3c",
+      "p17-not_published-660.png": "198a52415d095a80",
+      "p17-refusal-400-1280.png": "1261abe14f0ddc33",
+      "p17-refusal-400-660.png": "6a729fb4c63cec54",
+      "p17-refusal-401-1280.png": "bb453c5a5d4c3c42",
+      "p17-refusal-401-660.png": "3af7e2facab05abb",
+      "p17-refusal-403-1280.png": "54d22c0f7039d607",
+      "p17-refusal-403-660.png": "f403fbee6be3e9e6",
+      "p17-refusal-404-1280.png": "f6e8d40916a33241",
+      "p17-refusal-404-660.png": "6eaf69dc7b8733a5",
+      "p17-refusal-503-1280.png": "6f2e57439739374b",
+      "p17-refusal-503-660.png": "be40113bb4a139e2",
+      "p17-loading-1280.png": "970e84106fa15f88",
+      "p17-loading-660.png": "8cef24904e93b1dc",
+      "p17-interaction-1280.png": "52991788afbba4ac",
+      "probe.log (41 lines)": "6587d36e9ed74d16"
+    }
+  },
+  "known_flake": "src/app/PortalShell.test.tsx (P16 addendum §3.3) did not reproduce in these runs."
+}

@@ -1,18 +1,47 @@
 # P17 — Thanhvuong frontend receipt (Screen 08 S4 Execute Replay)
 
-**Trạng thái:** `P17-A S08 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · chưa push`.
+**Trạng thái:** `P17-A S08 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · đã push lên primus-origin, chưa PR`.
 **P17-B không done**: vẫn `SOURCE_CAPABILITY_BLOCKED` theo
 [capability matrix](./source-capability-matrix.md). Receipt này chỉ ghi lại
 thay đổi và evidence. Nó không đổi rule, không đổi contract, không đổi phase
 gate, và không gọi P17 là `VERIFIED`.
 
-Đã đọc (`READ`) trước khi làm: `CLAUDE-FOR-thanhvuong.md` A4/A4.1/A5/A13,
-[frontend handoff P17](./frontend-handoff-claude.md) (kể cả amendment RS-01 và
-RS-02), [capability matrix](./source-capability-matrix.md), Guide §P17
-(`P17-T01…T14`), spec `release-v1.1/docs/screens/08_s4_execute.md`, hi-fi
-`QuantBT 08 S4 Execute Replay.dc.html` mở trong trình duyệt ở 1280/660,
-`research-replay.openapi.json` + `generated/research-replay.d.ts`. Theo
-CLAUDE.md: tận dụng QuantBT v1.1 hiện có và bám hi-fi.
+## 0. Packet và những gì đã đọc
+
+**Packet P17 của Thanhvuong** (cả năm file nằm cạnh file này):
+
+| File | Nội dung |
+|---|---|
+| `thanhvuong-frontend-receipt.md` | receipt này: git, file, mapping hi-fi, evidence, discrepancy, kết luận |
+| [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md) | receipt backend request: `CG-P17-01…03` theo template CLAUDE.md §5 + locator/actual/expected/đề xuất/test, 8 hàng P17-B, việc Bobby quyết, trạng thái kiểm lại ngày 2026-09-23 |
+| [thanhvuong-test-results.json](./thanhvuong-test-results.json) | evidence máy đọc được: từng gate, lệnh, exit, số đếm, gate chưa chạy, SHA-256 ảnh/log |
+| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | debt trong scope (rỗng), lỗi đã sửa trong phase, request mở, downstream gate |
+| [thanhvuong-rollback.md](./thanhvuong-rollback.md) | revert từng commit, theo thứ tự mới nhất trước |
+
+Dòng trạng thái ở Unified §13 và implementation note dưới
+[`#rl-p17`](../../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-p17) trỏ về packet này.
+
+**Đã đọc (`READ`), theo CLAUDE.md §7.9** (commit = commit cuối chạm file đó):
+
+| File | Commit trên nhánh | Commit trên baseline `e39bacfa` |
+|---|---|---|
+| `CLAUDE.md` (§3, §5, §7) | `8ca7bc11` | `8ca7bc11` |
+| `upgrade/research_loop/CLAUDE-FOR-thanhvuong.md` (A4, A4.1, A5, A13) | `30fb9f21` | `30fb9f21` |
+| `upgrade/research_loop/THANHVUONG_P17_P21_FRONTEND_HANDOFF.md` | `30fb9f21` | **`51b11247`** (addendum RF-01 + RF-02; áp dụng ở `002e4098`, §7) |
+| `upgrade/UNIFIED_IMPLEMENTATION_PLAN.md` §13 board, `#rl-p17`, `#rl-p13-p17-audit`, `#rl-rs-01…03` | `7958f3f0` | `e39bacfa` (thêm RF-01/RF-02; không đổi `#rl-p17`) |
+| `evidence/P17/frontend-handoff-claude.md` (kể cả amendment RS-01, RS-02) | `b64b862b` | `b64b862b` |
+| `evidence/P17/source-capability-matrix.md`, `evidence/P17/README.md` | `742b1e9d` | `742b1e9d` |
+| `evidence/RS-01/frontend-handoff-claude.md` | `31f7fba8` | `31f7fba8` |
+| `evidence/RS-02/frontend-handoff-claude.md`, `field-action-coverage-matrix.md` | `b64b862b` | `b64b862b` |
+| `P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md` | `b64b862b` | `b64b862b` |
+| `RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md` §P17 (`P17-T01…T14`) | `a402f7b9` | `a402f7b9` |
+| `release-v1.1/docs/screens/08_s4_execute.md` | `a402f7b9` | `a402f7b9` |
+| `release-v1.1/QuantBT 08 S4 Execute Replay.dc.html`, mở trong browser ở 1280/660 | `a402f7b9` | `a402f7b9` |
+| `evidence/RF-01/README.md`, `evidence/RF-02/README.md` | — (chưa có trên nhánh) | `952ad48f`, `e39bacfa` |
+| `packages/contracts/openapi/research-replay.openapi.json` + `generated/research-replay.d.ts` | không đổi giữa hai bên | |
+
+`READ` khác `IMPLEMENTED` khác `VERIFIED` (A4.1). Tận dụng QuantBT v1.1 hiện
+có và bám hi-fi: xem §4, §4.1, §10.
 
 ## 1. Git: base, head, branch
 
@@ -21,28 +50,28 @@ CLAUDE.md: tận dụng QuantBT v1.1 hiện có và bám hi-fi.
 | Branch | `feat/thanhvuong/research-p17-p21`, remote duy nhất là `primus-origin` |
 | Base campaign (provisioned) | `30fb9f21473bfa4cd1bd6baecb4b927f2ad8d196` |
 | Base của P17 | `21f9a98b39994f99b2f1366be9227617ecd55011` (docs P16 addendum) |
-| Commit P17 (chưa push) | `b55aed4cff62ec69ce9f3dec51e9779f6d22726b` feat S08 screen · `737d279da27a2a98797cbfdf5fafb8f4e13ec7ad` route + link · `9ee852414a83c7ab5904d42dbf249e7c5e25c6e6` đổi nhãn test · `3cf70794c04c3a7459afdd4399e62cfb83381cef` thêm panel PnL distribution của hi-fi (sửa sau khi so ảnh, §4.1) |
-| Docs commit | `a4c375f5` (bản đầu) và commit cập nhật file này sau `3cf70794`, cùng một dòng P17 trong Unified §13 |
-| Baseline mới | `docs/research-loop-plan` đã tiến `30fb9f21` → `952ad48f75d6bd6757d3359fd127a889a92e28f4` (12 commit, không phải con của `21f9a98b`). **Chưa merge/rebase**. Bobby quyết cách tích hợp (§6) |
-| Push / PR | chưa. Chỉ push khi Bobby yêu cầu; PR vào `docs/research-loop-plan`, không merge/rebase/force-push |
+| Commit code P17 | `b55aed4c` feat S08 screen · `737d279d` route + link · `9ee85241` đổi nhãn test · `3cf70794` thêm panel PnL distribution của hi-fi (§4.1) · `002e4098ff996dead286e5c4af5241d2524b2c48` refusal S08 theo mapper chung RF-01/RF-02 (§7) |
+| Docs commit | `a4c375f5` (receipt đầu) · `7958f3f0` (so hi-fi) · commit chứa packet đầy đủ này, implementation note `#rl-p17` và rule CLAUDE.md §7.10 |
+| Baseline mới | `docs/research-loop-plan` đã tiến `30fb9f21` → `e39bacfa7da68c7af6322b82da96d653cffbe4ba` (qua `952ad48f`; không phải con của `21f9a98b`). **Chưa merge/rebase**. Bobby quyết cách tích hợp (§6) |
+| Push / PR | Đã push `21f9a98b..7958f3f0` theo yêu cầu (pre-push chạy tay exit 0); packet này push tiếp. Chưa PR; PR vào `docs/research-loop-plan` khi Bobby yêu cầu, không merge/rebase/force-push |
 
-## 2. File đã sửa (`git diff --numstat 21f9a98b 3cf70794 -- apps/portal/frontend`)
+## 2. File đã sửa (`git diff --numstat 21f9a98b 002e4098 -- apps/portal/frontend`)
 
 | File | + | − | Mục đích |
 |---|---:|---:|---|
-| `src/research/replayClient.ts` | 298 | 0 | Hai operation: `researchReplayDetailGetV1` và `researchCurrentSourceReplayGetV1`. Type lấy từ generated. Word maps, 13 capability keys, copy cố định cho refusal, `toReplayRefusal`, `replayState` |
+| `src/research/replayClient.ts` | 307 | 0 | Hai operation: `researchReplayDetailGetV1` và `researchCurrentSourceReplayGetV1`. Type lấy từ generated. Word maps, 13 capability keys, copy cố định cho refusal, `toReplayRefusal`, `replayState` |
 | `src/research/replayTransport.ts` | 183 | 0 | Transport store ngoài React (`useSyncExternalStore`): play/pause/step/seek/speed chỉ chạy trên sample đã tải, rAF có scheduler inject được, dừng ở cuối window, tự pause khi tab ẩn |
 | `src/research/useReplay.ts` | 180 | 0 | Đọc window: một GET khi vào, một token điều hướng mỗi lần đọc, 409 → bỏ token và hồi phục **đúng một lần**, lane retained chỉ đọc khi người dùng bấm |
 | `src/research/ExecuteDetail.tsx` | 878 | 0 | Bố cục Screen 08 theo hi-fi (§4) |
 | `src/research/ExecuteRoute.tsx` | 40 | 0 | Route trên cursor chung; `seq` trong hash = ordinal + 1, chỉ ghi khi playhead dừng |
-| `src/research/executeReplay.test.tsx` | 553 | 0 | 34 test, nhóm `S08-U01…U08` |
+| `src/research/executeReplay.test.tsx` | 571 | 0 | 36 test, nhóm `S08-U01…U08` |
 | `src/features/quantbt/QuantBTModule.tsx` | 5 | 1 | Mount `runs/:runId/execute`; loại `execute` khỏi lookup `/api/runs/:id` cũ (lookup này trả 501) |
 | `src/research/EvidenceFlow.tsx` | 1 | 1 | Stage 4 deep dive trỏ tới `execute` |
 | `src/research/FreezeDetail.tsx` | 10 | 0 | Breadcrumb S07 thêm link `next: S4 Execute →` (spec 07 dòng 18) |
 | `src/research/evidenceFlow.test.tsx` | 3 | 8 | Test hub: đủ bốn stage có link, tính cả Execute |
 | `src/research/researchBoundary.test.ts` | 1 | 0 | Thêm `replayClient.ts` vào danh sách module được gọi mạng |
 | `tsconfig.json` | 3 | 0 | Alias `@portal/contracts-research-replay` |
-| **Tổng** | **2155** | **10** | 12 file, tất cả thuộc `apps/portal/frontend/**` |
+| **Tổng** | **2182** | **10** | 12 file, tất cả thuộc `apps/portal/frontend/**` |
 
 Không đụng backend, `packages/contracts/**`, OpenAPI, fixture canonical,
 migration, `apps/portal/strategy/**`, control-plane, `package.json` hay lock
@@ -82,7 +111,7 @@ Viewport 1280 và 660. "Browser" = probe trên product route; "Unit" = vitest.
 | 13 route capability | `CapabilityGap` | `route_capabilities` (13 khoá) | `NOT_PUBLISHED` + reason code P04 | Browser `CAPS 13` ở 1280/660; Unit U04 |
 | State at playhead | `StateAtCursor` | `state_at_cursor.*`, `.execution_state` | `NOT_SELECTED` nếu không gửi `at`/`at_ordinal` | Unit U02: execution state in là "not published" |
 | Source absences | `SourceAbsences` | `source_absences.execution_state`, `.cross_stream_order` | `NOT_PUBLISHED`, `NOT_ASSERTED` | Unit U04 |
-| Retained model replay (RS-02) | `RetainedReplayPanel` | `researchCurrentSourceReplayGetV1` | chỉ đọc khi bấm; 404/409 → `RETAINED_NOT_ADMITTED` | Browser RETAINED; Unit U07 (lazy) |
+| Retained model replay (RS-02) | `RetainedReplayPanel` | `researchCurrentSourceReplayGetV1` | chỉ đọc khi bấm; 409 → `unavailable` + `RETAINED_NOT_RETAINED` (câu của mapper chung); 404 → `empty` + `RETAINED_NOT_FOUND` | Browser RETAINED; Unit U07 (lazy) |
 | Route state khác | `ResearchPanel` | `route.state` | pending / legacy / not published → `unavailable`, giữ shell | Browser 3 state ×2 viewport; Unit U05 |
 | Loading | `ResearchPanel aria-busy` | — | `loading` | Browser LOADING `busy=1 windows=0 zero=false` ở 1280/660; Unit U06 |
 | Refusal 400/401/403/404/409/503 | `toReplayRefusal` | status + `error.code` | terminal / denied / denied / empty / stale / unavailable | Browser 5 status ×2 viewport; Unit U06: không in prose của server |
@@ -125,15 +154,15 @@ không có field nào để vẽ, và vẽ ra sẽ là dữ liệu bịa.
 | `./scripts/verify-contributor-workspace.sh` | exit 0 |
 | Hook active | **Không** (`core.hooksPath` không đặt, như đã ghi ở P16 addendum §3.1). Bù bằng chạy tay, xem §5.5 |
 
-### 5.2 Test lanes (`apps/portal/frontend`, Node v20.20.2, tree = `3cf70794`)
+### 5.2 Test lanes (`apps/portal/frontend`, Node v20.20.2, tree = `002e4098`)
 
 | Lane | Lệnh | Exit | Kết quả |
 |---|---|---:|---|
 | Typecheck | `npx tsc -b --noEmit` | 0 | PASS |
 | Build | `npm run build` | 0 | PASS (chỉ có cảnh báo chunk size, đã có từ trước) |
-| Unit toàn bộ | `npx vitest run` | 0 | **169 file · 2969 pass · 1 skip**, chạy trên cả `9ee85241` và `3cf70794`. Flake `PortalShell` ghi ở P16 §3.3 không tái hiện lần này |
-| Unit S08 | `npx vitest run src/research/executeReplay.test.tsx` | 0 | 34/34 |
-| Browser toàn Research, 1 worker | `playwright test -c <probe config 127.0.0.1:4417> --workers=1` | 0 | **104/104 PASS** (82 test có sẵn + 22 test probe S08), chạy lại trên `3cf70794` |
+| Unit toàn bộ | `npx vitest run` | 0 | **169 file · 2971 pass · 1 skip** trên `002e4098` (2969 trên `9ee85241`/`3cf70794`). Flake `PortalShell` ghi ở P16 §3.3 không tái hiện lần này |
+| Unit S08 | `npx vitest run src/research/executeReplay.test.tsx` | 0 | 36/36 |
+| Browser toàn Research, 1 worker | `playwright test -c <probe config 127.0.0.1:4417> --workers=1` | 0 | **104/104 PASS** (82 test có sẵn + 22 test probe S08), chạy lại trên `3cf70794` và `002e4098` |
 | Browser toàn Research, 2 worker | cùng lệnh, `--workers=2` | 1 | 102 pass, 2 fail: `S01 keeps its filters…` (timeout 1.0m) và `S06 points at no trial`. Hai test này nằm ngoài diff P17. Chạy riêng thì pass 2/2. Ghi lại, không vá |
 
 Playwright 1.62.1, Chromium headless. Preview là `vite preview` riêng của
@@ -151,7 +180,8 @@ theo shape trong `apps/control-api/test/research-replay.contract.spec.ts` và
 |---|---|
 | full, sampled | `partial`, overflow 0, noise 0, đúng 1 GET khi vào |
 | pending_source_callback, legacy_metadata_only, not_published | `unavailable`, giữ shell, overflow 0, noise 0, 1 GET |
-| 400 / 401 / 403 / 404 / 503 | terminal / denied / denied / empty / unavailable, overflow 0, noise 0, 1 GET, **không in prose của server** (stub gửi `/private/x`, không lên màn) |
+| 400 / 401 / 403 / 404 / 503 | terminal / denied / denied / empty / unavailable, overflow 0, noise 0, 1 GET, **không in prose của server** (stub gửi `/private/x`, không lên màn). 403 trung tính: không xác nhận run tồn tại (F-04) |
+| Retained lane, 409 `RESEARCH_CURRENT_SOURCE_CONFLICT` | câu "No sealed retained source exists for this run yet — it is pending retention…", đúng câu của mapper chung |
 | loading | `aria-busy`, 0 window, không có số 0, overflow 0 |
 | Deep link `#…seq=46` | request đầu `at_ordinal=45`; readout "sample 46 of 240" |
 | Playback 4× | 0 request khi đang chạy; hash giữ `seq=46` khi chạy, thành `seq=65` sau khi pause |
@@ -172,12 +202,12 @@ Screenshot và log **không commit** (A4.1). Nằm ở `~/tv-shots/p17/` và
 | `p17-legacy_metadata_only-1280.png` | `e140be028c3e3cc8` | `…-660.png` | `80f140ccc1927f63` |
 | `p17-not_published-1280.png` | `1a8520047447fe3c` | `…-660.png` | `198a52415d095a80` |
 | `p17-refusal-400-1280.png` | `1261abe14f0ddc33` | `…-660.png` | `6a729fb4c63cec54` |
-| `p17-refusal-401-1280.png` | `269cb2d887534871` | `…-660.png` | `3af7e2facab05abb` |
-| `p17-refusal-403-1280.png` | `13656a437d9f17b7` | `…-660.png` | `ba7a187afa1b02d5` |
+| `p17-refusal-401-1280.png` | `bb453c5a5d4c3c42` | `…-660.png` | `3af7e2facab05abb` |
+| `p17-refusal-403-1280.png` | `54d22c0f7039d607` | `…-660.png` | `f403fbee6be3e9e6` |
 | `p17-refusal-404-1280.png` | `f6e8d40916a33241` | `…-660.png` | `6eaf69dc7b8733a5` |
 | `p17-refusal-503-1280.png` | `6f2e57439739374b` | `…-660.png` | `be40113bb4a139e2` |
-| `p17-loading-1280.png` | `a4be160e70bd593f` | `p17-loading-660.png` | `8cef24904e93b1dc` |
-| `p17-interaction-1280.png` | `52991788afbba4ac` | `probe.log` (41 dòng) | `033d10f3b0762c91` |
+| `p17-loading-1280.png` | `970e84106fa15f88` | `p17-loading-660.png` | `8cef24904e93b1dc` |
+| `p17-interaction-1280.png` | `52991788afbba4ac` | `probe.log` (41 dòng) | `6587d36e9ed74d16` |
 | hi-fi `p17-hifi-08-1280.png` | `959b04f135ac70b3` | hi-fi `p17-hifi-08-660.png` | `073177f46e8bba0b` |
 | `p17-product-execute-1280.png` (trước `3cf70794`) | `d0d6ebe8bebc6bd3` | `p17-product-execute-660.png` (trước `3cf70794`) | `9ac4ff35e74d8db9` |
 
@@ -196,13 +226,13 @@ Screenshot và log **không commit** (A4.1). Nằm ở `~/tv-shots/p17/` và
 |---|---|---|
 | `b55aed4c`, `737d279d`, `9ee85241` | `bash .githooks/pre-commit` trên index trước mỗi commit | exit 0 cả ba lần |
 | Range `21f9a98b..9ee85241` | `git diff --check` | exit 0 |
-| Docs commit này | `bash .githooks/pre-commit` trên index | exit 0 |
-| pre-push | chưa chạy, vì chưa push. Sẽ chạy tay trước khi push theo lệnh Bobby |
+| Docs commit (`a4c375f5`, `7958f3f0`, packet này) | `bash .githooks/pre-commit` trên index | exit 0 |
+| Push `21f9a98b..7958f3f0` và push packet này | `printf '<ref> <sha> <ref> <sha>' \| bash .githooks/pre-push primus-origin <url>` | exit 0 |
 
 ## 6. Baseline mới và xung đột (Bobby quyết)
 
 Kiểm bằng `git merge-file` từng file trên ba bản `30fb9f21` / `HEAD` /
-`952ad48f`, không merge thật:
+`952ad48f` (kiểm lại ở `e39bacfa`: RF-02 không chạm các file này), không merge thật:
 
 | File | Kết quả |
 |---|---|
@@ -214,7 +244,9 @@ Việc phải làm khi tích hợp, sau khi Bobby chọn cách (merge/rebase do 
 hoặc cho phép):
 
 1. `toReplayRefusal` → `toResearchRefusal` + `RefusalNote` của baseline
-   (`researchRefusal.ts:127`). Copy S08 đã gom vào một hàm để đổi một chỗ.
+   (`researchRefusal.ts:127`), và thêm mã `RESEARCH_REPLAY_*` vào `SURFACE_CODES`
+   (addendum RF-01). Copy S08 đã gom vào một hàm và đã khớp câu của mapper
+   (`002e4098`), nên lúc đổi không đổi chữ trên màn.
 2. Nút `reread replay` của S08 chuyển từ prop `actions` sang `recovery`.
    Ở baseline, `actions` chỉ hiện ở state có nội dung, nên nếu giữ nguyên thì
    nút đọc lại sẽ mất ở `unavailable`.
@@ -230,6 +262,8 @@ hoặc cho phép):
 | Nhãn test | — | Guide định nghĩa `P17-T01…T14` với nghĩa khác | Nhóm test cục bộ đổi thành `S08-U01…U08` (`9ee85241`) | Tránh nhầm với ID nghiệm thu |
 | Reveal mode | có | handoff: "if added", chỉ để trình bày | Chưa làm | Tuỳ chọn. Không có state nào để che vì chưa có outcome tương lai ngoài equity |
 | Panel trade PnL distribution | có | — | Bản đầu bỏ sót; đã thêm lại ở `3cf70794`, kèm reason code | Lỗi đã sửa, tìm ra khi so ảnh (§4.1) |
+| Retained 409 | — | Addendum RF-02 (`51b11247`): trên current-source, `CONFLICT` = chưa có retained source | Bản đầu ghi "run ngoài profile được admit"; sửa ở `002e4098` thành `unavailable` + câu của mapper chung | Lỗi đã sửa, tìm ra khi đọc lại handoff (§7.9) |
+| Copy 403 | — | Addendum RF-01: denied không xác nhận object tồn tại hay thuộc ai (F-04) | Bản đầu: "run thuộc workspace bạn không phải thành viên"; sửa ở `002e4098` | Lỗi đã sửa |
 
 ## 8. Guide `P17-T01…T14` — phần frontend chứng minh được
 
@@ -245,6 +279,10 @@ hoặc cho phép):
 
 ## 9. Request cho Codex
 
+Receipt đầy đủ, theo template CLAUDE.md §5 kèm đề xuất nhỏ nhất và ngày kiểm
+lại: [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md). Bảng
+dưới là tóm tắt.
+
 Mục P17-B giữ đúng tên hàng trong
 [source-capability-matrix.md](./source-capability-matrix.md), không cấp ID mới.
 Chỉ khoảng trống phía frontend mới dùng `CG-P17-*`.
@@ -252,7 +290,7 @@ Chỉ khoảng trống phía frontend mới dùng `CG-P17-*`.
 | # | Mục | Actual | Expected | Locator | Fallback đang render | Test khi có fact |
 |---|---|---|---|---|---|---|
 | 1 | **`CG-P17-01`** fixture canonical | Không có fixture replay trong `apps/portal/registry/fixtures/` hay evidence P17; test frontend dựng shape từ contract spec | Fixture versioned cho `full`, `EXTREMA_BUCKET_V1`, `PENDING_SOURCE_CALLBACK`, `LEGACY_METADATA_ONLY`, `NOT_PUBLISHED`, selected/`NOT_SELECTED`, và các Problem 400/403/404/409/503 | `apps/control-api/test/research-replay.contract.spec.ts`, `replay.service.ts` | Stub theo shape của spec | Test frontend đọc fixture thay cho stub |
-| 2 | **`CG-P17-02`** chọn lane theo run | Frontend không biết run có thuộc profile retained RS-02 hay không, nên phải đợi người dùng bấm; run ngoài profile trả 404/409, code không có trong generated contract của lane | Một fact typed trên replay (hoặc run) cho biết lane retained có được admit không, cộng mã refusal có tên trong generated contract | `research-current-source` contract; `replayClient.ts` `RETAINED_NOT_ADMITTED` | Nút "read retained replay"; 404/409 → câu cố định | Không bấm vẫn biết trạng thái; không còn request thử |
+| 2 | **`CG-P17-02`** chọn lane theo run | Frontend không biết run có thuộc profile retained RS-02 hay không, nên phải đợi người dùng bấm; 409 `CONFLICT` = chưa có retained source (RF-02); mã không có trong generated contract của lane | Một fact typed trên replay (hoặc run) cho biết lane retained có được admit không, cộng mã refusal có tên trong generated contract | `apps/control-api/src/research/current-source.error.ts:7–8`; `replayClient.ts` `RETAINED_NOT_RETAINED` | Nút "read retained replay"; 409 → `unavailable`, 404 → `empty` | Không bấm vẫn biết trạng thái; không còn request thử |
 | 3 | **`CG-P17-03`** ngữ nghĩa số đếm (A09) | Có `source_observation_count` và `emitted_point_count`; "sample N of M" đang dùng `emitted_point_count` | Codex xác nhận M đúng là `emitted_point_count`, và `source_observation_count` là số quan sát trước khi bucket | `EquityReplay` schema | In cả hai số, có nhãn | Unit assert nhãn theo xác nhận |
 | 4 | **P17-B · account/position state at playhead** | `state_at_cursor.execution_state=NOT_PUBLISHED` | Snapshot position/account có revision theo event/checkpoint gốc | matrix hàng 2 | "execution state — not published" | T12/T14 |
 | 5 | **P17-B · orders/fills/trades** | 3 capability `NOT_PUBLISHED` | Ledger có ID gốc, scope route/fold, số lượng/giá/phí chính xác | matrix hàng 3 | Blotter/anatomy không có dòng | T01, T10 |
