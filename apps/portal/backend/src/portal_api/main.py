@@ -33,7 +33,6 @@ from portal_api.api.ingress import IngressContextMiddleware, ingress_request_id
 from portal_api.api.routes_portal import router as router_portal
 from portal_api.api.routes_alphas import router as router_alphas
 from portal_api.api.routes_data import router as router_data
-from portal_api.api.routes_research import router as router_research
 from portal_api.api.routes_research_internal import router as router_research_internal
 from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
@@ -284,7 +283,6 @@ def create_app(
     app.include_router(router_runs)
     app.include_router(router_data)
     app.include_router(router_alphas)
-    app.include_router(router_research)
     # P07's AST adapter is service-private: Control API signs every request
     # and owns persisted source bytes/receipts.  It is deliberately not a
     # public facade endpoint and cannot be reached through browser routes.

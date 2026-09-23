@@ -444,18 +444,67 @@ def test_p04_t13_upgrade_default_is_disclosed_without_relabeling_history() -> No
 # P04-T08 / Atlas consumer contract -----------------------------------------
 
 
+def _signed_internal_principal(secret: str) -> str:
+    import base64
+    import hashlib
+    import hmac
+    import time
+
+    payload = {
+        "principalId": "rf01-control-api",
+        "username": "rf01-control-api",
+        "accessSubject": None,
+        "accessEmail": None,
+        "role": "ADMIN",
+        "authnMethods": ["portal_session"],
+        "sessionId": "rf01-session",
+        "mustChangePassword": False,
+        "issuedAt": "2026-09-23T00:00:00.000Z",
+        "exp": int(time.time()) + 60,
+        "policyVersion": "auth-policy-v1",
+    }
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    ).decode("ascii").rstrip("=")
+    signature = base64.urlsafe_b64encode(
+        hmac.new(secret.encode("utf-8"), encoded.encode("ascii"), hashlib.sha256).digest()
+    ).decode("ascii").rstrip("=")
+    return f"{encoded}.{signature}"
+
+
 @pytest.mark.anyio
-async def test_p04_t08_atlas_endpoint_is_manifest_driven_safe_and_read_only() -> None:
+async def test_p04_t08_atlas_is_served_only_through_the_internal_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P04-T08, amended by RF-01 (B-01).
+
+    The Atlas document stays manifest-driven, safe and read-only, but Python no
+    longer answers the public path: Control API's P09 BFF owns
+    ``/api/v1/research/quantbt/atlas`` with a wrapped response, and two
+    authorities on one path meant a gateway rollback swapped the shape.
+    """
+    secret = "rf01-internal-secret-with-enough-entropy"
+    monkeypatch.setenv("INTERNAL_PRINCIPAL_SECRET", secret)
     app = create_app()
     try:
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         ) as client:
-            response = await client.get("/api/v1/research/quantbt/atlas")
-            mutation = await client.post("/api/v1/research/quantbt/atlas")
+            public = await client.get("/api/v1/research/quantbt/atlas")
+            unsigned = await client.get("/internal/research/engine-atlas")
+            response = await client.get(
+                "/internal/research/engine-atlas",
+                headers={"x-portal-principal": _signed_internal_principal(secret)},
+            )
+            mutation = await client.post(
+                "/internal/research/engine-atlas",
+                headers={"x-portal-principal": _signed_internal_principal(secret)},
+            )
     finally:
         app.state.run_manager.shutdown()
 
+    assert public.status_code == 404
+    assert unsigned.status_code == 401
     assert response.status_code == 200
     payload = response.json()
     assert payload["schema_version"] == "research-engine-atlas.v1"

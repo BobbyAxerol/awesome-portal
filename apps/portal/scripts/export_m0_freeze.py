@@ -33,7 +33,7 @@ FROZEN_FILES = {
     "quantbt_gateway": "apps/portal/backend/src/portal_api/adapters/quantbt.py",
     "advanced_walkforward_runner": "apps/portal/backend/src/portal_api/services/advanced_walkforward_runner.py",
     "research_engine_catalog_service": "apps/portal/backend/src/portal_api/services/research_engine_catalog.py",
-    "research_engine_atlas_route": "apps/portal/backend/src/portal_api/api/routes_research.py",
+    "research_engine_atlas_internal_route": "apps/portal/backend/src/portal_api/api/routes_research_internal.py",
     "research_engine_catalog": "apps/portal/registry/research-engine-catalog.v1.json",
     "research_engine_catalog_schema": "apps/portal/registry/schemas/research-engine-catalog.v1.schema.json",
     "research_run_evidence_schema": "apps/portal/registry/schemas/research-run-evidence.v1.schema.json",

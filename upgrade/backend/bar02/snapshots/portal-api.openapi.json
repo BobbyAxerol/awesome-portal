@@ -932,55 +932,6 @@
         "title": "CapabilityAvailability",
         "type": "object"
       },
-      "CapabilityAxes": {
-        "additionalProperties": false,
-        "properties": {
-          "admission": {
-            "enum": [
-              "P04_BASELINE_ONLY",
-              "NOT_ADMITTED",
-              "DEFERRED"
-            ],
-            "title": "Admission",
-            "type": "string"
-          },
-          "engine": {
-            "enum": [
-              "ENGINE_SUPPORTED",
-              "ENGINE_PARTIAL",
-              "ENGINE_DEFERRED"
-            ],
-            "title": "Engine",
-            "type": "string"
-          },
-          "evidence": {
-            "enum": [
-              "EVIDENCE_MAPPED",
-              "EVIDENCE_GAP",
-              "NOT_APPLICABLE"
-            ],
-            "title": "Evidence",
-            "type": "string"
-          },
-          "integration": {
-            "enum": [
-              "ADAPTER_AVAILABLE",
-              "INTEGRATION_GAP",
-              "DEFERRED_BY_PORTAL"
-            ],
-            "title": "Integration",
-            "type": "string"
-          }
-        },
-        "required": [
-          "engine",
-          "integration",
-          "evidence",
-          "admission"
-        ],
-        "title": "CapabilityAxes",
-        "type": "object"
-      },
       "CapabilityPublic": {
         "additionalProperties": false,
         "properties": {
@@ -1058,41 +1009,6 @@
           "methodology"
         ],
         "title": "CapabilityRequirements",
-        "type": "object"
-      },
-      "ClaimDescriptor": {
-        "additionalProperties": false,
-        "properties": {
-          "contract_id": {
-            "pattern": "^[a-z][a-z0-9_]{1,63}$",
-            "title": "Contract Id",
-            "type": "string"
-          },
-          "engine_certification": {
-            "pattern": "^[A-Z][A-Z0-9_-]{1,63}$",
-            "title": "Engine Certification",
-            "type": "string"
-          },
-          "never_claims": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Never Claims",
-            "type": "string"
-          },
-          "numeric_guarantee": {
-            "maxLength": 400,
-            "minLength": 1,
-            "title": "Numeric Guarantee",
-            "type": "string"
-          }
-        },
-        "required": [
-          "contract_id",
-          "engine_certification",
-          "numeric_guarantee",
-          "never_claims"
-        ],
-        "title": "ClaimDescriptor",
         "type": "object"
       },
       "ConcernDefinition": {
@@ -1650,46 +1566,6 @@
         "title": "EngineReleasePublic",
         "type": "object"
       },
-      "EvidenceContractDescriptor": {
-        "additionalProperties": false,
-        "description": "Declared evidence envelope; P05 owns its durable writer.",
-        "properties": {
-          "required_fields": {
-            "items": {
-              "enum": [
-                "engine_release_id",
-                "route_id",
-                "effective_spec_digest",
-                "market_data_content_hash",
-                "report_level",
-                "selection_resolution",
-                "result_summary"
-              ],
-              "type": "string"
-            },
-            "minItems": 7,
-            "title": "Required Fields",
-            "type": "array"
-          },
-          "schema_id": {
-            "const": "research-run-evidence.v1",
-            "title": "Schema Id",
-            "type": "string"
-          },
-          "writer_state": {
-            "const": "P05_OWNED_NOT_ACTIVE",
-            "title": "Writer State",
-            "type": "string"
-          }
-        },
-        "required": [
-          "schema_id",
-          "required_fields",
-          "writer_state"
-        ],
-        "title": "EvidenceContractDescriptor",
-        "type": "object"
-      },
       "EvidenceValue": {
         "additionalProperties": false,
         "properties": {
@@ -1963,36 +1839,6 @@
         "title": "HistoricalDataDependency",
         "type": "object"
       },
-      "HistoricalReleasePublic": {
-        "additionalProperties": false,
-        "properties": {
-          "package": {
-            "title": "Package",
-            "type": "string"
-          },
-          "release_id": {
-            "title": "Release Id",
-            "type": "string"
-          },
-          "status": {
-            "const": "HISTORICAL_IDENTITY_RETAINED",
-            "title": "Status",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "string"
-          }
-        },
-        "required": [
-          "release_id",
-          "package",
-          "version",
-          "status"
-        ],
-        "title": "HistoricalReleasePublic",
-        "type": "object"
-      },
       "IngressDiagnostics": {
         "additionalProperties": false,
         "properties": {
@@ -2123,93 +1969,6 @@
           "description"
         ],
         "title": "LifecycleStageDefinition",
-        "type": "object"
-      },
-      "ModeDescriptor": {
-        "additionalProperties": false,
-        "properties": {
-          "artifact_fields": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 16,
-            "minItems": 1,
-            "title": "Artifact Fields",
-            "type": "array"
-          },
-          "default_schedule": {
-            "enum": [
-              "global",
-              "per_fold_decay",
-              "per_fold_causal"
-            ],
-            "title": "Default Schedule",
-            "type": "string"
-          },
-          "display_name": {
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "Display Name",
-            "type": "string"
-          },
-          "mode_id": {
-            "pattern": "^mode_[1-5]_[a-z0-9_]+$",
-            "title": "Mode Id",
-            "type": "string"
-          },
-          "objective_summary": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Objective Summary",
-            "type": "string"
-          },
-          "rules": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 4,
-            "minItems": 1,
-            "title": "Rules",
-            "type": "array"
-          },
-          "suspect": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Suspect",
-            "type": "string"
-          },
-          "valid_schedules": {
-            "items": {
-              "enum": [
-                "global",
-                "per_fold_decay",
-                "per_fold_causal"
-              ],
-              "type": "string"
-            },
-            "minItems": 1,
-            "title": "Valid Schedules",
-            "type": "array"
-          },
-          "when_to_use": {
-            "maxLength": 400,
-            "minLength": 1,
-            "title": "When To Use",
-            "type": "string"
-          }
-        },
-        "required": [
-          "mode_id",
-          "display_name",
-          "valid_schedules",
-          "default_schedule",
-          "objective_summary",
-          "suspect",
-          "artifact_fields",
-          "when_to_use",
-          "rules"
-        ],
-        "title": "ModeDescriptor",
         "type": "object"
       },
       "NavigationDefinition": {
@@ -3729,204 +3488,209 @@
         "title": "RegistryDependency",
         "type": "object"
       },
-      "ReleaseRuntimePublic": {
+      "ResearchRunProducerEnvelope": {
         "additionalProperties": false,
+        "description": "The server-owned P08/P10 immutable facts needed by the worker.",
         "properties": {
-          "detail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Detail"
-          },
-          "expected_version": {
-            "title": "Expected Version",
+          "adapter_contract_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Adapter Contract Digest",
             "type": "string"
           },
-          "installed_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Installed Version"
-          },
-          "native_expected_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Native Expected Version"
-          },
-          "native_installed_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Native Installed Version"
-          },
-          "native_package": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Native Package"
-          },
-          "package": {
-            "title": "Package",
+          "alpha_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Alpha Id",
             "type": "string"
           },
-          "release_id": {
-            "title": "Release Id",
+          "alpha_version_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Alpha Version Id",
             "type": "string"
           },
-          "verified": {
-            "title": "Verified",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "release_id",
-          "package",
-          "expected_version",
-          "verified"
-        ],
-        "title": "ReleaseRuntimePublic",
-        "type": "object"
-      },
-      "ResearchEngineAtlasDocument": {
-        "additionalProperties": false,
-        "properties": {
-          "claims": {
-            "items": {
-              "$ref": "#/components/schemas/ClaimDescriptor"
+          "client_intent_id": {
+            "maxLength": 191,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Client Intent Id",
+            "type": "string"
+          },
+          "dataset_binding_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Dataset Binding Digest",
+            "type": "string"
+          },
+          "effective_spec_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Effective Spec Digest",
+            "type": "string"
+          },
+          "execution_adapter_id": {
+            "const": "p04.delta-rsi.v1",
+            "title": "Execution Adapter Id",
+            "type": "string"
+          },
+          "intent_kind": {
+            "const": "NEW",
+            "title": "Intent Kind",
+            "type": "string"
+          },
+          "manifest_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Manifest Digest",
+            "type": "string"
+          },
+          "p04_parameters": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
             },
-            "title": "Claims",
-            "type": "array"
+            "maxProperties": 8,
+            "minProperties": 8,
+            "title": "P04 Parameters",
+            "type": "object"
           },
-          "current_release": {
-            "$ref": "#/components/schemas/ReleaseRuntimePublic"
+          "preflight_token": {
+            "maxLength": 191,
+            "pattern": "^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Preflight Token",
+            "type": "string"
           },
-          "evidence_contract": {
-            "$ref": "#/components/schemas/EvidenceContractDescriptor"
+          "requested_spec": {
+            "additionalProperties": true,
+            "maxProperties": 64,
+            "minProperties": 1,
+            "title": "Requested Spec",
+            "type": "object"
           },
-          "historical_releases": {
-            "items": {
-              "$ref": "#/components/schemas/HistoricalReleasePublic"
-            },
-            "title": "Historical Releases",
-            "type": "array"
-          },
-          "manifest_revision": {
-            "title": "Manifest Revision",
-            "type": "integer"
-          },
-          "modes": {
-            "items": {
-              "$ref": "#/components/schemas/ModeDescriptor"
-            },
-            "title": "Modes",
-            "type": "array"
-          },
-          "routes": {
-            "items": {
-              "$ref": "#/components/schemas/ResearchRoutePublic"
-            },
-            "title": "Routes",
-            "type": "array"
+          "requested_spec_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Requested Spec Digest",
+            "type": "string"
           },
           "schema_version": {
-            "const": "research-engine-atlas.v1",
-            "default": "research-engine-atlas.v1",
+            "const": "research.run-producer.v1",
             "title": "Schema Version",
             "type": "string"
+          },
+          "snapshot_content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Content Hash",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^dss_[0-9a-f]{32}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "work_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Work Digest",
+            "type": "string"
           }
         },
         "required": [
-          "manifest_revision",
-          "current_release",
-          "historical_releases",
-          "routes",
-          "modes",
-          "claims",
-          "evidence_contract"
+          "schema_version",
+          "client_intent_id",
+          "intent_kind",
+          "preflight_token",
+          "requested_spec",
+          "requested_spec_digest",
+          "effective_spec_digest",
+          "dataset_binding_digest",
+          "manifest_digest",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "alpha_id",
+          "alpha_version_id",
+          "execution_adapter_id",
+          "adapter_contract_digest",
+          "p04_parameters",
+          "work_digest"
         ],
-        "title": "ResearchEngineAtlasDocument",
+        "title": "ResearchRunProducerEnvelope",
         "type": "object"
       },
-      "ResearchRoutePublic": {
+      "ResearchRunProducerRequest": {
         "additionalProperties": false,
+        "description": "Exact private payload sent by Control API through the existing facade.",
         "properties": {
-          "axes": {
-            "$ref": "#/components/schemas/CapabilityAxes"
-          },
-          "backend": {
-            "title": "Backend",
+          "dataset_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Dataset Id",
             "type": "string"
           },
-          "default_for_new_runs": {
-            "title": "Default For New Runs",
-            "type": "boolean"
-          },
-          "execution_contract": {
-            "title": "Execution Contract",
+          "job_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Job Id",
             "type": "string"
           },
-          "family": {
-            "title": "Family",
+          "lease_epoch": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Lease Epoch",
+            "type": "integer"
+          },
+          "protocol": {
+            "const": "three_window_decay",
+            "title": "Protocol",
             "type": "string"
           },
-          "reason": {
-            "title": "Reason",
+          "research": {
+            "$ref": "#/components/schemas/ResearchRunProducerEnvelope"
+          },
+          "research_contract_version": {
+            "const": "research.run-request.v1",
+            "title": "Research Contract Version",
             "type": "string"
           },
-          "report_levels": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Report Levels",
-            "type": "array"
-          },
-          "required_input_class": {
-            "title": "Required Input Class",
+          "run_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Run Id",
             "type": "string"
           },
-          "route_id": {
-            "title": "Route Id",
+          "strategy_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "worker_attempt_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Worker Attempt Id",
+            "type": "string"
+          },
+          "workspace_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Workspace Id",
             "type": "string"
           }
         },
         "required": [
-          "route_id",
-          "family",
-          "execution_contract",
-          "backend",
-          "report_levels",
-          "default_for_new_runs",
-          "axes",
-          "reason",
-          "required_input_class"
+          "strategy_id",
+          "dataset_id",
+          "protocol",
+          "research_contract_version",
+          "run_id",
+          "workspace_id",
+          "job_id",
+          "worker_attempt_id",
+          "lease_epoch",
+          "research"
         ],
-        "title": "ResearchRoutePublic",
+        "title": "ResearchRunProducerRequest",
         "type": "object"
       },
       "ResourceProfile": {
@@ -4740,7 +4504,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PortalRunRequest"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PortalRunRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ResearchRunProducerRequest"
+                  }
+                ],
+                "title": "Payload"
               }
             }
           },
@@ -6429,28 +6201,6 @@
         "summary": "Portal Summary",
         "tags": [
           "portal"
-        ]
-      }
-    },
-    "/api/v1/research/quantbt/atlas": {
-      "get": {
-        "description": "Return the safe, manifest-driven Engine Atlas document.\n\nThe document deliberately contains no wheel hashes, file paths, runtime\nhandles or a callable dispatch surface. Browser code can render capability\nand refusal facts, but only a later authenticated Research operation may\nsubmit a typed run request.",
-        "operationId": "research_quantbt_atlas_api_v1_research_quantbt_atlas_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchEngineAtlasDocument"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Research Quantbt Atlas",
-        "tags": [
-          "research"
         ]
       }
     }

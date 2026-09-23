@@ -109,7 +109,7 @@
     "generated/execution-query-analytics.d.ts": "sha256:41d046d4f65e97e2ebbac298ae8f52365bc7d9d6188cbc22e456e7ea6f6a805d",
     "generated/execution-realtime.d.ts": "sha256:37567de26b9c8f4824a9eb7c9aa45c3e677ff888ef615c2cb7a80cd05435c204",
     "generated/execution-staged-activation.d.ts": "sha256:0c1dca37692c56aa495510afa05202d41d9ec9d7fb77b8b6ab7d4943da2220ce",
-    "generated/portal-api.d.ts": "sha256:fe264bfaa229e3364e89622851c6476f5a51c8327cc39c97060d8b0105678015",
+    "generated/portal-api.d.ts": "sha256:1334ecbacf9bd257ac2f0a205ca4f2b3b1c35bc65620af366ebf7da916821097",
     "generated/research-alpha-import.d.ts": "sha256:7956993ca6ceaf4164b834eb2a338d9f364ed4c88c76a70085ab138352e09f85",
     "generated/research-attempt-lineage.d.ts": "sha256:c6e8b25f01f61b59029160c26e13eb4a65a9c46d35c5aaffa3abd41e08136536",
     "generated/research-compare.d.ts": "sha256:6d7b51a94e8adb532707e6626d33a76afe314bd30a0234bd91ff51feda17b0ba",

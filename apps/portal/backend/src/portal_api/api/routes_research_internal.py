@@ -76,8 +76,10 @@ async def read_engine_atlas(request: Request) -> dict[str, object]:
     """Return the already-loaded P04 manifest document to Control API only.
 
     This route imports no QuantBT package, starts no engine and performs no
-    side effect.  The public descriptive P04 route remains unchanged; P09's
-    browser-facing consumer must use Control API's same-origin boundary.
+    side effect.  It is the only Python source of the Atlas: RF-01 retired the
+    public P04 route ``/api/v1/research/quantbt/atlas`` because Control API's
+    P09 BFF serves that same path with a different, wrapped document, and a
+    gateway rollback to this service would have swapped the shape silently.
     """
     try:
         require_internal_principal(request.headers)

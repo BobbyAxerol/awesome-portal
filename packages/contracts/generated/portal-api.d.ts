@@ -758,31 +758,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/research/quantbt/atlas": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Research Quantbt Atlas
-         * @description Return the safe, manifest-driven Engine Atlas document.
-         *
-         *     The document deliberately contains no wheel hashes, file paths, runtime
-         *     handles or a callable dispatch surface. Browser code can render capability
-         *     and refusal facts, but only a later authenticated Research operation may
-         *     submit a typed run request.
-         */
-        get: operations["research_quantbt_atlas_api_v1_research_quantbt_atlas_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1152,29 +1127,6 @@ export interface components {
              */
             state: "available" | "unavailable" | "degraded" | "stale" | "denied" | "commissioned";
         };
-        /** CapabilityAxes */
-        CapabilityAxes: {
-            /**
-             * Admission
-             * @enum {string}
-             */
-            admission: "P04_BASELINE_ONLY" | "NOT_ADMITTED" | "DEFERRED";
-            /**
-             * Engine
-             * @enum {string}
-             */
-            engine: "ENGINE_SUPPORTED" | "ENGINE_PARTIAL" | "ENGINE_DEFERRED";
-            /**
-             * Evidence
-             * @enum {string}
-             */
-            evidence: "EVIDENCE_MAPPED" | "EVIDENCE_GAP" | "NOT_APPLICABLE";
-            /**
-             * Integration
-             * @enum {string}
-             */
-            integration: "ADAPTER_AVAILABLE" | "INTEGRATION_GAP" | "DEFERRED_BY_PORTAL";
-        };
         /** CapabilityPublic */
         CapabilityPublic: {
             /** Capability Id */
@@ -1198,17 +1150,6 @@ export interface components {
             /** Methodology */
             methodology: string;
             resource_profile?: components["schemas"]["ResourceProfile"] | null;
-        };
-        /** ClaimDescriptor */
-        ClaimDescriptor: {
-            /** Contract Id */
-            contract_id: string;
-            /** Engine Certification */
-            engine_certification: string;
-            /** Never Claims */
-            never_claims: string;
-            /** Numeric Guarantee */
-            numeric_guarantee: string;
         };
         /** ConcernDefinition */
         ConcernDefinition: {
@@ -1399,24 +1340,6 @@ export interface components {
             /** Version */
             version: string;
         };
-        /**
-         * EvidenceContractDescriptor
-         * @description Declared evidence envelope; P05 owns its durable writer.
-         */
-        EvidenceContractDescriptor: {
-            /** Required Fields */
-            required_fields: ("engine_release_id" | "route_id" | "effective_spec_digest" | "market_data_content_hash" | "report_level" | "selection_resolution" | "result_summary")[];
-            /**
-             * Schema Id
-             * @constant
-             */
-            schema_id: "research-run-evidence.v1";
-            /**
-             * Writer State
-             * @constant
-             */
-            writer_state: "P05_OWNED_NOT_ACTIVE";
-        };
         /** EvidenceValue */
         EvidenceValue: {
             availability: components["schemas"]["CapabilityAvailability"];
@@ -1503,20 +1426,6 @@ export interface components {
              */
             state: "ready" | "available" | "unavailable" | "disabled";
         };
-        /** HistoricalReleasePublic */
-        HistoricalReleasePublic: {
-            /** Package */
-            package: string;
-            /** Release Id */
-            release_id: string;
-            /**
-             * Status
-             * @constant
-             */
-            status: "HISTORICAL_IDENTITY_RETAINED";
-            /** Version */
-            version: string;
-        };
         /** IngressDiagnostics */
         IngressDiagnostics: {
             /** Forwarded For Present */
@@ -1564,30 +1473,6 @@ export interface components {
              * @default []
              */
             personas: string[];
-        };
-        /** ModeDescriptor */
-        ModeDescriptor: {
-            /** Artifact Fields */
-            artifact_fields: string[];
-            /**
-             * Default Schedule
-             * @enum {string}
-             */
-            default_schedule: "global" | "per_fold_decay" | "per_fold_causal";
-            /** Display Name */
-            display_name: string;
-            /** Mode Id */
-            mode_id: string;
-            /** Objective Summary */
-            objective_summary: string;
-            /** Rules */
-            rules: string[];
-            /** Suspect */
-            suspect: string;
-            /** Valid Schedules */
-            valid_schedules: ("global" | "per_fold_decay" | "per_fold_causal")[];
-            /** When To Use */
-            when_to_use: string;
         };
         /** NavigationDefinition */
         NavigationDefinition: {
@@ -1807,45 +1692,6 @@ export interface components {
          * @enum {string}
          */
         OptimizationSchedule: "global" | "per_fold_decay" | "per_fold_causal";
-        /** OptimizerDefaultField */
-        OptimizerDefaultField: {
-            /** Default Value */
-            default_value: string | number | boolean | (string | number | boolean | null)[] | null;
-            /** Detail */
-            detail: string;
-            /** Field Id */
-            field_id: string;
-            /**
-             * Override State
-             * @enum {string}
-             */
-            override_state: "LOCKED" | "OVERRIDE_ALLOWED";
-            /**
-             * Value Source
-             * @constant
-             */
-            value_source: "RELEASE_DEFAULT";
-        };
-        /** OptimizerDefaultGroup */
-        OptimizerDefaultGroup: {
-            /** Fields */
-            fields: components["schemas"]["OptimizerDefaultField"][];
-            /**
-             * Group Id
-             * @enum {string}
-             */
-            group_id: "study" | "sampler" | "objective" | "candidate_selection";
-        };
-        /** OptimizerDefaults */
-        OptimizerDefaults: {
-            /** Groups */
-            groups: components["schemas"]["OptimizerDefaultGroup"][];
-            /**
-             * Schema Version
-             * @constant
-             */
-            schema_version: "research.optimizer-defaults.v1";
-        };
         /** ParameterSpaceConfig */
         ParameterSpaceConfig: {
             [key: string]: components["schemas"]["ParameterSpec"];
@@ -2239,72 +2085,6 @@ export interface components {
              */
             state: "ready" | "available" | "unavailable" | "disabled";
         };
-        /** ReleaseRuntimePublic */
-        ReleaseRuntimePublic: {
-            /** Detail */
-            detail?: string | null;
-            /** Expected Version */
-            expected_version: string;
-            /** Installed Version */
-            installed_version?: string | null;
-            /** Native Expected Version */
-            native_expected_version?: string | null;
-            /** Native Installed Version */
-            native_installed_version?: string | null;
-            /** Native Package */
-            native_package?: string | null;
-            optimizer_defaults: components["schemas"]["OptimizerDefaults"];
-            /** Package */
-            package: string;
-            /** Release Id */
-            release_id: string;
-            submission_constraints: components["schemas"]["SubmissionConstraints"];
-            /** Trial Ceiling */
-            trial_ceiling: number;
-            /** Verified */
-            verified: boolean;
-        };
-        /** ResearchEngineAtlasDocument */
-        ResearchEngineAtlasDocument: {
-            /** Claims */
-            claims: components["schemas"]["ClaimDescriptor"][];
-            current_release: components["schemas"]["ReleaseRuntimePublic"];
-            evidence_contract: components["schemas"]["EvidenceContractDescriptor"];
-            /** Historical Releases */
-            historical_releases: components["schemas"]["HistoricalReleasePublic"][];
-            /** Manifest Revision */
-            manifest_revision: number;
-            /** Modes */
-            modes: components["schemas"]["ModeDescriptor"][];
-            /** Routes */
-            routes: components["schemas"]["ResearchRoutePublic"][];
-            /**
-             * Schema Version
-             * @default research-engine-atlas.v1
-             * @constant
-             */
-            schema_version: "research-engine-atlas.v1";
-        };
-        /** ResearchRoutePublic */
-        ResearchRoutePublic: {
-            axes: components["schemas"]["CapabilityAxes"];
-            /** Backend */
-            backend: string;
-            /** Default For New Runs */
-            default_for_new_runs: boolean;
-            /** Execution Contract */
-            execution_contract: string;
-            /** Family */
-            family: string;
-            /** Reason */
-            reason: string;
-            /** Report Levels */
-            report_levels: string[];
-            /** Required Input Class */
-            required_input_class: string;
-            /** Route Id */
-            route_id: string;
-        };
         /**
          * ResearchRunProducerEnvelope
          * @description The server-owned P08/P10 immutable facts needed by the worker.
@@ -2492,39 +2272,6 @@ export interface components {
             };
             /** Version */
             version: string;
-        };
-        /**
-         * SubmissionConstraints
-         * @description Exact current New Run admission, intentionally distinct from defaults.
-         */
-        SubmissionConstraints: {
-            /**
-             * Accepted Trial Count
-             * @constant
-             */
-            accepted_trial_count: 1;
-            /**
-             * Early Stopping
-             * @constant
-             */
-            early_stopping: "MUST_BE_NULL";
-            /**
-             * Optimization Overrides
-             * @constant
-             */
-            optimization_overrides: "FORBIDDEN";
-            /**
-             * Profile Id
-             * @constant
-             */
-            profile_id: "p10.fixed-qualification.v1";
-            /**
-             * Random Seed
-             * @constant
-             */
-            random_seed: "MUST_BE_NULL";
-            /** Reason */
-            reason: string;
         };
         /** SummaryLinkItem */
         SummaryLinkItem: {
@@ -4000,26 +3747,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalErrorResponse"];
-                };
-            };
-        };
-    };
-    research_quantbt_atlas_api_v1_research_quantbt_atlas_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResearchEngineAtlasDocument"];
                 };
             };
         };
