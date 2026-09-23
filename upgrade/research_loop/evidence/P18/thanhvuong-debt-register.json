@@ -1,0 +1,145 @@
+{
+  "phase": "P18",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-09-23",
+  "tree": "aea76f6923e8d6acc51c851607a79e2f44b51fe7",
+  "open_implementation_debt": [],
+  "resolved_in_phase": [
+    {
+      "id": "S09-CLIP-PROVENANCE",
+      "what": "sealed revision strings clipped at the provenance line (word-break normal + .rr-block overflow hidden; 1280 sw 478 > cw 380, Letter 478 > 377, A4 478 > 366)",
+      "status": "RESOLVED",
+      "evidence": "aea76f69; .rr-long overflow-wrap anywhere / word-break break-all, block overflow visible; S09-U28; rerun probe CLIP/CLIP-PAPER == []"
+    },
+    {
+      "id": "S09-HEADER-CERT",
+      "what": "certification box dropped below the title at 1280 and on Letter",
+      "status": "RESOLVED",
+      "evidence": "aea76f69; S09-U30; rerun probe CERT 1280 beside=true (screen + print Letter)"
+    },
+    {
+      "id": "S09-PRINT-MARGIN",
+      "what": "page.pdf output had no page margin (no @page rule; doc-page.js forbidden)",
+      "status": "RESOLVED",
+      "evidence": "aea76f69; scoped @page { margin: 0.55in } while the route is mounted; S09-U29"
+    },
+    {
+      "id": "S09-ANNOTATION-NOPRINT",
+      "what": "mutable approval annotation printed inside the sealed sheet; warnings order",
+      "status": "RESOLVED",
+      "evidence": "93a435bb; warnings print after artifacts, annotation + exports after the footer in .no-print; S09-U27; browser print annotation display none, warnings visible"
+    },
+    {
+      "id": "S09-LABEL-ARCHIVE",
+      "what": "'archive' export label lower-case unlike JSON/CSV/Parquet",
+      "status": "RESOLVED",
+      "evidence": "aea76f69; S09-U31"
+    }
+  ],
+  "backend_requests": [
+    {
+      "id": "CG-P18-01",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-01",
+      "what": "passport key/label"
+    },
+    {
+      "id": "CG-P18-02",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-02",
+      "what": "certification grade"
+    },
+    {
+      "id": "CG-P18-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-03",
+      "what": "run-specific title (strategy)"
+    },
+    {
+      "id": "CG-P18-04",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-04",
+      "what": "per-fold columns"
+    },
+    {
+      "id": "CG-P18-05",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-05",
+      "what": "per-stage result"
+    },
+    {
+      "id": "CG-P18-06",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-06",
+      "what": "IS equity series"
+    },
+    {
+      "id": "CG-P18-07",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-07",
+      "what": "artifact filename/bytes"
+    },
+    {
+      "id": "CG-P18-08",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-08",
+      "what": "params-handoff caption (can fold into 04)"
+    },
+    {
+      "id": "CG-P18-09",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-09",
+      "what": "canonical P18 fixture"
+    },
+    {
+      "id": "CG-P18-10",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-10",
+      "what": "409 on GET report not declared in OpenAPI"
+    }
+  ],
+  "source_capability_blocked": [],
+  "source_capability_note": "P18 has no source-capability matrix; source absences (per-fold rows, audited fills, selection trace, artifact bytes, promotion approval, execution-state replay) are typed reason codes in the contract and render verbatim.",
+  "explicit_downstream_gates": [
+    {
+      "id": "P18-FE-DG-01",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "integrate the moved baseline e39bacfa (now 6a87f77b): EvidenceFlow.tsx merges cleanly; P17 FreezeDetail.tsx conflict remains; S09 to toResearchRefusal + RefusalNote + RESEARCH_REPORT_* in SURFACE_CODES; rerun all tests + 128 probes"
+    },
+    {
+      "id": "P18-FE-DG-02",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_FEATURE_FLAG",
+      "what": "REAL_API_E2E_RECEIPT for S09 on the RF-02 preview lane once FEATURE_RESEARCH_REPORTS is on there"
+    },
+    {
+      "id": "P18-FE-DG-03",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "axe (not in lock file); spec 09 T08"
+    },
+    {
+      "id": "P18-FE-DG-04",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "VISUAL_DECISION_REQUIRED: S09 title and certification badge (with CG-P18-02/03)"
+    },
+    {
+      "id": "P18-FE-DG-05",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_ROUTE",
+      "what": "'Release Candidate & Publish' (no-print bar) and Hub 'release candidate -> 11' become links once Screen 11 has a route"
+    }
+  ]
+}

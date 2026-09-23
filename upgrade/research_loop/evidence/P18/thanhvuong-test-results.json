@@ -1,0 +1,302 @@
+{
+  "phase": "P18",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-09-23",
+  "tree": "aea76f6923e8d6acc51c851607a79e2f44b51fe7",
+  "workspace": {
+    "user": "thanhvuong",
+    "branch": "feat/thanhvuong/research-p17-p21",
+    "remote": "primus-origin",
+    "base": "19310912b9695c9e5bb48f05432ff4726767d61f",
+    "node": "v20.20.2",
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34 headless"
+  },
+  "lane_note": "Unit, typecheck and build results are real executions in the workspace. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the report API stubbed from the report.service.ts shape (no canonical fixture: CG-P18-09), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). The full 128-probe Research suite ran on 93a435bb; after the aea76f69 fix (3 S09 files) only the S09 probe was rerun (46/46). No REAL_API_E2E_RECEIPT: FEATURE_RESEARCH_REPORTS=false.",
+  "results": [
+    {
+      "gate": "npm --prefix packages/contracts run generate:research-report",
+      "result": "PASS",
+      "exit": 0,
+      "note": "git status packages/contracts clean"
+    },
+    {
+      "gate": "apps/portal/frontend npx tsc -b --noEmit",
+      "scope": "tree aea76f69",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "apps/portal/frontend npm run build",
+      "scope": "tree aea76f69 (rerun before the fix probe)",
+      "result": "PASS",
+      "exit": 0,
+      "note": "only the pre-existing >500 kB chunk warning"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run (full)",
+      "scope": "tree aea76f69",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "170 files, 3006 passed, 1 skipped (3007)",
+      "note": "baseline 169 files / 2971 / 1 skip; +1 file / +35 tests. First full run failed on the known PortalShell flake (known_flake), second run passed"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run src/research/reportDetail.test.tsx",
+      "scope": "S09-U01..U31 (U14 parameterised x5)",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "35/35",
+      "note": "31 at 93a435bb, 30 at 6057a4c8; with researchBoundary.test.ts 49/49"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run src/research/researchBoundary.test.ts",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "14/14"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run (evidenceFlow, executeReplay, features/quantbt)",
+      "scope": "lanes touched by the route/link change",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "140 passed (6 files)"
+    },
+    {
+      "gate": "playwright -c <temp probe config, own preview 127.0.0.1:4417> e2e/_probe-research-tvp18.spec.ts --workers=1 (run1)",
+      "scope": "tree 93a435bb, S09 probe",
+      "result": "FAIL_PROBE_HARNESS",
+      "exit": 1,
+      "counts": "40 passed, 4 failed",
+      "note": "noise from S06 search route (GET /current-source/search 404 from stubPortalApi) while the SPA left S09; CSRF cookie not set (url+secure form refused by CDP). S09 itself had no error"
+    },
+    {
+      "gate": "playwright -c <temp probe config> e2e/_probe-research-tvp18.spec.ts --workers=1 (run2)",
+      "scope": "tree 93a435bb, S09 probe: loading, full, partial, not-published, 400/401/403/404/409/503, 304 SPA + reload, export JSON/CSV/409, poll unmount/hidden, print emulation, PDF Letter/A4, Print button, deep link + hard refresh, keyboard, links, no-mutation-after-inspect, hi-fi 1280/660",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "44/44; every RECEIPT line overflow=0 noise=0"
+    },
+    {
+      "gate": "playwright ... -g clip-audit",
+      "scope": "tree 93a435bb",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "2/2",
+      "note": "logged clipping only; found B1 (provenance line clipped), fixed in aea76f69"
+    },
+    {
+      "gate": "playwright -c <temp probe config> --workers=1 (all Research probes)",
+      "scope": "tree 93a435bb: fixtures 8 + product 74 + tvp18 46",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "128/128 (4.6 min)",
+      "note": "not rerun in full on aea76f69; see next gate"
+    },
+    {
+      "gate": "playwright -c .tv-probe.config.ts e2e/_probe-research-tvp18.spec.ts --workers=1 (rerun after fix)",
+      "scope": "tree aea76f69; lead copy of the B spec with clip assertions: screen/print/letter-816/a4-794 clips == [], provenance sw <= cw + overflow-wrap anywhere, cert box beside text at 1280 and print Letter",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "46/46 (3.3 min); 44 RECEIPT lines overflow=0 noise=0",
+      "note": "CLIP 1280 provenance sw 380 = cw 380; CLIP 660 540 = 540; CLIP-PAPER letter-816 [] a4-794 []; CERT 1280 beside=true screen + print Letter; CERT 660 screen stacks, print Letter beside=true"
+    },
+    {
+      "gate": "bash .githooks/pre-commit (manual)",
+      "scope": "before each P18 code commit: 70044e40, 1757b7d5 (and its local pre-push amend from 04495395), 6057a4c8, 93a435bb, aea76f69",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "6/6"
+    },
+    {
+      "gate": "git diff --cached --check (manual)",
+      "scope": "before each P18 code commit",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "git diff --check 19310912 HEAD",
+      "scope": "HEAD = aea76f69",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "bash .githooks/pre-commit (manual)",
+      "scope": "docs commit adding this packet + Unified line/note",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "bash .githooks/pre-push (manual)",
+      "scope": "push 19310912..<docs commit> to primus-origin",
+      "result": "PASS",
+      "exit": 0
+    }
+  ],
+  "not_run": [
+    {
+      "gate": "REAL_API_E2E_RECEIPT",
+      "reason": "backend feature-dark (FEATURE_RESEARCH_REPORTS=false); the RF-02 preview lane on docs/research-loop-plan 6a87f77b does not enable the report flag"
+    },
+    {
+      "gate": "axe",
+      "reason": "axe-core not in this branch's lock file; Bobby decides (as P16/P17); spec 09 T08 pending"
+    },
+    {
+      "gate": "focus-ring style measurement on the no-print bar",
+      "reason": "focus order and outline solid asserted in the browser; ring style not measured against a token"
+    },
+    {
+      "gate": "all Research probes (128) on aea76f69",
+      "reason": "aea76f69 touches only ReportDetail.tsx, reportClient.ts (one label) and reportDetail.test.tsx; the S09 probe was rerun (46/46)"
+    },
+    {
+      "gate": "spec 09 T03 (32-fold multi-page table), T04 (cross-screen digest via shared fixture), T05/T06 (scratch / FAILED run)",
+      "reason": "no canonical fixture (CG-P18-09); no scratch/failed variant in the contract (report seals only at run_completed)"
+    }
+  ],
+  "evidence_store": {
+    "location": "~/tv-shots/p18/ (tree 93a435bb, package B) and ~/tv-shots/p18-fix/ (tree aea76f69, rerun after fix) in the thanhvuong workspace (not committed, A4.1)",
+    "probe_spec_sha256_prefix": {
+      "package B spec (_probe-research-tvp18.spec.ts)": "32dc5f08f7ea7061",
+      "rerun spec with clip assertions": "586f39fe2d65f5ba"
+    },
+    "pdf_bytes": {
+      "p18-fix/p18-print-letter.pdf": 119055,
+      "p18-fix/p18-print-a4.pdf": 118199,
+      "p18/p18-print-letter.pdf (6 pages)": 116166,
+      "p18/p18-print-a4.pdf": 116345
+    },
+    "sha256_prefix_p18_fix": {
+      "p18-clip-audit-1280.png": "e765359da8d84bf2",
+      "p18-clip-audit-660.png": "3804d1d9010a8971",
+      "p18-clip-provenance-1280.png": "30d0479253a8cbcd",
+      "p18-clip-provenance-660.png": "bb36756462bedf28",
+      "p18-deep-link-refresh-1280.png": "c5f72b4c1de9b74b",
+      "p18-deep-link-refresh-660.png": "4f9675d5b4b013db",
+      "p18-etag-304-1280.png": "c5f72b4c1de9b74b",
+      "p18-etag-304-660.png": "4f9675d5b4b013db",
+      "p18-export-409-1280.png": "ca567dbe8eec85e5",
+      "p18-export-409-660.png": "9958529a97affcb6",
+      "p18-export-csv-failed-1280.png": "15980207d04d4cbf",
+      "p18-export-csv-failed-660.png": "539398eecaa7bee6",
+      "p18-export-json-1280.png": "b5bca14609b495be",
+      "p18-export-json-660.png": "50cfb22103f10e90",
+      "p18-full-1280.png": "c5f72b4c1de9b74b",
+      "p18-full-660.png": "4f9675d5b4b013db",
+      "p18-hifi-09-1280-visible.png": "5fd5b53938bbd146",
+      "p18-hifi-09-1280.png": "3cb15dbc8fcf0e63",
+      "p18-hifi-09-660-visible.png": "df8cb60d0e8f40c3",
+      "p18-hifi-09-660.png": "49ff17e835c46614",
+      "p18-keyboard-1280.png": "b0996a456219a9bd",
+      "p18-keyboard-660.png": "8de094c9c08e9f70",
+      "p18-links-1280.png": "c5f72b4c1de9b74b",
+      "p18-links-660.png": "4f9675d5b4b013db",
+      "p18-links-hub-1280.png": "eb16d2e07e030dbf",
+      "p18-links-hub-660.png": "d8692a8d006a0551",
+      "p18-links-s08-1280.png": "6f617454b24f0ceb",
+      "p18-links-s08-660.png": "d3ba3bf0c32b02cc",
+      "p18-loading-1280.png": "faf0ae9c9f6e1452",
+      "p18-loading-660.png": "b432a9de1ca59cd6",
+      "p18-no-mutation-after-inspect-1280.png": "c5f72b4c1de9b74b",
+      "p18-no-mutation-after-inspect-660.png": "4f9675d5b4b013db",
+      "p18-not-published-annotation-1280.png": "21080a2dbff0e81b",
+      "p18-not-published-annotation-660.png": "d2ebd98bfd982dba",
+      "p18-partial-1280.png": "a5ab1d94adca7957",
+      "p18-partial-660.png": "a3b732ee2fcae6d0",
+      "p18-poll-pauses-hidden-1280.png": "94f879131c3c8d57",
+      "p18-poll-pauses-hidden-660.png": "acd6e01d57c08f49",
+      "p18-poll-stops-on-unmount-1280.png": "94f879131c3c8d57",
+      "p18-poll-stops-on-unmount-660.png": "acd6e01d57c08f49",
+      "p18-print-1280.png": "c5f72b4c1de9b74b",
+      "p18-print-660.png": "4f9675d5b4b013db",
+      "p18-print-a4.pdf": "0ae364b761bf4d15",
+      "p18-print-emulated-1280.png": "056533506eec2d27",
+      "p18-print-emulated-660.png": "80085d7ea030cc82",
+      "p18-print-letter.pdf": "74a52a0347d9f02c",
+      "p18-refusal-400-1280.png": "89cd152af1d2673e",
+      "p18-refusal-400-660.png": "17369716581e7ea0",
+      "p18-refusal-401-1280.png": "aa8ed5b6ae271674",
+      "p18-refusal-401-660.png": "6561edb893d861b5",
+      "p18-refusal-403-1280.png": "93234d0dbbba6a5f",
+      "p18-refusal-403-660.png": "aafb275f41bb1498",
+      "p18-refusal-404-1280.png": "7968645971986f04",
+      "p18-refusal-404-660.png": "2afdc369883ed0f6",
+      "p18-refusal-409-1280.png": "c1295c7876a893f9",
+      "p18-refusal-409-660.png": "1d05752d12a251b2",
+      "p18-refusal-503-1280.png": "d727b2a4ddf16673",
+      "p18-refusal-503-660.png": "cb916583e2d8ebf5",
+      "playwright.log": "75e2b90b37d6467f",
+      "preview.log": "9291f11129fb0f1f",
+      "preview.pid": "0ba3ec13995f231a",
+      "probe.log": "32aaa0840aaf7ce5"
+    },
+    "sha256_prefix_p18": {
+      "p18-clip-audit-1280.png": "025ad80887dc295d",
+      "p18-clip-audit-660.png": "87ea6f681d2d653e",
+      "p18-clip-provenance-1280.png": "dd610e64cccb8cd3",
+      "p18-clip-provenance-660.png": "1cfcbe42bdb2ba82",
+      "p18-deep-link-refresh-1280.png": "a5fe682939db6259",
+      "p18-deep-link-refresh-660.png": "df224dce6a41c67c",
+      "p18-etag-304-1280.png": "a5fe682939db6259",
+      "p18-etag-304-660.png": "df224dce6a41c67c",
+      "p18-export-409-1280.png": "d4053d14c660f18d",
+      "p18-export-409-660.png": "6886dc80abb30a56",
+      "p18-export-csv-failed-1280.png": "a82ca6b13628acca",
+      "p18-export-csv-failed-660.png": "af0df04dea368a48",
+      "p18-export-json-1280.png": "1447416315a19580",
+      "p18-export-json-660.png": "5306fcac6398fe97",
+      "p18-full-1280.png": "a5fe682939db6259",
+      "p18-full-660.png": "df224dce6a41c67c",
+      "p18-hifi-09-1280-visible.png": "5fd5b53938bbd146",
+      "p18-hifi-09-1280.png": "3cb15dbc8fcf0e63",
+      "p18-hifi-09-660-visible.png": "df8cb60d0e8f40c3",
+      "p18-hifi-09-660.png": "49ff17e835c46614",
+      "p18-keyboard-1280.png": "a3f06f11f60a9434",
+      "p18-keyboard-660.png": "dfa7b948b283384e",
+      "p18-links-1280.png": "a5fe682939db6259",
+      "p18-links-660.png": "df224dce6a41c67c",
+      "p18-links-hub-1280.png": "eb16d2e07e030dbf",
+      "p18-links-hub-660.png": "d8692a8d006a0551",
+      "p18-links-s08-1280.png": "6f617454b24f0ceb",
+      "p18-links-s08-660.png": "d3ba3bf0c32b02cc",
+      "p18-loading-1280.png": "17783177af2eaace",
+      "p18-loading-660.png": "a13296ac17683c56",
+      "p18-no-mutation-after-inspect-1280.png": "a5fe682939db6259",
+      "p18-no-mutation-after-inspect-660.png": "df224dce6a41c67c",
+      "p18-not-published-annotation-1280.png": "a510477d97a0e940",
+      "p18-not-published-annotation-660.png": "20511b1f355eb8ee",
+      "p18-partial-1280.png": "84d6a77a69f20fa9",
+      "p18-partial-660.png": "4a1fdeb68a1741ad",
+      "p18-poll-pauses-hidden-1280.png": "9923b28663c74ee2",
+      "p18-poll-pauses-hidden-660.png": "594dbd709087f210",
+      "p18-poll-stops-on-unmount-1280.png": "9923b28663c74ee2",
+      "p18-poll-stops-on-unmount-660.png": "594dbd709087f210",
+      "p18-print-1280.png": "a5fe682939db6259",
+      "p18-print-660.png": "df224dce6a41c67c",
+      "p18-print-emulated-1280.png": "ce98bd0ed36c6397",
+      "p18-print-emulated-660.png": "509a6b06f53b0577",
+      "p18-refusal-400-1280.png": "c87b27e09c70f286",
+      "p18-refusal-400-660.png": "94e17e0bdf16b4f7",
+      "p18-refusal-401-1280.png": "aa8ed5b6ae271674",
+      "p18-refusal-401-660.png": "7ba3f9531d1a4b1b",
+      "p18-refusal-403-1280.png": "93234d0dbbba6a5f",
+      "p18-refusal-403-660.png": "dff0569e8f89b921",
+      "p18-refusal-404-1280.png": "7968645971986f04",
+      "p18-refusal-404-660.png": "d9dd263a50a56a46",
+      "p18-refusal-409-1280.png": "c1295c7876a893f9",
+      "p18-refusal-409-660.png": "18dfebc9078887ab",
+      "p18-refusal-503-1280.png": "d727b2a4ddf16673",
+      "p18-refusal-503-660.png": "033962f69b3c4b4b",
+      "p18-print-a4.pdf": "a4d5dbc75aa2f271",
+      "p18-print-letter.pdf": "5b964b2c1ee3ed5e",
+      "build.log": "cfd79f0002bbbdfc",
+      "full-suite.log": "21923e05fff5bf5b",
+      "preview.log": "49c0c77a111f165c",
+      "probe.log": "36c265155dc9da46",
+      "run1.log": "42b791d7c74678c1",
+      "run2.log": "a428bf94da92e3aa"
+    }
+  },
+  "known_flake": "src/app/PortalShell.test.tsx > 'mounts QuantBT under its canonical route with no nested topbar' fails intermittently in a full vitest run and passes alone (once foundation.test.tsx > P09-T04 instead); both files pass alone 52/52. Recorded at P16/P17; seen in 2 of 4 full runs after 93a435bb and on 6057a4c8 with the fix stashed. Outside the S09 diff, not changed (Bobby B5)."
+}
