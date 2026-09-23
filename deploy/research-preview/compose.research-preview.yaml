@@ -17,6 +17,13 @@ services:
   portal-api:
     environment:
       PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_HISTORICAL_DATA_MODE:?preview needs PORTAL_HISTORICAL_DATA_MODE}
+      # P10's intake publishes the durable request; the research-progress
+      # overlay only turns the flag on for the worker that consumes it.
+      PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: ${PORTAL_FEATURE_RESEARCH_RUN_PRODUCER:-false}
+      NATS_URL: nats://portal-nats:4222
+    depends_on:
+      portal-nats:
+        condition: service_healthy
 
   control-api:
     environment:
@@ -30,3 +37,18 @@ services:
   control-api-bootstrap:
     volumes:
       - ./deploy/research-preview/bootstrap-users.preview.yaml:/opt/control-api/bootstrap-users.yaml:ro
+
+  # P06 runs the Delta child in its own user/net/mount/pid namespaces
+  # (`unshare -Urnmpf`). Docker's default seccomp profile refuses to create a
+  # user namespace inside a container, so the child fails with "unshare:
+  # Operation not permitted", and the docker-default AppArmor profile then
+  # refuses the mount-propagation change, and Docker's masked /proc paths stop
+  # `--mount-proc`. PREVIEW ONLY: the worker gets unconfined seccomp, AppArmor
+  # and system paths so the namespace sandbox P06 relies on can exist at all.
+  # A production activation needs a reviewed narrow profile instead — recorded
+  # in the RF-02 packet as a request, not decided here.
+  quant-worker-py:
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+      - systempaths=unconfined
