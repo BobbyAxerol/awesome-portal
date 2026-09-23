@@ -348,9 +348,12 @@ describe("S08-U04 — every hi-fi panel keeps its place with a published reason"
     expect(document.querySelector('[data-source-absence="cross_stream_order"]')!.textContent).toContain("not asserted");
   });
 
-  it("keeps the blotter, anatomy, MAE×MFE, route and cost panels — each without rows", () => {
+  it("keeps the anatomy, blotter, MAE×MFE, PnL distribution, cost and route panels — each without rows", () => {
     renderScreen(controllerOf(replay()));
-    for (const id of ["trade-anatomy", "trade-blotter", "mae-mfe", "route-panel", "cost-timeline"]) {
+    const ids = ["trade-anatomy", "trade-blotter", "mae-mfe", "pnl-distribution", "cost-timeline", "route-panel"];
+    expect([...document.querySelectorAll("[data-absent-panel]")].map((el) => el.getAttribute("data-absent-panel"))).toEqual(ids);
+    expect(document.querySelector('[data-absent-panel="pnl-distribution"] canvas, [data-absent-panel="pnl-distribution"] svg rect')).toBeNull();
+    for (const id of ids) {
       const panel = document.querySelector(`[data-absent-panel="${id}"]`);
       expect(panel, id).toBeTruthy();
       expect(panel!.querySelector("table,tr")).toBeNull();
@@ -387,7 +390,7 @@ describe("S08-U05 — route states other than retrospective equity", () => {
     expect(document.querySelector("[data-route-note]")!.textContent).toContain(words);
     expect(document.querySelector('[data-chart="replay-equity"]')).toBeNull();
     expect(document.querySelector("[data-transport]")).toBeNull();
-    expect(document.querySelectorAll("[data-absent-panel]").length).toBe(5);
+    expect(document.querySelectorAll("[data-absent-panel]").length).toBe(6);
     expect(document.querySelector('[data-capability="orders"]')!.getAttribute("data-capability-state")).toBe("NOT_PUBLISHED");
   });
 });

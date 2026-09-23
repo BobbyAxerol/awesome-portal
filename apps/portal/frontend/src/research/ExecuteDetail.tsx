@@ -767,11 +767,11 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
                 note="Per-trade excursions need trades and their price paths; neither was published."
               />
               <AbsentPanel
-                id="route-panel"
-                title="route-aware facts"
+                id="pnl-distribution"
+                title="trade PnL distribution"
                 replay={replay}
-                capabilities={["sl_tp_ambiguity", "oco_tree", "multi_leg"]}
-                note="Intrabar ambiguity, OCO trees and multi-leg facts are each a separate published relation. The route declared all three."
+                capabilities={["trades"]}
+                note="A PnL distribution counts closed trades. No trade ledger was published, so there is nothing to count and no histogram is drawn from equity steps."
               />
               <AbsentPanel
                 id="cost-timeline"
@@ -779,6 +779,13 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
                 replay={replay}
                 capabilities={["funding"]}
                 note="Funding and cost series were not published for this route."
+              />
+              <AbsentPanel
+                id="route-panel"
+                title="route-aware facts"
+                replay={replay}
+                capabilities={["sl_tp_ambiguity", "oco_tree", "multi_leg"]}
+                note="Intrabar ambiguity, OCO trees and multi-leg facts are each a separate published relation. The route declared all three."
               />
             </div>
           </div>
