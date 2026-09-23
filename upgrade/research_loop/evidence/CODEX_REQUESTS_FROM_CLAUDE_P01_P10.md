@@ -89,7 +89,7 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
-| `CG-P06-01` | Attempt/queue read: ordinal, state, `started_at`/`ended_at` (open since P06, never on the board) | S03 attempts drawer, queued state | OPEN |
+| `CG-P06-01` | Attempt/queue read: ordinal, state, `started_at`/`ended_at` (open since P06, never on the board) | S03 attempts drawer, queued state | DELIVERED `390f179a` · `research-progress.d.ts:ProgressQueue/ProgressAttempt`; `{queue:{queue_class:"INTERACTIVE",queued_at_utc_ms:0,retry_not_before_utc_ms:null},attempts:[{ordinal:1,state:"CANCELLED",claimed_at_utc_ms:0,started_at_utc_ms:0,ended_at_utc_ms:0}]}`; 8-row bound, immutable scheduler-event times; generated fields optional for additive FE rollout, server emits them |
 | `CG-P06-02` | Progress channel from the running child (today Popen → wait → terminal receipt only) | S03 live console, tqdm, Gantt fill, cursor | OPEN |
 | `CG-P06-03` | Caps 45 CPU-s / 90 s wall vs a real walk-forward | any non-trivial run | APPROVED_PENDING_MEASUREMENT · Bobby DQ-11 |
 | `CG-P06-04` | Bug: float `cpu_seconds` dropped → usage 0 (`durable_worker.py:716-727`) | S03 budget, usage | DELIVERED `b0277b4f` |
