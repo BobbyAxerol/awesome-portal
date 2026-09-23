@@ -14,6 +14,7 @@ Branch: `docs/research-loop-plan`. This packet is a live evidence index, not a r
 | CG-P10-06 | `3bb91fa5` | `research-progress.d.ts` availability: `QUEUED_NO_SOURCE`, `CANCELLED_BEFORE_SOURCE`, `PENDING_SOURCE_CALLBACK` | focused progress service tests 5/5 |
 | CG-P04-02 | `57cf04ee` | `research-foundation.d.ts:AtlasMode.invalid_schedules`; `{schedule:"per_fold_causal",admission:"NOT_ADMITTED",reason:"...inner_split_frequency...",source:[...]}` | pinned wheel SHA; P04 Python 32/32; contracts 7/7; Control API build |
 | CG-P09-02 partial | `5069b39a` | Journey v2 and historical Atlas canonical response fixtures | contracts 6/6; snapshot parity 200/200; preflight fixture outstanding |
+| CG-P04-03 | `05b4e96c` | `AtlasMode.invalid_schedules`; all five modes have a reason for every rejected schedule | 5×3 partition; pinned-wheel RECORD SHA and anchor checks; P04 Python 32/32 |
 
 Only the Journey and historical Atlas responses are pinned. The preflight fixture remains outstanding, so `CG-P09-02` is PARTIAL, not delivered. No frontend files were staged by Codex.
 
