@@ -91,13 +91,16 @@ export const REPORT_PANELS = [
   "folds",
   "stages",
   "artifacts",
+  "warnings",
   "promotion",
   "provenance",
   "footer",
   "exports",
   "annotation",
-  "warnings",
 ] as const;
+
+/** P18 handoff: the annotation is mutable and is not part of the sealed report. */
+export const ANNOTATION_TITLE = "approval annotation — stored separately, not part of the sealed report";
 
 /* ------------------------------------------------------------------ style */
 
@@ -817,7 +820,7 @@ function Exports({ report, exporter }: { report: ReportDetail; exporter: ReportE
 function AnnotationBlock({ report }: { report: ReportDetail }) {
   const annotation = report.approval_annotation;
   return (
-    <Block panel="annotation" title="approval annotation — separate from the sealed core">
+    <Block panel="annotation" title={ANNOTATION_TITLE} className="no-print">
       {annotation.state === "AVAILABLE" && annotation.text !== null ? (
         <>
           <p className="rr-note" data-annotation-text>
@@ -830,14 +833,17 @@ function AnnotationBlock({ report }: { report: ReportDetail }) {
       ) : (
         <AvailabilityAbsent what="annotation" availability={annotation.availability} />
       )}
-      <p className="rr-caption">Display only. An annotation never changes the report revision or any sealed value.</p>
+      <p className="rr-caption">
+        Display only and never printed: the annotation is a mutable row kept apart from the frozen core, so the printed
+        sheet always matches its report revision.
+      </p>
     </Block>
   );
 }
 
 function Warnings({ core }: { core: FrozenCore }) {
   return (
-    <Block panel="warnings" title="warnings">
+    <Block panel="warnings" title="warnings" className="rr-keep">
       {core.warnings.length === 0 ? (
         <span className="rr-caption">The report carries no warning definitions.</span>
       ) : (
@@ -909,6 +915,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
               <StageChain core={core} />
               <Artifacts core={core} />
             </div>
+            <Warnings core={core} />
             <div className="rr-two rr-keep">
               <Promotion core={core} />
               <Provenance core={core} />
@@ -920,10 +927,9 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
         <Footer runId={runId} report={report} />
       </article>
       {report && core ? (
-        <div className="rr-screen">
+        <div className="rr-screen no-print">
           <Exports report={report} exporter={exporter} />
           <AnnotationBlock report={report} />
-          <Warnings core={core} />
           <p className="rr-caption no-print" data-rules>
             {REPORT_RULES_FOOTER}
           </p>

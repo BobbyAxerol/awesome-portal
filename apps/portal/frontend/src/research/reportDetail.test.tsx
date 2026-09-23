@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { NOPRINT_NOTE, REPORT_PANELS, SERIES_UNAVAILABLE } from "./ReportDetail";
+import { ANNOTATION_TITLE, NOPRINT_NOTE, REPORT_PANELS, SERIES_UNAVAILABLE } from "./ReportDetail";
 import { PRINT_SHEET_ATTRIBUTE, ReportRoute } from "./ReportRoute";
 import { REPORT_REFUSAL_COPY, exportDownloadHref, toReportRefusal, type ExportJob, type ReportDetail } from "./reportClient";
 import { equitySvg } from "./reportEquity";
@@ -333,6 +333,44 @@ describe("S09 Run Report — the sheet", () => {
     await screen.findByText("claim passport — sealed source facts, quoted verbatim");
     const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
     expect(order).toEqual([...REPORT_PANELS]);
+  });
+
+  it("S09-U27 the footer is the last printed block: warnings print inside the sheet, annotation and exports are screen-only", async () => {
+    server({
+      detail: [
+        {
+          status: 200,
+          body: report({
+            core: {
+              warnings: [
+                { definition_id: "research.warning.v1.fixed-profile", state: "ACTIVE", reason_code: "P04_FIXED_PROFILE", copy: "Fixed profile." },
+                { definition_id: "research.warning.v1.other", state: "NOT_APPLICABLE", reason_code: null, copy: "Not applicable here." },
+              ],
+            },
+          }),
+        },
+      ],
+    });
+    renderRoute();
+    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    const sheet = document.querySelector("article.rr-sheet")!;
+    const footer = panel("footer");
+    expect(sheet.lastElementChild).toBe(footer);
+    expect(sheet.contains(panel("warnings"))).toBe(true);
+    expect(panel("warnings").closest(".no-print")).toBeNull();
+    expect(panel("warnings").querySelectorAll("[data-warning]")).toHaveLength(2);
+    expect(panel("warnings").textContent).toContain("P04_FIXED_PROFILE");
+    const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
+    expect(order.indexOf("warnings")).toBe(order.indexOf("artifacts") + 1);
+    expect(order.indexOf("warnings")).toBeLessThan(order.indexOf("promotion"));
+    expect(sheet.contains(panel("annotation"))).toBe(false);
+    expect(panel("annotation").getAttribute("aria-label")).toBe(ANNOTATION_TITLE);
+    /* Every element after the footer, outside it, is screen-only. */
+    const after = [...document.querySelectorAll('[data-screen="run-report"] *')].filter(
+      (el) => !footer.contains(el) && Boolean(footer.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING),
+    );
+    expect(after.length).toBeGreaterThan(0);
+    for (const el of after) expect(el.closest(".no-print"), el.outerHTML.slice(0, 80)).not.toBeNull();
   });
 
   it("S09-U03 prints exact decimals and full digests as the server sent them", async () => {
