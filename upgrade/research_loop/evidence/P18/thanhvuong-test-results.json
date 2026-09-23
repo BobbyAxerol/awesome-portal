@@ -2,7 +2,7 @@
   "phase": "P18",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-23",
-  "tree": "29c28f4aea87d43f56dbf1187595de6944863831",
+  "tree": "548e8d29a7bf13d5f87a0ecdfd11e6bfba121e8c",
   "workspace": {
     "user": "thanhvuong",
     "branch": "feat/thanhvuong/research-p17-p21",
@@ -12,7 +12,7 @@
     "playwright": "1.62.1",
     "chromium": "151.0.7922.34 headless"
   },
-  "lane_note": "Unit, typecheck and build results are real executions in the workspace. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the report API stubbed from the report.service.ts shape (no canonical fixture: CG-P18-09), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). The full 128-probe Research suite ran on 93a435bb and again, in the 2026-09-23 independent audit, on head 47165016 (code = aea76f69): 128/128. After the audit fixes (29c28f4a) the full Research suite ran again with the audit measurements added: 129/129 (fixtures 8, product 74, tvp18 46, audit-measure 1). No REAL_API_E2E_RECEIPT: FEATURE_RESEARCH_REPORTS=false.",
+  "lane_note": "Unit, typecheck and build results are real executions in the workspace. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the report API stubbed from the report.service.ts shape (no canonical fixture: CG-P18-09), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). The full 128-probe Research suite ran on 93a435bb and again, in the 2026-09-23 independent audit, on head 47165016 (code = aea76f69): 128/128. After the audit fixes (29c28f4a) the full Research suite ran again with the audit measurements added: 129/129 (fixtures 8, product 74, tvp18 46, audit-measure 1). No REAL_API_E2E_RECEIPT: FEATURE_RESEARCH_REPORTS=false. After the hi-fi geometry round (548e8d29) the full Research suite ran again with the hifi-geometry probe added: 131/131 (fixtures 8, product 74, tvp18 49).",
   "results": [
     {
       "gate": "npm --prefix packages/contracts run generate:research-report",
@@ -256,6 +256,67 @@
       "scope": "push a9471cdd..<docs commit after audit fixes> to primus-origin",
       "result": "PASS",
       "exit": 0
+    },
+    {
+      "gate": "apps/portal/frontend npx tsc -b --noEmit",
+      "scope": "tree 548e8d29",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "apps/portal/frontend npm run build",
+      "scope": "tree 548e8d29",
+      "result": "PASS",
+      "exit": 0,
+      "note": "only the pre-existing >500 kB chunk warning"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run (full)",
+      "scope": "tree 548e8d29",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "170 files, 3015 passed, 1 skipped (3016)",
+      "note": "first run 1 failed = known PortalShell flake (known_flake); single rerun passed"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run src/research/reportDetail.test.tsx",
+      "scope": "tree 548e8d29",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "44/44 (S09-U01..U40, U14 x5); with researchBoundary 58/58"
+    },
+    {
+      "gate": "playwright full Research suite, --workers=1, preview 127.0.0.1:4417",
+      "scope": "tree 548e8d29",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "131/131 (fixtures 8, product 74, tvp18 49 = 46 + audit-measure 1 + hifi-geometry 2), 4.7 min, 46 RECEIPT lines overflow=0 noise=0",
+      "measurements": {
+        "GEOM_1280_screen_and_letter": "passport 1 row (Letter 2 rows); idrow beside, ratio 1.21; headline tiles 2 cols x 3 rows; eqPlot 215 px, ddPlot 92 px; yLabels ['131.0832','94.3324'] (server strings); 6 xLabels 2024-08-30..2024-10-09; 5 fold labels; ddDeepest '-0.029997 fraction'; title 'Equity — stitched OOS (5 folds)'; chain row beside ratio 1.1; promotion/provenance beside; footer copy per hi-fi; title font 27px",
+        "GEOM_660": "idrow, chain row and promotion/provenance stacked",
+        "GEOM_SPLIT": "[] at 1280 and 660 (td, th, artifact names, passport labels)",
+        "CLIP_and_CLIP_PAPER": "[] at 1280 and 660; CERT beside at 1280 and on Letter",
+        "AUDIT": "screen scrollHeight 3103 (page bottom 3039), print 816 2467 == sheet bottom 2467, one h1, splits []",
+        "pdf_pages": "Letter 4 (was 5), A4 3 (was 5)"
+      }
+    },
+    {
+      "gate": "git diff --cached --check + bash .githooks/pre-commit (manual)",
+      "scope": "code commit 548e8d29",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "bash .githooks/pre-commit (manual)",
+      "scope": "docs commit 'P18 packet after hi-fi geometry alignment'",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "bash .githooks/pre-push (manual)",
+      "scope": "push 62cfe6ed..<docs commit after hi-fi geometry> to primus-origin",
+      "result": "PASS",
+      "exit": 0
     }
   ],
   "not_run": [
@@ -281,10 +342,11 @@
     }
   ],
   "evidence_store": {
-    "location": "~/tv-shots/p18/ (tree 93a435bb, package B) and ~/tv-shots/p18-fix/ (tree aea76f69, rerun after fix) and ~/tv-shots/p18-fix2/ (tree 29c28f4a, audit fixes; before/after PDFs p18-audit-before-*.pdf / p18-audit-after-*.pdf) in the thanhvuong workspace (not committed, A4.1)",
+    "location": "~/tv-shots/p18/ (tree 93a435bb, package B) and ~/tv-shots/p18-fix/ (tree aea76f69, rerun after fix) and ~/tv-shots/p18-fix2/ (tree 29c28f4a, audit fixes; before/after PDFs p18-audit-before-*.pdf / p18-audit-after-*.pdf) in the thanhvuong workspace (not committed, A4.1) and ~/tv-shots/p18-hifi/ (tree 548e8d29, hi-fi geometry; 122 files; side-by-side p18-side-by-side-1280.png, block shots p18-block-*.png)",
     "probe_spec_sha256_prefix": {
       "package B spec (_probe-research-tvp18.spec.ts)": "32dc5f08f7ea7061",
-      "rerun spec with clip assertions": "586f39fe2d65f5ba"
+      "rerun spec with clip assertions": "586f39fe2d65f5ba",
+      "hi-fi geometry spec (hifi-geometry @1280/@660 added)": "739ec93cbd09925f"
     },
     "pdf_bytes": {
       "p18-fix/p18-print-letter.pdf": 119055,
@@ -292,7 +354,9 @@
       "p18/p18-print-letter.pdf (6 pages)": 116166,
       "p18/p18-print-a4.pdf": 116345,
       "p18-fix2/p18-print-letter.pdf (5 pages)": 118772,
-      "p18-fix2/p18-print-a4.pdf (5 pages)": 118185
+      "p18-fix2/p18-print-a4.pdf (5 pages)": 118185,
+      "p18-hifi/p18-print-letter.pdf (4 pages)": 117837,
+      "p18-hifi/p18-print-a4.pdf (3 pages)": 117177
     },
     "sha256_prefix_p18_fix": {
       "p18-clip-audit-1280.png": "e765359da8d84bf2",
@@ -455,6 +519,30 @@
       "p18-print-a4.pdf": "2af23630fb09fdca",
       "probe.log": "a190efb59e0be98b",
       "playwright.log": "b1a085ed68fa1571"
+    },
+    "sha256_prefix_p18_hifi": {
+      "p18-full-1280.png": "fa49b62246fae639",
+      "p18-full-660.png": "3412bab7ac56abef",
+      "p18-side-by-side-1280.png": "c4b1ade537d64302",
+      "p18-hifi-09-1280-visible.png": "5fd5b53938bbd146",
+      "p18-hifi-09-660-visible.png": "df8cb60d0e8f40c3",
+      "p18-block-header-1280.png": "1848d55f17bc603e",
+      "p18-block-passport-1280.png": "8bae8121ae7cf60e",
+      "p18-block-identity-1280.png": "eccb45fc057e13a0",
+      "p18-block-equity-1280.png": "93b07cec44762cf5",
+      "p18-block-stages-1280.png": "568a01f96e084388",
+      "p18-block-promotion-1280.png": "b0b186f24f5dba80",
+      "p18-block-header-660.png": "af1b1cb2afe9005f",
+      "p18-block-passport-660.png": "d7217bbd9b515919",
+      "p18-block-identity-660.png": "d138aeb3ab98b145",
+      "p18-block-equity-660.png": "37029b5d257dabc9",
+      "p18-block-stages-660.png": "83bb073f4b2c6e3d",
+      "p18-block-promotion-660.png": "18ded5f848d80e48",
+      "p18-print-letter.pdf": "ac24125295b04c5d",
+      "p18-print-a4.pdf": "0330b1e95369c4e9",
+      "probe.log (122 lines)": "fa44be34af5fa697",
+      "playwright.log": "dd7d3cc96d656b51",
+      "build.log": "e8e6d63579dbb63e"
     }
   },
   "known_flake": "src/app/PortalShell.test.tsx > 'mounts QuantBT under its canonical route with no nested topbar' fails intermittently in a full vitest run and passes alone (once foundation.test.tsx > P09-T04 instead); both files pass alone 52/52. Recorded at P16/P17; seen in 2 of 4 full runs after 93a435bb and on 6057a4c8 with the fix stashed. Outside the S09 diff, not changed (Bobby B5).",

@@ -2,7 +2,7 @@
   "phase": "P18",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-23",
-  "tree": "29c28f4aea87d43f56dbf1187595de6944863831",
+  "tree": "548e8d29a7bf13d5f87a0ecdfd11e6bfba121e8c",
   "open_implementation_debt": [],
   "resolved_in_phase": [
     {
@@ -62,6 +62,13 @@
       "found_by": "independent audit 2026-09-23 (audit notes)",
       "status": "RESOLVED",
       "evidence": "29c28f4a; caption [data-verdict-rule] reads provenance.verdict_rule_revision verbatim; S09-U35 (value from provenance, no hard-coded string in source)"
+    },
+    {
+      "id": "S09-HIFI-GEOMETRY",
+      "what": "five blocks and the header did not follow the hi-fi sheet geometry although the contract carries the data (CLAUDE.md rule 9): passport listed vertically, identity and headline stacked, equity without axes/legend/underwater strip, certification chain + artifacts and promotion + provenance stacked; metrics header cells split words at 660",
+      "found_by": "coordinator hi-fi review 2026-09-23 (p18-hifi-09-1280-visible.png)",
+      "status": "RESOLVED",
+      "evidence": "548e8d29; passport flex row, identity 1.15 : headline 1 (6 tiles 2 x 3 + headline_footnote), equity two-sided figcaption + 215 px plot with server-string y labels, <= 6 UTC day labels, fold labels, legend (IS not published CG-P18-06), 92 px underwater labelled with drawdown_fraction; chain 1.1 : artifacts 1; promotion/provenance one two-column card; footer/header per hi-fi; 660 stacks, print keeps rows; th keeps words whole; S09-U36..U40 (+U23/U33); ~/tv-shots/p18-hifi probe hifi-geometry GEOM 1280/Letter/660 and GEOM-SPLIT [], full Research 131/131; remaining deviations only missing fields CG-P18-01..07 (receipt §4)"
     }
   ],
   "backend_requests": [
@@ -179,5 +186,5 @@
   ],
   "audit_head": "47165016334d8b9298273b2deb2e1ea728bbdcdf",
   "open_debt": [],
-  "fix_head": "29c28f4aea87d43f56dbf1187595de6944863831"
+  "fix_head": "548e8d29a7bf13d5f87a0ecdfd11e6bfba121e8c"
 }

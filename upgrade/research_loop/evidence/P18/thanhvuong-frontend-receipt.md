@@ -15,7 +15,7 @@ không gọi P18 là `VERIFIED`.
 | `thanhvuong-frontend-receipt.md` | receipt này: đã đọc, git, file, mapping hi-fi, so hi-fi, evidence, discrepancy, scale refine, kết luận |
 | [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md) | receipt backend request: `CG-P18-01…10` theo template CLAUDE.md §5 + locator/actual/expected/đề xuất/test/fallback, việc Bobby quyết B1–B6, trạng thái kiểm lại ngày 2026-09-23 |
 | [thanhvuong-test-results.json](./thanhvuong-test-results.json) | evidence máy đọc được: từng gate, lệnh, exit, số đếm, gate chưa chạy, SHA-256 ảnh/PDF/log |
-| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | debt trong scope: `open_implementation_debt` rỗng, `open_debt` rỗng (A1/A2 audit đã sửa ở `29c28f4a`, §5.5, §7); lỗi đã sửa trong phase, request mở, downstream gate |
+| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | debt trong scope: `open_implementation_debt` rỗng, `open_debt` rỗng (A1/A2 audit đã sửa ở `29c28f4a`, geometry hi-fi ở `548e8d29`, §4, §5.5, §7); lỗi đã sửa trong phase, request mở, downstream gate |
 | [thanhvuong-rollback.md](./thanhvuong-rollback.md) | revert từng commit, theo thứ tự mới nhất trước |
 
 Dòng trạng thái ở Unified §13 và implementation note dưới
@@ -75,31 +75,31 @@ rỗng (cũng rỗng với `6a87f77b`). Không có fixture report ở cả ba re
 |---|---|
 | Branch | `feat/thanhvuong/research-p17-p21`, remote duy nhất là `primus-origin` |
 | Base của P18 | `19310912b9695c9e5bb48f05432ff4726767d61f` (docs: rule packet CLAUDE.md §7.10) |
-| Commit code P18 | `70044e40` feat(research): S09 report client and export hooks · `1757b7d5` feat(research): S09 Run Report screen, route and links · `6057a4c8` test(research): S09 unit lane S09-U01..U26 · `93a435bb` fix(research): S09 warnings print inside the sheet, annotation stays screen-only · `aea76f6923e8d6acc51c851607a79e2f44b51fe7` fix(research): S09 long identifiers wrap, header keeps the certification box, print margins · `29c28f4aea87d43f56dbf1187595de6944863831` fix(research): S09 screen-reader equity table leaves the layout, table cells keep words whole |
+| Commit code P18 | `70044e40` feat(research): S09 report client and export hooks · `1757b7d5` feat(research): S09 Run Report screen, route and links · `6057a4c8` test(research): S09 unit lane S09-U01..U26 · `93a435bb` fix(research): S09 warnings print inside the sheet, annotation stays screen-only · `aea76f6923e8d6acc51c851607a79e2f44b51fe7` fix(research): S09 long identifiers wrap, header keeps the certification box, print margins · `29c28f4aea87d43f56dbf1187595de6944863831` fix(research): S09 screen-reader equity table leaves the layout, table cells keep words whole · `548e8d29a7bf13d5f87a0ecdfd11e6bfba121e8c` feat(research): S09 layout follows the hi-fi sheet geometry |
 | Ghi chú lịch sử | `1757b7d5` ban đầu là `04495395`, được amend local **trước khi push** (chuyển notice + retry ra ngoài `ResearchPanel`, D9). Không merge, rebase hay force |
-| Docs commit | commit docs này (packet 5 file + dòng §13 + implementation note `#rl-p18`); các vòng trước `47165016` (audit), `a9471cdd`; vòng này `docs(research): P18 packet after audit fixes` |
+| Docs commit | commit docs này (packet 5 file + dòng §13 + implementation note `#rl-p18`); các vòng trước `47165016` (audit), `a9471cdd`; `62cfe6ed` (audit fixes); vòng này `docs(research): P18 packet after hi-fi geometry alignment` |
 | Tác giả | `Vuong <thanhvuong11052003@gmail.com>`, trailer `Co-Authored-By: Claude Fable 5.1` |
 | Baseline | `docs/research-loop-plan` = `e39bacfa` lúc lập plan, `6a87f77b` lúc đóng packet. **Chưa merge/rebase**. Bobby quyết cách tích hợp (§6, B1) |
-| Push / PR | Push `19310912..<commit docs này>` lên `primus-origin` (pre-push chạy tay exit 0), không force; vòng này push `a9471cdd..<commit docs này>`. Chưa PR |
+| Push / PR | Push `19310912..<commit docs này>` lên `primus-origin` (pre-push chạy tay exit 0), không force; vòng này push `62cfe6ed..<commit docs này>`. Chưa PR |
 
-## 2. File đã sửa (`git diff --numstat 19310912 29c28f4a -- apps/portal/frontend`)
+## 2. File đã sửa (`git diff --numstat 19310912 548e8d29 -- apps/portal/frontend`)
 
 | File | + | − | Mục đích |
 |---|---:|---:|---|
 | `src/research/reportClient.ts` | 328 | 0 | 4 operation đúng tên generated; 304/`Fresh<T>`; POST export kèm CSRF; `toReportRefusal` (F-04); word maps; `EXPORT_FORMAT_LABEL`, `ARTIFACT_LABEL` |
 | `src/research/useReport.ts` | 130 | 0 | Một GET khi vào, không poll, không refetch on focus; retry gửi lại kèm ETag đang giữ (Map in-memory) |
 | `src/research/useReportExport.ts` | 152 | 0 | Tạo job → poll 2000 ms chỉ khi QUEUED/RUNNING; dừng khi terminal / unmount / `document.hidden`; 409 giữ job |
-| `src/research/reportEquity.ts` | 119 | 0 | `equitySvg` pure function (spec §18): path theo thời gian, bỏ điểm không parse được |
-| `src/research/ReportDetail.tsx` | 970 | 0 | Sheet S09: 16 `data-panel`, print CSS scoped, `@page { margin: 0.55in }`; bảng sr-only equity trong wrapper `.rr-sr` (ẩn khi in); ô bảng giữ nguyên chữ; một `h1` (title là `h2`); verdict rule đọc từ `provenance.verdict_rule_revision` |
+| `src/research/reportEquity.ts` | 174 | 0 | `equitySvg` pure function (spec §18): path theo thời gian, bỏ điểm không parse được; nhãn trục y = chuỗi equity server của điểm cao/thấp nhất, ≤ 6 ngày UTC cho trục x, fold boundary kèm `fold_id`, điểm sâu nhất của underwater |
+| `src/research/ReportDetail.tsx` | 1109 | 0 | Sheet S09: 16 `data-panel`, geometry theo hi-fi (passport ngang, identity + headline một hàng, equity có trục/legend/underwater 92px, chain + artifacts hai card, promotion + provenance một card), print CSS scoped, `@page { margin: 0.55in }`; bảng sr-only equity trong wrapper `.rr-sr` (ẩn khi in); ô bảng giữ nguyên chữ; một `h1` (title là `h2`); verdict rule đọc từ `provenance.verdict_rule_revision` |
 | `src/research/ReportRoute.tsx` | 41 | 0 | Route; đặt `html[data-research-print-sheet]` chỉ khi mount |
-| `src/research/reportDetail.test.tsx` | 886 | 0 | 39 test, nhóm `S09-U01…U35` (U14 tham số ×5) |
+| `src/research/reportDetail.test.tsx` | 1036 | 0 | 44 test, nhóm `S09-U01…U40` (U14 tham số ×5) |
 | `src/research/utcMinute.ts` | 8 | 0 | `iso()` chuyển nguyên từ `ExecuteDetail.tsx`, dùng chung S08/S09 |
 | `src/research/ExecuteDetail.tsx` | 5 | 9 | Import `iso` từ `utcMinute.ts`; `data-next="run-report"` thành Link |
 | `src/research/EvidenceFlow.tsx` | 13 | 4 | Hub "generate report → 09" thành Link; "release candidate → 11" giữ refused |
 | `src/features/quantbt/QuantBTModule.tsx` | 4 | 1 | Mount `runs/:runId/report`; loại `report` khỏi lookup `/api/runs/:id` cũ |
 | `src/research/researchBoundary.test.ts` | 1 | 0 | Thêm `reportClient.ts` vào `NETWORK_MODULES` |
 | `tsconfig.json` | 3 | 0 | Alias `@portal/contracts-research-report` |
-| **Tổng** | **2660** | **14** | 13 file, tất cả thuộc `apps/portal/frontend/**` (code head `29c28f4a`; ở `aea76f69` là +2582/−14) |
+| **Tổng** | **3004** | **14** | 13 file, tất cả thuộc `apps/portal/frontend/**` (code head `548e8d29`; ở `29c28f4a` là +2660/−14, ở `aea76f69` là +2582/−14). Riêng `548e8d29`: `ReportDetail.tsx` +328/−189, `reportDetail.test.tsx` +156/−6, `reportEquity.ts` +106/−51 |
 
 Không đụng backend, `packages/contracts/**`, OpenAPI, fixture canonical,
 migration, `apps/portal/strategy/**`, control-plane, deploy, `package.json` hay
@@ -123,14 +123,14 @@ route (§5.2), dòng RECEIPT nào cũng `overflow=0 noise=0`.
 | No-print bar (← Hub · Stage 5, crumb, Print, Export, note) | `NoPrintBar` / `noprint-bar` (`.no-print`) | `exports.formats`, `exports.unavailable_formats[]` | mọi state, kể cả loading và refusal | U01, U08, U10, U11 | Print emulation `display:none`; Hub href `/evidence#stage=claim&fold=2`; RC là SPAN có `title`; Parquet/Archive disabled |
 | Header, kicker, title, run chip, meta | `Header` / `header` | `run_id`, `sealed_at_utc_ms`, `report_revision`, `presentation_revision`, `frozen_core.report_source` | loading (khung), available | U01, U03 | Còn dưới mọi refusal (chỉ còn `noprint-bar, header, footer`) |
 | Certification box | `Header` `[data-cert]` | — (`CG-P18-02`) | typed absence | U02, U30 | `CERT 1280` screen beside=true; print Letter beside=true (sau `aea76f69`) |
-| Claim passport | `Passport` / `passport` | `frozen_core.passport[6]` (ReportFact) | AVAILABLE text hoặc NOT_PUBLISHED + reason | U05 | full: 6 fact; partial: reason `P18_*_NOT_PUBLISHED` |
-| Identity block | `Identity` / `identity` | `frozen_core.identity[12]` key/label/value | AVAILABLE hoặc withheld | U05 | 12 hàng; 660 một cột |
-| Headline (6 ô) + footnote | `HeadlineRow` / `headline` | `frozen_core.headline[6]`, `headline_footnote` | value hoặc withheld + reason | U03, U04 | full `1.186 / -0.214 / -0.0931 / 412 / 0.5437 / -12.40` nguyên chuỗi; partial 3 ô withheld `P04_SOURCE_DID_NOT_PUBLISH_{OOS_SHARPE,DECAY_MEAN,WIN_RATE}`, `fakeZero=false` |
+| Claim passport | `Passport` / `passport` | `frozen_core.passport[6]` (ReportFact) | AVAILABLE text hoặc NOT_PUBLISHED + reason | U05 | full: 6 fact nằm ngang một hàng ở 1280; partial: reason `P18_*_NOT_PUBLISHED` (U36) |
+| Identity block | `Identity` / `identity` | `frozen_core.identity[12]` key/label/value | AVAILABLE hoặc withheld | U05, U37 | 12 hàng; cạnh headline ở 1280 (tỉ lệ 1.21), xếp chồng ở 660 |
+| Headline (6 ô) + footnote | `HeadlineRow` / `headline` | `frozen_core.headline[6]`, `headline_footnote` | value hoặc withheld + reason | U03, U04 | full `1.186 / -0.214 / -0.0931 / 412 / 0.5437 / -12.40` nguyên chuỗi; partial 3 ô withheld `P04_SOURCE_DID_NOT_PUBLISH_{OOS_SHARPE,DECAY_MEAN,WIN_RATE}`, `fakeZero=false`; 6 tile 2 cột × 3 hàng (U37) |
 | Metrics table (không có trong hi-fi) | `Metrics` / `metrics` | `frozen_core.metrics[8]` | value hoặc withheld | U03 | 8 metric |
-| Equity + underwater | `EquityFigure` / `equity` (SVG tĩnh, `equitySvg`) | `frozen_core.equity` points/counts/sampling/availability | AVAILABLE vẽ; NOT_PUBLISHED khung + "series unavailable — numbers unaffected" + reason | U06, U07, U23 | full: "emitted 240 of 240 source observations · sampling full"; partial: câu T10 + reason |
-| Fold boundary markers | `EquityFigure` | `frozen_core.folds.rows[].start_utc_ms` | chỉ vẽ khi folds AVAILABLE | U06 | 5 boundary F1…F5 |
+| Equity + underwater | `EquityFigure` / `equity` (SVG tĩnh, `equitySvg`) | `frozen_core.equity` points/counts/sampling/availability | AVAILABLE vẽ; NOT_PUBLISHED khung + "series unavailable — numbers unaffected" + reason | U06, U07, U23, U38 | full: title "Equity — stitched OOS (5 folds)", "emitted 240 of 240 source observations · sampling full · UTC", plot 215 px, y `131.0832`/`94.3324`, 6 nhãn ngày, underwater 92 px "-0.029997 fraction"; partial: câu T10 + reason |
+| Fold boundary markers | `EquityFigure` | `frozen_core.folds.rows[].start_utc_ms` | chỉ vẽ khi folds AVAILABLE | U06, U38 | 5 boundary kèm nhãn `fold_id` |
 | Per-fold verdict | `FoldVerdicts` / `folds` | `frozen_core.folds` (state, rows, reason_code) | rows hoặc một hàng absent + reason | U07 | full `PASS,PASS,WARN,DRAG,PASS`; partial `P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS` |
-| Certification chain / stage checks | `StageChain` / `stages` | `frozen_core.stages[5]` key/state/timestamps | PENDING/RUNNING/DONE; không bao giờ PASS | U05 | Stages không có chữ "PASS" |
+| Certification chain / stage checks | `StageChain` / `stages` | `frozen_core.stages[5]` key/state/timestamps | PENDING/RUNNING/DONE; không bao giờ PASS | U05, U39 | Stages không có chữ "PASS"; card "Certification chain" cạnh artifacts ở 1280 và Letter (1.1 : 1), xếp chồng ở 660 |
 | Key artifacts & digests | `Artifacts` / `artifacts` | `frozen_core.artifacts[7]` | SEALED digest đầy đủ hoặc state + reason | U05, U28 | full 7 SEALED (stub); partial 7 NOT_PUBLISHED đúng reason; digest xuống dòng, không cắt (`CLIP` `[]`) |
 | Warnings (không có trong hi-fi) | `Warnings` / `warnings` (trong sheet, sau artifacts) | `frozen_core.warnings[]` | ACTIVE / NOT_APPLICABLE, in mọi dòng | U02, U27 | print: `warnings visible=true` |
 | Promotion state | `Promotion` / `promotion` | `frozen_core.promotion` | NOT_PUBLISHED (hằng trong contract) + reason | U05 | `P04_SOURCE_DID_NOT_PUBLISH_PROMOTION_APPROVAL` |
@@ -145,31 +145,36 @@ route (§5.2), dòng RECEIPT nào cũng `overflow=0 noise=0`.
 ## 4. So hi-fi với product (1280 / 660)
 
 Evidence: hi-fi `p18-hifi-09-1280-visible.png` (`5fd5b53938bbd146`) và
-`p18-hifi-09-660-visible.png` (`df8cb60d0e8f40c3`) đặt cạnh product sau fix
-`p18-full-1280.png` (`c5f72b4c1de9b74b`) và `p18-full-660.png`
-(`4f9675d5b4b013db`) trong `~/tv-shots/p18-fix/`. Hi-fi cần `doc-page.js`,
-file này **không có trong repo** nên `<doc-page>` không upgrade và giữ
-`visibility:hidden`. Ảnh thô (`p18-hifi-09-1280.png`) chỉ có no-print bar. Bản
-`*-visible.png` inject CSS ép visible, chỉ để xem; file hi-fi không đổi.
+`p18-hifi-09-660-visible.png` (`df8cb60d0e8f40c3`) đặt cạnh product sau vòng
+geometry `p18-full-1280.png` (`fa49b62246fae639`) và `p18-full-660.png`
+(`3412bab7ac56abef`) trong `~/tv-shots/p18-hifi/`; ảnh ghép
+`p18-side-by-side-1280.png` (`c4b1ade537d64302`, hi-fi trái, product phải) và
+ảnh từng khối `p18-block-{header,passport,identity,equity,stages,promotion}-{1280,660}.png`.
+Hi-fi cần `doc-page.js`, file này **không có trong repo** nên `<doc-page>` không
+upgrade và giữ `visibility:hidden`; bản `*-visible.png` inject CSS ép visible,
+chỉ để xem, file hi-fi không đổi.
 
-| Khối | Hi-fi | Product (`aea76f69`) | Lý do |
+Quy tắc (CLAUDE.md rule 9): bố cục theo hi-fi; chỉ được lệch khi thiếu field.
+Đo trong browser bằng probe `hifi-geometry @1280/@660` (dòng `GEOM`, screen và
+Letter).
+
+| Khối | Hi-fi | Product (`548e8d29`) | Khớp? / lý do còn lệch (chỉ được là thiếu field) |
 |---|---|---|---|
-| No-print bar | Hub · RC (link) / Run Report + note; không có nút | Hub (link) · RC (span refused) / Run Report + Print + Export JSON/CSV + Parquet/Archive (disabled) + note | Route 11 chưa có (D7); export theo `exports.formats`/`unavailable_formats` |
-| Tiêu đề | "R-WFO-118 — mom_breakout_v3 on BTCUSDT · 4h"; meta generated/engine | "QuantBT Run Report" + chip run; meta sealed/revision/presentation/source profile | `CG-P18-03`, D2, `VISUAL_DECISION_REQUIRED` |
-| Cert box | Grade "B", góc phải trên | Box "not published · not a field of the report contract", góc phải trên ở 1280 và trên giấy; ở ≤700px được xếp chồng | `CG-P18-02`, `VISUAL_DECISION_REQUIRED`; vị trí sửa ở `aea76f69` (N1) |
-| Claim passport | 6 cột key/value nằm ngang | Danh sách dọc "fact n — value" + chú thích | `CG-P18-01`, D1 |
-| Identity + headline | 2 cột: identity 9 hàng, 4 tile 2×2 | Xếp chồng: identity 12 hàng, 6 tile một hàng (2 cột ở ≤700px) + footnote | contract: identity 12, headline 6 key cố định |
-| Metrics table | không có | có (8 metric) | `frozen_core.metrics` |
-| Equity | echarts IS vs stitched OOS, trục/legend, underwater riêng, boundary fold_01..05 | SVG tĩnh: 1 đường + fill, underwater ở đáy cùng SVG, boundary F1..F5, không trục/legend; caption đếm điểm | `CG-P18-06/08`; spec §18 SVG tĩnh |
-| Per-fold | 8 cột + câu tóm tắt | 3 cột (fold / OOS window / verdict) + caption nêu cột thiếu | `CG-P18-04`, D4 |
-| Stages | "Certification chain — min of the caps", S1–S4 text + cap | "stage checks — sealed stage timeline", S1–S5 state/started/completed | `CG-P18-05`, D5 |
-| Artifacts | 9 hàng, filename + digest rút gọn | 7 key, digest đầy đủ 64 hex, xuống dòng | `CG-P18-07`, D3 |
-| Warnings | không có | khối trong sheet, sau artifacts | D6, `frozen_core.warnings` |
-| Promotion / Provenance | 2 cột văn xuôi | 2 cột; provenance có dl revision/digest/source absences, in đủ (sửa ở `aea76f69`, B1) | contract `provenance`/`source_*` |
-| Footer | "confidential", "page prints on letter or A4" | "Quant Ecosystem Portal · Research"; run · sealed · "prints on Letter or A4" | — |
-| Exports / annotation | không có | chỉ trên màn hình, sau footer, `.no-print` | D6 |
-| Shell | trang độc lập | trong Portal shell; in thì ẩn chrome | D10 |
-| 660 | overflow 0 | overflow 0, headline 2 cột, identity 1 cột | `@media (max-width:700px)` |
+| Header | eyebrow 9px uppercase, title Newsreader 27px, meta mono 10px, cert box phải, gạch 2px | eyebrow 9px, title 27px, meta 10px, cert box phải ở 1280 và trên Letter, gạch 2px | **Khớp geometry.** Chữ title cố định "QuantBT Run Report" vì contract không có strategy/symbol/TF cho title (`CG-P18-03`); cert box là typed absence vì không có grade (`CG-P18-02`) |
+| Passport | facts nằm ngang (flex wrap, gap 8px 26px, padding 9px 12px), label 8.5px trên, value mono 10.5px dưới; header nền sunken 9.5px | y hệt; 1 hàng ở 1280, 2 hàng trên Letter, wrap ở 660 | **Khớp geometry.** Label là "fact N" thay vì tên key vì `ReportFact` không có key/label (`CG-P18-01`) |
+| Identity + headline | một hàng: identity `flex:1.15` grid `auto 1fr` mono 10px; tile `flex:1 1 44%`, value mono 15px/600; footnote 9px | một hàng (tỉ lệ đo 1.21), 6 tile 2 cột × 3 hàng, `headline_footnote` 9px; metrics ngay sau hàng; 660 xếp chồng | **Khớp.** Identity 12 hàng (hi-fi 9) và 6 tile (hi-fi 4) vì contract có 12/6 key cố định; value là chuỗi server nguyên văn, không tô màu/không thêm % (không có field dấu/đơn vị) |
+| Equity | figcaption hai đầu (Newsreader 13.5px / mono 8.5px), plot 215px, grid dashed, trục y/x, legend phải, fold dashed kèm nhãn, underwater 92px | y hệt: "Equity — stitched OOS (5 folds)" (số fold chỉ khi folds AVAILABLE), "emitted 240 of 240 source observations · sampling full · UTC", plot 215, 6 nhãn ngày `2024-08-30…2024-10-09`, 5 nhãn fold, legend "Stitched OOS" + "IS account — not published (CG-P18-06)" mờ, underwater 92 "-0.029997 fraction"; SVG thuần, không toFixed/Intl | **Khớp geometry.** Không có đường IS (`CG-P18-06`); trục y chỉ 2 nhãn = chuỗi equity server của điểm cao/thấp nhất (hi-fi 4 tick tính ra — client không được tính số); vế phải caption là count/sampling thay vì filename/digest vì không có field artifact filename (`CG-P18-07`) |
+| Certification chain + artifacts | hai card cạnh nhau (1.1 : 1): hàng `S1 · Split` \| mô tả \| cap; artifacts grid `auto 1fr` 9.5px | hai card cạnh nhau ở 1280 và Letter (tỉ lệ 1.1), xếp chồng ở 660; hàng `S1 · Split` \| state + started/completed UTC \| state, không bao giờ PASS; artifacts grid, absence tô màu theo state | **Khớp geometry.** Cột phải là state thay vì cap/binding vì stage không có field kết quả (`CG-P18-05`); tên artifact là enum contract, không có đuôi file (`CG-P18-07`); digest in đầy đủ (invariant §8, D3) |
+| Promotion + provenance | một card 2 cột, cột provenance có border-left | y hệt; 660 xếp chồng (border-top) | **Khớp.** Promotion là typed absence (`Promotion.state` hằng `NOT_PUBLISHED`); provenance thêm dl revision/digest/absence (field contract) |
+| Footer | mono 8.5px hai đầu: "Quant Ecosystem Portal · Research · confidential" \| run · report · "page prints on letter or A4" | y hệt: `run_id · report <sealed_at>Z · page prints on letter or A4` | **Khớp** |
+| Per-fold, metrics, warnings | per-fold 8 cột; không có metrics/warnings | không đổi vòng này | Per-fold 3 cột vì chỉ có fold_id/start/end/verdict (`CG-P18-04`); metrics/warnings là field contract không có trong hi-fi (D6) |
+| Chiều rộng sheet | `<doc-page>` (không render được, thiếu `doc-page.js`) | theo cột nội dung của shell (bỏ max-width 880) | Hi-fi không đo được; product lấy bề rộng no-print bar |
+| No-print bar, exports, annotation, shell | Hub · RC / Run Report + note | không đổi (D6, D7, D10) | Route 11 chưa có; export theo `exports.formats` |
+| 660 | overflow 0 | overflow 0; idrow, chain row, pp card xếp chồng; `GEOM-SPLIT` `[]` | **Khớp** (spec cho phép xếp chồng) |
+
+Kết quả: 7 khối geometry khớp; mọi chỗ còn lệch đều do thiếu field
+(`CG-P18-01…07`), không còn lệch vì bố cục. PDF Letter **5 → 4** trang, A4
+**5 → 3** (sheet gọn hơn).
 
 ### 4.1 Discrepancy hi-fi ≠ spec ≠ contract
 
@@ -193,10 +198,14 @@ kèm typed absence + reason.
 
 ## 5. Evidence
 
-### 5.1 Test lanes (`apps/portal/frontend`, Node v20.20.2, tree = `aea76f69`; dòng in đậm đầu bảng là tree `29c28f4a`)
+### 5.1 Test lanes (`apps/portal/frontend`, Node v20.20.2, tree = `aea76f69`; dòng in đậm đầu bảng là tree `548e8d29`, rồi `29c28f4a`)
 
 | Lane | Lệnh | Exit | Kết quả |
 |---|---|---:|---|
+| **Typecheck + build (tree `548e8d29`)** | `npx tsc -b --noEmit`; `npm run build` | 0 / 0 | PASS (chỉ cảnh báo chunk) |
+| **Unit toàn bộ (tree `548e8d29`)** | `npx vitest run` | 0 | **170 file · 3015 pass · 1 skip** (3016). Lần đầu 1 fail là flake `PortalShell` đã biết (§7, B5); chạy lại một lần pass |
+| **Unit S09 (tree `548e8d29`)** | `npx vitest run src/research/reportDetail.test.tsx` | 0 | **44/44** (`S09-U01…U40`, U14 ×5); kèm boundary 58/58 |
+| **Browser toàn Research, 1 worker (tree `548e8d29`)** | `RESEARCH_SHOT_DIR=~/tv-shots/p18-hifi npx playwright test -c .tv-probe.config.ts --workers=1` | 0 | **131/131** (fixtures 8, product 74, tvp18 49 = 46 + audit-measure 1 + hifi-geometry 2), 4.7 min; 46 RECEIPT `overflow=0 noise=0`; `GEOM` như §4; `CLIP`/`CLIP-PAPER`/split `[]`; `scrollHeight` 3 103, print 816 2 467 = 2 467; PDF Letter 4 trang, A4 3 |
 | **Typecheck + build (tree `29c28f4a`)** | `npx tsc -b --noEmit`; `npm run build` | 0 / 0 | PASS (chỉ cảnh báo chunk) |
 | **Unit toàn bộ (tree `29c28f4a`)** | `npx vitest run` | 0 | **170 file · 3010 pass · 1 skip** (3011); pass ngay lần đầu, flake `PortalShell` không xuất hiện |
 | **Unit S09 (tree `29c28f4a`)** | `npx vitest run src/research/reportDetail.test.tsx` | 0 | **39/39** (`S09-U01…U35`, U14 ×5); kèm boundary 53/53 |
@@ -288,6 +297,7 @@ Danh sách đầy đủ ở [thanhvuong-test-results.json](./thanhvuong-test-res
 | 5 commit code + lần amend `1757b7d5` | `git diff --cached --check` rồi `bash .githooks/pre-commit` trên index | exit 0, ×6 |
 | Range `19310912..HEAD` | `git diff --check` | exit 0 |
 | Commit code `29c28f4a` | `git diff --cached --check` rồi `bash .githooks/pre-commit` trên index | exit 0 |
+| Commit code `548e8d29` | `git diff --cached --check` rồi `bash .githooks/pre-commit` trên index | exit 0 |
 | Commit docs này | `bash .githooks/pre-commit` trên index | exit 0 |
 | Push `19310912..<commit docs này>` | `printf '<ref> <sha> <ref> <sha>' \| bash .githooks/pre-push primus-origin <url>` | exit 0 |
 
@@ -352,6 +362,8 @@ Chi tiết và đề xuất: [thanhvuong-backend-requests.md §3](./thanhvuong-b
 
 | Mục | Tìm ra ở | Xử lý |
 |---|---|---|
+| **S09-HIFI-GEOMETRY** 5 khối + header lệch geometry hi-fi dù contract đủ field (passport dọc, identity/headline xếp chồng, equity không trục/legend, chain/artifacts và promotion/provenance xếp chồng) | Coordinator, rule 9, 2026-09-23 | **Sửa ở `548e8d29`**: passport flex ngang; `.rr-idrow` identity 1.15 : headline 1 (tile 44%, 2 × 3, footnote); equity figcaption hai đầu, plot 215, trục từ chuỗi server, legend, fold label, underwater 92; `.rr-chainrow` 1.1 : 1; `.rr-pp` 2 cột; footer/header theo hi-fi; 660 xếp chồng, print giữ hàng ngang (U36–U40; probe `hifi-geometry`) |
+| Header bảng metrics bẻ chữ ở 660 ("Initia l equity", "SCO PE") do `.rr-page { overflow-wrap: anywhere }` (có từ trước, lộ khi xem 660) | Vòng geometry, ảnh 660 | **Sửa ở `548e8d29`**: `.rr-table th { word-break: normal; overflow-wrap: break-word }` (U33); probe split-word mở rộng sang `th`, `.rr-artgrid .k`, passport `.k`: `[]` ở 1280 và 660 |
 | **A1** bảng sr-only equity (240 hàng) cao 4 818 px: `scrollHeight` 1280 6 049 vs đáy 3 257; PDF Letter 7 trang (5 khi gỡ bảng) | Audit 2026-09-23 (§5.5) | **Sửa ở `29c28f4a`**: bảng nằm trong `<div className="rr-sr sr-only" data-sr-equity-table>` (block clip: absolute, 1px, overflow hidden, clip); print ẩn `.rr-sr`. `scrollHeight` 3 307, print 816 2 597 = 2 597, Letter **7 → 5**, A4 6 → 5 (U32) |
 | **A2** `.rr-table td { word-break: break-all }` bẻ chữ thường ("seal/ed", "STAT/E", tên artifact) | Audit 2026-09-23 (§5.5) | **Sửa ở `29c28f4a`**: `td { word-break: normal; overflow-wrap: break-word }`, chỉ `td.rr-long` giữ `break-all`. Dùng `break-word` thay `anywhere` như đề xuất: `anywhere` hạ min-content nên bảng auto-layout vẫn thu cột và bẻ "sealed" (đo trong browser). Chữ bị bẻ `[]` ở 1280 và Letter (U33) |
 | 2 `h1` trên trang | Audit (§5.5 a11y) | **Sửa ở `29c28f4a`**: title report là `h2`; module header giữ `h1` duy nhất (U34) |
@@ -395,10 +407,10 @@ binding scratch (thêm ở audit). Tất cả OPEN, kiểm lại 2026-09-23 trê
 - **`P18-A S09 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · đã push, chưa PR`.**
   Frontend bám hi-fi trong giới hạn contract; mọi khối hi-fi giữ chỗ, ô không có
   field in typed absence + reason code. Hai lỗi audit A1/A2
-  và 2 mục nhỏ đã sửa ở `29c28f4a` (§7); `open_debt` rỗng; còn lại là các mục mở ở §6.
+  và 2 mục nhỏ đã sửa ở `29c28f4a`; geometry hi-fi sửa ở `548e8d29` — mọi chỗ còn lệch hi-fi chỉ do thiếu field (§4, §7); `open_debt` rỗng; còn lại là các mục mở ở §6.
 - Chưa `VERIFIED`: thiếu `REAL_API_E2E_RECEIPT` (feature-dark), axe, tích hợp
   baseline (B1), `CG-P18-*`, `VISUAL_DECISION_REQUIRED` tiêu đề/cert (B2).
-  Toàn bộ probe Research chạy lại trên `29c28f4a`: 129/129; unit 3010 pass / 1 skip.
+  Toàn bộ probe Research chạy lại trên `29c28f4a`: 129/129; trên `548e8d29`: 131/131; unit 3015 pass / 1 skip.
 
 ## 11. Reuse report (v0.5 §11.3)
 

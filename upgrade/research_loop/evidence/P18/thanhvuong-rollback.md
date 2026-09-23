@@ -3,6 +3,11 @@
 Chỉ frontend. Không đổi contract, backend, migration hay feature flag. Revert
 commit mới nhất trước; sau mỗi bước Portal vẫn build được.
 
+- `548e8d29` (geometry theo hi-fi: passport ngang, identity + headline một hàng,
+  equity có trục/legend/underwater, chain + artifacts và promotion + provenance
+  hai cột, `th` giữ nguyên chữ): revert đưa sheet về bố cục xếp chồng trước đó
+  (PDF Letter 4 → 5, A4 3 → 5 trang), header bảng metrics lại bẻ chữ ở 660.
+  Không đổi dữ liệu hay request; revert trước `29c28f4a` (cùng file).
 - `29c28f4a` (bảng sr-only equity trong wrapper `.rr-sr`, ô bảng giữ nguyên chữ,
   một `h1`, verdict rule từ provenance): revert đưa lại ~2 800 px cuộn trống ở
   1280, PDF Letter 7 trang (2 trang trắng cuối), chữ bị bẻ trong ô bảng

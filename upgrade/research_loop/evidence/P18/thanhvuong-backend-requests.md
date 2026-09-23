@@ -6,7 +6,7 @@ Evidence máy đọc được: [thanhvuong-test-results.json](./thanhvuong-test-
 [thanhvuong-debt-register.json](./thanhvuong-debt-register.json).
 
 **Ngày kiểm lại:** 2026-09-23. Kiểm trên nhánh `feat/thanhvuong/research-p17-p21`
-(`aea76f69`, kiểm lại ở `47165016` và ở code head `29c28f4a`) và trên baseline `primus-origin/docs/research-loop-plan` = `e39bacfa`
+(`aea76f69`, kiểm lại ở `47165016`, ở `29c28f4a` và ở code head `548e8d29`; vòng geometry hi-fi không đổi contract, mọi chỗ còn lệch hi-fi chỉ do `CG-P18-01…07`) và trên baseline `primus-origin/docs/research-loop-plan` = `e39bacfa`
 (CLAUDE.md §7.6, §7.9). Lúc đóng packet baseline đã tiến tới `6a87f77b`; kiểm
 lại ở đó cho cùng kết quả.
 
