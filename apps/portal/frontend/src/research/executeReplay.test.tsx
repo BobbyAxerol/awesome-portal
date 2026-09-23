@@ -239,7 +239,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 /* ------------------------------------------------------------------- tests */
 
-describe("P17-T01 — the transport moves over loaded samples and never fetches", () => {
+describe("S08-U01 — the transport moves over loaded samples and never fetches", () => {
   it("clamps, steps and jumps within the window", () => {
     const transport = new ReplayTransport(manualScheduler().scheduler);
     transport.load(24, 0);
@@ -306,7 +306,7 @@ describe("P17-T01 — the transport moves over loaded samples and never fetches"
   });
 });
 
-describe("P17-T02 — a sample is never an execution state", () => {
+describe("S08-U02 — a sample is never an execution state", () => {
   it("labels the playhead and states the execution state as not published", () => {
     renderScreen(controllerOf(replay({ start: 40, selected: 45 })));
     expect(screen.getByText(PLAYHEAD_NOTE)).toBeTruthy();
@@ -328,7 +328,7 @@ describe("P17-T02 — a sample is never an execution state", () => {
   });
 });
 
-describe("P17-T03 — sampling is shown as a limit", () => {
+describe("S08-U03 — sampling is shown as a limit", () => {
   it("says extrema buckets are not every observation and are not interpolated", () => {
     renderScreen(controllerOf(replay({ sampling: "EXTREMA_BUCKET_V1" })));
     expect(document.querySelector("[data-sampling]")!.getAttribute("data-sampling")).toBe("EXTREMA_BUCKET_V1");
@@ -337,7 +337,7 @@ describe("P17-T03 — sampling is shown as a limit", () => {
   });
 });
 
-describe("P17-T04 — every hi-fi panel keeps its place with a published reason", () => {
+describe("S08-U04 — every hi-fi panel keeps its place with a published reason", () => {
   it("names all thirteen route capabilities with their reason codes", () => {
     renderScreen(controllerOf(replay()));
     for (const key of ROUTE_CAPABILITY_KEYS) {
@@ -374,7 +374,7 @@ describe("P17-T04 — every hi-fi panel keeps its place with a published reason"
   });
 });
 
-describe("P17-T05 — route states other than retrospective equity", () => {
+describe("S08-U05 — route states other than retrospective equity", () => {
   it.each([
     ["PENDING_SOURCE_CALLBACK", "has not called back"],
     ["LEGACY_METADATA_ONLY", "legacy metadata only"],
@@ -392,7 +392,7 @@ describe("P17-T05 — route states other than retrospective equity", () => {
   });
 });
 
-describe("P17-T06 — refusals speak fixed copy and keep the shell", () => {
+describe("S08-U06 — refusals speak fixed copy and keep the shell", () => {
   it.each([
     [400, "RESEARCH_REPLAY_CURSOR_INVALID", "terminal"],
     [401, "AUTH_REQUIRED", "denied"],
@@ -433,7 +433,7 @@ describe("P17-T06 — refusals speak fixed copy and keep the shell", () => {
   });
 });
 
-describe("P17-T07 — reads: one on arrival, one bounded recovery, and nothing else", () => {
+describe("S08-U07 — reads: one on arrival, one bounded recovery, and nothing else", () => {
   it("sends one plain GET on arrival, with no If-None-Match and no navigation input", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(replay()));
     const { result } = renderHook(() => useReplay("run_p17", null));
@@ -521,7 +521,7 @@ describe("P17-T07 — reads: one on arrival, one bounded recovery, and nothing e
   });
 });
 
-describe("P17-T08 — the surface is read-only and names only its two operations", () => {
+describe("S08-U08 — the surface is read-only and names only its two operations", () => {
   const files = ["replayClient.ts", "useReplay.ts", "ExecuteDetail.tsx", "ExecuteRoute.tsx", "replayTransport.ts"];
 
   it("has no write, no CSRF proof and no command", () => {
