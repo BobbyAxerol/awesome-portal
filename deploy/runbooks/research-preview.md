@@ -58,6 +58,29 @@ looked at.
   needs nothing from this repository and is removed the same way. Until then
   an SSH tunnel works: `ssh -L 8095:127.0.0.1:8095 <host>`.
 
+## Public hostname — research-portal.primusspark.com
+
+Requested by Bobby on 2026-09-23 ("rebuild … trên research-portal.primusspark.com,
+không đụng dev hay main"). Same shape as `dev-portal`:
+
+1. `preview.env`: `PORTAL_PUBLIC_ORIGIN=https://research-portal.primusspark.com`
+   (the Control API checks the Origin of every write against it), then
+   `preview.sh build && preview.sh up`.
+2. Loopback nginx: the `research-portal.primusspark.com` server block in
+   `deploy/nginx/portal-loopback.conf` → upstream `127.0.0.1:8095`, identity
+   headers stripped. Installed on the host 2026-09-23 (backup
+   `portal-loopback.conf.pre-research-routing-20260923`), `nginx -t` + reload.
+3. Cloudflare Tunnel: the `research-portal.primusspark.com` rule in
+   `deploy/cloudflared/config.example.yml`, placed before the 404 catch-all in
+   `/etc/cloudflared/config.yml`, then `systemctl restart cloudflared`. This
+   step is Bobby's (tunnel/DNS changes); restarting the tunnel briefly
+   reconnects every hostname on it.
+4. Check: `https://research-portal.primusspark.com` → 200, and
+   `RESEARCH_PREVIEW_ORIGIN=https://research-portal.primusspark.com npx playwright test -c playwright.research-preview.config.ts`.
+
+With the public origin set, harness calls must use that origin too; a write
+from `http://localhost:8095` is refused by the Origin check.
+
 ## Rules
 
 - Never point this stack at another project's volumes or ports, and never run

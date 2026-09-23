@@ -19,7 +19,7 @@ const OUT = process.env.RESEARCH_PREVIEW_RECEIPTS ?? `${HOME}/receipts`;
 mkdirSync(OUT, { recursive: true, mode: 0o700 });
 const PASSWORD = readFileSync(`${HOME}/claude-preview.password`, "utf8").trim();
 const RUN = (JSON.parse(readFileSync(`${HOME}/seeded-run.json`, "utf8")) as { run_id: string }).run_id;
-const ORIGIN = "http://localhost:8095";
+const ORIGIN = process.env.RESEARCH_PREVIEW_ORIGIN ?? "http://localhost:8095";
 
 const VIEWPORTS = [
   ["laptop", 1280, 900],

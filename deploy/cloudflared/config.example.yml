@@ -41,4 +41,12 @@ ingress:
       connectTimeout: 10s
       keepAliveTimeout: 90s
 
+  # Research Loop preview (RF-02 B3) → loopback nginx → portal-research-preview :8095.
+  # No Access assertion is trusted; the Control API keeps its own session (AUTH_MODE=dev).
+  - hostname: research-portal.primusspark.com
+    service: http://127.0.0.1:80
+    originRequest:
+      httpHostHeader: research-portal.primusspark.com
+      connectTimeout: 10s
+      keepAliveTimeout: 90s
   - service: http_status:404
