@@ -42,6 +42,7 @@ from portal_api.services.research_progress_relay import (
     ResearchProgressRelay,
     ResearchProgressRelayError,
 )
+from portal_api.services.research_retained_receipt import ResearchRetainedReceiptClient, ResearchRetainedReceiptError
 
 logger = logging.getLogger("portal_api.durable_worker")
 
@@ -231,6 +232,12 @@ class DurableQuantWorker:
                         "P11 reclaimed a non-terminal source journal; create a new P12 retry instead"
                     )
                 progress_journal.emit("run_started")
+                if os.getenv("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS", "false").lower() == "true":
+                    # P05 reserve requires a RUNNING P06 lease. A source
+                    # journal alone is not authority: wait for its exact
+                    # start event to be accepted before executing the child.
+                    if progress_relay is None or not await progress_relay.flush():
+                        raise ResearchRetainedReceiptError("P05 start lease was not acknowledged")
                 if progress_relay is not None:
                     progress_relay_stop = asyncio.Event()
                     progress_relay_task = asyncio.create_task(
@@ -295,6 +302,29 @@ class DurableQuantWorker:
             engine_dir = engine_root / run_id
             self._artifact_store.stage_directory(engine_dir, temp_dir)
             evidence_digest: str | None = None
+            if is_research_producer:
+                retained = ResearchRetainedReceiptClient.from_environment()
+                if retained is not None:
+                    receipt = result.get("research_receipt")
+                    if not isinstance(receipt, dict) or progress_journal is None:
+                        raise ResearchRetainedReceiptError("P05 source receipt or progress lease is unavailable")
+                    def current_fence(_fence: object) -> bool:
+                        current = self._registry.attempt(run_id, attempt.run_attempt_id)
+                        return (
+                            current is not None
+                            and current.status in {"CLAIMED", "RUNNING"}
+                            and self._registry.verify_lease(current, lease_token=lease_token)
+                            and not self._registry.cancellation_requested(
+                                run_id, attempt.run_attempt_id, lease_epoch=research_request.lease_epoch
+                            )
+                        )
+                    await asyncio.to_thread(
+                        retained.retain,
+                        request=research_request,
+                        receipt=receipt,
+                        artifact_root=Path(self._artifact_store.root),
+                        fence_validator=current_fence,
+                    )
             split_digest: str | None = None
             if is_research_producer:
                 shutil.rmtree(engine_root)

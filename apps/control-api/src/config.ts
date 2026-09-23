@@ -86,6 +86,10 @@ const EnvSchema = z.object({
   // bounds the private cancellation marker hop; worker journal persistence
   // remains the source recovery authority if that hop is unavailable.
   FEATURE_RESEARCH_PROGRESS: z.enum(["true", "false"]).default("false"),
+  // P05 writer registration is separate from P11 progress.  A release must
+  // deploy the worker's P05 store and private reserve/seal callback together.
+  FEATURE_RESEARCH_RETAINED_ARTIFACTS: z.enum(["true", "false"]).default("false"),
+
   RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
   // P12 is a persisted, same-origin history reader. It is deliberately
   // independent of the P10 producer/P11 callback flags: old and completed
@@ -458,6 +462,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     if (!config.INTERNAL_PRINCIPAL_SECRET) {
       throw new Error("FEATURE_RESEARCH_PROGRESS=true requires INTERNAL_PRINCIPAL_SECRET");
     }
+  }
+  if (config.FEATURE_RESEARCH_RETAINED_ARTIFACTS === "true" && config.FEATURE_RESEARCH_PROGRESS !== "true") {
+    throw new Error("FEATURE_RESEARCH_RETAINED_ARTIFACTS=true requires FEATURE_RESEARCH_PROGRESS=true");
   }
   if (config.FEATURE_RESEARCH_REPLAY === "true" && config.FEATURE_RESEARCH_EVIDENCE !== "true") {
     throw new Error("FEATURE_RESEARCH_REPLAY=true requires FEATURE_RESEARCH_EVIDENCE=true");

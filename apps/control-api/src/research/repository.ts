@@ -2701,6 +2701,9 @@ export class ResearchMetadataRepository {
         ],
       );
       if (worker.rowCount !== 1) this.throwLeaseRejected();
+      if (outcome !== "SUCCEEDED") {
+        await this.abortWritingArtifactsForFence(client, scope, input.workerAttemptId, input.leaseEpoch);
+      }
       await client.query(
         `UPDATE research.jobs
             SET state = $3,
@@ -2900,6 +2903,7 @@ export class ResearchMetadataRepository {
         WHERE workspace_id = $1 AND worker_attempt_id = $2 AND lease_epoch = $3`,
       [scope.workspaceId, input.workerAttemptId, input.leaseEpoch, transition === "LEASE_EXPIRED" ? "LOST_LEASE" : "FAILED", input.reason],
     );
+    await this.abortWritingArtifactsForFence(client, scope, input.workerAttemptId, input.leaseEpoch);
     await client.query(
       `UPDATE research.jobs
           SET state = $3,
@@ -2944,7 +2948,30 @@ export class ResearchMetadataRepository {
       worker_attempt_id: input.workerAttemptId,
       lease_epoch: input.leaseEpoch,
     });
+
     return { scheduled, terminal: !scheduled };
+  }
+  /** Preserve a sealed candidate, but close unsealed metadata from a fenced attempt. */
+  private async abortWritingArtifactsForFence(
+    client: ScopedClient,
+    scope: ResearchScope,
+    workerAttemptId: string,
+    leaseEpoch: number,
+  ): Promise<void> {
+    const aborted = await client.query<{ artifact_id: string }>(
+      `UPDATE research.artifacts
+          SET state = 'ABORTED', updated_at = now()
+        WHERE workspace_id = $1 AND worker_attempt_id = $2
+          AND lease_epoch = $3 AND state = 'WRITING'
+        RETURNING artifact_id`,
+      [scope.workspaceId, workerAttemptId, leaseEpoch],
+    );
+    for (const row of aborted.rows) {
+      await this.audit(client, scope, "RESEARCH_ARTIFACT_ABORTED", "artifact", row.artifact_id, {
+        worker_attempt_id: workerAttemptId,
+        lease_epoch: leaseEpoch,
+      });
+    }
   }
 
   private async recoverExpiredDurableJobsInTransaction(

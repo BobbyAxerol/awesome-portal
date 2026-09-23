@@ -434,6 +434,53 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     expect(foreign?.retainedArtifacts ?? []).toEqual([]);
   });
 
+  it("RF03-P05: worker reserve/seal reaches S03 retained_artifacts through the real authority", async () => {
+    const run = await createDispatchedRun();
+    await service.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));
+    const artifactId = "rart_rf03_p05";
+    const reservation = await metadata.reserveArtifact(scope, {
+      artifactId,
+      runId: run.runId,
+      workerAttemptId: run.workerAttemptId,
+      leaseEpoch: run.leaseEpoch,
+      storageLocator: `artifacts/${artifactId}`,
+      retentionClass: "RESEARCH_EVIDENCE",
+    });
+    expect(reservation.state).toBe("WRITING");
+    const beforeSeal = await service.read(admin, scope, run.runId);
+    expect(beforeSeal.retained_artifacts).toEqual([
+      { table_kind: "research_bundle", state: "WRITING", total_rows: "0", total_bytes: "0", sealed_at_utc_ms: null, reader_href: null },
+    ]);
+    const seal = {
+      artifactId,
+      workerAttemptId: run.workerAttemptId,
+      leaseEpoch: run.leaseEpoch,
+      manifestDigest: "d".repeat(64),
+      manifestSchemaVersion: "research.artifact-manifest.v1" as const,
+      totalRows: 1,
+      totalBytes: 100,
+      parts: [{
+        tableKind: "run_receipt",
+        schemaVersion: "research.run-receipt.v1",
+        partOrdinal: 1,
+        relativePath: "tables/run_receipt/part-000001.parquet",
+        partDigest: "e".repeat(64),
+        rowCount: 1,
+        byteCount: 100,
+        sequenceMin: null,
+        sequenceMax: null,
+      }],
+    };
+    expect(await metadata.sealArtifact(scope, seal)).toEqual({ replayed: false });
+    expect(await metadata.sealArtifact(scope, seal)).toEqual({ replayed: true });
+    const afterSeal = await service.read(admin, scope, run.runId);
+    expect(afterSeal.retained_artifacts).toHaveLength(1);
+    expect(afterSeal.retained_artifacts[0]).toMatchObject({
+      table_kind: "research_bundle", state: "SEALED", total_rows: "1", total_bytes: "100", reader_href: null,
+    });
+    expect(JSON.stringify(afterSeal)).not.toContain(artifactId);
+  });
+
   it("P11-T04/T05/T06/T12: cancellation wins a source completion race without turning an unsealed run into success", async () => {
     const run = await createDispatchedRun();
     await service.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));

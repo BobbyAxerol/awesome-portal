@@ -21,6 +21,14 @@ All three response families are pinned: Journey v2, current/historical Atlas and
 
 The full monorepo pre-commit gate passed on `3bb91fa5` and `ea221dc2`. Later P06/P10 commits used the already-run full gate plus their own focused regressions to avoid a second and third resource-heavy full run.
 
+### P05 receipt-writer checkpoint — 2026-09-23
+
+The feature-dark P05 bridge uses a signed private service principal and exact P06 lease to reserve/seal a verified one-row `run_receipt` Parquet artifact. It records a real `research.artifacts` row for S03. Lost-ACK replay reuses immutable bytes; failed/expired leases abort only WRITING candidates. No browser route, source DB, Execution, deployment or legacy artifact replacement was added. Both flags default `false`.
+
+This is **partial CG-P05-01**. Current P10 Delta has no admitted RS-02 Advanced-WFO observations/folds/trials/candidates/selection; S04–S07 remain typed `PENDING_RETENTION`. Next: P10 source admission and P06 trusted child progress, then wire the existing RS-02 importer. Do not claim RF-03 complete or show this one-row receipt as rich trial data.
+
+Evidence: Control API build, private-ingress/config 22/22, Python retention/worker/artifact 35/35, disposable PostgreSQL P05 5/5 and P11 10/10, P01 route inventory 227/collision 0. The full monorepo hook ran 117 Control API files (116 passed; 3 RS-01 stale-mock failures); after correcting the mock, focused RS-01/private-ingress tests passed 8/8. `npm run typecheck` still reports pre-existing test-fixture errors unrelated to this build; `npm run build` passes. No runtime activation or frontend file was included.
+
 ## RF-02 backend review
 
 P04 ruling `CG-P04-05`: QuantBT 1.1.1 does not publish a per-mode certification cap or a normative avoid-when instruction. The already-published `AtlasNotPublishedFact` is retained with an explicit reason; the cert-cap source locator is `quantbt/core/certification.py:164-195`, SHA-256 `9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35`. The absence of avoid-when guidance is recorded by the catalogue at `apps/portal/registry/research-engine-catalog.v1.json:502`; it is not promoted into a fabricated engine fact.

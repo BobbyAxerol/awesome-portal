@@ -35,10 +35,13 @@ function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<strin
       snapshot: terminalIngress.snapshot,
     }),
     markTerminalMaterialized: vi.fn().mockResolvedValue(undefined),
-    readRun: vi.fn().mockResolvedValue(options?.current ?? {
+    readRun: vi.fn().mockResolvedValue({
       runId: "run_rs01", jobState: "SUCCEEDED", progress: null,
       sourceLatestSequence: 9, retentionFloorSequence: 0, receivedAt: null,
       hasCurrentAttempt: true, terminalMaterialization: "PENDING", retainedArtifacts: [],
+      queueClass: "BACKGROUND", queuedAt: new Date("2026-09-23T00:00:00.000Z"),
+      retryNotBefore: null, attempts: [],
+      ...options?.current,
     }),
     currentLease: vi.fn(),
   };

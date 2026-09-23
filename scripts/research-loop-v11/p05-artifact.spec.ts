@@ -337,4 +337,56 @@ describe("Research Loop P05 · disk-first artifact authority", () => {
       [scope.workspaceId, writer.artifactId],
     )).rejects.toMatchObject({ code: "55000" });
   });
+  it("P05-T14: a failed or expired lease aborts only unsealed candidates", async () => {
+    await seedIdentity();
+    const failed = await reserveWriter("failed-lease");
+    await pool.query(
+      `UPDATE research.jobs SET state = 'CLAIMED', current_worker_attempt_id = $3,
+              current_lease_epoch = 1 WHERE workspace_id = $1 AND job_id = $2`,
+      [scope.workspaceId, "p05-job-failed-lease", failed.workerAttemptId],
+    );
+    await repository.finishDurableJob(scope, {
+      jobId: "p05-job-failed-lease", workerAttemptId: failed.workerAttemptId,
+      leaseEpoch: 1, outcome: "FAILED", reason: "source failed",
+      usage: { peakRssBytes: 1, cpuSeconds: 1, scratchBytes: 1, fdPeak: 3 },
+    });
+    expect((await pool.query(
+      `SELECT state FROM research.artifacts WHERE workspace_id = $1 AND artifact_id = $2`,
+      [scope.workspaceId, failed.artifactId],
+    )).rows[0].state).toBe("ABORTED");
+
+    const expired = await reserveWriter("expired-lease");
+    await pool.query(
+      `UPDATE research.jobs SET state = 'CLAIMED', work_digest = $4, current_worker_attempt_id = $3,
+              current_lease_epoch = 1 WHERE workspace_id = $1 AND job_id = $2`,
+      [scope.workspaceId, "p05-job-expired-lease", expired.workerAttemptId, DIGEST("1")],
+    );
+    await pool.query(
+      `UPDATE research.worker_attempts SET expires_at = now() - interval '1 second'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, expired.workerAttemptId],
+    );
+    await repository.recoverExpiredDurableJobs(scope);
+    expect((await pool.query(
+      `SELECT state FROM research.artifacts WHERE workspace_id = $1 AND artifact_id = $2`,
+      [scope.workspaceId, expired.artifactId],
+    )).rows[0].state).toBe("ABORTED");
+
+    const sealed = await reserveWriter("sealed-lease");
+    await pool.query(
+      `UPDATE research.jobs SET state = 'CLAIMED', current_worker_attempt_id = $3,
+              current_lease_epoch = 1 WHERE workspace_id = $1 AND job_id = $2`,
+      [scope.workspaceId, "p05-job-sealed-lease", sealed.workerAttemptId],
+    );
+    await sealWriter(sealed, "sealed-lease");
+    await repository.finishDurableJob(scope, {
+      jobId: "p05-job-sealed-lease", workerAttemptId: sealed.workerAttemptId,
+      leaseEpoch: 1, outcome: "FAILED", reason: "post-seal failure",
+      usage: { peakRssBytes: 1, cpuSeconds: 1, scratchBytes: 1, fdPeak: 3 },
+    });
+    expect((await pool.query(
+      `SELECT state FROM research.artifacts WHERE workspace_id = $1 AND artifact_id = $2`,
+      [scope.workspaceId, sealed.artifactId],
+    )).rows[0].state).toBe("SEALED");
+  });
 });

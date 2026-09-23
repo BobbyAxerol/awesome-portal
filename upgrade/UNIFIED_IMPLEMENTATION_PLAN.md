@@ -4322,6 +4322,8 @@ campaign sau khi Bobby tự merge qua PR.
 - **Rollback/handoff:** thay đổi contract additive; handoff cho RF-04 wave C theo từng id đã `DELIVERED`.
 - **Progress 2026-09-23:** P02 generated wire, P06 typed resource failure, P09 Journey v2/historical truth và P10 typed admission/progress đã có commit; backend review RF-02 được ghi ở [RF-03 packet](./research_loop/evidence/RF-03/README.md). Chưa đóng phase: P05 retention/artifact writer, P06 live child progress, P07/P08/P10/P11 còn contract work. Không chuyển RF-03 sang COMPLETE trước khi từng id có receipt.
 
+**P05 checkpoint 2026-09-23 (feature-dark):** exact-lease private reserve/seal and real one-row Parquet receipt now write to `research.artifacts`; failed/expired WRITING metadata is aborted without touching SEALED evidence. S03 can read the retained receipt. `CG-P05-01` remains OPEN for S04–S07 rich current-source materialization: P10 fixed Delta has no admitted Advanced-WFO rows yet. See [RF-03 packet](./research_loop/evidence/RF-03/README.md). No runtime activation.
+
 <a id="rl-rf-04"></a>
 ### RF-04 — Frontend P01–P10: sửa, chuẩn hoá theo HiFi, tối ưu tốc độ, nối màn (Claude)
 

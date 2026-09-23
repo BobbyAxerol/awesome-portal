@@ -159,7 +159,7 @@ export interface ProgressCurrentLease {
 export class ResearchProgressRepository {
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
-  async resolveIngress(input: ResearchProgressIngress): Promise<ProgressIngressScope> {
+  async resolveIngress(input: Pick<ResearchProgressIngress, "workspace_id" | "run_id" | "job_id" | "worker_attempt_id" | "lease_epoch">): Promise<ProgressIngressScope> {
     return this.withTransaction(input.workspace_id, "research-progress-worker", true, async (client) => {
       const result = await client.query<IngressRow>(
         `SELECT producer.workspace_id, producer.actor_user_id, producer.job_id,

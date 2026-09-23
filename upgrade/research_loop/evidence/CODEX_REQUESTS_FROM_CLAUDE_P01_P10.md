@@ -85,6 +85,8 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 |---|---|---|---|
 | `CG-P05-01` | No runtime writer registers `research.artifacts`: worker seals into the legacy store (`durable_worker.py:27,295,342`); `reserveArtifact`/`sealArtifact`/`createArtifact` have no caller; RS-02 seal table is not what `progress.repository.ts:363` reads. Widens `CG-RF02-03` (no retention materializer; current-source stays `PENDING_RETENTION`) | S03 artifacts/retained tables; S04–S07 current-source lanes | OPEN |
 
+**RF-03 P05 checkpoint (2026-09-23, source-dark):** The P10 fixed Delta worker now has a private signed, exact-lease reserve/seal path into `research.artifacts`. It writes an immutable one-row `run_receipt` Parquet part and bounded receipt document on the durable artifact volume. Exact retries verify and reuse the manifest; failed or expired leases abort only WRITING metadata. Both flags default false. This is real S03 retained evidence, **not** RS-02 Advanced-WFO observations/folds/trials/candidates/selection. S04–S07 stay `PENDING_RETENTION` until P10 admits that profile and the RS-02 importer is wired, so `CG-P05-01` remains OPEN for its full exit. Focused proof: Control API build, ingress/config 22/22, Python 35/35, disposable PG P05 5/5 and P11 10/10, P01 route ledger 227/no collisions. No runtime activation.
+
 ## P06 — scheduler / worker
 
 | Id | Gap → need | Blocks | Status |

@@ -10,6 +10,7 @@ services:
     environment:
       FEATURE_RESEARCH_RUN_PRODUCER: ${CONTROL_API_FEATURE_RESEARCH_RUN_PRODUCER:-false}
       FEATURE_RESEARCH_PROGRESS: ${CONTROL_API_FEATURE_RESEARCH_PROGRESS:-false}
+      FEATURE_RESEARCH_RETAINED_ARTIFACTS: ${CONTROL_API_FEATURE_RESEARCH_RETAINED_ARTIFACTS:-false}
       # P13 is a read-only same-origin Hub over already immutable terminal
       # receipts. It neither starts a worker nor changes P10/P11 flags.
       FEATURE_RESEARCH_EVIDENCE: ${CONTROL_API_FEATURE_RESEARCH_EVIDENCE:-false}
@@ -52,6 +53,7 @@ services:
     environment:
       PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: ${PORTAL_FEATURE_RESEARCH_RUN_PRODUCER:-false}
       PORTAL_FEATURE_RESEARCH_PROGRESS: ${PORTAL_FEATURE_RESEARCH_PROGRESS:-false}
+      PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS: ${PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS:-false}
       CONTROL_API_INTERNAL_URL: ${CONTROL_API_INTERNAL_URL:-http://control-api:4000}
       # Production base compose requires this value. The local fallback only
       # preserves the existing disposable-development default so `config -q`
