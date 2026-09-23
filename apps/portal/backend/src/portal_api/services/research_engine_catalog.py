@@ -373,6 +373,11 @@ class ReleaseRuntimePublic(CatalogModel):
     submission_constraints: SubmissionConstraints
     # RF02-B2, additive: absent only on a manifest written before it existed.
     walk_forward_options: WalkForwardOptions | None = None
+    # RF02 / CG-P10-01: the digest a New Run form sends as
+    # `client.config_digest`. It covers exactly the release facts above that
+    # the browser renders — not the private catalog digest — so the form can
+    # name the configuration it was built from without computing anything.
+    config_digest: str | None = None
 
 
 class HistoricalReleasePublic(CatalogModel):
@@ -455,6 +460,31 @@ def resolve_selection(
         integrity_state=integrity,
         publication_eligible=selected and required_artifacts_present,
     )
+
+
+def release_config_digest(release: EngineRelease) -> str:
+    """sha256 of the canonical browser-visible configuration of one release.
+
+    Canonical form: UTF-8 JSON, sorted keys, no whitespace, over release_id,
+    trial_ceiling, optimizer_defaults, submission_constraints and
+    walk_forward_options exactly as the Atlas publishes them.
+    """
+
+    facts = {
+        "release_id": release.release_id,
+        "trial_ceiling": release.trial_ceiling,
+        "optimizer_defaults": None
+        if release.optimizer_defaults is None
+        else release.optimizer_defaults.model_dump(mode="json"),
+        "submission_constraints": None
+        if release.submission_constraints is None
+        else release.submission_constraints.model_dump(mode="json"),
+        "walk_forward_options": None
+        if release.walk_forward_options is None
+        else release.walk_forward_options.model_dump(mode="json"),
+    }
+    encoded = json.dumps(facts, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 class ResearchEngineCatalogService:
@@ -743,6 +773,7 @@ class ResearchEngineCatalogService:
             optimizer_defaults=release.optimizer_defaults,  # type: ignore[arg-type]
             submission_constraints=release.submission_constraints,  # type: ignore[arg-type]
             walk_forward_options=release.walk_forward_options,
+            config_digest=release_config_digest(release),
         )
 
     def walk_forward_options(self) -> WalkForwardOptions:

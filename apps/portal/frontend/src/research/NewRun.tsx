@@ -21,7 +21,7 @@
  * summary written beside the payload — it *is* the payload, rendered.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AtlasDocument } from "./atlas";
 import { ResearchPanel } from "./ResearchPanel";
@@ -480,15 +480,92 @@ function DataStep({
   );
 }
 
+/**
+ * One published walk-forward choice (RF02-F2).
+ *
+ * The values come from the Atlas (`walk_forward_options`), never from a list in
+ * this file. A value the Portal does not admit stays visible, disabled, with
+ * the server's reason — preflight would refuse it, so offering it would only
+ * teach the reader that the button fails.
+ */
+function PublishedSelect({
+  label,
+  value,
+  options,
+  fallback,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly { value: string; admission: string; reason?: string | null }[] | null;
+  fallback: string;
+  onChange: (value: string) => void;
+}) {
+  if (options === null) {
+    return (
+      <Field label={label}>
+        <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-options-unpublished={label}>
+          not published by this release
+        </span>
+      </Field>
+    );
+  }
+  const refused = options.filter((option) => option.admission !== "ADMITTED");
+  return (
+    <Field label={label}>
+      <select
+        className={INPUT_CLASS}
+        style={inputStyle()}
+        value={value || fallback}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        data-published-select={label}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.admission !== "ADMITTED"}>
+            {option.value}
+            {option.admission !== "ADMITTED" ? " — not admitted" : ""}
+          </option>
+        ))}
+      </select>
+      {refused.map((option) => (
+        <span
+          key={option.value}
+          className="text-[9.5px] leading-[1.45]"
+          style={{ color: "var(--ink-faint)" }}
+          data-option-refused={option.value}
+        >
+          {option.value}: {option.reason}
+        </span>
+      ))}
+    </Field>
+  );
+}
+
 function WindowsStep({
   draft,
   patch,
+  atlas,
   error,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
+  atlas: AtlasDocument | null;
   error: string | null;
 }) {
+  const options = atlas?.current_release.walk_forward_options ?? null;
+  const modes = atlas?.modes ?? [];
+  const selectedMode = modes.find((mode) => mode.mode_id === draft.optimizationMode) ?? null;
+
+  /* A draft adopts the release defaults once, so the form never submits an
+     empty value the reader did not see. The defaults are the published ones. */
+  useEffect(() => {
+    if (!options || draft.protocol !== "advanced") return;
+    const change: Partial<RunDraft["walkForward"]> = {};
+    if (!draft.walkForward.frequency) change.frequency = options.frequency_default;
+    if (!draft.walkForward.windowMode) change.windowMode = options.window_mode_default;
+    if (Object.keys(change).length > 0) patch({ walkForward: { ...draft.walkForward, ...change } });
+  }, [options, draft.protocol, draft.walkForward, patch]);
   const rows = [
     ["is", "IS"],
     ["oos", "OOS"],
@@ -563,28 +640,36 @@ function WindowsStep({
               aria-label="Analysis end exclusive"
             />
           </Field>
-          <Field label="Frequency">
+          <Field label="First OOS instant">
             <input
+              type="datetime-local"
               className={INPUT_CLASS}
               style={inputStyle()}
-              value={draft.walkForward.frequency}
-              onChange={(e) =>
-                patch({ walkForward: { ...draft.walkForward, frequency: e.target.value } })
-              }
-              aria-label="Frequency"
+              value={draft.walkForward.splitMode}
+              onChange={(e) => patch({ walkForward: { ...draft.walkForward, splitMode: e.target.value } })}
+              aria-label="First OOS instant"
+              data-split-mode
             />
           </Field>
-          <Field label="Window mode">
-            <input
-              className={INPUT_CLASS}
-              style={inputStyle()}
-              value={draft.walkForward.windowMode}
-              onChange={(e) =>
-                patch({ walkForward: { ...draft.walkForward, windowMode: e.target.value } })
-              }
-              aria-label="Window mode"
-            />
-          </Field>
+          <PublishedSelect
+            label="Frequency"
+            value={draft.walkForward.frequency}
+            options={options?.frequency ?? null}
+            fallback={options?.frequency_default ?? ""}
+            onChange={(frequency) => patch({ walkForward: { ...draft.walkForward, frequency } })}
+          />
+          <PublishedSelect
+            label="Window mode"
+            value={draft.walkForward.windowMode}
+            options={options?.window_mode ?? null}
+            fallback={options?.window_mode_default ?? ""}
+            onChange={(windowMode) => patch({ walkForward: { ...draft.walkForward, windowMode } })}
+          />
+          {options ? (
+            <p className="w-full text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-split-rule>
+              {options.split_mode_rule}
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -594,24 +679,45 @@ function WindowsStep({
         The server derives the authoritative fold plan at preflight — the Review step shows it.
       </p>
 
+      {/* Mode and schedule are the Atlas's: a schedule the selected mode does
+          not list is not offered, because the claim comes from the pair. */}
       <div className="flex flex-wrap gap-2.5">
         <Field label="optimization_mode">
-          <input
+          <select
             className={INPUT_CLASS}
             style={inputStyle()}
             value={draft.optimizationMode}
-            onChange={(e) => patch({ optimizationMode: e.target.value })}
+            onChange={(e) => {
+              const mode = modes.find((candidate) => candidate.mode_id === e.target.value);
+              patch({ optimizationMode: e.target.value, optimizationSchedule: mode?.default_schedule ?? "" });
+            }}
             aria-label="Optimization mode"
-          />
+            disabled={modes.length === 0}
+          >
+            <option value="">{modes.length === 0 ? "Atlas not available" : "choose a mode"}</option>
+            {modes.map((mode) => (
+              <option key={mode.mode_id} value={mode.mode_id}>
+                {mode.mode_id} — {mode.display_name}
+              </option>
+            ))}
+          </select>
         </Field>
         <Field label="optimization_schedule">
-          <input
+          <select
             className={INPUT_CLASS}
             style={inputStyle()}
             value={draft.optimizationSchedule}
             onChange={(e) => patch({ optimizationSchedule: e.target.value })}
             aria-label="Optimization schedule"
-          />
+            disabled={selectedMode === null}
+          >
+            <option value="">{selectedMode === null ? "choose a mode first" : "choose a schedule"}</option>
+            {(selectedMode?.valid_schedules ?? []).map((schedule) => (
+              <option key={schedule} value={schedule}>
+                {schedule}
+              </option>
+            ))}
+          </select>
         </Field>
       </div>
 
@@ -1185,7 +1291,7 @@ export function NewRun(props: NewRunProps) {
             <DataStep draft={draft} patch={patch} limits={limits} error={errorByStep.get("data") ?? null} />
           ) : null}
           {step === "windows" ? (
-            <WindowsStep draft={draft} patch={patch} error={errorByStep.get("windows") ?? null} />
+            <WindowsStep draft={draft} patch={patch} atlas={atlas} error={errorByStep.get("windows") ?? null} />
           ) : null}
           {step === "parameters" ? (
             <ParametersStep draft={draft} patch={patch} error={errorByStep.get("parameters") ?? null} />

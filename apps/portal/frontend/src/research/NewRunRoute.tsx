@@ -187,14 +187,17 @@ export function NewRunRoute() {
    *
    * `client.engine_release_id` is the identity of the manifest whose routes,
    * ceilings and defaults this draft was declared against — so it is adopted
-   * from the Atlas rather than left empty. `config_digest` stays empty: no
-   * response publishes one and the browser must not compute a digest, which is
-   * recorded rather than papered over.
+   * from the Atlas rather than left empty. `config_digest` is adopted the same
+   * way (CG-P10-01, closed in RF-02): the Atlas publishes the digest of the
+   * release configuration this form renders, and the browser sends it
+   * unchanged. It never computes one; with no published digest it stays empty
+   * and preflight refuses, which is the honest outcome.
    */
   useEffect(() => {
     const releaseId = document?.current_release.release_id;
-    if (releaseId && run.draft.engineReleaseId !== releaseId) {
-      run.patch({ engineReleaseId: releaseId });
+    const configDigest = document?.current_release.config_digest ?? "";
+    if (releaseId && (run.draft.engineReleaseId !== releaseId || run.draft.configDigest !== configDigest)) {
+      run.patch({ engineReleaseId: releaseId, configDigest });
     }
   }, [document, run]);
 

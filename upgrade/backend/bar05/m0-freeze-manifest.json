@@ -28,8 +28,8 @@
     "planning_requirements_dev": "sha256:6b932715dbbe91092d3abd614cbb095f2d105ddce45eaa99f5c98159ec93156b",
     "portal_app_main": "sha256:5860e7e321c5c2116a5b69aeab4b3458008e6f5c3f3c42e75488d6b7b59aaf58",
     "portal_backend_pyproject": "sha256:3abd375cbb9902764ffe6976cbb9981942b4d6ea2576e37a6e28b536c311e7f4",
-    "portal_frontend_lock": "sha256:468da5d8cdff4bf1668d7ef21c112dcd79d865a8cd1a61bec98ecb96269f4752",
-    "portal_frontend_package": "sha256:9120f2903cb786dcfa120801a878aac76d64d560683486886d8f1c8789261f34",
+    "portal_frontend_lock": "sha256:ac6c7c51090fe68b17c6fa8544d8ac774a83b3cb741f2f70c10134317e982142",
+    "portal_frontend_package": "sha256:4ab5866fa785043896acca6b33479f7fed5f6379c437c433533d00c47c77090a",
     "protected_kernel_hash": "sha256:3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
     "protected_kernel_main": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
     "quantbt_gateway": "sha256:6c45c9e080082a57847cca419978c151a9c59602531ec3158ecb52199bf3733c",
@@ -37,11 +37,11 @@
     "research_engine_atlas_internal_route": "sha256:5c50992a698ea8e4f158b0f11c03512aa3b28c535d088f8a22597776a1ffcfe5",
     "research_engine_catalog": "sha256:301ee6a31a56809f7289b6967197f8c5c4bb2cc3ba92e6b5bfd37423cbcdd14a",
     "research_engine_catalog_schema": "sha256:065658cfb435e9c63145de7c45126d1f50b5a3d0bb1b1be519ae9b056fcc1611",
-    "research_engine_catalog_service": "sha256:3ecf7c1376b3330edd237fb01fe15486c89b07c2cf61d0b5b1b86261a4f6eb89",
+    "research_engine_catalog_service": "sha256:55c7b5df0e9dad62148739d239240d1129c3d409513890e0c88562a5794edb86",
     "research_run_evidence_schema": "sha256:ac1213412f91adbfb3f76c12dc12c6943fc979e83e75b1a5de9909e7fb01b730",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "d67a0fb4b9469184ba61987e5ef52e5acf7c7cb5",
+  "frozen_at_commit": "cb6d2c4165202fc52e8037ad4a36ff533599ef4a",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,

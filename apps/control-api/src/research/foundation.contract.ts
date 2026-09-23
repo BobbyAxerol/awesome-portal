@@ -248,6 +248,7 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
     optimizer_defaults: AtlasOptimizerDefaultsSchema,
     submission_constraints: AtlasSubmissionConstraintsSchema,
     walk_forward_options: AtlasWalkForwardOptionsSchema.nullable().optional(),
+    config_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable().optional(),
   }).strict(),
   historical_releases: z.array(z.object({
     release_id: Identifier, package: z.string().min(1).max(191), version: z.string().min(1).max(191),

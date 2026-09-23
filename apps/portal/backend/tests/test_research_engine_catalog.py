@@ -636,3 +636,33 @@ def test_rf02_t03_facts_must_describe_exactly_the_admitted_schedules(tmp_path: P
 
     with pytest.raises(ResearchEngineCatalogLoadError):
         ResearchEngineCatalogService(_root(tmp_path, mutate))
+
+
+def test_rf02_t05_release_config_digest_is_published_and_moves_with_the_facts(tmp_path: Path) -> None:
+    """CG-P10-01: the Atlas publishes the digest a New Run form sends back."""
+
+    import hashlib
+
+    document = _service().public_document().model_dump(mode="json")
+    current = document["current_release"]
+    facts = {
+        "release_id": current["release_id"],
+        "trial_ceiling": current["trial_ceiling"],
+        "optimizer_defaults": current["optimizer_defaults"],
+        "submission_constraints": current["submission_constraints"],
+        "walk_forward_options": current["walk_forward_options"],
+    }
+    expected = hashlib.sha256(
+        json.dumps(facts, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    # Anyone holding the published facts can recompute it; nothing private is in it.
+    assert current["config_digest"] == expected
+
+    def mutate(source: dict[str, object]) -> None:
+        releases = source["releases"]
+        assert isinstance(releases, list)
+        current_release = next(release for release in releases if release["role"] == "current")
+        current_release["walk_forward_options"]["frequency_default"] = "monthly"
+
+    moved = ResearchEngineCatalogService(_root(tmp_path, mutate)).public_document()
+    assert moved.current_release.config_digest != current["config_digest"]

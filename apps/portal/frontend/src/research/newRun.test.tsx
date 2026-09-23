@@ -867,3 +867,108 @@ describe("P10-T10 — the surface makes no request of its own", () => {
     }
   });
 });
+
+/* -------------------------------------------------------------------------
+ * RF02-F2 — every P02 control is built for real or refused with its reason
+ * ---------------------------------------------------------------------- */
+
+describe("RF02-F2 — the P02 field map is covered 24/24", () => {
+  const fieldMap = JSON.parse(
+    readFileSync(join(__dirname, "../../../../../upgrade/research_loop/evidence/P02/requested-spec-field-map.v1.json"), "utf8"),
+  ) as { denominator: { mapped_form_controls: number }; controls: { source_control_id: string; draft_path: string; requested_spec_path: string }[] };
+  const manifestAtlas = (
+    JSON.parse(readFileSync(join(__dirname, "../../e2e/research-foundation/atlas.json"), "utf8")) as { atlas: AtlasDocument }
+  ).atlas;
+  const blockedRoutes = Object.fromEntries(
+    manifestAtlas.routes.filter((route) => route.axes.admission !== "P04_BASELINE_ONLY").map((route) => [route.route_id, route.reason]),
+  );
+  const ROUTE_OF: Record<string, string> = { ib: "intrabar_bracket", pf: "portfolio", rx: "reactive", dc: "dca_ladder" };
+
+  function at(step: string, overrides: Partial<RunDraft> = {}) {
+    cleanup();
+    view({ atlas: manifestAtlas, limits: { ...LIMITS, blockedRoutes }, draft: draft(overrides) });
+    goToStep(step);
+  }
+
+  it("names 24 controls and resolves each one", () => {
+    expect(fieldMap.controls).toHaveLength(fieldMap.denominator.mapped_form_controls);
+    expect(fieldMap.controls).toHaveLength(24);
+    const outcome: Record<string, "built" | "refused"> = {};
+    for (const control of fieldMap.controls) {
+      const path = control.draft_path;
+      if (path.startsWith("routeCfg.")) {
+        // A route-specific control belongs to a route the release does not
+        // admit: its card is disabled with the server's reason, and no input
+        // for that parameter exists anywhere.
+        const route = ROUTE_OF[path.split(".")[1]!]!;
+        at("route");
+        const card = document.querySelector(`[data-route-card="${route}"]`) as HTMLButtonElement;
+        expect(card, route).toBeTruthy();
+        expect(card.disabled).toBe(true);
+        expect(card.textContent).toContain(blockedRoutes[route]);
+        outcome[control.source_control_id] = "refused";
+        continue;
+      }
+      if (path === "alphaId" || path === "avId") {
+        at("context");
+        expect(screen.getByLabelText(path === "alphaId" ? "Alpha" : "Alpha version")).toBeTruthy();
+      } else if (path === "datasetId" || path === "symbol" || path === "timeframe") {
+        at("data");
+        expect(screen.getByLabelText({ datasetId: "Dataset", symbol: "Symbol", timeframe: "Timeframe" }[path])).toBeTruthy();
+      } else if (path.startsWith("windows[*].start")) {
+        at("windows", { protocol: "three_window_decay" });
+        expect(screen.getByLabelText("IS start")).toBeTruthy();
+        at("windows", { protocol: "advanced" });
+        expect(screen.getByLabelText("Analysis start")).toBeTruthy();
+      } else if (path === "windows[*].end") {
+        at("windows", { protocol: "three_window_decay" });
+        expect(screen.getByLabelText("Holdout end exclusive")).toBeTruthy();
+      } else if (path === "advanced.*") {
+        at("windows", { protocol: "advanced" });
+        expect(screen.getByLabelText("Analysis end exclusive")).toBeTruthy();
+        expect(screen.getByLabelText("First OOS instant")).toBeTruthy();
+        const frequency = screen.getByLabelText("Frequency") as HTMLSelectElement;
+        const windowMode = screen.getByLabelText("Window mode") as HTMLSelectElement;
+        // The values are the manifest's, not a list in the component.
+        const published = manifestAtlas.current_release.walk_forward_options!;
+        expect([...frequency.options].map((option) => option.value)).toEqual(published.frequency.map((item) => item.value));
+        const rolling = [...windowMode.options].find((option) => option.value === "rolling")!;
+        expect(rolling.disabled).toBe(true);
+        expect(document.querySelector('[data-option-refused="rolling"]')?.textContent).toContain("RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED");
+        expect(document.querySelector("[data-split-rule]")?.textContent).toBe(published.split_mode_rule);
+      } else if (path.startsWith("parameter row")) {
+        at("parameters", {
+          parameters: [{ name: "window", dimension: "sweep", low: "20", high: "60", value: "", step: "2" } as never],
+        });
+        expect(screen.getByLabelText(path.endsWith("high") ? "window high" : "window low")).toBeTruthy();
+      } else if (path === "trials" || path === "earlyStopping" || path === "seed") {
+        at("optimization");
+        expect(screen.getByLabelText({ trials: "Optuna trials", earlyStopping: "Early stopping", seed: "Random seed" }[path])).toBeTruthy();
+      } else if (path === "cfgOverrides") {
+        // The release forbids optimization overrides; the constraint is shown
+        // where the control would be, with its reason.
+        at("optimization");
+        expect(document.querySelector('[data-submission-constraints="p10.fixed-qualification.v1"]')?.textContent).toMatch(/FORBIDDEN/);
+        outcome[control.source_control_id] = "refused";
+        continue;
+      } else {
+        throw new Error(`unmapped control ${control.source_control_id} ${path}`);
+      }
+      outcome[control.source_control_id] = "built";
+    }
+    expect(Object.keys(outcome)).toHaveLength(24);
+    expect(Object.values(outcome).filter((value) => value === "built")).toHaveLength(13);
+    expect(Object.values(outcome).filter((value) => value === "refused")).toHaveLength(11);
+  });
+
+  it("offers only the schedules the chosen mode lists, from the Atlas", () => {
+    const patch = vi.fn();
+    cleanup();
+    view({ atlas: manifestAtlas, patch, draft: draft({ optimizationMode: "mode_4_is_only_robust", optimizationSchedule: "global" }) });
+    goToStep("windows");
+    const schedule = screen.getByLabelText("Optimization schedule") as HTMLSelectElement;
+    expect([...schedule.options].map((option) => option.value).filter(Boolean)).toEqual(["global", "per_fold_causal"]);
+    fireEvent.change(screen.getByLabelText("Optimization mode"), { target: { value: "mode_2_sbb" } });
+    expect(patch).toHaveBeenCalledWith({ optimizationMode: "mode_2_sbb", optimizationSchedule: "global" });
+  });
+});

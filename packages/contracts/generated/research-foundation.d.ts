@@ -305,6 +305,8 @@ export interface components {
             trial_ceiling: number;
             optimizer_defaults: components["schemas"]["AtlasOptimizerDefaults"];
             submission_constraints: components["schemas"]["AtlasSubmissionConstraints"];
+            /** @description CG-P10-01. sha256 of the canonical browser-visible release configuration (release_id, trial_ceiling, optimizer_defaults, submission_constraints, walk_forward_options). A New Run form sends it unchanged as requested_spec.client.config_digest; the browser never computes it. */
+            config_digest?: string | null;
             /** @description RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed. */
             walk_forward_options?: components["schemas"]["AtlasWalkForwardOptions"] | null;
         };
