@@ -3,13 +3,27 @@ import { z } from "zod";
 const Identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/);
 const WorkspaceId = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional();
 
-/** The ordered P02 browser inspection vocabulary; each value stays opaque. */
+/** The codec this vocabulary implements (RF01-B4). */
+export const RESEARCH_CURSOR_CODEC = "p02-cursor.v2" as const;
+
+/**
+ * `stage` is presentation-only: it names the open evidence tab and never
+ * selects, filters or authorizes anything. It is the one key with a closed set.
+ */
+export const RESEARCH_CURSOR_STAGES = [
+  "summary", "split", "search", "freeze", "execute", "claim", "atlas",
+] as const;
+
+/** The ordered P02 browser inspection vocabulary; every value but `stage` stays opaque. */
 export const RESEARCH_CURSOR_KEYS = [
-  "fold", "study", "trial", "pick", "params", "trade", "seq", "event_seq",
+  "stage", "fold", "study", "trial", "pick", "params", "trade", "seq", "event_seq",
   "mode", "schedule", "route", "playback_ordinal",
 ] as const;
 
-const CursorFields = Object.fromEntries(RESEARCH_CURSOR_KEYS.map((key) => [key, Identifier.optional()]));
+const CursorFields = Object.fromEntries(RESEARCH_CURSOR_KEYS.map((key) => [
+  key,
+  key === "stage" ? z.enum(RESEARCH_CURSOR_STAGES).optional() : Identifier.optional(),
+]));
 
 export const ResearchJourneyQuerySchema = z.object({
   workspace_id: WorkspaceId,
@@ -37,6 +51,7 @@ export interface ResearchJourneyRegistryRecord {
 export interface ResearchInspectionCursor {
   cursor: Partial<Record<(typeof RESEARCH_CURSOR_KEYS)[number], string>>;
   canonical_query: string;
+  codec: typeof RESEARCH_CURSOR_CODEC;
   /** P02 semantic: a `pick` is inspection-only and cannot select/promote. */
   pick_effect: "INSPECTION_ONLY";
   ambiguity_state: "NOT_APPLICABLE" | "RESOLVED" | "UNRESOLVED_NO_RUN_CONTEXT";

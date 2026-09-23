@@ -6,7 +6,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { loadConfig } from "../../apps/control-api/src/config";
 import type { PortalUser } from "../../apps/control-api/src/domain";
 import { ResearchFoundationAtlasClient } from "../../apps/control-api/src/research/foundation.client";
-import type { ResearchEngineAtlasPrivate } from "../../apps/control-api/src/research/foundation.contract";
+import {
+  ResearchJourneyQuerySchema,
+  type ResearchEngineAtlasPrivate,
+} from "../../apps/control-api/src/research/foundation.contract";
 import { ResearchFoundationError } from "../../apps/control-api/src/research/foundation.error";
 import { ResearchFoundationService } from "../../apps/control-api/src/research/foundation.service";
 import {
@@ -110,7 +113,20 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
       },
     });
     expect(response.inspection.cursor).not.toHaveProperty("event_seq");
+    expect(response.inspection.codec).toBe("p02-cursor.v2");
     expect(response.etag).toMatch(/^W\/"research-journey-[0-9a-f]{24}"$/);
+
+    // RF01-B4: the journey read accepts `stage` and hands it back first in the
+    // canonical query, beside opaque (non-numeric) fold/trial identifiers.
+    const staged = await service.journey(scope, { stage: "freeze", fold: "wf-3", study: "s-1", trial: "t-0042" });
+    expect(staged.inspection).toMatchObject({
+      cursor: { stage: "freeze", fold: "wf-3", study: "s-1", trial: "t-0042" },
+      canonical_query: "?stage=freeze&fold=wf-3&study=s-1&trial=t-0042",
+      codec: "p02-cursor.v2",
+    });
+    expect(staged.etag).not.toBe(response.etag);
+    expect(ResearchJourneyQuerySchema.safeParse({ stage: "deploy" }).success).toBe(false);
+    expect(ResearchJourneyQuerySchema.safeParse({ stage: "atlas", fold: "3" }).success).toBe(true);
     expect((await pool.query(`SELECT count(*)::integer AS count FROM research.audit_log`)).rows[0].count).toBe(0);
   });
 

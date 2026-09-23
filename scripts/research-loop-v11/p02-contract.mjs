@@ -10,8 +10,15 @@
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/;
 const REQUEST_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{2,191}$/;
+// p02-cursor.v2 (RF01-B4): `stage` names which evidence tab is open. It is
+// presentation-only — never a resource, filter or authority — and is the one
+// key with a closed value set. Every other value stays an opaque identifier.
+export const CURSOR_CODEC = "p02-cursor.v2";
+export const CURSOR_STAGES = Object.freeze([
+  "summary", "split", "search", "freeze", "execute", "claim", "atlas",
+]);
 const CURSOR_ORDER = [
-  "fold", "study", "trial", "pick", "params", "trade", "seq", "event_seq",
+  "stage", "fold", "study", "trial", "pick", "params", "trade", "seq", "event_seq",
   "mode", "schedule", "route", "playback_ordinal",
 ];
 const CURSOR_KEYS = new Set(CURSOR_ORDER);
@@ -536,6 +543,9 @@ function cursorValue(key, value) {
   const decoded = value;
   if (!decoded || decoded.length > 191 || !/^[A-Za-z0-9._:-]+$/.test(decoded)) {
     throw new P02ContractError("CURSOR_VALUE_INVALID", `${key} has an invalid value.`);
+  }
+  if (key === "stage" && !CURSOR_STAGES.includes(decoded)) {
+    throw new P02ContractError("CURSOR_VALUE_INVALID", "stage is not a published evidence stage.");
   }
   return decoded;
 }

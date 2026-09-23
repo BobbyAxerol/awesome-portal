@@ -18,6 +18,8 @@ import {
   assertRequestedSpecV1,
   assertResearchRunRequestV1,
   createExactR1Payload,
+  CURSOR_CODEC,
+  CURSOR_STAGES,
   parseResearchCursor,
   serializeResearchCursor,
   validateOptimizerBindings,
@@ -366,6 +368,18 @@ describe("Research Loop P02 · unchanged Execution compatibility spike", () => {
     expect(serializeResearchCursor(parsed)).toBe("fold=3&study=s-west&trial=42&pick=best&trade=tr-7&event_seq=91");
     expect(errorCode(() => parseResearchCursor("trial=42", { ambiguousTrialIds: ["42"] })))
       .toBe("CURSOR_STUDY_REQUIRED");
+    // RF01-B4 · p02-cursor.v2: `stage` is admitted, ordered first, and is the
+    // one closed-set key; every other value stays opaque (a non-numeric fold
+    // or trial id is a valid identifier, not a coercion target).
+    expect(CURSOR_CODEC).toBe("p02-cursor.v2");
+    expect(CURSOR_STAGES).toEqual(["summary", "split", "search", "freeze", "execute", "claim", "atlas"]);
+    const staged = parseResearchCursor("fold=wf-3&trial=t-0042&stage=search&study=s-west");
+    expect(staged).toEqual({ fold: "wf-3", trial: "t-0042", stage: "search", study: "s-west" });
+    expect(serializeResearchCursor(staged)).toBe("stage=search&fold=wf-3&study=s-west&trial=t-0042");
+    expect(errorCode(() => parseResearchCursor("stage=deploy"))).toBe("CURSOR_VALUE_INVALID");
+    expect(errorCode(() => parseResearchCursor("stage=search&stage=split"))).toBe("CURSOR_DUPLICATE_KEY");
+    expect(errorCode(() => parseResearchCursor("stage=search&tab=split"))).toBe("CURSOR_UNSUPPORTED_KEY");
+    expect(errorCode(() => parseResearchCursor("stage=claim&seq=9&event_seq=8"))).toBe("CURSOR_SEQUENCE_CONFLICT");
     expect(errorCode(() => assertIdentityBinding({
       workspace_id: "ws_p02", research_alpha_id: "alpha", strategy_adapter_id: "strategy-a",
       execution_subject_id: "strategy-b", actor_user_id: "usr_p02",

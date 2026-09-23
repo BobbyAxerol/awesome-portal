@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { PortalUser } from "../domain";
 import { type ResearchScope, ResearchMetadataError } from "./contracts";
 import {
+  RESEARCH_CURSOR_CODEC,
   RESEARCH_CURSOR_KEYS,
   type ResearchAtlasQuery,
   type ResearchAtlasResponse,
@@ -132,6 +133,7 @@ export class ResearchFoundationService {
     return {
       cursor,
       canonical_query: params.size > 0 ? `?${params.toString()}` : "",
+      codec: RESEARCH_CURSOR_CODEC,
       pick_effect: "INSPECTION_ONLY",
       ambiguity_state: ambiguityState,
     };

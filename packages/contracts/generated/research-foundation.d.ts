@@ -44,6 +44,8 @@ export interface components {
     schemas: {
         WorkspaceId: string;
         Identifier: string;
+        /** @enum {unknown} */
+        CursorStage: "summary" | "split" | "search" | "freeze" | "execute" | "claim" | "atlas";
         JourneyCard: {
             card_id: components["schemas"]["Identifier"];
             title: string;
@@ -73,6 +75,7 @@ export interface components {
         };
         InspectionCursor: {
             cursor: {
+                stage?: components["schemas"]["CursorStage"];
                 fold?: components["schemas"]["Identifier"];
                 study?: components["schemas"]["Identifier"];
                 trial?: components["schemas"]["Identifier"];
@@ -85,6 +88,11 @@ export interface components {
                 route?: components["schemas"]["Identifier"];
                 playback_ordinal?: components["schemas"]["Identifier"];
             };
+            /**
+             * @description RF01-B4. Optional for clients deployed before the v2 codec; the server emits it on every read.
+             * @constant
+             */
+            codec?: "p02-cursor.v2";
             canonical_query: string;
             /** @constant */
             pick_effect: "INSPECTION_ONLY";
@@ -262,6 +270,8 @@ export interface components {
         WorkspaceId: components["schemas"]["WorkspaceId"];
         RunId: components["schemas"]["Identifier"];
         ReleaseId: components["schemas"]["Identifier"];
+        /** @description p02-cursor.v2 presentation-only key: the open evidence tab. It never selects, filters or authorizes a resource. */
+        Stage: components["schemas"]["CursorStage"];
         Fold: components["schemas"]["Identifier"];
         Study: components["schemas"]["Identifier"];
         Trial: components["schemas"]["Identifier"];
@@ -289,6 +299,8 @@ export interface operations {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
                 run_id?: components["parameters"]["RunId"];
+                /** @description p02-cursor.v2 presentation-only key: the open evidence tab. It never selects, filters or authorizes a resource. */
+                stage?: components["parameters"]["Stage"];
                 fold?: components["parameters"]["Fold"];
                 study?: components["parameters"]["Study"];
                 trial?: components["parameters"]["Trial"];
