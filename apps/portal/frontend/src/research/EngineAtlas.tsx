@@ -638,13 +638,15 @@ function ModesTab({
           style={{ borderColor: "var(--accent-2)", background: "var(--accent-2-soft)" }}
           data-rule-one
         >
+          {/* D-B2 (2026-09-23): gold on gold-soft is 4.0:1, below AA for this
+              size. The gold frame carries the warning; the words are ink. */}
           <span
             className="mono flex-none text-[10px] font-bold uppercase tracking-[.1em]"
-            style={{ color: "var(--accent-2)" }}
+            style={{ color: "var(--ink)" }}
           >
             rule one
           </span>
-          <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--accent-2)" }}>
+          <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink)" }}>
             The claim comes from <span className="mono">mode × schedule</span>, never from the mode
             alone. <span className="mono">mode_1_decay + per_fold_causal</span> is strict outer OOS;
             the same mode with <span className="mono">per_fold_decay</span> is selection-adjusted.

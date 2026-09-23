@@ -40,17 +40,10 @@ for (const [name, width] of [
       const serious = results.violations
         .filter((violation) => violation.impact === "serious" || violation.impact === "critical")
         .flatMap((violation) => violation.nodes.map((node) => ({ id: violation.id, data: node.any[0]?.data as { fgColor?: string; bgColor?: string } | undefined })))
-        // Two colour pairs are design-system decisions recorded for Bobby in
-        // the RF-02 packet, not S12 defects: the shared --ink-faint token
-        // (#939db0, 2.6–2.7:1) and Q4/D-4's gold Rule One (#9a6a1f on
-        // #f4ecdb, 4.0:1). Anything else fails this test.
-        .filter(
-          (node) =>
-            !(
-              node.id === "color-contrast" &&
-              (node.data?.fgColor === "#939db0" || (node.data?.fgColor === "#9a6a1f" && node.data?.bgColor === "#f4ecdb"))
-            ),
-        );
+        // One colour is a design-system change decided in RF-02 (D-B1) and
+        // scheduled as its own step: the shared --ink-faint token (#939db0,
+        // 2.6–2.7:1). Anything else fails this test.
+        .filter((node) => !(node.id === "color-contrast" && node.data?.fgColor === "#939db0"));
       expect(serious.map((node) => `${node.id} ${node.data?.fgColor ?? ""} on ${node.data?.bgColor ?? ""}`)).toEqual([]);
       await page.screenshot({ path: `${OUT}/rf02-s12-${tab}-${name}.png`, fullPage: true });
     });
