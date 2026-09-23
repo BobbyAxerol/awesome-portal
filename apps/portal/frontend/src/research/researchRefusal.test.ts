@@ -53,7 +53,7 @@ describe("RF01-F4 — one mapper behind the five historical names", () => {
     expect(toResearchRefusal(api(500, "RESEARCH_SEARCH_NOT_FOUND")).state).toBe("empty");
     expect(toResearchRefusal(api(400, "RESEARCH_EVIDENCE_UNAVAILABLE")).state).toBe("unavailable");
     expect(toResearchRefusal(api(503, "RESEARCH_FREEZE_INVALID")).state).toBe("terminal");
-    expect(RESEARCH_SURFACE_CODES).toHaveLength(24);
+    expect(RESEARCH_SURFACE_CODES).toHaveLength(28);
   });
 
   it.each([

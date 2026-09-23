@@ -849,7 +849,9 @@ describe("P11-T09 — typed availability and refusals keep the composition", () 
     const refusal = toProgressRefusal(new PortalApiError("said so", status, "CODE", "r"));
     expect(refusal.state).toBe(expected);
     expect(refusal.closesStream).toBe(closes);
-    expect(refusal.message).toBe("said so");
+    // RF01-F4: the shared mapper — fixed copy on screen, server text as detail.
+    expect(refusal.message).not.toBe("said so");
+    expect(refusal.detail).toBe("said so");
   });
 
   it("knows which statuses are still live", () => {

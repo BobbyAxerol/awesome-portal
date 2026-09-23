@@ -1,7 +1,7 @@
 /**
  * Research Loop — one refusal mapper (RF01-F4, audit F-05).
  *
- * Five screens used to carry five copies of the same function, each deciding
+ * Six screens used to carry six copies of the same function (S01, S03–S07), each deciding
  * by HTTP status alone and each printing the server's sentence as the notice.
  * That lost two things P03 made on purpose: an admission-saturated `503` is
  * `failed-retryable`, not `unavailable`; and a refusal's words on screen are
@@ -75,6 +75,12 @@ const SURFACE_CODES: Record<string, Kind> = {
   RESEARCH_RUN_LIBRARY_UNAVAILABLE: "UNAVAILABLE",
   RESEARCH_RUN_LIBRARY_INVALID: "INVALID",
   RESEARCH_RUN_LIBRARY_CURSOR_INVALID: "INVALID",
+  /* P11 progress. Its CONFLICT is not listed: a lost compare-and-set there is
+     terminal, which `toProgressRefusal` states on top of the 409. */
+  RESEARCH_PROGRESS_FORBIDDEN: "FORBIDDEN",
+  RESEARCH_PROGRESS_NOT_FOUND: "NOT_FOUND",
+  RESEARCH_PROGRESS_UNAVAILABLE: "UNAVAILABLE",
+  RESEARCH_PROGRESS_INVALID: "INVALID",
 };
 
 /** Every surface code this mapper classifies, for exhaustiveness tests. */

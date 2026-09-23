@@ -23,8 +23,7 @@ import type { components } from "@portal/contracts-research-progress";
 
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
-import type { ResearchState } from "./state";
-import { reportSessionExpired } from "../auth/sessionExpiry";
+import { REFUSAL_COPY, toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 
 type Schemas = components["schemas"];
 
@@ -191,58 +190,27 @@ export function classifyFrame(raw: string): StreamFrame | null {
  * Refusals
  * ---------------------------------------------------------------------- */
 
-export interface ProgressRefusal {
-  code: string | null;
-  /** The server's own sentence. Never rewritten locally. */
-  message: string;
-  status: number;
-  requestId: string | null;
-  state: ResearchState["state"];
-  mayRetry: boolean;
+/** The shared Research refusal (RF01-F4), plus the one fact only the stream needs. */
+export type ProgressRefusal = ResearchRefusal & {
   /** True when the stream must be closed and not reopened. */
   closesStream: boolean;
-}
+};
 
 /**
- * Maps a refusal by status, because P11's `Problem.error.code` is an open
- * string rather than a closed union — there is no exhaustive map to write, and
- * inventing one would drift from the server the first time it adds a code.
+ * The shared mapper, with P11's one difference: a `409` here is a lost
+ * compare-and-set on a run whose state has moved, so it is terminal for this
+ * view rather than a reread.
  *
  * `401`, `403` and `409` close the stream: an expired session or a lost
  * compare-and-set will not be fixed by reconnecting, and native EventSource
  * would otherwise retry them forever.
  */
 export function toProgressRefusal(error: unknown): ProgressRefusal {
-  if (!(error instanceof PortalApiError)) {
-    return {
-      code: null,
-      message: "The request did not reach the server.",
-      status: 0,
-      requestId: null,
-      state: "failed-retryable",
-      mayRetry: true,
-      closesStream: false,
-    };
-  }
-  /* RF01-F3: an expired session goes to the shell's sign-in path. */
-  if (error.status === 401) reportSessionExpired();
-  const { status } = error;
-  const denied = status === 401 || status === 403;
+  const refusal = toResearchRefusal(error);
+  const conflict = refusal.status === 409;
   return {
-    code: error.code,
-    message: error.message,
-    status,
-    requestId: error.requestId,
-    state: denied
-      ? "denied"
-      : status === 404
-        ? "empty"
-        : status === 409
-          ? "terminal"
-          : status >= 500
-            ? "unavailable"
-            : "terminal",
-    mayRetry: status >= 500,
-    closesStream: denied || status === 409,
+    ...refusal,
+    ...(conflict ? { state: "terminal" as const, mayRetry: false, message: REFUSAL_COPY.terminal } : {}),
+    closesStream: refusal.state === "denied" || conflict,
   };
 }

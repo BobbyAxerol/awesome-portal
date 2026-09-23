@@ -38,6 +38,7 @@ import {
   toProgressRefusal,
 } from "./progressClient";
 import { researchState, type ResearchState } from "./state";
+import { refusalState } from "./researchRefusal";
 
 /** Whether a status means the run can still produce events. */
 export function isLive(status: ProgressRead["current"]["effective_status"]): boolean {
@@ -335,13 +336,8 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   const foldCursor = pinnedFold ?? latestFold;
 
   const state: ResearchState = refusal
-    ? {
-        state: refusal.state,
-        reason: refusal.message,
-        mayRetry: refusal.mayRetry,
-        /* The composition stays; only the panel body reports the refusal. */
-        retainsContent: read !== null,
-      }
+    ? /* The composition stays; only the panel body reports the refusal. */
+      refusalState(refusal, read !== null)
     : read === null
       ? researchState({ kind: "in-flight", hasAcceptedResponse: false })
       : read.availability === "PENDING_SOURCE_CALLBACK"
