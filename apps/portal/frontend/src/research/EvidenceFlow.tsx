@@ -461,12 +461,21 @@ function RunHeader({
         )}
 
         <span className="ml-auto flex flex-wrap items-center gap-2">
+          {/* Screen 09 reads the sealed report for this run (P18). */}
+          <Link
+            to={`/research/quantbt/runs/${encodeURIComponent(hub.run_id)}/report`}
+            data-action="generate-report"
+            className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase"
+            style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+          >
+            generate report → 09
+          </Link>
           {/*
-            * Screens 09 and 11 have no route yet. An action that would go
-            * nowhere is shown refused with the reason, never as a live button
-            * a reader can be disappointed by.
+            * Screen 11 has no route yet. An action that would go nowhere is
+            * shown refused with the reason, never as a live button a reader
+            * can be disappointed by.
             */}
-          {(["generate report → 09", "release candidate → 11"] as const).map((label) => (
+          {(["release candidate → 11"] as const).map((label) => (
             <span
               key={label}
               data-action-unrouted={label}

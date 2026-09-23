@@ -41,6 +41,7 @@ import {
 } from "./replayClient";
 import { ReplayTransport, SPEEDS, transportKey, useTransport } from "./replayTransport";
 import type { ReplayController, RetainedReplaySlot } from "./useReplay";
+import { iso } from "./utcMinute";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -66,10 +67,6 @@ export const PLAYHEAD_NOTE =
 export const PAUSED_HIDDEN = "paused (tab hidden)";
 
 /* ------------------------------------------------------------------ parts */
-
-function iso(at: number): string {
-  return new Date(at).toISOString().slice(0, 16).replace("T", " ") + "Z";
-}
 
 function words(value: string): string {
   return value.toLowerCase().replace(/_/g, " ");
@@ -556,15 +553,14 @@ export function ExecuteScreen({ runId, cursor, controller, transport }: ExecuteS
           ← S3 Freeze
         </Link>
         <span style={{ color: "var(--line-strong)" }}>·</span>
-        {/* Screen 09 has no route yet; a link would go nowhere. */}
-        <span
+        <Link
+          to={`/research/quantbt/runs/${run}/report`}
           className="mono"
-          style={{ color: "var(--ink-faint)", opacity: 0.6 }}
-          title="Screen 09 Run Report has no published route yet."
+          style={{ color: "var(--accent)" }}
           data-next="run-report"
         >
           next: Run Report →
-        </span>
+        </Link>
       </nav>
 
       <div className="flex flex-col gap-1">
