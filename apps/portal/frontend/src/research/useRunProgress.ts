@@ -33,6 +33,7 @@ import {
   type ProgressRead,
   type ProgressRefusal,
   type ProgressSnapshot,
+  STREAM_EVENT_NAMES,
   classifyFrame,
   progressApi,
   toProgressRefusal,
@@ -44,6 +45,9 @@ import { refusalState } from "./researchRefusal";
 export function isLive(status: ProgressRead["current"]["effective_status"]): boolean {
   return status === "QUEUED" || status === "RUNNING" || status === "FINISHING";
 }
+
+/** How long a hidden tab keeps its stream (spec 03: one minute). */
+export const HIDDEN_STREAM_GRACE_MS = 60_000;
 
 /** How the screen is currently being fed. */
 export type Transport = "stream" | "poll" | "closed";
@@ -88,6 +92,12 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   /** Highest sequence applied. Older frames are dropped, never re-applied. */
   const appliedSeq = useRef<number>(0);
   const source = useRef<EventSource | null>(null);
+
+  /* Visible for the stream's purposes. Spec 03: a hidden tab keeps its stream
+     for a minute, then closes it; returning reopens it. */
+  const [visible, setVisible] = useState(
+    () => typeof document === "undefined" || document.visibilityState !== "hidden",
+  );
 
   const status = read?.current.effective_status ?? null;
   const live = status !== null && isLive(status);
@@ -217,7 +227,11 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
       setTransport("poll");
       return;
     }
-    if (document.visibilityState === "hidden") return;
+    if (!visible) {
+      closeStream();
+      setTransport("closed");
+      return;
+    }
 
     const stream = new EventSource(progressApi.streamUrl(runId, appliedSeq.current || null), {
       withCredentials: true,
@@ -225,10 +239,18 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     source.current = stream;
     setTransport("stream");
 
-    stream.onmessage = (message: MessageEvent<string>) => {
+    const onFrame = (message: MessageEvent<string>) => {
       const frame = classifyFrame(message.data);
       if (frame === null) return;
       if (frame.kind === "heartbeat") return;
+      if (frame.kind === "snapshot") {
+        /* The server opens every stream with the current read. */
+        setRead(frame.read);
+        if (frame.read.progress) {
+          appliedSeq.current = Math.max(appliedSeq.current, frame.read.progress.latest_sequence);
+        }
+        return;
+      }
       if (frame.kind === "terminal") {
         /* A typed gap or an expired session: stop, then replace local state
            from a snapshot rather than trying to stitch the hole. */
@@ -239,6 +261,12 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
       }
       applyEvent(frame.event, frame.snapshot);
     };
+    /* Named frames reach only named listeners; `onmessage` stays for an
+       unnamed frame so a server that drops the name still lands here. */
+    for (const name of STREAM_EVENT_NAMES) {
+      stream.addEventListener(name, onFrame as EventListener);
+    }
+    stream.onmessage = onFrame;
 
     stream.onerror = () => {
       /* Transient. Hand over to the poll floor instead of letting the native
@@ -251,21 +279,36 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
       stream.close();
       if (source.current === stream) source.current = null;
     };
-  }, [applyEvent, closeStream, live, refresh, runId]);
+  }, [applyEvent, closeStream, live, refresh, runId, visible]);
 
-  /* Visibility: a hidden tab keeps no stream open. */
+  /* Visibility: a tab hidden for a minute gives its stream up; coming back
+     reads a snapshot and reopens it. Closing at once and never reopening froze
+     a live run after any tab switch (RF-04, FE-S03-02). */
   useEffect(() => {
+    let hiddenTimer: number | null = null;
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
-        closeStream();
-        setTransport("closed");
-      } else if (live) {
-        void refresh();
+        if (hiddenTimer === null) {
+          hiddenTimer = window.setTimeout(() => {
+            hiddenTimer = null;
+            setVisible(false);
+          }, HIDDEN_STREAM_GRACE_MS);
+        }
+        return;
       }
+      if (hiddenTimer !== null) {
+        window.clearTimeout(hiddenTimer);
+        hiddenTimer = null;
+      }
+      setVisible(true);
+      if (live) void refresh();
     };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [closeStream, live, refresh]);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (hiddenTimer !== null) window.clearTimeout(hiddenTimer);
+    };
+  }, [live, refresh]);
 
   /* ----------------------------------------------------------- poll floor */
 

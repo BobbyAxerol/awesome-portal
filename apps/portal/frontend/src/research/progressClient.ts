@@ -153,8 +153,25 @@ export const progressApi = {
 
 export type StreamFrame =
   | { kind: "event"; event: ProgressEvent; snapshot: ProgressSnapshot | null }
+  | { kind: "snapshot"; read: ProgressRead }
   | { kind: "heartbeat" }
   | { kind: "terminal"; frame: ProgressTerminalFrame };
+
+/**
+ * The SSE event names the Control API writes (`progress.controller.ts`).
+ *
+ * Every frame is *named*. A browser delivers a named event only to a listener
+ * registered under that name — never to `onmessage` — so a stream read through
+ * `onmessage` alone receives nothing, raises no error, and never falls back to
+ * the poll floor: a running run freezes at its first snapshot (RF-04, FE-S03-01).
+ */
+export const STREAM_EVENT_NAMES = [
+  "research.progress.snapshot",
+  "research.progress",
+  "research.progress.heartbeat",
+  "research.progress.gap",
+  "auth.expired",
+] as const;
 
 /**
  * Classifies one SSE payload.
@@ -177,6 +194,13 @@ export function classifyFrame(raw: string): StreamFrame | null {
   if (value.event_type === "research.progress.heartbeat") return { kind: "heartbeat" };
   if (value.terminal === true && typeof value.event_type === "string") {
     return { kind: "terminal", frame: value as unknown as ProgressTerminalFrame };
+  }
+  if (
+    value.schema_version === "research.progress-read.v1" &&
+    value.current !== null &&
+    typeof value.current === "object"
+  ) {
+    return { kind: "snapshot", read: value as unknown as ProgressRead };
   }
   if (value.event && typeof value.event === "object") {
     const wrapper = value as unknown as ProgressStreamEvent;

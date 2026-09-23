@@ -18,6 +18,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ARTIFACT_NO_READER,
   NOT_ISSUED_NOTE,
+  NO_CLAIM_NOTE,
+  notIssuedText,
   OLDER_DROPPED,
   RunProgress,
   SSE_CLOSED,
@@ -34,7 +36,7 @@ import {
   progressApi,
   toProgressRefusal,
 } from "./progressClient";
-import { isLive, useRunProgress } from "./useRunProgress";
+import { HIDDEN_STREAM_GRACE_MS, isLive, useRunProgress } from "./useRunProgress";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
 
@@ -144,19 +146,37 @@ function view(overrides: Partial<React.ComponentProps<typeof RunProgress>> = {})
 
 /* ---------------------------------------------------------- stream double */
 
+/**
+ * Behaves like the browser: a frame is written under an SSE event name (as
+ * `progress.controller.ts` does) and reaches only listeners registered for
+ * that name — never `onmessage`. The first double called `onmessage` directly,
+ * which is how a stream that received nothing in production stayed green here.
+ */
+function eventNameOf(payload: unknown): string {
+  const value = payload as Record<string, unknown>;
+  if (value.event && typeof value.event === "object") return "research.progress";
+  if (value.schema_version === "research.progress-read.v1") return "research.progress.snapshot";
+  return String(value.event_type);
+}
+
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
   onmessage: ((e: MessageEvent<string>) => void) | null = null;
   onerror: ((e: Event) => void) | null = null;
   closed = false;
+  private listeners = new Map<string, ((e: MessageEvent<string>) => void)[]>();
   constructor(readonly url: string) {
     FakeEventSource.instances.push(this);
+  }
+  addEventListener(name: string, listener: (e: MessageEvent<string>) => void) {
+    this.listeners.set(name, [...(this.listeners.get(name) ?? []), listener]);
   }
   close() {
     this.closed = true;
   }
-  emit(payload: unknown) {
-    this.onmessage?.({ data: JSON.stringify(payload) } as MessageEvent<string>);
+  emit(payload: unknown, name: string = eventNameOf(payload)) {
+    const message = { data: JSON.stringify(payload) } as MessageEvent<string>;
+    for (const listener of this.listeners.get(name) ?? []) listener(message);
   }
   fail() {
     this.onerror?.(new Event("error"));
@@ -252,6 +272,25 @@ describe("P11-T01 — every HIFI block is present and reads from the snapshot", 
     expect(failure.getAttribute("data-failure")).toBe("RuntimeBudgetError.CAP_EXCEEDED");
     expect(failure.textContent).toContain("runtime budget exhausted");
     expect(screen.getByText(NOT_ISSUED_NOTE)).toBeTruthy();
+  });
+});
+
+describe("RF-04 FE-S03-04 — a finished run without a claim is not called failed", () => {
+  it("prints the server's own sentence on a COMPLETED, NOT_ISSUED run", () => {
+    const text = "The fixed P10 qualification sealed its artifacts but did not issue a release claim.";
+    view({
+      read: read(
+        { current: { ...read().current, effective_status: "COMPLETED", may_cancel: false } },
+        { status: "COMPLETED", claim: { state: "NOT_ISSUED", text, cursor: null } },
+      ),
+    });
+    expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByText(NOT_ISSUED_NOTE)).toBeNull();
+  });
+
+  it("never says failed when the server gave no sentence and the run did not fail", () => {
+    expect(notIssuedText("", "COMPLETED")).toBe(NO_CLAIM_NOTE);
+    expect(notIssuedText("", "FAILED")).toBe(NOT_ISSUED_NOTE);
   });
 });
 
@@ -655,6 +694,41 @@ describe("P11-T05 — the stream opens only when it should, and closes when it m
     expect(result.current.transport).toBe("poll");
     // No tight reconnect: exactly the one stream was opened.
     expect(FakeEventSource.instances).toHaveLength(opened);
+  });
+
+  it("applies the snapshot frame the server opens every stream with", async () => {
+    stubFetch(() => [200, read()]);
+    const { result } = renderHook(() => useRunProgress("run_01"));
+    await waitFor(() => expect(FakeEventSource.instances.length).toBeGreaterThan(0));
+    const moved = read({}, { overall: { ...snapshot().overall, pct: 77 }, latest_sequence: 55 });
+    await act(async () => FakeEventSource.last().emit(moved));
+    expect(result.current.snapshot?.overall.pct).toBe(77);
+  });
+
+  it("gives the stream up after a minute hidden and reopens it on return", async () => {
+    stubFetch(() => [200, read()]);
+    const { result } = renderHook(() => useRunProgress("run_01"));
+    await waitFor(() => expect(FakeEventSource.instances.length).toBeGreaterThan(0));
+    const first = FakeEventSource.last();
+    vi.useFakeTimers();
+    const setVisibility = (state: "hidden" | "visible") => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    try {
+      await act(async () => setVisibility("hidden"));
+      // A short switch keeps the stream.
+      await act(async () => vi.advanceTimersByTime(HIDDEN_STREAM_GRACE_MS - 1));
+      expect(first.closed).toBe(false);
+      await act(async () => vi.advanceTimersByTime(1));
+      expect(first.closed).toBe(true);
+      expect(result.current.transport).toBe("closed");
+      await act(async () => setVisibility("visible"));
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(FakeEventSource.last()).not.toBe(first));
+    expect(result.current.transport).toBe("stream");
   });
 
   it("closes the stream on unmount", async () => {

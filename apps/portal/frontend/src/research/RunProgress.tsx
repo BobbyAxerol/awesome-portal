@@ -50,6 +50,9 @@ export const SSE_CLOSED = "stream closed — final state";
 export const NOT_ISSUED_NOTE =
   "the run failed before Stage 5 — no claim exists. Failure detail is in the console above.";
 
+/** A run that ended without failing and without a claim, when the server gave no sentence. */
+export const NO_CLAIM_NOTE = "This run ended without issuing a claim.";
+
 export const OLDER_DROPPED = "· · · older lines dropped (kept server-side)";
 
 export const RULES_FOOTER =
@@ -656,6 +659,18 @@ function CertificateChip({ certificate }: { certificate: MethodologyCertificate 
   );
 }
 
+
+/**
+ * The server's own sentence wins. "The run failed" is only true of a run that
+ * failed: a COMPLETED fixed qualification also ends NOT_ISSUED, and printing
+ * the failure note over the server's text told the reader a finished run had
+ * broken (RF-04, FE-S03-04).
+ */
+export function notIssuedText(serverText: string, status: string | null): string {
+  if (serverText.trim() !== "") return serverText;
+  return status === "FAILED" ? NOT_ISSUED_NOTE : NO_CLAIM_NOTE;
+}
+
 function ClaimPassport({
   claim,
   status,
@@ -691,7 +706,7 @@ function ClaimPassport({
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)", opacity: issued ? 1 : 0.85 }}>
         {/* The server builds this sentence for both states; the page never
             composes a claim string of its own. */}
-        {notIssued ? NOT_ISSUED_NOTE : claim.text}
+        {notIssued ? notIssuedText(claim.text, status) : claim.text}
       </p>
       {issued && claim.cursor !== null ? (
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-claim-cursor>
