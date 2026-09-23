@@ -27,7 +27,12 @@ The feature-dark P05 bridge uses a signed private service principal and exact P0
 
 This is **partial CG-P05-01**. Current P10 Delta has no admitted RS-02 Advanced-WFO observations/folds/trials/candidates/selection; S04–S07 remain typed `PENDING_RETENTION`. Next: P10 source admission and P06 trusted child progress, then wire the existing RS-02 importer. Do not claim RF-03 complete or show this one-row receipt as rich trial data.
 
-Evidence: Control API build, private-ingress/config 22/22, Python retention/worker/artifact 35/35, disposable PostgreSQL P05 5/5 and P11 10/10, P01 route inventory 227/collision 0. The full monorepo hook ran 117 Control API files (116 passed; 3 RS-01 stale-mock failures); after correcting the mock, focused RS-01/private-ingress tests passed 8/8. `npm run typecheck` still reports pre-existing test-fixture errors unrelated to this build; `npm run build` passes. No runtime activation or frontend file was included.
+### P07 source-backed registry checkpoint — 2026-09-23
+
+`RegistryEntry` now projects alpha name, full source digest and server-owned strategy ID; its immutable declaration projects validated required candle columns and warmup bars. Python AST mirror adds literal version. Code commit: `a1926f25`. Source: `research.alphas.name`, `research.alpha_versions.code_digest` / import source digest and `declared_contract`, not browser input. Generated fields are additive for existing frontend fixtures; current server emits them. Tests: P07 disposable PostgreSQL 9/9, parser 9/9, contract 5/5, Control API build, frontend TypeScript, and full pre-commit 117/117 files, 813/813 Control API tests. `CG-P07-03/05` remain OPEN for the unproven 14-field mirror and absent persisted `supersedes` lineage. No runtime/auth change.
+
+
+P05 evidence: Control API build, private-ingress/config 22/22, Python retention/worker/artifact 35/35, disposable PostgreSQL P05 5/5 and P11 10/10, P01 route inventory 227/collision 0. The final full monorepo hook passed after the three stale RS-01 test mocks were corrected in the P05 code commit `d820d5ce`. `npm run typecheck` reports pre-existing test-fixture errors unrelated to P05; `npm run build` passes. No runtime activation or frontend file was included.
 
 ## RF-02 backend review
 

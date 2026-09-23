@@ -4324,6 +4324,8 @@ campaign sau khi Bobby tự merge qua PR.
 
 **P05 checkpoint 2026-09-23 (feature-dark):** exact-lease private reserve/seal and real one-row Parquet receipt now write to `research.artifacts`; failed/expired WRITING metadata is aborted without touching SEALED evidence. S03 can read the retained receipt. `CG-P05-01` remains OPEN for S04–S07 rich current-source materialization: P10 fixed Delta has no admitted Advanced-WFO rows yet. See [RF-03 packet](./research_loop/evidence/RF-03/README.md). No runtime activation.
 
+**P07 registry checkpoint `a1926f25`, 2026-09-23:** source-backed name, strategy ID, full digest, required columns, warmup and literal version mirror are published in generated `research-alpha-import.d.ts` with additive client rollout. `CG-P07-03/05` remain OPEN for 14-field mirror and persisted supersession lineage. P07 PostgreSQL 9/9, parser 9/9, contract 5/5, build, FE TypeScript and full pre-commit 813/813 Control API tests pass; no runtime activation. See [RF-03 packet](./research_loop/evidence/RF-03/README.md).
+
 <a id="rl-rf-04"></a>
 ### RF-04 — Frontend P01–P10: sửa, chuẩn hoá theo HiFi, tối ưu tốc độ, nối màn (Claude)
 

@@ -106,6 +106,8 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 | `CG-P07-04` | Gates: `RUNNING`, analyser time per gate, `QUARANTINED_*` codes, parse `expires_at`, declared digest to verify | S14 pipeline card | OPEN |
 | `CG-P07-05` | `RegistryEntry`: `supersedes`, display name, `strategy_id`, `warmup_bars`, `required_columns`, full digest | S02 context/strategy/data steps, S14 registry strip | OPEN (strategy_id: DQ-07) |
 | `CG-P07-06` | `may_activate` is actor permission; combine with typed lifecycle DRAFT for first-activation affordance; ACTIVE exact replay remains idempotent | S14 activate affordance | DELIVERED `8f0c4c4e` · `research-alpha-import.d.ts:RegistryEntry`; [RF-03 ruling](./RF-03/README.md) |
+**RF-03 P07 registry checkpoint `a1926f25` (2026-09-23):** The list now emits database-backed `display_name`, `strategy_id=alpha_id` (approved DQ-07), full `source_digest`, and source-validated `declaration.required_columns/warmup_bars`; the AST mirror adds literal `version`. Generated `research-alpha-import.d.ts:RegistryEntry/AlphaVersionDeclaration` fields are additive during FE rollout; current server emits them. Canonical example: `{display_name:"Alpha demo",strategy_id:"alpha-demo",source_digest:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",declaration:{required_columns:["open","high","low","close","volume"],warmup_bars:32}}`. `CG-P07-03/05` stay OPEN: the source has no persisted per-version supersession lineage or verified 14-field mirror, so neither is inferred from current active state. Proof: parser 9/9, P07 disposable PostgreSQL 9/9, contracts 5/5, Control API build, frontend TypeScript and full pre-commit 117/117 files, 813/813 tests. No activation/runtime changed.
+
 
 ## P08 — data / preflight
 
