@@ -1394,6 +1394,8 @@ test("S05 describes the holdout and offers no way into it", async ({ page }) => 
 
   await expect(page.locator("[data-holdout-integrity='P08_METADATA_BOUND']")).toBeVisible();
   await expect(page.locator("[data-holdout-evaluation='NOT_EVALUATED']")).toBeVisible();
+  // Three exposure facts, not two: the result of the holdout was never exposed.
+  await expect(page.locator("[data-holdout-result='NOT_EXPOSED']")).toBeVisible();
   await expect(page.locator("[data-holdout]")).not.toContainText("SEALED");
   await expect(page.locator("[data-action-unlock]")).toHaveAttribute("data-action-unlock", "NOT_PUBLISHED");
   await expect(page.locator("button[data-action-unlock], a[data-action-unlock]")).toHaveCount(0);
@@ -1466,6 +1468,8 @@ for (const [name, width, height] of [
     await expect(page.locator("[data-screen='search-detail']")).toBeVisible();
     await expect(page.locator("[data-source-profile='FIXED_PROFILE_NO_SEARCH']")).toBeVisible();
     await expect(page.locator("[data-requested-optimizer]")).toContainText("declared not executed");
+    await expect(page.locator("[data-one-mode]")).toContainText("fixed at submit");
+    await expect(page.locator("[data-readiness]")).toContainText("readiness partial");
 
     // Stage A, the freeze line and Stage B all keep their place.
     await expect(page.locator("[data-stage='A']")).toBeVisible();
@@ -1597,8 +1601,15 @@ for (const [name, width, height] of [
     await settle(page);
 
     await expect(page.locator("[data-screen='freeze-detail']")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "S3 · Freeze — ordering & integrity" })).toBeVisible();
     await expect(page.locator("[data-integrity='PARTIAL']")).toBeVisible();
     await expect(page.locator("[data-check]")).toHaveCount(3);
+    // Spec 07 §2.2's note, and the sentence that says only one clock exists here.
+    await expect(page.locator("[data-two-clocks]")).toContainText("two clocks, never one axis");
+    await expect(page.locator("[data-ordering-note]")).toContainText("Only one of those two clocks");
+    // A window that publishes its evaluation state shows it; one that does not
+    // shows no chip rather than an empty one.
+    await expect(page.locator("[data-window-evaluation]")).toHaveCount(1);
     await expect(page.locator("[data-frozen-parameter]")).toHaveCount(3);
     await expect(page.locator("[data-panel='ordering']")).toBeVisible();
     await expect(page.locator("[data-panel='what-if']")).toBeVisible();
@@ -1725,3 +1736,75 @@ test("the evidence chain walks 04 → 05 → 06 → 07 and back, carrying one cu
   await expect(page.locator("[data-cursor-fold]")).toContainText("fold 3");
   expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
 });
+
+/*
+ * The checks every deep-dive handoff asks for and the first pass of S05–S07
+ * did not write: a hard refresh, a keyboard walk, and the provenance each
+ * contract publishes.
+ */
+for (const [screen, path, marker] of [
+  ["S05", SPLIT, "split-detail"],
+  ["S06", SEARCH, "search-detail"],
+  ["S07", FREEZE, "freeze-detail"],
+] as const) {
+  test(`${screen} survives a hard refresh on a deep link and names every control`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto(`${path}#stage=split&fold=2&params=prm_3b81c7`);
+    await settle(page);
+    await expect(page.locator(`[data-screen='${marker}']`)).toBeVisible();
+
+    // A refresh restores the same question from the URL alone.
+    await page.reload();
+    await settle(page);
+    await expect(page.locator(`[data-screen='${marker}']`)).toBeVisible();
+    await expect(page).toHaveURL(/fold=2/);
+    await expect(page).toHaveURL(/params=prm_3b81c7/);
+
+    // Every control carries an accessible name, and the first tab stop inside
+    // the screen is reachable from the keyboard.
+    const unnamed = await page.evaluate((selector) => {
+      const root = document.querySelector(selector);
+      if (!root) return ["no screen"];
+      return [...root.querySelectorAll("button, a, input, select, summary")]
+        .filter((el) => {
+          const label =
+            el.getAttribute("aria-label") ?? el.getAttribute("title") ?? (el.textContent ?? "").trim();
+          return label.length === 0;
+        })
+        .map((el) => el.outerHTML.slice(0, 120));
+    }, `[data-screen='${marker}']`);
+    expect(unnamed, unnamed.join("\n")).toEqual([]);
+
+    const first = page.locator(`[data-screen='${marker}'] a, [data-screen='${marker}'] button`).first();
+    await first.focus();
+    expect(
+      await page.evaluate(
+        (selector) => document.activeElement?.closest(selector) !== null,
+        `[data-screen='${marker}']`,
+      ),
+    ).toBe(true);
+    expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+  });
+
+  test(`${screen} shows the provenance its contract publishes`, async ({ page }) => {
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto(path);
+    await settle(page);
+
+    const strip = page.locator("[data-provenance]");
+    await expect(strip).toBeVisible();
+    // The identity is in the summary; the digests are one disclosure away.
+    await expect(strip.locator("summary")).toContainText("provenance");
+    await strip.locator("summary").click();
+
+    // Requested and effective spec are two facts; a reader who sees only one
+    // cannot tell whether this run is the run that was asked for.
+    await expect(strip.locator("[data-provenance-digest='requested_spec_digest']")).toBeVisible();
+    await expect(strip.locator("[data-provenance-digest='effective_spec_digest']")).toBeVisible();
+  });
+}

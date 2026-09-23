@@ -20,6 +20,7 @@
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 
+import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
 import {
   ABSENT_WORDS,
@@ -472,6 +473,15 @@ function HoldoutCard({ detail }: { detail: SplitDetailDocument }) {
             <Chip data-holdout-exposure={(holdout as { child_input_state: string }).child_input_state}>
               {(holdout as { child_input_state: string }).child_input_state.toLowerCase().replace(/_/g, " ")}
             </Chip>
+            {/*
+              * Three exposure facts, not two. Whether the child tape saw the
+              * span, whether anything evaluated it, and whether any result of
+              * it was ever exposed are separate questions — and the handoff
+              * names all three.
+              */}
+            <Chip data-holdout-result={(holdout as { result_exposure_state: string }).result_exposure_state}>
+              result {(holdout as { result_exposure_state: string }).result_exposure_state.toLowerCase().replace(/_/g, " ")}
+            </Chip>
           </>
         ) : (
           <Withheld availability={(holdout as AbsentFact).availability} what="holdout" />
@@ -657,6 +667,8 @@ export function SplitScreen({
           </span>
         </div>
       ) : null}
+
+      {detail ? <ProvenanceStrip provenance={detail.provenance} /> : null}
 
       <ResearchPanel
         title="split"

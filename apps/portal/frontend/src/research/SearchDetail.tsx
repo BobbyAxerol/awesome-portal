@@ -22,6 +22,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
+import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
 import {
   DIAGNOSTIC_KEYS,
@@ -50,6 +51,16 @@ export const SEARCH_RULES_FOOTER =
   "A panel degrades when a field is missing; it never infers one. This run was qualified against a fixed parameter profile rather than searched, so every optimizer panel below states which kind of absence it is — a question that does not arise, a fact nobody published, or a claim nobody asserted.";
 
 export const FREEZE_LABEL = "POOL FREEZE";
+
+/**
+ * Spec 06 §10's switcher note, minus its first clause.
+ *
+ * The full sentence begins "one run is one mode — switching here opens another
+ * demo run to learn the reading". There is no switcher on a product route, so
+ * that half would point at a control nobody can see. What remains is the fact
+ * it exists to teach, and it is why this screen shows one mode and no pills.
+ */
+export const ONE_MODE_NOTE = "a real run's mode is fixed at submit.";
 
 const DIAGNOSTIC_LABEL: Record<DiagnosticKey, string> = {
   scatter: "trial surface",
@@ -461,6 +472,9 @@ export function SearchScreen({
             <span className="mono text-[10px] italic" style={{ color: "var(--role-holdout)" }}>
               {detail.requested_optimizer.state.toLowerCase().replace(/_/g, " ")}
             </span>
+            <span className="text-[10px]" style={{ color: "var(--ink-faint)" }} data-one-mode>
+              {ONE_MODE_NOTE}
+            </span>
           </span>
 
           <span className="flex items-baseline gap-1.5" data-selection-state={detail.selection.state}>
@@ -478,11 +492,17 @@ export function SearchScreen({
             </span>
           ) : null}
 
+          {/* `PARTIAL` here is the contract's own word for a source that
+              published a profile and no study — it is not a partial failure. */}
+          <Chip data-readiness={detail.readiness}>readiness {detail.readiness.toLowerCase()}</Chip>
+
           <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
             as of {new Date(detail.as_of_utc_ms).toISOString()}
           </span>
         </div>
       ) : null}
+
+      {detail ? <ProvenanceStrip provenance={detail.provenance} /> : null}
 
       <ResearchPanel
         title="search & selection"

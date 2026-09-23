@@ -556,6 +556,38 @@ describe("P16-T06 — the surface requests only the three named operations", () 
     );
   });
 
+  it("sends the ETag on a reread and keeps the copy on 304", async () => {
+    let reads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const headers: Record<string, string> = {};
+        new Headers(init?.headers).forEach((value, key) => {
+          headers[key] = value;
+        });
+        requested.push({ url, method: (init?.method ?? "GET").toUpperCase(), headers });
+        reads += 1;
+        const status = reads === 1 ? 200 : 304;
+        return {
+          ok: status === 200,
+          status,
+          statusText: String(status),
+          headers: new Headers(),
+          json: async () => detail(),
+        } as unknown as Response;
+      }),
+    );
+
+    const { result } = renderHook(() => useFreeze("R-WFO-118", null));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    const first = result.current.detail;
+
+    await act(async () => result.current.reread());
+    await waitFor(() => expect(reads).toBe(2));
+    expect(result.current.detail).toBe(first);
+    expect(requested[1].headers["if-none-match"]).toBe('"p16r1_31bb90"');
+  });
+
   it("classifies each refusal the contract declares", () => {
     const of = (status: number) => toFreezeRefusal(new PortalApiError("no", status, null, null));
     expect(of(401).state).toBe("denied");

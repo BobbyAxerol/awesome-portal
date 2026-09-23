@@ -23,6 +23,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
+import { ProvenanceStrip } from "./ProvenanceStrip";
 import { ResearchPanel } from "./ResearchPanel";
 import {
   BLOCKED_NOTE,
@@ -46,11 +47,23 @@ import type { ResearchState } from "./state";
 
 /* --------------------------------------------------------------- verbatim */
 
+/**
+ * Spec 07 §2.1 fixes a subtitle this run cannot honestly carry: "Selection
+ * closed before any out-of-sample bar was read — and every artifact below can
+ * prove it, or the run is BLOCKED." That sentence asserts the ordering the
+ * source states it does **not** assert, and the P16 handoff forbids exactly
+ * that claim. The title is the spec's, verbatim; the subtitle says what this
+ * screen can actually prove.
+ */
 export const FREEZE_SUBTITLE =
   "What was frozen, and what that freeze can honestly be checked against. Every match below is a match between digests Portal retained — the source artifact's own bytes were never opened here.";
 
 export const FREEZE_RULES_FOOTER =
   "A verification on this screen re-reads retained bindings; it never re-runs the engine, opens an artifact or evaluates a parameter. Where the source publishes no ordering, no selection artifact and no what-if grid, the panels say which kind of absence that is rather than showing an empty chart or a control that cannot act.";
+
+/** Spec 07 §2.2, verbatim — and the reason the two axes are never merged. */
+export const TWO_CLOCKS_NOTE =
+  "two clocks, never one axis — wall-clock proves WHO knew WHEN; data-time proves WHAT was knowable.";
 
 const CHECK_LABEL: Record<(typeof INTEGRITY_KEYS)[number], string> = {
   P04_ADAPTER_CONTRACT: "adapter contract",
@@ -174,7 +187,7 @@ function IntegrityPanel({
               : "re-read the retained bindings"
           }
         >
-          {verify.state === "verifying" ? "verifying…" : "verify again"}
+          {verify.state === "verifying" ? "verifying…" : "verify now"}
         </button>
       </div>
 
@@ -211,7 +224,9 @@ function IntegrityPanel({
 
       {verify.state === "done" ? (
         <p className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-verify-result={verify.verification.result}>
-          re-read {iso(verify.verification.verified_at_utc_ms)} · {verify.verification.result.toLowerCase().replace(/_/g, " ")}
+          re-read {iso(verify.verification.verified_at_utc_ms)} ·{" "}
+          {verify.verification.result.toLowerCase().replace(/_/g, " ")} · freeze revision{" "}
+          {verify.verification.freeze_revision ?? "not published"}
         </p>
       ) : verify.state === "refused" ? (
         <p className="text-[11px]" style={{ color: "var(--bad)" }} data-verify-refusal>
@@ -280,6 +295,11 @@ function WindowRow({ window, label }: { window: FreezeWindow | null; label: stri
       <Chip data-window-input={window.child_input_state}>
         {window.child_input_state.toLowerCase().replace(/_/g, " ")}
       </Chip>
+      {window.evaluation_state !== null ? (
+        <Chip data-window-evaluation={window.evaluation_state}>
+          {window.evaluation_state.toLowerCase().replace(/_/g, " ")}
+        </Chip>
+      ) : null}
     </span>
   );
 }
@@ -328,6 +348,18 @@ function FrozenParameters({ parameters, blocked }: { parameters: readonly Frozen
             />
           </span>
         </div>
+      ))}
+
+      {/* The declared bound state, said once — the same shape Screen 06 uses. */}
+      {[...new Set(parameters.map((parameter) => parameter.bound_state))].map((bound) => (
+        <span
+          key={bound}
+          className="mono text-[9px]"
+          style={{ color: "var(--ink-faint)" }}
+          data-bound-state={bound}
+        >
+          every frozen parameter above: {bound.toLowerCase().replace(/_/g, " ")}
+        </span>
       ))}
     </div>
   );
@@ -472,7 +504,7 @@ export function FreezeScreen({
 
       <div className="flex flex-col gap-1">
         <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
-          S3 · Freeze — what was sealed, and what that can be checked against
+          S3 · Freeze — ordering &amp; integrity
         </h1>
         <p className="text-[13.5px] italic" style={{ color: "var(--ink-mute)" }} data-subtitle>
           {FREEZE_SUBTITLE}
@@ -494,16 +526,15 @@ export function FreezeScreen({
             </span>
             <span className="mono text-[10px]">{freeze.selection.state.toLowerCase().replace(/_/g, " ")}</span>
           </span>
-          {detail.provenance.p14_split_revision !== null ? (
-            <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-split-revision>
-              split revision {detail.provenance.p14_split_revision}
-            </span>
-          ) : null}
+          {/* The contract's readiness, which this screen never showed. */}
+          <Chip data-readiness={detail.readiness}>readiness {detail.readiness.toLowerCase()}</Chip>
           <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-as-of>
             as of {new Date(detail.as_of_utc_ms).toISOString()}
           </span>
         </div>
       ) : null}
+
+      {detail ? <ProvenanceStrip provenance={detail.provenance} /> : null}
 
       <ResearchPanel
         title="freeze"
@@ -581,9 +612,13 @@ export function FreezeScreen({
                 <WindowRow window={freeze.ordering.data_time.outer_oos} label="outer OOS" />
                 <WindowRow window={freeze.ordering.data_time.holdout} label="holdout" />
               </div>
+              <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-two-clocks>
+                {TWO_CLOCKS_NOTE}
+              </p>
               <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-ordering-note>
-                These are the data windows the source published. They are not a wall-clock timeline and
-                not a causal verdict — the source asserted neither.
+                Only one of those two clocks is published for this run. These are the data windows —
+                what was knowable. They are not a wall-clock timeline and not a causal verdict, because
+                the source asserted neither.
               </p>
             </section>
 

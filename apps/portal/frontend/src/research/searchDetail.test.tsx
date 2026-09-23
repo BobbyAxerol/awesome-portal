@@ -456,6 +456,37 @@ describe("P15-T06 — one search read, one optional ledger read", () => {
     expect(requested.filter((url) => url.includes("current-source"))).toHaveLength(1);
   });
 
+  it("sends the ETag on a reread and keeps the copy on 304", async () => {
+    let reads = 0;
+    const seen: (HeadersInit | undefined)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        requested.push(url);
+        seen.push(init?.headers);
+        reads += 1;
+        const status = reads === 1 ? 200 : 304;
+        return {
+          ok: status === 200,
+          status,
+          statusText: String(status),
+          headers: new Headers(),
+          json: async () => detail(),
+        } as unknown as Response;
+      }),
+    );
+
+    const { result } = renderHook(() => useSearch("R-WFO-118", null));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    const first = result.current.detail;
+
+    await act(async () => result.current.reread());
+    await waitFor(() => expect(reads).toBe(2));
+    // A 304 means the projection in hand is still exact: same object, no repaint.
+    expect(result.current.detail).toBe(first);
+    expect(seen[1]).toEqual({ "If-None-Match": '"p15r1_7742aa"' });
+  });
+
   it("classifies each refusal and keeps the screen", () => {
     const of = (status: number) => toSearchRefusal(new PortalApiError("no", status, null, null));
     expect(of(403).state).toBe("denied");
