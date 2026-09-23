@@ -28,6 +28,19 @@ scripts/research-preview/preview.sh down       # stop, keep data
 scripts/research-preview/preview.sh teardown   # stop and delete only this project's volumes
 ```
 
+Seeding a real run (after `activate` and one sign-in as `claude-preview`, whose
+new password is kept in `claude-preview.password` beside the env file):
+
+```bash
+node scripts/research-preview/seed-run.mjs   # install P04 binding → preflight → run → follow progress
+```
+
+It uses only published same-origin routes and prints identifiers and states,
+never a credential. Build notes: the approved Historical Market Data reader
+wheel must be staged at `vendor/hmd-reader/` (ignored); `AUTH_MODE=dev` is only
+accepted with `PORTAL_ENV=local`, so the preview is `local` with its own
+query-cursor and governance keyrings.
+
 The script refuses ports 8080, 8081, 8090 and 18081, and never prints the env
 file. `identity.json` beside it records the git commit, the image ID of every
 running service and the last migration, so a receipt can name exactly what it

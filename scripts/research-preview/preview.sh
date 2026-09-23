@@ -60,7 +60,8 @@ PORTAL_STACK_NAME=$PROJECT
 PORTAL_HTTP_PORT=$port
 PORTAL_IMAGE_PREFIX=local/portal-research-preview
 PORTAL_IMAGE_TAG=rf02
-PORTAL_ENV=research-preview
+# AUTH_MODE=dev stands in for Cloudflare Access and is only allowed with local.
+PORTAL_ENV=local
 PORTAL_PUBLIC_ORIGIN=http://localhost:$port
 CONTROL_API_AUTH_MODE=dev
 CONTROL_API_SECRETS_DIR=$ENV_DIR/control-api-secrets
@@ -78,16 +79,24 @@ CONTROL_API_FEATURE_RESEARCH_FREEZE=true
 CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE=true
 PORTAL_FEATURE_RESEARCH_RUN_PRODUCER=true
 PORTAL_FEATURE_RESEARCH_PROGRESS=true
+CONTROL_API_QUERY_CURSOR_KEYS_JSON={"query-k1":"$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 48)"}
+CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON={"governance-k1":"$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 48)"}
 ENV
   chmod 600 "$ENV_FILE"
   echo "preview: wrote $ENV_FILE (port $port)"
 }
 
 cmd_build() {
+  # The approved Historical Market Data reader is a code-only wheel staged into
+  # the ignored vendor/hmd-reader directory; the image refuses to build
+  # without it rather than start a portal-api that cannot read data.
+  local wheel="$ROOT/vendor/hmd-reader/primus_historical_market_data-0.1.0rc3-py3-none-any.whl"
+  [[ -f "$wheel" ]] || { echo "preview: stage the approved HMD reader wheel at $wheel" >&2; exit 1; }
   local sha dirty=false
   sha="$(git -C "$ROOT" rev-parse HEAD)"
   [[ -z "$(git -C "$ROOT" status --porcelain)" ]] || dirty=true
-  PORTAL_BUILD_COMMIT="$sha" PORTAL_BUILD_DIRTY="$dirty" compose build portal-api control-api portal-web roadmap-task-board-api
+  PORTAL_BUILD_COMMIT="$sha" PORTAL_BUILD_DIRTY="$dirty" compose build \
+    --build-arg PORTAL_HMD_READER_REQUIRED=true portal-api control-api portal-web roadmap-task-board-api
 }
 
 record_identity() {
