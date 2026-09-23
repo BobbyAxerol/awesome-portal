@@ -73,6 +73,9 @@
       "@portal/contracts-research-replay": [
         "../../../packages/contracts/generated/research-replay.d.ts"
       ],
+      "@portal/contracts-research-report": [
+        "../../../packages/contracts/generated/research-report.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },
