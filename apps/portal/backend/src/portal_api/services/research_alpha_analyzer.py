@@ -270,7 +270,7 @@ def _validate_contract(
     if not isinstance(entrypoint, str) or not _IDENTIFIER_RE.fullmatch(entrypoint):
         return False, normalized, "entrypoint must be one bounded Python identifier."
     warmup = normalized.get("warmup_bars")
-    if not isinstance(warmup, int) or isinstance(warmup, bool) or warmup < 0 or warmup > 1_000_000:
+    if not isinstance(warmup, int) or isinstance(warmup, bool) or warmup < 0 or warmup > 100_000:
         return False, normalized, "warmup_bars must be a bounded non-negative integer."
     return True, normalized, "Contract fields are complete."
 

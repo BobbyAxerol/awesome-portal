@@ -80,6 +80,7 @@ def test_p07_t01_valid_contract_is_parseable_without_executing_strategy_body() -
     "source",
     [
         valid_source().replace('"warmup_bars": 32,\n', ""),
+        valid_source().replace('"warmup_bars": 32', '"warmup_bars": 100001'),
         valid_source().replace(
             '"parameter_space": {"window": {"kind": "int_range", "low": 8, "high": 64, "step": 1}}',
             '"parameter_space": {' + ", ".join(

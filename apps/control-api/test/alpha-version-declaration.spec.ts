@@ -61,6 +61,14 @@ describe("P10 safe AlphaVersion declaration projection", () => {
     expect(() => projectResearchAlphaVersionDeclaration({
       entrypoint: "generate_signals",
       timeframes: ["1h"],
+      required_columns: ["open", "high", "low", "close", "volume"],
+      warmup_bars: 100_001,
+      determinism: { seed_required: false },
+      parameter_space: {},
+    }, "generate_signals")).toThrow(ResearchAlphaVersionDeclarationError);
+    expect(() => projectResearchAlphaVersionDeclaration({
+      entrypoint: "generate_signals",
+      timeframes: ["1h"],
       determinism: { seed_required: false },
       parameter_space: { hostile: { kind: "fixed", value: { source_path: "/srv/private" } } },
     }, "generate_signals")).toThrow(ResearchAlphaVersionDeclarationError);

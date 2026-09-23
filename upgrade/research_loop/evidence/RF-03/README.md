@@ -1,5 +1,7 @@
 # RF-03 backend repair ledger — 2026-09-23
 
+P07/P08 compatibility correction: import/parser and registry projection now reject `warmup_bars > 100000`, matching P08's immutable preflight ceiling. Previously a source could pass registration but fail every bound preflight. Focused parser and Control API regressions cover `100001`; no runtime flag or persisted source data changed.
+
 Branch: `docs/research-loop-plan`. This packet is a live evidence index, not a release or activation approval. Source/runtime data, Execution, dev and main are unchanged.
 
 ## Delivered code

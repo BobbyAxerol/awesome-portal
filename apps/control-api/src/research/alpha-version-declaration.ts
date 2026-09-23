@@ -129,7 +129,7 @@ export function projectResearchAlphaVersionDeclaration(
     throw new ResearchAlphaVersionDeclarationError("declared_contract.required_columns is not a bounded candle column list.");
   }
   if (!Number.isInteger(contract.warmup_bars) || (contract.warmup_bars as number) < 0 ||
-      (contract.warmup_bars as number) > 1_000_000) {
+      (contract.warmup_bars as number) > 100_000) {
     throw new ResearchAlphaVersionDeclarationError("declared_contract.warmup_bars is invalid.");
   }
 
