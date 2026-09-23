@@ -41,6 +41,7 @@ import {
   type Integrity,
   type IntegrityCheck,
 } from "./freezeClient";
+import { HAIRLINE_PERCENT, placeInTimeline } from "./splitClient";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import type { RetainedSlot, VerifySlot } from "./useFreeze";
 import type { ResearchState } from "./state";
@@ -222,32 +223,35 @@ function IntegrityPanel({
         */}
       <Gap gap={integrity.source_artifact_bytes} what="source artifact bytes" />
 
-      {verify.state === "done" ? (
-        <div className="flex flex-col gap-0.5" data-verify-result={verify.verification.result}>
-          <p className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-            re-read {iso(verify.verification.verified_at_utc_ms)} ·{" "}
-            {verify.verification.result.toLowerCase().replace(/_/g, " ")} · freeze revision{" "}
-            {verify.verification.freeze_revision ?? "not published"}
+      {/* Present before the answer lands, so a screen reader announces it. */}
+      <div role="status" aria-live="polite" data-verify-live>
+        {verify.state === "done" ? (
+          <div className="flex flex-col gap-0.5" data-verify-result={verify.verification.result}>
+            <p className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
+              re-read {iso(verify.verification.verified_at_utc_ms)} ·{" "}
+              {verify.verification.result.toLowerCase().replace(/_/g, " ")} · freeze revision{" "}
+              {verify.verification.freeze_revision ?? "not published"}
+            </p>
+            {/*
+              * The scope of the answer the reader just asked for, from that
+              * answer — not borrowed from the snapshot beside it. The two agree
+              * today because both describe the same run at the same moment; the
+              * day they do not, this line is the one that is true.
+              */}
+            <p
+              className="mono text-[9px]"
+              style={{ color: "var(--ink-faint)" }}
+              data-verify-scope={verify.verification.verification_scope}
+            >
+              this verification covers {verify.verification.verification_scope.toLowerCase().replace(/_/g, " ")}
+            </p>
+          </div>
+        ) : verify.state === "refused" ? (
+          <p className="text-[11px]" style={{ color: "var(--bad)" }} data-verify-refusal>
+            {verify.refusal.message}
           </p>
-          {/*
-            * The scope of the answer the reader just asked for, from that
-            * answer — not borrowed from the snapshot beside it. The two agree
-            * today because both describe the same run at the same moment; the
-            * day they do not, this line is the one that is true.
-            */}
-          <p
-            className="mono text-[9px]"
-            style={{ color: "var(--ink-faint)" }}
-            data-verify-scope={verify.verification.verification_scope}
-          >
-            this verification covers {verify.verification.verification_scope.toLowerCase().replace(/_/g, " ")}
-          </p>
-        </div>
-      ) : verify.state === "refused" ? (
-        <p className="text-[11px]" style={{ color: "var(--bad)" }} data-verify-refusal>
-          {verify.refusal.message}
-        </p>
-      ) : null}
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -268,10 +272,10 @@ function CheckRow({ check }: { check: IntegrityCheck }) {
         * not actionable without them — and neither is ever shortened or
         * compared here.
         */}
-      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-expected={check.key}>
+      <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-expected={check.key}>
         expected {check.expected_digest ?? "not published"}
       </span>
-      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-observed={check.key}>
+      <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-observed={check.key}>
         observed {check.observed_digest ?? "not published"}
       </span>
     </>
@@ -319,7 +323,98 @@ function WindowRow({ window, label }: { window: FreezeWindow | null; label: stri
   );
 }
 
+const AXIS_TONE: Record<string, string> = {
+  IS: "var(--viz-train)",
+  "outer OOS": "var(--role-oos)",
+};
+
+/**
+ * Hi-fi F1, data-time axis only.
+ *
+ * The published windows, in the contract's chronological order, on one
+ * data-time track. The axis runs from the first published start to the last
+ * published end; the only arithmetic is the offset/width that turns two
+ * published timestamps into a position — the same conversion Screen 05 uses.
+ * No tick is generated, no boundary is inferred, and the wall clock is never
+ * drawn on this track: spec 07 §5 pitfall 1, and it is not published anyway.
+ */
+function DataTimeAxis({ windows }: { windows: readonly { label: string; window: FreezeWindow | null }[] }) {
+  const published = windows.filter(
+    (entry): entry is { label: string; window: FreezeWindow } => entry.window !== null,
+  );
+  const first = published[0];
+  const last = published[published.length - 1];
+  if (first === undefined || last === undefined) return null;
+  const timeline = {
+    start_utc_ms: first.window.start_utc_ms,
+    end_exclusive_utc_ms: last.window.end_exclusive_utc_ms,
+  };
+
+  return (
+    <div className="flex flex-col gap-1" data-data-time-axis={published.length}>
+      <div
+        className="relative h-[22px] overflow-hidden rounded-[3px] border"
+        style={{ borderColor: "var(--line-soft)", background: "var(--paper)" }}
+      >
+        {published.map(({ label, window }) => {
+          const geometry = placeInTimeline(timeline, window);
+          return (
+            <span
+              key={label}
+              data-axis-window={label}
+              data-hairline={geometry.widthPercent < HAIRLINE_PERCENT ? "true" : "false"}
+              title={`${label} · ${iso(window.start_utc_ms)} → ${iso(window.end_exclusive_utc_ms)} · ${window.data_role}`}
+              className="absolute top-0 h-full border-r"
+              style={{
+                borderColor: "var(--paper-raised)",
+                left: `${geometry.leftPercent}%`,
+                width: `${Math.max(geometry.widthPercent, HAIRLINE_PERCENT)}%`,
+                background: axisFill(label),
+              }}
+            />
+          );
+        })}
+      </div>
+      {/* The published endpoints, exactly — the track is a picture of them. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-axis-start>
+          {iso(timeline.start_utc_ms)}
+        </span>
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {published.map(({ label }) => (
+            <span key={label} className="flex items-center gap-1" data-axis-legend={label}>
+              <span
+                aria-hidden
+                className="inline-block h-[8px] w-[14px] rounded-[2px]"
+                style={{ background: axisFill(label) }}
+              />
+              <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }}>
+                {label}
+              </span>
+            </span>
+          ))}
+        </span>
+        <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-axis-end>
+          {iso(timeline.end_exclusive_utc_ms)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** The holdout is never drawn in the colour of a window something read. */
+function axisFill(label: string): string {
+  return label === "holdout"
+    ? "repeating-linear-gradient(135deg, var(--line-strong) 0 4px, var(--paper-sunken) 4px 8px)"
+    : AXIS_TONE[label] ?? "var(--line-strong)";
+}
+
 /* --------------------------------------------------------- frozen profile */
+
+/** Short reading words, one per published bound state; the full phrase sits in the title. */
+const BOUND_WORDS: Record<FrozenParameter["bound_state"], string> = {
+  WITHIN_DECLARED_RANGE: "in range",
+};
 
 function FrozenParameters({ parameters, blocked }: { parameters: readonly FrozenParameter[]; blocked: boolean }) {
   if (blocked) {
@@ -337,46 +432,157 @@ function FrozenParameters({ parameters, blocked }: { parameters: readonly Frozen
       </p>
     );
   }
+  /*
+   * Hi-fi F2's columns — parameter · declared range · range position ·
+   * frozen θ* · reading — on a fixed layout, so a wider value can never push
+   * one row's bar out of line with the next. Every cell is a published field;
+   * the reading is the server's own `position_percent` and `bound_state`.
+   */
+  const head = "mono py-1.5 pr-2 text-left text-[9px] font-normal uppercase tracking-[.07em]";
   return (
     <div className="flex flex-col gap-1.5" data-frozen={parameters.length}>
-      {parameters.map((parameter) => (
-        <div key={parameter.name} className="flex items-center gap-3" data-frozen-parameter={parameter.name}>
-          <span className="mono text-[10.5px]" style={{ flex: "0 0 auto", minWidth: 78 }}>
-            {parameter.name}
-          </span>
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)", flex: "0 0 auto", minWidth: 96 }}>
-            {parameter.minimum} … {parameter.maximum} · {parameter.step}
-          </span>
-          <span className="mono text-[11px] font-semibold" data-frozen-value={parameter.name}>
-            {parameter.frozen_value}
-          </span>
-          <span
-            className="relative h-[12px] flex-1 rounded-[2px] border"
-            style={{ borderColor: "var(--line-soft)", background: "var(--paper)" }}
-            title={`${parameter.frozen_value} sits at ${parameter.position_percent}% of the declared range`}
-          >
-            {/* The server's placement, again: the browser never recomputes it. */}
-            <span
-              data-frozen-position={parameter.name}
-              className="absolute top-0 h-full w-[2px]"
-              style={{ left: `${parameter.position_percent}%`, background: "var(--good)" }}
-            />
-          </span>
-        </div>
-      ))}
-
-      {/* The declared bound state, said once — the same shape Screen 06 uses. */}
-      {[...new Set(parameters.map((parameter) => parameter.bound_state))].map((bound) => (
-        <span
-          key={bound}
-          className="mono text-[9px]"
-          style={{ color: "var(--ink-faint)" }}
-          data-bound-state={bound}
-        >
-          every frozen parameter above: {bound.toLowerCase().replace(/_/g, " ")}
-        </span>
-      ))}
+      <table className="w-full table-fixed border-collapse" data-frozen-table>
+        <colgroup>
+          <col style={{ width: "17%" }} />
+          <col style={{ width: "19%" }} />
+          <col />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "25%" }} />
+        </colgroup>
+        <thead>
+          <tr className="border-b" style={{ borderColor: "var(--line)", color: "var(--ink-faint)" }}>
+            <th scope="col" className={head}>
+              parameter
+            </th>
+            <th scope="col" className={head}>
+              declared range
+            </th>
+            <th scope="col" className={head}>
+              range position
+            </th>
+            <th scope="col" className={`${head} text-right`}>
+              frozen θ*
+            </th>
+            <th scope="col" className={`${head} pl-3`}>
+              reading
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {parameters.map((parameter) => (
+            <tr
+              key={parameter.name}
+              className="border-b align-middle"
+              style={{ borderColor: "var(--line-soft)" }}
+              data-frozen-parameter={parameter.name}
+            >
+              <th scope="row" className="mono truncate py-2 pr-2 text-left text-[10.5px] font-normal normal-case tracking-normal" style={{ color: "var(--ink)" }}>
+                {parameter.name}
+              </th>
+              <td className="mono py-2 pr-2 text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+                {parameter.minimum} – {parameter.maximum} · step {parameter.step}
+              </td>
+              <td className="py-2 pr-3">
+                <span
+                  className="relative block h-[6px] rounded-[3px]"
+                  style={{ background: "var(--paper-sunken)" }}
+                  title={`${parameter.frozen_value} sits at ${parameter.position_percent}% of the declared range`}
+                >
+                  {/* The server's placement, again: the browser never recomputes it. */}
+                  <span
+                    data-frozen-position={parameter.name}
+                    className="absolute top-[-3px] h-[12px] w-[3px] rounded-[1px]"
+                    style={{
+                      left: `calc(${parameter.position_percent}% - 1.5px)`,
+                      background: "var(--role-oos)",
+                    }}
+                  />
+                </span>
+              </td>
+              <td
+                className="mono py-2 text-right text-[11px] font-semibold tabular-nums"
+                data-frozen-value={parameter.name}
+              >
+                {parameter.frozen_value}
+              </td>
+              <td
+                className="mono py-2 pl-3 text-[9.5px] leading-[1.4]"
+                style={{ color: "var(--ink-faint)" }}
+                data-bound-state={parameter.bound_state}
+                title={`${parameter.position_percent}% of the declared range · ${parameter.bound_state
+                  .toLowerCase()
+                  .replace(/_/g, " ")}`}
+              >
+                {parameter.position_percent}% · {BOUND_WORDS[parameter.bound_state]}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
+  );
+}
+
+/* ------------------------------------------------------ stage-4 binding */
+
+/**
+ * Hi-fi F4 — binding down to Stage 4.
+ *
+ * The hi-fi compares four values: sealed vs replayed, params and bundle. This
+ * contract publishes one of them — the sealed bundle digest — and Stage 4
+ * publishes none, so the card keeps its place and says which side is missing.
+ * Nothing here is marked bound: one value has nothing to be compared with.
+ */
+function Stage4Binding({ bundleDigest }: { bundleDigest: string | null }) {
+  const rows: { key: string; label: string; value: string | null }[] = [
+    { key: "sealed-params", label: "sealed params digest", value: null },
+    { key: "replay-params", label: "params digest used by replay", value: null },
+    { key: "sealed-bundle", label: "sealed bundle digest", value: bundleDigest },
+    { key: "runtime-bundle", label: "runtime bundle digest", value: null },
+  ];
+  return (
+    <section
+      className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
+      data-panel="stage4-binding"
+      data-binding-compared="false"
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+    >
+      <div className="flex flex-wrap items-baseline gap-2">
+        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          binding down to stage 4
+        </h3>
+        <span className="mono ml-auto text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+          not compared
+        </span>
+      </div>
+      <ul className="flex flex-col">
+        {rows.map((row) => (
+          <li
+            key={row.key}
+            className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b py-1.5 last:border-b-0"
+            style={{ borderColor: "var(--line-soft)" }}
+            data-binding-row={row.key}
+            data-binding-published={row.value === null ? "false" : "true"}
+          >
+            <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+              {row.label}
+            </span>
+            {row.value === null ? (
+              <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+                not published
+              </span>
+            ) : (
+              <span className="mono break-all text-[10px]">{row.value}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
+        Four values would be compared here — sealed against replayed, for params and for the bundle. This
+        contract publishes only the sealed bundle digest and Stage 4 publishes neither replayed value, so no
+        row is marked bound.
+      </p>
+    </section>
   );
 }
 
@@ -566,37 +772,6 @@ export function FreezeScreen({
       >
         {detail && freeze ? (
           <div className="flex flex-col gap-3">
-            <IntegrityPanel integrity={freeze.integrity} verify={verify} onVerify={onVerify} />
-
-            <section
-              className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
-              data-panel="frozen-parameters"
-              style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
-            >
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-                  frozen parameters
-                </h3>
-                {freeze.selection.parameter_bundle_digest !== null ? (
-                  <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-bundle-digest>
-                    bundle {freeze.selection.parameter_bundle_digest}
-                  </span>
-                ) : null}
-              </div>
-              <FrozenParameters parameters={freeze.frozen_parameters} blocked={blocked} />
-              {/*
-                * There is no selection artifact and no selected trial. Saying
-                * so here, beside the parameters, stops the table reading as
-                * "the winner of something".
-                */}
-              <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                <Gap gap={freeze.selection.strict_outer_oos} what="strict outer OOS" />
-                <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-selection-refs>
-                  selection artifact · selected trial · selection sequence — none published
-                </span>
-              </div>
-            </section>
-
             <section
               className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
               data-panel="ordering"
@@ -623,6 +798,13 @@ export function FreezeScreen({
                     ? `· ${freeze.ordering.data_time.chronology_kind.toLowerCase().replace(/_/g, " ")}`
                     : ""}
                 </span>
+                <DataTimeAxis
+                  windows={[
+                    { label: "IS", window: freeze.ordering.data_time.is },
+                    { label: "outer OOS", window: freeze.ordering.data_time.outer_oos },
+                    { label: "holdout", window: freeze.ordering.data_time.holdout },
+                  ]}
+                />
                 <WindowRow window={freeze.ordering.data_time.is} label="IS" />
                 <WindowRow window={freeze.ordering.data_time.outer_oos} label="outer OOS" />
                 <WindowRow window={freeze.ordering.data_time.holdout} label="holdout" />
@@ -636,6 +818,43 @@ export function FreezeScreen({
                 the source asserted neither.
               </p>
             </section>
+
+            {/* Hi-fi F2 beside F3/F4 at laptop width; stacked below it. */}
+            <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+              <section
+                className="flex min-w-0 flex-col gap-2 rounded-[8px] border px-4 py-3"
+                data-panel="frozen-parameters"
+                style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+              >
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+                    frozen parameters
+                  </h3>
+                  {freeze.selection.parameter_bundle_digest !== null ? (
+                    <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-bundle-digest>
+                      bundle {freeze.selection.parameter_bundle_digest}
+                    </span>
+                  ) : null}
+                </div>
+                <FrozenParameters parameters={freeze.frozen_parameters} blocked={blocked} />
+                {/*
+                  * There is no selection artifact and no selected trial. Saying
+                  * so here, beside the parameters, stops the table reading as
+                  * "the winner of something".
+                  */}
+                <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                  <Gap gap={freeze.selection.strict_outer_oos} what="strict outer OOS" />
+                  <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-selection-refs>
+                    selection artifact · selected trial · selection sequence — none published
+                  </span>
+                </div>
+              </section>
+
+              <div className="flex min-w-0 flex-col gap-3">
+                <IntegrityPanel integrity={freeze.integrity} verify={verify} onVerify={onVerify} />
+                <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
+              </div>
+            </div>
 
             <section
               className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"

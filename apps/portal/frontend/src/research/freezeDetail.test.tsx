@@ -652,3 +652,115 @@ describe("P16-T07 — nothing but the button writes", () => {
     expect(onVerify).toHaveBeenCalledTimes(1);
   });
 });
+
+/* -------------------------------------------------------------------------
+ * Hi-fi F1 / F2 / F4 composition — rich panels, published facts only
+ * ---------------------------------------------------------------------- */
+
+describe("Screen 07 composition — the hi-fi panels carry only published facts", () => {
+  it("draws the published data windows on one data-time track, at their published proportion", () => {
+    const { container } = view();
+    const axis = container.querySelector("[data-data-time-axis]");
+    expect(axis?.getAttribute("data-data-time-axis")).toBe("3");
+    // 500 + 200 + 100 days: the offsets and widths are the published spans, nothing else.
+    const style = (label: string) =>
+      (container.querySelector(`[data-axis-window='${label}']`) as HTMLElement | null)?.style;
+    expect(style("IS")?.left).toBe("0%");
+    expect(style("IS")?.width).toBe("62.5%");
+    expect(style("outer OOS")?.left).toBe("62.5%");
+    expect(style("outer OOS")?.width).toBe("25%");
+    expect(style("holdout")?.left).toBe("87.5%");
+    expect(style("holdout")?.width).toBe("12.5%");
+    // The endpoints are printed exactly; no tick is generated in between.
+    expect(axis?.querySelector("[data-axis-start]")?.textContent).toBe("2024-01-01 00:00Z");
+    expect(axis?.querySelector("[data-axis-end]")?.textContent).toBe("2026-03-11 00:00Z");
+    expect(axis?.querySelectorAll("[data-tick]")).toHaveLength(0);
+  });
+
+  it("never puts a wall-clock mark on the data-time track", () => {
+    const { container } = view();
+    const axis = container.querySelector("[data-data-time-axis]");
+    expect(axis?.textContent).not.toMatch(/frozen_at|first_read|committed|wall/i);
+  });
+
+  it("draws only the windows that were published", () => {
+    const base = detail();
+    const { container } = view({
+      detail: {
+        ...base,
+        freeze: {
+          ...base.freeze,
+          ordering: {
+            ...base.freeze.ordering,
+            data_time: { ...base.freeze.ordering.data_time, holdout: null },
+          },
+        },
+      },
+    });
+    expect(container.querySelector("[data-data-time-axis]")?.getAttribute("data-data-time-axis")).toBe("2");
+    expect(container.querySelector("[data-axis-window='holdout']")).toBeNull();
+  });
+
+  it("lays the frozen parameters out as the hi-fi's five columns, one row per published parameter", () => {
+    const { container } = view();
+    const table = container.querySelector("[data-frozen-table]");
+    expect([...(table?.querySelectorAll("thead th") ?? [])].map((th) => th.textContent)).toEqual([
+      "parameter",
+      "declared range",
+      "range position",
+      "frozen θ*",
+      "reading",
+    ]);
+    const row = table?.querySelector("[data-frozen-parameter='rsi_len']");
+    expect(row?.children).toHaveLength(5);
+    expect(row?.querySelector("[data-frozen-value='rsi_len']")?.textContent).toBe("14");
+    // The reading and the tick are the server's own placement, printed and positioned — never recomputed.
+    const reading = row?.querySelector("[data-bound-state]");
+    expect(reading?.textContent).toBe("25.7% · in range");
+    expect(reading?.getAttribute("title")).toBe("25.7% of the declared range · within declared range");
+    expect((row?.querySelector("[data-frozen-position='rsi_len']") as HTMLElement).style.left).toBe(
+      "calc(25.7% - 1.5px)",
+    );
+  });
+
+  it("keeps the Stage 4 binding card, with the one published digest and nothing marked bound", () => {
+    const { container } = view();
+    const card = container.querySelector("[data-panel='stage4-binding']");
+    expect(card?.getAttribute("data-binding-compared")).toBe("false");
+    expect(card?.querySelectorAll("[data-binding-row]")).toHaveLength(4);
+    expect(card?.querySelectorAll("[data-binding-published='true']")).toHaveLength(1);
+    expect(card?.querySelector("[data-binding-row='sealed-bundle']")?.textContent).toContain("sha256:bundle01");
+    expect(card?.querySelector("[data-binding-row='runtime-bundle']")?.textContent).toContain("not published");
+    expect(card?.textContent).not.toMatch(/✓|\bBOUND\b/);
+  });
+
+  it("adds no control: the verification is still the only action", () => {
+    const { container } = view();
+    const actions = [...container.querySelectorAll("button")]
+      .map((node) => node.getAttribute("data-action"))
+      .filter((action) => action !== null);
+    expect(actions).toEqual(["verify"]);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * Re-scan regressions — the route state and the announced answer
+ * ---------------------------------------------------------------------- */
+
+describe("a BLOCKED read is an answer, and the answer is announced", () => {
+  it("does not turn a BLOCKED snapshot into an empty scope because its table is empty", async () => {
+    stub(() => [200, blockedDetail()]);
+    const { result } = renderHook(() => useFreeze("R-WFO-118", null));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    expect(result.current.detail?.freeze.frozen_parameters).toEqual([]);
+    expect(result.current.state.state).toBe("available");
+  });
+
+  it("keeps the verification answer in a live status region that exists before the click", () => {
+    const { container } = view();
+    const live = container.querySelector("[data-verify-live]");
+    expect(live?.getAttribute("role")).toBe("status");
+    expect(live?.getAttribute("aria-live")).toBe("polite");
+    expect(live?.querySelector("[data-verify-result]")).toBeNull();
+  });
+});
