@@ -12,7 +12,7 @@
  *  - progress/SSE behaviour and artifact/export routes are unchanged.
  */
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Download, FolderOpen, Plus, ShieldAlert } from "lucide-react";
+import { BookOpen, Copy, Download, FolderOpen, Map as MapIcon, Plus, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Link,
@@ -302,11 +302,27 @@ export function QuantBTModule() {
           </a>
         </>
       ) : null}
-      <Link to={`${QUANTBT_ROOT}/imports`} className="btn-ghost no-print" aria-label="Alpha imports">
+      {onReferenceRoute ? (
+        // Only on the Research Loop screens, so the legacy headers in the
+        // visual baseline are unchanged.
+        <>
+          <Link to={`${QUANTBT_ROOT}/journey`} className="btn-ghost no-print">
+            <MapIcon size={12} />
+            Journey
+          </Link>
+          <Link to={`${QUANTBT_ROOT}/atlas`} className="btn-ghost no-print">
+            <BookOpen size={12} />
+            Engine Atlas
+          </Link>
+        </>
+      ) : null}
+      {/* Research Loop entry points (RF-02 preview): Imports opens S14 and New
+        * run opens S02. The previous screens stay at /imports and /new. */}
+      <Link to={`${QUANTBT_ROOT}/alpha-import`} className="btn-ghost no-print" aria-label="Alpha imports">
         <ShieldAlert size={12} />
         Imports
       </Link>
-      <Link className="btn-primary no-print" to={`${QUANTBT_ROOT}/new`}>
+      <Link className="btn-primary no-print" to={`${QUANTBT_ROOT}/runs/new`}>
         <Plus size={13} />
         New run
       </Link>
@@ -372,7 +388,8 @@ export function QuantBTModule() {
         <Route path="runs/legacy" element={<RunLibrary />} />
         <Route path="runs/:runId/*" element={<RunWorkspace />} />
         <Route path=":tab" element={<LegacyTabRedirect />} />
-        <Route index element={<ResolveDefaultRun />} />
+        {/* The module opens on S01; the latest legacy run is one click away in it. */}
+        <Route index element={<Navigate to={`${QUANTBT_ROOT}/runs`} replace />} />
         <Route path="*" element={<Navigate to={QUANTBT_ROOT} replace />} />
       </Routes>
     </>
