@@ -445,7 +445,7 @@ export interface components {
             schema_version: "research.progress-read.v1";
             run_id: components["schemas"]["RunId"];
             /** @enum {unknown} */
-            availability: "AVAILABLE" | "PENDING_SOURCE_CALLBACK";
+            availability: "AVAILABLE" | "QUEUED_NO_SOURCE" | "CANCELLED_BEFORE_SOURCE" | "PENDING_SOURCE_CALLBACK";
             current: {
                 job_state: string;
                 /** @enum {unknown} */

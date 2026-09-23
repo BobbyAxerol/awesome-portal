@@ -243,80 +243,6 @@ export interface components {
             };
             request_id: string;
         };
-        identifier: string;
-        interval: {
-            start: string;
-            end_exclusive: string;
-        };
-        decimalString: string;
-        intrabarParams: {
-            /** @enum {unknown} */
-            level_mode: "hlc_conservative" | "ohlc_path" | "close_only";
-            /** @enum {unknown} */
-            same_bar_policy: "stop_first" | "target_first" | "ambiguity_flag";
-            tick_size: components["schemas"]["decimalString"];
-        };
-        portfolioParams: {
-            /** @enum {unknown} */
-            mode: "longshort" | "market_neutral" | "directional" | "equal_weight" | "risk_parity" | "beta_neutral";
-            /** @enum {unknown} */
-            sizing: "equal_weight" | "risk_parity" | "vol_target" | "kelly_fraction" | "fixed_notional" | "atr_risk" | "min_variance" | "score_weighted";
-        };
-        reactiveParams: {
-            /** @enum {unknown} */
-            runtime: "R0" | "R1" | "R2" | "R3" | "R3B";
-            /** @enum {unknown} */
-            audit_mode: "minimal" | "standard" | "audit";
-        };
-        dcaParams: {
-            base_order_usd: components["schemas"]["decimalString"];
-            safety_orders: number;
-            step_scale: components["schemas"]["decimalString"];
-        };
-        scalar: string | number | boolean;
-        alphaBinding: {
-            alpha_id: components["schemas"]["identifier"];
-            alpha_version_id: components["schemas"]["identifier"];
-        };
-        routeParams: {
-            intrabar?: components["schemas"]["intrabarParams"];
-            portfolio?: components["schemas"]["portfolioParams"];
-            reactive?: components["schemas"]["reactiveParams"];
-            dca?: components["schemas"]["dcaParams"];
-        };
-        data: {
-            dataset_id: components["schemas"]["identifier"];
-            symbol: string;
-            timeframe: components["schemas"]["identifier"];
-        };
-        windows: {
-            is: components["schemas"]["interval"];
-            oos: components["schemas"]["interval"];
-            holdout: components["schemas"]["interval"];
-        };
-        walkForward: {
-            start: string;
-            end_exclusive: string;
-            split_mode: components["schemas"]["identifier"];
-            frequency: components["schemas"]["identifier"];
-            window_mode: components["schemas"]["identifier"];
-        };
-        parameterOverride: {
-            name: components["schemas"]["identifier"];
-            /** @constant */
-            kind: "sweep";
-            low: components["schemas"]["scalar"];
-            high: components["schemas"]["scalar"];
-        } | {
-            name: components["schemas"]["identifier"];
-            /** @constant */
-            kind: "pin";
-            value: components["schemas"]["scalar"];
-        };
-        client: {
-            engine_release_id: components["schemas"]["identifier"];
-            config_digest: string;
-        };
         /**
          * Research requested specification v1
          * @description P02 producer-side structural contract for S02. It is not a live endpoint contract. P04 supplies installed-manifest values and P10 supplies authenticated producer wiring.
@@ -324,102 +250,91 @@ export interface components {
         "research-requested-spec.v1.schema": {
             /** @constant */
             schema_version: "research.requested-spec.v1";
-            alpha_binding: null | components["schemas"]["alphaBinding"];
+            alpha_binding: null | {
+                alpha_id: string;
+                alpha_version_id: string;
+            };
             not_publishable: boolean;
-            strategy_id: components["schemas"]["identifier"];
+            strategy_id: string;
             /** @enum {unknown} */
             execution_route: "signal_notional" | "pct_equity" | "intrabar_bracket" | "dca_ladder" | "reactive" | "event_driven" | "native_event_lifecycle" | "orders" | "fill_replay" | "basket" | "arbitrage" | "portfolio" | "nautilus_dca_grid" | "options";
-            route_params: components["schemas"]["routeParams"];
-            data: components["schemas"]["data"];
-            /** @enum {unknown} */
-            protocol: "three_window_decay" | "advanced";
-            windows?: components["schemas"]["windows"];
-            walk_forward?: components["schemas"]["walkForward"];
-            optimization_mode: components["schemas"]["identifier"];
-            optimization_schedule: components["schemas"]["identifier"];
-            parameter_space_overrides: components["schemas"]["parameterOverride"][];
-            optuna_trials: number;
-            early_stopping: null | number;
-            random_seed: null | number;
-            optimization_config: {
-                [key: string]: components["schemas"]["scalar"];
-            };
-            client: components["schemas"]["client"];
-            $defs: {
-                identifier: string;
-                decimalString: string;
-                scalar: string | number | boolean;
-                alphaBinding: {
-                    alpha_id: components["schemas"]["identifier"];
-                    alpha_version_id: components["schemas"]["identifier"];
-                };
-                data: {
-                    dataset_id: components["schemas"]["identifier"];
-                    symbol: string;
-                    timeframe: components["schemas"]["identifier"];
-                };
-                interval: {
-                    start: string;
-                    end_exclusive: string;
-                };
-                windows: {
-                    is: components["schemas"]["interval"];
-                    oos: components["schemas"]["interval"];
-                    holdout: components["schemas"]["interval"];
-                };
-                walkForward: {
-                    start: string;
-                    end_exclusive: string;
-                    split_mode: components["schemas"]["identifier"];
-                    frequency: components["schemas"]["identifier"];
-                    window_mode: components["schemas"]["identifier"];
-                };
-                intrabarParams: {
+            route_params: {
+                intrabar?: {
                     /** @enum {unknown} */
                     level_mode: "hlc_conservative" | "ohlc_path" | "close_only";
                     /** @enum {unknown} */
                     same_bar_policy: "stop_first" | "target_first" | "ambiguity_flag";
-                    tick_size: components["schemas"]["decimalString"];
+                    tick_size: string;
                 };
-                portfolioParams: {
+                portfolio?: {
                     /** @enum {unknown} */
                     mode: "longshort" | "market_neutral" | "directional" | "equal_weight" | "risk_parity" | "beta_neutral";
                     /** @enum {unknown} */
                     sizing: "equal_weight" | "risk_parity" | "vol_target" | "kelly_fraction" | "fixed_notional" | "atr_risk" | "min_variance" | "score_weighted";
                 };
-                reactiveParams: {
+                reactive?: {
                     /** @enum {unknown} */
                     runtime: "R0" | "R1" | "R2" | "R3" | "R3B";
                     /** @enum {unknown} */
                     audit_mode: "minimal" | "standard" | "audit";
                 };
-                dcaParams: {
-                    base_order_usd: components["schemas"]["decimalString"];
+                dca?: {
+                    base_order_usd: string;
                     safety_orders: number;
-                    step_scale: components["schemas"]["decimalString"];
+                    step_scale: string;
                 };
-                routeParams: {
-                    intrabar?: components["schemas"]["intrabarParams"];
-                    portfolio?: components["schemas"]["portfolioParams"];
-                    reactive?: components["schemas"]["reactiveParams"];
-                    dca?: components["schemas"]["dcaParams"];
+            };
+            data: {
+                dataset_id: string;
+                symbol: string;
+                timeframe: string;
+            };
+            /** @enum {unknown} */
+            protocol: "three_window_decay" | "advanced";
+            windows?: {
+                is: {
+                    start: string;
+                    end_exclusive: string;
                 };
-                parameterOverride: {
-                    name: components["schemas"]["identifier"];
-                    /** @constant */
-                    kind: "sweep";
-                    low: components["schemas"]["scalar"];
-                    high: components["schemas"]["scalar"];
-                } | {
-                    name: components["schemas"]["identifier"];
-                    /** @constant */
-                    kind: "pin";
-                    value: components["schemas"]["scalar"];
+                oos: {
+                    start: string;
+                    end_exclusive: string;
                 };
-                client: {
-                    engine_release_id: components["schemas"]["identifier"];
-                    config_digest: string;
+                holdout: {
+                    start: string;
+                    end_exclusive: string;
                 };
+            };
+            walk_forward?: {
+                start: string;
+                end_exclusive: string;
+                split_mode: string;
+                frequency: string;
+                window_mode: string;
+            };
+            optimization_mode: string;
+            optimization_schedule: string;
+            parameter_space_overrides: ({
+                name: string;
+                /** @constant */
+                kind: "sweep";
+                low: string | number | boolean;
+                high: string | number | boolean;
+            } | {
+                name: string;
+                /** @constant */
+                kind: "pin";
+                value: string | number | boolean;
+            })[];
+            optuna_trials: number;
+            early_stopping: null | number;
+            random_seed: null | number;
+            optimization_config: {
+                [key: string]: string | number | boolean;
+            };
+            client: {
+                engine_release_id: string;
+                config_digest: string;
             };
         } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
     };

@@ -37,6 +37,12 @@ describe("P08 published Research preflight contract", () => {
     expect(generated).toContain("RESEARCH_PREFLIGHT_STALE");
     expect(generated).toContain("CLOSED_BARS_ONLY");
     expect(generated).toContain("may_create_run: boolean");
+    const requestedSpec = generated.slice(
+      generated.indexOf('"research-requested-spec.v1.schema": {'),
+      generated.indexOf("    };\n    responses:", generated.indexOf('"research-requested-spec.v1.schema": {')),
+    );
+    expect(requestedSpec).not.toContain("$defs:");
+    expect(requestedSpec).toContain("schema_version:");
     for (const typedPanelField of ["Topology", "ResourceEstimate", "DatasetBinding", "Quality", "Warmup"]) {
       expect(generated).toContain(typedPanelField);
     }

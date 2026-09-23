@@ -29,7 +29,7 @@ const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
 export interface ResearchProgressReadResponse {
   schema_version: "research.progress-read.v1";
   run_id: string;
-  availability: "AVAILABLE" | "PENDING_SOURCE_CALLBACK";
+  availability: "AVAILABLE" | "QUEUED_NO_SOURCE" | "CANCELLED_BEFORE_SOURCE" | "PENDING_SOURCE_CALLBACK";
   current: {
     job_state: string;
     effective_status: "QUEUED" | "RUNNING" | "FINISHING" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -255,7 +255,10 @@ export class ResearchProgressService {
     return {
       schema_version: "research.progress-read.v1",
       run_id: current.runId,
-      availability: current.progress ? "AVAILABLE" : "PENDING_SOURCE_CALLBACK",
+      availability: current.progress ? "AVAILABLE"
+        : current.jobState === "CANCELLED" ? "CANCELLED_BEFORE_SOURCE"
+        : current.jobState === "QUEUED" ? "QUEUED_NO_SOURCE"
+        : "PENDING_SOURCE_CALLBACK",
       current: {
         job_state: current.jobState,
         effective_status: effectiveStatus,

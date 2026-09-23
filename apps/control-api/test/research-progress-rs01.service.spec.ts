@@ -129,4 +129,29 @@ describe("RS-01 terminal materialization and retry recovery", () => {
       terminal_materialization: "PENDING",
     });
   });
+
+  it("distinguishes queued and cancelled-before-source from missing source callbacks", async () => {
+    for (const [jobState, availability, effectiveStatus] of [
+      ["QUEUED", "QUEUED_NO_SOURCE", "QUEUED"],
+      ["CANCELLED", "CANCELLED_BEFORE_SOURCE", "CANCELLED"],
+      ["RUNNING", "PENDING_SOURCE_CALLBACK", "RUNNING"],
+    ] as const) {
+      const { service } = subject({ current: {
+        runId: "run_rs01", jobState, progress: null,
+        sourceLatestSequence: 0, retentionFloorSequence: 0, receivedAt: null,
+        hasCurrentAttempt: jobState !== "QUEUED", terminalMaterialization: "NOT_REQUIRED", retainedArtifacts: [],
+      } });
+      const response = await service.read(
+        { role: "ADMIN" } as never,
+        { workspaceId: "research-workspace", actorUserId: "research-owner" },
+        "run_rs01",
+      );
+      expect(response.availability).toBe(availability);
+      expect(response.current.effective_status).toBe(effectiveStatus);
+      expect(response.progress).toBeNull();
+      if (jobState === "CANCELLED") {
+        expect(response.current.terminal_resolution).toBe("CONTROL_CANCELLATION");
+      }
+    }
+  });
 });
