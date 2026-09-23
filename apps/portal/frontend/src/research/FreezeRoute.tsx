@@ -10,25 +10,29 @@
 import { useParams } from "react-router-dom";
 
 import { FreezeScreen } from "./FreezeDetail";
+import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useFreeze } from "./useFreeze";
 
 export function FreezeRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
-  const { cursor } = useEvidenceCursor({ stage: "freeze" });
+  const { cursor, problems } = useEvidenceCursor({ stage: "freeze" });
   const freeze = useFreeze(runId, cursor.fold);
 
   return (
-    <FreezeScreen
-      runId={runId}
-      detail={freeze.detail}
-      state={freeze.state}
-      cursor={cursor}
-      verify={freeze.verify}
-      onVerify={freeze.runVerify}
-      retained={freeze.retained}
-      ensureRetained={freeze.ensureRetained}
-      onReread={freeze.reread}
-    />
+    <>
+      <RouteCursorNotice problems={problems} />
+      <FreezeScreen
+        runId={runId}
+        detail={freeze.detail}
+        state={freeze.state}
+        cursor={cursor}
+        verify={freeze.verify}
+        onVerify={freeze.runVerify}
+        retained={freeze.retained}
+        ensureRetained={freeze.ensureRetained}
+        onReread={freeze.reread}
+      />
+    </>
   );
 }

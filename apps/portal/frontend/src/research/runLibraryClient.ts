@@ -21,7 +21,7 @@
 import type { components } from "@portal/contracts-research-run-library";
 
 import { PortalApiError } from "../lib/api";
-import type { ResearchState } from "./state";
+import { toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 
 type Schemas = components["schemas"];
 
@@ -184,39 +184,10 @@ export function unavailableReason(availability: Availability): string {
  * Refusals
  * ---------------------------------------------------------------------- */
 
-export interface LibraryRefusal {
-  code: string | null;
-  message: string;
-  status: number;
-  requestId: string | null;
-  state: ResearchState["state"];
-  mayRetry: boolean;
-  /** True when a poll or lazy read must stop rather than retry. */
-  stopsPolling: boolean;
-}
-
-export function toLibraryRefusal(error: unknown): LibraryRefusal {
-  if (!(error instanceof PortalApiError)) {
-    return {
-      code: null,
-      message: "The request did not reach the server.",
-      status: 0,
-      requestId: null,
-      state: "failed-retryable",
-      mayRetry: true,
-      stopsPolling: false,
-    };
-  }
-  const { status } = error;
-  const denied = status === 401 || status === 403;
-  return {
-    code: error.code,
-    message: error.message,
-    status,
-    requestId: error.requestId,
-    state: denied ? "denied" : status === 404 ? "empty" : status >= 500 ? "unavailable" : "terminal",
-    mayRetry: status >= 500,
-    /* A denial will not be fixed by asking again every ten seconds. */
-    stopsPolling: denied || status === 404,
-  };
-}
+/**
+ * RF01-F4: one refusal mapper serves every Research surface
+ * (`researchRefusal.ts`). These names stay so existing callers and the
+ * shared-module rule (additive only) hold.
+ */
+export type LibraryRefusal = ResearchRefusal;
+export const toLibraryRefusal = toResearchRefusal;

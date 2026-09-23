@@ -28,6 +28,7 @@ import {
   toLibraryRefusal,
 } from "./runLibraryClient";
 import { researchState, type ResearchState } from "./state";
+import { refusalState } from "./researchRefusal";
 
 /** Filter state, exactly as the URL carries it. */
 export interface LibraryFilters {
@@ -344,12 +345,7 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
   const items = response?.items ?? [];
 
   const state: ResearchState = refusal
-    ? {
-        state: refusal.state,
-        reason: refusal.message,
-        mayRetry: refusal.mayRetry,
-        retainsContent: response !== null,
-      }
+    ? refusalState(refusal, response !== null)
     : response === null
       ? researchState({ kind: "in-flight", hasAcceptedResponse: false })
       : researchState({ kind: "ok", rowCount: items.length });

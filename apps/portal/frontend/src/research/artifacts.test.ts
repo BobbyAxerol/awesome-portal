@@ -51,7 +51,7 @@ describe("1 — same-origin DTO only; no direct path, data or engine request", (
 });
 
 describe("2 — every state keeps the panel and its exact label", () => {
-  it("retains the panel for all five states", () => {
+  it("retains the panel for all six authority states", () => {
     for (const state of RESEARCH_ARTIFACT_STATES) {
       const panel = artifactPanel(facts({ state }));
       expect(panel.retainsPanel).toBe(true);
@@ -176,5 +176,17 @@ describe("5 — row limits stay server-owned", () => {
   it("treats the cursor as opaque and never builds one", () => {
     const source = readFileSync(join(process.cwd(), "src", "research", "artifacts.ts"), "utf8");
     expect(source).not.toMatch(/atob|btoa|JSON\.parse\(.*cursor/i);
+  });
+});
+
+describe("RF01-F6 — integrity verdicts are not described as unsealed", () => {
+  it("names CORRUPT and MISSING for what they are", () => {
+    const corrupt = artifactPanel({ state: "CORRUPT", registered: true, serverAdmittedExport: true });
+    const missing = artifactPanel({ state: "MISSING", registered: true, serverAdmittedExport: true });
+    expect(corrupt.showsExport).toBe(false);
+    expect(corrupt.exportWithheldBecause).toMatch(/failed its integrity check/);
+    expect(missing.exportWithheldBecause).toMatch(/not where the authority recorded them/);
+    for (const panel of [corrupt, missing]) expect(panel.exportWithheldBecause).not.toMatch(/not sealed/);
+    expect(artifactPanel({ state: "PENDING", registered: true, serverAdmittedExport: false }).inProgress).toBe(true);
   });
 });

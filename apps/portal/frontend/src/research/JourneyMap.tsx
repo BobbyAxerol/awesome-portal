@@ -32,6 +32,8 @@ import type {
 import { ResearchPanel } from "./ResearchPanel";
 import { resolveScreenRoute } from "./screenRoutes";
 import type { ResearchState } from "./state";
+import { CursorNotice } from "./CursorNotice";
+import { encodeInspectionCursor, type CursorProblem } from "./inspectionCursor";
 
 /** Spec 00 §3.2 — the three card kinds, distinguished visually. */
 const TAG_STYLE: Record<
@@ -269,9 +271,22 @@ export interface JourneyMapProps {
   descriptor: JourneyDescriptor | null;
   inspection: InspectionCursor | null;
   state: ResearchState;
+  /** RF01-F5: keys the shared codec refused in this link, named rather than dropped. */
+  linkProblems?: readonly CursorProblem[];
+  /** The run the link scopes to, when it names one — lets the cursor open in Screen 04. */
+  runId?: string | null;
 }
 
-export function JourneyMap({ descriptor, inspection, state }: JourneyMapProps) {
+/**
+ * The same cursor, handed to Screen 04 through the shared codec: what the
+ * server canonicalised here is exactly what the evidence hub reads there.
+ */
+export function evidenceHrefFor(runId: string, inspection: InspectionCursor): string {
+  const hash = encodeInspectionCursor(inspection.cursor as Record<string, string>);
+  return `/research/quantbt/runs/${encodeURIComponent(runId)}/evidence${hash ? `#${hash}` : ""}`;
+}
+
+export function JourneyMap({ descriptor, inspection, state, linkProblems = [], runId = null }: JourneyMapProps) {
   return (
     <div
       data-screen="journey-map"
@@ -312,7 +327,18 @@ export function JourneyMap({ descriptor, inspection, state }: JourneyMapProps) {
       </ResearchPanel>
 
       <ResearchPanel title="deep link inspection" state={state} minBodyHeight={56}>
+        <CursorNotice problems={linkProblems} />
         {inspection ? <InspectionStrip inspection={inspection} /> : null}
+        {inspection && runId ? (
+          <Link
+            to={evidenceHrefFor(runId, inspection)}
+            className="mono self-start text-[10.5px]"
+            style={{ color: "var(--accent)" }}
+            data-open-evidence
+          >
+            open this cursor in evidence →
+          </Link>
+        ) : null}
       </ResearchPanel>
     </div>
   );

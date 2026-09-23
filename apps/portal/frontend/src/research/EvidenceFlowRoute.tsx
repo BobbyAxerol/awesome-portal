@@ -11,28 +11,32 @@
 import { useParams } from "react-router-dom";
 
 import { EvidenceFlow } from "./EvidenceFlow";
+import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useEvidence } from "./useEvidence";
 
 export function EvidenceFlowRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
-  const { cursor, setStage, setFold, reset } = useEvidenceCursor();
+  const { cursor, setStage, setFold, reset, problems } = useEvidenceCursor();
   const evidence = useEvidence(runId);
 
   return (
-    <EvidenceFlow
-      runId={runId}
-      hub={evidence.hub}
-      state={evidence.state}
-      cursor={cursor}
-      onStage={setStage}
-      onFold={setFold}
-      onResetCursor={reset}
-      series={evidence.series}
-      ensureSeries={evidence.ensureSeries}
-      passport={evidence.passport}
-      ensurePassport={evidence.ensurePassport}
-      onReread={evidence.reread}
-    />
+    <>
+      <RouteCursorNotice problems={problems} />
+      <EvidenceFlow
+        runId={runId}
+        hub={evidence.hub}
+        state={evidence.state}
+        cursor={cursor}
+        onStage={setStage}
+        onFold={setFold}
+        onResetCursor={reset}
+        series={evidence.series}
+        ensureSeries={evidence.ensureSeries}
+        passport={evidence.passport}
+        ensurePassport={evidence.ensurePassport}
+        onReread={evidence.reread}
+      />
+    </>
   );
 }

@@ -19,6 +19,7 @@ import {
   type SplitRefusal,
 } from "./splitClient";
 import { researchState, type ResearchState } from "./state";
+import { refusalState } from "./researchRefusal";
 
 export type FoldsSlot =
   | { state: "idle" }
@@ -81,12 +82,7 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
   }, [runId]);
 
   const state: ResearchState = refusal
-    ? {
-        state: refusal.state,
-        reason: refusal.message,
-        mayRetry: refusal.mayRetry,
-        retainsContent: detail !== null,
-      }
+    ? refusalState(refusal, detail !== null)
     : researchState(
         detail === null
           ? { kind: "in-flight", hasAcceptedResponse: false }

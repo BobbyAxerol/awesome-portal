@@ -10,8 +10,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { act } from "react";
+
 import { AuthGate } from "./AuthGate";
 import { csrfTokenFromCookie } from "./authApi";
+import { reportSessionExpired } from "./sessionExpiry";
 
 const originalFetch = globalThis.fetch;
 
@@ -119,6 +122,41 @@ describe("state machine", () => {
     mount(() => new Promise<Response>(() => {}));
     expect(screen.queryByTestId("shell")).toBeNull();
     expect(screen.getByRole("status")).toBeTruthy();
+  });
+});
+
+describe("RF01-F3 — a screen's 401 hands over to the existing sign-in path", () => {
+  const authenticated = () =>
+    json({
+      state: "AUTHENTICATED",
+      principal: { username: "bobby", role: "ADMIN", exp: 1 },
+      access_identity: { sub: "s", email: "name@azdag.com" },
+    });
+
+  it("replaces the shell with Frame 01D SESSION_EXPIRED, then re-reads the context", async () => {
+    let calls = 0;
+    mount(() => {
+      calls += 1;
+      return calls === 1 ? authenticated() : context("APP_LOGIN_REQUIRED");
+    });
+    await screen.findByTestId("shell");
+    window.location.hash = "#stage=search&fold=2";
+    act(() => reportSessionExpired());
+    const frame = await screen.findByTestId("access-problem-screen");
+    expect(frame.dataset.problem).toBe("SESSION_EXPIRED");
+    expect(screen.queryByTestId("shell")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign in again" }));
+    expect(await screen.findByTestId("login-screen")).toBeTruthy();
+    // No navigation happened: the deep link the reader had is still the URL.
+    expect(window.location.hash).toBe("#stage=search&fold=2");
+  });
+
+  it("ignores the signal before a session exists", async () => {
+    mount(() => context("APP_LOGIN_REQUIRED"));
+    await screen.findByTestId("login-screen");
+    act(() => reportSessionExpired());
+    expect(screen.queryByTestId("access-problem-screen")).toBeNull();
   });
 });
 

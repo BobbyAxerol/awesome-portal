@@ -31,8 +31,10 @@ import {
   type MethodologyCertificate,
   type ProgressRead,
   type ProgressSnapshot,
+  type RetainedArtifact,
   type Stage,
 } from "./progressClient";
+import { ArtifactPanel } from "./ArtifactPanel";
 import { ResearchPanel } from "./ResearchPanel";
 import type { Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
@@ -575,6 +577,59 @@ function ArtifactsStrip({ artifacts }: { artifacts: readonly Artifact[] }) {
   );
 }
 
+/** The server's bound on the retained list (`research-progress` OpenAPI). */
+const RETAINED_LIMIT = 128;
+
+/**
+ * The run's retained tables, from the artifact authority (RF01-F6).
+ *
+ * A different set from the bundle strip above: those are the files the source
+ * journals, these are the Parquet tables the authority keeps — the only place
+ * `CORRUPT` and `MISSING` can appear. Each goes through `ArtifactPanel`, so the
+ * P05 rules (export needs sealed + registered + a server action; no `READY`)
+ * hold where artifacts are actually shown. Rows come from the authority
+ * itself, so they are registered; no reader route is published, so no export.
+ */
+function RetainedTables({ retained }: { retained: readonly RetainedArtifact[] | undefined }) {
+  if (retained === undefined) {
+    return (
+      <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-retained-not-published>
+        This server does not publish retained tables for the progress read.
+      </p>
+    );
+  }
+  if (retained.length === 0) {
+    return (
+      <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-retained-none>
+        No table has been retained for this run yet.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2" data-retained-tables>
+      <div className="grid gap-2 md:grid-cols-2">
+        {retained.map((table, index) => (
+          <ArtifactPanel
+            key={`${table.table_kind}:${index}`}
+            title={table.table_kind}
+            facts={{ state: table.state, registered: true, serverAdmittedExport: false }}
+            metadata={{
+              rowCount: table.total_rows,
+              byteSize: table.total_bytes,
+              sealedAt: table.sealed_at_utc_ms !== null ? new Date(table.sealed_at_utc_ms).toISOString() : null,
+            }}
+          />
+        ))}
+      </div>
+      {retained.length >= RETAINED_LIMIT ? (
+        <p className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-retained-capped>
+          first {RETAINED_LIMIT} by table kind — the read is bounded
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * The methodology certificate chip.
  *
@@ -765,6 +820,10 @@ export function RunProgress(props: RunProgressProps) {
 
       <ResearchPanel title="artifacts" state={state} minBodyHeight={72}>
         {snapshot ? <ArtifactsStrip artifacts={snapshot.artifacts} /> : null}
+      </ResearchPanel>
+
+      <ResearchPanel title="retained tables" meta="artifact authority" state={state} minBodyHeight={56}>
+        {read ? <RetainedTables retained={read.retained_artifacts} /> : null}
       </ResearchPanel>
 
       <ResearchPanel title="claim" state={state} minBodyHeight={86}>

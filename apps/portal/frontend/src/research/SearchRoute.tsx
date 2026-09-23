@@ -10,23 +10,27 @@
 import { useParams } from "react-router-dom";
 
 import { SearchScreen } from "./SearchDetail";
+import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useSearch } from "./useSearch";
 
 export function SearchRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
-  const { cursor } = useEvidenceCursor({ stage: "search" });
+  const { cursor, problems } = useEvidenceCursor({ stage: "search" });
   const search = useSearch(runId, cursor.fold);
 
   return (
-    <SearchScreen
-      runId={runId}
-      detail={search.detail}
-      state={search.state}
-      cursor={cursor}
-      ledger={search.ledger}
-      ensureLedger={search.ensureLedger}
-      onReread={search.reread}
-    />
+    <>
+      <RouteCursorNotice problems={problems} />
+      <SearchScreen
+        runId={runId}
+        detail={search.detail}
+        state={search.state}
+        cursor={cursor}
+        ledger={search.ledger}
+        ensureLedger={search.ensureLedger}
+        onReread={search.reread}
+      />
+    </>
   );
 }

@@ -21,7 +21,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip } from "./ProvenanceStrip";
-import { ResearchPanel } from "./ResearchPanel";
+import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
   ABSENT_WORDS,
   HAIRLINE_PERCENT,
@@ -364,7 +364,7 @@ function FoldAnatomy({
       ) : slot.state === "refused" ? (
         <div className="flex flex-col gap-1" data-fold-refusal>
           <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            {slot.refusal.message}
+            <RefusalNote refusal={slot.refusal} />
           </p>
           <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
             Actual fold windows are published only for the admitted Advanced-WFO profile. For this run
@@ -724,8 +724,8 @@ export function SplitScreen({
         meta={detail?.revision ? `revision ${detail.revision}` : undefined}
         state={state}
         minBodyHeight={220}
-        actions={
-          state.mayRetry && state.state !== "available" ? (
+        recovery={
+          state.mayRetry ? (
             <button type="button" className="btn-ghost mono text-[10px]" data-action="reread" onClick={onReread}>
               reread split
             </button>

@@ -27,6 +27,7 @@ import type { components } from "@portal/contracts-research-preflight";
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
+import { reportSessionExpired } from "../auth/sessionExpiry";
 
 type Schemas = components["schemas"];
 
@@ -192,6 +193,8 @@ export function toPreflightRefusal(error: unknown): PreflightRefusal {
       mayRetry: true,
     };
   }
+  /* RF01-F3: an expired session goes to the shell's sign-in path. */
+  if (error.status === 401) reportSessionExpired();
   const known =
     error.code && error.code in REFUSAL ? REFUSAL[error.code as PreflightProblemCode] : null;
   return {

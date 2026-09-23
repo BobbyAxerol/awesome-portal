@@ -25,6 +25,8 @@ import type { components } from "@portal/contracts-research-foundation";
 
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
+import { reportSessionExpired } from "../auth/sessionExpiry";
+import { decodeInspectionCursor, INSPECTION_CURSOR_KEYS, type CursorProblem } from "./inspectionCursor";
 
 type Schemas = components["schemas"];
 
@@ -52,26 +54,11 @@ const JOURNEY_PATH = "/api/v1/research/journey";
 const ATLAS_PATH = "/api/v1/research/quantbt/atlas";
 
 /**
- * The P02 cursor keys the journey read accepts.
- *
- * Declared once, in the contract's own order, so a key cannot be smuggled onto
- * the query by a caller that happens to hold a wider object.
+ * The keys the journey read accepts: `run_id`, then the `p02-cursor.v2`
+ * vocabulary from the shared codec (RF01-F5), in the contract's own order, so
+ * a key cannot be smuggled onto the query by a caller that holds a wider object.
  */
-export const JOURNEY_CURSOR_KEYS = [
-  "run_id",
-  "fold",
-  "study",
-  "trial",
-  "pick",
-  "params",
-  "trade",
-  "seq",
-  "event_seq",
-  "mode",
-  "schedule",
-  "route",
-  "playback_ordinal",
-] as const;
+export const JOURNEY_CURSOR_KEYS = ["run_id", ...INSPECTION_CURSOR_KEYS] as const;
 
 export type JourneyCursorKey = (typeof JOURNEY_CURSOR_KEYS)[number];
 export type JourneyQuery = Partial<Record<JourneyCursorKey, string>> & { workspace_id?: string };
@@ -102,25 +89,33 @@ export class JourneyLinkConflict extends Error {
 /**
  * Builds the journey query from a URL's search parameters.
  *
- * Only the declared P02 keys survive; anything else a link carries is dropped
- * rather than forwarded, so a crafted URL cannot widen the request.
+ * The cursor keys go through the shared codec; `run_id` and `workspace_id` are
+ * address keys and pass through. Anything the codec refuses stays off the
+ * request — a crafted URL cannot widen it — and is reported by
+ * `journeyLinkProblems` for the screen to show, rather than vanishing.
  */
 export function journeyQueryFromSearch(search: string | URLSearchParams): JourneyQuery {
   const params = typeof search === "string" ? new URLSearchParams(search) : search;
-  const query: JourneyQuery = {};
-
-  const workspace = params.get("workspace_id");
-  if (workspace) query.workspace_id = workspace;
-
-  for (const key of JOURNEY_CURSOR_KEYS) {
-    const value = params.get(key);
-    if (value) query[key] = value;
-  }
-
-  if (query.seq && query.event_seq && query.seq !== query.event_seq) {
+  const { cursor, problems } = decodeInspectionCursor(params, { passThrough: JOURNEY_ADDRESS_KEYS });
+  if (problems.some((problem) => problem.code === "CURSOR_SEQUENCE_CONFLICT")) {
     throw new JourneyLinkConflict();
   }
+  const query: JourneyQuery = { ...cursor };
+  const workspace = params.get("workspace_id");
+  if (workspace) query.workspace_id = workspace;
+  const run = params.get("run_id");
+  if (run) query.run_id = run;
   return query;
+}
+
+const JOURNEY_ADDRESS_KEYS = ["run_id", "workspace_id"] as const;
+
+/** What the codec refused in a journey link, for the screen's notice (RF01-F5). */
+export function journeyLinkProblems(search: string | URLSearchParams): CursorProblem[] {
+  const params = typeof search === "string" ? new URLSearchParams(search) : search;
+  return decodeInspectionCursor(params, { passThrough: JOURNEY_ADDRESS_KEYS }).problems.filter(
+    (problem) => problem.code !== "CURSOR_SEQUENCE_CONFLICT",
+  );
 }
 
 function queryString(entries: Record<string, string | undefined>): string {
@@ -279,6 +274,8 @@ export function toFoundationRefusal(error: unknown): FoundationRefusal {
       highlightsSelection: false,
     };
   }
+  /* RF01-F3: an expired session goes to the shell's sign-in path. */
+  if (error.status === 401) reportSessionExpired();
   const known =
     error.code && error.code in REFUSAL ? REFUSAL[error.code as FoundationProblemCode] : null;
   return {

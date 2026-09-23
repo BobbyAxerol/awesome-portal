@@ -9,24 +9,28 @@
 import { useParams } from "react-router-dom";
 
 import { SplitScreen } from "./SplitDetail";
+import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useSplit } from "./useSplit";
 
 export function SplitRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
-  const { cursor, setFold } = useEvidenceCursor({ stage: "split" });
+  const { cursor, setFold, problems } = useEvidenceCursor({ stage: "split" });
   const split = useSplit(runId);
 
   return (
-    <SplitScreen
-      runId={runId}
-      detail={split.detail}
-      state={split.state}
-      cursor={cursor}
-      onFold={setFold}
-      folds={split.folds}
-      ensureFolds={split.ensureFolds}
-      onReread={split.reread}
-    />
+    <>
+      <RouteCursorNotice problems={problems} />
+      <SplitScreen
+        runId={runId}
+        detail={split.detail}
+        state={split.state}
+        cursor={cursor}
+        onFold={setFold}
+        folds={split.folds}
+        ensureFolds={split.ensureFolds}
+        onReread={split.reread}
+      />
+    </>
   );
 }

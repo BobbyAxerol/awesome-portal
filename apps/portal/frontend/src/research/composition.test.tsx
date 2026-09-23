@@ -20,7 +20,7 @@ import { ResearchPanel, ResearchValue } from "./ResearchPanel";
 import type { AtlasDocument, AtlasRoute } from "./atlas";
 import { RESEARCH_ARTIFACT_STATES, type ArtifactFacts } from "./artifacts";
 import { RESEARCH_JOB_STATES, type LogicalRun } from "./scheduler";
-import { researchState, type ResearchOutcome } from "./state";
+import { researchState, type ResearchOutcome, type ResearchState } from "./state";
 
 afterEach(cleanup);
 
@@ -198,8 +198,52 @@ describe("P03 — every state keeps the panel", () => {
     render(<ResearchPanel title="p" state={researchState(OUTCOMES.denied)} />);
     const notice = document.querySelector("[data-research-state='denied']");
     expect(notice).toBeTruthy();
-    expect(notice?.textContent).toMatch(/not a member/i);
+    // RF01-F1: neutral — neither confirms the object exists nor says whose it is.
+    expect(notice?.textContent).toMatch(/don't have access to this in your current workspace, or it doesn't exist/i);
+    expect(notice?.textContent).not.toMatch(/not a member|belongs to/i);
     expect(notice?.textContent).not.toMatch(/ws_|workspace_id|run_/);
+  });
+
+  it("RF01-F2: offers recovery where reading again can help, and nowhere else", () => {
+    const retry = <button type="button">read again</button>;
+    const cases: Array<[ResearchState["state"], boolean]> = [
+      ["unavailable", true],
+      ["failed-retryable", true],
+      ["stale", true],
+      ["denied", false],
+      ["empty", false],
+      ["terminal", false],
+      ["available", false],
+      ["loading", false],
+    ];
+    for (const [state, shown] of cases) {
+      const { unmount } = render(
+        <ResearchPanel
+          title="p"
+          state={{ state, reason: "r", mayRetry: true, retainsContent: true }}
+          recovery={retry}
+          actions={<button type="button">export</button>}
+        />,
+      );
+      expect(!!screen.queryByRole("button", { name: "read again" })).toBe(shown);
+      // The content action keeps FE-P03-01: never offered on unavailable.
+      if (state === "unavailable" || state === "failed-retryable") {
+        expect(screen.queryByRole("button", { name: "export" })).toBeNull();
+      }
+      unmount();
+    }
+  });
+
+  it("RF01-F4: keeps diagnostics in a details disclosure, not in the sentence", () => {
+    render(
+      <ResearchPanel
+        title="p"
+        state={{ state: "unavailable", reason: "The Research service did not answer. Try again.", detail: "RESEARCH_SPLIT_UNAVAILABLE · upstream 502", mayRetry: true, retainsContent: false }}
+      />,
+    );
+    const details = document.querySelector("[data-research-detail]");
+    expect(details?.tagName).toBe("DETAILS");
+    expect(details?.textContent).toContain("upstream 502");
   });
 
   it("offers an action only where one could succeed", () => {
@@ -383,7 +427,7 @@ describe("P04 — Engine Atlas composition", () => {
 /* ------------------------------------------------------- P05 artifacts */
 
 describe("P05 — artifact readiness panel", () => {
-  it("keeps the panel for all five artifact states", () => {
+  it("keeps the panel for all six authority artifact states", () => {
     for (const state of RESEARCH_ARTIFACT_STATES) {
       cleanup();
       render(<ArtifactPanel title="evidence" facts={artifact({ state })} />);

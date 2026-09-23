@@ -1,8 +1,9 @@
 /**
  * Research Loop — artifact readiness panel (P05 composition scope).
  *
- * Used by Run Progress and Evidence Flow. Every one of the five artifact states
- * keeps this panel in place; only its truth changes. `CORRUPT` and `MISSING`
+ * Used by Run Progress for the run's retained tables (RF01-F6), and by the
+ * fixture lane. Every one of the six authority states keeps this panel in
+ * place; only its truth changes. `CORRUPT` and `MISSING`
  * are the ones that matter most: the panel stays, the integrity fact is stated
  * exactly, and the export control is removed rather than left to fail.
  *
@@ -59,6 +60,14 @@ function panelState(facts: ArtifactFacts, transportState?: ResearchState): Resea
       state: "terminal",
       reason: `Artifact is ${facts.state}.`,
       mayRetry: false,
+      retainsContent: true,
+    };
+  }
+  if (facts.state === "PENDING") {
+    return {
+      state: "partial",
+      reason: "The artifact is reserved; no bytes have been written yet.",
+      mayRetry: true,
       retainsContent: true,
     };
   }

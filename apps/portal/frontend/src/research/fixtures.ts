@@ -27,7 +27,7 @@ export type { ResearchPresentationMetaV1, ResearchPresentationStateV1 } from "./
 export const FOREIGN_OBJECT_DENIED: ResearchPresentationMetaV1 = {
   state: "denied",
   reason_code: "RESEARCH_WORKSPACE_FORBIDDEN",
-  display_message: "This object belongs to a workspace you are not a member of.",
+  display_message: "You don't have access to this in your current workspace, or it doesn't exist.",
   retryable: false,
 };
 

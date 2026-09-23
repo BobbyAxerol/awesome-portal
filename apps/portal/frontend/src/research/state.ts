@@ -56,6 +56,12 @@ export interface ResearchState {
   state: ComponentState;
   /** Why, in one sentence, for the panel's own copy. Never a raw code. */
   reason: string;
+  /**
+   * Diagnostics behind the sentence — code, the server's own text, request id.
+   * Shown only inside the notice's details disclosure (RF01-F4). Optional so
+   * every existing caller keeps compiling unchanged.
+   */
+  detail?: string | null;
   /** False stops automatic retries — `denied` must not spin. */
   mayRetry: boolean;
   /** True when the panel keeps rendering its previous content underneath. */
@@ -66,7 +72,7 @@ const REFUSAL_STATE: Record<ResearchRefusalCode, ResearchState> = {
   /* 403-class: authorization, not absence. Retrying cannot change the answer. */
   RESEARCH_WORKSPACE_FORBIDDEN: {
     state: "denied",
-    reason: "This object belongs to a workspace you are not a member of.",
+    reason: "You don't have access to this in your current workspace, or it doesn't exist.",
     mayRetry: false,
     retainsContent: false,
   },

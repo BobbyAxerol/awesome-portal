@@ -23,7 +23,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip } from "./ProvenanceStrip";
-import { ResearchPanel } from "./ResearchPanel";
+import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
   DIAGNOSTIC_KEYS,
   SEARCH_GAP_WORDS,
@@ -271,7 +271,7 @@ function LedgerPanel({
       ) : slot.state === "refused" ? (
         <div className="flex flex-col gap-1" data-ledger-refusal>
           <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            {slot.refusal.message}
+            <RefusalNote refusal={slot.refusal} />
           </p>
           <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
             A retained trial ledger exists only for the admitted Advanced-WFO profile. For this run the
@@ -546,8 +546,8 @@ export function SearchScreen({
         meta={detail?.revision ? `revision ${detail.revision}` : undefined}
         state={state}
         minBodyHeight={240}
-        actions={
-          state.mayRetry && state.state !== "available" ? (
+        recovery={
+          state.mayRetry ? (
             <button type="button" className="btn-ghost mono text-[10px]" data-action="reread" onClick={onReread}>
               reread search
             </button>

@@ -35,6 +35,7 @@ import {
   type SeriesKind,
 } from "./evidenceClient";
 import { researchState, type ResearchState } from "./state";
+import { refusalState } from "./researchRefusal";
 
 /** What one series panel knows about its own series. */
 export type SeriesSlot =
@@ -182,12 +183,7 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
   }, [runId]);
 
   const state: ResearchState = refusal
-    ? {
-        state: refusal.state,
-        reason: refusal.message,
-        mayRetry: refusal.mayRetry,
-        retainsContent: hub !== null,
-      }
+    ? refusalState(refusal, hub !== null)
     : researchState(
         hub === null
           ? { kind: "in-flight", hasAcceptedResponse: false }

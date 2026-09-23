@@ -578,7 +578,9 @@ describe("P12-T06 — typed refusals keep the route and stop the poll", () => {
     const refusal = toLibraryRefusal(new PortalApiError("said so", status, "CODE", "r"));
     expect(refusal.state).toBe(expected);
     expect(refusal.stopsPolling).toBe(stops);
-    expect(refusal.message).toBe("said so");
+    // RF01-F4: the screen's sentence is fixed; the server's own text is detail.
+    expect(refusal.message).not.toBe("said so");
+    expect(refusal.detail).toBe("said so");
   });
 
   it("keeps the filter bar and the route on a refusal", () => {

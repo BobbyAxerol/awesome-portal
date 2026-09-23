@@ -28,6 +28,7 @@ import {
   type JourneyQuery,
   type JourneyResponse,
   foundationApi,
+  journeyLinkProblems,
   journeyQueryFromSearch,
   toFoundationRefusal,
 } from "./foundationClient";
@@ -114,6 +115,7 @@ export function JourneyMapRoute() {
   }, [location.search]);
 
   const query = "query" in parsed ? parsed.query : null;
+  const linkProblems = useMemo(() => journeyLinkProblems(location.search), [location.search]);
   const read = useFoundationRead<JourneyResponse>(
     (signal) => {
       if (query === null) return Promise.reject((parsed as { error: unknown }).error);
@@ -127,6 +129,8 @@ export function JourneyMapRoute() {
       descriptor={read.data?.descriptor ?? null}
       inspection={read.data?.inspection ?? null}
       state={read.state}
+      linkProblems={linkProblems}
+      runId={query?.run_id ?? null}
     />
   );
 }

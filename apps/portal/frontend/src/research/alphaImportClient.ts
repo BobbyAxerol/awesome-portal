@@ -21,6 +21,7 @@ import type { components } from "@portal/contracts-research-alpha-import";
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
+import { reportSessionExpired } from "../auth/sessionExpiry";
 
 type Schemas = components["schemas"];
 
@@ -249,6 +250,8 @@ export function toRefusal(error: unknown): ImportRefusal {
       invalidatesSource: false,
     };
   }
+  /* RF01-F3: an expired session goes to the shell's sign-in path. */
+  if (error.status === 401) reportSessionExpired();
   const known = error.code && error.code in REFUSAL ? REFUSAL[error.code as ProblemCode] : null;
   return {
     code: (error.code as ProblemCode | null) ?? null,

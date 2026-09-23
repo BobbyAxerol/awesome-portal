@@ -20,6 +20,7 @@
 
 import type { ReactNode } from "react";
 
+import { refusalDetail, type ResearchRefusal } from "./researchRefusal";
 import type { ResearchState } from "./state";
 
 export interface ResearchPanelProps {
@@ -32,6 +33,13 @@ export interface ResearchPanelProps {
   children?: ReactNode;
   /** Actions the server has admitted. Hidden whenever content is withheld. */
   actions?: ReactNode;
+  /**
+   * The way back from a failed read — "read again", never a content action.
+   * Shown only in `unavailable`, `failed-retryable` and `stale`, where asking
+   * again can change the answer (RF01-F2). Content actions such as Export stay
+   * in `actions` and keep the FE-P03-01 rule.
+   */
+  recovery?: ReactNode;
   /** Minimum body height so the frame does not collapse while loading. */
   minBodyHeight?: number;
 }
@@ -89,6 +97,16 @@ function StateNotice({ state }: { state: ResearchState }) {
             {state.reason}
           </span>
         ) : null}
+        {state.detail ? (
+          <details data-research-detail>
+            <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+              details
+            </summary>
+            <span className="mono break-all text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
+              {state.detail}
+            </span>
+          </details>
+        ) : null}
       </span>
     </div>
   );
@@ -121,17 +139,22 @@ function PanelSkeleton({ height }: { height: number }) {
  */
 const ACTIONABLE = new Set(["available", "stale", "partial"]);
 
+/** States in which reading again can change the answer. */
+const RECOVERABLE = new Set(["unavailable", "failed-retryable", "stale"]);
+
 export function ResearchPanel({
   title,
   meta,
   state,
   children,
   actions,
+  recovery,
   minBodyHeight = 72,
 }: ResearchPanelProps) {
   const contentVisible = showsContent(state);
   const isLoading = state.state === "loading";
   const actionsVisible = ACTIONABLE.has(state.state) && actions !== undefined;
+  const recoveryVisible = !isLoading && RECOVERABLE.has(state.state) && recovery !== undefined;
 
   return (
     <section
@@ -165,6 +188,11 @@ export function ResearchPanel({
         {isLoading ? <PanelSkeleton height={minBodyHeight} /> : null}
         {!isLoading && state.state !== "available" ? <StateNotice state={state} /> : null}
         {!isLoading && contentVisible ? children : null}
+        {recoveryVisible ? (
+          <div className="flex flex-wrap gap-2" data-research-recovery>
+            {recovery}
+          </div>
+        ) : null}
         {actionsVisible ? <div className="flex flex-wrap gap-2 pt-1">{actions}</div> : null}
       </div>
     </section>
@@ -198,5 +226,26 @@ export function ResearchValue({
       {value}
       {unit ? <span style={{ color: "var(--ink-faint)" }}> {unit}</span> : null}
     </span>
+  );
+}
+
+/**
+ * A refusal inside a sub-panel (a slot that failed while the screen stands).
+ *
+ * The fixed sentence reads as the answer; the server's text, code and request
+ * id follow as faint diagnostics, never as the headline (RF01-F4). Inline, so
+ * it can sit inside the paragraph a screen already wraps around it.
+ */
+export function RefusalNote({ refusal }: { refusal: ResearchRefusal }) {
+  const detail = refusalDetail(refusal);
+  return (
+    <>
+      {refusal.message}
+      {detail ? (
+        <span className="mono ml-1 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-refusal-detail>
+          ({detail})
+        </span>
+      ) : null}
+    </>
   );
 }

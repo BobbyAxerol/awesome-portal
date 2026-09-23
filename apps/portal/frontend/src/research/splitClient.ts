@@ -20,7 +20,7 @@ import type { components as SplitComponents } from "@portal/contracts-research-s
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 
 import { PortalApiError } from "../lib/api";
-import type { ResearchState } from "./state";
+import { toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 
 type SplitSchemas = SplitComponents["schemas"];
 type SourceSchemas = CurrentSourceComponents["schemas"];
@@ -207,46 +207,10 @@ export function reasonOf(fact: { reason_code?: string | null; availability?: Spl
  * Refusals
  * ---------------------------------------------------------------------- */
 
-export interface SplitRefusal {
-  code: string | null;
-  message: string;
-  status: number;
-  requestId: string | null;
-  state: ResearchState["state"];
-  mayRetry: boolean;
-  terminal: boolean;
-}
-
-export function toSplitRefusal(error: unknown): SplitRefusal {
-  if (!(error instanceof PortalApiError)) {
-    return {
-      code: null,
-      message: "The request did not reach the server.",
-      status: 0,
-      requestId: null,
-      state: "failed-retryable",
-      mayRetry: true,
-      terminal: false,
-    };
-  }
-  const { status } = error;
-  const denied = status === 401 || status === 403;
-  return {
-    code: error.code,
-    message: error.message,
-    status,
-    requestId: error.requestId,
-    state:
-      denied
-        ? "denied"
-        : status === 404
-          ? "empty"
-          : status === 409
-            ? "stale"
-            : status >= 500
-              ? "unavailable"
-              : "terminal",
-    mayRetry: status >= 500 || status === 409,
-    terminal: denied || status === 404,
-  };
-}
+/**
+ * RF01-F4: one refusal mapper serves every Research surface
+ * (`researchRefusal.ts`). These names stay so existing callers and the
+ * shared-module rule (additive only) hold.
+ */
+export type SplitRefusal = ResearchRefusal;
+export const toSplitRefusal = toResearchRefusal;

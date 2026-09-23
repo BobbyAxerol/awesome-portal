@@ -375,7 +375,8 @@ describe("P09-T03 — a journey deep link inspects and never dispatches", () => 
   });
 
   it("accepts seq and event_seq together only when they agree", () => {
-    expect(journeyQueryFromSearch("?seq=12&event_seq=12")).toEqual({ seq: "12", event_seq: "12" });
+    // p02-cursor.v2: agreeing aliases fold to the one canonical `seq`, as the server does.
+    expect(journeyQueryFromSearch("?seq=12&event_seq=12")).toEqual({ seq: "12" });
     expect(() => journeyQueryFromSearch("?seq=12&event_seq=13")).toThrow(JourneyLinkConflict);
   });
 

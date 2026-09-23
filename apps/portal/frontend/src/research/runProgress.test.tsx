@@ -432,6 +432,51 @@ describe("P11-T02 — a sealed artifact is readiness, not authorization", () => 
   });
 });
 
+describe("RF01-F6 — retained tables go through ArtifactPanel in the authority's six states", () => {
+  const table = (table_kind: string, state: string, sealed: number | null) => ({
+    table_kind,
+    state,
+    total_rows: "9007199254740993",
+    total_bytes: "4096",
+    sealed_at_utc_ms: sealed,
+    reader_href: null,
+  });
+
+  it("draws one ArtifactPanel per retained table, CORRUPT and MISSING included", () => {
+    view({
+      read: read({
+        retained_artifacts: [
+          table("equity", "SEALED", 1789836582123),
+          table("folds", "CORRUPT", 1789836582123),
+          table("trades", "MISSING", 1789836582123),
+          table("trials", "PENDING", null),
+          table("oos", "WRITING", null),
+          table("search", "ABORTED", null),
+        ] as never,
+      }),
+    });
+    const tables = document.querySelector("[data-retained-tables]") as HTMLElement;
+    for (const state of ["SEALED", "CORRUPT", "MISSING", "PENDING", "WRITING", "ABORTED"]) {
+      expect(tables.querySelector(`[data-artifact-state='${state}']`)).toBeTruthy();
+    }
+    // Exact integer strings, never rounded through a float.
+    expect(tables.textContent).toContain("9007199254740993");
+    expect(tables.textContent).toContain("2026-09-19T");
+    // No reader route is published, so nothing is a link or a download.
+    expect(tables.querySelectorAll("a, button")).toHaveLength(0);
+    expect(tables.textContent).toMatch(/has not published an export action/);
+    expect(tables.textContent).not.toMatch(/READY/);
+  });
+
+  it("says an empty list is empty and an absent list is not published", () => {
+    view({ read: read({ retained_artifacts: [] }) });
+    expect(document.querySelector("[data-retained-none]")).toBeTruthy();
+    cleanup();
+    view();
+    expect(document.querySelector("[data-retained-not-published]")).toBeTruthy();
+  });
+});
+
 describe("P11-T03 — the claim is a forecast until the source seals it", () => {
   it("draws a forecast dashed and an issued claim solid", () => {
     const { rerender } = view();

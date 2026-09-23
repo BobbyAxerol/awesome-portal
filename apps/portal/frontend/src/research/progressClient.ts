@@ -24,6 +24,7 @@ import type { components } from "@portal/contracts-research-progress";
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
 import type { ResearchState } from "./state";
+import { reportSessionExpired } from "../auth/sessionExpiry";
 
 type Schemas = components["schemas"];
 
@@ -38,6 +39,8 @@ export type ConsoleLine = Schemas["ConsoleLine"];
 export type CancelResponse = Schemas["CancelResponse"];
 export type Stage = Schemas["Stage"];
 export type Artifact = Schemas["Artifact"];
+/** RF01-B3: one retained table in the artifact authority's six-state vocabulary. */
+export type RetainedArtifact = Schemas["ProgressRetainedArtifact"];
 export type EffectiveStatus = ProgressRead["current"]["effective_status"];
 export type ClaimState = ProgressSnapshot["claim"]["state"];
 
@@ -221,6 +224,8 @@ export function toProgressRefusal(error: unknown): ProgressRefusal {
       closesStream: false,
     };
   }
+  /* RF01-F3: an expired session goes to the shell's sign-in path. */
+  if (error.status === 401) reportSessionExpired();
   const { status } = error;
   const denied = status === 401 || status === 403;
   return {

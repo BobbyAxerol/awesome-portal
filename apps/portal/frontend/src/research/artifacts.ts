@@ -8,18 +8,21 @@
  *
  * Deliberately absent, because P05 forbids them: any filesystem path, database
  * locator, lease epoch, worker identity, HMAC key or raw relation cursor; any
- * direct data request; and any `READY` state — P05 has five states and `READY`
- * is not one of them.
+ * direct data request; and any `READY` state — the authority has six states and
+ * `READY` is not one of them. (RF01-B3 made the sixth, `PENDING`, visible: it
+ * exists only on revision-zero rows inherited from P03, before any byte is
+ * written.)
  *
  * The rule most likely to be lost is the third one below: a candidate sealed on
  * disk is *not* a registered `SEALED` artifact. Offering a download from an
  * unregistered candidate hands the user bytes the authority has not accepted.
  */
 
-/** The exact typed states. There is no `READY`. */
-export type ResearchArtifactState = "WRITING" | "SEALED" | "CORRUPT" | "MISSING" | "ABORTED";
+/** The authority's exact states (`research.artifacts.state`). There is no `READY`. */
+export type ResearchArtifactState = "PENDING" | "WRITING" | "SEALED" | "CORRUPT" | "MISSING" | "ABORTED";
 
 export const RESEARCH_ARTIFACT_STATES: readonly ResearchArtifactState[] = [
+  "PENDING",
   "WRITING",
   "SEALED",
   "CORRUPT",
@@ -71,6 +74,10 @@ export function mayExport(facts: ArtifactFacts): boolean {
 
 function withheldReason(facts: ArtifactFacts): string | null {
   if (mayExport(facts)) return null;
+  /* CORRUPT and MISSING are integrity verdicts, not "not yet sealed": saying
+     "not sealed" would misdescribe a table the authority once accepted. */
+  if (facts.state === "CORRUPT") return "Artifact is CORRUPT: it failed its integrity check. No export is offered.";
+  if (facts.state === "MISSING") return "Artifact is MISSING: its bytes are not where the authority recorded them. No export is offered.";
   if (facts.state !== "SEALED") return `Artifact is ${facts.state}, not sealed.`;
   if (!facts.registered) {
     // The distinction this sentence draws is the whole point of the rule.
@@ -86,7 +93,7 @@ export function artifactPanel(facts: ArtifactFacts): ArtifactPanel {
     retainsPanel: true,
     showsExport: mayExport(facts),
     exportWithheldBecause: withheldReason(facts),
-    inProgress: facts.state === "WRITING",
+    inProgress: facts.state === "WRITING" || facts.state === "PENDING",
     integrityFailure: facts.state === "CORRUPT" || facts.state === "MISSING",
     reason: facts.reason ?? null,
   };

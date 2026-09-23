@@ -18,6 +18,7 @@ import {
   type SearchRefusal,
 } from "./searchClient";
 import { researchState, type ResearchState } from "./state";
+import { refusalState } from "./researchRefusal";
 
 export type LedgerSlot =
   | { state: "idle" }
@@ -81,12 +82,7 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
   }, [runId]);
 
   const state: ResearchState = refusal
-    ? {
-        state: refusal.state,
-        reason: refusal.message,
-        mayRetry: refusal.mayRetry,
-        retainsContent: detail !== null,
-      }
+    ? refusalState(refusal, detail !== null)
     : researchState(
         detail === null
           ? { kind: "in-flight", hasAcceptedResponse: false }

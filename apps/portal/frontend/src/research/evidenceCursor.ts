@@ -19,17 +19,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export const EVIDENCE_STAGES = [
-  "summary",
-  "split",
-  "search",
-  "freeze",
-  "execute",
-  "claim",
-  "atlas",
-] as const;
+import {
+  CURSOR_STAGES,
+  decodeInspectionCursor,
+  encodeInspectionCursor,
+  isCursorStage,
+  type CursorProblem,
+  type CursorStage,
+  type InspectionCursor,
+  type InspectionCursorKey,
+} from "./inspectionCursor";
 
-export type EvidenceStage = (typeof EVIDENCE_STAGES)[number];
+/** The seven tabs of spec 04 — the `stage` key's closed set in `p02-cursor.v2`. */
+export const EVIDENCE_STAGES = CURSOR_STAGES;
+
+export type EvidenceStage = CursorStage;
 
 export interface EvidenceCursor {
   stage: EvidenceStage;
@@ -40,6 +44,13 @@ export interface EvidenceCursor {
   schedule: string | null;
   route: string | null;
   seq: number | null;
+  /**
+   * RF01-F5: cursor keys these screens do not interpret (`study`, `pick`,
+   * `trade`, `mode`, `playback_ordinal`) and any `trial`/`seq` that is a valid
+   * identifier but not a number here. Carried verbatim so a link that passes
+   * through Screen 04 leaves with everything it arrived with. Absent when empty.
+   */
+  carried?: InspectionCursor;
 }
 
 export const DEFAULT_CURSOR: EvidenceCursor = {
@@ -52,64 +63,80 @@ export const DEFAULT_CURSOR: EvidenceCursor = {
   seq: null,
 };
 
-function isStage(value: string): value is EvidenceStage {
-  return (EVIDENCE_STAGES as readonly string[]).includes(value);
-}
+/** Keys these screens read into typed fields; every other codec key is carried. */
+const INTERPRETED = new Set<InspectionCursorKey>(["stage", "fold", "trial", "params", "schedule", "route", "seq", "event_seq"]);
 
-/** A hash key that is present but not a positive integer is dropped, not guessed. */
-function positiveInt(raw: string | null): number | null {
-  if (raw === null) return null;
-  if (!/^\d+$/.test(raw)) return null;
+/** An identifier that is also a positive integer; anything else is not a number here. */
+function positiveInt(raw: string | undefined): number | null {
+  if (raw === undefined || !/^\d+$/.test(raw)) return null;
   const value = Number(raw);
-  return value >= 1 ? value : null;
+  return value >= 1 && Number.isSafeInteger(value) ? value : null;
 }
 
-/**
- * Opaque hash values are echoed, never parsed.
- *
- * `params` is the canonical digest the server minted, `schedule` and `route`
- * are ids it published. The cursor carries them from screen to screen without
- * ever looking inside, so it cannot become a second source of them.
- */
-function opaque(raw: string | null): string | null {
-  if (raw === null) return null;
-  const trimmed = raw.trim();
-  return trimmed.length === 0 ? null : trimmed;
+interface Read {
+  cursor: EvidenceCursor;
+  problems: CursorProblem[];
+}
+
+function readHash(hash: string): Read {
+  const { cursor: decoded, problems } = decodeInspectionCursor(hash);
+  const carried: InspectionCursor = {};
+  for (const [key, value] of Object.entries(decoded) as Array<[InspectionCursorKey, string]>) {
+    if (!INTERPRETED.has(key)) carried[key] = value;
+  }
+
+  const fold = positiveInt(decoded.fold);
+  if (decoded.fold !== undefined && fold === null) {
+    /* `fold` always has a value on these screens, so an unreadable one cannot
+       be carried silently — it is replaced by the default, and said so. */
+    problems.push({ code: "CURSOR_VALUE_UNREADABLE", key: "fold" });
+  }
+  const trial = positiveInt(decoded.trial);
+  if (decoded.trial !== undefined && trial === null) carried.trial = decoded.trial;
+  const seq = positiveInt(decoded.seq);
+  if (decoded.seq !== undefined && seq === null) carried.seq = decoded.seq;
+
+  const cursor: EvidenceCursor = {
+    stage: decoded.stage !== undefined && isCursorStage(decoded.stage) ? decoded.stage : DEFAULT_CURSOR.stage,
+    fold: fold ?? DEFAULT_CURSOR.fold,
+    trial,
+    params: decoded.params ?? null,
+    schedule: decoded.schedule ?? null,
+    route: decoded.route ?? null,
+    seq,
+  };
+  if (Object.keys(carried).length > 0) cursor.carried = carried;
+  return { cursor, problems };
 }
 
 export function parseCursor(hash: string): EvidenceCursor {
-  const params = new URLSearchParams(hash.replace(/^#/, ""));
-  const stage = params.get("stage");
-  return {
-    stage: stage !== null && isStage(stage) ? stage : DEFAULT_CURSOR.stage,
-    fold: positiveInt(params.get("fold")) ?? DEFAULT_CURSOR.fold,
-    trial: positiveInt(params.get("trial")),
-    params: opaque(params.get("params")),
-    schedule: opaque(params.get("schedule")),
-    route: opaque(params.get("route")),
-    seq: positiveInt(params.get("seq")),
-  };
+  return readHash(hash).cursor;
+}
+
+/** What the codec refused in this hash — for the screen's notice, never dropped silently. */
+export function parseCursorProblems(hash: string): CursorProblem[] {
+  return readHash(hash).problems;
 }
 
 /**
- * Serialises a cursor back to a hash.
+ * Serialises a cursor back to a hash, in the codec's canonical order.
  *
  * `stage` and `fold` are always written — spec 04 §3 says a mount with no hash
  * writes the full key set, so a reader who copies the URL after landing gets a
  * link that means the same thing. The optional keys are written only when they
  * hold a value, because `params=` with nothing after it is a claim that the
- * digest is empty rather than unread.
+ * digest is empty rather than unread. Carried keys ride along unchanged.
  */
 export function serializeCursor(cursor: EvidenceCursor): string {
-  const params = new URLSearchParams();
-  params.set("stage", cursor.stage);
-  params.set("fold", String(cursor.fold));
-  if (cursor.trial !== null) params.set("trial", String(cursor.trial));
-  if (cursor.params !== null) params.set("params", cursor.params);
-  if (cursor.schedule !== null) params.set("schedule", cursor.schedule);
-  if (cursor.route !== null) params.set("route", cursor.route);
-  if (cursor.seq !== null) params.set("seq", String(cursor.seq));
-  return `#${params.toString()}`;
+  const wire: InspectionCursor = { ...cursor.carried };
+  wire.stage = cursor.stage;
+  wire.fold = String(cursor.fold);
+  if (cursor.trial !== null) wire.trial = String(cursor.trial);
+  if (cursor.params !== null) wire.params = cursor.params;
+  if (cursor.schedule !== null) wire.schedule = cursor.schedule;
+  if (cursor.route !== null) wire.route = cursor.route;
+  if (cursor.seq !== null) wire.seq = String(cursor.seq);
+  return `#${encodeInspectionCursor(wire)}`;
 }
 
 /** The href a deep dive link carries: the target screen plus this exact cursor. */
@@ -119,6 +146,8 @@ export function deepDiveHref(path: string, cursor: EvidenceCursor): string {
 
 export interface EvidenceCursorController {
   cursor: EvidenceCursor;
+  /** RF01-F5: what the codec refused in the arriving hash, for the screen's notice. */
+  problems: CursorProblem[];
   setStage: (stage: EvidenceStage) => void;
   setFold: (fold: number) => void;
   update: (patch: Partial<EvidenceCursor>) => void;
@@ -138,6 +167,9 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
   const [cursor, setCursor] = useState<EvidenceCursor>(() =>
     typeof window === "undefined" ? seed : { ...seed, ...parseCursor(window.location.hash) },
   );
+  const [problems, setProblems] = useState<CursorProblem[]>(() =>
+    typeof window === "undefined" ? [] : parseCursorProblems(window.location.hash),
+  );
 
   /* Mount writes the full key set even when the reader arrived without a hash,
      so the address bar always describes what is on screen. */
@@ -152,17 +184,31 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
   /* A hash edited by hand, or a back into an earlier replaceState, is still a
      legitimate way to move the cursor. */
   useEffect(() => {
-    const onHashChange = () => setCursor((previous) => ({ ...previous, ...parseCursor(window.location.hash) }));
+    const onHashChange = () => {
+      setCursor((previous) => ({ ...previous, ...parseCursor(window.location.hash) }));
+      setProblems(parseCursorProblems(window.location.hash));
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
   const update = useCallback((patch: Partial<EvidenceCursor>) => {
-    setCursor((previous) => ({ ...previous, ...patch }));
+    setCursor((previous) => {
+      const next = { ...previous, ...patch };
+      /* A key the reader just set is no longer the one the link carried. */
+      if (previous.carried && patch.carried === undefined) {
+        const carried = { ...previous.carried };
+        for (const key of Object.keys(patch)) delete carried[key as InspectionCursorKey];
+        if (Object.keys(carried).length > 0) next.carried = carried;
+        else delete next.carried;
+      }
+      return next;
+    });
   }, []);
 
   return {
     cursor,
+    problems,
     /* Stage is one key of the cursor. Everything else survives the change —
        the invariant spec 04 §2.4 and test T03 are about. */
     setStage: useCallback((stage: EvidenceStage) => update({ stage }), [update]),

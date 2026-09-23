@@ -18,7 +18,7 @@ import { Link } from "react-router-dom";
 import { EChart } from "../charts/EChart";
 import { baseOption, paletteNow, roleColorsNow } from "../charts/theme";
 import { vizTokensFor } from "../styles/tokens";
-import { ResearchPanel } from "./ResearchPanel";
+import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
   SERIES_POINT_CAP,
   WITHHELD_WORDS,
@@ -926,7 +926,7 @@ function SeriesPanel({
         children(slot.series)
       ) : slot?.state === "refused" ? (
         <p className="text-[11px]" style={{ color: "var(--bad)" }} data-series-refusal>
-          {slot.refusal.message}
+          <RefusalNote refusal={slot.refusal} />
         </p>
       ) : slot?.state === "revision-mismatch" ? (
         <p className="text-[11px]" style={{ color: "var(--role-holdout)" }} data-series-mismatch>
@@ -1205,7 +1205,7 @@ function PassportPanel({ slot, onNeeded }: { slot: PassportSlot; onNeeded: () =>
       ) : slot.state === "refused" ? (
         <div className="flex flex-col gap-1" data-passport-refusal>
           <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            {slot.refusal.message}
+            <RefusalNote refusal={slot.refusal} />
           </p>
           <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
             The retained-source lane admits one Advanced-WFO profile and does not admit any other,
@@ -1654,8 +1654,8 @@ export function EvidenceFlow({
         meta={hub?.revision ? `revision ${hub.revision}` : undefined}
         state={state}
         minBodyHeight={260}
-        actions={
-          state.mayRetry && state.state !== "available" ? (
+        recovery={
+          state.mayRetry ? (
             <button
               type="button"
               className="btn-ghost mono text-[10px]"

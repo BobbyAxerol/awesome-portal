@@ -24,7 +24,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip } from "./ProvenanceStrip";
-import { ResearchPanel } from "./ResearchPanel";
+import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
   BLOCKED_NOTE,
   FREEZE_GAP_WORDS,
@@ -245,7 +245,7 @@ function IntegrityPanel({
         </div>
       ) : verify.state === "refused" ? (
         <p className="text-[11px]" style={{ color: "var(--bad)" }} data-verify-refusal>
-          {verify.refusal.message}
+          <RefusalNote refusal={verify.refusal} />
         </p>
       ) : null}
     </section>
@@ -401,7 +401,7 @@ function RetainedPanel({ slot, onNeeded }: { slot: RetainedSlot; onNeeded: () =>
         <RetainedRows freeze={slot.freeze} />
       ) : slot.state === "refused" ? (
         <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-retained-refusal>
-          {slot.refusal.message} The retained-source lane admits one Advanced-WFO profile; for any other
+          <RefusalNote refusal={slot.refusal} /> The retained-source lane admits one Advanced-WFO profile; for any other
           run there is no manifest, row count or batch receipt to compare.
         </p>
       ) : (
@@ -556,8 +556,8 @@ export function FreezeScreen({
         meta={detail?.revision ? `revision ${detail.revision}` : undefined}
         state={state}
         minBodyHeight={240}
-        actions={
-          state.mayRetry && state.state !== "available" ? (
+        recovery={
+          state.mayRetry ? (
             <button type="button" className="btn-ghost mono text-[10px]" data-action="reread" onClick={onReread}>
               reread freeze
             </button>
