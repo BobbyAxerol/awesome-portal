@@ -28,6 +28,15 @@ const EnvSchema = z.object({
   AUTH_MODE: z.enum(AUTH_MODES).default("cloudflare_access_local_password"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   PORTAL_PUBLIC_ORIGIN: z.string().min(1).default("http://localhost:8080"),
+  /**
+   * Research preview only (research-portal): the user a browser without a
+   * session is signed in as, so a quick-look build has no login screen.
+   * Refused at startup unless PORTAL_ENV=local and AUTH_MODE=dev.
+   */
+  PREVIEW_AUTO_LOGIN_USERNAME: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^[a-z][a-z0-9._-]{1,63}$/).optional(),
+  ),
   CLOUDFLARE_TEAM_DOMAIN: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).optional(),
@@ -438,6 +447,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.AUTH_MODE === "dev" && !["local"].includes(config.PORTAL_ENV)) {
     throw new Error("AUTH_MODE=dev is only allowed with PORTAL_ENV=local");
+  }
+  if (config.PREVIEW_AUTO_LOGIN_USERNAME && (config.AUTH_MODE !== "dev" || config.PORTAL_ENV !== "local")) {
+    throw new Error("PREVIEW_AUTO_LOGIN_USERNAME is only allowed with AUTH_MODE=dev and PORTAL_ENV=local");
   }
   if (config.FEATURE_RESEARCH_PROGRESS === "true") {
     if (config.FEATURE_RESEARCH_RUN_PRODUCER !== "true") {

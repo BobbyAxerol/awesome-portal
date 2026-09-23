@@ -518,6 +518,28 @@ export class AuthService {
     return row;
   }
 
+  /**
+   * Research preview only: a session for PREVIEW_AUTO_LOGIN_USERNAME when the
+   * browser has none. loadConfig refuses the setting outside AUTH_MODE=dev +
+   * PORTAL_ENV=local, and an inactive or password-pending account gets none.
+   */
+  async previewAutoSession(devEmail: string | undefined): Promise<SessionResult | null> {
+    const username = this.config.PREVIEW_AUTO_LOGIN_USERNAME;
+    if (!username || this.config.AUTH_MODE !== "dev" || this.config.PORTAL_ENV !== "local") return null;
+    const user = await this.users.findByUsername(username);
+    if (!user || user.status !== "ACTIVE" || user.mustChangePassword) return null;
+    const identity = await this.verifyAccessIdentity(undefined, devEmail);
+    await this.audit.record({
+      eventType: "login_succeeded",
+      actorUserId: user.userId,
+      targetUserId: user.userId,
+      accessSubject: identity.sub,
+      result: "SUCCESS",
+      reasonCode: "PREVIEW_AUTO_LOGIN",
+    });
+    return this.createSession(user, identity, null, undefined);
+  }
+
   private async createSession(
     user: PortalUser,
     identity: VerifiedAccessIdentity,

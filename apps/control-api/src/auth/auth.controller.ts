@@ -40,13 +40,21 @@ export class AuthController {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
 
   @Get("/context")
-  async context(@Req() request: FastifyRequest) {
+  async context(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     const assertion = request.headers[ACCESS_ASSERTION_HEADER] as string | undefined;
     const devEmail =
       this.auth.config.AUTH_MODE === "dev"
         ? (request.headers["x-dev-access-email"] as string | undefined)
         : undefined;
-    const result = await this.auth.context(assertion, sessionTokenFrom(request), devEmail);
+    let result = await this.auth.context(assertion, sessionTokenFrom(request), devEmail);
+    // Research preview only: no login screen on a quick-look build.
+    if (result.state === "APP_LOGIN_REQUIRED" && this.auth.config.PREVIEW_AUTO_LOGIN_USERNAME) {
+      const session = await this.auth.previewAutoSession(devEmail);
+      if (session) {
+        setSessionCookies(reply, session.token, session.csrfToken, session.absoluteExpiresAt);
+        result = await this.auth.context(assertion, session.token, devEmail);
+      }
+    }
     return {
       state: result.state,
       principal: result.principal,

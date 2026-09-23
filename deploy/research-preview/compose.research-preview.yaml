@@ -30,6 +30,9 @@ services:
       PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:?preview needs PORTAL_PUBLIC_ORIGIN}
       FEATURE_RESEARCH_RUN_LIBRARY: ${CONTROL_API_FEATURE_RESEARCH_RUN_LIBRARY:-false}
       FEATURE_RESEARCH_CURRENT_SOURCE: ${CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE:-false}
+      # Quick-look preview: no login screen; the browser is signed in as this
+      # user. The Control API refuses it outside AUTH_MODE=dev + PORTAL_ENV=local.
+      PREVIEW_AUTO_LOGIN_USERNAME: ${PREVIEW_AUTO_LOGIN_USERNAME:-}
 
   # The preview's own bootstrap list: the owner plus one automation account
   # for the real-API browser receipt. No credential is in this file; the
