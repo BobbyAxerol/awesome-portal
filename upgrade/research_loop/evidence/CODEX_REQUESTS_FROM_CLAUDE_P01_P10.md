@@ -54,30 +54,30 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 
 | Id | What | Status |
 |---|---|---|
-| `CG-RF02-06` | Review Claude's backend work under RF-01/RF-02: route gate `e5daa7e2`, Python public Atlas removal `a0d0004d`, cursor codec v2 `c7cc1ceb`/`dbe569e8`, `retained_artifacts` `c0166746`, Atlas facts + every QuantBT 1.1.1 locator `d67a0fb4`, walk-forward options `99d5b2a5`, `config_digest` `996eef6c`, preview auto-login `6a87f77b`. RF02-B1's exit said "reviewer checks each locator" and no review is recorded | OPEN |
-| `CG-RF02-02` | Durable consumer survives idle fetch timeout — `5b2cf660` | OPEN (review) |
-| `CG-RF02-04` | Producer timeline starts at warmup — `12750366` | OPEN (review) |
+| `CG-RF02-06` | Review Claude's backend work under RF-01/RF-02: route gate `e5daa7e2`, Python public Atlas removal `a0d0004d`, cursor codec v2 `c7cc1ceb`/`dbe569e8`, `retained_artifacts` `c0166746`, Atlas facts + every QuantBT 1.1.1 locator `d67a0fb4`, walk-forward options `99d5b2a5`, `config_digest` `996eef6c`, preview auto-login `6a87f77b`. RF02-B1's exit said "reviewer checks each locator" and no review is recorded | ACCEPTED · [RF-03 review](./RF-03/README.md) |
+| `CG-RF02-02` | Durable consumer survives idle fetch timeout — `5b2cf660` | ACCEPTED by code review · NATS image test pending |
+| `CG-RF02-04` | Producer timeline starts at warmup — `12750366` | ACCEPTED · warmup ingress regression |
 | `CG-RF02-01` | Narrow seccomp/AppArmor profile for the P06 namespace child (preview runs unconfined) | OPEN |
 
 ## P02 — requested spec
 
 | Id | Gap → need | Blocks | Done when | Status |
 |---|---|---|---|---|
-| `CG-P02-01` | Generated `RequestedSpec` (`research-preflight.d.ts:348`) makes `$defs` required; `preflight.contract.ts` is `.strict()` → 400. Remove `$defs` from the wire type | S02 preflight on the real API | generated type has no `$defs`; a payload built from the type passes preflight | OPEN |
+| `CG-P02-01` | Generated `RequestedSpec` (`research-preflight.d.ts:348`) makes `$defs` required; `preflight.contract.ts` is `.strict()` → 400. Remove `$defs` from the wire type | S02 preflight on the real API | generated type has no `$defs`; a payload built from the type passes preflight | DELIVERED `3bb91fa5` · `research-preflight.d.ts:RequestedSpec` |
 | `CG-P02-02` | Fields for purge / embargo / label horizon, inner folds (`inner_split_frequency`, `inner_window_mode`, `inner_train_window`) and rolling train width (with P04/P08) | S02 advanced WF, rolling toggle; S05 purge/embargo/inner folds | requested-spec v-next + preflight admission; unsupported values refused with typed reasons | OPEN |
-| `CG-P02-03` | Capital / fee / slippage / sizing target | S02 review row | only if Bobby keeps it (DQ-12) | DQ |
+| `CG-P02-03` | Capital / fee / slippage / sizing target | S02 review row | only if Bobby keeps it (DQ-12) | NOT_PUBLISHED · Bobby DQ-12: leave assumptions row out until versioned requested-spec facts exist |
 
 ## P04 — engine catalog / Atlas
 
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
-| `CG-P04-02` | `mode_1_decay × per_fold_causal` absent from `research-engine-catalog.v1.json:343` though QuantBT 1.1.1 supports it (`walkforward.py:532-545`) — publish it, NOT_ADMITTED with reason if inner-fold fields are missing | S12 Rule One, default chip; S02 schedule options | DQ-10 |
+| `CG-P04-02` | `mode_1_decay × per_fold_causal` absent from `research-engine-catalog.v1.json:343` though QuantBT 1.1.1 supports it (`walkforward.py:532-545`) — publish it, NOT_ADMITTED with reason if inner-fold fields are missing | S12 Rule One, default chip; S02 schedule options | DELIVERED `57cf04ee` · `research-foundation.d.ts:AtlasMode.invalid_schedules` · `{schedule:"per_fold_causal",admission:"NOT_ADMITTED",reason:"...inner_split_frequency...",source:[...]}` |
 | `CG-P04-03` | Reason per invalid schedule (`invalid_schedules[{schedule, reason, source}]`) | S12 struck chips "with the reason" | OPEN |
 | `CG-P04-04` | `oos_use` 4 states + n/a (selection input · withheld until S4 · retrospective · report only) | S12 claim block, S02 claim forecast | OPEN |
-| `CG-P04-05` | `cert_cap`, `avoid_when` typed only as NOT_PUBLISHED: rule they stay unpublished for 1.1.1 (and say so in the contract doc) or allow a value | S12 cap chip, S02/S05 cap | OPEN |
+| `CG-P04-05` | `cert_cap`, `avoid_when` typed only as NOT_PUBLISHED: rule they stay unpublished for 1.1.1 (and say so in the contract doc) or allow a value | S12 cap chip, S02/S05 cap | NOT_PUBLISHED · QuantBT 1.1.1 has no per-mode cert cap or avoid-when guidance; `AtlasNotPublishedFact` reason + cert source locator; see RF-03 packet |
 | `CG-P04-06` | Route description, method (wfo/tape), status word, resolved backend, arbitrage per-spec matrix, `route_params` option lists | S12 routes tab, S02 route grid + 4 route forms | OPEN |
 | `CG-P04-07` | Claims certification qualifier + locators; objective term meanings; mode 2–5 weights | S12 claims tab, term table | OPEN |
-| `CG-P04-08` | Engine sub-stage vocabulary for the S03 stepper | S03 11-pill stepper | DQ-04 |
+| `CG-P04-08` | Engine sub-stage vocabulary for the S03 stepper | S03 11-pill stepper | NOT_PUBLISHED · Bobby DQ-04: five contract stages only; no 11 engine sub-stage source |
 
 ## P05 — artifact authority
 
@@ -91,19 +91,19 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 |---|---|---|---|
 | `CG-P06-01` | Attempt/queue read: ordinal, state, `started_at`/`ended_at` (open since P06, never on the board) | S03 attempts drawer, queued state | OPEN |
 | `CG-P06-02` | Progress channel from the running child (today Popen → wait → terminal receipt only) | S03 live console, tqdm, Gantt fill, cursor | OPEN |
-| `CG-P06-03` | Caps 45 CPU-s / 90 s wall vs a real walk-forward | any non-trivial run | DQ-11 |
-| `CG-P06-04` | Bug: float `cpu_seconds` dropped → usage 0 (`durable_worker.py:716-727`) | S03 budget, usage | OPEN |
-| `CG-P06-05` | Bug: budget/wall kill classified `CAPABILITY_MISMATCH`, code lost (`research_run_producer.py:280-281`, `durable_worker.py:626-640`) | S03 FAILED verbatim error | OPEN |
+| `CG-P06-03` | Caps 45 CPU-s / 90 s wall vs a real walk-forward | any non-trivial run | APPROVED_PENDING_MEASUREMENT · Bobby DQ-11 |
+| `CG-P06-04` | Bug: float `cpu_seconds` dropped → usage 0 (`durable_worker.py:716-727`) | S03 budget, usage | DELIVERED `b0277b4f` |
+| `CG-P06-05` | Bug: budget/wall kill classified `CAPABILITY_MISMATCH`, code lost (`research_run_producer.py:280-281`, `durable_worker.py:626-640`) | S03 FAILED verbatim error | DELIVERED `b0277b4f` |
 
 ## P07 — alpha import
 
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
-| `CG-P07-02` | v1 file contract (literal `ALPHA_CONTRACT` + one function) vs the HiFi's class/dataclass module | S14 anatomy, entrypoint card | DQ-05 |
+| `CG-P07-02` | v1 file contract (literal `ALPHA_CONTRACT` + one function) vs the HiFi's class/dataclass module | S14 anatomy, entrypoint card | NOT_PUBLISHED · Bobby DQ-05: v1 literal ALPHA_CONTRACT and one function; class/dataclass not a published parser variant |
 | `CG-P07-03` | Mirror: add `version`; HiFi's 14 fields where the source has them; per-field check verdict + note | S14 mirror table | OPEN |
 | `CG-P07-04` | Gates: `RUNNING`, analyser time per gate, `QUARANTINED_*` codes, parse `expires_at`, declared digest to verify | S14 pipeline card | OPEN |
 | `CG-P07-05` | `RegistryEntry`: `supersedes`, display name, `strategy_id`, `warmup_bars`, `required_columns`, full digest | S02 context/strategy/data steps, S14 registry strip | OPEN (strategy_id: DQ-07) |
-| `CG-P07-06` | `may_activate` ignores lifecycle; confirm register/activate authority vs HiFi "owner-only" | S14 activate affordance | OPEN |
+| `CG-P07-06` | `may_activate` is actor permission; combine with typed lifecycle DRAFT for first-activation affordance; ACTIVE exact replay remains idempotent | S14 activate affordance | DELIVERED `8f0c4c4e` · `research-alpha-import.d.ts:RegistryEntry`; [RF-03 ruling](./RF-03/README.md) |
 
 ## P08 — data / preflight
 
@@ -119,21 +119,21 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
-| `CG-P09-03` | Descriptor availability: New Run, Run Progress (and every mounted screen) → `AVAILABLE` | S00 cards show SOON on working screens | OPEN |
-| `CG-P09-04` | Descriptor v2 = HiFi 00 (8 phases, 27 cards, names verbatim), schema: `revision` integer, `maxItems` ≥ 12, mapping table, `target_fragment`, `requires_run`; new migration row | S00 whole map | DQ-03 |
-| `CG-P09-05` | Atlas contract fixes 14/5/7 while the manifest allows 32/8/16 | S12 T06 | OPEN |
-| `CG-P09-06` | Historical release returns 1.1.1 facts under a 1.0.8 label | S12 historical chip | OPEN |
-| `CG-P09-02` | Canonical fixtures for journey/atlas/preflight | fixture lanes | OPEN |
+| `CG-P09-03` | Descriptor availability: New Run, Run Progress (and every mounted screen) → `AVAILABLE` | S00 cards show SOON on working screens | DELIVERED `ea221dc2` · FE route-map consumption pending |
+| `CG-P09-04` | Descriptor v2 = HiFi 00 (8 phases, 28 actual HiFi cards, names verbatim), schema: `revision` integer, `maxItems` ≥ 12, mapping table, `target_fragment`, `requires_run`; new migration row | S00 whole map | DELIVERED `ea221dc2` · `research-foundation.d.ts:JourneyResponse` |
+| `CG-P09-05` | Atlas contract fixes 14/5/7 while the manifest allows 32/8/16 | S12 T06 | DELIVERED `ea221dc2` · `research-foundation.d.ts:Atlas` |
+| `CG-P09-06` | Historical release returns 1.1.1 facts under a 1.0.8 label | S12 historical chip | DELIVERED `ea221dc2` · `research-foundation.d.ts:AtlasResponse` |
+| `CG-P09-02` | Canonical fixtures for journey/atlas/preflight | fixture lanes | PARTIAL `5069b39a` · Journey v2 + historical Atlas pinned; preflight response fixture still OPEN |
 
 ## P10 — run creation / producer
 
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
-| `CG-P10-02` | Create admits only the fixed Delta profile (`run-admission.service.ts:109-128,165-176`); imported/DRAFT av_, overrides, trials > 1, advanced WF, 12 routes all refused. Adapter ownership conflicts (P07 says P10, P10 says P12/P19) | S02 real creation beyond the fixed profile; S14 → S02 | DQ-11 |
-| `CG-P10-03` | Imported av_ gets `PREFLIGHT_NOT_READY` "no longer available" — return the real code (adapter unavailable / not active) | S02 refusal text | OPEN |
+| `CG-P10-02` | Create admits only the fixed Delta profile (`run-admission.service.ts:109-128,165-176`); imported/DRAFT av_, overrides, trials > 1, advanced WF, 12 routes all refused. Adapter ownership conflicts (P07 says P10, P10 says P12/P19) | S02 real creation beyond the fixed profile; S14 → S02 | APPROVED_PENDING_IMPLEMENTATION · Bobby DQ-11 |
+| `CG-P10-03` | Imported av_ gets `PREFLIGHT_NOT_READY` "no longer available" — return the real code (adapter unavailable / not active) | S02 refusal text | DELIVERED `f8217217` |
 | `CG-P10-04` | Producer emits no progress facts: `fold_segment_observed`, `eta_s`, rate, `budget_tick`, claim + cursor on `run_completed`, all bundle files journaled; `tqdm_line`/`overall_pct` are literals | S03 progress, Gantt, claim hand-off | OPEN |
-| `CG-P10-05` | Create ignores mode/schedule and the producer never reads them — confirm and refuse mismatches | S02 claim forecast truth | OPEN |
-| `CG-P10-06` | Cancelled-before-progress run stays `PENDING_SOURCE_CALLBACK`; QUEUED job returns `progress: null` | S03 cancelled/queued states | OPEN |
+| `CG-P10-05` | Create ignores mode/schedule and the producer never reads them — confirm and refuse mismatches | S02 claim forecast truth | DELIVERED `f8217217` · fixed-mode mismatch refused |
+| `CG-P10-06` | Cancelled-before-progress run stays `PENDING_SOURCE_CALLBACK`; QUEUED job returns `progress: null` | S03 cancelled/queued states | DELIVERED `3bb91fa5` · `research-progress.d.ts` availability |
 
 ## P11 dependency (S03 read)
 
