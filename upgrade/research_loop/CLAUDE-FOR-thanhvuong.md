@@ -10,7 +10,28 @@
 
 # A. RULES ĐANG ÁP DỤNG CHO THANHVUONG
 
-**Bổ sung quy tắc nhánh theo chỉ đạo mới nhất của Bobby:** `dev` là nhánh tích hợp và baseline của thanhvuong, không phải nhánh để commit trực tiếp. Thanhvuong được tạo nhánh feature/phase riêng từ `primus-origin/dev`; mọi PR của thanhvuong chỉ được nhắm vào `dev`. Không commit/push/merge trực tiếp vào `dev` hoặc `main`. Chỉ Bobby được mở PR đưa `dev` lên `main` và merge PR đó khi Bobby xác nhận `dev` đã sẵn sàng. Quy tắc này thay giới hạn cũ “chỉ dùng một assigned campaign branch”; chi tiết và giới hạn quyền thực tế ở A6.
+## A0. Active campaign assignment — frontend P17–P21
+
+**Chỉ đạo cụ thể mới nhất của Bobby, có hiệu lực ưu tiên trong campaign này:**
+mọi câu ở phần A về baseline/PR `dev`, cadence hai phase hoặc tự tạo branch
+được **thay thế cho duy nhất scope frontend P17–P21** bằng các điều kiện dưới
+đây. Các rules an toàn khác vẫn giữ nguyên.
+
+| Item | Quy tắc bắt buộc |
+|---|---|
+| Research integration baseline | `primus-origin/docs/research-loop-plan` tại exact SHA do Bobby provision |
+| Working branch duy nhất | `feat/thanhvuong/research-p17-p21`, do Bobby tạo từ baseline trên |
+| Scope | Frontend/typed-client integration P17, P18, P19, P20, P21; P16 chỉ đọc để không regress; không mở P22 |
+| Handoff/PR target | Một PR duy nhất: `feat/thanhvuong/research-p17-p21` → `docs/research-loop-plan` |
+| Cấm | Direct write/merge vào `docs/research-loop-plan`, `dev`, `main`; thay base; rebase/force-push; backend contract/runtime/migration/deployment/Execution changes |
+
+Thanhvuong không tự tạo branch phụ hoặc đổi target PR. Nếu Research baseline di
+chuyển trong khi campaign đang review, báo Bobby exact base/head SHA; Bobby
+quyết định integration, không tự merge/rebase để đuổi theo. Khi và chỉ khi
+Bobby xác nhận toàn bộ Research campaign đủ điều kiện, Bobby tự quyết đường
+integration `docs/research-loop-plan` → `dev` → `main`.
+
+**General policy outside A0:** `dev` is normally the integration branch and contributor baseline, never a direct-commit branch. The active P17–P21 assignment in A0 overrides this paragraph and all conflicting `dev`-base/PR wording in part A; do not combine the two workflows.
 
 ## A1. Nhận diện người dùng và workspace trước mọi thay đổi
 
