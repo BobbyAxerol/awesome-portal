@@ -441,7 +441,14 @@ class ResearchRunProducerExecutor:
                     },
                 },
             },
-            "timeline": range_document(is_start, holdout_end),
+            # RS-01 made the ingress contract explicit: when warmup bars exist
+            # the timeline starts at the warmup, and every window is contiguous
+            # with the next. Starting it at IS made every real terminal event
+            # with warmup fail ingestion (found on the RF-02 real-API lane).
+            "timeline": range_document(
+                tape_counts.warmup_start if tape_counts.warmup_bars else is_start,
+                holdout_end,
+            ),
             "windows": {
                 "warmup": warmup,
                 "is": {

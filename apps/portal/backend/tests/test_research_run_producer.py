@@ -249,6 +249,17 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
         "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED",
     }
     assert split["protocol"]["selection"]["state"] == "FIXED_PROFILE_NO_SEARCH"
+    # The chronology the Control API ingress enforces (RS-01): the timeline
+    # starts at the warmup when warmup exists, and every window meets the next.
+    windows = split["windows"]
+    warmup = windows["warmup"]
+    expected_start = warmup["start_utc_ms"] if warmup["state"] == "AVAILABLE" else windows["is"]["start_utc_ms"]
+    assert split["timeline"]["start_utc_ms"] == expected_start
+    if warmup["state"] == "AVAILABLE":
+        assert warmup["end_exclusive_utc_ms"] == windows["is"]["start_utc_ms"]
+    assert windows["is"]["end_exclusive_utc_ms"] == windows["outer_oos"]["start_utc_ms"]
+    assert windows["outer_oos"]["end_exclusive_utc_ms"] == windows["holdout"]["start_utc_ms"]
+    assert split["timeline"]["end_exclusive_utc_ms"] == windows["holdout"]["end_exclusive_utc_ms"]
     assert len(json.dumps(split, sort_keys=True, separators=(",", ":")).encode("utf-8")) <= 16 * 1024
 
     # The sealed bundle is a future authorized read surface, not a copy of the
@@ -722,3 +733,49 @@ async def test_p10_t06_private_ingress_requires_exact_signed_authn_and_never_fal
     assert [(subject, message["run_id"]) for subject, message in broker.published] == [
         ("quant.run.requested.research", "rrun_p10_private")
     ]
+
+
+def test_rf02_p14_split_source_timeline_starts_at_warmup_when_warmup_exists() -> None:
+    """RS-01's ingress rule, on the producer side (found on the RF-02 real-API lane).
+
+    The Control API refuses a terminal split receipt whose timeline does not
+    start at the warmup when warmup bars exist. The P04 Delta adapter always
+    has warmup, so a producer that started the timeline at IS left every real
+    run RUNNING with its terminal event rejected.
+    """
+
+    from portal_api.services.research_run_producer import ResearchRunProducerExecutor, TapeWindowCounts
+
+    request = ResearchRunProducerRequest.model_validate(
+        _request(snapshot_id="dss_" + "0" * 32, snapshot_content_hash="d" * 64)
+    )
+    warmup_start = pd.Timestamp("2023-12-19T12:00:00Z")
+    is_start = pd.Timestamp("2024-01-01T00:00:00Z")
+    oos_start = pd.Timestamp("2024-01-08T00:00:00Z")
+    oos_end = pd.Timestamp("2024-01-15T00:00:00Z")
+    holdout_end = pd.Timestamp("2024-01-22T00:00:00Z")
+    ms = lambda ts: int(ts.value // 1_000_000)  # noqa: E731
+
+    with_warmup = ResearchRunProducerExecutor._p14_split_source(
+        request=request,
+        tape_counts=TapeWindowCounts(warmup_bars=300, warmup_start=warmup_start, is_bars=168, outer_oos_bars=168),
+        is_start=is_start,
+        oos_start=oos_start,
+        oos_end=oos_end,
+        holdout_end=holdout_end,
+        source_transform_digest="e" * 64,
+    )
+    assert with_warmup["windows"]["warmup"]["state"] == "AVAILABLE"
+    assert with_warmup["timeline"] == {"start_utc_ms": ms(warmup_start), "end_exclusive_utc_ms": ms(holdout_end)}
+    assert with_warmup["windows"]["warmup"]["end_exclusive_utc_ms"] == with_warmup["windows"]["is"]["start_utc_ms"]
+
+    without_warmup = ResearchRunProducerExecutor._p14_split_source(
+        request=request,
+        tape_counts=TapeWindowCounts(warmup_bars=0, warmup_start=None, is_bars=168, outer_oos_bars=168),
+        is_start=is_start,
+        oos_start=oos_start,
+        oos_end=oos_end,
+        holdout_end=holdout_end,
+        source_transform_digest="e" * 64,
+    )
+    assert without_warmup["timeline"]["start_utc_ms"] == ms(is_start)
