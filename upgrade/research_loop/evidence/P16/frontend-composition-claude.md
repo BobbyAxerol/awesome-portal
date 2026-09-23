@@ -114,9 +114,29 @@ reader just triggered carries the qualification that belongs to it.
 *Actual:* absent; the screen shows the snapshot's scope beside the result, which
 is correct today only because both come from the same run at the same moment.
 
+## Re-audit, 2026-09-23 (`bdeb0268`)
+
+Read back against this phase's handoff, spec and hi-fi. What the first pass
+missed, and what was done about it:
+
+| Finding | Fix |
+|---|---|
+| Provenance was rendered nowhere, including `p14_split_revision` and `source_split_digest` | shared `ProvenanceStrip` disclosure |
+| A window's `evaluation_state`, the frozen table's `bound_state`, the contract's `readiness` and the verification's own `freeze_revision` were all unread | each rendered; the fixture now publishes an `evaluation_state` so the browser asserts it |
+| The title was paraphrased; spec 07 §2.1 fixes it | restored verbatim: "S3 · Freeze — ordering & integrity" |
+| The verify button read "verify again"; spec 07 §7 fixes "verify now" | corrected |
+| Spec 07 §2.2's two-clock note was absent | rendered verbatim, followed by the fact that only one of those clocks is published for this run |
+| Spec 07 §2.1's subtitle is **not** rendered | it asserts "Selection closed before any out-of-sample bar was read", which is exactly the ordering `ordering.state = NOT_ASSERTED` refuses to claim and the handoff forbids. The reason sits in the file where the string would have gone |
+| No hard-refresh, keyboard-name or ETag check in the browser lane | all three added |
+
+Counts after the audit: **24 unit tests**, **8 browser tests**, suite 2920
+passed, probe 74 passed.
+
 ## Not claimed
 
 Fixture receipts only; no backend called, `REAL_API_E2E_RECEIPT` not claimed.
 No visual baseline re-recorded, no threshold widened. The Astra items reopened
 for P16 are backend remediation and are not closed by this screen. Screen 08
 has no route, so no next-stage navigation is wired from here.
+
+All open requests from this phase are consolidated in [the Codex request list](../CODEX_REQUESTS_FROM_CLAUDE_P13_P16.md).

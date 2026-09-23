@@ -118,6 +118,21 @@ metric.
 *Actual:* neither, so the formula panel and the metric chip are both absent.
 Nothing is inferred from the mode name in the meantime.
 
+## Re-audit, 2026-09-23 (`bdeb0268`)
+
+Read back against this phase's handoff, spec and hi-fi. What the first pass
+missed, and what was done about it:
+
+| Finding | Fix |
+|---|---|
+| Provenance was rendered nowhere | shared `ProvenanceStrip` disclosure |
+| `readiness` was never shown, though the contract publishes it — and `PARTIAL` here means a source that published a profile and no study, not a partial failure | readiness chip in the source strip |
+| Spec 06 §10's switcher note was absent | its second half is rendered verbatim — "a real run's mode is fixed at submit" — and the first half, which points at a demo control this route does not have, is dropped with the reason in the file |
+| No hard-refresh, keyboard-name or ETag check in the browser lane | all three added |
+
+Counts after the audit: **21 unit tests**, **8 browser tests**, suite 2920
+passed, probe 74 passed.
+
 ## Not claimed
 
 Fixture receipts only; no backend called, `REAL_API_E2E_RECEIPT` not claimed.
@@ -125,3 +140,5 @@ No visual baseline re-recorded, no threshold widened. The Astra items reopened
 for P15 (A09 Portal producer/retention/ledger integration) are backend work and
 are not closed by this screen. Screen 07 has no route yet at this commit, so
 the next-stage navigation is not wired from here.
+
+All open requests from this phase are consolidated in [the Codex request list](../CODEX_REQUESTS_FROM_CLAUDE_P13_P16.md).

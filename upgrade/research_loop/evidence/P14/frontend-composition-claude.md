@@ -125,6 +125,21 @@ Not requested, deliberately: purge, embargo, inner folds, θ* per fold and the
 gap scan. The contract states the current source publishes none of them, and
 the handoff says to keep them as typed gaps — which is what they are.
 
+## Re-audit, 2026-09-23 (`bdeb0268`)
+
+Read back against this phase's handoff, spec and hi-fi. What the first pass
+missed, and what was done about it:
+
+| Finding | Fix |
+|---|---|
+| Provenance was rendered nowhere: `source_adapter_id`, `engine_version`, `input_scope` and five digests all went unread, though spec 05 §2.1 gives the header a `fold_plan` digest chip | shared `ProvenanceStrip` disclosure, with requested and effective spec as two separate facts |
+| `windows.holdout.result_exposure_state` was not shown — two of the handoff's three exposure facts were on screen, not three | third chip beside the other two |
+| Spec 05 §2.3's ×6 purge/embargo lens is not built | the source publishes no purge or embargo span, so there is nothing to magnify; the hairline floor and its badge serve the same rule for the windows that do exist. Recorded, not hidden |
+| No hard-refresh, keyboard-name or ETag check in the browser lane | all three added |
+
+Counts after the audit: **28 unit tests**, **10 browser tests** (6 S05 + the
+shared refresh/provenance pair), suite 2920 passed, probe 74 passed.
+
 ## Not claimed
 
 Fixture receipts only; no backend was called and `REAL_API_E2E_RECEIPT` is not
@@ -133,3 +148,5 @@ Screen 05 is not in the immutable visual suite. The Astra `AUDIT_REOPENED`
 items for P14 (A03 range validation, warmup/data-use proof, supported fold
 mapping) are backend remediation and are not closed by this screen. Screens 06
 and 07 have no route yet, so the next-stage navigation is not wired.
+
+All open requests from this phase are consolidated in [the Codex request list](../CODEX_REQUESTS_FROM_CLAUDE_P13_P16.md).
