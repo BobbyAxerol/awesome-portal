@@ -760,18 +760,13 @@ describe("P13-T09 — the header is the Hub's own, fact by fact", () => {
 });
 
 describe("P13-T11 — a deep dive is a link once its screen exists", () => {
-  it("still refuses the one screen that has no route", () => {
-    const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "execute" } });
-    const dive = container.querySelector("[data-deep-dive='execute']");
-    expect(dive?.tagName).toBe("SPAN");
-    expect(dive?.getAttribute("title")).toContain("no published route yet");
-  });
-
-  it("links the three that do", () => {
+  /* P17 published Screen 08's route, so the last refused deep dive is a link. */
+  it("links all four, including Execute since P17", () => {
     for (const [stage, path] of [
       ["split", "split"],
       ["search", "search"],
       ["freeze", "freeze"],
+      ["execute", "execute"],
     ] as const) {
       const { container, unmount } = view({ cursor: { ...DEFAULT_CURSOR, stage } });
       const dive = container.querySelector(`[data-deep-dive='${stage}']`);

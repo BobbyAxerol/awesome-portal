@@ -52,6 +52,7 @@ import { EvidenceFlowRoute } from "../../research/EvidenceFlowRoute";
 import { SplitRoute } from "../../research/SplitRoute";
 import { SearchRoute } from "../../research/SearchRoute";
 import { FreezeRoute } from "../../research/FreezeRoute";
+import { ExecuteRoute } from "../../research/ExecuteRoute";
 import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
@@ -243,7 +244,7 @@ export function QuantBTModule() {
     /* Screen 03 reads a P11 run through its own contract. The legacy passport
        fetch would ask `/api/runs/{id}` for a run that legacy store never had,
        which is the same defect one level down. */
-    if (/\/runs\/[^/]+\/(progress|evidence|split|search|freeze)(\/|$)/.test(location.pathname)) return null;
+    if (/\/runs\/[^/]+\/(progress|evidence|split|search|freeze|execute)(\/|$)/.test(location.pathname)) return null;
     return segment;
   }, [location.pathname]);
 
@@ -359,6 +360,9 @@ export function QuantBTModule() {
         <Route path="runs/:runId/search" element={<SearchRoute />} />
         {/* P16 · Screen 07. */}
         <Route path="runs/:runId/freeze" element={<FreezeRoute />} />
+        {/* P17 · Screen 08. Before this route existed the path fell through to
+          * `runs/:runId/*` and the legacy workspace. */}
+        <Route path="runs/:runId/execute" element={<ExecuteRoute />} />
         {/* Screen 14's canonical route, resolved as `FD-P09-02`: under QuantBT
           * rather than under the still-COMMISSIONED ALPHA_POOL feature.
           * Legacy `imports` below is untouched. */}

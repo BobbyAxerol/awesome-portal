@@ -82,7 +82,7 @@ const DEEP_DIVE: Partial<Record<EvidenceStage, { screen: string; path: string | 
   split: { screen: "05 Split", path: "split" },
   search: { screen: "06 Search", path: "search" },
   freeze: { screen: "07 Freeze", path: "freeze" },
-  execute: { screen: "08 Execute", path: null },
+  execute: { screen: "08 Execute", path: "execute" },
 };
 
 /**

@@ -721,6 +721,16 @@ export function FreezeScreen({
         >
           ← S2 Search
         </Link>
+        <span style={{ color: "var(--line-strong)" }}>·</span>
+        {/* P17 · spec 08 §1 inbound "07 next-stage". */}
+        <Link
+          to={deepDiveHref(`/research/quantbt/runs/${encodeURIComponent(runId)}/execute`, { ...cursor, stage: "execute" })}
+          className="mono"
+          style={{ color: "var(--accent)" }}
+          data-action="next-execute"
+        >
+          next: S4 Execute →
+        </Link>
       </nav>
 
       <div className="flex flex-col gap-1">
