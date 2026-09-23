@@ -84,3 +84,16 @@ Contract side (generated, additive): `research-progress` gains
 `ProgressRetainedArtifact` + optional `retained_artifacts`;
 `research-foundation` gains `CursorStage`, the `stage` query parameter and
 optional `InspectionCursor.codec`.
+
+## Addendum — RF-02 shared-module changes (Claude, 2026-09-23)
+
+Additive again; old names and APIs kept. Packet: [RF-02](./evidence/RF-02/README.md).
+
+| Module | Change | For S08–S11/S13 |
+|---|---|---|
+| `researchRefusal.ts` | 34 surface codes now, including the six `RESEARCH_CURRENT_SOURCE_*`. On current-source reads `CONFLICT` means **pending retention** (state `unavailable`, its own sentence), not "changed since read" | S08 replay and S11 evidence pack read retained source: use `toResearchRefusal`, never write your own sentence for that 409 |
+| `Formula.tsx` (new) | KaTeX 0.16.47 as a lazy chunk with a mono fallback; `formulaToTex` maps only identifiers, `*`, `max` and operators | Use it for any engine formula; never hand-write LaTeX for an engine fact |
+| `EngineAtlas.tsx` | Hash is `#tab=&mode=&schedule=&route=&run=`; `atlasHash` / `atlasLocationFromHash` exported | Link to the Atlas with `run=` so its breadcrumb and deep links return to your run |
+| `EvidenceFlow.tsx` | Chart companion tables are wrapped in `div.sr-only` (a `<table>` does not clip); metric values wrap instead of overflowing | Do the same for any exact-value table or tile: real runs carry 40+ digit decimals |
+| Atlas contract | `current_release.walk_forward_options`, `current_release.config_digest`, `modes[].facts` (optional, additive) | S13 compare can name a run's mode × schedule claim from `facts` instead of composing one |
+| Real-API lane | `playwright.research-preview.config.ts` + `e2e/_preview-research-real-api.spec.ts` against the preview stack | Add S08–S11/S13 to `SCREENS` when their flags are on in a preview; list any expected typed refusal in `EXPECTED_REFUSALS` with the sentence the screen must show |

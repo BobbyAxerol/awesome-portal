@@ -197,5 +197,15 @@
       "status": "RESOLVED_BY_P02_SHARED_STATE_CONTRACT",
       "P01_resolution": "P02 adds Research Screen State Semantics v1 and amends S02/S11 specifications and test matrices. Per-screen UI implementation and browser evidence remain owned by their listed phases; no runtime behavior is inferred."
     }
-  ]
+  ],
+  "closure_notes": [
+    {
+      "finding_id": "P01-GAP-03",
+      "as_of": "2026-09-23",
+      "state_now": "RESOLVED",
+      "evidence": "RF-02 real-API lane (770dfbcd): isolated preview stack portal-research-preview built from ae5638b7, real BFF sign-in, one real P04 run through P10→P06→P11→P13/P14, REAL_API_E2E_RECEIPT 16/16 for S01–S07, S02, S12 at 1280/660. Packet: upgrade/research_loop/evidence/RF-02/README.md.",
+      "recorded_by": "Claude, RF-02"
+    }
+  ],
+  "closure_notes_rule": "Append-only. findings keep their P01 state; the latest closure_notes entry per finding_id is the current state."
 }
