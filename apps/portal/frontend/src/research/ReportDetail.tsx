@@ -111,7 +111,11 @@ export const ANNOTATION_TITLE = "approval annotation — stored separately, not 
  * print, so no shell logic changes.
  */
 const SHEET_CSS = `
-.rr-page { color: var(--ink); font-size: 12px; line-height: 1.5; }
+.rr-page { color: var(--ink); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+/* Sealed identifiers (revisions, digests, ETags, job ids, filenames) are
+   unbroken 64–70 character tokens. They wrap, in full, on screen and on
+   paper; nothing on the sheet clips or shortens them. */
+.rr-long { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }
 .rr-noprint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 18px;
   background: var(--paper-sunken); border: 1px solid var(--line); border-radius: 6px 6px 0 0; font-size: 12px; color: var(--ink-soft); }
 .rr-noprint a { color: var(--accent); text-decoration: none; }
@@ -125,23 +129,24 @@ const SHEET_CSS = `
   border: 1px solid var(--line); border-top: 0; display: flex; flex-direction: column; gap: 10px; }
 .rr-mono { font-family: var(--font-mono); }
 .rr-keep { break-inside: avoid; }
-.rr-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px;
+.rr-head { display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: flex-start; gap: 16px;
   border-bottom: 1px solid var(--ink); padding-bottom: 10px; position: relative; }
 .rr-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4px; border-top: 1px solid var(--ink); }
 .rr-kicker { font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
 .rr-title { font-family: var(--font-display); font-size: 24px; font-weight: 400; margin: 2px 0 0; }
 .rr-runchip { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
 .rr-meta { font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-soft); margin-top: 3px; word-break: break-all; }
+.rr-head-text { flex: 1 1 0; min-width: 0; }
 .rr-cert { flex: none; text-align: center; border: 2px solid var(--accent-2); border-radius: 8px; padding: 8px 18px; max-width: 220px; }
 .rr-cert .k { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
-.rr-block { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.rr-block { border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
 .rr-block > .t { padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--paper-sunken); font-size: 9.5px;
-  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; border-radius: 5px 5px 0 0; }
 .rr-block > .b { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
 .rr-passport { border: 1.5px solid var(--accent-2); border-radius: 8px; padding: 12px 14px; background: var(--paper-raised); }
 .rr-passport .t { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-2); font-weight: 600; }
 .rr-passport .row { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.7; word-break: break-all; }
-.rr-id { display: grid; grid-template-columns: 170px 1fr; row-gap: 3px; column-gap: 14px; }
+.rr-id { display: grid; grid-template-columns: 170px minmax(0, 1fr); row-gap: 3px; column-gap: 14px; }
 .rr-id .k { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
 .rr-id .v { font-family: var(--font-mono); font-size: 10.5px; word-break: break-all; }
 .rr-headline { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
@@ -181,8 +186,12 @@ const SHEET_CSS = `
   .rr-headline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rr-id { grid-template-columns: 1fr; }
   .rr-noprint .rr-note { margin-left: 0; }
+  .rr-head { flex-wrap: wrap; }
+  .rr-head-text { flex: 1 1 100%; }
 }
 @media print {
+  /* Hi-fi <doc-page margin="0.55in">; doc-page is not used, so this route owns the page box. */
+  @page { margin: 0.55in; }
   html[data-research-print-sheet] .portal-module-header,
   html[data-research-print-sheet] .portal-crosslinks { display: none !important; }
   html[data-research-print-sheet] .portal-content { padding: 0 !important; max-width: none !important; }
@@ -192,7 +201,9 @@ const SHEET_CSS = `
   .rr-screen { max-width: none; margin: 10px 0 0; }
   .rr-page a { color: inherit !important; text-decoration: none !important; }
   .rr-headline { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .rr-id { grid-template-columns: 170px 1fr; }
+  .rr-id { grid-template-columns: 170px minmax(0, 1fr); }
+  .rr-head { flex-wrap: nowrap; }
+  .rr-head-text { flex: 1 1 0; }
 }
 `;
 
@@ -337,22 +348,22 @@ function NoPrintBar({
 function Header({ runId, report }: { runId: string; report: ReportDetail | null }) {
   return (
     <header className="rr-head rr-keep" data-panel="header">
-      <div className="min-w-0">
+      <div className="rr-head-text" data-head-text>
         <div className="rr-kicker">Quant Ecosystem Portal · Backtest Evidence Report</div>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 className="rr-title">{REPORT_TITLE}</h1>
-          <span className="rr-runchip" data-run-chip>
+          <span className="rr-runchip rr-long" data-run-chip>
             {report?.run_id ?? runId}
           </span>
         </div>
         {report ? (
-          <div className="rr-meta" data-meta>
+          <div className="rr-meta rr-long" data-meta>
             sealed {iso(report.sealed_at_utc_ms)} · report revision {report.report_revision} ·{" "}
             {report.presentation_revision} · source profile {report.frozen_core.report_source}
           </div>
         ) : null}
       </div>
-      <div className="rr-cert" data-cert>
+      <div className="rr-cert" data-cert data-cert-box>
         <div className="k">certification</div>
         <div className="rr-absent" style={{ fontSize: 12 }} title={CERTIFICATION_ABSENT}>
           not published
@@ -369,7 +380,7 @@ function Passport({ core }: { core: FrozenCore }) {
       <h2 className="t">{PASSPORT_TITLE}</h2>
       <div className="mt-1 flex flex-col">
         {core.passport.map((fact, index) => (
-          <div key={index} className="row" data-passport-fact={index + 1} data-fact-state={fact.state}>
+          <div key={index} className="row rr-long" data-passport-fact={index + 1} data-fact-state={fact.state}>
             <span style={{ color: "var(--ink-faint)" }}>fact {index + 1} — </span>
             {fact.state === "AVAILABLE" && fact.text !== null ? (
               <b>{fact.text}</b>
@@ -391,7 +402,7 @@ function Identity({ core }: { core: FrozenCore }) {
         {core.identity.map((field) => (
           <div key={field.key} className="contents" data-identity={field.key}>
             <dt className="k">{field.label}</dt>
-            <dd className="v">
+            <dd className="v rr-long">
               {field.value !== null && field.availability.state === "AVAILABLE" ? (
                 field.value
               ) : (
@@ -642,7 +653,9 @@ function Artifacts({ core }: { core: FrozenCore }) {
             {core.artifacts.map((artifact) => (
               <tr key={artifact.key} data-artifact={artifact.key} data-artifact-state={artifact.state}>
                 <td>{ARTIFACT_LABEL[artifact.key]}</td>
-                <td>{artifact.digest ?? <span className="rr-absent">not published</span>}</td>
+                <td className="rr-long" data-artifact-digest>
+                  {artifact.digest ?? <span className="rr-absent">not published</span>}
+                </td>
                 <td>
                   {artifact.state === "SEALED" ? (
                     ARTIFACT_STATE_WORDS.SEALED
@@ -695,30 +708,30 @@ function Provenance({ core }: { core: FrozenCore }) {
   const absences = Object.entries(core.source_absences);
   return (
     <Block panel="provenance" title="provenance of this report" className="rr-keep">
-      <p className="rr-note" data-provenance-line>
+      <p className="rr-note rr-long" data-provenance-line>
         {provenance.line}
       </p>
       <dl className="rr-id">
         <dt className="k">metric registry</dt>
-        <dd className="v">{provenance.metric_registry_version}</dd>
+        <dd className="v rr-long">{provenance.metric_registry_version}</dd>
         <dt className="k">read model</dt>
-        <dd className="v">{provenance.read_model_revision}</dd>
+        <dd className="v rr-long">{provenance.read_model_revision}</dd>
         <dt className="k">verdict rule</dt>
-        <dd className="v">{provenance.verdict_rule_revision}</dd>
+        <dd className="v rr-long">{provenance.verdict_rule_revision}</dd>
         <dt className="k">data signature</dt>
-        <dd className="v" data-data-signature>
+        <dd className="v rr-long" data-data-signature>
           {provenance.data_signature ?? <span className="rr-absent">not published</span>}
         </dd>
         {REVISION_ROWS.map(([key, label]) => (
           <div key={key} className="contents" data-source-revision={key}>
             <dt className="k">{label} revision</dt>
-            <dd className="v">{core.source_revisions[key]}</dd>
+            <dd className="v rr-long">{core.source_revisions[key]}</dd>
           </div>
         ))}
         {DIGEST_ROWS.map(([key, label]) => (
           <div key={key} className="contents" data-source-digest={key}>
             <dt className="k">{label} digest</dt>
-            <dd className="v">{core.source_digests[key] ?? <span className="rr-absent">not published</span>}</dd>
+            <dd className="v rr-long">{core.source_digests[key] ?? <span className="rr-absent">not published</span>}</dd>
           </div>
         ))}
       </dl>
@@ -767,7 +780,7 @@ function Exports({ report, exporter }: { report: ReportDetail; exporter: ReportE
         const href = exportDownloadHref(slot.job);
         return (
           <div key={format} className="flex flex-col gap-0.5" data-export={format} data-export-state={slot.job?.state ?? "NONE"}>
-            <span className="rr-mono text-[10.5px]">
+            <span className="rr-mono rr-long text-[10.5px]" data-export-line>
               {EXPORT_FORMAT_LABEL[format]} ·{" "}
               {!offered
                 ? "not offered for this report"
@@ -781,7 +794,7 @@ function Exports({ report, exporter }: { report: ReportDetail; exporter: ReportE
               <span className="rr-reason">this job exports revision {slot.job.report_revision}</span>
             ) : null}
             {href && slot.job ? (
-              <span className="rr-mono text-[10px]" data-export-ready>
+              <span className="rr-mono rr-long text-[10px]" data-export-ready>
                 <a href={href} style={{ color: "var(--accent)" }} data-download-href>
                   download {slot.job.filename ?? EXPORT_FORMAT_LABEL[format]}
                 </a>

@@ -188,7 +188,7 @@ export const EXPORT_FORMAT_LABEL: Record<ExportFormat | UnavailableExportFormat[
   REPORT_JSON: "JSON",
   REPORT_CSV: "CSV",
   PARQUET: "Parquet",
-  ARCHIVE: "archive",
+  ARCHIVE: "Archive",
 };
 
 /** Spec 09 §16.6's artifact names, keyed by the contract's own enum. */

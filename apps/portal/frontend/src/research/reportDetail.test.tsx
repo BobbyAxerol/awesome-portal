@@ -505,7 +505,7 @@ describe("S09 Run Report — the sheet", () => {
     expect(release.getAttribute("title")).toContain("no published route");
   });
 
-  it("S09-U11 offers only the published formats; Parquet and archive are disabled with their reason", async () => {
+  it("S09-U11 offers only the published formats; Parquet and Archive are disabled with their reason", async () => {
     server();
     renderRoute();
     await screen.findByText("claim passport — sealed source facts, quoted verbatim");
@@ -518,6 +518,78 @@ describe("S09 Run Report — the sheet", () => {
       "P18_SOURCE_ARTIFACT_ARCHIVE_NOT_EXPOSED_TO_REPORT",
     );
     expect(panel("exports").textContent).toContain("at most 524288 bytes per file");
+  });
+});
+
+/* ------------------------------------------------------------ layout rules */
+
+/*
+ * jsdom does not lay out, so these assert the rules the probe measured in a
+ * real browser (package B, B1/N1/N2): the class a long value carries and the
+ * route's scoped stylesheet text.
+ */
+describe("S09 Run Report — layout rules", () => {
+  async function sheetCss() {
+    server();
+    renderRoute();
+    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    return document.querySelector('[data-screen="run-report"] > style')!.textContent ?? "";
+  }
+
+  it("S09-U28 long sealed identifiers wrap in full and no block clips them", async () => {
+    const css = await sheetCss();
+    expect(css).toContain(".rr-long { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }");
+    expect(css).toMatch(/\.rr-block \{[^}]*\}/);
+    expect(/\.rr-block \{([^}]*)\}/.exec(css)![1]).not.toMatch(/overflow\s*:\s*(hidden|clip)/);
+    expect(css).not.toMatch(/overflow\s*:\s*hidden/);
+    const long = [
+      "[data-provenance-line]",
+      "[data-meta]",
+      "[data-run-chip]",
+      "[data-data-signature]",
+      ...Object.keys(REVS).map((key) => `[data-source-revision="${key}"] dd`),
+      '[data-source-digest="manifest_digest"] dd',
+      '[data-artifact="RUN_SPEC"] [data-artifact-digest]',
+      '[data-identity="evidence_revision"] dd',
+      '[data-passport-fact="1"]',
+    ];
+    for (const selector of long) {
+      const el = document.querySelector(selector);
+      expect(el, selector).not.toBeNull();
+      expect(el!.classList.contains("rr-long"), selector).toBe(true);
+    }
+    /* Not shortened: the full 70-character revisions are in the text. */
+    for (const revision of Object.values(REVS)) expect(panel("provenance").querySelector("[data-provenance-line]")!.textContent).toContain(revision);
+  });
+
+  it("S09-U29 the route owns the print page box: @page margin 0.55in inside the print rules", async () => {
+    const css = await sheetCss();
+    const print = css.slice(css.indexOf("@media print {"));
+    expect(print).toContain("@page { margin: 0.55in; }");
+  });
+
+  it("S09-U30 the header keeps the certification box beside a shrinkable text column", async () => {
+    const css = await sheetCss();
+    const text = panel("header").querySelector("[data-head-text]")!;
+    const cert = panel("header").querySelector("[data-cert-box]")!;
+    expect(text.classList.contains("rr-head-text")).toBe(true);
+    expect(cert.classList.contains("rr-cert")).toBe(true);
+    expect(panel("header").lastElementChild).toBe(cert);
+    expect(css).toContain(".rr-head-text { flex: 1 1 0; min-width: 0; }");
+    expect(css).toMatch(/\.rr-cert \{ flex: none;/);
+    expect(/\.rr-head \{([^}]*)\}/.exec(css)![1]).toContain("flex-wrap: nowrap");
+    /* Narrow screens may stack; print restores the side-by-side header. */
+    expect(css.slice(css.indexOf("@media (max-width: 700px)"), css.indexOf("@media print {"))).toContain(".rr-head { flex-wrap: wrap; }");
+    expect(css.slice(css.indexOf("@media print {"))).toContain(".rr-head { flex-wrap: nowrap; }");
+  });
+
+  it("S09-U31 export format labels are written consistently", async () => {
+    await sheetCss();
+    for (const name of ["Export JSON", "Export CSV", "Export Parquet", "Export Archive"]) {
+      expect(screen.getByRole("button", { name }), name).toBeTruthy();
+    }
+    expect(panel("exports").querySelector('[data-export-unavailable-reason="ARCHIVE"]')?.textContent).toContain("Archive — not available");
+    expect(panel("exports").querySelector('[data-export="REPORT_JSON"] [data-export-line]')?.classList.contains("rr-long")).toBe(true);
   });
 });
 
