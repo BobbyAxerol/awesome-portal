@@ -215,6 +215,17 @@ export interface components {
             payload: Record<string, never>;
         };
         ProgressEmptyPayload: Record<string, never>;
+        /** @description One retained table in the artifact authority's six-state lifecycle. Carries no storage locator, worker attempt, lease epoch or manifest digest. */
+        ProgressRetainedArtifact: {
+            table_kind: string;
+            /** @enum {unknown} */
+            state: "PENDING" | "WRITING" | "SEALED" | "ABORTED" | "CORRUPT" | "MISSING";
+            total_rows: string;
+            total_bytes: string;
+            sealed_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            /** @description No artifact reader route is published; a later named, authorized reader contract owns links. */
+            reader_href: null;
+        };
         ProgressStagePayload: {
             /** @enum {unknown} */
             stage: "S1" | "S2" | "S3" | "S4" | "S5";
@@ -456,6 +467,8 @@ export interface components {
                 retry_reason: "P12_OWNED_NO_P11_RETRY_ROUTE";
             };
             progress: components["schemas"]["ProgressSnapshot"] | null;
+            /** @description RF01-B3. The run's retained P05 tables from the artifact authority, ordered by table_kind then artifact identity, bounded at 128. A different set from progress.artifacts (bundle readiness journaled by the source); only here can CORRUPT or MISSING appear. Optional during additive client rollout; the server emits it for every current read, as [] when no table is retained yet. */
+            retained_artifacts?: components["schemas"]["ProgressRetainedArtifact"][];
         };
         ProgressStreamEvent: {
             event: components["schemas"]["ProgressEvent"];

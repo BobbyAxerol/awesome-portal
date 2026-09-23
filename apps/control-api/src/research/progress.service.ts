@@ -44,6 +44,20 @@ export interface ResearchProgressReadResponse {
     retry_reason: "P12_OWNED_NO_P11_RETRY_ROUTE";
   };
   progress: ResearchProgressPublicSnapshot | null;
+  /**
+   * RF01-B3: the run's retained P05 tables in the authority's six-state
+   * vocabulary. `artifacts` inside `progress` stays the bundle-readiness list
+   * the source journals; this is a different set of things, read from the
+   * artifact authority, and the only place `CORRUPT`/`MISSING` can appear.
+   */
+  retained_artifacts: Array<{
+    table_kind: string;
+    state: "PENDING" | "WRITING" | "SEALED" | "ABORTED" | "CORRUPT" | "MISSING";
+    total_rows: string;
+    total_bytes: string;
+    sealed_at_utc_ms: number | null;
+    reader_href: null;
+  }>;
 }
 
 export interface ResearchProgressPublicEnvelope {
@@ -257,6 +271,14 @@ export class ResearchProgressService {
         retry_reason: "P12_OWNED_NO_P11_RETRY_ROUTE",
       },
       progress: current.progress ? toPublicResearchProgressSnapshot(current.progress) : null,
+      retained_artifacts: current.retainedArtifacts.map((artifact) => ({
+        table_kind: artifact.tableKind,
+        state: artifact.state,
+        total_rows: artifact.totalRows,
+        total_bytes: artifact.totalBytes,
+        sealed_at_utc_ms: artifact.sealedAt?.valueOf() ?? null,
+        reader_href: null,
+      })),
     };
   }
 

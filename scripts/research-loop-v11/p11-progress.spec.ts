@@ -380,6 +380,49 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     expect(JSON.stringify(publicPage)).not.toContain("lease_epoch");
   });
 
+  it("RF01-B3: the progress read carries retained tables in the authority's six-state vocabulary, locator-free", async () => {
+    const run = await createDispatchedRun();
+    await service.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));
+    const empty = await service.read(admin, scope, run.runId);
+    // No retained row yet is an empty list, never an invented PENDING table.
+    expect(empty.retained_artifacts).toEqual([]);
+
+    const sealedAt = new Date("2026-09-23T01:02:03.004Z");
+    for (const [artifactId, tableKind, state, digest, sealed] of [
+      ["art_rf01_c", "trades", "MISSING", "c".repeat(64), sealedAt],
+      ["art_rf01_a", "equity", "SEALED", "a".repeat(64), sealedAt],
+      ["art_rf01_b", "folds", "CORRUPT", "b".repeat(64), sealedAt],
+      ["art_rf01_d", "trials", "PENDING", "d".repeat(64), null],
+    ] as const) {
+      await pool.query(
+        `INSERT INTO research.artifacts (
+           workspace_id, artifact_id, run_id, table_kind, schema_version, manifest_digest,
+           state, retention_class, storage_locator, total_rows, total_bytes, sealed_at)
+         VALUES ($1, $2, $3, $4, 'research.table.v1', $5, $6, 'standard',
+                 'workspace/rf01/private-locator.parquet', 9007199254740993, 12, $7)`,
+        [scope.workspaceId, artifactId, run.runId, tableKind, digest, state, sealed],
+      );
+    }
+
+    const read = await service.read(admin, scope, run.runId);
+    expect(read.retained_artifacts).toEqual([
+      { table_kind: "equity", state: "SEALED", total_rows: "9007199254740993", total_bytes: "12", sealed_at_utc_ms: sealedAt.valueOf(), reader_href: null },
+      { table_kind: "folds", state: "CORRUPT", total_rows: "9007199254740993", total_bytes: "12", sealed_at_utc_ms: sealedAt.valueOf(), reader_href: null },
+      { table_kind: "trades", state: "MISSING", total_rows: "9007199254740993", total_bytes: "12", sealed_at_utc_ms: sealedAt.valueOf(), reader_href: null },
+      { table_kind: "trials", state: "PENDING", total_rows: "9007199254740993", total_bytes: "12", sealed_at_utc_ms: null, reader_href: null },
+    ]);
+    const body = JSON.stringify(read);
+    for (const secret of ["private-locator", "storage_locator", "manifest_digest", "a".repeat(64), "art_rf01_a", "lease_epoch", "worker_attempt_id"]) {
+      expect(body).not.toContain(secret);
+    }
+
+    // Another workspace's read cannot see this run's retained rows.
+    const foreign = await new ResearchProgressRepository(pool).readRun(
+      { ...scope, workspaceId: "research-workspace-foreign" }, run.runId,
+    ).catch(() => null);
+    expect(foreign?.retainedArtifacts ?? []).toEqual([]);
+  });
+
   it("P11-T04/T05/T06/T12: cancellation wins a source completion race without turning an unsealed run into success", async () => {
     const run = await createDispatchedRun();
     await service.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));

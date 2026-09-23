@@ -34,7 +34,11 @@ describe("P11 published Research Progress contract", () => {
       "ProgressMethodologyCertificate", "ProgressArtifactSealedPayload", "ProgressRunCompletedEvent",
       "P12_OWNED_NO_P11_RETRY_ROUTE", "PENDING_SOURCE_CALLBACK",
       "PENDING_RECONCILIATION", "research.progress.snapshot",
+      "ProgressRetainedArtifact", "retained_artifacts",
     ]) expect(generated).toContain(needle);
+    // RF01-B3: the retained-table list is the one place the artifact
+    // authority's integrity states reach the browser.
+    expect(generated).toContain('state: "PENDING" | "WRITING" | "SEALED" | "ABORTED" | "CORRUPT" | "MISSING";');
     // Screen 03 can narrow by event_type and read its declared payload without
     // hand-parsing an unknown source dictionary.  Keep this assertion against
     // generated output: a future OpenAPI simplification must not silently turn

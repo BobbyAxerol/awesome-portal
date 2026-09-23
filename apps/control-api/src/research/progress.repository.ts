@@ -94,6 +94,23 @@ export interface ProgressIngressScope {
   leaseEpoch: number;
 }
 
+/**
+ * One retained P05 table for this run, as the artifact authority records it
+ * (RF01-B3). This is the six-state `research.artifacts` lifecycle — the one
+ * place `CORRUPT` and `MISSING` exist — and deliberately carries no storage
+ * locator, worker attempt, lease epoch or manifest digest.
+ */
+export interface ProgressRetainedArtifact {
+  tableKind: string;
+  state: "PENDING" | "WRITING" | "SEALED" | "ABORTED" | "CORRUPT" | "MISSING";
+  totalRows: string;
+  totalBytes: string;
+  sealedAt: Date | null;
+}
+
+/** The bound on retained rows a progress read may carry. */
+export const PROGRESS_RETAINED_ARTIFACT_LIMIT = 128;
+
 export interface ProgressRunRead {
   runId: string;
   jobState: string;
@@ -103,6 +120,7 @@ export interface ProgressRunRead {
   receivedAt: Date | null;
   hasCurrentAttempt: boolean;
   terminalMaterialization: "NOT_REQUIRED" | "PENDING" | "READY";
+  retainedArtifacts: ProgressRetainedArtifact[];
 }
 
 /** Server-only P06 lease facts used solely by the P11 cancel marker hop. */
@@ -332,6 +350,29 @@ export class ResearchProgressRepository {
       if (!row) {
         throw new ResearchProgressError("RESEARCH_PROGRESS_NOT_FOUND", "Research run was not found.", 404);
       }
+      /* The same transaction reads the authority's own rows, so the list is
+         consistent with the snapshot beside it. Bounded, ordered, locator-free. */
+      const retained = await client.query<{
+        table_kind: string;
+        state: ProgressRetainedArtifact["state"];
+        total_rows: string | number;
+        total_bytes: string | number;
+        sealed_at: Date | null;
+      }>(
+        `SELECT table_kind, state, total_rows, total_bytes, sealed_at
+           FROM research.artifacts
+          WHERE workspace_id = $1 AND run_id = $2
+          ORDER BY table_kind ASC, artifact_id ASC
+          LIMIT $3`,
+        [scope.workspaceId, runId, PROGRESS_RETAINED_ARTIFACT_LIMIT],
+      );
+      const retainedArtifacts: ProgressRetainedArtifact[] = retained.rows.map((artifact) => ({
+        tableKind: artifact.table_kind,
+        state: artifact.state,
+        totalRows: String(artifact.total_rows),
+        totalBytes: String(artifact.total_bytes),
+        sealedAt: artifact.sealed_at,
+      }));
       let progress: ResearchProgressSnapshot | null = null;
       if (row.snapshot !== null) {
         const parsed = ResearchProgressSnapshotSchema.safeParse(parseObject(row.snapshot, "snapshot"));
@@ -351,6 +392,7 @@ export class ResearchProgressRepository {
         terminalMaterialization: TERMINAL_JOB_STATES.has(row.job_state)
           ? (row.terminal_materialized ? "READY" : "PENDING")
           : "NOT_REQUIRED",
+        retainedArtifacts,
       };
     });
   }

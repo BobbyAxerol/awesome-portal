@@ -38,7 +38,7 @@ function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<strin
     readRun: vi.fn().mockResolvedValue(options?.current ?? {
       runId: "run_rs01", jobState: "SUCCEEDED", progress: null,
       sourceLatestSequence: 9, retentionFloorSequence: 0, receivedAt: null,
-      hasCurrentAttempt: true, terminalMaterialization: "PENDING",
+      hasCurrentAttempt: true, terminalMaterialization: "PENDING", retainedArtifacts: [],
     }),
     currentLease: vi.fn(),
   };
@@ -93,6 +93,28 @@ describe("RS-01 terminal materialization and retry recovery", () => {
     expect(evidence.ingest).toHaveBeenCalledTimes(2);
     expect(progress.markTerminalMaterialized).toHaveBeenCalledTimes(1);
     expect(fanout.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("RF01-B3: projects retained tables without widening the vocabulary or leaking identity", async () => {
+    const sealedAt = new Date("2026-09-23T00:00:00.000Z");
+    const { service } = subject({ current: {
+      runId: "run_rs01", jobState: "SUCCEEDED", progress: null,
+      sourceLatestSequence: 9, retentionFloorSequence: 0, receivedAt: null,
+      hasCurrentAttempt: true, terminalMaterialization: "READY",
+      retainedArtifacts: [
+        { tableKind: "equity", state: "CORRUPT", totalRows: "12", totalBytes: "4096", sealedAt },
+        { tableKind: "trades", state: "WRITING", totalRows: "0", totalBytes: "0", sealedAt: null },
+      ],
+    } });
+    const response = await service.read(
+      { role: "ADMIN" } as never,
+      { workspaceId: "research-workspace", actorUserId: "research-owner" },
+      "run_rs01",
+    );
+    expect(response.retained_artifacts).toEqual([
+      { table_kind: "equity", state: "CORRUPT", total_rows: "12", total_bytes: "4096", sealed_at_utc_ms: sealedAt.valueOf(), reader_href: null },
+      { table_kind: "trades", state: "WRITING", total_rows: "0", total_bytes: "0", sealed_at_utc_ms: null, reader_href: null },
+    ]);
   });
 
   it("keeps terminal reads in FINISHING until the immutable checkpoint is visible", async () => {
