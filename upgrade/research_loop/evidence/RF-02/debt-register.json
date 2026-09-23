@@ -2,16 +2,56 @@
   "phase": "RF-02",
   "open_implementation_debt": [],
   "resolved_closeouts": [
-    { "id": "B-04", "status": "RESOLVED", "evidence": "d67a0fb4; RF02-T01..T03" },
-    { "id": "F-09", "status": "RESOLVED", "evidence": "5d04e85a, ae5638b7; engineAtlas.rf02.test.tsx, _probe-research-s12.spec.ts" },
-    { "id": "F-10", "status": "RESOLVED", "evidence": "99d5b2a5, 996eef6c; RF02-T04, field map 24/24" },
-    { "id": "F-06", "status": "DEFERRED_WITH_TRIGGER", "evidence": "78e01f32 (Q3)" },
-    { "id": "CG-P10-01", "status": "RESOLVED", "evidence": "996eef6c; RF02-T05; real preflight admitted on the preview" },
-    { "id": "P01-GAP-03", "status": "RESOLVED", "evidence": "770dfbcd; REAL_API_E2E_RECEIPT 16/16 at ae5638b7" }
+    {
+      "id": "B-04",
+      "status": "RESOLVED",
+      "evidence": "d67a0fb4; RF02-T01..T03"
+    },
+    {
+      "id": "F-09",
+      "status": "RESOLVED",
+      "evidence": "5d04e85a, ae5638b7; engineAtlas.rf02.test.tsx, _probe-research-s12.spec.ts"
+    },
+    {
+      "id": "F-10",
+      "status": "RESOLVED",
+      "evidence": "99d5b2a5, 996eef6c; RF02-T04, field map 24/24"
+    },
+    {
+      "id": "F-06",
+      "status": "DEFERRED_WITH_TRIGGER",
+      "evidence": "78e01f32 (Q3)"
+    },
+    {
+      "id": "CG-P10-01",
+      "status": "RESOLVED",
+      "evidence": "996eef6c; RF02-T05; real preflight admitted on the preview"
+    },
+    {
+      "id": "P01-GAP-03",
+      "status": "RESOLVED",
+      "evidence": "770dfbcd; REAL_API_E2E_RECEIPT 16/16 at ae5638b7"
+    }
   ],
   "explicit_downstream_gates": [
-    { "id": "RF02-DG-01", "owner": "Bobby", "state": "DECISION_PENDING", "subject": "D-B1..D-B6 in README" },
-    { "id": "RF02-DG-02", "owner": "Codex", "state": "REQUESTED", "subject": "CG-RF02-01..05 in README" }
+    {
+      "id": "RF02-DG-01",
+      "owner": "Bobby",
+      "state": "VISUAL_REVIEW_LATER",
+      "subject": "Look at S01–S07, S02, S12 on the preview; the HiFi deviation list in README is the checklist"
+    },
+    {
+      "id": "RF02-DG-02",
+      "owner": "Codex",
+      "state": "REQUESTED",
+      "subject": "CG-RF02-01..05 in README"
+    },
+    {
+      "id": "RF02-DG-03",
+      "owner": "Claude",
+      "state": "SCHEDULED",
+      "subject": "DS-01: darken --ink-faint to >=4.5:1 with one Portal-wide visual-baseline refresh (D-B1); then drop the S12 axe exception"
+    }
   ],
   "interpretation": "Open items are owner decisions and Codex requests, not unresolved RF-02 implementation."
 }

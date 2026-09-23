@@ -1,6 +1,6 @@
 # RF-02 — Foundation consumer completeness, Atlas and the real-API lane
 
-**Status:** `RF02_IMPLEMENTED · REAL_API_E2E_RECEIPT 16/16 · BOBBY_REVIEW_PENDING`
+**Status:** `RF02_COMPLETE · REAL_API_E2E_RECEIPT 16/16 · DECISIONS_DELEGATED · BOBBY_VISUAL_REVIEW_LATER`
 **Date:** 2026-09-23 · **Owner:** Claude (backend + frontend; Q4–Q6 approved 2026-09-23)
 **Branch:** `docs/research-loop-plan` — pushed to `origin` and `primus-origin`; not merged into `dev`/`main`.
 **Plan:** [Unified §13 RF-02](../../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-rf-02) · [P01–P05 audit](../AUDIT_P01_P05_CLAUDE_2026-09-23.md)
@@ -37,16 +37,35 @@ Fixture lanes on the same commit: frontend vitest 2975 passed / 1 skipped; resea
 3. **Exact decimals** of 47 digits overflowed a metric tile (now wraps, never rounded) and overprinted histogram ticks (ticks now 3 significant digits; exact edges in tooltip/table).
 4. **`sr-only` on a `<table>`** does not clip; the chart companion tables pushed S04 219px wide at 660 (`7de4c68f`).
 
-## Decisions for Bobby (not taken here)
+## Decisions — taken by Claude on Bobby's delegation (2026-09-23)
 
-| # | Decision | Recommendation |
+Bobby: "Duyệt bạn cứ chốt đi, rồi tôi xem sau, kiểu gì cũng sửa tiếp." Each
+decision below is the recommendation made before the delegation, now applied.
+Bobby reviews the screens later; anything he changes is a follow-up, not a
+reopening of RF-02.
+
+| # | Decision | Applied |
 |---|---|---|
-| D-B1 | `--ink-faint` (#939db0) is 2.6–2.7:1 on paper — fails WCAG AA for the small text it is used for on every Portal screen (axe: 232 nodes on S12 alone). Changing the token moves visual baselines everywhere | Darken to ≥4.5:1 in one design-system change with a baseline refresh, not per screen |
-| D-B2 | Q4/D-4 gold Rule One is 4.0:1 (#9a6a1f on #f4ecdb) | Keep the gold border/background, set the sentence in `--ink` |
-| D-B3 | Spec 12 §8 "verbatim" SUSPECT (5) and never-claims (7) lines differ from the P04 manifest text S12 renders; neither set has a locator in the pinned engine | Keep the manifest (reviewed P04 content) and amend spec 12 §8, or have Codex source the spec text and update the manifest |
-| D-B4 | Spec 12 §2 data-usage pulse animation is not built: no published per-mode data-usage fact beyond `reads`, which is shown as text | Accept as deviation D-5 |
-| D-B5 | Preview host: keep `portal-research-preview` running for review; optional one-label hostname behind Access (runbook) | Bobby creates the hostname if wanted; teardown with `preview.sh teardown` after review |
-| D-B6 | Look at S01–S07, S02, S12 on the preview and record approve/deviations | — |
+| D-B1 | `--ink-faint` (#939db0, 2.6–2.7:1) is darkened to ≥4.5:1 — **as its own design-system step DS-01**, with one visual-baseline refresh across the Portal, not inside RF-02 (the token is on every Execution screen too) | Scheduled (RF02-DG-03). Until then the S12 axe gate excludes exactly this colour |
+| D-B2 | Rule One keeps its gold frame and background; its words are `--ink` | Done (commit with this packet); the axe exception for the gold pair is removed |
+| D-B3 | S12 keeps the P04 manifest's SUSPECT / never-claims text; spec 12 §8's lines are HiFi sample copy with no engine locator. Spec 12 §8 is read as "render the manifest's text verbatim" | Recorded here and in the Unified RF-02 note |
+| D-B4 | Spec 12 §2's data-usage pulse is not built: no published per-mode data-usage fact beyond `reads`, which is shown as text. Accepted as deviation D-5 | Recorded |
+| D-B5 | The preview stack stays up for Bobby's review; no Access hostname for now (the runbook has the recipe) | Running at loopback :8095 |
+| D-B6 | RF-02 closes on the automated evidence; Bobby's visual review follows and is tracked below | Closed |
+
+### Where the build differs from the HiFi — for Bobby's later review
+
+1. **S12 routes**: four axis chips + reason instead of one status word; no declare/replay per route; no per-mode demo (D-1…D-3, approved).
+2. **Rule One**: gold frame, ink words (D-B2) instead of gold words.
+3. **Cert cap**: the HiFi's letters (B, ≤ C) are not shown; the claim block says "not published" with the source's reason.
+4. **SUSPECT / never-claims**: the manifest's sentences, not the HiFi's (D-B3).
+5. **Objective**: the engine's own formula text per stage, typeset with identifiers in `\texttt`, instead of the HiFi's hand-written math (e.g. mode 3's `P_C = Q_C + …` is not in the engine's objective contract, so it is not drawn).
+6. **No data-usage animation** (D-5).
+7. **Breadcrumb / deep link**: "Evidence Flow" links back only when the Atlas was opened from a run; "open search & selection →" appears only then, otherwise "find runs in this mode →".
+8. **Additions not in the HiFi**: release-facts panel (collapsed), struck-through invalid schedule chips, "avoid when" column showing "not published", cited source locators under each fact.
+9. **S02**: walk-forward frequency/window-mode are selects from the contract (rolling disabled with its reason) and a "First OOS instant" field; mode/schedule are selects.
+10. **S04–S07 on a real run**: retained-source panels read "pending retention" (CG-RF02-03), histogram ticks are 3 significant digits, long exact values wrap.
+11. `--ink-faint` contrast is unchanged until DS-01.
 
 ## Requests for Codex
 
