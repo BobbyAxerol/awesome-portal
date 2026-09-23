@@ -157,6 +157,7 @@ export class ResearchFreezeService {
       freeze_revision: detail.revision,
       verified_at_utc_ms: detail.as_of_utc_ms,
       result,
+      verification_scope: detail.freeze.integrity.verification_scope,
       integrity: detail.freeze.integrity,
     };
     const parsed = ResearchFreezeVerificationResponseSchema.safeParse(response);

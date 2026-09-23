@@ -22,8 +22,25 @@ describe("P16 published Research Freeze contract", () => {
     const generated = readFileSync(generatedPath, "utf8");
     for (const needle of [
       "researchFreezeDetailGetV1", "researchFreezeVerifyPostV1", "PARTIAL_MATCH", "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
-      "NOT_ATTESTED", "FIXED_PROFILE_NO_SELECTION_ARTIFACT", "frozen_parameters", "x-portal-csrf",
+      "verification_scope", "NOT_ATTESTED", "FIXED_PROFILE_NO_SELECTION_ARTIFACT", "frozen_parameters", "x-portal-csrf",
     ]) expect(generated).toContain(needle);
+  });
+
+  it("requires scope on the explicit verification response itself", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      components: {
+        schemas: Record<string, {
+          required?: string[];
+          properties?: Record<string, { enum?: string[] }>;
+        }>;
+      };
+    };
+    const verification = document.components.schemas.FreezeVerification!;
+
+    expect(verification.required).toContain("verification_scope");
+    expect(verification.properties?.verification_scope?.enum).toEqual([
+      "PORTAL_RETAINED_DIGEST_BINDING_ONLY", "NONE",
+    ]);
   });
 
   it("does not publish source/worker/artifact, cursor or diagnostic authority as a field or route parameter", () => {

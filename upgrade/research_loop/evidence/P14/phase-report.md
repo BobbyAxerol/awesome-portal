@@ -109,3 +109,13 @@ warmup, purge, embargo, strict outer-OOS, physical holdout-I/O, seal or unlock
 facts. They remain panel-local typed source gaps; no generic chronology or
 holdout interpretation is introduced. See the
 [RS-02 matrix](../RS-02/field-action-coverage-matrix.md).
+
+## Screen-05 axis presentation ruling — 2026-09-23
+
+`CG-P14-01` is resolved without creating a synthetic source tick relation.
+The immutable timeline/windows remain the sole semantic chronology facts; a
+consumer may choose bounded UTC tick labels from that coordinate for display
+only. The complete prohibition on replacing/snap-rounding bounds, using local
+calendar/current time, or serializing ticks into a request/export/cache is in
+[the ruling](./axis-label-presentation-ruling.md). This is a consumer
+presentation decision, not an OpenAPI, persistence or runtime change.

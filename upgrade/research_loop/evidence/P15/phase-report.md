@@ -122,3 +122,14 @@ trial/candidate/selection ledger with bounded opaque keysets. Objective
 decomposition, pruning, importance and interaction facts remain typed source
 gaps. The product may display the complete available ledger without claiming a
 generic optimizer. See [RS-02 matrix](../RS-02/field-action-coverage-matrix.md).
+
+## Candidate-selection metric amendment — 2026-09-23
+
+`CG-P15-01` is resolved by an additive required
+`requested_optimizer.candidate_selection_metric` branch. Current fixed P04
+requests emit `NOT_PUBLISHED` with
+`P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC`; they do not
+reuse the mutable engine catalogue's `robust_decay` default or infer a metric
+from a mode string. A later `CONFIRMED` value must be a persisted
+`RUN_BOUND_ENGINE_DEFAULT` source fact. Details and consumer rules are in
+[the amendment](./contract-amendment-candidate-selection-metric.md).

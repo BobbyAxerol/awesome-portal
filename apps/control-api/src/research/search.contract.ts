@@ -87,6 +87,30 @@ const AbsentFixedProfileSchema = z.object({
   availability: ResearchSearchAvailabilitySchema,
 }).strict();
 
+/**
+ * The installed P04 fixed profile retains a declared mode/schedule but does
+ * not bind the engine's candidate-selection metric into the immutable run.
+ * Keep that gap on the declaration itself: a current engine-catalogue default
+ * is release metadata, not historic run evidence.  The CONFIRMED branch is
+ * reserved for a future source that persists the exact run-bound default.
+ */
+const CandidateSelectionMetricSchema = z.discriminatedUnion("state", [
+  z.object({
+    state: z.literal("CONFIRMED"),
+    value: ModeOrScheduleSchema,
+    provenance: z.literal("RUN_BOUND_ENGINE_DEFAULT"),
+    reason_code: z.null(),
+    availability: ResearchSearchAvailabilitySchema,
+  }).strict(),
+  z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    value: z.null(),
+    provenance: z.literal("NONE"),
+    reason_code: ReasonCodeSchema,
+    availability: ResearchSearchAvailabilitySchema,
+  }).strict(),
+]);
+
 export const ResearchSearchResponseSchema = z.object({
   schema_version: z.literal("research.search-detail.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
@@ -124,6 +148,7 @@ export const ResearchSearchResponseSchema = z.object({
     mode: ModeOrScheduleSchema.nullable(),
     schedule: ModeOrScheduleSchema.nullable(),
     state: z.enum(["DECLARED_NOT_EXECUTED", "NOT_PUBLISHED"]),
+    candidate_selection_metric: CandidateSelectionMetricSchema,
     availability: ResearchSearchAvailabilitySchema,
   }).strict(),
   fixed_profile: z.union([FixedProfileSchema, AbsentFixedProfileSchema]),

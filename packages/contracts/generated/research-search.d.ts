@@ -78,11 +78,30 @@ export interface components {
             reason_code: components["schemas"]["ReasonCode"] | null;
             availability: components["schemas"]["Availability"];
         };
+        CandidateSelectionMetric: {
+            /** @constant */
+            state: "CONFIRMED";
+            value: string;
+            /** @constant */
+            provenance: "RUN_BOUND_ENGINE_DEFAULT";
+            reason_code: null;
+            availability: components["schemas"]["Availability"];
+        } | {
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            value: null;
+            /** @constant */
+            provenance: "NONE";
+            reason_code: components["schemas"]["ReasonCode"];
+            availability: components["schemas"]["Availability"];
+        };
         RequestedOptimizer: {
             mode: string | null;
             schedule: string | null;
             /** @enum {unknown} */
             state: "DECLARED_NOT_EXECUTED" | "NOT_PUBLISHED";
+            /** @description Run-bound candidate-selection metric only. Current P04 declared requests publish NOT_PUBLISHED; engine-catalogue defaults and mode-name inferences are not historic run evidence. */
+            candidate_selection_metric: components["schemas"]["CandidateSelectionMetric"];
             availability: components["schemas"]["Availability"];
         };
         Selection: {

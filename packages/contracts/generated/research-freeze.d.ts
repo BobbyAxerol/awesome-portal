@@ -208,6 +208,11 @@ export interface components {
             verified_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             /** @enum {unknown} */
             result: "PARTIAL_MATCH" | "BLOCKED" | "NOT_PUBLISHED";
+            /**
+             * @description Qualification of this explicit verification response itself; consumers must not borrow scope from a separately cached detail response.
+             * @enum {unknown}
+             */
+            verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY" | "NONE";
             integrity: components["schemas"]["Integrity"];
         };
         Problem: {

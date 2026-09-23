@@ -65,6 +65,16 @@ describe("P15 current-source Search / ledger / diagnostics authority", () => {
         mode: "mode_1_decay",
         schedule: "global",
         state: "DECLARED_NOT_EXECUTED",
+        candidate_selection_metric: {
+          state: "NOT_PUBLISHED",
+          value: null,
+          provenance: "NONE",
+          reason_code: "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+          availability: {
+            state: "NOT_PUBLISHED",
+            reason_code: "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+          },
+        },
       },
       fixed_profile: {
         state: "FIXED_PROFILE_NO_SEARCH",
@@ -93,6 +103,13 @@ describe("P15 current-source Search / ledger / diagnostics authority", () => {
       position_percent: 40,
     });
     expect(detail.source_absences.trial_ledger).toMatchObject({ state: "NOT_APPLICABLE" });
+    expect(detail.source_absences.candidate_selection_metric).toMatchObject({
+      state: "NOT_PUBLISHED",
+      reason_code: "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC",
+    });
+    // The catalogue's current robust_decay default is release metadata, not
+    // immutable evidence that this P10 request bound that selection metric.
+    expect(JSON.stringify(detail.requested_optimizer)).not.toContain("robust_decay");
     // The named typed absences are intentional; assert that no fabricated
     // sampled row, selected trial identity, candidate score, or progress
     // notification is smuggled into the response as a historical ledger.
@@ -159,6 +176,12 @@ describe("P15 current-source Search / ledger / diagnostics authority", () => {
       availability: { state: "PENDING_SOURCE_CALLBACK" },
       source_profile: { state: "PENDING_SOURCE_CALLBACK" },
       source_absences: { trial_ledger: { availability: { state: "PENDING_SOURCE_CALLBACK" } } },
+    });
+    expect(pendingDetail.requested_optimizer.candidate_selection_metric).toMatchObject({
+      state: "NOT_PUBLISHED",
+      value: null,
+      provenance: "NONE",
+      availability: { state: "PENDING_SOURCE_CALLBACK" },
     });
   });
 

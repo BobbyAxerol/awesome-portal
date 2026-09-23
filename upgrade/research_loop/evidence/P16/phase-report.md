@@ -103,3 +103,13 @@ the sealed manifest, exact relation counts and retained batch receipt. A
 artifact bytes, causal ordering, selection correctness or broker state. What-if
 remains `NOT_PUBLISHED`, and no GET enqueues an evaluation. See the
 [RS-02 matrix](../RS-02/field-action-coverage-matrix.md).
+
+## Verify-response scope amendment — 2026-09-23
+
+`CG-P16-01` is resolved by adding required top-level
+`FreezeVerification.verification_scope`. The server captures it from the same
+bounded re-read that produces `result`, so a user-triggered result no longer
+needs to borrow qualification from a separately cached detail snapshot. The
+field is response-only and adds no audit row, job, source read, mutation or
+runtime activation. See
+[the amendment](./contract-amendment-verification-scope.md).

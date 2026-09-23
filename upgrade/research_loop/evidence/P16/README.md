@@ -54,3 +54,11 @@ receipt. Use generated declarations only; see
 [frontend-handoff-claude.md](./frontend-handoff-claude.md). P16-B needs a
 future source-owner adapter contract, not manual frontend fields or a broader
 Portal read.
+
+## 2026-09-23 verification-scope amendment
+
+`CG-P16-01` is closed by the
+[verification response scope amendment](./contract-amendment-verification-scope.md).
+The explicit verification result now carries its own top-level scope, so the
+consumer never borrows that qualification from a separately cached detail
+snapshot.

@@ -52,6 +52,17 @@ calculate date boundaries, infer a fold, derive a selection/seal, or add a
 holdout action. A new fact/action needs one focused `CG-P14-*` request with a
 source locator and expected/actual shape—not a hand-written DTO or parser.
 
+### `CG-P14-01` resolved — UTC axis labels are presentation-only
+
+Read the binding [axis ruling](./axis-label-presentation-ruling.md). You may
+choose a bounded UTC tick density and format labels from the published
+`timeline` for the chart coordinate, including at 1280px and 660px. That does
+**not** create a semantic boundary: never round/snap/extend a window, use
+local time or `Date.now()`, serialize a tick into hash/request/export/cache, or
+label a tick as a fold/seal/holdout fact. Keep exact server endpoints and
+window ranges in accessible text. Test that a viewport-only tick change sends
+no new request and changes no semantic timestamp.
+
 ## Required rich-but-truthful composition
 
 Keep Screen-05's complete HiFi shell in every state; replace only the content
@@ -65,7 +76,7 @@ holdout, and do not add an import wizard or a new authority stage.
 
 | Generated fact | Required presentation rule |
 |---|---|
-| `timeline`, `windows.is`, `windows.outer_oos` | show server UTC-ms boundaries/counts exactly; do not calculate alternate labels or resize time intervals |
+| `timeline`, `windows.is`, `windows.outer_oos` | show server UTC-ms boundaries/counts exactly; chart labels may follow the explicit UTC presentation ruling, but must not calculate alternate boundaries or resize time intervals |
 | `windows.warmup` | when `AVAILABLE`, label non-scored copied input; when `NOT_APPLICABLE`, preserve panel layout with its exact reason |
 | `windows.holdout` | show metadata-bound, not exposed/not evaluated/not exposed; no result, preview, click-through, raw request or unlock affordance |
 | `windows.holdout.physical_io` / holdout source absence | say only `NOT_ATTESTED`; semantic tape exclusion is not a physical Parquet row-group proof |

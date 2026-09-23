@@ -35,6 +35,8 @@ interface StoredSplitProjection {
 const FIXED_PROFILE_REASON = "P04_FIXED_PROFILE_DOES_NOT_CREATE_OPTIMIZER_STUDY";
 const FIXED_DIAGNOSTIC_REASON = "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGNOSTICS";
 const STRICT_OOS_REASON = "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS";
+const CANDIDATE_SELECTION_METRIC_REASON = "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC";
+const REQUESTED_OPTIMIZER_NOT_PUBLISHED_REASON = "P10_REQUESTED_OPTIMIZER_DECLARATION_NOT_PUBLISHED";
 
 function availability(state: AvailabilityState, reasonCode: string | null): Availability {
   return { state, reason_code: reasonCode };
@@ -56,6 +58,33 @@ function unavailableGap(sourceAvailability: Availability, fallbackReason: string
     state: "NOT_PUBLISHED",
     reason_code: sourceAvailability.reason_code ?? fallbackReason,
     availability: sourceAvailability,
+  };
+}
+
+function candidateSelectionMetric(availabilityValue: Availability, declared: boolean) {
+  const reasonCode = declared
+    ? CANDIDATE_SELECTION_METRIC_REASON
+    : availabilityValue.reason_code ?? REQUESTED_OPTIMIZER_NOT_PUBLISHED_REASON;
+  return {
+    state: "NOT_PUBLISHED" as const,
+    value: null,
+    provenance: "NONE" as const,
+    reason_code: reasonCode,
+    availability: availability(
+      availabilityValue.state === "AVAILABLE" ? "NOT_PUBLISHED" : availabilityValue.state,
+      reasonCode,
+    ),
+  };
+}
+
+function candidateSelectionMetricGap(metric: ReturnType<typeof candidateSelectionMetric>): SourceGap {
+  return {
+    state: "NOT_PUBLISHED",
+    reason_code: metric.reason_code,
+    // Preserve pending/legacy parent availability rather than flattening a
+    // source outage into the stronger claim that the metric was inspected and
+    // omitted from a completed receipt.
+    availability: metric.availability,
   };
 }
 
@@ -192,6 +221,8 @@ export class ResearchSearchService {
     const available = availability("AVAILABLE", null);
     const optimizer = requestedOptimizer(row.legacyRequest);
     const declared = optimizer.mode && optimizer.schedule;
+    const declaredOptimizer = Boolean(declared);
+    const metric = candidateSelectionMetric(available, declaredOptimizer);
     const strictOos = gap("NOT_ASSERTED", source.protocol.selection.strict_outer_oos.reason_code || STRICT_OOS_REASON);
     const fixedGap = gap("NOT_APPLICABLE", FIXED_PROFILE_REASON);
     const diagnosticGap = gap("NOT_APPLICABLE", FIXED_DIAGNOSTIC_REASON);
@@ -214,6 +245,7 @@ export class ResearchSearchService {
       interactions: diagnosticGap,
       search_fold: fixedGap,
       strict_outer_oos: strictOos,
+      candidate_selection_metric: candidateSelectionMetricGap(metric),
     };
     const revisionPayload = {
       schema_version: "research.search-projection.v1",
@@ -253,8 +285,9 @@ export class ResearchSearchService {
       requested_optimizer: {
         mode: optimizer.mode,
         schedule: optimizer.schedule,
-        state: declared ? "DECLARED_NOT_EXECUTED" : "NOT_PUBLISHED",
-        availability: declared ? available : availability("NOT_PUBLISHED", "P10_REQUESTED_OPTIMIZER_DECLARATION_NOT_PUBLISHED"),
+        state: declaredOptimizer ? "DECLARED_NOT_EXECUTED" : "NOT_PUBLISHED",
+        candidate_selection_metric: metric,
+        availability: declaredOptimizer ? available : availability("NOT_PUBLISHED", REQUESTED_OPTIMIZER_NOT_PUBLISHED_REASON),
       },
       fixed_profile: {
         state: "FIXED_PROFILE_NO_SEARCH",
@@ -307,6 +340,7 @@ export class ResearchSearchService {
         : "NOT_PUBLISHED";
     const reason = sourceAvailability.reason_code ?? "P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED";
     const unavailable = unavailableGap(sourceAvailability, reason);
+    const metric = candidateSelectionMetric(sourceAvailability, false);
     return {
       schema_version: "research.search-detail.v1",
       read_authority: "PORTAL_PERSISTED_RESEARCH",
@@ -328,7 +362,13 @@ export class ResearchSearchService {
         manifest_digest: row.manifestDigest,
       },
       source_profile: { state: sourceState, reason_code: reason, availability: sourceAvailability },
-      requested_optimizer: { mode: null, schedule: null, state: "NOT_PUBLISHED", availability: sourceAvailability },
+      requested_optimizer: {
+        mode: null,
+        schedule: null,
+        state: "NOT_PUBLISHED",
+        candidate_selection_metric: metric,
+        availability: sourceAvailability,
+      },
       fixed_profile: {
         state: "NOT_PUBLISHED",
         adapter_contract_digest: null,
@@ -382,6 +422,7 @@ export class ResearchSearchService {
         interactions: unavailable,
         search_fold: unavailable,
         strict_outer_oos: unavailable,
+        candidate_selection_metric: candidateSelectionMetricGap(metric),
       },
     };
   }

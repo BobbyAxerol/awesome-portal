@@ -56,7 +56,49 @@
       "FixedProfile": { "type": "object", "additionalProperties": false, "required": ["state", "adapter_contract_digest", "parameter_bundle_digest", "parameters", "strict_outer_oos", "availability"], "properties": { "state": { "const": "FIXED_PROFILE_NO_SEARCH" }, "adapter_contract_digest": { "$ref": "#/components/schemas/Digest" }, "parameter_bundle_digest": { "$ref": "#/components/schemas/Digest" }, "parameters": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/components/schemas/Parameter" } }, "strict_outer_oos": { "$ref": "#/components/schemas/SourceGap" }, "availability": { "$ref": "#/components/schemas/Availability" } } },
       "UnavailableFixedProfile": { "type": "object", "additionalProperties": false, "required": ["state", "adapter_contract_digest", "parameter_bundle_digest", "parameters", "strict_outer_oos", "availability"], "properties": { "state": { "const": "NOT_PUBLISHED" }, "adapter_contract_digest": { "type": "null" }, "parameter_bundle_digest": { "type": "null" }, "parameters": { "type": "array", "maxItems": 0, "items": { "$ref": "#/components/schemas/Parameter" } }, "strict_outer_oos": { "$ref": "#/components/schemas/SourceGap" }, "availability": { "$ref": "#/components/schemas/Availability" } } },
       "SourceProfile": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code", "availability"], "properties": { "state": { "enum": ["FIXED_PROFILE_NO_SEARCH", "PENDING_SOURCE_CALLBACK", "LEGACY_METADATA_ONLY", "NOT_PUBLISHED"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
-      "RequestedOptimizer": { "type": "object", "additionalProperties": false, "required": ["mode", "schedule", "state", "availability"], "properties": { "mode": { "anyOf": [{ "type": "string", "pattern": "^[A-Za-z0-9_:-]{1,120}$" }, { "type": "null" }] }, "schedule": { "anyOf": [{ "type": "string", "pattern": "^[A-Za-z0-9_:-]{1,120}$" }, { "type": "null" }] }, "state": { "enum": ["DECLARED_NOT_EXECUTED", "NOT_PUBLISHED"] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+      "CandidateSelectionMetric": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["state", "value", "provenance", "reason_code", "availability"],
+            "properties": {
+              "state": { "const": "CONFIRMED" },
+              "value": { "type": "string", "pattern": "^[A-Za-z0-9_:-]{1,120}$" },
+              "provenance": { "const": "RUN_BOUND_ENGINE_DEFAULT" },
+              "reason_code": { "type": "null" },
+              "availability": { "$ref": "#/components/schemas/Availability" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["state", "value", "provenance", "reason_code", "availability"],
+            "properties": {
+              "state": { "const": "NOT_PUBLISHED" },
+              "value": { "type": "null" },
+              "provenance": { "const": "NONE" },
+              "reason_code": { "$ref": "#/components/schemas/ReasonCode" },
+              "availability": { "$ref": "#/components/schemas/Availability" }
+            }
+          }
+        ]
+      },
+      "RequestedOptimizer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode", "schedule", "state", "candidate_selection_metric", "availability"],
+        "properties": {
+          "mode": { "anyOf": [{ "type": "string", "pattern": "^[A-Za-z0-9_:-]{1,120}$" }, { "type": "null" }] },
+          "schedule": { "anyOf": [{ "type": "string", "pattern": "^[A-Za-z0-9_:-]{1,120}$" }, { "type": "null" }] },
+          "state": { "enum": ["DECLARED_NOT_EXECUTED", "NOT_PUBLISHED"] },
+          "candidate_selection_metric": {
+            "$ref": "#/components/schemas/CandidateSelectionMetric",
+            "description": "Run-bound candidate-selection metric only. Current P04 declared requests publish NOT_PUBLISHED; engine-catalogue defaults and mode-name inferences are not historic run evidence."
+          },
+          "availability": { "$ref": "#/components/schemas/Availability" }
+        }
+      },
       "Selection": { "type": "object", "additionalProperties": false, "required": ["state", "selected_trial_ref", "parameter_bundle_digest", "selection_trace", "availability"], "properties": { "state": { "enum": ["FIXED_PARAMETER_PROFILE", "NOT_PUBLISHED"] }, "selected_trial_ref": { "type": "null" }, "parameter_bundle_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "selection_trace": { "$ref": "#/components/schemas/SourceGap" }, "availability": { "$ref": "#/components/schemas/Availability" } } },
       "Inspection": { "type": "object", "additionalProperties": false, "required": ["requested_fold", "state", "availability"], "properties": { "requested_fold": { "anyOf": [{ "type": "integer", "minimum": 1, "maximum": 256 }, { "type": "null" }] }, "state": { "enum": ["NOT_APPLICABLE", "NOT_PUBLISHED"] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
       "Ledger": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code", "total_rows", "sampled_rows", "page", "availability"], "properties": { "state": { "enum": ["NOT_APPLICABLE", "NOT_PUBLISHED"] }, "reason_code": { "$ref": "#/components/schemas/ReasonCode" }, "total_rows": { "type": "null" }, "sampled_rows": { "type": "null" }, "page": { "type": "null" }, "availability": { "$ref": "#/components/schemas/Availability" } } },

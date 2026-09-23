@@ -50,6 +50,15 @@ cursor, revision, parameter override or job input, or emit a mutation from a
 slider/mount/fold change. The screen must never state that `PARTIAL_MATCH` is
 an artifact/causal-order/selection pass.
 
+### `CG-P16-01` resolved — verify response owns its qualification
+
+Read [the amendment](./contract-amendment-verification-scope.md) and regenerate
+the generated declaration. When the user triggers verify, render the returned
+top-level `verification_scope` beside that response's `result`; do not fetch or
+borrow it from an earlier `FreezeDetail` snapshot. The nested detail scope
+still belongs to the integrity panel. Neither scope permits “chain intact” or
+a source-byte/causal certificate.
+
 ## Required rich-but-truthful Screen-07 composition
 
 Keep the full HiFi shell and responsive geometry. Replace panel contents with
@@ -58,7 +67,7 @@ envelope.
 
 | Generated fact/state | Product rule |
 |---|---|
-| `integrity.state=PARTIAL`, verify `result=PARTIAL_MATCH` | label exactly as retained Portal binding match; render `source_artifact_bytes=NOT_ATTESTED`; never say “chain intact” or add a green source-integrity claim |
+| `integrity.state=PARTIAL`, verify `result=PARTIAL_MATCH` | label exactly as retained Portal binding match; use the verify response's top-level `verification_scope` for the action result, render `source_artifact_bytes=NOT_ATTESTED`; never say “chain intact” or add a green source-integrity claim |
 | `integrity.state=BLOCKED` | show a rich blocked banner and the individual mismatched check; frozen table is intentionally empty, never repopulated from fixture/current local defaults |
 | `frozen_parameters` | render exact decimal strings/bounds/steps only when supplied; no browser percent/digest/value recalculation |
 | `ordering.data_time` | render server UTC-ms data windows; `ordering.wall_clock=NOT_ASSERTED` is not a timeline nor causal pass/fail verdict |

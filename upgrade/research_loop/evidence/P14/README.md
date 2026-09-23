@@ -68,3 +68,12 @@ type rather than a local DTO. The full rule and direct HiFi browser comparison
 requirements are in [frontend-handoff-claude.md](./frontend-handoff-claude.md).
 The four visual HiFi groups are three authority states plus Code Anatomy as a
 presentation substage—not a new server lifecycle state.
+
+## 2026-09-23 Screen-05 axis ruling
+
+`CG-P14-01` is closed by the explicit
+[UTC-axis presentation ruling](./axis-label-presentation-ruling.md). Screen 05
+may format a bounded UTC tick set from the existing immutable `timeline` for
+visual labels only; it may not turn labels into a source boundary, route input,
+cursor, cache key, export fact or calendar/holdout inference. No synthetic
+server tick relation or contract revision was warranted.

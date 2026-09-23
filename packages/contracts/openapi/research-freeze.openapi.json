@@ -98,7 +98,24 @@
         } },
         "source_absences": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/SourceGap" } }
       } },
-      "FreezeVerification": { "type": "object", "additionalProperties": false, "required": ["schema_version", "read_authority", "run_id", "freeze_revision", "verified_at_utc_ms", "result", "integrity"], "properties": { "schema_version": { "const": "research.freeze-verification.v1" }, "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" }, "run_id": { "$ref": "#/components/schemas/RunId" }, "freeze_revision": { "anyOf": [{ "type": "string", "pattern": "^p16r1_[0-9a-f]{64}$" }, { "type": "null" }] }, "verified_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "result": { "enum": ["PARTIAL_MATCH", "BLOCKED", "NOT_PUBLISHED"] }, "integrity": { "$ref": "#/components/schemas/Integrity" } } },
+      "FreezeVerification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema_version", "read_authority", "run_id", "freeze_revision", "verified_at_utc_ms", "result", "verification_scope", "integrity"],
+        "properties": {
+          "schema_version": { "const": "research.freeze-verification.v1" },
+          "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" },
+          "run_id": { "$ref": "#/components/schemas/RunId" },
+          "freeze_revision": { "anyOf": [{ "type": "string", "pattern": "^p16r1_[0-9a-f]{64}$" }, { "type": "null" }] },
+          "verified_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
+          "result": { "enum": ["PARTIAL_MATCH", "BLOCKED", "NOT_PUBLISHED"] },
+          "verification_scope": {
+            "enum": ["PORTAL_RETAINED_DIGEST_BINDING_ONLY", "NONE"],
+            "description": "Qualification of this explicit verification response itself; consumers must not borrow scope from a separately cached detail response."
+          },
+          "integrity": { "$ref": "#/components/schemas/Integrity" }
+        }
+      },
       "Problem": { "type": "object", "additionalProperties": false, "required": ["error"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string", "maxLength": 160 }, "message": { "type": "string", "maxLength": 1024 } } }, "request_id": { "type": "string", "maxLength": 128 } } }
     }
   }

@@ -88,7 +88,11 @@ describe("P16 current-source Freeze / retained integrity authority", () => {
     ]) expect(JSON.stringify(detail)).not.toContain(privateNeedle);
 
     const verified = await service.verify(scope, "run_p16", { fold: 2 });
-    expect(verified).toMatchObject({ result: "PARTIAL_MATCH", freeze_revision: detail.revision });
+    expect(verified).toMatchObject({
+      result: "PARTIAL_MATCH",
+      freeze_revision: detail.revision,
+      verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+    });
     // A retained-digest match is deliberately not a source-artifact PASS.
     expect(JSON.stringify(verified)).not.toContain("PASS");
   });
@@ -114,7 +118,21 @@ describe("P16 current-source Freeze / retained integrity authority", () => {
     expect(detail.freeze.integrity.checks[0]).toMatchObject({
       key: "P04_ADAPTER_CONTRACT", state: "MISMATCH", expected_digest: P04_DELTA_ADAPTER_CONTRACT_DIGEST,
     });
-    await expect(service.verify(scope, "run_p16_mismatch", {})).resolves.toMatchObject({ result: "BLOCKED" });
+    await expect(service.verify(scope, "run_p16_mismatch", {})).resolves.toMatchObject({
+      result: "BLOCKED",
+      verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+    });
+  });
+
+  it("returns NONE on the verification response itself when no retained binding scope is published", async () => {
+    const repository = { hub: vi.fn().mockResolvedValue(currentP04Row({ projection: null })) };
+    const service = new ResearchFreezeService(repository as never, { FEATURE_RESEARCH_FREEZE: "true" } as never);
+
+    await expect(service.verify(scope, "run_p16_not_published", {})).resolves.toMatchObject({
+      result: "NOT_PUBLISHED",
+      verification_scope: "NONE",
+      integrity: { verification_scope: "NONE" },
+    });
   });
 
   it("preserves pending and legacy availability inside all nested source absences", async () => {

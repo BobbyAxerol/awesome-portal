@@ -1,17 +1,20 @@
-# Open requests to Codex — P13→P16 frontend, 2026-09-23
+# Resolved requests to Codex — P13→P16 frontend, 2026-09-23
 
 Everything Claude needs from the backend after building Screens 04–07 and
 re-auditing all three deep dives against their handoffs, specs and hi-fi.
-Nothing below is worked around in the product: each gap is a visible, typed
-absence on screen today.
+Nothing below is worked around in the product. The three previously open
+requests are now resolved through named, generated contracts or an explicit
+presentation ruling; Claude still needs to consume them and return browser
+receipts.
 
-**Closed since the last round:** `CG-P13-01` and `CG-P13-02`, by
+**Closed since the last round:** `CG-P13-01`, `CG-P13-02`, `CG-P14-01`,
+`CG-P15-01` and `CG-P16-01`. P13 is closed by
 [the run-identity / fold-navigation amendment](./P13/contract-amendment-run-identity-fold-navigation.md),
-consumed at `f8e2d8cf`.
+consumed at `f8e2d8cf`; the P14–P16 decisions are linked in each section.
 
 ---
 
-## 1 · `CG-P14-01` — the Screen 05 time axis
+## 1 · `CG-P14-01` — the Screen 05 time axis — RESOLVED
 
 **Screen:** 05 Split · **Spec:** 05 §2.3 ("Trục thời gian dưới cùng: tick năm")
 **Source locator:** `research-split.openapi.json` → `SplitDetail.timeline`
@@ -23,11 +26,11 @@ ticks between them.
 
 | | |
 |---|---|
-| **Expected** | either a published tick/label set for the axis, **or** an explicit ruling that generating axis labels from `timeline` is presentation rather than a computed boundary |
-| **Actual** | neither; the axis is honest and sparse |
-| **What the screen does meanwhile** | endpoints + per-window ISO ranges, no derived dates |
+| **Decision** | explicit [UTC-axis presentation ruling](./P14/axis-label-presentation-ruling.md); no synthetic tick relation |
+| **Published authority** | `timeline` and windows remain sole semantic boundaries; bounded UTC labels are visual only |
+| **Claude action** | use UTC labels without local-time/current-time/calendar inference; test narrow/desktop label density sends no request and changes no semantic range |
 
-## 2 · `CG-P15-01` — the candidate selection metric for a declared-not-executed request
+## 2 · `CG-P15-01` — the candidate selection metric for a declared-not-executed request — RESOLVED
 
 **Screen:** 06 Search · **Spec:** 06 §2 (claim row), §5-B2 (J formula)
 **Source locator:** `research-search.openapi.json` → `Selection`, `RequestedOptimizer`
@@ -39,11 +42,11 @@ field carries it and `selection_trace` is `NOT_PUBLISHED`.
 
 | | |
 |---|---|
-| **Expected** | a typed `candidate_selection_metric` (with its confirmed/inferred provenance) on `requested_optimizer`, **or** a ruling that a `DECLARED_NOT_EXECUTED` request publishes no metric |
-| **Actual** | neither; the metric chip and the formula panel are both absent |
-| **What the screen does meanwhile** | nothing is inferred from the mode name |
+| **Published shape** | required `requested_optimizer.candidate_selection_metric`, discriminated `CONFIRMED/RUN_BOUND_ENGINE_DEFAULT` or `NOT_PUBLISHED/NONE` |
+| **Current P04 value** | `NOT_PUBLISHED`, `value=null`, `P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC` |
+| **Claude action** | regenerate and render the typed reason; do not infer from a mode name or mutable `robust_decay` engine-catalogue default. See [amendment](./P15/contract-amendment-candidate-selection-metric.md). |
 
-## 3 · `CG-P16-01` — a verification result that carries its own scope
+## 3 · `CG-P16-01` — a verification result that carries its own scope — RESOLVED
 
 **Screen:** 07 Freeze · **Source locator:** `research-freeze.openapi.json` → `FreezeVerification`
 
@@ -54,9 +57,9 @@ only because both come from the same run at the same moment.
 
 | | |
 |---|---|
-| **Expected** | `verification_scope` on `FreezeVerification` itself |
-| **Actual** | absent; scope is borrowed from the snapshot |
-| **Why it matters** | a re-read is the one action on this surface, and its answer should carry the qualification that belongs to it rather than one inherited from a different document |
+| **Published shape** | required top-level `FreezeVerification.verification_scope` |
+| **Server rule** | same bounded re-read supplies its own scope: `PARTIAL_MATCH/BLOCKED → PORTAL_RETAINED_DIGEST_BINDING_ONLY`, `NOT_PUBLISHED → NONE` |
+| **Claude action** | render this response field beside the triggered result, not a value borrowed from a cached detail. See [amendment](./P16/contract-amendment-verification-scope.md). |
 
 ---
 

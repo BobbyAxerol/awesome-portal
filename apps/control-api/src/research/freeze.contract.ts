@@ -74,9 +74,11 @@ const IntegrityCheckSchema = z.object({
   availability: ResearchFreezeAvailabilitySchema,
 }).strict();
 
+const VerificationScopeSchema = z.enum(["PORTAL_RETAINED_DIGEST_BINDING_ONLY", "NONE"]);
+
 const IntegritySchema = z.object({
   state: z.enum(["PARTIAL", "BLOCKED", "NOT_PUBLISHED"]),
-  verification_scope: z.enum(["PORTAL_RETAINED_DIGEST_BINDING_ONLY", "NONE"]),
+  verification_scope: VerificationScopeSchema,
   checks: z.array(IntegrityCheckSchema).max(3),
   source_artifact_bytes: ResearchFreezeSourceGapSchema,
   availability: ResearchFreezeAvailabilitySchema,
@@ -182,6 +184,10 @@ export const ResearchFreezeVerificationResponseSchema = z.object({
   freeze_revision: z.string().regex(/^p16r1_[0-9a-f]{64}$/).nullable(),
   verified_at_utc_ms: UtcMsSchema,
   result: z.enum(["PARTIAL_MATCH", "BLOCKED", "NOT_PUBLISHED"]),
+  // A verify response is its own user-triggered observation. It must carry
+  // the qualification it actually verified, rather than requiring a client
+  // to borrow scope from a separately cached detail document.
+  verification_scope: VerificationScopeSchema,
   integrity: IntegritySchema,
 }).strict();
 

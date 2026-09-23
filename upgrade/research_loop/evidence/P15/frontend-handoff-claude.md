@@ -62,6 +62,7 @@ whole route with a generic unavailable envelope.
 | `source_profile.state=FIXED_PROFILE_NO_SEARCH` | label installed source as a fixed qualification, not an inactive/broken optimizer |
 | `fixed_profile.parameters` | render exact declared bounds/step/effective decimal strings and server display position; do not calculate alternative selection/scores or silently round values |
 | `requested_optimizer.state=DECLARED_NOT_EXECUTED` | say the request declared a mode/schedule but P04 did not execute a search; never render it as a current study/mode switcher or selection formula |
+| `requested_optimizer.candidate_selection_metric.state=NOT_PUBLISHED` | render its exact reason in the rich claim/formula panel; no metric chip/value or `INFERRED` label. A current catalogue default and the mode name are not run evidence. Reserve the panel's confirmed state for the generated `CONFIRMED/RUN_BOUND_ENGINE_DEFAULT` branch only. |
 | `selection.selected_trial_ref=null`, `FIXED_PARAMETER_PROFILE` | do not create best/selected cards, a pick hash, jump-to-trial action, Freeze action, trial drawer or θ* claimed to originate from a trial |
 | `ledger`, `diagnostics`, `source_absences` typed `NOT_APPLICABLE` | retain the visual panel/card with exact reason code/copy. No empty chart pretending no candidates existed, no `0`, no fixture points, no disabled POST button. |
 | `strict_outer_oos=NOT_ASSERTED` | do not show OOS pass/fail/selection chips or any inferred objective. |
@@ -73,6 +74,13 @@ shares a product-route response or claim**. The product route for a real P04
 run only renders the current fixed-profile contract. A future source publishes
 real optimizer facts; it will get a new discriminated generated contract, not
 a frontend inference branch.
+
+### `CG-P15-01` resolved — immutable metric truth
+
+Read [the amendment](./contract-amendment-candidate-selection-metric.md),
+regenerate the generated declaration, and discriminate on the published state.
+Current P04 has no run-bound candidate selection metric. Do not substitute the
+catalogue's `robust_decay` default, a mode-name mapping, or a local formula.
 
 ## Browser/HiFi receipt is mandatory
 

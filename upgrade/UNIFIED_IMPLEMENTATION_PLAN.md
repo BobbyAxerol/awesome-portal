@@ -4835,6 +4835,28 @@ artifact bytes are not attested,” never “chain intact.” Sliders, what-if g
 diagnostic evaluation and sibling draft are not hidden client mutations; they
 stay visibly `NOT_APPLICABLE` until a versioned source contract publishes them.
 
+#### P14–P16 consumer-contract closeout — 2026-09-23
+
+Three focused Claude requests are closed without widening source authority or
+creating a broad screen endpoint:
+
+| Request | Decision / contract | Consumer rule |
+|---|---|---|
+| `CG-P14-01` | [P14 UTC axis ruling](./research_loop/evidence/P14/axis-label-presentation-ruling.md): tick placement/labels derived from published `timeline` are display-only, so no synthetic tick relation is added. | UTC labels may vary with viewport; they must never alter/recreate a source boundary, hash/request/cache/export fact or calendar/holdout inference. |
+| `CG-P15-01` | [P15 amendment](./research_loop/evidence/P15/contract-amendment-candidate-selection-metric.md): `requested_optimizer.candidate_selection_metric` is required and current P04 emits typed `NOT_PUBLISHED`; `CONFIRMED` is reserved for a persisted `RUN_BOUND_ENGINE_DEFAULT`. | Do not infer from mode/schedule or a mutable engine catalogue default; show the source reason in the existing claim/formula panel. |
+| `CG-P16-01` | [P16 amendment](./research_loop/evidence/P16/contract-amendment-verification-scope.md): explicit verify response owns required top-level `verification_scope`. | Render the scope returned with that user action, not a value borrowed from an old detail snapshot. |
+
+All three amendments are additive/read-only. They add no migration, source
+adapter/worker, Execution call, browser authority, runtime flag or release
+activation. Their targeted backend/generated-contract gates must pass before
+Claude regenerates and consumes the declarations.
+
+**Closeout evidence:** targeted P15/P16 Control API contract/service/controller
+tests (16), generated-contract tests (11), TypeScript build, full generated
+output verifier, contract-snapshot check and whitespace check passed on
+2026-09-23. P14 is a normative consumer presentation ruling and requires its
+separate Claude browser receipt; it has no backend artifact to regenerate.
+
 <a id="rl-p17"></a>
 ### P17 — Route-aware replay và state-at-cursor
 

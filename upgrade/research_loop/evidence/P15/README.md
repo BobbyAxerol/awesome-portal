@@ -58,3 +58,11 @@ Claude owns the Screen-06 product consumer and direct browser-versus-HiFi
 receipt. The generated declaration must be used rather than a local DTO; see
 [frontend-handoff-claude.md](./frontend-handoff-claude.md). Do not modify
 P15 backend or make a generic optimizer appear from frontend fixtures.
+
+## 2026-09-23 candidate-selection metric amendment
+
+`CG-P15-01` is closed by the typed
+[candidate-selection metric amendment](./contract-amendment-candidate-selection-metric.md).
+Current P04 declared-but-not-executed requests publish `NOT_PUBLISHED` with a
+specific reason and no value. A mutable engine catalogue default or mode name
+is not historic run evidence.

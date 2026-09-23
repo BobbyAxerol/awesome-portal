@@ -18,8 +18,27 @@ describe("P15 published Research Search contract", () => {
     const generated = readFileSync(generatedPath, "utf8");
     for (const needle of [
       "researchSearchDetailGetV1", "FIXED_PROFILE_NO_SEARCH", "DECLARED_NOT_EXECUTED",
-      "FIXED_PARAMETER_PROFILE", "selected_trial_ref", "NOT_APPLICABLE", "ExactDecimal", "fold",
+      "FIXED_PARAMETER_PROFILE", "selected_trial_ref", "candidate_selection_metric", "RUN_BOUND_ENGINE_DEFAULT",
+      "NOT_PUBLISHED", "NOT_APPLICABLE", "ExactDecimal", "fold",
     ]) expect(generated).toContain(needle);
+  });
+
+  it("requires a run-bound candidate-selection metric instead of leaving a client inference slot", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      components: {
+        schemas: Record<string, {
+          required?: string[];
+          properties?: Record<string, { $ref?: string }>;
+          oneOf?: Array<{ properties?: Record<string, { const?: string }> }>;
+        }>;
+      };
+    };
+    const optimizer = document.components.schemas.RequestedOptimizer!;
+    const metric = document.components.schemas.CandidateSelectionMetric!;
+
+    expect(optimizer.required).toContain("candidate_selection_metric");
+    expect(optimizer.properties?.candidate_selection_metric?.$ref).toBe("#/components/schemas/CandidateSelectionMetric");
+    expect(metric.oneOf?.map((branch) => branch.properties?.state?.const)).toEqual(["CONFIRMED", "NOT_PUBLISHED"]);
   });
 
   it("does not expose worker, source, cursor, raw-data or command authority", () => {
