@@ -1,4 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Pool } from "../../apps/control-api/node_modules/pg";
 
 import type { ControlApiConfig } from "../../apps/control-api/src/config";
@@ -159,6 +161,12 @@ describe("Research Loop P08 · data snapshots, effective spec and preflight", ()
     await seedIdentity();
     const spec = requested();
     const result = await service.create(admin, scopeA, spec, "p08-request");
+    const fixture = JSON.parse(readFileSync(join(__dirname, "../../packages/contracts/fixtures/research-preflight.response.valid.json"), "utf8"));
+    expect({
+      ...result,
+      preflight_token: "rpft_fixture",
+      expires_at_utc_ms: 0,
+    }).toEqual(fixture);
     expect(result).toMatchObject({ schema_version: "research.preflight.v1", may_create_run: false, requested_spec_digest: sha256ResearchJson(spec), capability: { preflight_admission: "PREFLIGHT_ONLY" } });
     expect(result.snapshot.closed_bar_policy).toBe("CLOSED_BARS_ONLY");
     expect(client.calls[0]).toMatchObject({ requiredColumns: ["open", "high", "low", "close", "volume"], warmupBars: 0, requiresFunding: false });

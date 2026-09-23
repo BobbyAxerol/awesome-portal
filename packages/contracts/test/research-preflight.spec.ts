@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { components } from "../generated/research-preflight";
 
 import { describe, expect, it } from "vitest";
 
@@ -60,5 +61,19 @@ describe("P08 published Research preflight contract", () => {
     expect(document).toContain("P10 may return true only");
     expect(document).not.toContain("private_dsn");
     expect(document).toContain("propertyNames");
+  });
+  it("pins one typed, sanitized public response from the P08 producer", () => {
+    const fixture: components["schemas"]["ResearchPreflightV1"] = JSON.parse(
+      readFileSync(join(ROOT, "fixtures", "research-preflight.response.valid.json"), "utf8"),
+    );
+    expect(fixture).toMatchObject({
+      schema_version: "research.preflight.v1",
+      preflight_token: "rpft_fixture",
+      expires_at_utc_ms: 0,
+      may_create_run: false,
+      capability: { preflight_admission: "PREFLIGHT_ONLY" },
+    });
+    expect(fixture.snapshot).not.toHaveProperty("source_path");
+    expect(fixture.snapshot).not.toHaveProperty("market_rows");
   });
 });

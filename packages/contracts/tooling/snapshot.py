@@ -64,6 +64,7 @@ TRACKED = (
     "fixtures/problem.valid.json",
     "fixtures/research-foundation.journey-v2.valid.json",
     "fixtures/research-foundation.historical-identity.valid.json",
+    "fixtures/research-preflight.response.valid.json",
     "fixtures/command.valid.json",
     "fixtures/event.valid.json",
     "fixtures/keyset-page.valid.json",

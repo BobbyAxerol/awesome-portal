@@ -1,0 +1,228 @@
+{
+  "schema_version": "research.preflight.v1",
+  "preflight_token": "rpft_fixture",
+  "expires_at_utc_ms": 0,
+  "may_create_run": false,
+  "requested_spec_digest": "e64e1cd2fb8b00ebf92934ee5854452e1708d9fa26d9b7234f56faf4f461d506",
+  "effective_spec_digest": "13330cbe2836c37562ca53ce4048d15ad2a06817fb8906d49c3c567aba264299",
+  "dataset_binding_digest": "bef5f6103d67199c69f0d40fefff3f42c921190c53f1ea25b7c7fc8455e335ce",
+  "manifest_digest": "a3675116d9b48dcc7d13fcb6f382b60d99cf611297adb3339959ec2000a503fc",
+  "effective_spec": {
+    "schema_version": "research.effective-spec.v1",
+    "requested_spec_digest": "e64e1cd2fb8b00ebf92934ee5854452e1708d9fa26d9b7234f56faf4f461d506",
+    "engine": {
+      "engine_release_id": "er_quantbt_111",
+      "engine_catalog_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "execution_route": "signal_notional",
+      "required_input_class": "candle",
+      "route_axes": {
+        "engine": "SUPPORTED",
+        "integration": "ADAPTER_AVAILABLE",
+        "evidence": "EVIDENCE_MAPPED",
+        "admission": "P04_BASELINE_ONLY"
+      },
+      "preflight_admission": "PREFLIGHT_ONLY",
+      "optimization_mode": "mode_1_decay",
+      "optimization_schedule": "global"
+    },
+    "data_binding": {
+      "snapshot_id": "dss_0123456789abcdef0123456789abcdef",
+      "snapshot_content_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "market_content_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "source_manifest_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "timezone": "UTC",
+      "calendar_policy": "CRYPTO_24_7",
+      "closed_bar_policy": "CLOSED_BARS_ONLY",
+      "columns": [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "warmup_bars": 0,
+      "range_start_utc_ms": 1767484800000,
+      "range_end_exclusive_utc_ms": 1768694400000
+    },
+    "topology": {
+      "protocol": "three_window_decay",
+      "folds": [
+        {
+          "fold_id": "fold_000",
+          "train": {
+            "start_utc": "2026-01-04T00:00:00+00:00",
+            "end_exclusive_utc": "2026-01-10T00:00:00+00:00",
+            "start_utc_ms": 1767484800000,
+            "end_exclusive_utc_ms": 1768003200000,
+            "bars": 144
+          },
+          "outer_oos": {
+            "start_utc": "2026-01-10T00:00:00+00:00",
+            "end_exclusive_utc": "2026-01-14T00:00:00+00:00",
+            "start_utc_ms": 1768003200000,
+            "end_exclusive_utc_ms": 1768348800000,
+            "bars": 96
+          },
+          "state": "BOUNDARY_FIXED_NOT_EVALUATED"
+        }
+      ],
+      "sealed_holdout": {
+        "start_utc": "2026-01-14T00:00:00+00:00",
+        "end_exclusive_utc": "2026-01-18T00:00:00+00:00",
+        "start_utc_ms": 1768348800000,
+        "end_exclusive_utc_ms": 1768694400000,
+        "bars": 96,
+        "snapshot_read_state": "OPAQUE_SNAPSHOT_ONLY",
+        "evaluation_state": "NOT_EVALUATED",
+        "disclosure": "Snapshot integrity metadata only; no raw sealed-holdout values are returned."
+      },
+      "topology_digest": "96d5f9ce5c2680164339ca00cdc16addb117e903dd34b4419ff768d8a9aebd13"
+    },
+    "optimization": {
+      "mode": "mode_1_decay",
+      "schedule": "global",
+      "trial_count": 8,
+      "early_stopping": null,
+      "random_seed": 42,
+      "scope": "per_study_per_fold_per_seed"
+    },
+    "intent": {
+      "kind": "NEW",
+      "reproduction_semantics": "P10 supplies archived effective inputs.",
+      "upgrade_semantics": "P10 creates an explicit upgrade."
+    }
+  },
+  "dataset_binding": {
+    "schema_version": "research.dataset-binding.v1",
+    "snapshot_id": "dss_0123456789abcdef0123456789abcdef",
+    "snapshot_content_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "market_content_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "source_manifest_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "dataset_id": "crypto-binance-1m",
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "range_start_utc_ms": 1767484800000,
+    "range_end_exclusive_utc_ms": 1768694400000,
+    "timezone": "UTC",
+    "calendar_policy": "CRYPTO_24_7",
+    "closed_bar_policy": "CLOSED_BARS_ONLY"
+  },
+  "snapshot": {
+    "snapshot_id": "dss_0123456789abcdef0123456789abcdef",
+    "snapshot_content_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "market_content_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "source_manifest_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "row_count": 336,
+    "byte_count": 16384,
+    "query": {
+      "start_utc": "2026-01-04T00:00:00+00:00",
+      "end_exclusive_utc": "2026-01-10T00:00:00+00:00",
+      "start_utc_ms": 1767484800000,
+      "end_exclusive_utc_ms": 1768003200000,
+      "bars": 144
+    },
+    "logical_range": {
+      "start_utc": "2026-01-04T00:00:00+00:00",
+      "end_exclusive_utc": "2026-01-10T00:00:00+00:00",
+      "start_utc_ms": 1767484800000,
+      "end_exclusive_utc_ms": 1768003200000,
+      "bars": 144
+    },
+    "warmup": {
+      "start_utc": "2026-01-04T00:00:00+00:00",
+      "end_exclusive_utc": "2026-01-10T00:00:00+00:00",
+      "start_utc_ms": 1767484800000,
+      "end_exclusive_utc_ms": 1768003200000,
+      "bars": 144,
+      "requested_bars": 0,
+      "state": "BOUNDARY_ONLY_NOT_FIT"
+    },
+    "timezone": "UTC",
+    "calendar_policy": "CRYPTO_24_7",
+    "closed_bar_policy": "CLOSED_BARS_ONLY",
+    "columns": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "quality": {
+      "rows": 336,
+      "gaps": 0,
+      "duplicates": 0,
+      "gap_ratio": 0,
+      "passed": true,
+      "reason_codes": [],
+      "missing_bar_count": 0,
+      "state": "SNAPSHOT_INTEGRITY_ONLY"
+    },
+    "provenance": {
+      "loader_contract": "hmd-loader-v1"
+    }
+  },
+  "topology": {
+    "protocol": "three_window_decay",
+    "folds": [
+      {
+        "fold_id": "fold_000",
+        "train": {
+          "start_utc": "2026-01-04T00:00:00+00:00",
+          "end_exclusive_utc": "2026-01-10T00:00:00+00:00",
+          "start_utc_ms": 1767484800000,
+          "end_exclusive_utc_ms": 1768003200000,
+          "bars": 144
+        },
+        "outer_oos": {
+          "start_utc": "2026-01-10T00:00:00+00:00",
+          "end_exclusive_utc": "2026-01-14T00:00:00+00:00",
+          "start_utc_ms": 1768003200000,
+          "end_exclusive_utc_ms": 1768348800000,
+          "bars": 96
+        },
+        "state": "BOUNDARY_FIXED_NOT_EVALUATED"
+      }
+    ],
+    "sealed_holdout": {
+      "start_utc": "2026-01-14T00:00:00+00:00",
+      "end_exclusive_utc": "2026-01-18T00:00:00+00:00",
+      "start_utc_ms": 1768348800000,
+      "end_exclusive_utc_ms": 1768694400000,
+      "bars": 96,
+      "snapshot_read_state": "OPAQUE_SNAPSHOT_ONLY",
+      "evaluation_state": "NOT_EVALUATED",
+      "disclosure": "Snapshot integrity metadata only; no raw sealed-holdout values are returned."
+    },
+    "topology_digest": "96d5f9ce5c2680164339ca00cdc16addb117e903dd34b4419ff768d8a9aebd13"
+  },
+  "resource_estimate": {
+    "schema_version": "research.resource-estimate.v1",
+    "scope": "per_study_per_fold_per_seed; no product-wide trial claim is implied",
+    "trial_count": 8,
+    "seed_count": 1,
+    "outer_fold_count": 1,
+    "evaluation_count": 8,
+    "raw_frame_bytes": 16384,
+    "snapshot_bytes": 16384,
+    "estimated_memory_bytes": 8388608,
+    "estimated_scratch_bytes": 32768,
+    "estimated_cpu_seconds": 1,
+    "admission_state": "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING",
+    "disclosure": "Estimate only. P10 must reserve worker resources."
+  },
+  "capability": {
+    "engine_release_id": "er_quantbt_111",
+    "engine_catalog_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "execution_route": "signal_notional",
+    "required_input_class": "candle",
+    "route_axes": {
+      "engine": "SUPPORTED",
+      "integration": "ADAPTER_AVAILABLE",
+      "evidence": "EVIDENCE_MAPPED",
+      "admission": "P04_BASELINE_ONLY"
+    },
+    "preflight_admission": "PREFLIGHT_ONLY",
+    "optimization_mode": "mode_1_decay",
+    "optimization_schedule": "global"
+  }
+}
