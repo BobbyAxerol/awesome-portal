@@ -13,7 +13,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Copy, Download, FolderOpen, Map as MapIcon, Plus, ShieldAlert } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import {
   Link,
   Navigate,
@@ -30,29 +30,43 @@ import { useFeature } from "../../app/context";
 import { Badge, Chip, StateView } from "../../components/ui";
 import { api, canOpenRunResults, isTerminal, type RunSummary } from "../../lib/api";
 import { fmtShortHash } from "../../lib/format";
-import { AuditView } from "../audit/AuditView";
-import { ConfigWorkspace } from "../config/ConfigWorkspace";
-import { AlphaVersionDetail } from "../imports/AlphaVersionDetail";
-import { ImportInbox } from "../imports/ImportInbox";
-import { ExecutionView } from "../execution/ExecutionView";
-import { OptimizationView } from "../optimization/OptimizationView";
-import { OverviewView } from "../overview/OverviewView";
-import { ParametersView } from "../parameters/ParametersView";
-import { RunLibrary } from "../runs/RunLibrary";
-import { RunProgress } from "../runs/RunProgress";
 import { QuantBTSubnav } from "./QuantBTSubnav";
 import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
-import { EngineAtlasRoute, JourneyMapRoute } from "../../research/foundationRoutes";
-import { AlphaImportRoute } from "../../research/AlphaImportRoute";
-import { NewRunRoute } from "../../research/NewRunRoute";
-import { RunProgressRoute } from "../../research/RunProgressRoute";
-import { RunLibraryRoute } from "../../research/RunLibraryRoute";
-import { EvidenceFlowRoute } from "../../research/EvidenceFlowRoute";
-import { SplitRoute } from "../../research/SplitRoute";
-import { SearchRoute } from "../../research/SearchRoute";
-import { FreezeRoute } from "../../research/FreezeRoute";
 import { PortalApiError } from "../../lib/api";
+
+/*
+ * Every screen is its own chunk (RF-04, FE-X-01/02).
+ *
+ * They were imported statically, so opening any Research screen downloaded
+ * all of them — and, through the legacy result tabs, the ECharts bundle
+ * (246 KB gzip) on screens that draw no chart. Each route now loads only what
+ * it renders; the Suspense boundary below shows the loading state meanwhile.
+ */
+function lazyNamed<M extends Record<K, ComponentType<any>>, K extends keyof M>(load: () => Promise<M>, name: K) {
+  return lazy(() => load().then((module) => ({ default: module[name] })));
+}
+
+const AuditView = lazyNamed(() => import("../audit/AuditView"), "AuditView");
+const ConfigWorkspace = lazyNamed(() => import("../config/ConfigWorkspace"), "ConfigWorkspace");
+const AlphaVersionDetail = lazyNamed(() => import("../imports/AlphaVersionDetail"), "AlphaVersionDetail");
+const ImportInbox = lazyNamed(() => import("../imports/ImportInbox"), "ImportInbox");
+const ExecutionView = lazyNamed(() => import("../execution/ExecutionView"), "ExecutionView");
+const OptimizationView = lazyNamed(() => import("../optimization/OptimizationView"), "OptimizationView");
+const OverviewView = lazyNamed(() => import("../overview/OverviewView"), "OverviewView");
+const ParametersView = lazyNamed(() => import("../parameters/ParametersView"), "ParametersView");
+const RunLibrary = lazyNamed(() => import("../runs/RunLibrary"), "RunLibrary");
+const RunProgress = lazyNamed(() => import("../runs/RunProgress"), "RunProgress");
+const EngineAtlasRoute = lazyNamed(() => import("../../research/foundationRoutes"), "EngineAtlasRoute");
+const JourneyMapRoute = lazyNamed(() => import("../../research/foundationRoutes"), "JourneyMapRoute");
+const AlphaImportRoute = lazyNamed(() => import("../../research/AlphaImportRoute"), "AlphaImportRoute");
+const NewRunRoute = lazyNamed(() => import("../../research/NewRunRoute"), "NewRunRoute");
+const RunProgressRoute = lazyNamed(() => import("../../research/RunProgressRoute"), "RunProgressRoute");
+const RunLibraryRoute = lazyNamed(() => import("../../research/RunLibraryRoute"), "RunLibraryRoute");
+const EvidenceFlowRoute = lazyNamed(() => import("../../research/EvidenceFlowRoute"), "EvidenceFlowRoute");
+const SplitRoute = lazyNamed(() => import("../../research/SplitRoute"), "SplitRoute");
+const SearchRoute = lazyNamed(() => import("../../research/SearchRoute"), "SearchRoute");
+const FreezeRoute = lazyNamed(() => import("../../research/FreezeRoute"), "FreezeRoute");
 
 function RunStatusBadge({ status }: { status: string | null }) {
   if (!status) return null;
@@ -217,6 +231,10 @@ function LegacyTabRedirect() {
  * Module
  * ---------------------------------------------------------------------- */
 
+/** The Research Loop screens: S00, S01, S02, S03–S07, S12, S14. */
+const RESEARCH_SCREEN =
+  /\/research\/quantbt\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze)|runs)\/?$/;
+
 /** Path segments under `runs/` that name a screen rather than a run. */
 const RESERVED_RUN_SEGMENTS = new Set(["new", "legacy"]);
 
@@ -225,8 +243,18 @@ export function QuantBTModule() {
   const location = useLocation();
   const [copied, setCopied] = useState(false);
 
-  const runs = useQuery({ queryKey: ["runs"], queryFn: api.listRuns, refetchInterval: 4000 });
-  const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies });
+  /* The Research Loop screens read their own contracts. The legacy run list
+     (polled every 4 s, forever) and strategy list were fetched on every one of
+     them for a header count and a chip those screens do not show (RF-04,
+     FE-X-03). */
+  const onResearchScreen = RESEARCH_SCREEN.test(location.pathname);
+  const runs = useQuery({
+    queryKey: ["runs"],
+    queryFn: api.listRuns,
+    refetchInterval: 4000,
+    enabled: !onResearchScreen,
+  });
+  const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies, enabled: !onResearchScreen });
 
   // The active run is whatever the canonical path names. Reading it from the
   // URL keeps the header, passport and export action in agreement by
@@ -266,9 +294,7 @@ export function QuantBTModule() {
   // Kept separate from `onTaskRoute` on purpose: widening that regex would
   // also have dropped the caption from New Run and the import inbox, which are
   // outside this phase and inside the visual baseline.
-  const onReferenceRoute =
-    /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze))(\/|$)/.test(location.pathname) ||
-    /\/runs$/.test(location.pathname);
+  const onReferenceRoute = onResearchScreen;
 
   const actions = (
     <>
@@ -349,6 +375,7 @@ export function QuantBTModule() {
         )}
       </ModuleHeader>
 
+      <Suspense fallback={<StateView kind="loading" message="Loading screen…" />}>
       <Routes>
         <Route path="new" element={<ConfigWorkspace />} />
         {/* The quarantine inbox lives under QuantBT because it is about the
@@ -392,6 +419,7 @@ export function QuantBTModule() {
         <Route index element={<Navigate to={`${QUANTBT_ROOT}/runs`} replace />} />
         <Route path="*" element={<Navigate to={QUANTBT_ROOT} replace />} />
       </Routes>
+      </Suspense>
     </>
   );
 }

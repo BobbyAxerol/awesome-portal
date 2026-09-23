@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { EngineAtlas, atlasHash, atlasLocationFromHash, type AtlasLocation, type AtlasTab } from "./EngineAtlas";
+import { preloadKatex } from "./Formula";
 import { JourneyMap } from "./JourneyMap";
 import type { AtlasDocument } from "./atlas";
 import {
@@ -150,6 +151,7 @@ export function atlasQueryFromSearch(search: string): AtlasQuery {
 
 export function EngineAtlasRoute() {
   const location = useLocation();
+  useEffect(() => preloadKatex(), []);
   const query = useMemo(() => atlasQueryFromSearch(location.search), [location.search]);
 
   /* The tab lives in the hash so a link to a specific tab survives a reload

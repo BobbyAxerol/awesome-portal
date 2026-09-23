@@ -41,6 +41,19 @@ type KatexModule = { render: (tex: string, element: HTMLElement, options: Record
 
 let katexPromise: Promise<KatexModule> | null = null;
 
+/**
+ * Starts the KaTeX chunk without waiting for a formula to mount. The Atlas
+ * calls it when the route mounts, so the chunk downloads alongside the Atlas
+ * read instead of after it (RF-04, FE-X-04: typeset landed 530–690 ms cold,
+ * 5.6 s on a slow link, all of it queued behind the data).
+ */
+export function preloadKatex(): void {
+  void loadKatex().catch(() => {
+    /* The mono fallback stays; a failed preload is retried by the first formula. */
+    katexPromise = null;
+  });
+}
+
 function loadKatex(): Promise<KatexModule> {
   katexPromise ??= Promise.all([import("katex"), import("katex/dist/katex.min.css")]).then(
     ([module]) => ((module as { default?: KatexModule }).default ?? (module as unknown as KatexModule)),
