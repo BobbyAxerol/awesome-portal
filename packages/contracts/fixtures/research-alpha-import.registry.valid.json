@@ -7,6 +7,8 @@
       "display_name": "Alpha demo",
       "strategy_id": "alpha-demo",
       "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "supersedes": null,
+      "supersedes_state": "RECORDED",
       "version_label": "av_0_3_0",
       "lifecycle_state": "DRAFT",
       "entrypoint": "generate_signals",

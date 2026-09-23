@@ -235,6 +235,14 @@
         "display_name": { "type": "string", "minLength": 1, "maxLength": 160 },
         "strategy_id": { "$ref": "#/$defs/AlphaId" },
         "source_digest": { "$ref": "#/$defs/Digest" },
+        "supersedes": {
+          "anyOf": [{ "$ref": "#/$defs/AlphaVersionId" }, { "type": "null" }],
+          "description": "Immutable predecessor captured at registration; null is authoritative only with supersedes_state RECORDED."
+        },
+        "supersedes_state": {
+          "enum": ["RECORDED", "HISTORICAL_NOT_RECORDED"],
+          "description": "Distinguishes a proven first version from an older row without registration-time lineage."
+        },
         "version_label": { "type": "string", "minLength": 4, "maxLength": 64, "pattern": "^av_[0-9]+(?:_[0-9]+){2}$" },
         "lifecycle_state": { "enum": ["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] },
         "entrypoint": { "type": "string", "minLength": 1, "maxLength": 160 },

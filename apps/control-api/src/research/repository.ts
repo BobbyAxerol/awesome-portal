@@ -93,6 +93,8 @@ interface AlphaImportVersionRow {
   dependency_ref: string;
   lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   matches_declared_contract: boolean;
+  supersedes_alpha_version_id: string | null;
+  supersedes_recorded: boolean;
 }
 
 interface AlphaImportRegistryRow {
@@ -106,6 +108,8 @@ interface AlphaImportRegistryRow {
   declared_contract: Record<string, unknown> | string;
   source_digest_prefix: string;
   alpha_revision: string | number;
+  supersedes_alpha_version_id: string | null;
+  supersedes_recorded: boolean;
   registered_at: Date;
 }
 
@@ -1029,7 +1033,7 @@ export class ResearchMetadataRepository {
       }>(
         `SELECT active_version_id, revision, name, owner_user_id, execution_subject_id
            FROM research.alphas
-          WHERE workspace_id = $1 AND alpha_id = $2`,
+          WHERE workspace_id = $1 AND alpha_id = $2 FOR UPDATE`,
         [scope.workspaceId, input.alphaId],
       );
       const alphaRow = alpha.rows[0];
@@ -1046,8 +1050,8 @@ export class ResearchMetadataRepository {
         `INSERT INTO research.alpha_versions
            (workspace_id, alpha_version_id, alpha_id, code_digest, entrypoint,
             dependency_ref, declared_contract, source_file_ref, lifecycle_state,
-            registered_by_user_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, 'DRAFT', $9)
+            registered_by_user_id, supersedes_alpha_version_id, supersedes_recorded)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, 'DRAFT', $9, $10, true)
          ON CONFLICT (workspace_id, alpha_version_id) DO NOTHING
          RETURNING alpha_version_id`,
         [
@@ -1060,14 +1064,17 @@ export class ResearchMetadataRepository {
           JSON.stringify(input.declaredContract),
           input.sourceFileRef,
           scope.actorUserId,
+          alphaRow.active_version_id,
         ],
       );
 
       let replayed = false;
+      let registrationPredecessor = alphaRow.active_version_id;
       if (inserted.rowCount === 0) {
         const existing = await client.query<AlphaImportVersionRow>(
           `SELECT alpha_id, alpha_version_id, source_file_ref, code_digest,
                   entrypoint, dependency_ref, lifecycle_state,
+                  supersedes_alpha_version_id, supersedes_recorded,
                   declared_contract = $3::jsonb AS matches_declared_contract
              FROM research.alpha_versions
             WHERE workspace_id = $1 AND alpha_version_id = $2`,
@@ -1083,6 +1090,10 @@ export class ResearchMetadataRepository {
             409,
           );
         }
+        if (!row.supersedes_recorded) {
+          throw new ResearchMetadataError("RESEARCH_IMMUTABLE_ALPHA_VERSION_CONFLICT", "Historical Alpha lineage was not recorded; replay cannot infer it.", 409);
+        }
+        registrationPredecessor = row.supersedes_alpha_version_id;
         replayed = true;
       }
 
@@ -1122,7 +1133,7 @@ export class ResearchMetadataRepository {
         alphaId: input.alphaId,
         alphaVersionId: input.alphaVersionId,
         sourceDigest: input.sourceDigest,
-        supersedes: alphaRow.active_version_id,
+        supersedes: registrationPredecessor,
         alphaRevision: asNumber(alphaRow.revision),
         replayed,
       };
@@ -1231,6 +1242,8 @@ export class ResearchMetadataRepository {
                 version.declared_contract,
                 alpha.name AS display_name,
                 COALESCE(source.source_digest, version.code_digest) AS source_digest,
+                version.supersedes_alpha_version_id,
+                version.supersedes_recorded,
                 substring(COALESCE(source.source_digest, version.code_digest) FROM 1 FOR 12) AS source_digest_prefix,
                 alpha.revision AS alpha_revision,
                 version.registered_at
@@ -1265,6 +1278,8 @@ export class ResearchMetadataRepository {
         sourceDigest: row.source_digest,
         versionLabel: row.version_label,
         lifecycleState: row.lifecycle_state,
+        supersedes: row.supersedes_alpha_version_id,
+        supersedesRecorded: row.supersedes_recorded,
         entrypoint: row.entrypoint,
         declaredContract: decodeObject(row.declared_contract, "AlphaVersion declared contract"),
         sourceDigestPrefix: row.source_digest_prefix,

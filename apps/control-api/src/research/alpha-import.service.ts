@@ -224,6 +224,8 @@ export class ResearchAlphaImportService {
         display_name: row.displayName,
         strategy_id: row.alphaId,
         source_digest: row.sourceDigest,
+        supersedes: row.supersedes,
+        supersedes_state: row.supersedesRecorded ? "RECORDED" : "HISTORICAL_NOT_RECORDED",
         version_label: row.versionLabel,
         lifecycle_state: row.lifecycleState,
         entrypoint: row.entrypoint,

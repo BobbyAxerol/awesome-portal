@@ -175,6 +175,13 @@ export interface components {
             display_name?: string;
             strategy_id?: components["schemas"]["AlphaId"];
             source_digest?: components["schemas"]["Digest"];
+            /** @description Immutable predecessor captured at registration; null is authoritative only with supersedes_state RECORDED. */
+            supersedes?: components["schemas"]["AlphaVersionId"] | null;
+            /**
+             * @description Distinguishes a proven first version from an older row without registration-time lineage.
+             * @enum {unknown}
+             */
+            supersedes_state?: "RECORDED" | "HISTORICAL_NOT_RECORDED";
             version_label: string;
             /** @enum {unknown} */
             lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";

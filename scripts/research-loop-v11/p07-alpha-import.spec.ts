@@ -193,6 +193,7 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     expect(gates.gates.every((gate) => gate.state === "PASS")).toBe(true);
     expect(gates.static_scan_disclosure).toBe("Static scan — runtime causality is proven per run at Stage 3/4.");
     expect(result).toMatchObject({ schema_version: "research.alpha-registration.v1", lifecycle_state: "DRAFT", replayed: false, alpha_id: "p07-alpha", may_activate: true });
+    expect(result.supersedes).toBeNull();
 
     const activated = await service.activate(admin, scopeA, {
       alphaVersionId: result.alpha_version_id,
@@ -203,6 +204,7 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
       alpha_id: "p07-alpha", alpha_version_id: result.alpha_version_id, lifecycle_state: "ACTIVE",
       display_name: "p07-alpha", strategy_id: "p07-alpha", source_digest: parsed.source_digest,
       source_digest_prefix: parsed.source_digest.slice(0, 12), may_activate: true,
+      supersedes: null, supersedes_state: "RECORDED",
       declaration: {
         schema_version: "research.alpha-version-declaration.v1",
         entrypoint: "generate_signals", timeframes: ["1h"],
@@ -410,8 +412,20 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
       engineReleaseId: "quantbt-1.1.1", datasetBindingDigest: "d".repeat(64),
     });
     const second = await register(source("0.3.1", "version-two"));
+    expect(second.result.supersedes).toBe(first.result.alpha_version_id);
     await service.activate(admin, scopeA, {
       alphaVersionId: second.result.alpha_version_id, expectedAlphaRevision: second.result.alpha_revision,
+    });
+    const replay = await service.register(admin, scopeA, {
+      sourceFileRef: first.parsed.source_file_ref, alphaId: "p07-alpha", gateReceiptId: first.gates.gate_receipt_id,
+    }, "p07-request");
+    expect(replay).toMatchObject({ replayed: true, supersedes: null });
+    const registry = await service.list(admin, scopeA, "p07-alpha");
+    expect(registry.find((entry) => entry.alpha_version_id === second.result.alpha_version_id)).toMatchObject({
+      supersedes: first.result.alpha_version_id, supersedes_state: "RECORDED",
+    });
+    expect(registry.find((entry) => entry.alpha_version_id === first.result.alpha_version_id)).toMatchObject({
+      supersedes: null, supersedes_state: "RECORDED",
     });
     expect(firstActive.alpha_revision).toBe(2);
     const oldAttempt = await pool.query(

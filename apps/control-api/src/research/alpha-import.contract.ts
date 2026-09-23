@@ -113,6 +113,9 @@ export interface ResearchAlphaRegistryEntry {
   alpha_id: string;
   alpha_version_id: string;
   display_name: string;
+  /** Registration-time predecessor; historical rows explicitly report UNKNOWN. */
+  supersedes?: string | null;
+  supersedes_state?: "RECORDED" | "HISTORICAL_NOT_RECORDED";
   strategy_id: string;
   source_digest: string;
   version_label: string;

@@ -307,6 +307,8 @@ export interface ResearchAlphaRegistryRecord {
   displayName: string;
   sourceDigest: string;
   versionLabel: string;
+  supersedes: string | null;
+  supersedesRecorded: boolean;
   lifecycleState: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
   entrypoint: string;
   declaredContract: Record<string, unknown>;

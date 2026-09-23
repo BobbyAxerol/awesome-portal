@@ -74,6 +74,8 @@ describe("P07 published Research Alpha Import contract", () => {
 
     const generated = readFileSync(generatedPath, "utf8");
     expect(generated).toContain("may_activate: boolean");
+    expect(generated).toContain('supersedes_state?: "RECORDED" | "HISTORICAL_NOT_RECORDED"');
+    expect(generated).toContain('supersedes?: components["schemas"]["AlphaVersionId"] | null');
   });
 
   it("publishes only the bounded Alpha declaration Screen 02 may validate", () => {
