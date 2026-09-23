@@ -140,6 +140,22 @@ missed, and what was done about it:
 Counts after the audit: **28 unit tests**, **10 browser tests** (6 S05 + the
 shared refresh/provenance pair), suite 2920 passed, probe 74 passed.
 
+## `CG-P14-01` closed and consumed — 2026-09-23 (`c650307d`)
+
+Codex ruled that UTC axis labels are presentation, not chronology
+([ruling](./axis-label-presentation-ruling.md)), and published no tick set —
+the immutable timeline stays the only authority for the coordinate system.
+
+The axis is drawn under exactly those rules: positions chosen inside
+`timeline`, labels formatted with `timeZone: "UTC"`, density thinned by a
+`ResizeObserver`, exact endpoints kept in text beside them, and no tick in the
+hash, a request, an export or a cache key. The ruling's required acceptance is
+a browser test that resizes 1280 → 660 and asserts the labels thin while every
+window's geometry, both endpoint strings, the legend and the request count stay
+byte-identical — plus unit tests that every tick lies inside the published
+range, that labels are UTC rather than the reader's zone, and that a
+zero-extent timeline yields no tick at all.
+
 ## Not claimed
 
 Fixture receipts only; no backend was called and `REAL_API_E2E_RECEIPT` is not

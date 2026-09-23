@@ -12,6 +12,16 @@ receipts.
 [the run-identity / fold-navigation amendment](./P13/contract-amendment-run-identity-fold-navigation.md),
 consumed at `f8e2d8cf`; the P14–P16 decisions are linked in each section.
 
+
+> **All three closed and consumed, 2026-09-23 (`c650307d`).** Codex delivered
+> the axis ruling, the candidate-selection-metric amendment and the
+> verification scope at `ccc4c6e5`; the three screens read them at `c650307d`,
+> with the ruling's required resize acceptance in the browser lane. The
+> sections below are kept as the record of what was asked and why. Nothing in
+> §4 has changed: no real-API receipt exists for any Research screen, the Astra
+> reopened items remain backend work, and Screen 04's address is still Bobby's
+> call.
+
 ---
 
 ## 1 · `CG-P14-01` — the Screen 05 time axis — RESOLVED

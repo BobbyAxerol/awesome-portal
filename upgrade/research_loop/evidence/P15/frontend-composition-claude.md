@@ -133,6 +133,20 @@ missed, and what was done about it:
 Counts after the audit: **21 unit tests**, **8 browser tests**, suite 2920
 passed, probe 74 passed.
 
+## `CG-P15-01` closed and consumed — 2026-09-23 (`c650307d`)
+
+`requested_optimizer.candidate_selection_metric` is now a discriminated fact
+([amendment](./contract-amendment-candidate-selection-metric.md)). This run's
+is `NOT_PUBLISHED` with its reason, so the panel shows the absence: no chip, no
+value, no `INFERRED` label.
+
+The point of the amendment is what must *not* appear — the installed
+catalogue's current `robust_decay` default, which is a property of the present
+release rather than evidence about a request made in the past. A browser test
+asserts that string never reaches the screen. The `CONFIRMED` branch is
+rendered and unit-tested as well, so the panel is ready the day a producer
+binds a run-scoped metric.
+
 ## Not claimed
 
 Fixture receipts only; no backend called, `REAL_API_E2E_RECEIPT` not claimed.

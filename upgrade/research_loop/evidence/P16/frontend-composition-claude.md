@@ -132,6 +132,17 @@ missed, and what was done about it:
 Counts after the audit: **24 unit tests**, **8 browser tests**, suite 2920
 passed, probe 74 passed.
 
+## `CG-P16-01` closed and consumed — 2026-09-23 (`c650307d`)
+
+`FreezeVerification` now carries its own `verification_scope`
+([amendment](./contract-amendment-verification-scope.md)). The result a reader
+triggers prints the scope that came with it rather than borrowing the
+snapshot's; the nested detail scope stays with the integrity panel, where it
+belongs. Neither line permits "chain intact".
+
+The two agree today because both describe the same run at the same moment. The
+day they do not, the line under the result is the true one.
+
 ## Not claimed
 
 Fixture receipts only; no backend called, `REAL_API_E2E_RECEIPT` not claimed.
