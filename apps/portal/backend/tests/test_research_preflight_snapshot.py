@@ -391,3 +391,52 @@ async def test_p08_private_route_requires_hmac_and_never_turns_snapshot_metadata
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
+
+
+def test_rf02_t04_walk_forward_values_come_from_the_published_manifest(tmp_path: Path) -> None:
+    """RF02-B2: preflight admits exactly what the Atlas publishes, no more, no less."""
+
+    import shutil
+
+    published = ResearchEngineCatalogService(REGISTRY_ROOT).walk_forward_options()
+    assert published.admitted("window_mode") == {"expanding"}
+    assert published.admitted("frequency") == {"single", "yearly", "semi_yearly", "quarterly", "monthly", "weekly"}
+    rolling = next(item for item in published.window_mode if item.value == "rolling")
+    assert rolling.admission == "NOT_ADMITTED" and "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED" in (rolling.reason or "")
+    assert published.frequency_default == "quarterly" and published.window_mode_default == "expanding"
+
+    # Withdraw `weekly` in a copy of the manifest: the same spec that passes
+    # against the published manifest is now refused, so there is one list.
+    root = tmp_path / "registry"
+    shutil.copytree(REGISTRY_ROOT, root)
+    catalog_path = root / "research-engine-catalog.v1.json"
+    source = json.loads(catalog_path.read_text(encoding="utf-8"))
+    current = next(release for release in source["releases"] if release["role"] == "current")
+    for item in current["walk_forward_options"]["frequency"]:
+        if item["value"] == "weekly":
+            item["admission"] = "NOT_ADMITTED"
+            item["reason"] = "withdrawn for this test"
+    catalog_path.write_text(json.dumps(source, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    spec = requested()
+    spec.pop("windows")
+    spec["protocol"] = "advanced"
+    spec["walk_forward"] = {
+        "start": "2026-01-04T00:00:00",
+        "end_exclusive": "2026-01-18T00:00:00",
+        "split_mode": "walk_forward_2026-01-06T00:00:00",
+        "frequency": "weekly",
+        "window_mode": "expanding",
+    }
+    published_authority = ResearchPreflightSnapshotService(
+        provider=MutableHistoricalProvider(frame()),
+        snapshots=SnapshotStore(tmp_path / "published"),
+        engine_catalog=ResearchEngineCatalogService(REGISTRY_ROOT),
+    )
+    assert published_authority.build(payload(spec))["topology"]["frequency"] == "weekly"
+    withdrawn_authority = ResearchPreflightSnapshotService(
+        provider=MutableHistoricalProvider(frame()),
+        snapshots=SnapshotStore(tmp_path / "withdrawn"),
+        engine_catalog=ResearchEngineCatalogService(root),
+    )
+    assert error_code(lambda: withdrawn_authority.build(payload(spec))) == "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED"

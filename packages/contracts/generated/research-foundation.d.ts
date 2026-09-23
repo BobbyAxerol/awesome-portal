@@ -270,6 +270,28 @@ export interface components {
             random_seed: "MUST_BE_NULL";
             reason: string;
         };
+        AtlasWalkForwardOptions: {
+            /** @constant */
+            schema_version: "research.walk-forward-options.v1";
+            frequency: {
+                value: string;
+                /** @enum {unknown} */
+                admission: "ADMITTED" | "NOT_ADMITTED";
+                reason?: string | null;
+            }[];
+            frequency_default: string;
+            window_mode: {
+                value: string;
+                /** @enum {unknown} */
+                admission: "ADMITTED" | "NOT_ADMITTED";
+                reason?: string | null;
+            }[];
+            window_mode_default: string;
+            /** @constant */
+            split_mode_form: "source_instant";
+            split_mode_rule: string;
+            source: components["schemas"]["AtlasSourceLocator"][];
+        };
         AtlasRelease: {
             release_id: components["schemas"]["Identifier"];
             package: string;
@@ -283,6 +305,8 @@ export interface components {
             trial_ceiling: number;
             optimizer_defaults: components["schemas"]["AtlasOptimizerDefaults"];
             submission_constraints: components["schemas"]["AtlasSubmissionConstraints"];
+            /** @description RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed. */
+            walk_forward_options?: components["schemas"]["AtlasWalkForwardOptions"] | null;
         };
         HistoricalRelease: {
             release_id: components["schemas"]["Identifier"];

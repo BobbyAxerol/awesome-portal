@@ -35,13 +35,13 @@
     "quantbt_gateway": "sha256:6c45c9e080082a57847cca419978c151a9c59602531ec3158ecb52199bf3733c",
     "registry_source": "sha256:620c6cf89030ba3fef0267c9eea67db62fc334be8db8f628f68cde7d962e0694",
     "research_engine_atlas_internal_route": "sha256:5c50992a698ea8e4f158b0f11c03512aa3b28c535d088f8a22597776a1ffcfe5",
-    "research_engine_catalog": "sha256:7231671539e937be385ac108972a8163fe2767e6f3d4f25b9b174de1043121fb",
-    "research_engine_catalog_schema": "sha256:ad92a146f4513bebf32c73113f5f3fe7f0d7dbb18dbe243deb485ad0211795b3",
-    "research_engine_catalog_service": "sha256:1161f6dcc7fd18e08dd49f91eaec7376e5945fd241e75e309e42c29009599560",
+    "research_engine_catalog": "sha256:301ee6a31a56809f7289b6967197f8c5c4bb2cc3ba92e6b5bfd37423cbcdd14a",
+    "research_engine_catalog_schema": "sha256:065658cfb435e9c63145de7c45126d1f50b5a3d0bb1b1be519ae9b056fcc1611",
+    "research_engine_catalog_service": "sha256:3ecf7c1376b3330edd237fb01fe15486c89b07c2cf61d0b5b1b86261a4f6eb89",
     "research_run_evidence_schema": "sha256:ac1213412f91adbfb3f76c12dc12c6943fc979e83e75b1a5de9909e7fb01b730",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "952ad48f75d6bd6757d3359fd127a889a92e28f4",
+  "frozen_at_commit": "d67a0fb4b9469184ba61987e5ef52e5acf7c7cb5",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,

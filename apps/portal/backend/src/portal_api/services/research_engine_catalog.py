@@ -130,6 +130,66 @@ class SubmissionConstraints(CatalogModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
+class SourceLocator(CatalogModel):
+    """Where a mode fact is stated in the pinned engine package (RF02-B1).
+
+    `sha256` is the file digest the wheel RECORD carries; `anchor` must occur
+    inside `lines`. Both are checked against the installed release in tests,
+    so a fact cannot drift from its source silently.
+    """
+
+    path: str = Field(pattern=r"^quantbt/[A-Za-z0-9_./-]{1,200}\.py$")
+    lines: str = Field(pattern=r"^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    anchor: str = Field(min_length=1, max_length=200)
+
+
+class WalkForwardOptionValue(CatalogModel):
+    value: str = Field(pattern=r"^[a-z][a-z0-9_]{1,31}$")
+    admission: Literal["ADMITTED", "NOT_ADMITTED"]
+    reason: str | None = Field(default=None, min_length=1, max_length=400)
+
+    @model_validator(mode="after")
+    def validate_reason(self) -> "WalkForwardOptionValue":
+        if (self.admission == "NOT_ADMITTED") != (self.reason is not None):
+            raise ValueError("a NOT_ADMITTED value needs a reason and an admitted one has none")
+        return self
+
+
+class WalkForwardOptions(CatalogModel):
+    """Published walk-forward values for New Run (RF02-B2).
+
+    The engine's accepted values, each with the Portal's admission, so the
+    browser renders the contract instead of a hardcoded list and preflight's
+    refusal of a value is something the reader was told beforehand.
+    """
+
+    schema_version: Literal["research.walk-forward-options.v1"]
+    frequency: tuple[WalkForwardOptionValue, ...] = Field(min_length=1, max_length=8)
+    frequency_default: str
+    window_mode: tuple[WalkForwardOptionValue, ...] = Field(min_length=1, max_length=4)
+    window_mode_default: str
+    split_mode_form: Literal["source_instant"]
+    split_mode_rule: str = Field(min_length=1, max_length=400)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+    @model_validator(mode="after")
+    def validate_defaults(self) -> "WalkForwardOptions":
+        for values, default, label in (
+            (self.frequency, self.frequency_default, "frequency"),
+            (self.window_mode, self.window_mode_default, "window_mode"),
+        ):
+            admitted = {item.value for item in values if item.admission == "ADMITTED"}
+            if default not in admitted:
+                raise ValueError(f"{label}_default must be an admitted value")
+            if len({item.value for item in values}) != len(values):
+                raise ValueError(f"{label} values must be unique")
+        return self
+
+    def admitted(self, field: Literal["frequency", "window_mode"]) -> frozenset[str]:
+        return frozenset(item.value for item in getattr(self, field) if item.admission == "ADMITTED")
+
+
 class EngineRelease(CatalogModel):
     release_id: str = Field(pattern=r"^[a-z][a-z0-9_]{2,63}$")
     role: Literal["current", "historical_reader"]
@@ -143,6 +203,7 @@ class EngineRelease(CatalogModel):
     trial_ceiling: int | None = Field(default=None, ge=1, le=100_000)
     optimizer_defaults: OptimizerDefaults | None = None
     submission_constraints: SubmissionConstraints | None = None
+    walk_forward_options: WalkForwardOptions | None = None
 
 
 class CapabilityAxes(CatalogModel):
@@ -169,20 +230,6 @@ class RouteDescriptor(CatalogModel):
 
 
 Schedule = Literal["global", "per_fold_decay", "per_fold_causal"]
-
-
-class SourceLocator(CatalogModel):
-    """Where a mode fact is stated in the pinned engine package (RF02-B1).
-
-    `sha256` is the file digest the wheel RECORD carries; `anchor` must occur
-    inside `lines`. Both are checked against the installed release in tests,
-    so a fact cannot drift from its source silently.
-    """
-
-    path: str = Field(pattern=r"^quantbt/[A-Za-z0-9_./-]{1,200}\.py$")
-    lines: str = Field(pattern=r"^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$")
-    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    anchor: str = Field(min_length=1, max_length=200)
 
 
 class NotPublishedFact(CatalogModel):
@@ -324,6 +371,8 @@ class ReleaseRuntimePublic(CatalogModel):
     trial_ceiling: int
     optimizer_defaults: OptimizerDefaults
     submission_constraints: SubmissionConstraints
+    # RF02-B2, additive: absent only on a manifest written before it existed.
+    walk_forward_options: WalkForwardOptions | None = None
 
 
 class HistoricalReleasePublic(CatalogModel):
@@ -530,6 +579,7 @@ class ResearchEngineCatalogService:
                 historical.trial_ceiling is not None
                 or historical.optimizer_defaults is not None
                 or historical.submission_constraints is not None
+                or historical.walk_forward_options is not None
             ):
                 raise ResearchEngineCatalogLoadError(
                     "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
@@ -692,7 +742,16 @@ class ResearchEngineCatalogService:
             trial_ceiling=release.trial_ceiling,  # type: ignore[arg-type]
             optimizer_defaults=release.optimizer_defaults,  # type: ignore[arg-type]
             submission_constraints=release.submission_constraints,  # type: ignore[arg-type]
+            walk_forward_options=release.walk_forward_options,
         )
+
+    def walk_forward_options(self) -> WalkForwardOptions:
+        """The current release's published walk-forward values (RF02-B2)."""
+
+        current = next(release for release in self._catalog.releases if release.role == "current")
+        if current.walk_forward_options is None:
+            raise ResearchEngineCatalogError("current release publishes no walk-forward options")
+        return current.walk_forward_options
 
     def public_document(self) -> ResearchEngineAtlasDocument:
         return ResearchEngineAtlasDocument(

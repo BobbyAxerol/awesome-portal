@@ -30,7 +30,8 @@
         "native_dependency": {"$ref": "#/$defs/nativeDependency"},
         "trial_ceiling": {"type": "integer", "minimum": 1, "maximum": 100000},
         "optimizer_defaults": {"$ref": "#/$defs/optimizerDefaults"},
-        "submission_constraints": {"$ref": "#/$defs/submissionConstraints"}
+        "submission_constraints": {"$ref": "#/$defs/submissionConstraints"},
+        "walk_forward_options": {"$ref": "#/$defs/walkForwardOptions"}
       },
       "allOf": [
         {
@@ -41,7 +42,8 @@
               "anyOf": [
                 {"required": ["trial_ceiling"]},
                 {"required": ["optimizer_defaults"]},
-                {"required": ["submission_constraints"]}
+                {"required": ["submission_constraints"]},
+                {"required": ["walk_forward_options"]}
               ]
             }
           }
@@ -202,6 +204,21 @@
           }
         },
         "writer_state": {"const": "P05_OWNED_NOT_ACTIVE"}
+      }
+    },
+    "walkForwardOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "frequency", "frequency_default", "window_mode", "window_mode_default", "split_mode_form", "split_mode_rule", "source"],
+      "properties": {
+        "schema_version": {"const": "research.walk-forward-options.v1"},
+        "frequency": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "object", "additionalProperties": false, "required": ["value", "admission"], "properties": {"value": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"}, "admission": {"enum": ["ADMITTED", "NOT_ADMITTED"]}, "reason": {"type": "string", "minLength": 1, "maxLength": 400}}}},
+        "frequency_default": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"},
+        "window_mode": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "object", "additionalProperties": false, "required": ["value", "admission"], "properties": {"value": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"}, "admission": {"enum": ["ADMITTED", "NOT_ADMITTED"]}, "reason": {"type": "string", "minLength": 1, "maxLength": 400}}}},
+        "window_mode_default": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"},
+        "split_mode_form": {"const": "source_instant"},
+        "split_mode_rule": {"type": "string", "minLength": 1, "maxLength": 400},
+        "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
       }
     },
     "sourceLocator": {

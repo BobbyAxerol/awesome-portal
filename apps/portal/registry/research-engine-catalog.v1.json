@@ -1,6 +1,6 @@
 {
   "schema_version": "research-engine-catalog.v1",
-  "manifest_revision": 3,
+  "manifest_revision": 4,
   "releases": [
     {
       "release_id": "er_quantbt_108",
@@ -75,6 +75,70 @@
               {"field_id": "candidate_decay_lambda", "default_value": null, "value_source": "RELEASE_DEFAULT", "override_state": "LOCKED", "detail": "Portal OptimizationConfig default."},
               {"field_id": "candidate_decay_gamma", "default_value": null, "value_source": "RELEASE_DEFAULT", "override_state": "LOCKED", "detail": "Portal OptimizationConfig default."}
             ]
+          }
+        ]
+      },
+      "walk_forward_options": {
+        "schema_version": "research.walk-forward-options.v1",
+        "frequency": [
+          {
+            "value": "single",
+            "admission": "ADMITTED"
+          },
+          {
+            "value": "yearly",
+            "admission": "ADMITTED"
+          },
+          {
+            "value": "semi_yearly",
+            "admission": "ADMITTED"
+          },
+          {
+            "value": "quarterly",
+            "admission": "ADMITTED"
+          },
+          {
+            "value": "monthly",
+            "admission": "ADMITTED"
+          },
+          {
+            "value": "weekly",
+            "admission": "ADMITTED"
+          }
+        ],
+        "frequency_default": "quarterly",
+        "window_mode": [
+          {
+            "value": "expanding",
+            "admission": "ADMITTED"
+          },
+          {
+            "value": "rolling",
+            "admission": "NOT_ADMITTED",
+            "reason": "Rolling needs a train width the manifest does not own yet; preflight refuses it with RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED rather than inferring one."
+          }
+        ],
+        "window_mode_default": "expanding",
+        "split_mode_form": "source_instant",
+        "split_mode_rule": "The first outer out-of-sample instant in the dataset's source timezone, optionally prefixed walk_forward_. It must lie strictly inside walk_forward.start and end_exclusive; there is no release default to fall back on.",
+        "source": [
+          {
+            "path": "quantbt/walkforward.py",
+            "lines": "349-358",
+            "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+            "anchor": "`expanding` keeps the first train timestamp fixed"
+          },
+          {
+            "path": "quantbt/walkforward.py",
+            "lines": "409-411",
+            "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+            "anchor": "split_frequency: str = \"quarterly\""
+          },
+          {
+            "path": "quantbt/walkforward.py",
+            "lines": "493-498",
+            "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+            "anchor": "raise ValueError(\"window_mode must be expanding or rolling\")"
           }
         ]
       },

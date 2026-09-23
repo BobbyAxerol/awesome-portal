@@ -54,6 +54,7 @@ function atlasFixture(): ResearchEngineAtlasPrivate {
       trial_ceiling: current.trial_ceiling as number,
       optimizer_defaults: current.optimizer_defaults as ResearchEngineAtlasPrivate["current_release"]["optimizer_defaults"],
       submission_constraints: current.submission_constraints as ResearchEngineAtlasPrivate["current_release"]["submission_constraints"],
+      walk_forward_options: current.walk_forward_options as ResearchEngineAtlasPrivate["current_release"]["walk_forward_options"],
     },
     historical_releases: catalog.releases.filter((release) => release.role === "historical_reader").map((release) => ({
       release_id: release.release_id as string, package: release.package as string,
@@ -187,6 +188,11 @@ describe("Research Loop P09 · Journey/Atlas same-origin foundation", () => {
       cert_cap: { state: "NOT_PUBLISHED" },
     });
     expect(mode4.facts?.avoid_when.state).toBe("NOT_PUBLISHED");
+    // RF02-B2: the walk-forward values S02 may offer come through the same read.
+    const options = response.atlas.current_release.walk_forward_options!;
+    expect(options.window_mode.filter((item) => item.admission === "ADMITTED").map((item) => item.value)).toEqual(["expanding"]);
+    expect(options.window_mode.find((item) => item.value === "rolling")?.admission).toBe("NOT_ADMITTED");
+    expect(options.frequency_default).toBe("quarterly");
     const dumped = JSON.parse(JSON.stringify(atlasFixture())) as { modes: Array<{ facts: Record<string, any> }> };
     for (const mode of dumped.modes) {
       mode.facts.avoid_when.source = null;

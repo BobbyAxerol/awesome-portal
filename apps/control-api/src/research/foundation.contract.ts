@@ -219,6 +219,23 @@ const AtlasSubmissionConstraintsSchema = z.object({
   reason: z.string().min(1).max(500),
 }).strict();
 
+/** RF02-B2: published walk-forward values, each with the Portal's admission. */
+const WalkForwardOptionValueSchema = z.object({
+  value: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
+  admission: z.enum(["ADMITTED", "NOT_ADMITTED"]),
+  reason: z.string().min(1).max(400).nullable().optional(),
+}).strict();
+const AtlasWalkForwardOptionsSchema = z.object({
+  schema_version: z.literal("research.walk-forward-options.v1"),
+  frequency: z.array(WalkForwardOptionValueSchema).min(1).max(8),
+  frequency_default: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
+  window_mode: z.array(WalkForwardOptionValueSchema).min(1).max(4),
+  window_mode_default: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
+  split_mode_form: z.literal("source_instant"),
+  split_mode_rule: z.string().min(1).max(400),
+  source: SourcesSchema,
+}).strict();
+
 export const ResearchEngineAtlasPrivateSchema = z.object({
   schema_version: z.literal("research-engine-atlas.v1"),
   manifest_revision: z.number().int().positive(),
@@ -230,6 +247,7 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
     trial_ceiling: z.number().int().positive().max(100_000),
     optimizer_defaults: AtlasOptimizerDefaultsSchema,
     submission_constraints: AtlasSubmissionConstraintsSchema,
+    walk_forward_options: AtlasWalkForwardOptionsSchema.nullable().optional(),
   }).strict(),
   historical_releases: z.array(z.object({
     release_id: Identifier, package: z.string().min(1).max(191), version: z.string().min(1).max(191),

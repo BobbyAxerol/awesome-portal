@@ -43,6 +43,7 @@ from portal_api.services.data_catalog import (
 from portal_api.domain.errors import PortalDomainError
 from portal_api.services.research_engine_catalog import (
     ResearchEngineCatalogService,
+    WalkForwardOptions,
 )
 
 PREFLIGHT_SNAPSHOT_SCHEMA_VERSION = "research.preflight-snapshot.v1"
@@ -406,6 +407,7 @@ def _advanced_topology(
     frame: pd.DataFrame,
     *,
     source_timezone: str,
+    options: WalkForwardOptions,
 ) -> tuple[pd.Timestamp, pd.Timestamp, dict[str, object]]:
     spec = _require_object(requested.get("walk_forward"), "walk_forward")
     start, end = _interval(spec, source_timezone=source_timezone, label="walk_forward")
@@ -417,14 +419,17 @@ def _advanced_topology(
     frequency = _require_text(spec.get("frequency"), "walk_forward.frequency", maximum=32)
     window_mode = _require_text(spec.get("window_mode"), "walk_forward.window_mode", maximum=32)
     split_mode = _require_text(spec.get("split_mode"), "walk_forward.split_mode", maximum=64)
-    if frequency not in {"single", "yearly", "semi_yearly", "quarterly", "monthly", "weekly"}:
+    # RF02-B2: the admitted values are the ones the Atlas publishes, read from
+    # the same manifest, so a browser that renders the contract can never be
+    # refused a value it was offered, nor offered one preflight refuses.
+    if frequency not in options.admitted("frequency"):
         raise ResearchPreflightSnapshotError(
             "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED", "The selected fold frequency is not certified."
         )
     # P02 has no rolling train-width control. Claiming an exact rolling plan
-    # would silently invent an engine default, so fail closed until P10 adds
-    # the manifest-owned width field.
-    if window_mode != "expanding":
+    # would silently invent an engine default, so fail closed until the
+    # manifest owns the width field (published as NOT_ADMITTED with a reason).
+    if window_mode not in options.admitted("window_mode"):
         raise ResearchPreflightSnapshotError(
             "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
             "Rolling walk-forward requires a manifest-owned train width; P08 will not infer one.",
@@ -641,7 +646,10 @@ class ResearchPreflightSnapshotService:
             )
         else:
             _, _, topology = _advanced_topology(
-                requested, market.frame, source_timezone=source_timezone
+                requested,
+                market.frame,
+                source_timezone=source_timezone,
+                options=self.engine_catalog.walk_forward_options(),
             )
         _assert_metadata_bound("fold-plan", topology)
         trials = _require_nonnegative_integer(
