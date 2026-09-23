@@ -35,6 +35,7 @@ describe("P11 published Research Progress contract", () => {
       "P12_OWNED_NO_P11_RETRY_ROUTE", "PENDING_SOURCE_CALLBACK",
       "PENDING_RECONCILIATION", "research.progress.snapshot",
       "ProgressRetainedArtifact", "retained_artifacts",
+      "ProgressQueue", "ProgressAttempt", "claimed_at_utc_ms", "started_at_utc_ms", "ended_at_utc_ms",
     ]) expect(generated).toContain(needle);
     // RF01-B3: the retained-table list is the one place the artifact
     // authority's integrity states reach the browser.

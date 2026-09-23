@@ -1,4 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Pool } from "../../apps/control-api/node_modules/pg";
 
 import type { ControlApiConfig } from "../../apps/control-api/src/config";
@@ -330,6 +332,12 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
 
   it("P11-T01/T02/T07/T11: persists exact progress once, survives service restart, and rejects gaps or stale leases", async () => {
     const run = await createDispatchedRun();
+    const claimed = await service.read(admin, scope, run.runId);
+    expect(claimed.queue).toMatchObject({ queue_class: "INTERACTIVE", retry_not_before_utc_ms: null });
+    expect(claimed.attempts).toHaveLength(1);
+    expect(claimed.attempts[0]).toMatchObject({ ordinal: 1, state: "CLAIMED", started_at_utc_ms: null, ended_at_utc_ms: null });
+    expect(claimed.attempts[0]?.claimed_at_utc_ms).toBeGreaterThan(0);
+    expect(JSON.stringify(claimed)).not.toContain(run.workerAttemptId);
     const first = ingress({ ...run, sequence: 1, eventType: "run_started" });
     expect(await service.ingest(first)).toEqual({ accepted: true, latest_sequence: 1 });
     // At-least-once source delivery is exact: one immutable sequence and one
@@ -352,6 +360,9 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       current: { effective_status: "RUNNING", source_latest_sequence: 1 },
       progress: { latest_sequence: 1, status: "RUNNING" },
     });
+    expect(read.attempts[0]).toMatchObject({ ordinal: 1, state: "RUNNING", ended_at_utc_ms: null });
+    expect(read.attempts[0]?.started_at_utc_ms).toBeGreaterThanOrEqual(read.attempts[0]!.claimed_at_utc_ms);
+    expect(read.queue.queued_at_utc_ms).toBeLessThanOrEqual(read.attempts[0]!.claimed_at_utc_ms);
     expect(JSON.stringify(read)).not.toContain("attempt_id");
     expect(JSON.stringify(read)).not.toContain("lease_epoch");
 
@@ -436,6 +447,19 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     });
     await service.ingest(ingress({ ...run, sequence: 2, eventType: "run_completed", progress: completed }));
     const read = await service.read(admin, scope, run.runId);
+    expect(read.attempts[0]?.state).toBe("CANCELLED");
+    expect(read.attempts[0]?.ended_at_utc_ms).toBeGreaterThanOrEqual(read.attempts[0]!.started_at_utc_ms!);
+    expect(JSON.stringify(read)).not.toContain(run.workerAttemptId);
+    const fixture = JSON.parse(readFileSync(join(__dirname, "../../packages/contracts/fixtures/research-progress.attempts.valid.json"), "utf8"));
+    expect({
+      queue: { ...read.queue, queued_at_utc_ms: 0 },
+      attempts: read.attempts.map((attempt) => ({
+        ...attempt,
+        claimed_at_utc_ms: 0,
+        started_at_utc_ms: attempt.started_at_utc_ms === null ? null : 0,
+        ended_at_utc_ms: attempt.ended_at_utc_ms === null ? null : 0,
+      })),
+    }).toEqual(fixture);
     expect(read.current).toMatchObject({
       job_state: "CANCELLED",
       effective_status: "CANCELLED",

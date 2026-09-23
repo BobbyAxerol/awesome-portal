@@ -66,6 +66,7 @@ TRACKED = (
     "fixtures/research-foundation.historical-identity.valid.json",
     "fixtures/research-foundation.atlas-current.valid.json",
     "fixtures/research-preflight.response.valid.json",
+    "fixtures/research-progress.attempts.valid.json",
     "fixtures/command.valid.json",
     "fixtures/event.valid.json",
     "fixtures/keyset-page.valid.json",

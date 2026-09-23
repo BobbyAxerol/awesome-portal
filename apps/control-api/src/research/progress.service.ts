@@ -29,6 +29,18 @@ const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
 export interface ResearchProgressReadResponse {
   schema_version: "research.progress-read.v1";
   run_id: string;
+  queue: {
+    queue_class: "INTERACTIVE" | "HEAVY" | "BACKGROUND";
+    queued_at_utc_ms: number;
+    retry_not_before_utc_ms: number | null;
+  };
+  attempts: Array<{
+    ordinal: number;
+    state: "CLAIMED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "LOST_LEASE" | "CANCELLED";
+    claimed_at_utc_ms: number;
+    started_at_utc_ms: number | null;
+    ended_at_utc_ms: number | null;
+  }>;
   availability: "AVAILABLE" | "QUEUED_NO_SOURCE" | "CANCELLED_BEFORE_SOURCE" | "PENDING_SOURCE_CALLBACK";
   current: {
     job_state: string;
@@ -255,6 +267,18 @@ export class ResearchProgressService {
     return {
       schema_version: "research.progress-read.v1",
       run_id: current.runId,
+      queue: {
+        queue_class: current.queueClass,
+        queued_at_utc_ms: current.queuedAt.valueOf(),
+        retry_not_before_utc_ms: current.retryNotBefore?.valueOf() ?? null,
+      },
+      attempts: current.attempts.map((attempt) => ({
+        ordinal: attempt.ordinal,
+        state: attempt.state,
+        claimed_at_utc_ms: attempt.claimedAt.valueOf(),
+        started_at_utc_ms: attempt.startedAt?.valueOf() ?? null,
+        ended_at_utc_ms: attempt.endedAt?.valueOf() ?? null,
+      })),
       availability: current.progress ? "AVAILABLE"
         : current.jobState === "CANCELLED" ? "CANCELLED_BEFORE_SOURCE"
         : current.jobState === "QUEUED" ? "QUEUED_NO_SOURCE"

@@ -34,6 +34,9 @@ interface ReadRunRow {
   worker_attempt_id: string | null;
   lease_epoch: string | number | null;
   job_state: string;
+  queue_class: "INTERACTIVE" | "HEAVY" | "BACKGROUND";
+  job_created_at: Date;
+  retry_not_before: Date | null;
   created_at: Date;
   snapshot: Record<string, unknown> | string | null;
   source_latest_sequence: string | number | null;
@@ -111,9 +114,21 @@ export interface ProgressRetainedArtifact {
 /** The bound on retained rows a progress read may carry. */
 export const PROGRESS_RETAINED_ARTIFACT_LIMIT = 128;
 
+export interface ProgressWorkerAttempt {
+  ordinal: number;
+  state: "CLAIMED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "LOST_LEASE" | "CANCELLED";
+  claimedAt: Date;
+  startedAt: Date | null;
+  endedAt: Date | null;
+}
+
 export interface ProgressRunRead {
   runId: string;
   jobState: string;
+  queueClass: "INTERACTIVE" | "HEAVY" | "BACKGROUND";
+  queuedAt: Date;
+  retryNotBefore: Date | null;
+  attempts: ProgressWorkerAttempt[];
   progress: ResearchProgressSnapshot | null;
   sourceLatestSequence: number;
   retentionFloorSequence: number;
@@ -326,6 +341,7 @@ export class ResearchProgressRepository {
       const result = await client.query<ReadRunRow>(
         `SELECT producer.run_id, producer.attempt_id, producer.job_id,
                 producer.worker_attempt_id, producer.lease_epoch, job.state AS job_state,
+                job.queue_class, job.created_at AS job_created_at, job.retry_not_before,
                 producer.created_at, snapshot.snapshot, snapshot.source_latest_sequence,
                 snapshot.retention_floor_sequence, snapshot.received_at,
                 (terminal.source_sequence IS NOT NULL) AS terminal_materialized
@@ -349,6 +365,28 @@ export class ResearchProgressRepository {
       const row = result.rows[0];
       if (!row) {
         throw new ResearchProgressError("RESEARCH_PROGRESS_NOT_FOUND", "Research run was not found.", 404);
+      }
+      const workerAttempts = await client.query<{
+        ordinal: number;
+        state: ProgressWorkerAttempt["state"];
+        claimed_at: Date;
+        started_at: Date | null;
+        ended_at: Date | null;
+      }>(
+        `SELECT wa.ordinal, wa.state, wa.created_at AS claimed_at,
+                (SELECT min(e.occurred_at) FROM research.job_events e
+                  WHERE e.workspace_id = wa.workspace_id AND e.worker_attempt_id = wa.worker_attempt_id
+                    AND e.event_type = 'JOB_RUNNING') AS started_at,
+                (SELECT min(e.occurred_at) FROM research.job_events e
+                  WHERE e.workspace_id = wa.workspace_id AND e.worker_attempt_id = wa.worker_attempt_id
+                    AND e.event_type IN ('JOB_SUCCEEDED', 'JOB_FAILED', 'JOB_CANCELLED', 'LEASE_EXPIRED', 'WORKER_RETRY')) AS ended_at
+           FROM research.worker_attempts wa
+          WHERE wa.workspace_id = $1 AND wa.job_id = $2
+          ORDER BY wa.ordinal ASC LIMIT 9`,
+        [scope.workspaceId, row.job_id],
+      );
+      if (workerAttempts.rows.length > 8) {
+        throw new ResearchProgressError("RESEARCH_PROGRESS_CONFLICT", "Research attempt history exceeds its published bound.", 409);
       }
       /* The same transaction reads the authority's own rows, so the list is
          consistent with the snapshot beside it. Bounded, ordered, locator-free. */
@@ -384,6 +422,16 @@ export class ResearchProgressRepository {
       return {
         runId: row.run_id,
         jobState: row.job_state,
+        queueClass: row.queue_class,
+        queuedAt: row.job_created_at,
+        retryNotBefore: row.retry_not_before,
+        attempts: workerAttempts.rows.map((attempt) => ({
+          ordinal: attempt.ordinal,
+          state: attempt.state,
+          claimedAt: attempt.claimed_at,
+          startedAt: attempt.started_at,
+          endedAt: attempt.ended_at,
+        })),
         progress,
         sourceLatestSequence: row.source_latest_sequence === null ? 0 : asSafeNumber(row.source_latest_sequence, "latest sequence"),
         retentionFloorSequence: row.retention_floor_sequence === null ? 0 : asSafeNumber(row.retention_floor_sequence, "retention floor"),

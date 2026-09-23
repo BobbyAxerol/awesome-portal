@@ -440,10 +440,29 @@ export interface components {
         };
         /** @description Typed public event union. The browser may narrow by event_type without parsing arbitrary source strings; ingress independently rejects unknown keys. */
         ProgressEvent: components["schemas"]["ProgressRunStartedEvent"] | components["schemas"]["ProgressStageStartedEvent"] | components["schemas"]["ProgressStageCompletedEvent"] | components["schemas"]["ProgressTrialCompletedEvent"] | components["schemas"]["ProgressFoldCompletedEvent"] | components["schemas"]["ProgressFoldSegmentObservedEvent"] | components["schemas"]["ProgressArtifactWritingEvent"] | components["schemas"]["ProgressArtifactSealedEvent"] | components["schemas"]["ProgressBudgetTickEvent"] | components["schemas"]["ProgressHeartbeatEvent"] | components["schemas"]["ProgressSealStartedEvent"] | components["schemas"]["ProgressRunCompletedEvent"] | components["schemas"]["ProgressRunFailedEvent"];
+        ProgressQueue: {
+            /** @enum {unknown} */
+            queue_class: "INTERACTIVE" | "HEAVY" | "BACKGROUND";
+            queued_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            retry_not_before_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+        };
+        /** @description At most eight worker attempts. Ordinal and immutable scheduler-event timestamps only; no worker identity, lease epoch or source locator. */
+        ProgressAttempt: {
+            ordinal: number;
+            /** @enum {unknown} */
+            state: "CLAIMED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "LOST_LEASE" | "CANCELLED";
+            claimed_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            started_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            ended_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+        };
         ProgressRead: {
             /** @constant */
             schema_version: "research.progress-read.v1";
             run_id: components["schemas"]["RunId"];
+            /** @description Optional during additive client rollout; current server emits it on every read. */
+            queue?: components["schemas"]["ProgressQueue"];
+            /** @description Optional during additive client rollout; current server emits [] before any claim. */
+            attempts?: components["schemas"]["ProgressAttempt"][];
             /** @enum {unknown} */
             availability: "AVAILABLE" | "QUEUED_NO_SOURCE" | "CANCELLED_BEFORE_SOURCE" | "PENDING_SOURCE_CALLBACK";
             current: {
