@@ -15,7 +15,7 @@ không gọi P18 là `VERIFIED`.
 | `thanhvuong-frontend-receipt.md` | receipt này: đã đọc, git, file, mapping hi-fi, so hi-fi, evidence, discrepancy, scale refine, kết luận |
 | [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md) | receipt backend request: `CG-P18-01…10` theo template CLAUDE.md §5 + locator/actual/expected/đề xuất/test/fallback, việc Bobby quyết B1–B6, trạng thái kiểm lại ngày 2026-09-23 |
 | [thanhvuong-test-results.json](./thanhvuong-test-results.json) | evidence máy đọc được: từng gate, lệnh, exit, số đếm, gate chưa chạy, SHA-256 ảnh/PDF/log |
-| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | debt trong scope: `open_implementation_debt` rỗng, `open_debt` 2 lỗi audit A1/A2 (§5.5); lỗi đã sửa trong phase, request mở, downstream gate |
+| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | debt trong scope: `open_implementation_debt` rỗng, `open_debt` rỗng (A1/A2 audit đã sửa ở `29c28f4a`, §5.5, §7); lỗi đã sửa trong phase, request mở, downstream gate |
 | [thanhvuong-rollback.md](./thanhvuong-rollback.md) | revert từng commit, theo thứ tự mới nhất trước |
 
 Dòng trạng thái ở Unified §13 và implementation note dưới
@@ -65,7 +65,7 @@ rỗng (cũng rỗng với `6a87f77b`). Không có fixture report ở cả ba re
 | T12 | Warning giữ semantic label ở print và bundle | Một phần: warnings in trong sheet, không ẩn dòng nào, có ở print emulation và PDF (U27, browser print). Bundle download: PENDING API thật |
 | `V11-P18-DR` | Delta/dữ liệu | **PENDING** — không có compute/real data ở lane này |
 | `V11-P18-BR` | Browser/visual/action | Một phần: `PRODUCT_ROUTE_BROWSER_RECEIPT` với API stub, preview riêng, không phải dev host |
-| `V11-P18-GX` | protected hash, no-debt, report | Một phần: hook tay, `git diff --check`, `open_implementation_debt` rỗng nhưng `open_debt` có 2 lỗi audit (§5.5); không có rebuild/deploy receipt |
+| `V11-P18-GX` | protected hash, no-debt, report | Một phần: hook tay, `git diff --check`, `open_implementation_debt` và `open_debt` rỗng (A1/A2 audit sửa ở `29c28f4a`); không có rebuild/deploy receipt |
 
 `READ` khác `IMPLEMENTED` khác `VERIFIED` (A4.1).
 
@@ -75,14 +75,14 @@ rỗng (cũng rỗng với `6a87f77b`). Không có fixture report ở cả ba re
 |---|---|
 | Branch | `feat/thanhvuong/research-p17-p21`, remote duy nhất là `primus-origin` |
 | Base của P18 | `19310912b9695c9e5bb48f05432ff4726767d61f` (docs: rule packet CLAUDE.md §7.10) |
-| Commit code P18 | `70044e40` feat(research): S09 report client and export hooks · `1757b7d5` feat(research): S09 Run Report screen, route and links · `6057a4c8` test(research): S09 unit lane S09-U01..U26 · `93a435bb` fix(research): S09 warnings print inside the sheet, annotation stays screen-only · `aea76f6923e8d6acc51c851607a79e2f44b51fe7` fix(research): S09 long identifiers wrap, header keeps the certification box, print margins |
+| Commit code P18 | `70044e40` feat(research): S09 report client and export hooks · `1757b7d5` feat(research): S09 Run Report screen, route and links · `6057a4c8` test(research): S09 unit lane S09-U01..U26 · `93a435bb` fix(research): S09 warnings print inside the sheet, annotation stays screen-only · `aea76f6923e8d6acc51c851607a79e2f44b51fe7` fix(research): S09 long identifiers wrap, header keeps the certification box, print margins · `29c28f4aea87d43f56dbf1187595de6944863831` fix(research): S09 screen-reader equity table leaves the layout, table cells keep words whole |
 | Ghi chú lịch sử | `1757b7d5` ban đầu là `04495395`, được amend local **trước khi push** (chuyển notice + retry ra ngoài `ResearchPanel`, D9). Không merge, rebase hay force |
-| Docs commit | commit docs này (packet 5 file + dòng §13 + implementation note `#rl-p18`) |
+| Docs commit | commit docs này (packet 5 file + dòng §13 + implementation note `#rl-p18`); các vòng trước `47165016` (audit), `a9471cdd`; vòng này `docs(research): P18 packet after audit fixes` |
 | Tác giả | `Vuong <thanhvuong11052003@gmail.com>`, trailer `Co-Authored-By: Claude Fable 5.1` |
 | Baseline | `docs/research-loop-plan` = `e39bacfa` lúc lập plan, `6a87f77b` lúc đóng packet. **Chưa merge/rebase**. Bobby quyết cách tích hợp (§6, B1) |
-| Push / PR | Push `19310912..<commit docs này>` lên `primus-origin` (pre-push chạy tay exit 0), không force. Chưa PR |
+| Push / PR | Push `19310912..<commit docs này>` lên `primus-origin` (pre-push chạy tay exit 0), không force; vòng này push `a9471cdd..<commit docs này>`. Chưa PR |
 
-## 2. File đã sửa (`git diff --numstat 19310912 aea76f69 -- apps/portal/frontend`)
+## 2. File đã sửa (`git diff --numstat 19310912 29c28f4a -- apps/portal/frontend`)
 
 | File | + | − | Mục đích |
 |---|---:|---:|---|
@@ -90,16 +90,16 @@ rỗng (cũng rỗng với `6a87f77b`). Không có fixture report ở cả ba re
 | `src/research/useReport.ts` | 130 | 0 | Một GET khi vào, không poll, không refetch on focus; retry gửi lại kèm ETag đang giữ (Map in-memory) |
 | `src/research/useReportExport.ts` | 152 | 0 | Tạo job → poll 2000 ms chỉ khi QUEUED/RUNNING; dừng khi terminal / unmount / `document.hidden`; 409 giữ job |
 | `src/research/reportEquity.ts` | 119 | 0 | `equitySvg` pure function (spec §18): path theo thời gian, bỏ điểm không parse được |
-| `src/research/ReportDetail.tsx` | 953 | 0 | Sheet S09: 16 `data-panel`, print CSS scoped, `@page { margin: 0.55in }` |
+| `src/research/ReportDetail.tsx` | 970 | 0 | Sheet S09: 16 `data-panel`, print CSS scoped, `@page { margin: 0.55in }`; bảng sr-only equity trong wrapper `.rr-sr` (ẩn khi in); ô bảng giữ nguyên chữ; một `h1` (title là `h2`); verdict rule đọc từ `provenance.verdict_rule_revision` |
 | `src/research/ReportRoute.tsx` | 41 | 0 | Route; đặt `html[data-research-print-sheet]` chỉ khi mount |
-| `src/research/reportDetail.test.tsx` | 825 | 0 | 35 test, nhóm `S09-U01…U31` (U14 tham số ×5) |
+| `src/research/reportDetail.test.tsx` | 886 | 0 | 39 test, nhóm `S09-U01…U35` (U14 tham số ×5) |
 | `src/research/utcMinute.ts` | 8 | 0 | `iso()` chuyển nguyên từ `ExecuteDetail.tsx`, dùng chung S08/S09 |
 | `src/research/ExecuteDetail.tsx` | 5 | 9 | Import `iso` từ `utcMinute.ts`; `data-next="run-report"` thành Link |
 | `src/research/EvidenceFlow.tsx` | 13 | 4 | Hub "generate report → 09" thành Link; "release candidate → 11" giữ refused |
 | `src/features/quantbt/QuantBTModule.tsx` | 4 | 1 | Mount `runs/:runId/report`; loại `report` khỏi lookup `/api/runs/:id` cũ |
 | `src/research/researchBoundary.test.ts` | 1 | 0 | Thêm `reportClient.ts` vào `NETWORK_MODULES` |
 | `tsconfig.json` | 3 | 0 | Alias `@portal/contracts-research-report` |
-| **Tổng** | **2582** | **14** | 13 file, tất cả thuộc `apps/portal/frontend/**` (`git diff --shortstat 19310912 aea76f69` toàn repo cũng là 13 file, +2582/−14) |
+| **Tổng** | **2660** | **14** | 13 file, tất cả thuộc `apps/portal/frontend/**` (code head `29c28f4a`; ở `aea76f69` là +2582/−14) |
 
 Không đụng backend, `packages/contracts/**`, OpenAPI, fixture canonical,
 migration, `apps/portal/strategy/**`, control-plane, deploy, `package.json` hay
@@ -193,10 +193,14 @@ kèm typed absence + reason.
 
 ## 5. Evidence
 
-### 5.1 Test lanes (`apps/portal/frontend`, Node v20.20.2, tree = `aea76f69`)
+### 5.1 Test lanes (`apps/portal/frontend`, Node v20.20.2, tree = `aea76f69`; dòng in đậm đầu bảng là tree `29c28f4a`)
 
 | Lane | Lệnh | Exit | Kết quả |
 |---|---|---:|---|
+| **Typecheck + build (tree `29c28f4a`)** | `npx tsc -b --noEmit`; `npm run build` | 0 / 0 | PASS (chỉ cảnh báo chunk) |
+| **Unit toàn bộ (tree `29c28f4a`)** | `npx vitest run` | 0 | **170 file · 3010 pass · 1 skip** (3011); pass ngay lần đầu, flake `PortalShell` không xuất hiện |
+| **Unit S09 (tree `29c28f4a`)** | `npx vitest run src/research/reportDetail.test.tsx` | 0 | **39/39** (`S09-U01…U35`, U14 ×5); kèm boundary 53/53 |
+| **Browser toàn Research, 1 worker (tree `29c28f4a`)** | `RESEARCH_SHOT_DIR=~/tv-shots/p18-fix2 npx playwright test -c .tv-probe.config.ts --workers=1` | 0 | **129/129** (fixtures 8, product 74, tvp18 46, audit-measure 1), 4.5 min; 44 RECEIPT `overflow=0 noise=0`; đo trước/sau ở §5.5 |
 | Typecheck | `npx tsc -b --noEmit` | 0 | PASS |
 | Build | `npm run build` | 0 | PASS (chỉ cảnh báo chunk >500 kB đã có từ trước) |
 | Unit toàn bộ | `npx vitest run` | 0 | **170 file · 3006 pass · 1 skip** (baseline 169 / 2971 / 1). Lần chạy đầu fail do flake `PortalShell` (§7), lần hai pass |
@@ -283,6 +287,7 @@ Danh sách đầy đủ ở [thanhvuong-test-results.json](./thanhvuong-test-res
 |---|---|---|
 | 5 commit code + lần amend `1757b7d5` | `git diff --cached --check` rồi `bash .githooks/pre-commit` trên index | exit 0, ×6 |
 | Range `19310912..HEAD` | `git diff --check` | exit 0 |
+| Commit code `29c28f4a` | `git diff --cached --check` rồi `bash .githooks/pre-commit` trên index | exit 0 |
 | Commit docs này | `bash .githooks/pre-commit` trên index | exit 0 |
 | Push `19310912..<commit docs này>` | `printf '<ref> <sha> <ref> <sha>' \| bash .githooks/pre-push primus-origin <url>` | exit 0 |
 
@@ -305,8 +310,26 @@ probe/config tạm đã xoá, `git status --short` rỗng. Evidence ở
 | **A1 — lỗi code** | Bảng `sr-only` các điểm equity (240 hàng) cao **4 818 px** dù `sr-only`: bảng không co dưới nội dung nên `height:1px` không có tác dụng. 1280: `scrollHeight` 6 049 vs đáy nội dung 3 257 (~2 800 px trống cuối trang); print 816: 5 746 vs đáy sheet 2 611. PDF Letter **7 trang, gỡ bảng này còn 5** → ≥ 2 trang trắng cuối bản in. `ReportDetail.tsx:538-551`. Ghi `open_debt` `S09-SRONLY-TABLE-HEIGHT` |
 | **A2 — lỗi code** | `.rr-table td { word-break: break-all }` (`ReportDetail.tsx:161-162`) bẻ cả chữ thường: cột state artifacts in "seal/ed" (7/7 ô cao 2 dòng), header "STAT/E", tên "selection_/trace", "fill_ledge/r", "metrics_su/mmary" ở 1280 và print 816. Clip-audit không bắt vì không tràn. Ghi `open_debt` `S09-TABLE-WORD-BREAK` |
 
-Hai lỗi A1/A2 **không sửa** trong audit (chỉ được sửa docs); đề xuất nhỏ nhất
-và test ở [debt register](./thanhvuong-debt-register.json).
+Hai lỗi A1/A2 không sửa trong audit (chỉ được sửa docs); **đã sửa ở `29c28f4a`**
+(§7), cùng 2 mục nhỏ của audit (2 `h1`; verdict rule hard-code). Đo lại trên
+`29c28f4a` (probe `audit-measure @1280`, `~/tv-shots/p18-fix2/`):
+
+| Đo | Trước (`aea76f69`) | Sau (`29c28f4a`) |
+|---|---|---|
+| `scrollHeight` 1280 | 6 049 (đáy trang 3 257) | 3 307 (đáy trang 3 243; 64 px là padding shell, như nhau khi gỡ bảng sr) |
+| print 816 | 5 746 vs đáy sheet 2 611 | 2 597 = 2 597 |
+| PDF Letter / A4 | 7 / 6 trang | **5 / 5** trang (gỡ bảng sr vẫn 5 / 5) |
+| Số `h1` | 2 | 1 ("QuantBT Backtest" của module header) |
+| Chữ bị bẻ trong ô | `sealed`, `selection_trace`, `fill_ledger`, `metrics_summary` | `[]` trên màn 1280 và Letter |
+| Clip / cert | `[]` / beside | `[]` ở 1280/660/letter-816/a4-794; cert beside=true 1280 + Letter |
+
+SHA-256 16 hex (`p18-fix2/`): `p18-full-1280.png` `a8ab1b48792ac397`,
+`p18-print-letter.pdf` `ecd1cc0d30d73171` (118 772 B), `p18-print-a4.pdf`
+`2af23630fb09fdca` (118 185 B), `probe.log` `a190efb59e0be98b`,
+`playwright.log` `b1a085ed68fa1571`. PDF trước sửa lưu ở
+`p18-audit-before-letter.pdf` (7 trang) / `p18-audit-before-a4.pdf` (6 trang).
+Preview 4417 đã kill đúng PID node (kiểm cmdline), `ss -ltnp | grep 4417` rỗng;
+probe/config tạm đã xoá.
 
 ## 6. Việc Bobby quyết
 
@@ -329,6 +352,10 @@ Chi tiết và đề xuất: [thanhvuong-backend-requests.md §3](./thanhvuong-b
 
 | Mục | Tìm ra ở | Xử lý |
 |---|---|---|
+| **A1** bảng sr-only equity (240 hàng) cao 4 818 px: `scrollHeight` 1280 6 049 vs đáy 3 257; PDF Letter 7 trang (5 khi gỡ bảng) | Audit 2026-09-23 (§5.5) | **Sửa ở `29c28f4a`**: bảng nằm trong `<div className="rr-sr sr-only" data-sr-equity-table>` (block clip: absolute, 1px, overflow hidden, clip); print ẩn `.rr-sr`. `scrollHeight` 3 307, print 816 2 597 = 2 597, Letter **7 → 5**, A4 6 → 5 (U32) |
+| **A2** `.rr-table td { word-break: break-all }` bẻ chữ thường ("seal/ed", "STAT/E", tên artifact) | Audit 2026-09-23 (§5.5) | **Sửa ở `29c28f4a`**: `td { word-break: normal; overflow-wrap: break-word }`, chỉ `td.rr-long` giữ `break-all`. Dùng `break-word` thay `anywhere` như đề xuất: `anywhere` hạ min-content nên bảng auto-layout vẫn thu cột và bẻ "sealed" (đo trong browser). Chữ bị bẻ `[]` ở 1280 và Letter (U33) |
+| 2 `h1` trên trang | Audit (§5.5 a11y) | **Sửa ở `29c28f4a`**: title report là `h2`; module header giữ `h1` duy nhất (U34) |
+| Verdict rule hard-code trong caption fold | Audit notes | **Sửa ở `29c28f4a`**: đọc `provenance.verdict_rule_revision` nguyên chuỗi (U35) |
 | **B1** giá trị sealed bị cắt ở provenance line (`word-break: normal` + `.rr-block overflow:hidden`; 1280 sw 478 > cw 380; Letter 478 > 377; A4 478 > 366) | Gói B clip-audit, `p18-clip-provenance-1280.png` `dd610e64cccb8cd3` | **Sửa ở `aea76f69`**: `.rr-long` (`overflow-wrap: anywhere; word-break: break-all`) cho revision/digest/ETag/job id/sha256/filename; bỏ `overflow:hidden`. Probe chạy lại assert clip `[]` (U28) |
 | **N1** cert box rớt dòng ở 1280 | Gói B | **Sửa ở `aea76f69`**: cột chữ `flex: 1 1 0; min-width: 0`, `.rr-cert` `flex: none` (U30) |
 | **N2** PDF không có lề | Gói B | **Sửa ở `aea76f69`**: `@page { margin: 0.55in }` scoped (U29, D13) |
@@ -367,12 +394,11 @@ binding scratch (thêm ở audit). Tất cả OPEN, kiểm lại 2026-09-23 trê
 
 - **`P18-A S09 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · đã push, chưa PR`.**
   Frontend bám hi-fi trong giới hạn contract; mọi khối hi-fi giữ chỗ, ô không có
-  field in typed absence + reason code. Lỗi đã biết trong scope S09: hai lỗi
-  audit A1/A2 (§5.5, `open_debt`), còn lại là các mục mở ở §6.
+  field in typed absence + reason code. Hai lỗi audit A1/A2
+  và 2 mục nhỏ đã sửa ở `29c28f4a` (§7); `open_debt` rỗng; còn lại là các mục mở ở §6.
 - Chưa `VERIFIED`: thiếu `REAL_API_E2E_RECEIPT` (feature-dark), axe, tích hợp
-  baseline (B1), `CG-P18-*`, `VISUAL_DECISION_REQUIRED` tiêu đề/cert (B2), và
-  sửa hai lỗi audit A1 (bảng sr-only làm trang trắng cuối bản in) / A2 (bẻ chữ
-  trong bảng) (§5.5). 128 probe đã chạy lại trên `47165016`: 128/128.
+  baseline (B1), `CG-P18-*`, `VISUAL_DECISION_REQUIRED` tiêu đề/cert (B2).
+  Toàn bộ probe Research chạy lại trên `29c28f4a`: 129/129; unit 3010 pass / 1 skip.
 
 ## 11. Reuse report (v0.5 §11.3)
 

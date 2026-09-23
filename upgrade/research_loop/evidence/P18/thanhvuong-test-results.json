@@ -2,7 +2,7 @@
   "phase": "P18",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-23",
-  "tree": "aea76f6923e8d6acc51c851607a79e2f44b51fe7",
+  "tree": "29c28f4aea87d43f56dbf1187595de6944863831",
   "workspace": {
     "user": "thanhvuong",
     "branch": "feat/thanhvuong/research-p17-p21",
@@ -12,7 +12,7 @@
     "playwright": "1.62.1",
     "chromium": "151.0.7922.34 headless"
   },
-  "lane_note": "Unit, typecheck and build results are real executions in the workspace. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the report API stubbed from the report.service.ts shape (no canonical fixture: CG-P18-09), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). The full 128-probe Research suite ran on 93a435bb and again, in the 2026-09-23 independent audit, on head 47165016 (code = aea76f69): 128/128. No REAL_API_E2E_RECEIPT: FEATURE_RESEARCH_REPORTS=false.",
+  "lane_note": "Unit, typecheck and build results are real executions in the workspace. The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the report API stubbed from the report.service.ts shape (no canonical fixture: CG-P18-09), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). The full 128-probe Research suite ran on 93a435bb and again, in the 2026-09-23 independent audit, on head 47165016 (code = aea76f69): 128/128. After the audit fixes (29c28f4a) the full Research suite ran again with the audit measurements added: 129/129 (fixtures 8, product 74, tvp18 46, audit-measure 1). No REAL_API_E2E_RECEIPT: FEATURE_RESEARCH_REPORTS=false.",
   "results": [
     {
       "gate": "npm --prefix packages/contracts run generate:research-report",
@@ -147,6 +147,115 @@
       "scope": "push 19310912..<docs commit> to primus-origin",
       "result": "PASS",
       "exit": 0
+    },
+    {
+      "gate": "npx tsc -b --noEmit",
+      "scope": "tree 29c28f4a",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "npm run build",
+      "scope": "tree 29c28f4a",
+      "result": "PASS",
+      "exit": 0,
+      "note": "chunk > 500 kB warning only (pre-existing)"
+    },
+    {
+      "gate": "npx vitest run",
+      "scope": "tree 29c28f4a, full frontend",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "170 files, 3010 passed, 1 skipped (3011)",
+      "note": "passed on the first run; the PortalShell flake did not appear"
+    },
+    {
+      "gate": "npx vitest run src/research/reportDetail.test.tsx",
+      "scope": "tree 29c28f4a",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "39/39 (S09-U01..U35, U14 x5); with researchBoundary.test.ts 53/53"
+    },
+    {
+      "gate": "playwright full Research suite, 1 worker (RESEARCH_SHOT_DIR=~/tv-shots/p18-fix2)",
+      "scope": "tree 29c28f4a, vite preview 127.0.0.1:4417, probe config testMatch **/_probe-research-*.spec.ts (temporary, deleted)",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "129/129 (fixtures 8, product 74, tvp18 46, audit-measure 1), 4.5 min; 44 RECEIPT lines overflow=0 noise=0",
+      "measurements": {
+        "scrollHeight_1280": {
+          "before_aea76f69": 6049,
+          "after": 3307,
+          "page_bottom_after": 3243,
+          "note": "64 px = shell padding, same with and without the sr table"
+        },
+        "print_816": {
+          "before": "5746 vs sheet 2611",
+          "after": "2597 == 2597"
+        },
+        "pdf_pages": {
+          "before": {
+            "Letter": 7,
+            "A4": 6
+          },
+          "after": {
+            "Letter": 5,
+            "A4": 5
+          },
+          "after_without_sr_table": {
+            "Letter": 5,
+            "A4": 5
+          }
+        },
+        "h1_count": {
+          "before": 2,
+          "after": 1
+        },
+        "split_words": {
+          "before": [
+            "sealed",
+            "selection_trace",
+            "fill_ledger",
+            "metrics_summary"
+          ],
+          "after_screen": [],
+          "after_letter": []
+        },
+        "clip": "CLIP 1280/660 and CLIP-PAPER letter-816/a4-794 []",
+        "cert": "beside=true at 1280 and on Letter"
+      },
+      "sha256_prefix": {
+        "p18-full-1280.png": "a8ab1b48792ac397",
+        "p18-print-letter.pdf": "ecd1cc0d30d73171",
+        "p18-print-a4.pdf": "2af23630fb09fdca",
+        "probe.log": "a190efb59e0be98b",
+        "playwright.log": "b1a085ed68fa1571"
+      },
+      "teardown": "preview node PID killed after checking its cmdline; ss -ltnp | grep 4417 empty; temporary probe/config/test-results deleted; git status --short empty"
+    },
+    {
+      "gate": "git diff --cached --check + bash .githooks/pre-commit (manual)",
+      "scope": "code commit 29c28f4a",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "git diff --check 19310912 HEAD",
+      "scope": "HEAD = 29c28f4a",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "bash .githooks/pre-commit (manual)",
+      "scope": "docs commit 'P18 packet after audit fixes'",
+      "result": "PASS",
+      "exit": 0
+    },
+    {
+      "gate": "bash .githooks/pre-push (manual)",
+      "scope": "push a9471cdd..<docs commit after audit fixes> to primus-origin",
+      "result": "PASS",
+      "exit": 0
     }
   ],
   "not_run": [
@@ -172,7 +281,7 @@
     }
   ],
   "evidence_store": {
-    "location": "~/tv-shots/p18/ (tree 93a435bb, package B) and ~/tv-shots/p18-fix/ (tree aea76f69, rerun after fix) in the thanhvuong workspace (not committed, A4.1)",
+    "location": "~/tv-shots/p18/ (tree 93a435bb, package B) and ~/tv-shots/p18-fix/ (tree aea76f69, rerun after fix) and ~/tv-shots/p18-fix2/ (tree 29c28f4a, audit fixes; before/after PDFs p18-audit-before-*.pdf / p18-audit-after-*.pdf) in the thanhvuong workspace (not committed, A4.1)",
     "probe_spec_sha256_prefix": {
       "package B spec (_probe-research-tvp18.spec.ts)": "32dc5f08f7ea7061",
       "rerun spec with clip assertions": "586f39fe2d65f5ba"
@@ -181,7 +290,9 @@
       "p18-fix/p18-print-letter.pdf": 119055,
       "p18-fix/p18-print-a4.pdf": 118199,
       "p18/p18-print-letter.pdf (6 pages)": 116166,
-      "p18/p18-print-a4.pdf": 116345
+      "p18/p18-print-a4.pdf": 116345,
+      "p18-fix2/p18-print-letter.pdf (5 pages)": 118772,
+      "p18-fix2/p18-print-a4.pdf (5 pages)": 118185
     },
     "sha256_prefix_p18_fix": {
       "p18-clip-audit-1280.png": "e765359da8d84bf2",
@@ -337,6 +448,13 @@
         "p18-hifi-09-1280-visible.png": "5fd5b53938bbd146",
         "p18-hifi-09-660-visible.png": "df8cb60d0e8f40c3"
       }
+    },
+    "sha256_prefix_p18_fix2": {
+      "p18-full-1280.png": "a8ab1b48792ac397",
+      "p18-print-letter.pdf": "ecd1cc0d30d73171",
+      "p18-print-a4.pdf": "2af23630fb09fdca",
+      "probe.log": "a190efb59e0be98b",
+      "playwright.log": "b1a085ed68fa1571"
     }
   },
   "known_flake": "src/app/PortalShell.test.tsx > 'mounts QuantBT under its canonical route with no nested topbar' fails intermittently in a full vitest run and passes alone (once foundation.test.tsx > P09-T04 instead); both files pass alone 52/52. Recorded at P16/P17; seen in 2 of 4 full runs after 93a435bb and on 6057a4c8 with the fix stashed. Outside the S09 diff, not changed (Bobby B5).",

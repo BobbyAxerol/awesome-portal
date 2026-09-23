@@ -3,6 +3,11 @@
 Chỉ frontend. Không đổi contract, backend, migration hay feature flag. Revert
 commit mới nhất trước; sau mỗi bước Portal vẫn build được.
 
+- `29c28f4a` (bảng sr-only equity trong wrapper `.rr-sr`, ô bảng giữ nguyên chữ,
+  một `h1`, verdict rule từ provenance): revert đưa lại ~2 800 px cuộn trống ở
+  1280, PDF Letter 7 trang (2 trang trắng cuối), chữ bị bẻ trong ô bảng
+  ("seal/ed"), 2 `h1` và verdict rule hard-code. Revert trước `aea76f69`
+  (cùng file).
 - `aea76f69` (long identifiers, cert box, `@page`, nhãn Archive): revert làm
   provenance line cắt mất đuôi revision trên màn hình và trên giấy, cert box rớt
   dòng ở 1280, PDF không có lề. Không nên revert riêng.

@@ -2,7 +2,7 @@
   "phase": "P18",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-23",
-  "tree": "aea76f6923e8d6acc51c851607a79e2f44b51fe7",
+  "tree": "29c28f4aea87d43f56dbf1187595de6944863831",
   "open_implementation_debt": [],
   "resolved_in_phase": [
     {
@@ -34,6 +34,34 @@
       "what": "'archive' export label lower-case unlike JSON/CSV/Parquet",
       "status": "RESOLVED",
       "evidence": "aea76f69; S09-U31"
+    },
+    {
+      "id": "S09-SRONLY-TABLE-HEIGHT",
+      "what": "the 240-row sr-only table measures 4818 px (a table cannot shrink below its rows, so height:1px/overflow:hidden do not clip it); 1280: document scrollHeight 6049 vs .rr-page bottom 3257 (~2800 px blank scroll); print 816: 5746 vs sheet bottom 2611; page.pdf Letter 7 pages, 5 with the table removed (>= 2 trailing blank pages)",
+      "found_by": "independent audit 2026-09-23, browser on 47165016",
+      "status": "RESOLVED",
+      "evidence": "29c28f4a; the sr-only equity table sits in a clipping block wrapper <div className=\"rr-sr sr-only\" data-sr-equity-table> (position absolute, 1px, overflow hidden, clip) and the print block hides .rr-sr; S09-U32; ~/tv-shots/p18-fix2 probe AUDIT-SR: 1280 scrollHeight 6049 -> 3307 (page bottom 3243, the 64 px is shell padding, identical with and without the table), print 816 2597 == sheet bottom 2597, PDF Letter 7 -> 5 pages and A4 6 -> 5 (same count with the table removed)"
+    },
+    {
+      "id": "S09-TABLE-WORD-BREAK",
+      "what": "every table cell breaks inside ordinary words: artifact state 'seal|ed' (7/7 cells two lines), header 'STAT|E', names 'selection_|trace', 'fill_ledge|r', 'metrics_su|mmary' at 1280 and print 816; clip-audit passes because nothing overflows",
+      "found_by": "independent audit 2026-09-23, screenshot p18-audit-full-1280.png",
+      "status": "RESOLVED",
+      "evidence": "29c28f4a; .rr-table td { word-break: normal; overflow-wrap: break-word } and only .rr-table td.rr-long keeps break-all. break-word, not the suggested anywhere: anywhere lowers the min-content width, so the auto-layout table narrows the column and still split 'sealed' in the browser (measured); S09-U33; p18-fix2 probe split-word check (Range.getClientRects per word) [] on screen 1280 and on Letter; CLIP/CLIP-PAPER still []"
+    },
+    {
+      "id": "S09-DOUBLE-H1",
+      "what": "the page had two h1 ('QuantBT Backtest' from the module header and 'QuantBT Run Report'); audit a11y note",
+      "found_by": "independent audit 2026-09-23 (receipt §5.5 a11y row)",
+      "status": "RESOLVED",
+      "evidence": "29c28f4a; report title is h2 [data-report-title]; the module header owns the page's one h1; S09-U34; p18-fix2 probe h1 count 1 on screen and print 816"
+    },
+    {
+      "id": "S09-VERDICT-RULE-HARDCODE",
+      "what": "the fold verdict caption carried a hard-coded verdict rule string instead of the contract field; audit note",
+      "found_by": "independent audit 2026-09-23 (audit notes)",
+      "status": "RESOLVED",
+      "evidence": "29c28f4a; caption [data-verdict-rule] reads provenance.verdict_rule_revision verbatim; S09-U35 (value from provenance, no hard-coded string in source)"
     }
   ],
   "backend_requests": [
@@ -122,7 +150,7 @@
       "id": "P18-FE-DG-01",
       "owner": "Bobby",
       "state": "AWAITING_DECISION",
-      "what": "integrate the moved baseline e39bacfa (now 361f68b4; 361f68b4 also touches QuantBTModule.tsx, git merge-file 0 conflicts): EvidenceFlow.tsx merges cleanly; P17 FreezeDetail.tsx conflict remains; S09 to toResearchRefusal + RefusalNote + RESEARCH_REPORT_* in SURFACE_CODES; rerun all tests + 128 probes"
+      "what": "integrate the moved baseline e39bacfa (now 361f68b4; 361f68b4 also touches QuantBTModule.tsx, git merge-file 0 conflicts): EvidenceFlow.tsx merges cleanly; P17 FreezeDetail.tsx conflict remains; S09 to toResearchRefusal + RefusalNote + RESEARCH_REPORT_* in SURFACE_CODES; rerun all tests + 129 probes"
     },
     {
       "id": "P18-FE-DG-02",
@@ -150,30 +178,6 @@
     }
   ],
   "audit_head": "47165016334d8b9298273b2deb2e1ea728bbdcdf",
-  "open_debt": [
-    {
-      "id": "S09-SRONLY-TABLE-HEIGHT",
-      "found_by": "independent audit 2026-09-23, browser on 47165016",
-      "owner": "lead decides (code fix)",
-      "state": "OPEN",
-      "locator": "apps/portal/frontend/src/research/ReportDetail.tsx:538-551 (<table className=\"sr-only\"> of equity points)",
-      "actual": "the 240-row sr-only table measures 4818 px (a table cannot shrink below its rows, so height:1px/overflow:hidden do not clip it); 1280: document scrollHeight 6049 vs .rr-page bottom 3257 (~2800 px blank scroll); print 816: 5746 vs sheet bottom 2611; page.pdf Letter 7 pages, 5 with the table removed (>= 2 trailing blank pages)",
-      "expected": "no blank scroll or blank printed pages; exact points still exposed to assistive tech",
-      "smallest_fix": "wrap the table in <div className=\"sr-only\"> (block box clips) or hide it in print (.no-print / @media print display:none) and cap it with the same wrapper on screen",
-      "test": "unit: the sr-only table has a clipping block ancestor; probe: scrollHeight - .rr-page bottom <= 1 at 1280/660, Letter PDF page count equal with and without the table",
-      "evidence": "~/tv-shots/p18-audit/p18-audit.log GEOMETRY/PDFPAGES lines (f667ebb19ad9e884)"
-    },
-    {
-      "id": "S09-TABLE-WORD-BREAK",
-      "found_by": "independent audit 2026-09-23, screenshot p18-audit-full-1280.png",
-      "owner": "lead decides (code fix)",
-      "state": "OPEN",
-      "locator": "apps/portal/frontend/src/research/ReportDetail.tsx:161-162 (.rr-table td word-break: break-all)",
-      "actual": "every table cell breaks inside ordinary words: artifact state 'seal|ed' (7/7 cells two lines), header 'STAT|E', names 'selection_|trace', 'fill_ledge|r', 'metrics_su|mmary' at 1280 and print 816; clip-audit passes because nothing overflows",
-      "expected": "words and enum labels stay whole; only sealed identifiers (.rr-long) break anywhere",
-      "smallest_fix": ".rr-table td { word-break: normal; overflow-wrap: anywhere } keeping .rr-long on digest/revision cells; optionally white-space: nowrap on the state column",
-      "test": "probe: artifact state cells render on one line (height == single row) at 1280 and Letter; unit: CSS rule has no break-all outside .rr-long",
-      "evidence": "p18-audit-full-1280.png c5f72b4c1de9b74b (same bytes as p18-fix/p18-full-1280.png)"
-    }
-  ]
+  "open_debt": [],
+  "fix_head": "29c28f4aea87d43f56dbf1187595de6944863831"
 }
