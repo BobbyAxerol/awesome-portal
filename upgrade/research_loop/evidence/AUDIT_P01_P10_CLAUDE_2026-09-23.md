@@ -302,6 +302,9 @@ phase that delivers them** (Bobby: do not wire Thanhvuong's or unbuilt screens).
 
 ## 5. Decisions for Bobby
 
+**Approved by Bobby 2026-09-23 ("Duyệt DQ và bắt đầu Wave A ngay"): DQ-01…DQ-12
+as recommended in the right-hand column.** Codex works RF-03 in parallel.
+
 | # | Question | Claude recommends |
 |---|---|---|
 | DQ-01 | Research Loop screens: keep the QuantBT module header, or drop it and use the HiFi's in-page breadcrumb (00 fully shell-free per spec §1)? | Keep the Portal sidebar/topbar; **drop the module header on Research Loop screens**, add the HiFi breadcrumb; 00 keeps the shell (navigation) but no module header |
@@ -318,6 +321,11 @@ phase that delivers them** (Bobby: do not wire Thanhvuong's or unbuilt screens).
 | DQ-12 | Execution assumptions row (capital, fee, slippage, target) has no field anywhere | Leave out of S02 until a requested-spec field exists; recorded as HiFi deviation |
 
 ## 6. Order of work
+
+**Wave A status (Claude, 2026-09-23):** done — FE-S03-01, FE-S03-02, FE-S03-04,
+FE-S02-01, FE-X-01, FE-X-02, FE-X-03, FE-X-04, FE-S14-07, FE-S12-01, FE-S12-09.
+Moved to wave B: FE-S14-10 (activating a DRAFT from the registry after a reload
+needs an Activate control on the registry row, which is a layout change).
 
 1. **Now, no dependency (RF-04 wave A):** FE-S03-01/02/04, FE-S02-01, FE-X-01…04,
    FE-S14-07/10, FE-S12-01 (copy), FE-S12-09 — real bugs, speed, false copy.

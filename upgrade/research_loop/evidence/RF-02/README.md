@@ -82,7 +82,7 @@ reopening of RF-02.
 4. **SUSPECT / never-claims**: the manifest's sentences, not the HiFi's (D-B3).
 5. **Objective**: the engine's own formula text per stage, typeset with identifiers in `\texttt`, instead of the HiFi's hand-written math (e.g. mode 3's `P_C = Q_C + …` is not in the engine's objective contract, so it is not drawn).
 6. **No data-usage animation** (D-5).
-7. **Breadcrumb / deep link**: "Evidence Flow" links back only when the Atlas was opened from a run; "open search & selection →" appears only then, otherwise "find runs in this mode →".
+7. **Breadcrumb / deep link**: "Evidence Flow" links back only when the Atlas was opened from a run. Each mode card links "open search & selection →" to that run, otherwise "find runs in this mode →". *(Corrected 2026-09-23, RF-04 FE-S12-09: there is no header "open search & selection →" at all — the HiFi has one; the build only has the per-card link.)*
 8. **Additions not in the HiFi**: release-facts panel (collapsed), struck-through invalid schedule chips, "avoid when" column showing "not published", cited source locators under each fact.
 9. **S02**: walk-forward frequency/window-mode are selects from the contract (rolling disabled with its reason) and a "First OOS instant" field; mode/schedule are selects.
 10. **S04–S07 on a real run**: retained-source panels read "pending retention" (CG-RF02-03), histogram ticks are 3 significant digits, long exact values wrap.
@@ -101,3 +101,9 @@ reopening of RF-02.
 ## Not claimed
 
 No dev/stable deployment, no runtime flag outside the preview, no merge. Visual approval is Bobby's (D-B6).
+
+## Codex backend review — RF-03, 2026-09-23
+
+Accepted by code/source review: RF-01/RF-02 route gate, removal of the public Python Atlas route, cursor v2, bounded retained-artifact read, sourced Atlas facts, walk-forward options and config digest (`CG-RF02-06`). Three pinned QuantBT locator tests passed against the 1.1.1 wheel RECORD. The idle NATS timeout recovery (`5b2cf660`, `CG-RF02-02`) and warmup-inclusive timeline (`12750366`, `CG-RF02-04`) are accepted; the local venv lacks `nats-py`, so the idle-consumer runtime proof remains the preview-image receipt, not a claimed local test.
+
+Bobby accepts a public research preview for now. Preview auto-login is **not production authentication** and must not be promoted to dev/main/stable. The worker's narrow seccomp/AppArmor profile (`CG-RF02-01`) and artifact/retention materializer (`CG-RF02-03`/`CG-P05-01`) are still OPEN. Full findings and delivered backend commits: [RF-03 packet](../RF-03/README.md).
