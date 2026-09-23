@@ -44,3 +44,20 @@ Semantics come from `researchState()` over `lib/portalState.ts` — the same
 reused: it lives in the `exec-*` Carbon namespace and importing it would pull a
 dark surface into a paper one, while editing it is out of scope. One state
 language, two skins.
+
+## Deferral — query keys (RF02-F3, Q3, 2026-09-23)
+
+Audit F-06 found `src/research/queryKeys.ts` imported by no product code: the
+actor/workspace/revision keys and the auth-switch cache clearing P03 asked for
+were never wired. Bobby's Q3 decision: **defer, with a recorded trigger**.
+
+- **Why deferral is safe today.** One workspace per session (the TopBar's
+  "Default Workspace" is a label, not a selector), and logout unmounts every
+  Research screen, so no cache can serve one actor or workspace another's rows.
+- **Trigger.** The first product code that can switch the active workspace.
+  `src/research/queryKeys.deferral.test.ts` fails when a workspace switch
+  (`switchWorkspace`, `setActiveWorkspace`, `WorkspaceSelector`, …) appears
+  while `queryKeys.ts` is still unimported — the deferral cannot outlive its
+  reason unnoticed.
+- **Owner when triggered.** Whoever ships the selector wires the keys in the
+  same change; it is not a separate phase.
