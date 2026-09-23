@@ -159,7 +159,16 @@ const SHEET_CSS = `
 .rr-table th { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); text-align: left;
   font-weight: 500; border-bottom: 1px solid var(--ink); padding: 3px 6px; }
 .rr-table td { font-family: var(--font-mono); font-size: 10px; padding: 3px 6px; border-bottom: 1px solid var(--line-soft);
-  vertical-align: top; word-break: break-all; }
+  vertical-align: top; word-break: normal; overflow-wrap: break-word; }
+/* Words in a cell stay whole. break-word, not anywhere: anywhere lowers the
+   cell's min-content width, so an auto-layout table narrows the column and
+   splits ordinary words (measured in the browser). Only sealed identifiers
+   break anywhere. */
+.rr-table td.rr-long { word-break: break-all; }
+/* A table ignores a 1px height, so the screen-reader copy of the equity
+   points sits in its own clipped box and never prints (the SVG and caption do). */
+.rr-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .rr-table tr { break-inside: avoid; }
 .rr-verdict { font-weight: 700; }
 .rr-verdict[data-v="PASS"] { color: var(--good); }
@@ -196,6 +205,7 @@ const SHEET_CSS = `
   html[data-research-print-sheet] .portal-crosslinks { display: none !important; }
   html[data-research-print-sheet] .portal-content { padding: 0 !important; max-width: none !important; }
   .rr-page .no-print { display: none !important; }
+  .rr-page .rr-sr { display: none !important; }
   .rr-page { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .rr-sheet { max-width: none; padding: 0; border: 0; }
   .rr-screen { max-width: none; margin: 10px 0 0; }
@@ -351,7 +361,10 @@ function Header({ runId, report }: { runId: string; report: ReportDetail | null 
       <div className="rr-head-text" data-head-text>
         <div className="rr-kicker">Quant Ecosystem Portal · Backtest Evidence Report</div>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="rr-title">{REPORT_TITLE}</h1>
+          {/* The module header above owns the page's one h1. */}
+          <h2 className="rr-title" data-report-title>
+            {REPORT_TITLE}
+          </h2>
           <span className="rr-runchip rr-long" data-run-chip>
             {report?.run_id ?? runId}
           </span>
@@ -536,25 +549,27 @@ function EquityFigure({ equity, folds }: { equity: ReportEquity; folds: ReportFo
           {geometry && geometry.dropped > 0 ? ` · ${geometry.dropped} points did not parse and were not drawn` : ""}
         </p>
         {drawable ? (
-          <table className="sr-only">
-            <caption>Sealed equity points, exact values</caption>
-            <tbody>
-              {equity.points.map((point) => (
-                <tr key={point.at_utc_ms}>
-                  <th scope="row">{iso(point.at_utc_ms)}</th>
-                  <td>{point.equity}</td>
-                  <td>{point.drawdown_fraction}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="rr-sr sr-only" data-sr-equity-table>
+            <table>
+              <caption>Sealed equity points, exact values</caption>
+              <tbody>
+                {equity.points.map((point) => (
+                  <tr key={point.at_utc_ms}>
+                    <th scope="row">{iso(point.at_utc_ms)}</th>
+                    <td>{point.equity}</td>
+                    <td>{point.drawdown_fraction}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </div>
     </figure>
   );
 }
 
-function FoldVerdicts({ folds }: { folds: ReportFolds }) {
+function FoldVerdicts({ folds, verdictRule }: { folds: ReportFolds; verdictRule: string }) {
   const published = folds.state === "AVAILABLE";
   return (
     <Block panel="folds" title="per-fold verdict" aside={<span className="rr-reason">{folds.state.toLowerCase()}</span>}>
@@ -596,7 +611,9 @@ function FoldVerdicts({ folds }: { folds: ReportFolds }) {
           </tbody>
         </table>
       </div>
-      <p className="rr-caption">{FOLD_COLUMNS_ABSENT} verdict rule {"research.report-verdict-rule.v1"}.</p>
+      <p className="rr-caption" data-verdict-rule>
+        {FOLD_COLUMNS_ABSENT} verdict rule {verdictRule}.
+      </p>
     </Block>
   );
 }
@@ -923,7 +940,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
             <HeadlineRow core={core} />
             <Metrics core={core} />
             <EquityFigure equity={core.equity} folds={core.folds} />
-            <FoldVerdicts folds={core.folds} />
+            <FoldVerdicts folds={core.folds} verdictRule={core.provenance.verdict_rule_revision} />
             <div className="rr-two">
               <StageChain core={core} />
               <Artifacts core={core} />

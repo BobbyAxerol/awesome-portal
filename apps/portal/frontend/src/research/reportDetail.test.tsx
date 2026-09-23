@@ -541,7 +541,8 @@ describe("S09 Run Report — layout rules", () => {
     expect(css).toContain(".rr-long { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }");
     expect(css).toMatch(/\.rr-block \{[^}]*\}/);
     expect(/\.rr-block \{([^}]*)\}/.exec(css)![1]).not.toMatch(/overflow\s*:\s*(hidden|clip)/);
-    expect(css).not.toMatch(/overflow\s*:\s*hidden/);
+    /* The one clipped box is the off-screen screen-reader copy (.rr-sr, S09-U32). */
+    expect(css.replace(/\.rr-sr \{[^}]*\}/, "")).not.toMatch(/overflow\s*:\s*hidden/);
     const long = [
       "[data-provenance-line]",
       "[data-meta]",
@@ -590,6 +591,66 @@ describe("S09 Run Report — layout rules", () => {
     }
     expect(panel("exports").querySelector('[data-export-unavailable-reason="ARCHIVE"]')?.textContent).toContain("Archive — not available");
     expect(panel("exports").querySelector('[data-export="REPORT_JSON"] [data-export-line]')?.classList.contains("rr-long")).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------------ audit fixes */
+
+describe("S09 Run Report — audit fixes (A1/A2)", () => {
+  async function loaded(detail?: ReportDetail) {
+    server(detail ? { detail: [{ status: 200, body: detail }] } : {});
+    renderRoute();
+    await screen.findByText("claim passport — sealed source facts, quoted verbatim");
+    return document.querySelector('[data-screen="run-report"] > style')!.textContent ?? "";
+  }
+
+  it("S09-U32 the screen-reader equity table sits in a clipped box and never prints", async () => {
+    const css = await loaded();
+    const box = panel("equity").querySelector("[data-sr-equity-table]")!;
+    expect(box.tagName).toBe("DIV");
+    expect(box.classList.contains("rr-sr")).toBe(true);
+    const table = box.querySelector("table")!;
+    expect(table.className).toBe("");
+    expect(table.querySelectorAll("tbody tr")).toHaveLength(3);
+    const rule = /\.rr-sr \{([^}]*)\}/.exec(css)![1]!;
+    for (const part of ["position: absolute", "width: 1px", "height: 1px", "overflow: hidden", "clip: rect(0, 0, 0, 0)"]) {
+      expect(rule, part).toContain(part);
+    }
+    expect(css.slice(css.indexOf("@media print {"))).toContain(".rr-page .rr-sr { display: none !important; }");
+  });
+
+  it("S09-U33 table cells keep words whole; only sealed identifiers break anywhere", async () => {
+    const css = await loaded();
+    const td = /\.rr-table td \{([^}]*)\}/.exec(css)![1]!;
+    expect(td).toContain("word-break: normal");
+    expect(td).toContain("overflow-wrap: break-word");
+    expect(td).not.toContain("break-all");
+    expect(td).not.toContain("anywhere");
+    expect(css).toContain(".rr-table td.rr-long { word-break: break-all; }");
+    const row = panel("artifacts").querySelector('[data-artifact="RUN_SPEC"]')!;
+    expect(row.querySelector("[data-artifact-digest]")!.classList.contains("rr-long")).toBe(true);
+    const cells = [...row.querySelectorAll("td")];
+    expect(cells[0]!.classList.contains("rr-long")).toBe(false);
+    expect(cells[2]!.classList.contains("rr-long")).toBe(false);
+  });
+
+  it("S09-U34 the screen adds no h1: the module header keeps the page's only one", async () => {
+    await loaded();
+    const root = document.querySelector('[data-screen="run-report"]')!;
+    expect(root.querySelectorAll("h1")).toHaveLength(0);
+    const title = root.querySelector("[data-report-title]")!;
+    expect(title.tagName).toBe("H2");
+    expect(title.textContent).toBe("QuantBT Run Report");
+  });
+
+  it("S09-U35 the fold caption reads the verdict rule from provenance", async () => {
+    const detail = report();
+    (detail.frozen_core.provenance as { verdict_rule_revision: string }).verdict_rule_revision = "research.report-verdict-rule.v1";
+    await loaded(detail);
+    expect(panel("folds").querySelector("[data-verdict-rule]")!.textContent).toContain("verdict rule research.report-verdict-rule.v1.");
+    const source = readFileSync(join(process.cwd(), "src", "research", "ReportDetail.tsx"), "utf8");
+    expect(source).not.toContain('"research.report-verdict-rule.v1"');
+    expect(source).toContain("verdictRule={core.provenance.verdict_rule_revision}");
   });
 });
 
