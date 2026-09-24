@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { RunLibrary, SPARKLINE_UNAVAILABLE, STAT_WITHHELD, groupRuns, statDisplay } from "./RunLibrary";
+import { RunLibrary, SPARKLINE_UNAVAILABLE, groupRuns, statDisplay } from "./RunLibrary";
 import { type Availability, type RunLibraryItem, type RunLibraryResponse } from "./runLibraryClient";
 import { type LibraryFilters, type SelectedRun } from "./useRunLibrary";
 import { researchState } from "./state";
@@ -152,15 +152,16 @@ describe("S01 fidelity — stat values", () => {
     expect((document.querySelector('[data-metric="DECAY"]')!.lastElementChild as HTMLElement).hasAttribute("title")).toBe(false);
   });
 
-  it("keeps a withheld stat's slot as a dash with the reason in title, three times over", () => {
+  it("keeps a withheld stat's slot with its short reason, never a bare dash, three times over", () => {
+    // RF-06 wave C: a bare "—" in a number slot reads as a value (CLAUDE.md §3.3).
     view();
-    const dashes = Array.from(document.querySelectorAll("[data-stats] [data-withheld]"));
-    expect(dashes).toHaveLength(3);
-    for (const dash of dashes) {
-      expect(dash.textContent).toBe(STAT_WITHHELD);
-      expect(dash.getAttribute("title")).toMatch(/never inferred/);
+    const slots = Array.from(document.querySelectorAll("[data-stats] [data-withheld]"));
+    expect(slots).toHaveLength(3);
+    for (const slot of slots) {
+      expect(slot.textContent).toBe("not published");
+      expect(slot.getAttribute("title")).toMatch(/never inferred/);
     }
-    expect(document.querySelector("[data-stats]")?.textContent).not.toContain("not published");
+    expect(document.querySelector("[data-stats]")?.textContent).not.toMatch(/—/);
   });
 });
 
@@ -185,7 +186,7 @@ describe("S01 fidelity — sparkline placeholder (spec 01 §4.3)", () => {
     const values = Array.from({ length: 30 }, (_, index) => String(index + 1));
     view({
       response: page([item({ sparkline: { kind: "oos_equity", availability: AVAILABLE } })]),
-      sparklines: new Map([["A", values]]),
+      sparklines: new Map([["A", { kind: "series" as const, values, source: null, revision: null }]]),
     });
     expect(document.querySelector("[data-sparkline-values]")?.children).toHaveLength(24);
   });

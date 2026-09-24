@@ -20,9 +20,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   IDS_LIMIT,
   RUNNING_POLL_MS,
+  type Availability,
   type LibraryRefusal,
   type RunLibraryItem,
   type RunLibraryResponse,
+  type RunSparklineSource,
   type RunStatus,
   runLibraryApi,
   toLibraryRefusal,
@@ -149,6 +151,32 @@ export interface SelectedRun {
   pending: boolean;
 }
 
+/**
+ * What the lazy sparkline read answered for one card (spec 01 §4.3, RF-05
+ * `research.run-sparkline.v1`).
+ *
+ *  - `series`: the published display values and their provenance. `revision`
+ *    is the projection revision they come from, so the card can tell when its
+ *    stats and its bars were read from different revisions.
+ *  - `withheld`: the read answered, but with a typed absence — its reason is
+ *    the server's, not the list row's.
+ *  - `failed`: the read itself failed. Spec 01 §15.2: keep the placeholder,
+ *    say "sparkline unavailable", and do not retry automatically.
+ */
+export type SparklineRead =
+  | { kind: "series"; values: readonly string[]; source: RunSparklineSource | null; revision: string | null }
+  | { kind: "withheld"; availability: Availability }
+  | { kind: "failed" };
+
+/**
+ * Whether a row's status is live lifecycle truth. A legacy 1.0.8 row's
+ * QUEUED/RUNNING is what the retired engine once recorded; nothing monitors
+ * it, so it is never polled and never shown as live work (RF-05 CG-P12-07).
+ */
+export function isLiveStatus(item: RunLibraryItem): boolean {
+  return item.status_basis.kind === "DURABLE_LIFECYCLE";
+}
+
 export interface RunLibraryController {
   filters: LibraryFilters;
   setFilters: (next: LibraryFilters) => void;
@@ -169,7 +197,7 @@ export interface RunLibraryController {
 
   /** Registers a card as visible, for the running poll and the lazy sparkline. */
   observeVisible: (runId: string, visible: boolean) => void;
-  sparklines: ReadonlyMap<string, readonly string[]>;
+  sparklines: ReadonlyMap<string, SparklineRead>;
   polling: boolean;
 }
 
@@ -184,7 +212,7 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
   const [response, setResponse] = useState<RunLibraryResponse | null>(null);
   const [refusal, setRefusal] = useState<LibraryRefusal | null>(null);
   const [nonce, setNonce] = useState(0);
-  const [sparklines, setSparklines] = useState<ReadonlyMap<string, readonly string[]>>(new Map());
+  const [sparklines, setSparklines] = useState<ReadonlyMap<string, SparklineRead>>(new Map());
   const [polling, setPolling] = useState(false);
   /* Rows read by id for a selection the current page does not show. */
   const [lookedUp, setLookedUp] = useState<ReadonlyMap<string, RunLibraryItem>>(new Map());
@@ -351,7 +379,7 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
   const eligible = useMemo(
     () =>
       (response?.items ?? [])
-        .filter((item) => item.status === "RUNNING" && visible.current.has(item.run_id))
+        .filter((item) => item.status === "RUNNING" && isLiveStatus(item) && visible.current.has(item.run_id))
         .map((item) => item.run_id)
         .slice(0, IDS_LIMIT)
         .join(","),
@@ -367,7 +395,7 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
   const runningVisible = useCallback(
     (): string[] =>
       itemsRef.current
-        .filter((item) => item.status === "RUNNING" && visible.current.has(item.run_id))
+        .filter((item) => item.status === "RUNNING" && isLiveStatus(item) && visible.current.has(item.run_id))
         .map((item) => item.run_id)
         .slice(0, IDS_LIMIT),
     [],
@@ -435,6 +463,48 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
 
   /* ---------------------------------------------------- lazy sparkline */
 
+  /*
+   * One read per run *and revision*. A card whose projection revision moves
+   * on (a poll patch, a RUNNING run that completes while in view) is asked
+   * again for the new revision; the same revision is never asked twice, and
+   * a failed read is not retried (spec 01 §15.2).
+   */
+  const requestSparkline = useCallback(
+    (item: RunLibraryItem) => {
+      /* Only a card whose sparkline the server says exists is ever asked for:
+         a lazy read for a `NOT_PUBLISHED` series would be a request whose only
+         possible answer is "no". */
+      if (item.sparkline.availability.state !== "AVAILABLE") return;
+      const key = `${item.run_id}@${item.evidence_revision ?? ""}`;
+      if (sparklineAsked.current.has(key)) return;
+      sparklineAsked.current.add(key);
+      const runId = item.run_id;
+
+      runLibraryApi
+        .sparkline(runId, workspaceId)
+        .then((series) => {
+          const read: SparklineRead =
+            series.availability.state === "AVAILABLE" && series.values.length > 0
+              ? { kind: "series", values: series.values, source: series.source, revision: series.source?.projection_revision ?? series.source_revision }
+              : {
+                  kind: "withheld",
+                  /* An AVAILABLE answer with no values is still no series. */
+                  availability:
+                    series.availability.state === "AVAILABLE"
+                      ? { state: "NOT_PUBLISHED", reason_code: series.availability.reason_code }
+                      : series.availability,
+                };
+          setSparklines((previous) => new Map(previous).set(runId, read));
+        })
+        .catch(() => {
+          /* The placeholder stays, titled "sparkline unavailable". A failed
+             lazy read is not worth a screen-level refusal. */
+          setSparklines((previous) => new Map(previous).set(runId, { kind: "failed" }));
+        });
+    },
+    [workspaceId],
+  );
+
   const observeVisible = useCallback(
     (runId: string, isVisible: boolean) => {
       const had = visible.current.has(runId);
@@ -443,24 +513,9 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
       /* Only a real change wakes the poll effect. */
       if (had !== isVisible) setVisibleRevision((n) => n + 1);
 
-      if (!isVisible || sparklineAsked.current.has(runId)) return;
+      if (!isVisible) return;
       const item = itemsRef.current.find((row) => row.run_id === runId);
-      /* Only a card whose sparkline the server says exists is ever asked for:
-         a lazy read for a `NOT_PUBLISHED` series would be a request whose only
-         possible answer is "no". */
-      if (!item || item.sparkline.availability.state !== "AVAILABLE") return;
-      sparklineAsked.current.add(runId);
-
-      runLibraryApi
-        .sparkline(runId, workspaceId)
-        .then((series) => {
-          if (series.availability.state !== "AVAILABLE") return;
-          setSparklines((previous) => new Map(previous).set(runId, series.values));
-        })
-        .catch(() => {
-          /* The placeholder stays, with its title. A failed lazy read is not
-             worth a screen-level refusal. */
-        });
+      if (item) requestSparkline(item);
     },
     /*
      * Deliberately not dependent on `response`.
@@ -474,8 +529,20 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
      * requests a second, each one causing the next. Only the browser showed
      * it; in the unit lane nothing re-creates an observer.
      */
-    [workspaceId],
+    [requestSparkline],
   );
+
+  /*
+   * A card already in view whose row changed under it — a RUNNING run the
+   * poll saw complete, a new projection revision — is not re-announced by its
+   * IntersectionObserver, which fires only when visibility changes. Without
+   * this, a run that completed on screen kept its placeholder until scrolled.
+   */
+  useEffect(() => {
+    for (const item of response?.items ?? []) {
+      if (visible.current.has(item.run_id)) requestSparkline(item);
+    }
+  }, [response, requestSparkline]);
 
   const items = response?.items ?? [];
 

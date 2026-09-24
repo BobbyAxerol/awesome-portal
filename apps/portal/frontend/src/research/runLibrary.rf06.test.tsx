@@ -384,12 +384,20 @@ describe("FE-S01-07 — ?sel= holds only real runs", () => {
 });
 
 describe("FE-S01-08 — the claim face uses the server's reason", () => {
-  it("says 'claim not issued' for SOURCE_CLAIM_NOT_ISSUED", () => {
-    view();
+  it("prints the server's NOT_ISSUED sentence, marked not issued (RF-05 CG-P12-09)", () => {
+    const sentence = "The fixed P10 qualification sealed its artifacts but did not issue a release claim.";
+    view({ response: page([item({ claim: { state: "NOT_ISSUED", text: sentence, availability: AVAILABLE } })]) });
     const claim = document.querySelector("[data-claim]") as HTMLElement;
-    // Old code: "not published".
-    expect(claim.textContent).toBe(CLAIM_NOT_ISSUED);
+    // Pre-RF-05 code: the sentence was printed as if it were an issued claim.
+    expect(claim.textContent).toBe(`NOT ISSUED — ${sentence}`);
     expect(claim.getAttribute("data-claim-kind")).toBe("not-issued");
+  });
+
+  it("says 'claim not issued' when the state is published without its sentence", () => {
+    view({ response: page([item({ claim: { state: "NOT_ISSUED", text: null, availability: { state: "NOT_PUBLISHED", reason_code: "SOURCE_CLAIM_TEXT_EMPTY" } } })]) });
+    const claim = document.querySelector("[data-claim]") as HTMLElement;
+    expect(claim.textContent).toBe(CLAIM_NOT_ISSUED);
+    expect(claim.querySelector("[title]")?.getAttribute("title")).toBe("The source published a claim state without a sentence.");
   });
 
   it("gives a cancelled run its own line, not a pending promise", () => {
@@ -511,8 +519,10 @@ describe("FE-S01-14 — a legacy row", () => {
     source_kind: "LEGACY_1_0_8_METADATA",
     row_kind: "LEGACY_RUN",
     status: "QUEUED",
-    mode: { display: "three_window_decay", key: "three_window_decay", availability: { state: "LEGACY_METADATA_ONLY", reason_code: "LEGACY_1_0_8_PROTOCOL_METADATA_ONLY" }, schedule: null, protocol: "three_window_decay" },
+    mode: { display: "three_window_decay", key: null, availability: { state: "LEGACY_METADATA_ONLY", reason_code: "LEGACY_1_0_8_RECORDS_PROTOCOL_NOT_OPTIMIZATION_MODE" }, schedule: null, protocol: "three_window_decay" },
     binding: null,
+    binding_availability: { state: "LEGACY_METADATA_ONLY", reason_code: "LEGACY_1_0_8_DOES_NOT_PUBLISH_ALPHA_BINDING" },
+    status_basis: { kind: "LEGACY_RECORDED_STATUS", availability: { state: "LEGACY_METADATA_ONLY", reason_code: "LEGACY_1_0_8_NON_TERMINAL_STATUS_NOT_MONITORED" } },
   });
 
   it("shows the mode the server sent, marked legacy", () => {

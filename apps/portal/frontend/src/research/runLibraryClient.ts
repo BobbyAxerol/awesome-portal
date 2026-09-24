@@ -33,6 +33,8 @@ export type RunStatus = Schemas["RunStatus"];
 export type StageCell = Schemas["StageCell"];
 export type MetricCell = Schemas["MetricCell"];
 export type AlphaBinding = Schemas["AlphaBinding"];
+export type ReleaseCandidateRef = Schemas["ReleaseCandidateRef"];
+export type RunSparklineSource = Schemas["RunSparklineSource"];
 
 /**
  * The two published paths, spelled exactly as
@@ -154,6 +156,12 @@ export const COMPARE_PICK_ONE_MORE =
 export const COMPARE_PHASE = "P20";
 export const COMPARE_DEFERRED =
   "same ComparisonContractKey — comparable. The Compare screen (13) is not built yet; phase P20 delivers it.";
+
+/**
+ * Screen 11 Release Candidate is not built; phase P21 delivers it. The rc chip
+ * shows the persisted P21 relation but never navigates (RF-06 wave C).
+ */
+export const RC_PHASE = "P21";
 
 /**
  * Whether two selected runs may be compared.

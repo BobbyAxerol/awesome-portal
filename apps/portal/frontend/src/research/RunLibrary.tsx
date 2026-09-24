@@ -13,8 +13,9 @@
  *    reserves no chip at all. Tooltips carry a sentence, never a raw code;
  *    the code rides on `data-reason-code` for diagnostics.
  *  - **Copy that asserts a fact appears only when the run published it**
- *    (DQ-15). "claim not issued" is printed because the server said
- *    `SOURCE_CLAIM_NOT_ISSUED`; a failed or cancelled run gets its own line.
+ *    (DQ-15). The claim line prints the Stage-5 state and sentence the server
+ *    sent (a NOT_ISSUED sentence included); a failed or cancelled run gets
+ *    its own line; a legacy row's recorded status is never shown as live.
  *  - **The server owns comparability.** Two runs compare only when their
  *    `comparison.key` values are present and identical, wherever the rows
  *    are — a selection hidden by a filter is still looked up by id.
@@ -34,19 +35,22 @@ import {
   COMPARE_PHASE,
   COMPARE_PICK_ONE_MORE,
   COMPARE_REFUSAL,
+  RC_PHASE,
   type Availability,
   type MetricCell,
+  type ReleaseCandidateRef,
   type RunLibraryItem,
   type RunLibraryResponse,
+  type RunSparklineSource,
   type RunStatus,
   type StageCell,
   isAvailable,
   mayCompare,
   unavailableReason as stateSentence,
 } from "./runLibraryClient";
-import { formatMetric } from "./researchFormat";
+import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
-import { clearedFilters, type LibraryFilters, type SelectedRun } from "./useRunLibrary";
+import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
 import type { ResearchState } from "./state";
 
 /* --------------------------------------------------------------- verbatim */
@@ -65,7 +69,7 @@ export const CLAIM_FAILED =
   "no claim — the run failed before Stage 5; failure detail lives in the run console";
 /** A cancelled run's claim line — the status is published, so this may say so. */
 export const CLAIM_CANCELLED = "no claim — the run was cancelled before Stage 5";
-/** FE-S01-08: the face of `SOURCE_CLAIM_NOT_ISSUED`, the server's own verdict. */
+/** A NOT_ISSUED claim state published without its sentence (RF-05: the sentence normally travels with it). */
 export const CLAIM_NOT_ISSUED = "claim not issued";
 
 export const LEGACY_NOTE =
@@ -73,6 +77,9 @@ export const LEGACY_NOTE =
 
 export const EMPTY_NONE = "No runs yet.";
 export const filteredEmpty = (total: number) => `0 of ${total} runs match — loosen a filter.`;
+
+/** A legacy row's binding chip (RF-05 `binding_availability: LEGACY_METADATA_ONLY`). */
+export const LEGACY_BINDING_LABEL = "no binding · legacy";
 
 export const SCRATCH_TITLE =
   "no alpha_version binding — NOT_PUBLISHABLE, rc_ can never be composed from this run";
@@ -113,12 +120,54 @@ export const REASON_SENTENCES: Record<string, string> = {
   LEGACY_1_0_8_DOES_NOT_PUBLISH_COMPARISON_COMPATIBILITY:
     "The legacy 1.0.8 engine did not publish a comparison contract key.",
   LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES: "The legacy 1.0.8 engine did not publish a sparkline series.",
+  /* RF-05 (CG-P12-02…07) — the codes the library now publishes. */
+  P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT:
+    "The IS/OOS boundary is not in the run's receipt, so no in-sample Sharpe was measured and no decay can be stated.",
+  P13_SOURCE_PREDATES_OOS_ANALYTICS:
+    "This run was sealed before OOS analytics were published, so the engine's OOS figures were never recorded for it.",
+  P13_SOURCE_EVIDENCE_NOT_PUBLISHED: "This run published no sealed evidence.",
+  P13_EVIDENCE_READER_DISABLED: "The evidence reader is switched off on this deployment, so no run figures are read.",
+  P13_OOS_ANALYTICS_METRIC_INCOMPATIBLE:
+    "The run's OOS analytics block did not match the published shape, so the figure is withheld rather than guessed.",
+  P13_ENGINE_LOCATOR_MISMATCH:
+    "The engine field this figure is read from did not match its declared locator, so it is withheld rather than guessed.",
+  P13_OOS_RETURN_ZERO_VARIANCE: "OOS returns have zero variance; a ratio would be a placeholder, not a measurement.",
+  P13_OOS_SPAN_BELOW_ONE_DAY: "The OOS span is shorter than one day, so no annualised figure is defined.",
+  P13_RECEIPT_BYTE_BUDGET_EXHAUSTED: "The run's receipt reached its size budget before this figure was recorded.",
+  P13_ENGINE_RESULT_NOT_AVAILABLE_TO_ANALYTICS:
+    "The engine result was not available to the analytics step, so nothing was read from it.",
+  P13_EQUITY_OOS_SERIES_NOT_PUBLISHED: "This run published no OOS equity series.",
+  CANCELLED_BEFORE_SOURCE: "The run was cancelled before its source published anything, so there is nothing to report.",
+  SOURCE_CLAIM_NOT_PUBLISHED: "The source has not published a claim for this run.",
+  SOURCE_CLAIM_TEXT_EMPTY: "The source published a claim state without a sentence.",
+  SOURCE_METHODOLOGY_CERTIFICATE_NOT_ISSUED: "Stage 5 did not issue a methodology certificate for this run.",
+  SOURCE_FAILURE_REASON_NOT_PUBLISHED: "The run failed without publishing a failure reason.",
+  P21_NO_PERSISTED_RELEASE_CANDIDATE: "No release candidate has been composed from this run.",
+  P21_RELEASE_CANDIDATE_READER_DISABLED: "The release-candidate reader is switched off on this deployment.",
+  P21_RELEASE_CANDIDATE_REF_INCOMPATIBLE: "The stored release-candidate relation did not match the published shape.",
+  LEGACY_1_0_8_NON_TERMINAL_STATUS_NOT_MONITORED:
+    "The retired 1.0.8 engine recorded this status and stopped; nothing monitors it, so it is not live work.",
+  LEGACY_1_0_8_RECORDS_PROTOCOL_NOT_OPTIMIZATION_MODE:
+    "The legacy 1.0.8 engine recorded a protocol, not an optimization mode.",
+  LEGACY_1_0_8_DOES_NOT_PUBLISH_ALPHA_BINDING:
+    "The legacy 1.0.8 engine recorded no alpha binding for this run — neither bound nor scratch.",
+  LEGACY_1_0_8_HAS_NO_RELEASE_CANDIDATE_RELATION: "A legacy 1.0.8 run has no release-candidate relation.",
+  LEGACY_1_0_8_STRATEGY_METADATA_ONLY: "Recorded by the legacy 1.0.8 engine as strategy metadata only.",
+  LEGACY_1_0_8_DOES_NOT_PUBLISH_EXACT_OOS_METRICS: "The legacy 1.0.8 engine did not publish exact OOS figures.",
 };
 
 /** The sentence for a withheld fact: its code's own, else its state's. */
 export function reasonSentence(availability: Availability): string {
   const code = availability.reason_code;
-  return code && code in REASON_SENTENCES ? REASON_SENTENCES[code] : stateSentence(availability);
+  if (code && code in REASON_SENTENCES) return REASON_SENTENCES[code];
+  /* Two code families name the stat they withhold in their suffix. */
+  if (code?.startsWith("P13_METRIC_REGISTRY_DOES_NOT_DEFINE_")) {
+    return "The metric registry this run was sealed under does not define this figure.";
+  }
+  if (code?.startsWith("P13_PROJECTION_DOES_NOT_PUBLISH_")) {
+    return "The run's evidence projection does not publish this figure.";
+  }
+  return stateSentence(availability);
 }
 
 /* ---------------------------------------------------------------- styling */
@@ -239,7 +288,44 @@ function Withheld({ availability, what }: { availability: Availability; what?: s
   );
 }
 
-function StatusPill({ status }: { status: RunStatus }) {
+/**
+ * The recorded-status face of a legacy row (RF-05 CG-P12-07).
+ *
+ * The 1.0.8 engine's last word is shown as what it is — a record — and a
+ * non-terminal one says nothing watches it: "recorded QUEUED · not monitored".
+ */
+export function recordedStatusLabel(item: RunLibraryItem): string {
+  const notMonitored =
+    item.status_basis.availability.reason_code === "LEGACY_1_0_8_NON_TERMINAL_STATUS_NOT_MONITORED";
+  return `recorded ${item.status}${notMonitored ? " · not monitored" : ""}`;
+}
+
+function StatusPill({ item }: { item: RunLibraryItem }) {
+  const status = item.status;
+  if (!isLiveStatus(item)) {
+    /* No tone, no pulse, no live region: a record is not a lifecycle. */
+    return (
+      <span
+        className="inline-flex items-center"
+        data-status={status}
+        data-status-basis={item.status_basis.kind}
+        data-reason-code={item.status_basis.availability.reason_code ?? undefined}
+        title={reasonSentence(item.status_basis.availability)}
+        style={{
+          borderRadius: 999,
+          padding: "0 7px",
+          fontFamily: MONO,
+          fontSize: 10,
+          fontWeight: 600,
+          border: "1px dashed var(--line-strong)",
+          background: "var(--paper-sunken)",
+          color: "var(--ink-faint)",
+        }}
+      >
+        {recordedStatusLabel(item)}
+      </span>
+    );
+  }
   const tone = STATUS_TONE[status] ?? { background: "var(--paper-sunken)", ink: "var(--ink-soft)" };
   const running = status === "RUNNING";
   /* The hi-fi pulses the whole RUNNING pill (rl-pulse, 2 s, 1 → .35); only
@@ -249,6 +335,7 @@ function StatusPill({ status }: { status: RunStatus }) {
     <span
       className="inline-flex items-center"
       data-status={status}
+      data-status-basis={item.status_basis.kind}
       role={running ? "status" : undefined}
       data-motion={running ? "pulse" : undefined}
       style={{
@@ -340,6 +427,77 @@ export const SPARKLINE_UNAVAILABLE = "sparkline unavailable";
 
 const SPARK_BOX: CSSProperties = { gap: 1, height: 26, width: 150 };
 
+/** The hi-fi's column range: 12 % to 96 % of the box. */
+const SPARK_FLOOR = 12;
+const SPARK_CEIL = 96;
+
+/**
+ * Column heights for display values, as percentages of the box.
+ *
+ * Min–max over the values shown, into the hi-fi's 12–96 % band. Scaling by the
+ * peak alone (the earlier rule) drew an equity curve that moves 0.7 % around
+ * 20,000 as 24 identical columns. A flat series stays a flat row at mid
+ * height. Values that do not parse are not drawn as zero; they have no
+ * column height and the caller refuses the series.
+ */
+export function sparkHeights(values: readonly string[]): number[] | null {
+  const numbers = values.map((value) => Number(value));
+  if (numbers.some((value) => !Number.isFinite(value)) || numbers.length === 0) return null;
+  const low = Math.min(...numbers);
+  const high = Math.max(...numbers);
+  if (high === low) return numbers.map(() => (SPARK_FLOOR + SPARK_CEIL) / 2);
+  return numbers.map((value) => SPARK_FLOOR + ((value - low) / (high - low)) * (SPARK_CEIL - SPARK_FLOOR));
+}
+
+/** Sampling methods in words: a title is for a person, the code rides on `data-*`. */
+const SAMPLING_WORDS: Record<string, string> = {
+  FULL: "every point",
+  EXTREMA_BUCKET_V1: "extrema-preserving buckets",
+  EXTREMA_BUCKET_24_V1: "24 extrema-preserving buckets (first, last, minimum and maximum kept)",
+};
+
+function samplingWords(code: string | null): string {
+  return code === null ? "sampling not published" : (SAMPLING_WORDS[code] ?? "a reduction the library does not describe");
+}
+
+/**
+ * The envelope caption under the bars (CLAUDE.md §8 invariant: a downsample
+ * says so). `n of m pts` — the columns drawn, of the source's observations
+ * (or of the persisted points when the source count is not published) — and
+ * whether extrema were kept.
+ */
+export function sparkCaption(shown: number, source: RunSparklineSource | null): string {
+  if (source === null) return `${shown} pts · source not published`;
+  const of = source.source_observation_count ?? source.persisted_point_count;
+  const reduced =
+    source.display_sampling !== "FULL" || source.source_sampling !== null || of > shown;
+  return `${shown} of ${of} pts · ${reduced ? "extrema kept" : "full"}`;
+}
+
+/** The full provenance, for the title. */
+export function sparkProvenance(
+  shown: number,
+  source: RunSparklineSource | null,
+  cardRevision: string | null,
+): string {
+  if (source === null) return `OOS equity · ${shown} points · provenance not published`;
+  const span = [formatUtc(source.first_at_utc_ms), formatUtc(source.last_at_utc_ms)].filter(Boolean).join(" → ");
+  const parts = [
+    "OOS equity",
+    source.source_observation_count !== null
+      ? `${source.source_observation_count} source observations, reduced by ${samplingWords(source.source_sampling)}`
+      : `source observation count not published (${samplingWords(source.source_sampling)})`,
+    `${source.persisted_point_count} persisted points`,
+    `${shown} drawn by ${samplingWords(source.display_sampling)}`,
+    span,
+    `projection ${shortDigest(source.projection_revision.replace(/^p13r\d+_/, ""), 8)} · digest ${shortDigest(source.series_digest, 8)}`,
+  ];
+  if (cardRevision !== null && cardRevision !== source.projection_revision) {
+    parts.push("this series is from a different projection revision than the card's stats");
+  }
+  return parts.filter(Boolean).join(" · ");
+}
+
 /**
  * The lazy sparkline.
  *
@@ -348,14 +506,18 @@ const SPARK_BOX: CSSProperties = { gap: 1, height: 26, width: 150 };
  * path is ever fetched to produce one. It is drawn as the same 24 columns in
  * the paper's quiet grey (spec 01 §4.3), all one height, so it cannot be read
  * as a shape.
+ *
+ * A published series (RF-05 `GET /runs/{id}/sparkline`) is drawn as the
+ * hi-fi's columns with its envelope caption underneath — how many points of
+ * how many, and how they were reduced.
  */
 function Sparkline({
   item,
-  values,
+  read,
   onVisible,
 }: {
   item: RunLibraryItem;
-  values: readonly string[] | undefined;
+  read: SparklineRead | undefined;
   onVisible: (runId: string, visible: boolean) => void;
 }) {
   const box = useRef<HTMLSpanElement>(null);
@@ -383,10 +545,10 @@ function Sparkline({
   }, [item.run_id, onVisible]);
 
   const label = item.sparkline.kind ? SPARK_LABEL[item.sparkline.kind] ?? "equity" : "equity";
-  const available = isAvailable(item.sparkline.availability) && values && values.length > 0;
-  const shown = available ? values.slice(-SPARK_COLUMNS) : [];
-  const numbers = shown.map((value) => Math.abs(Number(value) || 0));
-  const peak = Math.max(...numbers, 1);
+  const listed = isAvailable(item.sparkline.availability);
+  const series = listed && read?.kind === "series" ? read : null;
+  const shown = series ? series.values.slice(-SPARK_COLUMNS) : [];
+  const heights = series ? sparkHeights(shown) : null;
   /* Hi-fi column ink by what the run is: a finished series in the OOS
      accent, a series still being searched in the train tint, a failed one
      in the quiet line colour. */
@@ -397,42 +559,88 @@ function Sparkline({
         ? "var(--viz-train)"
         : "var(--role-oos)";
 
+  const placeholderTitle = !listed
+    ? `${SPARKLINE_UNAVAILABLE} — ${reasonSentence(item.sparkline.availability)}`
+    : read?.kind === "failed"
+      ? `${SPARKLINE_UNAVAILABLE} — the series read failed; it is not retried automatically.`
+      : read?.kind === "withheld"
+        ? `${SPARKLINE_UNAVAILABLE} — ${reasonSentence(read.availability)}`
+        : read?.kind === "series"
+          ? `${SPARKLINE_UNAVAILABLE} — the published values are not numbers, so no column is drawn.`
+          : `${SPARKLINE_UNAVAILABLE} until the card scrolls into view`;
+  const placeholderReason = !listed
+    ? item.sparkline.availability.reason_code
+    : read?.kind === "withheld"
+      ? read.availability.reason_code
+      : null;
+
+  const caption: CSSProperties = {
+    fontFamily: MONO,
+    fontSize: 8.5,
+    lineHeight: "11px",
+    height: 11,
+    maxWidth: 150,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    color: "var(--ink-faint)",
+    whiteSpace: "nowrap",
+  };
+
   return (
     <span className="flex flex-none flex-col" style={{ gap: 3 }} data-sparkline={item.run_id} ref={box}>
       <span style={LABEL_9}>{label}</span>
-      {available ? (
-        <span className="flex items-end" style={SPARK_BOX} data-sparkline-values={shown.length}>
-          {numbers.map((value, index) => (
-            <span
-              key={index}
-              className="flex-1 rounded-[1px]"
-              style={{ height: `${Math.max(12, (value / peak) * 96)}%`, background: ink, opacity: 0.75 }}
-            />
-          ))}
-        </span>
+      {series && heights ? (
+        <>
+          <span
+            className="flex items-end"
+            style={SPARK_BOX}
+            data-sparkline-values={shown.length}
+            data-sparkline-revision={series.revision ?? undefined}
+            role="img"
+            aria-label={`OOS equity, ${sparkCaption(shown.length, series.source)}`}
+            title={sparkProvenance(shown.length, series.source, item.evidence_revision)}
+          >
+            {heights.map((height, index) => (
+              <span
+                key={index}
+                aria-hidden="true"
+                className="flex-1 rounded-[1px]"
+                style={{ height: `${height.toFixed(0)}%`, background: ink, opacity: 0.75 }}
+              />
+            ))}
+          </span>
+          <span
+            style={caption}
+            data-sparkline-caption
+            data-display-sampling={series.source?.display_sampling ?? undefined}
+          >
+            {sparkCaption(shown.length, series.source)}
+          </span>
+        </>
       ) : (
-        <span
-          className="flex items-end"
-          style={SPARK_BOX}
-          data-sparkline-placeholder={item.sparkline.availability.state}
-          data-reason-code={item.sparkline.availability.reason_code ?? undefined}
-          title={
-            item.sparkline.availability.state === "AVAILABLE"
-              ? `${SPARKLINE_UNAVAILABLE} until the card scrolls into view`
-              : `${SPARKLINE_UNAVAILABLE} — ${reasonSentence(item.sparkline.availability)}`
-          }
-          role="img"
-          aria-label={SPARKLINE_UNAVAILABLE}
-        >
-          {Array.from({ length: SPARK_COLUMNS }, (_, index) => (
-            <span
-              key={index}
-              aria-hidden="true"
-              className="flex-1 rounded-[1px]"
-              style={{ height: "50%", background: "var(--line-soft)" }}
-            />
-          ))}
-        </span>
+        <>
+          <span
+            className="flex items-end"
+            style={SPARK_BOX}
+            data-sparkline-placeholder={listed ? (read?.kind ?? "pending") : item.sparkline.availability.state}
+            data-reason-code={placeholderReason ?? undefined}
+            title={placeholderTitle}
+            role="img"
+            aria-label={SPARKLINE_UNAVAILABLE}
+          >
+            {Array.from({ length: SPARK_COLUMNS }, (_, index) => (
+              <span
+                key={index}
+                aria-hidden="true"
+                className="flex-1 rounded-[1px]"
+                style={{ height: "50%", background: "var(--line-soft)" }}
+              />
+            ))}
+          </span>
+          {/* A published series that has not been read yet keeps its caption's
+              line, so the card does not grow when the bars arrive. */}
+          {listed ? <span aria-hidden="true" style={caption} /> : null}
+        </>
       )}
     </span>
   );
@@ -461,8 +669,48 @@ export function statDisplay(metric: Pick<MetricCell, "role" | "value">): string 
   }
 }
 
-/** The reader's glyph for a withheld stat: its slot keeps a dash, the reason rides in `title`. */
-export const STAT_WITHHELD = "—";
+/**
+ * What a stat's number was measured over (RF-05 `MetricCell.scope`).
+ *
+ * `trades` is counted over the run's whole child tape, not the OOS window: a
+ * number that sits beside "OOS sharpe" under a bare "trades" reads as an OOS
+ * count. The scope is written right after the number whenever the label does
+ * not already say it — beside the value rather than in the 9 px label, so the
+ * hi-fi label stays and the stats keep one line beside the claim at 1280.
+ */
+export const SCOPE_LABEL: Record<NonNullable<MetricCell["scope"]>, string | null> = {
+  OOS: null,
+  IS_PLUS_OOS: "IS + OOS",
+  CHILD_TAPE: "child tape",
+};
+export const SCOPE_SENTENCE: Record<NonNullable<MetricCell["scope"]>, string> = {
+  OOS: "measured on the out-of-sample window",
+  IS_PLUS_OOS: "measured over in-sample and out-of-sample together, not OOS only",
+  CHILD_TAPE: "counted over the run's whole child tape, not the OOS window only",
+};
+
+/** The scope words written after a value, or null when the label already says it. */
+export function scopeSuffix(metric: Pick<MetricCell, "scope">): string | null {
+  return metric.scope ? SCOPE_LABEL[metric.scope] : null;
+}
+
+/**
+ * The short face of a withheld stat (DQ-14 shell, CLAUDE.md §3.3).
+ *
+ * A bare dash in a number slot reads as a value; the slot says in two or
+ * three words why it is empty, and the full sentence rides in `title`.
+ */
+const WITHHELD_FACE: Record<string, string> = {
+  P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT: "not measured",
+  P13_SOURCE_PREDATES_OOS_ANALYTICS: "not recorded",
+  CANCELLED_BEFORE_SOURCE: "not reported",
+};
+
+export function withheldFace(availability: Availability): string {
+  const code = availability.reason_code;
+  if (code && code in WITHHELD_FACE) return WITHHELD_FACE[code];
+  return WITHHELD_WORDS[availability.state];
+}
 
 function Stats({ stats }: { stats: readonly MetricCell[] }) {
   return (
@@ -472,8 +720,20 @@ function Stats({ stats }: { stats: readonly MetricCell[] }) {
     <span className="flex flex-wrap" style={{ gap: 18, flex: "1 0 auto" }} data-stats>
       {stats.map((metric) => {
         const shown = isAvailable(metric.availability) ? statDisplay(metric) : null;
+        const scope = metric.scope ? SCOPE_SENTENCE[metric.scope] : null;
+        const suffix = scopeSuffix(metric);
+        const valueTitle = [metric.value !== null && metric.value !== shown ? metric.value : null, scope]
+          .filter(Boolean)
+          .join(" — ");
         return (
-          <span key={metric.key} className="flex flex-col" style={{ gap: 1 }} data-metric={metric.role}>
+          <span
+            key={metric.key}
+            className="flex flex-col"
+            style={{ gap: 1 }}
+            data-metric={metric.role}
+            data-scope={metric.scope ?? undefined}
+            data-definition={metric.definition_id ?? undefined}
+          >
             <span style={LABEL_9}>{metric.label}</span>
             {shown !== null ? (
               <span
@@ -484,21 +744,39 @@ function Stats({ stats }: { stats: readonly MetricCell[] }) {
                   color:
                     metric.tone === "BAD" ? "var(--bad)" : metric.tone === "ACCENT" ? "var(--accent)" : "var(--ink)",
                 }}
-                title={metric.value !== null && metric.value !== shown ? metric.value : undefined}
+                title={valueTitle || undefined}
               >
                 {shown}
+                {suffix ? (
+                  <>
+                    {" "}
+                    <span
+                      data-scope-suffix
+                      style={{ fontSize: 8.5, fontWeight: 400, letterSpacing: ".04em", color: "var(--ink-faint)" }}
+                    >
+                      {suffix}
+                    </span>
+                  </>
+                ) : null}
               </span>
             ) : (
-              /* A withheld value keeps its slot as a dash, never a zero; the
-                 sentence says why and the code stays for diagnostics. */
+              /* A withheld value keeps its slot, never a zero or a bare dash:
+                 two words say why, the sentence is in title, the code stays
+                 for diagnostics. */
               <span
-                style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "var(--ink-faint)" }}
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 10,
+                  fontStyle: "italic",
+                  lineHeight: "17px",
+                  color: "var(--ink-faint)",
+                  whiteSpace: "nowrap",
+                }}
                 data-withheld={metric.availability.state}
                 data-reason-code={metric.availability.reason_code ?? undefined}
                 title={reasonSentence(metric.availability)}
-                aria-label={`${metric.label}: ${WITHHELD_WORDS[metric.availability.state]}`}
               >
-                {STAT_WITHHELD}
+                {withheldFace(metric.availability)}
               </span>
             )}
           </span>
@@ -508,26 +786,52 @@ function Stats({ stats }: { stats: readonly MetricCell[] }) {
   );
 }
 
-/** The claim line: the server's sentence, or the one fact the row published about its absence. */
+/**
+ * The claim's state as the line's first words (RF-05 CG-P12-09).
+ *
+ * The hi-fi's claim line opens with its kind in capitals ("STRICT_OUTER_OOS —
+ * …"). The library now carries the Stage-5 state beside the sentence, so the
+ * line opens with it: a NOT_ISSUED sentence is still the source's sentence,
+ * and must not read as an issued claim.
+ */
+export const CLAIM_STATE_WORDS: Record<NonNullable<RunLibraryItem["claim"]["state"]>, string> = {
+  ISSUED: "ISSUED",
+  NOT_ISSUED: "NOT ISSUED",
+  FORECAST: "FORECAST",
+};
+
+/** The claim line: the server's state and sentence, or the one fact the row published about its absence. */
 function ClaimQuote({ item }: { item: RunLibraryItem }) {
   const legacy = item.source_kind === "LEGACY_1_0_8_METADATA";
   const availability = item.claim.availability;
+  const state = item.claim.state;
   let body: ReactNode;
   let kind: string;
   if (isAvailable(availability) && item.claim.text !== null) {
-    body = item.claim.text;
-    kind = "issued";
-  } else if (!legacy && (item.status === "RUNNING" || item.status === "QUEUED")) {
+    body = (
+      <>
+        {state ? <span data-claim-state={state}>{CLAIM_STATE_WORDS[state]} — </span> : null}
+        {item.claim.text}
+      </>
+    );
+    kind = state === "NOT_ISSUED" ? "not-issued" : state === "FORECAST" ? "forecast" : "issued";
+  } else if (!legacy && isLiveStatus(item) && (item.status === "RUNNING" || item.status === "QUEUED")) {
     body = CLAIM_PENDING;
     kind = "pending";
-  } else if (item.status === "FAILED") {
+  } else if (item.status === "FAILED" && !legacy) {
     body = CLAIM_FAILED;
     kind = "failed";
-  } else if (item.status === "CANCELLED") {
+  } else if ((item.status === "CANCELLED" && !legacy) || availability.reason_code === "CANCELLED_BEFORE_SOURCE") {
     body = CLAIM_CANCELLED;
     kind = "cancelled";
-  } else if (availability.reason_code === "SOURCE_CLAIM_NOT_ISSUED") {
-    body = <span title={reasonSentence(availability)}>{CLAIM_NOT_ISSUED}</span>;
+  } else if (state === "NOT_ISSUED") {
+    /* The state is published but its sentence is not: say the state, give
+       the reason in title. */
+    body = (
+      <span data-claim-state={state} title={reasonSentence(availability)}>
+        {CLAIM_NOT_ISSUED}
+      </span>
+    );
     kind = "not-issued";
   } else {
     body = <Withheld availability={availability} what="claim" />;
@@ -541,8 +845,9 @@ function ClaimQuote({ item }: { item: RunLibraryItem }) {
       style={{
         fontFamily: MONO,
         fontSize: 9.5,
-        color: kind === "issued" || kind === "pending" ? "var(--accent-2)" : "var(--ink-soft)",
-        fontStyle: kind === "issued" || kind === "pending" ? undefined : "italic",
+        /* Hi-fi: every claim line is the gold quote — issued, pending, failed
+           alike; only a withheld shell is quiet. */
+        color: kind === "withheld" ? "var(--ink-soft)" : "var(--accent-2)",
         borderLeft: "2px solid var(--accent-2)",
         paddingLeft: 6,
         maxWidth: 300,
@@ -552,6 +857,88 @@ function ClaimQuote({ item }: { item: RunLibraryItem }) {
       {/* Never truncated: a claim that is cut is a claim that is changed. */}
       {body}
     </blockquote>
+  );
+}
+
+/** The mode chip's title: the facts the display joins, protocol kept apart (CG-P12-04). */
+export function modeTitle(mode: RunLibraryItem["mode"]): string | undefined {
+  const parts = [
+    mode.key ? `optimization mode ${mode.key}` : null,
+    mode.schedule ? `schedule ${mode.schedule}` : null,
+    mode.protocol ? `protocol ${mode.protocol}` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+/** Hi-fi rc chip ink by approval state (`rcColors`), in tokens. */
+const RC_TONE: Record<string, string> = {
+  DRAFT: "var(--accent-2)",
+  APPROVED: "var(--good)",
+  PENDING: "var(--accent-2)",
+  REJECTED: "var(--bad)",
+  NOT_APPROVED: "var(--ink-faint)",
+  UNKNOWN: "var(--ink-faint)",
+};
+
+/** Hi-fi `rc_` ids are short; a longer sealed id keeps 14 characters and its title. */
+const RC_ID_CHARS = 14;
+
+/**
+ * The rc chip's face, tone and title (spec 01 §2.5 #7, §17; RF-05 CG-P12-06).
+ *
+ * The relation is the persisted P21 one and nothing else: a local seal reads
+ * `rc_… · {approval state}`, the viewer's own draft `rc_ (draft) · DRAFT`.
+ */
+export function rcChipFace(rc: ReleaseCandidateRef): { text: string; state: string; title: string; fullId: string | null } {
+  const deferred = `The Release Candidate screen (11) is not built yet; phase ${RC_PHASE} delivers it.`;
+  if (rc.kind === "ACTOR_DRAFT") {
+    return {
+      text: "rc_ (draft) · DRAFT",
+      state: "DRAFT",
+      title: `release candidate being composed from this run — ${deferred}`,
+      fullId: rc.draft_id,
+    };
+  }
+  const id = rc.release_candidate_id;
+  const shortId = id === null ? "rc_" : id.length > RC_ID_CHARS ? `${id.slice(0, RC_ID_CHARS)}…` : id;
+  const state = rc.approval_state ?? "UNKNOWN";
+  return {
+    text: `${shortId} · ${rc.approval_state ?? "approval not published"}`,
+    state,
+    title: `${id ?? "sealed release candidate"} — published rc from this run's params · ${state.toLowerCase().replace("_", " ")} — ${deferred}`,
+    fullId: id,
+  };
+}
+
+function RcChip({ rc }: { rc: ReleaseCandidateRef }) {
+  const face = rcChipFace(rc);
+  const tone = RC_TONE[face.state] ?? "var(--ink-faint)";
+  /* Hi-fi: an <a> to Screen 11. Screen 11 is not built, so the chip is a
+     link that says where it would go and does not go there. */
+  return (
+    <span
+      role="link"
+      aria-disabled="true"
+      data-rc={face.fullId ?? rc.kind}
+      data-rc-kind={rc.kind}
+      data-rc-state={face.state}
+      data-phase={RC_PHASE}
+      title={face.title}
+      style={{
+        fontFamily: MONO,
+        fontSize: 9.5,
+        fontWeight: 700,
+        border: `1px solid ${tone}`,
+        color: tone,
+        borderRadius: 999,
+        padding: "1px 8px",
+        background: "var(--paper-raised)",
+        whiteSpace: "nowrap",
+        cursor: "not-allowed",
+      }}
+    >
+      {face.text}
+    </span>
   );
 }
 
@@ -673,7 +1060,7 @@ function RunCard({
   item: RunLibraryItem;
   selected: boolean;
   onToggle: (runId: string) => void;
-  sparkline: readonly string[] | undefined;
+  sparkline: SparklineRead | undefined;
   onVisible: (runId: string, visible: boolean) => void;
 }) {
   const legacy = item.source_kind === "LEGACY_1_0_8_METADATA";
@@ -685,6 +1072,7 @@ function RunCard({
       data-run={item.run_id}
       data-source-kind={item.source_kind}
       data-row-kind={item.row_kind}
+      data-evidence-revision={item.evidence_revision ?? undefined}
       data-selected={selected}
       style={{
         ...CARD,
@@ -697,7 +1085,7 @@ function RunCard({
       >
         <CompareCheck runId={item.run_id} selected={selected} onToggle={() => onToggle(item.run_id)} />
         <RunId runId={item.run_id} />
-        <StatusPill status={item.status} />
+        <StatusPill item={item} />
 
         {item.mode.display !== null && (isAvailable(item.mode.availability) || item.mode.availability.state === "LEGACY_METADATA_ONLY") ? (
           /* FE-S01-14: a legacy row's mode is still the server's value; it is
@@ -706,7 +1094,7 @@ function RunCard({
             data-mode={item.mode.key ?? ""}
             data-mode-state={item.mode.availability.state}
             data-reason-code={item.mode.availability.reason_code ?? undefined}
-            title={isAvailable(item.mode.availability) ? undefined : reasonSentence(item.mode.availability)}
+            title={isAvailable(item.mode.availability) ? modeTitle(item.mode) : reasonSentence(item.mode.availability)}
             style={
               isAvailable(item.mode.availability)
                 ? DATA_CHIP
@@ -728,14 +1116,16 @@ function RunCard({
           >
             {item.binding.alpha_name} · {item.binding.av}
           </span>
-        ) : legacy ? (
+        ) : item.binding_availability.state === "LEGACY_METADATA_ONLY" || legacy ? (
+          /* RF-05 CG-P12-07: the server says the binding is legacy metadata —
+             neither bound nor scratch, so neither chip's look. */
           <span
             data-binding="legacy"
-            title="The legacy 1.0.8 engine recorded no alpha binding for this run — neither bound nor scratch."
-            className="mono text-[10px] italic"
-            style={{ color: "var(--ink-faint)" }}
+            data-reason-code={item.binding_availability.reason_code ?? undefined}
+            title={reasonSentence(item.binding_availability)}
+            style={{ ...DATA_CHIP, borderStyle: "dashed", borderColor: "var(--line-strong)", color: "var(--ink-faint)" }}
           >
-            binding — legacy metadata
+            {LEGACY_BINDING_LABEL}
           </span>
         ) : isAvailable(item.binding_availability) ? (
           <span
@@ -762,8 +1152,8 @@ function RunCard({
           <Withheld availability={item.instrument.availability} what="instrument" />
         )}
 
-        {/* `rc` is pinned null by the contract: no chip, and no space kept for
-            one. Reserving a slot for a fact that cannot exist is a promise. */}
+        {/* Spec 01 §4.4: a null rc reserves no chip and no space. */}
+        {item.rc !== null ? <RcChip rc={item.rc} /> : null}
 
         <span
           data-certificate={cert ?? "none"}
@@ -813,7 +1203,7 @@ function RunCard({
 
       <div className="flex flex-wrap items-center" style={{ gap: 18, paddingTop: 8 }}>
         <EvidenceTrail stages={item.stages} />
-        <Sparkline item={item} values={sparkline} onVisible={onVisible} />
+        <Sparkline item={item} read={sparkline} onVisible={onVisible} />
         <Stats stats={item.stats} />
         <ClaimQuote item={item} />
       </div>
@@ -999,6 +1389,108 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
   );
 }
 
+/* ---------------------------------------------------------------- ledger */
+
+type ClaimLedgerCounts = RunLibraryResponse["claim_ledger"];
+
+/**
+ * The six claim buckets, in reading order, with their hi-fi ink (RF-05
+ * CG-P12-05). The hi-fi strip draws completed in ink at .85, running in the
+ * accent with the 2 s pulse, failed in red; the library's buckets map onto
+ * that: an issued claim is the ink, a not-issued one its quieter step, a
+ * pending source the pulsing accent, a cancelled or legacy row the line.
+ */
+export const LEDGER_BUCKETS: readonly {
+  key: keyof ClaimLedgerCounts;
+  word: string;
+  ink: string;
+  opacity?: number;
+  pulse?: boolean;
+  dashed?: boolean;
+  title: string;
+}[] = [
+  { key: "issued", word: "issued", ink: "var(--ink)", opacity: 0.85, title: "Stage 5 issued a claim" },
+  { key: "not_issued", word: "not issued", ink: "var(--ink-faint)", title: "Stage 5 finished and issued no claim" },
+  {
+    key: "pending_source",
+    word: "pending",
+    ink: "var(--accent)",
+    pulse: true,
+    title: "a live run still waiting for its source claim",
+  },
+  { key: "failed", word: "failed", ink: "var(--bad)", title: "the run failed before Stage 5" },
+  {
+    key: "cancelled_before_source",
+    word: "cancelled",
+    ink: "var(--line-strong)",
+    title: "cancelled before its source published a claim",
+  },
+  {
+    key: "legacy_metadata_only",
+    word: "legacy",
+    ink: "var(--line-strong)",
+    dashed: true,
+    title: "legacy 1.0.8 rows — metadata only, no claim was ever published",
+  },
+];
+
+/** Hi-fi: 14 px per run; the strip stops growing at 168 px and goes proportional. */
+const LEDGER_PX_PER_RUN = 14;
+const LEDGER_MAX_PX = 168;
+
+/**
+ * The caption: the rows the six buckets partition, then each bucket that has
+ * any. `issued` is always said — zero issued claims is the ledger's headline
+ * fact, not an empty bucket.
+ */
+export function ledgerCaption(ledger: ClaimLedgerCounts, rows: number): string {
+  const parts = LEDGER_BUCKETS.filter((bucket) => bucket.key === "issued" || ledger[bucket.key] > 0).map(
+    (bucket) => `${ledger[bucket.key]} ${bucket.word}`,
+  );
+  return [`${rows} ${rows === 1 ? "run" : "runs"}`, ...parts].join(" · ");
+}
+
+function ClaimLedger({ ledger, rows }: { ledger: ClaimLedgerCounts; rows: number }) {
+  const total = LEDGER_BUCKETS.reduce((sum, bucket) => sum + ledger[bucket.key], 0);
+  const width = Math.min(total * LEDGER_PX_PER_RUN, LEDGER_MAX_PX);
+  return (
+    <span className="ml-auto flex flex-wrap items-center" style={{ gap: 8 }} data-claim-ledger>
+      {/* Spec 01 §2.3 item 10: the ledger is a bar as well as a caption.
+          Each segment is sized by its own count; a bucket with no rows takes
+          no width rather than a sliver. */}
+      <span className="flex items-center overflow-hidden" style={{ gap: 2, height: 10, borderRadius: 5 }} data-ledger-bar>
+        {LEDGER_BUCKETS.map((bucket) => {
+          const count = ledger[bucket.key];
+          if (count === 0 || total === 0) return null;
+          return (
+            <span
+              key={bucket.key}
+              data-ledger-segment={bucket.key}
+              data-count={count}
+              title={`${count} · ${bucket.title}`}
+              data-motion={bucket.pulse ? "pulse" : undefined}
+              style={{
+                display: "inline-block",
+                boxSizing: "border-box",
+                height: 10,
+                borderRadius: 2,
+                width: Math.max(4, (count / total) * width),
+                ...(bucket.dashed
+                  ? { border: `1px dashed ${bucket.ink}`, background: "transparent" }
+                  : { background: bucket.ink, opacity: bucket.opacity ?? 1 }),
+                ...(bucket.pulse ? ({ "--rs-motion-duration": "2s" } as CSSProperties) : {}),
+              }}
+            />
+          );
+        })}
+      </span>
+      <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }} data-ledger-caption>
+        {ledgerCaption(ledger, rows)}
+      </span>
+    </span>
+  );
+}
+
 /* ------------------------------------------------------------- grouping */
 
 interface RunGroup {
@@ -1022,7 +1514,10 @@ export function groupRuns(items: readonly RunLibraryItem[]): RunGroup[] {
   const groups = new Map<string, RunGroup>();
   for (const item of items) {
     const bound = item.binding;
-    const legacy = bound === null && item.source_kind === "LEGACY_1_0_8_METADATA";
+    /* The server's typed fact, not the row kind (RF-05 CG-P12-07). */
+    const legacy =
+      bound === null &&
+      (item.binding_availability.state === "LEGACY_METADATA_ONLY" || item.source_kind === "LEGACY_1_0_8_METADATA");
     const scratch = bound === null && !legacy && isAvailable(item.binding_availability);
     const key = bound ? `a:${bound.alpha_id}:${bound.av}` : scratch ? "zz:scratch" : legacy ? "zzz:legacy" : "zz:withheld";
     const strategy =
@@ -1108,7 +1603,7 @@ export interface RunLibraryProps {
   response: RunLibraryResponse | null;
   items: readonly RunLibraryItem[];
   state: ResearchState;
-  sparklines: ReadonlyMap<string, readonly string[]>;
+  sparklines: ReadonlyMap<string, SparklineRead>;
   onVisible: (runId: string, visible: boolean) => void;
   onLoadNext: () => void;
   onLoadPrevious: () => void;
@@ -1170,8 +1665,6 @@ export function RunLibrary(props: RunLibraryProps) {
   const clearAll = () => onFilters(clearedFilters(filters));
 
   const ledger = response?.claim_ledger;
-  const ledgerTotal = ledger ? ledger.issued + ledger.not_issued + ledger.pending_source + ledger.failed : 0;
-  const ledgerWidth = Math.min(ledgerTotal * 14, 168);
 
   const loading = state.state === "loading";
   const listVisible =
@@ -1393,47 +1886,7 @@ export function RunLibrary(props: RunLibraryProps) {
           </span>
         ) : null}
 
-        {ledger ? (
-          <span className="ml-auto flex flex-wrap items-center" style={{ gap: 8 }} data-claim-ledger>
-            {/* Spec 01 §2.3 item 10: the ledger is a bar as well as a caption.
-                Each segment is sized by its own count; a family with no rows
-                takes no width rather than a sliver. */}
-            <span
-              className="flex items-center overflow-hidden"
-              style={{ gap: 2, height: 10, borderRadius: 5 }}
-              data-ledger-bar
-            >
-              {(
-                [
-                  ["issued", ledger.issued, "var(--good)"],
-                  ["not-issued", ledger.not_issued, "var(--ink-mute)"],
-                  ["pending", ledger.pending_source, "var(--accent-2)"],
-                  ["failed", ledger.failed, "var(--bad)"],
-                ] as const
-              ).map(([family, count, tone]) => {
-                if (count === 0 || ledgerTotal === 0) return null;
-                return (
-                  <span
-                    key={family}
-                    data-ledger-segment={family}
-                    title={`${count} ${family.replace("-", " ")}`}
-                    style={{
-                      display: "inline-block",
-                      height: 10,
-                      borderRadius: 2,
-                      background: tone,
-                      width: Math.max(4, (count / ledgerTotal) * ledgerWidth),
-                    }}
-                  />
-                );
-              })}
-            </span>
-            <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }}>
-              claims · {ledger.issued} issued · {ledger.not_issued} not issued · {ledger.pending_source} pending ·{" "}
-              {ledger.failed} failed
-            </span>
-          </span>
-        ) : null}
+        {ledger && response ? <ClaimLedger ledger={ledger} rows={response.page.filtered_rows} /> : null}
       </div>
 
       {loading ? (
