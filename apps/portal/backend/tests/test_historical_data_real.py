@@ -99,3 +99,61 @@ def test_approved_btcusdt_delta_signal_notional_direct_adapter_parity() -> None:
     adapter_result = adapter.backtest(data=prepared.frame, signal=signal)
     np.testing.assert_allclose(direct_result.equity.to_numpy(), adapter_result.equity.to_numpy())
     assert direct.full_report() == adapter.full_report()
+
+
+def test_approved_btcusdt_signal_notional_walkforward_public_api() -> None:
+    """RF-03 source feasibility only; P10 preview admission is a separate gate.
+
+    This opt-in test executes real Optuna trials against the approved read-only
+    historical loader.  It neither persists a Research run nor promotes an
+    imported AlphaVersion or changes the fixed P04 producer.
+    """
+    from portal_api.services.three_window_runner import _strategy_callable
+    from strategy.specification import DELTA_RSI_SPECIFICATION
+
+    runtime = load_historical_data_runtime(os.environ["HISTORICAL_MARKET_DATA_ROOT"])
+    prepared = HistoricalMarketDataProvider(runtime=runtime, engine="duckdb").load(
+        MarketDataQuery(
+            dataset_id=CRYPTO_BINANCE_DATASET_ID,
+            symbol="BTCUSDT",
+            timeframe="1h",
+            start="2026-06-01T00:00:00+00:00",
+            end_exclusive="2026-07-15T00:00:00+00:00",
+        )
+    )
+    gateway = QuantBTGateway()
+    assert any(
+        row.get("target_mode") == "signal_notional" and row.get("status") == "supported"
+        for row in gateway.walkforward_capabilities()
+    )
+    wf_config = gateway.build_advanced_walkforward_config(config_fields={
+        "split_mode": "2026-07-01",
+        "split_frequency": "weekly",
+        "target_mode": "signal_notional",
+        "window_mode": "expanding",
+        "optimization_mode": "mode_1_decay",
+        "optimization_schedule": "global",
+        "optuna_trials": 3,
+        "random_seed": 42,
+    })
+    _, source = gateway.run_advanced_walkforward(
+        strategy_fn=_strategy_callable,
+        data=prepared.frame,
+        wf_config=wf_config,
+        optimization_config={},
+        param_ranges=dict(DELTA_RSI_SPECIFICATION.parameter_space),
+        fixed_params=None,
+        account_kwargs={
+            "initial_capital": 20_000,
+            "leverage": 3,
+            "alloc_per_trade": 2_000,
+            "fee_rate": 0.0005,
+            "use_funding": False,
+        },
+        target_mode="signal_notional",
+    )
+    assert source["target_mode"] == "signal_notional"
+    assert source["n_folds"] >= 2
+    assert source["n_optuna_trial_rows"] >= 3
+    assert len(source["fold_table"]) >= 2
+    assert len(source["trial_table"]) >= 3

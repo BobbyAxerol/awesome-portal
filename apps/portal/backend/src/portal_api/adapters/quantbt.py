@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 from importlib import metadata
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Literal, Mapping
 
 import pandas as pd
 
@@ -279,12 +279,25 @@ class QuantBTGateway:
         param_ranges: Mapping[str, tuple[int | float, int | float, int | float]] | None,
         fixed_params: Mapping[str, object] | None,
         account_kwargs: Mapping[str, object],
+        target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
     ) -> tuple[Any, dict[str, Any]]:
-        """Run the public walk_forward endpoint with a fully typed config."""
+        """Run one source-supported WFO route without changing legacy defaults.
+
+        The existing Portal runner remains pct_equity. Research's future
+        versioned adapter must explicitly select signal_notional; a caller
+        cannot turn any public QuantBT route into an admitted Portal route.
+        """
+        if target_mode not in {"pct_equity", "signal_notional"}:
+            raise ValueError("walk-forward target mode is not Portal-allowlisted")
+        if not any(
+            row.get("target_mode") == target_mode and row.get("status") == "supported"
+            for row in self.walkforward_capabilities()
+        ):
+            raise RuntimeError(f"QuantBT 1.1.1 does not support walk-forward target {target_mode}")
         module = self._module()
         endpoint = module.QuantBTEndpoint.walk_forward(
             strategy_class=strategy_fn,
-            target_mode="pct_equity",
+            target_mode=target_mode,
             walkforward_config=wf_config,
             optimization_config=dict(optimization_config),
             **dict(account_kwargs),

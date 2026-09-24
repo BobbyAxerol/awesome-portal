@@ -4332,6 +4332,8 @@ campaign sau khi Bobby tự merge qua PR.
 
 **P08 declared-optimization checkpoint 2026-09-24:** exact persisted AlphaVersion entrypoint/declaration now enforces required seed and declared pin/sweep domains before snapshot; the private snapshot path also enforces current-release trial ceiling. Focused generated-wire 4/4 and isolated PostgreSQL 10/10 pass. `CG-P08-05` stays OPEN for an independently sourced sweep/evaluation ceiling and advanced-WF admission. This does not widen P10; RF-04 must consume only typed current facts.
 
+**RF-03 round-2 source probe 2026-09-24 (not an exit receipt):** the pinned HMD reader and QuantBT 1.1.1 public API completed a real read-only BTCUSDT 1h `signal_notional` WFO with two folds and three Optuna trials; the opt-in regression and exact dataset/resource facts are in [RF-03 evidence](./research_loop/evidence/RF-03/README.md). P10 private admission/child, P05 retention and the preview real-API receipt remain OPEN; this probe changes no runtime flag and does not advance RF-03/RF-04 status.
+
 <a id="rl-rf-04"></a>
 ### RF-04 — Frontend P01–P10: sửa, chuẩn hoá theo HiFi, tối ưu tốc độ, nối màn (Claude)
 
