@@ -5679,6 +5679,10 @@ refine §8) ·
   - Revert 4 commit docs rồi 6 commit code theo thứ tự ngược (`eeeae14f` trước, `92cdc844` cuối), theo [rollback](./research_loop/evidence/P20/thanhvuong-rollback.md). Backend vẫn `FEATURE_RESEARCH_COMPARE=false`.
   - Handoff cho P21 (S11): S13 chỉ GET, không publish fact, không chọn/promote run; rank không phải publish pick. Link S13 → S11 sẽ nối khi S11 có route.
 
+**Checkpoint tích hợp P16 review + P17–P20 frontend — 2026-09-24:** merge có hai parent, head 4ab990aa trên docs/research-loop-plan; giữ toàn bộ commits Thanhvuong tới a5455848, code/backend đã commit của Bobby/Claude, và 23 file evidence/rollback/request từ P16–P20. Bốn xung đột ở QuantBTModule, EvidenceFlow, FreezeDetail, RunLibrary được giải theo hướng giữ read-model RF-05/RF-06 mới hơn, đồng thời mở route Execute/Report/Lineage/Compare; CTA cũ "Soon" cho Report/Compare được nối route thật, P21 vẫn disabled. Link Lineage dùng helper nhẹ để không bundle cả màn S10 vào Import/Compare. Không sửa Trading System, contract, database, runtime hoặc P21.
+
+**Gate tích hợp:** frontend build/typecheck PASS; full frontend unit 183 files, 3,458 pass/1 skip; sau helper extraction, 123 test liên quan PASS; full repository hook trên merge gốc PASS, gồm Control API 125 files/894 tests và contract/route/security guards. Commit reconcile ba commit backend mới không có overlap; không chạy lại hook 6 phút cho merge tài liệu/đường đi đã commit. origin/docs/research-loop-plan đã nhận 4ab990aa; không push primus-origin, không merge dev/main, không deploy. Các backend RF-03 đang sửa dở trong checkout chung được giữ nguyên unstaged. Đây là **code integration**, không phải REAL_API_E2E_RECEIPT, visual sign-off hoặc P17–P21 product exit.
+
 <a id="rl-p21"></a>
 ### P21 — Release Candidate composer và immutable evidence pack
 
