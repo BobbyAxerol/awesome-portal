@@ -1,0 +1,343 @@
+{
+  "phase": "P20",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-09-24",
+  "tree": "e2d7d388ba704edfa0861a26a5fb15d5fae41c89",
+  "head": "034aef11fa1251226e74866ac2a4350f5a6c082f",
+  "open_implementation_debt": [],
+  "open_debt": [
+    {
+      "id": "VD-P20-01 S13-COPY-VS-HIFI",
+      "what": "hi-fi 'two alphas, one key' (mode label, EChart 2 title, guard, footer) vs contract pair = two runs of one Alpha; copy says 'two runs, one key'",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "MODE_LABELS, OVERLAY_TITLE, GUARD_MATCH (CompareDetail.tsx :90–:137)"
+    },
+    {
+      "id": "VD-P20-02 S13-COPY-VS-HIFI",
+      "what": "hi-fi/spec 'engine-published' correlation and spec §8 absent copy vs contract PORTAL_DERIVED; card prints formula/version/n/window/missing policy, absent → 'correlation not derived — {reason_code}'",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "correlationAbsent (compareClient.ts :146), CORRELATION_NOTE"
+    },
+    {
+      "id": "VD-P20-08 S13-DISCLOSURE-LINE",
+      "what": "one mono disclosure line (read_authority · revision · as_of · coverage · source_absences) not in the hi-fi; same group as S10-COUNTS-PANEL",
+      "class": "disclosure not in hi-fi",
+      "owner": "Bobby (B3)",
+      "state": "AWAITING_DECISION",
+      "evidence": "Meta (CompareDetail.tsx :671)"
+    },
+    {
+      "id": "VD-P20-10 S13-COPY-VS-HIFI",
+      "what": "rules footer verbatim except 'Two runs on one key', 'Portal-derived from sealed raw returns', 'the UI never constructs or compares one; the server refuses'",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "COMPARE_RULES (:150)"
+    },
+    {
+      "id": "VD-P20-11 S13-COPY-VS-HIFI",
+      "what": "subtitle 'Two ideas on one key' → 'Two runs on one key'",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "COMPARE_SUBTITLE (:86)"
+    },
+    {
+      "id": "VD-P20-13 S13-COPY-VS-HIFI",
+      "what": "delta header 'engine-published' → 'server-published'",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "DELTA_TITLE (:140)"
+    },
+    {
+      "id": "VD-P20-14 S13-COPY-VS-HIFI",
+      "what": "ladder laid out as the server's array reversed (weak → strong) so the hi-fi arrow 'claim ↑ →' and rule copy stay verbatim; label 'server order, read right to left · N returned'; spec T01 and contract order strong → weak",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "009cedb8; data-ladder-order=server-reversed; U02"
+    },
+    {
+      "id": "VD-P20-15 S13-COPY-VS-HIFI",
+      "what": "'EChart N' tags and the hi-fi demo narratives are not printed",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "CompareDetail.tsx header comment :36"
+    },
+    {
+      "id": "VD-P20-17 S13-COPY-VS-HIFI",
+      "what": "claim chip carries a faint 'origin {claim.origin}' line the hi-fi does not have",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "CompareDetail.tsx :38"
+    },
+    {
+      "id": "VD-P20-20 S13-COPY-VS-HIFI",
+      "what": "markets banner tail drops the hi-fi's repeated 'Small multiples only:' because the server caption before it already says it",
+      "class": "hi-fi copy contradicts contract",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "034aef11; MARKETS_RULE_TAIL (:110)"
+    },
+    {
+      "id": "VD-P20-03/04/05/06 S13-FIELD-DRIVEN-CELLS",
+      "what": "hi-fi cells with no compare field keep position/shape with typed absence: cert chip, schedule, ACTIVE/SUPERSEDED pill (run_state shown), per-fold OOS chart + 5/32 toggle, attempts config diff, win rate, OOS Sharpe common-window Δ",
+      "class": "field-driven",
+      "owner": "Codex (CG-P20-02/03/04/05/06/08), then Bobby",
+      "state": "BLOCKED_ON_BACKEND",
+      "evidence": "CONTRACT_GAPS (CompareDetail.tsx :161); U04, U06, U07; probe attempts/markets/pair"
+    },
+    {
+      "id": "S13-COMPARE-STATE-REFUSED (B finding 3)",
+      "what": "data-compare-state stays 'available' for pair REFUSED and for pair zero-variance correlation; refusal/absence is only in data-pair-state / data-correlation-absent",
+      "class": "state semantics",
+      "owner": "Bobby (B6)",
+      "state": "AWAITING_DECISION",
+      "evidence": "probe-final.log RECEIPT refused@1280/660 state=available, corr-zero state=available"
+    },
+    {
+      "id": "S13-BACK-ETAG-660 (B finding 4)",
+      "what": "Back through history at 660 sends one extra attempts GET without If-None-Match (single-slot ETag validator); data correct, extra bandwidth only",
+      "class": "efficiency",
+      "owner": "Thanhvuong",
+      "state": "OPEN",
+      "evidence": "probe-final.log RECEIPT mode-switch@660 compareGets=5 vs @1280 4"
+    },
+    {
+      "id": "S13-G1-HEADER-LAYOUT",
+      "what": "title wraps to two lines and the segmented control sits right of the subtitle; the hi-fi has a one-line title and the control below the subtitle. No VD was recorded for it (found in package B G1); the extra QuantBT module header above is removed on the baseline by 8bd81b01 (DQ-01)",
+      "class": "unrecorded hi-fi delta",
+      "owner": "Thanhvuong (fix at hi-fi alignment or after baseline integration) / Bobby",
+      "state": "OPEN",
+      "evidence": "p20-hifi-attempts-1280.png 1c5738b9461de0d9 vs p20-attempts-1280.png 35ad99e226e1b703"
+    },
+    {
+      "id": "S13-MINI-LABELS-UNIT",
+      "what": "034aef11 limits mini-chart x labels to first/last without a unit test; only the (uncommitted) browser probe locks it",
+      "class": "test coverage",
+      "owner": "Thanhvuong",
+      "state": "OPEN",
+      "evidence": "probe-final.log MINI-XLABEL markets@1280/660 n=2 overlap=false"
+    }
+  ],
+  "recorded_visual_decisions_not_blocking": [
+    {
+      "id": "VD-P20-03",
+      "state": "field-driven",
+      "cg": [
+        "CG-P20-02",
+        "CG-P20-03",
+        "CG-P20-08"
+      ]
+    },
+    {
+      "id": "VD-P20-04",
+      "state": "field-driven",
+      "cg": [
+        "CG-P20-04"
+      ]
+    },
+    {
+      "id": "VD-P20-05",
+      "state": "field-driven",
+      "cg": [
+        "CG-P20-05"
+      ]
+    },
+    {
+      "id": "VD-P20-06",
+      "state": "field-driven",
+      "cg": [
+        "CG-P20-06"
+      ]
+    },
+    {
+      "id": "VD-P20-07",
+      "state": "demo control"
+    },
+    {
+      "id": "VD-P20-09",
+      "state": "route"
+    },
+    {
+      "id": "VD-P20-12",
+      "state": "rule over hi-fi"
+    },
+    {
+      "id": "VD-P20-16",
+      "state": "rule over hi-fi"
+    },
+    {
+      "id": "VD-P20-18",
+      "state": "route"
+    },
+    {
+      "id": "VD-P20-19",
+      "state": "rule over hi-fi"
+    }
+  ],
+  "resolved_in_phase": [
+    {
+      "id": "S13-TOKEN-GATE (VD-P20-19)",
+      "what": "color-mix() and a hex in a comment tripped tokens.test.ts",
+      "found_by": "package A full vitest",
+      "status": "RESOLVED",
+      "evidence": "fixed before commit 0910ecc3: rank 3 chip var(--warn), correlation card var(--accent-soft)"
+    },
+    {
+      "id": "S13-S10-U49 (VD-P20-18)",
+      "what": "compare link inside .ln-links broke S10-U49 (three hi-fi links)",
+      "found_by": "package A full vitest",
+      "status": "RESOLVED",
+      "evidence": "0910ecc3: span .ln-compare beside .ln-links"
+    },
+    {
+      "id": "S13-LADDER-DIRECTION (VD-P20-14)",
+      "what": "ladder in server order with a bare arrow contradicted the hi-fi's reading direction",
+      "found_by": "plan review after package A",
+      "status": "RESOLVED_PENDING_BOBBY",
+      "evidence": "009cedb8; U02; probe attempts DOM = server reversed, 2 arrows 'claim ↑ →'"
+    },
+    {
+      "id": "S13-MINI-AXIS-OVERLAP (B finding 1)",
+      "what": "markets mini chart at 1280 printed ~6 full day labels in a 315 px card, overlapping",
+      "found_by": "package B, p20-markets-1280.png 575e025b89d9cd86",
+      "status": "RESOLVED",
+      "evidence": "034aef11 miniPlot keeps first/last label; receipt C [data-x-label] 2/0/0, overlap false, p20-markets-1280.png 45fc7c0bfd3d4e17"
+    },
+    {
+      "id": "S13-MARKETS-BANNER-REPEAT (B finding 5, VD-P20-20)",
+      "what": "'small multiples only' printed twice in the markets banner",
+      "found_by": "package B G8",
+      "status": "RESOLVED_PENDING_BOBBY",
+      "evidence": "034aef11 MARKETS_RULE_TAIL; receipt C regex assert"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "S13-AXE",
+      "what": "axe scan (spec 13 T10)",
+      "reason": "axe-core not in lock file",
+      "owner": "Bobby (B4)",
+      "state": "AWAITING_DECISION"
+    },
+    {
+      "id": "S13-REAL-API",
+      "what": "REAL_API_E2E_RECEIPT and V11-P20-DR",
+      "reason": "CONTROL_API_FEATURE_RESEARCH_COMPARE=false; no real Delta pair in this lane",
+      "owner": "Thanhvuong after Bobby (B5)",
+      "state": "BLOCKED_ON_FEATURE_FLAG"
+    },
+    {
+      "id": "S13-LOCAL-DUPLICATION",
+      "what": "per-client call<T>; toCompareRefusal reuses toLineageRefusal (no shared mapper on this branch; the baseline has researchRefusal.ts)",
+      "reason": "consolidation belongs to RF-04 / baseline integration",
+      "owner": "Thanhvuong",
+      "state": "DEFERRED_TO_RF-04"
+    }
+  ],
+  "backend_requests": [
+    {
+      "id": "CG-P20-01",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-01",
+      "what": "canonical compare fixtures (spec 13 §10: attempts, markets, pair_ok, pair_mismatch, pair_nocorr) + Problem"
+    },
+    {
+      "id": "CG-P20-02",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-02",
+      "what": "schedule/mode per run"
+    },
+    {
+      "id": "CG-P20-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-03",
+      "what": "cert/certification per run (same question as CG-P19-05)"
+    },
+    {
+      "id": "CG-P20-04",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-04",
+      "what": "OOS Sharpe per fold"
+    },
+    {
+      "id": "CG-P20-05",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-05",
+      "what": "intentional/config differences in attempts mode"
+    },
+    {
+      "id": "CG-P20-06",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-06",
+      "what": "win rate + OOS Sharpe common-window (stitched)"
+    },
+    {
+      "id": "CG-P20-07",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-07",
+      "what": "run-library fixture alpha id 'alpha_momentum_btc' vs compare regex ^[a-z][a-z0-9-]{2,63}$"
+    },
+    {
+      "id": "CG-P20-08",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-08",
+      "what": "alpha-version lifecycle ACTIVE/SUPERSEDED per run (related CG-P19-14)"
+    }
+  ],
+  "source_capability_blocked": [],
+  "source_capability_note": "P20 has no source-capability matrix; source absences (structured claim family, OOS Sharpe, decay, P13 equity series, full-resolution returns, common window, correlation) are typed P20_* reason codes in the contract and render verbatim.",
+  "explicit_downstream_gates": [
+    {
+      "id": "P20-FE-DG-01",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "integrate baseline bb25bf39 → 72d2638b: 3e7055d5 rewrites RunLibrary.tsx (CompareBar becomes a disabled 'not built yet' button — S13's alpha= entry must be rewired); 8bd81b01 DQ-01 drops the module header (G1), 404 → terminal notFound vs S13/S10 403=404 denied, DQ-08 researchFormat vs S13 raw decimal strings; no compare contract/service/P20 evidence change; P17 FreezeDetail.tsx conflict remains; rerun all unit tests + whole Research probe (128 on tree e2d7d388)"
+    },
+    {
+      "id": "P20-FE-DG-02",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_FEATURE_FLAG",
+      "what": "REAL_API_E2E_RECEIPT for S13 and V11-P20-DR once CONTROL_API_FEATURE_RESEARCH_COMPARE is on in a preview lane with a real Delta pair"
+    },
+    {
+      "id": "P20-FE-DG-03",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "B2 copy VD-P20-01/02/10/11/13/14/15/17 (+20): proposed new hi-fi version; B3 VD-P20-08; B6 data-compare-state for REFUSED"
+    },
+    {
+      "id": "P20-FE-DG-04",
+      "owner": "Codex",
+      "state": "OPEN",
+      "what": "CG-P20-01…08 answered or recorded as genuinely absent (NOT_APPLICABLE_PROVEN)"
+    }
+  ],
+  "known_flake_note": "none in package C; PortalShell full-run flake (P16–P19) not seen on 034aef11",
+  "rule_for_later_phases": {
+    "source": "Bobby 2026-09-24, Unified P19 note; applied in P20",
+    "rules": [
+      "each screen matches both the hi-fi and the spec; when they differ the hi-fi wins unless Bobby approves a VD exception",
+      "the frontend never picks a deviation on its own: record VD-PXX-NN in the phase note ledger and the handoff; open a new version when scope needs trimming",
+      "a hi-fi cell with no field keeps the hi-fi position and shape, renders a typed absence, and gets a CG-PXX-NN request",
+      "new debt created while doing P20 and later goes into both the phase handoff and Unified"
+    ],
+    "p20_debt_for_P21": "see Unified P20 note 'Nợ cho phase sau (P21+)' and frontend-handoff-claude.md Thanhvuong addendum"
+  }
+}
