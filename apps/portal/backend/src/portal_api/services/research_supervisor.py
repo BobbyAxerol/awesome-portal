@@ -185,6 +185,108 @@ class DeltaWfoChildResult:
     output_bytes: int
 
 
+# CG-P06-02: the child's live progress channel. A fixed sibling file of the
+# receipt (like ``result.json``), append-only NDJSON, bounded in lines and
+# bytes. It carries only Optuna trial facts and the child's own CPU seconds;
+# no path, market row, parameter value or credential.
+CHILD_PROGRESS_FILENAME = "progress.ndjson"
+CHILD_PROGRESS_SCHEMA = "research.p06.child-progress.v1"
+CHILD_PROGRESS_MAX_RECORDS = 512
+CHILD_PROGRESS_MAX_LINE_BYTES = 1_024
+CHILD_PROGRESS_MAX_BYTES = CHILD_PROGRESS_MAX_RECORDS * CHILD_PROGRESS_MAX_LINE_BYTES
+# The parent tails the channel this often while a progress consumer is
+# attached; heartbeats keep their own 5-second cadence.
+CHILD_PROGRESS_POLL_SECONDS = 0.5
+_CHILD_HEARTBEAT_SECONDS = 5.0
+_SIGNED_DECIMAL = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
+
+
+def _valid_child_progress_record(value: object, expected_sequence: int) -> dict[str, Any] | None:
+    """Accept exactly one well-formed trial record, or nothing.
+
+    The channel is an observation, not an authority: a malformed record ends
+    the live channel (the retained trial table still closes the study) rather
+    than failing a run whose engine result is intact.
+    """
+
+    if not isinstance(value, dict):
+        return None
+    if set(value) != {"schema_version", "sequence", "kind", "trial", "state", "objective", "best_objective", "cpu_seconds"}:
+        return None
+    if value.get("schema_version") != CHILD_PROGRESS_SCHEMA or value.get("kind") != "trial":
+        return None
+    sequence = value.get("sequence")
+    trial = value.get("trial")
+    if (
+        not isinstance(sequence, int) or isinstance(sequence, bool) or sequence != expected_sequence
+        or not isinstance(trial, int) or isinstance(trial, bool) or not 1 <= trial <= 100_000
+        or value.get("state") not in {"COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"}
+    ):
+        return None
+    for key in ("objective", "best_objective"):
+        item = value.get(key)
+        if item is not None and (not isinstance(item, str) or len(item) > 96 or not _SIGNED_DECIMAL.fullmatch(item)):
+            return None
+    cpu = value.get("cpu_seconds")
+    if cpu is not None and (isinstance(cpu, bool) or not isinstance(cpu, (int, float)) or not 0 <= cpu < 1e9):
+        return None
+    return value
+
+
+class _ChildProgressTail:
+    """Read new complete lines from the child's progress file, bounded."""
+
+    def __init__(self, path: Path, consumer: Callable[[dict[str, Any]], None]) -> None:
+        self._path = path
+        self._consumer = consumer
+        self._offset = 0
+        self._buffer = b""
+        self._next_sequence = 1
+        self._closed = False
+
+    def drain(self) -> None:
+        if self._closed:
+            return
+        try:
+            descriptor = os.open(self._path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        except FileNotFoundError:
+            return
+        except OSError:
+            self._closed = True  # e.g. a symlink planted in place of the file
+            return
+        try:
+            info = os.fstat(descriptor)
+            if not stat.S_ISREG(info.st_mode):
+                self._closed = True
+                return
+            budget = CHILD_PROGRESS_MAX_BYTES - self._offset
+            if budget <= 0:
+                self._closed = True
+                return
+            os.lseek(descriptor, self._offset, os.SEEK_SET)
+            chunk = os.read(descriptor, min(budget, max(0, info.st_size - self._offset)))
+        finally:
+            os.close(descriptor)
+        self._offset += len(chunk)
+        self._buffer += chunk
+        while b"\n" in self._buffer:
+            line, self._buffer = self._buffer.split(b"\n", 1)
+            if len(line) > CHILD_PROGRESS_MAX_LINE_BYTES:
+                self._closed = True
+                return
+            try:
+                record = _valid_child_progress_record(json.loads(line.decode("utf-8")), self._next_sequence)
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                record = None
+            if record is None:
+                self._closed = True
+                return
+            self._next_sequence += 1
+            self._consumer(record)
+        if len(self._buffer) > CHILD_PROGRESS_MAX_LINE_BYTES:
+            self._closed = True
+
+
 @dataclass(frozen=True, slots=True)
 class _LaunchOutcome:
     launcher_pid: int
@@ -290,6 +392,7 @@ class IsolatedResearchSupervisor:
         *,
         limits: ResearchChildLimits = DELTA_WFO_CHILD_LIMITS,
         on_child_alive: Callable[[], None] | None = None,
+        on_child_progress: Callable[[dict[str, Any]], None] | None = None,
     ) -> DeltaWfoChildResult:
         """Run the W1 Delta signal-notional WFO in the same P06 confinement.
 
@@ -325,6 +428,7 @@ class IsolatedResearchSupervisor:
                 expected_task="P10_DELTA_WFO",
                 limits=limits,
                 on_child_alive=on_child_alive,
+                on_child_progress=on_child_progress,
             )
             payload = launch.payload
             try:
@@ -335,6 +439,15 @@ class IsolatedResearchSupervisor:
                 profile_digest = str(payload["execution_profile_digest"])
             except (KeyError, TypeError, ValueError) as error:
                 raise ResearchSupervisorError("P06 child returned an invalid bounded receipt") from error
+            # CG-P11-09: the child reports its own peak RSS. The parent's
+            # RUSAGE_CHILDREN delta cannot see a child smaller than an earlier
+            # one in this process, so it is only the fallback.
+            child_rss = payload.get("peak_rss_bytes")
+            peak_rss_bytes = (
+                child_rss
+                if isinstance(child_rss, int) and not isinstance(child_rss, bool) and 0 < child_rss <= 16 * 1024 ** 3
+                else launch.peak_rss_bytes
+            )
             if profile_digest != receipt.execution_profile_digest:
                 raise ResearchSupervisorError("P06 WFO child did not run the admitted execution profile")
             output = output_holder["output"]
@@ -353,7 +466,7 @@ class IsolatedResearchSupervisor:
             n_folds=n_folds,
             trial_rows=trial_rows,
             elapsed_seconds=launch.elapsed_seconds,
-            peak_rss_bytes=launch.peak_rss_bytes,
+            peak_rss_bytes=peak_rss_bytes,
             cpu_seconds=launch.cpu_seconds,
             enforced_limits=launch.enforced_limits,
             output_root=output,
@@ -400,6 +513,7 @@ class IsolatedResearchSupervisor:
         expected_task: str,
         limits: ResearchChildLimits,
         on_child_alive: Callable[[], None] | None,
+        on_child_progress: Callable[[dict[str, Any]], None] | None = None,
     ) -> _LaunchOutcome:
         work = self._scratch_root / job_id / worker_attempt_id
         if work.exists():
@@ -466,6 +580,10 @@ class IsolatedResearchSupervisor:
             "--result",
             str(result_path),
         ]
+        tail = _ChildProgressTail(work / CHILD_PROGRESS_FILENAME, on_child_progress) if on_child_progress else None
+        # Without a progress consumer the loop keeps its original 5-second
+        # cadence exactly; with one it wakes twice a second to tail the file.
+        wait_step = CHILD_PROGRESS_POLL_SECONDS if tail is not None else _CHILD_HEARTBEAT_SECONDS
         before = resource.getrusage(resource.RUSAGE_CHILDREN)
         started = time.monotonic()
         with stdout_path.open("xb", buffering=0) as stdout, stderr_path.open("xb", buffering=0) as stderr:
@@ -482,6 +600,7 @@ class IsolatedResearchSupervisor:
             try:
                 if on_child_alive is not None and process.poll() is None:
                     on_child_alive()
+                last_alive = time.monotonic()
                 while True:
                     remaining = limits.wall_seconds - (time.monotonic() - started)
                     if remaining <= 0:
@@ -490,11 +609,20 @@ class IsolatedResearchSupervisor:
                             break
                         raise subprocess.TimeoutExpired(command, limits.wall_seconds)
                     try:
-                        return_code = process.wait(timeout=min(5.0, remaining))
+                        return_code = process.wait(timeout=min(wait_step, remaining))
                         break
                     except subprocess.TimeoutExpired:
-                        if on_child_alive is not None and process.poll() is None:
+                        if tail is not None:
+                            tail.drain()
+                        if (
+                            on_child_alive is not None and process.poll() is None
+                            and time.monotonic() - last_alive >= _CHILD_HEARTBEAT_SECONDS - 1e-6
+                        ):
+                            last_alive = time.monotonic()
                             on_child_alive()
+                if tail is not None:
+                    # Records written just before exit are still facts.
+                    tail.drain()
             except subprocess.TimeoutExpired as error:
                 self._kill_process_group(process)
                 raise ResearchSupervisorError("P06 child exceeded its wall-clock limit and was killed", code="RESOURCE_EXCEEDED") from error

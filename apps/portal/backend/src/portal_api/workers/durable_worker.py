@@ -49,7 +49,7 @@ from portal_api.services.research_current_source_retention import (
     ResearchCurrentSourceRetentionError,
 )
 from portal_api.services.research_retained_receipt import ResearchRetainedReceiptClient, ResearchRetainedReceiptError
-from portal_api.services.research_run_producer import WFO_SOURCE_DIRNAME
+from portal_api.services.research_run_producer import WFO_SOURCE_DIRNAME, parameter_bundle_digest
 
 logger = logging.getLogger("portal_api.durable_worker")
 
@@ -255,6 +255,7 @@ class DurableQuantWorker:
                     lease_epoch=research_request.lease_epoch,
                     planned_trials=DELTA_WFO_OPTUNA_TRIALS if is_delta_wfo else 1,
                     cpu_cap_seconds=DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
+                    profile="DELTA_WFO" if is_delta_wfo else "P04_FIXED",
                 )
                 try:
                     progress_relay = ResearchProgressRelay.from_environment(
@@ -358,6 +359,7 @@ class DurableQuantWorker:
             engine_dir = engine_root / run_id
             self._artifact_store.stage_directory(engine_dir, temp_dir)
             evidence_digest: str | None = None
+            handoff_cursor: dict[str, Any] | None = None
             if is_delta_wfo:
                 # W1 row G: reserve → RS-02 export → P05 seal → batches →
                 # current-source seal, all before `run_completed`. There is no
@@ -384,8 +386,17 @@ class DurableQuantWorker:
                     artifact_root=Path(self._artifact_store.root),
                     fence_validator=current_wfo_fence,
                 )
-                self._emit_retained_wfo_progress(progress_journal, retention)
+                handoff_cursor = self._emit_retained_wfo_progress(progress_journal, retention)
             elif is_research_producer:
+                p04_parameters = research_request.research.p04_parameters
+                if p04_parameters is not None:
+                    # The fixed profile hands over its one fold, its one
+                    # trial and the exact parameter bundle P14 digests.
+                    handoff_cursor = {
+                        "fold": 1,
+                        "trial": 1,
+                        "params_digest": parameter_bundle_digest(dict(p04_parameters)),
+                    }
                 retained = ResearchRetainedReceiptClient.from_environment()
                 if retained is not None:
                     receipt = result.get("research_receipt")
@@ -494,8 +505,8 @@ class DurableQuantWorker:
                     # P11 only carries bounded, measured receipt fields into
                     # Control API's durable P06 closeout.  It does not infer
                     # metrics from stdout, a console tail, or filesystem
-                    # paths.  A field absent from the fixed P04 receipt stays
-                    # zero rather than becoming a guessed measurement.
+                    # paths.  A field the receipt did not measure is null
+                    # (CG-P11-09), never a zero that reads as a measurement.
                     "usage": self._p11_usage(
                         result,
                         cpu_cap_seconds=DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
@@ -505,6 +516,8 @@ class DurableQuantWorker:
                     completion_payload["evidence_digest"] = evidence_digest
                 if split_digest is not None:
                     completion_payload["split_digest"] = split_digest
+                if handoff_cursor is not None:
+                    completion_payload["handoff_cursor"] = handoff_cursor
                 progress_journal.emit("run_completed", completion_payload)
             # The source journal is fsync'd before the local attempt is made
             # terminal.  Otherwise a crash in this tiny window would leave a
@@ -822,47 +835,83 @@ class DurableQuantWorker:
     def _emit_retained_wfo_progress(
         journal: ResearchProgressJournal,
         retention: CurrentSourceRetentionResult,
-    ) -> None:
-        """Claim WFO trials/folds only from rows already retained by Control API.
+    ) -> dict[str, Any]:
+        """Close the WFO study from the rows Control API has retained.
 
-        One ``trial_completed`` per retained TRIAL row and one
-        ``fold_completed`` per retained FOLD row, then S4 closes.  The
-        profile's study is global (one Optuna study over all folds), so trial
-        events carry fold 1.  No ``fold_segment_observed`` is emitted: QuantBT
-        does not publish per-fold segment timestamps.
+        Trials were already observed live from the child's Optuna callback
+        (CG-P06-02); the retained TRIAL rows are the authority they must
+        match. A trial the live channel missed is claimed here from its
+        retained row, and a live count above the retained count fails the run
+        closed. Folds complete only now, one per retained FOLD row, each with
+        the one global-study selection (trial, objective, parameter digest)
+        from the retained SELECTION. No ``fold_segment_observed`` is emitted:
+        QuantBT publishes no per-fold segment timestamps. Returns the
+        structured hand-off cursor ``run_completed`` carries.
         """
 
         states = list(retention.trial_states)
         total = len(states)
-        for index, state in enumerate(states, start=1):
+        live = int(journal.snapshot()["overall"]["trials_done"])
+        if live > total:
+            raise DurableRunError("P11 observed more live WFO trials than the retained trial table holds")
+        for index in range(live + 1, total + 1):
+            state = states[index - 1]
             payload: dict[str, Any] = {
-                "fold": 1,
+                "study": "GLOBAL",
                 "trial": index,
-                "overall_pct": (80 * index) // total,
-                "tqdm_line": f"Delta WFO global study retained · trial {index}/{total}",
+                "eta_s": None,
+                "tqdm_line": f"global study · trial {index}/{total} · from retained trial table",
                 "console": {
                     "tone": "COMPLETE",
-                    "text": f"Delta WFO trial {index}/{total} retained",
-                    "fold": 1,
+                    "text": f"global trial {index} retained (not observed live)",
                     "trial": index,
                 },
             }
             if state in {"COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"}:
                 payload["state"] = state
             journal.emit("trial_completed", payload)
-        for fold in range(1, int(retention.table_rows["FOLD"]) + 1):
-            journal.emit("fold_completed", {"fold": fold})
+
+        selection = retention.receipt.summary.get("selection") if isinstance(retention.receipt.summary, dict) else None
+        if not isinstance(selection, dict):
+            raise DurableRunError("P11 retained WFO selection is unavailable")
+        trial_id = selection.get("trial_id")
+        parameters = selection.get("parameters")
+        if not isinstance(trial_id, str) or not trial_id.isdigit() or not isinstance(parameters, dict) or not parameters:
+            raise DurableRunError("P11 retained WFO selection is not a numbered trial with parameters")
+        selected_trial = int(trial_id) + 1  # Optuna trial numbers are 0-based; P11 ordinals are not.
+        if not 1 <= selected_trial <= total:
+            raise DurableRunError("P11 retained WFO selection names a trial outside the retained table")
+        objective = selection.get("objective")
+        if objective is not None and not isinstance(objective, str):
+            raise DurableRunError("P11 retained WFO selection objective is invalid")
+        digest = parameter_bundle_digest(parameters)
+        fold_count = int(retention.table_rows["FOLD"])
+        if fold_count < 1:
+            raise DurableRunError("P11 retained WFO run has no fold")
+        for fold in range(1, fold_count + 1):
+            journal.emit("fold_completed", {
+                "fold": fold,
+                "selection": {
+                    "scope": "GLOBAL_STUDY",
+                    "trial": selected_trial,
+                    "objective": objective,
+                    "params_digest": digest,
+                },
+            })
         journal.emit("stage_completed", {"stage": "S4"})
+        return {"fold": fold_count, "trial": selected_trial, "params_digest": digest}
 
     @staticmethod
-    def _p11_usage(result: dict[str, Any], *, cpu_cap_seconds: int = 45) -> dict[str, int]:
-        """Project the fixed P10 child receipt into P06's exact usage shape.
+    def _p11_usage(result: dict[str, Any], *, cpu_cap_seconds: int = 45) -> dict[str, int | None]:
+        """Project the P10 child receipt into P06's exact usage shape.
 
-        The source child currently measures peak RSS and CPU seconds.  There
-        is no trustworthy fd/scratch probe in the immutable P04 receipt, so
-        those values are explicitly zero rather than fabricated.  Bounds are
-        repeated here before the private callback; Control API independently
-        validates them before persisting a terminal job state.
+        CG-P11-09: only measured quantities are numbers. The child receipt
+        measures CPU seconds and peak RSS; there is no scratch high-water or
+        descriptor probe, so those are ``None``. A missing, non-finite or
+        negative CPU value is unmeasured (``None``), and so is a zero RSS: a
+        running Python child always has resident memory, so zero only means
+        the parent's rusage delta could not see it. Bounds are repeated here
+        before the private callback; Control API validates them again.
         """
 
         receipt = result.get("research_receipt")
@@ -870,20 +919,22 @@ class DurableQuantWorker:
         if not isinstance(resource, dict):
             resource = {}
 
-        def measurement(name: str, maximum: int) -> int:
-            value = resource.get(name, 0)
-            if (isinstance(value, bool) or not isinstance(value, (int, float))
+        def measurement(name: str, maximum: int, *, zero_is_unmeasured: bool) -> int | None:
+            value = resource.get(name)
+            if (value is None or isinstance(value, bool) or not isinstance(value, (int, float))
                     or (isinstance(value, float) and not math.isfinite(value)) or value < 0):
-                return 0
+                return None
+            if zero_is_unmeasured and value == 0:
+                return None
             # The child reports CPU seconds as a float. Round upward so a
             # positive partial second cannot appear as zero usage.
             return min(math.ceil(value), maximum)
 
         return {
-            "peak_rss_bytes": measurement("peak_rss_bytes", 4 * 1024 * 1024 * 1024),
-            "cpu_seconds": measurement("cpu_seconds", cpu_cap_seconds),
-            "scratch_bytes": 0,
-            "fd_peak": 0,
+            "peak_rss_bytes": measurement("peak_rss_bytes", 4 * 1024 * 1024 * 1024, zero_is_unmeasured=True),
+            "cpu_seconds": measurement("cpu_seconds", cpu_cap_seconds, zero_is_unmeasured=False),
+            "scratch_bytes": None,
+            "fd_peak": None,
         }
 
     async def stop(self) -> None:

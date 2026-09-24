@@ -49,6 +49,31 @@ _MAX_SPLIT_BYTES = 16 * 1024
 _MAX_SNAPSHOT_BYTES = 256 * 1_024
 _SEGMENT_EVENTS = 128
 _MAX_SEGMENTS = 80  # 10,240 structured events; browser only ever receives 500.
+_SIGNED_DECIMAL_RE = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
+_DIGEST_RE = re.compile(r"[0-9a-f]{64}")
+_FOLD_SELECTION_SCOPES = {"GLOBAL_STUDY", "FIXED_PROFILE"}
+_USAGE_MAXIMA = {
+    "peak_rss_bytes": 4 * 1024 * 1024 * 1024,
+    # Largest admitted child CPU cap (W1 Delta WFO profile). Each journal
+    # additionally enforces its own profile cap (P04: 45) in ``emit``.
+    "cpu_seconds": _MAX_PROFILE_CPU_SECONDS,
+    "scratch_bytes": 4 * 1024 * 1024 * 1024,
+    "fd_peak": 65_536,
+}
+# Profile-specific wording for the two source-built claim sentences and the
+# claim line. The P04 sentences are unchanged byte-for-byte.
+_PROFILE_COPY = {
+    "P04_FIXED": {
+        "forecast": "The fixed qualification has not sealed a publishable claim.",
+        "not_issued": "The fixed P10 qualification sealed its artifacts but did not issue a release claim.",
+        "claimed": "worker claimed durable P10 qualification",
+    },
+    "DELTA_WFO": {
+        "forecast": "The walk-forward study has not sealed a publishable claim.",
+        "not_issued": "The Delta walk-forward study sealed its artifacts but did not issue a release claim.",
+        "claimed": "worker claimed durable P10 walk-forward study",
+    },
+}
 
 
 class ResearchProgressError(RuntimeError):
@@ -103,6 +128,84 @@ def _not_published_fold_timeline() -> dict[str, Any]:
         "reason_code": "SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS",
         "segments": [],
     }
+
+
+def _not_published_fold_selection() -> dict[str, Any]:
+    """The only truthful default until the source's ``fold_completed`` says."""
+
+    return {
+        "state": "NOT_PUBLISHED",
+        "scope": None,
+        "trial": None,
+        "objective": None,
+        "params_digest": None,
+        "reason_code": "SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION",
+    }
+
+
+def _signed_decimal_or_none(value: object, label: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, str) or len(value) > 96 or not _SIGNED_DECIMAL_RE.fullmatch(value):
+        raise ResearchProgressError(f"P11 {label} is invalid")
+
+
+def _validate_fold_selection(value: object) -> None:
+    if not isinstance(value, dict):
+        raise ResearchProgressError("P11 fold selection is invalid")
+    _exact_payload(value, event_type="fold selection", required={"scope", "trial", "objective", "params_digest"})
+    if value.get("scope") not in _FOLD_SELECTION_SCOPES:
+        raise ResearchProgressError("P11 fold selection scope is invalid")
+    _positive_integer(value.get("trial"), "fold selection trial")
+    _signed_decimal_or_none(value.get("objective"), "fold selection objective")
+    if value.get("scope") == "FIXED_PROFILE" and value.get("objective") is not None:
+        raise ResearchProgressError("P11 a fixed profile publishes no search objective")
+    digest = value.get("params_digest")
+    if not isinstance(digest, str) or not _DIGEST_RE.fullmatch(digest):
+        raise ResearchProgressError("P11 fold selection digest is invalid")
+
+
+def _validate_handoff_cursor(value: object) -> None:
+    if not isinstance(value, dict):
+        raise ResearchProgressError("P11 hand-off cursor is invalid")
+    _exact_payload(value, event_type="hand-off cursor", required={"fold", "trial", "params_digest"})
+    _positive_integer(value.get("fold"), "hand-off fold")
+    _positive_integer(value.get("trial"), "hand-off trial")
+    digest = value.get("params_digest")
+    if not isinstance(digest, str) or not _DIGEST_RE.fullmatch(digest):
+        raise ResearchProgressError("P11 hand-off digest is invalid")
+
+
+def _derived_overall_pct(snapshot: dict[str, Any]) -> int:
+    """Stage-weighted, monotonic progress from source facts only (CG-P10-04).
+
+    S1 5, S2 8, S3 10; the trial study spans 10..80 in proportion to
+    ``trials_done / trials_declared``; S4 closed 85; sealing 90; S5 closed 95;
+    100 only at ``run_completed``. The OpenAPI publishes the same table.
+    """
+
+    if snapshot["status"] == "COMPLETED":
+        return 100
+    stages = {item["key"]: item["state"] for item in snapshot["stages"]}
+    overall = snapshot["overall"]
+    pct = 0
+    if stages.get("S1") == "DONE":
+        pct = 5
+    if stages.get("S2") == "DONE":
+        pct = 8
+    if stages.get("S3") == "DONE":
+        pct = 10
+    done = int(overall.get("trials_done", 0))
+    declared = max(1, int(overall.get("trials_declared", 1)))
+    if done > 0 or stages.get("S4") in {"RUNNING", "DONE"}:
+        pct = max(pct, 10 + (70 * min(done, declared)) // declared)
+    if stages.get("S4") == "DONE":
+        pct = max(pct, 85)
+    if snapshot["readiness"].get("mandatory") in {"SEALING", "SEALED"} or stages.get("S5") == "RUNNING":
+        pct = max(pct, 90)
+    if stages.get("S5") == "DONE":
+        pct = max(pct, 95)
+    return min(pct, 99)
 
 
 def _not_published_methodology_certificate() -> dict[str, Any]:
@@ -217,11 +320,28 @@ def _validate_payload(event_type: str, payload: dict[str, Any]) -> None:
         _exact_payload(
             payload,
             event_type=event_type,
-            required={"fold", "trial"},
-            optional={"state", "overall_pct", "tqdm_line", "console"},
+            required={"trial"},
+            optional={
+                "fold", "study", "state", "objective", "best_objective", "eta_s",
+                "overall_pct", "tqdm_line", "console",
+            },
         )
-        _positive_integer(payload.get("fold"), "trial fold")
+        # A fold-bound trial names its fold; a trial of one global study that
+        # scores every fold at once names none. Exactly one of the two.
+        if ("study" in payload) == ("fold" in payload):
+            raise ResearchProgressError("P11 trial must name exactly one of fold or a global study")
+        if "study" in payload and payload.get("study") != "GLOBAL":
+            raise ResearchProgressError("P11 trial study scope is invalid")
+        if "fold" in payload:
+            _positive_integer(payload.get("fold"), "trial fold")
         _positive_integer(payload.get("trial"), "trial number")
+        _signed_decimal_or_none(payload.get("objective"), "trial objective")
+        _signed_decimal_or_none(payload.get("best_objective"), "trial best objective")
+        eta = payload.get("eta_s")
+        if eta is not None and (
+            not isinstance(eta, int) or isinstance(eta, bool) or not 0 <= eta <= 9_007_199_254_740_991
+        ):
+            raise ResearchProgressError("P11 trial ETA is invalid")
         state = payload.get("state")
         if state is not None and state not in {"COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"}:
             raise ResearchProgressError("P11 trial state is invalid")
@@ -251,8 +371,10 @@ def _validate_payload(event_type: str, payload: dict[str, Any]) -> None:
                     _positive_integer(console[key], f"trial console {key}")
         return
     if event_type == "fold_completed":
-        _exact_payload(payload, event_type=event_type, required={"fold"})
+        _exact_payload(payload, event_type=event_type, required={"fold"}, optional={"selection"})
         _positive_integer(payload.get("fold"), "fold number")
+        if "selection" in payload:
+            _validate_fold_selection(payload.get("selection"))
         return
     if event_type == "fold_segment_observed":
         _validate_fold_segment(payload)
@@ -291,8 +413,15 @@ def _validate_payload(event_type: str, payload: dict[str, Any]) -> None:
             raise ResearchProgressError("P11 budget percentage is invalid")
         return
     if event_type == "run_completed":
-        _exact_payload(payload, event_type=event_type, required={"usage"}, optional={"claim", "evidence_digest", "split_digest"})
+        _exact_payload(
+            payload,
+            event_type=event_type,
+            required={"usage"},
+            optional={"claim", "evidence_digest", "split_digest", "handoff_cursor"},
+        )
         _valid_usage(payload.get("usage"))
+        if "handoff_cursor" in payload:
+            _validate_handoff_cursor(payload.get("handoff_cursor"))
         evidence_digest = payload.get("evidence_digest")
         if evidence_digest is not None and (
             not isinstance(evidence_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", evidence_digest)
@@ -340,18 +469,14 @@ def _valid_artifact_name(value: object) -> str:
 
 
 def _valid_usage(value: object) -> None:
-    if not isinstance(value, dict) or set(value) != {"peak_rss_bytes", "cpu_seconds", "scratch_bytes", "fd_peak"}:
+    """Every key is present; ``None`` means unmeasured (CG-P11-09), never 0."""
+
+    if not isinstance(value, dict) or set(value) != set(_USAGE_MAXIMA):
         raise ResearchProgressError("P11 terminal usage is invalid")
-    maxima = {
-        "peak_rss_bytes": 4 * 1024 * 1024 * 1024,
-        # Largest admitted child CPU cap (W1 Delta WFO profile). Each journal
-        # additionally enforces its own profile cap (P04: 45) in ``emit``.
-        "cpu_seconds": _MAX_PROFILE_CPU_SECONDS,
-        "scratch_bytes": 4 * 1024 * 1024 * 1024,
-        "fd_peak": 65_536,
-    }
-    for key, maximum in maxima.items():
+    for key, maximum in _USAGE_MAXIMA.items():
         item = value.get(key)
+        if item is None:
+            continue
         if not isinstance(item, int) or isinstance(item, bool) or not 0 <= item <= maximum:
             raise ResearchProgressError("P11 terminal usage is invalid")
 
@@ -374,6 +499,7 @@ class ResearchProgressJournal:
         lease_epoch: int,
         planned_trials: int = 1,
         cpu_cap_seconds: int = _P04_CPU_SECONDS,
+        profile: str = "P04_FIXED",
     ) -> None:
         self.run_id = _identifier(run_id, "run id")
         self.attempt_id = _identifier(attempt_id, "attempt id")
@@ -386,7 +512,11 @@ class ResearchProgressJournal:
             or not 1 <= cpu_cap_seconds <= _MAX_PROFILE_CPU_SECONDS
         ):
             raise ResearchProgressError("P11 CPU cap is invalid")
+        if profile not in _PROFILE_COPY:
+            raise ResearchProgressError("P11 journal profile is invalid")
         self.lease_epoch = lease_epoch
+        self.profile = profile
+        self._copy = _PROFILE_COPY[profile]
         self.planned_trials = planned_trials
         self.cpu_cap_seconds = cpu_cap_seconds
         self.root = (root.resolve() / self.run_id / "progress" / self.attempt_id).resolve()
@@ -558,8 +688,10 @@ class ResearchProgressJournal:
             raise ResearchProgressError("P11 event type is unsupported")
         safe_payload = _bounded_json(payload or {}, "event payload")
         _validate_payload(event_type, safe_payload)
-        if event_type in {"run_completed", "run_failed"} and safe_payload["usage"]["cpu_seconds"] > self.cpu_cap_seconds:
-            raise ResearchProgressError("P11 terminal usage is invalid")
+        if event_type in {"run_completed", "run_failed"}:
+            cpu = safe_payload["usage"]["cpu_seconds"]
+            if cpu is not None and cpu > self.cpu_cap_seconds:
+                raise ResearchProgressError("P11 terminal usage is invalid")
         with self._locked():
             snapshot = self._read_snapshot()
             if snapshot["status"] in _TERMINAL:
@@ -577,6 +709,13 @@ class ResearchProgressJournal:
                 "payload": safe_payload,
             }
             self._apply(snapshot, event)
+            # The overall percentage is derived here from source facts, never
+            # taken from a producer literal. A trial event carries the value it
+            # produced so a stream consumer can patch without a snapshot.
+            snapshot["overall"]["pct"] = max(int(snapshot["overall"]["pct"]), _derived_overall_pct(snapshot))
+            if event_type == "trial_completed":
+                safe_payload["overall_pct"] = snapshot["overall"]["pct"]
+                self._assert_event_bound(event)
             snapshot["latest_sequence"] = sequence
             snapshot["updated_at_utc_ms"] = now_ms
             self._assert_snapshot_bound(snapshot)
@@ -675,9 +814,10 @@ class ResearchProgressJournal:
                 "artifacts": [],
                 "claim": {
                     "state": "FORECAST",
-                    "text": "The fixed qualification has not sealed a publishable claim.",
+                    "text": self._copy["forecast"],
                     "cursor": None,
                     "methodology_certificate": _not_published_methodology_certificate(),
+                    "handoff_cursor": None,
                 },
                 "readiness": {"mandatory": "PENDING", "optional": "NOT_APPLICABLE"},
                 "failure": None,
@@ -700,7 +840,7 @@ class ResearchProgressJournal:
             if snapshot["status"] != "QUEUED":
                 raise ResearchProgressError("P11 run may start only from the queued state")
             snapshot["status"] = "RUNNING"
-            snapshot["overall"]["tqdm_line"] = "worker claimed durable P10 qualification"
+            snapshot["overall"]["tqdm_line"] = self._copy["claimed"]
         elif event_type in {"stage_started", "stage_completed"}:
             stage = payload.get("stage")
             if stage not in _STAGES:
@@ -715,14 +855,20 @@ class ResearchProgressJournal:
                     raise ResearchProgressError("P11 stage completed before it started")
                 item["state"] = "DONE"
                 item["completed_at_utc_ms"] = now_ms
+                if stage == "S4":
+                    # The search is over: a remaining-time estimate for it
+                    # no longer describes anything.
+                    snapshot["overall"]["eta_s"] = None
         elif event_type == "trial_completed":
             trial = payload.get("trial")
             fold = payload.get("fold")
             if not isinstance(trial, int) or isinstance(trial, bool) or trial < 1:
                 raise ResearchProgressError("P11 trial completion has an invalid trial")
-            if not isinstance(fold, int) or isinstance(fold, bool) or fold < 1:
+            if fold is not None and (not isinstance(fold, int) or isinstance(fold, bool) or fold < 1):
                 raise ResearchProgressError("P11 trial completion has an invalid fold")
             overall = snapshot["overall"]
+            if trial > int(overall["trials_declared"]):
+                raise ResearchProgressError("P11 trial exceeds the declared trial count")
             overall["trials_done"] = max(int(overall["trials_done"]), trial)
             pct = payload.get("overall_pct")
             if isinstance(pct, int) and not isinstance(pct, bool) and 0 <= pct <= 100:
@@ -730,7 +876,11 @@ class ResearchProgressJournal:
             line = payload.get("tqdm_line")
             if isinstance(line, str) and 0 < len(line) <= 512:
                 overall["tqdm_line"] = line
-            if not any(item.get("fold") == fold for item in snapshot["folds"]):
+            if "eta_s" in payload:
+                overall["eta_s"] = payload["eta_s"]
+            # A global-study trial scores every fold at once; it opens no fold
+            # row, so no fold is drawn running before its OOS is evaluated.
+            if fold is not None and not any(item.get("fold") == fold for item in snapshot["folds"]):
                 if len(snapshot["folds"]) >= 256:
                     raise ResearchProgressError("P11 fold observation cap is exceeded")
                 snapshot["folds"].append({
@@ -739,6 +889,7 @@ class ResearchProgressJournal:
                     "started_at_utc_ms": now_ms,
                     "completed_at_utc_ms": None,
                     "fold_timeline": _not_published_fold_timeline(),
+                    "selection": _not_published_fold_selection(),
                 })
         elif event_type == "fold_segment_observed":
             _validate_fold_segment(payload)
@@ -753,6 +904,7 @@ class ResearchProgressJournal:
                     "started_at_utc_ms": payload["started_at_utc_ms"],
                     "completed_at_utc_ms": None,
                     "fold_timeline": _not_published_fold_timeline(),
+                    "selection": _not_published_fold_selection(),
                 }
                 snapshot["folds"].append(item)
             if item["state"] == "DONE":
@@ -817,6 +969,7 @@ class ResearchProgressJournal:
                     "started_at_utc_ms": now_ms,
                     "completed_at_utc_ms": now_ms,
                     "fold_timeline": _not_published_fold_timeline(),
+                    "selection": _not_published_fold_selection(),
                 }
                 snapshot["folds"].append(item)
             else:
@@ -824,6 +977,9 @@ class ResearchProgressJournal:
                     raise ResearchProgressError("P11 failed fold cannot complete")
                 item["state"] = "DONE"
                 item["completed_at_utc_ms"] = now_ms
+            selection = payload.get("selection")
+            if isinstance(selection, dict):
+                item["selection"] = {"state": "AVAILABLE", **selection, "reason_code": None}
         elif event_type in {"artifact_writing", "artifact_sealed"}:
             name = payload.get("name")
             if not isinstance(name, str) or not name or len(name) > 256 or name.startswith("/") or ".." in name.split("/"):
@@ -861,20 +1017,24 @@ class ResearchProgressJournal:
                 raise ResearchProgressError("P11 completion is forbidden before mandatory seal")
             snapshot["status"] = "COMPLETED"
             snapshot["overall"]["pct"] = 100
+            snapshot["overall"]["eta_s"] = None
             claim = payload.get("claim")
+            handoff = payload.get("handoff_cursor")
             if isinstance(claim, dict) and claim.get("state") == "ISSUED":
                 snapshot["claim"] = {
                     "state": claim["state"],
                     "text": claim["text"],
                     "cursor": claim["cursor"],
                     "methodology_certificate": claim.get("methodology_certificate") or _not_published_methodology_certificate(),
+                    "handoff_cursor": handoff if isinstance(handoff, dict) else None,
                 }
             else:
                 snapshot["claim"] = {
                     "state": "NOT_ISSUED",
-                    "text": "The fixed P10 qualification sealed its artifacts but did not issue a release claim.",
+                    "text": self._copy["not_issued"],
                     "cursor": None,
                     "methodology_certificate": _not_published_methodology_certificate(),
+                    "handoff_cursor": handoff if isinstance(handoff, dict) else None,
                 }
         elif event_type == "run_failed":
             code = payload.get("code")
@@ -885,11 +1045,13 @@ class ResearchProgressJournal:
                 raise ResearchProgressError("P11 failure message is invalid")
             snapshot["status"] = "FAILED"
             snapshot["failure"] = {"code": code, "message": message}
+            snapshot["overall"]["eta_s"] = None
             snapshot["claim"] = {
                 "state": "NOT_ISSUED",
                 "text": "The run failed before Stage 5 issued a claim.",
                 "cursor": None,
                 "methodology_certificate": _not_published_methodology_certificate(),
+                "handoff_cursor": None,
             }
             for item in snapshot["artifacts"]:
                 if item["state"] == "WRITING":
@@ -1000,11 +1162,26 @@ class ResearchProgressJournal:
             or len(value["artifacts"]) > 128
         ):
             raise ResearchProgressError("P11 snapshot has an invalid compact projection")
+        fold_keys = {"fold", "state", "started_at_utc_ms", "completed_at_utc_ms", "fold_timeline"}
         for fold in value["folds"]:
-            if not isinstance(fold, dict) or set(fold) != {
-                "fold", "state", "started_at_utc_ms", "completed_at_utc_ms", "fold_timeline",
-            }:
+            # ``selection`` is W2-additive: a journal written before it still
+            # reopens, and its absence reads as NOT_PUBLISHED downstream.
+            if not isinstance(fold, dict) or not fold_keys.issubset(fold) or set(fold) - fold_keys - {"selection"}:
                 raise ResearchProgressError("P11 snapshot fold shape is invalid")
+            if "selection" in fold:
+                selection = fold["selection"]
+                if not isinstance(selection, dict) or set(selection) != {
+                    "state", "scope", "trial", "objective", "params_digest", "reason_code",
+                }:
+                    raise ResearchProgressError("P11 snapshot fold selection is invalid")
+                if selection["state"] == "AVAILABLE":
+                    _validate_fold_selection({
+                        key: selection[key] for key in ("scope", "trial", "objective", "params_digest")
+                    })
+                    if selection["reason_code"] is not None:
+                        raise ResearchProgressError("P11 snapshot fold selection is invalid")
+                elif selection != _not_published_fold_selection():
+                    raise ResearchProgressError("P11 snapshot fold selection is invalid")
             _positive_integer(fold.get("fold"), "snapshot fold number")
             if fold.get("state") not in {"RUNNING", "DONE", "FAILED"}:
                 raise ResearchProgressError("P11 snapshot fold state is invalid")
@@ -1045,9 +1222,11 @@ class ResearchProgressJournal:
             else:
                 raise ResearchProgressError("P11 snapshot fold timeline state is invalid")
         claim = value.get("claim")
+        claim_keys = {"state", "text", "cursor", "methodology_certificate"}
         if (
             not isinstance(claim, dict)
-            or set(claim) != {"state", "text", "cursor", "methodology_certificate"}
+            or not claim_keys.issubset(claim)
+            or set(claim) - claim_keys - {"handoff_cursor"}
             or claim.get("state") not in {"FORECAST", "NOT_ISSUED", "ISSUED"}
             or not isinstance(claim.get("text"), str)
             or len(claim["text"]) > 1_024
@@ -1055,6 +1234,8 @@ class ResearchProgressJournal:
         ):
             raise ResearchProgressError("P11 snapshot claim is invalid")
         _validate_methodology_certificate(claim.get("methodology_certificate"), label="snapshot methodology certificate")
+        if claim.get("handoff_cursor") is not None:
+            _validate_handoff_cursor(claim["handoff_cursor"])
         bundle = value.get("mandatory_bundle")
         if bundle is not None:
             if (
@@ -1078,6 +1259,12 @@ class ResearchProgressJournal:
             os.fsync(handle.fileno())
         os.replace(temporary, self._snapshot_path)
         os.chmod(self._snapshot_path, 0o600)
+
+    @staticmethod
+    def _assert_event_bound(event: dict[str, Any]) -> None:
+        encoded = json.dumps(canonicalize(event["payload"]), sort_keys=True, separators=(",", ":")).encode("utf-8")
+        if len(encoded) > _MAX_EVENT_BYTES:
+            raise ResearchProgressError("P11 event payload exceeds the bounded event budget")
 
     @staticmethod
     def _assert_snapshot_bound(snapshot: dict[str, Any]) -> None:

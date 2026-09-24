@@ -522,6 +522,103 @@ def _wfo_output_root(receipt: dict[str, Any], receipt_dir: Path | None) -> Path:
     return resolved
 
 
+class _ChildProgressWriter:
+    """CG-P06-02: the child's bounded live progress channel.
+
+    One append-only NDJSON file beside ``result.json``; exclusive create and
+    no-follow, so it cannot be redirected. Each record is one Optuna trial as
+    the engine saw it plus this process's own CPU seconds. It never carries a
+    parameter value, market row, path or credential, and it stops silently at
+    its record/line budget: it is an observation, not a result.
+    """
+
+    def __init__(self, path: Path) -> None:
+        from portal_api.services.research_supervisor import (
+            CHILD_PROGRESS_MAX_LINE_BYTES,
+            CHILD_PROGRESS_MAX_RECORDS,
+            CHILD_PROGRESS_SCHEMA,
+        )
+
+        self._schema = CHILD_PROGRESS_SCHEMA
+        self._max_records = CHILD_PROGRESS_MAX_RECORDS
+        self._max_line = CHILD_PROGRESS_MAX_LINE_BYTES
+        self._descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_APPEND, 0o600)
+        self._sequence = 0
+
+    def trial(self, study: Any, frozen_trial: Any) -> None:
+        if self._sequence >= self._max_records:
+            return
+        state_name = getattr(getattr(frozen_trial, "state", None), "name", None)
+        state = {"COMPLETE": "COMPLETE", "PRUNED": "PRUNED", "FAIL": "FAILED"}.get(state_name)
+        number = getattr(frozen_trial, "number", None)
+        if state is None or not isinstance(number, int) or isinstance(number, bool) or number < 0:
+            return
+
+        def decimal_or_none(value: object) -> str | None:
+            try:
+                return _decimal_text(value, label="trial objective")
+            except (TypeError, ValueError):
+                return None  # a pruned/-inf/NaN objective is not a number
+
+        objective = decimal_or_none(getattr(frozen_trial, "value", None)) if state == "COMPLETE" else None
+        try:
+            best = decimal_or_none(study.best_value)
+        except (ValueError, RuntimeError):
+            best = None  # Optuna raises until one trial completes
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        record = {
+            "schema_version": self._schema,
+            "sequence": self._sequence + 1,
+            "kind": "trial",
+            "trial": number + 1,
+            "state": state,
+            "objective": objective,
+            "best_objective": best,
+            "cpu_seconds": round(usage.ru_utime + usage.ru_stime, 3),
+        }
+        line = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        if len(line) > self._max_line:
+            return
+        os.write(self._descriptor, line)
+        self._sequence += 1
+
+    def close(self) -> None:
+        os.close(self._descriptor)
+
+
+def _observe_optuna_trials(writer: _ChildProgressWriter) -> Any:
+    """Observe each finished trial through QuantBT's own study callback.
+
+    ``quantbt.walkforward`` passes its module-level ``logging_callback`` to
+    ``study.optimize`` at call time. Wrapping that one name lets the child
+    see every finished trial without changing what the engine computes; the
+    wrapper calls the original first and never lets an observation error
+    reach the study. Returns the restore function. If the engine build has
+    no such callback the channel stays silent and the retained trial table
+    alone closes the study.
+    """
+
+    import quantbt.walkforward as walkforward
+
+    original = getattr(walkforward, "logging_callback", None)
+    if not callable(original):
+        return lambda: None
+
+    def observed(study: Any, frozen_trial: Any) -> None:
+        original(study, frozen_trial)
+        try:
+            writer.trial(study, frozen_trial)
+        except Exception:  # noqa: BLE001 - observation must never alter the study
+            pass
+
+    walkforward.logging_callback = observed
+
+    def restore() -> None:
+        walkforward.logging_callback = original
+
+    return restore
+
+
 def _utc_ms_field(receipt: dict[str, Any], name: str) -> int:
     value = receipt.get(name)
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
@@ -626,10 +723,18 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
             optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5),
         ),
     )
-    summary = AdvancedWalkForwardRunner(
-        gateway=QuantBTGateway(),
-        artifacts=ArtifactRepository(output_root),
-    ).run(request, market, run_id, target_mode=profile["execution_route"])
+    from portal_api.services.research_supervisor import CHILD_PROGRESS_FILENAME
+
+    writer = _ChildProgressWriter(output_root.parent / CHILD_PROGRESS_FILENAME)
+    restore = _observe_optuna_trials(writer)
+    try:
+        summary = AdvancedWalkForwardRunner(
+            gateway=QuantBTGateway(),
+            artifacts=ArtifactRepository(output_root),
+        ).run(request, market, run_id, target_mode=profile["execution_route"])
+    finally:
+        restore()
+        writer.close()
     n_folds = int(summary.get("n_folds") or 0)
     bounds = profile["fold_bounds"]
     if not bounds["min"] <= n_folds <= bounds["max"]:
@@ -645,6 +750,8 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
         "n_folds": n_folds,
         "trial_rows": trial_rows,
         "execution_profile_digest": DELTA_WFO_PROFILE_DIGEST,
+        # CG-P11-09: this process's own high-water RSS (Linux reports KiB).
+        "peak_rss_bytes": int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024,
     }
 
 
