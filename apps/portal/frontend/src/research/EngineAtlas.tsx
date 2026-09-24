@@ -18,7 +18,7 @@
  * palette value for value — no raw hex, and no change to Execution Carbon.
  */
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { Formula } from "./Formula";
@@ -126,6 +126,13 @@ function RoutesTab({
   onRoute?: (route: string) => void;
 }) {
   const rows = useMemo(() => allRouteDisplays(doc), [doc]);
+  const tableRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedRoute) return;
+    const selected = [...(tableRef.current?.querySelectorAll<HTMLElement>("[data-route]") ?? [])]
+      .find((row) => row.dataset.route === selectedRoute);
+    if (typeof selected?.scrollIntoView === "function") selected.scrollIntoView({ block: "center", behavior: "auto" });
+  }, [selectedRoute, rows]);
   return (
     /*
       No fixed-width track at all.
@@ -141,7 +148,7 @@ function RoutesTab({
       a readable refusal at 660. The fixture lane has no sidebar, which is
       exactly why it never showed this: a fixture lane is not a product route.
     */
-    <div>
+    <div ref={tableRef}>
       <div>
         <div
           className="mono flex flex-wrap border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
@@ -162,7 +169,10 @@ function RoutesTab({
             data-selected={row.routeId === selectedRoute || undefined}
             aria-current={row.routeId === selectedRoute ? "true" : undefined}
             className="flex flex-col gap-1 border-b px-3 py-[7px]"
-            style={{ borderColor: "var(--line-soft)" }}
+            style={{
+              borderColor: row.routeId === selectedRoute ? "var(--accent)" : "var(--line-soft)",
+              background: row.routeId === selectedRoute ? "var(--accent-soft)" : undefined,
+            }}
           >
             <div className="flex flex-wrap items-baseline gap-y-0.5">
             <span
@@ -950,6 +960,14 @@ export function EngineAtlas({
                 {label}
               </span>
             ))}
+            {location.run ? (
+              <Link
+                data-header-search
+                to={`/research/quantbt/runs/${encodeURIComponent(location.run)}/search#${encodeInspectionCursor({ stage: "search", mode: location.mode ?? undefined, schedule: location.schedule ?? undefined })}`}
+                className="mono mt-1 rounded-[4px] border px-2 py-1 text-[10px]"
+                style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+              >Open search &amp; selection →</Link>
+            ) : null}
           </div>
         ) : null}
       </header>

@@ -23,6 +23,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { scheduleChoices } from "./atlas";
 import type { AtlasDocument } from "./atlas";
 import { ResearchPanel } from "./ResearchPanel";
 import { PreflightPanel } from "./PreflightPanel";
@@ -591,6 +592,7 @@ function WindowsStep({
   const options = atlas?.current_release.walk_forward_options ?? null;
   const modes = atlas?.modes ?? [];
   const selectedMode = modes.find((mode) => mode.mode_id === draft.optimizationMode) ?? null;
+  const scheduleOptions = atlas && selectedMode ? scheduleChoices(atlas, selectedMode) : [];
 
   /* A draft adopts the release defaults once, so the form never submits an
      empty value the reader did not see. The defaults are the published ones. */
@@ -714,8 +716,7 @@ function WindowsStep({
         The server derives the authoritative fold plan at preflight — the Review step shows it.
       </p>
 
-      {/* Mode and schedule are the Atlas's: a schedule the selected mode does
-          not list is not offered, because the claim comes from the pair. */}
+      {/* Keep invalid schedules visible but disabled; the source explains why. */}
       <div className="flex flex-wrap gap-2.5">
         <Field label="optimization_mode">
           <select
@@ -747,14 +748,21 @@ function WindowsStep({
             disabled={selectedMode === null}
           >
             <option value="">{selectedMode === null ? "choose a mode first" : "choose a schedule"}</option>
-            {(selectedMode?.valid_schedules ?? []).map((schedule) => (
-              <option key={schedule} value={schedule}>
-                {schedule}
+            {scheduleOptions.map(({ schedule, valid }) => (
+              <option key={schedule} value={schedule} disabled={!valid}>
+                {schedule}{valid ? "" : " · not admitted"}
               </option>
             ))}
           </select>
         </Field>
       </div>
+      {scheduleOptions.filter((choice) => !choice.valid).map((choice) => {
+        const reason = selectedMode?.invalid_schedules?.find((entry) => entry.schedule === choice.schedule)?.reason;
+        return <p key={choice.schedule} data-invalid-schedule={choice.schedule} className="text-[10px]" style={{ color: "var(--ink-soft)" }}>
+          {choice.schedule} · {reason ?? "Not admitted for this mode in the installed release manifest."}
+        </p>;
+      })}
+
 
       {error ? <ErrorBlock message={error} /> : null}
     </Card>
@@ -903,7 +911,11 @@ const GROUP_LABEL: Record<string, string> = {
  */
 function OptimizerDefaults({ release }: { release: AtlasRelease }) {
   return (
-    <div className="flex flex-col gap-2" data-optimizer-defaults>
+    <details className="rounded-[5px] border px-2.5 py-1.5" style={{ borderColor: "var(--line)" }} data-optimizer-defaults>
+      <summary className="cursor-pointer text-[11px] font-semibold" style={{ color: "var(--ink-soft)" }}>
+        Optimizer defaults · {release.optimizer_defaults.groups.reduce((count, group) => count + group.fields.length, 0)} fields · pinned by protocol
+      </summary>
+      <div className="mt-2 flex flex-col gap-2">
       {release.optimizer_defaults.groups.map((group) => (
         <section key={group.group_id} data-default-group={group.group_id} className="flex flex-col">
           <h4
@@ -947,7 +959,8 @@ function OptimizerDefaults({ release }: { release: AtlasRelease }) {
           ))}
         </section>
       ))}
-    </div>
+      </div>
+    </details>
   );
 }
 

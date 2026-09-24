@@ -33,6 +33,7 @@ function recorder(page: import("@playwright/test").Page) {
 }
 
 for (const [name, width, height] of [
+  ["desktop", 1440, 900],
   ["laptop", 1280, 900],
   ["mobile", 660, 900],
 ] as const) {
@@ -264,6 +265,7 @@ test("reduced motion is honoured on both product routes", async ({ page }) => {
 
 
 for (const [name, width] of [
+  ["desktop", 1440],
   ["laptop", 1280],
   ["mobile", 660],
 ] as const) {
@@ -518,6 +520,7 @@ test("S02 renders the four release-default groups as locked", async ({ page }) =
 const RUN_PROGRESS = "/research/quantbt/runs/run_01HZQ7PROBE/progress";
 
 for (const [name, width] of [
+  ["desktop", 1440],
   ["laptop", 1280],
   ["mobile", 660],
 ] as const) {

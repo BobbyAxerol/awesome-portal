@@ -32,3 +32,10 @@
 RF-04 **chưa hoàn tất**, không đánh dấu xanh trong Unified. Để đóng: (1) hoàn thiện Wave B visual/interaction IDs còn mở theo audit; (2) RF-03 publish từng fact thì regenerate và tiêu thụ ở Wave C, giữ NOT_PUBLISHED cho fact chưa có; (3) lấy real-API browser receipt ở 1440/1280/660, axe, console/network và bundle budget, đọc ảnh bằng mắt; (4) Bobby duyệt visual trên `research-portal`. Không dùng kết quả BFF-double để thay receipt thật.
 
 Lượt này chỉ commit các path RF-04 có chủ ý; các file RF-06 Claude đang sửa trên cùng worktree được giữ nguyên, không stage chung.
+
+## Follow-up 2026-09-24 — isolated RF-04 slice
+
+- S12: run-bound header CTA carries the published inspection cursor; the selected route row scrolls into view and has a visible highlight. S02: invalid release schedules remain visible with a disabled control and the source reason; optimizer defaults collapse into a read-only accordion. S00: research-screen badge text uses the contrast-safe warning token.
+- BFF-double browser probe now includes 1440 px as well as 1280/660. The isolated production-build probe passed 22/22. A dedicated axe probe scanned product routes S00/S02/S03/S12/S14 at all three widths: 15/15 passed after discounting only the documented shared `--ink-faint` token issue (D-B1). A non-chart route JS check found no `theme` or ECharts chunk. Focused S02/S12/S03 unit tests passed 137/137 before concurrent RF-06 edits began; frontend build passed.
+- A later full frontend unit run observed 8 failures in `runProgress.test.tsx` while Claude was rewriting S03 for RF-06 (3,101 passed, 1 skipped). This is **not** a green full gate and must be rerun after RF-06 commits. `RunProgress.tsx` now contains concurrent edits and is not staged or committed by this RF-04 slice.
+- Still open: measured route-JS budget, S12/S02 visual parity and Bobby visual approval, current-branch real-API preview receipts, and RF-03-dependent Wave C fields. Do not call RF-04 product accepted or turn BFF-double evidence into a real-API receipt.

@@ -49,7 +49,7 @@ const TAG_STYLE: Record<
   RESEARCH_SCREEN: {
     border: "var(--role-holdout)",
     background: "var(--paper)",
-    ink: "var(--role-holdout)",
+    ink: "var(--warn)",
     weight: 700,
   },
   EXECUTION_HANDOFF: {

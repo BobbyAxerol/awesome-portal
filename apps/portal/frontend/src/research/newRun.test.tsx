@@ -1025,13 +1025,16 @@ describe("RF02-F2 — the P02 field map is covered 24/24", () => {
     expect(Object.values(outcome).filter((value) => value === "refused")).toHaveLength(11);
   });
 
-  it("offers only the schedules the chosen mode lists, from the Atlas", () => {
+  it("shows all published schedules but disables invalid pairs with the source reason", () => {
     const patch = vi.fn();
     cleanup();
     view({ atlas: manifestAtlas, patch, draft: draft({ optimizationMode: "mode_4_is_only_robust", optimizationSchedule: "global" }) });
     goToStep("windows");
     const schedule = screen.getByLabelText("Optimization schedule") as HTMLSelectElement;
-    expect([...schedule.options].map((option) => option.value).filter(Boolean)).toEqual(["global", "per_fold_causal"]);
+    expect([...schedule.options].filter((option) => option.value && !option.disabled).map((option) => option.value)).toEqual(["global", "per_fold_causal"]);
+    expect([...schedule.options].find((option) => option.value === "per_fold_decay")?.disabled).toBe(true);
+    expect([...schedule.options].find((option) => option.value === "per_fold_decay")?.textContent).toContain("not admitted");
+    expect(document.querySelector('[data-invalid-schedule="per_fold_decay"]')?.textContent).toContain("per_fold_decay");
     fireEvent.change(screen.getByLabelText("Optimization mode"), { target: { value: "mode_2_sbb" } });
     expect(patch).toHaveBeenCalledWith({ optimizationMode: "mode_2_sbb", optimizationSchedule: "global" });
   });

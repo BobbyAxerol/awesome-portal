@@ -56,6 +56,9 @@ describe("spec 12 T01 — three verbatim tabs and the full hash", () => {
     expect(within(document.querySelector("[data-breadcrumb]") as HTMLElement).getByRole("link", { name: "Evidence Flow" }).getAttribute("href")).toBe(
       "/research/quantbt/runs/R-WFO-118/evidence",
     );
+    expect(document.querySelector("[data-header-search]")?.getAttribute("href")).toBe(
+      "/research/quantbt/runs/R-WFO-118/search#stage=search",
+    );
   });
 });
 
@@ -169,6 +172,7 @@ describe("Q4 / D-4 and the release facts panel", () => {
 
   it("selects a route into the hash from its row", () => {
     const onLocationChange = view("routes", { route: "signal_notional" });
+    expect((document.querySelector('[data-route="signal_notional"]') as HTMLElement).style.background).toBe("var(--accent-soft)");
     expect(document.querySelector('[data-route="signal_notional"]')?.getAttribute("aria-current")).toBe("true");
     fireEvent.click(document.querySelector('[data-route-link="intrabar_bracket"]') as HTMLElement);
     expect(onLocationChange).toHaveBeenCalledWith({ route: "intrabar_bracket" });
