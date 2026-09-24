@@ -104,9 +104,13 @@ export const MODE_LABELS: Record<CompareMode, string> = {
 export const ATTEMPTS_RULE =
   "Same alpha, same key — every chart may overlay. But numbers across claim classes never rank each other: a retrospective 1.31 does not beat a strict 1.19. Read the ladder left to right: the number falls as the claim strengthens, and that gap is the selection luck the weaker claims were counting.";
 
-/** Hi-fi markets rule after the server's caption (its first sentence), verbatim. */
+/**
+ * Hi-fi markets rule after the server's caption. The hi-fi's own first clause
+ * ("Small multiples only:") already sits in the server caption that precedes
+ * it, so it is not repeated (VD-P20-20).
+ */
 export const MARKETS_RULE_TAIL =
-  "Small multiples only: read shapes and claims side by side, never subtract across keys. This is the robustness question: does the idea survive a different market at all?";
+  "Read shapes and claims side by side, never subtract across keys. This is the robustness question: does the idea survive a different market at all?";
 
 /** Hi-fi figure caption, verbatim (VD-P20-04 keeps the frame). */
 export const FOLD_CHART_TITLE = "OOS Sharpe per fold, per attempt — same folds, same tape, different honesty";
@@ -520,7 +524,11 @@ const GEOMETRY_ONLY_DRAWDOWN = "0";
 function miniPlot(points: MarketChart["points"]): (Plot & { line: string; fill: string }) | null {
   const geometry = equitySvg(points.map((point) => ({ ...point, drawdown_fraction: GEOMETRY_ONLY_DRAWDOWN })));
   if (geometry.drawn === 0) return null;
-  return { ...geometry };
+  /* A small multiple is ~300px wide: only the first and last day labels fit
+     without overlapping (browser receipt B, 1280). The geometry is untouched. */
+  const { xLabels } = geometry;
+  const ends = xLabels.length > 2 ? [xLabels[0], xLabels[xLabels.length - 1]] : xLabels;
+  return { ...geometry, xLabels: ends };
 }
 
 /**
