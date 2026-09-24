@@ -194,7 +194,9 @@ describe("legacy compatibility", () => {
 
 describe("embedding (U04/U05)", () => {
   it("mounts QuantBT under its canonical route with no nested topbar", async () => {
-    mount({ route: "/research/quantbt/runs" });
+    // A legacy QuantBT screen: it keeps the module header. The Research Loop
+    // screens (`/runs`, `/journey`, …) carry their own heading instead (DQ-01).
+    mount({ route: "/research/quantbt/runs/legacy" });
     // QuantBT is a split chunk now (it owns ECharts), so the module arrives a
     // dynamic import later than the shell around it.
     // 15s, matching the sibling tests. The test budget below was raised to 20s

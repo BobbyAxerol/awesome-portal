@@ -41,6 +41,12 @@ export interface ResearchRefusal {
   stopsPolling: boolean;
   /** True for `401`: the session, not this object, is the problem. */
   sessionExpired: boolean;
+  /**
+   * True when the server said the addressed object does not exist (404).
+   * A screen addressed by a run id renders its not-found page — a way back to
+   * the Run Library — rather than an empty frame.
+   */
+  notFound: boolean;
 }
 
 type Kind = "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "UNAVAILABLE" | "INVALID" | "NOT_RETAINED";
@@ -99,7 +105,10 @@ export const RESEARCH_SURFACE_CODES = Object.keys(SURFACE_CODES);
 
 const KIND_STATE: Record<Kind, ResearchState["state"]> = {
   FORBIDDEN: "denied",
-  NOT_FOUND: "empty",
+  /* RF-06 FE-X-11: `empty` is a successful answer with zero rows (state
+     semantics v1). A 404 is not that — nothing with this id exists — so it is
+     terminal, with its own sentence. */
+  NOT_FOUND: "terminal",
   CONFLICT: "stale",
   UNAVAILABLE: "unavailable",
   INVALID: "terminal",
@@ -123,6 +132,8 @@ export const REFUSAL_COPY: Record<string, string> = {
   denied: "You don't have access to this in your current workspace, or it doesn't exist.",
   session: "Your session has expired. Sign in again to continue.",
   empty: "Nothing was found for this in your current workspace.",
+  "not-found": "Nothing with this id exists in your current workspace.",
+  conflict: "This changed while it was being read. Read it again.",
   stale: "This changed since it was read. Read it again to see the current revision.",
   unavailable: "The Research service did not answer. Try again.",
   "failed-retryable": "The request was not accepted this time. It can be tried again.",
@@ -132,7 +143,7 @@ export const REFUSAL_COPY: Record<string, string> = {
 
 function stateOfStatus(status: number): ResearchState["state"] {
   if (status === 401 || status === 403) return "denied";
-  if (status === 404) return "empty";
+  if (status === 404) return "terminal";
   if (status === 409) return "stale";
   if (status >= 500) return "unavailable";
   return "terminal";
@@ -155,6 +166,7 @@ export function toResearchRefusal(error: unknown): ResearchRefusal {
       terminal: false,
       stopsPolling: false,
       sessionExpired: false,
+      notFound: false,
     };
   }
 
@@ -176,9 +188,13 @@ export function toResearchRefusal(error: unknown): ResearchRefusal {
     mayRetry = state === "unavailable" || state === "stale" || state === "failed-retryable";
     message = sessionExpired
       ? REFUSAL_COPY.session
-      : (kind ? KIND_COPY[kind] : undefined) ?? REFUSAL_COPY[state] ?? REFUSAL_COPY.terminal;
+      : (kind ? KIND_COPY[kind] : undefined) ??
+        (status === 404 ? REFUSAL_COPY["not-found"] : undefined) ??
+        REFUSAL_COPY[state] ??
+        REFUSAL_COPY.terminal;
   }
-  const closed = state === "denied" || state === "empty";
+  const notFound = status === 404 && state === "terminal";
+  const closed = state === "denied" || state === "empty" || notFound;
 
   return {
     code,
@@ -191,11 +207,24 @@ export function toResearchRefusal(error: unknown): ResearchRefusal {
     terminal: closed,
     stopsPolling: closed,
     sessionExpired,
+    notFound,
   };
 }
 
 /** The panel state a refusal resolves to; the server's text rides as detail. */
 export function refusalState(refusal: ResearchRefusal, retainsContent: boolean): ResearchState {
+  /* RF-06 FE-X-11: `stale` means a retained value is shown with a newer one
+     pending. A conflict on a first read has nothing retained, so it is a
+     retryable failure, not "this changed since it was read". */
+  if (refusal.state === "stale" && !retainsContent) {
+    return {
+      state: "failed-retryable",
+      reason: REFUSAL_COPY.conflict,
+      detail: refusalDetail(refusal),
+      mayRetry: true,
+      retainsContent: false,
+    };
+  }
   return {
     state: refusal.state,
     reason: refusal.message,

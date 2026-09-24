@@ -12,7 +12,7 @@
  *  - progress/SSE behaviour and artifact/export routes are unchanged.
  */
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, Copy, Download, FolderOpen, Map as MapIcon, Plus, ShieldAlert } from "lucide-react";
+import { Copy, Download, FolderOpen, Plus, ShieldAlert } from "lucide-react";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import {
   Link,
@@ -328,20 +328,6 @@ export function QuantBTModule() {
           </a>
         </>
       ) : null}
-      {onReferenceRoute ? (
-        // Only on the Research Loop screens, so the legacy headers in the
-        // visual baseline are unchanged.
-        <>
-          <Link to={`${QUANTBT_ROOT}/journey`} className="btn-ghost no-print">
-            <MapIcon size={12} />
-            Journey
-          </Link>
-          <Link to={`${QUANTBT_ROOT}/atlas`} className="btn-ghost no-print">
-            <BookOpen size={12} />
-            Engine Atlas
-          </Link>
-        </>
-      ) : null}
       {/* Research Loop entry points (RF-02 preview): Imports opens S14 and New
         * run opens S02. The previous screens stay at /imports and /new. */}
       <Link to={`${QUANTBT_ROOT}/alpha-import`} className="btn-ghost no-print" aria-label="Alpha imports">
@@ -357,6 +343,11 @@ export function QuantBTModule() {
 
   return (
     <>
+      {/* DQ-01 (Bobby, 2026-09-23): the Research Loop screens carry their own
+          breadcrumb and title, as in the HiFi. The module header above them
+          printed a second title and a second "New run", and pushed every
+          screen's own heading ~80 px down (RF-06 FE-X-15). Legacy screens keep it. */}
+      {onResearchScreen ? null : (
       <ModuleHeader
         title={feature?.label ?? "QuantBT Backtest"}
         // The module description is orientation for someone arriving, not a
@@ -374,6 +365,7 @@ export function QuantBTModule() {
           </div>
         )}
       </ModuleHeader>
+      )}
 
       <Suspense fallback={<StateView kind="loading" message="Loading screen…" />}>
       <Routes>

@@ -50,7 +50,7 @@ describe("RF01-F4 — one mapper behind the five historical names", () => {
 
   it("lets a published surface code win over the status", () => {
     expect(toResearchRefusal(api(400, "RESEARCH_SPLIT_CONFLICT")).state).toBe("stale");
-    expect(toResearchRefusal(api(500, "RESEARCH_SEARCH_NOT_FOUND")).state).toBe("empty");
+    expect(toResearchRefusal(api(500, "RESEARCH_SEARCH_NOT_FOUND")).state).toBe("terminal");
     expect(toResearchRefusal(api(400, "RESEARCH_EVIDENCE_UNAVAILABLE")).state).toBe("unavailable");
     expect(toResearchRefusal(api(503, "RESEARCH_FREEZE_INVALID")).state).toBe("terminal");
     expect(RESEARCH_SURFACE_CODES).toHaveLength(34);
@@ -69,7 +69,7 @@ describe("RF01-F4 — one mapper behind the five historical names", () => {
   it.each([
     [401, "denied", false, true],
     [403, "denied", false, true],
-    [404, "empty", false, true],
+    [404, "terminal", false, true],
     [409, "stale", true, false],
     [422, "terminal", false, false],
     [503, "unavailable", true, false],
@@ -107,5 +107,21 @@ describe("RF01-F1/F3 — denied is neutral, 401 is the session", () => {
     toResearchRefusal(api(403));
     toResearchRefusal(api(503));
     expect(reports).toBe(1);
+  });
+});
+
+describe("RF-06 FE-X-11 — 404 is not empty, and a first-read conflict is not stale", () => {
+  it("names a missing object as not found, terminal, with notFound set", () => {
+    const refusal = toResearchRefusal(api(404, "SOMETHING_UNPUBLISHED"));
+    expect(refusal).toMatchObject({ state: "terminal", notFound: true, mayRetry: false });
+    expect(refusal.message).toBe(REFUSAL_COPY["not-found"]);
+  });
+
+  it("keeps stale only when a retained value is on screen", () => {
+    const refusal = toResearchRefusal(api(409, "SOMETHING_UNPUBLISHED"));
+    expect(refusalState(refusal, true).state).toBe("stale");
+    const first = refusalState(refusal, false);
+    expect(first.state).toBe("failed-retryable");
+    expect(first.reason).toBe(REFUSAL_COPY.conflict);
   });
 });
