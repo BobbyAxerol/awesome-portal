@@ -4334,6 +4334,8 @@ campaign sau khi Bobby tự merge qua PR.
 
 **RF-03 round-2 source probe 2026-09-24 (not an exit receipt):** the pinned HMD reader and QuantBT 1.1.1 public API completed a real read-only BTCUSDT 1h `signal_notional` WFO with two folds and three Optuna trials; the opt-in regression and exact dataset/resource facts are in [RF-03 evidence](./research_loop/evidence/RF-03/README.md). P10 private admission/child, P05 retention and the preview real-API receipt remain OPEN; this probe changes no runtime flag and does not advance RF-03/RF-04 status.
 
+**RF-03 Signal Notional retention adapter continuation 2026-09-24 — partial, not an exit receipt:** added the separately versioned `rs02.delta-signal-notional-wfo.v1` source profile and `rs02.quantbt-signal-notional-wfo.v1` serializer adapter. `AdvancedWalkForwardRunner` retains `pct_equity` as the generic default and only selects `signal_notional` through an explicit server argument with pinned capability validation and mismatch refusal. Focused adapter/runner tests 23/23, the read-only HMD public WFO probe 1/1, and an opt-in real-HMD → QuantBT WFO → temporary local P05 Parquet seal test 1/1 passed; the latter checks multiple folds, three optimizer trials, all five retained relations and manifest byte digest. This still does not route through P10 admission, imported/DRAFT source, the P06 isolated child, Control API `research.artifacts`/RS-02 row import, or the current-branch preview. `CG-P10-02`, `CG-P05-01` and RF-03 remain open; no runtime service or flag changed. Details: [RF-03 packet](./research_loop/evidence/RF-03/README.md).
+
 <a id="rl-rf-04"></a>
 ### RF-04 — Frontend P01–P10: sửa, chuẩn hoá theo HiFi, tối ưu tốc độ, nối màn (Claude)
 
