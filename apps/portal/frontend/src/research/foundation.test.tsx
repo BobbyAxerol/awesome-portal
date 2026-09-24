@@ -41,6 +41,7 @@ const DESCRIPTOR: JourneyResponse["descriptor"] = {
   descriptor_id: "quantbt_journey",
   revision: 1,
   content_sha256: "sha256:journey01",
+  mapping: [],
   phases: [
     {
       phase_id: "p1",
@@ -54,7 +55,7 @@ const DESCRIPTOR: JourneyResponse["descriptor"] = {
           description: "the shipped entry point",
           target_kind: "SHIPPED",
           target_key: "command_center",
-          availability: "AVAILABLE",
+          availability: "AVAILABLE", requires_run: false, target_fragment: null,
         },
         {
           card_id: "c_portal_map",
@@ -62,7 +63,7 @@ const DESCRIPTOR: JourneyResponse["descriptor"] = {
           description: "what exists and what is planned",
           target_kind: "SHIPPED",
           target_key: "portal_map",
-          availability: "AVAILABLE",
+          availability: "AVAILABLE", requires_run: false, target_fragment: null,
         },
       ],
     },
@@ -78,7 +79,7 @@ const DESCRIPTOR: JourneyResponse["descriptor"] = {
           description: "single .py contract, 7 fail-closed gates, DRAFT to ACTIVE",
           target_kind: "RESEARCH_SCREEN",
           target_key: "engine_atlas",
-          availability: "AVAILABLE",
+          availability: "AVAILABLE", requires_run: false, target_fragment: null,
         },
         {
           card_id: "c_compare",
@@ -86,7 +87,7 @@ const DESCRIPTOR: JourneyResponse["descriptor"] = {
           description: "not built in this release",
           target_kind: "RESEARCH_SCREEN",
           target_key: "compare",
-          availability: "PLANNED",
+          availability: "PLANNED", requires_run: false, target_fragment: null,
         },
         {
           card_id: "c_gate_r1",
@@ -94,7 +95,7 @@ const DESCRIPTOR: JourneyResponse["descriptor"] = {
           description: "reads the published record",
           target_kind: "EXECUTION_HANDOFF",
           target_key: "gate_r1",
-          availability: "DEPENDENCY_REQUIRED",
+          availability: "DEPENDENCY_REQUIRED", requires_run: false, target_fragment: null,
         },
       ],
     },
@@ -191,8 +192,9 @@ function atlas(overrides: Partial<AtlasResponse> = {}): AtlasResponse {
     selected_release_kind: "CURRENT",
     atlas: ATLAS_DOC,
     etag: 'W/"atlas-1"',
+    historical_identity: null,
     ...overrides,
-  };
+  } as AtlasResponse;
 }
 
 let sent: { url: string; headers: Record<string, string> }[] = [];
@@ -345,7 +347,7 @@ describe("P09-T02b — an unrouted screen says so rather than blaming the roadma
                   target_kind: "RESEARCH_SCREEN",
                   // The server says available; this build serves no route.
                   target_key: "preflight",
-                  availability: "AVAILABLE",
+                  availability: "AVAILABLE", requires_run: false, target_fragment: null,
                 },
               ],
             },
