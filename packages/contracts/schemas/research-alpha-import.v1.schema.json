@@ -44,9 +44,16 @@
       "required": ["field", "state", "check", "note"],
       "properties": {
         "field": { "type": "string", "minLength": 1, "maxLength": 128 },
-        "state": { "enum": ["parsed", "missing"] },
+        "state": {
+          "enum": ["parsed", "missing", "server_assigned", "server_computed", "not_in_contract"],
+          "description": "CG-P07-03: where the value came from. server_assigned is set at registration (strategy_id = alpha_id, DQ-07); not_in_contract is a HiFi field the v1 single-file contract cannot carry (DQ-05) and is never filled."
+        },
         "value": {},
-        "check": { "enum": ["VERIFY", "GATED"] },
+        "check": {
+          "enum": ["PASS", "FAIL", "VERIFY", "GATED", "NOT_APPLICABLE"],
+          "description": "PASS/FAIL: the verdict of the gate named in `gate`. VERIFY: parsed but no gate reads it. GATED: missing, so its gate cannot pass. NOT_APPLICABLE: server-assigned or not in the v1 contract."
+        },
+        "gate": { "anyOf": [{ "type": "string", "maxLength": 64 }, { "type": "null" }] },
         "note": { "type": "string", "minLength": 1, "maxLength": 256 }
       }
     },
@@ -70,6 +77,11 @@
         "state": { "enum": ["PASS", "FAIL", "SKIPPED"] },
         "message": { "type": "string", "maxLength": 512 },
         "ms": { "type": "integer", "minimum": 0, "maximum": 3600000 },
+        "timing_source": {
+          "anyOf": [{ "enum": ["ANALYSER", "CONTROL_API"] }, { "type": "null" }],
+          "description": "CG-P07-04: ANALYSER = the private parser measured this gate's own check (see analyser_us); CONTROL_API = timed in Control API (gate 3 registry lookup); null for SKIPPED. Gates run in one synchronous request, so RUNNING is only the client's in-flight state."
+        },
+        "analyser_us": { "anyOf": [{ "type": "integer", "minimum": 0, "maximum": 600000000 }, { "type": "null" }] },
         "quarantine_code": {
           "enum": ["QUARANTINED_CONTRACT", "QUARANTINED_ENTRYPOINT", "QUARANTINED_DIGEST_ALREADY_REGISTERED", "QUARANTINED_PARAMETER_SPACE", "QUARANTINED_DETERMINISM", "QUARANTINED_DATA_CONTRACT", "QUARANTINED_LOOKAHEAD"]
         }
@@ -175,6 +187,11 @@
         "parse_ok": { "type": "boolean" },
         "declared_contract": { "type": "object", "additionalProperties": true },
         "mirror": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/MirrorField" } },
+        "gate_timings_us": {
+          "type": "object",
+          "description": "CG-P07-04: measured analyser time per check in microseconds; excluded from analysis_digest.",
+          "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 600000000 }
+        },
         "gate_facts": {
           "type": "object",
           "additionalProperties": false,

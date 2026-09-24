@@ -26,11 +26,12 @@ describe("P08 published Research preflight contract", () => {
     );
   });
 
-  it("publishes exactly the two same-origin metadata operations", () => {
+  it("publishes exactly the two same-origin metadata operations and the W4 dataset catalog read", () => {
     const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as { paths: Record<string, unknown> };
     expect(Object.keys(openApi.paths)).toEqual([
       "/api/v1/research/preflights",
       "/api/v1/research/preflights/{preflight_token}",
+      "/api/v1/research/datasets",
     ]);
     const generated = readFileSync(generatedPath, "utf8");
     expect(generated).toContain("researchPreflightCreateV1");

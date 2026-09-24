@@ -5,13 +5,69 @@
   "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "analysis_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "gates": [
-    { "n": 1, "name": "contract-complete", "state": "PASS", "message": "Contract fields are complete.", "ms": 1 },
-    { "n": 2, "name": "entrypoint-importable", "state": "PASS", "message": "Restricted-definition sandbox loaded the entrypoint without calling strategy code.", "ms": 3 },
-    { "n": 3, "name": "digest-unique", "state": "PASS", "message": "Source digest is not registered in this workspace.", "ms": 1 },
-    { "n": 4, "name": "parameter-space-sane", "state": "PASS", "message": "parameter_space is sane.", "ms": 1 },
-    { "n": 5, "name": "determinism-declared", "state": "PASS", "message": "determinism.seed_required is declared.", "ms": 1 },
-    { "n": 6, "name": "data-contract-known", "state": "PASS", "message": "Data contract is known.", "ms": 1 },
-    { "n": 7, "name": "no-lookahead-static-scan", "state": "PASS", "message": "Static scan is heuristic only.", "ms": 2 }
+    {
+      "n": 1,
+      "name": "contract-complete",
+      "state": "PASS",
+      "message": "Contract fields are complete.",
+      "ms": 1,
+      "timing_source": "ANALYSER",
+      "analyser_us": 1137
+    },
+    {
+      "n": 2,
+      "name": "entrypoint-importable",
+      "state": "PASS",
+      "message": "Restricted-definition sandbox loaded the entrypoint without calling strategy code.",
+      "ms": 3,
+      "timing_source": "ANALYSER",
+      "analyser_us": 3137
+    },
+    {
+      "n": 3,
+      "name": "digest-unique",
+      "state": "PASS",
+      "message": "Source digest is not registered in this workspace.",
+      "ms": 1,
+      "timing_source": "CONTROL_API",
+      "analyser_us": null
+    },
+    {
+      "n": 4,
+      "name": "parameter-space-sane",
+      "state": "PASS",
+      "message": "parameter_space is sane.",
+      "ms": 1,
+      "timing_source": "ANALYSER",
+      "analyser_us": 1137
+    },
+    {
+      "n": 5,
+      "name": "determinism-declared",
+      "state": "PASS",
+      "message": "determinism.seed_required is declared.",
+      "ms": 1,
+      "timing_source": "ANALYSER",
+      "analyser_us": 1137
+    },
+    {
+      "n": 6,
+      "name": "data-contract-known",
+      "state": "PASS",
+      "message": "Data contract is known.",
+      "ms": 1,
+      "timing_source": "ANALYSER",
+      "analyser_us": 1137
+    },
+    {
+      "n": 7,
+      "name": "no-lookahead-static-scan",
+      "state": "PASS",
+      "message": "Static scan is heuristic only.",
+      "ms": 2,
+      "timing_source": "ANALYSER",
+      "analyser_us": 2137
+    }
   ],
   "all_pass": true,
   "expires_at_utc_ms": 1790000000000,

@@ -110,6 +110,45 @@
           }
         }
       }
+    },
+    "/api/v1/research/datasets": {
+      "get": {
+        "operationId": "researchDatasetCatalogGetV1",
+        "summary": "Read the research dataset catalog (Screen 02 data step)",
+        "description": "CG-P08-04. Same-origin and read-only; the private P08 adapter lists names and month partitions of the approved historical source. It never opens a data file.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The bounded catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetCatalog"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "502": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1616,6 +1655,229 @@
           },
           "field_path": {
             "$ref": "#/components/schemas/FieldPath"
+          }
+        }
+      },
+      "DatasetCatalog": {
+        "description": "CG-P08-04: read-only, bounded research dataset catalog for Screen 02. Datasets, timeframes, availability and, where the approved reader's storage layout is mounted, symbols with month-partition coverage. No path, row or price; exact bar availability is decided at preflight.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "datasets",
+          "coverage_rule"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.dataset-catalog.v1"
+          },
+          "coverage_rule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          },
+          "datasets": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "dataset_id",
+                "venue",
+                "availability",
+                "unavailable_reason",
+                "source_class",
+                "usage_scopes",
+                "excluded_scopes",
+                "source_timezone",
+                "calendar_policy",
+                "timeframes",
+                "symbols"
+              ],
+              "properties": {
+                "dataset_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "venue": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "availability": {
+                  "enum": [
+                    "available",
+                    "unavailable"
+                  ]
+                },
+                "unavailable_reason": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 400
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "source_class": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "usage_scopes": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "excluded_scopes": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "source_timezone": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "calendar_policy": {
+                  "enum": [
+                    "CRYPTO_24_7",
+                    "SOURCE_DECLARED"
+                  ]
+                },
+                "timeframes": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*(?:min|m|h|D|d)$"
+                  }
+                },
+                "symbols": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "state",
+                    "reason",
+                    "items",
+                    "total",
+                    "truncated"
+                  ],
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "PUBLISHED",
+                        "NOT_PUBLISHED"
+                      ]
+                    },
+                    "reason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "maxItems": 256,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "symbol",
+                          "contract_kind",
+                          "coverage"
+                        ],
+                        "properties": {
+                          "symbol": {
+                            "type": "string",
+                            "pattern": "^[A-Z0-9][A-Z0-9_-]{1,31}$"
+                          },
+                          "contract_kind": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "PERPETUAL",
+                                  "QUARTERLY"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "coverage": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "first_month",
+                                  "last_month",
+                                  "months",
+                                  "granularity"
+                                ],
+                                "properties": {
+                                  "first_month": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}$"
+                                  },
+                                  "last_month": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}$"
+                                  },
+                                  "months": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1200
+                                  },
+                                  "granularity": {
+                                    "const": "MONTH_PARTITION"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

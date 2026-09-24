@@ -201,11 +201,18 @@ export interface components {
         };
         MirrorField: {
             field: string;
-            /** @enum {unknown} */
-            state: "parsed" | "missing";
+            /**
+             * @description CG-P07-03: where the value came from. server_assigned is set at registration (strategy_id = alpha_id, DQ-07); not_in_contract is a HiFi field the v1 single-file contract cannot carry (DQ-05) and is never filled.
+             * @enum {unknown}
+             */
+            state: "parsed" | "missing" | "server_assigned" | "server_computed" | "not_in_contract";
             value?: unknown;
-            /** @enum {unknown} */
-            check: "VERIFY" | "GATED";
+            /**
+             * @description PASS/FAIL: the verdict of the gate named in `gate`. VERIFY: parsed but no gate reads it. GATED: missing, so its gate cannot pass. NOT_APPLICABLE: server-assigned or not in the v1 contract.
+             * @enum {unknown}
+             */
+            check: "PASS" | "FAIL" | "VERIFY" | "GATED" | "NOT_APPLICABLE";
+            gate?: string | null;
             note: string;
         };
         /** @description research.alpha-source.v1: the Parse receipt. It intentionally contains a read-only mirror, not source bytes or a mutable declared contract. */
@@ -227,6 +234,9 @@ export interface components {
             state: "PASS" | "FAIL" | "SKIPPED";
             message: string;
             ms: number;
+            /** @description CG-P07-04: ANALYSER = the private parser measured this gate's own check (see analyser_us); CONTROL_API = timed in Control API (gate 3 registry lookup); null for SKIPPED. Gates run in one synchronous request, so RUNNING is only the client's in-flight state. */
+            timing_source?: ("ANALYSER" | "CONTROL_API") | null;
+            analyser_us?: number | null;
             /** @enum {unknown} */
             quarantine_code?: "QUARANTINED_CONTRACT" | "QUARANTINED_ENTRYPOINT" | "QUARANTINED_DIGEST_ALREADY_REGISTERED" | "QUARANTINED_PARAMETER_SPACE" | "QUARANTINED_DETERMINISM" | "QUARANTINED_DATA_CONTRACT" | "QUARANTINED_LOOKAHEAD";
         };
@@ -281,6 +291,10 @@ export interface components {
                 [key: string]: unknown;
             };
             mirror: components["schemas"]["MirrorField"][];
+            /** @description CG-P07-04: measured analyser time per check in microseconds; excluded from analysis_digest. */
+            gate_timings_us?: {
+                [key: string]: number;
+            };
             gate_facts: {
                 contract_complete: boolean;
                 contract_message: string;

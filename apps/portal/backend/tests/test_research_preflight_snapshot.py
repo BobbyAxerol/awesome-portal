@@ -670,3 +670,82 @@ def test_w4_refusal_detail_names_gate_and_field_path() -> None:
     default = ResearchPreflightSnapshotError("RESEARCH_PREFLIGHT_TOPOLOGY_INVALID", "bad")
     assert refusal_detail(default, {"protocol": "three_window_decay"})["field_path"] == ["windows"]
     assert refusal_detail(default, {"protocol": "advanced"})["field_path"] == ["walk_forward"]
+
+
+# W4 · CG-P08-04 research dataset catalog -------------------------------------
+
+
+def _hmd_provider(storage: Path):
+    from portal_api.adapters.market_data import HistoricalDataRuntime, HistoricalMarketDataProvider
+
+    runtime = HistoricalDataRuntime(
+        storage_root=storage, reader_version="test", loader_contract="hmd-loader-v1", manifest_digest="a" * 64,
+        environment_id="test", release_commit="0" * 40, release_tag="test", dataset_release_id="binance_perpetual_spot_quarterly",
+        loader_class=object,
+    )
+    return HistoricalMarketDataProvider(runtime=runtime)
+
+
+def test_w4_dataset_catalog_lists_symbols_and_month_coverage_from_names_only(tmp_path: Path) -> None:
+    from portal_api.services.research_dataset_catalog import build_research_dataset_catalog
+
+    root = tmp_path / "storage" / "crypto" / "binance_futures" / "1m"
+    for symbol, months in {"BTCUSDT": [(2024, 11), (2024, 12), (2025, 1)], "BTCUSDT_250328": [(2025, 1)], "ETHUSDT": []}.items():
+        base = root / f"symbol={symbol}"
+        base.mkdir(parents=True)
+        for year, month in months:
+            (base / f"year={year}" / f"month={month:02d}").mkdir(parents=True)
+    # A data file must never be opened: an unreadable one proves it.
+    part = root / "symbol=BTCUSDT" / "year=2024" / "month=11" / "part.parquet"
+    part.write_bytes(b"not parquet")
+    part.chmod(0)
+    catalog = build_research_dataset_catalog(_hmd_provider(tmp_path / "storage"))
+    part.chmod(0o600)
+    assert catalog["schema_version"] == "research.dataset-catalog.v1"
+    (dataset,) = catalog["datasets"]
+    assert dataset["dataset_id"] == "crypto-binance-1m" and dataset["calendar_policy"] == "CRYPTO_24_7"
+    assert "1h" in dataset["timeframes"]
+    symbols = {row["symbol"]: row for row in dataset["symbols"]["items"]}
+    assert dataset["symbols"]["state"] == "PUBLISHED" and dataset["symbols"]["total"] == 3
+    assert symbols["BTCUSDT"] == {
+        "symbol": "BTCUSDT", "contract_kind": "PERPETUAL",
+        "coverage": {"first_month": "2024-11", "last_month": "2025-01", "months": 3, "granularity": "MONTH_PARTITION"},
+    }
+    assert symbols["BTCUSDT_250328"]["contract_kind"] == "QUARTERLY"
+    assert symbols["ETHUSDT"]["coverage"] is None
+    assert str(tmp_path) not in json.dumps(catalog)
+
+
+def test_w4_dataset_catalog_says_not_published_rather_than_inventing_symbols(service) -> None:
+    from portal_api.adapters.market_data import UnavailableHistoricalMarketDataProvider
+    from portal_api.services.research_dataset_catalog import build_research_dataset_catalog
+
+    authority, provider = service
+    (dataset,) = build_research_dataset_catalog(provider)["datasets"]
+    assert dataset["symbols"] == {
+        "state": "NOT_PUBLISHED",
+        "reason": "This source answers any symbol by query and publishes no symbol list.",
+        "items": [], "total": None, "truncated": False,
+    }
+    (unavailable,) = build_research_dataset_catalog(UnavailableHistoricalMarketDataProvider("mount missing"))["datasets"]
+    assert unavailable["availability"] == "unavailable" and unavailable["unavailable_reason"] == "mount missing"
+    assert unavailable["symbols"]["state"] == "NOT_PUBLISHED"
+
+
+@pytest.mark.anyio
+async def test_w4_dataset_catalog_private_route_requires_hmac(monkeypatch) -> None:
+    secret = "p08-test-principal-secret-0123456789"
+    monkeypatch.setenv("INTERNAL_PRINCIPAL_SECRET", secret)
+    app = create_app()
+    app.state.market_data_provider = MutableHistoricalProvider(frame())
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            denied = await client.get("/internal/research/datasets")
+            allowed = await client.get(
+                "/internal/research/datasets", headers={"x-portal-principal": signed_internal_principal(secret)}
+            )
+    finally:
+        app.state.run_manager.shutdown()
+    assert denied.status_code == 401
+    assert allowed.status_code == 200
+    assert allowed.json()["datasets"][0]["dataset_id"] == "crypto-binance-1m"

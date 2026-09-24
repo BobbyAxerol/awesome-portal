@@ -291,14 +291,28 @@ export class ResearchAlphaImportService {
     ): Promise<void> => {
       const name = GATE_NAMES[n - 1];
       if (failed) {
-        gates.push({ n, name, state: "SKIPPED", message: SKIPPED_MESSAGE, ms: 0 });
+        gates.push({ n, name, state: "SKIPPED", message: SKIPPED_MESSAGE, ms: 0, timing_source: null, analyser_us: null });
         return;
       }
       const started = performance.now();
       const outcome = await stateAndMessage();
-      const ms = Math.max(0, Math.round(performance.now() - started));
+      const localMs = performance.now() - started;
+      // CG-P07-04: a parser gate's time is the analyser's own measurement of
+      // that check (gate 1 includes the parse); gate 3 is timed here.
+      const analyserUs = ANALYSER_TIMING_KEYS[n - 1]
+        .reduce<number | null>((sum, key) => {
+          const value = analysis.gate_timings_us?.[key];
+          return typeof value === "number" ? (sum ?? 0) + value : sum;
+        }, null);
+      // `ms` stays the contract's whole milliseconds; `analyser_us` keeps precision.
+      const ms = Math.max(0, Math.round(analyserUs === null ? localMs : analyserUs / 1000));
       const quarantineCodes = ["QUARANTINED_CONTRACT", "QUARANTINED_ENTRYPOINT", "QUARANTINED_DIGEST_ALREADY_REGISTERED", "QUARANTINED_PARAMETER_SPACE", "QUARANTINED_DETERMINISM", "QUARANTINED_DATA_CONTRACT", "QUARANTINED_LOOKAHEAD"] as const;
-      gates.push({ n, name, state: outcome.pass ? "PASS" : "FAIL", message: outcome.message, ms, ...(!outcome.pass ? { quarantine_code: quarantineCodes[n - 1] } : {}) });
+      gates.push({
+        n, name, state: outcome.pass ? "PASS" : "FAIL", message: outcome.message, ms,
+        timing_source: analyserUs === null ? "CONTROL_API" : "ANALYSER",
+        analyser_us: analyserUs,
+        ...(!outcome.pass ? { quarantine_code: quarantineCodes[n - 1] } : {}),
+      });
       if (!outcome.pass) failed = true;
     };
     await add(1, async () => ({ pass: analysis.parse_ok && analysis.gate_facts.contract_complete, message: analysis.gate_facts.contract_message }));
@@ -335,6 +349,17 @@ export class ResearchAlphaImportService {
 }
 
 /** Convert only known repository errors into the bounded P07 HTTP vocabulary. */
+/** CG-P07-04: analyser check names per gate, in gate order (gate 3 has none). */
+const ANALYSER_TIMING_KEYS: readonly (readonly string[])[] = [
+  ["parse", "contract_complete"],
+  ["entrypoint_restricted_definition_load"],
+  [],
+  ["parameter_space_sane"],
+  ["determinism_declared"],
+  ["data_contract_known"],
+  ["no_lookahead_static_scan"],
+];
+
 export function asResearchAlphaImportError(error: unknown): never {
   if (error instanceof ResearchAlphaImportError) throw error;
   if (error instanceof ResearchMetadataError) {

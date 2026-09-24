@@ -19,6 +19,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from portal_api.auth.internal_principal import InternalPrincipalError, require_internal_principal
 from portal_api.services.research_alpha_analyzer import MAX_SOURCE_BYTES, analyze_alpha_source
 from portal_api.services.durable_runs import AttemptRegistry, DurableRunError
+from portal_api.services.research_dataset_catalog import (
+    ResearchDatasetCatalogError,
+    build_research_dataset_catalog,
+)
 from portal_api.services.research_preflight_snapshot import (
     ResearchPreflightSnapshotError,
     refusal_detail,
@@ -90,6 +94,23 @@ async def read_engine_atlas(request: Request) -> dict[str, object]:
     except InternalPrincipalError as exc:
         raise HTTPException(status_code=401, detail="private service authentication failed") from exc
     return request.app.state.research_engine_catalog.public_document().model_dump(mode="json")
+
+
+@router.get("/datasets")
+async def read_research_dataset_catalog(request: Request) -> dict[str, object]:
+    """CG-P08-04: the bounded research dataset catalog, for Control API only.
+
+    Names and month partitions from the approved reader's storage layout; no
+    data file is opened, no path or price is returned.
+    """
+    try:
+        require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    try:
+        return build_research_dataset_catalog(request.app.state.market_data_provider)
+    except ResearchDatasetCatalogError as exc:
+        raise HTTPException(status_code=503, detail="historical dataset catalog is unavailable") from exc
 
 
 @router.post("/preflight-snapshots")

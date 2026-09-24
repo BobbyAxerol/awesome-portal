@@ -38,6 +38,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the research dataset catalog (Screen 02 data step)
+         * @description CG-P08-04. Same-origin and read-only; the private P08 adapter lists names and month partitions of the approved historical source. It never opens a data file.
+         */
+        get: operations["researchDatasetCatalogGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -365,6 +385,44 @@ export interface components {
             message: string | null;
             field_path: components["schemas"]["FieldPath"];
         };
+        /** @description CG-P08-04: read-only, bounded research dataset catalog for Screen 02. Datasets, timeframes, availability and, where the approved reader's storage layout is mounted, symbols with month-partition coverage. No path, row or price; exact bar availability is decided at preflight. */
+        DatasetCatalog: {
+            /** @constant */
+            schema_version: "research.dataset-catalog.v1";
+            coverage_rule: string;
+            datasets: {
+                dataset_id: string;
+                venue: string;
+                /** @enum {unknown} */
+                availability: "available" | "unavailable";
+                unavailable_reason: string | null;
+                source_class: string;
+                usage_scopes: string[];
+                excluded_scopes: string[];
+                source_timezone: string;
+                /** @enum {unknown} */
+                calendar_policy: "CRYPTO_24_7" | "SOURCE_DECLARED";
+                timeframes: string[];
+                symbols: {
+                    /** @enum {unknown} */
+                    state: "PUBLISHED" | "NOT_PUBLISHED";
+                    reason: string | null;
+                    total: number | null;
+                    truncated: boolean;
+                    items: {
+                        symbol: string;
+                        contract_kind: ("PERPETUAL" | "QUARTERLY") | null;
+                        coverage: {
+                            first_month: string;
+                            last_month: string;
+                            months: number;
+                            /** @constant */
+                            granularity: "MONTH_PARTITION";
+                        } | null;
+                    }[];
+                };
+            }[];
+        };
         /**
          * Research requested specification v1
          * @description P02 producer-side structural contract for S02. It is not a live endpoint contract. P04 supplies installed-manifest values and P10 supplies authenticated producer wiring.
@@ -652,6 +710,33 @@ export interface operations {
             401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchDatasetCatalogGetV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bounded catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetCatalog"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };
