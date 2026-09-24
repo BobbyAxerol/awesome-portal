@@ -17,18 +17,30 @@ import { useParams } from "react-router-dom";
 
 import { SearchScreen } from "./SearchDetail";
 import { RouteCursorNotice } from "./CursorNotice";
-import { DEFAULT_CURSOR, useEvidenceCursor } from "./evidenceCursor";
+import { DEFAULT_CURSOR, clampFold, observedFoldsFor, useEvidenceCursor } from "./evidenceCursor";
 import { SEARCH_FOLD_MAX, useSearch } from "./useSearch";
 
 export function SearchRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
-  const { cursor, problems, notes, replaceFold, decline } = useEvidenceCursor({ stage: "search" });
-  const inRange = cursor.fold >= 1 && cursor.fold <= SEARCH_FOLD_MAX;
-  const search = useSearch(runId, inRange ? cursor.fold : DEFAULT_CURSOR.fold);
+  const { cursor, problems, notes, replaceFold, decline, clampToObserved } = useEvidenceCursor({ stage: "search" });
+  /* RF-06: the search read publishes no fold set. Where this run already
+     published one (the hub's `fold_navigation`, S05's fold plan), a fold it
+     never observed is clamped here exactly as there — before it is sent. */
+  const known = observedFoldsFor(runId);
+  const knownKey = known ? known.join(",") : "";
+  const target = known && known.length > 0 ? clampFold(cursor.fold, known).fold : cursor.fold;
+  const clamped = target !== cursor.fold;
+  const inRange = target >= 1 && target <= SEARCH_FOLD_MAX;
+  const search = useSearch(runId, inRange ? target : DEFAULT_CURSOR.fold);
 
   useEffect(() => {
-    if (!inRange) replaceFold(DEFAULT_CURSOR.fold, "OUT_OF_RANGE");
-  }, [inRange, replaceFold]);
+    if (known && known.length > 0) clampToObserved(known);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `knownKey` carries the set; a hand-edited fold re-clamps
+  }, [clampToObserved, knownKey, cursor.fold]);
+
+  useEffect(() => {
+    if (!inRange && !clamped) replaceFold(DEFAULT_CURSOR.fold, "OUT_OF_RANGE");
+  }, [clamped, inRange, replaceFold]);
 
   /* The run's mode and schedule were fixed at submit. A link that names
      others is acknowledged, not obeyed and not carried on. */
@@ -43,7 +55,7 @@ export function SearchRoute() {
 
   return (
     <>
-      <RouteCursorNotice problems={problems} notes={notes} />
+      <RouteCursorNotice problems={problems} notes={notes} frame={1560} />
       <SearchScreen
         runId={runId}
         detail={search.detail}

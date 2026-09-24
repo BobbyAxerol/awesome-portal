@@ -20,6 +20,11 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  COPY_DONE_LABEL,
+  COPY_RESET_MS,
+  foldKeyTarget,
+  halfOpen,
+  halfOpenShort,
   HOLDOUT_RULE_NO_READ,
   HOLDOUT_RULE_UNLOCK,
   SPLIT_RULES_BASE,
@@ -42,7 +47,15 @@ import {
 import { DEFAULT_CURSOR } from "./evidenceCursor";
 import { forgetSplitReads, splitState, useSplit } from "./useSplit";
 import { SplitRoute } from "./SplitRoute";
-import { clampFold, parseCursorNotes, seedCursor, useEvidenceCursor } from "./evidenceCursor";
+import {
+  clampFold,
+  forgetObservedFolds,
+  observedFoldsFor,
+  parseCursorNotes,
+  rememberObservedFolds,
+  seedCursor,
+  useEvidenceCursor,
+} from "./evidenceCursor";
 import { monthTicks } from "./splitClient";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
@@ -805,7 +818,7 @@ describe("RF-06 FE-S05-05…08 — the HiFi frames stay, as shells", () => {
   it("prints as-of in UTC minutes and digests shortened, the exact value in the title", () => {
     const { container } = view();
     const asOf = container.querySelector("[data-as-of]");
-    expect(asOf?.textContent).toMatch(/as-of \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC/);
+    expect(asOf?.textContent).toMatch(/as-of \d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
     expect(asOf?.textContent).not.toMatch(/\.\d{3}Z/);
     const bundle = container.querySelector("[data-bundle-digest]");
     expect(bundle?.getAttribute("title")).toBe("sha256:bundle01");
@@ -833,5 +846,138 @@ describe("RF-06 FE-S05-05…08 — the HiFi frames stay, as shells", () => {
       expect(mark.at_utc_ms).toBeLessThan(timeline.end_exclusive_utc_ms);
     }
     expect(monthTicks(timeline, 2).length).toBeLessThanOrEqual(2);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * RF-06 HiFi fidelity pass (S05) — span notation, fold keys, copy link, clamp
+ * ---------------------------------------------------------------------- */
+
+describe("RF-06 S05 fidelity — spans read as the half-open intervals they are", () => {
+  it("prints [start, end) with no day added or removed", () => {
+    const range = { start_utc_ms: Date.UTC(2026, 4, 1), end_exclusive_utc_ms: Date.UTC(2026, 6, 1) };
+    expect(halfOpen(range)).toBe("[2026-05-01, 2026-07-01)");
+    expect(halfOpenShort(range)).toBe("[2026-05-01, 07-01)");
+    expect(halfOpenShort({ start_utc_ms: Date.UTC(2025, 11, 1), end_exclusive_utc_ms: Date.UTC(2026, 0, 1) })).toBe(
+      "[2025-12-01, 2026-01-01)",
+    );
+  });
+
+  it("uses the notation in the protocol fact, the legend, the holdout range and the fold table", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-fact='span']")?.textContent).toContain("[2024-01-01, 2026-03-11)");
+    expect(container.querySelector("[data-window-legend='is']")?.textContent).toContain("[2024-01-02, 2025-05-15)");
+    expect(container.querySelector("[data-holdout-span]")?.textContent).toMatch(/^\[.*\)$/);
+    const spans = [...container.querySelectorAll("[data-span-cell]")].map((cell) => cell.textContent);
+    expect(spans).toEqual(["[2024-01-02, 2025-05-15)", "[2025-05-15, 12-01)"]);
+  });
+
+  it("right-aligns every numeric column, head and cell alike, and fits without a min-width overflow at desktop", () => {
+    const { container } = view();
+    const heads = [...container.querySelectorAll("[data-card='fold-table'] th")].map((th) => th.getAttribute("data-align"));
+    expect(heads).toEqual(["left", "left", "right", "right", "left", "right", "right", "left", "right", "right", "right"]);
+    const cells = [...container.querySelectorAll("[data-fold-table-row='three-window'] td")];
+    expect(cells[2].className).toContain("text-right");
+    expect(cells[3].className).toContain("text-right");
+  });
+
+  it("draws the holdout on its own gold dashed row, labelled with the server's words", () => {
+    const { container } = view();
+    const segment = container.querySelector("[data-holdout-track] [data-window='holdout']") as HTMLElement;
+    expect(segment).toBeTruthy();
+    expect(segment.className).toContain("border-dashed");
+    expect(segment.style.borderColor).toBe("var(--accent-2)");
+    // Not inside the windows track any more.
+    expect(container.querySelector("[data-track] [data-window='holdout']")).toBeNull();
+    expect(container.querySelector("[data-holdout-words]")?.textContent).toBe(
+      "P08_METADATA_BOUND · NOT_EVALUATED · result NOT_EXPOSED",
+    );
+  });
+});
+
+describe("RF-06 S05 fidelity — fold rows are buttons the arrow keys walk", () => {
+  it("maps keys to the neighbouring fold and stops at the ends", () => {
+    expect(foldKeyTarget("ArrowDown", 1, 3)).toBe(2);
+    expect(foldKeyTarget("ArrowRight", 3, 3)).toBe(3);
+    expect(foldKeyTarget("ArrowUp", 1, 3)).toBe(1);
+    expect(foldKeyTarget("ArrowLeft", 2, 3)).toBe(1);
+    expect(foldKeyTarget("Home", 3, 3)).toBe(1);
+    expect(foldKeyTarget("End", 1, 3)).toBe(3);
+    expect(foldKeyTarget("a", 1, 3)).toBeNull();
+  });
+
+  it("uses no list roles, a 64 px label and one roving tab stop", () => {
+    const { container } = view({ folds: { state: "ready", split: sourceSplit() }, cursor: { ...DEFAULT_CURSOR, fold: 2 } });
+    expect(container.querySelector("[role='list'], [role='listitem']")).toBeNull();
+    const rows = [...container.querySelectorAll("[data-fold-row]")];
+    expect(rows.map((row) => row.getAttribute("tabindex"))).toEqual(["-1", "0", "-1"]);
+    expect(rows[0].querySelector("span")?.className).toContain("w-[64px]");
+    expect(container.querySelector("[data-fold-range='1']")?.textContent).toMatch(/^\[2024-01-01 ⋯ .*\)$/);
+    // The cursor's fold is lit; the others are dimmed as in the HiFi.
+    expect((rows[0].querySelector("[data-fold-segment='train']") as HTMLElement).style.opacity).toBe("0.55");
+    expect((rows[1].querySelector("[data-fold-segment='train']") as HTMLElement).style.opacity).toBe("1");
+  });
+
+  it("moves the cursor with the arrow keys on the gantt, the θ* lanes and the table", () => {
+    const onFold = vi.fn();
+    const { container } = view({ folds: { state: "ready", split: sourceSplit() }, cursor: { ...DEFAULT_CURSOR, fold: 2 }, onFold });
+    fireEvent.keyDown(container.querySelector("[data-fold-row='2']") as Element, { key: "ArrowDown" });
+    expect(onFold).toHaveBeenLastCalledWith(3);
+    fireEvent.keyDown(container.querySelector("[data-theta-lane='2']") as Element, { key: "ArrowUp" });
+    expect(onFold).toHaveBeenLastCalledWith(1);
+    fireEvent.click(container.querySelector("[data-fold-table-row='3']") as Element);
+    expect(onFold).toHaveBeenLastCalledWith(3);
+    fireEvent.keyDown(container.querySelector("[data-fold-table-row='2']") as Element, { key: "Home" });
+    expect(onFold).toHaveBeenLastCalledWith(1);
+  });
+});
+
+describe("RF-06 S05 fidelity — copy link and marks", () => {
+  it("says '✓ evidence link copied' for 1.6 s, then returns", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn(async () => undefined) } });
+      const { container } = view();
+      const button = container.querySelector("[data-action='copy-evidence-link']") as HTMLElement;
+      await act(async () => {
+        fireEvent.click(button);
+      });
+      expect(button.textContent).toBe(COPY_DONE_LABEL);
+      act(() => vi.advanceTimersByTime(COPY_RESET_MS - 100));
+      expect(button.textContent).toBe(COPY_DONE_LABEL);
+      act(() => vi.advanceTimersByTime(200));
+      expect(button.textContent).toBe("copy evidence link");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("marks an unpublished integrity check with a dash, never a pass or a failure", () => {
+    const { container } = view();
+    const marks = [...container.querySelectorAll("[data-integrity-mark]")].map((row) => row.getAttribute("data-integrity-mark"));
+    expect(marks).toEqual(["pass", "none", "none", "none"]);
+    expect(container.querySelector("[data-integrity-mark='fail']")).toBeNull();
+  });
+});
+
+describe("RF-06 — a fold set the run already published clamps this screen too", () => {
+  it("remembers the hub's observed folds per run and clamps S05 against them", async () => {
+    forgetObservedFolds();
+    rememberObservedFolds("R-WFO-118", [1]);
+    expect(observedFoldsFor("R-WFO-118")).toEqual([1]);
+    expect(observedFoldsFor("another-run")).toBeNull();
+    stub(() => [200, detail()]);
+    const { container } = mountRoute("#stage=split&fold=4");
+    await waitFor(() => expect(window.location.hash).toBe("#stage=split&fold=1"));
+    expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 4");
+    forgetObservedFolds();
+  });
+
+  it("leaves the fold alone when no fold set was published", async () => {
+    forgetObservedFolds();
+    stub(() => [200, detail()]);
+    mountRoute("#stage=split&fold=4");
+    await waitFor(() => expect(requested.length).toBeGreaterThan(0));
+    expect(window.location.hash).toBe("#stage=split&fold=4");
   });
 });

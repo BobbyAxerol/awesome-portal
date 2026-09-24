@@ -55,17 +55,31 @@ export function CursorNotice({
   );
 }
 
-/** The notice placed above a routed screen, on the screen's own column. */
+/**
+ * The notice placed above a routed screen, on the screen's own column.
+ *
+ * `frame` is for screens that own their HiFi frame (`data-own-frame`): the
+ * shell gutter is gone there, so the notice takes the screen's own max width
+ * and 24 px side padding and lines up with its header.
+ */
 export function RouteCursorNotice({
   problems,
   notes = [],
+  frame,
 }: {
   problems: readonly CursorProblem[];
   notes?: readonly CursorNote[];
+  frame?: 1440 | 1560;
 }) {
   if (problems.length === 0 && notes.length === 0) return null;
+  const column =
+    frame === 1560
+      ? "mx-auto w-full min-w-0 max-w-[1560px] px-6 pt-4"
+      : frame === 1440
+        ? "mx-auto w-full min-w-0 max-w-[1440px] px-6 pt-4"
+        : "mx-auto w-full min-w-0 max-w-[1280px] px-2 pb-2";
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[1280px] px-2 pb-2">
+    <div className={column}>
       <CursorNotice problems={problems} notes={notes} />
     </div>
   );

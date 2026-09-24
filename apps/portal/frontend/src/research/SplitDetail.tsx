@@ -24,7 +24,7 @@
  * run published that fact.
  */
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip } from "./ProvenanceStrip";
@@ -87,6 +87,15 @@ const LINEAGE_PHASE = "P19";
 const LABEL = "[font-family:var(--font-body)] text-[10px] font-medium uppercase tracking-[.07em]";
 const CARD = "flex flex-col rounded-[8px] border";
 const CARD_STYLE = { borderColor: "var(--line)", background: "var(--paper-raised)" } as const;
+/** HiFi: the protocol, S1 and θ* cards float one step (`0 1px 2px`); the rest sit flat. */
+const RAISED_STYLE = { ...CARD_STYLE, boxShadow: "var(--shadow-e1)" } as const;
+
+/** HiFi screen frame: the screen owns its padding and width (`data-own-frame`). */
+export const SCREEN_FRAME = "mx-auto flex w-full min-w-0 flex-col gap-[14px] px-6 pb-14 pt-4";
+
+/** HiFi copy button: `✓ evidence link copied` for 1600 ms. */
+export const COPY_DONE_LABEL = "✓ evidence link copied";
+export const COPY_RESET_MS = 1600;
 
 function Withheld({ availability, what }: { availability: SplitAvailability; what?: string }) {
   return (
@@ -124,10 +133,11 @@ function Absent({ fact, what, showReason = false }: { fact: AbsentFact; what: st
   );
 }
 
+/** HiFi pill (square, mono 10.5, 3/10) — read-only here: a run's protocol is fixed at submit. */
 function Pill({ children, on = false, ...rest }: { children: ReactNode; on?: boolean } & Record<string, unknown>) {
   return (
     <span
-      className="mono rounded-[3px] border px-[10px] py-[3px] text-[10.5px] leading-[14px]"
+      className="mono border px-[10px] py-[3px] text-[10.5px]"
       style={
         on
           ? { color: "var(--accent)", borderColor: "var(--accent)", background: "var(--accent-soft)" }
@@ -161,13 +171,19 @@ function Chip({
   );
 }
 
-function Fact({ k, children, ...rest }: { k: string; children: ReactNode } & Record<string, unknown>) {
+/** A protocol fact. `tone` is the HiFi colour of a published value; an absence keeps its own. */
+function Fact({
+  k,
+  children,
+  tone = "var(--ink)",
+  ...rest
+}: { k: string; children: ReactNode; tone?: string } & Record<string, unknown>) {
   return (
     <span className="flex min-w-0 flex-col gap-[2px]" {...rest}>
-      <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+      <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         {k}
       </span>
-      <span className="mono text-[11px]" style={{ color: "var(--ink)" }}>
+      <span className="mono text-[11.5px]" style={{ color: tone }}>
         {children}
       </span>
     </span>
@@ -183,8 +199,30 @@ function exact(at: number): string {
   return new Date(at).toISOString();
 }
 
-function span(range: Range): string {
-  return `${day(range.start_utc_ms)} → ${day(range.end_exclusive_utc_ms)}`;
+/**
+ * A published span as the half-open interval it is: `[2026-05-01, 2026-07-01)`.
+ *
+ * The server's end is exclusive, so `2026-05-01 → 2026-07-01` next to
+ * `2026-07-01 → …` read as two windows sharing a day. The bracket says what the
+ * data says; no day is added or taken away.
+ */
+export function halfOpen(range: Range): string {
+  return `[${day(range.start_utc_ms)}, ${day(range.end_exclusive_utc_ms)})`;
+}
+
+/** The fold table's compact form (HiFi `2024-01-01 → 06-30`): the end drops a repeated year. */
+export function halfOpenShort(range: Range): string {
+  const start = day(range.start_utc_ms);
+  const end = day(range.end_exclusive_utc_ms);
+  return `[${start}, ${start.slice(0, 4) === end.slice(0, 4) ? end.slice(5) : end})`;
+}
+
+const span = halfOpen;
+
+/** HiFi as-of form: `2026-08-12 04:18Z`. */
+export function asOfUtc(at: number): string {
+  const iso = new Date(at).toISOString();
+  return `${iso.slice(0, 10)} ${iso.slice(11, 16)}Z`;
 }
 
 function bars(count: number | null): string | null {
@@ -200,36 +238,37 @@ export function Digest({ value, ...rest }: { value: string } & Record<string, un
   );
 }
 
-/** `as-of 2026-09-24 05:46 UTC`, exact milliseconds in the title (FE-X-13). */
+/** `as-of 2026-09-24 05:46Z` (HiFi form), exact milliseconds in the title (FE-X-13). */
 export function AsOf({ at, source }: { at: number; source: string }) {
   return (
     <span
       className="mono text-[10px]"
       style={{ color: "var(--ink-faint)" }}
-      title={`${exact(at)} (${at} ms UTC)`}
+      title={`${exact(at)} (${at} ms UTC) · ${formatUtc(at)}`}
       data-as-of
     >
-      source {source} · as-of {formatUtc(at)}
+      source {source} · as-of {asOfUtc(at)}
     </span>
   );
 }
 
 /**
  * HiFi header action: copies the address bar, which is the evidence link —
- * run, screen and the whole cursor. Nothing is minted; ✓ for 1.5 s.
+ * run, screen and the whole cursor. Nothing is minted; the HiFi's
+ * `✓ evidence link copied` for 1.6 s.
  */
 export function CopyEvidenceLink() {
   const [copied, setCopied] = useState<"idle" | "done" | "failed">("idle");
   useEffect(() => {
     if (copied === "idle") return;
-    const timer = window.setTimeout(() => setCopied("idle"), 1500);
+    const timer = window.setTimeout(() => setCopied("idle"), COPY_RESET_MS);
     return () => window.clearTimeout(timer);
   }, [copied]);
   return (
     <button
       type="button"
-      className="mono rounded-[6px] border px-3 py-[3px] text-[10px] uppercase tracking-[.08em]"
-      style={{ color: "var(--accent)", borderColor: "var(--accent)", background: "var(--paper-raised)" }}
+      className="mono rounded-[6px] border bg-transparent px-3 py-[3px] text-[10px] uppercase tracking-[.06em] [line-height:normal]"
+      style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
       data-action="copy-evidence-link"
       onClick={() => {
         const href = window.location.href;
@@ -244,7 +283,7 @@ export function CopyEvidenceLink() {
         );
       }}
     >
-      {copied === "done" ? "✓ copied" : copied === "failed" ? "copy unavailable" : "copy evidence link"}
+      {copied === "done" ? COPY_DONE_LABEL : copied === "failed" ? "copy unavailable" : "copy evidence link"}
     </button>
   );
 }
@@ -294,14 +333,8 @@ interface DrawnWindow {
   childInput: string;
 }
 
-interface HoldoutSpan extends Range {
-  snapshot: string;
-  childInput: string;
-  evaluation: string;
-}
-
-const HOLDOUT_HATCH =
-  "repeating-linear-gradient(135deg, var(--line) 0 4px, var(--paper-sunken) 4px 8px)";
+/** HiFi holdout row: gold dashed outline over a soft-gold hatch — never the colour of data something read. */
+const HOLDOUT_HATCH = "repeating-linear-gradient(135deg, var(--accent-2-soft) 0 4px, transparent 4px 8px)";
 
 /** Observes a box's width, for label density only. */
 function useWidth(initial: number) {
@@ -327,15 +360,7 @@ function useWidth(initial: number) {
  * percentage that places a span inside the axis. A segment narrower than a
  * hairline is floored to one and flagged.
  */
-function WindowAnatomy({
-  timeline,
-  windows,
-  holdout,
-}: {
-  timeline: Range;
-  windows: DrawnWindow[];
-  holdout: HoldoutSpan | null;
-}) {
+function WindowAnatomy({ timeline, windows }: { timeline: Range; windows: DrawnWindow[] }) {
   const placed = useMemo(
     () =>
       windows.map((window) => {
@@ -348,7 +373,6 @@ function WindowAnatomy({
       }),
     [timeline, windows],
   );
-  const holdoutGeometry = holdout ? placeInTimeline(timeline, holdout) : null;
 
   /* Label density follows the width, and nothing else does (P14 ruling). */
   const { box, width } = useWidth(1100);
@@ -357,18 +381,18 @@ function WindowAnatomy({
   return (
     <div className="flex flex-col gap-[6px]" data-window-anatomy>
       {/* Axis: UTC month starts, presentation only. */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pb-[2px]">
         <span className="w-[64px] flex-none" />
         <div className="relative h-[14px] flex-1" ref={box} data-axis data-tick-count={marks.length}>
           {marks.map((mark, index) => (
             <span
               key={mark.at_utc_ms}
               data-tick={mark.label}
-              className="absolute top-0 mono whitespace-nowrap border-l pl-[3px] text-[9px]"
+              className="absolute top-0 mono whitespace-nowrap border-l pl-[3px] text-[8.5px]"
               style={{
                 left: `${placeInTimeline(timeline, { start_utc_ms: mark.at_utc_ms, end_exclusive_utc_ms: mark.at_utc_ms }).leftPercent}%`,
                 borderColor: "var(--line-soft)",
-                color: "var(--ink-faint)",
+                color: "var(--viz-legend-inactive)",
                 transform: index === marks.length - 1 && marks.length > 2 ? "translateX(-100%)" : undefined,
               }}
             >
@@ -409,21 +433,6 @@ function WindowAnatomy({
               />
             );
           })}
-          {/* Never in the colour of a window something read — spec 05 §7 pitfall 3. */}
-          {holdout && holdoutGeometry ? (
-            <span
-              data-window="holdout"
-              role="img"
-              aria-label={`holdout · ${exact(holdout.start_utc_ms)} → ${exact(holdout.end_exclusive_utc_ms)} · ${holdout.evaluation} · ${holdout.childInput}`}
-              title={`holdout · ${exact(holdout.start_utc_ms)} → ${exact(holdout.end_exclusive_utc_ms)} · ${holdout.evaluation} · ${holdout.childInput}`}
-              className="absolute top-0 h-full rounded-[3px]"
-              style={{
-                left: `${holdoutGeometry.leftPercent}%`,
-                width: `${Math.max(holdoutGeometry.widthPercent, HAIRLINE_PERCENT)}%`,
-                background: HOLDOUT_HATCH,
-              }}
-            />
-          ) : null}
         </div>
         {/* The published endpoints, exactly — the marks above never replace them. */}
         <span
@@ -431,8 +440,8 @@ function WindowAnatomy({
           style={{ color: "var(--ink-faint)" }}
           title={`${exact(timeline.start_utc_ms)} → ${exact(timeline.end_exclusive_utc_ms)}`}
         >
-          <span data-timeline-start>{day(timeline.start_utc_ms)}</span> →{" "}
-          <span data-timeline-end>{day(timeline.end_exclusive_utc_ms)}</span>
+          [<span data-timeline-start>{day(timeline.start_utc_ms)}</span>,{" "}
+          <span data-timeline-end>{day(timeline.end_exclusive_utc_ms)}</span>)
         </span>
       </div>
 
@@ -530,6 +539,73 @@ function FoldAnatomy({
   );
 }
 
+type SourceFoldRow = CurrentSourceSplit["fold_plan"]["folds"][number];
+
+/** A fold's two published spans; a span missing either end is `null`, never guessed. */
+function foldSpans(fold: SourceFoldRow): { train: Range | null; test: Range | null } {
+  return {
+    train:
+      fold.train_start_utc_ms !== null && fold.train_end_utc_ms !== null
+        ? { start_utc_ms: fold.train_start_utc_ms, end_exclusive_utc_ms: fold.train_end_utc_ms }
+        : null,
+    test:
+      fold.test_start_utc_ms !== null && fold.test_end_utc_ms !== null
+        ? { start_utc_ms: fold.test_start_utc_ms, end_exclusive_utc_ms: fold.test_end_utc_ms }
+        : null,
+  };
+}
+
+/**
+ * The fold axis: the earliest published start to the latest published end. A
+ * fold that published neither is listed rather than drawn.
+ */
+function useFoldBounds(folds: readonly SourceFoldRow[]): Range | null {
+  return useMemo(() => {
+    const starts = folds.map((fold) => fold.train_start_utc_ms ?? fold.test_start_utc_ms).filter((v): v is number => v !== null);
+    const ends = folds.map((fold) => fold.test_end_utc_ms ?? fold.train_end_utc_ms).filter((v): v is number => v !== null);
+    if (starts.length === 0 || ends.length === 0) return null;
+    return { start_utc_ms: Math.min(...starts), end_exclusive_utc_ms: Math.max(...ends) };
+  }, [folds]);
+}
+
+/**
+ * Arrow keys walk the folds (HiFi: every fold row is a control). Up/Left is the
+ * previous fold, Down/Right the next, Home/End the first/last; focus follows
+ * the cursor so the next key press continues from where the reader is.
+ */
+export function foldKeyTarget(key: string, fold: number, count: number): number | null {
+  if (count < 1) return null;
+  switch (key) {
+    case "ArrowUp":
+    case "ArrowLeft":
+      return Math.max(1, fold - 1);
+    case "ArrowDown":
+    case "ArrowRight":
+      return Math.min(count, fold + 1);
+    case "Home":
+      return 1;
+    case "End":
+      return count;
+    default:
+      return null;
+  }
+}
+
+function onFoldKeyDown(
+  event: KeyboardEvent<HTMLElement>,
+  fold: number,
+  count: number,
+  onFold: (fold: number) => void,
+  attribute: string,
+) {
+  const target = foldKeyTarget(event.key, fold, count);
+  if (target === null) return;
+  event.preventDefault();
+  if (target !== fold) onFold(target);
+  const scope = event.currentTarget.parentElement;
+  (scope?.querySelector(`[${attribute}='${target}']`) as HTMLElement | null)?.focus();
+}
+
 function FoldRows({
   split,
   cursor,
@@ -540,14 +616,9 @@ function FoldRows({
   onFold: (fold: number) => void;
 }) {
   const folds = split.fold_plan.folds;
-  /* The axis is the earliest published start to the latest published end, and
-     a fold that published neither is listed rather than drawn. */
-  const bounds = useMemo(() => {
-    const starts = folds.map((fold) => fold.train_start_utc_ms ?? fold.test_start_utc_ms).filter((v): v is number => v !== null);
-    const ends = folds.map((fold) => fold.test_end_utc_ms ?? fold.train_end_utc_ms).filter((v): v is number => v !== null);
-    if (starts.length === 0 || ends.length === 0) return null;
-    return { start_utc_ms: Math.min(...starts), end_exclusive_utc_ms: Math.max(...ends) };
-  }, [folds]);
+  const bounds = useFoldBounds(folds);
+  /* Roving tab stop: the cursor's fold, or the first while the cursor is off the plan. */
+  const tabStop = cursor.fold >= 1 && cursor.fold <= folds.length ? cursor.fold : 1;
 
   return (
     <>
@@ -558,34 +629,31 @@ function FoldRows({
         </span>
       </div>
 
-      <div className="flex flex-col gap-[6px]" role="list">
+      {/* HiFi gantt: one button per fold, no list roles (a pressed button is not a list item). */}
+      <div className="flex flex-col gap-[6px]" data-fold-rows>
         {folds.map((fold, index) => {
           const number = index + 1;
           const current = cursor.fold === number;
-          const train =
-            fold.train_start_utc_ms !== null && fold.train_end_utc_ms !== null
-              ? { start_utc_ms: fold.train_start_utc_ms, end_exclusive_utc_ms: fold.train_end_utc_ms }
-              : null;
-          const test =
-            fold.test_start_utc_ms !== null && fold.test_end_utc_ms !== null
-              ? { start_utc_ms: fold.test_start_utc_ms, end_exclusive_utc_ms: fold.test_end_utc_ms }
-              : null;
+          const { train, test } = foldSpans(fold);
+          const start = fold.train_start_utc_ms ?? fold.test_start_utc_ms;
+          const end = fold.test_end_utc_ms ?? fold.train_end_utc_ms;
           return (
             <button
               key={fold.fold_id}
               type="button"
-              role="listitem"
               aria-pressed={current}
               data-fold-row={number}
               data-current={current}
+              tabIndex={number === tabStop ? 0 : -1}
               onClick={() => onFold(number)}
-              className="flex items-center gap-2 rounded-[3px] px-[6px] py-[3px] text-left"
+              onKeyDown={(event) => onFoldKeyDown(event, number, folds.length, onFold, "data-fold-row")}
+              className="flex w-full cursor-pointer items-center gap-2 rounded-[3px] border-0 border-l-2 border-solid px-[6px] py-[3px] text-left"
               style={{
                 background: current ? "var(--accent-soft)" : "transparent",
-                boxShadow: current ? "inset 2px 0 0 var(--accent)" : undefined,
+                borderLeftColor: current ? "var(--accent)" : "transparent",
               }}
             >
-              <span className="mono w-[56px] flex-none text-[11px]" style={{ color: "var(--ink-soft)" }}>
+              <span className="mono w-[64px] flex-none text-left text-[11px]" style={{ color: "var(--ink-soft)" }}>
                 {fold.fold_id}
               </span>
               <span className="relative h-[16px] flex-1 rounded-[3px]" style={{ background: "var(--paper-sunken)" }}>
@@ -600,6 +668,7 @@ function FoldRows({
                       left: `${placeInTimeline(bounds, train).leftPercent}%`,
                       width: `${Math.max(placeInTimeline(bounds, train).widthPercent, HAIRLINE_PERCENT)}%`,
                       background: "var(--viz-train)",
+                      opacity: current ? 1 : 0.55,
                     }}
                   />
                 ) : null}
@@ -614,19 +683,26 @@ function FoldRows({
                       left: `${placeInTimeline(bounds, test).leftPercent}%`,
                       width: `${Math.max(placeInTimeline(bounds, test).widthPercent, HAIRLINE_PERCENT)}%`,
                       background: "var(--role-oos)",
+                      opacity: current ? 1 : 0.6,
                     }}
                   />
                 ) : null}
               </span>
               {train === null || test === null ? (
-                <span className="mono text-[9px] italic" style={{ color: "var(--ink-faint)" }} data-fold-partial>
+                <span className="mono w-[196px] flex-none text-right text-[9px] italic" style={{ color: "var(--ink-faint)" }} data-fold-partial>
                   boundary not published
                 </span>
-              ) : (
-                <span className="mono hidden w-[196px] flex-none text-right text-[10px] lg:block" style={{ color: "var(--ink-faint)" }}>
-                  {day(test.start_utc_ms)} → {day(test.end_exclusive_utc_ms)}
+              ) : start !== null && end !== null ? (
+                /* HiFi `train-start ⋯ test-end`, as the half-open interval it is. */
+                <span
+                  className="mono hidden w-[196px] flex-none text-right text-[10px] lg:block"
+                  style={{ color: "var(--ink-faint)" }}
+                  data-fold-range={number}
+                  title={`${exact(start)} → ${exact(end)} (end exclusive)`}
+                >
+                  [{day(start)} ⋯ {day(end)})
                 </span>
-              )}
+              ) : null}
             </button>
           );
         })}
@@ -637,66 +713,106 @@ function FoldRows({
 
 /* ------------------------------------------------------------ holdout row */
 
-function HoldoutBlock({ detail }: { detail: SplitDetailDocument }) {
+/**
+ * HiFi holdout row: its own 16 px track, the span drawn where the server put
+ * it with a gold dashed outline over a soft-gold hatch, and an inline label in
+ * gold mono 9 px. The HiFi label is `SEALED · LOCKED · never read`; no seal
+ * record is published, so the label is the server's own state words.
+ */
+function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timeline: Range | null }) {
   const holdout = detail.windows.holdout;
   const unlock = detail.actions.holdout_unlock;
   const bound = hasRange(holdout);
   const facts = bound
-    ? (holdout as {
+    ? (holdout as Range & {
         snapshot_integrity_state: string;
         evaluation_state: string;
         result_exposure_state: string;
+        child_input_state: string;
         source_seal: AbsentFact;
       })
     : null;
+  const geometry = facts && timeline ? placeInTimeline(timeline, facts) : null;
+  /* The label sits in the empty track before the span; a span near the start takes it after. */
+  const labelBefore = geometry ? geometry.leftPercent >= 30 : true;
+  const words = facts
+    ? `${facts.snapshot_integrity_state} · ${facts.evaluation_state} · result ${facts.result_exposure_state}`
+    : "";
 
   return (
-    <div className="flex flex-col gap-[6px] pt-1" data-holdout={bound ? "bound" : "absent"}>
-      <div className="flex items-center gap-2">
-        <span className="mono w-[64px] flex-none text-[11px]" style={{ color: "var(--role-holdout)" }}>
+    <div className="flex flex-col gap-[6px]" data-holdout={bound ? "bound" : "absent"}>
+      <div className="flex items-center gap-2 pt-1">
+        <span className="mono w-[64px] flex-none text-[11px]" style={{ color: "var(--accent-2)" }}>
           holdout
         </span>
-        <div className="flex flex-1 flex-wrap items-center gap-1.5">
-          {bound && facts ? (
-            <>
-              {/*
-                * The words the server uses, not the HiFi's "SEALED · LOCKED":
-                * no seal record is published, so no seal is claimed.
-                */}
-              <Chip
-                data-holdout-integrity={facts.snapshot_integrity_state}
-                tone="var(--role-holdout)"
-                border="var(--role-holdout)"
-              >
-                {facts.snapshot_integrity_state}
-              </Chip>
-              <Chip data-holdout-evaluation={facts.evaluation_state}>{facts.evaluation_state}</Chip>
-              <Chip data-holdout-result={facts.result_exposure_state}>result {facts.result_exposure_state}</Chip>
-              <span className="flex items-baseline gap-1 text-[10.5px]" style={{ color: "var(--ink-soft)" }}>
-                seal <Absent fact={facts.source_seal} what="source seal" />
-              </span>
-            </>
-          ) : (
+        {facts ? (
+          <span className="relative h-[16px] min-w-0 flex-1" data-holdout-track>
+            {geometry ? (
+              <span
+                data-window="holdout"
+                role="img"
+                aria-label={`holdout · ${exact(facts.start_utc_ms)} → ${exact(facts.end_exclusive_utc_ms)} · ${facts.evaluation_state} · ${facts.child_input_state}`}
+                title={`holdout · ${exact(facts.start_utc_ms)} → ${exact(facts.end_exclusive_utc_ms)} · ${facts.evaluation_state} · ${facts.child_input_state}`}
+                className="absolute top-0 box-border h-full rounded-[3px] border border-dashed"
+                style={{
+                  left: `${geometry.leftPercent}%`,
+                  width: `${Math.max(geometry.widthPercent, HAIRLINE_PERCENT)}%`,
+                  borderColor: "var(--accent-2)",
+                  background: HOLDOUT_HATCH,
+                }}
+              />
+            ) : null}
+            <span
+              className="mono absolute top-[1px] overflow-hidden text-ellipsis whitespace-nowrap text-[9px]"
+              style={{
+                color: "var(--accent-2)",
+                ...(geometry && labelBefore
+                  ? { left: 0, right: `${100 - geometry.leftPercent}%`, paddingRight: 6, textAlign: "right" as const }
+                  : { left: geometry ? `${geometry.leftPercent + geometry.widthPercent}%` : 0, right: 0, paddingLeft: 6 }),
+              }}
+              title={words}
+              data-holdout-words
+            >
+              <span data-holdout-integrity={facts.snapshot_integrity_state}>{facts.snapshot_integrity_state}</span>
+              {" · "}
+              <span data-holdout-evaluation={facts.evaluation_state}>{facts.evaluation_state}</span>
+              {" · "}
+              <span data-holdout-result={facts.result_exposure_state}>result {facts.result_exposure_state}</span>
+            </span>
+          </span>
+        ) : (
+          <span className="flex-1">
             <Withheld availability={(holdout as AbsentFact).availability} what="holdout" />
-          )}
-        </div>
-        {bound ? (
+          </span>
+        )}
+        {facts ? (
           <span
-            className="mono w-[196px] flex-none text-right text-[10px]"
-            style={{ color: "var(--role-holdout)" }}
+            className="mono hidden w-[196px] flex-none text-right text-[10px] lg:block"
+            style={{ color: "var(--accent-2)" }}
             data-holdout-span
-            title={`${exact((holdout as Range).start_utc_ms)} → ${exact((holdout as Range).end_exclusive_utc_ms)}`}
+            title={`${exact(facts.start_utc_ms)} → ${exact(facts.end_exclusive_utc_ms)}`}
           >
-            {span(holdout as Range)}
+            {span(facts)}
           </span>
         ) : null}
       </div>
 
       <div
-        className="ml-[10px] flex flex-col gap-1 border-l-2 pl-[10px] text-[11px] leading-[1.6]"
-        style={{ borderColor: "var(--paper-sunken)", color: "var(--ink-soft)" }}
+        className="mt-[2px] flex flex-col gap-1 border-l-2 pl-2 text-[11px]"
+        style={{ borderColor: "var(--accent-2)", color: "var(--ink-soft)" }}
+        data-holdout-note
       >
-        <span data-holdout-rule="no-read">{HOLDOUT_RULE_NO_READ}</span>
+        <span data-holdout-rule="no-read">
+          {HOLDOUT_RULE_NO_READ}
+          {facts ? (
+            <>
+              {" "}
+              <span className="inline-flex items-baseline gap-1 text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
+                seal <Absent fact={facts.source_seal} what="source seal" />
+              </span>
+            </>
+          ) : null}
+        </span>
         <span className="flex flex-wrap items-center gap-2" data-holdout-rule="unlock">
           {/*
             * The unlock affordance exists in the HiFi. Its record and authority
@@ -773,25 +889,17 @@ export function SplitScreen({
     return out;
   }, [detail]);
 
-  const holdoutForTrack: HoldoutSpan | null =
-    detail && hasRange(detail.windows.holdout)
-      ? {
-          start_utc_ms: detail.windows.holdout.start_utc_ms,
-          end_exclusive_utc_ms: detail.windows.holdout.end_exclusive_utc_ms,
-          snapshot: (detail.windows.holdout as { snapshot_integrity_state: string }).snapshot_integrity_state,
-          childInput: (detail.windows.holdout as { child_input_state: string }).child_input_state,
-          evaluation: (detail.windows.holdout as { evaluation_state: string }).evaluation_state,
-        }
-      : null;
-
   const kind = detail?.protocol.kind ?? null;
   const fixed = detail?.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH";
   const foldPlanReady = folds.state === "ready";
 
   return (
-    <div className="flex flex-col gap-[14px]" data-screen="split-detail" data-run={runId}>
+    <div className={`${SCREEN_FRAME} max-w-[1440px]`} data-screen="split-detail" data-run={runId}>
       {/* ------------------------------------------------------ header */}
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5">
+      <header
+        className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5 border-b pb-[10px]"
+        style={{ borderColor: "var(--line)" }}
+      >
         <div className="flex min-w-0 flex-col gap-[3px]">
           <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
             {notFound ? (
@@ -807,17 +915,18 @@ export function SplitScreen({
                 Evidence Flow
               </Link>
             )}
-            <span style={{ color: "var(--line)" }}>/</span>
+            <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span className="mono min-w-0 truncate" title={runId}>
               {runId}
             </span>
-            <span style={{ color: "var(--line)" }}>/</span>
+            <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span style={{ color: "var(--ink)" }}>Stage 1 · Split</span>
+            {notFound ? null : <span style={{ color: "var(--ink-faint)" }}>·</span>}
             {notFound ? null : (
               /* The next stage, carrying this cursor on its own stage — spec 05 §1 outbound, FE-X-10. */
               <Link
                 to={deepDiveHref(`${runPath}/search`, { ...cursor, stage: "search" })}
-                className="mono ml-2 text-[10px]"
+                className="mono text-[10px]"
                 style={{ color: "var(--accent)" }}
                 data-action="next-stage"
               >
@@ -825,11 +934,11 @@ export function SplitScreen({
               </Link>
             )}
           </nav>
-          <h1 className="text-[22px] font-light leading-[1.2]" style={{ fontFamily: "var(--font-display)" }}>
+          <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
             {SPLIT_TITLE}
           </h1>
           <p
-            className="text-[13.5px] italic leading-[1.35]"
+            className="text-[13.5px] italic [line-height:normal]"
             style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }}
             data-subtitle
           >
@@ -862,8 +971,8 @@ export function SplitScreen({
         {detail ? (
           <div className="flex flex-col gap-[14px]">
             {/* ------------------------------------------- protocol card */}
-            <section className="rounded-[6px] border" style={CARD_STYLE} data-protocol-strip>
-              <div className="flex flex-wrap items-center gap-2 px-[14px] py-[9px]">
+            <section className="rounded-[6px] border" style={RAISED_STYLE} data-protocol-strip>
+              <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--line-soft)" }}>
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                   protocol
                 </span>
@@ -874,7 +983,8 @@ export function SplitScreen({
                 ) : (
                   <Withheld availability={detail.availability} what="protocol" />
                 )}
-                <span className={`${LABEL} ml-3`} style={{ color: "var(--ink-faint)" }}>
+                <span className="mx-1 h-[18px] w-px flex-none" style={{ background: "var(--line)" }} aria-hidden="true" />
+                <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                   selection
                 </span>
                 <span data-selection={detail.protocol.selection.state}>
@@ -886,8 +996,7 @@ export function SplitScreen({
               </div>
 
               <div
-                className="flex flex-wrap gap-x-[26px] gap-y-2 border-t px-[14px] py-[9px]"
-                style={{ borderColor: "var(--paper-sunken)" }}
+                className="flex flex-wrap gap-x-[26px] gap-y-2 px-[14px] py-[9px]"
                 data-protocol-absences
               >
                 <Fact k="span" data-fact="span">
@@ -904,12 +1013,19 @@ export function SplitScreen({
                 {foldPlanReady ? (
                   <Fact k="outer folds">{`${folds.split.fold_plan.folds.length} observed`}</Fact>
                 ) : null}
-                <Fact k="purge">
+                {/* HiFi tones (purge red, embargo gold) belong to a published value; an absence keeps its own. */}
+                <Fact k="purge" tone="var(--bad)">
                   <Absent fact={detail.protocol.purge} what="purge" />
                 </Fact>
-                <Fact k="embargo">
+                <Fact k="embargo" tone="var(--accent-2)">
                   <Absent fact={detail.protocol.embargo} what="embargo" />
                 </Fact>
+                {hasRange(detail.windows.holdout) ? (
+                  /* HiFi `holdout_state · SEALED · LOCKED`; the server's word is metadata-bound, not sealed. */
+                  <Fact k="holdout_state" tone="var(--accent-2)" data-fact="holdout_state">
+                    {(detail.windows.holdout as { snapshot_integrity_state: string }).snapshot_integrity_state}
+                  </Fact>
+                ) : null}
                 <Fact k="strict outer OOS">
                   {/* `NOT_ASSERTED` is not a pass and not a failure: no badge. */}
                   <Absent fact={detail.protocol.selection.strict_outer_oos} what="strict outer OOS" />
@@ -934,14 +1050,14 @@ export function SplitScreen({
               </div>
 
               <div
-                className="flex items-baseline gap-3 rounded-b-[6px] border-t px-[14px] py-2"
-                style={{ borderColor: "var(--paper-sunken)", background: "var(--paper-sunken)" }}
+                className="flex items-start gap-3 rounded-b-[6px] border-t px-[14px] py-2"
+                style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
                 data-protocol-note
               >
-                <span className="mono flex-none text-[10px] font-semibold uppercase" style={{ color: "var(--ink-soft)" }}>
+                <span className="mono flex-none text-[10px] font-semibold uppercase tracking-[.1em]" style={{ color: "var(--ink-soft)" }}>
                   protocol
                 </span>
-                <span className="text-[11.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
                   {protocolSentence(detail, foldPlanReady)}
                 </span>
               </div>
@@ -950,23 +1066,24 @@ export function SplitScreen({
             <ProvenanceStrip provenance={detail.provenance} />
 
             {/* ------------------------------------ S1 · fold construction */}
-            <section className={`${CARD} gap-[6px] p-4`} style={CARD_STYLE} data-card="fold-construction">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <section className={`${CARD} gap-[6px] p-4`} style={RAISED_STYLE} data-card="fold-construction">
+              <div className="mb-[2px] flex flex-wrap items-baseline justify-between gap-2">
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                   S1 · fold construction{kind ? ` — ${kind}` : ""}
                 </span>
                 <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-                  warmup = grey · IS = mist · outer OOS = accent · holdout = hatched
+                  warmup = grey · IS = mist · outer OOS = accent · holdout = gold hatch
                 </span>
               </div>
 
               {timeline ? (
-                <WindowAnatomy timeline={timeline} windows={drawn} holdout={holdoutForTrack} />
+                <WindowAnatomy timeline={timeline} windows={drawn} />
               ) : (
                 <Withheld availability={detail.availability} what="timeline" />
               )}
 
               {/* Windows the source declared absent keep their place. */}
+              {hasRange(detail.windows.warmup) && hasRange(detail.windows.is) && hasRange(detail.windows.outer_oos) ? null : (
               <div className="flex flex-wrap gap-x-5 gap-y-1.5 pl-[72px]" data-window-absences>
                 {!hasRange(detail.windows.warmup) ? (
                   <span className="flex items-baseline gap-1.5" data-absent="warmup">
@@ -989,28 +1106,39 @@ export function SplitScreen({
                   </span>
                 ) : null}
               </div>
+              )}
 
               <FoldAnatomy slot={folds} detail={detail} cursor={cursor} onFold={onFold} onNeeded={ensureFolds} />
 
-              <HoldoutBlock detail={detail} />
+              <HoldoutBlock detail={detail} timeline={timeline} />
             </section>
 
             {/* ----------------------------------------- S2 · θ* flow */}
-            <ThetaFlow detail={detail} />
+            <ThetaFlow detail={detail} folds={folds} cursor={cursor} onFold={onFold} />
 
             {/* --------------------------------------------- fold table */}
-            <FoldTable detail={detail} />
+            <FoldTable detail={detail} folds={folds} cursor={cursor} onFold={onFold} />
 
             {/* ------------------------------------------ three cards */}
             <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-[1.1fr_1fr_1fr]">
               <section className={`${CARD} gap-[6px] p-[14px]`} style={CARD_STYLE} data-card="boundary-integrity">
-                <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
-                  boundary integrity — read from the split, not recomputed
-                </span>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
+                    boundary integrity — read from the split, not recomputed
+                  </span>
+                  {detail.revision !== null ? (
+                    /* HiFi: the digest the checks were read from — here the split read's own revision. */
+                    <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={detail.revision} data-integrity-revision>
+                      split rev {shortDigest(detail.revision, 12)}…
+                    </span>
+                  ) : null}
+                </div>
                 <IntegrityRow
-                  ok={
+                  mark={
                     hasRange(detail.windows.holdout) &&
                     (detail.windows.holdout as { child_input_state: string }).child_input_state === "NOT_EXPOSED_TO_CHILD_TAPE"
+                      ? "pass"
+                      : "none"
                   }
                   label="holdout kept out of the child tape"
                 >
@@ -1025,7 +1153,7 @@ export function SplitScreen({
                   )}
                 </IntegrityRow>
                 {hasRange(detail.windows.holdout) ? (
-                  <IntegrityRow ok={false} label="physical row-group I/O">
+                  <IntegrityRow mark="none" label="physical row-group I/O">
                     <span data-absent="physical I/O attestation" data-absent-state="NOT_ATTESTED">
                       <span
                         className="italic"
@@ -1036,10 +1164,10 @@ export function SplitScreen({
                     </span>
                   </IntegrityRow>
                 ) : null}
-                <IntegrityRow ok={false} label="gap scan">
+                <IntegrityRow mark="none" label="gap scan">
                   <Absent fact={detail.protocol.gap_scan} what="gap scan" />
                 </IntegrityRow>
-                <IntegrityRow ok={foldPlanReady} label="train ∩ test = ∅, every fold">
+                <IntegrityRow mark={foldPlanReady ? "pass" : "none"} label="train ∩ test = ∅, every fold">
                   {foldPlanReady ? "retained fold plan" : "needs a fold plan"}
                 </IntegrityRow>
               </section>
@@ -1107,7 +1235,7 @@ export function SplitScreen({
       </ResearchPanel>
 
       <footer className="flex flex-col gap-[3px] border-t pt-2" style={{ borderColor: "var(--line)" }}>
-        <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <span className="text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
           rules of this screen
         </span>
         <p className="text-[11px] leading-[1.6]" style={{ color: "var(--ink-soft)" }} data-rules-footer>
@@ -1160,16 +1288,40 @@ function protocolSentence(detail: SplitDetailDocument, foldPlanReady: boolean): 
   return parts.join(" ").replace(" .", ".");
 }
 
-function IntegrityRow({ ok, label, children }: { ok: boolean; label: string; children: ReactNode }) {
+/**
+ * HiFi integrity row: a 16 px bold mono mark — ✓ a published pass, ✕ a
+ * published failure, — nothing published either way — then the check and the
+ * source's words for it.
+ */
+const INTEGRITY_MARK = {
+  pass: { glyph: "✓", tone: "var(--good)" },
+  fail: { glyph: "✕", tone: "var(--bad)" },
+  none: { glyph: "—", tone: "var(--ink-faint)" },
+} as const;
+
+function IntegrityRow({
+  mark,
+  label,
+  children,
+}: {
+  mark: keyof typeof INTEGRITY_MARK;
+  label: string;
+  children: ReactNode;
+}) {
   return (
-    <span className="flex items-baseline gap-2 border-b py-[2px] text-[11.5px]" style={{ borderColor: "var(--paper-sunken)" }} data-integrity={ok ? "published" : "absent"}>
-      <span className="mono w-[12px] flex-none" style={{ color: ok ? "var(--good)" : "var(--ink-faint)" }} aria-hidden="true">
-        {ok ? "✓" : "○"}
+    <span
+      className="flex items-baseline gap-2 border-b py-[2px] text-[11.5px]"
+      style={{ borderColor: "var(--paper-sunken)" }}
+      data-integrity={mark === "pass" ? "published" : "absent"}
+      data-integrity-mark={mark}
+    >
+      <span className="mono w-4 flex-none font-bold" style={{ color: INTEGRITY_MARK[mark].tone }} aria-hidden="true">
+        {INTEGRITY_MARK[mark].glyph}
       </span>
       <span className="mono flex-1" style={{ color: "var(--ink)" }}>
         {label}
       </span>
-      <span className="mono text-right text-[10px]" style={{ color: "var(--ink-faint)" }}>
+      <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
         {children}
       </span>
     </span>
@@ -1178,63 +1330,187 @@ function IntegrityRow({ ok, label, children }: { ok: boolean; label: string; chi
 
 /* ------------------------------------------------------- θ* flow card */
 
-function ThetaFlow({ detail }: { detail: SplitDetailDocument }) {
+interface LaneProps {
+  id: string;
+  track: Range;
+  is: Range | null;
+  oos: Range | null;
+  isLabel: string;
+  digest: ReactNode;
+  active: boolean;
+  /** Present only when there are folds to move between (HiFi: lanes are controls in walk_forward only). */
+  pick?: { number: number; count: number; tabStop: boolean; onFold: (fold: number) => void };
+  rest?: Record<string, unknown>;
+}
+
+/**
+ * One HiFi θ* lane: the IS bar (mist, `search · … · IS only` in the HiFi) and
+ * the traded OOS bar on one track, the parameters that crossed on the right.
+ * The HiFi ❖ freeze marker sits at a cutoff; it is drawn only where a freeze
+ * was published, and no read publishes one yet — so none is drawn.
+ */
+function ThetaLane({ id, track, is, oos, isLabel, digest, active, pick, rest }: LaneProps) {
+  const lit = active && pick !== undefined;
+  const body = (
+    <>
+      <span className="mono w-[64px] flex-none text-left text-[11px]" style={{ color: "var(--ink-soft)" }}>
+        {id}
+      </span>
+      <span className="relative h-[30px] min-w-0 flex-1">
+        {is ? (
+          <span
+            className="absolute bottom-[4px] top-[4px] box-border flex items-center overflow-hidden rounded-[3px] border px-1.5"
+            style={{
+              left: `${placeInTimeline(track, is).leftPercent}%`,
+              width: `${placeInTimeline(track, is).widthPercent}%`,
+              /* HiFi IS-bar fill approximated by --surface-3 (no exact token). */
+              background: "var(--surface-3)",
+              borderColor: "var(--viz-train)",
+              opacity: active ? 1 : 0.6,
+            }}
+            title={`IS ${exact(is.start_utc_ms)} → ${exact(is.end_exclusive_utc_ms)}`}
+            data-theta-is
+          >
+            <span className="mono overflow-hidden whitespace-nowrap text-[8.5px]" style={{ color: "var(--ink-soft)" }}>
+              {isLabel}
+            </span>
+          </span>
+        ) : null}
+        {oos ? (
+          <span
+            className="absolute bottom-[4px] top-[4px] flex items-center overflow-hidden rounded-[3px] px-1.5"
+            style={{
+              left: `${placeInTimeline(track, oos).leftPercent}%`,
+              width: `${placeInTimeline(track, oos).widthPercent}%`,
+              background: "var(--role-oos)",
+              opacity: active ? 1 : 0.65,
+            }}
+            title={`outer OOS ${exact(oos.start_utc_ms)} → ${exact(oos.end_exclusive_utc_ms)}`}
+            data-theta-oos
+          >
+            <span className="mono overflow-hidden whitespace-nowrap text-[8.5px]" style={{ color: "var(--accent-contrast)" }}>
+              OOS
+            </span>
+          </span>
+        ) : null}
+      </span>
+      <span className="mono flex w-[196px] flex-none flex-col text-right text-[9.5px]">
+        {digest}
+        <span style={{ color: "var(--accent)" }}>
+          trade OOS → S{" "}
+          <span className="italic" style={{ color: "var(--ink-faint)" }} title="the split read publishes no OOS Sharpe — see Evidence Flow">
+            not in read
+          </span>
+        </span>
+      </span>
+    </>
+  );
+  const className = "flex w-full items-center gap-2 rounded-[3px] border-0 border-l-2 border-solid px-[6px] py-[3px] text-left";
+  const style = {
+    background: lit ? "var(--accent-soft)" : "transparent",
+    borderLeftColor: lit ? "var(--accent)" : "transparent",
+  };
+  if (!pick) {
+    return (
+      <div className={className} style={style} {...rest}>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={`${className} cursor-pointer`}
+      style={style}
+      aria-pressed={active}
+      tabIndex={pick.tabStop ? 0 : -1}
+      data-theta-lane={pick.number}
+      onClick={() => pick.onFold(pick.number)}
+      onKeyDown={(event) => onFoldKeyDown(event, pick.number, pick.count, pick.onFold, "data-theta-lane")}
+      {...rest}
+    >
+      {body}
+    </button>
+  );
+}
+
+function ThetaFlow({
+  detail,
+  folds,
+  cursor,
+  onFold,
+}: {
+  detail: SplitDetailDocument;
+  folds: FoldsSlot;
+  cursor: EvidenceCursor;
+  onFold: (fold: number) => void;
+}) {
   const timeline = detail.timeline;
   const is = hasRange(detail.windows.is) ? (detail.windows.is as Range) : null;
   const oos = hasRange(detail.windows.outer_oos) ? (detail.windows.outer_oos as Range) : null;
   const fixed = detail.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH";
   const bundle = detail.protocol.selection.parameter_bundle_digest;
+  const plan = folds.state === "ready" ? folds.split.fold_plan.folds : null;
+  const bounds = useFoldBounds(plan ?? []);
+  const tabStop = plan && cursor.fold >= 1 && cursor.fold <= plan.length ? cursor.fold : 1;
 
   return (
-    <section className={`${CARD} gap-2 p-4`} style={CARD_STYLE} data-card="theta-flow">
+    <section className={`${CARD} gap-2 p-4`} style={RAISED_STYLE} data-card="theta-flow">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
           S2 · θ* flow — how IS parameters reach the OOS backtest
         </span>
-        <span className="flex items-baseline gap-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }}>
+        <span className="mono flex items-baseline gap-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-theta-meta>
           θ* per fold <Absent fact={detail.protocol.theta_per_fold} what="θ* per fold" showReason />
         </span>
       </div>
 
-      {timeline && is && oos ? (
-        <div className="flex items-center gap-2" data-theta-row>
-          <span className="mono w-[64px] flex-none text-[11px]" style={{ color: "var(--ink-soft)" }}>
-            IS → OOS
-          </span>
-          <span className="relative h-[30px] flex-1">
-            <span
-              className="mono absolute top-[4px] flex h-[22px] items-center overflow-hidden whitespace-nowrap rounded-[3px] border px-1.5 text-[9.5px]"
-              style={{
-                left: `${placeInTimeline(timeline, is).leftPercent}%`,
-                width: `${placeInTimeline(timeline, is).widthPercent}%`,
-                background: "var(--accent-soft)",
-                borderColor: "var(--viz-train)",
-                color: "var(--ink-faint)",
-              }}
-              title={`IS ${exact(is.start_utc_ms)} → ${exact(is.end_exclusive_utc_ms)}`}
-            >
-              {fixed ? "IS · fixed profile, no search" : "IS"}
-            </span>
-            <span
-              className="mono absolute top-[4px] flex h-[22px] items-center overflow-hidden whitespace-nowrap rounded-[3px] px-1.5 text-[9.5px]"
-              style={{
-                left: `${placeInTimeline(timeline, oos).leftPercent}%`,
-                width: `${placeInTimeline(timeline, oos).widthPercent}%`,
-                background: "var(--role-oos)",
-                color: "var(--accent-contrast)",
-              }}
-              title={`outer OOS ${exact(oos.start_utc_ms)} → ${exact(oos.end_exclusive_utc_ms)}`}
-            >
-              OOS
-            </span>
-          </span>
-          <span className="mono w-[196px] flex-none text-right text-[9.5px]" style={{ color: "var(--accent)" }}>
-            {bundle ? <Digest value={bundle} /> : <span style={{ color: "var(--ink-faint)" }}>bundle not published</span>}
-          </span>
+      {plan && plan.length > 0 && bounds ? (
+        <div className="flex flex-col" data-theta-lanes>
+          {plan.map((fold, index) => {
+            const { train, test } = foldSpans(fold);
+            return (
+              <ThetaLane
+                key={fold.fold_id}
+                id={fold.fold_id}
+                track={bounds}
+                is={train}
+                oos={test}
+                isLabel="IS"
+                active={cursor.fold === index + 1}
+                digest={
+                  <span className="italic" style={{ color: "var(--ink-faint)" }} title={reasonOf(detail.protocol.theta_per_fold)}>
+                    θ* not published
+                  </span>
+                }
+                pick={{ number: index + 1, count: plan.length, tabStop: tabStop === index + 1, onFold }}
+              />
+            );
+          })}
         </div>
+      ) : timeline && is && oos ? (
+        <ThetaLane
+          id="IS → OOS"
+          track={timeline}
+          is={is}
+          oos={oos}
+          isLabel={fixed ? "IS · fixed profile, no search" : "IS"}
+          active
+          digest={
+            bundle ? (
+              <span style={{ color: "var(--accent-2)" }}>
+                <Digest value={bundle} />{" "}
+                {fixed ? <span style={{ color: "var(--ink-faint)" }}>fixed profile</span> : null}
+              </span>
+            ) : (
+              <span style={{ color: "var(--ink-faint)" }}>bundle not published</span>
+            )
+          }
+          rest={{ "data-theta-row": true }}
+        />
       ) : null}
 
-      <p className="text-[11px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
+      <p className="border-l-2 pl-2 text-[11px] leading-[1.55]" style={{ color: "var(--ink-soft)", borderColor: "var(--accent)" }} data-theta-note>
         {fixed
           ? "No search ran, so nothing was frozen at a cutoff: the outer OOS window was traded with the declared fixed profile, whose bundle digest is on the right. Stage 3 verifies that same digest."
           : "The θ* each fold froze is not published by the split read."}
@@ -1245,67 +1521,165 @@ function ThetaFlow({ detail }: { detail: SplitDetailDocument }) {
 
 /* ---------------------------------------------------------- fold table */
 
-const TABLE_HEAD = ["fold", "train", "bars", "purge", "test window", "bars", "embargo", "params", "IS sharpe", "OOS · S_full", "Δ decay"];
+/** HiFi columns; numbers and durations are right-aligned, head and cell alike. */
+const TABLE_COLUMNS: { head: string; right: boolean }[] = [
+  { head: "fold", right: false },
+  { head: "train", right: false },
+  { head: "bars", right: true },
+  { head: "purge", right: true },
+  { head: "test window", right: false },
+  { head: "bars", right: true },
+  { head: "embargo", right: true },
+  { head: "params", right: false },
+  { head: "IS sharpe", right: true },
+  { head: "OOS · S_full", right: true },
+  { head: "Δ decay", right: true },
+];
 
-function FoldTable({ detail }: { detail: SplitDetailDocument }) {
+const TD = "mono whitespace-nowrap px-3 py-1.5 text-[12px]";
+
+/** A cell whose value the split read does not publish: its word, small, never a dash or a zero. */
+function AbsentCell({ word = "not in read", reason, right = true }: { word?: string; reason: string; right?: boolean }) {
+  return (
+    <td className={`${TD} ${right ? "text-right" : ""}`} data-absent-cell>
+      <span className="text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={reason}>
+        {word}
+      </span>
+    </td>
+  );
+}
+
+function SpanCell({ range }: { range: Range | null }) {
+  return range ? (
+    <td
+      className={`${TD} whitespace-nowrap`}
+      style={{ color: "var(--ink-soft)" }}
+      title={`${exact(range.start_utc_ms)} → ${exact(range.end_exclusive_utc_ms)} (end exclusive)`}
+      data-span-cell
+    >
+      {halfOpenShort(range)}
+    </td>
+  ) : (
+    <AbsentCell word="not published" reason="this fold published no boundary for this window" right={false} />
+  );
+}
+
+function FoldTable({
+  detail,
+  folds,
+  cursor,
+  onFold,
+}: {
+  detail: SplitDetailDocument;
+  folds: FoldsSlot;
+  cursor: EvidenceCursor;
+  onFold: (fold: number) => void;
+}) {
   const is = hasRange(detail.windows.is) ? (detail.windows.is as Range) : null;
   const oos = hasRange(detail.windows.outer_oos) ? (detail.windows.outer_oos as Range) : null;
   const bundle = detail.protocol.selection.parameter_bundle_digest;
-  const none = (
-    <span className="italic" style={{ color: "var(--ink-faint)" }} title="the split read publishes no metric — see Evidence Flow">
-      not in read
-    </span>
+  const plan = folds.state === "ready" ? folds.split.fold_plan.folds : null;
+  const tabStop = plan && cursor.fold >= 1 && cursor.fold <= plan.length ? cursor.fold : 1;
+  const metricReason = "the split read publishes no metric — see Evidence Flow";
+  const purge = (
+    <AbsentCell word={ABSENT_WORDS[detail.protocol.purge.state]} reason={reasonOf(detail.protocol.purge)} />
   );
+  const embargo = (
+    <AbsentCell word={ABSENT_WORDS[detail.protocol.embargo.state]} reason={reasonOf(detail.protocol.embargo)} />
+  );
+
   return (
     <section className="overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-card="fold-table">
-      <table className="mono w-full min-w-[860px] border-collapse text-left text-[11px]">
+      <table className="w-full min-w-[760px] border-collapse text-[12px]">
         <thead>
           <tr>
-            {TABLE_HEAD.map((head, index) => (
+            {TABLE_COLUMNS.map((column, index) => (
               <th
-                key={`${head}-${index}`}
-                className="border-b px-3 py-2 text-[9.5px] font-normal uppercase tracking-[.06em]"
-                style={{ color: "var(--ink-faint)", borderColor: "var(--paper-sunken)", fontFamily: "var(--font-body)" }}
+                key={`${column.head}-${index}`}
+                className={`border-b px-3 py-2 text-[10px] font-medium uppercase tracking-[.07em] ${column.right ? "text-right" : "text-left"}`}
+                style={{ color: "var(--ink-faint)", borderColor: "var(--line)", fontFamily: "var(--font-body)" }}
+                data-align={column.right ? "right" : "left"}
               >
-                {head}
+                {column.head}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {is && oos ? (
+          {plan && plan.length > 0 ? (
+            plan.map((fold, index) => {
+              const number = index + 1;
+              const current = cursor.fold === number;
+              const { train, test } = foldSpans(fold);
+              return (
+                <tr
+                  key={fold.fold_id}
+                  data-fold-table-row={number}
+                  data-current={current}
+                  aria-selected={current}
+                  tabIndex={number === tabStop ? 0 : -1}
+                  className="cursor-pointer"
+                  style={{ background: current ? "var(--accent-soft)" : "transparent" }}
+                  onClick={() => onFold(number)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onFold(number);
+                      return;
+                    }
+                    onFoldKeyDown(event, number, plan.length, onFold, "data-fold-table-row");
+                  }}
+                >
+                  <td
+                    className={TD}
+                    style={{ boxShadow: `inset 2px 0 0 ${current ? "var(--accent)" : "transparent"}` }}
+                  >
+                    {fold.fold_id}
+                  </td>
+                  <SpanCell range={train} />
+                  <AbsentCell reason="the retained fold plan publishes no bar count per fold" />
+                  {purge}
+                  <SpanCell range={test} />
+                  <AbsentCell reason="the retained fold plan publishes no bar count per fold" />
+                  {embargo}
+                  <AbsentCell reason={reasonOf(detail.protocol.theta_per_fold)} word="θ* not published" right={false} />
+                  <AbsentCell reason={metricReason} />
+                  <AbsentCell reason={metricReason} />
+                  <AbsentCell reason={metricReason} />
+                </tr>
+              );
+            })
+          ) : is && oos ? (
             <tr data-fold-table-row="three-window">
-              <td className="whitespace-nowrap px-3 py-1.5">IS / OOS</td>
-              <td className="whitespace-nowrap px-3 py-1.5" title={`${exact(is.start_utc_ms)} → ${exact(is.end_exclusive_utc_ms)}`}>
-                {span(is)}
+              <td className={TD}>IS / OOS</td>
+              <SpanCell range={is} />
+              <td className={`${TD} text-right`} style={{ color: "var(--ink-soft)" }}>
+                {formatMetric(barsOf(detail.windows.is), "bars") ?? "not published"}
               </td>
-              <td className="whitespace-nowrap px-3 py-1.5">{formatMetric(barsOf(detail.windows.is), "bars") ?? "not published"}</td>
-              <td className="whitespace-nowrap px-3 py-1.5 italic" style={{ color: "var(--ink-faint)" }}>
-                {ABSENT_WORDS[detail.protocol.purge.state]}
+              {purge}
+              <SpanCell range={oos} />
+              <td className={`${TD} text-right`} style={{ color: "var(--ink-soft)" }}>
+                {formatMetric(barsOf(detail.windows.outer_oos), "bars") ?? "not published"}
               </td>
-              <td className="whitespace-nowrap px-3 py-1.5" title={`${exact(oos.start_utc_ms)} → ${exact(oos.end_exclusive_utc_ms)}`}>
-                {span(oos)}
-              </td>
-              <td className="whitespace-nowrap px-3 py-1.5">{formatMetric(barsOf(detail.windows.outer_oos), "bars") ?? "not published"}</td>
-              <td className="whitespace-nowrap px-3 py-1.5 italic" style={{ color: "var(--ink-faint)" }}>
-                {ABSENT_WORDS[detail.protocol.embargo.state]}
-              </td>
-              <td className="whitespace-nowrap px-3 py-1.5" style={{ color: "var(--accent)" }}>
-                {bundle ? <Digest value={bundle} /> : none}
-              </td>
-              <td className="whitespace-nowrap px-3 py-1.5">{none}</td>
-              <td className="whitespace-nowrap px-3 py-1.5">{none}</td>
-              <td className="whitespace-nowrap px-3 py-1.5">{none}</td>
+              {embargo}
+              {bundle ? (
+                <td className={`${TD} whitespace-nowrap`} style={{ color: "var(--accent)" }}>
+                  <Digest value={bundle} />
+                </td>
+              ) : (
+                <AbsentCell reason="the split read publishes no parameter bundle" right={false} />
+              )}
+              <AbsentCell reason={metricReason} />
+              <AbsentCell reason={metricReason} />
+              <AbsentCell reason={metricReason} />
             </tr>
           ) : null}
         </tbody>
       </table>
-      <div
-        className="mono border-t px-3 py-1.5 text-[10px]"
-        style={{ borderColor: "var(--paper-sunken)", color: "var(--ink-faint)" }}
-      >
-        protocol {detail.protocol.kind ?? "not published"} · one IS/OOS pair · no fold rows were published, so
-        there is no row to move the cursor to
+      <div className="mono border-t px-3 py-1.5 text-[10px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }} data-fold-table-foot>
+        {plan && plan.length > 0
+          ? `${plan.length} folds from the retained source · click a row or use the arrow keys to move the cursor — Search follows it`
+          : `protocol ${detail.protocol.kind ?? "not published"} · one IS/OOS pair · no fold rows were published, so there is no row to move the cursor to`}
       </div>
     </section>
   );

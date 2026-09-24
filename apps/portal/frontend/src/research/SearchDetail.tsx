@@ -23,7 +23,7 @@
  * the read published it (DQ-15).
  */
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip } from "./ProvenanceStrip";
@@ -41,7 +41,7 @@ import {
   type SearchSourceGap,
 } from "./searchClient";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
-import { AsOf, CopyEvidenceLink, Digest, RunNotFound } from "./SplitDetail";
+import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME } from "./SplitDetail";
 import type { LedgerSlot } from "./useSearch";
 import type { ResearchState } from "./state";
 
@@ -92,6 +92,54 @@ const STAGE_A_DIAGNOSTICS: DiagnosticKey[] = ["scatter", "progression", "prune_r
 const LABEL = "[font-family:var(--font-body)] text-[10px] font-medium uppercase tracking-[.07em]";
 const CARD = "flex flex-col gap-[6px] rounded-[8px] border p-[14px]";
 const CARD_STYLE = { borderColor: "var(--line)", background: "var(--paper-raised)" } as const;
+/** HiFi: the mode card floats one step (`--shadow-e1`); the stage panels sit flat. */
+const RAISED_STYLE = { ...CARD_STYLE, boxShadow: "var(--shadow-e1)" } as const;
+
+/**
+ * HiFi schedule pill tone: only `per_fold_causal` keeps OOS out of selection,
+ * so every other schedule, when it is the run's, wears the warn style (gold on
+ * soft gold) rather than the accent.
+ */
+export function schedulePillTone(schedule: string | null): "accent" | "warn" {
+  return schedule !== null && schedule !== "per_fold_causal" ? "warn" : "accent";
+}
+
+/**
+ * The HiFi freeze-line arrow chip, by kind. `none`/`decay`/`retro`/`na` are the
+ * HiFi's four (from the run's claim matrix); `no-freeze` is a run that ran no
+ * search and froze no pool; `unpublished` is a run whose claim matrix the read
+ * does not publish. Only a published crossing (decay, retro) moves.
+ */
+export type FreezeArrowKind = "none" | "decay" | "retro" | "na" | "no-freeze" | "unpublished";
+
+export function freezeArrow(kind: FreezeArrowKind): { glyph: string; title: string; tone: string; border: string; flow: boolean } {
+  switch (kind) {
+    case "none":
+      return { glyph: "→", title: "information flows one way, left → right", tone: "var(--accent-2)", border: "var(--accent-2)", flow: false };
+    case "decay":
+      return { glyph: "◀ OOS", title: "OOS enters selection across the freeze line — the claim becomes selection-adjusted", tone: "var(--bad)", border: "var(--bad)", flow: true };
+    case "retro":
+      return { glyph: "◀ FULL", title: "refit after reading the full span — retrospective", tone: "var(--bad)", border: "var(--bad)", flow: true };
+    case "na":
+      return { glyph: "×", title: "no window is withheld", tone: "var(--bad)", border: "var(--bad)", flow: false };
+    case "no-freeze":
+      return { glyph: "×", title: "no pool froze — this run ran no search, so nothing crossed a freeze line", tone: "var(--ink-faint)", border: "var(--line)", flow: false };
+    case "unpublished":
+      return { glyph: "—", title: "the run's claim matrix is not published, so which way information crossed is not shown", tone: "var(--ink-faint)", border: "var(--line)", flow: false };
+  }
+}
+
+/** Claim-row facts the search read does not carry (requested as `CG-P15-05`). */
+const CLAIM_SHELL_REASON = "not in the search read — claim-row facts are requested as CG-P15-05";
+
+/** HiFi claim-row aside, verbatim: a fact about this screen, true of every run. */
+export const SELECTOR_LAYERS_NOTE = [
+  "Two selector layers, two enums: ",
+  "optimization_mode",
+  " belongs to the walk-forward endpoint; ",
+  "CandidateSelector.mode",
+  " belongs to the optimization package. This screen never mixes them.",
+] as const;
 
 function Withheld({ availability, what }: { availability: SearchAvailability; what?: string }) {
   return (
@@ -139,14 +187,22 @@ function Gap({
   );
 }
 
-function Pill({ children, on = false, ...rest }: { children: ReactNode; on?: boolean } & Record<string, unknown>) {
+/** HiFi pill: square, mono 10.5, 3/10; read-only — one run is one mode. */
+function Pill({
+  children,
+  on = false,
+  tone = "accent",
+  ...rest
+}: { children: ReactNode; on?: boolean; tone?: "accent" | "warn" } & Record<string, unknown>) {
   return (
     <span
-      className="mono rounded-[3px] border px-[10px] py-[3px] text-[10.5px] leading-[14px]"
+      className="mono border px-[10px] py-[3px] text-[10.5px]"
       style={
-        on
-          ? { color: "var(--accent)", borderColor: "var(--accent)", background: "var(--accent-soft)" }
-          : { color: "var(--ink-soft)", borderColor: "var(--line)", background: "var(--paper-raised)" }
+        on && tone === "warn"
+          ? { color: "var(--accent-2)", borderColor: "var(--accent-2)", background: "var(--accent-2-soft)" }
+          : on
+            ? { color: "var(--accent)", borderColor: "var(--accent)", background: "var(--accent-soft)" }
+            : { color: "var(--ink-soft)", borderColor: "var(--line)", background: "var(--paper-raised)" }
       }
       {...rest}
     >
@@ -176,15 +232,32 @@ function Chip({
   );
 }
 
-function Claim({ k, children, ...rest }: { k: string; children: ReactNode } & Record<string, unknown>) {
+function Claim({
+  k,
+  children,
+  accent = false,
+  ...rest
+}: { k: string; children: ReactNode; accent?: boolean } & Record<string, unknown>) {
   return (
     <span className="flex min-w-0 flex-col gap-[2px]" {...rest}>
-      <span className="text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+      <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         {k}
       </span>
-      <span className="mono text-[11.5px]" style={{ color: "var(--ink)" }}>
+      <span
+        className={`mono text-[11.5px] ${accent ? "border-l-2 pl-1.5" : ""}`}
+        style={{ color: "var(--ink)", borderColor: accent ? "var(--accent-2)" : undefined }}
+      >
         {children}
       </span>
+    </span>
+  );
+}
+
+/** A HiFi claim-row field this read does not publish: its frame, its word, its reason. */
+function ClaimShell({ what }: { what: string }) {
+  return (
+    <span className="italic" style={{ color: "var(--ink-faint)" }} title={`${what} — ${CLAIM_SHELL_REASON}`} data-claim-shell={what}>
+      not published
     </span>
   );
 }
@@ -210,56 +283,87 @@ function EmptyPanel({ id, title, gap }: { id: string; title: string; gap: Search
 
 /* ------------------------------------------------- A1 · the declared profile */
 
-const A1_COLUMNS = [
+/** HiFi A1 columns (px); `right` columns are numbers. θ* takes the rest, after a 14 px gutter. */
+const A1_COLUMNS: { head: string; width: number; right?: boolean }[] = [
   { head: "param", width: 86 },
-  { head: "kind", width: 72 },
+  { head: "kind", width: 112 },
   { head: "low … high", width: 96 },
-  { head: "step", width: 44 },
-  { head: "θ* and range position", width: 0 },
+  { head: "step", width: 44, right: true },
+  { head: "levels", width: 56, right: true },
 ];
+
+const LEVELS_REASON = "levels — the search read publishes no level count per parameter";
+
+/** HiFi A1 note, from the server's own bound state and placement — no browser threshold. */
+const BOUND_WORDS: Record<Parameter["bound_state"], string> = {
+  WITHIN_DECLARED_RANGE: "within range",
+};
 
 /**
  * The one panel with real content: the parameters the profile declares.
  *
- * The tick is drawn at `position_percent` — the server's placement of the
- * effective value inside its own range. The browser does not work it out.
- * `levels` is not served, so the column is not drawn rather than computed.
+ * HiFi A1 row: name · kind · low … high · step · levels · θ* on a baseline
+ * track with a 2 × 11 tick and a 118 px note. The tick is drawn at
+ * `position_percent` — the server's placement of the effective value inside
+ * its own range; the browser does not work it out, and does not judge "near a
+ * bound" either: the note is the served `bound_state` and that placement.
+ * `levels` is not served, so its cell says so.
  */
 function ParameterTable({ parameters }: { parameters: readonly Parameter[] }) {
   return (
-    <div className="flex flex-col gap-[6px] overflow-x-auto" data-parameters={parameters.length}>
-      <div className="flex min-w-[460px] items-baseline gap-2 px-[3px]">
+    <div className="flex min-w-0 flex-col" data-parameters={parameters.length}>
+      <div
+        className="flex border-b pb-[3px] text-[9.5px] uppercase tracking-[.06em]"
+        style={{ color: "var(--ink-faint)", borderColor: "var(--line-soft)" }}
+        data-a1-head
+      >
         {A1_COLUMNS.map((column) => (
           <span
             key={column.head}
-            className="text-[9.5px] uppercase tracking-[.06em]"
-            style={{
-              color: "var(--ink-faint)",
-              flex: column.width ? `0 0 ${column.width}px` : "1 1 auto",
-            }}
+            className={`flex-none ${column.right ? "text-right" : ""}`}
+            style={{ width: column.width }}
+            data-align={column.right ? "right" : "left"}
           >
             {column.head}
           </span>
         ))}
+        <span className="flex-1 pl-[14px]">θ* and range position</span>
       </div>
 
       {parameters.map((parameter) => (
-        <div key={parameter.name} className="mono flex min-w-[460px] items-center gap-2 py-[2px] text-[10.5px]" data-parameter={parameter.name}>
-          <span style={{ flex: "0 0 86px" }}>{parameter.name}</span>
-          <span style={{ flex: "0 0 72px", color: "var(--ink-soft)" }} data-kind={parameter.name}>
+        <div
+          key={parameter.name}
+          className="mono flex items-center border-b py-[2px] text-[10.5px]"
+          style={{ borderColor: "var(--paper-sunken)" }}
+          data-parameter={parameter.name}
+        >
+          <span className="w-[86px] flex-none">{parameter.name}</span>
+          <span className="w-[112px] flex-none" style={{ color: "var(--ink-soft)" }} data-kind={parameter.name}>
             {parameter.kind}
           </span>
-          <span style={{ flex: "0 0 96px", color: "var(--ink-faint)" }} data-range={parameter.name}>
+          <span className="w-[96px] flex-none" style={{ color: "var(--ink-soft)" }} data-range={parameter.name}>
             {parameter.minimum} … {parameter.maximum}
           </span>
-          <span style={{ flex: "0 0 44px", color: "var(--ink-faint)" }}>{parameter.step}</span>
-          <span className="flex flex-1 items-center gap-2">
-            <span className="font-semibold" style={{ flex: "0 0 40px", textAlign: "right" }} data-effective={parameter.name}>
+          <span className="w-[44px] flex-none text-right" style={{ color: "var(--ink-soft)" }} data-step={parameter.name}>
+            {parameter.step}
+          </span>
+          {/* Levels are not served: the cell keeps its place and its reason, and
+              the absence is printed once, under the table — not eight times. */}
+          <span
+            className="w-[56px] flex-none text-right"
+            title={LEVELS_REASON}
+            data-levels={parameter.name}
+            data-levels-state="NOT_PUBLISHED"
+          >
+            <span className="sr-only">levels not published</span>
+          </span>
+          <span className="flex flex-1 items-center gap-2 pl-[14px]">
+            <span className="w-[44px] flex-none text-right" style={{ color: "var(--good)" }} data-effective={parameter.name}>
               {parameter.effective_value}
             </span>
             <span
-              className="relative h-[10px] flex-1 rounded-[2px]"
-              style={{ background: "var(--paper-sunken)" }}
+              className="relative h-[11px] flex-1 border-b"
+              style={{ borderColor: "var(--line)" }}
               role="img"
               aria-label={`${parameter.name} ${parameter.effective_value} at ${parameter.position_percent}% of ${parameter.minimum} … ${parameter.maximum}`}
               title={`${parameter.effective_value} sits at ${parameter.position_percent}% of the declared range · ${parameter.bound_state}`}
@@ -267,19 +371,20 @@ function ParameterTable({ parameters }: { parameters: readonly Parameter[] }) {
               <span
                 data-position={parameter.name}
                 data-position-percent={parameter.position_percent}
-                className="absolute top-[-2px] h-[14px] w-[2px]"
+                className="absolute bottom-[-1px] h-[11px] w-[2px]"
                 style={{ left: `${parameter.position_percent}%`, background: "var(--good)" }}
               />
             </span>
+            <span
+              className="w-[118px] flex-none text-[9px] [font-family:var(--font-body)]"
+              style={{ color: "var(--ink-faint)" }}
+              title={`${parameter.bound_state} · ${parameter.position_percent}% of the declared range`}
+              data-bound-state={parameter.bound_state}
+            >
+              {BOUND_WORDS[parameter.bound_state] ?? parameter.bound_state} · {Math.round(parameter.position_percent)}%
+            </span>
           </span>
         </div>
-      ))}
-
-      {/* The server's bound state, said once rather than stamped on each row. */}
-      {[...new Set(parameters.map((parameter) => parameter.bound_state))].map((bound) => (
-        <span key={bound} className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-bound-state={bound}>
-          every parameter above: {bound}
-        </span>
       ))}
     </div>
   );
@@ -303,8 +408,8 @@ function LedgerPanel({
   const ledgerGap = { state: detail.ledger.state, reason_code: detail.ledger.reason_code };
 
   return (
-    <section className="flex min-w-0 flex-col rounded-[6px] border" style={CARD_STYLE} data-ledger={slot.state}>
-      <div className="flex flex-wrap items-baseline justify-between gap-2 px-3 py-2">
+    <section className="flex min-w-0 flex-col overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-ledger={slot.state}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }} data-ledger-title>
         <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
           trial ledger — around θ* · Optuna trials only; candidate replays are a separate ledger
         </h3>
@@ -319,9 +424,7 @@ function LedgerPanel({
         <LedgerRows search={slot.search} />
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <LedgerHead />
-          </div>
+          <LedgerHead />
           <div className="flex flex-col gap-1 px-3 py-2.5">
             {slot.state === "not-applicable" ? (
               /* FE-X-12: the search read already answered; the retained lane was not asked. */
@@ -357,7 +460,7 @@ function LedgerPanel({
       )}
 
       {slot.state === "ready" ? (
-        <div className="border-t px-3 py-1.5 text-[10px]" style={{ borderColor: "var(--paper-sunken)", color: "var(--ink-faint)" }}>
+        <div className="border-t px-3 py-1.5 text-[10px]" style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}>
           The OOS column has four states from the mode × schedule matrix — never a boolean. The UI recomputes no
           objective.
         </div>
@@ -366,25 +469,52 @@ function LedgerPanel({
   );
 }
 
-const LEDGER_COLUMNS = [
-  { head: "trial", width: 96 },
+/** HiFi ledger columns (px). S_IS and S_OOS are numbers (right); digest and note sit after a 14 px gutter. */
+const LEDGER_COLUMNS: { head: string; width: number; right?: boolean; gutter?: boolean }[] = [
+  { head: "trial", width: 62 },
   { head: "seed", width: 50 },
   { head: "state", width: 96 },
-  { head: "S_IS", width: 76 },
-  { head: "S_OOS", width: 120 },
-  { head: "digest", width: 110 },
-  { head: "note", width: 0 },
+  { head: "S_IS", width: 76, right: true },
+  { head: "S_OOS", width: 120, right: true },
+  { head: "digest", width: 110, gutter: true },
+  { head: "note", width: 0, gutter: true },
 ];
+
+function columnClass(column: (typeof LEDGER_COLUMNS)[number]): string {
+  return `${column.width ? "flex-none" : "flex-1"} ${column.right ? "text-right" : "text-left"} ${column.gutter ? "pl-[14px]" : ""}`;
+}
+
+function columnStyle(column: (typeof LEDGER_COLUMNS)[number]) {
+  return column.width ? { width: column.width } : undefined;
+}
+
+/** HiFi trial-state colours: SELECTED gold, PRUNED faint, INFEASIBLE red, COMPLETE green. */
+export function trialStateTone(state: string): string {
+  switch (state.toUpperCase()) {
+    case "SELECTED":
+      return "var(--accent-2)";
+    case "PRUNED":
+      return "var(--ink-faint)";
+    case "INFEASIBLE":
+    case "FAIL":
+    case "FAILED":
+      return "var(--bad)";
+    case "COMPLETE":
+      return "var(--good)";
+    default:
+      return "var(--ink-faint)";
+  }
+}
 
 function LedgerHead() {
   return (
-    <div className="flex min-w-[760px] border-t px-3 py-[5px]" style={{ borderColor: "var(--paper-sunken)" }}>
+    <div
+      className="flex min-w-[760px] border-b px-3 py-[5px] text-[9.5px] uppercase tracking-[.06em]"
+      style={{ borderColor: "var(--line-soft)", color: "var(--ink-faint)" }}
+      data-ledger-head
+    >
       {LEDGER_COLUMNS.map((column) => (
-        <span
-          key={column.head}
-          className="text-[9.5px] uppercase tracking-[.06em]"
-          style={{ color: "var(--ink-faint)", flex: column.width ? `0 0 ${column.width}px` : "1 1 auto" }}
-        >
+        <span key={column.head} className={columnClass(column)} style={columnStyle(column)} data-align={column.right ? "right" : "left"}>
           {column.head}
         </span>
       ))}
@@ -392,17 +522,28 @@ function LedgerHead() {
   );
 }
 
+function NotPublished({ title }: { title: string }) {
+  return (
+    <span className="italic" style={{ color: "var(--ink-faint)" }} title={title}>
+      not published
+    </span>
+  );
+}
+
 /**
  * The retained ledger, when the run is in the admitted profile. Selected,
- * raw-best and inspected stay three separate ideas, as RS-02 requires.
+ * raw-best and inspected stay three separate ideas, as RS-02 requires: the
+ * source's selection is the gold row, the row the reader clicked is the accent
+ * row, and clicking never selects anything.
  */
 function LedgerRows({ search }: { search: CurrentSourceSearch }) {
   const trials = search.ledger.trials;
   const selectedId = search.selection.selected_trial_id;
+  const [picked, setPicked] = useState<string | null>(null);
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-3 pb-1">
+    <div>
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-3 py-1">
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-candidate-count>
           {search.candidates.rows.length} of {search.candidates.source_candidate_count} candidates
         </span>
@@ -422,44 +563,53 @@ function LedgerRows({ search }: { search: CurrentSourceSearch }) {
         )}
       </div>
       <LedgerHead />
-      {trials.map((trial) => (
-        <div
-          key={trial.trial_id}
-          className="mono flex min-w-[760px] items-baseline border-t px-3 py-1 text-[10.5px]"
-          style={{
-            borderColor: "var(--paper-sunken)",
-            background: trial.trial_id === selectedId ? "var(--accent-2-soft)" : undefined,
-          }}
-          data-trial={trial.trial_id}
-          data-trial-selected={trial.trial_id === selectedId}
-        >
-          <span style={{ flex: "0 0 96px" }}>{trial.trial_id}</span>
-          <span style={{ flex: "0 0 50px", color: "var(--ink-faint)" }} className="italic" title="seed is not published per trial">
-            not published
-          </span>
-          <span style={{ flex: "0 0 96px", color: "var(--ink-faint)" }} className="text-[9px]">
-            {trial.state}
-          </span>
-          <span style={{ flex: "0 0 76px" }}>
-            {trial.objective ?? (
-              <span className="italic" style={{ color: "var(--ink-faint)" }}>
-                not published
-              </span>
-            )}
-          </span>
-          <span style={{ flex: "0 0 120px", color: "var(--ink-faint)" }} className="italic">
-            not published
-          </span>
-          <span style={{ flex: "0 0 110px", color: "var(--ink-faint)" }} className="italic">
-            not published
-          </span>
-          <span className="flex-1 text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-            {Object.entries(trial.parameters)
-              .map(([name, value]) => `${name}=${value}`)
-              .join(" · ")}
-          </span>
-        </div>
-      ))}
+      {trials.map((trial) => {
+        const selected = trial.trial_id === selectedId;
+        return (
+          <button
+            key={trial.trial_id}
+            type="button"
+            className="mono flex w-full min-w-[760px] items-baseline border-0 border-b border-solid px-3 py-1 text-left text-[10.5px]"
+            style={{
+              borderBottomColor: "var(--paper-sunken)",
+              color: "var(--ink)",
+              background: selected ? "var(--accent-2-soft)" : picked === trial.trial_id ? "var(--accent-soft)" : "transparent",
+            }}
+            aria-pressed={picked === trial.trial_id}
+            onClick={() => setPicked(trial.trial_id)}
+            data-trial={trial.trial_id}
+            data-trial-selected={selected}
+          >
+            <span className={columnClass(LEDGER_COLUMNS[0])} style={columnStyle(LEDGER_COLUMNS[0])}>
+              {trial.trial_id}
+            </span>
+            <span className={columnClass(LEDGER_COLUMNS[1])} style={columnStyle(LEDGER_COLUMNS[1])}>
+              <NotPublished title="seed is not published per trial" />
+            </span>
+            <span
+              className={`${columnClass(LEDGER_COLUMNS[2])} text-[9px]`}
+              style={{ ...columnStyle(LEDGER_COLUMNS[2]), color: trialStateTone(trial.state) }}
+              data-trial-state={trial.state}
+            >
+              {trial.state}
+            </span>
+            <span className={columnClass(LEDGER_COLUMNS[3])} style={columnStyle(LEDGER_COLUMNS[3])}>
+              {trial.objective ?? <NotPublished title="the retained trial publishes no objective" />}
+            </span>
+            <span className={columnClass(LEDGER_COLUMNS[4])} style={columnStyle(LEDGER_COLUMNS[4])}>
+              <NotPublished title="the retained ledger publishes no OOS value per trial (CG-P15-03)" />
+            </span>
+            <span className={columnClass(LEDGER_COLUMNS[5])} style={columnStyle(LEDGER_COLUMNS[5])}>
+              <NotPublished title="the retained ledger publishes no parameter digest per trial" />
+            </span>
+            <span className={`${columnClass(LEDGER_COLUMNS[6])} text-[9.5px]`} style={{ color: "var(--ink-faint)" }}>
+              {Object.entries(trial.parameters)
+                .map(([name, value]) => `${name}=${value}`)
+                .join(" · ")}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -471,20 +621,42 @@ function FreezeLine({ detail }: { detail: SearchDetailDocument }) {
   const title = froze
     ? "Stage A searches, the pool freezes, Stage B selects on what was frozen."
     : "Stage A searches, the pool freezes, Stage B selects on what was frozen. This run froze no pool because it ran no search.";
+  /* The run's claim matrix (which way information crossed) is not published
+     (CG-P15-05); a fixed profile froze nothing, and says so. */
+  const kind: FreezeArrowKind = detail.source_profile.state === "FIXED_PROFILE_NO_SEARCH" ? "no-freeze" : "unpublished";
+  const arrow = freezeArrow(kind);
+  const line =
+    "h-0 flex-1 border-t-2 border-dashed min-[1100px]:h-auto min-[1100px]:w-0 min-[1100px]:border-l-2 min-[1100px]:border-t-0";
   return (
     <div
-      className="flex flex-row items-center gap-2 py-1 min-[1100px]:flex-col min-[1100px]:pt-[34px]"
+      className="flex min-w-0 flex-row items-center gap-2 py-1 min-[1100px]:flex-col min-[1100px]:gap-0 min-[1100px]:overflow-hidden min-[1100px]:pb-0 min-[1100px]:pt-[34px]"
       data-freeze-line={detail.selection.state}
     >
-      <span className="h-0 flex-1 border-t-2 border-dashed min-[1100px]:h-auto min-[1100px]:w-0 min-[1100px]:border-l-2 min-[1100px]:border-t-0" style={{ borderColor: "var(--role-holdout)" }} />
-      <span
-        className="mono whitespace-nowrap text-[9.5px] font-bold tracking-[.14em] min-[1100px]:[transform:rotate(180deg)] min-[1100px]:[writing-mode:vertical-rl]"
-        style={{ color: "var(--role-holdout)" }}
-        title={title}
-      >
-        {FREEZE_LABEL} · {froze ? "FROZEN" : "NONE — NO SEARCH RAN"}
+      <span className={line} style={{ borderColor: "var(--accent-2)" }} />
+      <span className="flex flex-none flex-row items-center gap-1.5 min-[1100px]:flex-col min-[1100px]:py-[10px]">
+        <span
+          className="mono whitespace-nowrap text-[9.5px] font-bold tracking-[.14em] min-[1100px]:[transform:rotate(180deg)] min-[1100px]:[writing-mode:vertical-rl]"
+          style={{ color: "var(--accent-2)" }}
+          title={title}
+        >
+          {FREEZE_LABEL} · {froze ? "FROZEN" : "NONE — NO SEARCH RAN"}
+        </span>
+        <span
+          className="mono whitespace-nowrap rounded-[3px] border px-1.5 py-[3px] text-[10px] font-bold"
+          style={{
+            color: arrow.tone,
+            borderColor: arrow.border,
+            background: "var(--paper)",
+            ...(arrow.flow ? { ["--rs-motion-duration" as string]: "1.6s" } : {}),
+          }}
+          title={arrow.title}
+          data-freeze-arrow={kind}
+          data-motion={arrow.flow ? "flow" : undefined}
+        >
+          {arrow.glyph}
+        </span>
       </span>
-      <span className="h-0 flex-1 border-t-2 border-dashed min-[1100px]:h-auto min-[1100px]:w-0 min-[1100px]:border-l-2 min-[1100px]:border-t-0" style={{ borderColor: "var(--role-holdout)" }} />
+      <span className={line} style={{ borderColor: "var(--accent-2)" }} />
     </div>
   );
 }
@@ -537,9 +709,12 @@ export function SearchScreen({
   const metric = detail?.requested_optimizer.candidate_selection_metric;
 
   return (
-    <div className="flex flex-col gap-[14px]" data-screen="search-detail" data-run={runId}>
+    <div className={`${SCREEN_FRAME} max-w-[1560px]`} data-screen="search-detail" data-run={runId}>
       {/* ------------------------------------------------------ header */}
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5">
+      <header
+        className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5 border-b pb-[10px]"
+        style={{ borderColor: "var(--line)" }}
+      >
         <div className="flex min-w-0 flex-col gap-[3px]">
           <nav className="flex flex-wrap items-center gap-1.5 text-[12px]" aria-label="Breadcrumb" style={{ color: "var(--ink-soft)" }}>
             {notFound ? (
@@ -551,25 +726,27 @@ export function SearchScreen({
                 Evidence Flow
               </Link>
             )}
-            <span style={{ color: "var(--line)" }}>/</span>
+            <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span className="mono min-w-0 truncate" title={runId}>
               {runId}
             </span>
-            <span style={{ color: "var(--line)" }}>/</span>
+            <span style={{ color: "var(--ink-faint)" }}>/</span>
             <span style={{ color: "var(--ink)" }}>Stage 2 · Search &amp; Selection</span>
             {notFound ? null : (
               <>
+                <span style={{ color: "var(--ink-faint)" }}>·</span>
                 <Link
                   to={deepDiveHref(`${runPath}/split`, { ...cursor, stage: "split" })}
-                  className="mono ml-2 text-[10px]"
+                  className="mono text-[10px]"
                   style={{ color: "var(--accent)" }}
                   data-action="back-to-split"
                 >
                   ← S1 Split
                 </Link>
+                <span style={{ color: "var(--ink-faint)" }}>·</span>
                 <Link
                   to={deepDiveHref(`${runPath}/freeze`, { ...cursor, stage: "freeze" })}
-                  className="mono ml-1 text-[10px]"
+                  className="mono text-[10px]"
                   style={{ color: "var(--accent)" }}
                   data-action="next-stage"
                 >
@@ -578,11 +755,11 @@ export function SearchScreen({
               </>
             )}
           </nav>
-          <h1 className="text-[22px] font-light leading-[1.2]" style={{ fontFamily: "var(--font-display)" }}>
+          <h1 className="text-[22px] font-light tracking-[-0.01em] [line-height:normal]" style={{ fontFamily: "var(--font-display)" }}>
             {SEARCH_TITLE}
           </h1>
           <p
-            className="text-[13.5px] italic leading-[1.35]"
+            className="text-[13.5px] italic [line-height:normal]"
             style={{ fontFamily: "var(--font-display)", color: "var(--ink-faint)" }}
             data-subtitle
           >
@@ -615,23 +792,46 @@ export function SearchScreen({
         {detail ? (
           <div className="flex flex-col gap-[14px]">
             {/* --------------------------------------- mode × schedule card */}
-            <section className="rounded-[6px] border" style={CARD_STYLE} data-source-strip={detail.source_profile.state}>
-              <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--paper-sunken)" }}>
+            <section className="rounded-[6px] border" style={RAISED_STYLE} data-source-strip={detail.source_profile.state}>
+              <div className="flex flex-wrap items-center gap-2 border-b px-[14px] py-[9px]" style={{ borderColor: "var(--line-soft)" }}>
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                   optimization_mode
                 </span>
                 {/* One run is one mode: the run's own, read-only — never a switcher. */}
                 <span data-requested-optimizer={detail.requested_optimizer.state} className="flex flex-wrap items-center gap-2">
-                  <Pill on data-run-mode>
-                    {detail.requested_optimizer.mode ?? "mode not published"}
-                  </Pill>
-                  <span className={`${LABEL} ml-3`} style={{ color: "var(--ink-faint)" }}>
+                  {detail.requested_optimizer.mode !== null ? (
+                    <Pill on data-run-mode>
+                      {detail.requested_optimizer.mode}
+                    </Pill>
+                  ) : (
+                    <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} data-run-mode>
+                      mode not published
+                    </span>
+                  )}
+                  <span className="mx-1 h-[18px] w-px flex-none" style={{ background: "var(--line)" }} aria-hidden="true" />
+                  <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                     schedule
                   </span>
-                  <Pill on data-run-schedule>
-                    {detail.requested_optimizer.schedule ?? "schedule not published"}
-                  </Pill>
-                  <span className="mono text-[10.5px] italic" style={{ color: "var(--role-holdout)" }}>
+                  {detail.requested_optimizer.schedule !== null ? (
+                    <Pill
+                      on
+                      tone={schedulePillTone(detail.requested_optimizer.schedule)}
+                      data-run-schedule
+                      data-pill-tone={schedulePillTone(detail.requested_optimizer.schedule)}
+                      title={
+                        schedulePillTone(detail.requested_optimizer.schedule) === "warn"
+                          ? "only per_fold_causal keeps OOS out of selection — this schedule is shown in the warn style"
+                          : undefined
+                      }
+                    >
+                      {detail.requested_optimizer.schedule}
+                    </Pill>
+                  ) : (
+                    <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} data-run-schedule>
+                      schedule not published
+                    </span>
+                  )}
+                  <span className="mono text-[10.5px] italic" style={{ color: "var(--accent-2)" }}>
                     {detail.requested_optimizer.state.toLowerCase().replace(/_/g, " ")}
                   </span>
                 </span>
@@ -640,51 +840,97 @@ export function SearchScreen({
                 </span>
               </div>
 
-              {/* Claim row — the run's own words for what it claims. */}
-              <div className="flex flex-wrap gap-x-6 gap-y-2 px-[14px] py-[9px]" data-claim-row>
-                <Claim k="source profile">
-                  <span data-source-profile={detail.source_profile.state} title={detail.source_profile.reason_code ?? undefined}>
-                    {detail.source_profile.state}
-                  </span>
-                </Claim>
-                <Claim k="selection" data-selection-state={detail.selection.state}>
-                  {detail.selection.state}
-                </Claim>
-                <Claim k="strict outer OOS">
-                  {profile ? <Gap gap={profile.strict_outer_oos} what="strict outer OOS" bare /> : null}
-                </Claim>
-                <Claim k="candidate_selection_metric" data-metric-state={metric?.state}>
-                  {metric?.state === "CONFIRMED" ? (
-                    <span className="flex items-baseline gap-1.5">
-                      <Chip data-metric-value={metric.value}>{metric.value}</Chip>
-                      <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} data-metric-provenance>
-                        {metric.provenance.toLowerCase().replace(/_/g, " ")}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="italic" style={{ color: "var(--ink-faint)" }} title={metric?.reason_code ?? undefined}>
-                      not published
-                    </span>
-                  )}
-                </Claim>
-                <Claim k="validation claim">
-                  <span className="italic" style={{ color: "var(--ink-faint)" }} title="the search read publishes no validation claim (CG-P15-05)">
-                    not published
-                  </span>
-                </Claim>
-                <Claim k="readiness">
-                  <span
-                    data-readiness={detail.readiness}
-                    title="The server's own word: a fixed profile is published; the optimizer facts around it are absent by nature."
-                  >
-                    {detail.readiness}
-                  </span>
-                </Claim>
-                {profile && profile.parameter_bundle_digest !== null ? (
-                  <Claim k="parameter bundle">
-                    <Digest value={profile.parameter_bundle_digest} data-bundle-digest />
+              {/* Claim row — HiFi's six fields first, each a shell where the read publishes nothing, then the run's own facts. */}
+              <div className="flex flex-wrap items-stretch min-[900px]:flex-nowrap">
+                <div className="flex flex-1 flex-wrap gap-x-6 gap-y-2 px-[14px] py-[9px]" data-claim-row>
+                  <Claim k="validation_claim" accent>
+                    <ClaimShell what="validation claim" />
                   </Claim>
-                ) : null}
+                  <Claim k="chronological_claim">
+                    <ClaimShell what="chronological claim" />
+                  </Claim>
+                  <Claim k="oos_used_for_selection">
+                    <ClaimShell what="oos_used_for_selection" />
+                  </Claim>
+                  <Claim k="OOS column state">
+                    <ClaimShell what="OOS column state" />
+                  </Claim>
+                  <Claim k="scoring_backend">
+                    <ClaimShell what="scoring backend" />
+                  </Claim>
+                  <Claim k="candidate_selection_metric" data-metric-state={metric?.state}>
+                    {metric?.state === "CONFIRMED" ? (
+                      <span className="flex items-baseline gap-1.5">
+                        <span data-metric-value={metric.value}>{metric.value}</span>
+                        <span className="text-[9px]" style={{ color: "var(--good)" }}>
+                          CONFIRMED
+                        </span>
+                        <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} data-metric-provenance>
+                          {metric.provenance.toLowerCase().replace(/_/g, " ")}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="italic" style={{ color: "var(--ink-faint)" }} title={metric?.reason_code ?? undefined}>
+                        not published
+                      </span>
+                    )}
+                  </Claim>
+                  <Claim k="source profile">
+                    <span data-source-profile={detail.source_profile.state} title={detail.source_profile.reason_code ?? undefined}>
+                      {detail.source_profile.state}
+                    </span>
+                  </Claim>
+                  <Claim k="selection" data-selection-state={detail.selection.state}>
+                    {detail.selection.state}
+                  </Claim>
+                  <Claim k="strict outer OOS">
+                    {profile ? <Gap gap={profile.strict_outer_oos} what="strict outer OOS" bare /> : null}
+                  </Claim>
+                  <Claim k="readiness">
+                    <span
+                      data-readiness={detail.readiness}
+                      title="The server's own word: a fixed profile is published; the optimizer facts around it are absent by nature."
+                    >
+                      {detail.readiness}
+                    </span>
+                  </Claim>
+                  {profile && profile.parameter_bundle_digest !== null ? (
+                    <Claim k="parameter bundle">
+                      <Digest value={profile.parameter_bundle_digest} data-bundle-digest />
+                    </Claim>
+                  ) : null}
+                </div>
+                <div
+                  className="flex w-full items-center border-t px-[14px] py-[9px] min-[900px]:w-auto min-[900px]:max-w-[250px] min-[900px]:border-l min-[900px]:border-t-0"
+                  style={{ borderColor: "var(--line-soft)" }}
+                  data-selector-layers
+                >
+                  <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                    {SELECTOR_LAYERS_NOTE[0]}
+                    <span className="mono">{SELECTOR_LAYERS_NOTE[1]}</span>
+                    {SELECTOR_LAYERS_NOTE[2]}
+                    <span className="mono">{SELECTOR_LAYERS_NOTE[3]}</span>
+                    {SELECTOR_LAYERS_NOTE[4]}
+                  </span>
+                </div>
+              </div>
+
+              {/* HiFi "what this mode reads": its cells come from the run's claim matrix, which this read does not publish. */}
+              <div
+                className="flex flex-wrap items-center gap-[14px] rounded-b-[6px] border-t px-[14px] py-2"
+                style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
+                data-mode-reads="shell"
+              >
+                <span className={`${LABEL} flex-none`} style={{ color: "var(--ink-faint)" }}>
+                  what this mode reads
+                </span>
+                <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={CLAIM_SHELL_REASON}>
+                  not published
+                </span>
+                <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                  Which windows {detail.requested_optimizer.mode ?? "this mode"} reads on each side of the freeze comes
+                  from the run's claim matrix; the search read does not publish it, so no cell is drawn.
+                </span>
               </div>
             </section>
 
@@ -697,7 +943,7 @@ export function SearchScreen({
             >
               <div className="flex min-w-0 flex-col gap-3" data-stage="A">
                 <div className="flex flex-wrap items-baseline gap-2.5">
-                  <h2 className="mono text-[11px] font-bold uppercase" style={{ color: "var(--role-is)" }}>
+                  <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--role-is)" }}>
                     Stage A · search
                   </h2>
                   <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
@@ -705,7 +951,7 @@ export function SearchScreen({
                   </span>
                 </div>
 
-                <section className={CARD} style={CARD_STYLE} data-panel="search-space">
+                <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} data-panel="search-space">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
                       A1 · search space as declared
@@ -721,7 +967,17 @@ export function SearchScreen({
                   ) : (
                     <Withheld availability={profile?.availability ?? detail.availability} what="parameter profile" />
                   )}
-                  <div className="flex flex-wrap gap-x-5 gap-y-1 border-t pt-1.5" style={{ borderColor: "var(--paper-sunken)" }} data-coverage>
+                  <div className="flex flex-wrap gap-x-[22px] gap-y-1 pt-[5px]" data-coverage>
+                    {parameters.length > 0 ? (
+                      <span className="inline-flex items-baseline gap-x-1.5" data-gap-fact="levels" data-gap-state="NOT_PUBLISHED">
+                        <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+                          levels
+                        </span>
+                        <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={LEVELS_REASON}>
+                          not published
+                        </span>
+                      </span>
+                    ) : null}
                     {gapOf("sampler_seed_warm_start") ? (
                       <Gap gap={gapOf("sampler_seed_warm_start") as SearchSourceGap} what="sampler · seeds" />
                     ) : null}
@@ -738,7 +994,7 @@ export function SearchScreen({
 
               <div className="flex min-w-0 flex-col gap-3" data-stage="B">
                 <div className="flex flex-wrap items-baseline gap-2.5">
-                  <h2 className="mono text-[11px] font-bold uppercase" style={{ color: "var(--role-holdout)" }}>
+                  <h2 className="mono text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: "var(--accent-2)" }}>
                     Stage B · selection
                   </h2>
                   <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
@@ -817,7 +1073,7 @@ export function SearchScreen({
       </ResearchPanel>
 
       <footer className="flex flex-col gap-[3px] border-t pt-2" style={{ borderColor: "var(--line)" }}>
-        <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        <span className="text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
           rules of this screen
         </span>
         <p className="text-[11px] leading-[1.6]" style={{ color: "var(--ink-soft)" }} data-rules-footer>

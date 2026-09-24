@@ -13,7 +13,7 @@ import { useParams } from "react-router-dom";
 
 import { SplitScreen } from "./SplitDetail";
 import { RouteCursorNotice } from "./CursorNotice";
-import { useEvidenceCursor } from "./evidenceCursor";
+import { observedFoldsFor, useEvidenceCursor } from "./evidenceCursor";
 import { useSplit } from "./useSplit";
 
 export function SplitRoute() {
@@ -22,15 +22,22 @@ export function SplitRoute() {
   const split = useSplit(runId);
 
   /* FE-S04-06: once the retained source publishes its observed folds, a fold
-     outside them is clamped (golden cases 8–9) and the notice says so. */
+     outside them is clamped (golden cases 8–9) and the notice says so. Where
+     this screen's reads publish no fold set, the set this run already
+     published (the hub's `fold_navigation`) clamps it the same way. */
   const observed = split.folds.state === "ready" ? split.folds.split.fold_plan.folds.length : 0;
+  const known = observedFoldsFor(runId);
+  const knownKey = known ? known.join(",") : "";
   useEffect(() => {
     if (observed > 0) clampToObserved(Array.from({ length: observed }, (_, index) => index + 1));
-  }, [clampToObserved, observed]);
+    else if (known && known.length > 0) clampToObserved(known);
+    // `knownKey` carries the set; the array identity is stable per run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clampToObserved, observed, knownKey, cursor.fold]);
 
   return (
     <>
-      <RouteCursorNotice problems={problems} notes={notes} />
+      <RouteCursorNotice problems={problems} notes={notes} frame={1440} />
       <SplitScreen
         runId={runId}
         detail={split.detail}

@@ -11,7 +11,7 @@
  * Freeze action, no inferred objective and no position the browser worked out
  * for itself.
  */
-import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -20,6 +20,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   SEARCH_RULES_BASE,
   SEARCH_RULES_FIXED_PROFILE,
+  SELECTOR_LAYERS_NOTE,
+  freezeArrow,
+  schedulePillTone,
+  trialStateTone,
   SEARCH_SUBTITLE,
   SEARCH_TITLE,
   SearchScreen,
@@ -31,7 +35,7 @@ import {
   type CurrentSourceSearch,
   type SearchDetail,
 } from "./searchClient";
-import { DEFAULT_CURSOR } from "./evidenceCursor";
+import { DEFAULT_CURSOR, forgetObservedFolds, rememberObservedFolds } from "./evidenceCursor";
 import { forgetSearchReads, searchState, useSearch } from "./useSearch";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
@@ -728,7 +732,7 @@ describe("RF-06 FE-S06-07/08 — HiFi layout", () => {
     expect(container.querySelector("[data-kind='rsi_len']")?.textContent).toBe("NUMERIC");
     expect(container.querySelector("[data-claim-row]")).toBeTruthy();
     expect(container.querySelector("[data-action='copy-evidence-link']")).toBeTruthy();
-    expect(container.querySelector("[data-as-of]")?.textContent).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$/);
+    expect(container.querySelector("[data-as-of]")?.textContent).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
     expect(container.querySelector("[data-bundle-digest]")?.getAttribute("title")).toBe("sha256:bundle01");
   });
 
@@ -736,5 +740,111 @@ describe("RF-06 FE-S06-07/08 — HiFi layout", () => {
     const { container } = view();
     expect(container.querySelectorAll("[data-gap-fact='objective components']")).toHaveLength(1);
     expect(container.querySelector("[data-source-absences]")).toBeNull();
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * RF-06 HiFi fidelity pass (S06)
+ * ---------------------------------------------------------------------- */
+
+describe("RF-06 S06 fidelity — freeze arrow chip", () => {
+  it("maps the HiFi kinds, and only a published crossing moves", () => {
+    expect(freezeArrow("none")).toMatchObject({ glyph: "→", tone: "var(--accent-2)", flow: false });
+    expect(freezeArrow("decay")).toMatchObject({ glyph: "◀ OOS", tone: "var(--bad)", flow: true });
+    expect(freezeArrow("retro")).toMatchObject({ glyph: "◀ FULL", tone: "var(--bad)", flow: true });
+    expect(freezeArrow("na")).toMatchObject({ glyph: "×", tone: "var(--bad)", flow: false });
+    expect(freezeArrow("no-freeze").title).toContain("no pool froze");
+    expect(freezeArrow("unpublished").glyph).toBe("—");
+  });
+
+  it("a fixed profile shows the neutral 'no pool froze' chip, without motion", () => {
+    const { container } = view();
+    const chip = container.querySelector("[data-freeze-arrow]") as HTMLElement;
+    expect(chip.getAttribute("data-freeze-arrow")).toBe("no-freeze");
+    expect(chip.textContent).toBe("×");
+    expect(chip.getAttribute("title")).toContain("no pool froze");
+    expect(chip.getAttribute("data-motion")).toBeNull();
+  });
+});
+
+describe("RF-06 S06 fidelity — mode card and claim row", () => {
+  it("wears the warn style for any schedule but per_fold_causal", () => {
+    expect(schedulePillTone("global")).toBe("warn");
+    expect(schedulePillTone("per_fold_decay")).toBe("warn");
+    expect(schedulePillTone("per_fold_causal")).toBe("accent");
+    expect(schedulePillTone(null)).toBe("accent");
+    const { container } = view();
+    const pill = container.querySelector("[data-run-schedule]") as HTMLElement;
+    expect(pill.getAttribute("data-pill-tone")).toBe(schedulePillTone(detail().requested_optimizer.schedule));
+  });
+
+  it("keeps the HiFi claim fields first, as shells with a reason, and the static selector-layers aside", () => {
+    const { container } = view();
+    const keys = [...container.querySelectorAll("[data-claim-row] > span > span:first-child")].map((k) => k.textContent);
+    expect(keys.slice(0, 6)).toEqual([
+      "validation_claim",
+      "chronological_claim",
+      "oos_used_for_selection",
+      "OOS column state",
+      "scoring_backend",
+      "candidate_selection_metric",
+    ]);
+    const shells = container.querySelectorAll("[data-claim-shell]");
+    expect(shells).toHaveLength(5);
+    for (const shell of shells) {
+      expect(shell.textContent).toBe("not published");
+      expect(shell.getAttribute("title")).toContain("CG-P15-05");
+    }
+    expect(container.querySelector("[data-selector-layers]")?.textContent).toBe(SELECTOR_LAYERS_NOTE.join(""));
+    expect(container.querySelector("[data-mode-reads='shell']")?.textContent).toContain("not published");
+  });
+});
+
+describe("RF-06 S06 fidelity — A1 and the ledger", () => {
+  it("lays A1 out in the HiFi columns, step and levels right, levels' absence said once", () => {
+    const { container } = view();
+    const heads = [...container.querySelectorAll("[data-a1-head] > span")].map((h) => [h.textContent, h.getAttribute("data-align")]);
+    expect(heads.slice(0, 5)).toEqual([
+      ["param", "left"],
+      ["kind", "left"],
+      ["low … high", "left"],
+      ["step", "right"],
+      ["levels", "right"],
+    ]);
+    expect(container.querySelectorAll("[data-levels-state='NOT_PUBLISHED']")).toHaveLength(2);
+    expect(container.querySelectorAll("[data-gap-fact='levels']")).toHaveLength(1);
+    // The note is the served bound state and placement, rounded for reading; exact in the title.
+    const note = container.querySelector("[data-bound-state]");
+    expect(note?.textContent).toMatch(/^within range · \d+%$/);
+    expect(note?.getAttribute("title")).toContain("WITHIN_DECLARED_RANGE");
+  });
+
+  it("colours trial states as the HiFi does, and a click marks a row without selecting it", () => {
+    expect(trialStateTone("SELECTED")).toBe("var(--accent-2)");
+    expect(trialStateTone("PRUNED")).toBe("var(--ink-faint)");
+    expect(trialStateTone("INFEASIBLE")).toBe("var(--bad)");
+    expect(trialStateTone("COMPLETE")).toBe("var(--good)");
+    const { container } = view({ ledger: { state: "ready", search: retainedSearch() } });
+    const heads = [...container.querySelectorAll("[data-ledger-head] > span")].map((h) => h.getAttribute("data-align"));
+    expect(heads).toEqual(["left", "left", "left", "right", "right", "left", "left"]);
+    const row = container.querySelector("[data-trial='trial_042']") as HTMLElement;
+    expect(row.tagName).toBe("BUTTON");
+    fireEvent.click(row);
+    expect(row.getAttribute("aria-pressed")).toBe("true");
+    expect(row.style.background).toBe("var(--accent-soft)");
+    expect(container.querySelector("[data-trial='trial_017']")?.getAttribute("data-trial-selected")).toBe("true");
+  });
+});
+
+describe("RF-06 S06 — a fold the run never observed is clamped as on the hub", () => {
+  it("clamps against the run's published fold set before the read is sent", async () => {
+    forgetObservedFolds();
+    rememberObservedFolds("R-WFO-118", [1]);
+    stub((url) => [200, foldEcho(url)]);
+    const { container } = mountRoute("#stage=search&fold=4");
+    await waitFor(() => expect(window.location.hash).toBe("#stage=search&fold=1"));
+    expect(requested.some((url) => url.includes("fold=4"))).toBe(false);
+    expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 4");
+    forgetObservedFolds();
   });
 });

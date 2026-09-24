@@ -18,6 +18,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 
 import {
   CURSOR_STAGES,
@@ -144,6 +145,36 @@ export function clampFold(
   if (fold > last) return { fold: last, note: { code: "CURSOR_FOLD_CLAMPED", from: fold, to: last, reason: "BEYOND_LAST" } };
   const below = set.filter((value) => value < fold).pop() ?? first;
   return { fold: below, note: { code: "CURSOR_FOLD_CLAMPED", from: fold, to: below, reason: "NOT_OBSERVED" } };
+}
+
+/* -------------------------------------------------------------------------
+ * Observed folds, per run — RF-06 fold clamping across S04–S06
+ *
+ * The hub publishes the folds a run observed (`fold_navigation`); S05 learns
+ * them from the retained fold plan. S06's read publishes none. So that a fold
+ * the run never observed is clamped the same way on every screen of one run,
+ * each published set is remembered for that run when a screen clamps against
+ * it, and a screen whose own read publishes no set clamps against the one the
+ * run already published. Nothing is inferred: with no published set there is
+ * nothing to clamp against, and the fold is left alone.
+ * ---------------------------------------------------------------------- */
+
+const observedByRun = new Map<string, readonly number[]>();
+
+export function rememberObservedFolds(runId: string, observed: readonly number[]): void {
+  if (!runId) return;
+  const set = [...new Set(observed.filter((value) => Number.isSafeInteger(value) && value >= 1))].sort((a, b) => a - b);
+  if (set.length > 0) observedByRun.set(runId, set);
+}
+
+/** The observed folds a read of this run published in this session, or `null`. */
+export function observedFoldsFor(runId: string): readonly number[] | null {
+  return observedByRun.get(runId) ?? null;
+}
+
+/** Test seam. */
+export function forgetObservedFolds(): void {
+  observedByRun.clear();
 }
 
 function readHash(hash: string): Read {
@@ -282,6 +313,8 @@ export interface EvidenceCursorController {
  * reader expects from a screen whose whole state is one cursor.
  */
 export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): EvidenceCursorController {
+  /* The run the cursor belongs to — used only to remember a published observed-fold set. */
+  const { runId } = useParams<{ runId: string }>();
   /* Callers pass an object literal; the seed is keyed on its values so a
      re-render does not reset anything. */
   const seedKey = JSON.stringify(defaults);
@@ -337,6 +370,7 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
 
   const clampToObserved = useCallback(
     (observed: readonly number[]) => {
+      rememberObservedFolds(runId ?? "", observed);
       setCursor((previous) => {
         const { fold, note } = clampFold(previous.fold, observed);
         if (note === null) return previous;
@@ -344,7 +378,7 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
         return { ...previous, fold };
       });
     },
-    [addNote],
+    [addNote, runId],
   );
 
   const replaceFold = useCallback(
