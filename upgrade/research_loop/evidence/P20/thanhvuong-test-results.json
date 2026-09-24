@@ -3,8 +3,8 @@
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-24",
   "status": "P20-A S13 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · pushed, no PR · NOT_VERIFIED",
-  "tree": "e2d7d388ba704edfa0861a26a5fb15d5fae41c89",
-  "head": "034aef11fa1251226e74866ac2a4350f5a6c082f",
+  "tree": "58f2764411882585d6df8f4f7efffdda65639c62",
+  "head": "eeeae14fb5e1205b68838d9696550792d85b5eab",
   "workspace": {
     "user": "thanhvuong",
     "branch": "feat/thanhvuong/research-p17-p21",
@@ -40,12 +40,20 @@
         "tree": "e2d7d388ba704edfa0861a26a5fb15d5fae41c89",
         "subject": "fix(research): S13 mini chart day labels and markets rule copy",
         "numstat": "1 file +11/-3"
+      },
+      {
+        "sha": "eeeae14fb5e1205b68838d9696550792d85b5eab",
+        "tree": "58f2764411882585d6df8f4f7efffdda65639c62",
+        "subject": "fix(research): S13 audit fixes — Δ direction label, zero sign, absent counts, resolver mode",
+        "numstat": "3 files +114/-21"
       }
     ],
-    "diff_numstat_base_to_head": "10 files +2807/-2 (git diff --numstat 295901b7 034aef11)",
+    "diff_numstat_base_to_head": "10 files +2900/-2 (git diff --numstat 295901b7 eeeae14f)",
     "docs_commits": [
       "e731cfa6 docs(research): P20 Thanhvuong packet — S13 Compare receipt, requests, debt, rollback",
-      "this commit — docs(research): P20 §13 row, implementation note and handoff addendum"
+      "7800e8e2 docs(research): P20 §13 row, implementation note and handoff addendum",
+      "this commit — docs(research): P20 packet after audit — receipt §12, VD-P20-21…29, CG-P20-09…11",
+      "next commit — docs(research): P20 §13 note + handoff after audit"
     ],
     "baseline": {
       "ref": "primus-origin/docs/research-loop-plan",
@@ -59,7 +67,11 @@
       ],
       "merged": false
     },
-    "history_note": "package A reported 919e55b7/22c6294e/7dfb8d0f with an Opus trailer; rebuilt locally before push only to set the Fable trailer, trees unchanged"
+    "history_note": "package A reported 919e55b7/22c6294e/7dfb8d0f with an Opus trailer; rebuilt locally before push only to set the Fable trailer, trees unchanged",
+    "pushes": [
+      "295901b7..7800e8e2 (package C)",
+      "7800e8e2..<second docs commit after audit> (package C-2: eeeae14f + 2 docs commits); a commit cannot record its own SHA, see git log"
+    ]
   },
   "contract": {
     "openapi": "packages/contracts/openapi/research-compare.openapi.json",
@@ -71,11 +83,11 @@
     "canonical_fixture": false,
     "feature_flag": "CONTROL_API_FEATURE_RESEARCH_COMPARE=false"
   },
-  "lane_note": "Unit, typecheck and build are real executions in the workspace on head 034aef11 (package C, 2026-09-24). The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the compare API stubbed from the compare.contract.ts / compare.service.ts shape (no canonical fixture: CG-P20-01), on the workspace's own vite preview 127.0.0.1:4417, Playwright 1.62.1 Chromium, 1280 and 660. It is not a real-API receipt, not the dev host, and does not verify P20.",
+  "lane_note": "Unit, typecheck and build are real executions in the workspace on head eeeae14f (package C-2 after the independent audit, 2026-09-24). The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the compare API stubbed from the compare.contract.ts / compare.service.ts shape (no canonical fixture: CG-P20-01), on the workspace's own vite preview 127.0.0.1:4417, Playwright 1.62.1 Chromium, 1280 and 660, light theme (data-theme=research) for 23 gates and dark theme (data-theme=operations) for 15 gates. It is not a real-API receipt, not the dev host, and does not verify P20.",
   "results": [
     {
       "gate": "apps/portal/frontend npx tsc -b --noEmit",
-      "scope": "head 034aef11",
+      "scope": "head eeeae14f",
       "result": "PASS",
       "exit": 0,
       "log_sha256_prefix": "e3b0c44298fc1c14",
@@ -83,98 +95,124 @@
     },
     {
       "gate": "apps/portal/frontend npm run build",
-      "scope": "head 034aef11",
+      "scope": "head eeeae14f",
       "result": "PASS",
       "exit": 0,
-      "note": "built in 7.42s; only the pre-existing chunk-size warning",
-      "log_sha256_prefix": "1241fc832ec41153"
+      "note": "built in 8.92s; only the pre-existing chunk-size warning",
+      "log_sha256_prefix": "569dbfc7f20e563b"
     },
     {
       "gate": "apps/portal/frontend npx vitest run",
-      "scope": "head 034aef11",
+      "scope": "head eeeae14f",
       "result": "PASS",
       "exit": 0,
       "files": 172,
-      "passed": 3091,
+      "passed": 3094,
       "skipped": 1,
       "failed": 0,
-      "duration_s": 94.3,
+      "duration_s": 98.85,
       "note": "first pass; PortalShell flake not seen",
-      "log_sha256_prefix": "930b33c9aaf5b2af"
+      "log_sha256_prefix": "efddb2da599ef1e1"
     },
     {
       "gate": "apps/portal/frontend npx vitest run src/research/compareDetail.test.tsx src/research/researchBoundary.test.ts",
-      "scope": "head 034aef11",
+      "scope": "head eeeae14f",
       "result": "PASS",
       "exit": 0,
       "files": 2,
-      "passed": 38,
+      "passed": 41,
       "failed": 0,
-      "breakdown": "S13 24 (S13-U01…U23, U15 each 403/404) + boundary 14",
-      "log_sha256_prefix": "0fbf78d732eee597"
+      "breakdown": "S13 27 (S13-U01…U26, U15 each 403/404) + boundary 14",
+      "log_sha256_prefix": "38bbc27ad19da8d6"
     },
     {
-      "gate": "whole Research probe: RESEARCH_SHOT_DIR=~/tv-shots/p20/final/all P20_SHOT_DIR=~/tv-shots/p20/final/shots npx playwright test -c .tv-probe.config.ts --workers=1",
-      "scope": "head 034aef11, preview 127.0.0.1:4417 (PIDs 473200 473232 473233, killed by PID; ss -ltnp | grep 4417 empty)",
+      "gate": "whole Research probe: RESEARCH_SHOT_DIR=~/tv-shots/p20/final2/all P20_SHOT_DIR=~/tv-shots/p20/final2/shots npx playwright test -c .tv-probe.config.ts --workers=1",
+      "scope": "head eeeae14f, preview 127.0.0.1:4417 (PIDs 1227101 1227159 1227160, killed by PID; ss -ltnp | grep 4417 empty; 4317–4320 untouched)",
       "result": "PASS",
       "exit": 0,
-      "passed": 128,
+      "passed": 162,
       "failed": 0,
       "flaky": 0,
       "breakdown": {
         "_probe-research-fixtures.spec.ts": 8,
         "_probe-research-product.spec.ts": 74,
-        "_probe-research-tvp20.spec.ts (temporary, not committed)": 46
+        "_probe-research-tvp20.spec.ts (temporary, not committed)": 80
       },
-      "duration": "2.7m",
-      "log_sha256_prefix": "53a7fafab986e143",
-      "probe_log_sha256_prefix": "bca957cdd7e225b5"
+      "tvp20_breakdown": "light 25 tests × 2 viewports (23 RECEIPT gates + hi-fi capture + product geometry) + dark 15 gates × 2",
+      "duration": "4.4m",
+      "log_sha256_prefix": "fe151f443fd274a5",
+      "probe_log_sha256_prefix": "35e3038508ed11ad"
     },
     {
-      "gate": "RECEIPT counts (42 = 21 gates × 1280/660)",
+      "gate": "RECEIPT counts (76 = 23 light gates × 2 + 15 dark gates × 2)",
       "result": "PASS",
       "overflow_gt_0": 0,
       "console_noise_gt_0": 0,
       "mutations_gt_0": 0,
       "foreign_gt_0": 0,
+      "bare_digit_leaf_gt_0": 0,
       "overflow_culprit_lines": 0,
-      "note": "overflow = document.documentElement.scrollWidth - innerWidth ≤ 0 everywhere; declared console lines are the stubbed request's own 4xx/5xx (1 per refusal, 2 in etag-304); legacy GET /api/runs poll excluded"
+      "note": "overflow = document.documentElement.scrollWidth - innerWidth ≤ 0 everywhere; declared console lines are the stubbed request's own 4xx/5xx (1 per refusal, 2 in etag-304 and light resolver-badmode); legacy GET /api/runs poll excluded. Package C recorded '42 = 21 gates × 2' against a 19-row table and 46 tests (audit C2); corrected here"
     },
     {
-      "gate": "mini chart x labels (receipt C, markets)",
+      "gate": "mini chart x labels + mini meta (markets)",
       "result": "PASS",
-      "1280": [
-        {
-          "n": 2,
-          "overlap": false
+      "x_labels": {
+        "1280": [
+          {
+            "n": 2,
+            "overlap": false
+          },
+          {
+            "n": 0,
+            "overlap": false
+          },
+          {
+            "n": 0,
+            "overlap": false
+          }
+        ],
+        "660": [
+          {
+            "n": 2,
+            "overlap": false
+          },
+          {
+            "n": 0,
+            "overlap": false
+          },
+          {
+            "n": 0,
+            "overlap": false
+          }
+        ]
+      },
+      "mini_meta": {
+        "1280": {
+          "btc": 1,
+          "eth": 0,
+          "sol": 0
         },
-        {
-          "n": 0,
-          "overlap": false
-        },
-        {
-          "n": 0,
-          "overlap": false
+        "660": {
+          "btc": 1,
+          "eth": 0,
+          "sol": 0
         }
-      ],
-      "660": [
-        {
-          "n": 2,
-          "overlap": false
-        },
-        {
-          "n": 0,
-          "overlap": false
-        },
-        {
-          "n": 0,
-          "overlap": false
-        }
-      ],
-      "note": "only the btc card draws a chart; eth NOT_PUBLISHED, sol QUEUED"
+      },
+      "note": "only the btc card draws a chart; eth NOT_PUBLISHED, sol QUEUED; no 'emitted 0' (audit A4)"
+    },
+    {
+      "gate": "probe iteration note",
+      "result": "INFO",
+      "note": "C-2 round 1: 76 passed / 4 failed (zero-delta 1280/660 light+dark) because the bare-digit scan flagged the server-published Δ '0' cell — probe artefact, not a code bug; [data-delta-value] excluded from the scan; round 2 8/8; then whole probe 162/162",
+      "logs": {
+        "pw-tvp20-iter1.log": "30d4dd9e463b6409",
+        "pw-tvp20-iter2.log": "cdce1201ca6f82a0"
+      }
     },
     {
       "gate": "browser loading",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "9 panel skeletons, aria-busy, 1 GET",
@@ -183,6 +221,7 @@
     },
     {
       "gate": "browser loading",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "9 panel skeletons, aria-busy, 1 GET",
@@ -191,22 +230,25 @@
     },
     {
       "gate": "browser attempts",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
-      "assertion": "server order reversed (VD-P20-14), 2 arrows 'claim ↑ →', banner verbatim",
+      "assertion": "server order reversed (VD-P20-14), 2 arrows, aria 'claim strengthens along the ladder' (A8), banner verbatim",
       "image": "p20-attempts-1280.png",
       "image_sha256_prefix": "35ad99e226e1b703"
     },
     {
       "gate": "browser attempts",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
-      "assertion": "server order reversed (VD-P20-14), 2 arrows 'claim ↑ →', banner verbatim",
+      "assertion": "server order reversed (VD-P20-14), 2 arrows, aria 'claim strengthens along the ladder' (A8), banner verbatim",
       "image": "p20-attempts-660.png",
       "image_sha256_prefix": "351f61018572b762"
     },
     {
       "gate": "browser attempts-partial",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "coverage PARTIAL + reason + total",
@@ -215,6 +257,7 @@
     },
     {
       "gate": "browser attempts-partial",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "coverage PARTIAL + reason + total",
@@ -223,102 +266,133 @@
     },
     {
       "gate": "browser markets",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
-      "assertion": "3 cards, caption verbatim, no overlay/Δ, mini [data-x-label] 2/0/0 no overlap",
+      "assertion": "3 cards, caption verbatim, no overlay/Δ, mini [data-x-label] 2/0/0 no overlap, [data-mini-meta] btc 1 eth 0 sol 0 (gate d)",
       "image": "p20-markets-1280.png",
-      "image_sha256_prefix": "45fc7c0bfd3d4e17"
+      "image_sha256_prefix": "b3f302663293a836"
     },
     {
       "gate": "browser markets",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
-      "assertion": "3 cards, caption verbatim, no overlay/Δ, mini [data-x-label] 2/0/0 no overlap",
+      "assertion": "3 cards, caption verbatim, no overlay/Δ, mini [data-x-label] 2/0/0 no overlap, [data-mini-meta] btc 1 eth 0 sol 0 (gate d)",
       "image": "p20-markets-660.png",
-      "image_sha256_prefix": "7eed8cfcfe2c5734"
+      "image_sha256_prefix": "7aeb60f13a2bdfba"
     },
     {
       "gate": "browser pair",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
-      "assertion": "#0f4c5c solid + #9a6a1f dashed, 6 delta rows, ρ server string, weaker claim, TRADE_COUNT NOT_APPLICABLE",
+      "assertion": "rgb(15,76,92) solid + rgb(154,106,31) dashed, 6 delta rows, [data-delta-direction] 'B − A · as published', OOS row without 'stitched', nonMono 0 (gate a), foot 'matched 398 · A source 400 · B source 410 · …', ρ server string, weaker claim, TRADE_COUNT NOT_APPLICABLE",
       "image": "p20-pair-1280.png",
-      "image_sha256_prefix": "60131ffb36e9b7c0"
+      "image_sha256_prefix": "e15641b5be08dd36"
     },
     {
       "gate": "browser pair",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
-      "assertion": "#0f4c5c solid + #9a6a1f dashed, 6 delta rows, ρ server string, weaker claim, TRADE_COUNT NOT_APPLICABLE",
+      "assertion": "rgb(15,76,92) solid + rgb(154,106,31) dashed, 6 delta rows, [data-delta-direction] 'B − A · as published', OOS row without 'stitched', nonMono 0 (gate a), foot 'matched 398 · A source 400 · B source 410 · …', ρ server string, weaker claim, TRADE_COUNT NOT_APPLICABLE",
       "image": "p20-pair-660.png",
-      "image_sha256_prefix": "fff3a3a4d4e4d3c3"
+      "image_sha256_prefix": "af6d612599a22561"
     },
     {
       "gate": "browser pair-partial",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
-      "assertion": "data-pair-partial-reason",
+      "assertion": "data-pair-partial-reason; foot 'research.compare-common-window.v1 · common window not published · P20_CURRENT_SOURCE_SEAL_DOES_NOT_MATCH_P14_AND_RUN_BINDINGS', no 'matched', correlation meta INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL only, no [data-overlay-meta] (gate c)",
       "image": "p20-pair-partial-1280.png",
-      "image_sha256_prefix": "7b0a615e5673c65d"
+      "image_sha256_prefix": "3809e2e1fe99c44c"
     },
     {
       "gate": "browser pair-partial",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
-      "assertion": "data-pair-partial-reason",
+      "assertion": "data-pair-partial-reason; foot 'research.compare-common-window.v1 · common window not published · P20_CURRENT_SOURCE_SEAL_DOES_NOT_MATCH_P14_AND_RUN_BINDINGS', no 'matched', correlation meta INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL only, no [data-overlay-meta] (gate c)",
       "image": "p20-pair-partial-660.png",
-      "image_sha256_prefix": "595eb494504d2d0d"
+      "image_sha256_prefix": "41952b202bcf0e0b"
     },
     {
       "gate": "browser refused",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
-      "assertion": "0 overlay/delta/correlation nodes incl. hidden, mismatch rgb(180,58,58)",
+      "assertion": "0 overlay/delta/correlation/svg nodes incl. hidden, mismatch rgb(180,58,58); data-compare-state=available (S13-REFUSED-STATE-ATTR)",
       "image": "p20-refused-1280.png",
       "image_sha256_prefix": "bc4f2e64b18ef917"
     },
     {
       "gate": "browser refused",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
-      "assertion": "0 overlay/delta/correlation nodes incl. hidden, mismatch rgb(180,58,58)",
+      "assertion": "0 overlay/delta/correlation/svg nodes incl. hidden, mismatch rgb(180,58,58); data-compare-state=available (S13-REFUSED-STATE-ATTR)",
       "image": "p20-refused-660.png",
       "image_sha256_prefix": "c5e19439efcc6d83"
     },
     {
       "gate": "browser corr-zero",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "data-correlation-absent + P20_ZERO_VARIANCE_RAW_RETURNS, no 0",
       "image": "p20-corr-zero-1280.png",
-      "image_sha256_prefix": "eb2a5e7f6b2fc73a"
+      "image_sha256_prefix": "07ca0235ae1d81e2"
     },
     {
       "gate": "browser corr-zero",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "data-correlation-absent + P20_ZERO_VARIANCE_RAW_RETURNS, no 0",
       "image": "p20-corr-zero-660.png",
-      "image_sha256_prefix": "ce8fed0c615cf924"
+      "image_sha256_prefix": "b77e51f6364d7641"
     },
     {
-      "gate": "browser etag-304",
+      "gate": "browser zero-delta",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
-      "assertion": "If-None-Match → 304 keeps revision; 503 read again recovers",
-      "image": "p20-etag-304-1280.png",
-      "image_sha256_prefix": "e79f0bfb8f92bd21"
+      "assertion": "NET_RETURN Δ '0' and MAX_DRAWDOWN Δ '-0.0000' carry no data-sign, ink colour (gate b, A2)",
+      "image": "p20-zero-delta-1280.png",
+      "image_sha256_prefix": "06f1c0666143f236"
+    },
+    {
+      "gate": "browser zero-delta",
+      "theme": "light (research)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "NET_RETURN Δ '0' and MAX_DRAWDOWN Δ '-0.0000' carry no data-sign, ink colour (gate b, A2)",
+      "image": "p20-zero-delta-660.png",
+      "image_sha256_prefix": "d1851900f8bf3ecd"
     },
     {
       "gate": "browser etag-304",
+      "theme": "light (research)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "If-None-Match on the immediate return → 304 keeps revision; 503 read again recovers; 5 GETs",
+      "image": "p20-etag-304-1280.png",
+      "image_sha256_prefix": "3e7e33297e252ec8"
+    },
+    {
+      "gate": "browser etag-304",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
-      "assertion": "If-None-Match → 304 keeps revision; 503 read again recovers",
+      "assertion": "If-None-Match on the immediate return → 304 keeps revision; 503 read again recovers; 5 GETs",
       "image": "p20-etag-304-660.png",
-      "image_sha256_prefix": "7eed8cfcfe2c5734"
+      "image_sha256_prefix": "7aeb60f13a2bdfba"
     },
     {
       "gate": "browser refusal-400",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "terminal, no retry, request id",
@@ -327,6 +401,7 @@
     },
     {
       "gate": "browser refusal-400",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "terminal, no retry, request id",
@@ -335,6 +410,7 @@
     },
     {
       "gate": "browser refusal-401",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "denied",
@@ -343,6 +419,7 @@
     },
     {
       "gate": "browser refusal-401",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "denied",
@@ -351,6 +428,7 @@
     },
     {
       "gate": "browser refusal-403",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "denied, same sentence as 404",
@@ -359,6 +437,7 @@
     },
     {
       "gate": "browser refusal-403",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "denied, same sentence as 404",
@@ -367,6 +446,7 @@
     },
     {
       "gate": "browser refusal-404",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "denied, same sentence as 403",
@@ -375,6 +455,7 @@
     },
     {
       "gate": "browser refusal-404",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "denied, same sentence as 403",
@@ -383,6 +464,7 @@
     },
     {
       "gate": "browser refusal-503",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "unavailable + retry",
@@ -391,6 +473,7 @@
     },
     {
       "gate": "browser refusal-503",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "unavailable + retry",
@@ -399,54 +482,61 @@
     },
     {
       "gate": "browser deeplink",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "?runs= survives reload, 2 GETs",
       "image": "p20-deeplink-1280.png",
-      "image_sha256_prefix": "60131ffb36e9b7c0"
+      "image_sha256_prefix": "e15641b5be08dd36"
     },
     {
       "gate": "browser deeplink",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "?runs= survives reload, 2 GETs",
       "image": "p20-deeplink-660.png",
-      "image_sha256_prefix": "fff3a3a4d4e4d3c3"
+      "image_sha256_prefix": "af6d612599a22561"
     },
     {
       "gate": "browser mode-switch",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
-      "assertion": "URL trail + Back×3; 4 GETs @1280, 5 @660 (finding 4)",
+      "assertion": "URL trail + Back; pair without runs idle (PAIR_NEEDS_TWO, 0 request); 5 GETs at 1280 and 660 (S13-BACK-REFETCH)",
       "image": "p20-mode-switch-1280.png",
-      "image_sha256_prefix": "60131ffb36e9b7c0"
+      "image_sha256_prefix": "e15641b5be08dd36"
     },
     {
       "gate": "browser mode-switch",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
-      "assertion": "URL trail + Back×3; 4 GETs @1280, 5 @660 (finding 4)",
+      "assertion": "URL trail + Back; pair without runs idle (PAIR_NEEDS_TWO, 0 request); 5 GETs at 1280 and 660 (S13-BACK-REFETCH)",
       "image": "p20-mode-switch-660.png",
-      "image_sha256_prefix": "fff3a3a4d4e4d3c3"
+      "image_sha256_prefix": "af6d612599a22561"
     },
     {
       "gate": "browser stale",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "old response landing late is dropped",
       "image": "p20-stale-1280.png",
-      "image_sha256_prefix": "48a81e4787d132f8"
+      "image_sha256_prefix": "3689c7df895d63f0"
     },
     {
       "gate": "browser stale",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "old response landing late is dropped",
       "image": "p20-stale-660.png",
-      "image_sha256_prefix": "d207e219a16607a1"
+      "image_sha256_prefix": "b325bdb040e77b9f"
     },
     {
       "gate": "browser resolver-runs-only",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "alpha= redirects; runs-only → empty + reason, 0 compare GET",
@@ -455,6 +545,7 @@
     },
     {
       "gate": "browser resolver-runs-only",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "alpha= redirects; runs-only → empty + reason, 0 compare GET",
@@ -462,39 +553,62 @@
       "image_sha256_prefix": "9543f2da2291b5e1"
     },
     {
+      "gate": "browser resolver-badmode",
+      "theme": "light (research)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "?alpha=…&mode=foo → ?mode=foo; with runs → ?runs=run_pair_a,run_pair_b&mode=foo; 400 terminal req_p20_400 (gate e, A10)",
+      "image": "p20-resolver-badmode-1280.png",
+      "image_sha256_prefix": "48ccc0645040f00a"
+    },
+    {
+      "gate": "browser resolver-badmode",
+      "theme": "light (research)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "?alpha=…&mode=foo → ?mode=foo; with runs → ?runs=run_pair_a,run_pair_b&mode=foo; 400 terminal req_p20_400 (gate e, A10)",
+      "image": "p20-resolver-badmode-660.png",
+      "image_sha256_prefix": "0c36d569db77857e"
+    },
+    {
       "gate": "browser keyboard",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "Tab order + :focus-visible ring; Enter switches mode",
       "image": "p20-keyboard-1280.png",
-      "image_sha256_prefix": "054596662d09a124"
+      "image_sha256_prefix": "294f8c15b09922ff"
     },
     {
       "gate": "browser keyboard",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "Tab order + :focus-visible ring; Enter switches mode",
       "image": "p20-keyboard-660.png",
-      "image_sha256_prefix": "0c07e00bdd71374e"
+      "image_sha256_prefix": "2c2dc8461b38c0b2"
     },
     {
       "gate": "browser reduced-motion",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "running animations 0",
       "image": "p20-reduced-motion-1280.png",
-      "image_sha256_prefix": "60131ffb36e9b7c0"
+      "image_sha256_prefix": "e15641b5be08dd36"
     },
     {
       "gate": "browser reduced-motion",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "running animations 0",
       "image": "p20-reduced-motion-660.png",
-      "image_sha256_prefix": "fff3a3a4d4e4d3c3"
+      "image_sha256_prefix": "af6d612599a22561"
     },
     {
       "gate": "browser entry-links",
+      "theme": "light (research)",
       "viewport": 1280,
       "result": "PASS",
       "assertion": "CompareBar href has alpha= for same alpha; none for 2 alphas; Lineage compare → canonical",
@@ -503,11 +617,282 @@
     },
     {
       "gate": "browser entry-links",
+      "theme": "light (research)",
       "viewport": 660,
       "result": "PASS",
       "assertion": "CompareBar href has alpha= for same alpha; none for 2 alphas; Lineage compare → canonical",
       "image": "p20-entry-links-660.png",
       "image_sha256_prefix": "351f61018572b762"
+    },
+    {
+      "gate": "browser dark loading",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-loading-1280.png",
+      "image_sha256_prefix": "bdaf1911c54642a5"
+    },
+    {
+      "gate": "browser dark loading",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-loading-660.png",
+      "image_sha256_prefix": "bf82711fcfd46215"
+    },
+    {
+      "gate": "browser dark attempts",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-attempts-1280.png",
+      "image_sha256_prefix": "1128a328a9423c67"
+    },
+    {
+      "gate": "browser dark attempts",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-attempts-660.png",
+      "image_sha256_prefix": "bbc82956ba674db4"
+    },
+    {
+      "gate": "browser dark attempts-partial",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-attempts-partial-1280.png",
+      "image_sha256_prefix": "2737635e56056709"
+    },
+    {
+      "gate": "browser dark attempts-partial",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-attempts-partial-660.png",
+      "image_sha256_prefix": "e3c953ef5f9bce21"
+    },
+    {
+      "gate": "browser dark markets",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-markets-1280.png",
+      "image_sha256_prefix": "3bbeb2fbb86ce04b"
+    },
+    {
+      "gate": "browser dark markets",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-markets-660.png",
+      "image_sha256_prefix": "f90c843f55692c2c"
+    },
+    {
+      "gate": "browser dark pair",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations; overlay strokes rgb(127,179,196) / rgb(212,167,94) (theme tokens)",
+      "image": "p20-dark-pair-1280.png",
+      "image_sha256_prefix": "7201ec666b2e8ab2"
+    },
+    {
+      "gate": "browser dark pair",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations; overlay strokes rgb(127,179,196) / rgb(212,167,94) (theme tokens)",
+      "image": "p20-dark-pair-660.png",
+      "image_sha256_prefix": "599dd588cf73dbcc"
+    },
+    {
+      "gate": "browser dark pair-partial",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-pair-partial-1280.png",
+      "image_sha256_prefix": "5029acff9e4c5a4b"
+    },
+    {
+      "gate": "browser dark pair-partial",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-pair-partial-660.png",
+      "image_sha256_prefix": "8ec2e642613ecbf5"
+    },
+    {
+      "gate": "browser dark corr-zero",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-corr-zero-1280.png",
+      "image_sha256_prefix": "36681dcf673bb00c"
+    },
+    {
+      "gate": "browser dark corr-zero",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-corr-zero-660.png",
+      "image_sha256_prefix": "9f61bb1e0326cf1d"
+    },
+    {
+      "gate": "browser dark refused",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refused-1280.png",
+      "image_sha256_prefix": "cab0aeb46adc9508"
+    },
+    {
+      "gate": "browser dark refused",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refused-660.png",
+      "image_sha256_prefix": "8abd430e6caca28c"
+    },
+    {
+      "gate": "browser dark zero-delta",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-zero-delta-1280.png",
+      "image_sha256_prefix": "a941e31fed2bc843"
+    },
+    {
+      "gate": "browser dark zero-delta",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-zero-delta-660.png",
+      "image_sha256_prefix": "29c4349272802d02"
+    },
+    {
+      "gate": "browser dark resolver-badmode",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-resolver-badmode-1280.png",
+      "image_sha256_prefix": "dc4a1dcde2c24247"
+    },
+    {
+      "gate": "browser dark resolver-badmode",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-resolver-badmode-660.png",
+      "image_sha256_prefix": "2b61448b6c053384"
+    },
+    {
+      "gate": "browser dark refusal-400",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-400-1280.png",
+      "image_sha256_prefix": "e92b0c9587b0bb41"
+    },
+    {
+      "gate": "browser dark refusal-400",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-400-660.png",
+      "image_sha256_prefix": "27bbf30aff694ed1"
+    },
+    {
+      "gate": "browser dark refusal-401",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-401-1280.png",
+      "image_sha256_prefix": "89530e3f1f9bc18b"
+    },
+    {
+      "gate": "browser dark refusal-401",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-401-660.png",
+      "image_sha256_prefix": "e78366accebb423e"
+    },
+    {
+      "gate": "browser dark refusal-403",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-403-1280.png",
+      "image_sha256_prefix": "e6e094c7d134b0bd"
+    },
+    {
+      "gate": "browser dark refusal-403",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-403-660.png",
+      "image_sha256_prefix": "9b7fe9b2dcb42086"
+    },
+    {
+      "gate": "browser dark refusal-404",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-404-1280.png",
+      "image_sha256_prefix": "e910b734e8f82c4d"
+    },
+    {
+      "gate": "browser dark refusal-404",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-404-660.png",
+      "image_sha256_prefix": "ab0e6fa8ab95d6ca"
+    },
+    {
+      "gate": "browser dark refusal-503",
+      "theme": "dark (operations)",
+      "viewport": 1280,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-503-1280.png",
+      "image_sha256_prefix": "3dca58e22803fec0"
+    },
+    {
+      "gate": "browser dark refusal-503",
+      "theme": "dark (operations)",
+      "viewport": 660,
+      "result": "PASS",
+      "assertion": "same gate as light, theme=operations",
+      "image": "p20-dark-refusal-503-660.png",
+      "image_sha256_prefix": "b8120787f0bfbb86"
     }
   ],
   "results_history": [
@@ -526,6 +911,453 @@
       "playwright_log_sha256_prefix": "88821e5770640add",
       "probe_log_sha256_prefix": "efe31217803b55eb",
       "note": "round 1 of the P20 probe 44/46 (probe stub for entry-links), probe fixed, no src change; findings 1 (mini labels) and 5 (banner) fixed in 034aef11"
+    },
+    {
+      "gate": "package C (head 034aef11, tree e2d7d388)",
+      "tsc": 0,
+      "build": "0 (7.42s, 1241fc832ec41153)",
+      "vitest": "172 files 3091 passed 1 skipped (930b33c9aaf5b2af)",
+      "s13": "38/38 (0fbf78d732eee597)",
+      "browser": "whole Research probe 128/128 (tvp20 46; playwright 53a7fafab986e143, probe-final.log bca957cdd7e225b5), light theme only",
+      "note": "superseded by package C-2 on eeeae14f; package C RECEIPT count was mis-stated as 42 = 21 × 2 (audit C2)",
+      "results_package_C": [
+        {
+          "gate": "apps/portal/frontend npx tsc -b --noEmit",
+          "scope": "head 034aef11",
+          "result": "PASS",
+          "exit": 0,
+          "log_sha256_prefix": "e3b0c44298fc1c14",
+          "note": "empty log"
+        },
+        {
+          "gate": "apps/portal/frontend npm run build",
+          "scope": "head 034aef11",
+          "result": "PASS",
+          "exit": 0,
+          "note": "built in 7.42s; only the pre-existing chunk-size warning",
+          "log_sha256_prefix": "1241fc832ec41153"
+        },
+        {
+          "gate": "apps/portal/frontend npx vitest run",
+          "scope": "head 034aef11",
+          "result": "PASS",
+          "exit": 0,
+          "files": 172,
+          "passed": 3091,
+          "skipped": 1,
+          "failed": 0,
+          "duration_s": 94.3,
+          "note": "first pass; PortalShell flake not seen",
+          "log_sha256_prefix": "930b33c9aaf5b2af"
+        },
+        {
+          "gate": "apps/portal/frontend npx vitest run src/research/compareDetail.test.tsx src/research/researchBoundary.test.ts",
+          "scope": "head 034aef11",
+          "result": "PASS",
+          "exit": 0,
+          "files": 2,
+          "passed": 38,
+          "failed": 0,
+          "breakdown": "S13 24 (S13-U01…U23, U15 each 403/404) + boundary 14",
+          "log_sha256_prefix": "0fbf78d732eee597"
+        },
+        {
+          "gate": "whole Research probe: RESEARCH_SHOT_DIR=~/tv-shots/p20/final/all P20_SHOT_DIR=~/tv-shots/p20/final/shots npx playwright test -c .tv-probe.config.ts --workers=1",
+          "scope": "head 034aef11, preview 127.0.0.1:4417 (PIDs 473200 473232 473233, killed by PID; ss -ltnp | grep 4417 empty)",
+          "result": "PASS",
+          "exit": 0,
+          "passed": 128,
+          "failed": 0,
+          "flaky": 0,
+          "breakdown": {
+            "_probe-research-fixtures.spec.ts": 8,
+            "_probe-research-product.spec.ts": 74,
+            "_probe-research-tvp20.spec.ts (temporary, not committed)": 46
+          },
+          "duration": "2.7m",
+          "log_sha256_prefix": "53a7fafab986e143",
+          "probe_log_sha256_prefix": "bca957cdd7e225b5"
+        },
+        {
+          "gate": "RECEIPT counts (42 = 21 gates × 1280/660)",
+          "result": "PASS",
+          "overflow_gt_0": 0,
+          "console_noise_gt_0": 0,
+          "mutations_gt_0": 0,
+          "foreign_gt_0": 0,
+          "overflow_culprit_lines": 0,
+          "note": "overflow = document.documentElement.scrollWidth - innerWidth ≤ 0 everywhere; declared console lines are the stubbed request's own 4xx/5xx (1 per refusal, 2 in etag-304); legacy GET /api/runs poll excluded"
+        },
+        {
+          "gate": "mini chart x labels (receipt C, markets)",
+          "result": "PASS",
+          "1280": [
+            {
+              "n": 2,
+              "overlap": false
+            },
+            {
+              "n": 0,
+              "overlap": false
+            },
+            {
+              "n": 0,
+              "overlap": false
+            }
+          ],
+          "660": [
+            {
+              "n": 2,
+              "overlap": false
+            },
+            {
+              "n": 0,
+              "overlap": false
+            },
+            {
+              "n": 0,
+              "overlap": false
+            }
+          ],
+          "note": "only the btc card draws a chart; eth NOT_PUBLISHED, sol QUEUED"
+        },
+        {
+          "gate": "browser loading",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "9 panel skeletons, aria-busy, 1 GET",
+          "image": "p20-loading-1280.png",
+          "image_sha256_prefix": "97b3e40bde919ea4"
+        },
+        {
+          "gate": "browser loading",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "9 panel skeletons, aria-busy, 1 GET",
+          "image": "p20-loading-660.png",
+          "image_sha256_prefix": "3a7e2b479ac3798c"
+        },
+        {
+          "gate": "browser attempts",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "server order reversed (VD-P20-14), 2 arrows 'claim ↑ →', banner verbatim",
+          "image": "p20-attempts-1280.png",
+          "image_sha256_prefix": "35ad99e226e1b703"
+        },
+        {
+          "gate": "browser attempts",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "server order reversed (VD-P20-14), 2 arrows 'claim ↑ →', banner verbatim",
+          "image": "p20-attempts-660.png",
+          "image_sha256_prefix": "351f61018572b762"
+        },
+        {
+          "gate": "browser attempts-partial",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "coverage PARTIAL + reason + total",
+          "image": "p20-attempts-partial-1280.png",
+          "image_sha256_prefix": "7f6acbf1665791b7"
+        },
+        {
+          "gate": "browser attempts-partial",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "coverage PARTIAL + reason + total",
+          "image": "p20-attempts-partial-660.png",
+          "image_sha256_prefix": "0c03cc0c38042eb9"
+        },
+        {
+          "gate": "browser markets",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "3 cards, caption verbatim, no overlay/Δ, mini [data-x-label] 2/0/0 no overlap",
+          "image": "p20-markets-1280.png",
+          "image_sha256_prefix": "45fc7c0bfd3d4e17"
+        },
+        {
+          "gate": "browser markets",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "3 cards, caption verbatim, no overlay/Δ, mini [data-x-label] 2/0/0 no overlap",
+          "image": "p20-markets-660.png",
+          "image_sha256_prefix": "7eed8cfcfe2c5734"
+        },
+        {
+          "gate": "browser pair",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "#0f4c5c solid + #9a6a1f dashed, 6 delta rows, ρ server string, weaker claim, TRADE_COUNT NOT_APPLICABLE",
+          "image": "p20-pair-1280.png",
+          "image_sha256_prefix": "60131ffb36e9b7c0"
+        },
+        {
+          "gate": "browser pair",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "#0f4c5c solid + #9a6a1f dashed, 6 delta rows, ρ server string, weaker claim, TRADE_COUNT NOT_APPLICABLE",
+          "image": "p20-pair-660.png",
+          "image_sha256_prefix": "fff3a3a4d4e4d3c3"
+        },
+        {
+          "gate": "browser pair-partial",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "data-pair-partial-reason",
+          "image": "p20-pair-partial-1280.png",
+          "image_sha256_prefix": "7b0a615e5673c65d"
+        },
+        {
+          "gate": "browser pair-partial",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "data-pair-partial-reason",
+          "image": "p20-pair-partial-660.png",
+          "image_sha256_prefix": "595eb494504d2d0d"
+        },
+        {
+          "gate": "browser refused",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "0 overlay/delta/correlation nodes incl. hidden, mismatch rgb(180,58,58)",
+          "image": "p20-refused-1280.png",
+          "image_sha256_prefix": "bc4f2e64b18ef917"
+        },
+        {
+          "gate": "browser refused",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "0 overlay/delta/correlation nodes incl. hidden, mismatch rgb(180,58,58)",
+          "image": "p20-refused-660.png",
+          "image_sha256_prefix": "c5e19439efcc6d83"
+        },
+        {
+          "gate": "browser corr-zero",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "data-correlation-absent + P20_ZERO_VARIANCE_RAW_RETURNS, no 0",
+          "image": "p20-corr-zero-1280.png",
+          "image_sha256_prefix": "eb2a5e7f6b2fc73a"
+        },
+        {
+          "gate": "browser corr-zero",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "data-correlation-absent + P20_ZERO_VARIANCE_RAW_RETURNS, no 0",
+          "image": "p20-corr-zero-660.png",
+          "image_sha256_prefix": "ce8fed0c615cf924"
+        },
+        {
+          "gate": "browser etag-304",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "If-None-Match → 304 keeps revision; 503 read again recovers",
+          "image": "p20-etag-304-1280.png",
+          "image_sha256_prefix": "e79f0bfb8f92bd21"
+        },
+        {
+          "gate": "browser etag-304",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "If-None-Match → 304 keeps revision; 503 read again recovers",
+          "image": "p20-etag-304-660.png",
+          "image_sha256_prefix": "7eed8cfcfe2c5734"
+        },
+        {
+          "gate": "browser refusal-400",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "terminal, no retry, request id",
+          "image": "p20-refusal-400-1280.png",
+          "image_sha256_prefix": "c8747c071ec4b5a4"
+        },
+        {
+          "gate": "browser refusal-400",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "terminal, no retry, request id",
+          "image": "p20-refusal-400-660.png",
+          "image_sha256_prefix": "b8987be17950668f"
+        },
+        {
+          "gate": "browser refusal-401",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "denied",
+          "image": "p20-refusal-401-1280.png",
+          "image_sha256_prefix": "8cfbf586dda98473"
+        },
+        {
+          "gate": "browser refusal-401",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "denied",
+          "image": "p20-refusal-401-660.png",
+          "image_sha256_prefix": "449030a24da8205a"
+        },
+        {
+          "gate": "browser refusal-403",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "denied, same sentence as 404",
+          "image": "p20-refusal-403-1280.png",
+          "image_sha256_prefix": "41d1ad7105b92e36"
+        },
+        {
+          "gate": "browser refusal-403",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "denied, same sentence as 404",
+          "image": "p20-refusal-403-660.png",
+          "image_sha256_prefix": "4742f2c09873980d"
+        },
+        {
+          "gate": "browser refusal-404",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "denied, same sentence as 403",
+          "image": "p20-refusal-404-1280.png",
+          "image_sha256_prefix": "e9c5b93065995efe"
+        },
+        {
+          "gate": "browser refusal-404",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "denied, same sentence as 403",
+          "image": "p20-refusal-404-660.png",
+          "image_sha256_prefix": "1a28c5ab1e196327"
+        },
+        {
+          "gate": "browser refusal-503",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "unavailable + retry",
+          "image": "p20-refusal-503-1280.png",
+          "image_sha256_prefix": "ede08477efc12ecb"
+        },
+        {
+          "gate": "browser refusal-503",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "unavailable + retry",
+          "image": "p20-refusal-503-660.png",
+          "image_sha256_prefix": "3d8bab4a503fc42e"
+        },
+        {
+          "gate": "browser deeplink",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "?runs= survives reload, 2 GETs",
+          "image": "p20-deeplink-1280.png",
+          "image_sha256_prefix": "60131ffb36e9b7c0"
+        },
+        {
+          "gate": "browser deeplink",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "?runs= survives reload, 2 GETs",
+          "image": "p20-deeplink-660.png",
+          "image_sha256_prefix": "fff3a3a4d4e4d3c3"
+        },
+        {
+          "gate": "browser mode-switch",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "URL trail + Back×3; 4 GETs @1280, 5 @660 (finding 4)",
+          "image": "p20-mode-switch-1280.png",
+          "image_sha256_prefix": "60131ffb36e9b7c0"
+        },
+        {
+          "gate": "browser mode-switch",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "URL trail + Back×3; 4 GETs @1280, 5 @660 (finding 4)",
+          "image": "p20-mode-switch-660.png",
+          "image_sha256_prefix": "fff3a3a4d4e4d3c3"
+        },
+        {
+          "gate": "browser stale",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "old response landing late is dropped",
+          "image": "p20-stale-1280.png",
+          "image_sha256_prefix": "48a81e4787d132f8"
+        },
+        {
+          "gate": "browser stale",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "old response landing late is dropped",
+          "image": "p20-stale-660.png",
+          "image_sha256_prefix": "d207e219a16607a1"
+        },
+        {
+          "gate": "browser resolver-runs-only",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "alpha= redirects; runs-only → empty + reason, 0 compare GET",
+          "image": "p20-resolver-runs-only-1280.png",
+          "image_sha256_prefix": "ef9a5dbf7c6b0fa7"
+        },
+        {
+          "gate": "browser resolver-runs-only",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "alpha= redirects; runs-only → empty + reason, 0 compare GET",
+          "image": "p20-resolver-runs-only-660.png",
+          "image_sha256_prefix": "9543f2da2291b5e1"
+        },
+        {
+          "gate": "browser keyboard",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "Tab order + :focus-visible ring; Enter switches mode",
+          "image": "p20-keyboard-1280.png",
+          "image_sha256_prefix": "054596662d09a124"
+        },
+        {
+          "gate": "browser keyboard",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "Tab order + :focus-visible ring; Enter switches mode",
+          "image": "p20-keyboard-660.png",
+          "image_sha256_prefix": "0c07e00bdd71374e"
+        },
+        {
+          "gate": "browser reduced-motion",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "running animations 0",
+          "image": "p20-reduced-motion-1280.png",
+          "image_sha256_prefix": "60131ffb36e9b7c0"
+        },
+        {
+          "gate": "browser reduced-motion",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "running animations 0",
+          "image": "p20-reduced-motion-660.png",
+          "image_sha256_prefix": "fff3a3a4d4e4d3c3"
+        },
+        {
+          "gate": "browser entry-links",
+          "viewport": 1280,
+          "result": "PASS",
+          "assertion": "CompareBar href has alpha= for same alpha; none for 2 alphas; Lineage compare → canonical",
+          "image": "p20-entry-links-1280.png",
+          "image_sha256_prefix": "35ad99e226e1b703"
+        },
+        {
+          "gate": "browser entry-links",
+          "viewport": 660,
+          "result": "PASS",
+          "assertion": "CompareBar href has alpha= for same alpha; none for 2 alphas; Lineage compare → canonical",
+          "image": "p20-entry-links-660.png",
+          "image_sha256_prefix": "351f61018572b762"
+        }
+      ]
     }
   ],
   "hifi_compare": {
@@ -554,8 +1386,8 @@
         },
         "product": {
           "attempts": 1343,
-          "markets": 1040,
-          "pair_legal": 1682,
+          "markets": 1010,
+          "pair_legal": 1703,
           "refused": 900
         }
       },
@@ -568,13 +1400,14 @@
         },
         "product": {
           "attempts": 2035,
-          "markets": 1762,
-          "pair_legal": 1946,
+          "markets": 1724,
+          "pair_legal": 1955,
           "refused": 1034
         }
       }
     },
-    "deltas": "G1–G18 in thanhvuong-frontend-receipt.md §5.4; ledger VD-P20-01…20 in §6"
+    "deltas": "G1–G19 in thanhvuong-frontend-receipt.md §5.4; ledger VD-P20-01…29 in §6",
+    "doc_height_note": "product heights from package C-2 on eeeae14f; package C: 1280 markets 1040 / pair 1682, 660 markets 1762 / pair 1946"
   },
   "not_run": [
     {
@@ -595,71 +1428,108 @@
     },
     {
       "gate": "spec 13 T11 copy diff 0",
-      "reason": "intentional copy deviations VD-P20-01/02/10/11/13/20 await Bobby (B2)"
+      "reason": "intentional copy deviations VD-P20-01/02/10/11/13/20/21/25/26/29 await Bobby (B2); audit A6/A7 verbatim hi-fi copy recorded on VD-P20-15/-10"
     },
     {
       "gate": "dev-host review / rebuild-deploy receipt (V11-P20-GX)",
       "reason": "not deployed; branch only"
+    },
+    {
+      "gate": "unit lock for mini chart labels",
+      "reason": "S13-MINI-LABELS-UNIT; only the browser probe locks it"
     }
   ],
   "evidence_store": {
-    "location": "~/tv-shots/p20/final/ (package C: logs, shots/, all/) and ~/tv-shots/p20/ (package B) in the thanhvuong workspace; not committed (A4.1)",
+    "location": "~/tv-shots/p20/final2/ (package C-2: logs, shots/, all/), ~/tv-shots/p20/final/ (package C) and ~/tv-shots/p20/ (package B) in the thanhvuong workspace; not committed (A4.1)",
     "logs": {
       "tsc.log": "e3b0c44298fc1c14",
-      "build.log": "1241fc832ec41153",
-      "vitest-full.log": "930b33c9aaf5b2af",
-      "vitest-s13.log": "0fbf78d732eee597",
-      "playwright.log": "53a7fafab986e143",
-      "probe-final.log": "bca957cdd7e225b5"
+      "build.log": "569dbfc7f20e563b",
+      "vitest-full.log": "efddb2da599ef1e1",
+      "vitest-s13.log": "38bbc27ad19da8d6",
+      "playwright.log": "fe151f443fd274a5",
+      "probe-final2.log": "35e3038508ed11ad",
+      "preview.log": "9291f11129fb0f1f",
+      "pw-tvp20-iter1.log": "30d4dd9e463b6409",
+      "pw-tvp20-iter2.log": "cdce1201ca6f82a0"
     },
     "temporary_probe": {
-      "spec_copy_package_B": "6d7a4823b8a6949b",
-      "spec_used_package_C": "4683ce73aa552df8",
+      "spec_used_package_C2": "1741ddd61264b05d",
       "config_copy": "2a7e46a01bf64f1c",
       "committed": false,
-      "removed_after_run": true
+      "removed_after_run": true,
+      "themes": "light data-theme=research; dark data-theme=operations via localStorage portal.preferences.v1"
     },
-    "shots_package_C": {
+    "shots_package_C2": {
       "p20-attempts-1280.png": "35ad99e226e1b703",
       "p20-attempts-660.png": "351f61018572b762",
       "p20-attempts-partial-1280.png": "7f6acbf1665791b7",
       "p20-attempts-partial-660.png": "0c03cc0c38042eb9",
-      "p20-corr-zero-1280.png": "eb2a5e7f6b2fc73a",
-      "p20-corr-zero-660.png": "ce8fed0c615cf924",
-      "p20-deeplink-1280.png": "60131ffb36e9b7c0",
-      "p20-deeplink-660.png": "fff3a3a4d4e4d3c3",
+      "p20-corr-zero-1280.png": "07ca0235ae1d81e2",
+      "p20-corr-zero-660.png": "b77e51f6364d7641",
+      "p20-dark-attempts-1280.png": "1128a328a9423c67",
+      "p20-dark-attempts-660.png": "bbc82956ba674db4",
+      "p20-dark-attempts-partial-1280.png": "2737635e56056709",
+      "p20-dark-attempts-partial-660.png": "e3c953ef5f9bce21",
+      "p20-dark-corr-zero-1280.png": "36681dcf673bb00c",
+      "p20-dark-corr-zero-660.png": "9f61bb1e0326cf1d",
+      "p20-dark-loading-1280.png": "bdaf1911c54642a5",
+      "p20-dark-loading-660.png": "bf82711fcfd46215",
+      "p20-dark-markets-1280.png": "3bbeb2fbb86ce04b",
+      "p20-dark-markets-660.png": "f90c843f55692c2c",
+      "p20-dark-pair-1280.png": "7201ec666b2e8ab2",
+      "p20-dark-pair-660.png": "599dd588cf73dbcc",
+      "p20-dark-pair-partial-1280.png": "5029acff9e4c5a4b",
+      "p20-dark-pair-partial-660.png": "8ec2e642613ecbf5",
+      "p20-dark-refusal-400-1280.png": "e92b0c9587b0bb41",
+      "p20-dark-refusal-400-660.png": "27bbf30aff694ed1",
+      "p20-dark-refusal-401-1280.png": "89530e3f1f9bc18b",
+      "p20-dark-refusal-401-660.png": "e78366accebb423e",
+      "p20-dark-refusal-403-1280.png": "e6e094c7d134b0bd",
+      "p20-dark-refusal-403-660.png": "9b7fe9b2dcb42086",
+      "p20-dark-refusal-404-1280.png": "e910b734e8f82c4d",
+      "p20-dark-refusal-404-660.png": "ab0e6fa8ab95d6ca",
+      "p20-dark-refusal-503-1280.png": "3dca58e22803fec0",
+      "p20-dark-refusal-503-660.png": "b8120787f0bfbb86",
+      "p20-dark-refused-1280.png": "cab0aeb46adc9508",
+      "p20-dark-refused-660.png": "8abd430e6caca28c",
+      "p20-dark-resolver-badmode-1280.png": "dc4a1dcde2c24247",
+      "p20-dark-resolver-badmode-660.png": "2b61448b6c053384",
+      "p20-dark-zero-delta-1280.png": "a941e31fed2bc843",
+      "p20-dark-zero-delta-660.png": "29c4349272802d02",
+      "p20-deeplink-1280.png": "e15641b5be08dd36",
+      "p20-deeplink-660.png": "af6d612599a22561",
       "p20-entry-links-1280.png": "35ad99e226e1b703",
       "p20-entry-links-660.png": "351f61018572b762",
       "p20-entry-no-alpha-1280.png": "d4165681357c9e1d",
       "p20-entry-no-alpha-660.png": "b7ee2de74ed296c7",
-      "p20-etag-304-1280.png": "e79f0bfb8f92bd21",
-      "p20-etag-304-660.png": "7eed8cfcfe2c5734",
+      "p20-etag-304-1280.png": "3e7e33297e252ec8",
+      "p20-etag-304-660.png": "7aeb60f13a2bdfba",
       "p20-hifi-attempts-1280.png": "1c5738b9461de0d9",
       "p20-hifi-attempts-660.png": "8712c51178e09428",
       "p20-hifi-markets-1280.png": "1a50dc5bc45e5cb4",
-      "p20-hifi-markets-660.png": "dac9c9441b31a71a",
+      "p20-hifi-markets-660.png": "564ad3f798f81af6",
       "p20-hifi-pair-legal-1280.png": "d298726fe3d42ab5",
       "p20-hifi-pair-legal-660.png": "1f93babdce9adc2f",
       "p20-hifi-pair-refused-1280.png": "a5619a73dfaf3555",
       "p20-hifi-pair-refused-660.png": "e06fe613bdb35fa3",
-      "p20-keyboard-1280.png": "054596662d09a124",
-      "p20-keyboard-660.png": "0c07e00bdd71374e",
-      "p20-keyboard-focus-1280.png": "ee9359135e0182fa",
+      "p20-keyboard-1280.png": "294f8c15b09922ff",
+      "p20-keyboard-660.png": "2c2dc8461b38c0b2",
+      "p20-keyboard-focus-1280.png": "4eb0cc3025c4ccd0",
       "p20-keyboard-focus-660.png": "70dfd9b8bdeb58db",
       "p20-loading-1280.png": "97b3e40bde919ea4",
       "p20-loading-660.png": "3a7e2b479ac3798c",
-      "p20-markets-1280.png": "45fc7c0bfd3d4e17",
-      "p20-markets-660.png": "7eed8cfcfe2c5734",
-      "p20-mode-switch-1280.png": "60131ffb36e9b7c0",
-      "p20-mode-switch-660.png": "fff3a3a4d4e4d3c3",
-      "p20-pair-1280.png": "60131ffb36e9b7c0",
-      "p20-pair-660.png": "fff3a3a4d4e4d3c3",
+      "p20-markets-1280.png": "b3f302663293a836",
+      "p20-markets-660.png": "7aeb60f13a2bdfba",
+      "p20-mode-switch-1280.png": "e15641b5be08dd36",
+      "p20-mode-switch-660.png": "af6d612599a22561",
+      "p20-pair-1280.png": "e15641b5be08dd36",
+      "p20-pair-660.png": "af6d612599a22561",
       "p20-pair-needs-two-1280.png": "49dd2ef6a116669d",
       "p20-pair-needs-two-660.png": "5b06675556c5604c",
-      "p20-pair-partial-1280.png": "7b0a615e5673c65d",
-      "p20-pair-partial-660.png": "595eb494504d2d0d",
-      "p20-reduced-motion-1280.png": "60131ffb36e9b7c0",
-      "p20-reduced-motion-660.png": "fff3a3a4d4e4d3c3",
+      "p20-pair-partial-1280.png": "3809e2e1fe99c44c",
+      "p20-pair-partial-660.png": "41952b202bcf0e0b",
+      "p20-reduced-motion-1280.png": "e15641b5be08dd36",
+      "p20-reduced-motion-660.png": "af6d612599a22561",
       "p20-refusal-400-1280.png": "c8747c071ec4b5a4",
       "p20-refusal-400-660.png": "b8987be17950668f",
       "p20-refusal-401-1280.png": "8cfbf586dda98473",
@@ -672,19 +1542,99 @@
       "p20-refusal-503-660.png": "3d8bab4a503fc42e",
       "p20-refused-1280.png": "bc4f2e64b18ef917",
       "p20-refused-660.png": "c5e19439efcc6d83",
+      "p20-resolver-badmode-1280.png": "48ccc0645040f00a",
+      "p20-resolver-badmode-660.png": "0c36d569db77857e",
       "p20-resolver-runs-only-1280.png": "ef9a5dbf7c6b0fa7",
       "p20-resolver-runs-only-660.png": "9543f2da2291b5e1",
-      "p20-stale-1280.png": "48a81e4787d132f8",
-      "p20-stale-660.png": "d207e219a16607a1"
+      "p20-stale-1280.png": "3689c7df895d63f0",
+      "p20-stale-660.png": "b325bdb040e77b9f",
+      "p20-zero-delta-1280.png": "06f1c0666143f236",
+      "p20-zero-delta-660.png": "d1851900f8bf3ecd"
     },
-    "package_B_changed": {
-      "p20-markets-1280.png": "575e025b89d9cd86 (before 034aef11)",
-      "p20-markets-660.png": "a57ce6a3957d755a (before 034aef11)",
-      "p20-hifi-markets-1280.png": "46d95ea9d38f9a22 (ECharts canvas not deterministic)",
-      "p20-etag-304-1280.png": "70be1d1204333743"
+    "package_C": {
+      "location": "~/tv-shots/p20/final/",
+      "logs": {
+        "tsc.log": "e3b0c44298fc1c14",
+        "build.log": "1241fc832ec41153",
+        "vitest-full.log": "930b33c9aaf5b2af",
+        "vitest-s13.log": "0fbf78d732eee597",
+        "playwright.log": "53a7fafab986e143",
+        "probe-final.log": "bca957cdd7e225b5"
+      },
+      "temporary_probe": {
+        "spec_copy_package_B": "6d7a4823b8a6949b",
+        "spec_used_package_C": "4683ce73aa552df8",
+        "config_copy": "2a7e46a01bf64f1c",
+        "committed": false,
+        "removed_after_run": true
+      },
+      "shots_package_C": {
+        "p20-attempts-1280.png": "35ad99e226e1b703",
+        "p20-attempts-660.png": "351f61018572b762",
+        "p20-attempts-partial-1280.png": "7f6acbf1665791b7",
+        "p20-attempts-partial-660.png": "0c03cc0c38042eb9",
+        "p20-corr-zero-1280.png": "eb2a5e7f6b2fc73a",
+        "p20-corr-zero-660.png": "ce8fed0c615cf924",
+        "p20-deeplink-1280.png": "60131ffb36e9b7c0",
+        "p20-deeplink-660.png": "fff3a3a4d4e4d3c3",
+        "p20-entry-links-1280.png": "35ad99e226e1b703",
+        "p20-entry-links-660.png": "351f61018572b762",
+        "p20-entry-no-alpha-1280.png": "d4165681357c9e1d",
+        "p20-entry-no-alpha-660.png": "b7ee2de74ed296c7",
+        "p20-etag-304-1280.png": "e79f0bfb8f92bd21",
+        "p20-etag-304-660.png": "7eed8cfcfe2c5734",
+        "p20-hifi-attempts-1280.png": "1c5738b9461de0d9",
+        "p20-hifi-attempts-660.png": "8712c51178e09428",
+        "p20-hifi-markets-1280.png": "1a50dc5bc45e5cb4",
+        "p20-hifi-markets-660.png": "dac9c9441b31a71a",
+        "p20-hifi-pair-legal-1280.png": "d298726fe3d42ab5",
+        "p20-hifi-pair-legal-660.png": "1f93babdce9adc2f",
+        "p20-hifi-pair-refused-1280.png": "a5619a73dfaf3555",
+        "p20-hifi-pair-refused-660.png": "e06fe613bdb35fa3",
+        "p20-keyboard-1280.png": "054596662d09a124",
+        "p20-keyboard-660.png": "0c07e00bdd71374e",
+        "p20-keyboard-focus-1280.png": "ee9359135e0182fa",
+        "p20-keyboard-focus-660.png": "70dfd9b8bdeb58db",
+        "p20-loading-1280.png": "97b3e40bde919ea4",
+        "p20-loading-660.png": "3a7e2b479ac3798c",
+        "p20-markets-1280.png": "45fc7c0bfd3d4e17",
+        "p20-markets-660.png": "7eed8cfcfe2c5734",
+        "p20-mode-switch-1280.png": "60131ffb36e9b7c0",
+        "p20-mode-switch-660.png": "fff3a3a4d4e4d3c3",
+        "p20-pair-1280.png": "60131ffb36e9b7c0",
+        "p20-pair-660.png": "fff3a3a4d4e4d3c3",
+        "p20-pair-needs-two-1280.png": "49dd2ef6a116669d",
+        "p20-pair-needs-two-660.png": "5b06675556c5604c",
+        "p20-pair-partial-1280.png": "7b0a615e5673c65d",
+        "p20-pair-partial-660.png": "595eb494504d2d0d",
+        "p20-reduced-motion-1280.png": "60131ffb36e9b7c0",
+        "p20-reduced-motion-660.png": "fff3a3a4d4e4d3c3",
+        "p20-refusal-400-1280.png": "c8747c071ec4b5a4",
+        "p20-refusal-400-660.png": "b8987be17950668f",
+        "p20-refusal-401-1280.png": "8cfbf586dda98473",
+        "p20-refusal-401-660.png": "449030a24da8205a",
+        "p20-refusal-403-1280.png": "41d1ad7105b92e36",
+        "p20-refusal-403-660.png": "4742f2c09873980d",
+        "p20-refusal-404-1280.png": "e9c5b93065995efe",
+        "p20-refusal-404-660.png": "1a28c5ab1e196327",
+        "p20-refusal-503-1280.png": "ede08477efc12ecb",
+        "p20-refusal-503-660.png": "3d8bab4a503fc42e",
+        "p20-refused-1280.png": "bc4f2e64b18ef917",
+        "p20-refused-660.png": "c5e19439efcc6d83",
+        "p20-resolver-runs-only-1280.png": "ef9a5dbf7c6b0fa7",
+        "p20-resolver-runs-only-660.png": "9543f2da2291b5e1",
+        "p20-stale-1280.png": "48a81e4787d132f8",
+        "p20-stale-660.png": "d207e219a16607a1"
+      },
+      "package_B_changed": {
+        "p20-markets-1280.png": "575e025b89d9cd86 (before 034aef11)",
+        "p20-markets-660.png": "a57ce6a3957d755a (before 034aef11)",
+        "p20-hifi-markets-1280.png": "46d95ea9d38f9a22 (ECharts canvas not deterministic)",
+        "p20-etag-304-1280.png": "70be1d1204333743"
+      }
     }
   },
   "known_flake": [
-    "src/app/PortalShell.test.tsx intermittent in full vitest runs (P16-P19); not seen on 034aef11"
+    "src/app/PortalShell.test.tsx intermittent in full vitest runs (P16-P19); not seen on 034aef11 or eeeae14f"
   ]
 }

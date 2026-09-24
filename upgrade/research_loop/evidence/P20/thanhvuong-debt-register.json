@@ -2,9 +2,34 @@
   "phase": "P20",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-24",
-  "tree": "e2d7d388ba704edfa0861a26a5fb15d5fae41c89",
-  "head": "034aef11fa1251226e74866ac2a4350f5a6c082f",
-  "open_implementation_debt": [],
+  "tree": "58f2764411882585d6df8f4f7efffdda65639c62",
+  "head": "eeeae14fb5e1205b68838d9696550792d85b5eab",
+  "open_implementation_debt": [
+    {
+      "id": "S13-REFUSED-STATE-ATTR",
+      "audit": "A9",
+      "what": "data-compare-state stays 'available' for pair REFUSED and pair zero-variance correlation (CompareDetail.tsx:1558 @ eeeae14f); refusal/absence only in data-pair-state / data-correlation-absent",
+      "owner": "Thanhvuong after Bobby (B6)",
+      "state": "AWAITING_DECISION",
+      "evidence": "probe-final2.log RECEIPT refused@1280/660 and dark-refused state=available; supersedes S13-COMPARE-STATE-REFUSED"
+    },
+    {
+      "id": "S13-BACK-REFETCH",
+      "audit": "C4 (package B finding 4)",
+      "what": "single-slot ETag validator: If-None-Match is sent only when returning to the key just read; back/forward across another key re-reads 200",
+      "owner": "Thanhvuong",
+      "state": "OPEN",
+      "evidence": "probe-final2.log mode-switch@1280 and @660 compareGets=5 (attempts re-read without validator); etag-304 sends the validator only on the immediate return; supersedes S13-BACK-ETAG-660"
+    },
+    {
+      "id": "S13-DELTA-DIRECTION-LABEL",
+      "audit": "A1",
+      "what": "Δ header label 'B − A · as published' is a constant based on reading compare.service.ts subtractDecimal (right − left), not on a contract field",
+      "owner": "Thanhvuong after Codex (CG-P20-09)",
+      "state": "BLOCKED_ON_BACKEND",
+      "evidence": "CompareDetail.tsx:1253 @ eeeae14f; U24; probe pair deltaDir; VD-P20-21"
+    }
+  ],
   "open_debt": [
     {
       "id": "VD-P20-01 S13-COPY-VS-HIFI",
@@ -32,11 +57,11 @@
     },
     {
       "id": "VD-P20-10 S13-COPY-VS-HIFI",
-      "what": "rules footer verbatim except 'Two runs on one key', 'Portal-derived from sealed raw returns', 'the UI never constructs or compares one; the server refuses'",
+      "what": "rules footer verbatim except 'Two runs on one key', 'Portal-derived from sealed raw returns', 'the UI never constructs or compares one; the server refuses'; not covered (audit A7): 'only the ACTIVE node may promote' still printed though the screen has no ACTIVE node — kept verbatim per the Bobby rule 2026-09-24, Bobby decides",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
       "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "COMPARE_RULES (:150)"
+      "evidence": "COMPARE_RULES (CompareDetail.tsx:151 @ eeeae14f)"
     },
     {
       "id": "VD-P20-11 S13-COPY-VS-HIFI",
@@ -64,11 +89,11 @@
     },
     {
       "id": "VD-P20-15 S13-COPY-VS-HIFI",
-      "what": "'EChart N' tags and the hi-fi demo narratives are not printed",
+      "what": "'EChart N' tags and the hi-fi demo narratives are not printed; not covered (audit A6): ATTEMPTS_RULE still prints the demo numbers 'a retrospective 1.31 does not beat a strict 1.19' — kept verbatim per the Bobby rule 2026-09-24, Bobby decides",
       "class": "hi-fi copy contradicts contract",
       "owner": "Bobby (B2)",
       "state": "REQUIRES_BOBBY_DECISION",
-      "evidence": "CompareDetail.tsx header comment :36"
+      "evidence": "CompareDetail.tsx header comment; ATTEMPTS_RULE (:104 @ eeeae14f)"
     },
     {
       "id": "VD-P20-17 S13-COPY-VS-HIFI",
@@ -95,36 +120,93 @@
       "evidence": "CONTRACT_GAPS (CompareDetail.tsx :161); U04, U06, U07; probe attempts/markets/pair"
     },
     {
-      "id": "S13-COMPARE-STATE-REFUSED (B finding 3)",
-      "what": "data-compare-state stays 'available' for pair REFUSED and for pair zero-variance correlation; refusal/absence is only in data-pair-state / data-correlation-absent",
-      "class": "state semantics",
-      "owner": "Bobby (B6)",
-      "state": "AWAITING_DECISION",
-      "evidence": "probe-final.log RECEIPT refused@1280/660 state=available, corr-zero state=available"
-    },
-    {
-      "id": "S13-BACK-ETAG-660 (B finding 4)",
-      "what": "Back through history at 660 sends one extra attempts GET without If-None-Match (single-slot ETag validator); data correct, extra bandwidth only",
-      "class": "efficiency",
-      "owner": "Thanhvuong",
-      "state": "OPEN",
-      "evidence": "probe-final.log RECEIPT mode-switch@660 compareGets=5 vs @1280 4"
-    },
-    {
-      "id": "S13-G1-HEADER-LAYOUT",
-      "what": "title wraps to two lines and the segmented control sits right of the subtitle; the hi-fi has a one-line title and the control below the subtitle. No VD was recorded for it (found in package B G1); the extra QuantBT module header above is removed on the baseline by 8bd81b01 (DQ-01)",
-      "class": "unrecorded hi-fi delta",
-      "owner": "Thanhvuong (fix at hi-fi alignment or after baseline integration) / Bobby",
-      "state": "OPEN",
-      "evidence": "p20-hifi-attempts-1280.png 1c5738b9461de0d9 vs p20-attempts-1280.png 35ad99e226e1b703"
-    },
-    {
       "id": "S13-MINI-LABELS-UNIT",
       "what": "034aef11 limits mini-chart x labels to first/last without a unit test; only the (uncommitted) browser probe locks it",
       "class": "test coverage",
       "owner": "Thanhvuong",
       "state": "OPEN",
       "evidence": "probe-final.log MINI-XLABEL markets@1280/660 n=2 overlap=false"
+    },
+    {
+      "id": "VD-P20-21 S13-COPY-VS-HIFI",
+      "what": "hi-fi Δ reads A − B; server returns B − A (right − left); UI labels 'B − A · as published' and never recomputes",
+      "class": "hi-fi vs contract direction",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p20-hifi-pair-legal-1280.png d298726fe3d42ab5 vs p20-pair-1280.png e15641b5be08dd36; CG-P20-09",
+      "source": "independent audit 2026-09-24"
+    },
+    {
+      "id": "VD-P20-22 S13-COPY-VS-HIFI",
+      "what": "header: segmented control on the subtitle row, title wraps to two lines at 1280; hi-fi one-line title, control below subtitle (was S13-G1-HEADER-LAYOUT)",
+      "class": "layout",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p20-hifi-attempts-1280.png 1c5738b9461de0d9 vs p20-attempts-1280.png 35ad99e226e1b703",
+      "source": "independent audit 2026-09-24"
+    },
+    {
+      "id": "VD-P20-23 S13-COPY-VS-HIFI",
+      "what": "weaker-claim block and intentional-differences table are not in the hi-fi (handoff rich composition + spec §8)",
+      "class": "block not in hi-fi",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p20-hifi-pair-legal-1280.png d298726fe3d42ab5 vs p20-pair-1280.png e15641b5be08dd36",
+      "source": "independent audit 2026-09-24"
+    },
+    {
+      "id": "VD-P20-24 S13-COPY-VS-HIFI",
+      "what": "extra lines not in the hi-fi: route·protocol, markets sampling line, overlay figcaption, common-window foot",
+      "class": "copy/layout",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p20-hifi-markets-1280.png 1a50dc5bc45e5cb4 vs p20-markets-1280.png b3f302663293a836; pair as above",
+      "source": "independent audit 2026-09-24"
+    },
+    {
+      "id": "VD-P20-25 S13-COPY-VS-HIFI",
+      "what": "markets banner drops the hi-fi sentence 'Three different ComparisonContractKeys — overlay and Δ columns are REFUSED by design.'",
+      "class": "copy",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "MARKETS_RULE_TAIL (CompareDetail.tsx:112); p20-hifi-markets-1280.png vs p20-markets-1280.png",
+      "source": "independent audit 2026-09-24"
+    },
+    {
+      "id": "VD-P20-26 S13-COPY-VS-HIFI",
+      "what": "correlation sub-caption 'daily OOS returns · overlapping window only' replaced by meta n · window · missing_policy",
+      "class": "copy",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p20-hifi-pair-legal-1280.png vs p20-pair-1280.png",
+      "source": "independent audit 2026-09-24"
+    },
+    {
+      "id": "VD-P20-27 S13-COPY-VS-HIFI",
+      "what": "overlay y axis shows 2 labels (max/min of server points) vs 5 labelled gridlines in the hi-fi (equitySvg reuse, no rebase)",
+      "class": "chart",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p20-hifi-pair-legal-1280.png vs p20-pair-1280.png",
+      "source": "independent audit 2026-09-24"
+    },
+    {
+      "id": "VD-P20-28 S13-COPY-VS-HIFI",
+      "what": "Δ coloured by sign, not by better/worse; a zero Δ is not coloured (eeeae14f, deltaSign :1168)",
+      "class": "colour semantics",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p20-zero-delta-1280.png 06f1c0666143f236; p20-pair-1280.png e15641b5be08dd36",
+      "source": "independent audit 2026-09-24"
+    },
+    {
+      "id": "VD-P20-29 S13-COPY-VS-HIFI",
+      "what": "row label 'OOS sharpe' without '(stitched)': the value is original_metrics OOS_SHARPE, not a stitched common-window number (eeeae14f :1185)",
+      "class": "copy",
+      "owner": "Bobby (B2)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "p20-hifi-pair-legal-1280.png vs p20-pair-1280.png; CG-P20-06",
+      "source": "independent audit 2026-09-24"
     }
   ],
   "recorded_visual_decisions_not_blocking": [
@@ -218,6 +300,69 @@
       "found_by": "package B G8",
       "status": "RESOLVED_PENDING_BOBBY",
       "evidence": "034aef11 MARKETS_RULE_TAIL; receipt C regex assert"
+    },
+    {
+      "id": "S13-AUDIT-A1",
+      "what": "Δ header did not state the direction (server B − A, hi-fi A − B)",
+      "found_by": "independent audit 2026-09-24 (head 7800e8e2)",
+      "status": "RESOLVED",
+      "resolved_at": "eeeae14f",
+      "evidence": "eeeae14f [data-delta-direction] 'B − A · as published' (:1253); U24; probe pair"
+    },
+    {
+      "id": "S13-AUDIT-A2",
+      "what": "a zero Δ got data-sign=pos and was coloured green",
+      "found_by": "independent audit 2026-09-24 (head 7800e8e2)",
+      "status": "RESOLVED",
+      "resolved_at": "eeeae14f",
+      "evidence": "eeeae14f deltaSign (:1168); U24; probe zero-delta sign null"
+    },
+    {
+      "id": "S13-AUDIT-A3",
+      "what": "numbers in the common-window foot and correlation meta were not mono",
+      "found_by": "independent audit 2026-09-24 (head 7800e8e2)",
+      "status": "RESOLVED",
+      "resolved_at": "eeeae14f",
+      "evidence": "eeeae14f .cp-tcard > .foot .num, .cp-corr .num (:257); probe nonMono 0, bare 0"
+    },
+    {
+      "id": "S13-AUDIT-A4",
+      "what": "NOT_PUBLISHED blocks printed matched 0 / emitted 0 / n 0 beside the absence reason",
+      "found_by": "independent audit 2026-09-24 (head 7800e8e2)",
+      "status": "RESOLVED",
+      "resolved_at": "eeeae14f",
+      "evidence": "eeeae14f foot reason line (:1288), mini/overlay meta only when AVAILABLE (:919, :1075), correlation meta missing_policy only (:1310/:1320); U25; probe pair-partial, MINI-META; field question CG-P20-10"
+    },
+    {
+      "id": "S13-AUDIT-A5",
+      "what": "row label 'OOS sharpe (stitched)' claimed a method the contract does not state",
+      "found_by": "independent audit 2026-09-24 (head 7800e8e2)",
+      "status": "RESOLVED",
+      "resolved_at": "eeeae14f",
+      "evidence": "eeeae14f label 'OOS sharpe' (:1185); U24"
+    },
+    {
+      "id": "S13-AUDIT-A8",
+      "what": "ladder arrow aria 'claim strengthens to the right' wrong at 660 (stacked)",
+      "found_by": "independent audit 2026-09-24 (head 7800e8e2)",
+      "status": "RESOLVED",
+      "resolved_at": "eeeae14f",
+      "evidence": "eeeae14f aria 'claim strengthens along the ladder' (:818); probe attempts"
+    },
+    {
+      "id": "S13-AUDIT-A10",
+      "what": "resolver silently replaced an unknown mode",
+      "found_by": "independent audit 2026-09-24 (head 7800e8e2)",
+      "status": "RESOLVED",
+      "resolved_at": "eeeae14f",
+      "evidence": "eeeae14f CompareRoute.tsx:77–78 passes mode=foo to canonical; U26; probe resolver-badmode 400 terminal"
+    },
+    {
+      "id": "S13-G1-HEADER-LAYOUT",
+      "what": "unrecorded header delta",
+      "found_by": "package B G1",
+      "status": "RECORDED_AS_VD",
+      "evidence": "now VD-P20-22 (REQUIRES_BOBBY_DECISION)"
     }
   ],
   "deferred": [
@@ -299,6 +444,30 @@
       "state": "OPEN",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P20-08",
       "what": "alpha-version lifecycle ACTIVE/SUPERSEDED per run (related CG-P19-14)"
+    },
+    {
+      "id": "CG-P20-09",
+      "owner": "Codex",
+      "state": "OPEN",
+      "date": "2026-09-24",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-09",
+      "what": "Δ direction: field delta_definition RIGHT_MINUS_LEFT or written confirmation (compare.service.ts subtractDecimal right − left vs its name/argument order)"
+    },
+    {
+      "id": "CG-P20-10",
+      "owner": "Codex",
+      "state": "OPEN",
+      "date": "2026-09-24",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-10",
+      "what": "count fields when the block is NOT_PUBLISHED (matched_observation_count 0, emitted_point_count 0, correlation.n): null or a UI rule"
+    },
+    {
+      "id": "CG-P20-11",
+      "owner": "Codex (+ Bobby for spec)",
+      "state": "OPEN",
+      "date": "2026-09-24",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P20-11",
+      "what": "attempts secondary sort key: spec OOS desc vs service NET_RETURN desc"
     }
   ],
   "source_capability_blocked": [],
@@ -308,7 +477,7 @@
       "id": "P20-FE-DG-01",
       "owner": "Bobby",
       "state": "AWAITING_DECISION",
-      "what": "integrate baseline bb25bf39 → 72d2638b: 3e7055d5 rewrites RunLibrary.tsx (CompareBar becomes a disabled 'not built yet' button — S13's alpha= entry must be rewired); 8bd81b01 DQ-01 drops the module header (G1), 404 → terminal notFound vs S13/S10 403=404 denied, DQ-08 researchFormat vs S13 raw decimal strings; no compare contract/service/P20 evidence change; P17 FreezeDetail.tsx conflict remains; rerun all unit tests + whole Research probe (128 on tree e2d7d388)"
+      "what": "integrate baseline bb25bf39 → 72d2638b: 3e7055d5 rewrites RunLibrary.tsx (CompareBar becomes a disabled 'not built yet' button — S13's alpha= entry must be rewired); 8bd81b01 DQ-01 drops the module header (G1), 404 → terminal notFound vs S13/S10 403=404 denied, DQ-08 researchFormat vs S13 raw decimal strings; no compare contract/service/P20 evidence change; P17 FreezeDetail.tsx conflict remains; rerun all unit tests + whole Research probe (162 on tree 58f27644, head eeeae14f)"
     },
     {
       "id": "P20-FE-DG-02",
@@ -320,16 +489,16 @@
       "id": "P20-FE-DG-03",
       "owner": "Bobby",
       "state": "AWAITING_DECISION",
-      "what": "B2 copy VD-P20-01/02/10/11/13/14/15/17 (+20): proposed new hi-fi version; B3 VD-P20-08; B6 data-compare-state for REFUSED"
+      "what": "B2 copy VD-P20-01/02/10/11/13/14/15/17 (+20, +21…29, audit A6/A7 verbatim copy): proposed new hi-fi version; B3 VD-P20-08; B6 data-compare-state for REFUSED (S13-REFUSED-STATE-ATTR)"
     },
     {
       "id": "P20-FE-DG-04",
       "owner": "Codex",
       "state": "OPEN",
-      "what": "CG-P20-01…08 answered or recorded as genuinely absent (NOT_APPLICABLE_PROVEN)"
+      "what": "CG-P20-01…11 answered or recorded as genuinely absent (NOT_APPLICABLE_PROVEN)"
     }
   ],
-  "known_flake_note": "none in package C; PortalShell full-run flake (P16–P19) not seen on 034aef11",
+  "known_flake_note": "none in packages C and C-2; PortalShell full-run flake (P16–P19) not seen on 034aef11 or eeeae14f",
   "rule_for_later_phases": {
     "source": "Bobby 2026-09-24, Unified P19 note; applied in P20",
     "rules": [
@@ -339,5 +508,6 @@
       "new debt created while doing P20 and later goes into both the phase handoff and Unified"
     ],
     "p20_debt_for_P21": "see Unified P20 note 'Nợ cho phase sau (P21+)' and frontend-handoff-claude.md Thanhvuong addendum"
-  }
+  },
+  "audit_note": "independent audit 2026-09-24 on head 7800e8e2: A1–A5, A8, A10 fixed in eeeae14f; A6/A7 recorded on VD-P20-15/-10 (verbatim hi-fi copy, Bobby decides); A9 → S13-REFUSED-STATE-ATTR; audit B → VD-P20-21…27 (+28, 29); audit D → CG-P20-09…11; receipt §12"
 }

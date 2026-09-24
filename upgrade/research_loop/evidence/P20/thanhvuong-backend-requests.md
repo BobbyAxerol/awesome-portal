@@ -8,7 +8,7 @@ Receipt này gom mọi việc S13 cần từ backend (@codex) và từ Bobby.
 **Ngày kiểm lại:** 2026-09-24, theo CLAUDE.md §7.6 và §7.9.
 
 Nơi kiểm:
-- Nhánh `feat/thanhvuong/research-p17-p21`, code head `034aef11`.
+- Nhánh `feat/thanhvuong/research-p17-p21`, code head `034aef11` (CG-01…08); `eeeae14f` sau audit độc lập (CG-09…11 thêm 2026-09-24; contract, service và d.ts không đổi giữa hai head).
 - Baseline `primus-origin/docs/research-loop-plan` = `bb25bf39` (lúc lập plan) và **`72d2638b`** (sau `git fetch` lúc đóng packet).
 
 Kết quả kiểm:
@@ -178,6 +178,63 @@ Backend request (@codex)
 | Test khi có | U02/U04 + probe attempts: pill + viền |
 | Fallback đang chạy | `run_state` |
 
+### CG-P20-09 — hướng Δ common-window (audit A1)
+
+```text
+Backend request (@codex) — 2026-09-24
+- Endpoint/field cần: researchCompareGetV1 pair.common_window — field additive delta_definition: "RIGHT_MINUS_LEFT" (hoặc enum tương đương), hoặc xác nhận bằng văn bản rằng Δ = right − left là bất biến của research.compare.v1
+- Lý do UI: hi-fi đọc Δ = A − B; server trả B − A. UI phải ghi hướng mà không suy từ code service (CLAUDE.md §3.5)
+- Ảnh hưởng hiện tại: /research/quantbt/alphas/:alphaId/compare?mode=pair — header Δ in "B − A · as published" dựa trên đọc code, chưa có cam kết contract
+- Đề xuất schema: CommonWindow.delta_definition: "RIGHT_MINUS_LEFT" (const); chỉ đề xuất — codex quyết
+```
+
+| Mục | Nội dung |
+|---|---|
+| Locator | `apps/control-api/src/research/compare.service.ts:393` `subtractDecimal(left, right)`; thân hàm trả `unscaled(right) − unscaled(left)`; comment `:395` ghi "`right - left`"; gọi ở `:446–:447` với `(leftReturn, rightReturn)` / `(leftDrawdown, rightDrawdown)`. `generated/research-compare.d.ts` `common_window.metrics[].delta` không có field hướng |
+| Actual | Code và comment cùng nói right − left (B − A). Tên hàm + thứ tự tham số `subtractDecimal(left, right)` đọc như left − right, dễ bị "sửa" ngược mà contract không bắt được. Probe: 0.4217 / 0.3871 → Δ `-0.0346` |
+| Expected | Hướng Δ là một phần contract (field hoặc câu xác nhận trong README P20), không chỉ là chi tiết cài đặt |
+| Đề xuất nhỏ nhất | Thêm const field `delta_definition`, hoặc một dòng trong P20 README/OpenAPI description + test contract khoá `right − left` |
+| Test khi có | U24 đọc nhãn từ field thay vì hằng; probe pair assert nhãn khớp field |
+| Fallback đang chạy | `eeeae14f`: nhãn cố định `B − A · as published` (`CompareDetail.tsx:1253`), in chuỗi server, không tính lại; debt `S13-DELTA-DIRECTION-LABEL`; VD-P20-21 |
+
+### CG-P20-10 — count field khi block NOT_PUBLISHED (audit A4)
+
+```text
+Backend request (@codex) — 2026-09-24
+- Endpoint/field cần: researchCompareGetV1 — matched_observation_count (common_window), emitted_point_count (overlay, market chart), correlation.n khi block tương ứng NOT_PUBLISHED: trả null, hoặc xác nhận rule "count trong block NOT_PUBLISHED không mang nghĩa, UI không in"
+- Lý do UI: CLAUDE.md §3.3 — không in 0 thay cho vắng; hiện server gửi 0 trong block không công bố
+- Ảnh hưởng hiện tại: pair PARTIAL (common window NOT_PUBLISHED), markets card chart NOT_PUBLISHED, correlation chưa derive
+- Đề xuất schema: đổi các count thành number | null khi availability ≠ AVAILABLE (breaking cho type) — hoặc giữ number và ghi rõ trong OpenAPI description; codex quyết
+```
+
+| Mục | Nội dung |
+|---|---|
+| Locator | `compare.service.ts:355` `matched_observation_count: 0` (common window không công bố), `:387`, `:487`, `:496` `emitted_point_count: 0`; `:673` `unavailableCorrelation(reason, raw.matchedCount, …)`; d.ts `:132`/`:227` `emitted_point_count: number`, `:190` `matched_observation_count: number`, `:214` `n: number` (không nullable) |
+| Actual | Trước `eeeae14f` UI in `matched 0`, `emitted 0 of source count not published`, `n 0` cạnh lý do vắng |
+| Expected | Một rule rõ: count trong block NOT_PUBLISHED là `null`, hoặc là số hợp lệ phải in (vd `n` = số điểm khớp dù ρ không derive được) |
+| Đề xuất nhỏ nhất | Xác nhận bằng văn bản; field nullable chỉ khi codex thấy cần |
+| Test khi có | U25 + probe pair-partial / markets / corr-zero theo rule chốt |
+| Fallback đang chạy | `eeeae14f`: không in count trong block NOT_PUBLISHED (foot in `definition_id · common window not published · reason`; `[data-mini-meta]`/`[data-overlay-meta]` chỉ khi AVAILABLE; correlation meta chỉ `missing_policy`) |
+
+### CG-P20-11 — khoá sort thứ hai của attempts (audit C5)
+
+```text
+Backend request (@codex) — 2026-09-24
+- Endpoint/field cần: researchCompareGetV1?mode=attempts — thứ tự attempts[] trong cùng claim rank: OOS desc (spec 13 §5) hay NET_RETURN desc (code)
+- Lý do UI: spec T01 "sort đúng bậc"; FE không sort (chỉ bày ngược mảng server, VD-P20-14), nên thứ tự là của server
+- Ảnh hưởng hiện tại: ladder attempts; hôm nay mọi run cùng rank 3 hoặc NOT_PUBLISHED nên khoá thứ hai quyết định thứ tự
+- Đề xuất schema: không đổi schema; hoặc sửa sortCandidates theo spec, hoặc sửa spec §5 theo code (codex + Bobby quyết)
+```
+
+| Mục | Nội dung |
+|---|---|
+| Locator | `release-v1.1/docs/screens/13_compare.md:67` "Sort attempts: rank asc → rồi OOS desc trong cùng rank"; `compare.service.ts:310` `sortCandidates`: rank asc → `originalNetReturn` desc (`:288`) → `created_at_utc_ms` → `run_id` |
+| Actual | Khoá thứ hai là `NET_RETURN_FRACTION` gốc, không phải OOS Sharpe |
+| Expected | Spec và code cùng một khoá |
+| Đề xuất nhỏ nhất | Chọn một nguồn và sửa nguồn kia; nếu giữ NET_RETURN vì OOS thường NOT_PUBLISHED, ghi lý do vào spec |
+| Test khi có | Service test thứ tự; probe attempts assert DOM = server đảo (đã có) |
+| Fallback đang chạy | FE in thứ tự server, không sort lại (U02, U22 grep `.sort(` = 0) |
+
 ## 2. Không có hàng source-capability riêng
 
 P20 không có matrix source-capability; source absence là reason code `P20_*` trong contract (`P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED`, `P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE`, `P20_P13_EQUITY_SERIES_NOT_AVAILABLE`, …) và được in nguyên văn.
@@ -194,7 +251,8 @@ Không mở request cho: ETag/304 (contract đã có, S13 dùng), badge 403/404 
 - **B3 — `VD-P20-08`** dòng meta disclosure: cùng nhóm `S10-COUNTS-PANEL` (giữ, bỏ, hay chuẩn hoá thành panel chung).
 - **B4 — axe** (spec T10): axe-core không có trong lock.
 - **B5 — `REAL_API_E2E_RECEIPT` / `V11-P20-DR`**: cần bật `CONTROL_API_FEATURE_RESEARCH_COMPARE` trên một lane preview + cặp run Delta thật.
-- **B6 — `data-compare-state` cho REFUSED**: hiện `available` cho cả pair REFUSED và pair zero-variance (response 200 hợp lệ); có muốn state màn phản ánh refusal (vd `refused`) không.
+- **B6 — `data-compare-state` cho REFUSED**: hiện `available` cho cả pair REFUSED và pair zero-variance (response 200 hợp lệ); có muốn state màn phản ánh refusal (vd `refused`) không. Audit A9 xác nhận lại; debt `S13-REFUSED-STATE-ATTR`.
+- **B2 (bổ sung sau audit)** — VD-P20-21…29 (hướng Δ, header, khối weaker claim/differences, dòng phụ, banner markets, caption correlation, trục y overlay, tô Δ theo dấu, bỏ "(stitched)") và copy hi-fi verbatim audit A6 (`ATTEMPTS_RULE` số demo, VD-15) / A7 (`COMPARE_RULES` "ACTIVE node", VD-10): đề xuất gộp vào version hi-fi mới.
 
 ## 4. Trạng thái
 
@@ -208,4 +266,7 @@ Không mở request cho: ETag/304 (contract đã có, S13 dùng), badge 403/404 
 | `CG-P20-06` | Codex | OPEN | win rate + OOS stitched common-window |
 | `CG-P20-07` | Codex | OPEN | alpha id fixture run-library |
 | `CG-P20-08` | Codex | OPEN | lifecycle ACTIVE/SUPERSEDED per run (liên quan `CG-P19-14`) |
+| `CG-P20-09` | Codex | OPEN | hướng Δ `RIGHT_MINUS_LEFT` (audit A1, 2026-09-24) |
+| `CG-P20-10` | Codex | OPEN | count khi block NOT_PUBLISHED (audit A4, 2026-09-24) |
+| `CG-P20-11` | Codex (+ Bobby cho spec) | OPEN | khoá sort thứ hai attempts OOS vs NET_RETURN (audit C5, 2026-09-24) |
 | B1–B6 | Bobby | AWAITING_DECISION | §3 |

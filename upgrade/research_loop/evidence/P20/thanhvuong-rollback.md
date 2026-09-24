@@ -4,13 +4,28 @@ Rollback này chỉ đụng frontend: không đổi contract, backend, migration
 
 Thứ tự: revert commit mới nhất trước. Sau mỗi bước Portal vẫn build được. Lệnh mẫu: `git revert --no-edit <sha>` trên nhánh `feat/thanhvuong/research-p17-p21`, rồi `npx tsc -b --noEmit && npm run build && npx vitest run` trong `apps/portal/frontend`.
 
-## 0. Docs (2 commit docs P20)
+## 0. Docs (4 commit docs P20)
+
+Chuỗi docs, mới nhất trước:
+1. `docs(research): P20 §13 note + handoff after audit` (gói C-2; Unified §13 + note + handoff addendum).
+2. `docs(research): P20 packet after audit — receipt §12, VD-P20-21…29, CG-P20-09…11` (gói C-2; 5 file packet, gồm file này). SHA hai commit này xem `git log` (commit không tự ghi được SHA của chính nó).
+3. `7800e8e2` `docs(research): P20 §13 row, implementation note and handoff addendum`.
+4. `e731cfa6` `docs(research): P20 Thanhvuong packet — S13 Compare receipt, requests, debt, rollback`.
 
 - **Nội dung:** packet 5 file `evidence/P20/thanhvuong-*`; dòng §13 P20 + implementation note `#p20-thanhvuong-frontend-implementation-note--screen-13-2026-09-24` trong Unified; mục "Thanhvuong addendum" cuối `evidence/P20/frontend-handoff-claude.md`.
-- **Ảnh hưởng khi revert:** chỉ mất hồ sơ; code không đổi. Nếu revert code mà giữ docs thì phải sửa dòng §13 + note cho khớp.
-- **Thứ tự:** revert docs trước code (commit docs 2 rồi docs 1).
+- **Ảnh hưởng khi revert:** chỉ mất hồ sơ; code không đổi. Nếu revert code mà giữ docs thì phải sửa dòng §13 + note cho khớp. Chỉ revert 2 commit docs sau audit (1, 2) thì hồ sơ quay về trạng thái trước audit (ghi head `034aef11`, 42 RECEIPT) trong khi code vẫn ở `eeeae14f` — không nên để lệch như vậy; revert cả `eeeae14f` (mục 1a) hoặc giữ cả hai.
+- **Thứ tự:** revert docs trước code (1 → 2 → 3 → 4). Nếu chỉ gỡ phần audit: 1 → 2 → `eeeae14f`.
+
+## 1a. `eeeae14f` — sửa audit A1–A5, A8, A10
+
+- **Nội dung commit:** `CompareDetail.tsx` +50/−15 (header Δ + `[data-delta-direction]` "B − A · as published"; `deltaSign` bỏ màu cho Δ bằng 0; foot common-window + meta correlation mono; block NOT_PUBLISHED không in count; nhãn "OOS sharpe"; aria mũi tên ladder); `CompareRoute.tsx` +6/−6 (resolver giữ mode lạ để server trả 400); `compareDetail.test.tsx` +58 (`S13-U24…U26`).
+- **Ảnh hưởng khi revert:** quay về hành vi trước audit: Δ không ghi hướng, Δ 0 tô xanh, `matched 0` / `emitted 0` / `n 0` cạnh lý do vắng, nhãn "(stitched)", aria "to the right", resolver đổi im lặng mode lạ. Test U24–U26 đi cùng commit nên không còn test đỏ.
+- **Dữ liệu và request:** không đổi (vẫn 1 GET mỗi key; resolver mode lạ khi revert sẽ không gửi 400 mà gửi mode suy ra).
+- **Thứ tự:** trước `034aef11`.
 
 ## 1. `034aef11` — nhãn ngày mini chart và copy banner markets
+
+- **Thứ tự:** sau `eeeae14f` (commit đó sửa cùng file).
 
 - **Nội dung commit:** `CompareDetail.tsx` +11/−3 (`miniPlot` chỉ giữ nhãn trục X đầu/cuối; `MARKETS_RULE_TAIL` bỏ cụm "Small multiples only:" lặp, VD-P20-20).
 - **Ảnh hưởng khi revert:** ở 1280 nhãn trục X của mini chart lại chồng nhau (gói B finding 1, `575e025b89d9cd86`); banner markets lại in "small multiples only" hai lần.
