@@ -247,3 +247,26 @@ spec §23 redirect; S05/S06 use the HiFi title/subtitle (DQ-02); a few added
 lines not in HiFi/spec (cancelled-claim line, "open progress →", "open legacy
 run →", P19/P20/P21 disabled labels). The e2e probe (`_probe-research-product`,
 Codex's working copy) expects `128400.00`; the tile now reads `128,400.00`.
+
+## 8. HiFi fidelity pass — 2026-09-24 (Claude)
+
+Bobby: "rules là luôn bám HiFi về chi tiết UI UX, font chữ, cỡ, cách chuẩn hoá
+số, hoạt động, tính động … làm luôn màn 3". Each screen was measured block by
+block against its `.dc.html` (getComputedStyle, 1440/1280/660 + HiFi motion
+observed), then rebuilt to it. S03 is taken back from the RF-04 hand-off.
+
+| Screen | Result (measured, 1440) |
+|---|---|
+| shared | `researchScreen.css`: 13 px / line-height normal (was 16/1.5), shell gutter removed for 01/03/04/05/06 which own their HiFi frame, 120 ms colour transitions, HiFi double-ring focus, link hover, `rs-pulse`/`rs-flow`/`rs-caret` with reduced-motion off |
+| 01 | card 101 px (HiFi 101, was 131), frame 248/1192 (was 280/1128), chips/pills/inputs at HiFi heights, sparkline placeholder bars, 2-dp ratios, run id ellipsis + copy, HiFi pulses |
+| 03 | HiFi order (meta strip, claim passport first), 5 stage pills (DQ-04), 14 px gradient bar, Gantt 602 + Artifacts 528 side by side, fill = trial progress (DONE 100 %, was 11 %), console 330 px lh 1.75, Live console / Stage log, done banner with S1–S5 links, alertdialog cancel, live patching from events + refreshed availability (DQ-13) — verified on two real runs |
+| 04 | passport card + inline dataset panel (HiFi over spec, DQ-02), only the cursor bar sticks, tiles 220.8×90 (HiFi), EChart 1/2 split with provenance row, HiFi grids/axes/tooltips, U+2212 and `Z` times, verdict/monthly/behaviour shells |
+| 05/06 | frame 272/1144, S06 grid 567/52/525 and 629/52/583 (HiFi identical), fold table fits (was 1207 in 1126), numeric columns right-aligned, `[start, end)` spans, gold holdout row, fold keyboard, freeze arrow chip, A1/ledger HiFi columns and colours |
+
+Everything that still differs is data the backend does not publish (RF-05
+ids cited on each shell) or a recorded decision: 5 stages not 11 (DQ-04), 2-dp
+money without `$` and "currency" not "USD" (DQ-08, no currency code in the
+contract), `reset to θ*` and retained-source passport kept (spec), cursor
+notices, 409 on S04's current-source read until `CG-P13-09`. Colours without a
+token were approximated to the nearest token (console palette, #e8eff1,
+#f4f8f9, #fdfbf5) and listed per screen in the agents' receipts.
