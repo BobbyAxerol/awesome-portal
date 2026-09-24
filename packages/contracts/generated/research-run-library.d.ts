@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * List persisted Research runs in created-descending keyset order
-         * @description At most 50 rows. Exact totals, counters and claim ledger are server-computed in the same read snapshot. ids polling is mutually exclusive with pagination and library filters. The result never assigns an OOS metric, certificate, claim, sparkline or source fact that persisted Research data did not publish.
+         * @description At most 50 rows. Exact totals, counters and claim ledger are server-computed in the same read snapshot. ids polling is mutually exclusive with pagination and library filters. The result never assigns an OOS metric, certificate, claim, sparkline or source fact that persisted Research data did not publish. COMPLETED-card stats come from the persisted P13 projection and its metric registry; rc comes only from persisted P21 relations. q matches run id, alpha id/name, av, symbol, timeframe, optimization mode, schedule, protocol and sealed rc id; a legacy 1.0.8 row matches only its run id and recorded protocol. mode filters the optimization mode, never a protocol. A legacy row is excluded from every alpha filter, including scratch.
          */
         get: operations["researchRunLibraryListV1"];
         put?: never;
@@ -33,7 +33,7 @@ export interface paths {
         };
         /**
          * Read at most 24 explicitly published display points for one run
-         * @description P12 currently returns a typed unavailable/legacy state instead of reading a worker artifact or Parquet file. A later named series contract may publish exact points without changing the Library list contract.
+         * @description For a COMPLETED durable run the values are the persisted P13 EQUITY_OOS equity points of the run's newest projection revision (the series the Screen-04 Hub reads), integrity-checked against their stored digest and reduced to at most 24 by an extrema-preserving bucket that always keeps the first, last, minimum and maximum. `source` names the revision and sampling. Nothing reads a worker artifact or Parquet file; every other case is a typed unavailable/legacy state.
          */
         get: operations["researchRunLibrarySparklineV1"];
         put?: never;
@@ -87,6 +87,19 @@ export interface components {
             /** @enum {unknown} */
             tone: "DEFAULT" | "BAD" | "ACCENT";
             availability: components["schemas"]["Availability"];
+            /** @description P13 metric-registry scope of a COMPLETED-card value (TRADE_COUNT covers the full child tape, not OOS only). Null for lifecycle cells and absent values. */
+            scope: ("OOS" | "IS_PLUS_OOS" | "CHILD_TAPE") | null;
+            definition_id: string | null;
+        };
+        /** @description A persisted P21 relation only: the newest Portal-local sealed pack for the run, otherwise the viewer's own draft. Never inferred from a run name, claim or certificate. */
+        ReleaseCandidateRef: {
+            /** @enum {unknown} */
+            kind: "LOCAL_SEAL" | "ACTOR_DRAFT";
+            release_candidate_id: string | null;
+            draft_id: string | null;
+            delivery_state: ("NOT_DELIVERED" | "PENDING" | "DELIVERED" | "UNKNOWN") | null;
+            approval_state: ("NOT_APPROVED" | "PENDING" | "APPROVED" | "REJECTED" | "UNKNOWN") | null;
+            sealed_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
         };
         AlphaBinding: {
             alpha_id: components["schemas"]["AlphaId"];
@@ -111,9 +124,18 @@ export interface components {
             row_kind: "LOGICAL_RUN" | "WORKER_CHILD" | "AUDIT_CHILD" | "REPRODUCTION_CHILD" | "LEGACY_RUN";
             relationship: components["schemas"]["RunRelationship"];
             status: components["schemas"]["RunStatus"];
+            /** @description DURABLE_LIFECYCLE: the durable job/run lifecycle. LEGACY_RECORDED_STATUS: the value the retired 1.0.8 engine recorded; a recorded QUEUED/RUNNING is not monitored by anything (reason LEGACY_1_0_8_NON_TERMINAL_STATUS_NOT_MONITORED) and must not be presented as live work. */
+            status_basis: {
+                /** @enum {unknown} */
+                kind: "DURABLE_LIFECYCLE" | "LEGACY_RECORDED_STATUS";
+                availability: components["schemas"]["Availability"];
+            };
+            /** @description display is `optimization_mode · optimization_schedule` for a durable run. key is the optimization mode only (null when none is published); protocol is carried separately and is never a mode. */
             mode: {
                 display: string | null;
                 key: string | null;
+                schedule: string | null;
+                protocol: string | null;
                 availability: components["schemas"]["Availability"];
             };
             strategy_id: {
@@ -122,7 +144,8 @@ export interface components {
             };
             binding: components["schemas"]["AlphaBinding"] | null;
             binding_availability: components["schemas"]["Availability"];
-            rc: null;
+            rc: components["schemas"]["ReleaseCandidateRef"] | null;
+            rc_availability: components["schemas"]["Availability"];
             instrument: {
                 display: string | null;
                 availability: components["schemas"]["Availability"];
@@ -132,7 +155,9 @@ export interface components {
                 grade: ("A" | "B" | "C" | "D") | null;
                 availability: components["schemas"]["Availability"];
             };
+            /** @description The persisted Stage-5 claim, state and sentence verbatim, identical to the Screen-04 Hub claim for the same run (a NOT_ISSUED sentence is still the source sentence). */
             claim: {
+                state: ("FORECAST" | "NOT_ISSUED" | "ISSUED") | null;
                 text: string | null;
                 availability: components["schemas"]["Availability"];
             };
@@ -147,6 +172,8 @@ export interface components {
                 kind: ("oos_equity" | "search_progress" | "failed") | null;
                 availability: components["schemas"]["Availability"];
             };
+            /** @description The persisted P13 projection revision the COMPLETED stats and sparkline come from. */
+            evidence_revision: string | null;
             source_updated_at_utc_ms: components["schemas"]["UtcMilliseconds"];
         };
         RunLibraryResponse: {
@@ -172,11 +199,14 @@ export interface components {
                 technical_retries: number;
                 legacy_metadata_rows: number;
             };
+            /** @description Six buckets that partition the filtered rows (their sum is page.filtered_rows). pending_source is only a durable, non-cancelled run still waiting for its source claim; a run cancelled before its source published is cancelled_before_source; a legacy 1.0.8 row is legacy_metadata_only. */
             claim_ledger: {
                 issued: number;
                 not_issued: number;
                 pending_source: number;
                 failed: number;
+                cancelled_before_source: number;
+                legacy_metadata_only: number;
             };
             filter_catalog: {
                 alphas: {
@@ -198,6 +228,23 @@ export interface components {
             values: components["schemas"]["ExactDecimal"][];
             availability: components["schemas"]["Availability"];
             source_revision: string | null;
+            source: components["schemas"]["RunSparklineSource"] | null;
+        };
+        /** @description Provenance of the display values: the persisted P13 series, its source sampling and the Library's own <=24-point reduction. Null whenever values is empty. */
+        RunSparklineSource: {
+            /** @constant */
+            series_kind: "EQUITY_OOS";
+            /** @constant */
+            value_field: "equity";
+            projection_revision: string;
+            series_digest: components["schemas"]["Digest"];
+            source_observation_count: number | null;
+            source_sampling: string | null;
+            persisted_point_count: number;
+            /** @enum {unknown} */
+            display_sampling: "FULL" | "EXTREMA_BUCKET_24_V1";
+            first_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            last_at_utc_ms: components["schemas"]["UtcMilliseconds"];
         };
     };
     responses: {
@@ -216,13 +263,14 @@ export interface components {
         RunId: components["schemas"]["RunId"];
         RunLibraryQuery: string;
         RunLibraryStatus: components["schemas"]["RunStatus"][];
+        /** @description Exact optimization mode (requested_spec.optimization_mode). A protocol key or a legacy row never matches. */
         RunLibraryMode: string[];
         RunLibraryAlpha: (components["schemas"]["AlphaId"] | "scratch")[];
         /** @description Visible-running-row poll only. Mutually exclusive with filters and cursors. */
         RunLibraryIds: components["schemas"]["RunId"][];
         /** @description Opaque after cursor; binds workspace/filter/sort/limit. */
         RunLibraryCursor: string;
-        /** @description Opaque before cursor; mutually exclusive with cursor. */
+        /** @description Opaque before cursor; mutually exclusive with cursor. Boundaries carry exact PostgreSQL microsecond timestamps, so paging back never repeats or skips a row. */
         RunLibraryBefore: string;
         RunLibraryLimit: number;
     };
@@ -238,13 +286,14 @@ export interface operations {
                 workspace_id?: components["parameters"]["WorkspaceId"];
                 q?: components["parameters"]["RunLibraryQuery"];
                 status?: components["parameters"]["RunLibraryStatus"];
+                /** @description Exact optimization mode (requested_spec.optimization_mode). A protocol key or a legacy row never matches. */
                 mode?: components["parameters"]["RunLibraryMode"];
                 alpha?: components["parameters"]["RunLibraryAlpha"];
                 /** @description Visible-running-row poll only. Mutually exclusive with filters and cursors. */
                 ids?: components["parameters"]["RunLibraryIds"];
                 /** @description Opaque after cursor; binds workspace/filter/sort/limit. */
                 cursor?: components["parameters"]["RunLibraryCursor"];
-                /** @description Opaque before cursor; mutually exclusive with cursor. */
+                /** @description Opaque before cursor; mutually exclusive with cursor. Boundaries carry exact PostgreSQL microsecond timestamps, so paging back never repeats or skips a row. */
                 before?: components["parameters"]["RunLibraryBefore"];
                 limit?: components["parameters"]["RunLibraryLimit"];
             };

@@ -7,6 +7,8 @@ import { ControlApiConfig, querySigningKeys } from "../config";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
 import type { AppliedSort, NormalizedFilter } from "../query/contracts";
 import { CONTROL_API_CONFIG } from "../tokens";
+import * as metricRegistry from "./evidence-metric-registry";
+import type { ResearchMetricDefinition, ResearchMetricRegistryVersion } from "./evidence-metric-registry";
 import { ResearchProgressSnapshotSchema, type ResearchProgressSnapshot } from "./progress.contract";
 import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
 import {
@@ -22,6 +24,7 @@ import { ResearchRunLibraryError } from "./run-library.error";
 import {
   type RunLibraryBoundary,
   type RunLibraryRow,
+  type RunLibrarySparklineSource,
   ResearchRunLibraryRepository,
 } from "./run-library.repository";
 import type { ResearchScope } from "./contracts";
@@ -82,6 +85,11 @@ function sourceAvailability(
   if (row.source_kind === "LEGACY_1_0_8_METADATA") {
     return unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS");
   }
+  if (!progress && row.effective_status === "CANCELLED") {
+    // CG-P12-05: a run cancelled before its source published anything will
+    // never receive a snapshot.  It is not pending and not "unpublished yet".
+    return unavailable("NOT_PUBLISHED", "CANCELLED_BEFORE_SOURCE");
+  }
   if (!progress) {
     return unavailable(
       row.effective_status === "RUNNING" || row.effective_status === "QUEUED"
@@ -137,6 +145,162 @@ function canonicalComparisonKey(row: RunLibraryRow, spec: ResearchRequestedSpec 
     protocol: spec.protocol,
   });
   return `rck1_${createHash("sha256").update(canonical, "utf8").digest("base64url")}`;
+}
+
+const EXACT_DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+const EVIDENCE_REVISION = /^p13r[0-9]+_[0-9a-f]{64}$/;
+const DIGEST = /^[0-9a-f]{64}$/;
+const RELEASE_CANDIDATE_ID = /^rc_[0-9A-HJKMNP-TV-Z]{26}$/;
+const RELEASE_CANDIDATE_DRAFT_ID = /^rcd_[0-9A-HJKMNP-TV-Z]{26}$/;
+const DELIVERY_STATES = new Set(["NOT_DELIVERED", "PENDING", "DELIVERED", "UNKNOWN"]);
+const APPROVAL_STATES = new Set(["NOT_APPROVED", "PENDING", "APPROVED", "REJECTED", "UNKNOWN"]);
+const CURSOR_TIMESTAMP = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}(?:[0-9]{3})?Z$/;
+export const RUN_LIBRARY_SPARKLINE_MAXIMUM_POINTS = 24;
+
+type StatRole = "OOS_SHARPE" | "DECAY" | "TRADE_COUNT";
+
+/**
+ * Registry keys behind each COMPLETED-card cell.  TRADE_COUNT is a base
+ * (v1/v2) registry fact read from `projection.direct`; OOS Sharpe and the
+ * IS→OOS Sharpe decay are CG-P13-03 performance (v3) facts read from
+ * `projection.oos_analytics.metrics` under the exact rule the Screen-04 Hub
+ * applies.  Values are never computed here.
+ */
+export const RUN_LIBRARY_STAT_ROLE_METRIC_KEYS: Readonly<Record<StatRole, string>> = Object.freeze({
+  OOS_SHARPE: "OOS_SHARPE",
+  DECAY: "OOS_SHARPE_DECAY",
+  TRADE_COUNT: "TRADE_COUNT",
+});
+
+/** Structural view of a CG-P13-03 performance definition. */
+interface PerformanceMetricDefinitionLike {
+  key: string;
+  sourceField: string;
+  scope: string;
+  origin: string;
+  definitionId: string;
+  sourceLocator: string | null;
+}
+
+/**
+ * Read through the module namespace so the Library compiles and degrades to
+ * a typed absence on a registry that predates CG-P13-03, and picks the v3
+ * definitions up with no Library change once they exist.
+ */
+function performanceMetricDefinitions(): readonly PerformanceMetricDefinitionLike[] {
+  const value = (metricRegistry as unknown as { RESEARCH_PERFORMANCE_METRIC_DEFINITIONS?: unknown })
+    .RESEARCH_PERFORMANCE_METRIC_DEFINITIONS;
+  return Array.isArray(value) ? value as PerformanceMetricDefinitionLike[] : [];
+}
+
+/** Mirrors the Hub's source-absence code for a projection sealed before OOS analytics. */
+const PREDATES_OOS_ANALYTICS = "P13_SOURCE_PREDATES_OOS_ANALYTICS";
+
+type MetricScope = "OOS" | "IS_PLUS_OOS" | "CHILD_TAPE";
+
+function metricScope(definition: ResearchMetricDefinition): MetricScope | null {
+  const scope = definition.scope as string;
+  return scope === "OOS" || scope === "IS_PLUS_OOS" || scope === "CHILD_TAPE" ? scope : null;
+}
+
+/**
+ * Extract every exact decimal the persisted projection publishes, keyed by
+ * registry key.  R1/R2 fields map exactly as the Screen-04 Hub maps them;
+ * an explicit `metrics` map/array or any further scalar under `direct`/
+ * `derived` is accepted under its upper-cased name.  Nothing is computed.
+ */
+export function projectionMetricValues(projection: Record<string, unknown> | null): Map<string, string> {
+  const values = new Map<string, string>();
+  if (!projection) return values;
+  const put = (key: unknown, raw: unknown) => {
+    if (typeof key !== "string" || !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(key)) return;
+    const normalizedKey = key.toUpperCase();
+    const value = typeof raw === "number" && Number.isFinite(raw) ? String(raw) : raw;
+    if (typeof value !== "string" || value.length > 192 || !EXACT_DECIMAL.test(value)) return;
+    if (!values.has(normalizedKey)) values.set(normalizedKey, value);
+  };
+  const record = (value: unknown): Record<string, unknown> | null =>
+    value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+  const metrics = projection.metrics;
+  if (Array.isArray(metrics)) {
+    for (const entry of metrics) {
+      const item = record(entry);
+      if (item) put(item.key, item.value);
+    }
+  } else if (record(metrics)) {
+    for (const [key, entry] of Object.entries(record(metrics)!)) put(key, record(entry) ? record(entry)!.value : entry);
+  }
+  const direct = record(projection.direct);
+  const derived = record(projection.derived);
+  put("INITIAL_EQUITY", direct?.initial_equity);
+  put("FINAL_EQUITY", direct?.final_equity);
+  put("TRADE_COUNT", direct?.num_trades);
+  put("BARS_PROCESSED", direct?.bars);
+  put("NET_RETURN_FRACTION", derived?.net_return_fraction);
+  put("MAX_DRAWDOWN_FRACTION", derived?.max_drawdown_fraction);
+  for (const group of [derived, direct]) {
+    for (const [key, value] of Object.entries(group ?? {})) put(key, value);
+  }
+  return values;
+}
+
+/**
+ * Deterministic extrema-preserving reduction to at most `maximum` points.
+ * The first and last points are always kept; the interior is split into
+ * contiguous buckets and each bucket keeps its minimum and maximum, so the
+ * global minimum and maximum always survive.  Flat buckets keep one point,
+ * so the bucket count grows while the result still fits the budget.  Order
+ * is preserved; values are never interpolated.
+ */
+export function extremaPreservingSample<T>(
+  points: readonly T[],
+  valueOf: (point: T) => number,
+  maximum = RUN_LIBRARY_SPARKLINE_MAXIMUM_POINTS,
+): { points: T[]; sampled: boolean } {
+  if (maximum < 4) throw new RangeError("extrema-preserving sample needs at least four points");
+  if (points.length <= maximum) return { points: [...points], sampled: false };
+  const values = points.map(valueOf);
+  const interior = points.length - 2;
+  const select = (buckets: number): Set<number> => {
+    const keep = new Set<number>([0, points.length - 1]);
+    for (let bucket = 0; bucket < buckets; bucket += 1) {
+      const start = 1 + Math.floor((bucket * interior) / buckets);
+      const end = 1 + Math.floor(((bucket + 1) * interior) / buckets);
+      if (start >= end) continue;
+      let minimum = start;
+      let maximumIndex = start;
+      for (let index = start; index < end; index += 1) {
+        if (values[index]! < values[minimum]!) minimum = index;
+        if (values[index]! > values[maximumIndex]!) maximumIndex = index;
+      }
+      keep.add(minimum);
+      keep.add(maximumIndex);
+    }
+    return keep;
+  };
+  let best = select(Math.floor((maximum - 2) / 2));
+  for (let buckets = Math.floor((maximum - 2) / 2) + 1; buckets <= interior; buckets += 1) {
+    const candidate = select(buckets);
+    if (candidate.size > maximum) break;
+    best = candidate;
+  }
+  return { points: [...best].sort((left, right) => left - right).map((index) => points[index]!), sampled: true };
+}
+
+/** Code-point-ordered canonical JSON; identical to the P13 series digest identity. */
+function canonicalJson(value: unknown): string {
+  const normalize = (input: unknown): unknown => {
+    if (Array.isArray(input)) return input.map(normalize);
+    if (input && typeof input === "object") {
+      return Object.fromEntries(
+        Object.entries(input as Record<string, unknown>)
+          .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+          .map(([key, nested]) => [key, normalize(nested)]),
+      );
+    }
+    return input;
+  };
+  return JSON.stringify(normalize(value));
 }
 
 function filtersFor(query: ResearchRunLibraryQuery): NormalizedFilter[] {
@@ -210,6 +374,8 @@ export class ResearchRunLibraryService {
         not_issued: page.claimLedger.notIssued,
         pending_source: page.claimLedger.pendingSource,
         failed: page.claimLedger.failed,
+        cancelled_before_source: page.claimLedger.cancelledBeforeSource,
+        legacy_metadata_only: page.claimLedger.legacyMetadataOnly,
       },
       filter_catalog: {
         alphas: page.filterCatalog.alphas.map((alpha) => ({
@@ -244,27 +410,117 @@ export class ResearchRunLibraryService {
     if (!row) {
       throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_NOT_FOUND", "Research run was not found.", 404);
     }
-    const progress = this.progress(row.progress_snapshot);
-    const availability = row.source_kind === "LEGACY_1_0_8_METADATA"
-      ? unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES")
-      : progress && sourceActual(progress)
-        ? unavailable("NOT_PUBLISHED", "P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES")
-        : sourceAvailability(row, progress);
     const sequence = typeof row.source_latest_sequence === "number"
       ? row.source_latest_sequence
       : Number(row.source_latest_sequence);
-    const response = {
+    const progressRevision = Number.isSafeInteger(sequence) && sequence >= 0 ? `p11-seq-${sequence}` : null;
+    const absent = (availability: Availability, revision: string | null = progressRevision) => ({
       schema_version: "research.run-sparkline.v1" as const,
       run_id: row.run_id,
-      values: [],
+      values: [] as string[],
       availability,
-      source_revision: Number.isSafeInteger(sequence) && sequence >= 0 ? `p11-seq-${sequence}` : null,
-    };
+      source_revision: revision,
+      source: null,
+    });
+    let response: unknown;
+    if (row.source_kind === "LEGACY_1_0_8_METADATA") {
+      response = absent(unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES"));
+    } else if (safeStatus(row.effective_status) !== "COMPLETED") {
+      const progress = this.progress(row.progress_snapshot);
+      response = absent(progress && sourceActual(progress)
+        ? unavailable("NOT_PUBLISHED", "P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES")
+        : sourceAvailability(row, progress));
+    } else {
+      const equity = this.equityAvailability(row.evidence_revision, row.equity_availability_state, row.equity_reason_code);
+      response = equity.state === "AVAILABLE"
+        ? this.equitySparkline(row)
+        : absent(equity, this.evidenceRevision(row.evidence_revision) ?? progressRevision);
+    }
     const parsed = ResearchRunLibrarySparklineResponseSchema.safeParse(response);
     if (!parsed.success) {
       throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Run sparkline response is incompatible.", 503);
     }
     return parsed.data;
+  }
+
+  /**
+   * Reduce the persisted P13 EQUITY_OOS series (already bounded to <=192
+   * points by P13) to <=24 display values.  The series is integrity-checked
+   * against its stored digest exactly as the P13 reader does; a mismatch is a
+   * 503, never a silently different curve.
+   */
+  private equitySparkline(row: RunLibrarySparklineSource) {
+    const incompatible = () => new ResearchRunLibraryError(
+      "RESEARCH_RUN_LIBRARY_UNAVAILABLE",
+      "Persisted evidence series is incompatible with the Run Library sparkline.",
+      503,
+    );
+    const revision = this.evidenceRevision(row.evidence_revision);
+    let payload: unknown = row.equity_series_payload;
+    try {
+      if (typeof payload === "string") payload = JSON.parse(payload);
+    } catch {
+      throw incompatible();
+    }
+    if (!revision || !Array.isArray(payload) || payload.length === 0 || payload.length > 192
+        || typeof row.equity_series_digest !== "string" || !DIGEST.test(row.equity_series_digest)) {
+      throw incompatible();
+    }
+    const emitted = Number(row.equity_emitted_point_count);
+    if (!Number.isSafeInteger(emitted) || emitted !== payload.length) throw incompatible();
+    if (createHash("sha256").update(canonicalJson(payload), "utf8").digest("hex") !== row.equity_series_digest) {
+      throw incompatible();
+    }
+    const points = payload.map((entry) => {
+      const point = entry && typeof entry === "object" && !Array.isArray(entry) ? entry as Record<string, unknown> : null;
+      const at = point?.at_utc_ms;
+      const equity = point?.equity;
+      if (typeof at !== "number" || !Number.isSafeInteger(at) || at < 0
+          || typeof equity !== "string" || !EXACT_DECIMAL.test(equity)) {
+        throw incompatible();
+      }
+      return { at, equity, numeric: Number(equity) };
+    });
+    const sample = extremaPreservingSample(points, (point) => point.numeric);
+    const observed = row.equity_source_observation_count === null ? null : Number(row.equity_source_observation_count);
+    return {
+      schema_version: "research.run-sparkline.v1" as const,
+      run_id: row.run_id,
+      values: sample.points.map((point) => point.equity),
+      availability: available(),
+      source_revision: revision,
+      source: {
+        series_kind: "EQUITY_OOS" as const,
+        value_field: "equity" as const,
+        projection_revision: revision,
+        series_digest: row.equity_series_digest,
+        source_observation_count: observed !== null && Number.isSafeInteger(observed) && observed >= 0 ? observed : null,
+        source_sampling: row.equity_sampling,
+        persisted_point_count: points.length,
+        display_sampling: sample.sampled ? "EXTREMA_BUCKET_24_V1" as const : "FULL" as const,
+        first_at_utc_ms: points[0]!.at,
+        last_at_utc_ms: points[points.length - 1]!.at,
+      },
+    };
+  }
+
+  private evidenceEnabled(): boolean {
+    return this.config.FEATURE_RESEARCH_EVIDENCE === "true";
+  }
+
+  private evidenceRevision(value: string | null): string | null {
+    return typeof value === "string" && EVIDENCE_REVISION.test(value) ? value : null;
+  }
+
+  /** Availability of the COMPLETED-card equity series from the persisted P13 lane. */
+  private equityAvailability(revision: string | null, state: string | null, reason: string | null): Availability {
+    if (!this.evidenceEnabled()) return unavailable("NOT_PUBLISHED", "P13_EVIDENCE_READER_DISABLED");
+    if (!this.evidenceRevision(revision)) return unavailable("NOT_PUBLISHED", "P13_SOURCE_EVIDENCE_NOT_PUBLISHED");
+    if (state === "AVAILABLE") return available();
+    return unavailable(
+      "NOT_PUBLISHED",
+      typeof reason === "string" && /^[A-Z][A-Z0-9_]{2,159}$/.test(reason) ? reason : "P13_EQUITY_OOS_SERIES_NOT_PUBLISHED",
+    );
   }
 
   private requireEnabled(): void {
@@ -297,11 +553,12 @@ export class ResearchRunLibraryService {
       if (typeof timestamp !== "string" || typeof runId !== "string" || !ResearchRunIdSchema.safeParse(runId).success) {
         throw new Error("invalid cursor boundary");
       }
-      const createdAt = new Date(timestamp);
-      if (!Number.isSafeInteger(createdAt.getTime()) || createdAt.toISOString() !== timestamp) {
+      // Exact PostgreSQL microsecond text (CG-P12-08).  A pre-fix
+      // millisecond cursor is still accepted until its short TTL expires.
+      if (!CURSOR_TIMESTAMP.test(timestamp) || !Number.isSafeInteger(new Date(timestamp).getTime())) {
         throw new Error("invalid cursor timestamp");
       }
-      return { createdAt, runId, direction };
+      return { createdAt: timestamp, runId, direction };
     } catch (error) {
       if (error instanceof ResearchRunLibraryError) throw error;
       const message = error instanceof QueryContractError && error.code === "CURSOR_EXPIRED"
@@ -322,7 +579,7 @@ export class ResearchRunLibraryService {
       workspace_id: workspaceId,
       direction,
       query_fingerprint: fingerprint,
-      boundary: [row.created_at.toISOString(), row.run_id],
+      boundary: [row.created_at_cursor, row.run_id],
     });
   }
 
@@ -348,13 +605,12 @@ export class ResearchRunLibraryService {
         technical_retry_count: Math.max(0, currentOrdinal - 1),
       },
       status,
+      status_basis: this.statusBasis(row, status),
       mode: this.mode(row, requested, legacy),
       strategy_id: this.strategy(row, requested, legacy),
       binding,
-      binding_availability: binding ? available() : row.alpha_filter_key === "scratch"
-        ? available()
-        : unavailable("NOT_PUBLISHED", "ALPHA_BINDING_NOT_PUBLISHED"),
-      rc: null,
+      binding_availability: this.bindingAvailability(row, binding),
+      ...this.releaseCandidate(row),
       instrument: this.instrument(row, requested),
       created_at_utc_ms: utcMs(row.created_at, "created timestamp"),
       certificate: this.certificate(progress, source),
@@ -375,14 +631,20 @@ export class ResearchRunLibraryService {
       sparkline: {
         // A queued/draft/cancelled/recovery row has no equity or search curve
         // fact.  `null` keeps the existing card layout without labelling an
-        // unavailable placeholder as OOS equity.
-        kind: status === "RUNNING"
-          ? "search_progress"
-          : status === "FAILED" ? "failed" : status === "COMPLETED" ? "oos_equity" : null,
+        // unavailable placeholder as OOS equity.  An unmonitored legacy
+        // QUEUED/RUNNING record is not a live search either.
+        kind: row.source_kind === "LEGACY_1_0_8_METADATA" && (status === "RUNNING" || status === "QUEUED")
+          ? null
+          : status === "RUNNING"
+            ? "search_progress"
+            : status === "FAILED" ? "failed" : status === "COMPLETED" ? "oos_equity" : null,
         availability: row.source_kind === "LEGACY_1_0_8_METADATA"
           ? unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES")
-          : unavailable("NOT_PUBLISHED", "P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES"),
+          : status === "COMPLETED"
+            ? this.equityAvailability(row.evidence_revision, row.evidence_equity_state, row.evidence_equity_reason)
+            : unavailable("NOT_PUBLISHED", "P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES"),
       },
+      evidence_revision: this.evidenceEnabled() ? this.evidenceRevision(row.evidence_revision) : null,
       source_updated_at_utc_ms: utcMs(sourceUpdated, "source update timestamp"),
     };
     const parsed = ResearchRunLibraryItemSchema.safeParse(item);
@@ -420,23 +682,111 @@ export class ResearchRunLibraryService {
     };
   }
 
+  /**
+   * CG-P12-04: the chip is `optimization_mode · optimization_schedule`
+   * (spec 01 §76).  `key` is the mode only; a protocol is carried
+   * separately and is never offered as a mode.
+   */
   private mode(
     row: RunLibraryRow,
     spec: ResearchRequestedSpec | null,
     legacy: Record<string, unknown> | null,
   ): ResearchRunLibraryItem["mode"] {
     if (spec) {
-      return { display: `${spec.optimization_mode} · ${spec.protocol}`, key: spec.optimization_mode, availability: available() };
-    }
-    const protocol = typeof legacy?.protocol === "string" ? legacy.protocol : row.mode_key;
-    if (protocol) {
       return {
-        display: protocol,
-        key: protocol,
-        availability: unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_PROTOCOL_METADATA_ONLY"),
+        display: `${spec.optimization_mode} · ${spec.optimization_schedule}`,
+        key: spec.optimization_mode,
+        schedule: spec.optimization_schedule,
+        protocol: spec.protocol,
+        availability: available(),
       };
     }
-    return { display: null, key: null, availability: sourceAvailability(row, null) };
+    const rawProtocol = typeof legacy?.protocol === "string" ? legacy.protocol : null;
+    const protocol = rawProtocol && rawProtocol.length <= 120 ? rawProtocol : null;
+    if (row.source_kind === "LEGACY_1_0_8_METADATA") {
+      return {
+        display: protocol,
+        key: null,
+        schedule: null,
+        protocol,
+        availability: unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_RECORDS_PROTOCOL_NOT_OPTIMIZATION_MODE"),
+      };
+    }
+    return {
+      display: protocol,
+      key: null,
+      schedule: null,
+      protocol,
+      availability: unavailable("NOT_PUBLISHED", "REQUESTED_SPEC_DOES_NOT_PUBLISH_OPTIMIZATION_MODE"),
+    };
+  }
+
+  /** CG-P12-07: legacy status is a recorded 1.0.8 value, not a monitored lifecycle. */
+  private statusBasis(row: RunLibraryRow, status: ResearchRunLibraryItem["status"]): ResearchRunLibraryItem["status_basis"] {
+    if (row.source_kind === "RESEARCH_DURABLE") return { kind: "DURABLE_LIFECYCLE", availability: available() };
+    return {
+      kind: "LEGACY_RECORDED_STATUS",
+      availability: unavailable(
+        "LEGACY_METADATA_ONLY",
+        status === "QUEUED" || status === "RUNNING"
+          ? "LEGACY_1_0_8_NON_TERMINAL_STATUS_NOT_MONITORED"
+          : "LEGACY_1_0_8_RECORDED_STATUS",
+      ),
+    };
+  }
+
+  /** CG-P12-07: a durable scratch run is a declared fact; a legacy row has no binding fact. */
+  private bindingAvailability(row: RunLibraryRow, binding: ResearchRunLibraryItem["binding"]) {
+    if (binding) return available();
+    if (row.source_kind === "LEGACY_1_0_8_METADATA") {
+      return unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_ALPHA_BINDING");
+    }
+    return row.alpha_filter_key === "scratch"
+      ? available()
+      : unavailable("NOT_PUBLISHED", "ALPHA_BINDING_NOT_PUBLISHED");
+  }
+
+  /**
+   * CG-P12-06: rc only from a persisted P21 relation.  A Portal-local sealed
+   * pack (workspace-visible) wins; otherwise the viewer's own draft.  An
+   * unexpected identifier/state shape is a typed absence, not a 503.
+   */
+  private releaseCandidate(row: RunLibraryRow): Pick<ResearchRunLibraryItem, "rc" | "rc_availability"> {
+    if (row.source_kind === "LEGACY_1_0_8_METADATA") {
+      return { rc: null, rc_availability: unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_HAS_NO_RELEASE_CANDIDATE_RELATION") };
+    }
+    if (this.config.FEATURE_RESEARCH_RELEASE_CANDIDATES !== "true") {
+      return { rc: null, rc_availability: unavailable("NOT_PUBLISHED", "P21_RELEASE_CANDIDATE_READER_DISABLED") };
+    }
+    if (row.rc_release_candidate_id !== null) {
+      const sealedAt = Number(row.rc_sealed_at_utc_ms);
+      if (!RELEASE_CANDIDATE_ID.test(row.rc_release_candidate_id)
+          || !DELIVERY_STATES.has(row.rc_delivery_state ?? "") || !APPROVAL_STATES.has(row.rc_approval_state ?? "")
+          || !Number.isSafeInteger(sealedAt) || sealedAt < 0) {
+        return { rc: null, rc_availability: unavailable("NOT_PUBLISHED", "P21_RELEASE_CANDIDATE_REF_INCOMPATIBLE") };
+      }
+      return {
+        rc: {
+          kind: "LOCAL_SEAL",
+          release_candidate_id: row.rc_release_candidate_id,
+          draft_id: null,
+          delivery_state: row.rc_delivery_state as NonNullable<ResearchRunLibraryItem["rc"]>["delivery_state"],
+          approval_state: row.rc_approval_state as NonNullable<ResearchRunLibraryItem["rc"]>["approval_state"],
+          sealed_at_utc_ms: sealedAt,
+        },
+        rc_availability: available(),
+      };
+    }
+    if (row.rc_draft_id !== null && RELEASE_CANDIDATE_DRAFT_ID.test(row.rc_draft_id)) {
+      return {
+        rc: {
+          kind: "ACTOR_DRAFT", release_candidate_id: null, draft_id: row.rc_draft_id,
+          delivery_state: null, approval_state: null, sealed_at_utc_ms: null,
+        },
+        rc_availability: available(),
+      };
+    }
+    return { rc: null, rc_availability: unavailable("NOT_PUBLISHED", "P21_NO_PERSISTED_RELEASE_CANDIDATE") };
   }
 
   private strategy(
@@ -476,15 +826,27 @@ export class ResearchRunLibraryService {
     };
   }
 
+  /**
+   * CG-P12-09: the same persisted Stage-5 claim the Screen-04 Hub prints —
+   * state and sentence verbatim, whatever the state.  Only its absence is
+   * typed; a NOT_ISSUED sentence is still the source's sentence.  The
+   * sentence is shown only once its source is AVAILABLE (as the Hub does);
+   * a pending or otherwise unavailable source carries no text.
+   */
   private claim(progress: ResearchProgressSnapshot | null, source: Availability): ResearchRunLibraryItem["claim"] {
-    if (source.state === "AVAILABLE" && progress?.claim.state === "ISSUED") {
-      return { text: progress.claim.text, availability: available() };
+    if (!progress) {
+      return {
+        state: null,
+        text: null,
+        availability: source.state === "AVAILABLE" ? unavailable("NOT_PUBLISHED", "SOURCE_CLAIM_NOT_PUBLISHED") : source,
+      };
     }
+    if (source.state !== "AVAILABLE") return { state: progress.claim.state, text: null, availability: source };
+    const text = progress.claim.text.length > 0 ? progress.claim.text : null;
     return {
-      text: null,
-      availability: source.state === "AVAILABLE"
-        ? unavailable("NOT_PUBLISHED", "SOURCE_CLAIM_NOT_ISSUED")
-        : source,
+      state: progress.claim.state,
+      text,
+      availability: text === null ? unavailable("NOT_PUBLISHED", "SOURCE_CLAIM_TEXT_EMPTY") : available(),
     };
   }
 
@@ -514,6 +876,42 @@ export class ResearchRunLibraryService {
     }) as ResearchRunLibraryItem["stages"];
   }
 
+  /**
+   * CG-P12-02 / CG-P13-03: the Hub's `oosPerformance` rule for one fact.  A
+   * value is shown only when the analytics block and the metric are
+   * AVAILABLE, the definition is ENGINE_DIRECT and the stored receipt locator
+   * equals the registry locator; every other case keeps the Hub's reason.
+   */
+  private performanceValue(
+    projection: Record<string, unknown> | null,
+    definition: PerformanceMetricDefinitionLike,
+  ): { value: string | null; availability: Availability } {
+    const reason = (value: unknown, fallback: string) =>
+      typeof value === "string" && /^[A-Z][A-Z0-9_]{2,159}$/.test(value) ? value : fallback;
+    const analytics = asObject((projection?.oos_analytics ?? null) as Record<string, unknown> | null);
+    if (!analytics) return { value: null, availability: unavailable("NOT_PUBLISHED", PREDATES_OOS_ANALYTICS) };
+    if (analytics.state !== "AVAILABLE") {
+      return { value: null, availability: unavailable("NOT_PUBLISHED", reason(analytics.reason_code, PREDATES_OOS_ANALYTICS)) };
+    }
+    const metrics = asObject((analytics.metrics ?? null) as Record<string, unknown> | null);
+    const raw = asObject((metrics?.[definition.sourceField] ?? null) as Record<string, unknown> | null);
+    const incompatible = { value: null, availability: unavailable("NOT_PUBLISHED", "P13_OOS_ANALYTICS_METRIC_INCOMPATIBLE") };
+    if (!raw || !["AVAILABLE", "NOT_APPLICABLE", "NOT_PUBLISHED"].includes(String(raw.state))
+        || Object.keys(raw).some((field) => !["state", "reason_code", "value", "locator"].includes(field))) {
+      return incompatible;
+    }
+    if (raw.state !== "AVAILABLE") {
+      // The Library availability vocabulary has no NOT_APPLICABLE; the
+      // source reason code is kept verbatim so the card can say why.
+      return { value: null, availability: unavailable("NOT_PUBLISHED", reason(raw.reason_code, "P13_OOS_ANALYTICS_METRIC_INCOMPATIBLE")) };
+    }
+    if (definition.origin !== "ENGINE_DIRECT" || raw.locator !== definition.sourceLocator) {
+      return { value: null, availability: unavailable("NOT_PUBLISHED", "P13_ENGINE_LOCATOR_MISMATCH") };
+    }
+    if (typeof raw.value !== "string" || raw.value.length > 192 || !EXACT_DECIMAL.test(raw.value)) return incompatible;
+    return { value: raw.value, availability: available() };
+  }
+
   private stats(
     row: RunLibraryRow,
     progress: ResearchProgressSnapshot | null,
@@ -526,7 +924,9 @@ export class ResearchRunLibraryService {
       value: string | null,
       availability: Availability,
       tone: "DEFAULT" | "BAD" | "ACCENT" = "DEFAULT",
-    ) => ({ key, label, role, value, availability, tone });
+      scope: MetricScope | null = null,
+      definitionId: string | null = null,
+    ) => ({ key, label, role, value, availability, tone, scope, definition_id: definitionId });
     const status = safeStatus(row.effective_status);
     if (status === "RUNNING" && progress && source.state === "AVAILABLE") {
       return [
@@ -544,17 +944,53 @@ export class ResearchRunLibraryService {
       ] as ResearchRunLibraryItem["stats"];
     }
     if (status === "COMPLETED") {
-      const missing = unavailable(
-        row.source_kind === "LEGACY_1_0_8_METADATA" ? "LEGACY_METADATA_ONLY" : "NOT_PUBLISHED",
-        row.source_kind === "LEGACY_1_0_8_METADATA"
-          ? "LEGACY_1_0_8_DOES_NOT_PUBLISH_EXACT_OOS_METRICS"
-          : "P12_DOES_NOT_INFER_FINAL_METRICS_FROM_PROGRESS_OR_ARTIFACTS",
+      const cells: Array<[string, string, StatRole]> = [
+        ["oos_sharpe", "OOS sharpe", "OOS_SHARPE"],
+        ["decay", "Δ decay", "DECAY"],
+        ["trade_count", "trades", "TRADE_COUNT"],
+      ];
+      if (row.source_kind === "LEGACY_1_0_8_METADATA") {
+        const missing = unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_EXACT_OOS_METRICS");
+        return cells.map(([key, label, role]) => metric(key, label, role, null, missing)) as ResearchRunLibraryItem["stats"];
+      }
+      const revision = this.evidenceRevision(row.evidence_revision);
+      if (!this.evidenceEnabled() || !revision) {
+        const missing = unavailable(
+          "NOT_PUBLISHED",
+          this.evidenceEnabled() ? "P13_SOURCE_EVIDENCE_NOT_PUBLISHED" : "P13_EVIDENCE_READER_DISABLED",
+        );
+        return cells.map(([key, label, role]) => metric(key, label, role, null, missing)) as ResearchRunLibraryItem["stats"];
+      }
+      const projection = asObject(row.evidence_projection);
+      const values = projectionMetricValues(projection);
+      const rawVersion = projection?.metric_registry_version;
+      const definitions = metricRegistry.researchMetricDefinitions(
+        (typeof rawVersion === "string" ? rawVersion : "research.metric-registry.v1") as ResearchMetricRegistryVersion,
       );
-      return [
-        metric("oos_sharpe", "OOS sharpe", "OOS_SHARPE", null, missing),
-        metric("decay", "Δ decay", "DECAY", null, missing),
-        metric("trade_count", "trades", "TRADE_COUNT", null, missing),
-      ] as ResearchRunLibraryItem["stats"];
+      const performance = performanceMetricDefinitions();
+      return cells.map(([key, label, role]) => {
+        const registryKey = RUN_LIBRARY_STAT_ROLE_METRIC_KEYS[role];
+        const performanceDefinition = performance.find((entry) => entry.key === registryKey);
+        if (performanceDefinition) {
+          const resolved = this.performanceValue(projection, performanceDefinition);
+          const scope = performanceDefinition.scope === "OOS" ? "OOS" as const : null;
+          return resolved.value !== null
+            ? metric(key, label, role, resolved.value, available(), "DEFAULT", scope, performanceDefinition.definitionId)
+            : metric(key, label, role, null, resolved.availability);
+        }
+        const definition = definitions.find((entry) => entry.key === registryKey);
+        if (!definition || definition.origin === "NOT_PUBLISHED") {
+          return metric(key, label, role, null, unavailable("NOT_PUBLISHED", `P13_METRIC_REGISTRY_DOES_NOT_DEFINE_${role}`));
+        }
+        const scope = metricScope(definition);
+        if (role === "OOS_SHARPE" && scope !== "OOS") {
+          return metric(key, label, role, null, unavailable("NOT_PUBLISHED", "P13_METRIC_REGISTRY_DOES_NOT_DEFINE_OOS_SHARPE"));
+        }
+        const value = values.get(registryKey);
+        return value !== undefined
+          ? metric(key, label, role, value, available(), "DEFAULT", scope, definition.definitionId)
+          : metric(key, label, role, null, unavailable("NOT_PUBLISHED", `P13_PROJECTION_DOES_NOT_PUBLISH_${role}`));
+      }) as ResearchRunLibraryItem["stats"];
     }
     return [
       metric("progress", "progress", "PROGRESS", null, source),

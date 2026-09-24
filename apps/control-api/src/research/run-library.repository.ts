@@ -20,7 +20,13 @@ type JsonRecord = Record<string, unknown>;
 type JsonColumn = JsonRecord | string | null;
 
 export interface RunLibraryBoundary {
-  createdAt: Date;
+  /**
+   * PostgreSQL's exact microsecond UTC timestamp text
+   * (`YYYY-MM-DDTHH:MM:SS.ffffffZ`).  A JS Date truncates to milliseconds;
+   * a truncated `before` boundary admitted the boundary row itself and so
+   * repeated one row and skipped another (CG-P12-08).
+   */
+  createdAt: string;
   runId: string;
   direction: "after" | "before";
 }
@@ -54,6 +60,36 @@ export interface RunLibraryRow {
   current_worker_ordinal: string | number | null;
   alpha_filter_key: string;
   mode_key: string | null;
+  /** Exact microsecond keyset text; see RunLibraryBoundary. */
+  created_at_cursor: string;
+  /** Latest persisted P13 projection for the producer's worker attempt (durable only). */
+  evidence_revision: string | null;
+  evidence_projection: JsonColumn;
+  evidence_equity_state: string | null;
+  evidence_equity_reason: string | null;
+  /** Latest persisted P21 Portal-local sealed pack for the run. */
+  rc_release_candidate_id: string | null;
+  rc_delivery_state: string | null;
+  rc_approval_state: string | null;
+  rc_sealed_at_utc_ms: string | number | null;
+  /** The viewer's own persisted P21 draft for the run. */
+  rc_draft_id: string | null;
+}
+
+export interface RunLibrarySparklineSource {
+  run_id: string;
+  source_kind: RunLibraryRow["source_kind"];
+  effective_status: string;
+  source_latest_sequence: string | number | null;
+  progress_snapshot: JsonColumn;
+  evidence_revision: string | null;
+  equity_availability_state: string | null;
+  equity_reason_code: string | null;
+  equity_source_observation_count: string | number | null;
+  equity_emitted_point_count: string | number | null;
+  equity_sampling: string | null;
+  equity_series_payload: JsonRecord[] | string | null;
+  equity_series_digest: string | null;
 }
 
 export interface RunLibraryCounters {
@@ -68,6 +104,8 @@ export interface RunLibraryClaimLedger {
   notIssued: number;
   pendingSource: number;
   failed: number;
+  cancelledBeforeSource: number;
+  legacyMetadataOnly: number;
 }
 
 export interface RunLibraryFilterCatalog {
@@ -102,6 +140,8 @@ interface ClaimLedgerRow {
   not_issued: string | number;
   pending_source: string | number;
   failed: string | number;
+  cancelled_before_source: string | number;
+  legacy_metadata_only: string | number;
 }
 interface AlphaFacetRow { alpha_id: string; alpha_name: string; }
 interface ModeFacetRow { mode_key: string; }
@@ -137,8 +177,15 @@ function emptyCounters(): RunLibraryCounters {
 }
 
 function emptyLedger(): RunLibraryClaimLedger {
-  return { issued: 0, notIssued: 0, pendingSource: 0, failed: 0 };
+  return { issued: 0, notIssued: 0, pendingSource: 0, failed: 0, cancelledBeforeSource: 0, legacyMetadataOnly: 0 };
 }
+
+/**
+ * Exact keyset text.  `to_char(... 'US')` always renders six fractional
+ * digits, so the value round-trips through `::timestamptz` without loss.
+ */
+const CREATED_AT_CURSOR_SQL =
+  `to_char(library.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 
 /**
  * P12 has its own two-reader lane so it cannot starve identity, scheduler, or
@@ -179,6 +226,7 @@ export class ResearchRunLibraryRepository {
       const rows = await client.query<RunLibraryRow>(
         `${this.selectColumns()}
            FROM ${filter.fromSql}
+           ${this.pageJoins()}
           WHERE ${filter.whereSql}${keyset}
           ORDER BY ${order}
           LIMIT $${pageParams.length}`,
@@ -234,16 +282,30 @@ export class ResearchRunLibraryRepository {
             WHERE ${filter.whereSql}`,
         filter.params,
       );
+      // CG-P12-05: the six buckets partition the filtered rows.  A legacy
+      // 1.0.8 row never had a source claim to wait for, and a durable run
+      // cancelled before its source published a claim will never receive one;
+      // neither is "pending".  A claim value outside the known vocabulary
+      // stays pending rather than being guessed into issued/not-issued.
       const ledger = await client.query<ClaimLedgerRow>(
         `SELECT
+             count(*) FILTER (WHERE library.effective_status = 'FAILED') AS failed,
              count(*) FILTER (WHERE library.effective_status <> 'FAILED'
+                                AND library.source_kind = 'LEGACY_1_0_8_METADATA') AS legacy_metadata_only,
+             count(*) FILTER (WHERE library.effective_status <> 'FAILED'
+                                AND library.source_kind = 'RESEARCH_DURABLE'
                                 AND library.progress_snapshot->'claim'->>'state' = 'ISSUED') AS issued,
              count(*) FILTER (WHERE library.effective_status <> 'FAILED'
+                                AND library.source_kind = 'RESEARCH_DURABLE'
                                 AND library.progress_snapshot->'claim'->>'state' IN ('FORECAST', 'NOT_ISSUED')) AS not_issued,
-             count(*) FILTER (WHERE library.effective_status <> 'FAILED'
-                                AND (library.progress_snapshot IS NULL
-                                     OR library.progress_snapshot->'claim' IS NULL)) AS pending_source,
-             count(*) FILTER (WHERE library.effective_status = 'FAILED') AS failed
+             count(*) FILTER (WHERE library.effective_status = 'CANCELLED'
+                                AND library.source_kind = 'RESEARCH_DURABLE'
+                                AND COALESCE(library.progress_snapshot->'claim'->>'state', '')
+                                    NOT IN ('ISSUED', 'FORECAST', 'NOT_ISSUED')) AS cancelled_before_source,
+             count(*) FILTER (WHERE library.effective_status NOT IN ('FAILED', 'CANCELLED')
+                                AND library.source_kind = 'RESEARCH_DURABLE'
+                                AND COALESCE(library.progress_snapshot->'claim'->>'state', '')
+                                    NOT IN ('ISSUED', 'FORECAST', 'NOT_ISSUED')) AS pending_source
              FROM ${filter.fromSql}
             WHERE ${filter.whereSql}`,
         filter.params,
@@ -257,19 +319,25 @@ export class ResearchRunLibraryRepository {
             LIMIT 200`,
         [scope.workspaceId],
       );
+      // CG-P12-04: the mode facet lists optimization modes only.  The view's
+      // `mode_key` falls back to a protocol for legacy/unparsed rows, which is
+      // not a mode, so the facet reads the requested spec directly.
       const modes = await client.query<ModeFacetRow>(
-        `SELECT mode_key
+        `SELECT requested_spec->>'optimization_mode' AS mode_key
              FROM research.run_library_rows_v1
-            WHERE workspace_id = $1 AND mode_key IS NOT NULL
-            GROUP BY mode_key
-            ORDER BY mode_key ASC
+            WHERE workspace_id = $1 AND source_kind = 'RESEARCH_DURABLE'
+              AND requested_spec->>'optimization_mode' IS NOT NULL
+            GROUP BY requested_spec->>'optimization_mode'
+            ORDER BY requested_spec->>'optimization_mode' ASC
             LIMIT 32`,
         [scope.workspaceId],
       );
+      // CG-P12-07: a legacy row is unbound history, not a scratch run.
       const scratch = await client.query<ScratchFacetRow>(
         `SELECT EXISTS(
              SELECT 1 FROM research.run_library_rows_v1
               WHERE workspace_id = $1 AND alpha_filter_key = 'scratch'
+                AND source_kind = 'RESEARCH_DURABLE'
            ) AS scratch_available`,
         [scope.workspaceId],
       );
@@ -294,6 +362,8 @@ export class ResearchRunLibraryRepository {
           notIssued: asNonNegativeInteger(claim.not_issued, "not-issued claim count"),
           pendingSource: asNonNegativeInteger(claim.pending_source, "pending claim count"),
           failed: asNonNegativeInteger(claim.failed, "failed claim count"),
+          cancelledBeforeSource: asNonNegativeInteger(claim.cancelled_before_source, "cancelled claim count"),
+          legacyMetadataOnly: asNonNegativeInteger(claim.legacy_metadata_only, "legacy claim count"),
         } : emptyLedger(),
         filterCatalog: {
           alphas: alphas.rows.map((row) => ({ alphaId: row.alpha_id, alphaName: row.alpha_name })),
@@ -304,20 +374,107 @@ export class ResearchRunLibraryRepository {
     });
   }
 
-  async findSparklineSource(
-    scope: ResearchScope,
-    runId: string,
-  ): Promise<Pick<RunLibraryRow, "run_id" | "source_kind" | "effective_status" | "source_latest_sequence" | "progress_snapshot"> | null> {
+  /**
+   * CG-P12-03: one bounded read of the persisted P13 EQUITY_OOS series for
+   * the run's latest projection revision (<=192 points, <=32 KiB).  It
+   * never opens an artifact, a worker path or Parquet.
+   */
+  async findSparklineSource(scope: ResearchScope, runId: string): Promise<RunLibrarySparklineSource | null> {
     this.assertScope(scope);
     return this.withScopedRead(scope, async (client) => {
-      const result = await client.query<Pick<RunLibraryRow, "run_id" | "source_kind" | "effective_status" | "source_latest_sequence" | "progress_snapshot">>(
-        `SELECT run_id, source_kind, effective_status, source_latest_sequence, progress_snapshot
-           FROM research.run_library_rows_v1
-          WHERE workspace_id = $1 AND run_id = $2`,
+      const result = await client.query<RunLibrarySparklineSource>(
+        `SELECT library.run_id, library.source_kind, library.effective_status,
+                library.source_latest_sequence, library.progress_snapshot,
+                equity.projection_revision AS evidence_revision,
+                equity.availability_state AS equity_availability_state,
+                equity.reason_code AS equity_reason_code,
+                equity.source_observation_count AS equity_source_observation_count,
+                equity.emitted_point_count AS equity_emitted_point_count,
+                equity.sampling AS equity_sampling,
+                equity.series_payload AS equity_series_payload,
+                equity.series_digest AS equity_series_digest
+           FROM research.run_library_rows_v1 library
+           LEFT JOIN LATERAL (
+             SELECT projection.projection_revision, series.availability_state, series.reason_code,
+                    series.source_observation_count, series.emitted_point_count, series.sampling,
+                    series.series_payload, series.series_digest
+               FROM research.run_producers producer
+               JOIN research.run_evidence_projections_v1 projection
+                 ON projection.workspace_id = producer.workspace_id
+                AND projection.run_id = producer.run_id
+                AND projection.worker_attempt_id = producer.worker_attempt_id
+               LEFT JOIN research.run_evidence_series_v1 series
+                 ON series.workspace_id = projection.workspace_id
+                AND series.run_id = projection.run_id
+                AND series.worker_attempt_id = projection.worker_attempt_id
+                AND series.projection_revision = projection.projection_revision
+                AND series.series_kind = 'EQUITY_OOS'
+              WHERE library.source_kind = 'RESEARCH_DURABLE'
+                AND producer.workspace_id = library.workspace_id
+                AND producer.run_id = library.run_id
+              ORDER BY projection.received_at DESC, projection.projection_revision DESC
+              LIMIT 1
+           ) equity ON true
+          WHERE library.workspace_id = $1 AND library.run_id = $2`,
         [scope.workspaceId, runId],
       );
       return result.rows[0] ?? null;
     });
+  }
+
+  /**
+   * Bounded per-selected-row joins (the page is <= 51 rows).  Both read only
+   * persisted Portal relations: the P13 projection that the Screen-04 Hub
+   * reads (same producer attempt, same newest-revision order) and the P21
+   * release-candidate relations.  They never touch an artifact or worker.
+   * The P13 projection is passed through without re-validating its private
+   * schema so that additive metric keys (CG-P13-03) flow to the service.
+   */
+  private pageJoins(): string {
+    return `LEFT JOIN LATERAL (
+             SELECT projection.projection_revision,
+                    (projection.projection - 'series_identity' - 'source') AS projection,
+                    series.availability_state AS equity_state,
+                    series.reason_code AS equity_reason
+               FROM research.run_producers producer
+               JOIN research.run_evidence_projections_v1 projection
+                 ON projection.workspace_id = producer.workspace_id
+                AND projection.run_id = producer.run_id
+                AND projection.worker_attempt_id = producer.worker_attempt_id
+               LEFT JOIN research.run_evidence_series_v1 series
+                 ON series.workspace_id = projection.workspace_id
+                AND series.run_id = projection.run_id
+                AND series.worker_attempt_id = projection.worker_attempt_id
+                AND series.projection_revision = projection.projection_revision
+                AND series.series_kind = 'EQUITY_OOS'
+              WHERE library.source_kind = 'RESEARCH_DURABLE'
+                AND producer.workspace_id = library.workspace_id
+                AND producer.run_id = library.run_id
+              ORDER BY projection.received_at DESC, projection.projection_revision DESC
+              LIMIT 1
+           ) evidence ON true
+           LEFT JOIN LATERAL (
+             SELECT pack.release_candidate_id, delivery.delivery_state, delivery.approval_state,
+                    floor(extract(epoch FROM pack.sealed_at) * 1000)::bigint AS sealed_at_utc_ms
+               FROM research.release_candidate_packs_v1 pack
+               JOIN research.release_candidate_delivery_states_v1 delivery
+                 ON delivery.workspace_id = pack.workspace_id
+                AND delivery.release_candidate_id = pack.release_candidate_id
+              WHERE library.source_kind = 'RESEARCH_DURABLE'
+                AND pack.workspace_id = library.workspace_id
+                AND pack.run_id = library.run_id
+              ORDER BY pack.sealed_at DESC, pack.release_candidate_id DESC
+              LIMIT 1
+           ) rc_pack ON true
+           LEFT JOIN LATERAL (
+             SELECT draft.draft_id
+               FROM research.release_candidate_drafts_v1 draft
+              WHERE library.source_kind = 'RESEARCH_DURABLE'
+                AND draft.workspace_id = library.workspace_id
+                AND draft.run_id = library.run_id
+                AND draft.actor_user_id = current_setting('research.actor_user_id', true)
+              LIMIT 1
+           ) rc_draft ON true`;
   }
 
   private selectColumns(): string {
@@ -328,7 +485,17 @@ export class ResearchRunLibraryRepository {
               library.alpha_code_digest, library.legacy_request, library.requested_spec, library.portal_receipt,
               library.progress_snapshot, library.progress_received_at, library.source_latest_sequence,
               library.retention_floor_sequence, library.job_state, library.current_worker_ordinal,
-              library.alpha_filter_key, library.mode_key`;
+              library.alpha_filter_key, library.mode_key,
+              ${CREATED_AT_CURSOR_SQL} AS created_at_cursor,
+              evidence.projection_revision AS evidence_revision,
+              evidence.projection AS evidence_projection,
+              evidence.equity_state AS evidence_equity_state,
+              evidence.equity_reason AS evidence_equity_reason,
+              rc_pack.release_candidate_id AS rc_release_candidate_id,
+              rc_pack.delivery_state AS rc_delivery_state,
+              rc_pack.approval_state AS rc_approval_state,
+              rc_pack.sealed_at_utc_ms AS rc_sealed_at_utc_ms,
+              rc_draft.draft_id AS rc_draft_id`;
   }
 
   private buildFilter(workspaceId: string, query: ResearchRunLibraryQuery): BuiltFilter {
@@ -353,8 +520,16 @@ export class ResearchRunLibraryRepository {
       clauses.push(`search.search_document ILIKE ${parameter(`%${escapeLike(query.q)}%`)} ESCAPE '\\'`);
     }
     if (query.status.length > 0) clauses.push(`library.effective_status = ANY(${parameter(query.status)}::text[])`);
-    if (query.mode.length > 0) clauses.push(`library.mode_key = ANY(${parameter(query.mode)}::text[])`);
-    if (query.alpha.length > 0) clauses.push(`library.alpha_filter_key = ANY(${parameter(query.alpha)}::text[])`);
+    // CG-P12-04: filter on the optimization mode itself, never the legacy
+    // protocol fallback that the view's `mode_key` carries.
+    if (query.mode.length > 0) {
+      clauses.push(`library.requested_spec->>'optimization_mode' = ANY(${parameter(query.mode)}::text[])`);
+    }
+    // CG-P12-07: an unbound legacy row is neither an alpha run nor scratch.
+    if (query.alpha.length > 0) {
+      clauses.push(`library.alpha_filter_key = ANY(${parameter(query.alpha)}::text[])`);
+      clauses.push("library.source_kind = 'RESEARCH_DURABLE'");
+    }
     if (query.ids.length > 0) clauses.push(`library.run_id = ANY(${parameter(query.ids)}::text[])`);
     return { fromSql, whereSql: clauses.join(" AND "), params };
   }
@@ -362,7 +537,7 @@ export class ResearchRunLibraryRepository {
   private keysetPredicate(boundary: RunLibraryBoundary | null, params: unknown[]): string {
     if (!boundary) return "";
     params.push(boundary.createdAt, boundary.runId);
-    const createdAt = `$${params.length - 1}`;
+    const createdAt = `$${params.length - 1}::timestamptz`;
     const runId = `$${params.length}`;
     if (boundary.direction === "after") {
       return ` AND (library.created_at < ${createdAt} OR (library.created_at = ${createdAt} AND library.run_id < ${runId}))`;
@@ -374,11 +549,11 @@ export class ResearchRunLibraryRepository {
   private async hasRowBeyond(
     client: PoolClient,
     filter: BuiltFilter,
-    row: Pick<RunLibraryRow, "created_at" | "run_id">,
+    row: Pick<RunLibraryRow, "created_at_cursor" | "run_id">,
     direction: "after" | "before",
   ): Promise<boolean> {
-    const params = [...filter.params, row.created_at, row.run_id];
-    const createdAt = `$${params.length - 1}`;
+    const params = [...filter.params, row.created_at_cursor, row.run_id];
+    const createdAt = `$${params.length - 1}::timestamptz`;
     const runId = `$${params.length}`;
     const predicate = direction === "after"
       ? `(library.created_at < ${createdAt} OR (library.created_at = ${createdAt} AND library.run_id < ${runId}))`

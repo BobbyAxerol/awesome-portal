@@ -123,6 +123,13 @@ const MetricCellSchema = z.object({
   value: z.string().min(1).max(192).nullable(),
   tone: z.enum(["DEFAULT", "BAD", "ACCENT"]).default("DEFAULT"),
   availability: FieldAvailabilitySchema,
+  /**
+   * RF-05 additive: the P13 registry scope/definition that produced a
+   * COMPLETED-card value (e.g. trade count covers the full child tape, not
+   * OOS only).  Null for lifecycle cells and for absent values.
+   */
+  scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE"]).nullable(),
+  definition_id: z.string().regex(/^research\.metric\.[a-z0-9_.]{1,120}$/).nullable(),
 }).strict();
 
 const AlphaBindingSchema = z.object({
@@ -134,8 +141,25 @@ const AlphaBindingSchema = z.object({
 }).strict();
 
 const ClaimSchema = z.object({
+  /** RF-05 additive: the persisted Stage-5 claim state, identical to the Screen-04 Hub. */
+  state: z.enum(["FORECAST", "NOT_ISSUED", "ISSUED"]).nullable(),
+  /** The persisted source sentence, verbatim, whatever its state (CG-P12-09). */
   text: z.string().min(1).max(1_024).nullable(),
   availability: FieldAvailabilitySchema,
+}).strict();
+
+/**
+ * RF-05 / CG-P12-06: a persisted P21 relation only.  A Portal-local sealed
+ * pack wins over the viewer's own draft; nothing is inferred from run names,
+ * claims or certificates.
+ */
+const ReleaseCandidateRefSchema = z.object({
+  kind: z.enum(["LOCAL_SEAL", "ACTOR_DRAFT"]),
+  release_candidate_id: z.string().regex(/^rc_[0-9A-HJKMNP-TV-Z]{26}$/).nullable(),
+  draft_id: z.string().regex(/^rcd_[0-9A-HJKMNP-TV-Z]{26}$/).nullable(),
+  delivery_state: z.enum(["NOT_DELIVERED", "PENDING", "DELIVERED", "UNKNOWN"]).nullable(),
+  approval_state: z.enum(["NOT_APPROVED", "PENDING", "APPROVED", "REJECTED", "UNKNOWN"]).nullable(),
+  sealed_at_utc_ms: UtcMsSchema.nullable(),
 }).strict();
 
 const CertificateSchema = z.object({
@@ -163,15 +187,30 @@ export const ResearchRunLibraryItemSchema = z.object({
     technical_retry_count: z.number().int().nonnegative(),
   }).strict(),
   status: ResearchRunLibraryStatusSchema,
+  /**
+   * RF-05 / CG-P12-07 additive.  A durable row's status is its lifecycle.
+   * A 1.0.8 row's status is the value recorded by that retired engine; a
+   * recorded QUEUED/RUNNING is not monitored by anything today, so it is
+   * labelled LEGACY_METADATA_ONLY rather than rewritten or shown as live.
+   */
+  status_basis: z.object({
+    kind: z.enum(["DURABLE_LIFECYCLE", "LEGACY_RECORDED_STATUS"]),
+    availability: FieldAvailabilitySchema,
+  }).strict(),
   mode: z.object({
+    /** `optimization_mode · optimization_schedule` for a durable run (CG-P12-04). */
     display: z.string().min(1).max(240).nullable(),
+    /** The optimization mode only; never a protocol key. */
     key: z.string().min(1).max(120).nullable(),
+    schedule: z.string().min(1).max(120).nullable(),
+    protocol: z.string().min(1).max(120).nullable(),
     availability: FieldAvailabilitySchema,
   }).strict(),
   strategy_id: z.object({ value: z.string().min(1).max(192).nullable(), availability: FieldAvailabilitySchema }).strict(),
   binding: AlphaBindingSchema.nullable(),
   binding_availability: FieldAvailabilitySchema,
-  rc: z.null(),
+  rc: ReleaseCandidateRefSchema.nullable(),
+  rc_availability: FieldAvailabilitySchema,
   instrument: z.object({ display: z.string().min(1).max(192).nullable(), availability: FieldAvailabilitySchema }).strict(),
   created_at_utc_ms: UtcMsSchema,
   certificate: CertificateSchema,
@@ -184,14 +223,23 @@ export const ResearchRunLibraryItemSchema = z.object({
     kind: z.enum(["oos_equity", "search_progress", "failed"]).nullable(),
     availability: FieldAvailabilitySchema,
   }).strict(),
+  /** RF-05 additive: the persisted P13 projection revision the stats/sparkline came from. */
+  evidence_revision: z.string().regex(/^p13r[0-9]+_[0-9a-f]{64}$/).nullable(),
   source_updated_at_utc_ms: UtcMsSchema,
 }).strict();
 
+/**
+ * The six buckets partition the filtered rows (their sum is
+ * `page.filtered_rows`).  `pending_source` is only a durable, non-cancelled
+ * run still waiting for its source claim (CG-P12-05).
+ */
 const ClaimLedgerSchema = z.object({
   issued: z.number().int().nonnegative(),
   not_issued: z.number().int().nonnegative(),
   pending_source: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
+  cancelled_before_source: z.number().int().nonnegative(),
+  legacy_metadata_only: z.number().int().nonnegative(),
 }).strict();
 
 export const ResearchRunLibraryResponseSchema = z.object({
@@ -229,6 +277,24 @@ export const ResearchRunLibrarySparklineResponseSchema = z.object({
   values: z.array(z.string().regex(/^-?[0-9]+(?:\.[0-9]+)?$/)).max(24),
   availability: FieldAvailabilitySchema,
   source_revision: z.string().min(1).max(160).nullable(),
+  /**
+   * RF-05 / CG-P12-03 additive: where the display points came from.  Null
+   * whenever `values` is empty.  Points are the persisted P13 EQUITY_OOS
+   * series (never Parquet/artifacts), reduced to <=24 by an extrema-
+   * preserving bucket that always keeps the first, last, minimum and maximum.
+   */
+  source: z.object({
+    series_kind: z.literal("EQUITY_OOS"),
+    value_field: z.literal("equity"),
+    projection_revision: z.string().regex(/^p13r[0-9]+_[0-9a-f]{64}$/),
+    series_digest: z.string().regex(/^[0-9a-f]{64}$/),
+    source_observation_count: z.number().int().nonnegative().nullable(),
+    source_sampling: z.string().min(1).max(64).nullable(),
+    persisted_point_count: z.number().int().nonnegative(),
+    display_sampling: z.enum(["FULL", "EXTREMA_BUCKET_24_V1"]),
+    first_at_utc_ms: UtcMsSchema,
+    last_at_utc_ms: UtcMsSchema,
+  }).strict().nullable(),
 }).strict();
 
 export type ResearchRunLibraryResponse = z.infer<typeof ResearchRunLibraryResponseSchema>;
