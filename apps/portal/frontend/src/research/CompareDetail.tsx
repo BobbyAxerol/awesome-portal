@@ -31,7 +31,8 @@
  *  - VD-P20-08 one mono disclosure line under the header.
  *  - VD-P20-10 the rules footer changes two phrases the contract contradicts.
  *  - VD-P20-12 a pair without two run ids sends nothing and says so.
- *  - VD-P20-14 the ladder reads in the server's order (strongest claim first).
+ *  - VD-P20-14 the ladder is laid out as the server's array reversed, so the
+ *    hi-fi reading direction (weak → strong, "claim ↑ →") holds verbatim.
  *  - VD-P20-15 "EChart N" tags and the hi-fi's demo narratives are not printed.
  *  - VD-P20-16 mismatched key parts are tinted by display-only equality.
  *  - VD-P20-17 the claim chip names its origin.
@@ -94,12 +95,14 @@ export const MODE_LABELS: Record<CompareMode, string> = {
 };
 
 /**
- * Hi-fi attempts rule. The first two sentences are verbatim; the last one
- * read the ladder weak→strong, and the contract orders it strong→weak
+ * Hi-fi attempts rule, verbatim. The hi-fi reads the ladder weak→strong,
+ * left to right; the contract returns it strong→weak. The screen lays the
+ * server's array out reversed — a fixed presentation, never a sort by a
+ * number — so this sentence and the "claim ↑ →" arrow stay true
  * (VD-P20-14, REQUIRES_BOBBY_DECISION).
  */
 export const ATTEMPTS_RULE =
-  "Same alpha, same key — every chart may overlay. But numbers across claim classes never rank each other: a retrospective 1.31 does not beat a strict 1.19. Read the ladder left to right in the server's order: the strongest claim comes first, and a prettier number never moves a weaker claim ahead of it.";
+  "Same alpha, same key — every chart may overlay. But numbers across claim classes never rank each other: a retrospective 1.31 does not beat a strict 1.19. Read the ladder left to right: the number falls as the claim strengthens, and that gap is the selection luck the weaker claims were counting.";
 
 /** Hi-fi markets rule after the server's caption (its first sentence), verbatim. */
 export const MARKETS_RULE_TAIL =
@@ -769,15 +772,16 @@ function Ladder({ result }: { result: AttemptResult }) {
     <section data-panel="ladder" aria-label="claim ladder">
       <h3 className="cp-ladderhead">
         <span data-ladder-header>{LADDER_HEADER}</span>
-        <span className="cp-faint">server order · {result.attempts.length} returned</span>
+        <span className="cp-faint">server order, read right to left · {result.attempts.length} returned</span>
       </h3>
       {result.attempts.length === 0 ? (
         <span className="cp-faint" data-no-attempts>
           no comparable attempt was returned for this alpha
         </span>
       ) : (
-        <div className="cp-ladder">
-          {result.attempts.map((run, index) => (
+        <div className="cp-ladder" data-ladder-order="server-reversed">
+          {/* Reversed for the hi-fi's reading direction (VD-P20-14); the server's order is the inverse. */}
+          {[...result.attempts].reverse().map((run, index) => (
             <LadderStep key={run.run_id} run={run} last={index === result.attempts.length - 1} />
           ))}
         </div>
@@ -796,14 +800,14 @@ function Ladder({ result }: { result: AttemptResult }) {
   );
 }
 
-/** A card and, before the next one, the hi-fi's arrow — bare, because the order is the server's (VD-P20-14). */
+/** A card and, before the next one, the hi-fi's arrow "claim ↑ →" (the ladder is laid out weak→strong, VD-P20-14). */
 function LadderStep({ run, last }: { run: CompareRun; last: boolean }) {
   return (
     <>
       <LadderCard run={run} />
       {last ? null : (
-        <span className="cp-arrow" aria-label="next in the server's order" data-ladder-arrow>
-          →
+        <span className="cp-arrow" aria-label="claim strengthens to the right" data-ladder-arrow>
+          claim ↑ →
         </span>
       )}
     </>

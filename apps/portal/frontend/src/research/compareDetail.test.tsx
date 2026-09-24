@@ -335,7 +335,7 @@ describe("S13 Compare — reads and order", () => {
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(COMPARE_TITLE);
   });
 
-  it("S13-U02 sends one GET with mode=attempts and keeps the server's attempt order (rank 3, 3, not published)", async () => {
+  it("S13-U02 sends one GET with mode=attempts and lays the server's attempt order out reversed, weak → strong as the hi-fi reads (rank 3, 3, not published)", async () => {
     const { calls } = server([
       { status: 200, body: attempts([run("run_z"), run("run_a"), run("run_m", { claim: NOT_PUBLISHED_CLAIM })]) },
     ]);
@@ -345,8 +345,11 @@ describe("S13 Compare — reads and order", () => {
     expect(calls[0]!.method).toBe("GET");
     expect(calls[0]!.url).toBe(`/api/v1/research/alphas/${ALPHA}/compare?mode=attempts`);
     const order = Array.from(document.querySelectorAll("[data-ladder-run]")).map((el) => el.getAttribute("data-ladder-run"));
-    expect(order).toEqual(["run_z", "run_a", "run_m"]);
-    expect(document.querySelectorAll("[data-ladder-arrow]")).toHaveLength(2);
+    expect(order).toEqual(["run_m", "run_a", "run_z"]);
+    expect(document.querySelector("[data-ladder-order]")?.getAttribute("data-ladder-order")).toBe("server-reversed");
+    const arrows = Array.from(document.querySelectorAll("[data-ladder-arrow]"));
+    expect(arrows).toHaveLength(2);
+    expect(arrows.map((el) => el.textContent?.trim())).toEqual(["claim ↑ →", "claim ↑ →"]);
     expect(panels()).toEqual([...COMPARE_PANELS.attempts]);
   });
 
