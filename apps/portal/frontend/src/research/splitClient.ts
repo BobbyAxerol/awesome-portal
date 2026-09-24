@@ -8,8 +8,8 @@
  *    UTC-millisecond boundaries and bar counts, plus typed absences for every
  *    protocol fact the current source does not publish.
  *  - **RS-02 `researchCurrentSourceSplitGetV1`** publishes the folds actually
- *    observed for the one admitted Advanced-WFO profile. It refuses every
- *    other profile rather than falling back.
+ *    observed for the one admitted Advanced-WFO profile. For any other
+ *    profile it answers a typed not-applicable 200 (RF-05), never a fallback.
  *
  * Nothing here computes a boundary. `24h` and `72h` are not added to a date,
  * a fold is not inferred, a seal is not derived and a bar is not counted: the
@@ -20,7 +20,15 @@ import type { components as SplitComponents } from "@portal/contracts-research-s
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 
 import { PortalApiError } from "../lib/api";
-import { toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
+import {
+  CURRENT_SOURCE_LANE_COPY,
+  ResearchLaneConflictError,
+  laneStateOfError,
+  readLaneState,
+  reasonCodeSentence,
+  toResearchRefusal,
+  type ResearchRefusal,
+} from "./researchRefusal";
 
 type SplitSchemas = SplitComponents["schemas"];
 type SourceSchemas = CurrentSourceComponents["schemas"];
@@ -46,6 +54,77 @@ function query(workspaceId?: string): string {
   return workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
 }
 
+/* -------------------------------------------------------------------------
+ * RS-02 lane answers (RF-05 CG-P13-09)
+ *
+ * The retained current-source lane now says, in a typed body, whether it can
+ * ever answer for a run. The screens stop guessing from their own read
+ * (FE-X-12's skip inference) and render what the lane said:
+ *
+ *  - a 200 `research.current-source-not-applicable.v1` — this run's binding is
+ *    never retained, nothing is pending, do not retry;
+ *  - a 409 `RESEARCH_CURRENT_SOURCE_CONFLICT` with `details.lane_state` — the
+ *    lane could apply and has nothing yet, for one of four named reasons.
+ * ---------------------------------------------------------------------- */
+
+export type LaneNotApplicable = SourceSchemas["LaneNotApplicable"];
+export type LaneState = SourceSchemas["LaneState"];
+
+export const LANE_NOT_APPLICABLE_SCHEMA = "research.current-source-not-applicable.v1";
+
+/** Whether a 200 from a current-source read is the typed not-applicable answer. */
+export function isLaneNotApplicable(body: unknown): body is LaneNotApplicable {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    (body as { schema_version?: unknown }).schema_version === LANE_NOT_APPLICABLE_SCHEMA
+  );
+}
+
+/**
+ * The lane state a refused current-source read carried, or null. The typed
+ * error, the parser and the sentences live in the shared refusal module
+ * (`ResearchLaneConflictError`, `readLaneState`, `CURRENT_SOURCE_LANE_COPY`),
+ * so S04, S05 and S06 read a 409 the same way.
+ */
+export const laneStateOf = laneStateOfError;
+export const LANE_STATE_COPY = CURRENT_SOURCE_LANE_COPY;
+
+const RUN_PROFILE_WORDS: Record<string, string> = {
+  P04_FIXED_QUALIFICATION: "the P04 fixed qualification",
+};
+
+/** One sentence for the typed not-applicable answer, built from its own fields. */
+export function laneNotApplicableSentence(answer: LaneNotApplicable): string {
+  const shared = reasonCodeSentence(answer.lane.reason_code);
+  if (shared) return shared;
+  const profile = RUN_PROFILE_WORDS[answer.lane.run_profile] ?? answer.lane.run_profile;
+  return `Not applicable: this run is bound to ${profile}, which the retained lane never holds — it retains ${answer.lane.retainable_profile_id} runs only. Nothing is pending.`;
+}
+
+/**
+ * The typed refusal a non-2xx response carries. Shared by the split and search
+ * clients so both read `details.lane_state` the same way.
+ */
+export async function problemOf(response: Response): Promise<PortalApiError> {
+  let message = `${response.status} ${response.statusText}`;
+  let code: string | null = null;
+  let requestId: string | null = response.headers.get("x-request-id");
+  let laneState: ReturnType<typeof readLaneState> = null;
+  try {
+    const problem = (await response.json()) as Partial<SourceSchemas["Problem"]>;
+    if (problem?.error?.message) message = problem.error.message;
+    code = problem?.error?.code ?? null;
+    requestId = problem?.request_id ?? requestId;
+    laneState = readLaneState(problem?.details?.lane_state);
+  } catch {
+    /* non-JSON error body: keep the status line the server gave */
+  }
+  return laneState !== null
+    ? new ResearchLaneConflictError(message, response.status, code, requestId, laneState)
+    : new PortalApiError(message, response.status, code, requestId);
+}
+
 async function call<T>(path: string, etag?: string | null, signal?: AbortSignal): Promise<Fresh<T>> {
   const response = await fetch(path, {
     credentials: "same-origin",
@@ -53,20 +132,7 @@ async function call<T>(path: string, etag?: string | null, signal?: AbortSignal)
     headers: etag ? { "If-None-Match": etag } : undefined,
   });
   if (response.status === 304) return NOT_MODIFIED;
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    let code: string | null = null;
-    let requestId: string | null = response.headers.get("x-request-id");
-    try {
-      const problem = (await response.json()) as Partial<SplitSchemas["Problem"]>;
-      if (problem?.error?.message) message = problem.error.message;
-      code = problem?.error?.code ?? null;
-      requestId = problem?.request_id ?? requestId;
-    } catch {
-      /* non-JSON error body: keep the status line the server gave */
-    }
-    throw new PortalApiError(message, response.status, code, requestId);
-  }
+  if (!response.ok) throw await problemOf(response);
   return (await response.json()) as T;
 }
 
@@ -79,9 +145,9 @@ export const splitApi = {
       options.signal,
     ),
 
-  /** `researchCurrentSourceSplitGetV1` */
+  /** `researchCurrentSourceSplitGetV1` — the fold plan, or the typed not-applicable answer. */
   currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
-    call<CurrentSourceSplit>(
+    call<CurrentSourceSplit | LaneNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/split${query(options.workspaceId)}`,
       null,
       options.signal,
@@ -245,6 +311,93 @@ export const ABSENT_WORDS: Record<AbsentFact["state"], string> = {
 export function reasonOf(fact: { reason_code?: string | null; availability?: SplitAvailability }): string {
   return fact.reason_code ?? fact.availability?.reason_code ?? fact.availability?.state ?? "unknown";
 }
+
+/* -------------------------------------------------------------------------
+ * RF-05 facts: as-of basis, dataset, not-applicable, absence index
+ * ---------------------------------------------------------------------- */
+
+export type AsOfBasis = SplitDetail["as_of_basis"];
+export type DatasetFact = SplitSchemas["DatasetFact"];
+export type AbsenceIndexEntry = SplitSchemas["AbsenceIndexEntry"];
+
+/**
+ * What an as-of time is the time of (CG-P14-04). The number is stable for one
+ * immutable revision and is never the read time; the basis says which durable
+ * fact it dates. Shared with Screen 06, whose read carries the same enum.
+ */
+export const AS_OF_BASIS_WORDS: Record<AsOfBasis, string> = {
+  P14_PROJECTION_RECEIVED_AT: "when the P14 projection for this run was received",
+  RUN_STATE_UPDATED_AT: "when the run's state last changed — no projection has been received",
+  LEGACY_READ_MODEL_UPDATED_AT: "when the legacy read model was last updated",
+};
+
+/** `1h bars` from the bound dataset (CG-P14-05), or null when none is bound. */
+export function barsWord(dataset: DatasetFact): string | null {
+  return dataset.state === "AVAILABLE" ? `${dataset.timeframe} bars` : null;
+}
+
+/** The dataset binding behind the span, for the fact's title — never guessed. */
+export function datasetTitle(dataset: DatasetFact): string {
+  if (dataset.state !== "AVAILABLE") return `dataset ${dataset.state.toLowerCase().replace(/_/g, " ")} · ${dataset.reason_code}`;
+  const interval =
+    dataset.bar_interval_ms === null
+      ? `bar interval not fixed${dataset.reason_code ? ` (${dataset.reason_code})` : ""}`
+      : `bar interval ${dataset.bar_interval_ms} ms`;
+  return `dataset ${dataset.dataset_id} · ${dataset.symbol} · ${dataset.timeframe} · ${interval} · from the P08 dataset binding`;
+}
+
+/**
+ * The words for a protocol fact the run's protocol has no place for
+ * (CG-P14-03): `n/a · three-window`. It is not an absence — nothing is missing
+ * — so it is printed as a value, not in the italic of "not published".
+ */
+export function notApplicableWords(detail: Pick<SplitDetail, "protocol">): string {
+  return detail.protocol.kind === "THREE_WINDOW_CURRENT" ? "n/a · three-window" : "n/a";
+}
+
+/** RFC 6901: resolve a JSON pointer inside a document, or undefined. */
+export function resolvePointer(document: unknown, pointer: string): unknown {
+  if (pointer === "") return document;
+  if (!pointer.startsWith("/")) return undefined;
+  let node: unknown = document;
+  for (const raw of pointer.slice(1).split("/")) {
+    const token = raw.replace(/~1/g, "/").replace(/~0/g, "~");
+    if (typeof node !== "object" || node === null || !(token in node)) return undefined;
+    node = (node as Record<string, unknown>)[token];
+  }
+  return node;
+}
+
+/**
+ * CG-P14-06: each absence is stated once, from `absence_index`, at the field
+ * that owns it. Returns the field-local fact the entry points at.
+ */
+export function absenceAt(detail: SplitDetail, entry: AbsenceIndexEntry): AbsentFact | null {
+  const fact = resolvePointer(detail, entry.pointer);
+  if (typeof fact !== "object" || fact === null || !("state" in fact)) return null;
+  const { state } = fact as { state: string };
+  if (state !== "NOT_PUBLISHED" && state !== "NOT_ASSERTED" && state !== "NOT_APPLICABLE") return null;
+  const reason = (fact as { reason_code?: string | null }).reason_code;
+  const availability = (fact as { availability?: SplitAvailability }).availability;
+  return {
+    state,
+    reason_code: reason ?? availability?.reason_code ?? state,
+    availability: availability ?? { state: "NOT_PUBLISHED", reason_code: reason ?? null },
+  } as AbsentFact;
+}
+
+/**
+ * Reason codes this screen explains in a sentence. The code stays in the
+ * title; the sentence is ours. Defined here rather than in `researchRefusal.ts`
+ * (owned elsewhere) — see the RF-06 wave C receipt.
+ */
+export const SPLIT_REASON_WORDS: Record<string, string> = {
+  P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE:
+    "not counted — P10 counts only rows copied into the child tape, and the holdout is never copied",
+  P14_THREE_WINDOW_PROTOCOL_HAS_NO_PURGE: "a three-window run has no train/test boundary to purge",
+  P14_THREE_WINDOW_PROTOCOL_HAS_NO_EMBARGO: "a three-window run has no test window to embargo after",
+  P14_THREE_WINDOW_PROTOCOL_HAS_NO_INNER_FOLDS: "a three-window run has no nested folds",
+};
 
 /* -------------------------------------------------------------------------
  * Refusals

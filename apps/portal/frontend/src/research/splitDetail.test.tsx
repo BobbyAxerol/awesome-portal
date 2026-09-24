@@ -42,6 +42,7 @@ import {
   tickCountForWidth,
   toSplitRefusal,
   type CurrentSourceSplit,
+  type LaneNotApplicable,
   type SplitDetail,
 } from "./splitClient";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
@@ -82,6 +83,45 @@ function absent(reason: string, state: "NOT_PUBLISHED" | "NOT_ASSERTED" = "NOT_P
   return { state, reason_code: reason, availability: { state: "NOT_PUBLISHED", reason_code: reason } } as const;
 }
 
+/** RF-05 CG-P14-03: a fact the three-window protocol has no place for. */
+function notApplicable(reason: string) {
+  return { state: "NOT_APPLICABLE", reason_code: reason, availability: { state: "NOT_APPLICABLE", reason_code: reason } } as const;
+}
+
+/** The absence_index the live preview serves for a completed three-window run (rrun_3935…, 2026-09-24). */
+const ABSENCE_INDEX = [
+  { key: "strict_outer_oos", pointer: "/protocol/selection/strict_outer_oos", state: "NOT_ASSERTED" },
+  { key: "fold_plan", pointer: "/protocol/fold_plan", state: "NOT_PUBLISHED" },
+  { key: "inner_folds", pointer: "/protocol/inner_folds", state: "NOT_APPLICABLE" },
+  { key: "purge", pointer: "/protocol/purge", state: "NOT_APPLICABLE" },
+  { key: "embargo", pointer: "/protocol/embargo", state: "NOT_APPLICABLE" },
+  { key: "theta_per_fold", pointer: "/protocol/theta_per_fold", state: "NOT_PUBLISHED" },
+  { key: "gap_scan", pointer: "/protocol/gap_scan", state: "NOT_PUBLISHED" },
+  { key: "holdout_seal", pointer: "/windows/holdout/source_seal", state: "NOT_PUBLISHED" },
+  { key: "holdout_unlock", pointer: "/windows/holdout/unlock", state: "NOT_PUBLISHED" },
+  { key: "holdout_bars", pointer: "/windows/holdout/bars_absence", state: "NOT_PUBLISHED" },
+] as const;
+
+/** The typed 200 the RS-02 lane answers for a P04 fixed-qualification run. */
+function laneAnswer(operation: "split" | "search" = "split"): LaneNotApplicable {
+  return {
+    schema_version: "research.current-source-not-applicable.v1",
+    read_authority: "PORTAL_RETAINED_CURRENT_SOURCE",
+    run_id: "R-WFO-118",
+    revision: "rs02_not-applicable_b31f",
+    etag: '"rs02_not-applicable_b31f"',
+    availability: { state: "NOT_APPLICABLE", reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION" },
+    lane: {
+      state: "NOT_APPLICABLE",
+      operation,
+      run_profile: "P04_FIXED_QUALIFICATION",
+      run_adapter_contract_digest: "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+      retainable_profile_id: "rs02.delta-wfo-global.v1",
+      reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION",
+    },
+  };
+}
+
 function detail(overrides: Partial<SplitDetail> = {}): SplitDetail {
   return {
     schema_version: "research.split-detail.v1",
@@ -92,6 +132,17 @@ function detail(overrides: Partial<SplitDetail> = {}): SplitDetail {
     availability: AVAILABLE,
     readiness: "COMPLETE",
     as_of_utc_ms: T0 + 900 * DAY,
+    as_of_basis: "P14_PROJECTION_RECEIVED_AT",
+    dataset: {
+      state: "AVAILABLE",
+      dataset_id: "crypto-binance-1m",
+      symbol: "BTCUSDT",
+      timeframe: "1h",
+      bar_interval_ms: 3_600_000,
+      provenance: "P08_DATASET_BINDING",
+      reason_code: null,
+      availability: AVAILABLE,
+    },
     provenance: {
       source_adapter_id: "p04.delta-rsi.v1",
       engine_version: "1.1.1",
@@ -111,9 +162,9 @@ function detail(overrides: Partial<SplitDetail> = {}): SplitDetail {
         strict_outer_oos: absent("P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR", "NOT_ASSERTED"),
       },
       fold_plan: absent("P04_PUBLISHES_NO_FOLD_PLAN"),
-      inner_folds: absent("P04_PUBLISHES_NO_INNER_FOLDS"),
-      purge: absent("P04_PUBLISHES_NO_PURGE"),
-      embargo: absent("P04_PUBLISHES_NO_EMBARGO"),
+      inner_folds: notApplicable("P14_THREE_WINDOW_PROTOCOL_HAS_NO_INNER_FOLDS"),
+      purge: notApplicable("P14_THREE_WINDOW_PROTOCOL_HAS_NO_PURGE"),
+      embargo: notApplicable("P14_THREE_WINDOW_PROTOCOL_HAS_NO_EMBARGO"),
       theta_per_fold: absent("P04_PUBLISHES_NO_THETA_PER_FOLD"),
       gap_scan: absent("P08_PUBLISHES_NO_GAP_SCAN"),
     },
@@ -159,6 +210,7 @@ function detail(overrides: Partial<SplitDetail> = {}): SplitDetail {
         },
         source_seal: absent("P08_PUBLISHES_NO_SEAL_RECORD"),
         unlock: absent("P14_PUBLISHES_NO_UNLOCK_RECORD"),
+        bars_absence: absent("P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE"),
         availability: AVAILABLE,
       },
     },
@@ -169,8 +221,13 @@ function detail(overrides: Partial<SplitDetail> = {}): SplitDetail {
         availability: { state: "NOT_PUBLISHED", reason_code: "P14_PUBLISHES_NO_UNLOCK_ACTION" },
       },
     },
+    absence_authority: "FIELD_LOCAL",
+    absence_index: ABSENCE_INDEX.map((entry) => ({ ...entry })),
+    /* Deprecated (RF-05 CG-P14-06) and deliberately contradictory here: the
+       screen must not read it, so anything it says must never reach the page. */
     source_absences: {
       physical_holdout_io: absent("P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED"),
+      deprecated_decoy: absent("DEPRECATED_SOURCE_ABSENCES_MUST_NOT_RENDER"),
     },
     ...overrides,
   } as SplitDetail;
@@ -252,7 +309,7 @@ function view(overrides: Partial<React.ComponentProps<typeof SplitScreen>> = {})
         state={OK}
         cursor={DEFAULT_CURSOR}
         onFold={vi.fn()}
-        folds={{ state: "not-applicable", reason: "P04_PUBLISHES_NO_FOLD_PLAN" }}
+        folds={{ state: "not-applicable", answer: laneAnswer() }}
         ensureFolds={vi.fn()}
         onReread={vi.fn()}
         {...overrides}
@@ -543,6 +600,7 @@ describe("P14-T05 — folds come from the one operation that publishes them", ()
       folds: {
         state: "refused",
         refusal: toSplitRefusal(new PortalApiError("Not an admitted profile.", 404, "NOT_ADMITTED", null)),
+        laneState: null,
       },
     });
     expect(container.querySelector("[data-fold-refusal]")?.textContent).toContain("Not an admitted profile.");
@@ -577,15 +635,52 @@ describe("P14-T06 — one split read, one optional fold read", () => {
     expect(requested.filter((url) => url.includes("current-source/split"))).toHaveLength(1);
   });
 
-  it("FE-S05-02 / FE-X-12: never asks the fold lane for a fixed profile", async () => {
-    stub(() => [200, detail()]);
+  it("RF-05: the fold lane's own typed 200 decides not-applicable — no skip inferred from the split", async () => {
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
     const { result } = renderHook(() => useSplit("R-WFO-118"));
     await waitFor(() => expect(result.current.detail).not.toBeNull());
     await act(async () => {
       result.current.ensureFolds();
+      result.current.ensureFolds();
     });
-    expect(result.current.folds.state).toBe("not-applicable");
-    expect(requested.filter((url) => url.includes("current-source"))).toHaveLength(0);
+    await waitFor(() => expect(result.current.folds.state).toBe("not-applicable"));
+    expect(requested.filter((url) => url.includes("current-source/split"))).toHaveLength(1);
+    const slot = result.current.folds;
+    expect(slot.state === "not-applicable" && slot.answer.lane.run_profile).toBe("P04_FIXED_QUALIFICATION");
+  });
+
+  it("RF-05: a 409 carries its lane state onto the fold slot", async () => {
+    stub((url) =>
+      url.includes("current-source")
+        ? [
+            409,
+            {
+              error: { code: "RESEARCH_CURRENT_SOURCE_CONFLICT", message: "Current source is not retained." },
+              details: { lane_state: "PENDING_RETENTION", effective_status: "COMPLETED" },
+            },
+          ]
+        : [200, detail()],
+    );
+    const { result } = renderHook(() => useSplit("R-WFO-118"));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    await act(async () => result.current.ensureFolds());
+    await waitFor(() => expect(result.current.folds.state).toBe("refused"));
+    const slot = result.current.folds;
+    expect(slot.state === "refused" && slot.laneState).toBe("PENDING_RETENTION");
+  });
+
+  it("RF-05: a not-applicable answer is final — a remount does not ask again", async () => {
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
+    const first = renderHook(() => useSplit("R-WFO-118"));
+    await waitFor(() => expect(first.result.current.detail).not.toBeNull());
+    await act(async () => first.result.current.ensureFolds());
+    await waitFor(() => expect(first.result.current.folds.state).toBe("not-applicable"));
+    first.unmount();
+    const second = renderHook(() => useSplit("R-WFO-118"));
+    await waitFor(() => expect(second.result.current.detail).not.toBeNull());
+    await act(async () => second.result.current.ensureFolds());
+    expect(second.result.current.folds.state).toBe("not-applicable");
+    expect(requested.filter((url) => url.includes("current-source/split"))).toHaveLength(1);
   });
 
   it("sends the ETag on a reread and keeps the copy on 304", async () => {
@@ -692,7 +787,7 @@ describe("RF-06 FE-X-10 / FE-S05-01 — the screen's own stage seeds the cursor"
   });
 
   it("bare /split: Evidence Flow carries stage=split, next-stage carries stage=search", async () => {
-    stub(() => [200, detail()]);
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
     const { container } = mountRoute("");
     await waitFor(() => expect(container.querySelector("[data-card='fold-construction']")).toBeTruthy());
     expect(container.querySelector("[data-action='back-to-hub']")?.getAttribute("href")).toBe(
@@ -730,13 +825,39 @@ describe("RF-06 FE-S04-06 — an unobserved fold is clamped, with a notice", () 
   });
 });
 
-describe("RF-06 FE-S05-02 — the fold lane is not asked for a fixed profile", () => {
-  it("mounting the route issues one split read and no current-source read", async () => {
-    stub(() => [200, detail()]);
+describe("RF-06 wave C — the fold lane is asked once and its answer is rendered", () => {
+  it("mounting the route issues one split read and one current-source read, and says what the lane answered", async () => {
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
     const { container } = mountRoute("#stage=split&fold=1");
     await waitFor(() => expect(container.querySelector("[data-fold-anatomy='not-applicable']")).toBeTruthy());
-    expect(requested).toEqual(["/api/v1/quantbt/runs/R-WFO-118/split"]);
+    expect(requested).toEqual([
+      "/api/v1/quantbt/runs/R-WFO-118/split",
+      "/api/v1/quantbt/runs/R-WFO-118/current-source/split",
+    ]);
     expect(container.querySelector("[data-absent-reason='fold plan']")?.textContent).toBe("P04_PUBLISHES_NO_FOLD_PLAN");
+    const lane = container.querySelector("[data-fold-lane='not-applicable']");
+    expect(lane?.textContent).toContain("P04 fixed qualification");
+    expect(lane?.textContent).toContain("Nothing is pending");
+    expect(lane?.getAttribute("title")).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
+  });
+
+  it("a 409 renders its lane-state sentence, not the server's message text", async () => {
+    stub((url) =>
+      url.includes("current-source")
+        ? [
+            409,
+            {
+              error: { code: "RESEARCH_CURRENT_SOURCE_CONFLICT", message: "server words that must not be the sentence" },
+              details: { lane_state: "NOT_RETAINED_TERMINAL", effective_status: "CANCELLED" },
+            },
+          ]
+        : [200, detail()],
+    );
+    const { container } = mountRoute("#stage=split&fold=1");
+    await waitFor(() => expect(container.querySelector("[data-lane-state='NOT_RETAINED_TERMINAL']")).toBeTruthy());
+    const lane = container.querySelector("[data-fold-lane]");
+    expect(lane?.textContent).toContain("cancelled or failed before a sealed artifact was retained");
+    expect(lane?.textContent).not.toContain("server words");
   });
 });
 
@@ -966,7 +1087,7 @@ describe("RF-06 — a fold set the run already published clamps this screen too"
     rememberObservedFolds("R-WFO-118", [1]);
     expect(observedFoldsFor("R-WFO-118")).toEqual([1]);
     expect(observedFoldsFor("another-run")).toBeNull();
-    stub(() => [200, detail()]);
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
     const { container } = mountRoute("#stage=split&fold=4");
     await waitFor(() => expect(window.location.hash).toBe("#stage=split&fold=1"));
     expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 4");
@@ -975,9 +1096,152 @@ describe("RF-06 — a fold set the run already published clamps this screen too"
 
   it("leaves the fold alone when no fold set was published", async () => {
     forgetObservedFolds();
-    stub(() => [200, detail()]);
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
     mountRoute("#stage=split&fold=4");
     await waitFor(() => expect(requested.length).toBeGreaterThan(0));
     expect(window.location.hash).toBe("#stage=split&fold=4");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * RF-06 wave C — RF-05 split fields (CG-P14-03…06), one test per field
+ * ---------------------------------------------------------------------- */
+
+describe("RF-06 wave C — S05 consumes the RF-05 split fields", () => {
+  it("CG-P14-05: the span fact reads `span · 1h bars` from the bound dataset, the binding in the title", () => {
+    const { container } = view();
+    const fact = container.querySelector("[data-fact='span']");
+    expect(fact?.textContent).toContain("[2024-01-01, 2026-03-11) · 1h bars");
+    const title = fact?.querySelector("[data-dataset]")?.getAttribute("title") ?? "";
+    expect(title).toContain("crypto-binance-1m");
+    expect(title).toContain("BTCUSDT");
+    expect(title).toContain("bar interval 3600000 ms");
+    expect(title).toContain("P08 dataset binding");
+  });
+
+  it("CG-P14-05: no bar word is invented when no dataset is bound; the reason rides in the title", () => {
+    const { container } = view({
+      detail: detail({
+        dataset: {
+          state: "LEGACY_METADATA_ONLY",
+          dataset_id: null,
+          symbol: null,
+          timeframe: null,
+          bar_interval_ms: null,
+          provenance: "NONE",
+          reason_code: "P14_LEGACY_RUN_HAS_NO_DATASET_BINDING",
+          availability: { state: "LEGACY_METADATA_ONLY", reason_code: "P14_LEGACY_RUN_HAS_NO_DATASET_BINDING" },
+        },
+      } as Partial<SplitDetail>),
+    });
+    const fact = container.querySelector("[data-fact='span']");
+    expect(fact?.textContent).not.toContain("bars");
+    expect(fact?.querySelector("[data-dataset]")?.getAttribute("title")).toContain("P14_LEGACY_RUN_HAS_NO_DATASET_BINDING");
+  });
+
+  it("CG-P14-04: as-of is the durable fact's time in the HiFi Z form, its basis named in the title", () => {
+    const { container } = view();
+    const asOf = container.querySelector("[data-as-of]");
+    expect(asOf?.textContent).toBe("source split read · as-of 2026-06-19 00:00Z");
+    expect(asOf?.getAttribute("data-as-of-basis")).toBe("P14_PROJECTION_RECEIVED_AT");
+    expect(asOf?.getAttribute("title")).toContain("as-of basis P14_PROJECTION_RECEIVED_AT — when the P14 projection for this run was received");
+  });
+
+  it("CG-P14-03: purge, embargo and inner folds read `n/a · three-window`, upright, never as missing", () => {
+    const { container } = view();
+    for (const name of ["purge", "embargo", "inner folds"]) {
+      const fact = container.querySelector(`[data-fact='${name}']`);
+      expect(fact?.textContent, name).toContain("n/a · three-window");
+      expect(fact?.textContent, name).not.toMatch(/not published|not applicable/);
+      const value = fact?.querySelector("[data-absent-state='NOT_APPLICABLE']");
+      expect(value?.className, name).not.toContain("italic");
+      expect(value?.getAttribute("title"), name).toMatch(/P14_THREE_WINDOW_PROTOCOL_HAS_NO_/);
+    }
+    // No inner-fold row is drawn as if something were missing.
+    expect(container.querySelector("[data-inner-row]")).toBeNull();
+    // The fold table's purge and embargo cells say n/a, not "not published".
+    const row = container.querySelector("[data-fold-table-row='three-window']");
+    expect(row?.querySelectorAll("[data-na-cell]")).toHaveLength(2);
+    expect(row?.textContent).not.toContain("not published");
+  });
+
+  it("CG-P14-03: a fact that applies and was not published still says not published", () => {
+    const base = detail();
+    const { container } = view({
+      detail: detail({
+        protocol: { ...base.protocol, purge: absent("P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED"), inner_folds: absent("P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED") },
+      } as Partial<SplitDetail>),
+    });
+    expect(container.querySelector("[data-fact='purge']")?.textContent).toContain("not published");
+    expect(container.querySelector("[data-inner-row]")?.textContent).toContain("not published");
+    expect(container.querySelector("[data-fact='inner folds']")).toBeNull();
+  });
+
+  it("RF-05: the holdout's missing bar count carries its reason, once, beside the seal", () => {
+    const { container } = view();
+    const bars = container.querySelectorAll("[data-absence-key='holdout_bars']");
+    expect(bars).toHaveLength(1);
+    expect(bars[0].textContent).toContain("not counted — P10 counts only rows copied into the child tape");
+    expect(bars[0].querySelector("[title]")?.getAttribute("title")).toBe("P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE");
+    expect(container.querySelector("[data-holdout-note]")?.contains(bars[0])).toBe(true);
+  });
+
+  it("CG-P14-06: every absence_index key is stated exactly once, and source_absences is not read", () => {
+    const { container } = view();
+    for (const entry of ABSENCE_INDEX) {
+      expect(container.querySelectorAll(`[data-absence-key='${entry.key}']`), entry.key).toHaveLength(1);
+    }
+    expect(container.textContent).not.toContain("DEPRECATED_SOURCE_ABSENCES_MUST_NOT_RENDER");
+    expect(container.textContent).not.toContain("deprecated decoy");
+    expect(container.querySelector("[data-source-absences]")).toBeNull();
+  });
+
+  it("CG-P14-06: an index key no frame owns is listed once at the foot, resolved through its pointer", () => {
+    const base = detail();
+    const { container } = view({
+      detail: detail({
+        absence_index: [...base.absence_index, { key: "holdout_unlock_action", pointer: "/actions/holdout_unlock", state: "NOT_PUBLISHED" }],
+      } as Partial<SplitDetail>),
+    });
+    const extra = container.querySelectorAll("[data-absence-key='holdout_unlock_action']");
+    expect(extra).toHaveLength(1);
+    expect(container.querySelector("[data-source-absences]")?.contains(extra[0])).toBe(true);
+    expect(extra[0].textContent).toContain("not published");
+  });
+
+  it("a cancelled run with no projection: every window absence is stated once, from the index", () => {
+    const receipt = "P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED";
+    const missing = absent(receipt);
+    const { container } = view({
+      detail: detail({
+        readiness: "NOT_READY",
+        as_of_basis: "RUN_STATE_UPDATED_AT",
+        timeline: null,
+        protocol: {
+          kind: null,
+          selection: { state: "NOT_PUBLISHED", parameter_bundle_digest: null, strict_outer_oos: missing },
+          fold_plan: missing,
+          inner_folds: missing,
+          purge: missing,
+          embargo: missing,
+          theta_per_fold: missing,
+          gap_scan: missing,
+        },
+        windows: { warmup: missing, is: missing, outer_oos: missing, holdout: missing },
+        absence_index: [
+          ...["strict_outer_oos", "fold_plan", "inner_folds", "purge", "embargo", "theta_per_fold", "gap_scan"].map((key) => ({
+            key,
+            pointer: key === "strict_outer_oos" ? "/protocol/selection/strict_outer_oos" : `/protocol/${key}`,
+            state: "NOT_PUBLISHED" as const,
+          })),
+          ...["warmup", "is", "outer_oos", "holdout"].map((key) => ({ key, pointer: `/windows/${key}`, state: "NOT_PUBLISHED" as const })),
+        ],
+      } as unknown as Partial<SplitDetail>),
+    });
+    for (const entry of ["strict_outer_oos", "fold_plan", "inner_folds", "purge", "embargo", "theta_per_fold", "gap_scan", "warmup", "is", "outer_oos", "holdout"]) {
+      expect(container.querySelectorAll(`[data-absence-key='${entry}']`), entry).toHaveLength(1);
+    }
+    expect(container.querySelector("[data-as-of]")?.getAttribute("title")).toContain("RUN_STATE_UPDATED_AT");
+    expect(container.textContent).not.toContain("n/a · three-window");
   });
 });

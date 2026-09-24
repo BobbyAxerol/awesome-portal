@@ -19,7 +19,7 @@
 import type { components as SearchComponents } from "@portal/contracts-research-search";
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 
-import { PortalApiError } from "../lib/api";
+import { problemOf, type LaneNotApplicable } from "./splitClient";
 import { toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 
 type SearchSchemas = SearchComponents["schemas"];
@@ -30,6 +30,10 @@ export type SearchAvailability = SearchSchemas["Availability"];
 export type SearchSourceGap = SearchSchemas["SourceGap"];
 export type Parameter = SearchSchemas["Parameter"];
 export type Diagnostics = SearchSchemas["Diagnostics"];
+export type ClaimRow = SearchSchemas["ClaimRow"];
+export type ClaimTokenFact = SearchSchemas["ClaimTokenFact"];
+export type OosColumn = SearchSchemas["OosColumn"];
+export type ScoringBackend = SearchSchemas["ScoringBackend"];
 
 export type CurrentSourceSearch = SourceSchemas["Search"];
 export type SourceTrial = SourceSchemas["Trial"];
@@ -63,20 +67,8 @@ async function call<T>(path: string, etag?: string | null, signal?: AbortSignal)
     headers: etag ? { "If-None-Match": etag } : undefined,
   });
   if (response.status === 304) return NOT_MODIFIED;
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    let code: string | null = null;
-    let requestId: string | null = response.headers.get("x-request-id");
-    try {
-      const problem = (await response.json()) as Partial<SearchSchemas["Problem"]>;
-      if (problem?.error?.message) message = problem.error.message;
-      code = problem?.error?.code ?? null;
-      requestId = problem?.request_id ?? requestId;
-    } catch {
-      /* non-JSON error body: keep the status line the server gave */
-    }
-    throw new PortalApiError(message, response.status, code, requestId);
-  }
+  /* One parser for both clients, so a current-source 409's lane state is read the same way. */
+  if (!response.ok) throw await problemOf(response);
   return (await response.json()) as T;
 }
 
@@ -92,7 +84,7 @@ export const searchApi = {
       options.signal,
     ),
 
-  /** `researchCurrentSourceSearchGetV1` */
+  /** `researchCurrentSourceSearchGetV1` — the retained ledger, or the typed not-applicable answer. */
   currentSource: (
     runId: string,
     options: { workspaceId?: string; cursor?: string | null; signal?: AbortSignal } = {},
@@ -103,7 +95,7 @@ export const searchApi = {
        decoded, rebuilt or compared. */
     if (options.cursor) params.set("cursor", options.cursor);
     const serialized = params.toString();
-    return call<CurrentSourceSearch>(
+    return call<CurrentSourceSearch | LaneNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/search${serialized ? `?${serialized}` : ""}`,
       null,
       options.signal,

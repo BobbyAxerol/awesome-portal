@@ -33,7 +33,11 @@ import {
   SEARCH_GAP_WORDS,
   SEARCH_WITHHELD_WORDS,
   gapReason,
+  type ClaimRow,
+  type ClaimTokenFact,
   type CurrentSourceSearch,
+  type OosColumn,
+  type ScoringBackend,
   type DiagnosticKey,
   type Parameter,
   type SearchAvailability,
@@ -42,6 +46,7 @@ import {
 } from "./searchClient";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME } from "./SplitDetail";
+import { LANE_STATE_COPY, laneNotApplicableSentence } from "./splitClient";
 import type { LedgerSlot } from "./useSearch";
 import type { ResearchState } from "./state";
 
@@ -129,8 +134,47 @@ export function freezeArrow(kind: FreezeArrowKind): { glyph: string; title: stri
   }
 }
 
-/** Claim-row facts the search read does not carry (requested as `CG-P15-05`). */
-const CLAIM_SHELL_REASON = "not in the search read — claim-row facts are requested as CG-P15-05";
+/**
+ * Reason codes the claim row explains in a few words; the code stays in the
+ * title. Defined here rather than in `researchRefusal.ts` (owned elsewhere) —
+ * see the RF-06 wave C receipt.
+ */
+export const CLAIM_REASON_WORDS: Record<string, string> = {
+  P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_VALIDATION_CLAIM: "the declared optimizer did not run",
+  P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_CHRONOLOGICAL_CLAIM: "the declared optimizer did not run",
+  P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND: "the declared optimizer did not run",
+  P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS: "a fixed profile asserts no OOS selection",
+  P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED: "the source receipt is not published",
+};
+
+/**
+ * HiFi OOS-column chip (`claim.oosStateStyle`): words and tone per state. The
+ * HiFi colours map to tokens by value — report only `--state-unavailable`,
+ * withheld `--role-is`, selection input / retrospective `--accent-2`,
+ * n/a `--bad`. `NOT_PUBLISHED` is not a chip.
+ */
+export const OOS_COLUMN_CHIP: Record<Exclude<OosColumn["state"], "NOT_PUBLISHED">, { words: string; tone: string }> = {
+  SELECTION_INPUT: { words: "selection input", tone: "var(--accent-2)" },
+  RETROSPECTIVE: { words: "retrospective", tone: "var(--accent-2)" },
+  REPORT_ONLY: { words: "report only", tone: "var(--state-unavailable)" },
+  WITHHELD: { words: "withheld", tone: "var(--role-is)" },
+  NOT_APPLICABLE: { words: "n/a", tone: "var(--bad)" },
+};
+
+const OOS_COLUMN_TITLE: Partial<Record<OosColumn["state"], string>> = {
+  REPORT_ONLY:
+    "The outer-OOS window was observed after the parameters were fixed and fed no selection inside this run. Strict outer-OOS selection is a separate fact, and it is not asserted.",
+  SELECTION_INPUT: "The OOS column entered selection — the claim is selection-adjusted.",
+  RETROSPECTIVE: "Rescored after the full span was read — retrospective evidence, never a deployment claim.",
+  WITHHELD: "The outer OOS is withheld until Stage 4 reads it once.",
+  NOT_APPLICABLE: "No window was withheld, so no column can be called OOS.",
+};
+
+/** The Engine Atlas address for a declared mode (spec 12 §1 hash: tab, mode, schedule, run). */
+export function atlasModeHref(reference: NonNullable<ClaimRow["mode_reference"]>, runId: string): string {
+  const params = new URLSearchParams({ tab: "modes", mode: reference.mode, schedule: reference.schedule, run: runId });
+  return `/research/quantbt/atlas#${params.toString()}`;
+}
 
 /** HiFi claim-row aside, verbatim: a fact about this screen, true of every run. */
 export const SELECTOR_LAYERS_NOTE = [
@@ -253,13 +297,105 @@ function Claim({
   );
 }
 
-/** A HiFi claim-row field this read does not publish: its frame, its word, its reason. */
-function ClaimShell({ what }: { what: string }) {
+/**
+ * A claim-row fact that is not a confirmed value: its own word — `not
+ * applicable` upright (the question does not arise), `not asserted` and `not
+ * published` in the italic of an absence — and the reason in a few words, the
+ * code in the title.
+ */
+function ClaimAbsence({ state, reason, what }: { state: string; reason: string | null; what: string }) {
+  const code = reason ?? state;
+  const upright = state === "NOT_APPLICABLE";
   return (
-    <span className="italic" style={{ color: "var(--ink-faint)" }} title={`${what} — ${CLAIM_SHELL_REASON}`} data-claim-shell={what}>
-      not published
+    <span className="flex flex-col gap-[1px]" data-claim-fact={what} data-claim-state={state}>
+      <span className={upright ? "" : "italic"} style={{ color: upright ? "var(--ink-soft)" : "var(--ink-faint)" }} title={code}>
+        {SEARCH_GAP_WORDS[state as SearchSourceGap["state"]] ?? state.toLowerCase().replace(/_/g, " ")}
+      </span>
+      <span className="text-[9px] [font-family:var(--font-body)]" style={{ color: "var(--ink-faint)" }} title={code} data-claim-reason={code}>
+        {CLAIM_REASON_WORDS[code] ?? code}
+      </span>
     </span>
   );
+}
+
+/** A run-sourced claim token, or its typed absence. */
+function ClaimToken({ fact, what }: { fact: ClaimTokenFact | ClaimRow["oos_used_for_selection"]; what: string }) {
+  if (fact.state === "CONFIRMED") {
+    return (
+      <span className="flex items-baseline gap-1.5" data-claim-fact={what} data-claim-state="CONFIRMED">
+        <span data-claim-value>{fact.value}</span>
+        <span className="text-[9px]" style={{ color: "var(--good)" }} title={fact.provenance}>
+          CONFIRMED
+        </span>
+      </span>
+    );
+  }
+  return <ClaimAbsence state={fact.state} reason={fact.reason_code} what={what} />;
+}
+
+/** HiFi OOS-column chip, from the server's own column state. */
+function OosColumnChip({ column }: { column: OosColumn }) {
+  if (column.state === "NOT_PUBLISHED") {
+    return <ClaimAbsence state="NOT_PUBLISHED" reason={column.reason_code} what="oos column" />;
+  }
+  const chip = OOS_COLUMN_CHIP[column.state];
+  const title = [
+    OOS_COLUMN_TITLE[column.state],
+    column.source_evaluation_state,
+    column.provenance !== "NONE" ? column.provenance : null,
+    column.reason_code,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <span
+      className="mono self-start rounded-[3px] border px-[6px] text-[11px] font-semibold"
+      style={{ color: chip.tone, borderColor: chip.tone }}
+      title={title}
+      data-claim-fact="oos column"
+      data-oos-column={column.state}
+    >
+      {chip.words}
+    </span>
+  );
+}
+
+/**
+ * Scoring backend: a confirmed value, or what the request declared — which is
+ * not an executed fact, and is tagged so — or the typed absence.
+ */
+function ScoringBackendFact({ backend }: { backend: ScoringBackend }) {
+  if (backend.state === "CONFIRMED" && backend.declared_value !== null) {
+    return (
+      <span className="flex items-baseline gap-1.5" data-claim-fact="scoring backend" data-claim-state="CONFIRMED">
+        <span data-claim-value>{backend.declared_value}</span>
+        <span className="text-[9px]" style={{ color: "var(--good)" }} title={backend.provenance}>
+          CONFIRMED
+        </span>
+      </span>
+    );
+  }
+  if (backend.declared_value !== null) {
+    return (
+      <span className="flex flex-col gap-[1px]" data-claim-fact="scoring backend" data-claim-state={backend.state}>
+        <span className="flex items-baseline gap-1.5">
+          <span data-claim-declared>{backend.declared_value}</span>
+          <span
+            className="text-[9px]"
+            style={{ color: "var(--accent-2)" }}
+            title={`declared in the request (${backend.provenance}); not an executed fact`}
+          >
+            DECLARED
+          </span>
+        </span>
+        <span className="text-[9px] [font-family:var(--font-body)]" style={{ color: "var(--ink-faint)" }} title={backend.reason_code ?? backend.state}>
+          {backend.state === "NOT_APPLICABLE" ? "not applicable" : "not published"} as run evidence —{" "}
+          {CLAIM_REASON_WORDS[backend.reason_code ?? ""] ?? backend.reason_code ?? backend.state}
+        </span>
+      </span>
+    );
+  }
+  return <ClaimAbsence state={backend.state} reason={backend.reason_code} what="scoring backend" />;
 }
 
 /** A panel the hi-fi fills from an optimizer, kept as a frame with its reason. */
@@ -427,32 +563,47 @@ function LedgerPanel({
           <LedgerHead />
           <div className="flex flex-col gap-1 px-3 py-2.5">
             {slot.state === "not-applicable" ? (
-              /* FE-X-12: the search read already answered; the retained lane was not asked. */
-              <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-ledger-shell>
-                No trial ledger exists for this run: the search read says the ledger is{" "}
-                <span className="mono" data-ledger-gap-state={ledgerGap.state}>
-                  {SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}
-                </span>{" "}
-                — <span className="mono text-[10px]">{ledgerGap.reason_code}</span>. No row, count or zero is shown in
-                its place.
-              </p>
-            ) : slot.state === "refused" ? (
-              <div className="flex flex-col gap-1" data-ledger-refusal>
+              /* RF-05: the retained lane answered a typed not-applicable. */
+              <div className="flex flex-col gap-1" data-ledger-shell>
                 <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                  <RefusalNote refusal={slot.refusal} />
+                  {/* "exists" only where the read says the question does not arise. */}
+                  {ledgerGap.state === "NOT_APPLICABLE" ? "No trial ledger exists for this run" : "No trial ledger is shown for this run"}
+                  : the search read says the ledger is{" "}
+                  <span className="mono" data-ledger-gap-state={ledgerGap.state}>
+                    {SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}
+                  </span>{" "}
+                  — <span className="mono text-[10px]">{ledgerGap.reason_code}</span>. No row, count or zero is shown in
+                  its place.
+                </p>
+                <p
+                  className="text-[10.5px] leading-[1.5]"
+                  style={{ color: "var(--ink-faint)" }}
+                  data-ledger-lane="not-applicable"
+                  title={`${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
+                >
+                  retained ledger lane — {laneNotApplicableSentence(slot.answer)}
+                </p>
+              </div>
+            ) : slot.state === "refused" ? (
+              <div className="flex flex-col gap-1" data-ledger-refusal data-ledger-lane={slot.laneState ?? "refused"}>
+                <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                  {slot.laneState ? (
+                    <span data-lane-state={slot.laneState}>retained ledger lane — {LANE_STATE_COPY[slot.laneState]}</span>
+                  ) : (
+                    <RefusalNote refusal={slot.refusal} />
+                  )}
                 </p>
                 <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
-                  A retained trial ledger exists only for the admitted Advanced-WFO profile. For this run the search
-                  contract says the ledger is{" "}
+                  For this run the search contract says the ledger is{" "}
                   <span className="mono" data-ledger-gap-state={ledgerGap.state}>
-                    {ledgerGap.state.toLowerCase().replace(/_/g, " ")}
+                    {SEARCH_GAP_WORDS[ledgerGap.state as SearchSourceGap["state"]] ?? ledgerGap.state}
                   </span>{" "}
                   — <span className="mono">{ledgerGap.reason_code}</span>. No row, count or zero is shown in its place.
                 </p>
               </div>
             ) : (
               <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
-                reading the retained ledger…
+                asking the retained ledger lane…
               </p>
             )}
           </div>
@@ -768,7 +919,7 @@ export function SearchScreen({
         </div>
         {detail ? (
           <div className="flex flex-none flex-col items-end gap-[5px]">
-            <AsOf at={detail.as_of_utc_ms} source="search read" />
+            <AsOf at={detail.as_of_utc_ms} source="search read" basis={detail.as_of_basis} />
             <CopyEvidenceLink />
           </div>
         ) : null}
@@ -842,21 +993,26 @@ export function SearchScreen({
 
               {/* Claim row — HiFi's six fields first, each a shell where the read publishes nothing, then the run's own facts. */}
               <div className="flex flex-wrap items-stretch min-[900px]:flex-nowrap">
-                <div className="flex flex-1 flex-wrap gap-x-6 gap-y-2 px-[14px] py-[9px]" data-claim-row>
+                <div
+                  className="flex flex-1 flex-wrap gap-x-6 gap-y-2 px-[14px] py-[9px]"
+                  data-claim-row
+                  data-claim-basis={detail.claim_row.basis}
+                  title={`claim basis ${detail.claim_row.basis}`}
+                >
                   <Claim k="validation_claim" accent>
-                    <ClaimShell what="validation claim" />
+                    <ClaimToken fact={detail.claim_row.validation_claim} what="validation claim" />
                   </Claim>
                   <Claim k="chronological_claim">
-                    <ClaimShell what="chronological claim" />
+                    <ClaimToken fact={detail.claim_row.chronological_claim} what="chronological claim" />
                   </Claim>
                   <Claim k="oos_used_for_selection">
-                    <ClaimShell what="oos_used_for_selection" />
+                    <ClaimToken fact={detail.claim_row.oos_used_for_selection} what="oos used for selection" />
                   </Claim>
                   <Claim k="OOS column state">
-                    <ClaimShell what="OOS column state" />
+                    <OosColumnChip column={detail.claim_row.oos_column} />
                   </Claim>
                   <Claim k="scoring_backend">
-                    <ClaimShell what="scoring backend" />
+                    <ScoringBackendFact backend={detail.claim_row.scoring_backend} />
                   </Claim>
                   <Claim k="candidate_selection_metric" data-metric-state={metric?.state}>
                     {metric?.state === "CONFIRMED" ? (
@@ -915,22 +1071,52 @@ export function SearchScreen({
                 </div>
               </div>
 
-              {/* HiFi "what this mode reads": its cells come from the run's claim matrix, which this read does not publish. */}
+              {/* HiFi "what this mode reads": what a mode reads is Atlas release
+                  metadata for the declared mode (claim_row.mode_reference), never
+                  run evidence — so it is a link there, tagged so, not cells here. */}
               <div
                 className="flex flex-wrap items-center gap-[14px] rounded-b-[6px] border-t px-[14px] py-2"
                 style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
-                data-mode-reads="shell"
+                data-mode-reads={detail.claim_row.mode_reference ? "reference" : "shell"}
               >
                 <span className={`${LABEL} flex-none`} style={{ color: "var(--ink-faint)" }}>
                   what this mode reads
                 </span>
-                <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={CLAIM_SHELL_REASON}>
-                  not published
-                </span>
-                <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                  Which windows {detail.requested_optimizer.mode ?? "this mode"} reads on each side of the freeze comes
-                  from the run's claim matrix; the search read does not publish it, so no cell is drawn.
-                </span>
+                {detail.claim_row.mode_reference ? (
+                  <>
+                    <Link
+                      to={atlasModeHref(detail.claim_row.mode_reference, runId)}
+                      className="mono text-[10.5px]"
+                      style={{ color: "var(--accent)" }}
+                      data-action="open-atlas-mode"
+                      title={`${detail.claim_row.mode_reference.operation_id} · ${detail.claim_row.mode_reference.relation}`}
+                    >
+                      {detail.claim_row.mode_reference.mode} · {detail.claim_row.mode_reference.schedule} in the Engine Atlas →
+                    </Link>
+                    <Chip data-mode-relation={detail.claim_row.mode_reference.relation} tone="var(--ink-faint)">
+                      release metadata · not run evidence
+                    </Chip>
+                    <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                      {detail.claim_row.basis === "DECLARED_NOT_EXECUTED"
+                        ? "The request declared this mode and the source did not execute it. What the mode reads on each side of the freeze is described for the release in the Atlas; nothing from it is drawn here as this run's evidence."
+                        : "What the mode reads on each side of the freeze is described for the release in the Atlas; nothing from it is drawn here as this run's evidence."}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      className="mono text-[10.5px] italic"
+                      style={{ color: "var(--ink-faint)" }}
+                      title={`claim basis ${detail.claim_row.basis}`}
+                    >
+                      not published
+                    </span>
+                    <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+                      The search read names no declared mode for this run, so there is no Atlas entry to point at and no
+                      cell is drawn.
+                    </span>
+                  </>
+                )}
               </div>
             </section>
 

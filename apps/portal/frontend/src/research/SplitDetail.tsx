@@ -24,22 +24,40 @@
  * run published that fact.
  */
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router-dom";
 
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
   ABSENT_WORDS,
+  AS_OF_BASIS_WORDS,
   HAIRLINE_PERCENT,
+  LANE_STATE_COPY,
+  SPLIT_REASON_WORDS,
   SPLIT_WITHHELD_WORDS,
+  absenceAt,
   barsOf,
+  barsWord,
+  datasetTitle,
   hasRange,
+  laneNotApplicableSentence,
+  notApplicableWords,
   monthTickBudget,
   monthTicks,
   placeInTimeline,
   reasonOf,
   type AbsentFact,
+  type AsOfBasis,
   type CurrentSourceSplit,
   type Range,
   type SplitAvailability,
@@ -97,12 +115,13 @@ export const SCREEN_FRAME = "mx-auto flex w-full min-w-0 flex-col gap-[14px] px-
 export const COPY_DONE_LABEL = "✓ evidence link copied";
 export const COPY_RESET_MS = 1600;
 
-function Withheld({ availability, what }: { availability: SplitAvailability; what?: string }) {
+function Withheld({ availability, what, indexKey }: { availability: SplitAvailability; what?: string; indexKey?: string }) {
   return (
     <span
       className="mono text-[10px] italic leading-[16px]"
       style={{ color: "var(--ink-faint)" }}
       data-withheld={availability.state}
+      data-absence-key={indexKey}
       title={availability.reason_code ?? availability.state}
     >
       {what ? `${what} — ` : ""}
@@ -118,9 +137,26 @@ function Withheld({ availability, what }: { availability: SplitAvailability; wha
  * `NOT_ASSERTED` keeps its own word: the strict outer-OOS selector was
  * neither passed nor failed for this run.
  */
-function Absent({ fact, what, showReason = false }: { fact: AbsentFact; what: string; showReason?: boolean }) {
+function Absent({
+  fact,
+  what,
+  showReason = false,
+  indexKey,
+}: {
+  fact: AbsentFact;
+  what: string;
+  showReason?: boolean;
+  /** The `absence_index` key this element states — each key is stated once (CG-P14-06). */
+  indexKey?: string;
+}) {
+  if (fact.state === "NOT_APPLICABLE") return <NotApplicable fact={fact} what={what} indexKey={indexKey} />;
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-absent={what} data-absent-state={fact.state}>
+    <span
+      className="inline-flex flex-wrap items-baseline gap-x-1.5"
+      data-absent={what}
+      data-absent-state={fact.state}
+      data-absence-key={indexKey}
+    >
       <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={reasonOf(fact)}>
         {ABSENT_WORDS[fact.state]}
       </span>
@@ -129,6 +165,30 @@ function Absent({ fact, what, showReason = false }: { fact: AbsentFact; what: st
           {reasonOf(fact)}
         </span>
       ) : null}
+    </span>
+  );
+}
+
+/**
+ * A fact the run's protocol has no place for (CG-P14-03). It is an answer, not
+ * a gap: printed upright in the value's own face, `n/a · three-window` where
+ * the protocol is three-window, the reason code in the title. Never "not
+ * published", never drawn as missing.
+ */
+const NotApplicableWords = createContext("n/a");
+
+function NotApplicable({ fact, what, indexKey }: { fact: AbsentFact; what: string; indexKey?: string }) {
+  const reason = reasonOf(fact);
+  return (
+    <span
+      className="mono"
+      style={{ color: "var(--ink-soft)" }}
+      title={`${SPLIT_REASON_WORDS[reason] ?? "not applicable to this run's protocol"} · ${reason}`}
+      data-absent={what}
+      data-absent-state="NOT_APPLICABLE"
+      data-absence-key={indexKey}
+    >
+      {useContext(NotApplicableWords)}
     </span>
   );
 }
@@ -238,14 +298,20 @@ export function Digest({ value, ...rest }: { value: string } & Record<string, un
   );
 }
 
-/** `as-of 2026-09-24 05:46Z` (HiFi form), exact milliseconds in the title (FE-X-13). */
-export function AsOf({ at, source }: { at: number; source: string }) {
+/**
+ * `as-of 2026-09-24 05:46Z` (HiFi form), exact milliseconds in the title
+ * (FE-X-13). RF-05 CG-P14-04: the time is that of a durable fact, never the
+ * read, and the title names which fact (`as_of_basis`).
+ */
+export function AsOf({ at, source, basis }: { at: number; source: string; basis?: AsOfBasis }) {
+  const basisLine = basis ? `as-of basis ${basis} — ${AS_OF_BASIS_WORDS[basis] ?? basis}\n` : "";
   return (
     <span
       className="mono text-[10px]"
       style={{ color: "var(--ink-faint)" }}
-      title={`${exact(at)} (${at} ms UTC) · ${formatUtc(at)}`}
+      title={`${basisLine}${exact(at)} (${at} ms UTC) · ${formatUtc(at)}`}
       data-as-of
+      data-as-of-basis={basis}
     >
       source {source} · as-of {asOfUtc(at)}
     </span>
@@ -498,44 +564,78 @@ function FoldAnatomy({
     onNeeded();
   }, [onNeeded]);
 
+  const inner = detail.protocol.inner_folds;
   return (
     <div className="flex flex-col gap-[6px]" data-fold-anatomy={slot.state}>
       {slot.state === "ready" ? (
         <FoldRows split={slot.split} cursor={cursor} onFold={onFold} />
-      ) : slot.state === "refused" ? (
-        <div className="flex flex-col gap-1 pl-[72px]" data-fold-refusal>
-          <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-            <RefusalNote refusal={slot.refusal} />
-          </p>
-          <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
-            Actual fold windows are published only for the admitted Advanced-WFO profile. No fold row is drawn — a
-            fold here would be this screen's invention.
-          </p>
-        </div>
-      ) : slot.state === "not-applicable" ? (
+      ) : (
+        /* No fold plan reached this screen: the row keeps its frame, states the
+           split read's own absence once (CG-P14-02 still open), and says what the
+           retained lane answered — in its words, not a guess from the split. */
         <div className="flex items-baseline gap-2" data-fold-shell>
           <span className="mono w-[64px] flex-none text-[11px]" style={{ color: "var(--ink-soft)" }}>
             folds
           </span>
-          <span className="flex flex-1 flex-wrap items-baseline gap-x-2 text-[11px]" style={{ color: "var(--ink-soft)" }}>
-            fold plan <Absent fact={detail.protocol.fold_plan} what="fold plan" showReason />
+          <span className="flex min-w-0 flex-1 flex-col gap-[3px] text-[11px]" style={{ color: "var(--ink-soft)" }}>
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              fold plan <Absent fact={detail.protocol.fold_plan} what="fold plan" showReason indexKey="fold_plan" />
+            </span>
+            <FoldLane slot={slot} />
           </span>
         </div>
-      ) : (
-        <p className="mono pl-[72px] text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
-          reading the retained fold plan…
-        </p>
       )}
 
-      <div className="flex items-baseline gap-2" data-inner-row>
-        <span className="mono w-[64px] flex-none text-[9.5px]" style={{ color: "var(--accent)" }}>
-          └ inner
-        </span>
-        <span className="flex flex-1 flex-wrap items-baseline gap-x-2 text-[11px]" style={{ color: "var(--ink-soft)" }}>
-          inner folds <Absent fact={detail.protocol.inner_folds} what="inner folds" showReason />
-        </span>
-      </div>
+      {/* Inner folds: a three-window run has none (NOT_APPLICABLE), which the
+          protocol card states once as `n/a · three-window` — so no row is drawn
+          here as if something were missing. A run whose protocol has them but
+          did not publish them keeps the row, with the reason. */}
+      {inner.state === "NOT_APPLICABLE" ? null : (
+        <div className="flex items-baseline gap-2" data-inner-row>
+          <span className="mono w-[64px] flex-none text-[9.5px]" style={{ color: "var(--accent)" }}>
+            └ inner
+          </span>
+          <span className="flex flex-1 flex-wrap items-baseline gap-x-2 text-[11px]" style={{ color: "var(--ink-soft)" }}>
+            inner folds <Absent fact={inner} what="inner folds" showReason indexKey="inner_folds" />
+          </span>
+        </div>
+      )}
     </div>
+  );
+}
+
+/** What the RS-02 fold lane answered for this run (RF-05 CG-P13-09). */
+function FoldLane({ slot }: { slot: FoldsSlot }) {
+  if (slot.state === "not-applicable") {
+    return (
+      <span
+        className="text-[10.5px] leading-[1.5]"
+        style={{ color: "var(--ink-faint)" }}
+        data-fold-lane="not-applicable"
+        title={`${slot.answer.lane.reason_code} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
+      >
+        retained fold lane — {laneNotApplicableSentence(slot.answer)}
+      </span>
+    );
+  }
+  if (slot.state === "refused") {
+    return (
+      <span className="flex flex-col gap-[2px] text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-fold-refusal data-fold-lane={slot.laneState ?? "refused"}>
+        {slot.laneState ? (
+          <span data-lane-state={slot.laneState}>retained fold lane — {LANE_STATE_COPY[slot.laneState]}</span>
+        ) : (
+          <span>
+            <RefusalNote refusal={slot.refusal} />
+          </span>
+        )}
+        <span>No fold row is drawn — a fold here would be this screen's invention.</span>
+      </span>
+    );
+  }
+  return (
+    <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-fold-lane="loading">
+      asking the retained fold lane…
+    </span>
   );
 }
 
@@ -730,6 +830,7 @@ function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timel
         result_exposure_state: string;
         child_input_state: string;
         source_seal: AbsentFact;
+        bars_absence?: AbsentFact;
       })
     : null;
   const geometry = facts && timeline ? placeInTimeline(timeline, facts) : null;
@@ -782,7 +883,7 @@ function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timel
           </span>
         ) : (
           <span className="flex-1">
-            <Withheld availability={(holdout as AbsentFact).availability} what="holdout" />
+            <Withheld availability={(holdout as AbsentFact).availability} what="holdout" indexKey="holdout" />
           </span>
         )}
         {facts ? (
@@ -808,8 +909,14 @@ function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timel
             <>
               {" "}
               <span className="inline-flex items-baseline gap-1 text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
-                seal <Absent fact={facts.source_seal} what="source seal" />
+                seal <Absent fact={facts.source_seal} what="source seal" indexKey="holdout_seal" />
               </span>
+              {facts.bars_absence ? (
+                <>
+                  {" "}
+                  <HoldoutBars fact={facts.bars_absence} />
+                </>
+              ) : null}
             </>
           ) : null}
         </span>
@@ -831,12 +938,39 @@ function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timel
           </span>
           <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
             unlock record{" "}
-            {bound ? <Absent fact={(holdout as { unlock: AbsentFact }).unlock} what="unlock record" /> : null} · Screen 10
+            {bound ? (
+              <Absent fact={(holdout as { unlock: AbsentFact }).unlock} what="unlock record" indexKey="holdout_unlock" />
+            ) : null}{" "}
+            · Screen 10
             ({LINEAGE_PHASE}) not built
           </span>
         </span>
       </div>
     </div>
+  );
+}
+
+/**
+ * RF-05: why the holdout carries no bar count. The server's reason, in a
+ * sentence, stated once beside the seal — the count is not zero and not
+ * pending; P10 never counts rows it never copies.
+ */
+function HoldoutBars({ fact }: { fact: AbsentFact }) {
+  const reason = reasonOf(fact);
+  const words = SPLIT_REASON_WORDS[reason];
+  return (
+    <span
+      className="ml-1 text-[10.5px]"
+      style={{ color: "var(--ink-faint)" }}
+      data-absent="holdout bars"
+      data-absent-state={fact.state}
+      data-absence-key="holdout_bars"
+    >
+      · bars{" "}
+      <span className="mono italic" title={reason} data-holdout-bars-reason={reason}>
+        {words ?? `${ABSENT_WORDS[fact.state]} (${reason})`}
+      </span>
+    </span>
   );
 }
 
@@ -947,7 +1081,7 @@ export function SplitScreen({
         </div>
         {detail ? (
           <div className="flex flex-none flex-col items-end gap-[5px]">
-            <AsOf at={detail.as_of_utc_ms} source="split read" />
+            <AsOf at={detail.as_of_utc_ms} source="split read" basis={detail.as_of_basis} />
             <CopyEvidenceLink />
           </div>
         ) : null}
@@ -969,6 +1103,7 @@ export function SplitScreen({
         }
       >
         {detail ? (
+          <NotApplicableWords.Provider value={notApplicableWords(detail)}>
           <div className="flex flex-col gap-[14px]">
             {/* ------------------------------------------- protocol card */}
             <section className="rounded-[6px] border" style={RAISED_STYLE} data-protocol-strip>
@@ -999,10 +1134,16 @@ export function SplitScreen({
                 className="flex flex-wrap gap-x-[26px] gap-y-2 px-[14px] py-[9px]"
                 data-protocol-absences
               >
+                {/* HiFi `span · 4h bars`: the bar word is the bound dataset's
+                    timeframe (CG-P14-05); dataset, symbol and interval ride in the title. */}
                 <Fact k="span" data-fact="span">
                   {timeline ? (
-                    <span title={`${exact(timeline.start_utc_ms)} → ${exact(timeline.end_exclusive_utc_ms)}`}>
+                    <span
+                      title={`${exact(timeline.start_utc_ms)} → ${exact(timeline.end_exclusive_utc_ms)}\n${datasetTitle(detail.dataset)}`}
+                      data-dataset={detail.dataset.state === "AVAILABLE" ? detail.dataset.dataset_id : detail.dataset.state}
+                    >
                       {span(timeline)}
+                      {barsWord(detail.dataset) ? <span data-bars-word> · {barsWord(detail.dataset)}</span> : null}
                     </span>
                   ) : (
                     <Withheld availability={detail.availability} />
@@ -1013,12 +1154,19 @@ export function SplitScreen({
                 {foldPlanReady ? (
                   <Fact k="outer folds">{`${folds.split.fold_plan.folds.length} observed`}</Fact>
                 ) : null}
+                {/* A three-window run has no inner folds: stated here, once, as the
+                    answer it is. Where the protocol has them, the fold card owns the row. */}
+                {detail.protocol.inner_folds.state === "NOT_APPLICABLE" ? (
+                  <Fact k="inner folds" data-fact="inner folds">
+                    <Absent fact={detail.protocol.inner_folds} what="inner folds" indexKey="inner_folds" />
+                  </Fact>
+                ) : null}
                 {/* HiFi tones (purge red, embargo gold) belong to a published value; an absence keeps its own. */}
-                <Fact k="purge" tone="var(--bad)">
-                  <Absent fact={detail.protocol.purge} what="purge" />
+                <Fact k="purge" tone="var(--bad)" data-fact="purge">
+                  <Absent fact={detail.protocol.purge} what="purge" indexKey="purge" />
                 </Fact>
-                <Fact k="embargo" tone="var(--accent-2)">
-                  <Absent fact={detail.protocol.embargo} what="embargo" />
+                <Fact k="embargo" tone="var(--accent-2)" data-fact="embargo">
+                  <Absent fact={detail.protocol.embargo} what="embargo" indexKey="embargo" />
                 </Fact>
                 {hasRange(detail.windows.holdout) ? (
                   /* HiFi `holdout_state · SEALED · LOCKED`; the server's word is metadata-bound, not sealed. */
@@ -1028,7 +1176,7 @@ export function SplitScreen({
                 ) : null}
                 <Fact k="strict outer OOS">
                   {/* `NOT_ASSERTED` is not a pass and not a failure: no badge. */}
-                  <Absent fact={detail.protocol.selection.strict_outer_oos} what="strict outer OOS" />
+                  <Absent fact={detail.protocol.selection.strict_outer_oos} what="strict outer OOS" indexKey="strict_outer_oos" />
                 </Fact>
                 <Fact k="readiness">
                   <span
@@ -1090,19 +1238,19 @@ export function SplitScreen({
                     <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
                       warmup
                     </span>
-                    <Withheld availability={detail.windows.warmup.availability} />
+                    <Withheld availability={detail.windows.warmup.availability} indexKey="warmup" />
                   </span>
                 ) : null}
                 {!hasRange(detail.windows.is) ? (
                   <span className="flex items-baseline gap-1.5">
                     <span className="mono text-[9px] uppercase" style={{ color: "var(--ink-faint)" }}>IS window</span>
-                    <Absent fact={detail.windows.is as AbsentFact} what="IS window" />
+                    <Absent fact={detail.windows.is as AbsentFact} what="IS window" indexKey="is" />
                   </span>
                 ) : null}
                 {!hasRange(detail.windows.outer_oos) ? (
                   <span className="flex items-baseline gap-1.5">
                     <span className="mono text-[9px] uppercase" style={{ color: "var(--ink-faint)" }}>outer OOS window</span>
-                    <Absent fact={detail.windows.outer_oos as AbsentFact} what="outer OOS window" />
+                    <Absent fact={detail.windows.outer_oos as AbsentFact} what="outer OOS window" indexKey="outer_oos" />
                   </span>
                 ) : null}
               </div>
@@ -1165,7 +1313,7 @@ export function SplitScreen({
                   </IntegrityRow>
                 ) : null}
                 <IntegrityRow mark="none" label="gap scan">
-                  <Absent fact={detail.protocol.gap_scan} what="gap scan" />
+                  <Absent fact={detail.protocol.gap_scan} what="gap scan" indexKey="gap_scan" />
                 </IntegrityRow>
                 <IntegrityRow mark={foldPlanReady ? "pass" : "none"} label="train ∩ test = ∅, every fold">
                   {foldPlanReady ? "retained fold plan" : "needs a fold plan"}
@@ -1217,20 +1365,21 @@ export function SplitScreen({
               </section>
             </div>
 
-            {/* Absences the frames above did not already name — each once. */}
+            {/* Absences the frames above do not own — each once, from absence_index. */}
             {extraAbsences(detail).length > 0 ? (
               <section className="flex flex-wrap gap-x-5 gap-y-1.5 px-1" data-source-absences>
-                {extraAbsences(detail).map(([name, fact]) => (
-                  <span key={name} className="flex items-baseline gap-1.5">
+                {extraAbsences(detail).map(([entry, fact]) => (
+                  <span key={entry.key} className="flex items-baseline gap-1.5" title={entry.pointer}>
                     <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-                      {name.replace(/_/g, " ")}
+                      {entry.key.replace(/_/g, " ")}
                     </span>
-                    <Absent fact={fact} what={name.replace(/_/g, " ")} />
+                    <Absent fact={fact} what={entry.key.replace(/_/g, " ")} indexKey={entry.key} />
                   </span>
                 ))}
               </section>
             ) : null}
           </div>
+          </NotApplicableWords.Provider>
         ) : null}
       </ResearchPanel>
 
@@ -1247,22 +1396,33 @@ export function SplitScreen({
   );
 }
 
-/** Names the frames above already state; `source_absences` repeats them. */
-const SHOWN_ABSENCES = new Set([
+/**
+ * The `absence_index` keys a frame above states at its own field (CG-P14-06).
+ * Anything else the index names is listed once at the foot. `source_absences`
+ * (deprecated) is not read.
+ */
+export const FRAMED_ABSENCE_KEYS = new Set([
+  "strict_outer_oos",
   "fold_plan",
   "inner_folds",
   "purge",
   "embargo",
   "theta_per_fold",
   "gap_scan",
+  "holdout_seal",
   "holdout_unlock",
-  "strict_outer_oos",
-  "physical_holdout_io",
-  "source_seal",
+  "holdout_bars",
+  "warmup",
+  "is",
+  "outer_oos",
+  "holdout",
 ]);
 
-function extraAbsences(detail: SplitDetailDocument): [string, AbsentFact][] {
-  return Object.entries(detail.source_absences).filter(([name]) => !SHOWN_ABSENCES.has(name));
+function extraAbsences(detail: SplitDetailDocument): [SplitDetailDocument["absence_index"][number], AbsentFact][] {
+  return (detail.absence_index ?? [])
+    .filter((entry) => !FRAMED_ABSENCE_KEYS.has(entry.key))
+    .map((entry) => [entry, absenceAt(detail, entry)] as const)
+    .filter((pair): pair is [SplitDetailDocument["absence_index"][number], AbsentFact] => pair[1] !== null);
 }
 
 /** The protocol note, built only from facts this read published (DQ-15). */
@@ -1461,7 +1621,7 @@ function ThetaFlow({
           S2 · θ* flow — how IS parameters reach the OOS backtest
         </span>
         <span className="mono flex items-baseline gap-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-theta-meta>
-          θ* per fold <Absent fact={detail.protocol.theta_per_fold} what="θ* per fold" showReason />
+          θ* per fold <Absent fact={detail.protocol.theta_per_fold} what="θ* per fold" showReason indexKey="theta_per_fold" />
         </span>
       </div>
 
@@ -1549,6 +1709,17 @@ function AbsentCell({ word = "not in read", reason, right = true }: { word?: str
   );
 }
 
+/** Purge/embargo in the table: `n/a` upright when the protocol has none, the absence word otherwise. */
+function ProtocolCell({ fact }: { fact: AbsentFact }) {
+  if (fact.state !== "NOT_APPLICABLE") return <AbsentCell word={ABSENT_WORDS[fact.state]} reason={reasonOf(fact)} />;
+  const reason = reasonOf(fact);
+  return (
+    <td className={`${TD} text-right`} style={{ color: "var(--ink-soft)" }} data-na-cell title={`${SPLIT_REASON_WORDS[reason] ?? "not applicable"} · ${reason}`}>
+      n/a
+    </td>
+  );
+}
+
 function SpanCell({ range }: { range: Range | null }) {
   return range ? (
     <td
@@ -1581,12 +1752,8 @@ function FoldTable({
   const plan = folds.state === "ready" ? folds.split.fold_plan.folds : null;
   const tabStop = plan && cursor.fold >= 1 && cursor.fold <= plan.length ? cursor.fold : 1;
   const metricReason = "the split read publishes no metric — see Evidence Flow";
-  const purge = (
-    <AbsentCell word={ABSENT_WORDS[detail.protocol.purge.state]} reason={reasonOf(detail.protocol.purge)} />
-  );
-  const embargo = (
-    <AbsentCell word={ABSENT_WORDS[detail.protocol.embargo.state]} reason={reasonOf(detail.protocol.embargo)} />
-  );
+  const purge = <ProtocolCell fact={detail.protocol.purge} />;
+  const embargo = <ProtocolCell fact={detail.protocol.embargo} />;
 
   return (
     <section className="overflow-x-auto rounded-[6px] border" style={CARD_STYLE} data-card="fold-table">

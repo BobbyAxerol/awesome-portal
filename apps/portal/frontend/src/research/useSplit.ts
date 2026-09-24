@@ -3,8 +3,11 @@
  *
  * The P14 detail is the spine: three windows, a holdout and a register of
  * typed absences. The RS-02 current-source split is the only published source
- * of actual fold windows, and it admits one profile — so it is asked for only
- * when the split says the run could be in it (FE-X-12), at most once per mount.
+ * of actual fold windows. It is asked at most once per mount, and its answer —
+ * not a guess from the split read — decides the fold panel (RF-05 CG-P13-09):
+ * a typed not-applicable 200 says the lane never holds this run; a 409 names
+ * the lane state. A not-applicable answer is final for the run (the server:
+ * "nothing is pending; do not retry"), so it is kept for the next visit.
  *
  * RF-06:
  *  - FE-S05-08: the split read is immutable per revision, so the last accepted
@@ -19,9 +22,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   NOT_MODIFIED,
+  isLaneNotApplicable,
+  laneStateOf,
   splitApi,
   toSplitRefusal,
   type CurrentSourceSplit,
+  type LaneNotApplicable,
+  type LaneState,
   type SplitDetail,
   type SplitRefusal,
 } from "./splitClient";
@@ -32,9 +39,10 @@ export type FoldsSlot =
   | { state: "idle" }
   | { state: "loading" }
   | { state: "ready"; split: CurrentSourceSplit }
-  | { state: "refused"; refusal: SplitRefusal }
-  /** FE-X-12: the lane cannot apply to this run, so it was not asked. */
-  | { state: "not-applicable"; reason: string };
+  /** A refusal; `laneState` is the 409's `details.lane_state` when it named one. */
+  | { state: "refused"; refusal: SplitRefusal; laneState: LaneState | null }
+  /** RF-05: the lane answered a typed 200 — it never holds this run. */
+  | { state: "not-applicable"; answer: LaneNotApplicable };
 
 export interface SplitController {
   detail: SplitDetail | null;
@@ -56,20 +64,11 @@ function cacheKey(runId: string, workspaceId?: string): string {
 /** Test seam: forget every accepted split. */
 export function forgetSplitReads(): void {
   accepted.clear();
+  laneAnswers.clear();
 }
 
-/**
- * FE-X-12: whether the RS-02 fold lane could answer for this run.
- *
- * RS-02 admits one Advanced-WFO profile. A split that says the run was a
- * fixed profile with no search is, by the server's own word, not in it —
- * asking anyway only buys a 409 in the console and a contradictory sentence
- * on screen. Returns the reason when it cannot apply, `null` when it might.
- */
-export function foldLaneExclusion(detail: SplitDetail): string | null {
-  if (detail.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH") return detail.protocol.fold_plan.reason_code;
-  return null;
-}
+/** Typed not-applicable answers, per run: final, so a revisit does not ask again. */
+const laneAnswers = new Map<string, LaneNotApplicable>();
 
 /** FE-S05-04: the source has not reported yet — pending, not empty. */
 export function isPendingSource(detail: SplitDetail): boolean {
@@ -131,9 +130,9 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
     if (detail === null) return;
     if (foldsAskedFor.current === key) return;
     foldsAskedFor.current = key;
-    const excluded = foldLaneExclusion(detail);
-    if (excluded !== null) {
-      setFolds({ runId, slot: { state: "not-applicable", reason: excluded } });
+    const known = laneAnswers.get(key);
+    if (known) {
+      setFolds({ runId, slot: { state: "not-applicable", answer: known } });
       return;
     }
     setFolds({ runId, slot: { state: "loading" } });
@@ -141,19 +140,22 @@ export function useSplit(runId: string, workspaceId?: string): SplitController {
       .currentSource(runId, { workspaceId })
       .then((answer) => {
         if (answer === NOT_MODIFIED) return;
+        if (isLaneNotApplicable(answer)) {
+          laneAnswers.set(key, answer);
+          setFolds({ runId, slot: { state: "not-applicable", answer } });
+          return;
+        }
         setFolds({ runId, slot: { state: "ready", split: answer } });
       })
       .catch((error: unknown) =>
-        setFolds({ runId, slot: { state: "refused", refusal: toSplitRefusal(error) } }),
+        setFolds({
+          runId,
+          slot: { state: "refused", refusal: toSplitRefusal(error), laneState: laneStateOf(error) },
+        }),
       );
   }, [detail, key, runId, workspaceId]);
 
-  const slot: FoldsSlot =
-    folds.runId !== runId
-      ? { state: "idle" }
-      : folds.slot.state === "idle" && detail !== null && foldLaneExclusion(detail) !== null
-        ? { state: "not-applicable", reason: foldLaneExclusion(detail) as string }
-        : folds.slot;
+  const slot: FoldsSlot = folds.runId !== runId ? { state: "idle" } : folds.slot;
 
   return {
     detail,

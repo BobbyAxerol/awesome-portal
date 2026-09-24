@@ -11,12 +11,15 @@
  *    answer is cached per (workspace, run, fold) and only that entry's ETag is
  *    ever sent, so a fold change is a fresh read — the server's ETag ignoring
  *    the fold (`CG-P15-02`) can no longer turn it into a 304 for fold 1.
- *  - FE-X-12 / FE-S06-03: the retained ledger is asked for only when the search
- *    read says a ledger could exist, at most once per mount.
+ *  - RF-05 CG-P13-09 (replaces the FE-X-12 skip inference): the retained
+ *    ledger is asked at most once per mount, and the lane's own answer decides
+ *    the panel — a typed not-applicable 200, or a 409 naming its lane state.
+ *    A not-applicable answer is final for the run and kept for the next visit.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { isLaneNotApplicable, laneStateOf, type LaneNotApplicable, type LaneState } from "./splitClient";
 import {
   NOT_MODIFIED,
   searchApi,
@@ -32,9 +35,10 @@ export type LedgerSlot =
   | { state: "idle" }
   | { state: "loading" }
   | { state: "ready"; search: CurrentSourceSearch }
-  | { state: "refused"; refusal: SearchRefusal }
-  /** FE-X-12: the search read says no ledger exists for this run; not asked. */
-  | { state: "not-applicable"; reason: string };
+  /** A refusal; `laneState` is the 409's `details.lane_state` when it named one. */
+  | { state: "refused"; refusal: SearchRefusal; laneState: LaneState | null }
+  /** RF-05: the lane answered a typed 200 — it never holds this run. */
+  | { state: "not-applicable"; answer: LaneNotApplicable };
 
 export interface SearchController {
   detail: SearchDetail | null;
@@ -59,16 +63,11 @@ function cacheKey(runId: string, fold: number | null, workspaceId?: string): str
 /** Test seam: forget every accepted search read. */
 export function forgetSearchReads(): void {
   accepted.clear();
+  laneAnswers.clear();
 }
 
-/** FE-X-12: why the retained ledger cannot apply, or `null` when it might. */
-export function ledgerLaneExclusion(detail: SearchDetail): string | null {
-  if (detail.ledger.state === "NOT_APPLICABLE") return detail.ledger.reason_code;
-  if (detail.source_profile.state === "FIXED_PROFILE_NO_SEARCH") {
-    return detail.source_profile.reason_code ?? detail.ledger.reason_code;
-  }
-  return null;
-}
+/** Typed not-applicable answers, per run: final, so a revisit does not ask again. */
+const laneAnswers = new Map<string, LaneNotApplicable>();
 
 export function searchState(detail: SearchDetail | null, refusal: SearchRefusal | null): ResearchState {
   if (refusal) return refusalState(refusal, detail !== null);
@@ -129,9 +128,9 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
     if (detail === null) return;
     if (ledgerAskedFor.current === runKey) return;
     ledgerAskedFor.current = runKey;
-    const excluded = ledgerLaneExclusion(detail);
-    if (excluded !== null) {
-      setLedger({ runId, slot: { state: "not-applicable", reason: excluded } });
+    const known = laneAnswers.get(runKey);
+    if (known) {
+      setLedger({ runId, slot: { state: "not-applicable", answer: known } });
       return;
     }
     setLedger({ runId, slot: { state: "loading" } });
@@ -139,21 +138,23 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
       .currentSource(runId, { workspaceId })
       .then((answer) => {
         if (answer === NOT_MODIFIED) return;
+        if (isLaneNotApplicable(answer)) {
+          laneAnswers.set(runKey, answer);
+          setLedger({ runId, slot: { state: "not-applicable", answer } });
+          return;
+        }
         setLedger({ runId, slot: { state: "ready", search: answer } });
       })
-      /* RS-02 admits one profile. Its refusal describes the run, so it stays
-         inside the ledger panel. */
+      /* The lane's refusal describes the run, so it stays inside the ledger panel. */
       .catch((error: unknown) =>
-        setLedger({ runId, slot: { state: "refused", refusal: toSearchRefusal(error) } }),
+        setLedger({
+          runId,
+          slot: { state: "refused", refusal: toSearchRefusal(error), laneState: laneStateOf(error) },
+        }),
       );
   }, [detail, runId, runKey, workspaceId]);
 
-  const slot: LedgerSlot =
-    ledger.runId !== runId
-      ? { state: "idle" }
-      : ledger.slot.state === "idle" && detail !== null && ledgerLaneExclusion(detail) !== null
-        ? { state: "not-applicable", reason: ledgerLaneExclusion(detail) as string }
-        : ledger.slot;
+  const slot: LedgerSlot = ledger.runId !== runId ? { state: "idle" } : ledger.slot;
 
   return {
     detail,

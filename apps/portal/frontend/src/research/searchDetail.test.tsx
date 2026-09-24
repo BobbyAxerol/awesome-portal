@@ -18,6 +18,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  OOS_COLUMN_CHIP,
+  atlasModeHref,
   SEARCH_RULES_BASE,
   SEARCH_RULES_FIXED_PROFILE,
   SELECTOR_LAYERS_NOTE,
@@ -36,6 +38,7 @@ import {
   type SearchDetail,
 } from "./searchClient";
 import { DEFAULT_CURSOR, forgetObservedFolds, rememberObservedFolds } from "./evidenceCursor";
+import type { LaneNotApplicable } from "./splitClient";
 import { forgetSearchReads, searchState, useSearch } from "./useSearch";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
@@ -60,6 +63,68 @@ function gap(reason: string, state: "NOT_PUBLISHED" | "NOT_APPLICABLE" | "NOT_AS
   return { state, reason_code: reason, availability: { state, reason_code: reason } } as const;
 }
 
+/** The claim row the live preview serves for a declared-not-executed request (rrun_3935…, 2026-09-24). */
+function claimRow(overrides: Partial<SearchDetail["claim_row"]> = {}): SearchDetail["claim_row"] {
+  const none = (state: "NOT_APPLICABLE" | "NOT_ASSERTED", reason: string, availability: string = state) => ({
+    state,
+    value: null,
+    provenance: "NONE",
+    reason_code: reason,
+    availability: { state: availability, reason_code: reason },
+  });
+  return {
+    basis: "DECLARED_NOT_EXECUTED",
+    validation_claim: none("NOT_APPLICABLE", "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_VALIDATION_CLAIM"),
+    chronological_claim: none("NOT_APPLICABLE", "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_CHRONOLOGICAL_CLAIM"),
+    oos_used_for_selection: none(
+      "NOT_ASSERTED",
+      "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS",
+      "NOT_PUBLISHED",
+    ),
+    oos_column: {
+      state: "REPORT_ONLY",
+      source_evaluation_state: "P04_OBSERVED_AFTER_FIXED_PROFILE",
+      provenance: "P14_SOURCE_RECEIPT",
+      reason_code: null,
+      availability: AVAILABLE,
+    },
+    scoring_backend: {
+      state: "NOT_APPLICABLE",
+      declared_value: null,
+      provenance: "NONE",
+      reason_code: "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND",
+      availability: { state: "NOT_APPLICABLE", reason_code: "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND" },
+    },
+    mode_reference: {
+      mode: "mode_1_decay",
+      schedule: "per_fold_causal",
+      operation_id: "researchEngineAtlasGetV1",
+      relation: "DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE",
+    },
+    ...overrides,
+  } as unknown as SearchDetail["claim_row"];
+}
+
+/** The typed 200 the RS-02 lane answers for a P04 fixed-qualification run. */
+function laneAnswer(): LaneNotApplicable {
+  return {
+    schema_version: "research.current-source-not-applicable.v1",
+    read_authority: "PORTAL_RETAINED_CURRENT_SOURCE",
+    run_id: "R-WFO-118",
+    revision: "rs02_not-applicable_7c",
+    etag: '"rs02_not-applicable_7c"',
+    availability: { state: "NOT_APPLICABLE", reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION" },
+    lane: {
+      state: "NOT_APPLICABLE",
+      operation: "search",
+      run_profile: "P04_FIXED_QUALIFICATION",
+      run_adapter_contract_digest: "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+      retainable_profile_id: "rs02.delta-wfo-global.v1",
+      reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION",
+    },
+  };
+}
+
 function detail(overrides: Partial<SearchDetail> = {}): SearchDetail {
   return {
     schema_version: "research.search-detail.v1",
@@ -70,6 +135,7 @@ function detail(overrides: Partial<SearchDetail> = {}): SearchDetail {
     availability: AVAILABLE,
     readiness: "PARTIAL",
     as_of_utc_ms: 1789836590000,
+    as_of_basis: "P14_PROJECTION_RECEIVED_AT",
     provenance: {
       source_adapter_id: "p04.delta-rsi.v1",
       adapter_contract_digest: "sha256:adapter01",
@@ -98,6 +164,7 @@ function detail(overrides: Partial<SearchDetail> = {}): SearchDetail {
       },
       availability: AVAILABLE,
     },
+    claim_row: claimRow(),
     fixed_profile: {
       state: "FIXED_PROFILE_NO_SEARCH",
       adapter_contract_digest: "sha256:adapter01",
@@ -474,6 +541,7 @@ describe("P15-T05 — the ledger comes from the one operation that retains it", 
       ledger: {
         state: "refused",
         refusal: toSearchRefusal(new PortalApiError("Not an admitted profile.", 404, "NOT_ADMITTED", null)),
+        laneState: null,
       },
     });
     const refusal = container.querySelector("[data-ledger-refusal]");
@@ -613,7 +681,7 @@ function foldEcho(url: string): SearchDetail {
 
 describe("RF-06 FE-S06-01 / FE-X-10 — bare /search opens on the search stage", () => {
   it("links back to the hub's search tab and forward to freeze on its own stage", async () => {
-    stub((url) => [200, foldEcho(url)]);
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, foldEcho(url)]));
     const { container } = mountRoute("");
     await waitFor(() => expect(container.querySelector("[data-panel='search-space']")).toBeTruthy());
     expect(window.location.hash).toBe("#stage=search&fold=1");
@@ -646,20 +714,66 @@ describe("RF-06 FE-S06-02 — an ETag belongs to the query it answered", () => {
   });
 });
 
-describe("RF-06 FE-S06-03 / FE-X-12 — no retained-ledger read when the ledger cannot exist", () => {
-  it("answers from the search read and never calls current-source", async () => {
-    stub(() => [200, detail()]);
+describe("RF-06 wave C — the retained ledger lane answers for itself (replaces the FE-X-12 skip)", () => {
+  it("asks the lane once and renders its typed not-applicable 200 — no skip inferred from the search read", async () => {
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
+    const { result } = renderHook(() => useSearch("R-WFO-118", 1));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    await act(async () => {
+      result.current.ensureLedger();
+      result.current.ensureLedger();
+    });
+    await waitFor(() => expect(result.current.ledger.state).toBe("not-applicable"));
+    expect(requested.filter((url) => url.includes("current-source/search"))).toHaveLength(1);
+  });
+
+  it("a not-applicable answer is final — a remount does not ask again", async () => {
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, detail()]));
+    const first = renderHook(() => useSearch("R-WFO-118", 1));
+    await waitFor(() => expect(first.result.current.detail).not.toBeNull());
+    await act(async () => first.result.current.ensureLedger());
+    await waitFor(() => expect(first.result.current.ledger.state).toBe("not-applicable"));
+    first.unmount();
+    const second = renderHook(() => useSearch("R-WFO-118", 1));
+    await waitFor(() => expect(second.result.current.detail).not.toBeNull());
+    await act(async () => second.result.current.ensureLedger());
+    expect(second.result.current.ledger.state).toBe("not-applicable");
+    expect(requested.filter((url) => url.includes("current-source"))).toHaveLength(1);
+  });
+
+  it("a 409 carries its lane state, and the panel says that sentence, not the server's text", async () => {
+    stub((url) =>
+      url.includes("current-source")
+        ? [
+            409,
+            {
+              error: { code: "RESEARCH_CURRENT_SOURCE_CONFLICT", message: "server words that must not be the sentence" },
+              details: { lane_state: "NOT_RETAINED_LEGACY", effective_status: "COMPLETED" },
+            },
+          ]
+        : [200, detail()],
+    );
     const { result } = renderHook(() => useSearch("R-WFO-118", 1));
     await waitFor(() => expect(result.current.detail).not.toBeNull());
     await act(async () => result.current.ensureLedger());
-    expect(result.current.ledger.state).toBe("not-applicable");
-    expect(requested.filter((url) => url.includes("current-source"))).toHaveLength(0);
+    await waitFor(() => expect(result.current.ledger.state).toBe("refused"));
+    const slot = result.current.ledger;
+    expect(slot.state === "refused" && slot.laneState).toBe("NOT_RETAINED_LEGACY");
+    const { container } = view({ ledger: slot });
+    const refusal = container.querySelector("[data-ledger-refusal]");
+    expect(refusal?.querySelector("[data-lane-state='NOT_RETAINED_LEGACY']")?.textContent).toContain(
+      "legacy 1.0.8 metadata run",
+    );
+    expect(refusal?.textContent).not.toContain("server words");
   });
 
-  it("the ledger shell names the typed reason and no pending-retention sentence", () => {
-    const { container } = view({ ledger: { state: "not-applicable", reason: "P04_RAN_NO_TRIALS" } });
+  it("the ledger shell names the search read's typed reason and the lane's own answer, no pending-retention sentence", () => {
+    const { container } = view({ ledger: { state: "not-applicable", answer: laneAnswer() } });
     const shell = container.querySelector("[data-ledger-shell]");
     expect(shell?.textContent).toContain("P04_RAN_NO_TRIALS");
+    const lane = shell?.querySelector("[data-ledger-lane='not-applicable']");
+    expect(lane?.textContent).toContain("P04 fixed qualification");
+    expect(lane?.getAttribute("title")).toContain("RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION");
     expect(container.textContent).not.toMatch(/pending retention/i);
   });
 });
@@ -679,7 +793,7 @@ describe("RF-06 FE-S06-04 — the footer asserts a fixed profile only when the r
 
 describe("RF-06 FE-S06-05 — an Atlas mode/schedule the run contradicts is acknowledged, not forwarded", () => {
   it("declines a mode that differs, keeps a schedule that matches, and says so", async () => {
-    stub((url) => [200, foldEcho(url)]);
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, foldEcho(url)]));
     const { container } = mountRoute("#stage=search&mode=mode_2_sbb&schedule=per_fold_causal");
     await waitFor(() => expect(container.querySelector("[data-cursor-note='CURSOR_KEY_NOT_APPLIED']")).toBeTruthy());
     expect(container.querySelector("[data-cursor-note]")?.textContent).toContain("mode_1_decay");
@@ -692,7 +806,7 @@ describe("RF-06 FE-S06-05 — an Atlas mode/schedule the run contradicts is ackn
 
 describe("RF-06 FE-S06-06 — a fold the read cannot accept is replaced before it is sent", () => {
   it("fold=999 never reaches the server and the notice says what was shown", async () => {
-    stub((url) => [200, foldEcho(url)]);
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, foldEcho(url)]));
     const { container } = mountRoute("#stage=search&fold=999");
     await waitFor(() => expect(container.querySelector("[data-panel='inspection']")).toBeTruthy());
     expect(requested.some((url) => url.includes("fold=999"))).toBe(false);
@@ -778,7 +892,7 @@ describe("RF-06 S06 fidelity — mode card and claim row", () => {
     expect(pill.getAttribute("data-pill-tone")).toBe(schedulePillTone(detail().requested_optimizer.schedule));
   });
 
-  it("keeps the HiFi claim fields first, as shells with a reason, and the static selector-layers aside", () => {
+  it("keeps the HiFi claim fields first, filled from claim_row, and the static selector-layers aside", () => {
     const { container } = view();
     const keys = [...container.querySelectorAll("[data-claim-row] > span > span:first-child")].map((k) => k.textContent);
     expect(keys.slice(0, 6)).toEqual([
@@ -789,14 +903,10 @@ describe("RF-06 S06 fidelity — mode card and claim row", () => {
       "scoring_backend",
       "candidate_selection_metric",
     ]);
-    const shells = container.querySelectorAll("[data-claim-shell]");
-    expect(shells).toHaveLength(5);
-    for (const shell of shells) {
-      expect(shell.textContent).toBe("not published");
-      expect(shell.getAttribute("title")).toContain("CG-P15-05");
-    }
+    // CG-P15-05 answered: no claim field is a "not published" shell any more.
+    expect(container.querySelectorAll("[data-claim-shell]")).toHaveLength(0);
+    expect(container.querySelector("[data-claim-row]")?.textContent).not.toContain("CG-P15-05");
     expect(container.querySelector("[data-selector-layers]")?.textContent).toBe(SELECTOR_LAYERS_NOTE.join(""));
-    expect(container.querySelector("[data-mode-reads='shell']")?.textContent).toContain("not published");
   });
 });
 
@@ -840,11 +950,172 @@ describe("RF-06 S06 — a fold the run never observed is clamped as on the hub",
   it("clamps against the run's published fold set before the read is sent", async () => {
     forgetObservedFolds();
     rememberObservedFolds("R-WFO-118", [1]);
-    stub((url) => [200, foldEcho(url)]);
+    stub((url) => (url.includes("current-source") ? [200, laneAnswer()] : [200, foldEcho(url)]));
     const { container } = mountRoute("#stage=search&fold=4");
     await waitFor(() => expect(window.location.hash).toBe("#stage=search&fold=1"));
     expect(requested.some((url) => url.includes("fold=4"))).toBe(false);
     expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 4");
     forgetObservedFolds();
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * RF-06 wave C — RF-05 search fields (CG-P14-04, CG-P15-05), one test per field
+ * ---------------------------------------------------------------------- */
+
+describe("RF-06 wave C — S06 consumes claim_row and as_of_basis", () => {
+  const field = (container: HTMLElement, what: string) => container.querySelector(`[data-claim-fact='${what}']`);
+
+  it("validation_claim: NOT_APPLICABLE, upright, with its reason", () => {
+    const { container } = view();
+    const fact = field(container, "validation claim");
+    expect(fact?.getAttribute("data-claim-state")).toBe("NOT_APPLICABLE");
+    expect(fact?.textContent).toContain("not applicable");
+    expect(fact?.textContent).toContain("the declared optimizer did not run");
+    expect(fact?.querySelector("[data-claim-reason]")?.getAttribute("title")).toBe(
+      "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_VALIDATION_CLAIM",
+    );
+    expect(fact?.firstElementChild?.className).not.toContain("italic");
+  });
+
+  it("chronological_claim: NOT_APPLICABLE with its own reason", () => {
+    const { container } = view();
+    const fact = field(container, "chronological claim");
+    expect(fact?.getAttribute("data-claim-state")).toBe("NOT_APPLICABLE");
+    expect(fact?.querySelector("[data-claim-reason]")?.getAttribute("title")).toBe(
+      "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_CHRONOLOGICAL_CLAIM",
+    );
+  });
+
+  it("a confirmed claim token prints its value", () => {
+    const { container } = view({
+      detail: detail({
+        claim_row: claimRow({
+          validation_claim: {
+            state: "CONFIRMED",
+            value: "strict_nested_fold_local_retraining",
+            provenance: "RUN_SOURCE_RECEIPT",
+            reason_code: null,
+            availability: AVAILABLE,
+          },
+        }),
+      }),
+    });
+    const fact = field(container, "validation claim");
+    expect(fact?.getAttribute("data-claim-state")).toBe("CONFIRMED");
+    expect(fact?.querySelector("[data-claim-value]")?.textContent).toBe("strict_nested_fold_local_retraining");
+  });
+
+  it("oos_used_for_selection: NOT_ASSERTED keeps its own word, never a boolean", () => {
+    const { container } = view();
+    const fact = field(container, "oos used for selection");
+    expect(fact?.getAttribute("data-claim-state")).toBe("NOT_ASSERTED");
+    expect(fact?.textContent).toContain("not asserted");
+    expect(fact?.textContent).not.toMatch(/true|false|not published/);
+  });
+
+  it("OOS column: REPORT_ONLY is the HiFi 'report only' chip in its tone, with the P14 evaluation state in the title", () => {
+    const { container } = view();
+    const chip = field(container, "oos column");
+    expect(chip?.getAttribute("data-oos-column")).toBe("REPORT_ONLY");
+    expect(chip?.textContent).toBe("report only");
+    expect((chip as HTMLElement).style.color).toBe("var(--state-unavailable)");
+    expect((chip as HTMLElement).style.borderColor).toBe("var(--state-unavailable)");
+    expect(chip?.getAttribute("title")).toContain("P04_OBSERVED_AFTER_FIXED_PROFILE");
+  });
+
+  it("OOS column: each HiFi state has its own words and tone; NOT_PUBLISHED is no chip", () => {
+    expect(OOS_COLUMN_CHIP.SELECTION_INPUT).toEqual({ words: "selection input", tone: "var(--accent-2)" });
+    expect(OOS_COLUMN_CHIP.RETROSPECTIVE).toEqual({ words: "retrospective", tone: "var(--accent-2)" });
+    expect(OOS_COLUMN_CHIP.WITHHELD).toEqual({ words: "withheld", tone: "var(--role-is)" });
+    expect(OOS_COLUMN_CHIP.NOT_APPLICABLE).toEqual({ words: "n/a", tone: "var(--bad)" });
+    const { container } = view({
+      detail: detail({
+        claim_row: claimRow({
+          oos_column: {
+            state: "NOT_PUBLISHED",
+            source_evaluation_state: null,
+            provenance: "NONE",
+            reason_code: "P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED",
+            availability: { state: "NOT_PUBLISHED", reason_code: "P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED" },
+          },
+        }),
+      }),
+    });
+    expect(container.querySelector("[data-oos-column]")).toBeNull();
+    expect(field(container, "oos column")?.textContent).toContain("not published");
+  });
+
+  it("scoring_backend: NOT_APPLICABLE with its reason when nothing was declared", () => {
+    const { container } = view();
+    const fact = field(container, "scoring backend");
+    expect(fact?.getAttribute("data-claim-state")).toBe("NOT_APPLICABLE");
+    expect(fact?.querySelector("[data-claim-reason]")?.getAttribute("title")).toBe(
+      "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND",
+    );
+  });
+
+  it("scoring_backend: a declared value is shown as declared, never as an executed fact", () => {
+    const { container } = view({
+      detail: detail({
+        claim_row: claimRow({
+          scoring_backend: {
+            state: "NOT_APPLICABLE",
+            declared_value: "proxy",
+            provenance: "RUN_REQUESTED_SPEC",
+            reason_code: "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND",
+            availability: { state: "NOT_APPLICABLE", reason_code: "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND" },
+          },
+        }),
+      }),
+    });
+    const fact = field(container, "scoring backend");
+    expect(fact?.querySelector("[data-claim-declared]")?.textContent).toBe("proxy");
+    expect(fact?.textContent).toContain("DECLARED");
+    expect(fact?.textContent).toContain("not applicable as run evidence");
+    expect(fact?.textContent).not.toContain("CONFIRMED");
+  });
+
+  it("mode_reference: a link to the Atlas modes tab, tagged release metadata, not run evidence", () => {
+    const { container } = view();
+    const row = container.querySelector("[data-mode-reads='reference']");
+    const link = row?.querySelector("[data-action='open-atlas-mode']");
+    expect(link?.getAttribute("href")).toBe(
+      "/research/quantbt/atlas#tab=modes&mode=mode_1_decay&schedule=per_fold_causal&run=R-WFO-118",
+    );
+    expect(link?.textContent).toContain("mode_1_decay · per_fold_causal");
+    expect(row?.querySelector("[data-mode-relation='DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE']")?.textContent).toBe(
+      "release metadata · not run evidence",
+    );
+    expect(row?.textContent).not.toContain("not published");
+    expect(atlasModeHref({ mode: "a b", schedule: "global", operation_id: "researchEngineAtlasGetV1", relation: "DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE" }, "r1")).toBe(
+      "/research/quantbt/atlas#tab=modes&mode=a+b&schedule=global&run=r1",
+    );
+  });
+
+  it("mode_reference null: the row keeps its frame and says not published", () => {
+    const { container } = view({ detail: detail({ claim_row: claimRow({ basis: "NOT_PUBLISHED", mode_reference: null }) }) });
+    expect(container.querySelector("[data-action='open-atlas-mode']")).toBeNull();
+    expect(container.querySelector("[data-mode-reads='shell']")?.textContent).toContain("not published");
+  });
+
+  it("a ledger the read did not publish is 'not shown', never 'does not exist'", () => {
+    const { container } = view({ detail: admitted(), ledger: { state: "not-applicable", answer: laneAnswer() } });
+    const shell = container.querySelector("[data-ledger-shell]");
+    expect(shell?.textContent).toContain("No trial ledger is shown for this run");
+    expect(shell?.textContent).not.toContain("exists");
+  });
+
+  it("claim basis rides on the row", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-claim-row]")?.getAttribute("data-claim-basis")).toBe("DECLARED_NOT_EXECUTED");
+  });
+
+  it("CG-P14-04: as-of in the HiFi Z form, its basis named in the title", () => {
+    const { container } = view();
+    const asOf = container.querySelector("[data-as-of]");
+    expect(asOf?.textContent).toMatch(/^source search read · as-of \d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
+    expect(asOf?.getAttribute("data-as-of-basis")).toBe("P14_PROJECTION_RECEIVED_AT");
+    expect(asOf?.getAttribute("title")).toContain("as-of basis P14_PROJECTION_RECEIVED_AT");
   });
 });
