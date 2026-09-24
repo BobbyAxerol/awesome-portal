@@ -122,7 +122,9 @@ export function patchSnapshot(prev: ProgressSnapshot, event: ProgressEvent): Pro
         pct: payload.overall_pct === undefined ? prev.overall.pct : Math.max(prev.overall.pct, payload.overall_pct),
         tqdm_line: payload.tqdm_line ?? prev.overall.tqdm_line,
       };
-      if (!prev.folds.some((f) => f.fold === payload.fold)) upsertFold(payload.fold, (f) => f);
+      /* A global-study trial names no fold and opens no fold row. */
+      const fold = payload.fold;
+      if (fold !== undefined && !prev.folds.some((f) => f.fold === fold)) upsertFold(fold, (f) => f);
       break;
     }
     case "fold_completed":
@@ -333,7 +335,9 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
 
       if (event.event_type === "trial_completed") {
         const { fold, trial } = event.payload;
-        setEventTrials((previous) => (previous[fold] === trial ? previous : { ...previous, [fold]: trial }));
+        if (fold !== undefined) {
+          setEventTrials((previous) => (previous[fold] === trial ? previous : { ...previous, [fold]: trial }));
+        }
       }
 
       if (event.event_type === "trial_completed" && event.payload.console) {
@@ -344,7 +348,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
             occurred_at_utc_ms: event.occurred_at_utc_ms,
             tone: observation.tone,
             text: observation.text,
-            fold: observation.fold ?? event.payload.fold,
+            fold: observation.fold ?? event.payload.fold ?? null,
             trial: observation.trial ?? event.payload.trial,
           },
         ]);

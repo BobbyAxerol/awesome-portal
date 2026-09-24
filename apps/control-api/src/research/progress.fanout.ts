@@ -4,6 +4,7 @@ import { Injectable } from "@nestjs/common";
 
 import type { ResearchProgressEvent, ResearchProgressSnapshot } from "./progress.contract";
 import { ResearchProgressError } from "./progress.error";
+import type { ProgressRunRead } from "./progress.repository";
 
 export interface ResearchProgressEnvelope {
   event: ResearchProgressEvent;
@@ -15,6 +16,13 @@ export interface ResearchProgressEnvelope {
    * use the normal read/poll floor until this is non-null.
    */
   snapshot: ResearchProgressSnapshot | null;
+  /**
+   * CG-P11-08 (DQ-13): the run-level read materialised once, right after this
+   * event's ingress committed. Each subscriber projects it for its own viewer
+   * (`may_cancel` depends on role). Null when that post-commit read failed;
+   * the event itself is still delivered and the poll floor recovers the read.
+   */
+  run?: ProgressRunRead | null;
 }
 
 /**

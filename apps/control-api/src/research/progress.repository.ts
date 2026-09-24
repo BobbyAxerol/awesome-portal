@@ -45,6 +45,30 @@ interface ReadRunRow {
   received_at: Date | null;
   terminal_materialized: boolean;
   source_terminal_event: boolean;
+  alpha_id?: string | null;
+  alpha_name?: string | null;
+  alpha_version_id?: string | null;
+  execution_profile_id?: string | null;
+  requested_spec_digest?: string | null;
+  spec_protocol?: string | null;
+  spec_mode?: string | null;
+  spec_schedule?: string | null;
+  spec_symbol?: string | null;
+  spec_timeframe?: string | null;
+  spec_route?: string | null;
+  declared_fold_count?: string | number | null;
+  sealed_holdout?: Record<string, unknown> | string | null;
+  requested_spec_retained?: boolean | null;
+}
+
+interface RequestedSpecRow {
+  run_id: string;
+  alpha_id: string;
+  alpha_version_id: string;
+  execution_profile_id: string;
+  requested_spec_digest: string;
+  created_at: Date;
+  requested_spec: Record<string, unknown> | string | null;
 }
 
 interface ProgressEventRow {
@@ -123,7 +147,48 @@ export interface ProgressWorkerAttempt {
   state: "CLAIMED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "LOST_LEASE" | "CANCELLED";
   claimedAt: Date;
   startedAt: Date | null;
+  /**
+   * For LOST_LEASE this is when the scheduler *recorded* the loss (its sweep
+   * of expired leases), which can be long after the lease actually lapsed.
+   */
   endedAt: Date | null;
+  /** The last lease expiry the attempt held (CG-P11-06). */
+  leaseExpiresAt: Date | null;
+}
+
+/**
+ * CG-P11-03: immutable run identity from the P10 producer row and its P08
+ * manifest. Every field is a stored fact; nothing is derived from progress.
+ */
+export interface ProgressRunIdentity {
+  alphaId: string;
+  alphaName: string | null;
+  alphaVersionId: string;
+  executionProfileId: string;
+  protocol: string | null;
+  mode: string | null;
+  schedule: string | null;
+  symbol: string | null;
+  timeframe: string | null;
+  executionRoute: string | null;
+  requestedSpecDigest: string;
+  createdAt: Date;
+  /** Length of the P08 topology's fold list; null when the topology declares none. */
+  declaredFoldCount: number | null;
+  /** The P08-declared sealed holdout window, never its values. */
+  sealedHoldout: { startUtcMs: number; endExclusiveUtcMs: number; bars: number | null } | null;
+  requestedSpecRetained: boolean;
+}
+
+/** CG-P11-07: the immutable requested spec a clone starts from. */
+export interface ProgressRequestedSpec {
+  runId: string;
+  requestedSpec: Record<string, unknown>;
+  requestedSpecDigest: string;
+  alphaId: string;
+  alphaVersionId: string;
+  executionProfileId: string;
+  createdAt: Date;
 }
 
 export interface ProgressRunRead {
@@ -140,6 +205,8 @@ export interface ProgressRunRead {
   hasCurrentAttempt: boolean;
   terminalMaterialization: "NOT_REQUIRED" | "PENDING" | "READY";
   retainedArtifacts: ProgressRetainedArtifact[];
+  /** Null only if the producer row's identity could not be read. */
+  identity: ProgressRunIdentity | null;
 }
 
 /** Server-only P06 lease facts used solely by the P11 cancel marker hop. */
@@ -350,10 +417,29 @@ export class ResearchProgressRepository {
                 producer.created_at, snapshot.snapshot, snapshot.source_latest_sequence,
                 snapshot.retention_floor_sequence, snapshot.received_at,
                 (terminal.source_sequence IS NOT NULL) AS terminal_materialized,
-                COALESCE(latest_event.event_type IN ('run_completed', 'run_failed'), false) AS source_terminal_event
+                COALESCE(latest_event.event_type IN ('run_completed', 'run_failed'), false) AS source_terminal_event,
+                producer.alpha_id, alpha.name AS alpha_name, producer.alpha_version_id,
+                producer.execution_profile_id, producer.requested_spec_digest,
+                preflight.requested_spec->>'protocol' AS spec_protocol,
+                preflight.requested_spec->>'optimization_mode' AS spec_mode,
+                preflight.requested_spec->>'optimization_schedule' AS spec_schedule,
+                preflight.requested_spec->'data'->>'symbol' AS spec_symbol,
+                preflight.requested_spec->'data'->>'timeframe' AS spec_timeframe,
+                preflight.requested_spec->>'execution_route' AS spec_route,
+                CASE WHEN jsonb_typeof(preflight.topology->'folds') = 'array'
+                     THEN jsonb_array_length(preflight.topology->'folds') END AS declared_fold_count,
+                CASE WHEN jsonb_typeof(preflight.topology->'sealed_holdout') = 'object'
+                     THEN preflight.topology->'sealed_holdout' END AS sealed_holdout,
+                (preflight.requested_spec IS NOT NULL) AS requested_spec_retained
            FROM research.run_producers producer
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
+          LEFT JOIN research.alphas alpha
+             ON alpha.workspace_id = producer.workspace_id AND alpha.alpha_id = producer.alpha_id
+          LEFT JOIN research.preflight_manifests preflight
+             ON preflight.workspace_id = producer.workspace_id
+            AND preflight.preflight_token = producer.preflight_token
+            AND preflight.actor_user_id = producer.actor_user_id
           LEFT JOIN research.run_progress_snapshots snapshot
              ON snapshot.workspace_id = producer.workspace_id
             AND snapshot.run_id = producer.run_id
@@ -383,8 +469,9 @@ export class ResearchProgressRepository {
         claimed_at: Date;
         started_at: Date | null;
         ended_at: Date | null;
+        lease_expires_at: Date | null;
       }>(
-        `SELECT wa.ordinal, wa.state, wa.created_at AS claimed_at,
+        `SELECT wa.ordinal, wa.state, wa.created_at AS claimed_at, wa.expires_at AS lease_expires_at,
                 (SELECT min(e.occurred_at) FROM research.job_events e
                   WHERE e.workspace_id = wa.workspace_id AND e.worker_attempt_id = wa.worker_attempt_id
                     AND e.event_type = 'JOB_RUNNING') AS started_at,
@@ -442,6 +529,7 @@ export class ResearchProgressRepository {
           claimedAt: attempt.claimed_at,
           startedAt: attempt.started_at,
           endedAt: attempt.ended_at,
+          leaseExpiresAt: attempt.lease_expires_at ?? null,
         })),
         progress,
         sourceLatestSequence: row.source_latest_sequence === null ? 0 : asSafeNumber(row.source_latest_sequence, "latest sequence"),
@@ -459,8 +547,98 @@ export class ResearchProgressRepository {
           // is inconsistent; keep it fail-closed instead of reporting success.
           : row.job_state === "SUCCEEDED" ? "PENDING" : "NOT_REQUIRED",
         retainedArtifacts,
+        identity: this.identity(row),
       };
     });
+  }
+
+  /**
+   * CG-P11-07: the exact requested spec a run was admitted with, so a new run
+   * can start from it. Read-only and immutable (P08 manifests reject UPDATE);
+   * it carries no preflight token, snapshot locator, lease or worker handle.
+   */
+  async requestedSpec(scope: ResearchScope, runId: string): Promise<ProgressRequestedSpec> {
+    return this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
+      const result = await client.query<RequestedSpecRow>(
+        `SELECT producer.run_id, producer.alpha_id, producer.alpha_version_id,
+                producer.execution_profile_id, producer.requested_spec_digest, producer.created_at,
+                preflight.requested_spec
+           FROM research.run_producers producer
+          LEFT JOIN research.preflight_manifests preflight
+             ON preflight.workspace_id = producer.workspace_id
+            AND preflight.preflight_token = producer.preflight_token
+            AND preflight.actor_user_id = producer.actor_user_id
+          WHERE producer.workspace_id = $1 AND producer.run_id = $2
+          ORDER BY producer.created_at DESC
+          LIMIT 1`,
+        [scope.workspaceId, runId],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        throw new ResearchProgressError("RESEARCH_PROGRESS_NOT_FOUND", "Research run was not found.", 404);
+      }
+      if (row.requested_spec === null) {
+        throw new ResearchProgressError(
+          "RESEARCH_RUN_REQUESTED_SPEC_NOT_RETAINED",
+          "This run's requested specification is not retained, so it cannot seed a new run.",
+          409,
+        );
+      }
+      return {
+        runId: row.run_id,
+        requestedSpec: parseObject(row.requested_spec, "requested spec"),
+        requestedSpecDigest: row.requested_spec_digest,
+        alphaId: row.alpha_id,
+        alphaVersionId: row.alpha_version_id,
+        executionProfileId: row.execution_profile_id,
+        createdAt: row.created_at,
+      };
+    });
+  }
+
+  private identity(row: ReadRunRow): ProgressRunIdentity | null {
+    if (typeof row.alpha_id !== "string" || typeof row.alpha_version_id !== "string"
+      || typeof row.requested_spec_digest !== "string") {
+      return null;
+    }
+    const text = (value: string | null | undefined): string | null =>
+      typeof value === "string" && value.length > 0 && value.length <= 191 ? value : null;
+    const declared = row.declared_fold_count === null || row.declared_fold_count === undefined
+      ? null : asSafeNumber(row.declared_fold_count, "declared fold count");
+    let sealedHoldout: ProgressRunIdentity["sealedHoldout"] = null;
+    if (row.sealed_holdout !== null && row.sealed_holdout !== undefined) {
+      const holdout = parseObject(row.sealed_holdout, "sealed holdout");
+      const start = holdout.start_utc_ms;
+      const end = holdout.end_exclusive_utc_ms;
+      const bars = holdout.bars;
+      if (typeof start === "number" && typeof end === "number" && Number.isSafeInteger(start)
+        && Number.isSafeInteger(end) && start >= 0 && end > start) {
+        sealedHoldout = {
+          startUtcMs: start,
+          endExclusiveUtcMs: end,
+          bars: typeof bars === "number" && Number.isSafeInteger(bars) && bars >= 0 ? bars : null,
+        };
+      }
+    }
+    return {
+      alphaId: row.alpha_id,
+      alphaName: text(row.alpha_name),
+      alphaVersionId: row.alpha_version_id,
+      // Rows written before migration 062 have no profile column value; they
+      // are all the P04 fixed qualification by construction.
+      executionProfileId: text(row.execution_profile_id) ?? "p04.fixed-qualification.v1",
+      protocol: text(row.spec_protocol),
+      mode: text(row.spec_mode),
+      schedule: text(row.spec_schedule),
+      symbol: text(row.spec_symbol),
+      timeframe: text(row.spec_timeframe),
+      executionRoute: text(row.spec_route),
+      requestedSpecDigest: row.requested_spec_digest,
+      createdAt: row.created_at,
+      declaredFoldCount: declared !== null && declared > 0 ? declared : null,
+      sealedHoldout,
+      requestedSpecRetained: row.requested_spec_retained === true,
+    };
   }
 
   /**

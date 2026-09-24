@@ -39,7 +39,14 @@ interface ProgressRequest extends FastifyRequest {
   portalSession: AuthSession & { csrfSecretHash: string };
 }
 
-type StreamEnvelope = Parameters<ResearchProgressService["subscribe"]>[1] extends (event: infer Value) => void ? Value : never;
+type StreamEnvelope = Parameters<ResearchProgressService["subscribe"]>[2] extends (event: infer Value) => void ? Value : never;
+
+/**
+ * CG-P11-08: one `research.progress` frame may carry at most this much read.
+ * A larger read is omitted with a typed reason and the client falls back to
+ * one snapshot GET; the event itself is never dropped for its read's size.
+ */
+export const STREAM_READ_FRAME_BUDGET_BYTES = 192 * 1_024;
 
 /**
  * The browser gets one same-origin vocabulary.  It cannot see source journal
@@ -67,6 +74,24 @@ export class ResearchProgressController {
     if (!query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
     return this.service.read(request.portalUser, { workspaceId, actorUserId: request.portalUser.userId }, runId);
+  }
+
+  /**
+   * CG-P11-07: the immutable requested spec a new run may be seeded from
+   * (Screen 02 `?from=<runId>`). Read-only; creating the new run is still a
+   * NEW intent through a fresh preflight.
+   */
+  @Get(":runId/requested-spec")
+  async requestedSpec(
+    @Req() request: ProgressRequest,
+    @Param("runId") rawRunId: string,
+    @Query() rawQuery: unknown,
+  ) {
+    const runId = this.runId(rawRunId);
+    const query = ResearchProgressReadQuerySchema.safeParse(rawQuery);
+    if (!query.success) this.invalid();
+    const workspaceId = await this.workspace(request, query.data.workspace_id);
+    return this.service.requestedSpec({ workspaceId, actorUserId: request.portalUser.userId }, runId);
   }
 
   @Get(":runId/console")
@@ -146,6 +171,18 @@ export class ResearchProgressController {
         }
         return true;
       };
+      const liveFrame = (envelope: StreamEnvelope) => {
+        const read = envelope.read ?? null;
+        if (read !== null && Buffer.byteLength(JSON.stringify(read), "utf8") > STREAM_READ_FRAME_BUDGET_BYTES) {
+          return {
+            event: envelope.event,
+            snapshot: envelope.snapshot,
+            read: null,
+            read_omitted_reason: "P11_STREAM_READ_OVER_FRAME_BUDGET" as const,
+          };
+        }
+        return { event: envelope.event, snapshot: envelope.snapshot, read };
+      };
       const buffered = (envelope: StreamEnvelope) => {
         if (envelope.event.sequence <= lastSent || closed) return;
         if (loading) {
@@ -153,12 +190,12 @@ export class ResearchProgressController {
           else pending.push(envelope);
           return;
         }
-        send("research.progress", envelope, envelope.event.sequence, this.isTerminal(envelope.event.event_type));
+        send("research.progress", liveFrame(envelope), envelope.event.sequence, this.isTerminal(envelope.event.event_type));
       };
       // Subscribe before the durable page read so a callback between the two
       // cannot create a silent gap. The tiny fixed buffer has a typed close
       // rather than holding browser work in memory.
-      unsubscribe = this.service.subscribe(runId, buffered);
+      unsubscribe = this.service.subscribe(request.portalUser, runId, buffered);
       const [initial, snapshot] = await Promise.all([
         this.service.events(scope, runId, afterSequence, query.data.limit),
         this.service.read(request.portalUser, scope, runId),
@@ -172,8 +209,10 @@ export class ResearchProgressController {
       });
       reply.raw.once("close", end);
       send("research.progress.snapshot", snapshot);
+      // Replayed history needs no read: the opening snapshot frame above is
+      // already the current read, so these carry `read: null`.
       for (const event of initial.events) {
-        if (!send("research.progress", { event, snapshot: null }, event.sequence, this.isTerminal(event.event_type))) return;
+        if (!send("research.progress", { event, snapshot: null, read: null }, event.sequence, this.isTerminal(event.event_type))) return;
       }
       loading = false;
       if (overflowed) {
@@ -188,7 +227,7 @@ export class ResearchProgressController {
       }
       for (const envelope of pending.sort((left, right) => left.event.sequence - right.event.sequence)) {
         if (envelope.event.sequence <= lastSent) continue;
-        if (!send("research.progress", envelope, envelope.event.sequence, this.isTerminal(envelope.event.event_type))) return;
+        if (!send("research.progress", liveFrame(envelope), envelope.event.sequence, this.isTerminal(envelope.event.event_type))) return;
       }
       heartbeat = setInterval(() => send("research.progress.heartbeat", {
         schema_version: "research.progress-stream.v1",
