@@ -1,0 +1,6 @@
+--- research-release-candidate.controller.spec.ts
++++ research-release-candidate.controller.spec.ts
+@@ -1 +1,3 @@
+     await expect(controller.pack(request as never, response as never, rcId, {})).resolves.toEqual({ pack_digest: "b".repeat(64) });
++    await expect(controller.publication(request as never, response as never, rcId, {})).resolves.toEqual({ state: "NOT_PUBLISHED" });
++    await expect(controller.publish(request as never, rcId, {}, {})).rejects.toMatchObject({ code: "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN", status: 403 });

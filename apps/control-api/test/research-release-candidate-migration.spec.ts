@@ -75,6 +75,9 @@ describe("P21 disposable PostgreSQL immutable Release Candidate proof", () => {
     try {
       const shape = await database.query<{
         drafts: boolean; packs: boolean; delivery: boolean; pins: boolean;
+        publication: boolean; publication_guard: boolean; runtime_select_publication: boolean;
+        runtime_insert_publication: boolean; runtime_update_publication: boolean;
+        runtime_update_publication_state: boolean; runtime_update_publication_request: boolean; runtime_delete_publication: boolean;
         draft_guard: boolean; pack_guard: boolean; delivery_guard: boolean; pin_guard: boolean;
         runtime_insert_draft: boolean; runtime_update_draft: boolean; runtime_insert_pack: boolean;
         runtime_insert_delivery: boolean; runtime_update_delivery: boolean; runtime_insert_pin: boolean;
@@ -84,6 +87,8 @@ describe("P21 disposable PostgreSQL immutable Release Candidate proof", () => {
           to_regclass('research.release_candidate_packs_v1') IS NOT NULL AS packs,
           to_regclass('research.release_candidate_delivery_states_v1') IS NOT NULL AS delivery,
           to_regclass('research.release_candidate_retention_pins_v1') IS NOT NULL AS pins,
+          to_regclass('research.release_candidate_publication_intents_v1') IS NOT NULL AS publication,
+          EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_publication_intents_v1_guard' AND NOT tgisinternal) AS publication_guard,
           EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_drafts_v1_guard' AND NOT tgisinternal) AS draft_guard,
           EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_packs_v1_immutable_guard' AND NOT tgisinternal) AS pack_guard,
           EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_delivery_states_v1_guard' AND NOT tgisinternal) AS delivery_guard,
@@ -93,10 +98,19 @@ describe("P21 disposable PostgreSQL immutable Release Candidate proof", () => {
           has_table_privilege('portal_research_runtime', 'research.release_candidate_packs_v1', 'INSERT') AS runtime_insert_pack,
           has_table_privilege('portal_research_runtime', 'research.release_candidate_delivery_states_v1', 'INSERT') AS runtime_insert_delivery,
           has_table_privilege('portal_research_runtime', 'research.release_candidate_delivery_states_v1', 'UPDATE') AS runtime_update_delivery,
-          has_table_privilege('portal_research_runtime', 'research.release_candidate_retention_pins_v1', 'INSERT') AS runtime_insert_pin
+          has_table_privilege('portal_research_runtime', 'research.release_candidate_retention_pins_v1', 'INSERT') AS runtime_insert_pin,
+          has_table_privilege('portal_research_runtime', 'research.release_candidate_publication_intents_v1', 'SELECT') AS runtime_select_publication,
+          has_table_privilege('portal_research_runtime', 'research.release_candidate_publication_intents_v1', 'INSERT') AS runtime_insert_publication,
+          has_table_privilege('portal_research_runtime', 'research.release_candidate_publication_intents_v1', 'UPDATE') AS runtime_update_publication,
+          has_column_privilege('portal_research_runtime', 'research.release_candidate_publication_intents_v1', 'state', 'UPDATE') AS runtime_update_publication_state,
+          has_column_privilege('portal_research_runtime', 'research.release_candidate_publication_intents_v1', 'request_payload', 'UPDATE') AS runtime_update_publication_request,
+          has_table_privilege('portal_research_runtime', 'research.release_candidate_publication_intents_v1', 'DELETE') AS runtime_delete_publication
       `);
       expect(shape.rows[0]).toEqual({
         drafts: true, packs: true, delivery: true, pins: true,
+        publication: true, publication_guard: true, runtime_select_publication: true,
+        runtime_insert_publication: true, runtime_update_publication: false,
+        runtime_update_publication_state: true, runtime_update_publication_request: false, runtime_delete_publication: false,
         draft_guard: true, pack_guard: true, delivery_guard: true, pin_guard: true,
         runtime_insert_draft: true, runtime_update_draft: true, runtime_insert_pack: true,
         runtime_insert_delivery: true, runtime_update_delivery: false, runtime_insert_pin: true,
@@ -156,6 +170,30 @@ describe("P21 disposable PostgreSQL immutable Release Candidate proof", () => {
           (SELECT approval_state FROM research.release_candidate_delivery_states_v1) AS approval_state
       `);
       expect(retained.rows[0]).toEqual({ packs: 1, pins: 1, delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED" });
+
+      await database.query(`INSERT INTO research.release_candidate_publication_intents_v1
+        (workspace_id, release_candidate_id, run_id, alpha_id, alpha_version_id, actor_user_id,
+         request_key, payload_digest, request_payload, pack_digest, current_source_fingerprint,
+         legacy_artifact_sha256, methodology_claim_id, state)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, 'PENDING')`, [
+        scope.workspaceId, first.releaseCandidateId, scope.runId, "alpha_p21", "av_p21", scope.actorUserId,
+        "rc:publish:p22-migration", digest("p22-payload"), JSON.stringify({ request: "strict-r1" }),
+        first.packDigest, sourceFingerprint, `sha256:${digest("legacy-artifact")}`, "claim:p21",
+      ]);
+      await expect(database.query(`UPDATE research.release_candidate_publication_intents_v1
+        SET request_payload = request_payload || '{"tampered":true}'::jsonb
+        WHERE workspace_id = $1 AND release_candidate_id = $2`, [scope.workspaceId, first.releaseCandidateId]))
+        .rejects.toMatchObject({ code: "23514" });
+      await database.query(`UPDATE research.release_candidate_publication_intents_v1 SET state = 'UNKNOWN'
+        WHERE workspace_id = $1 AND release_candidate_id = $2`, [scope.workspaceId, first.releaseCandidateId]);
+      await database.query(`UPDATE research.release_candidate_publication_intents_v1 SET state = 'REFUSED'
+        WHERE workspace_id = $1 AND release_candidate_id = $2`, [scope.workspaceId, first.releaseCandidateId]);
+      await expect(database.query(`DELETE FROM research.release_candidate_publication_intents_v1
+        WHERE workspace_id = $1 AND release_candidate_id = $2`, [scope.workspaceId, first.releaseCandidateId]))
+        .rejects.toMatchObject({ code: "55000" });
+      const publicationState = await database.query(`SELECT state FROM research.release_candidate_publication_intents_v1
+        WHERE workspace_id = $1 AND release_candidate_id = $2`, [scope.workspaceId, first.releaseCandidateId]);
+      expect(publicationState.rows[0]?.state).toBe("REFUSED");
 
       // A subsequent mutable source-row change can make a new composition
       // ineligible, but it must never rewrite the already sealed local pack.

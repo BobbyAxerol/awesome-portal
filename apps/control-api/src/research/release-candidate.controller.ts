@@ -6,7 +6,9 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { constantTimeEqual, sha256 } from "../auth/argon";
 import { csrfCookieFrom, CSRF_HEADER, originAllowed } from "../auth/cookies";
 import { ControlApiConfig } from "../config";
+import type { PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
+import { newUlid } from "../id";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -16,11 +18,14 @@ import {
   ResearchReleaseCandidateRunIdSchema,
   ResearchReleaseCandidateSealSchema,
 } from "./release-candidate.contract";
+import {
+  ResearchReleaseCandidatePublishRequestSchema,
+} from "./release-candidate-publication.contract";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
 import { ResearchReleaseCandidateService } from "./release-candidate.service";
 
 interface ReleaseCandidateRequest extends FastifyRequest {
-  portalUser: { userId: string };
+  portalUser: PortalUser;
   portalWorkspaceId: string;
   portalSession: { csrfSecretHash: string };
 }
@@ -108,6 +113,49 @@ export class ResearchReleaseCandidateController {
     reply.header("cache-control", "private, no-store");
     reply.header("etag", `\"${body.pack_digest}\"`);
     return reply.send(body);
+  }
+
+  @Get("research/release-candidates/:releaseCandidateId/publication")
+  async publication(
+    @Req() request: ReleaseCandidateRequest,
+    @Res() reply: FastifyReply,
+    @Param("releaseCandidateId") rawReleaseCandidateId: string,
+    @Query() rawQuery: unknown,
+  ) {
+    if (!ResearchReleaseCandidateIdSchema.safeParse(rawReleaseCandidateId).success) this.invalid();
+    const query = this.query(rawQuery);
+    const workspaceId = await this.workspace(request, query.workspace_id);
+    const body = await this.service.publication(
+      { workspaceId, actorUserId: request.portalUser.userId }, request.portalUser, rawReleaseCandidateId,
+    );
+    reply.header("cache-control", "private, no-store");
+    return reply.send(body);
+  }
+
+  @Post("research/release-candidates/:releaseCandidateId/publish")
+  @HttpCode(200)
+  async publish(
+    @Req() request: ReleaseCandidateRequest,
+    @Param("releaseCandidateId") rawReleaseCandidateId: string,
+    @Query() rawQuery: unknown,
+    @Body() rawBody: unknown,
+  ) {
+    this.assertActionSecurity(request);
+    if (!ResearchReleaseCandidateIdSchema.safeParse(rawReleaseCandidateId).success) this.invalid();
+    const query = this.query(rawQuery);
+    const parsedBody = ResearchReleaseCandidatePublishRequestSchema.safeParse(rawBody);
+    if (!parsedBody.success) this.invalid();
+    if (query.workspace_id !== undefined && parsedBody.data.workspace_id !== undefined
+      && query.workspace_id !== parsedBody.data.workspace_id) this.invalid();
+    const input = { ...parsedBody.data, ...(query.workspace_id === undefined ? {} : { workspace_id: query.workspace_id }) };
+    const workspaceId = await this.workspace(request, input.workspace_id);
+    const requestId = typeof request.id === "string" && request.id.length > 0 && request.id.length <= 128
+      ? request.id
+      : newUlid("req");
+    return this.service.publish(
+      { workspaceId, actorUserId: request.portalUser.userId }, request.portalUser,
+      rawReleaseCandidateId, input, requestId,
+    );
   }
 
   private runId(raw: string): string {

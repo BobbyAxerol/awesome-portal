@@ -116,6 +116,76 @@ export interface ReleaseCandidateStoredPack {
   approvalState: "NOT_APPROVED" | "PENDING" | "APPROVED" | "REJECTED" | "UNKNOWN";
 }
 
+export type ReleaseCandidatePublicationState = "PENDING" | "DELIVERED" | "UNKNOWN" | "REFUSED";
+
+export interface ReleaseCandidatePublicationIntent {
+  releaseCandidateId: string;
+  runId: string;
+  alphaId: string;
+  alphaVersionId: string;
+  actorUserId: string;
+  requestKey: string;
+  payloadDigest: string;
+  requestPayload: Record<string, unknown>;
+  packDigest: string;
+  currentSourceFingerprint: string;
+  legacyArtifactSha256: string;
+  methodologyClaimId: string;
+  state: ReleaseCandidatePublicationState;
+  approvalId: string | null;
+  evidenceSetHash: string | null;
+  receiptDigest: string | null;
+  downstreamStatus: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED" | null;
+  slaDueAt: string | null;
+  expiresAt: string | null;
+  publishedAtUtcMs: number | null;
+  lastErrorCode: string | null;
+  receipt: Record<string, unknown> | null;
+  createdAtUtcMs: number;
+  updatedAtUtcMs: number;
+}
+
+interface PublicationIntentRow {
+  workspace_id: string;
+  release_candidate_id: string;
+  run_id: string;
+  alpha_id: string;
+  alpha_version_id: string;
+  actor_user_id: string;
+  request_key: string;
+  payload_digest: string;
+  request_payload: JsonColumn;
+  pack_digest: string;
+  current_source_fingerprint: string;
+  legacy_artifact_sha256: string;
+  methodology_claim_id: string;
+  state: ReleaseCandidatePublicationState;
+  approval_id: string | null;
+  evidence_set_hash: string | null;
+  downstream_receipt_digest: string | null;
+  downstream_status: ReleaseCandidatePublicationIntent["downstreamStatus"];
+  sla_due_at: Date | string | null;
+  expires_at: Date | string | null;
+  published_at_utc_ms: string | number | null;
+  last_error_code: string | null;
+  receipt_json: JsonColumn;
+  created_at_utc_ms: string | number;
+  updated_at_utc_ms: string | number;
+}
+
+export interface BeginPublicationInput {
+  runId: string;
+  alphaId: string;
+  alphaVersionId: string;
+  requestKey: string;
+  payloadDigest: string;
+  requestPayload: Record<string, unknown>;
+  expectedPackDigest: string;
+  expectedSourceFingerprint: string;
+  legacyArtifactSha256: string;
+  methodologyClaimId: string;
+}
+
 export interface ReleaseCandidatePin {
   pinKind: "ALPHA_VERSION" | "RUN" | "REPORT" | "EVIDENCE" | "SPLIT" | "SELECTION" | "CURRENT_SOURCE" | "ARTIFACT";
   sourceRef: string;
@@ -290,6 +360,166 @@ export class ResearchReleaseCandidateRepository {
       const result = await client.query<PackRow>(`${this.packSelect()}
         WHERE pack.workspace_id = $1 AND pack.release_candidate_id = $2`, [scope.workspaceId, releaseCandidateId]);
       return result.rowCount === 1 ? this.pack(result.rows[0]!) : null;
+    });
+  }
+
+  async publicationIntent(scope: ResearchScope, releaseCandidateId: string): Promise<ReleaseCandidatePublicationIntent | null> {
+    return this.transaction(scope, true, async (client) => {
+      await this.requireMembership(client, scope);
+      const result = await client.query<PublicationIntentRow>(`${this.publicationSelect()}
+        WHERE intent.workspace_id = $1 AND intent.release_candidate_id = $2`, [scope.workspaceId, releaseCandidateId]);
+      return result.rowCount === 1 ? this.publicationIntentRow(result.rows[0]!) : null;
+    });
+  }
+
+  async beginPublication(scope: ResearchScope, releaseCandidateId: string, input: BeginPublicationInput) {
+    return this.transaction(scope, false, async (client) => {
+      await this.requireMembership(client, scope);
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))", [scope.workspaceId, releaseCandidateId]);
+      const existing = await client.query<PublicationIntentRow>(`${this.publicationSelect()}
+        WHERE intent.workspace_id = $1 AND intent.release_candidate_id = $2 FOR UPDATE`, [scope.workspaceId, releaseCandidateId]);
+      if (existing.rowCount === 1) {
+        const intent = this.publicationIntentRow(existing.rows[0]!);
+        if (intent.actorUserId !== scope.actorUserId || intent.requestKey !== input.requestKey
+          || intent.payloadDigest !== input.payloadDigest) {
+          throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "A different publication intent already exists for this candidate.", 409);
+        }
+        return { intent, replayed: true };
+      }
+      const packResult = await client.query<PackRow>(`${this.packSelect()}
+        WHERE pack.workspace_id = $1 AND pack.release_candidate_id = $2 FOR UPDATE OF pack`, [scope.workspaceId, releaseCandidateId]);
+      if (packResult.rowCount !== 1) {
+        throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Release Candidate pack was not found.", 404);
+      }
+      const pack = this.pack(packResult.rows[0]!);
+      if (pack.runId !== input.runId || pack.packDigest !== input.expectedPackDigest
+        || pack.sourceFingerprint !== input.expectedSourceFingerprint) {
+        throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Release Candidate changed; reload the sealed pack.", 409);
+      }
+      await this.lockRun(client, scope.workspaceId, pack.runId);
+      const current = await this.requireSnapshot(client, scope.workspaceId, pack.runId);
+      this.assertFingerprint(current, input.expectedSourceFingerprint);
+      const inserted = await client.query<PublicationIntentRow>(`
+        INSERT INTO research.release_candidate_publication_intents_v1
+          (workspace_id, release_candidate_id, run_id, alpha_id, alpha_version_id, actor_user_id,
+           request_key, payload_digest, request_payload, pack_digest, current_source_fingerprint,
+           legacy_artifact_sha256, methodology_claim_id, state)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, 'PENDING')
+        RETURNING *, (extract(epoch FROM created_at) * 1000)::bigint AS created_at_utc_ms,
+          (extract(epoch FROM updated_at) * 1000)::bigint AS updated_at_utc_ms,
+          (extract(epoch FROM published_at) * 1000)::bigint AS published_at_utc_ms`, [
+        scope.workspaceId, releaseCandidateId, pack.runId, input.alphaId, input.alphaVersionId,
+        scope.actorUserId, input.requestKey, input.payloadDigest, canonicalResearchJson(input.requestPayload),
+        input.expectedPackDigest, input.expectedSourceFingerprint, input.legacyArtifactSha256,
+        input.methodologyClaimId,
+      ]);
+      return { intent: this.publicationIntentRow(inserted.rows[0]!), replayed: false };
+    });
+  }
+
+  async markPublicationPending(scope: ResearchScope, releaseCandidateId: string): Promise<ReleaseCandidatePublicationIntent> {
+    return this.transaction(scope, false, async (client) => {
+      await this.requireMembership(client, scope);
+      const result = await client.query<PublicationIntentRow>(`
+        UPDATE research.release_candidate_publication_intents_v1
+           SET state = 'PENDING', last_error_code = NULL, updated_at = now()
+         WHERE workspace_id = $1 AND release_candidate_id = $2 AND actor_user_id = $3
+           AND state IN ('PENDING', 'UNKNOWN')
+        RETURNING *, (extract(epoch FROM created_at) * 1000)::bigint AS created_at_utc_ms,
+          (extract(epoch FROM updated_at) * 1000)::bigint AS updated_at_utc_ms,
+          (extract(epoch FROM published_at) * 1000)::bigint AS published_at_utc_ms`,
+      [scope.workspaceId, releaseCandidateId, scope.actorUserId]);
+      if (result.rowCount !== 1) {
+        throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Publication is not retryable for this actor.", 409);
+      }
+      return this.publicationIntentRow(result.rows[0]!);
+    });
+  }
+
+  async finishPublication(scope: ResearchScope, releaseCandidateId: string, result: {
+    approvalId: string;
+    evidenceSetHash: string;
+    receiptDigest: string;
+    status: NonNullable<ReleaseCandidatePublicationIntent["downstreamStatus"]>;
+    slaDueAt: string;
+    expiresAt: string;
+    publishedAtUtcMs: number;
+    receipt: Record<string, unknown>;
+  }): Promise<ReleaseCandidatePublicationIntent> {
+    return this.transaction(scope, false, async (client) => {
+      await this.requireMembership(client, scope);
+      const currentResult = await client.query<PublicationIntentRow>(`${this.publicationSelect()}
+        WHERE intent.workspace_id = $1 AND intent.release_candidate_id = $2 AND intent.actor_user_id = $3 FOR UPDATE`,
+      [scope.workspaceId, releaseCandidateId, scope.actorUserId]);
+      if (currentResult.rowCount !== 1) {
+        throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Publication intent was not found.", 404);
+      }
+      const current = this.publicationIntentRow(currentResult.rows[0]!);
+      if (current.state === "DELIVERED") {
+        if (current.approvalId !== result.approvalId || current.evidenceSetHash !== result.evidenceSetHash) {
+          throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "A different approval receipt is already retained.", 409);
+        }
+        return current;
+      }
+      const saved = await client.query<PublicationIntentRow>(`
+        UPDATE research.release_candidate_publication_intents_v1
+           SET state = 'DELIVERED', approval_id = $4, evidence_set_hash = $5,
+               downstream_receipt_digest = $6, downstream_status = $7,
+               sla_due_at = $8::timestamptz, expires_at = $9::timestamptz,
+               published_at = to_timestamp($10::double precision / 1000), receipt_json = $11::jsonb,
+               last_error_code = NULL, updated_at = now()
+         WHERE workspace_id = $1 AND release_candidate_id = $2 AND actor_user_id = $3
+           AND state IN ('PENDING', 'UNKNOWN')
+        RETURNING *, (extract(epoch FROM created_at) * 1000)::bigint AS created_at_utc_ms,
+          (extract(epoch FROM updated_at) * 1000)::bigint AS updated_at_utc_ms,
+          (extract(epoch FROM published_at) * 1000)::bigint AS published_at_utc_ms`, [
+        scope.workspaceId, releaseCandidateId, scope.actorUserId, result.approvalId,
+        result.evidenceSetHash, result.receiptDigest, result.status, result.slaDueAt,
+        result.expiresAt, result.publishedAtUtcMs, canonicalResearchJson(result.receipt),
+      ]);
+      if (saved.rowCount !== 1) {
+        throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Publication intent changed before receipt could be retained.", 409);
+      }
+      const approvalState = result.status === "PENDING" ? "PENDING"
+        : result.status === "APPROVED" || result.status === "APPROVED_WITH_CONDITION" ? "APPROVED"
+          : result.status === "DENIED" ? "REJECTED" : "UNKNOWN";
+      const delivery = await client.query(`
+        UPDATE research.release_candidate_delivery_states_v1
+           SET delivery_state = 'DELIVERED', approval_state = $3,
+               downstream_receipt_digest = $4, downstream_updated_at = to_timestamp($5::double precision / 1000),
+               approval_id = $6
+         WHERE workspace_id = $1 AND release_candidate_id = $2`, [
+        scope.workspaceId, releaseCandidateId, approvalState, result.receiptDigest,
+        result.publishedAtUtcMs, result.approvalId,
+      ]);
+      if (delivery.rowCount !== 1) {
+        throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", "Release Candidate delivery state disappeared before its receipt was saved.", 503);
+      }
+      return this.publicationIntentRow(saved.rows[0]!);
+    });
+  }
+
+  async recordPublicationFailure(
+    scope: ResearchScope,
+    releaseCandidateId: string,
+    state: "UNKNOWN" | "REFUSED",
+    errorCode: string,
+  ): Promise<ReleaseCandidatePublicationIntent> {
+    return this.transaction(scope, false, async (client) => {
+      await this.requireMembership(client, scope);
+      const result = await client.query<PublicationIntentRow>(`
+        UPDATE research.release_candidate_publication_intents_v1
+           SET state = $4, last_error_code = $5, updated_at = now()
+         WHERE workspace_id = $1 AND release_candidate_id = $2 AND actor_user_id = $3
+           AND state IN ('PENDING', 'UNKNOWN')
+        RETURNING *, (extract(epoch FROM created_at) * 1000)::bigint AS created_at_utc_ms,
+          (extract(epoch FROM updated_at) * 1000)::bigint AS updated_at_utc_ms,
+          (extract(epoch FROM published_at) * 1000)::bigint AS published_at_utc_ms`,
+      [scope.workspaceId, releaseCandidateId, scope.actorUserId, state, errorCode]);
+      if (result.rowCount !== 1) {
+        throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Publication outcome is already final or belongs to another actor.", 409);
+      }
+      return this.publicationIntentRow(result.rows[0]!);
     });
   }
 
@@ -625,6 +855,49 @@ export class ResearchReleaseCandidateRepository {
       sealedAtUtcMs: safeInteger(row.sealed_at_utc_ms, "pack timestamp"),
       deliveryState: row.delivery_state, approvalState: row.approval_state,
     };
+  }
+
+  private publicationIntentRow(row: PublicationIntentRow): ReleaseCandidatePublicationIntent {
+    const dateText = (value: Date | string | null): string | null => value === null
+      ? null
+      : value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+    const requestPayload = jsonRecord(row.request_payload, "publication request");
+    if (!requestPayload) {
+      throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE", "Release Candidate publication request is incompatible.", 503);
+    }
+    return {
+      releaseCandidateId: row.release_candidate_id,
+      runId: row.run_id,
+      alphaId: row.alpha_id,
+      alphaVersionId: row.alpha_version_id,
+      actorUserId: row.actor_user_id,
+      requestKey: row.request_key,
+      payloadDigest: row.payload_digest,
+      requestPayload,
+      packDigest: row.pack_digest,
+      currentSourceFingerprint: row.current_source_fingerprint,
+      legacyArtifactSha256: row.legacy_artifact_sha256,
+      methodologyClaimId: row.methodology_claim_id,
+      state: row.state,
+      approvalId: row.approval_id,
+      evidenceSetHash: row.evidence_set_hash,
+      receiptDigest: row.downstream_receipt_digest,
+      downstreamStatus: row.downstream_status,
+      slaDueAt: dateText(row.sla_due_at),
+      expiresAt: dateText(row.expires_at),
+      publishedAtUtcMs: row.published_at_utc_ms === null ? null : safeInteger(row.published_at_utc_ms, "publication timestamp"),
+      lastErrorCode: row.last_error_code,
+      receipt: row.receipt_json === null ? null : jsonRecord(row.receipt_json, "publication receipt"),
+      createdAtUtcMs: safeInteger(row.created_at_utc_ms, "publication creation timestamp"),
+      updatedAtUtcMs: safeInteger(row.updated_at_utc_ms, "publication update timestamp"),
+    };
+  }
+
+  private publicationSelect() {
+    return `SELECT intent.*, (extract(epoch FROM intent.created_at) * 1000)::bigint AS created_at_utc_ms,
+                   (extract(epoch FROM intent.updated_at) * 1000)::bigint AS updated_at_utc_ms,
+                   (extract(epoch FROM intent.published_at) * 1000)::bigint AS published_at_utc_ms
+              FROM research.release_candidate_publication_intents_v1 intent`;
   }
 
   private packSelect() {

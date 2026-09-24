@@ -1,0 +1,5 @@
+--- apps/control-api/src/research/release-candidate.service.ts
++++ apps/control-api/src/research/release-candidate.service.ts
+@@ -244 +244 @@
+-        ? { by_user_id: intent.actorUserId, by_username: actorUsername, at_utc_ms: intent.publishedAtUtcMs, receipt_digest: intent.receiptDigest }
++        ? { approval_id: intent.approvalId!, by_user_id: intent.actorUserId, by_username: actorUsername, at_utc_ms: intent.publishedAtUtcMs, receipt_digest: intent.receiptDigest }

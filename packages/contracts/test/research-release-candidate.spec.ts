@@ -27,12 +27,12 @@ describe("P21 published Research Release Candidate contract", () => {
       "researchReleaseCandidateLocalSealCreateV1", "researchReleaseCandidatePackGetV1",
       "release_candidate_id", "parameter_bundle_digest", "METHODOLOGY_CLAIM",
       "PROPOSED_USE_RESTRICTIONS", "SEALED_LOCAL", "NOT_DELIVERED", "NOT_APPROVED",
-      "P22_PUBLICATION_NOT_COMMISSIONED", "PORTAL_PERSISTED_RESEARCH",
+      "P22_LOCAL_SEAL_REQUIRED", "PORTAL_PERSISTED_RESEARCH",
       "PublishedComparison", "CertificationAxes", "published_comparison", "certification_axes",
     ]) expect(generated).toContain(needle);
   });
 
-  it("does not expose source relation/cursor, worker custody, execution inputs, or a publish command", () => {
+  it("does not expose source relation/cursor, worker custody, execution inputs, or a downstream approval command", () => {
     const document = readFileSync(openApiPath, "utf8");
     for (const forbidden of [
       "relation_name", "source_cursor", "worker_attempt_id", "lease_epoch", "artifact_store_path",

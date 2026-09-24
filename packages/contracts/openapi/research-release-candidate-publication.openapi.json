@@ -1,0 +1,622 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Release Candidate Publication API",
+    "version": "1.0.0",
+    "description": "P22 same-origin publication intent routed through the existing strict Governance R1 create contract. R1 decisions remain exclusively in the existing Governance review surfaces; this API does not approve, reject, start Execution, or invoke QuantBT."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
+  "paths": {
+    "/api/v1/research/release-candidates/{releaseCandidateId}/publication": {
+      "get": {
+        "operationId": "researchReleaseCandidatePublicationGetV1",
+        "summary": "Read publication outcome and the existing R1 approval mirror",
+        "description": "Workspace/session scoped, private no-store. The response preserves local RC digest, source artifact SHA-256 and Governance evidence-set hash as distinct facts. It mirrors the existing R1 status, SLA, expiry and conditions read-only; no decision is performed here.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReleaseCandidateId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Typed current publication state and read-only R1 mirror.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/research/release-candidates/{releaseCandidateId}/publish": {
+      "post": {
+        "operationId": "researchReleaseCandidatePublishV1",
+        "summary": "Publish one sealed candidate through existing R1 create",
+        "description": "Requires portal session, allowed same-origin Origin and matching __Host-portal_csrf cookie plus x-portal-csrf header. Creates only the unchanged governance.approval-create-request.v1 R1 request using the persisted exact run, Alpha and methodology claim. Request-key replay is reconciled against exact R1 detail/artifact pins. This endpoint cannot approve/reject, mutate an existing decision, start Paper/Execution, or change the sealed pack.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReleaseCandidateId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created, replayed, pending/unknown, or refused publication state; the existing R1 request is never treated as approval.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "parameters": {
+      "ReleaseCandidateId": {
+        "name": "releaseCandidateId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ReleaseCandidateId"
+        }
+      },
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/WorkspaceId"
+        }
+      },
+      "CsrfToken": {
+        "name": "x-portal-csrf",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed same-origin refusal; no source relation/cursor/path, credential, auth token or Execution command is disclosed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "WorkspaceId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]{1,128}$"
+      },
+      "ReleaseCandidateId": {
+        "type": "string",
+        "pattern": "^rc_[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "RunId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+      },
+      "Digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "UtcMilliseconds": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "ReasonCode": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+      },
+      "PublishRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "expected_pack_digest",
+          "request_key",
+          "methodology_claim_id",
+          "summary"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.release-candidate-publish-request.v1"
+          },
+          "workspace_id": {
+            "$ref": "#/components/schemas/WorkspaceId"
+          },
+          "expected_pack_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+          },
+          "methodology_claim_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 2000
+          }
+        }
+      },
+      "PublicationSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "availability",
+          "reason_code",
+          "run_status",
+          "legacy_artifact_sha256",
+          "artifact_schema_version",
+          "eligible_methodology_claim_ids",
+          "captured_at"
+        ],
+        "properties": {
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "PARTIAL",
+              "UNAVAILABLE",
+              "NOT_CHECKED"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "legacy_artifact_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "artifact_schema_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eligible_methodology_claim_ids": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            }
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ApprovalCondition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "limitation_id",
+          "kind",
+          "label",
+          "statement",
+          "expires_at"
+        ],
+        "properties": {
+          "limitation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "kind": {
+            "enum": [
+              "lineage",
+              "warning",
+              "restriction",
+              "waiver"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ApprovalMirror": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approval_id",
+          "gate",
+          "status",
+          "subject_id",
+          "requester_user_id",
+          "evidence_set_hash",
+          "sla_due_at",
+          "expires_at",
+          "created_at",
+          "read_at",
+          "conditions",
+          "href"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "gate": {
+            "const": "R1"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "APPROVED_WITH_CONDITION",
+              "DENIED",
+              "CHANGES_REQUESTED",
+              "EXPIRED"
+            ]
+          },
+          "subject_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "requester_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "evidence_set_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "sla_due_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "conditions": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/components/schemas/ApprovalCondition"
+            }
+          },
+          "href": {
+            "type": "string",
+            "pattern": "^/governance/approvals/[A-Za-z0-9._-]+/r1$"
+          }
+        }
+      },
+      "PublishedReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approval_id",
+          "by_user_id",
+          "by_username",
+          "at_utc_ms",
+          "receipt_digest"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "by_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "by_username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "receipt_digest": {
+            "$ref": "#/components/schemas/Digest"
+          }
+        }
+      },
+      "PublicationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "release_candidate_id",
+          "run_id",
+          "alpha_id",
+          "alpha_version_id",
+          "pack_digest",
+          "source",
+          "state",
+          "candidate_relation",
+          "may_publish",
+          "blocked_reason",
+          "published",
+          "approval_read",
+          "approval",
+          "as_of_utc_ms",
+          "replayed"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.release-candidate-publication.v1"
+          },
+          "release_candidate_id": {
+            "$ref": "#/components/schemas/ReleaseCandidateId"
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "alpha_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "alpha_version_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "pack_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PublicationSource"
+          },
+          "state": {
+            "enum": [
+              "NOT_PUBLISHED",
+              "PENDING",
+              "DELIVERED",
+              "UNKNOWN",
+              "REFUSED"
+            ]
+          },
+          "candidate_relation": {
+            "enum": [
+              "CURRENT",
+              "SUPERSEDED",
+              "UNKNOWN"
+            ]
+          },
+          "may_publish": {
+            "type": "boolean"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublishedReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approval_read": {
+            "enum": [
+              "NOT_PUBLISHED",
+              "AVAILABLE",
+              "DENIED",
+              "NOT_FOUND",
+              "UNAVAILABLE"
+            ]
+          },
+          "approval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalMirror"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "as_of_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      }
+    }
+  }
+}

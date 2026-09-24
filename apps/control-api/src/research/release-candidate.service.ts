@@ -2,9 +2,12 @@
 
 import { createHash } from "node:crypto";
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import { ControlApiConfig } from "../config";
+import type { PortalUser } from "../domain";
+import { ApprovalCreateRequestSchema } from "../governance/contracts";
+import { GovernanceError, GovernanceService } from "../governance/governance.service";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import { canonicalResearchJson } from "./preflight.service";
@@ -17,6 +20,11 @@ import {
   type ResearchReleaseCandidatePackResponse,
   type ResearchReleaseCandidateSealResponse,
 } from "./release-candidate.contract";
+import {
+  ResearchReleaseCandidatePublicationResponseSchema,
+  type ResearchReleaseCandidatePublishRequest,
+  type ResearchReleaseCandidatePublicationResponse,
+} from "./release-candidate-publication.contract";
 import { ResearchReleaseCandidateError } from "./release-candidate.error";
 import {
   releaseCandidateSourceFingerprint,
@@ -26,6 +34,7 @@ import {
   type ReleaseCandidatePin,
   type ReleaseCandidateSource,
   type ReleaseCandidateStoredPack,
+  type ReleaseCandidatePublicationIntent,
 } from "./release-candidate.repository";
 
 type Availability = {
@@ -136,6 +145,7 @@ export class ResearchReleaseCandidateService {
   constructor(
     private readonly repository: ResearchReleaseCandidateRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(GovernanceService) private readonly governance?: GovernanceService,
   ) {}
 
   async detail(scope: ResearchScope, runId: string): Promise<ResearchReleaseCandidateComposeResponse> {
@@ -208,6 +218,448 @@ export class ResearchReleaseCandidateService {
     return parsed.data;
   }
 
+  async publication(scope: ResearchScope, user: PortalUser, releaseCandidateId: string): Promise<ResearchReleaseCandidatePublicationResponse> {
+    this.requireEnabled();
+    if (scope.actorUserId !== user.userId) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_FORBIDDEN", "Access denied.", 403);
+    const intent = await this.repository.publicationIntent(scope, releaseCandidateId);
+    if (!intent) {
+      const ready = await this.publicationReadiness(scope, user, releaseCandidateId);
+      return this.publicationResponse({
+        releaseCandidateId, runId: ready.runId, alphaId: ready.alphaId, alphaVersionId: ready.alphaVersionId,
+        packDigest: ready.packDigest, source: ready.source, state: "NOT_PUBLISHED",
+        candidateRelation: ready.candidateRelation,
+        mayPublish: ready.blockedReason === null && ready.candidateRelation === "CURRENT",
+        blockedReason: ready.blockedReason,
+        published: null, approvalRead: "NOT_PUBLISHED", approval: null,
+        asOfUtcMs: Date.now(), replayed: false,
+      });
+    }
+    const source = this.intentSource(intent);
+    const latestPack = await this.repository.latestPack(scope, intent.runId);
+    const candidateRelation = !latestPack ? "UNKNOWN" : latestPack.releaseCandidateId === intent.releaseCandidateId ? "CURRENT" : "SUPERSEDED";
+    const mayRetry = candidateRelation === "CURRENT" && source.availability === "AVAILABLE"
+      && intent.actorUserId === user.userId
+      && (intent.state === "PENDING" || intent.state === "UNKNOWN");
+    const approvalRead = intent.state === "DELIVERED"
+      ? await this.readApprovalMirror(scope, user, intent)
+      : { state: "NOT_PUBLISHED" as const, approval: null };
+    const receipt = intent.receipt;
+    const requester = record(record(receipt)?.approval)?.requester;
+    const payload = intent.requestPayload;
+    const actorUsername = typeof record(payload.actor)?.username === "string"
+      ? String(record(payload.actor)?.username)
+      : typeof record(requester)?.username === "string" ? String(record(requester)?.username) : "Portal user";
+    const published = intent.state === "DELIVERED" && intent.publishedAtUtcMs !== null && intent.receiptDigest !== null
+      ? { approval_id: intent.approvalId!, by_user_id: intent.actorUserId, by_username: actorUsername, at_utc_ms: intent.publishedAtUtcMs, receipt_digest: intent.receiptDigest }
+      : null;
+    return this.publicationResponse({
+      releaseCandidateId: intent.releaseCandidateId, runId: intent.runId, alphaId: intent.alphaId,
+      alphaVersionId: intent.alphaVersionId, packDigest: intent.packDigest, source, state: intent.state,
+      candidateRelation,
+      mayPublish: mayRetry,
+      blockedReason: mayRetry ? null : candidateRelation === "SUPERSEDED" ? "P22_RELEASE_CANDIDATE_SUPERSEDED"
+        : candidateRelation === "UNKNOWN" ? "P22_RELEASE_CANDIDATE_CURRENTNESS_UNKNOWN"
+          : intent.state === "REFUSED" ? "P22_GOVERNANCE_REFUSED"
+            : intent.actorUserId !== user.userId ? "P22_PUBLICATION_OWNED_BY_ANOTHER_ACTOR" : null,
+      published, approvalRead: approvalRead.state, approval: approvalRead.approval,
+      asOfUtcMs: Date.now(), replayed: false,
+    });
+  }
+
+  async publish(
+    scope: ResearchScope,
+    user: PortalUser,
+    releaseCandidateId: string,
+    input: ResearchReleaseCandidatePublishRequest,
+    requestId: string,
+  ): Promise<ResearchReleaseCandidatePublicationResponse> {
+    this.requireEnabled();
+    if (scope.actorUserId !== user.userId) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_FORBIDDEN", "Access denied.", 403);
+    if (input.workspace_id !== undefined && input.workspace_id !== scope.workspaceId) {
+      throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Release Candidate was not found.", 404);
+    }
+    const payloadDigest = digestOf({
+      workspace_id: scope.workspaceId, actor_user_id: user.userId, release_candidate_id: releaseCandidateId,
+      expected_pack_digest: input.expected_pack_digest, request_key: input.request_key,
+      methodology_claim_id: input.methodology_claim_id, summary: input.summary,
+    });
+    const prior = await this.repository.publicationIntent(scope, releaseCandidateId);
+    if (prior) {
+      if (prior.actorUserId !== user.userId || prior.payloadDigest !== payloadDigest) {
+        throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "A different publication request is already bound to this candidate.", 409);
+      }
+      if (prior.state === "DELIVERED" || prior.state === "REFUSED") return this.publication(scope, user, releaseCandidateId);
+      const currentPublication = await this.publication(scope, user, releaseCandidateId);
+      if (!currentPublication.may_publish) return currentPublication;
+      await this.repository.markPublicationPending(scope, releaseCandidateId);
+      return this.executePublication(scope, user, releaseCandidateId, prior, true, requestId);
+    }
+
+    const ready = await this.publicationReadiness(scope, user, releaseCandidateId, true);
+    if (input.expected_pack_digest !== ready.packDigest) {
+      throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_CONFLICT", "Release Candidate digest changed; reload the sealed pack.", 409);
+    }
+    if (ready.blockedReason !== null) {
+      return this.publicationResponse({
+        releaseCandidateId, runId: ready.runId, alphaId: ready.alphaId, alphaVersionId: ready.alphaVersionId,
+        packDigest: ready.packDigest, source: ready.source, state: "NOT_PUBLISHED", candidateRelation: ready.candidateRelation,
+        mayPublish: false,
+        blockedReason: ready.blockedReason, published: null, approvalRead: "NOT_PUBLISHED", approval: null,
+        asOfUtcMs: Date.now(), replayed: false,
+      });
+    }
+    if (!ready.source.eligible_methodology_claim_ids.includes(input.methodology_claim_id)) {
+      return this.publicationResponse({
+        releaseCandidateId, runId: ready.runId, alphaId: ready.alphaId, alphaVersionId: ready.alphaVersionId,
+        packDigest: ready.packDigest, source: ready.source, state: "NOT_PUBLISHED", candidateRelation: ready.candidateRelation,
+        mayPublish: false,
+        blockedReason: "P22_METHODOLOGY_CLAIM_NOT_PUBLISHED", published: null,
+        approvalRead: "NOT_PUBLISHED", approval: null, asOfUtcMs: Date.now(), replayed: false,
+      });
+    }
+
+    const downstream = ApprovalCreateRequestSchema.safeParse({
+      schema_version: "governance.approval-create-request.v1",
+      workspace_id: scope.workspaceId,
+      request_key: input.request_key,
+      gate: "R1",
+      alpha_id: ready.alphaId,
+      evidence_run_id: ready.runId,
+      methodology_claim_id: input.methodology_claim_id,
+      summary: input.summary,
+    });
+    if (!downstream.success) throw this.unavailable("Existing R1 create contract is incompatible.");
+    const requestPayload = {
+      schema_version: input.schema_version,
+      downstream_request: downstream.data,
+      actor: { user_id: user.userId, username: user.username },
+      source: ready.source,
+      current_source_fingerprint: ready.currentSourceFingerprint,
+    };
+    const begun = await this.repository.beginPublication(scope, releaseCandidateId, {
+      runId: ready.runId,
+      alphaId: ready.alphaId,
+      alphaVersionId: ready.alphaVersionId,
+      requestKey: input.request_key,
+      payloadDigest,
+      requestPayload,
+      expectedPackDigest: ready.packDigest,
+      expectedSourceFingerprint: ready.currentSourceFingerprint,
+      legacyArtifactSha256: ready.source.legacy_artifact_sha256!,
+      methodologyClaimId: input.methodology_claim_id,
+    });
+    if (begun.intent.state === "DELIVERED" || begun.intent.state === "REFUSED") {
+      return this.publication(scope, user, releaseCandidateId);
+    }
+    if (begun.replayed) await this.repository.markPublicationPending(scope, releaseCandidateId);
+    return this.executePublication(scope, user, releaseCandidateId, begun.intent, begun.replayed, requestId);
+  }
+
+  private async publicationReadiness(scope: ResearchScope, user: PortalUser, releaseCandidateId: string, refresh: boolean = false) {
+    const stored = await this.repository.readPack(scope, releaseCandidateId);
+    if (!stored) throw new ResearchReleaseCandidateError("RESEARCH_RELEASE_CANDIDATE_NOT_FOUND", "Release Candidate pack was not found.", 404);
+    const packResponse = await this.pack(scope, releaseCandidateId);
+    const latestPack = await this.repository.latestPack(scope, stored.runId);
+    const candidateRelation: "CURRENT" | "SUPERSEDED" | "UNKNOWN" = !latestPack ? "UNKNOWN" : latestPack.releaseCandidateId === releaseCandidateId ? "CURRENT" : "SUPERSEDED";
+    const core = packResponse.frozen_core as Record<string, unknown>;
+    const sourceFingerprint = typeof core.source_fingerprint === "string" ? core.source_fingerprint : null;
+    const coreDigest = digestOf(core);
+    const alphaId = this.frozenField(core, "alpha_id");
+    const alphaVersionId = this.frozenField(core, "alpha_version_id");
+    const finalAuditRunId = this.frozenField(core, "final_audit_run_id");
+    if (coreDigest !== stored.packDigest || sourceFingerprint !== stored.sourceFingerprint) {
+      return this.notReady(stored, alphaId.value, alphaVersionId.value, "P22_PACK_INTEGRITY_FAILED", candidateRelation);
+    }
+    if (alphaId.value === null || alphaVersionId.value === null || finalAuditRunId.value !== stored.runId
+      || ![alphaId, alphaVersionId, finalAuditRunId].every((field) => field.available)) {
+      return this.notReady(stored, alphaId.value, alphaVersionId.value, "P22_FINAL_AUDIT_NOT_LINKED", candidateRelation);
+    }
+
+    if (candidateRelation !== "CURRENT") {
+      return this.notReady(stored, alphaId.value, alphaVersionId.value,
+        candidateRelation === "SUPERSEDED" ? "P22_RELEASE_CANDIDATE_SUPERSEDED" : "P22_RELEASE_CANDIDATE_CURRENTNESS_UNKNOWN", candidateRelation);
+    }
+    const current = await this.detail(scope, stored.runId);
+    if (current.source_fingerprint !== stored.sourceFingerprint) {
+      return this.notReady(stored, alphaId.value, alphaVersionId.value, "P22_CURRENT_SOURCE_CHANGED", candidateRelation);
+    }
+    if (current.local_seal.state !== "SEALED_LOCAL" || current.local_seal.release_candidate_id !== releaseCandidateId
+      || current.local_seal.pack_digest !== stored.packDigest || current.local_seal.availability.state !== "AVAILABLE") {
+      return this.notReady(stored, alphaId.value, alphaVersionId.value, "P22_LOCAL_SEAL_NOT_CURRENT", candidateRelation);
+    }
+    if (!current.run.binding || current.run.binding.alpha_id !== alphaId.value
+      || current.run.binding.alpha_version_id !== alphaVersionId.value || current.run.binding.lifecycle_state !== "ACTIVE") {
+      return this.notReady(stored, alphaId.value, alphaVersionId.value, "P22_ALPHA_VERSION_NOT_ACTIVE", candidateRelation);
+    }
+
+    let fact: Awaited<ReturnType<GovernanceService["researchPublicationEvidence"]>> | null = null;
+    try {
+      fact = await this.requireGovernance().researchPublicationEvidence(user, scope.workspaceId, stored.runId, refresh);
+    } catch (error) {
+      if (!(error instanceof GovernanceError)) throw error;
+      return this.notReady(stored, alphaId.value, alphaVersionId.value,
+        error.status === 404 ? "P22_GOVERNANCE_RUN_NOT_FOUND" : "P22_GOVERNANCE_SOURCE_UNAVAILABLE", candidateRelation, "UNAVAILABLE");
+    }
+    const source = this.publicationSource(fact);
+    const sourceBlock = source.availability !== "AVAILABLE" ? source.reason_code ?? "P22_SOURCE_FACTS_PARTIAL"
+      : source.run_status === null ? "P22_GOVERNANCE_SOURCE_UNAVAILABLE"
+      : fact.run_id !== stored.runId || fact.alpha_id !== alphaId.value ? "P22_ALPHA_MAPPING_MISMATCH"
+        : !["COMPLETED", "SUCCEEDED", "COMPLETE"].includes(fact.status) ? "P22_RUN_NOT_TERMINAL"
+          : source.legacy_artifact_sha256 === null || source.artifact_schema_version === null ? "P22_LEGACY_ARTIFACT_PIN_NOT_PUBLISHED"
+            : source.eligible_methodology_claim_ids.length === 0 ? "P22_METHODOLOGY_CLAIM_NOT_PUBLISHED" : null;
+    return {
+      releaseCandidateId: stored.releaseCandidateId, runId: stored.runId,
+      alphaId: alphaId.value, alphaVersionId: alphaVersionId.value, packDigest: stored.packDigest,
+      currentSourceFingerprint: stored.sourceFingerprint, source, candidateRelation, blockedReason: sourceBlock,
+    };
+  }
+
+  private notReady(
+    pack: ReleaseCandidateStoredPack,
+    alphaId: string | null,
+    alphaVersionId: string | null,
+    reason: string,
+    candidateRelation: "CURRENT" | "SUPERSEDED" | "UNKNOWN" = "UNKNOWN",
+    sourceAvailability: "NOT_CHECKED" | "UNAVAILABLE" = "NOT_CHECKED",
+  ) {
+    return {
+      releaseCandidateId: pack.releaseCandidateId, runId: pack.runId,
+      alphaId: alphaId ?? "unbound", alphaVersionId: alphaVersionId ?? "unbound",
+      packDigest: pack.packDigest, currentSourceFingerprint: pack.sourceFingerprint, candidateRelation,
+      source: { availability: sourceAvailability, reason_code: sourceAvailability === "NOT_CHECKED" ? "P22_SOURCE_NOT_CHECKED" : reason,
+        run_status: null, legacy_artifact_sha256: null, artifact_schema_version: null,
+        eligible_methodology_claim_ids: [], captured_at: null },
+      blockedReason: reason,
+    };
+  }
+
+  private frozenField(core: Record<string, unknown>, key: string): { value: string | null; available: boolean } {
+    const fields = Array.isArray(core.fields) ? core.fields : [];
+    const field = fields.map(record).find((item) => item?.key === key);
+    return {
+      value: typeof field?.value === "string" && field.value.length <= 191 ? field.value : null,
+      available: record(field?.availability)?.state === "AVAILABLE",
+    };
+  }
+
+  private publicationSource(fact: Awaited<ReturnType<GovernanceService["researchPublicationEvidence"]>>): ResearchReleaseCandidatePublicationResponse["source"] {
+    const claims = [...new Set(fact.methodology_claim_ids.filter((item) => typeof item === "string" && item.length > 0 && item.length <= 191))].slice(0, 64);
+    const runStatus = /^[A-Z][A-Z0-9_]{0,63}$/.test(fact.status) ? fact.status : null;
+    const legacyArtifactSha256 = /^sha256:[0-9a-f]{64}$/.test(fact.artifact_sha256) ? fact.artifact_sha256 : null;
+    const artifactSchemaVersion = typeof fact.artifact_schema_version === "string" && fact.artifact_schema_version.length <= 191 ? fact.artifact_schema_version : null;
+    const capturedAt = Number.isFinite(Date.parse(fact.captured_at)) ? fact.captured_at : null;
+    const complete = runStatus !== null && legacyArtifactSha256 !== null && artifactSchemaVersion !== null
+      && claims.length > 0 && capturedAt !== null;
+    return {
+      availability: complete ? "AVAILABLE" : "PARTIAL",
+      reason_code: complete ? null : "P22_SOURCE_FACTS_PARTIAL",
+      run_status: runStatus,
+      legacy_artifact_sha256: legacyArtifactSha256,
+      artifact_schema_version: artifactSchemaVersion,
+      eligible_methodology_claim_ids: claims,
+      captured_at: capturedAt,
+    };
+  }
+
+  private intentSource(intent: ReleaseCandidatePublicationIntent): ResearchReleaseCandidatePublicationResponse["source"] {
+    const source = record(intent.requestPayload.source);
+    if (!source) throw this.unavailable("Persisted publication source facts are incompatible.");
+    const claims = Array.isArray(source.eligible_methodology_claim_ids)
+      ? source.eligible_methodology_claim_ids.filter((item): item is string => typeof item === "string").slice(0, 64) : [];
+    const legacyArtifactSha256 = typeof source.legacy_artifact_sha256 === "string" ? source.legacy_artifact_sha256 : null;
+    if (legacyArtifactSha256 !== intent.legacyArtifactSha256) {
+      throw this.unavailable("Persisted publication artifact pin is inconsistent.");
+    }
+    const availability = source.availability === "AVAILABLE" || source.availability === "PARTIAL"
+      ? source.availability : "UNAVAILABLE";
+    return {
+      availability,
+      reason_code: typeof source.reason_code === "string" ? source.reason_code : availability === "AVAILABLE" ? null : "P22_SOURCE_FACTS_PARTIAL",
+      run_status: typeof source.run_status === "string" ? source.run_status : null,
+      legacy_artifact_sha256: legacyArtifactSha256,
+      artifact_schema_version: typeof source.artifact_schema_version === "string" ? source.artifact_schema_version : null,
+      eligible_methodology_claim_ids: claims,
+      captured_at: typeof source.captured_at === "string" ? source.captured_at : null,
+    };
+  }
+
+  private async executePublication(
+    scope: ResearchScope,
+    user: PortalUser,
+    releaseCandidateId: string,
+    intent: ReleaseCandidatePublicationIntent,
+    replayed: boolean,
+    requestId: string,
+  ): Promise<ResearchReleaseCandidatePublicationResponse> {
+    try {
+      const downstream = ApprovalCreateRequestSchema.safeParse(intent.requestPayload.downstream_request);
+      const requestMatches = downstream.success
+        && downstream.data.workspace_id === scope.workspaceId
+        && downstream.data.request_key === intent.requestKey
+        && downstream.data.gate === "R1"
+        && downstream.data.alpha_id === intent.alphaId
+        && downstream.data.evidence_run_id === intent.runId
+        && downstream.data.methodology_claim_id === intent.methodologyClaimId;
+      if (!requestMatches || intent.actorUserId !== user.userId) {
+        await this.repository.recordPublicationFailure(scope, releaseCandidateId, "REFUSED", "P22_SAVED_REQUEST_INVALID");
+        return this.publication(scope, user, releaseCandidateId);
+      }
+      const response = await this.requireGovernance().createApproval(user, {
+        workspaceId: scope.workspaceId,
+        requestKey: downstream.data.request_key,
+        alphaId: downstream.data.alpha_id,
+        evidenceRunId: downstream.data.evidence_run_id,
+        methodologyClaimId: downstream.data.methodology_claim_id,
+        summary: downstream.data.summary,
+        expectedArtifactSha256: intent.legacyArtifactSha256,
+      }, requestId);
+      const approval = record(response.approval);
+      const requester = record(approval?.requester);
+      const status = approval?.status;
+      const evidenceSetHash = typeof approval?.evidence_set_hash === "string" ? approval.evidence_set_hash : "";
+      const createdAt = typeof approval?.created_at === "string" ? approval.created_at : "";
+      const slaDueAt = typeof approval?.sla_due_at === "string" ? approval.sla_due_at : "";
+      const expiresAt = typeof approval?.expires_at === "string" ? approval.expires_at : "";
+      if (response.schema_version !== "governance.approval-create.v1"
+        || typeof response.replayed !== "boolean"
+        || approval?.approval_id !== intent.approvalId && intent.approvalId !== null
+        || approval?.gate !== "R1" || approval?.subject_id !== intent.alphaId
+        || requester?.user_id !== intent.actorUserId
+        || !/^sha256:[0-9a-f]{64}$/.test(evidenceSetHash)
+        || !["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"].includes(String(status))
+        || !Number.isFinite(Date.parse(createdAt)) || !Number.isFinite(Date.parse(slaDueAt)) || !Number.isFinite(Date.parse(expiresAt))) {
+        throw new Error("Existing Governance create receipt failed P22 source identity checks.");
+      }
+      if (response.replayed) {
+        const replayPin = await this.readApprovalMirror(scope, user, intent, String(approval!.approval_id), evidenceSetHash);
+        if (replayPin.state !== "AVAILABLE") {
+          await this.repository.recordPublicationFailure(scope, releaseCandidateId, "UNKNOWN", "P22_REPLAY_PIN_UNVERIFIED");
+          return this.publication(scope, user, releaseCandidateId);
+        }
+      }
+      const receipt = {
+        schema_version: "governance.approval-create.v1",
+        replayed: response.replayed,
+        approval: {
+          approval_id: approval.approval_id,
+          gate: approval.gate,
+          subject_id: approval.subject_id,
+          requester: { user_id: requester.user_id, username: requester.username },
+          status,
+          evidence_set_hash: evidenceSetHash,
+          sla_due_at: slaDueAt,
+          expires_at: expiresAt,
+          created_at: createdAt,
+        },
+      };
+      const saved = await this.repository.finishPublication(scope, releaseCandidateId, {
+        approvalId: String(approval.approval_id), evidenceSetHash,
+        receiptDigest: digestOf(receipt), status: status as NonNullable<ReleaseCandidatePublicationIntent["downstreamStatus"]>,
+        slaDueAt, expiresAt, publishedAtUtcMs: Date.parse(createdAt), receipt,
+      });
+      return this.publication(scope, user, releaseCandidateId).then((result) => ({ ...result, replayed: replayed || response.replayed }));
+    } catch (error) {
+      const knownRefusal = error instanceof GovernanceError && error.status >= 400 && error.status < 500;
+      const safeCode = knownRefusal ? "P22_GOVERNANCE_REFUSED" : "P22_DOWNSTREAM_OUTCOME_UNKNOWN";
+      await this.repository.recordPublicationFailure(scope, releaseCandidateId, knownRefusal ? "REFUSED" : "UNKNOWN", safeCode);
+      return this.publication(scope, user, releaseCandidateId);
+    }
+  }
+
+  private async readApprovalMirror(
+    scope: ResearchScope, user: PortalUser, intent: ReleaseCandidatePublicationIntent,
+    approvalId = intent.approvalId, evidenceSetHash = intent.evidenceSetHash,
+  ) {
+    if (!approvalId || !evidenceSetHash) return { state: "UNAVAILABLE" as const, approval: null };
+    try {
+      const result = await this.requireGovernance().detail(user, scope.workspaceId, approvalId);
+      const data = record(result.data);
+      const approval = record(data?.approval);
+      const requester = record(approval?.requester);
+      const manifest = record(data?.evidence_manifest);
+      const entries = Array.isArray(manifest?.entries) ? manifest.entries.map(record).filter((item): item is Record<string, unknown> => item !== null) : [];
+      const source = this.intentSource(intent);
+      const pin = entries.length === 1 ? entries[0]! : null;
+      const valid = result.schema_version === "governance.r1-review.v1"
+        && approval?.approval_id === approvalId && approval?.gate === "R1"
+        && approval?.subject_id === intent.alphaId && requester?.user_id === intent.actorUserId
+        && approval?.evidence_set_hash === evidenceSetHash
+        && manifest?.manifest_hash === evidenceSetHash
+        && pin?.artifact_id === intent.runId && pin?.sha256 === intent.legacyArtifactSha256
+        && pin?.source_reference === intent.runId && pin?.source_authority === "RESEARCH"
+        && pin?.verification === "SERVER_PINNED" && pin?.schema_version === source.artifact_schema_version;
+      if (!valid) return { state: "UNAVAILABLE" as const, approval: null };
+      const conditions = Array.isArray(data?.known_limitations) ? data.known_limitations.map(record).filter((item): item is Record<string, unknown> => item !== null).map((item) => ({
+        limitation_id: item.limitation_id,
+        kind: item.kind,
+        label: item.label,
+        statement: item.statement,
+        expires_at: item.expires_at,
+      })) : [];
+      const mirror = {
+        approval_id: approval!.approval_id,
+        gate: "R1" as const,
+        status: approval!.status,
+        subject_id: approval!.subject_id,
+        requester_user_id: requester!.user_id,
+        evidence_set_hash: approval!.evidence_set_hash,
+        sla_due_at: approval!.sla_due_at,
+        expires_at: approval!.expires_at,
+        created_at: approval!.created_at,
+        read_at: result.read_at,
+        conditions,
+        href: `/governance/approvals/${approvalId}/r1`,
+      };
+      const validation = ResearchReleaseCandidatePublicationResponseSchema.shape.approval.safeParse(mirror);
+      return validation.success
+        ? { state: "AVAILABLE" as const, approval: validation.data }
+        : { state: "UNAVAILABLE" as const, approval: null };
+    } catch (error) {
+      if (error instanceof GovernanceError && error.status === 403) return { state: "DENIED" as const, approval: null };
+      if (error instanceof GovernanceError && error.status === 404) return { state: "NOT_FOUND" as const, approval: null };
+      return { state: "UNAVAILABLE" as const, approval: null };
+    }
+  }
+
+  private publicationResponse(input: {
+    releaseCandidateId: string; runId: string; alphaId: string; alphaVersionId: string; packDigest: string;
+    source: ResearchReleaseCandidatePublicationResponse["source"];
+    state: ResearchReleaseCandidatePublicationResponse["state"];
+    candidateRelation: ResearchReleaseCandidatePublicationResponse["candidate_relation"];
+    mayPublish: boolean;
+    blockedReason: string | null;
+    published: ResearchReleaseCandidatePublicationResponse["published"];
+    approvalRead: ResearchReleaseCandidatePublicationResponse["approval_read"];
+    approval: ResearchReleaseCandidatePublicationResponse["approval"];
+    asOfUtcMs: number; replayed: boolean;
+  }): ResearchReleaseCandidatePublicationResponse {
+    const parsed = ResearchReleaseCandidatePublicationResponseSchema.safeParse({
+      schema_version: "research.release-candidate-publication.v1",
+      release_candidate_id: input.releaseCandidateId,
+      run_id: input.runId,
+      alpha_id: input.alphaId,
+      alpha_version_id: input.alphaVersionId,
+      pack_digest: input.packDigest,
+      source: input.source,
+      state: input.state,
+      candidate_relation: input.candidateRelation,
+      may_publish: input.mayPublish,
+      blocked_reason: input.blockedReason,
+      published: input.published,
+      approval_read: input.approvalRead,
+      approval: input.approval,
+      as_of_utc_ms: input.asOfUtcMs,
+      replayed: input.replayed,
+    });
+    if (!parsed.success) throw this.unavailable("Research publication response is incompatible.");
+    return parsed.data;
+  }
+
+  private requireGovernance(): GovernanceService {
+    if (!this.governance) throw this.unavailable("Existing Governance service is unavailable.");
+    return this.governance;
+  }
+
   private compose(
     source: ReleaseCandidateSource,
     draft: ReleaseCandidateDraft,
@@ -274,7 +726,7 @@ export class ResearchReleaseCandidateService {
       },
       gate_verdict: {
         title: sealBlockedReason ? "local seal blocked — review evidence" : "local seal ready — downstream publish remains P22",
-        body: "P21 creates only a Portal-local immutable evidence pack. It neither computes, approves, delivers, nor starts Paper.",
+        body: "P21 seals a Portal-local evidence pack. P22 publication creates only an existing R1 request; it does not approve or start Paper.",
       },
       draft: {
         draft_id: draft.draftId,
@@ -294,14 +746,17 @@ export class ResearchReleaseCandidateService {
         may_edit_draft: true,
         may_seal: sealBlockedReason === null,
         seal_blocked_reason: sealBlockedReason,
-        publish: { enabled: false as const, blocked_reason: "P22_PUBLICATION_NOT_COMMISSIONED" as const },
+        publish: {
+          enabled: localSeal.state === "SEALED_LOCAL" && localSeal.availability.state === "AVAILABLE",
+          blocked_reason: localSeal.state !== "SEALED_LOCAL" ? "P22_LOCAL_SEAL_REQUIRED" : localSeal.availability.reason_code,
+        },
       },
       mirror: null,
       source_absences: {
         alpha_binding: isScratch ? absent("P21_SCRATCH_RUN_UNBOUND") : AVAILABLE,
         methodology_claim: pack[3]!.availability,
         final_audit: pack[5]!.availability,
-        approval_mirror: absent("P22_PUBLICATION_NOT_COMMISSIONED"),
+        approval_mirror: absent("P22_MIRROR_READ_USES_SEPARATE_ENDPOINT"),
         execution_deployment: notApplicable("P21_EXECUTION_DEPLOYMENT_OUT_OF_SCOPE"),
       },
     };

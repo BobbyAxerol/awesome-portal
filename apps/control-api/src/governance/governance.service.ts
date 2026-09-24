@@ -68,6 +68,7 @@ interface CreateApprovalInput {
   evidenceRunId: string;
   methodologyClaimId: string;
   summary: string;
+  expectedArtifactSha256?: string;
 }
 
 function canonical(value: unknown): string {
@@ -345,6 +346,13 @@ export class GovernanceService {
         422,
       );
     }
+    if (input.expectedArtifactSha256 !== undefined && run.artifactSha256 !== input.expectedArtifactSha256) {
+      throw new GovernanceError(
+        "EVIDENCE_ARTIFACT_CHANGED",
+        "Evidence artifact changed after the publication intent was prepared.",
+        409,
+      );
+    }
     const evidenceId = newUlid("ev");
     const evidence: EvidenceRecord = {
       evidenceId,
@@ -443,6 +451,22 @@ export class GovernanceService {
       }
       throw error;
     }
+  }
+
+  /** P22 reads the same RunSync-backed evidence record used by existing R1 creation. */
+  async researchPublicationEvidence(user: PortalUser, workspaceId: string, runId: string, refresh = false) {
+    if (refresh) await this.runSync?.refresh(user, workspaceId, runId);
+    const run = await this.repository.approvalEvidenceRun(workspaceId, runId);
+    if (!run) throw new GovernanceError("EVIDENCE_RUN_NOT_FOUND", "Evidence run was not found.", 404);
+    return {
+      run_id: run.runId,
+      alpha_id: run.alphaId,
+      status: run.status,
+      artifact_sha256: run.artifactSha256,
+      artifact_schema_version: run.artifactSchemaVersion,
+      methodology_claim_ids: [...run.methodologyClaimIds],
+      captured_at: run.capturedAt.toISOString(),
+    };
   }
 
   async detail(user: PortalUser, workspaceId: string, approvalId: string) {

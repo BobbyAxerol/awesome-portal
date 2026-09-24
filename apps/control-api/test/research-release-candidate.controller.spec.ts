@@ -18,12 +18,14 @@ function reply() {
 
 describe("P21 same-origin controller boundary", () => {
   it("reads only a named run/RC under the active workspace and returns private no-store responses", async () => {
-    const service = { detail: vi.fn().mockResolvedValue({ source_fingerprint: "a".repeat(64) }), pack: vi.fn().mockResolvedValue({ pack_digest: "b".repeat(64) }) };
+    const service = { detail: vi.fn().mockResolvedValue({ source_fingerprint: "a".repeat(64) }), pack: vi.fn().mockResolvedValue({ pack_digest: "b".repeat(64) }), publication: vi.fn().mockResolvedValue({ state: "NOT_PUBLISHED" }), publish: vi.fn() };
     const controller = new ResearchReleaseCandidateController(service as never, { isMember: vi.fn().mockResolvedValue(true) } as never, {} as never);
     const response = reply();
 
     await expect(controller.detail(request as never, response as never, runId, {})).resolves.toEqual({ source_fingerprint: "a".repeat(64) });
     await expect(controller.pack(request as never, response as never, rcId, {})).resolves.toEqual({ pack_digest: "b".repeat(64) });
+    await expect(controller.publication(request as never, response as never, rcId, {})).resolves.toEqual({ state: "NOT_PUBLISHED" });
+    await expect(controller.publish(request as never, rcId, {}, {})).rejects.toMatchObject({ code: "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN", status: 403 });
     expect(service.detail).toHaveBeenCalledWith({ workspaceId: "ws-p21", actorUserId: "usr-p21" }, runId);
     expect(response.header).toHaveBeenCalledWith("cache-control", "private, no-store");
   });

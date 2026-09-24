@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
- "generated_at": "2026-09-21",
- "route_count": 180,
+ "generated_at": "2026-09-24",
+ "route_count": 182,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1566,62 +1566,62 @@
    "test_owner": "codex"
   },
   {
-    "route": "POST /internal/research/progress/events",
+   "route": "POST /internal/research/progress/events",
    "controller": "research/progress-ingress.controller.ts",
    "interaction_class": "INTENTIONALLY_UNEXPOSED",
    "consumer": "INTERNAL_WORKER_ONLY",
    "unused_capability": false,
    "evidence": "P11 infrastructure-only private callback: it requires the short-lived signed research_progress_writer principal and the exact current P10/P06 lease before materialising a worker journal event. It is forbidden to browser, facade, Execution Edge, source database and CLI callers by design.",
-    "owner": "codex",
-    "test_owner": "codex"
+   "owner": "codex",
+   "test_owner": "codex"
   },
   {
-    "route": "GET /api/v1/quantbt/runs",
-    "controller": "research/run-library.controller.ts",
-    "interaction_class": "AUTO_READ",
-    "consumer": "TYPED_FRONTEND_PORT",
-    "unused_capability": true,
-    "evidence": "P12 bounded same-origin persisted Run Library reader: signed opaque keysets, exact workspace-scoped totals, trigger-maintained search projection and explicit legacy/metric absence. It cannot scan artifacts/Parquet, read a worker/source database or create a run; Claude owns the S01 typed product consumer and browser receipt.",
-    "owner": "codex",
-    "test_owner": "codex"
+   "route": "GET /api/v1/quantbt/runs",
+   "controller": "research/run-library.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P12 bounded same-origin persisted Run Library reader: signed opaque keysets, exact workspace-scoped totals, trigger-maintained search projection and explicit legacy/metric absence. It cannot scan artifacts/Parquet, read a worker/source database or create a run; Claude owns the S01 typed product consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
   },
   {
-    "route": "GET /api/v1/quantbt/runs/:runId/sparkline",
-    "controller": "research/run-library.controller.ts",
-    "interaction_class": "INTERACTION_READ",
-    "consumer": "TYPED_FRONTEND_PORT",
-    "unused_capability": true,
-    "evidence": "P12 lazy Screen-01 sparkline boundary validates the session/workspace-scoped run ID and returns at most 24 exact decimal strings. Current P12 refuses artifact/Parquet reads, so an unavailable series is explicit rather than a fabricated curve; Claude owns placeholder and browser evidence.",
-    "owner": "codex",
-    "test_owner": "codex"
+   "route": "GET /api/v1/quantbt/runs/:runId/sparkline",
+   "controller": "research/run-library.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P12 lazy Screen-01 sparkline boundary validates the session/workspace-scoped run ID and returns at most 24 exact decimal strings. Current P12 refuses artifact/Parquet reads, so an unavailable series is explicit rather than a fabricated curve; Claude owns placeholder and browser evidence.",
+   "owner": "codex",
+   "test_owner": "codex"
   },
   {
-    "route": "GET /api/v1/quantbt/runs/:runId/evidence",
-    "controller": "research/evidence.controller.ts",
-    "interaction_class": "AUTO_READ",
-    "consumer": "TYPED_FRONTEND_PORT",
-    "unused_capability": true,
-    "evidence": "P13 bounded same-origin Evidence Flow Hub reads only one immutable Portal projection under session/workspace scope. It never starts QuantBT, scans an artifact/Parquet dataset, exposes worker or lease identity, or lets the browser choose a revision; Claude owns the Screen 04 rich typed consumer and browser receipt.",
-    "owner": "codex",
-    "test_owner": "codex"
+   "route": "GET /api/v1/quantbt/runs/:runId/evidence",
+   "controller": "research/evidence.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P13 bounded same-origin Evidence Flow Hub reads only one immutable Portal projection under session/workspace scope. It never starts QuantBT, scans an artifact/Parquet dataset, exposes worker or lease identity, or lets the browser choose a revision; Claude owns the Screen 04 rich typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
   },
   {
-    "route": "GET /api/v1/quantbt/runs/:runId/evidence/series",
-    "controller": "research/evidence.controller.ts",
-    "interaction_class": "INTERACTION_READ",
-    "consumer": "TYPED_FRONTEND_PORT",
-    "unused_capability": true,
-    "evidence": "P13 lazy named Evidence Flow chart read returns one at-most-192-value exact-decimal series bound to the Hub revision. It rejects relation/cursor/path/worker input and represents source absence as a typed empty series; Claude owns Screen 04 drilldown, revision rejection and browser evidence.",
-    "owner": "codex",
-    "test_owner": "codex"
+   "route": "GET /api/v1/quantbt/runs/:runId/evidence/series",
+   "controller": "research/evidence.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P13 lazy named Evidence Flow chart read returns one at-most-192-value exact-decimal series bound to the Hub revision. It rejects relation/cursor/path/worker input and represents source absence as a typed empty series; Claude owns Screen 04 drilldown, revision rejection and browser evidence.",
+   "owner": "codex",
+   "test_owner": "codex"
   },
   {
    "route": "GET /api/v1/quantbt/runs/:runId/split",
-    "controller": "research/split.controller.ts",
-    "interaction_class": "AUTO_READ",
-    "consumer": "TYPED_FRONTEND_PORT",
-    "unused_capability": true,
-    "evidence": "P14 bounded same-origin Split reader returns one immutable current-P04 chronology projection under session/workspace scope. It retains typed non-publication for advanced folds, purge/embargo, strict selection, source seal and holdout unlock; it never reads snapshot/Parquet data, exposes a worker/lease/path, returns a holdout result or creates an action channel. Claude owns Screen 05 typed consumer and browser receipt.",
+   "controller": "research/split.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P14 bounded same-origin Split reader returns one immutable current-P04 chronology projection under session/workspace scope. It retains typed non-publication for advanced folds, purge/embargo, strict selection, source seal and holdout unlock; it never reads snapshot/Parquet data, exposes a worker/lease/path, returns a holdout result or creates an action channel. Claude owns Screen 05 typed consumer and browser receipt.",
    "owner": "codex",
    "test_owner": "codex"
   },
@@ -1762,6 +1762,26 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P21 workspace-scoped immutable local pack read returns frozen 17/12 evidence plus a separately typed downstream delivery/approval state. It exposes neither a generic research relation nor any mutable approval surface; a foreign RC is indistinguishable from absent.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/release-candidates/:releaseCandidateId/publication",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P22 workspace-scoped read of immutable publication intent and current existing R1 detail. Preserves the local RC digest, legacy artifact SHA-256, Governance evidence-set hash, raw R1 status, SLA, expiry and conditions as separate source facts; no R1 decision is exposed.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/release-candidates/:releaseCandidateId/publish",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P22 strict same-origin/CSRF publication intent invokes only the unchanged governance.approval-create-request.v1 R1 operation using a sealed/current RC and exact run/Alpha/claim/artifact pins. Idempotent replay is verified from existing R1 detail; never approves/rejects or starts Execution.",
    "owner": "codex",
    "test_owner": "codex"
   },
