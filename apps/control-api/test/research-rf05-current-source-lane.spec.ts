@@ -15,7 +15,6 @@ import { ResearchCurrentSourceError } from "../src/research/current-source.error
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
 import { ifNoneMatchWeakly } from "../src/research/etag";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "../src/research/p04-delta.binding";
-import { ResearchSplitError } from "../src/research/split.error";
 
 const scope = { workspaceId: "rf05-workspace", actorUserId: "rf05-user" };
 const config = {
@@ -29,24 +28,21 @@ function build(options: {
   status: string;
   sourceKind?: "RESEARCH_DURABLE" | "LEGACY_1_0_8_METADATA";
   adapterContractDigest?: string | null;
-  hub?: ReturnType<typeof vi.fn>;
 }) {
   const repository = {
     sealForRead: vi.fn().mockResolvedValue(null),
-    runState: vi.fn().mockResolvedValue({ sourceKind: options.sourceKind ?? "RESEARCH_DURABLE", effectiveStatus: options.status }),
+    runState: vi.fn().mockResolvedValue({
+      sourceKind: options.sourceKind ?? "RESEARCH_DURABLE",
+      effectiveStatus: options.status,
+      adapterContractDigest: options.adapterContractDigest ?? null,
+    }),
     rows: vi.fn(),
     sampleRows: vi.fn(),
     verifyRetainedImport: vi.fn(),
   };
-  const split = {
-    hub: options.hub ?? vi.fn().mockResolvedValue(
-      options.adapterContractDigest === undefined ? null : { adapterContractDigest: options.adapterContractDigest },
-    ),
-  };
   return {
     repository,
-    split,
-    service: new ResearchCurrentSourceService(repository as never, config as never, split as never),
+    service: new ResearchCurrentSourceService(repository as never, config as never),
   };
 }
 
@@ -174,27 +170,26 @@ describe("RF-05 CG-P13-09 · refusals carry a typed lane_state", () => {
     });
   });
 
-  it("a legacy 1.0.8 row is NOT_RETAINED_LEGACY without consulting the P10 binding", async () => {
-    const { service, split } = build({ status: "COMPLETED", sourceKind: "LEGACY_1_0_8_METADATA" });
+  it("a legacy 1.0.8 row is NOT_RETAINED_LEGACY even if a binding were present", async () => {
+    const { service } = build({ status: "COMPLETED", sourceKind: "LEGACY_1_0_8_METADATA", adapterContractDigest: P04_DELTA_ADAPTER_CONTRACT_DIGEST });
     await expect(service.evidence(scope, "legacy")).rejects.toMatchObject({
       status: 409, details: { lane_state: "NOT_RETAINED_LEGACY" },
     });
-    expect(split.hub).not.toHaveBeenCalled();
   });
 
   it("a durable run without a producer binding stays a typed refusal, not NOT_APPLICABLE", async () => {
-    const { service } = build({ status: "QUEUED", adapterContractDigest: undefined });
+    const { service } = build({ status: "QUEUED", adapterContractDigest: null });
     await expect(service.split(scope, "draft")).rejects.toMatchObject({ status: 409, details: { lane_state: "PENDING_SOURCE" } });
   });
 
-  it("maps a lane-lookup failure to the current-source vocabulary", async () => {
-    const forbidden = build({ status: "COMPLETED", hub: vi.fn().mockRejectedValue(new ResearchSplitError("RESEARCH_SPLIT_FORBIDDEN", "no", 403)) });
-    await expect(forbidden.service.split(scope, "run")).rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_FORBIDDEN", status: 403 });
-    const saturated = build({ status: "COMPLETED", hub: vi.fn().mockRejectedValue(new ResearchSplitError("RESEARCH_SPLIT_UNAVAILABLE", "busy", 503)) });
-    await expect(saturated.service.split(scope, "run")).rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE", status: 503 });
+  it("answers the no-seal lane from one run-state read, without another reader's admission slot", async () => {
+    const { service, repository } = build({ status: "COMPLETED", adapterContractDigest: P04_DELTA_ADAPTER_CONTRACT_DIGEST });
+    await service.split(scope, "run_p04");
+    expect(repository.sealForRead).toHaveBeenCalledTimes(1);
+    expect(repository.runState).toHaveBeenCalledTimes(1);
   });
 
-  it("a harness without the P10 lookup keeps the typed refusal", async () => {
+  it("a run-state row from an older harness (no binding field) keeps the typed refusal", async () => {
     const repository = {
       sealForRead: vi.fn().mockResolvedValue(null),
       runState: vi.fn().mockResolvedValue({ sourceKind: "RESEARCH_DURABLE", effectiveStatus: "COMPLETED" }),

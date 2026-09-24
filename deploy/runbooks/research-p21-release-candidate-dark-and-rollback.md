@@ -20,7 +20,7 @@ change-control rules still apply.
 1. The candidate release is built from an immutable reviewed commit and its
    normal Control API migration mechanism has completed successfully.
 2. `CONTROL_API_FEATURE_RESEARCH_REPORTS=true` and
-   `CONTROL_API_FEATURE_RESEARCH_ATTEMPT_LINEAGE=true` are true in the same
+   `CONTROL_API_FEATURE_RESEARCH_LINEAGE=true` are true in the same
    profile. Release Candidate admission must fail closed otherwise.
 3. P21 focused service/controller/contract tests, generated-contract snapshot,
    disposable migration/immutability proof and Control API compile have passed

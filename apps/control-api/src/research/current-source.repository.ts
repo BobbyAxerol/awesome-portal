@@ -87,9 +87,19 @@ export interface CurrentSourcePage {
   totalRows: number;
 }
 
+/** Run state for the no-seal lane; exported so the PostgreSQL lane runs the exact statement. */
+export const CURRENT_SOURCE_RUN_STATE_SQL = `SELECT library.source_kind, library.effective_status, producer.adapter_contract_digest
+  FROM research.run_library_rows_v1 library
+  LEFT JOIN research.run_producers producer
+    ON producer.workspace_id = library.workspace_id AND producer.run_id = library.run_id
+ WHERE library.workspace_id = $1 AND library.run_id = $2
+ LIMIT 1`;
+
 export interface CurrentSourceRunState {
   sourceKind: "RESEARCH_DURABLE" | "LEGACY_1_0_8_METADATA";
   effectiveStatus: string;
+  /** The run's immutable P10 adapter binding; null for a run P10 never admitted. */
+  adapterContractDigest: string | null;
 }
 
 interface SealQueryRow {
@@ -130,7 +140,11 @@ export interface CurrentSourceBatchDigestRow {
   batch_digest: string;
   row_count: string | number;
 }
-interface RunStateQueryRow { source_kind: "RESEARCH_DURABLE" | "LEGACY_1_0_8_METADATA"; effective_status: string; }
+interface RunStateQueryRow {
+  source_kind: "RESEARCH_DURABLE" | "LEGACY_1_0_8_METADATA";
+  effective_status: string;
+  adapter_contract_digest: string | null;
+}
 
 const MAXIMUM_CONCURRENT_CURRENT_SOURCE_READS = 2;
 const MAXIMUM_QUEUED_CURRENT_SOURCE_READS = 8;
@@ -389,20 +403,23 @@ export class ResearchCurrentSourceRepository {
   /**
    * This is only used to turn an absent current-source seal into an honest
    * typed refusal. It does not read legacy request/configuration JSON and it
-   * never causes a source/worker lookup.
+   * never causes a source/worker lookup. The P10 adapter binding is joined
+   * here, inside this lane's own admission, so a no-seal read never takes a
+   * split-reader slot (it used to, and could 503 behind slow split reads).
    */
   async runState(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<CurrentSourceRunState | null> {
     return this.withScopedRead(scope, async (client) => {
       const result = await client.query<RunStateQueryRow>(
-        `SELECT source_kind, effective_status
-           FROM research.run_library_rows_v1
-          WHERE workspace_id = $1 AND run_id = $2
-          LIMIT 1`,
+        CURRENT_SOURCE_RUN_STATE_SQL,
         [scope.workspaceId, runId],
       );
-      return result.rowCount === 1
-        ? { sourceKind: result.rows[0]!.source_kind, effectiveStatus: result.rows[0]!.effective_status }
-        : null;
+      if (result.rowCount !== 1) return null;
+      const row = result.rows[0]!;
+      return {
+        sourceKind: row.source_kind,
+        effectiveStatus: row.effective_status,
+        adapterContractDigest: row.adapter_contract_digest ?? null,
+      };
     }, signal);
   }
 
