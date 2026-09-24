@@ -56,6 +56,8 @@ interface ReadRunRow {
   spec_symbol?: string | null;
   spec_timeframe?: string | null;
   spec_route?: string | null;
+  spec_engine_release?: string | null;
+  spec_config_digest?: string | null;
   declared_fold_count?: string | number | null;
   sealed_holdout?: Record<string, unknown> | string | null;
   requested_spec_retained?: boolean | null;
@@ -171,6 +173,9 @@ export interface ProgressRunIdentity {
   symbol: string | null;
   timeframe: string | null;
   executionRoute: string | null;
+  /** The P02 client's engine release id and config digest, as requested. */
+  engineReleaseId: string | null;
+  configDigest: string | null;
   requestedSpecDigest: string;
   createdAt: Date;
   /** Length of the P08 topology's fold list; null when the topology declares none. */
@@ -426,6 +431,8 @@ export class ResearchProgressRepository {
                 preflight.requested_spec->'data'->>'symbol' AS spec_symbol,
                 preflight.requested_spec->'data'->>'timeframe' AS spec_timeframe,
                 preflight.requested_spec->>'execution_route' AS spec_route,
+                preflight.requested_spec->'client'->>'engine_release_id' AS spec_engine_release,
+                preflight.requested_spec->'client'->>'config_digest' AS spec_config_digest,
                 CASE WHEN jsonb_typeof(preflight.topology->'folds') = 'array'
                      THEN jsonb_array_length(preflight.topology->'folds') END AS declared_fold_count,
                 CASE WHEN jsonb_typeof(preflight.topology->'sealed_holdout') = 'object'
@@ -633,6 +640,9 @@ export class ResearchProgressRepository {
       symbol: text(row.spec_symbol),
       timeframe: text(row.spec_timeframe),
       executionRoute: text(row.spec_route),
+      engineReleaseId: text(row.spec_engine_release),
+      configDigest: typeof row.spec_config_digest === "string" && /^[0-9a-f]{64}$/.test(row.spec_config_digest)
+        ? row.spec_config_digest : null,
       requestedSpecDigest: row.requested_spec_digest,
       createdAt: row.created_at,
       declaredFoldCount: declared !== null && declared > 0 ? declared : null,

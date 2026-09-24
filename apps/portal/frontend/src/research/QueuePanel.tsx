@@ -226,6 +226,9 @@ export function ServedAttempts({ queue, attempts = [], open = false }: ServedAtt
         queue {queue ? <span style={{ color: "var(--ink-soft)" }}>{queue.queue_class}</span> : "class not published"}
         {queue ? <> · queued {clock(queue.queued_at_utc_ms)}</> : null} · {attempts.length} worker attempt
         {attempts.length === 1 ? "" : "s"}
+        {queue?.retry_not_before_utc_ms != null ? (
+          <span data-retry-not-before> · next attempt not before {clock(queue.retry_not_before_utc_ms)}</span>
+        ) : null}
       </summary>
       <div style={{ paddingTop: 4 }}>
         {attempts.map((attempt) => {
@@ -259,7 +262,16 @@ export function ServedAttempts({ queue, attempts = [], open = false }: ServedAtt
               </span>
               <span>claimed {clock(attempt.claimed_at_utc_ms)}</span>
               {attempt.started_at_utc_ms !== null ? <span>started {clock(attempt.started_at_utc_ms)}</span> : null}
-              {attempt.ended_at_utc_ms !== null ? <span>ended {clock(attempt.ended_at_utc_ms)}</span> : null}
+              {/* CG-P11-06: a lost lease lapsed at one instant and was recorded
+                  by the scheduler's sweep at another; both are facts. */}
+              {attempt.state === "LOST_LEASE" && attempt.lease_expired_at_utc_ms != null ? (
+                <span data-lease-lapsed>lease lapsed {clock(attempt.lease_expired_at_utc_ms)}</span>
+              ) : null}
+              {attempt.ended_at_utc_ms !== null ? (
+                <span>
+                  {attempt.state === "LOST_LEASE" ? "recorded" : "ended"} {clock(attempt.ended_at_utc_ms)}
+                </span>
+              ) : null}
             </div>
           );
         })}

@@ -29,7 +29,6 @@ export function RunProgressRoute() {
       onLoadOlder={progress.loadOlder}
       canLoadOlder={progress.canLoadOlder}
       refusal={progress.refusal}
-      meta={progress.meta}
       foldTrials={progress.foldTrials}
       foldCursor={progress.foldCursor}
       onPinFold={progress.pinFold}

@@ -88,7 +88,9 @@ function requested(): ResearchRequestedSpec {
     early_stopping: null,
     random_seed: null,
     optimization_config: {},
-    client: { engine_release_id: "er_quantbt_111", config_digest: "a".repeat(64) },
+    // Distinct from the "a"-filled locator digest the retained-table case
+    // proves never leaks: the client config digest is a public identity fact.
+    client: { engine_release_id: "er_quantbt_111", config_digest: "5".repeat(64) },
   } as ResearchRequestedSpec;
 }
 
@@ -616,7 +618,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
         id: { value: "signal_notional", availability: { state: "AVAILABLE", reason_code: null } },
         contract: { value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P13_ROUTE_CONTRACT_NOT_PUBLISHED" } },
       },
-      config_digest: { value: "a".repeat(64), availability: { state: "AVAILABLE", reason_code: null } },
+      config_digest: { value: "5".repeat(64), availability: { state: "AVAILABLE", reason_code: null } },
       seed: { value: null, availability: { state: "NOT_APPLICABLE", reason_code: "P02_RANDOM_SEED_NOT_SELECTED" } },
     });
     expect(hub.core.fold_navigation).toEqual({
@@ -1074,6 +1076,8 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
       schedule: "global",
       instrument: { symbol: "BTCUSDT", timeframe: "1h" },
       execution_route: "signal_notional",
+      engine_release_id: "er_quantbt_111",
+      config_digest: "5".repeat(64),
       requested_spec_digest: sha256ResearchJson(requested()),
       declared_folds: { state: "DECLARED", count: 1, reason_code: null },
     });

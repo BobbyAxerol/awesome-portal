@@ -544,6 +544,10 @@ export interface components {
                 timeframe: string | null;
             };
             execution_route: string | null;
+            /** @description The engine release the P02 client requested (requested_spec.client.engine_release_id). */
+            engine_release_id: string | null;
+            /** @description The P02 client's config digest (requested_spec.client.config_digest). */
+            config_digest: components["schemas"]["Digest"] | null;
             requested_spec_digest: components["schemas"]["Digest"];
             created_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             /** @description The fold count the P08 topology declared at admission (a three-window run declares one). */

@@ -41,6 +41,16 @@ export type Artifact = Schemas["Artifact"];
 /** RF01-B3: one retained table in the artifact authority's six-state vocabulary. */
 export type RetainedArtifact = Schemas["ProgressRetainedArtifact"];
 export type EffectiveStatus = ProgressRead["current"]["effective_status"];
+/** CG-P11-03: run identity from the P10 producer row and its P08 manifest. */
+export type ProgressRunIdentity = Schemas["ProgressRunIdentity"];
+/** CG-P11-03: a declared artifact this viewer may not read (the sealed holdout). */
+export type DeniedArtifact = Schemas["ProgressDeniedArtifact"];
+/** CG-P11-03: the parameter bundle a fold was evaluated with. */
+export type FoldSelection = Schemas["ProgressFoldSelection"];
+/** CG-P11-03: the structured cursor a finished run hands to Screen 04. */
+export type HandoffCursor = Schemas["ProgressHandoffCursor"];
+/** CG-P11-07: the immutable requested spec a new run may start from. */
+export type RunRequestedSpec = Schemas["RunRequestedSpec"];
 export type ClaimState = ProgressSnapshot["claim"]["state"];
 
 /**
@@ -59,6 +69,16 @@ export const NOT_PUBLISHED_TIMELINE: FoldTimeline = {
   state: "NOT_PUBLISHED",
   reason_code: "SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS",
   segments: [],
+};
+
+/** The documented meaning of an absent fold `selection` (pre-W2 snapshot). */
+export const NOT_PUBLISHED_SELECTION: FoldSelection = {
+  state: "NOT_PUBLISHED",
+  scope: null,
+  trial: null,
+  objective: null,
+  params_digest: null,
+  reason_code: "SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION",
 };
 
 /** The documented meaning of an absent `methodology_certificate`. */
@@ -129,6 +149,16 @@ export const progressApi = {
       { signal },
     ),
 
+  /**
+   * CG-P11-07: the admitted requested spec, for Screen 02's `?from=`. The new
+   * run is still a NEW intent through a fresh preflight.
+   */
+  requestedSpec: (runId: string, workspaceId?: string, signal?: AbortSignal) =>
+    call<RunRequestedSpec>(
+      runPath(runId, `/requested-spec${workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : ""}`),
+      { signal },
+    ),
+
   /** The server decides admission; `may_cancel` is display state. */
   cancel: (runId: string, reason: string, workspaceId?: string) =>
     call<CancelResponse>(runPath(runId, "/cancel"), {
@@ -152,7 +182,15 @@ export const progressApi = {
  * ---------------------------------------------------------------------- */
 
 export type StreamFrame =
-  | { kind: "event"; event: ProgressEvent; snapshot: ProgressSnapshot | null }
+  | {
+      kind: "event";
+      event: ProgressEvent;
+      snapshot: ProgressSnapshot | null;
+      /** CG-P11-08: this viewer's current read; null on a replayed frame. */
+      read: ProgressRead | null;
+      /** True when the server left the read out for its size: read once. */
+      readOmitted: boolean;
+    }
   | { kind: "snapshot"; read: ProgressRead }
   | { kind: "heartbeat" }
   | { kind: "terminal"; frame: ProgressTerminalFrame };
@@ -205,7 +243,17 @@ export function classifyFrame(raw: string): StreamFrame | null {
   if (value.event && typeof value.event === "object") {
     const wrapper = value as unknown as ProgressStreamEvent;
     if (typeof wrapper.event.event_type !== "string") return null;
-    return { kind: "event", event: wrapper.event, snapshot: wrapper.snapshot ?? null };
+    const read =
+      wrapper.read && typeof wrapper.read === "object" && wrapper.read.schema_version === "research.progress-read.v1"
+        ? wrapper.read
+        : null;
+    return {
+      kind: "event",
+      event: wrapper.event,
+      snapshot: wrapper.snapshot ?? null,
+      read,
+      readOmitted: wrapper.read_omitted_reason === "P11_STREAM_READ_OVER_FRAME_BUDGET",
+    };
   }
   return null;
 }

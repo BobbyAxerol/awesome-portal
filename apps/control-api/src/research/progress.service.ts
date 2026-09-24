@@ -44,6 +44,8 @@ export interface ResearchProgressRunIdentity {
   schedule: string | null;
   instrument: { symbol: string | null; timeframe: string | null };
   execution_route: string | null;
+  engine_release_id: string | null;
+  config_digest: string | null;
   requested_spec_digest: string;
   created_at_utc_ms: number;
   declared_folds:
@@ -454,6 +456,8 @@ export class ResearchProgressService {
       schedule: identity.schedule,
       instrument: { symbol: identity.symbol, timeframe: identity.timeframe },
       execution_route: identity.executionRoute,
+      engine_release_id: identity.engineReleaseId,
+      config_digest: identity.configDigest,
       requested_spec_digest: identity.requestedSpecDigest,
       created_at_utc_ms: identity.createdAt.valueOf(),
       declared_folds: identity.declaredFoldCount === null
