@@ -33,6 +33,7 @@ import {
   mayCompare,
   unavailableReason,
 } from "./runLibraryClient";
+import { compareEntryHref } from "./compareClient";
 import { lineageHref } from "./LineageDetail";
 import { ResearchPanel } from "./ResearchPanel";
 import type { LibraryFilters } from "./useRunLibrary";
@@ -495,6 +496,9 @@ function CompareBar({
   const [a, b] = selected.map((id) => items.find((item) => item.run_id === id));
   const comparable = mayCompare(a, b);
   const both = selected.length === 2;
+  /* The canonical compare route reads inside one Alpha: name it only when both runs are bound to the same one. */
+  const alphaA = a?.binding?.alpha_id ?? null;
+  const sharedAlpha = alphaA !== null && alphaA === (b?.binding?.alpha_id ?? null) ? alphaA : null;
 
   return (
     <div
@@ -512,7 +516,7 @@ function CompareBar({
         </span>
       ) : comparable ? (
         <Link
-          to={`/research/quantbt/compare?runs=${selected.join(",")}`}
+          to={compareEntryHref(selected, sharedAlpha)}
           className="btn-ghost mono text-[10px]"
           data-action="open-compare"
         >

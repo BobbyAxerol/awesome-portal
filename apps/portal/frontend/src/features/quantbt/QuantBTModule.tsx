@@ -54,6 +54,7 @@ import { SearchRoute } from "../../research/SearchRoute";
 import { FreezeRoute } from "../../research/FreezeRoute";
 import { ExecuteRoute } from "../../research/ExecuteRoute";
 import { ReportRoute } from "../../research/ReportRoute";
+import { CompareResolverRoute, CompareRoute } from "../../research/CompareRoute";
 import { LineageRoute } from "../../research/LineageRoute";
 import { PortalApiError } from "../../lib/api";
 
@@ -270,7 +271,7 @@ export function QuantBTModule() {
   // also have dropped the caption from New Run and the import inbox, which are
   // outside this phase and inside the visual baseline.
   const onReferenceRoute =
-    /\/(journey|atlas|alpha-import|alphas\/[^/]+\/lineage|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze))(\/|$)/.test(location.pathname) ||
+    /\/(journey|atlas|alpha-import|alphas\/[^/]+\/lineage|alphas\/[^/]+\/compare|compare|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze))(\/|$)/.test(location.pathname) ||
     /\/runs$/.test(location.pathname);
 
   const actions = (
@@ -375,6 +376,11 @@ export function QuantBTModule() {
         {/* P19 · Screen 10. Declared before `alphas/:alphaId/:version` so a
           * reader never has to know that the static segment also outranks it. */}
         <Route path="alphas/:alphaId/lineage" element={<LineageRoute />} />
+        {/* P20 · Screen 13, canonical inside one Alpha (VD-P20-09); also
+          * declared before `alphas/:alphaId/:version`. `compare` is the route
+          * spec 13 names, kept as a resolver ahead of the `:tab` redirect. */}
+        <Route path="alphas/:alphaId/compare" element={<CompareRoute />} />
+        <Route path="compare" element={<CompareResolverRoute />} />
         <Route path="alphas/:alphaId/:version" element={<AlphaVersionDetail />} />
         {/* P12 · Screen 01 on the canonical route spec 01 names. The screen it
           * replaces is not deleted — it stays reachable at `runs/legacy`, so

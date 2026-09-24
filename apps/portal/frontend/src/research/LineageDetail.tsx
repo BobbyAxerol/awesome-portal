@@ -28,6 +28,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link, useInRouterContext } from "react-router-dom";
 
+import { compareHref } from "./compareClient";
 import { ResearchPanel } from "./ResearchPanel";
 import {
   LINEAGE_REASON,
@@ -273,6 +274,7 @@ const LINEAGE_CSS = `
 .ln-alpha { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; }
 .ln-alphaid { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); }
 .ln-links { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 10px; }
+.ln-compare { font-family: var(--font-mono); font-size: 10px; }
 .ln-unrouted { color: var(--ink-faint); cursor: not-allowed; text-decoration: line-through dotted; }
 .ln-band { display: flex; flex-direction: column; gap: 4px; padding: 7px 12px; min-width: 0; }
 .ln-band + .ln-band { border-top: 1px solid var(--line-soft); }
@@ -841,6 +843,12 @@ function RootCard({
           <span className="ln-unrouted" title={RC_UNROUTED} aria-label={`rc & publish — ${RC_UNROUTED}`} data-action-unrouted="release-candidate">
             rc &amp; publish →
           </span>
+        </span>
+        {/* P20: Screen 13 reads inside this Alpha; kept beside, not inside, the hi-fi's three links. */}
+        <span className="ln-compare">
+          <Link to={compareHref(alpha.alpha_id)} data-action="open-compare">
+            compare →
+          </Link>
         </span>
       </div>
       <div ref={bandsRef}>
