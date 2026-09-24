@@ -43,15 +43,66 @@ const ConsoleObservationSchema = z.object({
   fold: PositiveIntegerSchema.nullable().optional(),
   trial: PositiveIntegerSchema.nullable().optional(),
 }).strict();
+// CG-P11-09: every usage key is always present, and `null` means the source
+// did not measure it. A zero is a measurement; it is never a placeholder for
+// a probe the child does not have (scratch/fd today, RSS when unobservable).
 const UsageSchema = z.object({
-  peak_rss_bytes: z.number().int().nonnegative().max(4 * 1024 * 1024 * 1024),
+  peak_rss_bytes: z.number().int().nonnegative().max(4 * 1024 * 1024 * 1024).nullable(),
   // Wire ceiling is the largest installed child limit (W1 Delta WFO: 120 s).
   // The per-profile cap is enforced after lease resolution: a P04 fixed
   // qualification attempt is still refused above its 45 s child limit.
-  cpu_seconds: z.number().int().nonnegative().max(120),
-  scratch_bytes: z.number().int().nonnegative().max(4 * 1024 * 1024 * 1024),
-  fd_peak: z.number().int().nonnegative().max(65_536),
+  cpu_seconds: z.number().int().nonnegative().max(120).nullable(),
+  scratch_bytes: z.number().int().nonnegative().max(4 * 1024 * 1024 * 1024).nullable(),
+  fd_peak: z.number().int().nonnegative().max(65_536).nullable(),
 }).strict();
+/**
+ * CG-P11-03: the parameter bundle a fold was evaluated with. `GLOBAL_STUDY`
+ * means one optimizer study selected the bundle for every fold (its objective
+ * is study-wide, not a per-fold best); `FIXED_PROFILE` means no search ran, so
+ * there is no objective at all.
+ */
+const FoldSelectionFactSchema = z.object({
+  scope: z.enum(["GLOBAL_STUDY", "FIXED_PROFILE"]),
+  trial: PositiveIntegerSchema,
+  objective: SignedDecimalSchema.nullable(),
+  params_digest: DigestSchema,
+}).strict().superRefine((value, context) => {
+  if (value.scope === "FIXED_PROFILE" && value.objective !== null) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "a fixed profile publishes no search objective" });
+  }
+});
+/** CG-P11-03: the structured cursor a finished run hands to Screen 04. */
+const HandoffCursorSchema = z.object({
+  fold: PositiveIntegerSchema,
+  trial: PositiveIntegerSchema,
+  params_digest: DigestSchema,
+}).strict();
+const notPublishedFoldSelection = () => ({
+  state: "NOT_PUBLISHED" as const,
+  scope: null,
+  trial: null,
+  objective: null,
+  params_digest: null,
+  reason_code: "SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION" as const,
+});
+const SnapshotFoldSelectionSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  scope: z.enum(["GLOBAL_STUDY", "FIXED_PROFILE"]).nullable(),
+  trial: PositiveIntegerSchema.nullable(),
+  objective: SignedDecimalSchema.nullable(),
+  params_digest: DigestSchema.nullable(),
+  reason_code: z.literal("SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION").nullable(),
+}).strict().superRefine((value, context) => {
+  if (value.state === "AVAILABLE") {
+    if (value.scope === null || value.trial === null || value.params_digest === null || value.reason_code !== null
+      || (value.scope === "FIXED_PROFILE" && value.objective !== null)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "available fold selection is inconsistent" });
+    }
+  } else if (value.scope !== null || value.trial !== null || value.objective !== null
+    || value.params_digest !== null || value.reason_code === null) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "not-published fold selection is inconsistent" });
+  }
+});
 const FoldSegmentSchema = z.object({
   kind: z.enum(["search", "oos", "freeze_tick"]),
   state: z.enum(["RUNNING", "DONE", "FAILED"]),
@@ -499,14 +550,28 @@ function validatePayload(
     stage_started: z.object({ stage: StageKeySchema }).strict(),
     stage_completed: z.object({ stage: StageKeySchema }).strict(),
     trial_completed: z.object({
-      fold: PositiveIntegerSchema,
+      // A fold-bound trial names its fold. A trial of one global study that
+      // scores every fold at once names none (`study: "GLOBAL"`): pinning it
+      // to fold 1 would draw a running fold the source never started.
+      fold: PositiveIntegerSchema.optional(),
+      study: z.literal("GLOBAL").optional(),
       trial: PositiveIntegerSchema,
       state: z.enum(["COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"]).optional(),
+      /** The trial's own objective; null for a pruned/failed trial. */
+      objective: SignedDecimalSchema.nullable().optional(),
+      /** The study's best objective after this trial; null before any completes. */
+      best_objective: SignedDecimalSchema.nullable().optional(),
+      /** Remaining search seconds at the observed trial rate; null when not computable. */
+      eta_s: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable().optional(),
       overall_pct: z.number().int().min(0).max(100).optional(),
       tqdm_line: z.string().min(1).max(512).optional(),
       console: ConsoleObservationSchema.optional(),
-    }).strict(),
-    fold_completed: z.object({ fold: PositiveIntegerSchema }).strict(),
+    }).strict().superRefine((value, nestedContext) => {
+      if ((value.study === "GLOBAL") === (value.fold !== undefined)) {
+        nestedContext.addIssue({ code: z.ZodIssueCode.custom, message: "a trial names exactly one of fold or a global study" });
+      }
+    }),
+    fold_completed: z.object({ fold: PositiveIntegerSchema, selection: FoldSelectionFactSchema.optional() }).strict(),
     fold_segment_observed: z.object({
       fold: PositiveIntegerSchema,
       kind: z.enum(["search", "oos", "freeze_tick"]),
@@ -550,6 +615,9 @@ function validatePayload(
       // document is a bounded chronology/holdout receipt, never an unlock or
       // a raw holdout payload.
       split_digest: DigestSchema.optional(),
+      // CG-P11-03: the fold/trial/parameter bundle this run hands to Screen 04,
+      // independent of whether a claim was issued.
+      handoff_cursor: HandoffCursorSchema.optional(),
     }).strict(),
     run_failed: z.object({
       code: z.string().min(1).max(160),
@@ -622,12 +690,15 @@ const SnapshotFoldSchema = z.object({
   started_at_utc_ms: UtcMsSchema.nullable(),
   completed_at_utc_ms: UtcMsSchema.nullable(),
   fold_timeline: FoldTimelineSchema.optional().default(notPublishedFoldTimeline),
+  selection: SnapshotFoldSelectionSchema.optional().default(notPublishedFoldSelection),
 }).strict();
 const SnapshotClaimSchema = z.object({
   state: z.enum(["FORECAST", "NOT_ISSUED", "ISSUED"]),
   text: z.string().max(1_024),
+  /** Legacy free-text cursor of an issued claim; the structured one is `handoff_cursor`. */
   cursor: z.string().max(512).nullable(),
   methodology_certificate: MethodologyCertificateSchema.optional().default(notPublishedMethodologyCertificate),
+  handoff_cursor: HandoffCursorSchema.nullable().optional().default(null),
 }).strict();
 
 export const ResearchProgressSnapshotSchema = z.object({

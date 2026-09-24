@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 229,
+  "route_count": 230,
   "routes": [
     {
       "method": "DELETE",
@@ -812,6 +812,11 @@
     {
       "method": "GET",
       "path": "/api/v1/research/runs/:runId/progress",
+      "owner": "apps/control-api/src/research/progress.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/research/runs/:runId/requested-spec",
       "owner": "apps/control-api/src/research/progress.controller.ts"
     },
     {

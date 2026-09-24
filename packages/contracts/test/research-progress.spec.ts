@@ -8,7 +8,7 @@ const openApiPath = join(ROOT, "openapi", "research-progress.openapi.json");
 const generatedPath = join(ROOT, "generated", "research-progress.d.ts");
 
 describe("P11 published Research Progress contract", () => {
-  it("publishes exactly the four same-origin progress operations", () => {
+  it("publishes exactly the five same-origin progress operations", () => {
     const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as {
       paths: Record<string, Record<string, unknown>>;
     };
@@ -16,12 +16,19 @@ describe("P11 published Research Progress contract", () => {
       "/api/v1/research/runs/{runId}/progress",
       "/api/v1/research/runs/{runId}/events",
       "/api/v1/research/runs/{runId}/console",
+      "/api/v1/research/runs/{runId}/requested-spec",
       "/api/v1/research/runs/{runId}/cancel",
     ]);
     expect(Object.keys(openApi.paths["/api/v1/research/runs/{runId}/progress"])).toEqual(["get"]);
     expect(Object.keys(openApi.paths["/api/v1/research/runs/{runId}/events"])).toEqual(["get"]);
     expect(Object.keys(openApi.paths["/api/v1/research/runs/{runId}/console"])).toEqual(["get"]);
+    expect(Object.keys(openApi.paths["/api/v1/research/runs/{runId}/requested-spec"])).toEqual(["get"]);
     expect(Object.keys(openApi.paths["/api/v1/research/runs/{runId}/cancel"])).toEqual(["post"]);
+    // CG-P11-03: every GET documents the reserved access-policy refusal.
+    for (const path of ["progress", "events", "console", "requested-spec"]) {
+      const get = openApi.paths[`/api/v1/research/runs/{runId}/${path}`].get as { responses: Record<string, unknown> };
+      expect(Object.keys(get.responses)).toContain("403");
+    }
   });
 
   it("generates the compact-read, console, cancellation and discriminated event vocabulary", () => {
@@ -36,7 +43,15 @@ describe("P11 published Research Progress contract", () => {
       "PENDING_RECONCILIATION", "research.progress.snapshot",
       "ProgressRetainedArtifact", "retained_artifacts",
       "ProgressQueue", "ProgressAttempt", "claimed_at_utc_ms", "started_at_utc_ms", "ended_at_utc_ms",
+      // W2 (CG-P11-03/-06/-07/-08/-09)
+      "researchRunRequestedSpecGetV1", "RunRequestedSpec", "ProgressRunIdentity", "declared_folds",
+      "ProgressDeniedArtifact", "denied_artifacts", "ProgressFoldSelection", "ProgressHandoffCursor",
+      "handoff_cursor", "lease_expired_at_utc_ms", "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC", "new_run_from",
+      "P11_STREAM_READ_OVER_FRAME_BUDGET", "evidence_digest", "split_digest", "best_objective",
     ]) expect(generated).toContain(needle);
+    // CG-P11-09: an unmeasured usage field is nullable, never a required zero.
+    expect(generated).toMatch(/fd_peak: number \| null;/);
+    expect(generated).toMatch(/scratch_bytes: number \| null;/);
     // RF01-B3: the retained-table list is the one place the artifact
     // authority's integrity states reach the browser.
     expect(generated).toContain('state: "PENDING" | "WRITING" | "SEALED" | "ABORTED" | "CORRUPT" | "MISSING";');

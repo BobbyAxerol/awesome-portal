@@ -4306,14 +4306,17 @@ export class ResearchMetadataRepository {
       fdPeak: 65_536,
     };
     for (const [key, maximum] of Object.entries(limits) as Array<[keyof typeof limits, number]>) {
-      requireNonNegativeSafeInteger(usage[key], `usage.${key}`);
-      if (usage[key] > maximum) {
+      const value = usage[key];
+      // CG-P11-09: an unmeasured quantity stays null; it is not coerced to 0.
+      if (value === null) continue;
+      requireNonNegativeSafeInteger(value, `usage.${key}`);
+      if (value > maximum) {
         throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", `usage.${key} exceeds the bounded worker contract.`, 400);
       }
     }
   }
 
-  private workerUsageDatabaseShape(usage: ResearchWorkerUsage): Record<string, number> {
+  private workerUsageDatabaseShape(usage: ResearchWorkerUsage): Record<string, number | null> {
     return {
       peak_rss_bytes: usage.peakRssBytes,
       cpu_seconds: usage.cpuSeconds,

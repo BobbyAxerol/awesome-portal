@@ -12,8 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CANCEL_BODY, FOLLOW_SLACK_PX, RunProgress, SSE_LIVE, SSE_POLL, SSE_RESTING, consoleStamp } from "./RunProgress";
 import type { ProgressEvent, ProgressRead, ProgressSnapshot } from "./progressClient";
 import { POLL_FLOOR_MS } from "./progressClient";
-import { foldFromHash, mergeRead, patchSnapshot, useRunProgress, type RunMetaRead } from "./useRunProgress";
-import type { EvidenceHub } from "./evidenceClient";
+import { foldFromHash, mergeRead, patchSnapshot, useRunProgress } from "./useRunProgress";
 import { researchState } from "./state";
 
 afterEach(cleanup);
@@ -82,10 +81,35 @@ function read(overrides: Partial<ProgressRead> = {}, snap: Partial<ProgressSnaps
       last_received_at_utc_ms: 1789836582000,
       may_cancel: true,
       may_retry: false,
-      retry_reason: "P12_OWNED_NO_P11_RETRY_ROUTE",
+      retry_reason: "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC",
+      new_run_from: { state: "AVAILABLE", reason_code: null },
     },
+    run: identity(),
+    denied_artifacts: [],
     progress: snapshot(snap),
     ...overrides,
+  };
+}
+
+/** CG-P11-03: the progress read's own run identity. */
+function identity(): NonNullable<ProgressRead["run"]> {
+  return {
+    alpha: {
+      alpha_id: "delta-rsi-polynomial-alpha",
+      alpha_name: "Delta-RSI Polynomial Alpha",
+      alpha_version_id: "av_delta_rsi_polynomial_alpha_1_0_0",
+    },
+    execution_profile_id: "p04.fixed-qualification.v1",
+    protocol: "three_window_decay",
+    mode: "mode_1_decay",
+    schedule: "global",
+    instrument: { symbol: "BTCUSDT", timeframe: "1h" },
+    execution_route: "signal_notional",
+    engine_release_id: "er_quantbt_111",
+    config_digest: "909514e09820e9fc8c2a37946c66053aaf7a9106875c73ed97165f7d1d02f452",
+    requested_spec_digest: "e".repeat(64),
+    created_at_utc_ms: 1789836572000,
+    declared_folds: { state: "DECLARED", count: 5, reason_code: null },
   };
 }
 
@@ -102,37 +126,6 @@ function completed(snap: Partial<ProgressSnapshot> = {}): ProgressRead {
       ...snap,
     },
   );
-}
-
-const fact = <T,>(value: T) => ({ value, availability: { state: "AVAILABLE" as const, reason_code: null } });
-
-function hub(): EvidenceHub {
-  return {
-    schema_version: "research.evidence-hub.v1",
-    core: {
-      engine_version: "1.1.1",
-      data: { dataset_id: "crypto-binance-1m", symbol: "BTCUSDT", timeframe: "1h", oos_observation_count: 744 },
-      run_identity: {
-        status: fact("RUNNING"),
-        binding: {
-          alpha_id: "delta-rsi-polynomial-alpha",
-          alpha_name: "Delta-RSI Polynomial Alpha",
-          alpha_version_id: "av_delta_rsi_polynomial_alpha_1_0_0",
-          availability: { state: "AVAILABLE", reason_code: null },
-        },
-        created_at_utc_ms: fact(1789836572000),
-        mode: fact("mode_1_decay"),
-        schedule: fact("global"),
-        route: {
-          id: fact("signal_notional"),
-          contract: { value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P13_ROUTE_CONTRACT_NOT_PUBLISHED" } },
-        },
-        config_digest: fact("909514e09820e9fc8c2a37946c66053aaf7a9106875c73ed97165f7d1d02f452"),
-        seed: { value: null, availability: { state: "NOT_APPLICABLE", reason_code: "P02_RANDOM_SEED_NOT_SELECTED" } },
-      },
-      fold_navigation: { observed_folds: [1, 2], published_fold_count: 5, availability: { state: "AVAILABLE", reason_code: null } },
-    },
-  } as unknown as EvidenceHub;
 }
 
 const OK = researchState({ kind: "ok", rowCount: 1 });
@@ -153,7 +146,6 @@ function view(overrides: Partial<React.ComponentProps<typeof RunProgress>> = {})
       onPinFold={vi.fn()}
       cancelling={false}
       onCancel={vi.fn()}
-      meta={{ state: "ready", hub: hub() }}
       {...overrides}
     />,
   );
@@ -307,30 +299,36 @@ describe("FE-S03-14 — the floor keeps refreshing current state under a live st
  * FE-S03-03 — meta strip from the P13 Hub
  * ---------------------------------------------------------------------- */
 
-describe("FE-S03-03 — the run meta strip reads the Hub verbatim", () => {
-  it("prints mode, schedule, alpha, symbol, timeframe, route, engine and config digest", () => {
+describe("FE-S03-03 / CG-P11-03 — the run meta strip reads the progress read's identity", () => {
+  it("prints protocol, mode, schedule, alpha, symbol, timeframe, route, engine release and config digest", () => {
     view();
     const strip = $("[data-run-meta]");
     expect(strip.getAttribute("data-run-meta")).toBe("ready");
-    expect($('[data-meta="mode"]').textContent).toBe("mode_1_decay · global");
+    expect($('[data-meta="mode"]').textContent).toBe("three_window_decay · mode_1_decay · global");
     expect($('[data-meta="binding"]').textContent).toBe("delta-rsi-polynomial-alpha · BTCUSDT · 1h");
     expect($('[data-meta="route"]').textContent).toBe("route signal_notional");
-    expect($('[data-meta="engine"]').textContent).toContain("quantbt-engine==1.1.1");
+    expect($('[data-meta="engine"]').textContent).toContain("engine er_quantbt_111");
     expect($('[data-meta="engine"]').textContent).toContain("sha256:909514…");
     expect(within(strip).getByText("RUNNING").getAttribute("data-status-pill")).toBe("RUNNING");
   });
 
-  it("keeps the strip and names the reason when the Hub is refused", () => {
-    view({ meta: { state: "refused", reason: "The run's evidence is not readable here." } as RunMetaRead });
-    expect($("[data-meta-refused]").textContent).toContain("not published");
-    expect($("[data-meta-refused] [data-not-published]").getAttribute("title")).toBe("The run's evidence is not readable here.");
+  it("renders a null fact as not published, never as a guess", () => {
+    view({ read: read({ run: { ...identity(), instrument: { symbol: null, timeframe: "1h" }, config_digest: null } }) });
+    expect($('[data-meta="binding"] [data-not-published]').textContent).toBe("not published");
+    expect($('[data-meta="engine"] [data-not-published]')).toBeTruthy();
   });
 
-  it("fetches the Hub once from the hook", async () => {
-    stubFetch((url) => (url.includes("/evidence") ? [200, hub()] : url.includes("/console?") ? [200, { lines: [] }] : [200, completed()]));
+  it("keeps the strip and says so when an older server sends no identity", () => {
+    view({ read: read({ run: null }) });
+    expect($("[data-run-meta]").getAttribute("data-run-meta")).toBe("not-published");
+    expect($("[data-meta-refused]").textContent).toContain("not published");
+  });
+
+  it("reads identity from the progress read alone — no evidence request", async () => {
+    stubFetch((url) => (url.includes("/console?") ? [200, { lines: [] }] : [200, completed()]));
     const { result } = renderHook(() => useRunProgress("run_01"));
-    await waitFor(() => expect(result.current.meta.state).toBe("ready"));
-    expect(fetched.filter((u) => u.includes("/api/v1/quantbt/runs/run_01/evidence"))).toHaveLength(1);
+    await waitFor(() => expect(result.current.read?.run?.alpha.alpha_id).toBe("delta-rsi-polynomial-alpha"));
+    expect(fetched.filter((u) => u.includes("/evidence"))).toHaveLength(0);
   });
 });
 
@@ -533,9 +531,10 @@ describe("FE-S03-11 — numbers, bar and motion", () => {
   });
 
   it("shows no raw retry code on screen", () => {
-    view({ read: completed(), transport: "closed" });
-    expect($("[data-retry-reason]").textContent).toContain("does not offer retry");
-    expect($("[data-retry-reason] .sr-only").textContent).toContain("P12_OWNED_NO_P11_RETRY_ROUTE");
+    view({ read: read({ current: { ...read().current, effective_status: "FAILED", may_cancel: false } }), transport: "closed" });
+    expect(document.body.textContent).not.toContain("FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC");
+    expect(document.body.textContent).not.toContain("P12_OWNED_NO_P11_RETRY_ROUTE");
+    expect($('[data-action="new-run-from"]').textContent).toBe("new run with same draft →");
   });
 });
 

@@ -861,10 +861,41 @@ describe("P11-T08 — cancel is the server's decision and retry is not offered",
     expect(document.querySelector('[data-action="cancel"]')).toBeNull();
   });
 
-  it("states why there is no retry instead of offering one", () => {
+  it("offers no retry on a completed run, and exactly one seeded new run after a failure (CG-P11-07)", () => {
     view({ read: read({ current: { ...read().current, effective_status: "COMPLETED", may_cancel: false } }), transport: "closed" });
-    expect(document.querySelector("[data-retry-reason]")?.textContent).toContain("does not offer retry");
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
+    expect(document.querySelector('[data-action="new-run-from"]')).toBeNull();
+    cleanup();
+    const failed = read({
+      current: {
+        ...read().current,
+        effective_status: "FAILED",
+        may_cancel: false,
+        retry_reason: "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC",
+        new_run_from: { state: "AVAILABLE", reason_code: null },
+      },
+    });
+    view({ read: failed, transport: "closed" });
+    const link = document.querySelector('[data-action="new-run-from"]');
+    expect(link?.getAttribute("href")).toBe("/research/quantbt/runs/new?from=run_01");
+    expect(link?.textContent).toBe("new run with same draft →");
+    expect(document.querySelector('[data-action="retry"]')).toBeNull();
+  });
+
+  it("says why no new run can be seeded when the requested spec is not retained", () => {
+    view({
+      read: read({
+        current: {
+          ...read().current,
+          effective_status: "CANCELLED",
+          may_cancel: false,
+          new_run_from: { state: "NOT_AVAILABLE", reason_code: "RUN_REQUESTED_SPEC_NOT_RETAINED" },
+        },
+      }),
+      transport: "closed",
+    });
+    expect(document.querySelector('[data-action="new-run-from"]')).toBeNull();
+    expect(document.querySelector("[data-retry-reason]")?.textContent).toContain("requested spec is not retained");
   });
 
   it("shows a cancellation resolution without overwriting the source status", () => {

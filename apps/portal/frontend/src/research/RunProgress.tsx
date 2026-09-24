@@ -29,11 +29,14 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, ty
 
 import {
   NOT_PUBLISHED_CERTIFICATE,
+  NOT_PUBLISHED_SELECTION,
   NOT_PUBLISHED_TIMELINE,
   type Artifact,
   type ConsoleLine,
+  type DeniedArtifact,
   type EffectiveStatus,
   type FoldSegment,
+  type HandoffCursor,
   type ProgressRead,
   type ProgressRefusal,
   type ProgressSnapshot,
@@ -46,7 +49,7 @@ import { ServedAttempts } from "./QueuePanel";
 import { formatBytes, formatDuration, formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { NotPublished, RunMetaStrip } from "./RunMetaStrip";
 import { StageLedger, utcClock } from "./StageLedger";
-import type { RunMetaRead, Transport } from "./useRunProgress";
+import type { Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
 import { QUANTBT_ROOT } from "../features/quantbt/routes";
 
@@ -85,7 +88,18 @@ export const CANCEL_BODY =
 
 /** Why a fold row has no best J₁ / trial / params digest (DQ-14). */
 export const FOLD_SELECTION_NOT_PUBLISHED =
-  "The progress read does not publish a fold's best J₁, selected trial or params digest.";
+  "The source has not published this fold's selection (best J₁, selected trial, params digest).";
+
+/** CG-P11-03: the sealed holdout's DENIED card, in words. */
+export const DENIED_HOLDOUT_NOTE = "sealed — unlock is a one-time audited workflow this release does not install";
+
+/** CG-P11-07: the one action after a failed or cancelled run (spec 03 pitfall 9). */
+export const NEW_RUN_FROM_LABEL = "new run with same draft →";
+export const NEW_RUN_FROM_UNAVAILABLE =
+  "This run's requested spec is not retained, so no new run can be seeded from it.";
+
+/** HiFi `rate` cell: the source publishes an ETA from its trial rate, not the rate. */
+export const RATE_NOT_PUBLISHED = "The source publishes an ETA derived from its trial rate, not the rate itself.";
 
 const STAGE_LABEL: Record<Stage["key"], string> = {
   S1: "Split",
@@ -276,13 +290,37 @@ function runHref(runId: string, path: string, cursor: InspectionCursor): string 
   return `${QUANTBT_ROOT}/runs/${encodeURIComponent(runId)}/${path}${hash ? `#${hash}` : ""}`;
 }
 
-/** The cursor a finished run hands on: fold, and trial/params only when the claim published them. */
-function handoffCursor(fold: number | null, claimCursor: InspectionCursor): InspectionCursor {
+/**
+ * The evidence cursor for a fold: the fold, and its trial/params only when the
+ * source published them — the fold's own `selection`, else the run's
+ * structured hand-off cursor when it names this fold (CG-P11-03), else a
+ * legacy free-text claim cursor. Nothing is inferred.
+ */
+function evidenceCursor(
+  fold: number | null,
+  folds: ProgressSnapshot["folds"],
+  handoff: HandoffCursor | null,
+  claimCursor: InspectionCursor,
+): InspectionCursor {
+  const target = fold ?? handoff?.fold ?? null;
+  if (target === null) return {};
+  const selection = folds.find((f) => f.fold === target)?.selection ?? NOT_PUBLISHED_SELECTION;
+  if (selection.state === "AVAILABLE" && selection.trial !== null && selection.params_digest !== null) {
+    return { fold: String(target), trial: String(selection.trial), params: selection.params_digest };
+  }
+  if (handoff !== null && handoff.fold === target) {
+    return { fold: String(target), trial: String(handoff.trial), params: handoff.params_digest };
+  }
   return {
-    ...(fold !== null ? { fold: String(fold) } : {}),
-    ...(claimCursor.trial ? { trial: claimCursor.trial } : {}),
-    ...(claimCursor.params ? { params: claimCursor.params } : {}),
+    fold: String(target),
+    ...(claimCursor.fold === String(target) && claimCursor.trial ? { trial: claimCursor.trial } : {}),
+    ...(claimCursor.fold === String(target) && claimCursor.params ? { params: claimCursor.params } : {}),
   };
+}
+
+/** Where a failed/cancelled run's one action goes: Screen 02 seeded from this run. */
+export function newRunFromHref(runId: string): string {
+  return `${QUANTBT_ROOT}/runs/new?from=${encodeURIComponent(runId)}`;
 }
 
 /* ---------------------------------------------------------------- stages */
@@ -369,24 +407,49 @@ function StagePills({
 
 /* --------------------------------------------------------------- progress */
 
+/** How the study row names the study the source ran (CG-P10-04). */
+function studyLabel(snapshot: ProgressSnapshot, foldCount: number | null): ReactNode {
+  const scope = snapshot.folds.find((f) => (f.selection ?? NOT_PUBLISHED_SELECTION).state === "AVAILABLE")?.selection?.scope;
+  if (scope === "FIXED_PROFILE") return "fixed profile — no search";
+  const global = scope === "GLOBAL_STUDY" || (snapshot.folds.length === 0 && snapshot.overall.trials_done > 0);
+  if (global) return foldCount === null ? "global — scores every fold" : `global — scores all ${count(foldCount)} folds`;
+  const latest = snapshot.folds.length > 0 ? snapshot.folds[snapshot.folds.length - 1].fold : null;
+  if (latest === null) return null;
+  return (
+    <>
+      {latest} / {foldCount === null ? <NotPublished reason="The fold count is not declared." /> : count(foldCount)}
+    </>
+  );
+}
+
 function ProgressCard({
   snapshot,
   live,
   foldCount,
-  studyFold,
 }: {
   snapshot: ProgressSnapshot;
   live: boolean;
-  /** `fold_navigation.published_fold_count` from the Hub, when published. */
+  /** `run.declared_folds` from the progress read, when declared. */
   foldCount: number | null;
-  studyFold: number | null;
 }) {
   const { overall, budget } = snapshot;
   const pct = Math.max(0, Math.min(100, overall.pct));
   const budgetHot = budget.pct > 90;
   const budgetTone = budgetHot ? "var(--bad)" : "var(--role-holdout)";
   const barMotion = live ? pulse("2.4s") : null;
-  const eta = overall.eta_s === null ? (live ? <Absent /> : "—") : formatDuration(overall.eta_s);
+  const searchDone = snapshot.stages.find((s) => s.key === "S4")?.state === "DONE" || overall.trials_done >= overall.trials_declared;
+  /* The server owns the ETA. Null means "not computable", said in words. */
+  const eta =
+    overall.eta_s !== null ? (
+      formatDuration(overall.eta_s)
+    ) : !live ? (
+      <Absent what="none — run final" />
+    ) : searchDone ? (
+      <Absent what="search done" />
+    ) : (
+      <Absent />
+    );
+  const study = studyLabel(snapshot, foldCount);
 
   return (
     <div data-overall style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -451,12 +514,9 @@ function ProgressCard({
         data-stat-row
         style={{ display: "flex", gap: "4px 22px", flexWrap: "wrap", fontFamily: MONO, fontSize: 10.5, color: "var(--ink-soft)" }}
       >
-        {studyFold !== null ? (
+        {study !== null ? (
           <span data-study>
-            study{" "}
-            <span style={{ color: "var(--ink)" }}>
-              {studyFold} / {foldCount === null ? <NotPublished reason="The fold count is not published yet." /> : foldCount}
-            </span>
+            study <span style={{ color: "var(--ink)" }}>{study}</span>
           </span>
         ) : null}
         <span data-elapsed>
@@ -465,6 +525,9 @@ function ProgressCard({
         <span data-eta>
           {/* The server owns the ETA. A null one is absent, never computed. */}
           eta <span style={{ color: "var(--ink)" }}>{eta}</span>
+        </span>
+        <span data-rate>
+          rate <NotPublished reason={RATE_NOT_PUBLISHED} what="not reported" />
         </span>
         {/* The server builds this string; the page does not reformat it. */}
         <span data-tqdm style={{ color: "var(--ink-faint)" }}>
@@ -531,7 +594,9 @@ interface FoldGanttProps {
   cursor: number | null;
   onPick: (fold: number) => void;
   foldTrials: Readonly<Record<number, number>>;
-  /** The claim's own published cursor, when it names a fold. */
+  /** The run's structured hand-off cursor, once published. */
+  handoff: HandoffCursor | null;
+  /** The claim's own legacy cursor text, when it names a fold. */
   claimCursor: InspectionCursor;
 }
 
@@ -589,9 +654,15 @@ function FoldFill({ fold }: { fold: ProgressSnapshot["folds"][number] }) {
   );
 }
 
+/** `prm_3a91c2` — the params digest as the HiFi prints it; full value in the title. */
+function paramsTag(digest: string): string {
+  return `prm_${shortDigest(digest, 6)}`;
+}
+
 function foldNote(
   fold: ProgressSnapshot["folds"][number],
   foldTrials: Readonly<Record<number, number>>,
+  handoff: HandoffCursor | null,
   claimCursor: InspectionCursor,
 ): ReactNode {
   if (fold.state === "RUNNING") {
@@ -599,13 +670,26 @@ function foldNote(
     return trial === undefined ? "running" : `trial ${count(trial)} · running`;
   }
   if (fold.state === "FAILED") return "failed";
+  const selection = fold.selection ?? NOT_PUBLISHED_SELECTION;
+  if (selection.state === "AVAILABLE" && selection.trial !== null && selection.params_digest !== null) {
+    const objective =
+      selection.objective === null ? "no search" : `${selection.scope === "GLOBAL_STUDY" ? "global " : ""}best J₁ ${formatMetric(selection.objective, "ratio") ?? selection.objective}`;
+    return (
+      <span title={[selection.objective, selection.params_digest].filter(Boolean).join(" · ")} data-fold-selection={selection.scope ?? undefined}>
+        {objective} · trial {count(selection.trial)} · {paramsTag(selection.params_digest)}
+      </span>
+    );
+  }
+  if (handoff !== null && handoff.fold === fold.fold) {
+    return `trial ${count(handoff.trial)} · ${paramsTag(handoff.params_digest)}`;
+  }
   if (claimCursor.fold === String(fold.fold) && (claimCursor.trial || claimCursor.params)) {
     return [claimCursor.trial ? `trial ${claimCursor.trial}` : null, claimCursor.params ?? null].filter(Boolean).join(" · ");
   }
   return <NotPublished reason={FOLD_SELECTION_NOT_PUBLISHED} what="selection not published" />;
 }
 
-function FoldGantt({ folds, cursor, onPick, foldTrials, claimCursor }: FoldGanttProps) {
+function FoldGantt({ folds, cursor, onPick, foldTrials, handoff, claimCursor }: FoldGanttProps) {
   const container = useRef<HTMLDivElement>(null);
   if (folds.length === 0) {
     return (
@@ -772,7 +856,7 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, claimCursor }: FoldGantt
                 color: "var(--ink-faint)",
               }}
             >
-              {foldNote(fold, foldTrials, claimCursor)}
+              {foldNote(fold, foldTrials, handoff, claimCursor)}
             </span>
           </button>
         );
@@ -790,16 +874,17 @@ function FoldGantt({ folds, cursor, onPick, foldTrials, claimCursor }: FoldGantt
 function CursorRow({
   fold,
   foldState,
-  claimCursor,
+  cursor,
   liveTrial,
 }: {
   fold: number | null;
   foldState: string | null;
-  claimCursor: InspectionCursor;
+  /** The evidence cursor for this fold, from published facts only. */
+  cursor: InspectionCursor;
   liveTrial: number | undefined;
 }) {
-  const trial = claimCursor.fold === String(fold) && claimCursor.trial ? claimCursor.trial : liveTrial !== undefined ? count(liveTrial) : null;
-  const params = claimCursor.fold === String(fold) && claimCursor.params ? claimCursor.params : null;
+  const trial = cursor.trial ?? (liveTrial !== undefined ? count(liveTrial) : null);
+  const params = cursor.params ? paramsTag(cursor.params) : null;
   return (
     <div
       data-evidence-cursor
@@ -831,7 +916,9 @@ function CursorRow({
       <span style={CHIP} data-cursor-params>
         params{" "}
         {params !== null ? (
-          <span style={{ color: "var(--accent)" }}>{params}</span>
+          <span style={{ color: "var(--accent)" }} title={cursor.params}>
+            {params}
+          </span>
         ) : foldState === "RUNNING" ? (
           <span style={{ color: "var(--accent-2)" }}>unfrozen</span>
         ) : (
@@ -847,11 +934,12 @@ function CursorRow({
 
 /* -------------------------------------------------------------- artifacts */
 
-const ARTIFACT_TONE: Record<Artifact["state"], string> = {
+const ARTIFACT_TONE: Record<Artifact["state"] | "DENIED", string> = {
   SEALED: "var(--good)",
   WRITING: "var(--accent)",
   PENDING: "var(--ink-faint)",
   ABORTED: "var(--bad)",
+  DENIED: "var(--bad)",
 };
 
 function artifactNote(artifact: Artifact): ReactNode {
@@ -870,10 +958,46 @@ function artifactNote(artifact: Artifact): ReactNode {
   return "pending";
 }
 
-function ArtifactsTable({ artifacts }: { artifacts: readonly Artifact[] }) {
+/** A withheld artifact: named, counted, never linked (CG-P11-03). */
+function DeniedRow({ artifact }: { artifact: DeniedArtifact }) {
+  const rows = artifact.rows === null ? null : formatMetric(artifact.rows, "count");
+  const range =
+    artifact.range === null ? null : `${formatUtc(artifact.range.start_utc_ms)} → ${formatUtc(artifact.range.end_exclusive_utc_ms)}`;
+  return (
+    <span
+      data-artifact={artifact.name}
+      data-artifact-state="DENIED"
+      title={[artifact.reason_code, range].filter(Boolean).join(" · ")}
+      style={{ display: "flex", alignItems: "baseline", gap: 10, fontSize: 11, borderBottom: "1px solid var(--paper-sunken)", padding: "3px 0", minWidth: 0 }}
+    >
+      <span style={{ width: 170, flex: "none", fontFamily: MONO, fontSize: 10.5 }}>{artifact.name}</span>
+      <span
+        style={{
+          width: 76,
+          flex: "none",
+          fontFamily: MONO,
+          fontSize: 9,
+          letterSpacing: ".05em",
+          textTransform: "uppercase",
+          color: ARTIFACT_TONE.DENIED,
+          borderLeft: `2px solid ${ARTIFACT_TONE.DENIED}`,
+          paddingLeft: 5,
+        }}
+      >
+        denied
+      </span>
+      <span style={{ flex: 1, minWidth: 0, color: "var(--ink-faint)", fontSize: 10 }}>
+        {rows !== null ? `${rows} bars · ` : null}
+        {DENIED_HOLDOUT_NOTE}
+      </span>
+    </span>
+  );
+}
+
+function ArtifactsTable({ artifacts, denied = [] }: { artifacts: readonly Artifact[]; denied?: readonly DeniedArtifact[] }) {
   return (
     <div data-artifacts style={{ display: "flex", flexDirection: "column" }}>
-      {artifacts.length === 0 ? (
+      {artifacts.length === 0 && denied.length === 0 ? (
         <span style={{ fontSize: 10.5, color: "var(--ink-faint)", padding: "3px 0" }} data-artifacts-empty>
           No artifact has been announced yet.
         </span>
@@ -934,6 +1058,9 @@ function ArtifactsTable({ artifacts }: { artifacts: readonly Artifact[] }) {
           </span>
         );
       })}
+      {denied.map((artifact) => (
+        <DeniedRow key={artifact.name} artifact={artifact} />
+      ))}
     </div>
   );
 }
@@ -1198,6 +1325,7 @@ function ClaimPassport({
   failure,
   readiness,
   handoffHref,
+  handoffLabel,
   engineVersion,
 }: {
   claim: ProgressSnapshot["claim"];
@@ -1206,8 +1334,11 @@ function ClaimPassport({
   failure: ProgressSnapshot["failure"];
   readiness: ProgressSnapshot["readiness"];
   handoffHref: string;
+  /** `fold 2 · trial 1`, when the cursor names them (spec 03 §8). */
+  handoffLabel: string | null;
   engineVersion: string | null;
 }) {
+  const handoff = claim.handoff_cursor ?? null;
   const issued = claim.state === "ISSUED";
   const forecast = claim.state === "FORECAST";
   const certificate = claim.methodology_certificate ?? NOT_PUBLISHED_CERTIFICATE;
@@ -1215,7 +1346,7 @@ function ClaimPassport({
   const stateWord = issued ? "issued" : forecast ? "forecast" : "not issued";
   const note = issued
     ? engineVersion
-      ? `issued by quantbt-engine ${engineVersion} at COMPLETED — now authoritative`
+      ? `issued by engine ${engineVersion} at COMPLETED — now authoritative`
       : "issued by the engine at COMPLETED — now authoritative"
     : forecast
       ? "computed from mode × schedule in the config; issued only when the engine completes"
@@ -1260,6 +1391,8 @@ function ClaimPassport({
           <a
             data-open-evidence
             href={handoffHref}
+            aria-label={handoffLabel ? `open evidence flow at ${handoffLabel}` : "open evidence flow"}
+            title={handoffLabel ?? undefined}
             style={{
               marginLeft: "auto",
               display: "inline-block",
@@ -1311,6 +1444,13 @@ function ClaimPassport({
             mandatory {readiness.mandatory} · optional {readiness.optional}
           </span>
         </Field>
+        {handoff !== null ? (
+          <Field label="hand-off cursor" name="handoff">
+            <span style={valueStyle(issued ? "issued" : "neutral")} data-handoff-cursor title={handoff.params_digest}>
+              fold {count(handoff.fold)} · trial {count(handoff.trial)} · {paramsTag(handoff.params_digest)}
+            </span>
+          </Field>
+        ) : null}
         {issued && claim.cursor !== null ? (
           <Field label="claim cursor" name="cursor">
             <span style={valueStyle("issued")} data-claim-cursor>
@@ -1646,6 +1786,42 @@ function Header({
   );
 }
 
+/**
+ * CG-P11-07: no automatic or in-place retry. A failed or cancelled run offers
+ * exactly one action — a new run seeded from its admitted requested spec —
+ * or says why it cannot (spec 03 pitfall 9).
+ */
+function NewRunFrom({ runId, read }: { runId: string; read: ProgressRead }) {
+  const from = read.current.new_run_from;
+  if (from?.state === "AVAILABLE") {
+    return (
+      <a
+        data-action="new-run-from"
+        href={newRunFromHref(runId)}
+        title="Opens New Run seeded from this run's requested spec; it is admitted as a new run through a fresh preflight."
+        style={{
+          border: "1px solid var(--accent)",
+          borderRadius: 6,
+          padding: "3px 12px",
+          fontFamily: MONO,
+          fontSize: 10,
+          letterSpacing: ".05em",
+          color: "var(--accent)",
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {NEW_RUN_FROM_LABEL}
+      </a>
+    );
+  }
+  return (
+    <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }} data-retry-reason>
+      {from ? NEW_RUN_FROM_UNAVAILABLE : "this release does not offer retry from Run Progress"}
+    </span>
+  );
+}
+
 function RulesFooter() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
@@ -1678,11 +1854,8 @@ export interface RunProgressProps {
   cancelling: boolean;
   onCancel: (reason: string) => void;
   refusal?: ProgressRefusal | null;
-  meta?: RunMetaRead;
   foldTrials?: Readonly<Record<number, number>>;
 }
-
-const NOT_LOADED_META: RunMetaRead = { state: "loading" };
 
 export function RunProgress(props: RunProgressProps) {
   const {
@@ -1701,7 +1874,6 @@ export function RunProgress(props: RunProgressProps) {
     cancelling,
     onCancel,
     refusal = null,
-    meta = NOT_LOADED_META,
     foldTrials = {},
   } = props;
 
@@ -1718,9 +1890,11 @@ export function RunProgress(props: RunProgressProps) {
   const live = (status === "QUEUED" || status === "RUNNING" || status === "FINISHING") && !sourceTerminal;
   /* Completion is the source's seal and nothing else. */
   const sealed = snapshot?.readiness.mandatory === "SEALED";
-  const hub = meta.state === "ready" ? meta.hub : null;
-  const foldCount = hub?.core.fold_navigation?.published_fold_count ?? null;
-  const engineVersion = hub?.core.engine_version ?? null;
+  /* CG-P11-03: identity and the declared fold count come with the read. */
+  const identity = read === null ? undefined : (read.run ?? null);
+  const declared = identity?.declared_folds;
+  const foldCount = declared?.state === "DECLARED" ? declared.count : null;
+  const engineVersion = identity?.engine_release_id ?? null;
 
   const statusSlot =
     status !== null ? (
@@ -1765,7 +1939,7 @@ export function RunProgress(props: RunProgressProps) {
           title={`${queued ? "Run queued" : "Run cancelled"} — ${runId}`}
           right={<TransportDot transport={transport} live={live} />}
         />
-        <RunMetaStrip runId={runId} meta={meta} status={statusSlot} />
+        <RunMetaStrip runId={runId} identity={identity} status={statusSlot} />
         <section style={{ ...CARD, gap: 8 }}>
           <h2 style={{ ...CARD_TITLE, margin: 0 }}>{queued ? "queued — waiting for a worker" : "cancelled before the source reported"}</h2>
           <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>
@@ -1779,6 +1953,7 @@ export function RunProgress(props: RunProgressProps) {
             </span>
           ) : null}
           <ServedAttempts queue={read.queue} attempts={read.attempts} open />
+          {!queued ? <NewRunFrom runId={runId} read={read} /> : null}
         </section>
         <RulesFooter />
       </div>
@@ -1789,11 +1964,13 @@ export function RunProgress(props: RunProgressProps) {
   const content = state.state === "available" || state.retainsContent;
   const connecting = read === null;
   const claimCursor = snapshot?.claim.cursor ? decodeInspectionCursor(snapshot.claim.cursor).cursor : {};
-  const cursor = handoffCursor(foldCursor, claimCursor);
-  const handoffHref = runHref(runId, "evidence", { stage: "summary", ...cursor });
   const folds = snapshot?.folds ?? [];
+  const handoff = snapshot?.claim.handoff_cursor ?? null;
+  const cursor = evidenceCursor(foldCursor, folds, handoff, claimCursor);
+  const handoffHref = runHref(runId, "evidence", { stage: "summary", ...cursor });
+  const handoffLabel = cursor.fold && cursor.trial ? `fold ${cursor.fold} · trial ${cursor.trial}` : null;
   const cursorFold = folds.find((f) => f.fold === foldCursor) ?? null;
-  const latestFold = folds.length > 0 ? folds[folds.length - 1].fold : null;
+  const terminalStatus = status === "FAILED" || status === "CANCELLED";
   const title = `${status === "COMPLETED" ? "Run completed" : "Run progress"} — ${runId}`;
 
   const tabButton = (key: "live" | "stage", label: string) => (
@@ -1865,7 +2042,7 @@ export function RunProgress(props: RunProgressProps) {
         ) : null}
       </Header>
 
-      <RunMetaStrip runId={runId} meta={meta} status={statusSlot} panel />
+      <RunMetaStrip runId={runId} identity={identity} status={statusSlot} panel />
       {read && (read.queue || (read.attempts?.length ?? 0) > 0) ? (
         <ServedAttempts queue={read.queue} attempts={read.attempts} />
       ) : null}
@@ -1885,6 +2062,7 @@ export function RunProgress(props: RunProgressProps) {
           failure={snapshot.failure}
           readiness={snapshot.readiness}
           handoffHref={handoffHref}
+          handoffLabel={handoffLabel}
           engineVersion={engineVersion}
         />
       ) : (
@@ -1899,7 +2077,7 @@ export function RunProgress(props: RunProgressProps) {
         {content && snapshot ? (
           <>
             <StagePills stages={snapshot.stages} claimState={snapshot.claim.state} runId={runId} cursor={cursor} />
-            <ProgressCard snapshot={snapshot} live={live} foldCount={foldCount} studyFold={latestFold} />
+            <ProgressCard snapshot={snapshot} live={live} foldCount={foldCount} />
           </>
         ) : (
           <Skeleton height={86} />
@@ -1916,11 +2094,18 @@ export function RunProgress(props: RunProgressProps) {
         >
           {content && snapshot ? (
             <>
-              <FoldGantt folds={folds} cursor={foldCursor} onPick={onPinFold} foldTrials={foldTrials} claimCursor={claimCursor} />
+              <FoldGantt
+                folds={folds}
+                cursor={foldCursor}
+                onPick={onPinFold}
+                foldTrials={foldTrials}
+                handoff={handoff}
+                claimCursor={claimCursor}
+              />
               <CursorRow
                 fold={foldCursor}
                 foldState={cursorFold?.state ?? null}
-                claimCursor={claimCursor}
+                cursor={cursor}
                 liveTrial={foldCursor !== null && cursorFold?.state === "RUNNING" ? foldTrials[foldCursor] : undefined}
               />
             </>
@@ -1947,7 +2132,7 @@ export function RunProgress(props: RunProgressProps) {
         >
           {content && snapshot ? (
             <>
-              <ArtifactsTable artifacts={snapshot.artifacts} />
+              <ArtifactsTable artifacts={snapshot.artifacts} denied={read?.denied_artifacts ?? []} />
               {/* Said once, plainly, so a missing link reads as a boundary. */}
               <span style={{ fontSize: 10, color: "var(--ink-faint)", lineHeight: 1.5, paddingTop: 4 }} data-artifact-no-reader>
                 {ARTIFACT_NO_READER}
@@ -2014,12 +2199,7 @@ export function RunProgress(props: RunProgressProps) {
           </span>
         ) : null}
         <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8 }}>
-          {read !== null && !read.current.may_retry && !(read.current.may_cancel && live) ? (
-            <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }} data-retry-reason>
-              this release does not offer retry from Run Progress
-              <span className="sr-only"> {read.current.retry_reason}</span>
-            </span>
-          ) : null}
+          {read !== null && terminalStatus ? <NewRunFrom runId={runId} read={read} /> : null}
           {read?.current.may_cancel && live ? (
             <button
               type="button"
@@ -2059,7 +2239,12 @@ export function RunProgress(props: RunProgressProps) {
           setFollow={setFollow}
         />
       ) : (
-        <StageLedger folds={folds} foldTrials={foldTrials} cursor={foldCursor} />
+        <StageLedger
+          folds={folds}
+          foldTrials={foldTrials}
+          cursor={foldCursor}
+          studyTrials={snapshot ? { done: snapshot.overall.trials_done, declared: snapshot.overall.trials_declared } : null}
+        />
       )}
 
       {sealed && snapshot ? <DoneBanner runId={runId} issued={snapshot.claim.state === "ISSUED"} cursor={cursor} /> : null}

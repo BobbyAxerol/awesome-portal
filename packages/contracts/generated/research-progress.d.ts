@@ -61,6 +61,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/runs/{runId}/requested-spec": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the immutable requested spec a new run may start from (Screen 02 ?from=)
+         * @description CG-P11-07. Read-only and immutable: the P08 manifest row cannot be updated. It returns no preflight token, snapshot locator, lease or worker handle. Creating the new run is still a NEW intent through a fresh preflight; run-create keeps refusing every other intent kind. Dark with the run producer (503).
+         */
+        get: operations["researchRunRequestedSpecGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/runs/{runId}/cancel": {
         parameters: {
             query?: never;
@@ -150,6 +170,7 @@ export interface components {
             latest_sequence: components["schemas"]["UtcMilliseconds"];
             retention_floor_sequence: components["schemas"]["UtcMilliseconds"];
             stages: components["schemas"]["Stage"][];
+            /** @description Server-derived from source facts, never estimated by the browser. pct is stage-weighted and monotonic: S1 5, S2 8, S3 10, the trial study 10 + 70 x trials_done / trials_declared, S4 closed 85, sealing 90, S5 closed 95, 100 only at run_completed. eta_s is the remaining search time at the observed trial rate while trials remain, otherwise null. tqdm_line is a server-built line. */
             overall: {
                 pct: number;
                 elapsed_s: components["schemas"]["UtcMilliseconds"];
@@ -173,6 +194,8 @@ export interface components {
                 completed_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
                 /** @description Optional only for a pre-amendment historical snapshot; absence has the documented NOT_PUBLISHED meaning and is not permission to synthesize segments. */
                 fold_timeline?: components["schemas"]["ProgressFoldTimeline"];
+                /** @description CG-P11-03. Optional only for a pre-W2 historical snapshot; absence means NOT_PUBLISHED. */
+                selection?: components["schemas"]["ProgressFoldSelection"];
             }[];
             artifacts: components["schemas"]["Artifact"][];
             claim: {
@@ -182,6 +205,8 @@ export interface components {
                 cursor: string | null;
                 /** @description Optional only for a pre-amendment historical snapshot; it must not be inferred from the claim text, engine capability or a methodology ceiling. */
                 methodology_certificate?: components["schemas"]["ProgressMethodologyCertificate"];
+                /** @description CG-P11-03. The structured cursor from run_completed, set whether or not a claim was issued; `cursor` stays the legacy free text of an issued claim. Optional only for a pre-W2 snapshot; absence means null. */
+                handoff_cursor?: components["schemas"]["ProgressHandoffCursor"] | null;
             };
             readiness: {
                 /** @enum {unknown} */
@@ -237,17 +262,27 @@ export interface components {
             fold?: number | null;
             trial?: number | null;
         };
+        /** @description Exactly one of `fold` (a fold-bound trial) or `study: GLOBAL` (a trial of one study that scores every fold at once, which therefore names no fold). Ingress rejects both or neither. */
         ProgressTrialPayload: {
-            fold: number;
+            fold?: number;
+            /** @constant */
+            study?: "GLOBAL";
             trial: number;
             /** @enum {unknown} */
             state?: "COMPLETE" | "PRUNED" | "INFEASIBLE" | "FAILED";
+            /** @description This trial's objective; null for a pruned or failed trial. */
+            objective?: components["schemas"]["SignedDecimal"] | null;
+            /** @description The study's best objective after this trial; null before any trial completes. */
+            best_objective?: components["schemas"]["SignedDecimal"] | null;
+            /** @description Remaining search seconds at the observed trial rate; null when not computable (no completed trial yet, or the search is done). */
+            eta_s?: number | null;
             overall_pct?: number;
             tqdm_line?: string;
             console?: components["schemas"]["ProgressConsoleObservation"];
         };
         ProgressFoldPayload: {
             fold: number;
+            selection?: components["schemas"]["ProgressFoldSelectionFact"];
         };
         ProgressFoldSegmentPayload: {
             fold: number;
@@ -273,12 +308,41 @@ export interface components {
             cap: components["schemas"]["Decimal"] | null;
             pct: number;
         };
+        /** @description CG-P11-09. Every key is present; null means the source had no probe for that quantity. A zero is a measurement, never a placeholder. */
         ProgressUsage: {
-            peak_rss_bytes: number;
-            /** @description Profile-bounded: a P04 fixed-qualification attempt is refused above 45 at ingest; a Delta WFO attempt above 120. */
-            cpu_seconds: number;
-            scratch_bytes: number;
-            fd_peak: number;
+            /** @description The child's own peak resident set size when it reports one; null when unobservable. */
+            peak_rss_bytes: number | null;
+            /** @description Profile-bounded: a P04 fixed-qualification attempt is refused above 45 at ingest; a Delta WFO attempt above 120. Null when no child ran (e.g. cancelled before start). */
+            cpu_seconds: number | null;
+            /** @description No peak-scratch probe is installed for the P06 child; null. */
+            scratch_bytes: number | null;
+            /** @description No descriptor high-water probe is installed for the P06 child; null. */
+            fd_peak: number | null;
+        };
+        /** @description CG-P11-03. The fold, trial and parameter bundle a finished run hands to Screen 04 (`#fold=&trial=&params=`). Trial is the 1-based P11 ordinal (source trial number + 1). params_digest is sha256 over the canonical JSON of the selected parameter bundle. */
+        ProgressHandoffCursor: {
+            fold: number;
+            trial: number;
+            params_digest: components["schemas"]["Digest"];
+        };
+        SignedDecimal: string;
+        /** @description CG-P11-03. The parameter bundle a fold was evaluated with. GLOBAL_STUDY: one optimizer study selected it for every fold, so objective is study-wide, not a per-fold best. FIXED_PROFILE: no search ran; objective is null. */
+        ProgressFoldSelectionFact: {
+            /** @enum {unknown} */
+            scope: "GLOBAL_STUDY" | "FIXED_PROFILE";
+            trial: number;
+            objective: components["schemas"]["SignedDecimal"] | null;
+            params_digest: components["schemas"]["Digest"];
+        };
+        /** @description Snapshot form of ProgressFoldSelectionFact. NOT_PUBLISHED until the source's fold_completed carries a selection. */
+        ProgressFoldSelection: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            scope: ("GLOBAL_STUDY" | "FIXED_PROFILE") | null;
+            trial: number | null;
+            objective: components["schemas"]["SignedDecimal"] | null;
+            params_digest: components["schemas"]["Digest"] | null;
+            reason_code: "SOURCE_DID_NOT_PUBLISH_FOLD_SELECTION" | null;
         };
         ProgressIssuedClaim: {
             /** @constant */
@@ -290,6 +354,11 @@ export interface components {
         ProgressCompletedPayload: {
             usage: components["schemas"]["ProgressUsage"];
             claim?: components["schemas"]["ProgressIssuedClaim"];
+            /** @description CG-P11-09. sha256 of the P13 terminal evidence receipt that travels beside this event at the private ingress (P04 fixed profile only). */
+            evidence_digest?: components["schemas"]["Digest"];
+            /** @description CG-P11-09. sha256 of the P14 terminal split receipt that travels beside this event at the private ingress (P04 fixed profile only). */
+            split_digest?: components["schemas"]["Digest"];
+            handoff_cursor?: components["schemas"]["ProgressHandoffCursor"];
         };
         ProgressFailedPayload: {
             code: string;
@@ -454,13 +523,82 @@ export interface components {
             state: "CLAIMED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "LOST_LEASE" | "CANCELLED";
             claimed_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             started_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            /** @description For LOST_LEASE: when the scheduler's expired-lease sweep recorded the loss, which can be long after the lease lapsed. */
             ended_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            /** @description CG-P11-06. When a LOST_LEASE attempt's lease actually lapsed (the attempt's last expires_at); null for every other state. Optional during additive client rollout. */
+            lease_expired_at_utc_ms?: components["schemas"]["UtcMilliseconds"] | null;
+        };
+        /** @description CG-P11-03. Stored facts from the P10 producer row and its immutable P08 manifest; nothing is derived from progress. No display id is minted: run_id is the identity. */
+        ProgressRunIdentity: {
+            alpha: {
+                alpha_id: string;
+                alpha_name: string | null;
+                alpha_version_id: string;
+            };
+            execution_profile_id: string;
+            protocol: string | null;
+            mode: string | null;
+            schedule: string | null;
+            instrument: {
+                symbol: string | null;
+                timeframe: string | null;
+            };
+            execution_route: string | null;
+            /** @description The engine release the P02 client requested (requested_spec.client.engine_release_id). */
+            engine_release_id: string | null;
+            /** @description The P02 client's config digest (requested_spec.client.config_digest). */
+            config_digest: components["schemas"]["Digest"] | null;
+            requested_spec_digest: components["schemas"]["Digest"];
+            created_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            /** @description The fold count the P08 topology declared at admission (a three-window run declares one). */
+            declared_folds: {
+                /** @enum {unknown} */
+                state: "DECLARED" | "NOT_PUBLISHED";
+                count: number | null;
+                reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" | null;
+            };
+        };
+        /** @description CG-P11-03. A declared artifact this viewer may not read. Today only the P08 sealed holdout: its window and bar count are manifest metadata; its values were never given to the child and no unlock workflow is installed. */
+        ProgressDeniedArtifact: {
+            /** @constant */
+            name: "sealed holdout";
+            /** @constant */
+            state: "DENIED";
+            /** @constant */
+            reason_code: "P08_SEALED_HOLDOUT_UNLOCK_NOT_INSTALLED";
+            rows: string | null;
+            range: {
+                start_utc_ms: components["schemas"]["UtcMilliseconds"];
+                end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+            } | null;
+            reader_href: null;
+        };
+        /** @description CG-P11-07. The immutable requested spec a run was admitted with. */
+        RunRequestedSpec: {
+            /** @constant */
+            schema_version: "research.run-requested-spec.v1";
+            run_id: components["schemas"]["RunId"];
+            /** @description Exactly the research.requested-spec.v1 document the run was admitted with. */
+            requested_spec: Record<string, never>;
+            requested_spec_digest: components["schemas"]["Digest"];
+            alpha_id: string;
+            alpha_version_id: string;
+            execution_profile_id: string;
+            created_at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            clone: {
+                /** @constant */
+                intent_kind: "NEW";
+                /** @constant */
+                requires_fresh_preflight: true;
+            };
         };
         ProgressRead: {
             /** @constant */
             schema_version: "research.progress-read.v1";
             run_id: components["schemas"]["RunId"];
-            /** @description Optional during additive client rollout; current server emits it on every read. */
+            /** @description CG-P11-03. Optional during additive client rollout; the server emits it on every read (null only if the producer row could not be read). */
+            run?: components["schemas"]["ProgressRunIdentity"] | null;
+            /** @description Optional during additive client rollout; current server emits it on every read. retry_not_before_utc_ms is set only while the job is in RETRY_WAIT (CG-P11-06). */
             queue?: components["schemas"]["ProgressQueue"];
             /** @description Optional during additive client rollout; current server emits [] before any claim. */
             attempts?: components["schemas"]["ProgressAttempt"][];
@@ -483,16 +621,32 @@ export interface components {
                 may_cancel: boolean;
                 /** @constant */
                 may_retry: false;
-                /** @constant */
-                retry_reason: "P12_OWNED_NO_P11_RETRY_ROUTE";
+                /**
+                 * @description CG-P11-07. No automatic or in-place retry exists. The one action is a new run seeded from GET /api/v1/research/runs/{runId}/requested-spec. P12_OWNED_NO_P11_RETRY_ROUTE is only ever emitted by a pre-W2 server.
+                 * @enum {unknown}
+                 */
+                retry_reason: "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC" | "P12_OWNED_NO_P11_RETRY_ROUTE";
+                /** @description CG-P11-07. Whether this run's requested spec is retained to seed a new run. Optional during additive client rollout. */
+                new_run_from?: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "NOT_AVAILABLE";
+                    reason_code: "RUN_REQUESTED_SPEC_NOT_RETAINED" | null;
+                };
             };
             progress: components["schemas"]["ProgressSnapshot"] | null;
             /** @description RF01-B3. The run's retained P05 tables from the artifact authority, ordered by table_kind then artifact identity, bounded at 128. A different set from progress.artifacts (bundle readiness journaled by the source); only here can CORRUPT or MISSING appear. Optional during additive client rollout; the server emits it for every current read, as [] when no table is retained yet. */
             retained_artifacts?: components["schemas"]["ProgressRetainedArtifact"][];
+            /** @description CG-P11-03. Declared artifacts this viewer may not read, never linked. Optional during additive client rollout; [] when none. */
+            denied_artifacts?: components["schemas"]["ProgressDeniedArtifact"][];
         };
+        /** @description CG-P11-08 (DQ-13). A live frame carries this viewer's current read, materialised once after the event committed, so the browser never refetches per event. A replayed frame (sequence at or below the opening research.progress.snapshot) carries read: null because the opening frame is already current. A read over 192 KiB is omitted with read_omitted_reason and the client makes one snapshot GET. */
         ProgressStreamEvent: {
             event: components["schemas"]["ProgressEvent"];
             snapshot: components["schemas"]["ProgressSnapshot"] | null;
+            /** @description Optional during additive client rollout; the server writes it on every research.progress frame. */
+            read?: components["schemas"]["ProgressRead"] | null;
+            /** @constant */
+            read_omitted_reason?: "P11_STREAM_READ_OVER_FRAME_BUDGET";
         };
         ProgressHeartbeat: {
             /** @constant */
@@ -595,6 +749,15 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
+            /** @description Reserved access-policy refusal (RESEARCH_PROGRESS_FORBIDDEN). This Control API revision answers a non-member with 404 so a run's existence is not disclosed; an edge access policy may still answer 403 before the request reaches it. Clients render DENIED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
@@ -628,6 +791,15 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
+            /** @description Reserved access-policy refusal (RESEARCH_PROGRESS_FORBIDDEN). This Control API revision answers a non-member with 404 so a run's existence is not disclosed; an edge access policy may still answer 403 before the request reaches it. Clients render DENIED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
@@ -659,8 +831,63 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
+            /** @description Reserved access-policy refusal (RESEARCH_PROGRESS_FORBIDDEN). This Control API revision answers a non-member with 404 so a run's existence is not disclosed; an edge access policy may still answer 403 before the request reaches it. Clients render DENIED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchRunRequestedSpecGetV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path: {
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run's requested spec as admitted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunRequestedSpec"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            /** @description Reserved access-policy refusal (RESEARCH_PROGRESS_FORBIDDEN). This Control API revision answers a non-member with 404 so a run's existence is not disclosed; an edge access policy may still answer 403 before the request reaches it. Clients render DENIED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            /** @description RESEARCH_RUN_REQUESTED_SPEC_NOT_RETAINED: the run exists but its requested spec is not retained */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
             503: components["responses"]["Problem"];
         };
     };

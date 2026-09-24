@@ -88,7 +88,9 @@ function requested(): ResearchRequestedSpec {
     early_stopping: null,
     random_seed: null,
     optimization_config: {},
-    client: { engine_release_id: "er_quantbt_111", config_digest: "a".repeat(64) },
+    // Distinct from the "a"-filled locator digest the retained-table case
+    // proves never leaks: the client config digest is a public identity fact.
+    client: { engine_release_id: "er_quantbt_111", config_digest: "5".repeat(64) },
   } as ResearchRequestedSpec;
 }
 
@@ -108,7 +110,11 @@ async function seedIdentity(pool: Pool): Promise<void> {
   );
 }
 
-async function seedManifest(repository: ResearchMetadataRepository, spec: ResearchRequestedSpec): Promise<void> {
+async function seedManifest(
+  repository: ResearchMetadataRepository,
+  spec: ResearchRequestedSpec,
+  topologyExtra: Record<string, unknown> = {},
+): Promise<void> {
   const requestedDigest = sha256ResearchJson(spec);
   const effectiveSpec = {
     schema_version: "research.effective-spec.v1",
@@ -121,7 +127,7 @@ async function seedManifest(repository: ResearchMetadataRepository, spec: Resear
     snapshot_content_hash: "b".repeat(64),
     source_manifest_digest: "d".repeat(64),
   };
-  const topology = { schema_version: "research.topology.v1", topology_digest: "c".repeat(64) };
+  const topology = { schema_version: "research.topology.v1", topology_digest: "c".repeat(64), ...topologyExtra };
   const resourceEstimate = { schema_version: "research.resource-estimate.v1", trial_count: 1 };
   const snapshot = {
     snapshot_id: "dss_0123456789abcdef0123456789abcdef",
@@ -296,11 +302,11 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
   afterEach(async () => { await truncateAll(pool); });
   afterAll(async () => { await pool?.end(); });
 
-  async function createDispatchedRun() {
+  async function createDispatchedRun(topologyExtra: Record<string, unknown> = {}) {
     await seedIdentity(pool);
     await new ResearchP04DeltaBindingService(metadata).install(admin, scope);
     const spec = requested();
-    await seedManifest(metadata, spec);
+    await seedManifest(metadata, spec, topologyExtra);
     const producer = new ResearchRunCreateService(
       metadata,
       new ResearchRunAdmissionService(metadata, config),
@@ -612,7 +618,7 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
         id: { value: "signal_notional", availability: { state: "AVAILABLE", reason_code: null } },
         contract: { value: null, availability: { state: "NOT_PUBLISHED", reason_code: "P13_ROUTE_CONTRACT_NOT_PUBLISHED" } },
       },
-      config_digest: { value: "a".repeat(64), availability: { state: "AVAILABLE", reason_code: null } },
+      config_digest: { value: "5".repeat(64), availability: { state: "AVAILABLE", reason_code: null } },
       seed: { value: null, availability: { state: "NOT_APPLICABLE", reason_code: "P02_RANDOM_SEED_NOT_SELECTED" } },
     });
     expect(hub.core.fold_navigation).toEqual({
@@ -1053,5 +1059,109 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
     // P16 does not persist a new “verification” row and cannot enqueue work:
     // it reads the one immutable P14 receipt already retained for the run.
     expect(persisted.rows[0]).toEqual({ sources: "1", projections: "1", freeze_table: null });
+  });
+  it("W2 CG-P11-03/-06/-07: identity, declared folds, sealed holdout, lease lapse and the clone seed come from real rows", async () => {
+    const holdout = { start_utc_ms: Date.parse("2025-01-06T00:00:00Z"), end_exclusive_utc_ms: Date.parse("2025-01-08T00:00:00Z"), bars: 48 };
+    const run = await createDispatchedRun({
+      protocol: "three_window_decay",
+      folds: [{ fold_id: "fold_000", state: "BOUNDARY_FIXED_NOT_EVALUATED" }],
+      sealed_holdout: holdout,
+    });
+    const read = await service.read(admin, scope, run.runId);
+    expect(read.run).toMatchObject({
+      alpha: { alpha_id: P04_DELTA_BINDING.alphaId, alpha_version_id: P04_DELTA_BINDING.alphaVersionId },
+      execution_profile_id: "p04.fixed-qualification.v1",
+      protocol: "three_window_decay",
+      mode: "mode_1_decay",
+      schedule: "global",
+      instrument: { symbol: "BTCUSDT", timeframe: "1h" },
+      execution_route: "signal_notional",
+      engine_release_id: "er_quantbt_111",
+      config_digest: "5".repeat(64),
+      requested_spec_digest: sha256ResearchJson(requested()),
+      declared_folds: { state: "DECLARED", count: 1, reason_code: null },
+    });
+    expect(read.denied_artifacts).toEqual([{
+      name: "sealed holdout", state: "DENIED", reason_code: "P08_SEALED_HOLDOUT_UNLOCK_NOT_INSTALLED",
+      rows: "48", range: { start_utc_ms: holdout.start_utc_ms, end_exclusive_utc_ms: holdout.end_exclusive_utc_ms },
+      reader_href: null,
+    }]);
+    expect(read.current).toMatchObject({
+      may_retry: false,
+      retry_reason: "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC",
+      new_run_from: { state: "AVAILABLE", reason_code: null },
+    });
+    // The clone seed is byte-for-byte the admitted requested spec.
+    const seed = await service.requestedSpec(scope, run.runId);
+    expect(seed).toMatchObject({
+      schema_version: "research.run-requested-spec.v1", run_id: run.runId,
+      requested_spec_digest: sha256ResearchJson(requested()),
+      clone: { intent_kind: "NEW", requires_fresh_preflight: true },
+    });
+    expect(sha256ResearchJson(seed.requested_spec)).toBe(sha256ResearchJson(requested()));
+    expect(JSON.stringify(seed)).not.toMatch(/rpft_|dss_|worker_attempt|lease_epoch/);
+    await expectProgressError(service.requestedSpec(scope, "run_missing"), "RESEARCH_PROGRESS_NOT_FOUND");
+
+    // Lease lapse: the attempt's lease expired ten minutes before the sweep
+    // recorded it. The read keeps both instants apart.
+    await pool.query(
+      `UPDATE research.worker_attempts SET expires_at = now() - interval '10 minutes'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    const lapsed = await pool.query<{ expires_at: Date }>(
+      `SELECT expires_at FROM research.worker_attempts WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    expect(await metadata.recoverExpiredDurableJobs(scope)).toMatchObject({ recovered: 1 });
+    const retrying = await service.read(admin, scope, run.runId);
+    expect(retrying.current.job_state).toBe("RETRY_WAIT");
+    expect(retrying.attempts[0]).toMatchObject({
+      state: "LOST_LEASE", lease_expired_at_utc_ms: lapsed.rows[0]!.expires_at.valueOf(),
+    });
+    expect(retrying.attempts[0]!.ended_at_utc_ms!).toBeGreaterThan(retrying.attempts[0]!.lease_expired_at_utc_ms!);
+    // While the scheduler waits to retry, the instant is published...
+    expect(retrying.queue.retry_not_before_utc_ms).not.toBeNull();
+    // ...and once the run is cancelled there is no retry to wait for.
+    await metadata.requestDurableJobCancellation(scope, { jobId: run.jobId, reason: "operator stop" });
+    const cancelled = await service.read(admin, scope, run.runId);
+    expect(cancelled.current.job_state).toBe("CANCELLED");
+    expect(cancelled.queue.retry_not_before_utc_ms).toBeNull();
+    expect(cancelled.attempts[0]!.lease_expired_at_utc_ms).toBe(lapsed.rows[0]!.expires_at.valueOf());
+  });
+
+  it("W2 CG-P11-09/-08: unmeasured usage persists as null and the fanout carries the committed read", async () => {
+    const fanout = new ResearchProgressFanout();
+    const streaming = new ResearchProgressService(
+      new ResearchProgressRepository(pool), metadata, fanout,
+      new FakeProgressPortalClient() as never, new FakeEvidenceService() as never, new FakeSplitService() as never,
+      new FakeReportService() as never, config,
+    );
+    const run = await createDispatchedRun();
+    const frames: Array<{ event: { sequence: number }; read: { current: { effective_status: string } } | null }> = [];
+    const stop = streaming.subscribe(admin, run.runId, (frame) => frames.push(frame as never));
+    await streaming.ingest(ingress({ ...run, sequence: 1, eventType: "run_started" }));
+    const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 2, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: 2, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+    const terminal = ingress({ ...run, sequence: 2, eventType: "run_completed", progress: completed });
+    (terminal.event.payload as Record<string, unknown>).usage = {
+      peak_rss_bytes: 314_572_800, cpu_seconds: 6, scratch_bytes: null, fd_peak: null,
+    };
+    await streaming.ingest(terminal);
+    stop();
+    const usage = await pool.query<{ measured_usage: Record<string, unknown> }>(
+      `SELECT measured_usage FROM research.worker_attempts WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scope.workspaceId, run.workerAttemptId],
+    );
+    expect(usage.rows[0]!.measured_usage).toEqual({
+      peak_rss_bytes: 314_572_800, cpu_seconds: 6, scratch_bytes: null, fd_peak: null,
+    });
+    expect(frames.map((frame) => frame.event.sequence)).toEqual([1, 2]);
+    expect(frames[0]!.read?.current.effective_status).toBe("RUNNING");
+    expect(frames[1]!.read?.current.effective_status).toBe("COMPLETED");
   });
 });

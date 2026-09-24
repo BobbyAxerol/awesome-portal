@@ -395,10 +395,29 @@ def test_w1_producer_runs_real_wfo_child_and_stages_source(tmp_path: Path, monke
     ticks = [event["payload"] for event in events if event["event_type"] == "budget_tick"]
     assert ticks[0] == {"used": "0.000", "cap": "2.000", "pct": 0}
     assert ticks[-1]["cap"] == "2.000"
-    # Trials/folds are claimed only after retention (durable worker), never here.
-    assert not [event for event in events if event["event_type"] in {"trial_completed", "fold_completed", "fold_segment_observed"}]
-    stages = journal.snapshot()["stages"]
+    # CG-P06-02: trials arrive live from the child's Optuna callback, as one
+    # global study that names no fold. Folds are claimed only after retention
+    # (durable worker), and no segment timestamp is ever invented.
+    assert not [event for event in events if event["event_type"] in {"fold_completed", "fold_segment_observed"}]
+    trials = [event["payload"] for event in events if event["event_type"] == "trial_completed"]
+    assert [trial["trial"] for trial in trials] == [1, 2, 3]
+    assert all(trial["study"] == "GLOBAL" and "fold" not in trial for trial in trials)
+    assert all(trial["state"] in {"COMPLETE", "PRUNED"} for trial in trials)
+    completed = [trial for trial in trials if trial["state"] == "COMPLETE"]
+    assert completed and all(trial["objective"] is not None for trial in completed)
+    assert trials[-1]["best_objective"] is not None
+    # ETA exists while trials remain and is withdrawn once the search is done.
+    assert all(isinstance(trial["eta_s"], int) and trial["eta_s"] >= 0 for trial in trials[:-1])
+    assert trials[-1]["eta_s"] is None
+    assert [trial["overall_pct"] for trial in trials] == [33, 56, 80]
+    assert trials[-1]["tqdm_line"].startswith("global study · trial 3/3 · best J\u2081 ")
+    snapshot = journal.snapshot()
+    assert snapshot["folds"] == []  # a global study opens no fold row
+    assert snapshot["overall"]["trials_done"] == 3 and snapshot["overall"]["eta_s"] is None
+    stages = snapshot["stages"]
     assert [stage["state"] for stage in stages] == ["DONE", "DONE", "DONE", "RUNNING", "PENDING"]
+    # The WFO receipt's RSS is the child's own high-water mark.
+    assert receipt["resource"]["peak_rss_bytes"] > 50 * 1024 * 1024
 
 
 # -------------------------------------------------------- G: durable worker
@@ -465,11 +484,13 @@ async def test_w1_worker_retains_before_run_completed_and_claims_three_trials(
     assert attempt is not None and attempt.status == "SUCCEEDED", attempt
     operations = api.operations()
     assert operations[0] == "reserve" and operations[1] == "seal" and operations[-1] == "current-source/seal"
-    # Every retention request happened before the P11 terminal event, and
-    # before any trial was claimed.
+    # Every retention request happened before the P11 terminal event and
+    # before any fold was claimed. Trials were observed live (CG-P06-02), so
+    # all three already existed when retention began.
     for _operation, events in observed_at_request:
         assert "run_completed" not in events
-        assert "trial_completed" not in events
+        assert "fold_completed" not in events
+        assert events.count("trial_completed") == 3
 
     events = _journal_events(registry.root, run_id, attempt_id)
     types = [event["event_type"] for event in events]
@@ -479,11 +500,21 @@ async def test_w1_worker_retains_before_run_completed_and_claims_three_trials(
     assert types.index("run_completed") > max(index for index, kind in enumerate(types) if kind == "trial_completed")
     assert types[-1] == "run_completed"
     trials = [event["payload"] for event in events if event["event_type"] == "trial_completed"]
-    assert [trial["trial"] for trial in trials] == [1, 2, 3]
+    assert [trial["trial"] for trial in trials] == [1, 2, 3]  # live once, never re-claimed
     assert trials[-1]["overall_pct"] == 80
+    folds = [event["payload"] for event in events if event["event_type"] == "fold_completed"]
+    assert [fold["fold"] for fold in folds] == [1, 2]
+    selection = folds[0]["selection"]
+    assert selection["scope"] == "GLOBAL_STUDY" and all(fold["selection"] == selection for fold in folds)
+    assert len(selection["params_digest"]) == 64
     completed = events[-1]["payload"]
-    assert set(completed) == {"usage"}  # no P13 evidence / P14 split digest
+    assert set(completed) == {"usage", "handoff_cursor"}  # no P13 evidence / P14 split digest
+    assert completed["handoff_cursor"] == {
+        "fold": 2, "trial": selection["trial"], "params_digest": selection["params_digest"],
+    }
     assert 0 < completed["usage"]["cpu_seconds"] <= 120
+    assert completed["usage"]["peak_rss_bytes"] > 0
+    assert completed["usage"]["scratch_bytes"] is None and completed["usage"]["fd_peak"] is None
     ticks = [event["payload"] for event in events if event["event_type"] == "budget_tick"]
     assert ticks and all(tick["cap"] == "2.000" for tick in ticks)
     snapshot = ResearchProgressJournal(
@@ -491,6 +522,11 @@ async def test_w1_worker_retains_before_run_completed_and_claims_three_trials(
     ).snapshot()
     assert snapshot["overall"]["trials_done"] == 3 and snapshot["overall"]["trials_declared"] == 3
     assert [fold["state"] for fold in snapshot["folds"]] == ["DONE", "DONE"]
+    assert all(fold["selection"]["state"] == "AVAILABLE" for fold in snapshot["folds"])
+    assert snapshot["claim"]["state"] == "NOT_ISSUED"
+    assert snapshot["claim"]["text"].startswith("The Delta walk-forward study")
+    assert snapshot["claim"]["handoff_cursor"] == completed["handoff_cursor"]
+    assert snapshot["overall"]["pct"] == 100 and snapshot["overall"]["eta_s"] is None
     manifest = store.open_bundle(run_id, attempt_id, attempt.artifacts_sha256)
     assert not any(WFO_SOURCE_DIRNAME in name for name in manifest["files"])
     assert "research/p10-receipt.json" in manifest["files"]
@@ -542,3 +578,8 @@ def test_w1_p11_usage_clamps_to_the_profile_cap(tmp_path: Path) -> None:
     p04.emit("run_started")
     with pytest.raises(ResearchProgressError, match="usage"):
         p04.emit("run_completed", {"usage": {"peak_rss_bytes": 0, "cpu_seconds": 100, "scratch_bytes": 0, "fd_peak": 0}})
+    # An unmeasured CPU value is null, not above the cap.
+    p04.emit("run_failed", {
+        "code": "USER_CANCELLED", "message": "cancelled",
+        "usage": {"peak_rss_bytes": None, "cpu_seconds": None, "scratch_bytes": None, "fd_peak": None},
+    })
