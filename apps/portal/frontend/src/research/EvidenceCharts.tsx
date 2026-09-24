@@ -28,7 +28,7 @@ import { useMemo } from "react";
 
 import { EChart } from "../charts/EChart";
 import { baseOption, roleColorsNow, paletteNow } from "../charts/theme";
-import { vizTokensFor } from "../styles/tokens";
+import { canvasTokens, activeTheme, withAlpha } from "../styles/tokens";
 import type {
   CorrectedDistributionBucket,
   DistributionBucket,
@@ -36,7 +36,7 @@ import type {
   EvidenceSeries,
   RollingReturnPoint,
 } from "./evidenceClient";
-import { formatFractionAxis, formatMetric, formatUtc } from "./researchFormat";
+import { formatFractionAxis, formatMetric } from "./researchFormat";
 
 /** HiFi heights (measured on the `.dc.html`): equity 380, underwater 180, rolling/distribution 230. */
 export const CHART_HEIGHT = { equity: 380, underwater: 180, rolling: 230, distribution: 230 } as const;
@@ -48,30 +48,64 @@ export const SERIES_NAME = {
   distribution: "observations",
 } as const;
 
+/* ---------------------------------------------------------------- format */
+
+/**
+ * One minus sign on this screen: U+2212. `formatMetric` already writes it for
+ * a fraction; the axis helper and a negative currency come out of Intl with
+ * the ASCII hyphen, so every chart string passes through here.
+ */
+export function withMinus(text: string | null): string {
+  return text === null ? "" : text.replace(/^-/, "\u2212").replace(/([\s[(,])-(?=\d)/g, "$1\u2212");
+}
+
+/** A fraction as a percentage for an axis or a mark, with the screen's minus. */
+export function percent(value: number, digits = 2): string {
+  return withMinus(formatFractionAxis(value, digits));
+}
+
+/** A UTC instant the way the HiFi writes one that carries a time: `2026-07-20 13:00Z`. */
+export function utcZ(ms: number | null | undefined): string {
+  if (ms === null || ms === undefined || !Number.isFinite(ms)) return "";
+  const iso = new Date(ms).toISOString();
+  return `${iso.slice(0, 10)} ${iso.slice(11, 16)}Z`;
+}
+
 /*
  * Apparatus the shared theme gives every chart and this screen turns off: the
- * legend repeats the panel heading and sat on the first y label, and the zoom
- * slider offers a deep read spec 04 §7 leaves to Screen 08.
+ * legend (only one series is published per chart, so it would repeat the
+ * panel heading) and the zoom slider, which spec 04 §7 leaves to Screen 08.
  */
 function noChartApparatus() {
   return { legend: { show: false }, dataZoom: [] as never[] };
 }
 
-const TOOLTIP_BASE = { trigger: "axis" as const, confine: true };
+/**
+ * The HiFi tooltip: ECharts' own box as the prototype leaves it — 4px radius,
+ * 10px padding and its soft drop shadow — in the screen's mono type. The
+ * shadow is the ink token at 20%, the nearest token to the prototype's black.
+ */
+function hifiTooltip() {
+  const { ink } = paletteNow();
+  return {
+    trigger: "axis" as const,
+    confine: true,
+    padding: 10,
+    extraCssText: `border-radius:4px;box-shadow:1px 2px 10px ${withAlpha(ink, 0.2)};`,
+    textStyle: { fontSize: 11, lineHeight: 17, fontFamily: "JetBrains Mono, monospace" },
+  };
+}
 
 /* The crosshair prints the axis value on the axis itself; it must read in the
    same units as the ticks, not as the raw float ECharts plotted. */
-const timePointer = { label: { formatter: (param: { value: unknown }) => formatUtc(Number(param.value)) ?? "" } };
-const fractionPointer = {
-  label: { formatter: (param: { value: unknown }) => formatFractionAxis(Number(param.value), 2) },
-};
+const timePointer = { label: { formatter: (param: { value: unknown }) => utcZ(Number(param.value)) } };
+const fractionPointer = { label: { formatter: (param: { value: unknown }) => percent(Number(param.value), 2) } };
 const currencyPointer = {
-  label: { formatter: (param: { value: unknown }) => formatMetric(Number(param.value), "currency") ?? "" },
+  label: { formatter: (param: { value: unknown }) => withMinus(formatMetric(Number(param.value), "currency")) },
 };
 
-function withSoftAlpha(color: string): string {
-  return /^#[0-9a-f]{6}$/i.test(color) ? `${color}2e` : color;
-}
+/* HiFi axis grammar: mono 11, faint; time ticks are a plain UTC date. */
+const TIME_AXIS = { type: "time" as const, axisLabel: { hideOverlap: true, margin: 10 }, axisPointer: timePointer };
 
 type AxisParam = { dataIndex: number; marker?: string; seriesName?: string };
 
@@ -85,8 +119,8 @@ function first(params: unknown): AxisParam | undefined {
   return Array.isArray(params) ? (params[0] as AxisParam | undefined) : (params as AxisParam | undefined);
 }
 
-const fraction = (value: string) => formatMetric(value, "fraction");
-const currency = (value: string) => formatMetric(value, "currency");
+const fraction = (value: string) => withMinus(formatMetric(value, "fraction"));
+const currency = (value: string) => withMinus(formatMetric(value, "currency"));
 
 /**
  * The exact values behind a chart, for a screen reader and for a reader who
@@ -140,21 +174,22 @@ export function equityOption(points: EquityPoint[]) {
   return baseOption({
     ...noChartApparatus(),
     useUTC: true,
-    grid: { left: 64, right: 20, top: 16, bottom: 30 },
-    xAxis: { type: "time", axisLabel: { fontSize: 10, hideOverlap: true }, axisPointer: timePointer },
+    /* HiFi EChart 1 grid; containLabel keeps long equity ticks inside it. */
+    grid: { left: 56, right: 20, top: 34, bottom: 44, containLabel: true },
+    xAxis: TIME_AXIS,
     yAxis: {
       type: "value",
       scale: true,
-      axisLabel: { fontSize: 10, formatter: (value: number) => formatMetric(value, "count") ?? "" },
+      axisLabel: { formatter: (value: number) => withMinus(formatMetric(value, "count")) },
       axisPointer: currencyPointer,
     },
     tooltip: {
-      ...TOOLTIP_BASE,
+      ...hifiTooltip(),
       formatter: (params: unknown) => {
         const param = first(params);
         const point = points[param?.dataIndex ?? -1];
         return point
-          ? `${formatUtc(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.equity, currency(point.equity))}`
+          ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.equity, currency(point.equity))}`
           : "";
       },
     },
@@ -179,20 +214,20 @@ export function drawdownOption(points: EquityPoint[]) {
   return baseOption({
     ...noChartApparatus(),
     useUTC: true,
-    grid: { left: 64, right: 20, top: 22, bottom: 30 },
-    xAxis: { type: "time", axisLabel: { fontSize: 10, hideOverlap: true }, axisPointer: timePointer },
+    grid: { left: 56, right: 20, top: 16, bottom: 40, containLabel: true },
+    xAxis: TIME_AXIS,
     yAxis: {
       type: "value",
-      axisLabel: { fontSize: 10, formatter: (value: number) => formatFractionAxis(value, 2) },
+      axisLabel: { formatter: (value: number) => percent(value, 2) },
       axisPointer: fractionPointer,
     },
     tooltip: {
-      ...TOOLTIP_BASE,
+      ...hifiTooltip(),
       formatter: (params: unknown) => {
         const param = first(params);
         const point = points[param?.dataIndex ?? -1];
         return point
-          ? `${formatUtc(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.drawdown, fraction(point.drawdown_fraction))}`
+          ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.drawdown, fraction(point.drawdown_fraction))}`
           : "";
       },
     },
@@ -201,9 +236,9 @@ export function drawdownOption(points: EquityPoint[]) {
         type: "line",
         name: SERIES_NAME.drawdown,
         showSymbol: false,
-        areaStyle: { color: withSoftAlpha(tone) },
+        areaStyle: { color: tone, opacity: 0.18 },
         data: points.map((point) => [point.at_utc_ms, Number(point.drawdown_fraction)]),
-        lineStyle: { width: 1.25, color: tone },
+        lineStyle: { width: 1.25, color: tone, opacity: 0.8 },
         itemStyle: { color: tone },
         ...(hasTrough
           ? {
@@ -217,8 +252,9 @@ export function drawdownOption(points: EquityPoint[]) {
                   distance: 8,
                   color: ink,
                   fontSize: 10,
+                  fontFamily: "JetBrains Mono, monospace",
                   formatter: (param: { value?: unknown }) =>
-                    typeof param.value === "number" ? `trough ${formatFractionAxis(param.value, 2)}` : "",
+                    typeof param.value === "number" ? percent(param.value, 2) : "",
                 },
                 data: [{ type: "min", name: "deepest trough", valueIndex: 1 }],
               },
@@ -231,25 +267,25 @@ export function drawdownOption(points: EquityPoint[]) {
 
 export function rollingOption(points: RollingReturnPoint[]) {
   const { accent } = paletteNow();
-  const zero = vizTokensFor().legendInactive;
+  const zero = canvasTokens(activeTheme()).line;
   return baseOption({
     ...noChartApparatus(),
     useUTC: true,
-    grid: { left: 58, right: 18, top: 16, bottom: 30 },
-    xAxis: { type: "time", axisLabel: { fontSize: 10, hideOverlap: true }, axisPointer: timePointer },
+    grid: { left: 50, right: 46, top: 30, bottom: 40, containLabel: true },
+    xAxis: TIME_AXIS,
     yAxis: {
       type: "value",
       scale: true,
-      axisLabel: { fontSize: 10, formatter: (value: number) => formatFractionAxis(value, 2) },
+      axisLabel: { formatter: (value: number) => percent(value, 2) },
       axisPointer: fractionPointer,
     },
     tooltip: {
-      ...TOOLTIP_BASE,
+      ...hifiTooltip(),
       formatter: (params: unknown) => {
         const param = first(params);
         const point = points[param?.dataIndex ?? -1];
         return point
-          ? `${formatUtc(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.rolling, fraction(point.return_fraction))}`
+          ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.rolling, fraction(point.return_fraction))}`
           : "";
       },
     },
@@ -259,7 +295,7 @@ export function rollingOption(points: RollingReturnPoint[]) {
         name: SERIES_NAME.rolling,
         showSymbol: false,
         data: points.map((point) => [point.at_utc_ms, Number(point.return_fraction)]),
-        lineStyle: { width: 1.2, color: accent },
+        lineStyle: { width: 1.5, color: accent },
         itemStyle: { color: accent },
         markLine: {
           symbol: "none",
@@ -284,31 +320,52 @@ export function bucketEdges(bucket: Bucket): { lower: string; upper: string; clo
 
 function bucketLabel(bucket: Bucket): string {
   const { lower, upper, closing } = bucketEdges(bucket);
-  return `[${fraction(lower) ?? lower}, ${fraction(upper) ?? upper}${closing}`;
+  return `[${fraction(lower) || lower}, ${fraction(upper) || upper}${closing}`;
+}
+
+/**
+ * The bucket whose edges hold zero, read by comparing the server's edges — no
+ * value is binned or moved. Null when zero is outside every bucket.
+ */
+export function zeroBucketIndex(buckets: Bucket[]): number | null {
+  const index = buckets.findIndex((bucket) => {
+    const { lower, upper, closing } = bucketEdges(bucket);
+    const lo = Number(lower);
+    const hi = Number(upper);
+    return lo <= 0 && (closing === "]" ? 0 <= hi : 0 < hi);
+  });
+  return index === -1 ? null : index;
+}
+
+/** About six labelled ticks, never rotated (HiFi EChart 4 labels every fifth of 30). */
+export function tickInterval(count: number): number {
+  return Math.max(0, Math.ceil(count / 6) - 1);
 }
 
 export function distributionOption(buckets: Bucket[]) {
+  const { accent, accent2 } = canvasTokens(activeTheme());
+  const zero = zeroBucketIndex(buckets);
   return baseOption({
     ...noChartApparatus(),
-    grid: { left: 44, right: 14, top: 16, bottom: 50 },
+    grid: { left: 44, right: 16, top: 20, bottom: 40, containLabel: true },
     /* A tick names a bucket by its lower edge as a percentage; the exact edges
        are in the tooltip and in the table below. */
     xAxis: {
       type: "category",
       data: buckets.map(bucketLabel),
       axisLabel: {
-        fontSize: 9,
-        rotate: 40,
-        hideOverlap: true,
+        fontSize: 10,
+        rotate: 0,
+        interval: tickInterval(buckets.length),
         formatter: (_value: string, index: number) => {
           const bucket = buckets[index];
-          return bucket ? fraction(bucket.lower_inclusive) ?? "" : "";
+          return bucket ? fraction(bucket.lower_inclusive) : "";
         },
       },
     },
-    yAxis: { type: "value", minInterval: 1, axisLabel: { fontSize: 10 } },
+    yAxis: { type: "value", minInterval: 1 },
     tooltip: {
-      ...TOOLTIP_BASE,
+      ...hifiTooltip(),
       axisPointer: { type: "shadow" },
       formatter: (params: unknown) => {
         const param = first(params);
@@ -323,7 +380,19 @@ export function distributionOption(buckets: Bucket[]) {
         type: "bar",
         name: SERIES_NAME.distribution,
         data: buckets.map((bucket) => Number(bucket.count)),
-        itemStyle: { color: vizTokensFor().train },
+        barCategoryGap: "14%",
+        itemStyle: { color: withAlpha(accent, 0.55) },
+        ...(zero !== null
+          ? {
+              markLine: {
+                symbol: "none",
+                silent: true,
+                lineStyle: { color: accent2, type: "dashed" },
+                label: { color: accent2, fontSize: 9, fontFamily: "JetBrains Mono, monospace", formatter: "0%" },
+                data: [{ xAxis: zero }],
+              },
+            }
+          : {}),
       },
     ],
   });
@@ -332,28 +401,15 @@ export function distributionOption(buckets: Bucket[]) {
 /* ---------------------------------------------------------- components */
 
 /**
- * Equity, and beneath it the drawdown that is the same points restated.
- *
- * Two charts, as the HiFi draws them (EChart 1 and 2). Both read one response:
- * the drawdown is not a second measurement and costs no second request.
+ * EChart 1 — the stitched OOS equity. Its exact values (and the drawdown the
+ * same points carry) are in the screen-reader table beneath it.
  */
 export function EquityChart({ series }: { series: EvidenceSeries }) {
   const points = series.values as EquityPoint[];
   const equity = useMemo(() => equityOption(points), [points]);
-  const drawdown = useMemo(() => drawdownOption(points), [points]);
-
   return (
-    <div className="flex flex-col gap-3" data-chart="equity">
+    <div data-chart="equity">
       <EChart option={equity} height={CHART_HEIGHT.equity} />
-      <div className="flex flex-col gap-1 border-t pt-2.5" style={{ borderColor: "var(--line-soft)" }}>
-        <span style={{ fontFamily: "var(--font-display)", fontSize: 15, color: "var(--ink)" }}>
-          Underwater — drawdown derived from equity
-        </span>
-        <EChart option={drawdown} height={CHART_HEIGHT.underwater} />
-        <span className="text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
-          Drawdown is a restatement of the equity series above, not a separate metric the engine computes.
-        </span>
-      </div>
       <ExactTable
         id="equity"
         caption="OOS equity and drawdown, exact values"
@@ -363,6 +419,21 @@ export function EquityChart({ series }: { series: EvidenceSeries }) {
           cells: [new Date(point.at_utc_ms).toISOString(), point.equity, point.drawdown_fraction],
         }))}
       />
+    </div>
+  );
+}
+
+/**
+ * EChart 2 — the drawdown the equity response already carries, in its own
+ * figure as the HiFi draws it. It reads the same response: not a second
+ * measurement, and no second request.
+ */
+export function DrawdownChart({ series }: { series: EvidenceSeries }) {
+  const points = series.values as EquityPoint[];
+  const drawdown = useMemo(() => drawdownOption(points), [points]);
+  return (
+    <div data-chart="drawdown">
+      <EChart option={drawdown} height={CHART_HEIGHT.underwater} />
     </div>
   );
 }

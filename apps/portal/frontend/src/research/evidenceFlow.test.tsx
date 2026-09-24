@@ -579,20 +579,20 @@ describe("P13-T05 — seven tabs over one cursor", () => {
     expect(onStage).toHaveBeenCalledWith("claim");
   });
 
-  it("opens the dataset drawer and closes it on Escape", async () => {
+  it("opens the dataset panel and closes it on Escape", async () => {
     const { container } = view();
-    fireEvent.click(container.querySelector("[data-action='dataset-drawer']") as Element);
-    expect(container.querySelector("[data-drawer='dataset']")).toBeTruthy();
-    expect(screen.getByText("ds_btcusdt_4h")).toBeTruthy();
+    fireEvent.click(container.querySelector("[data-action='dataset-panel']") as Element);
+    expect(container.querySelector("[data-dataset-panel='dataset']")).toBeTruthy();
+    expect(screen.getAllByText("ds_btcusdt_4h").length).toBeGreaterThan(0);
 
     fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(container.querySelector("[data-drawer='dataset']")).toBeNull());
+    await waitFor(() => expect(container.querySelector("[data-dataset-panel='dataset']")).toBeNull());
   });
 
-  it("states what the drawer does not receive rather than drawing a coverage bar", () => {
+  it("states what the panel does not receive rather than drawing a coverage bar", () => {
     const { container } = view();
-    fireEvent.click(container.querySelector("[data-action='dataset-drawer']") as Element);
-    expect(container.querySelector("[data-gap='dataset-coverage']")).toBeTruthy();
+    fireEvent.click(container.querySelector("[data-action='dataset-panel']") as Element);
+    expect(container.querySelector("[data-gap='dataset-coverage']")?.textContent).toContain("not published");
   });
 
   it("disables the previous-fold step at the first fold", () => {
@@ -633,7 +633,7 @@ describe("P13-T06 — the retained-source passport is a panel, not the route", (
     expect(container.querySelector("[data-passport-refusal]")?.textContent).toContain("admitted Advanced-WFO");
     // The rest of the screen is untouched: the hub is still a hub.
     expect(container.querySelector("[data-metrics]")).toBeTruthy();
-    expect(container.querySelector("[data-claim-strip]")).toBeTruthy();
+    expect(container.querySelector("[data-claim-passport]")).toBeTruthy();
   });
 
   it("reads the passport once", async () => {
@@ -747,6 +747,7 @@ describe("P13-T09 — the header is the Hub's own, fact by fact", () => {
 
   it("does not upgrade a selected route id into a route contract", () => {
     const { container } = view();
+    fireEvent.click(container.querySelector("[data-action='dataset-panel']") as Element);
     expect(container.querySelector("[data-header-value='route']")?.textContent).toBe("close_target_v2");
     const contract = container.querySelector("[data-header-fact='route contract'] [data-withheld]");
     expect(contract?.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
@@ -755,6 +756,7 @@ describe("P13-T09 — the header is the Hub's own, fact by fact", () => {
 
   it("treats a deliberately unselected seed as an answer, not a gap", () => {
     const { container } = view();
+    fireEvent.click(container.querySelector("[data-action='dataset-panel']") as Element);
     const seed = container.querySelector("[data-header-fact='seed'] [data-withheld]");
     expect(seed?.getAttribute("data-withheld")).toBe("NOT_APPLICABLE");
     expect(seed?.textContent).toContain("not applicable");
@@ -885,7 +887,7 @@ function notIssuedHub(): EvidenceHub {
 describe("RF-06 FE-S04-01 — a claim that was not issued says so", () => {
   it("does not call a NOT_ISSUED claim available, and quotes the server's sentence", () => {
     const { container } = view({ hub: notIssuedHub() });
-    const strip = container.querySelector("[data-claim-strip]");
+    const strip = container.querySelector("[data-claim-passport]");
     expect(strip?.textContent).not.toContain("claim — available");
     expect(strip?.querySelector("[data-claim-not-issued]")?.textContent).toContain("NOT_ISSUED");
     expect(strip?.textContent).toContain(NOT_ISSUED_SENTENCE);
@@ -913,7 +915,7 @@ describe("RF-06 FE-S04-01 — a claim that was not issued says so", () => {
         },
       }),
     });
-    const strip = container.querySelector("[data-claim-strip]");
+    const strip = container.querySelector("[data-claim-passport]");
     expect(strip?.querySelector("[data-certificate-state='NOT_ISSUED']")?.textContent).toContain("NOT_ISSUED");
     expect(strip?.textContent).not.toContain("not applicable");
   });
@@ -957,43 +959,50 @@ describe("RF-06 FE-S04-02 — metric tiles round by unit and keep the exact valu
   });
 });
 
-describe("RF-06 FE-S04-04 — the strip sticks below the topbar", () => {
-  it("offsets the sticky strip by the topbar height, not 0", () => {
+describe("RF-06 FE-S04-04 — the tab card sticks like the HiFi's", () => {
+  it("draws the claims as a passport card that does not stick", () => {
     const { container } = view();
-    const strip = container.querySelector("[data-claim-strip]") as HTMLElement;
-    expect(strip.className).toContain("md:sticky");
-    expect(strip.style.top).toBe("var(--topbar-h)");
+    const passport = container.querySelector("[data-claim-passport]") as HTMLElement;
+    expect(passport.className).not.toMatch(/sticky/);
+    expect(passport.style.background).toBe("var(--paper-raised)");
+    expect(container.querySelector("[data-claim-strip]")).toBeNull();
   });
 
-  it("sticks under the topbar's measured height when the shell's topbar wraps", async () => {
+  it("keeps tabs and cursor in one card that slides under the topbar until only the cursor bar shows", async () => {
     const bar = document.createElement("header");
     bar.className = "portal-topbar";
     bar.getBoundingClientRect = () => ({ height: 90, width: 660, top: 0, left: 0, right: 660, bottom: 90, x: 0, y: 0, toJSON: () => ({}) });
     document.body.appendChild(bar);
+    const observed: Element[] = [];
     vi.stubGlobal(
       "ResizeObserver",
       class {
-        observe() {}
+        constructor(private readonly callback: () => void) {}
+        observe(element: Element) {
+          observed.push(element);
+          this.callback();
+        }
         disconnect() {}
       },
     );
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+      return this.hasAttribute("data-stage-tabs")
+        ? ({ height: 48, width: 900, top: 0, left: 0, right: 900, bottom: 48, x: 0, y: 0, toJSON: () => ({}) } as DOMRect)
+        : original.call(this);
+    };
     try {
       const { container } = view();
-      const strip = container.querySelector("[data-claim-strip]") as HTMLElement;
-      await waitFor(() => expect(strip.style.top).toBe("90px"));
+      const card = container.querySelector("[data-stage-card]") as HTMLElement;
+      expect(card.querySelector("[role='tablist']")).toBeTruthy();
+      expect(card.querySelector("[data-cursor-bar]")).toBeTruthy();
+      expect(card.className).toMatch(/(^|\s)sticky(\s|$)/);
+      // topbar 90 − tab row 48: jsdom folds the calc() to its result.
+      await waitFor(() => expect(card.style.top).toMatch(/^calc\((90px - 48px|42px)\)$/));
     } finally {
+      HTMLElement.prototype.getBoundingClientRect = original;
       bar.remove();
     }
-  });
-
-  it("keeps tabs and cursor in one card that sticks under the strip", () => {
-    const { container } = view();
-    const card = container.querySelector("[data-stage-card]") as HTMLElement;
-    expect(card.querySelector("[role='tablist']")).toBeTruthy();
-    expect(card.querySelector("[data-cursor-bar]")).toBeTruthy();
-    expect(card.className).toContain("md:sticky");
-    expect(card.style.top).toContain("var(--topbar-h)");
-    expect(card.style.top).toMatch(/^calc\(/);
   });
 });
 
@@ -1026,7 +1035,7 @@ describe("RF-06 FE-S04-05 — state vocabulary", () => {
       { state: "unavailable" as const, reason: "The Research service did not answer. Try again." },
     ]) {
       const { container, unmount } = view({ hub: null, state: { ...refused, mayRetry: true, retainsContent: false } });
-      expect(container.querySelector("[data-claim-strip]"), refused.state).toBeTruthy();
+      expect(container.querySelector("[data-claim-passport]"), refused.state).toBeTruthy();
       expect(container.querySelector("[data-run-header]")?.textContent, refused.state).toContain("R-WFO-118");
       expect(container.querySelectorAll("[role='tab']"), refused.state).toHaveLength(7);
       expect(container.querySelector("[data-action='reread']"), refused.state).toBeTruthy();
@@ -1044,15 +1053,47 @@ describe("RF-06 FE-S04-05 — state vocabulary", () => {
 });
 
 describe("RF-06 FE-S04-07 — the drawer gives focus back", () => {
-  it("returns focus to the dataset chip when Escape closes the drawer", async () => {
+  it("returns focus to the dataset chip when Escape closes the panel", async () => {
     const { container } = view();
-    const chip = container.querySelector("[data-action='dataset-drawer']") as HTMLButtonElement;
+    const chip = container.querySelector("[data-action='dataset-panel']") as HTMLButtonElement;
     chip.focus();
     fireEvent.click(chip);
-    expect(container.querySelector("[data-drawer='dataset']")).toBeTruthy();
+    expect(container.querySelector("[data-dataset-panel='dataset']")).toBeTruthy();
+    // Focus from inside the panel, as a keyboard reader would be.
+    (container.querySelector("[data-action='copy-digest']") as HTMLButtonElement).focus();
     fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(container.querySelector("[data-drawer='dataset']")).toBeNull());
+    await waitFor(() => expect(container.querySelector("[data-dataset-panel='dataset']")).toBeNull());
     expect(document.activeElement).toBe(chip);
+  });
+
+  it("opens inline under the header, not as a modal drawer, and toggles from the chip", () => {
+    const { container } = view();
+    const chip = container.querySelector("[data-action='dataset-panel']") as HTMLButtonElement;
+    fireEvent.click(chip);
+    const panel = container.querySelector("[data-dataset-panel='dataset']") as HTMLElement;
+    expect(panel.getAttribute("role")).toBeNull();
+    expect(container.querySelector("[role='dialog']")).toBeNull();
+    expect(chip.getAttribute("aria-expanded")).toBe("true");
+    expect(chip.getAttribute("aria-controls")).toBe(panel.id);
+    // The panel follows the header in the page flow, before the claims passport.
+    expect(container.querySelector("[data-run-header]")?.nextElementSibling).toBe(panel);
+    expect(chip.textContent).toContain("▴");
+    fireEvent.click(chip);
+    expect(container.querySelector("[data-dataset-panel='dataset']")).toBeNull();
+  });
+
+  it("shortens a digest, keeps it whole in the title and copies the whole", () => {
+    const writeText = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    const long = "sha256:16cc048b2605839be82718e77ca1c9f0333ed0e5b58317665dc4836ea0b0a5ab";
+    const { container } = view({ hub: hub({ core: { ...hub().core, dataset_binding_digest: long } }) });
+    fireEvent.click(container.querySelector("[data-action='dataset-panel']") as Element);
+    const cell = container.querySelector(`[data-digest='${long}']`) as HTMLElement;
+    const shown = cell.querySelector("[data-drawer-value]") as HTMLElement;
+    expect(shown.textContent).toBe("sha256:16cc048b2605839b…");
+    expect(shown.getAttribute("title")).toBe(long);
+    fireEvent.click(cell.querySelector("[data-action='copy-digest']") as Element);
+    expect(writeText).toHaveBeenCalledWith(long);
   });
 });
 
@@ -1115,10 +1156,14 @@ describe("RF-06 FE-S04-11 — durable strings are rendered exactly", () => {
     const { container } = view();
     expect(container.querySelector("[data-run-status]")?.textContent).toBe("READY");
     expect(container.querySelector("[data-readiness]")?.textContent).toContain("COMPLETE");
-    expect(container.querySelector("[data-input-scope]")?.textContent).toBe("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY");
-    expect(container.querySelector("[data-metric='FINAL_EQUITY'] [data-metric-scope]")?.textContent).toBe(
-      "OOS · CURRENCY · ENGINE_DIRECT",
+    fireEvent.click(container.querySelector("[data-action='dataset-panel']") as Element);
+    expect(container.querySelector("[data-header-value='input scope']")?.textContent).toBe(
+      "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
     );
+    // The foot words are a lookup of the enums; the enums themselves ride in the title.
+    const foot = container.querySelector("[data-metric='FINAL_EQUITY'] [data-metric-scope]");
+    expect(foot?.textContent).toBe("oos · currency · engine-direct");
+    expect(foot?.getAttribute("title")).toContain("OOS · CURRENCY · ENGINE_DIRECT");
     cleanup();
     const split = view({ cursor: { ...DEFAULT_CURSOR, stage: "split" } });
     expect(split.container.querySelector("[data-stage-state]")?.textContent).toBe("DONE");
@@ -1186,11 +1231,13 @@ describe("RF-06 FE-S04-13 — the HiFi layout", () => {
     expect(summary?.querySelector("[data-tab-sub]")?.textContent).toBe("4 of 5 metrics · 4 series");
   });
 
-  it("paints the strip in the HiFi's light paper with the gold rule, not the sunken paper", () => {
+  it("keeps an absent claim field in the passport with its label and reason", () => {
     const { container } = view();
-    const strip = container.querySelector("[data-claim-strip]") as HTMLElement;
-    expect(strip.style.background).toBe("var(--paper)");
-    expect(strip.style.borderColor).toBe("var(--role-holdout)");
+    for (const name of ["validation_claim", "chronological_claim", "oos_used_for_selection", "holdout_state", "causality_claim", "runtime authority"]) {
+      const field = container.querySelector(`[data-claim-field='${name}']`);
+      expect(field?.textContent, name).toContain(name);
+      expect(field?.textContent, name).toContain("not published");
+    }
   });
 
   it("gives each stage tab its HiFi heading and honest panel shells", () => {
@@ -1209,5 +1256,175 @@ describe("RF-06 FE-S04-13 — the HiFi layout", () => {
     expect(report?.tagName).toBe("SPAN");
     expect(report?.getAttribute("title")).toContain("P18");
     expect(container.querySelector("[data-action-unrouted='release candidate →']")?.getAttribute("title")).toContain("P21");
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * RF-06 fidelity pass — HiFi look, spec behaviour (DQ-02)
+ * ---------------------------------------------------------------------- */
+
+describe("RF-06 fidelity — cursor bar", () => {
+  it("offers the fold dropdown even for a single observed fold, holding exactly the observed set", () => {
+    const { container } = view({
+      hub: hub({ core: { ...hub().core, fold_navigation: { observed_folds: [1], published_fold_count: 1, availability: AVAILABLE } } }),
+    });
+    const select = container.querySelector("[data-fold-select]") as HTMLSelectElement;
+    expect(select).toBeTruthy();
+    expect([...select.options].map((option) => option.value)).toEqual(["1"]);
+    expect(select.disabled).toBe(false);
+  });
+
+  it("moves the cursor when a fold is picked from the dropdown", () => {
+    const onFold = vi.fn();
+    const { container } = view({ onFold });
+    fireEvent.change(container.querySelector("[data-fold-select]") as Element, { target: { value: "5" } });
+    expect(onFold).toHaveBeenCalledWith(5);
+  });
+
+  it("disables the dropdown with the server's reason when no set is published", () => {
+    const { container } = view({
+      hub: hub({
+        core: {
+          ...hub().core,
+          fold_navigation: {
+            observed_folds: [],
+            published_fold_count: null,
+            availability: { state: "PENDING_SOURCE_CALLBACK", reason_code: "P11_HAS_NOT_OBSERVED_A_FOLD_YET" },
+          },
+        },
+      }),
+    });
+    const select = container.querySelector("[data-fold-select]") as HTMLSelectElement;
+    expect(select.disabled).toBe(true);
+    expect(select.getAttribute("title")).toBe("P11_HAS_NOT_OBSERVED_A_FOLD_YET");
+  });
+
+  it("reads the observed bound aloud and shows it only when it adds something", () => {
+    const quiet = view();
+    expect(quiet.container.querySelector("[data-fold-bound]")?.className).toBe("sr-only");
+    cleanup();
+    const loud = view({ cursor: { ...DEFAULT_CURSOR, fold: 40 } });
+    expect(loud.container.querySelector("[data-fold-bound]")?.className).not.toBe("sr-only");
+  });
+
+  it("carries seq, schedule and window chips, saying not published where the Hub is silent", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-cursor-seq]")?.textContent).toContain("not published");
+    expect(container.querySelector("[data-cursor-schedule]")?.textContent).toContain("per_fold_causal");
+    expect(container.querySelector("[data-cursor-window]")?.textContent).toContain("oos");
+    cleanup();
+    const withSeq = view({ cursor: { ...DEFAULT_CURSOR, seq: 92200 } });
+    expect(withSeq.container.querySelector("[data-cursor-seq]")?.textContent).toContain("92200");
+  });
+});
+
+describe("RF-06 fidelity — window switcher and tiles", () => {
+  it("draws the window choices as buttons, only OOS live, each refused one titled", () => {
+    const { container } = view();
+    const buttons = [...container.querySelectorAll("[data-window-switcher] [data-segment]")] as HTMLButtonElement[];
+    expect(buttons.map((button) => button.textContent)).toEqual(["IS", "OOS", "Holdout Live", "Compare", "Capital", "Rebased 100"]);
+    for (const button of buttons) {
+      expect(button.tagName).toBe("BUTTON");
+      const live = button.textContent === "OOS" || button.textContent === "Capital";
+      expect(button.disabled, button.textContent ?? "").toBe(!live);
+      expect(button.getAttribute("title"), button.textContent ?? "").toBeTruthy();
+    }
+    expect(container.querySelector("[data-capital-toggle]")).toBeTruthy();
+  });
+
+  it("lays tiles five to a row, never under 150px", () => {
+    const { container } = view();
+    expect((container.querySelector("[data-metrics]") as HTMLElement).style.gridTemplateColumns).toContain(
+      "calc((100% - 32px) / 5)",
+    );
+  });
+
+  it("maps each unit enum to its word and never prints a currency code", () => {
+    const { container } = view();
+    const foot = (key: string) => container.querySelector(`[data-metric='${key}'] [data-metric-scope]`)?.textContent;
+    expect(foot("FINAL_EQUITY")).toBe("oos · currency · engine-direct");
+    expect(foot("NET_RETURN_FRACTION")).toBe("oos · percent · engine-direct");
+    expect(foot("TRADE_COUNT")).toBe("is + oos · count · engine-direct");
+    expect(container.querySelector("[data-metrics]")?.textContent).not.toMatch(/USD|\$/);
+  });
+
+  it("prints a negative currency with the screen's one minus sign", () => {
+    const { container } = view({ hub: hub({ metrics: [metric({ value: "-1250.5" })] }) });
+    const value = container.querySelector("[data-metric-value='FINAL_EQUITY']");
+    expect(value?.textContent).toBe("−1,250.50");
+    expect(value?.getAttribute("title")).toBe("-1250.5");
+  });
+});
+
+describe("RF-06 fidelity — summary panels", () => {
+  it("draws equity and underwater as two figures labelled EChart 1 and 2", () => {
+    const { container } = view();
+    const figures = [...container.querySelectorAll("figure[data-series-panel='EQUITY_OOS']")];
+    expect(figures).toHaveLength(2);
+    expect(figures.map((figure) => figure.querySelector("[data-chart-no]")?.textContent)).toEqual(["EChart 1", "EChart 2"]);
+    expect(figures[1].textContent).toContain("Underwater — drawdown derived from equity");
+  });
+
+  it("puts the provenance row under EChart 1, each cell a fact or its absence", () => {
+    const { container } = view({ series: new Map([["EQUITY_OOS", { state: "ready", series: equitySeries() }]]) });
+    const row = container.querySelector("[data-provenance='EQUITY_OOS']");
+    const cell = (label: string) => row?.querySelector(`[data-provenance-cell='${label}']`)?.textContent ?? "";
+    expect(cell("source")).toContain("EQUITY_OOS");
+    expect(cell("segment")).toContain("not published");
+    expect(cell("units")).toContain("not published");
+    expect(cell("timezone")).toContain("UTC");
+    expect(cell("as-of")).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}Z/);
+    expect(cell("digest")).toContain("not published");
+  });
+
+  it("keeps the per-fold verdict table with the HiFi's nine columns and no invented row", () => {
+    const { container } = view();
+    const table = container.querySelector("[data-gap='per-fold-verdict']");
+    expect([...(table?.querySelectorAll("th") ?? [])].map((th) => th.textContent)).toEqual([
+      "fold",
+      "OOS sharpe",
+      "Δ decay",
+      "trades",
+      "max dd",
+      "contribution",
+      "worst moment",
+      "verdict",
+      "open",
+    ]);
+    expect(table?.querySelectorAll("tbody tr")).toHaveLength(1);
+    expect(table?.querySelector("tbody")?.textContent).toContain("not published");
+  });
+
+  it("keeps the monthly and behaviour cards in the HiFi label header", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-series-panel='MONTHLY_RETURNS'] h3")?.textContent).toBe(
+      "monthly returns — stitched OOS",
+    );
+    expect(container.querySelectorAll("[data-behavior-tile]")).toHaveLength(8);
+  });
+
+  it("stamps the header's created instant with Z, as the HiFi does", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-created]")?.textContent).toMatch(/created \d{4}-\d{2}-\d{2} \d{2}:\d{2}Z$/);
+  });
+
+  it("colours the status pill with its own tone", () => {
+    const { container } = view();
+    const pill = container.querySelector("[data-run-status='READY']") as HTMLElement;
+    expect(pill.style.color).toBe("var(--good)");
+    expect(pill.style.background).toBe("var(--good-bg)");
+  });
+});
+
+describe("RF-06 fidelity — claim tab next card", () => {
+  it("draws generate report as the primary button and release candidate as the outline, both refused", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
+    const report = container.querySelector("[data-action-unrouted='generate run report →']") as HTMLElement;
+    expect(report.getAttribute("data-primary")).toBe("true");
+    expect(report.style.background).toBe("var(--accent)");
+    expect(report.getAttribute("aria-disabled")).toBe("true");
+    const rc = container.querySelector("[data-action-unrouted='release candidate →']") as HTMLElement;
+    expect(rc.getAttribute("data-primary")).toBeNull();
+    expect(container.querySelectorAll("[data-soon-hook] button[disabled]")).toHaveLength(2);
   });
 });

@@ -43,14 +43,26 @@ import {
   type EvidenceStage,
 } from "./evidenceCursor";
 import { refusalDetail } from "./researchRefusal";
-import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import { formatMetric, shortDigest } from "./researchFormat";
 import type { PassportSlot, SeriesSlot } from "./useEvidence";
 import type { ResearchState } from "./state";
 
-/* The chart chunk. Three entry points, one module, fetched once. */
+/* The chart chunk. Four entry points, one module, fetched once. */
 const EquityChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.EquityChart })));
+const DrawdownChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DrawdownChart })));
 const RollingChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.RollingChart })));
 const DistributionChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DistributionChart })));
+
+/**
+ * A UTC instant the way the HiFi writes one that carries a time:
+ * `2026-08-12 04:18Z`. (The chart chunk has its own copy so this route chunk
+ * does not import it.)
+ */
+function utcZ(ms: number | null | undefined): string {
+  if (ms === null || ms === undefined || !Number.isFinite(ms)) return "";
+  const iso = new Date(ms).toISOString();
+  return `${iso.slice(0, 10)} ${iso.slice(11, 16)}Z`;
+}
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -201,7 +213,7 @@ function SourceGap({
   id: string;
 }) {
   return (
-    <section className="flex flex-col gap-1.5 rounded-[8px] border px-3.5 py-3" data-gap={id} style={PANEL_STYLE}>
+    <section className="flex flex-col gap-1.5 rounded-[8px] border p-4" data-gap={id} style={PANEL_STYLE}>
       <PanelLabel>{title}</PanelLabel>
       <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
         {reason}
@@ -226,7 +238,7 @@ function Pill({
 } & Record<string, unknown>) {
   return (
     <span
-      className="mono whitespace-nowrap rounded-full border px-2 text-[11px] leading-[18px]"
+      className="mono whitespace-nowrap rounded-full border px-2 py-px text-[11px]"
       style={{ color: tone, borderColor: border, background }}
       {...rest}
     >
@@ -236,45 +248,11 @@ function Pill({
 }
 
 /** Tone of a durable run status. The word itself is rendered exactly. */
-function statusTone(status: string): { tone: string; background: string } {
-  if (status === "READY") return { tone: "var(--good)", background: "var(--good-bg)" };
-  if (status === "FAILED" || status === "RECOVERY_REQUIRED") return { tone: "var(--bad)", background: "var(--bad-bg)" };
-  if (status === "CANCELLED") return { tone: "var(--ink-soft)", background: "var(--paper-sunken)" };
-  return { tone: "var(--accent)", background: "var(--accent-soft)" };
-}
-
-/**
- * One secondary fact of the run header.
- *
- * Every field of `run_identity` carries its own availability, so each is
- * rendered or withheld on its own terms. `NOT_APPLICABLE` is not a gap: a seed
- * that was deliberately not selected is a real answer.
- */
-function HeaderFact({
-  label,
-  value,
-  availability,
-  title,
-}: {
-  label: string;
-  value: string | null;
-  availability: Availability;
-  title?: string;
-}) {
-  return (
-    <span className="flex items-baseline gap-1" data-header-fact={label}>
-      <span className="text-[9.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
-        {label}
-      </span>
-      {isAvailable(availability) && value !== null ? (
-        <span className="mono text-[10.5px]" style={{ color: "var(--ink)" }} data-header-value={label} title={title}>
-          {value}
-        </span>
-      ) : (
-        <Withheld availability={availability} />
-      )}
-    </span>
-  );
+function statusTone(status: string): { color: string; background: string } {
+  if (status === "READY") return { color: "var(--good)", background: "var(--good-bg)" };
+  if (status === "FAILED" || status === "RECOVERY_REQUIRED") return { color: "var(--bad)", background: "var(--bad-bg)" };
+  if (status === "CANCELLED") return { color: "var(--ink-soft)", background: "var(--paper-sunken)" };
+  return { color: "var(--accent)", background: "var(--accent-soft)" };
 }
 
 /**
@@ -286,12 +264,12 @@ function runStatus(hub: EvidenceHub | null): string | null {
   return status && isAvailable(status.availability) ? status.value : null;
 }
 
-/* ------------------------------------------------------------ claim strip */
+/* --------------------------------------------------------- claims passport */
 
 /**
- * The spec's claim fields the Hub does not carry. They keep a chip each
- * (spec 04 §22: "chip `{key} —` grey — do not hide the chip"), so a reader sees
- * which fact is absent rather than a shorter strip that looks complete.
+ * The spec's claim fields the Hub does not carry. Each keeps its cell in the
+ * passport (spec 04 §22: "do not hide the chip"), so a reader sees which fact
+ * is absent rather than a shorter card that looks complete.
  */
 const UNPUBLISHED_CLAIM_FIELDS = [
   "validation_claim",
@@ -301,188 +279,202 @@ const UNPUBLISHED_CLAIM_FIELDS = [
   "causality_claim",
 ] as const;
 
-function Dot() {
+/** The HiFi passport label: Inter 10px, weight 500, uppercase, faint. */
+const PASSPORT_LABEL = "text-[10px] font-medium uppercase tracking-[.07em]";
+
+function PassportField({
+  name,
+  children,
+  bar = false,
+  ...rest
+}: { name: string; children: ReactNode; bar?: boolean } & Record<string, unknown>) {
   return (
-    <span aria-hidden="true" className="text-[9px]" style={{ color: "var(--viz-legend-inactive)" }}>
-      ·
-    </span>
+    <div className="flex min-w-0 flex-col gap-0.5" data-claim-field={name} {...rest}>
+      <span className={PASSPORT_LABEL} style={{ color: "var(--ink-faint)" }}>
+        {name}
+      </span>
+      <span
+        className="mono text-[12px]"
+        style={{
+          color: "var(--ink)",
+          ...(bar ? { borderLeft: "2px solid var(--accent-2)", paddingLeft: 6 } : {}),
+        }}
+      >
+        {children}
+      </span>
+    </div>
   );
 }
 
-function AbsentClaimField({ name }: { name: string }) {
+function AbsentClaimField({ name, bar }: { name: string; bar?: boolean }) {
   return (
-    <span
-      className="mono text-[10px]"
-      style={{ color: "var(--ink-faint)" }}
-      data-claim-field={name}
-      data-withheld="NOT_PUBLISHED"
-      title={`${name} — not published by the Evidence Hub for this run`}
-    >
-      {name} <b className="font-semibold">—</b>
-    </span>
+    <PassportField name={name} bar={bar} data-withheld="NOT_PUBLISHED" title={`${name} — not published by the Evidence Hub for this run`}>
+      <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} />
+    </PassportField>
   );
 }
 
 /**
- * The claim strip — sticky under the topbar (spec 04 §2.1, §26).
+ * The claims passport — the HiFi's white card of label/value cells with the
+ * engine note at its right (DQ-02: the HiFi wins on look; spec 04 §2.1 drew a
+ * sticky chip strip). It is not sticky: in the HiFi only the tab card sticks.
  *
  * The claim is rendered by its own state, never by its availability:
  * `NOT_ISSUED` with the server's sentence is an answer ("no claim was issued"),
  * not an available claim (FE-S04-01). A certificate chip appears only for a
  * typed `ISSUED` grade: a claim string never earns one.
  */
-function ClaimStrip({
+function ClaimPassport({
   hub,
   state,
   onJump,
-  stripRef,
-  top,
 }: {
   hub: EvidenceHub | null;
   state: ResearchState;
   onJump: (stage: EvidenceStage) => void;
-  stripRef: React.Ref<HTMLDivElement>;
-  /** Where the topbar ends; the strip sticks right there. */
-  top: string;
 }) {
   const claim = hub?.claim ?? null;
   const certificate = claim?.methodology_certificate ?? null;
   const issued = certificate?.state === "ISSUED" && certificate.grade !== null;
   const contract = hub?.core.run_identity?.route.contract ?? null;
+  const engine = hub?.core.engine_version ?? null;
 
   return (
     <div
-      ref={stripRef}
-      className="z-20 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b px-4 py-[7px] md:sticky"
-      data-claim-strip={claim?.state ?? state.state}
-      style={{
-        top,
-        borderColor: "var(--role-holdout)",
-        /* The HiFi's warm strip paper has no token of its own; `--paper` is the
-           nearest (3/255 off), opaque so content scrolls under it cleanly.
-           The gold rule beneath is what sets the strip apart (spec 04 §2.1). */
-        background: "var(--paper)",
-      }}
+      className="flex items-stretch rounded-[6px] border"
+      data-claim-passport={claim?.state ?? state.state}
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)", boxShadow: "var(--shadow-e1)" }}
     >
-      {claim === null ? (
-        <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-claim-pending>
-          claim — {state.state === "loading" ? "reading…" : "not read"}
-        </span>
-      ) : claim.state === "ISSUED" && claim.text !== null ? (
-        <button
-          type="button"
-          className="mono text-left text-[10px]"
-          style={{ color: "var(--ink-soft)" }}
-          data-claim-text
-          aria-label="Stage 5 claim — jump to source"
-          onClick={() => onJump("claim")}
-        >
-          claim <b className="font-semibold" style={{ color: "var(--ink)" }}>{claim.text}</b>
-        </button>
-      ) : claim.state === "NOT_ISSUED" ? (
-        <button
-          type="button"
-          className="mono text-left text-[10px]"
-          style={{ color: "var(--ink-soft)" }}
-          data-claim-not-issued
-          aria-label="claim not issued — jump to source"
-          title={claim.text ?? undefined}
-          onClick={() => onJump("claim")}
-        >
-          claim <b className="font-semibold" style={{ color: "var(--ink)" }}>NOT_ISSUED</b>
-          {claim.text !== null ? (
-            <span className="italic" data-claim-sentence>
-              {" "}
-              — {claim.text}
+      <div className="flex min-w-0 flex-1 flex-wrap gap-x-6 gap-y-2 px-3.5 py-2.5">
+        <PassportField name="stage 5 claim">
+          {claim === null ? (
+            <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-claim-pending>
+              {state.state === "loading" ? "reading…" : "not read"}
             </span>
-          ) : null}
-        </button>
-      ) : claim.state === "FORECAST" && claim.text !== null ? (
-        <span className="mono text-[10px] italic" data-claim-forecast style={{ color: "var(--role-holdout)" }}>
-          {claim.text} — forecast, not the issued claim
-        </span>
-      ) : (
-        <Withheld
-          /* A claim in state NOT_PUBLISHED is withheld even if an older
-             responder marks the block itself AVAILABLE. */
-          availability={
-            isAvailable(claim.availability)
-              ? { state: "NOT_PUBLISHED", reason_code: claim.availability.reason_code }
-              : claim.availability
-          }
-          what="claim"
-        />
-      )}
+          ) : claim.state === "ISSUED" && claim.text !== null ? (
+            <button
+              type="button"
+              className="mono text-left text-[12px]"
+              style={{ color: "var(--ink)" }}
+              data-claim-text
+              aria-label="Stage 5 claim — jump to source"
+              onClick={() => onJump("claim")}
+            >
+              {claim.text}
+            </button>
+          ) : claim.state === "NOT_ISSUED" ? (
+            <button
+              type="button"
+              className="mono max-w-[560px] text-left text-[12px]"
+              style={{ color: "var(--ink)" }}
+              data-claim-not-issued
+              aria-label="claim not issued — jump to source"
+              title={claim.text ?? undefined}
+              onClick={() => onJump("claim")}
+            >
+              NOT_ISSUED
+              {claim.text !== null ? (
+                <span className="text-[10.5px] italic" style={{ color: "var(--ink-soft)" }} data-claim-sentence>
+                  {" "}
+                  — {claim.text}
+                </span>
+              ) : null}
+            </button>
+          ) : claim.state === "FORECAST" && claim.text !== null ? (
+            <span className="italic" data-claim-forecast style={{ color: "var(--accent-2)" }}>
+              {claim.text} — forecast, not the issued claim
+            </span>
+          ) : (
+            <Withheld
+              /* A claim in state NOT_PUBLISHED is withheld even if an older
+                 responder marks the block itself AVAILABLE. */
+              availability={
+                isAvailable(claim.availability)
+                  ? { state: "NOT_PUBLISHED", reason_code: claim.availability.reason_code }
+                  : claim.availability
+              }
+            />
+          )}
+        </PassportField>
 
-      <Dot />
-      {UNPUBLISHED_CLAIM_FIELDS.map((name) => (
-        <span key={name} className="contents">
-          <AbsentClaimField name={name} />
-          <Dot />
-        </span>
-      ))}
+        {UNPUBLISHED_CLAIM_FIELDS.map((name, index) => (
+          <AbsentClaimField key={name} name={name} bar={index === 0} />
+        ))}
 
-      {contract !== null && isAvailable(contract.availability) && contract.value !== null ? (
-        <button
-          type="button"
-          className="mono text-[10px]"
-          style={{ color: "var(--ink-soft)" }}
-          data-claim-field="execution_contract"
-          onClick={() => onJump("execute")}
-          aria-label={`execution_contract ${contract.value} — jump to source`}
-        >
-          execution_contract <b className="font-semibold" style={{ color: "var(--ink)" }}>{contract.value}</b>
-        </button>
-      ) : (
-        <span data-claim-field="execution_contract">
-          <Withheld
-            availability={contract?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }}
-            what="execution_contract"
-          />
-        </span>
-      )}
-      <Dot />
+        {contract !== null && isAvailable(contract.availability) && contract.value !== null ? (
+          <PassportField name="execution_contract">
+            <button
+              type="button"
+              className="mono text-[12px]"
+              style={{ color: "var(--ink)" }}
+              onClick={() => onJump("execute")}
+              aria-label={`execution_contract ${contract.value} — jump to source`}
+              title="the numeric contract every metric on this run was produced under"
+            >
+              {contract.value}
+            </button>
+          </PassportField>
+        ) : (
+          <PassportField name="execution_contract">
+            <Withheld availability={contract?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
+          </PassportField>
+        )}
 
-      {issued && certificate ? (
-        <button
-          type="button"
-          data-certificate={certificate.grade}
-          title={CERT_TOOLTIP}
-          aria-label={`certificate ${certificate.grade} — jump to source`}
-          onClick={() => onJump("claim")}
-          className="mono rounded-[3px] border-[1.5px] px-[7px] text-[10px] font-bold leading-[16px]"
-          style={{ color: "var(--role-holdout)", borderColor: "var(--role-holdout)" }}
-        >
-          cert {certificate.grade}
-        </button>
-      ) : certificate?.state === "NOT_ISSUED" ? (
-        <span
-          className="mono text-[10px]"
-          style={{ color: "var(--ink-soft)" }}
-          data-certificate-state="NOT_ISSUED"
-          title={certificate.reason_code ?? undefined}
-        >
-          certification <b className="font-semibold">NOT_ISSUED</b>
-        </span>
-      ) : (
-        <span data-certificate-state="NOT_PUBLISHED">
-          <Withheld
-            availability={{ state: "NOT_PUBLISHED", reason_code: certificate?.reason_code ?? null }}
-            what="certification"
-          />
-        </span>
-      )}
+        <AbsentClaimField name="runtime authority" />
 
-      {hub ? (
-        <span className="ml-auto flex flex-wrap items-center gap-2">
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-registry={hub.metric_registry_version}>
-            {hub.metric_registry_version}
+        <PassportField name="certification">
+          {issued && certificate ? (
+            <button
+              type="button"
+              data-certificate={certificate.grade}
+              title={CERT_TOOLTIP}
+              aria-label={`certificate ${certificate.grade} — jump to source`}
+              onClick={() => onJump("claim")}
+              className="mono inline-flex items-center gap-1.5 text-[12px]"
+              style={{ color: "var(--ink)" }}
+            >
+              <span
+                className="inline-flex items-center rounded-[3px] border px-2 text-[13px] font-bold"
+                style={{ color: "var(--accent-2)", borderColor: "var(--accent-2)", background: "var(--accent-2-soft)" }}
+              >
+                {certificate.grade}
+              </span>
+              <span className="text-[10px] underline" style={{ color: "var(--accent)" }}>
+                open Stage 5 ↗
+              </span>
+            </button>
+          ) : certificate?.state === "NOT_ISSUED" ? (
+            <span data-certificate-state="NOT_ISSUED" title={certificate.reason_code ?? undefined}>
+              NOT_ISSUED
+            </span>
+          ) : (
+            <span data-certificate-state="NOT_PUBLISHED">
+              <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: certificate?.reason_code ?? null }} />
+            </span>
+          )}
+        </PassportField>
+      </div>
+
+      <div
+        className="hidden max-w-[230px] flex-col justify-center gap-1 border-l px-3.5 py-2.5 sm:flex"
+        style={{ borderColor: "var(--line-soft)" }}
+        data-passport-note
+      >
+        <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+          Claims issued by{" "}
+          <span className="mono">{engine !== null ? `quantbt-engine ${engine}` : "the engine"}</span>. The UI renders
+          them — it never infers.
+        </span>
+        {hub ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+            <span data-registry={hub.metric_registry_version}>{hub.metric_registry_version}</span>
+            {" · "}
+            <span data-readiness={hub.readiness}>
+              readiness <b className="font-semibold" style={{ color: "var(--ink-soft)" }}>{hub.readiness}</b>
+            </span>
           </span>
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-readiness={hub.readiness}>
-            readiness <b className="font-semibold" style={{ color: "var(--ink-soft)" }}>{hub.readiness}</b>
-          </span>
-        </span>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -490,127 +482,253 @@ function ClaimStrip({
 /* ------------------------------------------------------------- run header */
 
 /**
- * The HiFi identity line: `run {id}` · status · binding · dataset · route, and
- * the engine on the right; beneath it the secondary facts of `run_identity`.
- * Strings are printed exactly as the Hub sends them (FE-S04-11).
+ * The HiFi identity line, one row: `run {id}` · status · mode · binding ·
+ * dataset chip · route, and the engine with the created instant on the right.
+ * Strings are printed exactly as the Hub sends them (FE-S04-11). The secondary
+ * facts (route contract, config digest, seed, input scope, revision) live in
+ * the dataset panel the chip opens — the HiFi strip has one row.
  */
 function RunHeader({
   runId,
   hub,
-  onOpenDrawer,
-  drawerOpen,
-  drawerTrigger,
+  onToggleDataset,
+  datasetOpen,
+  datasetTrigger,
+  datasetPanelId,
 }: {
   runId: string;
   hub: EvidenceHub | null;
-  onOpenDrawer: () => void;
-  drawerOpen: boolean;
-  drawerTrigger: React.Ref<HTMLButtonElement>;
+  onToggleDataset: () => void;
+  datasetOpen: boolean;
+  datasetTrigger: React.Ref<HTMLButtonElement>;
+  datasetPanelId: string;
 }) {
   const core = hub?.core ?? null;
   const identity = core?.run_identity;
 
   return (
     <header
-      className="flex flex-col gap-1.5 rounded-[3px] border px-3 py-1.5"
+      className="mono flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[3px] border px-3 py-1.5 text-[11px]"
       data-run-header={runId}
-      style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
+      style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)", color: "var(--ink-faint)" }}
     >
-      <div className="mono flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]" style={{ color: "var(--ink-faint)" }}>
-        <span>
-          run{" "}
-          <span style={{ color: "var(--ink)" }} data-run-id>
-            {hub?.run_id ?? runId}
-          </span>
+      <span>
+        run{" "}
+        <span style={{ color: "var(--ink)" }} data-run-id>
+          {hub?.run_id ?? runId}
         </span>
+      </span>
 
-        {/*
-          * `run_identity` is additive and optional while the responder rolls
-          * out. An older responder that does not send it leaves the header
-          * thinner — the shell stays, and nothing is invented to fill it.
-          */}
-        {identity ? (
-          <>
-            {isAvailable(identity.status.availability) && identity.status.value !== null ? (
-              <span
-                className="rounded-full px-2 text-[11px] font-semibold leading-[18px]"
-                style={statusTone(identity.status.value)}
-                data-run-status={identity.status.value}
-              >
-                {identity.status.value}
-              </span>
-            ) : (
-              <Withheld availability={identity.status.availability} what="status" />
-            )}
+      {/*
+        * `run_identity` is additive and optional while the responder rolls
+        * out. An older responder that does not send it leaves the header
+        * thinner — the shell stays, and nothing is invented to fill it.
+        */}
+      {identity ? (
+        <>
+          {isAvailable(identity.status.availability) && identity.status.value !== null ? (
+            <span
+              className="inline-flex items-center rounded-full px-2 py-px text-[11px] font-semibold"
+              style={statusTone(identity.status.value)}
+              data-run-status={identity.status.value}
+            >
+              {identity.status.value}
+            </span>
+          ) : (
+            <Withheld availability={identity.status.availability} what="status" />
+          )}
 
-            {isAvailable(identity.mode.availability) && identity.mode.value !== null ? (
-              <Pill data-mode={identity.mode.value}>
-                {identity.mode.value}
-                {isAvailable(identity.schedule.availability) && identity.schedule.value !== null
-                  ? ` · ${identity.schedule.value}`
-                  : ""}
-              </Pill>
-            ) : null}
+          {isAvailable(identity.mode.availability) && identity.mode.value !== null ? (
+            <Pill data-mode={identity.mode.value}>
+              {identity.mode.value}
+              {isAvailable(identity.schedule.availability) && identity.schedule.value !== null
+                ? ` · ${identity.schedule.value}`
+                : ""}
+            </Pill>
+          ) : null}
 
-            {isAvailable(identity.binding.availability) && identity.binding.alpha_name !== null ? (
-              <Pill
-                data-binding={identity.binding.alpha_version_id ?? ""}
-                title={`${identity.binding.alpha_id ?? ""} · ${identity.binding.alpha_version_id ?? ""}`}
-              >
-                {identity.binding.alpha_name}
-              </Pill>
-            ) : (
-              <Withheld availability={identity.binding.availability} what="binding" />
-            )}
-          </>
-        ) : null}
+          {isAvailable(identity.binding.availability) && identity.binding.alpha_name !== null ? (
+            <Pill
+              data-binding={identity.binding.alpha_version_id ?? ""}
+              title={`${identity.binding.alpha_id ?? ""} · ${identity.binding.alpha_version_id ?? ""}`}
+            >
+              {identity.binding.alpha_name}
+            </Pill>
+          ) : (
+            <Withheld availability={identity.binding.availability} what="binding" />
+          )}
+        </>
+      ) : null}
 
-        {core ? (
-          <button
-            ref={drawerTrigger}
-            type="button"
-            data-action="dataset-drawer"
-            aria-haspopup="dialog"
-            aria-expanded={drawerOpen}
-            onClick={onOpenDrawer}
-            title="dataset identity — digests pinned at submit"
-            className="mono whitespace-nowrap rounded-full border px-2 text-[11px] leading-[18px]"
-            style={{
-              color: drawerOpen ? "var(--accent)" : "var(--ink-soft)",
-              borderColor: drawerOpen ? "var(--accent)" : "var(--line)",
-              background: drawerOpen ? "var(--accent-soft)" : "var(--paper-raised)",
-            }}
-          >
-            <span data-instrument>
-              {core.data.symbol ?? "symbol —"} · {core.data.timeframe ?? "timeframe —"}
-            </span>{" "}
-            · {core.data.dataset_id ?? "dataset"} {drawerOpen ? "▴" : "▾"}
-          </button>
-        ) : null}
+      {core ? (
+        <button
+          ref={datasetTrigger}
+          type="button"
+          data-action="dataset-panel"
+          aria-expanded={datasetOpen}
+          aria-controls={datasetPanelId}
+          onClick={onToggleDataset}
+          title="dataset identity — digests pinned at submit"
+          className="mono whitespace-nowrap rounded-full border px-2 py-px text-[11px]"
+          style={{
+            color: datasetOpen ? "var(--accent)" : "var(--ink-soft)",
+            borderColor: datasetOpen ? "var(--accent)" : "var(--line)",
+            background: datasetOpen ? "var(--accent-soft)" : "var(--paper-raised)",
+          }}
+        >
+          <span data-instrument>
+            {core.data.symbol ?? "symbol —"} · {core.data.timeframe ?? "timeframe —"}
+          </span>{" "}
+          · {core.data.dataset_id ?? "dataset"} {datasetOpen ? "▴" : "▾"}
+        </button>
+      ) : null}
 
-        {identity && isAvailable(identity.route.id.availability) && identity.route.id.value !== null ? (
-          <Pill data-route={identity.route.id.value}>route {identity.route.id.value}</Pill>
-        ) : null}
+      {identity && isAvailable(identity.route.id.availability) && identity.route.id.value !== null ? (
+        <Pill data-route={identity.route.id.value}>route {identity.route.id.value}</Pill>
+      ) : null}
 
-        {core ? (
-          <span className="ml-auto flex flex-wrap items-center gap-x-1.5">
-            {core.engine_version !== null ? (
-              <span data-engine={core.engine_version}>engine quantbt-engine {core.engine_version}</span>
-            ) : (
-              <Withheld availability={hub!.availability} what="engine" />
-            )}
-            {core.source_adapter_id !== null ? <span data-adapter={core.source_adapter_id}>· {core.source_adapter_id}</span> : null}
-            {identity && isAvailable(identity.created_at_utc_ms.availability) && identity.created_at_utc_ms.value !== null ? (
-              <span data-created title={new Date(identity.created_at_utc_ms.value).toISOString()}>
-                · created {formatUtc(identity.created_at_utc_ms.value)}
-              </span>
-            ) : null}
+      {core ? (
+        <span className="ml-auto flex flex-wrap items-center gap-x-1.5">
+          {core.engine_version !== null ? (
+            <span data-engine={core.engine_version}>engine quantbt-engine {core.engine_version}</span>
+          ) : (
+            <Withheld availability={hub!.availability} what="engine" />
+          )}
+          {core.source_adapter_id !== null ? <span data-adapter={core.source_adapter_id}>· {core.source_adapter_id}</span> : null}
+          {identity && isAvailable(identity.created_at_utc_ms.availability) && identity.created_at_utc_ms.value !== null ? (
+            <span data-created title={new Date(identity.created_at_utc_ms.value).toISOString()}>
+              · created {utcZ(identity.created_at_utc_ms.value)}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+    </header>
+  );
+}
+
+/* ---------------------------------------------------------- dataset panel */
+
+/** A digest the width of a phone: shortened, whole in the title, copyable. */
+function DigestValue({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  const short = shortDigest(value, 16);
+  const prefix = value.startsWith("sha256:") ? "sha256:" : "";
+  return (
+    <span className="inline-flex min-w-0 items-baseline gap-1.5" data-digest={value}>
+      <span className="truncate" title={value} data-drawer-value>
+        {prefix}
+        {short}
+        {short !== null && short.length < value.length - prefix.length ? "…" : ""}
+      </span>
+      <button
+        type="button"
+        className="mono text-[9.5px]"
+        style={{ color: copied ? "var(--good)" : "var(--accent)" }}
+        aria-label={`copy ${value}`}
+        data-action="copy-digest"
+        onClick={() => {
+          void navigator.clipboard?.writeText(value).catch(() => undefined);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1500);
+        }}
+      >
+        {copied ? "✓ copied" : "copy"}
+      </button>
+    </span>
+  );
+}
+
+/** One row of the panel's grid: label, then the Hub's value or its absence. */
+function PanelRow({
+  label,
+  value,
+  availability,
+  digest = false,
+  title,
+}: {
+  label: string;
+  value: string | null;
+  availability?: Availability;
+  digest?: boolean;
+  title?: string;
+}) {
+  const shown = value !== null && (availability === undefined || isAvailable(availability));
+  return (
+    <>
+      <dt style={{ color: "var(--ink-faint)" }}>
+        {label}
+      </dt>
+      <dd className="min-w-0" data-drawer-row={label}>
+        {shown ? (
+          digest ? (
+            <DigestValue value={value as string} />
+          ) : (
+            <span data-header-value={label} data-drawer-value title={title}>
+              {value}
+            </span>
+          )
+        ) : (
+          <span data-header-fact={label}>
+            <Withheld availability={availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
           </span>
-        ) : null}
-      </div>
+        )}
+      </dd>
+    </>
+  );
+}
 
-      {hub && core ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1" data-run-identity={identity ? "" : undefined}>
+/**
+ * The dataset identity, inline under the header as the HiFi opens it (DQ-02;
+ * spec 04 §2.3 drew a right drawer). The run's other pinned facts sit in the
+ * same grid. Escape closes it and hands focus back to the chip (FE-S04-07).
+ */
+function DatasetPanel({ hub, id, onClose }: { hub: EvidenceHub; id: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  const core = hub.core;
+  const identity = core.run_identity;
+  return (
+    <section
+      id={id}
+      aria-label="dataset identity"
+      data-dataset-panel="dataset"
+      className="flex flex-col gap-2 rounded-[6px] border px-4 py-3"
+      style={{ borderColor: "var(--accent)", background: "var(--paper-raised)", boxShadow: "var(--shadow-e2)" }}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          className="text-[10px] font-semibold uppercase tracking-[.07em]"
+          style={{ color: "var(--accent)", fontFamily: "var(--font-body)" }}
+        >
+          dataset identity — {core.data.dataset_id ?? "dataset"}
+        </h2>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-drawer-footer>
+          {DRAWER_FOOTER}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-[18px]">
+        <dl
+          className="mono grid min-w-0 flex-[1.1] basis-[320px] gap-x-3.5 gap-y-0.5 text-[10.5px]"
+          style={{ gridTemplateColumns: "auto minmax(0, 1fr)", color: "var(--ink)" }}
+        >
+          <PanelRow label="dataset" value={core.data.dataset_id} />
+          <PanelRow label="symbol" value={core.data.symbol} />
+          <PanelRow label="timeframe" value={core.data.timeframe} />
+          <PanelRow
+            label="OOS observations"
+            value={core.data.oos_observation_count === null ? null : formatMetric(core.data.oos_observation_count, "count")}
+          />
+          <PanelRow label="dataset binding digest" value={core.dataset_binding_digest} digest />
+          <PanelRow label="manifest digest" value={core.manifest_digest} digest />
+          <PanelRow label="requested spec digest" value={core.requested_spec_digest} digest />
+          <PanelRow label="effective spec digest" value={core.effective_spec_digest} digest />
+          <PanelRow label="source transform digest" value={core.source_transform_digest} digest />
           {identity ? (
             <>
               {/*
@@ -618,160 +736,57 @@ function RunHeader({
                 * published as absent, and printing the id under that label would
                 * upgrade a choice into an assertion about what the route enforces.
                 */}
-              <HeaderFact label="route" value={identity.route.id.value} availability={identity.route.id.availability} />
-              <HeaderFact
+              <PanelRow label="route" value={identity.route.id.value} availability={identity.route.id.availability} />
+              <PanelRow
                 label="route contract"
                 value={identity.route.contract.value}
                 availability={identity.route.contract.availability}
               />
-              <HeaderFact
+              <PanelRow
                 label="config digest"
-                value={shortDigest(identity.config_digest.value, 12)}
-                title={identity.config_digest.value ?? undefined}
+                value={identity.config_digest.value}
                 availability={identity.config_digest.availability}
+                digest
               />
               {/* `seed` null with NOT_APPLICABLE is a real selected null. */}
-              <HeaderFact
+              <PanelRow
                 label="seed"
                 value={identity.seed.value === null ? null : String(identity.seed.value)}
                 availability={identity.seed.availability}
               />
             </>
           ) : null}
-          {core.input_scope !== null ? (
-            <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }} data-input-scope={core.input_scope}>
-              {core.input_scope}
-            </span>
-          ) : null}
+          <PanelRow label="input scope" value={core.input_scope} />
           {/*
             * The revision is the run's identity on this screen, so it is shown
-            * (shortened, full in the title). It is never parsed, and nothing the
-            * browser sends carries it.
+            * (shortened, whole in the title). It is never parsed, and nothing
+            * the browser sends carries it.
             */}
-          {hub.revision !== null ? (
-            <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-revision title={hub.revision}>
-              revision {hub.revision.slice(0, 18)}…
-            </span>
-          ) : (
-            <Withheld availability={hub.availability} what="revision" />
-          )}
-          <span className="mono ml-auto text-[10px]" style={{ color: "var(--ink-faint)" }} data-as-of title={new Date(hub.as_of_utc_ms).toISOString()}>
-            as of {formatUtc(hub.as_of_utc_ms)}
-          </span>
-        </div>
-      ) : null}
-    </header>
-  );
-}
-
-/* --------------------------------------------------------- dataset drawer */
-
-function DatasetDrawer({ hub, onClose }: { hub: EvidenceHub; onClose: () => void }) {
-  const panel = useRef<HTMLDivElement>(null);
-  const titleId = useId();
-
-  /* Escape closes, and focus is trapped while it is open: spec 04 §2.3. */
-  useEffect(() => {
-    const first = panel.current?.querySelector<HTMLElement>("button");
-    first?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || panel.current === null) return;
-      const focusable = [...panel.current.querySelectorAll<HTMLElement>("button, [href], [tabindex]")];
-      if (focusable.length === 0) return;
-      const edge = event.shiftKey ? focusable[0] : focusable[focusable.length - 1];
-      if (document.activeElement === edge) {
-        event.preventDefault();
-        (event.shiftKey ? focusable[focusable.length - 1] : focusable[0]).focus();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  const rows: [string, string | null][] = [
-    ["dataset", hub.core.data.dataset_id],
-    ["symbol", hub.core.data.symbol],
-    ["timeframe", hub.core.data.timeframe],
-    [
-      "OOS observations",
-      hub.core.data.oos_observation_count === null ? null : formatMetric(hub.core.data.oos_observation_count, "count"),
-    ],
-    ["dataset binding digest", hub.core.dataset_binding_digest],
-    ["manifest digest", hub.core.manifest_digest],
-    ["requested spec digest", hub.core.requested_spec_digest],
-    ["effective spec digest", hub.core.effective_spec_digest],
-    ["source transform digest", hub.core.source_transform_digest],
-  ];
-
-  return (
-    <div className="fixed inset-0 z-40" data-drawer-backdrop onClick={onClose}>
-      <div className="absolute inset-0" style={{ background: "var(--scrim)" }} />
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        data-drawer="dataset"
-        onClick={(event) => event.stopPropagation()}
-        className="absolute right-0 top-0 flex h-full w-full max-w-[420px] flex-col gap-3 overflow-y-auto px-5 py-4"
-        style={{ background: "var(--paper-raised)", boxShadow: "var(--shadow-raised)" }}
-      >
-        <div className="flex items-baseline gap-2">
-          <h2
-            id={titleId}
-            className="text-[10px] font-semibold uppercase tracking-[.07em]"
-            style={{ color: "var(--accent)", fontFamily: "var(--font-body)" }}
-          >
-            dataset identity — {hub.core.data.dataset_id ?? "dataset"}
-          </h2>
-          <button
-            type="button"
-            className="mono ml-auto text-[12px]"
-            data-action="close-drawer"
-            aria-label="Close dataset drawer"
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
-
-        <dl className="flex flex-col gap-1.5">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex flex-wrap items-baseline gap-2" data-drawer-row={label}>
-              <dt className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-                {label}
-              </dt>
-              <dd className="mono break-all text-[10.5px]">
-                {value !== null ? (
-                  <span data-drawer-value>{value}</span>
-                ) : (
-                  <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} />
-                )}
-              </dd>
-            </div>
-          ))}
+          <PanelRow label="revision" value={hub.revision} availability={hub.revision === null ? hub.availability : undefined} digest />
+          <PanelRow label="as of" value={utcZ(hub.as_of_utc_ms)} title={new Date(hub.as_of_utc_ms).toISOString()} />
         </dl>
-
         {/*
           * The hi-fi's coverage bar and gap scan read a dataset manifest this
-          * screen does not receive. The drawer keeps its shape and says so
+          * screen does not receive. The panel keeps its place and says so
           * rather than drawing a coverage bar out of nothing.
           */}
-        <SourceGap
-          id="dataset-coverage"
-          title="coverage · gap scan · vendor"
-          reason="the Evidence contract publishes the dataset's identity and digests, not its coverage bar, gap scan or vendor. They are read from a dataset manifest no operation on this screen exposes."
-        />
-
-        <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-drawer-footer>
-          {DRAWER_FOOTER}
-        </p>
+        <div className="flex min-w-0 flex-1 basis-[300px] flex-col gap-1" data-gap="dataset-coverage">
+          <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+            coverage · gap scan · vendor
+          </span>
+          <div
+            className="h-4 rounded-full border"
+            style={{ background: "var(--paper-sunken)", borderColor: "var(--line-soft)" }}
+            aria-hidden="true"
+          />
+          <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+            <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} /> — the Evidence contract publishes
+            the dataset&apos;s identity and digests, not its coverage bar, gap scan or vendor. They are read from a dataset
+            manifest no operation on this screen exposes.
+          </span>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -801,10 +816,12 @@ function StageTabs({
   cursor,
   hub,
   onStage,
+  rowRef,
 }: {
   cursor: EvidenceCursor;
   hub: EvidenceHub | null;
   onStage: (stage: EvidenceStage) => void;
+  rowRef?: React.Ref<HTMLDivElement>;
 }) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -829,7 +846,7 @@ function StageTabs({
   };
 
   return (
-    <div className="flex items-stretch overflow-x-auto" data-stage-tabs>
+    <div ref={rowRef} className="flex items-stretch overflow-x-auto" data-stage-tabs>
       <div role="tablist" aria-label="Evidence stages" className="flex items-stretch" onKeyDown={onKeyDown}>
         {EVIDENCE_STAGES.map((stage) => {
           const selected = cursor.stage === stage;
@@ -898,11 +915,25 @@ function StageTabs({
 function CursorPill({ children, ...rest }: { children: ReactNode } & Record<string, unknown>) {
   return (
     <span
-      className="mono inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 text-[11px] leading-[18px]"
+      className="mono inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px text-[11px]"
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)", color: "var(--ink-soft)" }}
       {...rest}
     >
       {children}
+    </span>
+  );
+}
+
+/** The HiFi's fold id: `fold_03` for fold 3 (spec 04 §3 folds are 1-based). */
+export function foldId(fold: number): string {
+  return `fold_${String(fold).padStart(2, "0")}`;
+}
+
+/** A deep-dive link whose screen has no route yet: shown, refused, with the phase. */
+function UnbuiltLink({ label, why }: { label: string; why: string }) {
+  return (
+    <span title={why} aria-disabled="true" style={{ opacity: 0.6 }} data-unbuilt-link={label}>
+      {label}
     </span>
   );
 }
@@ -924,10 +955,10 @@ function CursorBar({
 }) {
   const [copied, setCopied] = useState(false);
   /*
-   * The step buttons are bound to the folds P11 actually observed, and to
-   * nothing else. This is a published observed set, not the source's complete
-   * fold plan: the label says "observed" so the selector cannot be read as a
-   * promise about folds nobody has seen.
+   * The step buttons and the dropdown are bound to the folds P11 actually
+   * observed, and to nothing else. This is a published observed set, not the
+   * source's complete fold plan: its bound says "observed" so the selector
+   * cannot be read as a promise about folds nobody has seen.
    */
   const published = folds !== undefined && isAvailable(folds.availability) ? folds.observed_folds : [];
   const count = folds?.published_fold_count ?? published.length;
@@ -940,6 +971,9 @@ function CursorBar({
     if (next !== undefined) onFold(next);
   };
   const reason = unavailableReason(folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null });
+  /* The bound is read aloud always, and shown only when it says something the
+     dropdown does not: an unpublished set, or a fold outside it. */
+  const anomalous = published.length === 0 || index === -1;
 
   const copyLink = useCallback(() => {
     const href = `${window.location.origin}${window.location.pathname}${deepDiveHref("", cursor)}`;
@@ -950,6 +984,10 @@ function CursorBar({
 
   const schedule = hub?.core.run_identity?.schedule;
   const base = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
+  const stepStyle = (disabled: boolean) => ({
+    color: disabled ? "var(--viz-legend-inactive)" : "var(--ink-soft)",
+    cursor: disabled ? "default" : "pointer",
+  });
 
   return (
     <div
@@ -961,63 +999,73 @@ function CursorBar({
         evidence cursor
       </span>
 
-      <CursorPill data-cursor-fold-pill>
-        <span data-cursor-fold>fold {cursor.fold}</span>
+      <span
+        className="mono inline-flex items-center gap-[3px] whitespace-nowrap rounded-full border py-px pl-2 pr-1 text-[11px]"
+        style={{ borderColor: "var(--line)", background: "var(--paper-raised)", color: "var(--ink-soft)" }}
+        data-cursor-fold-pill
+      >
+        <span data-cursor-fold>fold</span>
         <button
           type="button"
           aria-label="previous fold"
           data-action="fold-previous"
           disabled={atFirst}
-          title={published.length === 0 ? reason : atFirst ? "this is the first observed fold" : "previous observed fold"}
+          title={published.length === 0 ? reason : atFirst ? "this is the first observed fold" : "previous fold"}
           onClick={() => step(-1)}
-          className="px-0.5"
-          style={{ color: atFirst ? "var(--viz-legend-inactive)" : "var(--ink-soft)", cursor: atFirst ? "not-allowed" : "pointer" }}
+          className="mono px-[3px] text-[11px]"
+          style={stepStyle(atFirst)}
         >
           ‹
         </button>
-        {/* The published members, so a reader can reach one without stepping. */}
-        {published.length > 1 ? (
-          <select
-            className="mono bg-transparent text-[11px]"
-            style={{ color: "var(--ink)" }}
-            data-fold-select
-            aria-label="observed fold"
-            value={index === -1 ? "" : String(cursor.fold)}
-            onChange={(event) => onFold(Number(event.target.value))}
-          >
-            {index === -1 ? <option value="">—</option> : null}
-            {published.map((fold) => (
-              <option key={fold} value={String(fold)}>
-                fold {fold}
-              </option>
-            ))}
-          </select>
-        ) : null}
+        {/* The HiFi dropdown, holding exactly the observed members. */}
+        <select
+          className="mono max-w-[150px] bg-transparent text-[11px]"
+          style={{ color: "var(--ink)" }}
+          data-fold-select
+          aria-label="observed fold"
+          aria-describedby="ef-fold-bound"
+          title={published.length === 0 ? reason : `${count} observed folds`}
+          disabled={published.length === 0}
+          value={index === -1 ? "" : String(cursor.fold)}
+          onChange={(event) => onFold(Number(event.target.value))}
+        >
+          {index === -1 ? <option value="">{foldId(cursor.fold)}</option> : null}
+          {published.map((fold) => (
+            <option key={fold} value={String(fold)}>
+              {foldId(fold)}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           aria-label="next fold"
           data-action="fold-next"
           disabled={atLast}
-          title={published.length === 0 ? reason : atLast ? "this is the last observed fold" : "next observed fold"}
+          title={published.length === 0 ? reason : atLast ? "this is the last observed fold" : "next fold"}
           onClick={() => step(1)}
-          className="px-0.5"
-          style={{ color: atLast ? "var(--viz-legend-inactive)" : "var(--ink-soft)", cursor: atLast ? "not-allowed" : "pointer" }}
+          className="mono px-[3px] text-[11px]"
+          style={stepStyle(atLast)}
         >
           ›
         </button>
-        <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-fold-bound>
-          {published.length > 0 ? (
-            <>
-              of {count} observed
-              {index === -1 ? " — this fold is not in the observed set" : ""}
-            </>
-          ) : (
-            <>
-              of <Withheld availability={folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} what="observed folds" />
-            </>
-          )}
-        </span>
-      </CursorPill>
+      </span>
+      <span
+        id="ef-fold-bound"
+        className={anomalous ? "mono text-[9.5px]" : "sr-only"}
+        style={{ color: "var(--ink-faint)" }}
+        data-fold-bound
+      >
+        {published.length > 0 ? (
+          <>
+            of {count} observed
+            {index === -1 ? ` — fold ${cursor.fold} is not in the observed set` : ""}
+          </>
+        ) : (
+          <>
+            of <Withheld availability={folds?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} what="observed folds" />
+          </>
+        )}
+      </span>
 
       <CursorPill data-cursor-trial>
         trial{" "}
@@ -1037,29 +1085,42 @@ function CursorBar({
         )}
       </CursorPill>
 
-      {schedule && isAvailable(schedule.availability) && schedule.value !== null ? (
-        <CursorPill data-cursor-schedule>
-          schedule <span style={{ color: "var(--ink)" }}>{schedule.value}</span>
-        </CursorPill>
-      ) : null}
+      <CursorPill data-cursor-seq>
+        seq{" "}
+        {cursor.seq !== null ? (
+          <span style={{ color: "var(--ink)" }}>{cursor.seq}</span>
+        ) : (
+          <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_EVENT_SEQ" }} />
+        )}
+      </CursorPill>
+
+      <CursorPill data-cursor-schedule>
+        schedule{" "}
+        {schedule && isAvailable(schedule.availability) && schedule.value !== null ? (
+          <span style={{ color: "var(--ink)" }}>{schedule.value}</span>
+        ) : (
+          <Withheld availability={schedule?.availability ?? { state: "NOT_PUBLISHED", reason_code: null }} />
+        )}
+      </CursorPill>
+
+      {/* The Hub publishes one window, OOS; the switcher below says so. */}
+      <CursorPill data-cursor-window>
+        window <span style={{ color: "var(--ink)" }}>oos</span>
+      </CursorPill>
 
       <span className="ml-1 text-[10px]" style={{ color: "var(--ink-faint)" }} data-deep-dives>
         deep dives:{" "}
-        <Link to={deepDiveHref(`${base}/split`, cursor)} style={{ color: "var(--accent)" }}>
-          S1 split
-        </Link>{" "}
-        ·{" "}
-        <Link to={deepDiveHref(`${base}/search`, cursor)} style={{ color: "var(--accent)" }}>
+        <Link to={deepDiveHref(`${base}/search`, { ...cursor, stage: "search" })} style={{ color: "var(--accent)" }}>
           S2 search
         </Link>{" "}
         ·{" "}
-        <Link to={deepDiveHref(`${base}/freeze`, cursor)} style={{ color: "var(--accent)" }}>
+        <Link to={deepDiveHref(`${base}/freeze`, { ...cursor, stage: "freeze" })} style={{ color: "var(--accent)" }}>
           S3 freeze
         </Link>{" "}
         ·{" "}
-        <span title="Screen 08 is not built yet (P17), so this link would go nowhere." style={{ opacity: 0.6 }}>
-          S4 replay
-        </span>{" "}
+        <UnbuiltLink label="S4 replay" why="Screen 08 is not built yet (P17), so this link would go nowhere." />{" "}
+        ·{" "}
+        <UnbuiltLink label="promotion" why="Screen 11 is not built yet (P21), so this link would go nowhere." />{" "}
         ·{" "}
         <Link to="/research/quantbt/journey" style={{ color: "var(--accent)" }}>
           journey map ↗
@@ -1081,7 +1142,7 @@ function CursorBar({
           data-action="copy-link"
           onClick={copyLink}
           className="mono rounded-[6px] border px-3 py-[3px] text-[10px] uppercase tracking-[.06em]"
-          style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+          style={{ color: "var(--accent)", borderColor: "var(--accent)", background: "transparent" }}
         >
           {copied ? COPY_LINK_DONE : COPY_LINK_IDLE}
         </button>
@@ -1111,13 +1172,43 @@ function signTone(metric: Metric): string {
 }
 
 /**
+ * The words the HiFi tile foot uses for the Hub's enums (`oos · percent · …`).
+ * A lookup, nothing more: the unit is the one the server declared. `CURRENCY`
+ * reads "currency", not a currency code — the contract publishes none, and
+ * printing "USD" would assert one.
+ */
+export const SCOPE_WORD: Record<Metric["scope"], string> = {
+  OOS: "oos",
+  IS_PLUS_OOS: "is + oos",
+  CHILD_TAPE: "child tape",
+  NOT_PUBLISHED: "scope not published",
+};
+export const UNIT_WORD: Record<Metric["unit"], string> = {
+  CURRENCY: "currency",
+  FRACTION: "percent",
+  COUNT: "count",
+};
+export const ORIGIN_WORD: Record<Metric["origin"], string> = {
+  ENGINE_DIRECT: "engine-direct",
+  SOURCE_DERIVED: "source-derived",
+  NOT_PUBLISHED: "origin not published",
+};
+
+/** A metric string as the tile prints it: rounded by unit, one minus sign. */
+export function tileValue(metric: Metric): string | null {
+  if (metric.value === null) return null;
+  const shown = formatMetric(metric.value, metric.unit.toLowerCase());
+  return shown === null ? null : shown.replace(/^-/, "\u2212");
+}
+
+/**
  * One metric tile (FE-S04-02, DQ-08). The rounded value is for reading; the
  * exact server string is the tile's title, its data attribute, and what the
  * clipboard receives when the value is copied.
  */
 function MetricTile({ metric }: { metric: Metric }) {
   const shown = isAvailable(metric.availability) && metric.value !== null;
-  const display = shown ? formatMetric(metric.value, metric.unit.toLowerCase()) : null;
+  const display = shown ? tileValue(metric) : null;
   return (
     <div
       className="flex min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
@@ -1130,7 +1221,7 @@ function MetricTile({ metric }: { metric: Metric }) {
       {shown && metric.value !== null ? (
         <span
           className="mono text-[22px] font-semibold leading-[28px]"
-          style={{ color: signTone(metric) }}
+          style={{ color: signTone(metric), fontVariantNumeric: "tabular-nums" }}
           data-metric-value={metric.key}
           data-exact={metric.value}
           title={metric.value}
@@ -1146,8 +1237,13 @@ function MetricTile({ metric }: { metric: Metric }) {
           <Withheld availability={metric.availability} />
         </span>
       )}
-      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-metric-scope={metric.scope}>
-        {metric.scope} · {metric.unit} · {metric.origin}
+      <span
+        className="mono text-[9.5px]"
+        style={{ color: "var(--ink-faint)" }}
+        data-metric-scope={metric.scope}
+        title={`${metric.scope} · ${metric.unit} · ${metric.origin} · ${metric.definition_id}`}
+      >
+        {SCOPE_WORD[metric.scope]} · {UNIT_WORD[metric.unit]} · {ORIGIN_WORD[metric.origin]}
       </span>
     </div>
   );
@@ -1193,25 +1289,60 @@ function ChartFrame({ height, children }: { height: number; children: ReactNode 
   );
 }
 
-/** The frame every lazy series panel keeps, whatever the answer turns out to be. */
+/** The sampling line a panel shows once its series has answered. */
+function SamplingLine({ series }: { series: EvidenceSeries }) {
+  return (
+    <span
+      className="mono ml-auto text-[9.5px]"
+      style={{ color: "var(--ink-faint)" }}
+      data-sampling={series.source_sample.sampling ?? "NOT_PUBLISHED"}
+    >
+      {formatMetric(series.source_sample.emitted_point_count, "count")} points from{" "}
+      {series.source_sample.source_observation_count === null
+        ? "an unpublished number of"
+        : formatMetric(series.source_sample.source_observation_count, "count")}{" "}
+      source observations · {series.source_sample.sampling ?? "sampling not published"}
+    </span>
+  );
+}
+
+/**
+ * The frame every lazy series panel keeps, whatever the answer turns out to be.
+ *
+ * Two HiFi grammars: a `figure` (EChart n in gold, Newsreader title, 16px
+ * padding, raised) for the charts, and a `card` (uppercase label header, 14px
+ * padding, flat) for the monthly strip.
+ */
 function SeriesPanel({
   kind,
   title,
+  chartNo,
+  variant = "figure",
   footnote,
+  footer,
   link,
   slot,
   onNeeded,
   emptyReason,
+  className,
+  style,
   children,
 }: {
   kind: SeriesKind;
   title: string;
+  /** The HiFi's `EChart n` label; figures only. */
+  chartNo?: number;
+  variant?: "figure" | "card";
   footnote?: ReactNode;
+  /** The provenance row under the chart (HiFi EChart 1). */
+  footer?: (series: EvidenceSeries | null) => ReactNode;
   link: EvidenceHub["series"][number] | undefined;
   slot: SeriesSlot | undefined;
   onNeeded: (kind: SeriesKind) => void;
   /** What an answered series with no points means, in this panel's words. */
   emptyReason: string;
+  className?: string;
+  style?: React.CSSProperties;
   children: (series: EvidenceSeries) => ReactNode;
 }) {
   /* The read starts when the panel is on screen and its link says the series
@@ -1224,63 +1355,120 @@ function SeriesPanel({
   const ready = slot?.state === "ready" ? slot.series : null;
   const empty = ready !== null && ready.values.length === 0;
 
+  const body = !available && link !== undefined ? (
+    <Withheld availability={link.availability} what={kind} />
+  ) : link === undefined ? (
+    <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={kind} />
+  ) : empty ? (
+    /* FE-S04-10: an answered series with no points is not a blank body. */
+    <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-series-empty>
+      {emptyReason}
+    </p>
+  ) : ready ? (
+    children(ready)
+  ) : slot?.state === "refused" ? (
+    <p className="text-[11px]" style={{ color: "var(--bad)" }} data-series-refusal>
+      <RefusalNote refusal={slot.refusal} />
+    </p>
+  ) : slot?.state === "revision-mismatch" ? (
+    <p className="text-[11px]" style={{ color: "var(--accent-2)" }} data-series-mismatch>
+      this chart answered at a different projection revision than the summary above it, so it was
+      discarded rather than drawn beside numbers it does not belong to.
+    </p>
+  ) : (
+    <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-series-loading>
+      reading…
+    </p>
+  );
+
+  const state = empty ? "empty" : (slot?.state ?? (available ? "idle" : "absent"));
+
+  if (variant === "card") {
+    return (
+      <section
+        className={`flex min-w-0 flex-col gap-1.5 rounded-[8px] border p-3.5 ${className ?? ""}`}
+        data-series-panel={kind}
+        data-series-state={state}
+        style={{ borderColor: "var(--line)", background: "var(--paper-raised)", ...style }}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <PanelLabel>{title}</PanelLabel>
+          {ready ? <SamplingLine series={ready} /> : null}
+        </div>
+        {body}
+        {footnote ? (
+          <div className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
+            {footnote}
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
     <figure
-      className="m-0 flex min-w-0 flex-col gap-2 rounded-[8px] border p-4"
+      className={`m-0 min-w-0 rounded-[8px] border p-4 ${className ?? ""}`}
       data-series-panel={kind}
-      data-series-state={empty ? "empty" : (slot?.state ?? (available ? "idle" : "absent"))}
-      style={PANEL_STYLE}
+      data-series-state={state}
+      style={{ ...PANEL_STYLE, ...style }}
     >
-      <figcaption className="flex flex-wrap items-baseline gap-2">
+      <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
+        {chartNo !== undefined ? (
+          <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
+            EChart {chartNo}
+          </span>
+        ) : null}
         <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
           {title}
         </span>
-        {ready ? (
-          <span
-            className="mono ml-auto text-[9.5px]"
-            style={{ color: "var(--ink-faint)" }}
-            data-sampling={ready.source_sample.sampling ?? "NOT_PUBLISHED"}
-          >
-            {formatMetric(ready.source_sample.emitted_point_count, "count")} points from{" "}
-            {ready.source_sample.source_observation_count === null
-              ? "an unpublished number of"
-              : formatMetric(ready.source_sample.source_observation_count, "count")}{" "}
-            source observations · {ready.source_sample.sampling ?? "sampling not published"}
-          </span>
-        ) : null}
+        {ready ? <SamplingLine series={ready} /> : null}
       </figcaption>
-
-      {!available && link !== undefined ? (
-        <Withheld availability={link.availability} what={kind} />
-      ) : link === undefined ? (
-        <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={kind} />
-      ) : empty ? (
-        /* FE-S04-10: an answered series with no points is not a blank body. */
-        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-series-empty>
-          {emptyReason}
-        </p>
-      ) : ready ? (
-        children(ready)
-      ) : slot?.state === "refused" ? (
-        <p className="text-[11px]" style={{ color: "var(--bad)" }} data-series-refusal>
-          <RefusalNote refusal={slot.refusal} />
-        </p>
-      ) : slot?.state === "revision-mismatch" ? (
-        <p className="text-[11px]" style={{ color: "var(--role-holdout)" }} data-series-mismatch>
-          this chart answered at a different projection revision than the summary above it, so it was
-          discarded rather than drawn beside numbers it does not belong to.
-        </p>
-      ) : (
-        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-series-loading>
-          reading…
-        </p>
-      )}
+      {body}
+      {footer ? footer(ready) : null}
       {footnote ? (
-        <div className="text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
+        <div className="mt-2 text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
           {footnote}
         </div>
       ) : null}
     </figure>
+  );
+}
+
+/**
+ * The HiFi provenance row under EChart 1: SOURCE · SEGMENT · UNITS · TIMEZONE
+ * · AS-OF · DIGEST. Each cell is a published fact or says it is not: the
+ * series names its kind, its points are UTC milliseconds by contract, and the
+ * as-of is the Hub's; segment, units and a content digest are not published.
+ */
+function ProvenanceRow({ hub, series, kind }: { hub: EvidenceHub; series: EvidenceSeries | null; kind: SeriesKind }) {
+  const cells: [string, ReactNode][] = [
+    ["source", `evidence series ${series?.kind ?? kind}`],
+    ["segment", <Withheld key="segment" availability={{ state: "NOT_PUBLISHED", reason_code: "SERIES_SEGMENT_NOT_PUBLISHED" }} />],
+    ["units", <Withheld key="units" availability={{ state: "NOT_PUBLISHED", reason_code: "SERIES_UNITS_NOT_PUBLISHED" }} />],
+    ["timezone", "UTC"],
+    ["as-of", utcZ(hub.as_of_utc_ms)],
+    [
+      "digest",
+      <Withheld key="digest" availability={{ state: "NOT_PUBLISHED", reason_code: "SERIES_DIGEST_NOT_PUBLISHED" }} />,
+    ],
+  ];
+  return (
+    <div
+      className="mt-2.5 flex flex-wrap gap-x-6 gap-y-1 border-t pt-2 text-[10px]"
+      style={{ borderColor: "var(--line-soft)" }}
+      data-provenance={kind}
+    >
+      {cells.map(([label, value]) => (
+        <span key={label} data-provenance-cell={label}>
+          <span className="uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+            {label}
+          </span>{" "}
+          <span className="mono" style={{ color: "var(--ink)" }}>
+            {value}
+          </span>
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -1292,12 +1480,15 @@ function MonthlyHeat({ series }: { series: EvidenceSeries }) {
         const negative = point.return_fraction.trim().startsWith("-");
         const month = new Date(point.month_start_utc_ms).toISOString().slice(0, 7);
         const shown = formatMetric(point.return_fraction, "fraction");
+        /* HiFi tick: `3/24` — month without its zero, two-digit year. */
+        const tick = `${month.slice(5).replace(/^0/, "")}/${month.slice(2, 4)}`;
         return (
           <span
             key={point.month_start_utc_ms}
             className="flex min-w-0 flex-1 flex-col gap-0.5"
             data-month={month}
-            title={`${month} · ${point.return_fraction}`}
+            data-exact={point.return_fraction}
+            title={`${month} · ${shown ?? point.return_fraction}`}
           >
             <span
               className="block h-[26px] rounded-[3px]"
@@ -1311,7 +1502,7 @@ function MonthlyHeat({ series }: { series: EvidenceSeries }) {
               {shown ?? point.return_fraction}
             </span>
             <span className="mono text-center text-[8px]" style={{ color: "var(--ink-faint)" }}>
-              {month}
+              {tick}
             </span>
           </span>
         );
@@ -1382,7 +1573,7 @@ function PassportPanel({
 
   return (
     <section
-      className="flex flex-col gap-2 rounded-[8px] border px-3.5 py-3"
+      className="flex flex-col gap-2 rounded-[8px] border p-4"
       data-passport={skipped ? "skipped" : slot.state}
       style={PANEL_STYLE}
     >
@@ -1441,7 +1632,7 @@ function RetainedPassport({ evidence }: { evidence: CurrentSourceEvidence }) {
         <Pill data-profile={provenance.profile_id}>{provenance.profile_id}</Pill>
         <Pill data-source-adapter={provenance.source_adapter_id}>{provenance.source_adapter_id}</Pill>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-          retained {formatUtc(provenance.retained_at_utc_ms)}
+          retained {utcZ(provenance.retained_at_utc_ms)}
         </span>
       </div>
       <dl className="flex flex-wrap gap-x-5 gap-y-1.5">
@@ -1486,43 +1677,221 @@ function TabHeading({ title, subtitle }: { title: string; subtitle: string }) {
   );
 }
 
-/** The HiFi window switcher. The Hub publishes the OOS window only; the rest keep their place with the reason. */
-function WindowSwitcher() {
-  const windows = [
-    { label: "IS", on: false },
-    { label: "OOS", on: true },
-    { label: "Holdout Live", on: false },
-    { label: "Compare", on: false },
-  ];
+/** One HiFi segmented control: buttons in a bordered, clipped strip. */
+function Segmented({
+  options,
+  label,
+  ...rest
+}: {
+  options: { label: string; on: boolean; why?: string }[];
+  label: string;
+} & Record<string, unknown>) {
   return (
-    <div className="flex flex-wrap items-center gap-2.5" data-window-switcher>
-      <span className="inline-flex overflow-hidden rounded-[6px] border" style={{ borderColor: "var(--line)" }}>
-        {windows.map((entry) => (
+    <span
+      className="inline-flex overflow-hidden rounded-[6px] border"
+      style={{ borderColor: "var(--line)" }}
+      role="group"
+      aria-label={label}
+      {...rest}
+    >
+      {options.map((entry) => (
+        <button
+          key={entry.label}
+          type="button"
+          /* Only the published choice is live; the rest keep their place, and
+             their title says why they cannot be chosen. */
+          disabled={!entry.on}
+          aria-pressed={entry.on}
+          title={entry.why}
+          data-segment={entry.label}
+          className="mono border-r px-3.5 py-1 text-[11px] last:border-r-0"
+          style={{
+            borderColor: "var(--line)",
+            background: entry.on ? "var(--accent-soft)" : "var(--paper-raised)",
+            color: entry.on ? "var(--accent)" : "var(--ink-soft)",
+            cursor: entry.on ? "default" : "not-allowed",
+          }}
+        >
+          {entry.label}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The HiFi window switcher and the capital toggle. The Hub publishes the OOS
+ * window only and one equity series in account currency, so OOS and Capital
+ * are the live choices and the others keep their place with the reason.
+ */
+function WindowSwitcher() {
+  const notWindow = "the Evidence Hub publishes the OOS window only";
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2.5" data-window-switcher>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <Segmented
+          label="window"
+          options={[
+            { label: "IS", on: false, why: notWindow },
+            { label: "OOS", on: true, why: "the window every metric and series on this tab describes" },
+            { label: "Holdout Live", on: false, why: notWindow },
+            { label: "Compare", on: false, why: notWindow },
+          ]}
+        />
+        <span
+          className="mono border-l-2 pl-1.5 text-[10px]"
+          style={{ color: "var(--accent-2)", borderColor: "var(--accent-2)" }}
+          data-window-disclosure
+        >
+          {WINDOW_DISCLOSURE}
+        </span>
+      </div>
+      <Segmented
+        label="equity scale"
+        data-capital-toggle
+        options={[
+          { label: "Capital", on: true, why: "equity as the account holds it" },
+          { label: "Rebased 100", on: false, why: "a rebased series is not published; this screen does not rebase one" },
+        ]}
+      />
+    </div>
+  );
+}
+
+/** Per-fold verdict columns, in the HiFi's order and alignment. */
+const VERDICT_COLUMNS: [string, "left" | "right"][] = [
+  ["fold", "left"],
+  ["OOS sharpe", "left"],
+  ["Δ decay", "right"],
+  ["trades", "right"],
+  ["max dd", "right"],
+  ["contribution", "right"],
+  ["worst moment", "left"],
+  ["verdict", "left"],
+  ["open", "left"],
+];
+
+/**
+ * The per-fold verdict table, kept at full shape (DQ-14): header, sort pills
+ * and column heads, with one row saying the rows are not published.
+ */
+function VerdictTable({ hub }: { hub: EvidenceHub }) {
+  const perFold = hub.source_absences.per_fold_metrics;
+  return (
+    <section
+      className="overflow-x-auto rounded-[6px] border"
+      data-gap="per-fold-verdict"
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
+        <span className="inline-flex flex-wrap items-center gap-2.5">
+          <PanelLabel>per-fold verdict — which fold carries the run, which fold drags it</PanelLabel>
+        </span>
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          {[
+            ["by fold", true],
+            ["worst first", false],
+          ].map(([label, on]) => (
+            <button
+              key={String(label)}
+              type="button"
+              disabled
+              title="no per-fold rows are published to sort"
+              className="mono rounded-full border px-[9px] py-px text-[9px]"
+              style={{
+                borderColor: on ? "var(--accent)" : "var(--line)",
+                background: on ? "var(--accent-soft)" : "var(--paper-raised)",
+                color: on ? "var(--accent)" : "var(--ink-soft)",
+                cursor: "not-allowed",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+            per-fold metrics · not published
+          </span>
+        </span>
+      </div>
+      <table className="w-full min-w-[980px] border-collapse text-[12px]">
+        <thead>
+          <tr>
+            {VERDICT_COLUMNS.map(([label, align]) => (
+              <th
+                key={label}
+                scope="col"
+                className="border-b px-3 py-[7px] text-[10px] font-medium uppercase tracking-[.07em]"
+                style={{ color: "var(--ink-faint)", borderColor: "var(--line)", textAlign: align }}
+              >
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colSpan={VERDICT_COLUMNS.length} className="px-3 py-1.5 text-[11px]" style={{ color: "var(--ink-soft)" }}>
+              {perFold ? <Withheld availability={perFold} what="per-fold metrics" /> : <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what="per-fold metrics" />}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div
+        className="border-t px-3 py-[7px] text-[10.5px] leading-[1.5]"
+        style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
+      >
+        The Evidence contract publishes run-final metrics and four named series; it publishes no per-fold metric,
+        verdict or threshold rule. A verdict drawn here would be this screen&apos;s opinion, not the engine&apos;s.
+      </div>
+    </section>
+  );
+}
+
+/** The HiFi behaviour tiles, each an empty cell with its reason (DQ-14). */
+const BEHAVIOR_TILES = [
+  "beta vs benchmark",
+  "corr vs benchmark",
+  "skew",
+  "excess kurtosis",
+  "win rate",
+  "avg holding",
+  "exposure L/S/F",
+  "turnover",
+] as const;
+
+function BehaviorCard() {
+  return (
+    <section
+      className="flex min-w-0 flex-[1_1_340px] flex-col gap-1.5 rounded-[8px] border p-3.5"
+      data-gap="behavior-tiles"
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <PanelLabel>behavior — engine-published, UI renders</PanelLabel>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+          segment not published
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {BEHAVIOR_TILES.map((label) => (
           <span
-            key={entry.label}
-            aria-disabled={!entry.on}
-            aria-current={entry.on ? "true" : undefined}
-            title={entry.on ? "the window every metric and series on this tab describes" : "the Evidence Hub publishes the OOS window only"}
-            className="mono border-r px-3 py-1 text-[11px] last:border-r-0"
-            style={{
-              borderColor: "var(--line)",
-              background: entry.on ? "var(--accent-soft)" : "var(--paper-raised)",
-              color: entry.on ? "var(--accent)" : "var(--ink-faint)",
-              opacity: entry.on ? 1 : 0.6,
-            }}
+            key={label}
+            className="flex min-w-0 flex-col gap-px rounded-[6px] border px-2.5 py-1.5"
+            style={{ borderColor: "var(--line-soft)" }}
+            data-behavior-tile={label}
           >
-            {entry.label}
+            <span className="text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+              {label}
+            </span>
+            <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: "P13_PUBLISHES_NO_BEHAVIOR_ANALYTIC" }} />
           </span>
         ))}
+      </div>
+      <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>
+        No behaviour analytic is published for this run. These tiles stay empty rather than being computed from the
+        equity series, which would make the chart the source of a number the engine never issued.
       </span>
-      <span
-        className="mono border-l-2 pl-1.5 text-[10px]"
-        style={{ color: "var(--role-holdout)", borderColor: "var(--role-holdout)" }}
-        data-window-disclosure
-      >
-        {WINDOW_DISCLOSURE}
-      </span>
-    </div>
+    </section>
   );
 }
 
@@ -1545,47 +1914,51 @@ function SummaryTab({
   );
   const status = runStatus(hub);
   const sealed = hub.readiness !== "NOT_READY" && !(status !== null && (ENDED_UNSEALED.has(status) || LIVE.has(status)));
-  const perFold = hub.source_absences.per_fold_metrics;
 
   return (
     <section data-screen-label="Summary" className="flex flex-col gap-3.5">
       <WindowSwitcher />
 
-      <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }} data-metrics>
+      {/* HiFi: five tiles to a row, never narrower than 150px. */}
+      <div
+        className="grid gap-2"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(max(150px, calc((100% - 32px) / 5)), 1fr))" }}
+        data-metrics
+      >
         {ordered.map((metric) => (
           <MetricTile key={metric.key} metric={metric} />
         ))}
       </div>
 
-      {hub.warnings.length > 0 ? (
-        <ul className="flex flex-col gap-1" data-warnings>
-          {hub.warnings.map((warning) => (
-            <li
-              key={warning.definition_id}
-              data-warning={warning.definition_id}
-              data-warning-state={warning.state}
-              title={warning.reason_code ?? undefined}
-              className="text-[11px]"
-              style={{ color: warning.state === "ACTIVE" ? "var(--role-holdout)" : "var(--ink-faint)" }}
-            >
-              {warning.copy}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
       <SeriesPanel
         kind="EQUITY_OOS"
+        chartNo={1}
         title="Equity — stitched OOS account"
         link={linkFor("EQUITY_OOS")}
         slot={series.get("EQUITY_OOS")}
         onNeeded={ensureSeries}
         emptyReason="the source published this series with no points, so no curve is drawn."
-        footnote={
-          <span data-fold-boundaries>
-            Fold boundaries are not marked: the Hub publishes which folds were observed, not where each one starts.
-          </span>
-        }
+        footer={(loaded) => (
+          <>
+            <ProvenanceRow hub={hub} series={loaded} kind="EQUITY_OOS" />
+            {hub.warnings.length > 0 ? (
+              <ul className="mt-2 flex flex-col gap-0.5" data-warnings>
+                {hub.warnings.map((warning) => (
+                  <li
+                    key={warning.definition_id}
+                    data-warning={warning.definition_id}
+                    data-warning-state={warning.state}
+                    title={warning.reason_code ?? undefined}
+                    className="text-[12px] leading-[1.4]"
+                    style={{ color: warning.state === "ACTIVE" ? "var(--accent-2)" : "var(--ink-faint)" }}
+                  >
+                    {warning.copy}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </>
+        )}
       >
         {(loaded) => (
           <ChartFrame height={380}>
@@ -1594,73 +1967,84 @@ function SummaryTab({
         )}
       </SeriesPanel>
 
-      <SourceGap
-        id="per-fold-verdict"
-        title="per-fold verdict — which fold carries the run, which fold drags it"
-        reason={
+      <SeriesPanel
+        kind="EQUITY_OOS"
+        chartNo={2}
+        title="Underwater — drawdown derived from equity"
+        link={linkFor("EQUITY_OOS")}
+        slot={series.get("EQUITY_OOS")}
+        onNeeded={ensureSeries}
+        emptyReason="the source published this series with no points, so no drawdown is drawn."
+        footnote={
           <>
-            {perFold ? <Withheld availability={perFold} what="per-fold metrics" /> : null}{" "}
-            The Evidence contract publishes run-final metrics and four named series; it publishes no per-fold metric,
-            verdict or threshold rule. A verdict drawn here would be this screen's opinion, not the engine's.
+            Drawdown is a restatement of the equity series above, not a separate metric the engine computes.{" "}
+            <span data-fold-boundaries>
+              Fold boundaries are not marked: the Hub publishes which folds were observed, not where each one starts.
+            </span>
           </>
         }
-      />
+      >
+        {(loaded) => (
+          <ChartFrame height={180}>
+            <DrawdownChart series={loaded} />
+          </ChartFrame>
+        )}
+      </SeriesPanel>
+
+      <VerdictTable hub={hub} />
 
       <div className="flex flex-wrap gap-3.5">
-        <div className="min-w-0 flex-[1.4] basis-[420px]">
-          <SeriesPanel
-            kind="ROLLING_RETURNS_20"
-            title="Strategy behavior — rolling 20-observation return"
-            link={linkFor("ROLLING_RETURNS_20")}
-            slot={series.get("ROLLING_RETURNS_20")}
-            onNeeded={ensureSeries}
-            emptyReason="the source published no rolling window for this run, so no line is drawn."
-          >
-            {(loaded) => (
-              <ChartFrame height={230}>
-                <RollingChart series={loaded} />
-              </ChartFrame>
-            )}
-          </SeriesPanel>
-        </div>
-        <div className="min-w-0 flex-1 basis-[320px]">
-          <SeriesPanel
-            kind="RETURN_DISTRIBUTION"
-            title="Return distribution — stitched OOS"
-            link={linkFor("RETURN_DISTRIBUTION")}
-            slot={series.get("RETURN_DISTRIBUTION")}
-            onNeeded={ensureSeries}
-            emptyReason="the source published no histogram bucket for this run, so no bar is drawn."
-          >
-            {(loaded) => (
-              <ChartFrame height={230}>
-                <DistributionChart series={loaded} />
-              </ChartFrame>
-            )}
-          </SeriesPanel>
-        </div>
+        <SeriesPanel
+          kind="ROLLING_RETURNS_20"
+          chartNo={3}
+          title="Strategy behavior — rolling 20-observation return"
+          className="flex-[1.4_1_520px]"
+          link={linkFor("ROLLING_RETURNS_20")}
+          slot={series.get("ROLLING_RETURNS_20")}
+          onNeeded={ensureSeries}
+          emptyReason="the source published no rolling window for this run, so no line is drawn."
+          footnote="Read from the Evidence Hub's published rolling series — the UI computes nothing."
+        >
+          {(loaded) => (
+            <ChartFrame height={230}>
+              <RollingChart series={loaded} />
+            </ChartFrame>
+          )}
+        </SeriesPanel>
+        <SeriesPanel
+          kind="RETURN_DISTRIBUTION"
+          chartNo={4}
+          title="Return distribution — stitched OOS"
+          className="flex-[1_1_380px]"
+          link={linkFor("RETURN_DISTRIBUTION")}
+          slot={series.get("RETURN_DISTRIBUTION")}
+          onNeeded={ensureSeries}
+          emptyReason="the source published no histogram bucket for this run, so no bar is drawn."
+          footnote="Bucket edges and counts as the Hub published them — the UI bins nothing."
+        >
+          {(loaded) => (
+            <ChartFrame height={230}>
+              <DistributionChart series={loaded} />
+            </ChartFrame>
+          )}
+        </SeriesPanel>
       </div>
 
       <div className="flex flex-wrap gap-3.5">
-        <div className="min-w-0 flex-[1.3] basis-[420px]">
-          <SeriesPanel
-            kind="MONTHLY_RETURNS"
-            title="Monthly returns — stitched OOS"
-            link={linkFor("MONTHLY_RETURNS")}
-            slot={series.get("MONTHLY_RETURNS")}
-            onNeeded={ensureSeries}
-            emptyReason="no calendar month was published for this run — the source emitted 0 monthly values, so no cell is drawn. A month is never reduced from the equity series here."
-          >
-            {(loaded) => <MonthlyHeat series={loaded} />}
-          </SeriesPanel>
-        </div>
-        <div className="min-w-0 flex-1 basis-[300px]">
-          <SourceGap
-            id="behavior-tiles"
-            title="behavior — engine-published, UI renders"
-            reason="no behaviour analytic (win rate, payoff, average hold, turnover, exposure, beta) is published for this run. These tiles stay empty rather than being computed from the equity series, which would make the chart the source of a number the engine never issued."
-          />
-        </div>
+        <SeriesPanel
+          kind="MONTHLY_RETURNS"
+          variant="card"
+          title="monthly returns — stitched OOS"
+          className="flex-[1.3_1_460px]"
+          link={linkFor("MONTHLY_RETURNS")}
+          slot={series.get("MONTHLY_RETURNS")}
+          onNeeded={ensureSeries}
+          emptyReason="no calendar month was published for this run — the source emitted 0 monthly values, so no cell is drawn. A month is never reduced from the equity series here."
+          footnote="One cell per calendar month, value in %. The reading to look for is clustering — three red cells in a row is a regime, not noise."
+        >
+          {(loaded) => <MonthlyHeat series={loaded} />}
+        </SeriesPanel>
+        <BehaviorCard />
       </div>
 
       <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
@@ -1725,10 +2109,10 @@ function StagePreviewTab({
               {row.state}
             </span>
             <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-              started {row.started_at_utc_ms === null ? "not published" : formatUtc(row.started_at_utc_ms)}
+              started {row.started_at_utc_ms === null ? "not published" : utcZ(row.started_at_utc_ms)}
             </span>
             <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>
-              completed {row.completed_at_utc_ms === null ? "not published" : formatUtc(row.completed_at_utc_ms)}
+              completed {row.completed_at_utc_ms === null ? "not published" : utcZ(row.completed_at_utc_ms)}
             </span>
           </>
         ) : (
@@ -1766,17 +2150,64 @@ function StagePreviewTab({
   );
 }
 
-function UnroutedAction({ label, screen, phase }: { label: string; screen: string; phase: string }) {
+/**
+ * A hook whose screen is not built: drawn in the HiFi's button style (primary
+ * or outline), refused, and titled with the phase that builds it.
+ */
+function UnroutedAction({
+  label,
+  screen,
+  phase,
+  primary = false,
+}: {
+  label: string;
+  screen: string;
+  phase: string;
+  primary?: boolean;
+}) {
   return (
     <span
       data-action-unrouted={label}
+      data-primary={primary || undefined}
       aria-disabled="true"
       title={`Screen ${screen} is not built yet (${phase}), so this action would go nowhere.`}
-      className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
-      style={{ color: "var(--ink-faint)", borderColor: "var(--line)", opacity: 0.55, cursor: "not-allowed" }}
+      className={`mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em] ${primary ? "font-semibold" : ""}`}
+      style={{
+        color: primary ? "var(--accent-contrast)" : "var(--accent)",
+        borderColor: "var(--accent)",
+        background: primary ? "var(--accent)" : "transparent",
+        opacity: 0.55,
+        cursor: "not-allowed",
+      }}
     >
       {label}
     </span>
+  );
+}
+
+/** The HiFi's two gated hooks under NEXT, disabled with SOON. */
+function SoonHook({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3" data-soon-hook={label}>
+      <button
+        type="button"
+        disabled
+        aria-disabled="true"
+        className="mono rounded-[6px] border px-4 py-2 text-[11px] font-semibold uppercase tracking-[.05em]"
+        style={{ borderColor: "var(--viz-legend-inactive)", background: "var(--paper-sunken)", color: "var(--ink-faint)", cursor: "not-allowed" }}
+      >
+        {label}
+      </button>
+      <span
+        className="mono rounded-[3px] border border-dashed px-[5px] py-px text-[9px] font-semibold"
+        style={{ borderColor: "var(--ink-faint)", color: "var(--ink-faint)" }}
+      >
+        SOON
+      </span>
+      <span className="text-[11.5px]" style={{ color: "var(--ink-soft)" }}>
+        {children}
+      </span>
+    </div>
   );
 }
 
@@ -1840,7 +2271,7 @@ function ClaimTab({ hub }: { hub: EvidenceHub }) {
                 {certificate.grade}
               </span>
               <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-cert-issued>
-                issued {certificate.issued_at_utc_ms === null ? "not published" : formatUtc(certificate.issued_at_utc_ms)}
+                issued {certificate.issued_at_utc_ms === null ? "not published" : utcZ(certificate.issued_at_utc_ms)}
               </span>
             </>
           ) : certificate.state === "NOT_ISSUED" ? (
@@ -1891,12 +2322,24 @@ function ClaimTab({ hub }: { hub: EvidenceHub }) {
         )}
       </section>
 
-      <section className="flex flex-wrap items-center justify-between gap-2.5 rounded-[8px] border px-4 py-3" data-claim-next style={PANEL_STYLE}>
-        <PanelLabel>next — hooks only, gates designed in a later round</PanelLabel>
-        <span className="flex flex-wrap gap-2">
-          <UnroutedAction label="generate run report →" screen="09" phase="P18" />
-          <UnroutedAction label="release candidate →" screen="11" phase="P21" />
-        </span>
+      <section className="flex flex-col gap-2.5 rounded-[8px] border p-4" data-claim-next style={PANEL_STYLE}>
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <PanelLabel>next — hooks only, gates designed in a later round</PanelLabel>
+          <span className="inline-flex flex-wrap gap-2">
+            <UnroutedAction label="generate run report →" screen="09" phase="P18" primary />
+            <UnroutedAction label="release candidate →" screen="11" phase="P21" />
+          </span>
+        </div>
+        <SoonHook label="Send to Approval Gate">
+          requires a methodology certificate · currently{" "}
+          <span className="mono font-semibold">
+            {certificate.state === "ISSUED" && certificate.grade !== null ? certificate.grade : certificate.state}
+          </span>
+        </SoonHook>
+        <SoonHook label="Register for Paper Trading">
+          will carry the claim passport and the evidence link; deployment params must equal frozen params or declare a
+          refit.
+        </SoonHook>
       </section>
     </section>
   );
@@ -1944,7 +2387,7 @@ function AtlasTab({ runId, hub }: { runId: string; hub: EvidenceHub }) {
 /** FE-S04-05: a 404 is its own page with a way back, not an empty hub. */
 function RunNotFound({ runId }: { runId: string }) {
   return (
-    <main className="flex flex-col gap-2 px-1 py-4" data-screen="evidence-flow" data-run={runId} data-run-not-found>
+    <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-2 px-7 pb-16 pt-5" data-screen="evidence-flow" data-run={runId} data-run-not-found>
       <nav className="mono text-[10.5px]" aria-label="Research breadcrumbs">
         <Link to="/research/quantbt/runs" style={{ color: "var(--accent)" }}>
           Runs
@@ -2094,37 +2537,44 @@ export function EvidenceFlow({
   ensurePassport,
   onReread,
 }: EvidenceFlowProps) {
-  const [drawer, setDrawer] = useState(false);
-  const drawerTrigger = useRef<HTMLButtonElement>(null);
-  const drawerWasOpen = useRef(false);
-  const strip = useRef<HTMLDivElement>(null);
-  const [stripHeight, setStripHeight] = useState(0);
+  const [datasetOpen, setDatasetOpen] = useState(false);
+  const datasetTrigger = useRef<HTMLButtonElement>(null);
+  const datasetWasOpen = useRef(false);
+  const datasetPanelId = useId();
+  const tabRow = useRef<HTMLDivElement>(null);
+  const [tabRowHeight, setTabRowHeight] = useState(0);
   const topbar = useTopbarOffset();
   const summaryVisited = useRef(false);
   if (cursor.stage === "summary") summaryVisited.current = true;
   const summaryKept = summaryVisited.current;
 
   /* A run id is 37 characters; the full one is on the identity line, and at
-     full length the crumb wrapped the 56px topbar the strip is pinned under. */
+     full length the crumb wrapped the 56px topbar. */
   const crumbRun = runId.length > 16 ? `${runId.slice(0, 13)}…` : runId;
   useTopbarCrumb(notFound ? null : `${crumbRun} / ${STAGE_CRUMB[cursor.stage]}`);
 
-  /* FE-S04-07: closing the drawer, by any route, hands focus back to the chip. */
+  /* FE-S04-07: closing the panel, by the chip or by Escape, hands focus back to the chip. */
   useEffect(() => {
-    if (drawer) {
-      drawerWasOpen.current = true;
-    } else if (drawerWasOpen.current) {
-      drawerWasOpen.current = false;
-      drawerTrigger.current?.focus();
+    if (datasetOpen) {
+      datasetWasOpen.current = true;
+    } else if (datasetWasOpen.current) {
+      datasetWasOpen.current = false;
+      datasetTrigger.current?.focus();
     }
-  }, [drawer]);
-  const closeDrawer = useCallback(() => setDrawer(false), []);
+  }, [datasetOpen]);
+  const closeDataset = useCallback(() => setDatasetOpen(false), []);
 
-  /* The tab card sticks right under the strip, whose height changes as it wraps. */
+  /*
+   * Sticky like the HiFi: the tab card slides up under the topbar until only
+   * its cursor bar shows. The HiFi pins the card at `top:0` beneath a 56px
+   * topbar, which hides the 48px tab row and clips 8px of the cursor bar; this
+   * pins it at (measured topbar − measured tab row), so the cursor bar shows
+   * whole at every width the topbar wraps to.
+   */
   useEffect(() => {
-    const element = strip.current;
+    const element = tabRow.current;
     if (!element || typeof ResizeObserver !== "function") return;
-    const observer = new ResizeObserver(() => setStripHeight(element.getBoundingClientRect().height));
+    const observer = new ResizeObserver(() => setTabRowHeight(element.getBoundingClientRect().height));
     observer.observe(element);
     return () => observer.disconnect();
   }, [notFound]);
@@ -2134,34 +2584,37 @@ export function EvidenceFlow({
   const status = runStatus(hub);
 
   return (
-    <div className="flex flex-col gap-3.5" data-screen="evidence-flow" data-run={runId}>
+    <div
+      className="mx-auto flex w-full max-w-[1440px] flex-col gap-3.5 px-7 pb-16 pt-5"
+      data-screen="evidence-flow"
+      data-run={runId}
+    >
       <RunHeader
         runId={runId}
         hub={hub}
-        drawerOpen={drawer}
-        drawerTrigger={drawerTrigger}
-        onOpenDrawer={() => setDrawer(true)}
+        datasetOpen={datasetOpen}
+        datasetTrigger={datasetTrigger}
+        datasetPanelId={datasetPanelId}
+        onToggleDataset={() => setDatasetOpen((open) => !open)}
       />
-      {hub && drawer ? <DatasetDrawer hub={hub} onClose={closeDrawer} /> : null}
+      {hub && datasetOpen ? <DatasetPanel hub={hub} id={datasetPanelId} onClose={closeDataset} /> : null}
 
-      <ClaimStrip hub={hub} state={state} onJump={onStage} stripRef={strip} top={topbar} />
+      <ClaimPassport hub={hub} state={state} onJump={onStage} />
 
       {hub && hub.readiness === "NOT_READY" ? <SealNotice runId={runId} status={status} /> : null}
 
-      {/* Tabs and cursor: one card, sticky under the strip from md up (HiFi).
-          Below md neither sticks: topbar + strip + card would hold a third of
-          a phone screen. */}
+      {/* Tabs and cursor: one card, sticky (HiFi). */}
       <div
-        className="z-[19] rounded-[6px] border md:sticky"
+        className="sticky z-[25] rounded-[6px] border"
         data-stage-card
         style={{
-          top: `calc(${topbar} + ${stripHeight}px)`,
+          top: `calc(${topbar} - ${tabRowHeight}px)`,
           borderColor: "var(--line)",
           background: "var(--paper-raised)",
-          boxShadow: "var(--shadow)",
+          boxShadow: "var(--shadow-e2)",
         }}
       >
-        <StageTabs cursor={cursor} hub={hub} onStage={onStage} />
+        <StageTabs cursor={cursor} hub={hub} onStage={onStage} rowRef={tabRow} />
         <CursorBar
           runId={runId}
           cursor={cursor}
