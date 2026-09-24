@@ -24,6 +24,7 @@ from typing import Any, Awaitable, Callable
 
 from pydantic import ValidationError
 
+from portal_api.domain.research_delta_wfo_profile import DELTA_WFO_CPU_SECONDS, DELTA_WFO_OPTUNA_TRIALS
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.services.artifact_store import ContentAddressedArtifactStore
 from portal_api.services.durable_runs import (
@@ -42,7 +43,13 @@ from portal_api.services.research_progress_relay import (
     ResearchProgressRelay,
     ResearchProgressRelayError,
 )
+from portal_api.services.research_current_source_retention import (
+    CurrentSourceRetentionResult,
+    ResearchCurrentSourceRetentionClient,
+    ResearchCurrentSourceRetentionError,
+)
 from portal_api.services.research_retained_receipt import ResearchRetainedReceiptClient, ResearchRetainedReceiptError
+from portal_api.services.research_run_producer import WFO_SOURCE_DIRNAME
 
 logger = logging.getLogger("portal_api.durable_worker")
 
@@ -61,6 +68,16 @@ class _ProgressJournalRecoveryRequired(DurableRunError):
     """
 
     code = "LEASE_LOST"
+
+
+class _DeltaWfoProfileUnavailable(DurableRunError):
+    """W1: a Delta WFO job reached a worker whose WFO lane is dark."""
+
+    code = "CAPABILITY_MISMATCH"
+
+
+def _flag(name: str) -> bool:
+    return os.getenv(name, "false").strip().lower() == "true"
 
 
 async def execute_run_in_process(
@@ -184,7 +201,20 @@ class DurableQuantWorker:
         progress_journal: ResearchProgressJournal | None = None
         progress_relay: ResearchProgressRelay | None = None
         p10_temp_dir: Path | None = None
+        is_delta_wfo = is_research_producer and research_request.research.is_delta_wfo
         try:
+            if is_delta_wfo and not (
+                _flag("PORTAL_FEATURE_RESEARCH_WFO_PROFILE")
+                and _flag("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS")
+                and _flag("PORTAL_FEATURE_RESEARCH_PROGRESS")
+            ):
+                # Refused before any journal, child or artifact exists. The
+                # Control API admission refuses first; this is the worker's
+                # own fence against a dark or mis-configured replica.
+                raise _DeltaWfoProfileUnavailable(
+                    "P10 Delta WFO profile requires PORTAL_FEATURE_RESEARCH_WFO_PROFILE, "
+                    "PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS and PORTAL_FEATURE_RESEARCH_PROGRESS"
+                )
             progress_enabled = (
                 is_research_producer
                 and os.getenv("PORTAL_FEATURE_RESEARCH_PROGRESS", "false").strip().lower() == "true"
@@ -198,7 +228,8 @@ class DurableQuantWorker:
                     run_id=run_id,
                     attempt_id=attempt.run_attempt_id,
                     lease_epoch=research_request.lease_epoch,
-                    planned_trials=1,
+                    planned_trials=DELTA_WFO_OPTUNA_TRIALS if is_delta_wfo else 1,
+                    cpu_cap_seconds=DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
                 )
                 try:
                     progress_relay = ResearchProgressRelay.from_environment(
@@ -302,7 +333,34 @@ class DurableQuantWorker:
             engine_dir = engine_root / run_id
             self._artifact_store.stage_directory(engine_dir, temp_dir)
             evidence_digest: str | None = None
-            if is_research_producer:
+            if is_delta_wfo:
+                # W1 row G: reserve → RS-02 export → P05 seal → batches →
+                # current-source seal, all before `run_completed`. There is no
+                # dark fallback: a WFO run without retained rows is a failure.
+                current_source = ResearchCurrentSourceRetentionClient.from_environment()
+                if progress_journal is None:
+                    raise ResearchCurrentSourceRetentionError("RS-02 retention requires the P11 progress lease")
+
+                def current_wfo_fence(_fence: object) -> bool:
+                    current = self._registry.attempt(run_id, attempt.run_attempt_id)
+                    return (
+                        current is not None
+                        and current.status in {"CLAIMED", "RUNNING"}
+                        and self._registry.verify_lease(current, lease_token=lease_token)
+                        and not self._registry.cancellation_requested(
+                            run_id, attempt.run_attempt_id, lease_epoch=research_request.lease_epoch
+                        )
+                    )
+
+                retention = await asyncio.to_thread(
+                    current_source.retain,
+                    request=research_request,
+                    source_root=engine_root / WFO_SOURCE_DIRNAME,
+                    artifact_root=Path(self._artifact_store.root),
+                    fence_validator=current_wfo_fence,
+                )
+                self._emit_retained_wfo_progress(progress_journal, retention)
+            elif is_research_producer:
                 retained = ResearchRetainedReceiptClient.from_environment()
                 if retained is not None:
                     receipt = result.get("research_receipt")
@@ -413,7 +471,10 @@ class DurableQuantWorker:
                     # metrics from stdout, a console tail, or filesystem
                     # paths.  A field absent from the fixed P04 receipt stays
                     # zero rather than becoming a guessed measurement.
-                    "usage": self._p11_usage(result),
+                    "usage": self._p11_usage(
+                        result,
+                        cpu_cap_seconds=DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
+                    ),
                 }
                 if evidence_digest is not None:
                     completion_payload["evidence_digest"] = evidence_digest
@@ -733,7 +794,43 @@ class DurableQuantWorker:
         path.chmod(0o600)
 
     @staticmethod
-    def _p11_usage(result: dict[str, Any]) -> dict[str, int]:
+    def _emit_retained_wfo_progress(
+        journal: ResearchProgressJournal,
+        retention: CurrentSourceRetentionResult,
+    ) -> None:
+        """Claim WFO trials/folds only from rows already retained by Control API.
+
+        One ``trial_completed`` per retained TRIAL row and one
+        ``fold_completed`` per retained FOLD row, then S4 closes.  The
+        profile's study is global (one Optuna study over all folds), so trial
+        events carry fold 1.  No ``fold_segment_observed`` is emitted: QuantBT
+        does not publish per-fold segment timestamps.
+        """
+
+        states = list(retention.trial_states)
+        total = len(states)
+        for index, state in enumerate(states, start=1):
+            payload: dict[str, Any] = {
+                "fold": 1,
+                "trial": index,
+                "overall_pct": (80 * index) // total,
+                "tqdm_line": f"Delta WFO global study retained · trial {index}/{total}",
+                "console": {
+                    "tone": "COMPLETE",
+                    "text": f"Delta WFO trial {index}/{total} retained",
+                    "fold": 1,
+                    "trial": index,
+                },
+            }
+            if state in {"COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"}:
+                payload["state"] = state
+            journal.emit("trial_completed", payload)
+        for fold in range(1, int(retention.table_rows["FOLD"]) + 1):
+            journal.emit("fold_completed", {"fold": fold})
+        journal.emit("stage_completed", {"stage": "S4"})
+
+    @staticmethod
+    def _p11_usage(result: dict[str, Any], *, cpu_cap_seconds: int = 45) -> dict[str, int]:
         """Project the fixed P10 child receipt into P06's exact usage shape.
 
         The source child currently measures peak RSS and CPU seconds.  There
@@ -759,7 +856,7 @@ class DurableQuantWorker:
 
         return {
             "peak_rss_bytes": measurement("peak_rss_bytes", 4 * 1024 * 1024 * 1024),
-            "cpu_seconds": measurement("cpu_seconds", 45),
+            "cpu_seconds": measurement("cpu_seconds", cpu_cap_seconds),
             "scratch_bytes": 0,
             "fd_peak": 0,
         }

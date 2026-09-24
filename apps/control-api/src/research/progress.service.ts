@@ -22,6 +22,10 @@ import { ResearchMetadataRepository } from "./repository";
 import { ResearchEvidenceService } from "./evidence.service";
 import { ResearchSplitService } from "./split.service";
 import { ResearchReportService } from "./report.service";
+import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
+
+/** The installed P04 fixed-qualification child CPU limit (P10 job cost). */
+const P04_FIXED_CHILD_CPU_SECONDS = 45;
 
 const ACTIVE_JOB_STATES = new Set(["QUEUED", "CLAIMED", "RUNNING"]);
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
@@ -115,6 +119,7 @@ export class ResearchProgressService {
   async ingest(input: ResearchProgressIngress): Promise<{ accepted: true; latest_sequence: number }> {
     this.requireEnabled();
     const ingressScope = await this.progress.resolveIngress(input);
+    this.assertProfileBoundIngress(ingressScope, input);
     const persisted = await this.progress.persistIngress(ingressScope, input);
     // P13 is a terminal sidecar only. If its own immutable write temporarily
     // fails, the P11 event remains persisted and the source relay can retry
@@ -356,6 +361,33 @@ export class ResearchProgressService {
     } catch (error) {
       if (await this.isTerminalReplay(scope, input, error)) return;
       throw this.mapMetadata(error);
+    }
+  }
+
+  /**
+   * W1: the wire admits the largest installed child cap; this binds each
+   * attempt to its own run's immutable execution profile before anything is
+   * persisted. A P04 attempt keeps its 45 CPU-second cap, and a Delta WFO
+   * attempt can never attach P04 P13/P14 terminal sidecars (its evidence is
+   * the retained RS-02 lane, not a fixed-qualification receipt).
+   */
+  private assertProfileBoundIngress(scope: ProgressIngressScope, input: ResearchProgressIngress): void {
+    const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID;
+    const usage = input.event.payload.usage;
+    if (usage && typeof usage === "object" && !Array.isArray(usage)) {
+      const cpu = (usage as Record<string, unknown>).cpu_seconds;
+      const cap = wfo ? DELTA_WFO_PROFILE.child_limits.cpu_seconds : P04_FIXED_CHILD_CPU_SECONDS;
+      if (typeof cpu === "number" && cpu > cap) {
+        throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research progress usage exceeds the run profile's child limit.", 400);
+      }
+    }
+    if (wfo && (input.evidence !== undefined || input.split !== undefined
+      || input.event.payload.evidence_digest !== undefined || input.event.payload.split_digest !== undefined)) {
+      throw new ResearchProgressError(
+        "RESEARCH_PROGRESS_INVALID",
+        "A Delta WFO run publishes retained current-source evidence, not P04 terminal sidecars.",
+        400,
+      );
     }
   }
 

@@ -3531,6 +3531,27 @@
             "title": "Execution Adapter Id",
             "type": "string"
           },
+          "execution_profile_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Profile Digest"
+          },
+          "execution_profile_id": {
+            "default": "p04.fixed-qualification.v1",
+            "enum": [
+              "p04.fixed-qualification.v1",
+              "p10.delta-signal-notional-wfo.v1"
+            ],
+            "title": "Execution Profile Id",
+            "type": "string"
+          },
           "intent_kind": {
             "const": "NEW",
             "title": "Intent Kind",
@@ -3542,20 +3563,27 @@
             "type": "string"
           },
           "p04_parameters": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "integer"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
                 },
-                {
-                  "type": "number"
-                }
-              ]
-            },
-            "maxProperties": 8,
-            "minProperties": 8,
-            "title": "P04 Parameters",
-            "type": "object"
+                "maxProperties": 8,
+                "minProperties": 8,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P04 Parameters"
           },
           "preflight_token": {
             "maxLength": 191,
@@ -3612,7 +3640,6 @@
           "alpha_version_id",
           "execution_adapter_id",
           "adapter_contract_digest",
-          "p04_parameters",
           "work_digest"
         ],
         "title": "ResearchRunProducerEnvelope",
@@ -3641,7 +3668,10 @@
             "type": "integer"
           },
           "protocol": {
-            "const": "three_window_decay",
+            "enum": [
+              "three_window_decay",
+              "advanced"
+            ],
             "title": "Protocol",
             "type": "string"
           },

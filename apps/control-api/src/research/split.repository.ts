@@ -33,6 +33,12 @@ export interface SplitHubRow {
    * does not match the historical producer contract.
    */
   adapterContractDigest: string | null;
+  /**
+   * W1 immutable P10 execution profile. The Delta WFO profile shares the P04
+   * executor digest, so P15/P16 must gate on this, never on the digest alone.
+   * Optional so a pre-W1 fixture reads as the P04 fixed qualification.
+   */
+  executionProfileId?: string | null;
   requestedSpecDigest: string | null;
   effectiveSpecDigest: string | null;
   datasetBindingDigest: string | null;
@@ -72,6 +78,7 @@ export type SplitSourceAsOfBasis =
 interface HubQueryRow {
   run_id: string;
   adapter_contract_digest: string | null;
+  execution_profile_id: string | null;
   requested_spec_digest: string | null;
   effective_spec_digest: string | null;
   dataset_binding_digest: string | null;
@@ -194,6 +201,7 @@ export class ResearchSplitRepository {
       const durable = await client.query<HubQueryRow>(
         `SELECT producer.run_id,
                 producer.adapter_contract_digest,
+                producer.execution_profile_id,
                 producer.requested_spec_digest,
                 producer.effective_spec_digest,
                 producer.dataset_binding_digest,
@@ -240,6 +248,7 @@ export class ResearchSplitRepository {
         return {
           kind: "DURABLE" as const, runId: row.run_id,
           adapterContractDigest: row.adapter_contract_digest,
+          executionProfileId: row.execution_profile_id,
           requestedSpecDigest: row.requested_spec_digest,
           effectiveSpecDigest: row.effective_spec_digest,
           datasetBindingDigest: row.dataset_binding_digest,
@@ -274,6 +283,7 @@ export class ResearchSplitRepository {
       return {
         kind: "LEGACY" as const, runId,
         adapterContractDigest: null,
+        executionProfileId: null,
         requestedSpecDigest: null, effectiveSpecDigest: null, datasetBindingDigest: null, manifestDigest: null,
         legacyRequest: null,
         progressSnapshot: null, jobState: null, revision: null, projection: null, readiness: null,

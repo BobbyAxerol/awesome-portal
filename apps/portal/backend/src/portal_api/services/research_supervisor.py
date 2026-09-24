@@ -15,6 +15,7 @@ import re
 import resource
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -110,11 +111,99 @@ class ResearchChildResult:
     evidence_source: dict[str, Any] | None = None
 
 
+# W1 §1.1 child_limits (cpu 120 s, wall 240 s) plus the design's scratch and
+# per-file caps. Memory/FD/NPROC stay at the P04 defaults.  The P04 default
+# ``ResearchChildLimits()`` is unchanged.
+DELTA_WFO_CHILD_LIMITS = ResearchChildLimits(
+    cpu_seconds=120,
+    wall_seconds=240,
+    scratch_bytes=128 * 1024 * 1024,
+    file_bytes=16 * 1024 * 1024,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class DeltaWfoChildReceipt:
+    """ID-only launch receipt for the W1 ``P10_DELTA_WFO`` child task.
+
+    Every WFO knob except the requested span/first OOS boundary comes from the
+    digest-pinned profile inside the child; the receipt cannot widen them.
+    """
+
+    job_id: str
+    run_id: str
+    worker_attempt_id: str
+    lease_epoch: int
+    market_path: Path
+    artifact_root: Path
+    execution_profile_id: str
+    execution_profile_digest: str
+    dataset_id: str
+    symbol: str
+    data_start_utc_ms: int
+    data_end_exclusive_utc_ms: int
+    first_oos_utc_ms: int
+
+    def as_payload(self, *, output_root: Path) -> dict[str, Any]:
+        return {
+            "schema_version": "research.p06.child-receipt.v1",
+            "task": "P10_DELTA_WFO",
+            "job_id": self.job_id,
+            "run_id": self.run_id,
+            "worker_attempt_id": self.worker_attempt_id,
+            "lease_epoch": self.lease_epoch,
+            "market_path": str(self.market_path),
+            "artifact_root": str(self.artifact_root),
+            "output_root": str(output_root),
+            "execution_profile_id": self.execution_profile_id,
+            "execution_profile_digest": self.execution_profile_digest,
+            "dataset_id": self.dataset_id,
+            "symbol": self.symbol,
+            "data_start_utc_ms": self.data_start_utc_ms,
+            "data_end_exclusive_utc_ms": self.data_end_exclusive_utc_ms,
+            "first_oos_utc_ms": self.first_oos_utc_ms,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class DeltaWfoChildResult:
+    launcher_pid: int
+    child_pid: int
+    network_namespace: str
+    engine_version: str
+    bars: int
+    n_folds: int
+    trial_rows: int
+    elapsed_seconds: float
+    peak_rss_bytes: int
+    cpu_seconds: float
+    enforced_limits: dict[str, int]
+    # Validated regular-file tree ``output_root/<run_id>/...`` on the parent's
+    # scratch filesystem. The caller copies it out and removes it.
+    output_root: Path
+    output_files: int
+    output_bytes: int
+
+
+@dataclass(frozen=True, slots=True)
+class _LaunchOutcome:
+    launcher_pid: int
+    child_pid: int
+    network_namespace: str
+    payload: dict[str, Any]
+    elapsed_seconds: float
+    peak_rss_bytes: int
+    cpu_seconds: float
+    enforced_limits: dict[str, int]
+
+
 class IsolatedResearchSupervisor:
     """Start one real namespace-isolated, resource-limited P04 child."""
 
     _MAX_RESULT_BYTES = 32 * 1024
     _MAX_LOG_BYTES = 16 * 1024
+    _MAX_WFO_OUTPUT_FILES = 64
+    _MAX_WFO_OUTPUT_BYTES = 64 * 1024 * 1024
 
     def __init__(self, scratch_root: Path, *, allowed_market_root: Path) -> None:
         self._scratch_root = scratch_root.resolve()
@@ -129,6 +218,22 @@ class IsolatedResearchSupervisor:
         if not value or len(value) > 160 or not value.replace("-", "").replace("_", "").replace(".", "").isalnum():
             raise ResearchSupervisorError(f"{label} is not an opaque bounded identifier")
 
+    def _validate_launch_identity(self, *, job_id: str, run_id: str, worker_attempt_id: str, lease_epoch: int) -> None:
+        for label, value in (("job_id", job_id), ("run_id", run_id), ("worker_attempt_id", worker_attempt_id)):
+            self._opaque(value, label)
+        if lease_epoch < 1:
+            raise ResearchSupervisorError("lease_epoch must be positive")
+
+    def _approved_market_input(self, market_path: Path) -> Path:
+        resolved = market_path.resolve(strict=True)
+        if resolved.suffix != ".parquet" or not resolved.is_relative_to(self._allowed_market_root):
+            raise ResearchSupervisorError("P06 child may read only an approved Parquet market input")
+        return resolved
+
+    def _assert_artifact_root(self, artifact_root: Path) -> None:
+        if artifact_root.resolve().is_relative_to(self._scratch_root):
+            raise ResearchSupervisorError("artifact_root must not be a child scratch location")
+
     def run_p04_delta_qualification(
         self,
         receipt: ResearchChildReceipt,
@@ -137,18 +242,166 @@ class IsolatedResearchSupervisor:
         on_child_alive: Callable[[], None] | None = None,
     ) -> ResearchChildResult:
         limits.validate()
-        for label, value in (("job_id", receipt.job_id), ("run_id", receipt.run_id), ("worker_attempt_id", receipt.worker_attempt_id)):
-            self._opaque(value, label)
-        if receipt.lease_epoch < 1:
-            raise ResearchSupervisorError("lease_epoch must be positive")
-        market_path = receipt.market_path.resolve(strict=True)
-        if market_path.suffix != ".parquet" or not market_path.is_relative_to(self._allowed_market_root):
-            raise ResearchSupervisorError("P06 child may read only an approved Parquet market input")
-        artifact_root = receipt.artifact_root.resolve()
-        if artifact_root.is_relative_to(self._scratch_root):
-            raise ResearchSupervisorError("artifact_root must not be a child scratch location")
+        self._validate_launch_identity(
+            job_id=receipt.job_id,
+            run_id=receipt.run_id,
+            worker_attempt_id=receipt.worker_attempt_id,
+            lease_epoch=receipt.lease_epoch,
+        )
+        self._approved_market_input(receipt.market_path)
+        self._assert_artifact_root(receipt.artifact_root)
+        launch = self._launch(
+            job_id=receipt.job_id,
+            worker_attempt_id=receipt.worker_attempt_id,
+            payload_for=lambda _work: receipt.as_payload(),
+            expected_task="P04_DELTA_SMOKE",
+            limits=limits,
+            on_child_alive=on_child_alive,
+        )
+        payload = launch.payload
+        try:
+            engine_version = str(payload["engine_version"])
+            final_equity = float(payload["final_equity"])
+            num_trades = int(payload["num_trades"])
+            bars = int(payload["bars"])
+        except (KeyError, TypeError, ValueError) as error:
+            raise ResearchSupervisorError("P06 child returned an invalid bounded receipt") from error
+        evidence_source = payload.get("evidence_source")
+        if evidence_source is not None:
+            self._validate_evidence_source(evidence_source)
+        return ResearchChildResult(
+            launcher_pid=launch.launcher_pid,
+            child_pid=launch.child_pid,
+            network_namespace=launch.network_namespace,
+            engine_version=engine_version,
+            final_equity=final_equity,
+            num_trades=num_trades,
+            bars=bars,
+            elapsed_seconds=launch.elapsed_seconds,
+            peak_rss_bytes=launch.peak_rss_bytes,
+            cpu_seconds=launch.cpu_seconds,
+            enforced_limits=launch.enforced_limits,
+            evidence_source=evidence_source if isinstance(evidence_source, dict) else None,
+        )
 
-        work = self._scratch_root / receipt.job_id / receipt.worker_attempt_id
+    def run_delta_wfo(
+        self,
+        receipt: DeltaWfoChildReceipt,
+        *,
+        limits: ResearchChildLimits = DELTA_WFO_CHILD_LIMITS,
+        on_child_alive: Callable[[], None] | None = None,
+    ) -> DeltaWfoChildResult:
+        """Run the W1 Delta signal-notional WFO in the same P06 confinement.
+
+        The child writes QuantBT's advanced WFO artifacts into ``output``, a
+        sibling of its receipt on the real scratch filesystem (never the
+        child's private tmpfs, which disappears with its mount namespace).
+        The parent then refuses symlinks, non-regular files and any output
+        beyond ``64`` files / ``64 MiB`` before a caller may read it.
+        """
+
+        limits.validate()
+        self._validate_launch_identity(
+            job_id=receipt.job_id,
+            run_id=receipt.run_id,
+            worker_attempt_id=receipt.worker_attempt_id,
+            lease_epoch=receipt.lease_epoch,
+        )
+        self._approved_market_input(receipt.market_path)
+        self._assert_artifact_root(receipt.artifact_root)
+        output_holder: dict[str, Path] = {}
+
+        def payload_for(work: Path) -> dict[str, Any]:
+            output = work / "output"
+            output.mkdir(mode=0o700)
+            output_holder["output"] = output
+            return receipt.as_payload(output_root=output)
+
+        try:
+            launch = self._launch(
+                job_id=receipt.job_id,
+                worker_attempt_id=receipt.worker_attempt_id,
+                payload_for=payload_for,
+                expected_task="P10_DELTA_WFO",
+                limits=limits,
+                on_child_alive=on_child_alive,
+            )
+            payload = launch.payload
+            try:
+                engine_version = str(payload["engine_version"])
+                bars = int(payload["bars"])
+                n_folds = int(payload["n_folds"])
+                trial_rows = int(payload["trial_rows"])
+                profile_digest = str(payload["execution_profile_digest"])
+            except (KeyError, TypeError, ValueError) as error:
+                raise ResearchSupervisorError("P06 child returned an invalid bounded receipt") from error
+            if profile_digest != receipt.execution_profile_digest:
+                raise ResearchSupervisorError("P06 WFO child did not run the admitted execution profile")
+            output = output_holder["output"]
+            files, total_bytes = self._validate_output_tree(output, run_id=receipt.run_id)
+        except BaseException:
+            output = output_holder.get("output")
+            if output is not None and output.exists():
+                shutil.rmtree(output, ignore_errors=True)
+            raise
+        return DeltaWfoChildResult(
+            launcher_pid=launch.launcher_pid,
+            child_pid=launch.child_pid,
+            network_namespace=launch.network_namespace,
+            engine_version=engine_version,
+            bars=bars,
+            n_folds=n_folds,
+            trial_rows=trial_rows,
+            elapsed_seconds=launch.elapsed_seconds,
+            peak_rss_bytes=launch.peak_rss_bytes,
+            cpu_seconds=launch.cpu_seconds,
+            enforced_limits=launch.enforced_limits,
+            output_root=output,
+            output_files=files,
+            output_bytes=total_bytes,
+        )
+
+    @classmethod
+    def _validate_output_tree(cls, output: Path, *, run_id: str) -> tuple[int, int]:
+        """Refuse a child output that is not a small tree of regular files."""
+
+        if output.is_symlink() or not output.is_dir():
+            raise ResearchSupervisorError("P06 WFO child output root is invalid")
+        files = 0
+        total = 0
+        for directory, subdirectories, names in os.walk(output, followlinks=False):
+            for name in (*subdirectories, *names):
+                path = Path(directory) / name
+                info = path.lstat()
+                if stat.S_ISLNK(info.st_mode):
+                    raise ResearchSupervisorError("P06 WFO child output contains a symlink")
+                if stat.S_ISDIR(info.st_mode):
+                    continue
+                if not stat.S_ISREG(info.st_mode):
+                    raise ResearchSupervisorError("P06 WFO child output contains a non-regular file")
+                files += 1
+                total += info.st_size
+                if files > cls._MAX_WFO_OUTPUT_FILES or total > cls._MAX_WFO_OUTPUT_BYTES:
+                    raise ResearchSupervisorError(
+                        "P06 WFO child output exceeds its bounded file budget",
+                        code="RESOURCE_EXCEEDED",
+                    )
+        entries = [entry.name for entry in output.iterdir()]
+        if entries != [run_id] or not (output / run_id / "manifest.json").is_file():
+            raise ResearchSupervisorError("P06 WFO child output is not one run artifact directory")
+        return files, total
+
+    def _launch(
+        self,
+        *,
+        job_id: str,
+        worker_attempt_id: str,
+        payload_for: Callable[[Path], dict[str, Any]],
+        expected_task: str,
+        limits: ResearchChildLimits,
+        on_child_alive: Callable[[], None] | None,
+    ) -> _LaunchOutcome:
+        work = self._scratch_root / job_id / worker_attempt_id
         if work.exists():
             raise ResearchSupervisorError("a P06 scratch receipt may be launched only once")
         work.mkdir(mode=0o700, parents=True)
@@ -157,7 +410,7 @@ class IsolatedResearchSupervisor:
         result_path = work / "result.json"
         stdout_path = work / "stdout.log"
         stderr_path = work / "stderr.log"
-        receipt_path.write_text(json.dumps(receipt.as_payload(), sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+        receipt_path.write_text(json.dumps(payload_for(work), sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
         os.chmod(receipt_path, 0o600)
 
         project_root = Path(__file__).resolve().parents[3]
@@ -263,14 +516,10 @@ class IsolatedResearchSupervisor:
         try:
             child_pid = int(payload["child_pid"])
             network_namespace = str(payload["network_namespace"])
-            engine_version = str(payload["engine_version"])
-            final_equity = float(payload["final_equity"])
-            num_trades = int(payload["num_trades"])
-            bars = int(payload["bars"])
             enforced_limits = {str(key): int(value) for key, value in dict(payload["enforced_limits"]).items()}
         except (KeyError, TypeError, ValueError) as error:
             raise ResearchSupervisorError("P06 child returned an invalid bounded receipt") from error
-        if payload.get("task") != "P04_DELTA_SMOKE" or payload.get("credential_environment_clean") is not True:
+        if payload.get("task") != expected_task or payload.get("credential_environment_clean") is not True:
             raise ResearchSupervisorError("P06 child receipt did not prove its required boundary")
         expected_limits = {
             "address_space_bytes": limits.memory_bytes,
@@ -282,22 +531,15 @@ class IsolatedResearchSupervisor:
         }
         if enforced_limits != expected_limits:
             raise ResearchSupervisorError("P06 child did not retain the exact bounded resource limits")
-        evidence_source = payload.get("evidence_source")
-        if evidence_source is not None:
-            self._validate_evidence_source(evidence_source)
-        return ResearchChildResult(
+        return _LaunchOutcome(
             launcher_pid=process.pid,
             child_pid=child_pid,
             network_namespace=network_namespace,
-            engine_version=engine_version,
-            final_equity=final_equity,
-            num_trades=num_trades,
-            bars=bars,
+            payload=payload,
             elapsed_seconds=elapsed,
             peak_rss_bytes=max(0, int(after.ru_maxrss - before.ru_maxrss)) * 1024,
             cpu_seconds=max(0.0, (after.ru_utime + after.ru_stime) - (before.ru_utime + before.ru_stime)),
             enforced_limits=enforced_limits,
-            evidence_source=evidence_source if isinstance(evidence_source, dict) else None,
         )
 
     @staticmethod
@@ -372,6 +614,9 @@ class IsolatedResearchSupervisor:
 
 
 __all__ = [
+    "DELTA_WFO_CHILD_LIMITS",
+    "DeltaWfoChildReceipt",
+    "DeltaWfoChildResult",
     "IsolatedResearchSupervisor",
     "ResearchChildLimits",
     "ResearchChildReceipt",

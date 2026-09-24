@@ -125,11 +125,12 @@ export interface components {
             reason_code: string | null;
             availability: components["schemas"]["Availability"];
         };
+        /** @description W1: exactly one admitted RS-02 lane pair; the source adapter and profile are never mixed. */
         Provenance: {
-            /** @constant */
-            source_adapter_id: "rs02.quantbt-advanced-wfo.v1";
-            /** @constant */
-            profile_id: "rs02.delta-wfo-global.v1";
+            /** @enum {unknown} */
+            source_adapter_id: "rs02.quantbt-advanced-wfo.v1" | "rs02.quantbt-signal-notional-wfo.v1";
+            /** @enum {unknown} */
+            profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1";
             /** @constant */
             engine_version: "1.1.1";
             source_manifest_digest: components["schemas"]["Digest"];
@@ -139,7 +140,17 @@ export interface components {
             effective_spec_digest: components["schemas"]["Digest"];
             dataset_binding_digest: components["schemas"]["Digest"];
             retained_at_utc_ms: components["schemas"]["UtcMs"];
-        };
+        } & ({
+            /** @constant */
+            source_adapter_id?: "rs02.quantbt-advanced-wfo.v1";
+            /** @constant */
+            profile_id?: "rs02.delta-wfo-global.v1";
+        } | {
+            /** @constant */
+            source_adapter_id?: "rs02.quantbt-signal-notional-wfo.v1";
+            /** @constant */
+            profile_id?: "rs02.delta-signal-notional-wfo.v1";
+        });
         Common: {
             /** @constant */
             read_authority: "PORTAL_RETAINED_CURRENT_SOURCE";
@@ -388,8 +399,11 @@ export interface components {
                 /** @constant */
                 run_profile: "P04_FIXED_QUALIFICATION";
                 run_adapter_contract_digest: components["schemas"]["Digest"];
-                /** @constant */
-                retainable_profile_id: "rs02.delta-wfo-global.v1";
+                /**
+                 * @description The P04 fixed qualification always emits rs02.delta-wfo-global.v1 (byte-stable).
+                 * @enum {unknown}
+                 */
+                retainable_profile_id: "rs02.delta-wfo-global.v1" | "rs02.delta-signal-notional-wfo.v1";
                 reason_code: string;
             };
         };

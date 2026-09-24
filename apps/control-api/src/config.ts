@@ -127,6 +127,12 @@ const EnvSchema = z.object({
   // bounded importer, generated client and Screen 04--08 acceptance land as
   // one reviewed dev slice.
   FEATURE_RESEARCH_CURRENT_SOURCE: z.enum(["true", "false"]).default("false"),
+  // W1 admits the one locked Delta signal-notional walk-forward execution
+  // profile (P10) and its private RS-02 ingest. It only widens P10 admission
+  // to that exact profile; the P04 fixed qualification wire is unchanged.
+  // Requires the producer, progress, retained-artifact and current-source
+  // lanes, because a WFO run is complete only once its artifact is sealed.
+  FEATURE_RESEARCH_WFO_PROFILE: z.enum(["true", "false"]).default("false"),
   // P18 is a persisted Report/Export projection.  It is independently dark
   // until the source readers, the additive migration and the generated
   // consumer contract are accepted together.  Enabling it never starts
@@ -465,6 +471,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.FEATURE_RESEARCH_RETAINED_ARTIFACTS === "true" && config.FEATURE_RESEARCH_PROGRESS !== "true") {
     throw new Error("FEATURE_RESEARCH_RETAINED_ARTIFACTS=true requires FEATURE_RESEARCH_PROGRESS=true");
+  }
+  if (config.FEATURE_RESEARCH_WFO_PROFILE === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_RUN_PRODUCER", config.FEATURE_RESEARCH_RUN_PRODUCER],
+      ["FEATURE_RESEARCH_PROGRESS", config.FEATURE_RESEARCH_PROGRESS],
+      ["FEATURE_RESEARCH_RETAINED_ARTIFACTS", config.FEATURE_RESEARCH_RETAINED_ARTIFACTS],
+      ["FEATURE_RESEARCH_CURRENT_SOURCE", config.FEATURE_RESEARCH_CURRENT_SOURCE],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_WFO_PROFILE=true requires: ${missing.join(", ")}`);
+    }
   }
   if (config.FEATURE_RESEARCH_REPLAY === "true" && config.FEATURE_RESEARCH_EVIDENCE !== "true") {
     throw new Error("FEATURE_RESEARCH_REPLAY=true requires FEATURE_RESEARCH_EVIDENCE=true");

@@ -28,6 +28,8 @@ function build(options: {
   status: string;
   sourceKind?: "RESEARCH_DURABLE" | "LEGACY_1_0_8_METADATA";
   adapterContractDigest?: string | null;
+  /** W1: a P10-admitted run always carries its immutable execution profile. */
+  executionProfileId?: string | null;
 }) {
   const repository = {
     sealForRead: vi.fn().mockResolvedValue(null),
@@ -35,6 +37,9 @@ function build(options: {
       sourceKind: options.sourceKind ?? "RESEARCH_DURABLE",
       effectiveStatus: options.status,
       adapterContractDigest: options.adapterContractDigest ?? null,
+      executionProfileId: options.executionProfileId !== undefined
+        ? options.executionProfileId
+        : options.adapterContractDigest ? "p04.fixed-qualification.v1" : null,
     }),
     rows: vi.fn(),
     sampleRows: vi.fn(),

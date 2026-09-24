@@ -2107,6 +2107,14 @@ export interface components {
              * @constant
              */
             execution_adapter_id: "p04.delta-rsi.v1";
+            /** Execution Profile Digest */
+            execution_profile_digest?: string | null;
+            /**
+             * Execution Profile Id
+             * @default p04.fixed-qualification.v1
+             * @enum {string}
+             */
+            execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
             /**
              * Intent Kind
              * @constant
@@ -2115,9 +2123,9 @@ export interface components {
             /** Manifest Digest */
             manifest_digest: string;
             /** P04 Parameters */
-            p04_parameters: {
+            p04_parameters?: {
                 [key: string]: number;
-            };
+            } | null;
             /** Preflight Token */
             preflight_token: string;
             /** Requested Spec */
@@ -2151,9 +2159,9 @@ export interface components {
             lease_epoch: number;
             /**
              * Protocol
-             * @constant
+             * @enum {string}
              */
-            protocol: "three_window_decay";
+            protocol: "three_window_decay" | "advanced";
             research: components["schemas"]["ResearchRunProducerEnvelope"];
             /**
              * Research Contract Version

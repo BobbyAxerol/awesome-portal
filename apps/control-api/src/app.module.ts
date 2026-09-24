@@ -145,6 +145,7 @@ import { ResearchReplayService } from "./research/replay.service";
 import { ResearchCurrentSourceController } from "./research/current-source.controller";
 import { ResearchCurrentSourceRepository } from "./research/current-source.repository";
 import { ResearchCurrentSourceService } from "./research/current-source.service";
+import { ResearchCurrentSourceIngestService } from "./research/current-source-ingest.service";
 import { ResearchReportController } from "./research/report.controller";
 import { ResearchReportRepository } from "./research/report.repository";
 import { ResearchReportService } from "./research/report.service";
@@ -294,6 +295,7 @@ export class AppModule {
         // separately accepted dev slice supplies sealed current-engine rows.
         ResearchCurrentSourceRepository,
         ResearchCurrentSourceService,
+        ResearchCurrentSourceIngestService,
         ResearchReportRepository,
         ResearchReportService,
         ResearchLineageRepository,

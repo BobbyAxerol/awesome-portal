@@ -11,6 +11,12 @@ services:
       FEATURE_RESEARCH_RUN_PRODUCER: ${CONTROL_API_FEATURE_RESEARCH_RUN_PRODUCER:-false}
       FEATURE_RESEARCH_PROGRESS: ${CONTROL_API_FEATURE_RESEARCH_PROGRESS:-false}
       FEATURE_RESEARCH_RETAINED_ARTIFACTS: ${CONTROL_API_FEATURE_RESEARCH_RETAINED_ARTIFACTS:-false}
+      # W1 admits only the locked Delta signal-notional WFO execution profile
+      # and its private RS-02 ingest. It requires RUN_PRODUCER, PROGRESS,
+      # RETAINED_ARTIFACTS and CURRENT_SOURCE; P04 runs are unchanged.
+      FEATURE_RESEARCH_WFO_PROFILE: ${CONTROL_API_FEATURE_RESEARCH_WFO_PROFILE:-false}
+      # RS-02 retained current-source reads/ingest; WFO_PROFILE requires it.
+      FEATURE_RESEARCH_CURRENT_SOURCE: ${CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE:-false}
       # P13 is a read-only same-origin Hub over already immutable terminal
       # receipts. It neither starts a worker nor changes P10/P11 flags.
       FEATURE_RESEARCH_EVIDENCE: ${CONTROL_API_FEATURE_RESEARCH_EVIDENCE:-false}
@@ -54,6 +60,7 @@ services:
       PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: ${PORTAL_FEATURE_RESEARCH_RUN_PRODUCER:-false}
       PORTAL_FEATURE_RESEARCH_PROGRESS: ${PORTAL_FEATURE_RESEARCH_PROGRESS:-false}
       PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS: ${PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS:-false}
+      PORTAL_FEATURE_RESEARCH_WFO_PROFILE: ${PORTAL_FEATURE_RESEARCH_WFO_PROFILE:-false}
       CONTROL_API_INTERNAL_URL: ${CONTROL_API_INTERNAL_URL:-http://control-api:4000}
       # Production base compose requires this value. The local fallback only
       # preserves the existing disposable-development default so `config -q`

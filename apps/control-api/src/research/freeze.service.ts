@@ -11,6 +11,7 @@ import {
   P04_DELTA_FIXED_PARAMETERS,
 } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
+import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import {
   ResearchFreezeResponseSchema,
@@ -43,6 +44,7 @@ const NO_DIAGNOSTIC_GRID = "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF
 const NO_DIAGNOSTIC_ADMISSION = "P04_FIXED_PROFILE_DOES_NOT_ACCEPT_DIAGNOSTIC_PARAMETER_OVERRIDES";
 const NO_SIBLING_DRAFT = "P04_FIXED_PROFILE_DOES_NOT_ACCEPT_SIBLING_PARAMETER_DRAFTS";
 const NO_ARTIFACT_BYTES = "P04_SOURCE_ARTIFACT_BYTES_NOT_PUBLISHED_TO_PORTAL";
+const WFO_PROFILE_NOT_P04_FREEZE = "P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE";
 
 function availability(state: AvailabilityState, reasonCode: string | null): Availability {
   return { state, reason_code: reasonCode };
@@ -186,6 +188,12 @@ export class ResearchFreezeService {
   }
 
   private mapDetail(row: SplitHubRow, requestedFold: number | null): unknown {
+    if (row.kind === "DURABLE" && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID) {
+      // W1: a Delta WFO run shares the P04 executor digest but has no P04
+      // fixed-parameter bundle to verify; its freeze truth is the retained
+      // RS-02 current-source lane. Answer the existing typed absence.
+      return this.absentDetail(row, availability("NOT_APPLICABLE", WFO_PROFILE_NOT_P04_FREEZE), requestedFold);
+    }
     const fallback = rowAvailability(row);
     const projection = row.projection ? parseProjection(row.projection) : null;
     if (row.projection && !projection) {

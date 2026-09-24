@@ -25,6 +25,7 @@ interface IngressRow {
   lease_epoch: string | number;
   dispatch_state: "PENDING" | "DISPATCHED";
   job_state: string;
+  execution_profile_id: string;
 }
 
 interface ReadRunRow {
@@ -96,6 +97,8 @@ export interface ProgressIngressScope {
   jobId: string;
   workerAttemptId: string;
   leaseEpoch: number;
+  /** W1 immutable run execution profile; absent is read as the P04 fixed qualification. */
+  executionProfileId?: string;
 }
 
 /**
@@ -165,7 +168,7 @@ export class ResearchProgressRepository {
       const result = await client.query<IngressRow>(
         `SELECT producer.workspace_id, producer.actor_user_id, producer.job_id,
                 producer.worker_attempt_id, producer.lease_epoch, producer.dispatch_state,
-                job.state AS job_state
+                job.state AS job_state, producer.execution_profile_id
            FROM research.run_producers producer
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
@@ -188,6 +191,7 @@ export class ResearchProgressRepository {
         jobId: row.job_id,
         workerAttemptId: row.worker_attempt_id,
         leaseEpoch: asSafeNumber(row.lease_epoch, "lease epoch"),
+        executionProfileId: row.execution_profile_id,
       };
     });
   }

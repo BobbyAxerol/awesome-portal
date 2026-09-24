@@ -45,7 +45,10 @@ const ConsoleObservationSchema = z.object({
 }).strict();
 const UsageSchema = z.object({
   peak_rss_bytes: z.number().int().nonnegative().max(4 * 1024 * 1024 * 1024),
-  cpu_seconds: z.number().int().nonnegative().max(45),
+  // Wire ceiling is the largest installed child limit (W1 Delta WFO: 120 s).
+  // The per-profile cap is enforced after lease resolution: a P04 fixed
+  // qualification attempt is still refused above its 45 s child limit.
+  cpu_seconds: z.number().int().nonnegative().max(120),
   scratch_bytes: z.number().int().nonnegative().max(4 * 1024 * 1024 * 1024),
   fd_peak: z.number().int().nonnegative().max(65_536),
 }).strict();

@@ -34,6 +34,8 @@ _FOLD_SEGMENT_KINDS = ("search", "oos", "freeze_tick")
 _FOLD_SEGMENT_STATES = {"RUNNING", "DONE", "FAILED"}
 _METHODOLOGY_CERTIFICATE_GRADES = {"A", "B", "C", "D"}
 _MAX_EVENT_BYTES = 2_048
+_P04_CPU_SECONDS = 45
+_MAX_PROFILE_CPU_SECONDS = 120
 _MAX_EVIDENCE_BYTES = 28 * 1024
 # P14's chronology receipt contains only named time-role facts.  It is much
 # smaller than a P13 chart/evidence passport and may never become a market
@@ -342,7 +344,9 @@ def _valid_usage(value: object) -> None:
         raise ResearchProgressError("P11 terminal usage is invalid")
     maxima = {
         "peak_rss_bytes": 4 * 1024 * 1024 * 1024,
-        "cpu_seconds": 45,
+        # Largest admitted child CPU cap (W1 Delta WFO profile). Each journal
+        # additionally enforces its own profile cap (P04: 45) in ``emit``.
+        "cpu_seconds": _MAX_PROFILE_CPU_SECONDS,
         "scratch_bytes": 4 * 1024 * 1024 * 1024,
         "fd_peak": 65_536,
     }
@@ -369,6 +373,7 @@ class ResearchProgressJournal:
         attempt_id: str,
         lease_epoch: int,
         planned_trials: int = 1,
+        cpu_cap_seconds: int = _P04_CPU_SECONDS,
     ) -> None:
         self.run_id = _identifier(run_id, "run id")
         self.attempt_id = _identifier(attempt_id, "attempt id")
@@ -376,8 +381,14 @@ class ResearchProgressJournal:
             raise ResearchProgressError("P11 lease epoch is invalid")
         if not isinstance(planned_trials, int) or isinstance(planned_trials, bool) or not 1 <= planned_trials <= 2_147_483_647:
             raise ResearchProgressError("P11 planned trial count is invalid")
+        if (
+            not isinstance(cpu_cap_seconds, int) or isinstance(cpu_cap_seconds, bool)
+            or not 1 <= cpu_cap_seconds <= _MAX_PROFILE_CPU_SECONDS
+        ):
+            raise ResearchProgressError("P11 CPU cap is invalid")
         self.lease_epoch = lease_epoch
         self.planned_trials = planned_trials
+        self.cpu_cap_seconds = cpu_cap_seconds
         self.root = (root.resolve() / self.run_id / "progress" / self.attempt_id).resolve()
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(self.root, 0o700)
@@ -547,6 +558,8 @@ class ResearchProgressJournal:
             raise ResearchProgressError("P11 event type is unsupported")
         safe_payload = _bounded_json(payload or {}, "event payload")
         _validate_payload(event_type, safe_payload)
+        if event_type in {"run_completed", "run_failed"} and safe_payload["usage"]["cpu_seconds"] > self.cpu_cap_seconds:
+            raise ResearchProgressError("P11 terminal usage is invalid")
         with self._locked():
             snapshot = self._read_snapshot()
             if snapshot["status"] in _TERMINAL:

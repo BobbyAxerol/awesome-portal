@@ -15,6 +15,12 @@ import { CONTROL_API_POOL } from "../tokens";
 import { acquireResearchPoolClient, BoundedResearchReadAdmission } from "./bounded-read";
 import { RESEARCH_DB_BUDGET, RESEARCH_DB_RUNTIME_ROLE, type ResearchScope } from "./contracts";
 import { ResearchCurrentSourceError } from "./current-source.error";
+import {
+  RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID,
+  RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
+  RS02_SIGNAL_NOTIONAL_PROFILE_ID,
+  RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID,
+} from "./delta-wfo.profile";
 
 export type CurrentSourceTableKind = "OBSERVATION" | "FOLD" | "TRIAL" | "CANDIDATE" | "SELECTION";
 
@@ -37,11 +43,19 @@ export interface CurrentSourceAppendBatch {
   rows: readonly CurrentSourceRowInput[];
 }
 
-export interface CurrentSourceSealWrite {
+/** RS-02 admits exactly two (source adapter, profile) pairs; never a mix. */
+export type CurrentSourceLanePair =
+  | { sourceAdapterId: "rs02.quantbt-advanced-wfo.v1"; profileId: "rs02.delta-wfo-global.v1" }
+  | { sourceAdapterId: "rs02.quantbt-signal-notional-wfo.v1"; profileId: "rs02.delta-signal-notional-wfo.v1" };
+
+export function isCurrentSourceLanePair(sourceAdapterId: unknown, profileId: unknown): boolean {
+  return (sourceAdapterId === RS02_ADVANCED_WFO_SOURCE_ADAPTER_ID && profileId === RS02_DELTA_WFO_GLOBAL_PROFILE_ID)
+    || (sourceAdapterId === RS02_SIGNAL_NOTIONAL_SOURCE_ADAPTER_ID && profileId === RS02_SIGNAL_NOTIONAL_PROFILE_ID);
+}
+
+export type CurrentSourceSealWrite = CurrentSourceLanePair & {
   runId: string;
   artifactRevision: number;
-  sourceAdapterId: "rs02.quantbt-advanced-wfo.v1";
-  profileId: "rs02.delta-wfo-global.v1";
   manifestDigest: string;
   sourceTransformDigest: string;
   requestedSpecDigest: string;
@@ -51,15 +65,18 @@ export interface CurrentSourceSealWrite {
   totalRows: number;
   /** Compact source-derived models generated at seal time, never in a GET. */
   summary: Record<string, unknown>;
-}
+  /**
+   * Optional private-ingest cross-check: the worker's digest of the batch
+   * receipts it sent. The stored digest is always recomputed locally.
+   */
+  expectedRetainedImportDigest?: string;
+};
 
 type JsonColumn = Record<string, unknown> | string | null;
 
-export interface CurrentSourceSealRow {
+export type CurrentSourceSealRow = CurrentSourceLanePair & {
   runId: string;
   artifactRevision: number;
-  sourceAdapterId: "rs02.quantbt-advanced-wfo.v1";
-  profileId: "rs02.delta-wfo-global.v1";
   manifestDigest: string;
   sourceTransformDigest: string;
   /** Digest of the immutable, P05-verified local batch receipt set. */
@@ -71,7 +88,7 @@ export interface CurrentSourceSealRow {
   totalRows: number;
   summary: Record<string, unknown>;
   retainedAtUtcMs: number;
-}
+};
 
 export interface CurrentSourceStoredRow {
   sourceOrdinal: number;
@@ -88,7 +105,8 @@ export interface CurrentSourcePage {
 }
 
 /** Run state for the no-seal lane; exported so the PostgreSQL lane runs the exact statement. */
-export const CURRENT_SOURCE_RUN_STATE_SQL = `SELECT library.source_kind, library.effective_status, producer.adapter_contract_digest
+export const CURRENT_SOURCE_RUN_STATE_SQL = `SELECT library.source_kind, library.effective_status, producer.adapter_contract_digest,
+       producer.execution_profile_id
   FROM research.run_library_rows_v1 library
   LEFT JOIN research.run_producers producer
     ON producer.workspace_id = library.workspace_id AND producer.run_id = library.run_id
@@ -100,13 +118,15 @@ export interface CurrentSourceRunState {
   effectiveStatus: string;
   /** The run's immutable P10 adapter binding; null for a run P10 never admitted. */
   adapterContractDigest: string | null;
+  /** W1 immutable P10 execution profile; null for a run P10 never admitted. */
+  executionProfileId: string | null;
 }
 
 interface SealQueryRow {
   run_id: string;
   artifact_revision: string | number;
-  source_adapter_id: "rs02.quantbt-advanced-wfo.v1";
-  profile_id: "rs02.delta-wfo-global.v1";
+  source_adapter_id: string;
+  profile_id: string;
   manifest_digest: string;
   source_transform_digest: string;
   retained_import_digest: string;
@@ -144,6 +164,38 @@ interface RunStateQueryRow {
   source_kind: "RESEARCH_DURABLE" | "LEGACY_1_0_8_METADATA";
   effective_status: string;
   adapter_contract_digest: string | null;
+  execution_profile_id: string | null;
+}
+
+interface IngestAuthorityRow {
+  execution_profile_id: string;
+  execution_profile_digest: string | null;
+  requested_spec_digest: string;
+  effective_spec_digest: string;
+  dataset_binding_digest: string;
+  artifact_run_id: string | null;
+  artifact_state: string | null;
+  artifact_manifest_digest: string | null;
+  artifact_revision: string | number | null;
+  artifact_worker_attempt_id: string | null;
+  artifact_lease_epoch: string | number | null;
+}
+
+/** W1 private-ingest facts; every seal digest comes from here, never the body. */
+export interface CurrentSourceIngestAuthority {
+  executionProfileId: string;
+  executionProfileDigest: string | null;
+  requestedSpecDigest: string;
+  effectiveSpecDigest: string;
+  datasetBindingDigest: string;
+  artifact: {
+    runId: string;
+    state: string;
+    manifestDigest: string | null;
+    artifactRevision: number;
+    workerAttemptId: string | null;
+    leaseEpoch: number | null;
+  } | null;
 }
 
 const MAXIMUM_CONCURRENT_CURRENT_SOURCE_READS = 2;
@@ -228,9 +280,9 @@ export class ResearchCurrentSourceRepository {
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
   /** Private worker-only batch append; no HTTP controller mounts this method. */
-  async append(scope: ResearchScope, input: CurrentSourceAppendBatch): Promise<void> {
+  async append(scope: ResearchScope, input: CurrentSourceAppendBatch): Promise<{ replayed: boolean }> {
     this.assertBatch(input);
-    await this.withTransaction(scope, false, async (client) => {
+    return this.withTransaction(scope, false, async (client) => {
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
         // Import and seal share one custody lock. A seal can therefore never
         // observe a partial append, and two private import attempts cannot
@@ -260,7 +312,7 @@ export class ResearchCurrentSourceRepository {
           || asSafeNonNegative(existing.rows[0]!.row_count, "batch row count") !== input.rows.length) {
           throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Current-source batch conflicts with immutable retained rows.", 409);
         }
-        return;
+        return { replayed: true };
       }
       await client.query(
         `INSERT INTO research.current_source_import_batches_v1
@@ -286,13 +338,17 @@ export class ResearchCurrentSourceRepository {
              AS imported(source_ordinal bigint, source_id text, occurred_at_utc_ms bigint, payload jsonb)`,
         [scope.workspaceId, input.runId, input.artifactRevision, input.tableKind, canonicalJson(rows)],
       );
+      return { replayed: false };
     });
   }
 
   /** Final immutable publish after every expected local row batch exists. */
-  async seal(scope: ResearchScope, input: CurrentSourceSealWrite): Promise<void> {
+  async seal(
+    scope: ResearchScope,
+    input: CurrentSourceSealWrite,
+  ): Promise<{ replayed: boolean; retainedImportDigest: string }> {
     this.assertSeal(input);
-    await this.withTransaction(scope, false, async (client) => {
+    return this.withTransaction(scope, false, async (client) => {
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
         `${scope.workspaceId}:${input.runId}:${input.artifactRevision}:rs02-custody`,
       ]);
@@ -314,7 +370,10 @@ export class ResearchCurrentSourceRepository {
           || canonicalJson(row.summary) !== canonicalJson(input.summary)) {
           throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Current-source seal conflicts with immutable retained facts.", 409);
         }
-        return;
+        if (input.expectedRetainedImportDigest !== undefined && row.retainedImportDigest !== input.expectedRetainedImportDigest) {
+          throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Current-source seal conflicts with immutable retained facts.", 409);
+        }
+        return { replayed: true, retainedImportDigest: row.retainedImportDigest };
       }
       const counts = await client.query<TableCountRow>(
         `SELECT table_kind, count(*) AS count, min(source_ordinal) AS minimum_ordinal, max(source_ordinal) AS maximum_ordinal
@@ -370,6 +429,9 @@ export class ResearchCurrentSourceRepository {
         throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "Current-source batch receipt does not cover the sealed rows.", 409);
       }
       const retainedImportDigest = currentSourceImportDigest(batches.rows);
+      if (input.expectedRetainedImportDigest !== undefined && retainedImportDigest !== input.expectedRetainedImportDigest) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source retained import digest does not match the accepted batch receipts.", 400);
+      }
       await client.query(
         `INSERT INTO research.current_source_seals_v1
            (workspace_id, run_id, artifact_revision, source_adapter_id, profile_id, manifest_digest,
@@ -381,6 +443,50 @@ export class ResearchCurrentSourceRepository {
           input.effectiveSpecDigest, input.datasetBindingDigest, retainedImportDigest,
           canonicalJson(input.tableRows), input.totalRows, canonicalJson(input.summary)],
       );
+      return { replayed: false, retainedImportDigest };
+    });
+  }
+
+  /**
+   * W1 private ingest authority: the run's immutable producer facts and the
+   * P05 artifact row named by the worker. Read inside this lane's own
+   * transaction as the runtime role; no browser membership is implied.
+   */
+  async ingestAuthority(scope: ResearchScope, runId: string, artifactId: string): Promise<CurrentSourceIngestAuthority | null> {
+    return this.withTransaction(scope, true, async (client) => {
+      const result = await client.query<IngestAuthorityRow>(
+        `SELECT producer.execution_profile_id, producer.execution_profile_digest,
+                producer.requested_spec_digest, producer.effective_spec_digest, producer.dataset_binding_digest,
+                artifact.run_id AS artifact_run_id, artifact.state AS artifact_state,
+                artifact.manifest_digest AS artifact_manifest_digest,
+                artifact.artifact_revision, artifact.worker_attempt_id AS artifact_worker_attempt_id,
+                artifact.lease_epoch AS artifact_lease_epoch
+           FROM research.run_producers producer
+           LEFT JOIN research.artifacts artifact
+             ON artifact.workspace_id = producer.workspace_id AND artifact.artifact_id = $3
+          WHERE producer.workspace_id = $1 AND producer.run_id = $2
+          LIMIT 1`,
+        [scope.workspaceId, runId, artifactId],
+      );
+      const row = result.rows[0];
+      if (!row) return null;
+      return {
+        executionProfileId: row.execution_profile_id,
+        executionProfileDigest: row.execution_profile_digest ?? null,
+        requestedSpecDigest: row.requested_spec_digest,
+        effectiveSpecDigest: row.effective_spec_digest,
+        datasetBindingDigest: row.dataset_binding_digest,
+        artifact: row.artifact_state === null
+          ? null
+          : {
+            runId: row.artifact_run_id!,
+            state: row.artifact_state,
+            manifestDigest: row.artifact_manifest_digest,
+            artifactRevision: asSafeNonNegative(row.artifact_revision, "artifact revision"),
+            workerAttemptId: row.artifact_worker_attempt_id,
+            leaseEpoch: row.artifact_lease_epoch === null ? null : asSafeNonNegative(row.artifact_lease_epoch, "artifact lease epoch"),
+          },
+      };
     });
   }
 
@@ -419,6 +525,7 @@ export class ResearchCurrentSourceRepository {
         sourceKind: row.source_kind,
         effectiveStatus: row.effective_status,
         adapterContractDigest: row.adapter_contract_digest ?? null,
+        executionProfileId: row.execution_profile_id ?? null,
       };
     }, signal);
   }
@@ -584,7 +691,7 @@ export class ResearchCurrentSourceRepository {
       || !/^[0-9a-f]{64}$/.test(input.manifestDigest) || !/^[0-9a-f]{64}$/.test(input.sourceTransformDigest)
       || !/^[0-9a-f]{64}$/.test(input.requestedSpecDigest) || !/^[0-9a-f]{64}$/.test(input.effectiveSpecDigest)
       || !/^[0-9a-f]{64}$/.test(input.datasetBindingDigest)
-      || input.sourceAdapterId !== "rs02.quantbt-advanced-wfo.v1" || input.profileId !== "rs02.delta-wfo-global.v1") {
+      || !isCurrentSourceLanePair(input.sourceAdapterId, input.profileId)) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal is invalid.", 400);
     }
     let total = 0;
@@ -606,11 +713,13 @@ export class ResearchCurrentSourceRepository {
     const mapped = Object.fromEntries(
       TABLE_KINDS.map((kind) => [kind, asSafeNonNegative(tableRows[kind] as string | number | null, `${kind} count`)]),
     ) as Record<CurrentSourceTableKind, number>;
+    if (!isCurrentSourceLanePair(row.source_adapter_id, row.profile_id)) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Current-source lane pair is incompatible.", 503);
+    }
     return {
       runId: row.run_id,
       artifactRevision: asSafeNonNegative(row.artifact_revision, "artifact revision"),
-      sourceAdapterId: row.source_adapter_id,
-      profileId: row.profile_id,
+      ...({ sourceAdapterId: row.source_adapter_id, profileId: row.profile_id } as CurrentSourceLanePair),
       manifestDigest: row.manifest_digest,
       sourceTransformDigest: row.source_transform_digest,
       retainedImportDigest: row.retained_import_digest,

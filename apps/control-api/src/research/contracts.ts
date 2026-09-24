@@ -362,6 +362,12 @@ export interface ResearchRunProducerInput {
   alphaVersionId: string;
   executionAdapterId: "p04.delta-rsi.v1";
   adapterContractDigest: string;
+  /**
+   * W1 run execution profile. Omitted means the P04 fixed qualification
+   * (with a NULL digest), so existing callers keep their exact identity.
+   */
+  executionProfileId?: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+  executionProfileDigest?: string | null;
   preflightToken: string;
   requestedSpecDigest: string;
   effectiveSpecDigest: string;
@@ -387,6 +393,8 @@ export interface ResearchRunProducerRecord {
   alphaVersionId: string;
   executionAdapterId: "p04.delta-rsi.v1";
   adapterContractDigest: string;
+  executionProfileId: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+  executionProfileDigest: string | null;
   requestedSpecDigest: string;
   effectiveSpecDigest: string;
   datasetBindingDigest: string;

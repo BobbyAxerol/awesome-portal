@@ -1,9 +1,11 @@
 """P06 bounded QuantBT child entry point.
 
 This module is intentionally *not* a generic plugin launcher.  P06 permits
-only the pinned P04 Delta-RSI qualification operation; P07 owns imported/user
-strategy admission.  The parent supervisor starts this module in a separate
-PID, mount, user and network namespace and hands it an allowlisted receipt.
+only two server-installed operations: the pinned P04 Delta-RSI qualification
+and (W1) the digest-pinned Delta signal-notional advanced WFO profile.  P07
+owns imported/user strategy admission.  The parent supervisor starts this
+module in a separate PID, mount, user and network namespace and hands it an
+allowlisted receipt.
 """
 
 from __future__ import annotations
@@ -50,6 +52,7 @@ _MAX_ROLLING_EVIDENCE_POINTS = 16
 _MAX_MONTHLY_EVIDENCE_POINTS = 32
 _MAX_DISTRIBUTION_BUCKETS = 12
 _MAX_EVIDENCE_RECEIPT_BYTES = 24 * 1024
+_ALLOWED_TASKS = frozenset({"P04_DELTA_SMOKE", "P10_DELTA_WFO"})
 
 
 def _finite_decimal(value: object, *, label: str) -> Decimal:
@@ -491,13 +494,171 @@ def _run_p04_delta_smoke(receipt: dict[str, Any]) -> dict[str, Any]:
     return output
 
 
-def execute_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
+def _wfo_output_root(receipt: dict[str, Any], receipt_dir: Path | None) -> Path:
+    """Accept only the supervisor-created empty ``output`` sibling directory.
+
+    It is on the real scratch filesystem (not this child's tmpfs) so the
+    parent can read it after the mount namespace is gone.  Anything else --
+    another path, a symlink, a pre-populated directory -- is refused.
+    """
+
+    if receipt_dir is None:
+        raise ValueError("P10 WFO child requires its receipt directory")
+    raw = receipt.get("output_root")
+    if not isinstance(raw, str) or not raw:
+        raise ValueError("P10 WFO child receipt has no output_root")
+    expected = (receipt_dir / "output").resolve(strict=True)
+    candidate = Path(raw)
+    if candidate.is_symlink():
+        raise ValueError("P10 WFO output_root must not be a symlink")
+    resolved = candidate.resolve(strict=True)
+    if resolved != expected or not resolved.is_dir():
+        raise ValueError("P10 WFO output_root escapes the expected sibling output directory")
+    tmpdir = os.environ.get("TMPDIR")
+    if tmpdir and resolved.is_relative_to(Path(tmpdir).resolve()):
+        raise ValueError("P10 WFO output_root must not be the child tmpfs")
+    if any(resolved.iterdir()):
+        raise ValueError("P10 WFO output_root must start empty")
+    return resolved
+
+
+def _utc_ms_field(receipt: dict[str, Any], name: str) -> int:
+    value = receipt.get(name)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"P10 WFO child receipt {name} is invalid")
+    return value
+
+
+def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, Any]:
+    """Run the W1 §1.1 profile through the Portal advanced WFO runner.
+
+    Every WFO knob comes from the digest-verified profile; the receipt only
+    carries the admitted span, first OOS boundary and dataset labels.
+    """
+
+    import pandas as pd
+
+    from portal_api.adapters.market_data import DatasetDescriptor, prepare_market_data
+    from portal_api.adapters.quantbt import QuantBTGateway
+    from portal_api.domain.enums import OptimizationMode, OptimizationSchedule
+    from portal_api.domain.requests import (
+        AccountConfig,
+        AdvancedWalkForwardConfig,
+        ExecutionConfig,
+        OptimizationConfig,
+        ParameterSpaceConfig,
+        ParameterSpec,
+        PortalRunRequest,
+    )
+    from portal_api.domain.research_delta_wfo_profile import (
+        DELTA_WFO_PROFILE,
+        DELTA_WFO_PROFILE_DIGEST,
+        DELTA_WFO_PROFILE_ID,
+        delta_wfo_profile_digest,
+    )
+    from portal_api.repositories.artifacts import ArtifactRepository
+    from portal_api.services.advanced_walkforward_runner import AdvancedWalkForwardRunner
+    from strategy.specification import DELTA_RSI_SPECIFICATION
+
+    if receipt.get("execution_profile_id") != DELTA_WFO_PROFILE_ID:
+        raise ValueError("P10 WFO child receipt names an uninstalled execution profile")
+    if (
+        receipt.get("execution_profile_digest") != DELTA_WFO_PROFILE_DIGEST
+        or delta_wfo_profile_digest(DELTA_WFO_PROFILE) != DELTA_WFO_PROFILE_DIGEST
+    ):
+        raise ValueError("P10 WFO child profile digest does not match the installed profile")
+    profile = DELTA_WFO_PROFILE
+    run_id = receipt.get("run_id")
+    dataset_id = receipt.get("dataset_id")
+    symbol = receipt.get("symbol")
+    if not all(isinstance(value, str) and value for value in (run_id, dataset_id, symbol)):
+        raise ValueError("P10 WFO child receipt identity is invalid")
+    start_ms = _utc_ms_field(receipt, "data_start_utc_ms")
+    end_ms = _utc_ms_field(receipt, "data_end_exclusive_utc_ms")
+    split_ms = _utc_ms_field(receipt, "first_oos_utc_ms")
+    if not start_ms < split_ms < end_ms:
+        raise ValueError("P10 WFO child span is invalid")
+
+    market_path = _safe_path(str(receipt["market_path"]), label="market_path")
+    market = prepare_market_data(
+        pd.read_parquet(market_path),
+        DatasetDescriptor(dataset_id=dataset_id, symbol=symbol, venue="BINANCE", timeframe=profile["timeframe"]),
+    )
+    start = pd.Timestamp(start_ms, unit="ms", tz="UTC")
+    end = pd.Timestamp(end_ms, unit="ms", tz="UTC")
+    split = pd.Timestamp(split_ms, unit="ms", tz="UTC")
+    request = PortalRunRequest(
+        strategy_id="delta-rsi-polynomial-alpha",
+        dataset_id=dataset_id,
+        symbol=symbol,
+        timeframe=profile["timeframe"],
+        protocol="advanced_walk_forward",
+        parameter_space=ParameterSpaceConfig({
+            key: ParameterSpec(
+                kind="float_range" if isinstance(low, float) else "int_range",
+                low=low,
+                high=high,
+                step=step,
+            )
+            for key, (low, high, step) in DELTA_RSI_SPECIFICATION.parameter_space.items()
+        }),
+        # The same account as the installed P04 Delta qualification child.
+        account=AccountConfig(
+            initial_capital=20_000,
+            leverage=3,
+            alloc_per_trade=2_000,
+            canonical_one_way_fee_rate=0.0005,
+            funding_enabled=False,
+        ),
+        execution=ExecutionConfig(target_mode=profile["execution_route"]),
+        calibration=AdvancedWalkForwardConfig(
+            data_start=start.to_pydatetime(),
+            data_end_exclusive=end.to_pydatetime(),
+            split_mode=split.isoformat(),
+            split_frequency=profile["frequency"],
+            window_mode=profile["window_mode"],
+            optimization_mode=OptimizationMode(profile["optimization_mode"]),
+            optimization_schedule=OptimizationSchedule(profile["optimization_schedule"]),
+            fold_boundary_position_policy="carry",
+            optuna_trials=profile["optuna_trials"],
+            optuna_early_stopping=None,
+            random_seed=profile["random_seed"],
+            optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5),
+        ),
+    )
+    summary = AdvancedWalkForwardRunner(
+        gateway=QuantBTGateway(),
+        artifacts=ArtifactRepository(output_root),
+    ).run(request, market, run_id, target_mode=profile["execution_route"])
+    n_folds = int(summary.get("n_folds") or 0)
+    bounds = profile["fold_bounds"]
+    if not bounds["min"] <= n_folds <= bounds["max"]:
+        raise ValueError(f"P10 WFO produced {n_folds} folds outside the admitted {bounds['min']}..{bounds['max']}")
+    trials_path = output_root / run_id / "wfo" / "trials.parquet"
+    trial_rows = len(pd.read_parquet(trials_path)) if trials_path.is_file() else 0
+    if trial_rows != profile["optuna_trials"]:
+        raise ValueError("P10 WFO did not publish exactly the admitted trial count")
+    return {
+        "task": "P10_DELTA_WFO",
+        "engine_version": QuantBTGateway().version(),
+        "bars": int(len(market.frame)),
+        "n_folds": n_folds,
+        "trial_rows": trial_rows,
+        "execution_profile_digest": DELTA_WFO_PROFILE_DIGEST,
+    }
+
+
+def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None) -> dict[str, Any]:
     _assert_clean_environment()
     if receipt.get("schema_version") != "research.p06.child-receipt.v1":
         raise ValueError("unsupported child receipt schema")
-    if receipt.get("task") != "P04_DELTA_SMOKE":
+    task = receipt.get("task")
+    if task not in _ALLOWED_TASKS:
         raise ValueError("P06 child task is not allowlisted")
-    result = _run_p04_delta_smoke(receipt)
+    if task == "P10_DELTA_WFO":
+        result = _run_p10_delta_wfo(receipt, _wfo_output_root(receipt, receipt_dir))
+    else:
+        result = _run_p04_delta_smoke(receipt)
     result.update(
         {
             "child_pid": os.getpid(),
@@ -519,7 +680,7 @@ def main() -> int:
     if result_path.parent != receipt_path.parent or result_path.name != "result.json":
         raise ValueError("child result path must be the sibling fixed result.json")
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    result = execute_receipt(receipt)
+    result = execute_receipt(receipt, receipt_dir=receipt_path.parent)
     temporary = result_path.with_suffix(".tmp")
     temporary.write_text(json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
     os.replace(temporary, result_path)

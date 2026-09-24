@@ -275,6 +275,7 @@ export interface components {
         };
         ProgressUsage: {
             peak_rss_bytes: number;
+            /** @description Profile-bounded: a P04 fixed-qualification attempt is refused above 45 at ingest; a Delta WFO attempt above 120. */
             cpu_seconds: number;
             scratch_bytes: number;
             fd_peak: number;

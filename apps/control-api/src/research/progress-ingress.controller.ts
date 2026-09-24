@@ -6,7 +6,14 @@ import { FastifyRequest } from "fastify";
 import { PrincipalService } from "../auth/principal";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
-import { ResearchArtifactReserveIngressSchema, ResearchArtifactSealIngressSchema } from "./artifact-ingress.contract";
+import {
+  RESEARCH_CURRENT_SOURCE_INGEST_MAX_BODY_BYTES,
+  ResearchArtifactReserveIngressSchema,
+  ResearchArtifactSealIngressSchema,
+  ResearchCurrentSourceBatchIngressSchema,
+  ResearchCurrentSourceSealIngressSchema,
+} from "./artifact-ingress.contract";
+import { ResearchCurrentSourceIngestService } from "./current-source-ingest.service";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchProgressRepository } from "./progress.repository";
 import { ResearchProgressIngressSchema } from "./progress.contract";
@@ -20,6 +27,7 @@ export class ResearchProgressIngressController {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ResearchProgressRepository) private readonly progress: ResearchProgressRepository,
     @Inject(ResearchMetadataRepository) private readonly metadata: ResearchMetadataRepository,
+    @Inject(ResearchCurrentSourceIngestService) private readonly currentSource: ResearchCurrentSourceIngestService,
   ) {}
 
   @Post("events")
@@ -99,6 +107,50 @@ export class ResearchProgressIngressController {
       },
     );
     return { schema_version: "research.artifact-seal.v1", sealed: true, replayed: result.replayed };
+  }
+
+  /** W1 §1.2: one bounded retained-row batch for a sealed P05 WFO artifact. */
+  @Post("artifacts/current-source/batches")
+  @HttpCode(200)
+  async appendCurrentSourceBatch(@Req() request: FastifyRequest, @Body() body: unknown) {
+    this.assertWorkerPrincipal(request);
+    this.assertCurrentSourceIngestEnabled();
+    this.assertBoundedBody(body);
+    const parsed = ResearchCurrentSourceBatchIngressSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research current-source batch is invalid.", 400);
+    }
+    const lease = await this.progress.resolveIngress(parsed.data);
+    return this.currentSource.appendBatch(lease, parsed.data);
+  }
+
+  /** W1 §1.2: final immutable current-source seal; digests come from run_producers. */
+  @Post("artifacts/current-source/seal")
+  @HttpCode(200)
+  async sealCurrentSource(@Req() request: FastifyRequest, @Body() body: unknown) {
+    this.assertWorkerPrincipal(request);
+    this.assertCurrentSourceIngestEnabled();
+    this.assertBoundedBody(body);
+    const parsed = ResearchCurrentSourceSealIngressSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research current-source seal is invalid.", 400);
+    }
+    const lease = await this.progress.resolveIngress(parsed.data);
+    return this.currentSource.seal(lease, parsed.data);
+  }
+
+  private assertCurrentSourceIngestEnabled(): void {
+    this.assertArtifactRetentionEnabled();
+    if (this.config.FEATURE_RESEARCH_CURRENT_SOURCE !== "true") {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE", "Research current-source retention is not enabled.", 503);
+    }
+  }
+
+  private assertBoundedBody(body: unknown): void {
+    const encoded = JSON.stringify(body ?? null);
+    if (Buffer.byteLength(encoded, "utf8") > RESEARCH_CURRENT_SOURCE_INGEST_MAX_BODY_BYTES) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research current-source ingest body exceeds 1,000,000 bytes.", 400);
+    }
   }
 
   private assertArtifactRetentionEnabled(): void {

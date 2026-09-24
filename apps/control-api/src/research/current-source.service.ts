@@ -34,6 +34,14 @@ import {
   type CurrentSourceStoredRow,
   type CurrentSourceTableKind,
 } from "./current-source.repository";
+import {
+  CurrentSourceCandidatePayloadSchema as CandidatePayloadSchema,
+  CurrentSourceFoldPayloadSchema as FoldPayloadSchema,
+  CurrentSourceObservationPayloadSchema as ObservationPayloadSchema,
+  CurrentSourceSummarySchema as SummarySchema,
+  CurrentSourceTrialPayloadSchema as TrialPayloadSchema,
+} from "./current-source.payload";
+import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } from "./delta-wfo.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
 
@@ -47,98 +55,6 @@ type Availability = {
   state: "AVAILABLE" | "PENDING_RETENTION" | "NOT_RETAINED_LEGACY" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
   reason_code: string | null;
 };
-
-const DecimalSchema = z.string().regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(96);
-const ParameterMapSchema = z.record(
-  z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,63}$/),
-  DecimalSchema,
-).superRefine((value, context) => {
-  if (Object.keys(value).length > 24) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "current-source parameter map exceeds 24 fields" });
-  }
-});
-const SummarySchema = z.object({
-  schema_version: z.literal("research.current-source-summary.v1"),
-  metrics: z.object({
-    initial_equity: DecimalSchema,
-    final_equity: DecimalSchema,
-    net_return_fraction: DecimalSchema,
-    max_drawdown_fraction: DecimalSchema,
-  }).strict(),
-  selection: z.object({
-    trial_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/).nullable(),
-    objective: DecimalSchema.nullable(),
-    parameters: ParameterMapSchema,
-  }).strict(),
-  data_use: z.object({
-    warmup: z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]), reason_code: z.string().nullable() }).strict(),
-    purge: z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]), reason_code: z.string().nullable() }).strict(),
-    embargo: z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]), reason_code: z.string().nullable() }).strict(),
-    strict_outer_oos_selection: z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]), reason_code: z.string().nullable() }).strict(),
-  }).strict(),
-  derived: z.object({
-    monthly_returns: z.object({
-      source_observation_count: z.number().int().nonnegative().max(2_000_000),
-      emitted_point_count: z.number().int().nonnegative().max(192),
-      total_period_count: z.number().int().nonnegative().max(2_000_000),
-      omitted_leading_period_count: z.number().int().nonnegative().max(2_000_000),
-      omitted_transport_period_count: z.number().int().nonnegative().max(2_000_000),
-      sampling: z.enum(["FULL", "TAIL_WINDOW_V1"]),
-      values: z.array(z.object({ month_start_utc_ms: z.number().int().nonnegative(), return_fraction: DecimalSchema }).strict()).max(192),
-    }).strict(),
-    rolling_returns_20: z.object({
-      source_observation_count: z.number().int().nonnegative().max(2_000_000),
-      emitted_point_count: z.number().int().nonnegative().max(192),
-      window_observations: z.literal(20),
-      sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1", "NOT_APPLICABLE"]),
-      values: z.array(z.object({ at_utc_ms: z.number().int().nonnegative(), return_fraction: DecimalSchema }).strict()).max(192),
-    }).strict(),
-    return_distribution: z.object({
-      state: z.enum(["AVAILABLE", "NOT_APPLICABLE"]),
-      reason_code: z.string().nullable(),
-      source_observation_count: z.number().int().nonnegative().max(2_000_000),
-      emitted_point_count: z.number().int().nonnegative().max(192),
-      sampling: z.enum(["FULL_RETURN_HISTOGRAM_V2", "NOT_APPLICABLE"]),
-      values: z.array(z.object({
-        lower_inclusive: DecimalSchema,
-        upper: DecimalSchema,
-        upper_inclusive: z.enum(["true", "false"]),
-        count: z.string().regex(/^[0-9]+$/),
-      }).strict()).max(192),
-    }).strict(),
-  }).strict(),
-}).strict();
-
-const ObservationPayloadSchema = z.object({
-  source_index_utc: z.string().datetime({ offset: true }),
-  at_utc_ms: z.number().int().nonnegative(),
-  equity: DecimalSchema,
-  return_fraction: DecimalSchema,
-  accepted_position: DecimalSchema,
-  drawdown_fraction: DecimalSchema,
-  signal_target: DecimalSchema.nullable(),
-}).strict();
-
-const FoldPayloadSchema = z.object({
-  fold_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
-  train_start_utc_ms: z.number().int().nonnegative().nullable(),
-  train_end_utc_ms: z.number().int().nonnegative().nullable(),
-  test_start_utc_ms: z.number().int().nonnegative().nullable(),
-  test_end_utc_ms: z.number().int().nonnegative().nullable(),
-}).strict();
-
-const TrialPayloadSchema = z.object({
-  trial_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
-  state: z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/),
-  objective: DecimalSchema.nullable(),
-  parameters: ParameterMapSchema,
-}).strict();
-
-const CandidatePayloadSchema = z.object({
-  candidate_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
-  objective: DecimalSchema.nullable(),
-  parameters: ParameterMapSchema,
-}).strict();
 
 function isSeal(value: CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse): value is CurrentSourceSealRow {
   return "artifactRevision" in value;
@@ -472,7 +388,9 @@ export class ResearchCurrentSourceService {
     if (state.sourceKind === "LEGACY_1_0_8_METADATA") {
       return refuse("NOT_RETAINED_LEGACY", "This historical run is NOT_RETAINED_LEGACY; it has no current-source bytes.");
     }
-    const notApplicable = this.notApplicable(runId, operation, state.adapterContractDigest ?? null);
+    const notApplicable = this.notApplicable(
+      runId, operation, state.adapterContractDigest ?? null, state.executionProfileId ?? null,
+    );
     if (notApplicable) return notApplicable;
     if (state.effectiveStatus === "COMPLETED") {
       return refuse("PENDING_RETENTION", "Current QuantBT output is PENDING_RETENTION; a sealed retained artifact is required.");
@@ -487,13 +405,17 @@ export class ResearchCurrentSourceService {
    * RF-05 CG-P13-09. A run admitted under the P04 fixed qualification can
    * never be sealed into the RS-02 Advanced-WFO lane, whatever its status;
    * answer that as a typed 200 instead of a retryable-looking 409. The test
-   * is the run's immutable P10 adapter-contract digest, not a name or mode.
+   * is the run's immutable P10 execution profile AND adapter-contract
+   * digest, not a name or mode: the W1 Delta WFO profile shares the P04
+   * executor digest, and such a run is pending a seal, never not-applicable.
    */
   private notApplicable(
     runId: string,
     operation: ResearchCurrentSourceOperation,
     adapterContractDigest: string | null,
+    executionProfileId: string | null,
   ): ResearchCurrentSourceNotApplicableResponse | null {
+    if (executionProfileId !== P04_FIXED_QUALIFICATION_PROFILE_ID) return null;
     if (adapterContractDigest !== P04_DELTA_ADAPTER_CONTRACT_DIGEST) return null;
     const revisionValue = `rs02_not-applicable_${sha256ResearchJson({
       schema_version: "research.current-source-not-applicable.v1",
@@ -514,7 +436,8 @@ export class ResearchCurrentSourceService {
         operation,
         run_profile: "P04_FIXED_QUALIFICATION",
         run_adapter_contract_digest: adapterContractDigest,
-        retainable_profile_id: "rs02.delta-wfo-global.v1",
+        // Byte-stable: P04 N/A keeps naming the original Advanced-WFO lane.
+        retainable_profile_id: RS02_DELTA_WFO_GLOBAL_PROFILE_ID,
         reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON,
       },
     });

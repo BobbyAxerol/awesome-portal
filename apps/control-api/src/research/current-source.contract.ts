@@ -64,9 +64,14 @@ export const ResearchCurrentSourceEvidenceSeriesQuerySchema = ResearchCurrentSou
   kind: z.enum(["EQUITY", "RETURNS", "POSITIONS", "MONTHLY_RETURNS", "ROLLING_RETURNS_20", "RETURN_DISTRIBUTION"]),
 }).strict();
 
-const ProvenanceSchema = z.object({
-  source_adapter_id: z.literal("rs02.quantbt-advanced-wfo.v1"),
-  profile_id: z.literal("rs02.delta-wfo-global.v1"),
+/**
+ * W1: a sealed artifact names exactly one of two RS-02 lane pairs. The pair
+ * is checked as a unit so a response can never mix the Advanced-WFO adapter
+ * with the signal-notional profile (or vice versa).
+ */
+const ProvenanceBaseSchema = z.object({
+  source_adapter_id: z.enum(["rs02.quantbt-advanced-wfo.v1", "rs02.quantbt-signal-notional-wfo.v1"]),
+  profile_id: z.enum(["rs02.delta-wfo-global.v1", "rs02.delta-signal-notional-wfo.v1"]),
   engine_version: z.literal("1.1.1"),
   source_manifest_digest: DigestSchema,
   source_transform_digest: DigestSchema,
@@ -76,6 +81,14 @@ const ProvenanceSchema = z.object({
   dataset_binding_digest: DigestSchema,
   retained_at_utc_ms: UtcMsSchema,
 }).strict();
+
+const ProvenanceSchema = ProvenanceBaseSchema.superRefine((value, context) => {
+  const paired = (value.source_adapter_id === "rs02.quantbt-advanced-wfo.v1" && value.profile_id === "rs02.delta-wfo-global.v1")
+    || (value.source_adapter_id === "rs02.quantbt-signal-notional-wfo.v1" && value.profile_id === "rs02.delta-signal-notional-wfo.v1");
+  if (!paired) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["profile_id"], message: "current-source source adapter and profile must be one admitted pair" });
+  }
+});
 
 const CommonSchema = z.object({
   read_authority: z.literal("PORTAL_RETAINED_CURRENT_SOURCE"),
@@ -332,7 +345,9 @@ export const ResearchCurrentSourceNotApplicableResponseSchema = z.object({
     operation: ResearchCurrentSourceOperationSchema,
     run_profile: z.literal("P04_FIXED_QUALIFICATION"),
     run_adapter_contract_digest: DigestSchema,
-    retainable_profile_id: z.literal("rs02.delta-wfo-global.v1"),
+    // Enum of both RS-02 profiles for forward compatibility; the P04 fixed
+    // qualification keeps emitting rs02.delta-wfo-global.v1 byte-for-byte.
+    retainable_profile_id: z.enum(["rs02.delta-wfo-global.v1", "rs02.delta-signal-notional-wfo.v1"]),
     reason_code: ReasonCodeSchema,
   }).strict(),
 }).strict();

@@ -11,6 +11,7 @@ import {
   P04_DELTA_FIXED_PARAMETERS,
 } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
+import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import { ResearchSearchResponseSchema, type ResearchSearchResponse } from "./search.contract";
 import { ResearchSearchError } from "./search.error";
@@ -315,7 +316,10 @@ export class ResearchSearchService {
 
     const source = projection.source;
     const expectedBundleDigest = sha256ResearchJson(P04_DELTA_FIXED_PARAMETERS);
-    const compatible = row.adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST
+    // W1: gate on the immutable execution profile too; the Delta WFO profile
+    // shares the P04 executor digest but is not the fixed qualification.
+    const compatible = (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID
+      && row.adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST
       && source.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH"
       && source.protocol.selection.parameter_bundle_digest === expectedBundleDigest;
     if (!compatible) {

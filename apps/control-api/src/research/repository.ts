@@ -44,6 +44,11 @@ import {
   type ResearchWorkerUsage,
   ResearchMetadataError,
 } from "./contracts";
+import {
+  DELTA_WFO_PROFILE_DIGEST,
+  DELTA_WFO_PROFILE_ID,
+  P04_FIXED_QUALIFICATION_PROFILE_ID,
+} from "./delta-wfo.profile";
 
 type ScopedClient = PoolClient;
 
@@ -195,6 +200,8 @@ interface RunProducerRow {
   worker_attempt_id: string | null;
   lease_epoch: string | number | null;
   portal_receipt: Record<string, unknown> | string | null;
+  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+  execution_profile_digest: string | null;
 }
 
 interface ResearchJobCostRow {
@@ -436,6 +443,8 @@ function rowToRunProducer(row: RunProducerRow): ResearchRunProducerRecord {
     alphaVersionId: row.alpha_version_id,
     executionAdapterId: row.execution_adapter_id,
     adapterContractDigest: row.adapter_contract_digest,
+    executionProfileId: row.execution_profile_id,
+    executionProfileDigest: row.execution_profile_digest ?? null,
     requestedSpecDigest: row.requested_spec_digest,
     effectiveSpecDigest: row.effective_spec_digest,
     datasetBindingDigest: row.dataset_binding_digest,
@@ -1412,17 +1421,18 @@ export class ResearchMetadataRepository {
             execution_adapter_id, adapter_contract_digest,
             requested_spec_digest, effective_spec_digest, dataset_binding_digest,
             manifest_digest, snapshot_id, snapshot_content_hash, work_digest,
-            legacy_request)
+            legacy_request, execution_profile_id, execution_profile_digest)
          VALUES ($1, $2, $3, $4, $5, $6,
                  $7, $8, $9, $10, $11, $12,
-                 $13, $14, $15, $16, $17, $18, $19, $20::jsonb)
+                 $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21, $22)
          ON CONFLICT (workspace_id, client_intent_id) DO NOTHING
          RETURNING run_id, attempt_id, job_id, client_intent_id, alpha_id,
                    alpha_version_id, execution_adapter_id, adapter_contract_digest,
                    requested_spec_digest, effective_spec_digest,
                    dataset_binding_digest, manifest_digest, snapshot_id,
                    snapshot_content_hash, work_digest, legacy_request,
-                   dispatch_state, worker_attempt_id, lease_epoch, portal_receipt`,
+                   dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                   execution_profile_id, execution_profile_digest`,
         [
           scope.workspaceId, input.runId, input.attemptId, input.jobId,
           scope.actorUserId, input.clientIntentId, input.intentKind,
@@ -1431,6 +1441,7 @@ export class ResearchMetadataRepository {
           input.requestedSpecDigest, input.effectiveSpecDigest,
           input.datasetBindingDigest, input.manifestDigest, input.snapshotId,
           input.snapshotContentHash, input.workDigest, JSON.stringify(input.legacyRequest),
+          input.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID, input.executionProfileDigest ?? null,
         ],
       );
       if (inserted.rowCount === 1 && inserted.rows[0]) {
@@ -1449,7 +1460,8 @@ export class ResearchMetadataRepository {
                 requested_spec_digest, effective_spec_digest,
                 dataset_binding_digest, manifest_digest, snapshot_id,
                 snapshot_content_hash, work_digest, legacy_request,
-                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt
+                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                execution_profile_id, execution_profile_digest
            FROM research.run_producers
           WHERE workspace_id = $1 AND client_intent_id = $2`,
         [scope.workspaceId, input.clientIntentId],
@@ -1545,16 +1557,17 @@ export class ResearchMetadataRepository {
               execution_adapter_id, adapter_contract_digest,
               requested_spec_digest, effective_spec_digest, dataset_binding_digest,
               manifest_digest, snapshot_id, snapshot_content_hash, work_digest,
-              legacy_request)
+              legacy_request, execution_profile_id, execution_profile_digest)
            VALUES ($1, $2, $3, $4, $5, $6,
                    $7, $8, $9, $10, $11, $12,
-                   $13, $14, $15, $16, $17, $18, $19, $20::jsonb)
+                   $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21, $22)
            RETURNING run_id, attempt_id, job_id, client_intent_id, alpha_id,
                      alpha_version_id, execution_adapter_id, adapter_contract_digest,
                      requested_spec_digest, effective_spec_digest,
                      dataset_binding_digest, manifest_digest, snapshot_id,
                      snapshot_content_hash, work_digest, legacy_request,
-                     dispatch_state, worker_attempt_id, lease_epoch, portal_receipt`,
+                     dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                   execution_profile_id, execution_profile_digest`,
           [
             scope.workspaceId, input.runId, input.attemptId, input.jobId,
             scope.actorUserId, input.clientIntentId, input.intentKind,
@@ -1563,6 +1576,7 @@ export class ResearchMetadataRepository {
             input.requestedSpecDigest, input.effectiveSpecDigest,
             input.datasetBindingDigest, input.manifestDigest, input.snapshotId,
             input.snapshotContentHash, input.workDigest, JSON.stringify(input.legacyRequest),
+            input.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID, input.executionProfileDigest ?? null,
           ],
         );
         const row = producer.rows[0];
@@ -1616,7 +1630,8 @@ export class ResearchMetadataRepository {
                 requested_spec_digest, effective_spec_digest,
                 dataset_binding_digest, manifest_digest, snapshot_id,
                 snapshot_content_hash, work_digest, legacy_request,
-                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt
+                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                execution_profile_id, execution_profile_digest
            FROM research.run_producers
           WHERE workspace_id = $1 AND client_intent_id = $2
           FOR UPDATE`,
@@ -1666,7 +1681,8 @@ export class ResearchMetadataRepository {
                     producer.requested_spec_digest, producer.effective_spec_digest,
                     producer.dataset_binding_digest, producer.manifest_digest, producer.snapshot_id,
                     producer.snapshot_content_hash, producer.work_digest, producer.legacy_request,
-                    producer.dispatch_state, producer.worker_attempt_id, producer.lease_epoch, producer.portal_receipt`,
+                    producer.dispatch_state, producer.worker_attempt_id, producer.lease_epoch, producer.portal_receipt,
+                    producer.execution_profile_id, producer.execution_profile_digest`,
         [scope.workspaceId, input.runId, input.jobId, input.workerAttemptId, input.leaseEpoch],
       );
       const row = updated.rows[0];
@@ -1677,7 +1693,8 @@ export class ResearchMetadataRepository {
                   requested_spec_digest, effective_spec_digest,
                   dataset_binding_digest, manifest_digest, snapshot_id,
                   snapshot_content_hash, work_digest, legacy_request,
-                  dispatch_state, worker_attempt_id, lease_epoch, portal_receipt
+                  dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                  execution_profile_id, execution_profile_digest
              FROM research.run_producers
             WHERE workspace_id = $1 AND run_id = $2 AND job_id = $3`,
           [scope.workspaceId, input.runId, input.jobId],
@@ -1722,7 +1739,8 @@ export class ResearchMetadataRepository {
                     requested_spec_digest, effective_spec_digest,
                     dataset_binding_digest, manifest_digest, snapshot_id,
                     snapshot_content_hash, work_digest, legacy_request,
-                    dispatch_state, worker_attempt_id, lease_epoch, portal_receipt`,
+                    dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                   execution_profile_id, execution_profile_digest`,
         [scope.workspaceId, input.runId, input.jobId, input.workerAttemptId, input.leaseEpoch, JSON.stringify(input.receipt)],
       );
       const row = updated.rows[0];
@@ -1733,7 +1751,8 @@ export class ResearchMetadataRepository {
                 requested_spec_digest, effective_spec_digest,
                 dataset_binding_digest, manifest_digest, snapshot_id,
                 snapshot_content_hash, work_digest, legacy_request,
-                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt
+                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                execution_profile_id, execution_profile_digest
            FROM research.run_producers
           WHERE workspace_id = $1 AND run_id = $2 AND job_id = $3`,
         [scope.workspaceId, input.runId, input.jobId],
@@ -4171,6 +4190,12 @@ export class ResearchMetadataRepository {
     if (input.executionAdapterId !== "p04.delta-rsi.v1") {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research execution adapter is unsupported.", 400);
     }
+    const profileId = input.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID;
+    const profileDigest = input.executionProfileDigest ?? null;
+    if (!(profileId === P04_FIXED_QUALIFICATION_PROFILE_ID && profileDigest === null)
+      && !(profileId === DELTA_WFO_PROFILE_ID && profileDigest === DELTA_WFO_PROFILE_DIGEST)) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research execution profile is unsupported.", 400);
+    }
     for (const [label, value] of Object.entries({
       adapterContractDigest: input.adapterContractDigest,
       manifestDigest: input.manifestDigest,
@@ -4193,6 +4218,8 @@ export class ResearchMetadataRepository {
       record.alphaVersionId === input.alphaVersionId &&
       record.executionAdapterId === input.executionAdapterId &&
       record.adapterContractDigest === input.adapterContractDigest &&
+      record.executionProfileId === (input.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) &&
+      record.executionProfileDigest === (input.executionProfileDigest ?? null) &&
       record.requestedSpecDigest === input.requestedSpecDigest &&
       record.effectiveSpecDigest === input.effectiveSpecDigest &&
       record.datasetBindingDigest === input.datasetBindingDigest &&

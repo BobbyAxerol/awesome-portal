@@ -127,10 +127,11 @@ describe("RF-05 real preview rows (QuantBT 1.1.1, BTCUSDT 1h)", () => {
     expect(fixture.live_before[`before-cs-split-${COMPLETED}`]!.error).toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_CONFLICT" });
     // The binding is the preview's own run_producers value, as runState joins it.
     const binding = (runId: string) => (fixture.hub_rows[runId]!.row.adapter_contract_digest as string | undefined) ?? null;
-    const statuses: Record<string, { sourceKind: string; effectiveStatus: string; adapterContractDigest: string | null }> = {
-      [COMPLETED]: { sourceKind: "RESEARCH_DURABLE", effectiveStatus: "COMPLETED", adapterContractDigest: binding(COMPLETED) },
-      [CANCELLED]: { sourceKind: "RESEARCH_DURABLE", effectiveStatus: "CANCELLED", adapterContractDigest: binding(CANCELLED) },
-      [LEGACY]: { sourceKind: "LEGACY_1_0_8_METADATA", effectiveStatus: "QUEUED", adapterContractDigest: null },
+    // Migration 062 backfills every pre-W1 producer as the P04 fixed profile.
+    const statuses: Record<string, { sourceKind: string; effectiveStatus: string; adapterContractDigest: string | null; executionProfileId: string | null }> = {
+      [COMPLETED]: { sourceKind: "RESEARCH_DURABLE", effectiveStatus: "COMPLETED", adapterContractDigest: binding(COMPLETED), executionProfileId: "p04.fixed-qualification.v1" },
+      [CANCELLED]: { sourceKind: "RESEARCH_DURABLE", effectiveStatus: "CANCELLED", adapterContractDigest: binding(CANCELLED), executionProfileId: "p04.fixed-qualification.v1" },
+      [LEGACY]: { sourceKind: "LEGACY_1_0_8_METADATA", effectiveStatus: "QUEUED", adapterContractDigest: null, executionProfileId: null },
     };
     const service = new ResearchCurrentSourceService({
       sealForRead: vi.fn().mockResolvedValue(null),

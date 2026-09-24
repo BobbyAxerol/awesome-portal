@@ -29,16 +29,39 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from pydantic import ValidationError
 
+from portal_api.domain.research_delta_wfo_profile import (
+    DELTA_WFO_CPU_SECONDS,
+    DELTA_WFO_PROFILE_DIGEST,
+    DELTA_WFO_PROFILE_ID,
+)
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
 from portal_api.services.research_supervisor import (
+    DELTA_WFO_CHILD_LIMITS,
+    DeltaWfoChildReceipt,
     IsolatedResearchSupervisor,
     ResearchChildLimits,
     ResearchChildReceipt,
     ResearchSupervisorError,
 )
 from portal_api.services.research_progress import ResearchProgressJournal
+
+
+# The WFO child's validated QuantBT output is copied here, beside (not
+# inside) the ``<run_id>`` engine directory the durable worker stages into its
+# bundle.  The worker's P05/RS-02 retention reads it, then removes the whole
+# engine root.  It is never a browser-visible artifact.
+WFO_SOURCE_DIRNAME = ".p10-wfo-source"
+
+
+def delta_wfo_enabled() -> bool:
+    """W1 flag: default off, and meaningless without P05 retained artifacts."""
+
+    def flag(name: str) -> bool:
+        return os.getenv(name, "false").strip().lower() == "true"
+
+    return flag("PORTAL_FEATURE_RESEARCH_WFO_PROFILE") and flag("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS")
 
 
 class ResearchRunProducerError(RuntimeError):
@@ -163,6 +186,7 @@ class ResearchRunProducerExecutor:
     supervisor: IsolatedResearchSupervisor
     market_root: Path
     child_limits: ResearchChildLimits = field(default_factory=ResearchChildLimits)
+    wfo_child_limits: ResearchChildLimits = DELTA_WFO_CHILD_LIMITS
 
     async def __call__(
         self,
@@ -214,6 +238,9 @@ class ResearchRunProducerExecutor:
         def progress(event_type: str, payload: dict[str, Any] | None = None) -> None:
             if progress_journal is not None:
                 progress_journal.emit(event_type, payload)
+
+        if request.research.is_delta_wfo:
+            return self._execute_delta_wfo_sync(request, artifact_root, progress)
 
         research = request.research
         progress("stage_started", {"stage": "S1"})
@@ -420,6 +447,187 @@ class ResearchRunProducerExecutor:
             "research_split": split_source,
         }
 
+    def _execute_delta_wfo_sync(
+        self,
+        request: ResearchRunProducerRequest,
+        artifact_root: Path,
+        progress: Any,
+    ) -> dict[str, Any]:
+        """W1 row D: the Delta signal-notional WFO through the same P06 child.
+
+        Holdout is not part of an advanced topology, so the child tape is the
+        P08 snapshot bounded to rows before ``walk_forward.end_exclusive``.
+        The child writes real QuantBT advanced-WFO output; this method copies
+        the validated tree to ``engine_root/.p10-wfo-source/<run_id>`` for the
+        worker's P05/RS-02 retention.  It publishes no P13 evidence and no P14
+        split receipt (both are P04-shaped hubs), and it does not claim any
+        trial/fold: those are emitted by the worker from the retained tables.
+        """
+
+        if not delta_wfo_enabled():
+            raise ResearchRunProducerError(
+                "P10 Delta WFO profile is not enabled (PORTAL_FEATURE_RESEARCH_WFO_PROFILE "
+                "and PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS are both required)",
+                code="CAPABILITY_MISMATCH",
+            )
+        research = request.research
+        if research.execution_profile_digest != DELTA_WFO_PROFILE_DIGEST:
+            raise ResearchRunProducerError("P10 Delta WFO profile digest no longer matches", code="CAPABILITY_MISMATCH")
+        progress("stage_started", {"stage": "S1"})
+        try:
+            identity, _ = self.snapshots.describe(research.snapshot_id)
+        except DataCatalogError as exc:
+            raise ResearchRunProducerError("P10 immutable preflight snapshot is unavailable") from exc
+        if identity.content_hash != research.snapshot_content_hash:
+            raise ResearchRunProducerError("P10 immutable preflight snapshot hash no longer matches")
+        frame_path = self.snapshots.snapshot_path(research.snapshot_id) / "frame.parquet"
+        if _sha256_file(frame_path) != identity.content_hash:
+            raise ResearchRunProducerError("P10 immutable preflight snapshot bytes no longer match")
+
+        walk_forward = research.requested_spec["walk_forward"]
+        assert isinstance(walk_forward, dict)  # enforced by the private DTO
+        span_start = _utc_timestamp(walk_forward.get("start"), label="walk-forward start")
+        first_oos = _utc_timestamp(walk_forward.get("split_mode"), label="walk-forward first OOS")
+        span_end = _utc_timestamp(walk_forward.get("end_exclusive"), label="walk-forward end")
+        if not span_start < first_oos < span_end:
+            raise ResearchRunProducerError("P10 walk-forward chronology is invalid")
+        data = research.requested_spec.get("data")
+        assert isinstance(data, dict)
+
+        job_directory = self.market_root / request.job_id / request.worker_attempt_id
+        tape_path = job_directory / "wfo_span.parquet"
+        if job_directory.exists():
+            shutil.rmtree(job_directory)
+        job_directory.mkdir(mode=0o700, parents=True)
+        source_root = artifact_root / WFO_SOURCE_DIRNAME
+        try:
+            tape_counts = self._write_is_oos_tape(
+                frame_path=frame_path,
+                tape_path=tape_path,
+                is_start=span_start,
+                oos_start=first_oos,
+                oos_end=span_end,
+            )
+            if tape_counts.is_bars < 1 or tape_counts.outer_oos_bars < 1:
+                raise ResearchRunProducerError("P10 immutable snapshot cannot form a bounded walk-forward tape")
+            os.chmod(tape_path, 0o600)
+            progress("stage_completed", {"stage": "S1"})
+            progress("stage_started", {"stage": "S2"})
+            receipt = DeltaWfoChildReceipt(
+                job_id=request.job_id,
+                run_id=request.run_id,
+                worker_attempt_id=request.worker_attempt_id,
+                lease_epoch=request.lease_epoch,
+                market_path=tape_path,
+                artifact_root=artifact_root,
+                execution_profile_id=DELTA_WFO_PROFILE_ID,
+                execution_profile_digest=DELTA_WFO_PROFILE_DIGEST,
+                dataset_id=str(data.get("dataset_id")),
+                symbol=str(data.get("symbol")),
+                data_start_utc_ms=int(span_start.value // 1_000_000),
+                data_end_exclusive_utc_ms=int(span_end.value // 1_000_000),
+                first_oos_utc_ms=int(first_oos.value // 1_000_000),
+            )
+            progress("stage_completed", {"stage": "S2"})
+            progress("stage_started", {"stage": "S3"})
+            progress("stage_completed", {"stage": "S3"})
+            progress("stage_started", {"stage": "S4"})
+            cpu_cap = min(self.wfo_child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
+            progress("budget_tick", _cpu_budget_tick_payload(0, cpu_cap))
+            child = self.supervisor.run_delta_wfo(
+                receipt,
+                limits=self.wfo_child_limits,
+                on_child_alive=(lambda: progress("heartbeat", {})),
+            )
+            try:
+                progress("budget_tick", _cpu_budget_tick_payload(min(child.cpu_seconds, cpu_cap), cpu_cap))
+                destination = source_root / request.run_id
+                if destination.exists():
+                    shutil.rmtree(destination)
+                source_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+                shutil.copytree(child.output_root / request.run_id, destination, symlinks=True)
+            finally:
+                shutil.rmtree(child.output_root, ignore_errors=True)
+        except ResearchSupervisorError as exc:
+            raise ResearchRunProducerError(
+                "P10 isolated Delta WFO exceeded its resource budget"
+                if exc.code == "RESOURCE_EXCEEDED"
+                else "P10 isolated Delta WFO failed",
+                code=exc.code,
+            ) from exc
+        finally:
+            if job_directory.exists():
+                shutil.rmtree(job_directory)
+
+        engine_directory = artifact_root / request.run_id
+        engine_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        (engine_directory / "config").mkdir(mode=0o700, exist_ok=True)
+        (engine_directory / "research").mkdir(mode=0o700, exist_ok=True)
+        public_config = {
+            "schema_version": "research.p10.run-config.v1",
+            "run_id": request.run_id,
+            "alpha_id": research.alpha_id,
+            "alpha_version_id": research.alpha_version_id,
+            "execution_adapter_id": research.execution_adapter_id,
+            "execution_profile_id": research.execution_profile_id,
+            "execution_profile_digest": research.execution_profile_digest,
+            "requested_spec": research.requested_spec,
+            "requested_spec_digest": research.requested_spec_digest,
+            "effective_spec_digest": research.effective_spec_digest,
+            "dataset_binding_digest": research.dataset_binding_digest,
+            "manifest_digest": research.manifest_digest,
+            "input_scope": "P08_OPTIONAL_WARMUP_PLUS_WFO_SPAN",
+        }
+        request_path = engine_directory / "config" / "request.json"
+        request_path.write_text(
+            json.dumps(canonicalize(public_config), sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.chmod(request_path, 0o600)
+        receipt_document = {
+            "schema_version": "research.p10.delta-wfo-receipt.v1",
+            "run_id": request.run_id,
+            "execution_adapter_id": research.execution_adapter_id,
+            "execution_profile_id": research.execution_profile_id,
+            "execution_profile_digest": research.execution_profile_digest,
+            "requested_spec_digest": research.requested_spec_digest,
+            "effective_spec_digest": research.effective_spec_digest,
+            "dataset_binding_digest": research.dataset_binding_digest,
+            "manifest_digest": research.manifest_digest,
+            "input_scope": "P08_OPTIONAL_WARMUP_PLUS_WFO_SPAN",
+            "tape": {
+                "warmup_bars": tape_counts.warmup_bars,
+                "is_bars": tape_counts.is_bars,
+                "outer_oos_bars": tape_counts.outer_oos_bars,
+            },
+            "engine": {
+                "version": child.engine_version,
+                "bars": child.bars,
+                "n_folds": child.n_folds,
+                "trial_rows": child.trial_rows,
+                "output_files": child.output_files,
+                "output_bytes": child.output_bytes,
+            },
+            "resource": {
+                "elapsed_seconds": child.elapsed_seconds,
+                "peak_rss_bytes": child.peak_rss_bytes,
+                "cpu_seconds": child.cpu_seconds,
+                "enforced_limits": child.enforced_limits,
+            },
+        }
+        receipt_path = engine_directory / "research" / "p10-receipt.json"
+        receipt_path.write_text(
+            json.dumps(canonicalize(receipt_document), sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.chmod(receipt_path, 0o600)
+        return {
+            "status": "COMPLETED",
+            "research_receipt": receipt_document,
+            "research_evidence": None,
+            "research_split": None,
+        }
+
     @staticmethod
     def _p14_split_source(
         *,
@@ -605,4 +813,9 @@ class ResearchRunProducerExecutor:
                 temporary.unlink(missing_ok=True)
 
 
-__all__ = ["ResearchRunProducerError", "ResearchRunProducerExecutor"]
+__all__ = [
+    "ResearchRunProducerError",
+    "ResearchRunProducerExecutor",
+    "WFO_SOURCE_DIRNAME",
+    "delta_wfo_enabled",
+]

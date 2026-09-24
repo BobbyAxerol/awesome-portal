@@ -18,6 +18,12 @@ import {
 } from "./run-create.contract";
 import { ResearchRunCreateError } from "./run-create.error";
 import { ResearchRunAdmissionService } from "./run-admission.service";
+import {
+  DELTA_WFO_PROFILE_ID,
+  DELTA_WFO_RESOURCE_CLASS,
+  DELTA_WFO_RESOURCE_PROFILE,
+  DELTA_WFO_WORK_SCHEMA_VERSION,
+} from "./delta-wfo.profile";
 
 const P10_RESOURCE_PROFILE = Object.freeze({
   memoryBytes: 4 * 1024 * 1024 * 1024,
@@ -96,29 +102,87 @@ export class ResearchRunCreateService {
     const attemptId = stableId("ratt", commandDigest);
     const jobId = stableId("rjob", commandDigest);
     const commandId = stableId("rcmd", commandDigest);
-    const workDigest = digest({
-      schema_version: "research.p10.delta-work.v1",
-      requested_spec_digest: manifest.requestedSpecDigest,
-      effective_spec_digest: manifest.effectiveSpecDigest,
-      dataset_binding_digest: manifest.datasetBindingDigest,
-      manifest_digest: manifest.manifestDigest,
-      snapshot: {
+    const profile = accepted.profile!;
+    const wfo = profile.id === DELTA_WFO_PROFILE_ID;
+    // The P04 branch below is byte-for-byte the pre-W1 construction (golden
+    // tests pin both digests). The WFO branch is a separate versioned shape:
+    // it carries the pinned profile identity and never a P04 parameter map.
+    const workDigest = wfo
+      ? digest({
+        schema_version: DELTA_WFO_WORK_SCHEMA_VERSION,
+        requested_spec_digest: manifest.requestedSpecDigest,
+        effective_spec_digest: manifest.effectiveSpecDigest,
+        dataset_binding_digest: manifest.datasetBindingDigest,
+        manifest_digest: manifest.manifestDigest,
+        snapshot: {
+          snapshot_id: this.stringFact(manifest.snapshot, "snapshot_id"),
+          snapshot_content_hash: this.stringFact(manifest.snapshot, "snapshot_content_hash"),
+        },
+        alpha: {
+          alpha_id: alpha.alphaId,
+          alpha_version_id: alpha.alphaVersionId,
+          adapter_id: alpha.adapterId,
+          adapter_contract_digest: alpha.adapterContractDigest,
+        },
+        execution_profile: {
+          profile_id: profile.id,
+          profile_digest: profile.digest,
+        },
+        engine_release_id: requested.client.engine_release_id,
+        requested_spec: requested,
+      })
+      : digest({
+        schema_version: "research.p10.delta-work.v1",
+        requested_spec_digest: manifest.requestedSpecDigest,
+        effective_spec_digest: manifest.effectiveSpecDigest,
+        dataset_binding_digest: manifest.datasetBindingDigest,
+        manifest_digest: manifest.manifestDigest,
+        snapshot: {
+          snapshot_id: this.stringFact(manifest.snapshot, "snapshot_id"),
+          snapshot_content_hash: this.stringFact(manifest.snapshot, "snapshot_content_hash"),
+        },
+        alpha: {
+          alpha_id: alpha.alphaId,
+          alpha_version_id: alpha.alphaVersionId,
+          adapter_id: alpha.adapterId,
+          adapter_contract_digest: alpha.adapterContractDigest,
+          fixed_parameters: alpha.fixedParameters,
+        },
+        engine_release_id: requested.client.engine_release_id,
+        // This is retained to prove that an accepted P10 request did not drop
+        // a value before the only installed worker profile evaluated it.
+        requested_spec: requested,
+      });
+    const legacyRequest = wfo ? {
+      strategy_id: requested.strategy_id,
+      dataset_id: requested.data.dataset_id,
+      protocol: requested.protocol,
+      research_contract_version: "research.run-request.v1",
+      run_id: runId,
+      workspace_id: scope.workspaceId,
+      research: {
+        schema_version: "research.run-producer.v1",
+        client_intent_id: input.client_intent_id,
+        intent_kind: input.intent_kind,
+        preflight_token: input.preflight_token,
+        requested_spec: requested,
+        requested_spec_digest: manifest.requestedSpecDigest,
+        effective_spec_digest: manifest.effectiveSpecDigest,
+        dataset_binding_digest: manifest.datasetBindingDigest,
+        manifest_digest: manifest.manifestDigest,
         snapshot_id: this.stringFact(manifest.snapshot, "snapshot_id"),
         snapshot_content_hash: this.stringFact(manifest.snapshot, "snapshot_content_hash"),
-      },
-      alpha: {
         alpha_id: alpha.alphaId,
         alpha_version_id: alpha.alphaVersionId,
-        adapter_id: alpha.adapterId,
+        execution_adapter_id: alpha.adapterId,
         adapter_contract_digest: alpha.adapterContractDigest,
-        fixed_parameters: alpha.fixedParameters,
+        // W1: the child re-verifies this pinned profile before running the
+        // walk-forward search; there is deliberately no p04_parameters map.
+        execution_profile_id: profile.id,
+        execution_profile_digest: profile.digest,
+        work_digest: workDigest,
       },
-      engine_release_id: requested.client.engine_release_id,
-      // This is retained to prove that an accepted P10 request did not drop
-      // a value before the only installed worker profile evaluated it.
-      requested_spec: requested,
-    });
-    const legacyRequest = {
+    } : {
       // Legacy read model fields remain top-level, unchanged and nonoptional.
       strategy_id: requested.strategy_id,
       dataset_id: requested.data.dataset_id,
@@ -163,6 +227,8 @@ export class ResearchRunCreateService {
         alphaVersionId: alpha.alphaVersionId,
         executionAdapterId: alpha.adapterId,
         adapterContractDigest: alpha.adapterContractDigest,
+        executionProfileId: profile.id,
+        executionProfileDigest: profile.digest,
         preflightToken: input.preflight_token,
         requestedSpecDigest: manifest.requestedSpecDigest,
         effectiveSpecDigest: manifest.effectiveSpecDigest,
@@ -173,9 +239,9 @@ export class ResearchRunCreateService {
         workDigest,
         engineReleaseId: requested.client.engine_release_id,
         legacyRequest,
-        cost: P10_RESOURCE_PROFILE,
+        cost: wfo ? DELTA_WFO_RESOURCE_PROFILE : P10_RESOURCE_PROFILE,
         queueClass: "INTERACTIVE",
-        resourceClass: "p10-delta-rsi-v1",
+        resourceClass: wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
         attemptLimit: 2,
       });
     } catch (error) {
