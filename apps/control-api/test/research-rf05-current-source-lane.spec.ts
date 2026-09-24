@@ -42,7 +42,7 @@ function build(options: {
         : options.adapterContractDigest ? "p04.fixed-qualification.v1" : null,
     }),
     rows: vi.fn(),
-    sampleRows: vi.fn(),
+    observationSeries: vi.fn(),
     verifyRetainedImport: vi.fn(),
   };
   return {
@@ -81,7 +81,7 @@ describe("RF-05 CG-P13-09 · P04 fixed profile is NOT_APPLICABLE, answered as a 
         expect((await read(service)).etag).toBe(answer.etag);
       }
       expect(repository.rows).not.toHaveBeenCalled();
-      expect(repository.sampleRows).not.toHaveBeenCalled();
+      expect(repository.observationSeries).not.toHaveBeenCalled();
       expect(repository.verifyRetainedImport).not.toHaveBeenCalled();
     }
   });

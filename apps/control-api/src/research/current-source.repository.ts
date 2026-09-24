@@ -601,46 +601,73 @@ export class ResearchCurrentSourceRepository {
   }
 
   /**
-   * Return a bounded, evenly spaced sample from an already sealed local
-   * relation. Dense ordinals are checked at seal time, so this is at most 192
-   * indexed seeks rather than a source read, full-table scan, or chart-side
-   * approximation.
+   * W3 · CG-P13-05 (A02): the observation relation for a chart.
+   *
+   * Up to `maximum` rows, every retained row in source order (FULL). Past it,
+   * `floor(maximum / 5)` ordinal buckets each contribute their first and last
+   * row plus their minimum-equity, maximum-equity and minimum-drawdown row, so
+   * the relation's endpoints (net return) and its extrema (max drawdown,
+   * equity range) always survive the downsample. Never more than `maximum`.
    */
-  async sampleRows(
+  async observationSeries(
     scope: ResearchScope,
     runId: string,
     artifactRevision: number,
-    tableKind: CurrentSourceTableKind,
     totalRows: number,
     maximum: number,
     signal?: AbortSignal,
-  ): Promise<CurrentSourceStoredRow[]> {
-    if (!Number.isSafeInteger(totalRows) || totalRows < 1 || !Number.isSafeInteger(maximum) || maximum < 2 || maximum > 200) {
-      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source sample request is invalid.", 400);
+  ): Promise<{ rows: CurrentSourceStoredRow[]; sampling: "FULL" | "OBSERVATION_EXTREMA_BUCKET_V2"; extremaEmitted: boolean }> {
+    if (!Number.isSafeInteger(totalRows) || totalRows < 1 || !Number.isSafeInteger(maximum) || maximum < 10 || maximum > 2_000) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source series request is invalid.", 400);
     }
-    const stride = totalRows <= maximum ? 1 : Math.max(1, Math.ceil((totalRows - 1) / (maximum - 1)));
-    const ordinals = Array.from(new Set([
-      ...Array.from({ length: Math.ceil(totalRows / stride) }, (_, index) => index * stride).filter((ordinal) => ordinal < totalRows),
-      totalRows - 1,
-    ])).sort((left, right) => left - right);
+    const full = totalRows <= maximum;
+    const buckets = Math.floor(maximum / 5);
     return this.withScopedRead(scope, async (client) => {
-      const result = await client.query<SourceRowQueryRow>(
-        `SELECT source_ordinal, source_id, occurred_at_utc_ms, payload
-           FROM research.current_source_rows_v1
-          WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = $4
-            AND source_ordinal = ANY($5::bigint[])
-          ORDER BY source_ordinal ASC`,
-        [scope.workspaceId, runId, artifactRevision, tableKind, ordinals],
-      );
-      if (result.rows.length !== ordinals.length) {
-        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Current-source retained sample is incomplete.", 503);
+      const result = full
+        ? await client.query<SourceRowQueryRow>(
+          `SELECT source_ordinal, source_id, occurred_at_utc_ms, payload
+             FROM research.current_source_rows_v1
+            WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'OBSERVATION'
+            ORDER BY source_ordinal ASC
+            LIMIT $4`,
+          [scope.workspaceId, runId, artifactRevision, maximum + 1],
+        )
+        : await client.query<SourceRowQueryRow>(
+          `WITH obs AS (
+             SELECT source_ordinal,
+                    (payload->>'equity')::numeric AS equity,
+                    (payload->>'drawdown_fraction')::numeric AS drawdown,
+                    (source_ordinal * $4::bigint) / $5::bigint AS bucket
+               FROM research.current_source_rows_v1
+              WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'OBSERVATION'
+           ), picks AS (
+             (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, source_ordinal ASC)
+             UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, source_ordinal DESC)
+             UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, equity ASC, source_ordinal ASC)
+             UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, equity DESC, source_ordinal ASC)
+             UNION (SELECT DISTINCT ON (bucket) source_ordinal FROM obs ORDER BY bucket, drawdown ASC, source_ordinal ASC)
+           )
+           SELECT row.source_ordinal, row.source_id, row.occurred_at_utc_ms, row.payload
+             FROM research.current_source_rows_v1 row
+             JOIN picks ON picks.source_ordinal = row.source_ordinal
+            WHERE row.workspace_id = $1 AND row.run_id = $2 AND row.artifact_revision = $3 AND row.table_kind = 'OBSERVATION'
+            ORDER BY row.source_ordinal ASC
+            LIMIT $6`,
+          [scope.workspaceId, runId, artifactRevision, buckets, totalRows, maximum + 1],
+        );
+      if ((full && result.rows.length !== totalRows) || result.rows.length > maximum || result.rows.length < 2 && totalRows >= 2) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Current-source retained series is incomplete.", 503);
       }
-      return result.rows.map((row) => ({
-        sourceOrdinal: asSafeNonNegative(row.source_ordinal, "row ordinal"),
-        sourceId: row.source_id,
-        occurredAtUtcMs: row.occurred_at_utc_ms === null ? null : asSafeNonNegative(row.occurred_at_utc_ms, "row timestamp"),
-        payload: asJsonRecord(row.payload, "row payload"),
-      }));
+      return {
+        rows: result.rows.map((row) => ({
+          sourceOrdinal: asSafeNonNegative(row.source_ordinal, "row ordinal"),
+          sourceId: row.source_id,
+          occurredAtUtcMs: row.occurred_at_utc_ms === null ? null : asSafeNonNegative(row.occurred_at_utc_ms, "row timestamp"),
+          payload: asJsonRecord(row.payload, "row payload"),
+        })),
+        sampling: full ? "FULL" as const : "OBSERVATION_EXTREMA_BUCKET_V2" as const,
+        extremaEmitted: true,
+      };
     }, signal);
   }
 

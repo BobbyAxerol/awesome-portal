@@ -20,6 +20,172 @@ export const CurrentSourceParameterMapSchema = z.record(
     context.addIssue({ code: z.ZodIssueCode.custom, message: "current-source parameter map exceeds 24 fields" });
   }
 });
+/**
+ * W3 (CG-P13-07/08, CG-P14-02, CG-P15-03/04): versioned fact blocks the
+ * exporter adds to retained rows and to the seal summary. Every block is
+ * optional, so a seal retained before W3 (the W1 preview seal) still reads;
+ * the named readers turn a missing block into a typed absence.
+ */
+const FactTokenSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/);
+const FactReasonSchema = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
+const FactUtcMsSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const FactCountSchema = z.number().int().nonnegative().max(2_000_000);
+
+const FoldWindowSchema = z.object({
+  bars: FactCountSchema.nullable(),
+  start_utc_ms: FactUtcMsSchema.nullable(),
+  end_utc_ms: FactUtcMsSchema.nullable(),
+}).strict();
+
+export const CurrentSourceFoldFactsSchema = z.object({
+  schema_version: z.literal("research.current-source-fold-facts.v1"),
+  train_bars: FactCountSchema.nullable(),
+  test_bars: FactCountSchema.nullable(),
+  guards: z.object({
+    warmup: FoldWindowSchema,
+    label_horizon: FoldWindowSchema,
+    purge: FoldWindowSchema,
+    embargo: FoldWindowSchema,
+    validation: FoldWindowSchema,
+    cutoff_utc_ms: FactUtcMsSchema.nullable(),
+    account_policy: FactTokenSchema.nullable(),
+  }).strict().nullable(),
+  oos_score: z.object({
+    basis: z.literal("QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1"),
+    is_sharpe: CurrentSourceDecimalSchema.nullable(),
+    oos_sharpe: CurrentSourceDecimalSchema.nullable(),
+    is_sharpe_raw: CurrentSourceDecimalSchema.nullable(),
+    oos_sharpe_raw: CurrentSourceDecimalSchema.nullable(),
+    decay: CurrentSourceDecimalSchema.nullable(),
+    is_trade_count: CurrentSourceDecimalSchema.nullable(),
+    oos_trade_count: CurrentSourceDecimalSchema.nullable(),
+    is_required_trades: CurrentSourceDecimalSchema.nullable(),
+    oos_required_trades: CurrentSourceDecimalSchema.nullable(),
+    is_trade_penalty: CurrentSourceDecimalSchema.nullable(),
+    oos_trade_penalty: CurrentSourceDecimalSchema.nullable(),
+  }).strict().nullable(),
+  oos_path: z.object({
+    basis: z.literal("RETAINED_STITCHED_OBSERVATIONS_V1"),
+    observation_count: FactCountSchema,
+    start_basis: z.enum(["PREVIOUS_OBSERVATION", "FIRST_WINDOW_OBSERVATION"]),
+    start_equity: CurrentSourceDecimalSchema,
+    end_equity: CurrentSourceDecimalSchema,
+    return_fraction: CurrentSourceDecimalSchema,
+    max_drawdown_fraction: CurrentSourceDecimalSchema,
+    worst_return_fraction: CurrentSourceDecimalSchema,
+    worst_at_utc_ms: FactUtcMsSchema,
+  }).strict().nullable(),
+}).strict();
+
+const ObjectiveTermSchema = z.object({
+  term: FactTokenSchema,
+  weight: CurrentSourceDecimalSchema,
+  value: CurrentSourceDecimalSchema,
+  contribution: CurrentSourceDecimalSchema,
+}).strict();
+
+export const CurrentSourceTrialFactsSchema = z.object({
+  schema_version: z.literal("research.current-source-trial-facts.v1"),
+  stage: FactTokenSchema.nullable(),
+  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
+  fold_scope: z.object({
+    kind: z.enum(["FOLD", "ALL_OUTER_FOLDS", "NOT_PUBLISHED"]),
+    fold_id: FactTokenSchema.nullable(),
+    reason_code: FactReasonSchema.nullable(),
+  }).strict(),
+  study_id: FactTokenSchema.nullable(),
+  source_trial_id: FactTokenSchema.nullable(),
+  pruned: z.boolean().nullable(),
+  oos_seen_by_optuna: z.boolean().nullable(),
+  metrics: z.object({
+    mean_is_sharpe: CurrentSourceDecimalSchema.nullable(),
+    mean_oos_sharpe: CurrentSourceDecimalSchema.nullable(),
+    mean_decay: CurrentSourceDecimalSchema.nullable(),
+    std_decay: CurrentSourceDecimalSchema.nullable(),
+    oos_reason_code: FactReasonSchema.nullable(),
+    temporal_score: CurrentSourceDecimalSchema.nullable(),
+    temporal_q25: CurrentSourceDecimalSchema.nullable(),
+    temporal_count: CurrentSourceDecimalSchema.nullable(),
+    temporal_reason_code: FactReasonSchema.nullable(),
+  }).strict(),
+  objective_components: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: FactReasonSchema.nullable(),
+    formula: FactReasonSchema.nullable(),
+    terms: z.array(ObjectiveTermSchema).max(8),
+  }).strict(),
+}).strict();
+
+export const CurrentSourceFactsSchema = z.object({
+  schema_version: z.literal("research.current-source-facts.v1"),
+  claims: z.object({
+    validation_claim: FactTokenSchema.nullable(),
+    causality_claim: FactTokenSchema.nullable(),
+    chronological_validation_claim: FactTokenSchema.nullable(),
+    oos_used_for_selection: z.boolean().nullable(),
+    full_sample_used_for_selection: z.boolean().nullable(),
+    params_semantics: FactTokenSchema.nullable(),
+    causality_schedule: FactTokenSchema.nullable(),
+    signal_causality_scope: FactTokenSchema.nullable(),
+  }).strict(),
+  temporal_guards: z.object({
+    label_horizon_bars: FactCountSchema.nullable(),
+    purge_bars: FactCountSchema.nullable(),
+    embargo_bars: FactCountSchema.nullable(),
+    warmup_policy: FactTokenSchema.nullable(),
+    warmup_bars: FactCountSchema.nullable(),
+    inner_validation: z.object({
+      selection_scope: FactTokenSchema.nullable(),
+      inner_split_frequency: FactTokenSchema.nullable(),
+      inner_window_mode: FactTokenSchema.nullable(),
+      inner_min_folds: FactCountSchema.nullable(),
+    }).strict().nullable(),
+    inner_validation_published: z.boolean(),
+  }).strict(),
+  search: z.object({
+    optimization_mode: FactTokenSchema.nullable(),
+    optimization_schedule: FactTokenSchema.nullable(),
+    n_studies: FactCountSchema.nullable(),
+    optuna_trials_scope: FactTokenSchema.nullable(),
+    optuna_trials_per_study: FactCountSchema.nullable(),
+    trial_ledger_mode: FactTokenSchema.nullable(),
+    candidate_selection_metric: FactTokenSchema.nullable(),
+    top_is_fraction: CurrentSourceDecimalSchema.nullable(),
+    top_is_k: FactCountSchema.nullable(),
+    decay_lambda: CurrentSourceDecimalSchema.nullable(),
+    decay_gamma: CurrentSourceDecimalSchema.nullable(),
+    raw_best_is_trial_id: FactTokenSchema.nullable(),
+    raw_best_is_objective: CurrentSourceDecimalSchema.nullable(),
+    selected_trial_id: FactTokenSchema.nullable(),
+    candidate_source_trial_ids: z.array(FactTokenSchema).max(64),
+    pruned_trial_count: FactCountSchema,
+    objective_probe: z.object({ rows: FactCountSchema, verified_rows: FactCountSchema }).strict(),
+  }).strict(),
+  execution: z.object({
+    engine_id: FactTokenSchema.nullable(),
+    signal_phase: FactTokenSchema.nullable(),
+    fill_phase: FactTokenSchema.nullable(),
+    accounting_certified: z.boolean().nullable(),
+    final_account_backend: FactTokenSchema.nullable(),
+    final_account_runtime: FactTokenSchema.nullable(),
+    scoring_backend: FactTokenSchema.nullable(),
+    native_prepared_wfo_policy: FactTokenSchema.nullable(),
+    execution_clock: FactTokenSchema.nullable(),
+    account_execution: FactTokenSchema.nullable(),
+    fold_account_policy: FactTokenSchema.nullable(),
+    fold_boundary_position_policy: FactTokenSchema.nullable(),
+  }).strict(),
+  selected_fold_metrics: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: FactReasonSchema.nullable(),
+    trial_id: FactTokenSchema.nullable(),
+  }).strict(),
+}).strict();
+
+export type CurrentSourceFoldFacts = z.infer<typeof CurrentSourceFoldFactsSchema>;
+export type CurrentSourceTrialFacts = z.infer<typeof CurrentSourceTrialFactsSchema>;
+export type CurrentSourceFacts = z.infer<typeof CurrentSourceFactsSchema>;
+
 export const CurrentSourceSummarySchema = z.object({
   schema_version: z.literal("research.current-source-summary.v1"),
   metrics: z.object({
@@ -46,6 +212,8 @@ export const CurrentSourceSummarySchema = z.object({
     trials: z.number().int().positive().max(1_000_000),
     candidates: z.number().int().nonnegative().max(1_000_000),
   }).strict().optional(),
+  // W3: run-level QuantBT facts (claims, guards, search, execution contract).
+  source_facts: CurrentSourceFactsSchema.optional(),
   derived: z.object({
     monthly_returns: z.object({
       source_observation_count: z.number().int().nonnegative().max(2_000_000),
@@ -95,6 +263,7 @@ export const CurrentSourceFoldPayloadSchema = z.object({
   train_end_utc_ms: z.number().int().nonnegative().nullable(),
   test_start_utc_ms: z.number().int().nonnegative().nullable(),
   test_end_utc_ms: z.number().int().nonnegative().nullable(),
+  fold_facts: CurrentSourceFoldFactsSchema.optional(),
 }).strict();
 
 export const CurrentSourceTrialPayloadSchema = z.object({
@@ -102,12 +271,14 @@ export const CurrentSourceTrialPayloadSchema = z.object({
   state: z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/),
   objective: CurrentSourceDecimalSchema.nullable(),
   parameters: CurrentSourceParameterMapSchema,
+  trial_facts: CurrentSourceTrialFactsSchema.optional(),
 }).strict();
 
 export const CurrentSourceCandidatePayloadSchema = z.object({
   candidate_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
   objective: CurrentSourceDecimalSchema.nullable(),
   parameters: CurrentSourceParameterMapSchema,
+  trial_facts: CurrentSourceTrialFactsSchema.optional(),
 }).strict();
 
 export const CurrentSourceSelectionPayloadSchema = z.object({

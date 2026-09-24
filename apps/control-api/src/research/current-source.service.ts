@@ -22,11 +22,24 @@ import {
   type ResearchCurrentSourceEvidenceSeriesResponse,
   type ResearchCurrentSourcePageQuery,
   type ResearchCurrentSourceReplayResponse,
+  type ResearchCurrentSourceSearchQuery,
   type ResearchCurrentSourceSearchResponse,
   type ResearchCurrentSourceSplitResponse,
   type ResearchCurrentSourceFreezeResponse,
 } from "./current-source.contract";
 import { ResearchCurrentSourceError } from "./current-source.error";
+import {
+  claimStrip,
+  foldAnatomy,
+  foldScore,
+  foldVerdicts,
+  searchContract,
+  searchDiagnostics,
+  selectionRoles,
+  splitGuards,
+  trialCoversFold,
+  trialFacts,
+} from "./current-source-facts";
 import {
   ResearchCurrentSourceRepository,
   type CurrentSourcePage,
@@ -49,7 +62,14 @@ import { sha256ResearchJson } from "./preflight.service";
 const P04_FIXED_PROFILE_NOT_RETAINABLE_REASON = "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION";
 
 const RESPONSE_MAX_BYTES = 1_048_576;
-const DISPLAY_SERIES_LIMIT = 192;
+/**
+ * W3 · CG-P13-05 (A02): the observation series serve every retained row up
+ * to this bound (spec 04 pitfall 7: "server downsample ≤ 2000"), and past it
+ * an extrema-preserving bucket sample with a whole-relation envelope.
+ */
+const OBSERVATION_SERIES_LIMIT = 2_000;
+/** The RS-02 admitted bound on trial rows (`current-source.contract.ts` ledger). */
+const MAXIMUM_TRIAL_ROWS = 64;
 
 type Availability = {
   state: "AVAILABLE" | "PENDING_RETENTION" | "NOT_RETAINED_LEGACY" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
@@ -119,6 +139,57 @@ function asCandidate(row: CurrentSourceStoredRow) {
   return parsed.data;
 }
 
+const TYPED_TRIAL_STATES = ["COMPLETE", "PRUNED", "FAIL", "RUNNING", "WAITING"] as const;
+
+/** W3 · CG-P15-03: a retained trial state outside Optuna's own set is an incompatible row. */
+function typedTrialState(state: string): (typeof TYPED_TRIAL_STATES)[number] {
+  if ((TYPED_TRIAL_STATES as readonly string[]).includes(state)) return state as (typeof TYPED_TRIAL_STATES)[number];
+  throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained trial state is not a typed trial state.", 503);
+}
+
+function compareDecimal(left: string, right: string): number {
+  // Exact enough for ordering retained decimal text: both parse to the
+  // nearest double; ties fall back to the text so the choice is stable.
+  const difference = Number(left) - Number(right);
+  return difference !== 0 ? difference : left.localeCompare(right);
+}
+
+/**
+ * CG-P13-05 envelope of the emitted observation rows. When the rows are the
+ * whole relation (FULL) or an extrema-preserving sample, the extrema here are
+ * the relation's own: the sampler keeps every bucket's minimum/maximum
+ * equity and minimum drawdown, and the first and last row.
+ */
+function observationEnvelope(
+  rows: Array<{ at_utc_ms: number; equity: string; drawdown_fraction: string }>,
+  extremaEmitted: boolean,
+) {
+  const first = rows[0];
+  const last = rows.at(-1);
+  if (!first || !last) return null;
+  let minEquity = first;
+  let maxEquity = first;
+  let minDrawdown = first;
+  for (const row of rows) {
+    if (compareDecimal(row.equity, minEquity.equity) < 0) minEquity = row;
+    if (compareDecimal(row.equity, maxEquity.equity) > 0) maxEquity = row;
+    if (compareDecimal(row.drawdown_fraction, minDrawdown.drawdown_fraction) < 0) minDrawdown = row;
+  }
+  return {
+    first_at_utc_ms: first.at_utc_ms,
+    last_at_utc_ms: last.at_utc_ms,
+    first_equity: first.equity,
+    last_equity: last.equity,
+    min_equity: minEquity.equity,
+    min_equity_at_utc_ms: minEquity.at_utc_ms,
+    max_equity: maxEquity.equity,
+    max_equity_at_utc_ms: maxEquity.at_utc_ms,
+    min_drawdown_fraction: minDrawdown.drawdown_fraction,
+    min_drawdown_at_utc_ms: minDrawdown.at_utc_ms,
+    extrema_emitted: extremaEmitted,
+  };
+}
+
 @Injectable()
 export class ResearchCurrentSourceService {
   private readonly cursors: KeysetCursorCodec;
@@ -138,6 +209,12 @@ export class ResearchCurrentSourceService {
     const seal = await this.requireSeal(scope, runId, "evidence", signal);
     if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
+    const facts = summary.source_facts;
+    const foldRows = await this.boundedRows(scope, runId, seal, "FOLD", 256, signal);
+    const candidateRows = await this.boundedRows(scope, runId, seal, "CANDIDATE", 64, signal);
+    const selectedCandidate = candidateRows.map(asCandidate).find((candidate) =>
+      candidate.trial_facts?.source_trial_id === summary.selection.trial_id
+      && candidate.objective === summary.selection.objective) ?? null;
     const value = {
       schema_version: "research.current-source-evidence.v1" as const,
       ...this.common("evidence", seal),
@@ -165,6 +242,24 @@ export class ResearchCurrentSourceService {
         audited_fills: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS"),
         benchmark: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES"),
       },
+      claim: claimStrip(facts),
+      fold_verdicts: foldVerdicts(
+        foldRows.map((row) => {
+          const fold = asFold(row);
+          return {
+            sourceOrdinal: row.sourceOrdinal,
+            foldId: fold.fold_id,
+            testStartUtcMs: fold.test_start_utc_ms,
+            testEndUtcMs: fold.test_end_utc_ms,
+            facts: fold.fold_facts,
+          };
+        }),
+        facts,
+        {
+          meanOosSharpe: selectedCandidate?.trial_facts?.metrics.mean_oos_sharpe ?? null,
+          meanDecay: selectedCandidate?.trial_facts?.metrics.mean_decay ?? null,
+        },
+      ),
     };
     return this.valid(ResearchCurrentSourceEvidenceResponseSchema, value);
   }
@@ -204,8 +299,8 @@ export class ResearchCurrentSourceService {
       fold_plan: {
         state: "AVAILABLE" as const,
         folds: page.rows.map((row) => {
-          const fold = asFold(row);
-          return { source_ordinal: row.sourceOrdinal, ...fold };
+          const { fold_facts: foldFacts, ...fold } = asFold(row);
+          return { source_ordinal: row.sourceOrdinal, ...fold, anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
         }),
         chronology: "SOURCE_OBSERVED_ADVANCED_WFO" as const,
         availability: available(),
@@ -216,6 +311,7 @@ export class ResearchCurrentSourceService {
         embargo: this.summaryFact(summary.data_use.embargo),
         strict_outer_oos_selection: this.summaryFact(summary.data_use.strict_outer_oos_selection),
       },
+      guards: splitGuards(summary.source_facts),
     };
     return this.valid(ResearchCurrentSourceSplitResponseSchema, value);
   }
@@ -223,14 +319,34 @@ export class ResearchCurrentSourceService {
   async search(
     scope: ResearchScope,
     runId: string,
-    query: ResearchCurrentSourcePageQuery,
+    query: ResearchCurrentSourcePageQuery | ResearchCurrentSourceSearchQuery,
     signal?: AbortSignal,
   ): Promise<ResearchCurrentSourceSearchResponse | ResearchCurrentSourceNotApplicableResponse> {
     const seal = await this.requireSeal(scope, runId, "search", signal);
     if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
+    const facts = summary.source_facts;
+    const ledgerMode = facts?.search.trial_ledger_mode ?? null;
     const currentRevision = revision("search", seal);
-    const page = await this.readPage(scope, runId, seal, "TRIAL", query, currentRevision, "research.current-source.search.v1", signal);
+    const fold = "fold" in query ? query.fold ?? null : null;
+    // A fold filter binds its own cursors: a page minted for fold 1 is
+    // refused for fold 2 (the operation string is part of the fingerprint).
+    const operation = fold === null ? "research.current-source.search.v1" : `research.current-source.search.v1:fold=${fold}`;
+    let page: CurrentSourcePage;
+    let matchedRows: number;
+    if (fold === null) {
+      page = await this.readPage(scope, runId, seal, "TRIAL", query, currentRevision, operation, signal);
+      matchedRows = seal.tableRows.TRIAL;
+    } else {
+      const folds = await this.boundedRows(scope, runId, seal, "FOLD", 256, signal);
+      if (!folds.some((row) => row.sourceId === fold)) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "The fold filter names no retained fold of this run.", 400);
+      }
+      const all = await this.boundedRows(scope, runId, seal, "TRIAL", MAXIMUM_TRIAL_ROWS, signal);
+      const matched = all.filter((row) => trialCoversFold(asTrial(row).trial_facts, fold));
+      matchedRows = matched.length;
+      page = this.pageInMemory(scope.workspaceId, runId, currentRevision, operation, matched, query);
+    }
     const candidates = await this.repository.rows(scope, runId, seal.artifactRevision, "CANDIDATE", { limit: 64 }, signal);
     if (candidates.totalRows !== seal.tableRows.CANDIDATE || candidates.hasMore || candidates.hasPrevious) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained candidate ledger exceeds its admitted bound.", 503);
@@ -244,35 +360,38 @@ export class ResearchCurrentSourceService {
         objective: summary.selection.objective,
         parameters: summary.selection.parameters,
         availability: available(),
+        objective_kind: facts ? "MODE_1_DECAY_J" as const : "NOT_PUBLISHED" as const,
+        roles: selectionRoles(facts, summary.selection),
       },
+      search_contract: searchContract(facts),
       ledger: {
         source_trial_count: seal.tableRows.TRIAL,
         returned_rows: page.rows.length,
         trials: page.rows.map((row) => {
-          const trial = asTrial(row);
+          const { trial_facts: rowFacts, ...trial } = asTrial(row);
           return {
             source_ordinal: row.sourceOrdinal,
             trial_id: trial.trial_id,
-            state: trial.state,
+            state: typedTrialState(trial.state),
             objective: trial.objective,
             parameters: trial.parameters,
+            facts: trialFacts(rowFacts, ledgerMode),
             playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "TRIAL", row.sourceOrdinal),
           };
         }),
-        page: this.page(scope.workspaceId, runId, currentRevision, "TRIAL", query.limit, page, "research.current-source.search.v1"),
+        page: this.page(scope.workspaceId, runId, currentRevision, "TRIAL", query.limit, page, operation),
         availability: available(),
+        fold_filter: { fold_id: fold, rule: "TRIAL_FOLD_SCOPE_COVERS_FOLD" as const, matched_rows: matchedRows },
       },
       candidates: {
         source_candidate_count: seal.tableRows.CANDIDATE,
-        rows: candidates.rows.map((row) => ({ source_ordinal: row.sourceOrdinal, ...asCandidate(row) })),
+        rows: candidates.rows.map((row) => {
+          const { trial_facts: rowFacts, ...candidate } = asCandidate(row);
+          return { source_ordinal: row.sourceOrdinal, ...candidate, facts: trialFacts(rowFacts, ledgerMode) };
+        }),
         availability: available(),
       },
-      diagnostics: {
-        candidates: fact("AVAILABLE", null),
-        objective_components: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_OBJECTIVE_COMPONENT_BREAKDOWN"),
-        prune_reasons: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PRUNE_REASON_DIMENSIONS"),
-        importance: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_IMPORTANCE"),
-      },
+      diagnostics: searchDiagnostics(facts),
     };
     return this.valid(ResearchCurrentSourceSearchResponseSchema, value);
   }
@@ -505,15 +624,17 @@ export class ResearchCurrentSourceService {
     signal?: AbortSignal,
   ): Promise<{ availability: Availability; source_sample: Record<string, unknown>; values: unknown[] }> {
     if (kind === "EQUITY" || kind === "RETURNS" || kind === "POSITIONS") {
-      const rows = await this.repository.sampleRows(
-        scope, runId, seal.artifactRevision, "OBSERVATION", seal.tableRows.OBSERVATION, DISPLAY_SERIES_LIMIT, signal,
+      const sample = await this.repository.observationSeries(
+        scope, runId, seal.artifactRevision, seal.tableRows.OBSERVATION, OBSERVATION_SERIES_LIMIT, signal,
       );
+      const rows = sample.rows;
       return {
         availability: available(),
         source_sample: {
           source_observation_count: seal.tableRows.OBSERVATION,
           emitted_point_count: rows.length,
-          sampling: rows.length === seal.tableRows.OBSERVATION ? "FULL" : "RETENTION_STRIDE_V1",
+          sampling: sample.sampling,
+          envelope: observationEnvelope(rows.map(asObservation), sample.extremaEmitted),
         },
         values: rows.map((row) => {
           const observation = asObservation(row);
@@ -536,6 +657,7 @@ export class ResearchCurrentSourceService {
           source_observation_count: source.source_observation_count,
           emitted_point_count: source.emitted_point_count,
           sampling: source.sampling,
+          envelope: null,
         },
         values: source.values,
       };
@@ -551,6 +673,7 @@ export class ResearchCurrentSourceService {
           source_observation_count: source.source_observation_count,
           emitted_point_count: source.emitted_point_count,
           sampling: source.sampling,
+          envelope: null,
         },
         values: source.values,
       };
@@ -566,8 +689,58 @@ export class ResearchCurrentSourceService {
         source_observation_count: source.source_observation_count,
         emitted_point_count: source.emitted_point_count,
         sampling: source.sampling,
+        envelope: null,
       },
       values: source.values,
+    };
+  }
+
+  /** A whole bounded relation (FOLD ≤ 256, TRIAL/CANDIDATE ≤ 64) that must match its sealed count. */
+  private async boundedRows(
+    scope: ResearchScope,
+    runId: string,
+    seal: CurrentSourceSealRow,
+    tableKind: "FOLD" | "TRIAL" | "CANDIDATE",
+    limit: number,
+    signal?: AbortSignal,
+  ): Promise<CurrentSourceStoredRow[]> {
+    const page = await this.repository.rows(scope, runId, seal.artifactRevision, tableKind, { limit }, signal);
+    if (page.totalRows !== seal.tableRows[tableKind] || page.hasMore || page.hasPrevious) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", `Retained ${tableKind.toLowerCase()} relation exceeds its admitted bound.`, 503);
+    }
+    return page.rows;
+  }
+
+  /** Keyset paging over an already-bounded, already-filtered row set (the S06 fold filter). */
+  private pageInMemory(
+    workspaceId: string,
+    runId: string,
+    currentRevision: string,
+    operation: string,
+    rows: CurrentSourceStoredRow[],
+    query: ResearchCurrentSourcePageQuery | ResearchCurrentSourceSearchQuery,
+  ): CurrentSourcePage {
+    const resourceId = `${operation}:${runId}:${currentRevision}:TRIAL`;
+    const fingerprint = queryFingerprint({ resourceId, limit: query.limit, filters: [], sort: [] });
+    const ordered = [...rows].sort((left, right) => left.sourceOrdinal - right.sourceOrdinal);
+    let window: CurrentSourceStoredRow[];
+    if (query.cursor) {
+      const after = this.decodeCursor(workspaceId, resourceId, fingerprint, "after", query.cursor);
+      window = ordered.filter((row) => row.sourceOrdinal > after).slice(0, query.limit);
+    } else if (query.before) {
+      const before = this.decodeCursor(workspaceId, resourceId, fingerprint, "before", query.before);
+      window = ordered.filter((row) => row.sourceOrdinal < before).slice(-query.limit);
+    } else {
+      const at = this.selectedOrdinal(workspaceId, runId, currentRevision, "TRIAL", query);
+      window = ordered.filter((row) => at === null || row.sourceOrdinal >= at).slice(0, query.limit);
+    }
+    const first = window[0]?.sourceOrdinal;
+    const last = window.at(-1)?.sourceOrdinal;
+    return {
+      rows: window,
+      hasMore: last !== undefined && ordered.some((row) => row.sourceOrdinal > last),
+      hasPrevious: first !== undefined && ordered.some((row) => row.sourceOrdinal < first),
+      totalRows: ordered.length,
     };
   }
 

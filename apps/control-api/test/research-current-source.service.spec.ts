@@ -123,7 +123,7 @@ describe("RS-02 retained current-source named read models", () => {
         if (kind === "CANDIDATE") return page(candidates, 1);
         throw new Error(`unexpected ${kind}`);
       }),
-      sampleRows: vi.fn().mockResolvedValue(observations),
+      observationSeries: vi.fn().mockResolvedValue({ rows: observations, sampling: "FULL", extremaEmitted: true }),
       verifyRetainedImport: vi.fn().mockResolvedValue("f".repeat(64)),
     };
     const current = service(repository);
@@ -166,7 +166,7 @@ describe("RS-02 retained current-source named read models", () => {
         if (kind === "CANDIDATE") return page(candidates, 1);
         throw new Error(`unexpected ${kind}`);
       }),
-      sampleRows: vi.fn().mockResolvedValue(observations),
+      observationSeries: vi.fn().mockResolvedValue({ rows: observations, sampling: "FULL", extremaEmitted: true }),
       verifyRetainedImport: vi.fn().mockResolvedValue("0".repeat(64)),
     };
     const current = service(repository);
@@ -221,7 +221,7 @@ describe("RS-02 retained current-source named read models", () => {
     const repository = {
       sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn(), rows: vi.fn().mockResolvedValue({
         rows: observations.slice(0, 1), hasMore: true, hasPrevious: false, totalRows: 3,
-      }), sampleRows: vi.fn(), verifyRetainedImport: vi.fn(),
+      }), observationSeries: vi.fn(), verifyRetainedImport: vi.fn(),
     };
     const current = service(repository);
     const first = sealed(await current.replay(scope, "run-rs02", { limit: 1 }));

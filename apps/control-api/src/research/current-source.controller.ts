@@ -10,6 +10,7 @@ import {
   ResearchCurrentSourcePageQuerySchema,
   ResearchCurrentSourceReadQuerySchema,
   ResearchCurrentSourceRunIdSchema,
+  ResearchCurrentSourceSearchQuerySchema,
 } from "./current-source.contract";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchCurrentSourceService } from "./current-source.service";
@@ -55,7 +56,7 @@ export class ResearchCurrentSourceController {
   @Get(":runId/current-source/search")
   async search(@Req() request: CurrentSourceRequest, @Res() reply: FastifyReply, @Param("runId") rawRunId: string, @Query() rawQuery: unknown) {
     const runId = this.runId(rawRunId);
-    const query = this.parse(ResearchCurrentSourcePageQuerySchema, rawQuery);
+    const query = this.parse(ResearchCurrentSourceSearchQuerySchema, rawQuery);
     const scope = await this.scope(request, query.workspace_id);
     // Search carries renewable relation-bound cursors. Do not let an ETag 304
     // reuse a stale cursor payload across a browser session.

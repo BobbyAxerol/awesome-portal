@@ -390,6 +390,73 @@ describe("W1 migration 062 on 061 · run execution profile + paired RS-02 lane",
     }
   });
 
+  it("W3 · A12 P13-T03: the observation series downsample keeps net return, max drawdown and the equity range", async () => {
+    const database = new Pool({ connectionString: w1DatabaseUrl });
+    const scope = { workspaceId: "ws_w1", actorUserId: "usr_w1" };
+    const start = Date.parse("2026-01-01T00:00:00Z");
+    // Deterministic path with its extrema in the middle of buckets.
+    const equities = Array.from({ length: 5_000 }, (_, index) => 10_000 + 400 * Math.sin(index / 97) + 3 * index
+      + (index === 1_234 ? -2_500 : 0) + (index === 3_777 ? 4_000 : 0));
+    let peak = -Infinity;
+    const drawdowns = equities.map((equity) => { peak = Math.max(peak, equity); return equity / peak - 1; });
+    const client = await database.connect();
+    try {
+      await client.query("SET session_replication_role = replica");
+      for (const [runId, count] of [["rrun_w3_series", 5_000], ["rrun_w3_series_small", 300]] as const) {
+        const values: string[] = [];
+        const params: unknown[] = [];
+        for (let ordinal = 0; ordinal < count; ordinal += 1) {
+          const at = start + ordinal * 3_600_000;
+          const iso = new Date(at).toISOString().replace(".000Z", "Z");
+          params.push(ordinal, iso, at, JSON.stringify({
+            source_index_utc: iso, at_utc_ms: at, equity: String(equities[ordinal]), return_fraction: "0",
+            accepted_position: "0", drawdown_fraction: String(drawdowns[ordinal]), signal_target: null,
+          }));
+          const base = params.length - 4;
+          values.push(`('ws_w1', '${runId}', 1, 'OBSERVATION', $${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}::jsonb)`);
+          if (values.length === 500 || ordinal === count - 1) {
+            await client.query(`INSERT INTO research.current_source_rows_v1
+              (workspace_id, run_id, artifact_revision, table_kind, source_ordinal, source_id, occurred_at_utc_ms, payload)
+              VALUES ${values.join(", ")}`, params);
+            values.length = 0;
+            params.length = 0;
+          }
+        }
+      }
+      await client.query("SET session_replication_role = origin");
+    } finally {
+      client.release();
+    }
+    const repository = new ResearchCurrentSourceRepository(database);
+    try {
+      const sampled = await repository.observationSeries(scope, "rrun_w3_series", 1, 5_000, 2_000);
+      expect(sampled.sampling).toBe("OBSERVATION_EXTREMA_BUCKET_V2");
+      expect(sampled.rows.length).toBeLessThanOrEqual(2_000);
+      expect(sampled.rows.length).toBeGreaterThan(400);
+      const ordinals = sampled.rows.map((row) => row.sourceOrdinal);
+      expect(ordinals).toEqual([...ordinals].sort((left, right) => left - right));
+      const served = sampled.rows.map((row) => ({ equity: Number(row.payload.equity), drawdown: Number(row.payload.drawdown_fraction) }));
+      // Net return: both endpoints survive.
+      expect(ordinals[0]).toBe(0);
+      expect(ordinals.at(-1)).toBe(4_999);
+      expect(served[served.length - 1]!.equity / served[0]!.equity - 1).toBe(equities[4_999]! / equities[0]! - 1);
+      // Max drawdown and the equity range are the full relation's.
+      expect(Math.min(...served.map((row) => row.drawdown))).toBe(Math.min(...drawdowns));
+      expect(Math.min(...served.map((row) => row.equity))).toBe(Math.min(...equities));
+      expect(Math.max(...served.map((row) => row.equity))).toBe(Math.max(...equities));
+      expect(ordinals).toContain(1_234);
+      expect(ordinals).toContain(3_777);
+
+      const full = await repository.observationSeries(scope, "rrun_w3_series_small", 1, 300, 2_000);
+      expect(full.sampling).toBe("FULL");
+      expect(full.rows.map((row) => row.sourceOrdinal)).toEqual(Array.from({ length: 300 }, (_, index) => index));
+      await expect(repository.observationSeries(scope, "rrun_w3_series_small", 1, 301, 2_000))
+        .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_UNAVAILABLE" });
+    } finally {
+      await database.end();
+    }
+  });
+
   it("P10 on PostgreSQL: a WFO intent persists its profile, versioned job cost and replays against the same identity", async () => {
     const database = new Pool({ connectionString: w1DatabaseUrl });
     const scope = { workspaceId: "ws_w1", actorUserId: "usr_w1" };
