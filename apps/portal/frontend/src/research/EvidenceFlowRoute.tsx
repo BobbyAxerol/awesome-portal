@@ -8,6 +8,7 @@
  * that is not mine to move; the swap is one line if Bobby wants it.
  */
 
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 import { EvidenceFlow } from "./EvidenceFlow";
@@ -17,16 +18,29 @@ import { useEvidence } from "./useEvidence";
 
 export function EvidenceFlowRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
-  const { cursor, setStage, setFold, reset, problems } = useEvidenceCursor();
+  const { cursor, setStage, setFold, reset, problems, notes, clampToObserved } = useEvidenceCursor();
   const evidence = useEvidence(runId);
+
+  /* RF-06 FE-S04-06: a linked fold the run never observed is moved to the
+     nearest observed one, with a notice — not kept with both steppers dead and
+     carried into every deep-dive link. Only a published observed set clamps. */
+  const navigation = evidence.hub?.core.fold_navigation;
+  const observed =
+    navigation && navigation.availability.state === "AVAILABLE" ? navigation.observed_folds : null;
+  const observedKey = observed ? observed.join(",") : null;
+  useEffect(() => {
+    if (observed && observed.length > 0) clampToObserved(observed);
+    // The key captures the set; the array identity changes on every read.
+  }, [observedKey, clampToObserved]);
 
   return (
     <>
-      <RouteCursorNotice problems={problems} />
+      <RouteCursorNotice problems={problems} notes={notes} />
       <EvidenceFlow
         runId={runId}
         hub={evidence.hub}
         state={evidence.state}
+        notFound={evidence.refusal?.notFound ?? false}
         cursor={cursor}
         onStage={setStage}
         onFold={setFold}

@@ -32,6 +32,7 @@ import {
 import {
   DEFAULT_CURSOR,
   deepDiveHref,
+  type EvidenceCursor,
   parseCursor,
   serializeCursor,
   useEvidenceCursor,
@@ -464,10 +465,14 @@ describe("P13-T03 — a series is read when a panel needs it, once", () => {
  * ---------------------------------------------------------------------- */
 
 describe("P13-T04 — the hub renders facts, and names what is missing", () => {
-  it("prints the server's exact decimal string, not a reformatted number", () => {
-    view();
-    expect(screen.getByText("128400.00")).toBeTruthy();
-    expect(screen.getByText("-0.096")).toBeTruthy();
+  it("rounds by unit for reading and keeps the server's exact string in the title (DQ-08)", () => {
+    const { container } = view();
+    const equity = container.querySelector("[data-metric-value='FINAL_EQUITY']");
+    expect(equity?.textContent).toBe("128,400.00");
+    expect(equity?.getAttribute("title")).toBe("128400.00");
+    const drawdown = container.querySelector("[data-metric-value='MAX_DRAWDOWN_FRACTION']");
+    expect(drawdown?.textContent).toBe("−9.60%");
+    expect(drawdown?.getAttribute("title")).toBe("-0.096");
   });
 
   it("never turns an unpublished metric into a zero", () => {
@@ -657,7 +662,7 @@ describe("P13-T07 — a refusal keeps the screen", () => {
     const of = (status: number) => toEvidenceRefusal(new PortalApiError("no", status, null, null));
     expect(of(401).state).toBe("denied");
     expect(of(403).state).toBe("denied");
-    expect(of(404).state).toBe("empty");
+    expect(of(404).state).toBe("terminal");
     expect(of(409).state).toBe("stale");
     expect(of(503).state).toBe("unavailable");
     expect(of(400).state).toBe("terminal");
@@ -679,7 +684,16 @@ describe("P13-T07 — a refusal keeps the screen", () => {
   });
 
   it("sends a run whose evidence has not sealed to the screen that owns it", () => {
-    const { container } = view({ hub: hub({ readiness: "NOT_READY" }) });
+    const base = hub();
+    const running = {
+      ...base,
+      readiness: "NOT_READY" as const,
+      core: {
+        ...base.core,
+        run_identity: { ...base.core.run_identity!, status: { value: "RUNNING" as const, availability: AVAILABLE } },
+      },
+    };
+    const { container } = view({ hub: running });
     expect(container.querySelector("[data-not-ready]")).toBeTruthy();
     expect(container.querySelector("[data-action='watch-progress']")?.getAttribute("href")).toBe(
       "/research/quantbt/runs/R-WFO-118/progress",
@@ -834,5 +848,366 @@ describe("P13-T10 — the fold selector is bounded by what P11 observed", () => 
   it("asks no other screen's operation to bound itself", () => {
     const code = codeOf("EvidenceFlow.tsx") + codeOf("useEvidence.ts") + codeOf("evidenceClient.ts");
     expect(code).not.toMatch(/current-source\/split|researchCurrentSourceSplitGetV1|run-library/);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * RF-06 — the 2026-09-24 browser audit (AUDIT_P11_P15 §2 P13, FE-S04-01…13)
+ * ---------------------------------------------------------------------- */
+
+function withStatus(status: "READY" | "RUNNING" | "CANCELLED" | "FAILED", overrides: Partial<EvidenceHub> = {}): EvidenceHub {
+  const base = hub(overrides);
+  return {
+    ...base,
+    core: { ...base.core, run_identity: { ...base.core.run_identity!, status: { value: status, availability: AVAILABLE } } },
+  };
+}
+
+const NOT_ISSUED_SENTENCE = "The fixed P10 qualification sealed its artifacts but did not issue a release claim.";
+
+function notIssuedHub(): EvidenceHub {
+  return hub({
+    claim: {
+      state: "NOT_ISSUED",
+      text: NOT_ISSUED_SENTENCE,
+      cursor: null,
+      methodology_certificate: {
+        state: "NOT_PUBLISHED",
+        grade: null,
+        issued_at_utc_ms: null,
+        reason_code: "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE",
+      },
+      availability: AVAILABLE,
+    },
+  });
+}
+
+describe("RF-06 FE-S04-01 — a claim that was not issued says so", () => {
+  it("does not call a NOT_ISSUED claim available, and quotes the server's sentence", () => {
+    const { container } = view({ hub: notIssuedHub() });
+    const strip = container.querySelector("[data-claim-strip]");
+    expect(strip?.textContent).not.toContain("claim — available");
+    expect(strip?.querySelector("[data-claim-not-issued]")?.textContent).toContain("NOT_ISSUED");
+    expect(strip?.textContent).toContain(NOT_ISSUED_SENTENCE);
+    expect(strip?.querySelector("[data-claim-text]")).toBeNull();
+  });
+
+  it("styles a NOT_ISSUED sentence on the Claim tab unlike an issued claim", () => {
+    const issued = view({ cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
+    const issuedQuote = issued.container.querySelector("[data-claim-quote='ISSUED']") as HTMLElement;
+    expect(issuedQuote.style.color).toBe("var(--role-holdout)");
+    cleanup();
+    const notIssued = view({ hub: notIssuedHub(), cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
+    const quote = notIssued.container.querySelector("[data-claim-quote='NOT_ISSUED']") as HTMLElement;
+    expect(quote.textContent).toBe(NOT_ISSUED_SENTENCE);
+    expect(quote.style.color).not.toBe("var(--role-holdout)");
+    expect(notIssued.container.querySelector("[data-claim-state]")?.textContent).toBe("NOT_ISSUED");
+  });
+
+  it("names a NOT_ISSUED certificate as not issued, not as not applicable", () => {
+    const { container } = view({
+      hub: hub({
+        claim: {
+          ...hub().claim,
+          methodology_certificate: { state: "NOT_ISSUED", grade: null, issued_at_utc_ms: null, reason_code: "S1_CAP" },
+        },
+      }),
+    });
+    const strip = container.querySelector("[data-claim-strip]");
+    expect(strip?.querySelector("[data-certificate-state='NOT_ISSUED']")?.textContent).toContain("NOT_ISSUED");
+    expect(strip?.textContent).not.toContain("not applicable");
+  });
+});
+
+describe("RF-06 FE-S04-02 — metric tiles round by unit and keep the exact value", () => {
+  const LONG = "-0.001544941240185635450293621818514223089782795749";
+
+  it("prints a 47-digit fraction as a percentage with two decimals, exact in the title", () => {
+    const { container } = view({
+      hub: hub({ metrics: [metric({ key: "NET_RETURN_FRACTION", label: "net return", unit: "FRACTION", value: LONG })] }),
+    });
+    const value = container.querySelector("[data-metric-value='NET_RETURN_FRACTION']");
+    expect(value?.textContent).toBe("−0.15%");
+    expect(value?.getAttribute("title")).toBe(LONG);
+    expect(container.textContent).not.toContain("0.0015449412401856354502");
+  });
+
+  it("prints a count as an integer and a currency grouped to two decimals", () => {
+    const { container } = view({
+      hub: hub({
+        metrics: [
+          metric({ key: "FINAL_EQUITY", value: "19965.998848845535" }),
+          metric({ key: "TRADE_COUNT", label: "trades", unit: "COUNT", value: "45" }),
+        ],
+      }),
+    });
+    expect(container.querySelector("[data-metric-value='FINAL_EQUITY']")?.textContent).toBe("19,966.00");
+    expect(container.querySelector("[data-metric-value='TRADE_COUNT']")?.textContent).toBe("45");
+  });
+
+  it("puts the exact string on the clipboard when the tile is copied", () => {
+    const { container } = view({
+      hub: hub({ metrics: [metric({ key: "NET_RETURN_FRACTION", label: "net return", unit: "FRACTION", value: LONG })] }),
+    });
+    const setData = vi.fn();
+    fireEvent.copy(container.querySelector("[data-metric-value='NET_RETURN_FRACTION']") as Element, {
+      clipboardData: { setData },
+    });
+    expect(setData).toHaveBeenCalledWith("text/plain", LONG);
+  });
+});
+
+describe("RF-06 FE-S04-04 — the strip sticks below the topbar", () => {
+  it("offsets the sticky strip by the topbar height, not 0", () => {
+    const { container } = view();
+    const strip = container.querySelector("[data-claim-strip]") as HTMLElement;
+    expect(strip.className).toContain("md:sticky");
+    expect(strip.style.top).toBe("var(--topbar-h)");
+  });
+
+  it("sticks under the topbar's measured height when the shell's topbar wraps", async () => {
+    const bar = document.createElement("header");
+    bar.className = "portal-topbar";
+    bar.getBoundingClientRect = () => ({ height: 90, width: 660, top: 0, left: 0, right: 660, bottom: 90, x: 0, y: 0, toJSON: () => ({}) });
+    document.body.appendChild(bar);
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+    try {
+      const { container } = view();
+      const strip = container.querySelector("[data-claim-strip]") as HTMLElement;
+      await waitFor(() => expect(strip.style.top).toBe("90px"));
+    } finally {
+      bar.remove();
+    }
+  });
+
+  it("keeps tabs and cursor in one card that sticks under the strip", () => {
+    const { container } = view();
+    const card = container.querySelector("[data-stage-card]") as HTMLElement;
+    expect(card.querySelector("[role='tablist']")).toBeTruthy();
+    expect(card.querySelector("[data-cursor-bar]")).toBeTruthy();
+    expect(card.className).toContain("md:sticky");
+    expect(card.style.top).toContain("var(--topbar-h)");
+    expect(card.style.top).toMatch(/^calc\(/);
+  });
+});
+
+describe("RF-06 FE-S04-05 — state vocabulary", () => {
+  it("renders a 404 as run-not-found with a way back to the Run Library", () => {
+    const { container } = view({
+      hub: null,
+      notFound: true,
+      state: { state: "terminal", reason: "Nothing with this id exists in your current workspace.", mayRetry: false, retainsContent: false },
+    });
+    expect(container.querySelector("[data-run-not-found]")).toBeTruthy();
+    expect(container.querySelector("[data-action='open-runs']")?.getAttribute("href")).toBe("/research/quantbt/runs");
+    // No cursor for a run that does not exist.
+    expect(container.querySelector("[data-cursor-bar]")).toBeNull();
+    expect(container.querySelector("[role='tab']")).toBeNull();
+  });
+
+  it("does not tell a cancelled run to watch its progress", () => {
+    const { container } = view({ hub: withStatus("CANCELLED", { readiness: "NOT_READY" }) });
+    const notice = container.querySelector("[data-not-ready]");
+    expect(notice?.getAttribute("data-not-ready")).toBe("CANCELLED");
+    expect(notice?.textContent).toContain("CANCELLED");
+    expect(container.querySelector("[data-action='watch-progress']")).toBeNull();
+    expect(notice?.textContent).not.toMatch(/has not sealed its evidence yet/);
+  });
+
+  it("keeps strip, header and tabs as shells when the first read is refused", () => {
+    for (const refused of [
+      { state: "failed-retryable" as const, reason: "This changed while it was being read. Read it again." },
+      { state: "unavailable" as const, reason: "The Research service did not answer. Try again." },
+    ]) {
+      const { container, unmount } = view({ hub: null, state: { ...refused, mayRetry: true, retainsContent: false } });
+      expect(container.querySelector("[data-claim-strip]"), refused.state).toBeTruthy();
+      expect(container.querySelector("[data-run-header]")?.textContent, refused.state).toContain("R-WFO-118");
+      expect(container.querySelectorAll("[role='tab']"), refused.state).toHaveLength(7);
+      expect(container.querySelector("[data-action='reread']"), refused.state).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it("exposes a 404 to the route as notFound", async () => {
+    stub(() => [404, { error: { code: "RESEARCH_EVIDENCE_NOT_FOUND", message: "Research run was not found." } }]);
+    const { result } = renderHook(() => useEvidence("rrun_nope"));
+    await waitFor(() => expect(result.current.refusal).not.toBeNull());
+    expect(result.current.refusal?.notFound).toBe(true);
+    expect(result.current.state.state).toBe("terminal");
+  });
+});
+
+describe("RF-06 FE-S04-07 — the drawer gives focus back", () => {
+  it("returns focus to the dataset chip when Escape closes the drawer", async () => {
+    const { container } = view();
+    const chip = container.querySelector("[data-action='dataset-drawer']") as HTMLButtonElement;
+    chip.focus();
+    fireEvent.click(chip);
+    expect(container.querySelector("[data-drawer='dataset']")).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(container.querySelector("[data-drawer='dataset']")).toBeNull());
+    expect(document.activeElement).toBe(chip);
+  });
+});
+
+describe("RF-06 FE-S04-08 — the Atlas link carries this run's cell", () => {
+  it("names the run's mode, schedule and route in the Atlas hash", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "atlas" } });
+    const href = container.querySelector("[data-action='open-atlas']")?.getAttribute("href") ?? "";
+    const params = new URLSearchParams(href.split("#")[1]);
+    expect(params.get("run")).toBe("R-WFO-118");
+    expect(params.get("route")).toBe("close_target_v2");
+    expect(params.get("schedule")).toBe("per_fold_causal");
+    expect(params.get("mode")).toBe("mode_1_decay · per_fold_causal");
+  });
+});
+
+describe("RF-06 FE-S04-09 — the passport refusal names the real cause", () => {
+  const pending = () =>
+    toEvidenceRefusal(
+      new PortalApiError(
+        "Current QuantBT output is PENDING_RETENTION; a sealed retained artifact is required.",
+        409,
+        "RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "req_1",
+      ),
+    );
+
+  it("says pending retention, not a profile claim", () => {
+    const { container } = view({ passport: { state: "refused", refusal: pending() } });
+    const panel = container.querySelector("[data-passport-refusal]");
+    expect(panel?.querySelector("[data-passport-cause]")?.getAttribute("data-passport-cause")).toBe("PENDING_RETENTION");
+    expect(panel?.textContent).toContain("pending retention");
+    expect(panel?.textContent).not.toMatch(/Advanced-WFO profile|admits one/);
+  });
+
+  it("does not ask the retention lane about a run that never sealed", () => {
+    const ensurePassport = vi.fn();
+    const { container } = view({ hub: withStatus("CANCELLED", { readiness: "NOT_READY" }), ensurePassport });
+    expect(ensurePassport).not.toHaveBeenCalled();
+    expect(container.querySelector("[data-passport-cause='NOT_RETAINABLE']")?.textContent).toContain("CANCELLED");
+  });
+});
+
+describe("RF-06 FE-S04-10 — an empty series says it is empty", () => {
+  it("gives an answered MONTHLY_RETURNS with no points an empty-state sentence", () => {
+    const monthly: EvidenceSeries = {
+      ...equitySeries(),
+      kind: "MONTHLY_RETURNS",
+      source_sample: { source_observation_count: 744, emitted_point_count: 0, sampling: "FULL" },
+      values: [],
+    };
+    const { container } = view({ series: new Map([["MONTHLY_RETURNS", { state: "ready", series: monthly }]]) });
+    const panel = container.querySelector("[data-series-panel='MONTHLY_RETURNS']");
+    expect(panel?.getAttribute("data-series-state")).toBe("empty");
+    expect(panel?.querySelector("[data-series-empty]")?.textContent).toContain("no calendar month");
+  });
+});
+
+describe("RF-06 FE-S04-11 — durable strings are rendered exactly", () => {
+  it("prints status, readiness, input scope, metric scope and stage state as sent", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-run-status]")?.textContent).toBe("READY");
+    expect(container.querySelector("[data-readiness]")?.textContent).toContain("COMPLETE");
+    expect(container.querySelector("[data-input-scope]")?.textContent).toBe("P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY");
+    expect(container.querySelector("[data-metric='FINAL_EQUITY'] [data-metric-scope]")?.textContent).toBe(
+      "OOS · CURRENCY · ENGINE_DIRECT",
+    );
+    cleanup();
+    const split = view({ cursor: { ...DEFAULT_CURSOR, stage: "split" } });
+    expect(split.container.querySelector("[data-stage-state]")?.textContent).toBe("DONE");
+  });
+});
+
+describe("RF-06 FE-S04-12 — the chart library is not in the route chunk", () => {
+  it("reaches ECharts only through a lazy import", () => {
+    const code = codeOf("EvidenceFlow.tsx");
+    expect(code).not.toMatch(/from\s+["'](\.\.\/charts\/EChart|echarts[^"']*|\.\/EvidenceCharts)["']/);
+    expect(code).toMatch(/lazy\(\(\) => import\("\.\/EvidenceCharts"\)/);
+  });
+
+  it("keeps the chart's height while the chart chunk loads", async () => {
+    const { container } = view({ series: new Map([["EQUITY_OOS", { state: "ready", series: equitySeries() }]]) });
+    const placeholder = container.querySelector("[data-chart-loading]") as HTMLElement;
+    expect(placeholder.style.height).toBe("380px");
+    await waitFor(() => expect(container.querySelector("[data-chart='equity']")).toBeTruthy(), { timeout: 15_000 });
+    expect(container.querySelector("[data-chart-table='equity']")?.textContent).toContain("128400.00");
+  }, 20_000);
+});
+
+describe("RF-06 FE-S04-12 — Summary keeps its charts across a tab switch", () => {
+  it("hides the Summary panel on another tab instead of unmounting it, and shows it again", () => {
+    const ensureSeries = vi.fn();
+    const props = { series: new Map([["EQUITY_OOS", { state: "ready", series: equitySeries() }]]) as never, ensureSeries };
+    const { container, rerender } = view(props);
+    const kept = container.querySelector("[data-panel-kept='summary']");
+    expect(kept).toBeTruthy();
+    const rerenderAt = (stage: EvidenceCursor["stage"]) =>
+      rerender(
+        <MemoryRouter>
+          <EvidenceFlow
+            runId="R-WFO-118"
+            hub={hub()}
+            state={OK}
+            cursor={{ ...DEFAULT_CURSOR, stage }}
+            onStage={vi.fn()}
+            onFold={vi.fn()}
+            onResetCursor={vi.fn()}
+            series={props.series}
+            ensureSeries={ensureSeries}
+            passport={{ state: "idle" }}
+            ensurePassport={vi.fn()}
+            onReread={vi.fn()}
+          />
+        </MemoryRouter>,
+      );
+    rerenderAt("claim");
+    expect(container.querySelector("[data-panel-kept='summary']")).toBe(kept);
+    expect((kept as HTMLElement).hidden).toBe(true);
+    expect(container.querySelector("[data-panel='claim']")).toBeTruthy();
+    rerenderAt("summary");
+    expect(container.querySelector("[data-panel-kept='summary']")).toBe(kept);
+    expect((kept as HTMLElement).hidden).toBe(false);
+  });
+});
+
+describe("RF-06 FE-S04-13 — the HiFi layout", () => {
+  it("has no extra page title and names the tab in the HiFi grammar", () => {
+    const { container } = view();
+    expect(container.querySelector("h1")).toBeNull();
+    const summary = container.querySelector("[data-tab='summary']");
+    expect(summary?.textContent).toContain("Summary");
+    expect(summary?.querySelector("[data-tab-sub]")?.textContent).toBe("4 of 5 metrics · 4 series");
+  });
+
+  it("paints the strip in the HiFi's light paper with the gold rule, not the sunken paper", () => {
+    const { container } = view();
+    const strip = container.querySelector("[data-claim-strip]") as HTMLElement;
+    expect(strip.style.background).toBe("var(--paper)");
+    expect(strip.style.borderColor).toBe("var(--role-holdout)");
+  });
+
+  it("gives each stage tab its HiFi heading and honest panel shells", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "freeze" } });
+    expect(container.querySelector("[data-tab-heading]")?.textContent).toContain(
+      "Stage 3 · Freeze — the hinge between Search and Execute",
+    );
+    const shells = container.querySelectorAll("[data-stage-shells='freeze'] [data-gap]");
+    expect(shells.length).toBe(2);
+    for (const shell of shells) expect(shell.textContent).toContain("not published");
+  });
+
+  it("keeps generate report and release candidate refused with their phase", () => {
+    const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
+    const report = container.querySelector("[data-action-unrouted='generate run report →']");
+    expect(report?.tagName).toBe("SPAN");
+    expect(report?.getAttribute("title")).toContain("P18");
+    expect(container.querySelector("[data-action-unrouted='release candidate →']")?.getAttribute("title")).toContain("P21");
   });
 });
