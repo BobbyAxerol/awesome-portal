@@ -270,3 +270,14 @@ contract), `reset to θ*` and retained-source passport kept (spec), cursor
 notices, 409 on S04's current-source read until `CG-P13-09`. Colours without a
 token were approximated to the nearest token (console palette, #e8eff1,
 #f4f8f9, #fdfbf5) and listed per screen in the agents' receipts.
+
+## 9. RF-06 wave C — RF-05 fields on screen (Claude, 2026-09-24)
+
+| Screen | Consumed (live values on rrun_3935d7d1…, QuantBT 1.1.1, BTCUSDT 1h) | Still a typed shell (owner) |
+|---|---|---|
+| 01 | OOS Sharpe 0.74 (exact in title, scope OOS), trades "45 child tape", decay reason in words, sparkline 24 of 744 pts · extrema kept, claim NOT ISSUED + sentence, ledger 6 buckets (15 runs · 10 not issued · 4 cancelled · 1 legacy), rc chip (disabled, P21), legacy "recorded QUEUED · not monitored", mode `mode_1_decay · global` | certificate (no source), rc live (no persisted RC yet) |
+| 04 | tiles: Sharpe 0.74, Sortino 0.61, CAGR −1.81%, PF 1.15, long/short bar hit rate 39.60% / 52.80% (labelled per-bar, never win rate), decay typed; verdict header; rolling Sharpe typed NOT_APPLICABLE (30 < 63 daily returns), beta typed; monthly 2026-07 −0.15%; pill from lifecycle.display_status; banner only when IN_PROGRESS; passport 200 NOT_APPLICABLE — **0 console errors** (the 409 is gone) | claim strip facts `CG-P13-07`, per-fold verdict `CG-P13-08` (Codex) |
+| 05 | `[2026-04-18, 2026-08-15) · 1h bars` with dataset binding in title, as-of with basis, purge/embargo/inner folds "n/a · three-window", holdout bars reason, absences once from `absence_index` | fold plan, θ*, gap scan `CG-P14-02` (Codex) |
+| 06 | claim row (not applicable / not asserted / "report only" chip / scoring backend), mode reference → Atlas "release metadata · not run evidence", as-of basis; current-source skip driven by the server's 200 | trial ledger, diagnostics `CG-P15-03/04` (Codex) |
+
+Deviations for Bobby: S01 cards 115 px (HiFi 101) because a downsampled series must say so (§8); "stitched OOS equity" label on a single-window run (HiFi copy vs DQ-15 — Bobby's call); S04 EChart 3 split into two small charts and a 5th chart for the still-published 20-observation return; 15 tiles instead of the HiFi 5 (new engine metrics).
