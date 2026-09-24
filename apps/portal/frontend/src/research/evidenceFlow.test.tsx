@@ -779,18 +779,13 @@ describe("P13-T09 — the header is the Hub's own, fact by fact", () => {
 });
 
 describe("P13-T11 — a deep dive is a link once its screen exists", () => {
-  it("still refuses the one screen that has no route", () => {
-    const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "execute" } });
-    const dive = container.querySelector("[data-deep-dive='execute']");
-    expect(dive?.tagName).toBe("SPAN");
-    expect(dive?.getAttribute("title")).toContain("no published route yet");
-  });
-
-  it("links the three that do", () => {
+  /* P17 published Screen 08's route, so the last refused deep dive is a link. */
+  it("links all four, including Execute since P17", () => {
     for (const [stage, path] of [
       ["split", "split"],
       ["search", "search"],
       ["freeze", "freeze"],
+      ["execute", "execute"],
     ] as const) {
       const { container, unmount } = view({ cursor: { ...DEFAULT_CURSOR, stage } });
       const dive = container.querySelector(`[data-deep-dive='${stage}']`);
@@ -1256,11 +1251,11 @@ describe("RF-06 FE-S04-13 — the HiFi layout", () => {
     for (const shell of shells) expect(shell.textContent).toContain("not published");
   });
 
-  it("keeps generate report and release candidate refused with their phase", () => {
+  it("links the built report but keeps release candidate refused until P21", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
-    const report = container.querySelector("[data-action-unrouted='generate run report →']");
-    expect(report?.tagName).toBe("SPAN");
-    expect(report?.getAttribute("title")).toContain("P18");
+    const report = container.querySelector('[data-action="generate-report"]');
+    expect(report?.tagName).toBe("A");
+    expect(report?.getAttribute("href")).toContain("/report");
     expect(container.querySelector("[data-action-unrouted='release candidate →']")?.getAttribute("title")).toContain("P21");
   });
 });
@@ -1423,12 +1418,11 @@ describe("RF-06 fidelity — summary panels", () => {
 });
 
 describe("RF-06 fidelity — claim tab next card", () => {
-  it("draws generate report as the primary button and release candidate as the outline, both refused", () => {
+  it("draws linked report as primary and still refuses release candidate", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
-    const report = container.querySelector("[data-action-unrouted='generate run report →']") as HTMLElement;
-    expect(report.getAttribute("data-primary")).toBe("true");
+    const report = container.querySelector('[data-action="generate-report"]') as HTMLElement;
+    expect(report.tagName).toBe("A");
     expect(report.style.background).toBe("var(--accent)");
-    expect(report.getAttribute("aria-disabled")).toBe("true");
     const rc = container.querySelector("[data-action-unrouted='release candidate →']") as HTMLElement;
     expect(rc.getAttribute("data-primary")).toBeNull();
     expect(container.querySelectorAll("[data-soon-hook] button[disabled]")).toHaveLength(2);

@@ -337,16 +337,13 @@ describe("FE-S01-04 — compare looks a hidden selection up by id", () => {
   });
 });
 
-describe("FE-S01-05 — open compare never navigates to the unbuilt Screen 13", () => {
-  it("renders the ready button disabled with its phase", () => {
+describe("FE-S01-05 — open compare only when the built Screen 13 can read both runs", () => {
+  it("links a same-Alpha, same-contract pair to the resolver", () => {
     view({ response: page([item({ run_id: "A" }), item({ run_id: "B" })]), filters: { ...EMPTY, sel: ["A", "B"] } });
-    const button = document.querySelector('[data-action="open-compare"]') as HTMLButtonElement;
-    // Old code: an <a href="/research/quantbt/compare?runs=A,B"> that bounced back to /runs.
-    expect(button.tagName).toBe("BUTTON");
-    expect(button.disabled).toBe(true);
-    expect(button.getAttribute("href")).toBeNull();
-    expect(button.getAttribute("data-phase")).toBe("P20");
-    expect(button.textContent).toContain("P20");
+    const link = document.querySelector('[data-action="open-compare"]') as HTMLAnchorElement;
+    expect(link.tagName).toBe("A");
+    expect(link.getAttribute("href")).toBe("/research/quantbt/compare?runs=A,B&alpha=delta-rsi");
+    expect(link.textContent).toContain("open compare");
   });
 });
 
@@ -484,14 +481,14 @@ describe("FE-S01-12 — compare bar and checkbox", () => {
 });
 
 describe("FE-S01-13 — header, frame, certificate, footer", () => {
-  it("links the journey map and shows attempt lineage disabled with P19", () => {
-    view();
+  it("links the journey map and bound Alpha group to built Attempt Lineage", () => {
+    view({ filters: { ...EMPTY, group: true } });
     expect(screen.getByText(TITLE)).toBeTruthy();
     expect(screen.getByText("journey map ↗").getAttribute("href")).toBe("/research/quantbt/journey");
-    const lineage = document.querySelector('[data-link-disabled="attempt-lineage"]') as HTMLElement;
-    expect(lineage.getAttribute("aria-disabled")).toBe("true");
-    expect(lineage.getAttribute("href")).toBeNull();
-    expect(lineage.textContent).toContain("P19");
+    expect(document.querySelector("[data-lineage-hint]")?.textContent).toContain("select an alpha group");
+    const lineage = document.querySelector('[data-action="open-lineage"]') as HTMLAnchorElement;
+    expect(lineage.getAttribute("href")).toBe("/research/quantbt/alphas/delta-rsi/lineage");
+    expect(lineage.getAttribute("data-lineage-alpha")).toBe("delta-rsi");
   });
 
   it("draws no extra RUNS frame around the cards", () => {

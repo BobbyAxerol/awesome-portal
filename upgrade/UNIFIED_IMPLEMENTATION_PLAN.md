@@ -3626,11 +3626,11 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P13](#rl-p13) | P05,P09–P11 | 04 | 07 | **AUDIT_REOPENED / 2026-09-22** — [Astra checkpoint](#rl-p13-p17-audit). Retain the feature-dark immutable receipt/Hub/series foundation and [historical P13 evidence](./research_loop/evidence/P13/README.md). A01/A02/A04/A05/A07 and source-supported metric/envelope coverage need remediation; previous narrow-slice PASS does not close the original phase. FE S04 remains Claude-owned, pending named-contract integration and browser/real-API receipt. · FE_EVIDENCE_HUB_MOUNTED / Claude — Screen 04 mounted at `/research/quantbt/runs/:runId/evidence`, beside the approved legacy workspace rather than over spec 04's `/runs/{id}` root; **needs Bobby's acknowledgement** if the root is wanted instead. Screen 01's `open evidence →` is a link again. Typed only from `@portal/contracts-research-evidence` and `@portal/contracts-research-current-source`: composition +1494, tests +704, client +251, container +198, cursor +173, route +38, probe +291, fixtures +1343 — `git diff --stat` 16 files, +4541/−13. `P13-T01…T09` 42 tests pass; tsc 0, research suite 425/425, full frontend suite **165 files / 0 failures**, build 0, product browser probe **49/49** (9 of them S04) with 0 console output beyond the deliberately refused passport read and 0 px overflow at 1280 and 660. **Two contracts, two questions:** the P13 Hub is the spine (metric registry, Stage-5 claim, methodology certificate, stage timeline, four series links, declared absences); RS-02's retained passport is one lazy panel whose profile refusal stays inside that panel. **A series belongs to its revision** — one answered at another is discarded, the Hub reread and that series asked once more, then the panel states the mismatch rather than looping. Nothing is computed: exact decimal strings are printed as strings, tooltips print the string not the plotted number, the certificate is rendered and never recomputed from caps, and a claim string alone earns none. The hash cursor (spec 04 §3) is exported for 05–08: stage changes keep it, every change replaces rather than pushes, and `trial`/`params`/fold-count stay absent because no operation publishes them. **Three defects only the browser found:** the equity chart drew nothing (an axis array through a one-axis merge — now equity plus its underwater restatement, one response); the palette was ECharts' own blue and highlighter green (now chart-theme tokens, legend and zoom slider off); and two repo gates caught a hand-mixed rgba scrim and a disabled fold step with no reason. **Fixture receipts only** — no backend was called, no baseline re-recorded, no threshold widened; `REAL_API_E2E_RECEIPT`, the Astra A01/A02/A04/A05/A07 items and RS-03 journeys are not claimed. **Two focused requests to Codex:** `CG-P13-01` run identity on the Hub (status/binding/created/mode/schedule/route/config digest/seed for the spec §2.2 header) and `CG-P13-02` the fold plan (a fold count to bound the cursor, or sanction to read `researchCurrentSourceSplitGetV1` for it). Neither is worked around. [Claude P13 composition](./research_loop/evidence/P13/frontend-composition-claude.md) |
 | [P14](#rl-p14) | P08,P10,P13 | 05 | 07 | **AUDIT_REOPENED / 2026-09-22** — preserve [P14 receipt](./research_loop/evidence/P14/README.md), UTC/source-digest/holdout boundaries and feature-dark defaults. A03 range-validation, warmup/data-use proof, supported fold mapping and S05 handoff require remediation. No unlock/strict-OOS/physical-I/O assertion is newly authorized. Original source/browser gates are not closed by the fixed smoke profile. · FE_SPLIT_MOUNTED / Claude — Screen 05 mounted at `/research/quantbt/runs/:runId/split`, on the shared evidence cursor so a reader arriving from the hub keeps their fold. Typed only from `@portal/contracts-research-split` and `@portal/contracts-research-current-source`: composition +741, tests +553, client +215, container +104, route +32, probe +131, fixture +110 — `git diff --stat` 18 files, +2434/−33 (includes consuming the P13 run-identity/fold amendment at `f8e2d8cf`). `P14-T01…T07` 28 tests pass; tsc 0, full frontend suite **166 files / 0 failures**, build 0, product browser probe **55/55** (6 of them S05), 0 console output beyond the deliberately refused retained-source read, 0 px overflow at 1280 and 660. **No boundary is computed:** the three windows and the holdout are placed on one axis by the single arithmetic that turns two published timestamps into an offset and a width, and a test asserts the screen contains no interval arithmetic at all. A sub-pixel window is floored to a hairline and badged rather than dropped. **The holdout is described, never opened:** it is `P08_METADATA_BOUND`, not SEALED — calling it sealed would assert a seal record the contract says it does not publish; evaluation, child-tape exposure and physical I/O stay three separate facts; the unlock affordance is a span, and a browser test clicks it and asserts no request leaves the page. **`NOT_ASSERTED` keeps its own word** for the strict outer-OOS selector, with no verdict badge. Actual folds come only from the retained-source split, whose profile refusal stays inside the fold panel. Four hi-fi elements are deliberately not drawn (seal wording, certificate-cap sentence, axis year ticks, protocol numbers) and each is recorded with its reason. **Fixture receipts only** — no backend called, no baseline re-recorded, no threshold widened; the Astra A03 items stay open for backend. **One request to Codex:** `CG-P14-01` — publish an axis tick set, or rule that generating axis labels from the timeline range is presentation rather than a computed boundary. [Claude P14 composition](./research_loop/evidence/P14/frontend-composition-claude.md) · **Re-audited 2026-09-23 (`bdeb0268`)** — published facts the first pass rendered nowhere are now on screen (provenance on all three deep dives; S05 `result_exposure_state`; S06/S07 `readiness`; S07 window `evaluation_state`, frozen `bound_state` and the verification's `freeze_revision`), spec copy corrected to verbatim where it is true and deliberately withheld where it is not, and the hard-refresh / keyboard-name / ETag checks each handoff requires are written. Suite 2920 passed, probe 74 passed. Open requests: [consolidated list](./research_loop/evidence/CODEX_REQUESTS_FROM_CLAUDE_P13_P16.md). · **`CG-P14-01`/`CG-P15-01`/`CG-P16-01` closed by Codex at `ccc4c6e5` and consumed at `c650307d`** — UTC axis ticks under the presentation ruling (with the required 1280→660 resize acceptance: labels thin, geometry, endpoints, legend and request count byte-identical), the candidate-selection metric rendered as the typed absence it is with the installed catalogue default asserted absent, and the verify result carrying its own `verification_scope` instead of the snapshot's. Suite 2928 passed, probe 77 passed. |
 | [P15](#rl-p15) | P04,P05,P13,P14 | 06 | 08 | **AUDIT_REOPENED / 2026-09-22** — [P15 fixed-run compatibility](./research_loop/evidence/P15/README.md) remains useful. A09: installed QuantBT WFO/optimizer artifacts are proven; missing Portal producer/retention/ledger integration is not a blanket engine source gap. Complete supported full-ledger/diagnostic contracts via RS-02; Claude keeps rich S06 composition and consumes generated facts. · FE_SEARCH_MOUNTED / Claude — Screen 06 mounted at `/research/quantbt/runs/:runId/search`, on the shared cursor, whose fold is sent as the contract's own `fold` selector. Typed only from `@portal/contracts-research-search` and `@portal/contracts-research-current-source`: composition +647, tests +488, client +207, container +107, route +32, probe +119, fixture +63 — `git diff --stat` 11 files, +1862/−2. `P15-T01…T06` 20 tests pass; tsc 0, full frontend suite **167 files / 0 failures**, build 0, product browser probe **61/61** (6 of them S06), 0 console output beyond the deliberately refused retained read, 0 px overflow at 1280 and 660. **A search that did not happen is not a search whose results are missing:** the Stage A / freeze line / Stage B geometry is kept, the installed source is labelled a fixed qualification rather than a switched-off optimizer, and the three absences stay three words — `NOT_APPLICABLE` (the question does not arise), `NOT_PUBLISHED` (it does and nothing answered), `NOT_ASSERTED` (nobody claimed it). The declared profile is the one panel with content: exact decimal bounds and a tick at the server's own `position_percent`, with a test asserting no arithmetic touches a declared bound. Nothing points at a trial — `selected_trial_ref` is null, so no best card, no pick, no jump-to-trial, no Freeze action — and no empty chart is drawn anywhere, because an empty axis reads as a study that found nothing. Two hi-fi elements are deliberately not built (the five-mode demo tape, the KaTeX objective formula) with reasons recorded. **One defect the browser found:** seven identical explanation paragraphs buried the per-panel reason codes; the rule is now stated once. **Fixture receipts only** — no backend called, no baseline re-recorded, no threshold widened; Astra A09 stays open for backend. **One request to Codex:** `CG-P15-01` — publish a typed `candidate_selection_metric` for a declared-not-executed request, or rule that none exists. [Claude P15 composition](./research_loop/evidence/P15/frontend-composition-claude.md) · **Re-audited 2026-09-23 (`bdeb0268`)** — published facts the first pass rendered nowhere are now on screen (provenance on all three deep dives; S05 `result_exposure_state`; S06/S07 `readiness`; S07 window `evaluation_state`, frozen `bound_state` and the verification's `freeze_revision`), spec copy corrected to verbatim where it is true and deliberately withheld where it is not, and the hard-refresh / keyboard-name / ETag checks each handoff requires are written. Suite 2920 passed, probe 74 passed. Open requests: [consolidated list](./research_loop/evidence/CODEX_REQUESTS_FROM_CLAUDE_P13_P16.md). · **`CG-P14-01`/`CG-P15-01`/`CG-P16-01` closed by Codex at `ccc4c6e5` and consumed at `c650307d`** — UTC axis ticks under the presentation ruling (with the required 1280→660 resize acceptance: labels thin, geometry, endpoints, legend and request count byte-identical), the candidate-selection metric rendered as the typed absence it is with the installed catalogue default asserted absent, and the verify result carrying its own `verification_scope` instead of the snapshot's. Suite 2928 passed, probe 77 passed. |
-| [P16](#rl-p16) | P13–P15 | 07 | 08 | **AUDIT_REOPENED / 2026-09-22** — preserve [P16 partial binding verifier](./research_loop/evidence/P16/README.md); never relabel `PARTIAL_MATCH` as artifact integrity PASS. A10: expected-byte verification, historical bindings and supported diagnostic/reuse paths remain implementation work. P05/P11 foundations already exist. S07 FE/product receipt pending; no runtime activation. · FE_FREEZE_MOUNTED / Claude — Screen 07 mounted at `/research/quantbt/runs/:runId/freeze`, on the shared cursor. Typed only from `@portal/contracts-research-freeze` and `@portal/contracts-research-current-source`: composition +683, tests +600, client +215, container +140, route +34, probe +126, fixtures +143 — `git diff --stat` 12 files, +2138/−2. `P16-T01…T07` 23 tests pass; tsc 0, full frontend suite **168 files / 0 failures**, build 0, product browser probe **67/67** (6 of them S07), 0 console output beyond the deliberately refused retained read, 0 px overflow at 1280 and 660. **A match is only as wide as its published scope:** `PARTIAL` is rendered as `PORTAL_RETAINED_DIGEST_BINDING_ONLY` with that scope in words beside every mark, both digests are printed per check, the unattested source artifact bytes sit in the same panel as the matches, and a browser test asserts the screen never says chain intact. **`BLOCKED` empties the frozen table on purpose** and names the mismatched check with both digests. **One POST, from one click:** it carries the same-origin CSRF proof, cannot overlap itself, and rereads the snapshot only after the typed result — unit and browser tests both assert that mount, a fold-carrying hash, a fold change and repeated renders send nothing. What-if offers no control at all (`may_submit`/`may_create` pinned false), and `NOT_ASSERTED` ordering draws no verdict. Five hi-fi elements are deliberately not built, each recorded with its contract reason. **Fixture receipts only** — no backend called, no baseline re-recorded, no threshold widened; Astra items stay open for backend. **One request to Codex:** `CG-P16-01` — carry `verification_scope` on `FreezeVerification` itself so a re-read's result carries its own qualification. [Claude P16 composition](./research_loop/evidence/P16/frontend-composition-claude.md) · **Re-audited 2026-09-23 (`bdeb0268`)** — published facts the first pass rendered nowhere are now on screen (provenance on all three deep dives; S05 `result_exposure_state`; S06/S07 `readiness`; S07 window `evaluation_state`, frozen `bound_state` and the verification's `freeze_revision`), spec copy corrected to verbatim where it is true and deliberately withheld where it is not, and the hard-refresh / keyboard-name / ETag checks each handoff requires are written. Suite 2920 passed, probe 74 passed. Open requests: [consolidated list](./research_loop/evidence/CODEX_REQUESTS_FROM_CLAUDE_P13_P16.md). · **`CG-P14-01`/`CG-P15-01`/`CG-P16-01` closed by Codex at `ccc4c6e5` and consumed at `c650307d`** — UTC axis ticks under the presentation ruling (with the required 1280→660 resize acceptance: labels thin, geometry, endpoints, legend and request count byte-identical), the candidate-selection metric rendered as the typed absence it is with the installed catalogue default asserted absent, and the verify result carrying its own `verification_scope` instead of the snapshot's. Suite 2928 passed, probe 77 passed. |
-| [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | **AUDIT_REOPENED / 2026-09-22** — preserve [P17 retrospective-equity compatibility](./research_loop/evidence/P17/README.md). A05/A06/A08: revision coherence, ETag/cursor/deep-link and read-cost fixes; A09: retain/map actual route-supported outputs rather than waiting for an engine upgrade. No invented fills or execution state. Full route/FE acceptance remains open. |
-| [P18](#rl-p18) | P13–P17 | 09 | 09 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S09_BROWSER_PRINT_PENDING_CLAUDE** — RS-01…03 acceptance is consumed only as the persisted P13–P17 input boundary. Immutable report + bounded JSON/CSV export are complete and proven in [P18 evidence](./research_loop/evidence/P18/README.md); no source rerun/artifact/file access, runtime activation or product receipt is claimed. Claude owns [S09 consumer/print](./research_loop/evidence/P18/frontend-handoff-claude.md). |
-| [P19](#rl-p19) | P07,P10,P12,P15 | 10 | 10 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S10_BROWSER_HIFI_PENDING_CLAUDE** — bounded persisted lineage, source-attested promotion-fact lane and generated client are proven in [P19 evidence](./research_loop/evidence/P19/README.md). No source-pick heuristic, UI receipt, deployment or product activation is claimed. Claude owns [Screen 10 handoff](./research_loop/evidence/P19/frontend-handoff-claude.md). |
-| [P20](#rl-p20) | P13,P15,P18,P19 | 13 | 10 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S13_BROWSER_HIFI_PENDING_CLAUDE** — [P20 evidence](./research_loop/evidence/P20/README.md) proves the bounded same-origin reader, exact raw-return correlation and operational cache. It does not claim a source rerun, product route receipt, deployment or activation. Claude owns [Screen 13 typed consumer/browser handoff](./research_loop/evidence/P20/frontend-handoff-claude.md). |
+| [P16](#rl-p16) | P13–P15 | 07 | 08 | **AUDIT_REOPENED / 2026-09-22** — preserve [P16 partial binding verifier](./research_loop/evidence/P16/README.md); never relabel `PARTIAL_MATCH` as artifact integrity PASS. A10: expected-byte verification, historical bindings and supported diagnostic/reuse paths remain implementation work. P05/P11 foundations already exist. S07 FE/product receipt pending; no runtime activation. · FE_FREEZE_MOUNTED / Claude — Screen 07 mounted at `/research/quantbt/runs/:runId/freeze`, on the shared cursor. Typed only from `@portal/contracts-research-freeze` and `@portal/contracts-research-current-source`: composition +683, tests +600, client +215, container +140, route +34, probe +126, fixtures +143 — `git diff --stat` 12 files, +2138/−2. `P16-T01…T07` 23 tests pass; tsc 0, full frontend suite **168 files / 0 failures**, build 0, product browser probe **67/67** (6 of them S07), 0 console output beyond the deliberately refused retained read, 0 px overflow at 1280 and 660. **A match is only as wide as its published scope:** `PARTIAL` is rendered as `PORTAL_RETAINED_DIGEST_BINDING_ONLY` with that scope in words beside every mark, both digests are printed per check, the unattested source artifact bytes sit in the same panel as the matches, and a browser test asserts the screen never says chain intact. **`BLOCKED` empties the frozen table on purpose** and names the mismatched check with both digests. **One POST, from one click:** it carries the same-origin CSRF proof, cannot overlap itself, and rereads the snapshot only after the typed result — unit and browser tests both assert that mount, a fold-carrying hash, a fold change and repeated renders send nothing. What-if offers no control at all (`may_submit`/`may_create` pinned false), and `NOT_ASSERTED` ordering draws no verdict. Five hi-fi elements are deliberately not built, each recorded with its contract reason. **Fixture receipts only** — no backend called, no baseline re-recorded, no threshold widened; Astra items stay open for backend. **One request to Codex:** `CG-P16-01` — carry `verification_scope` on `FreezeVerification` itself so a re-read's result carries its own qualification. [Claude P16 composition](./research_loop/evidence/P16/frontend-composition-claude.md) · **Re-audited 2026-09-23 (`bdeb0268`)** — published facts the first pass rendered nowhere are now on screen (provenance on all three deep dives; S05 `result_exposure_state`; S06/S07 `readiness`; S07 window `evaluation_state`, frozen `bound_state` and the verification's `freeze_revision`), spec copy corrected to verbatim where it is true and deliberately withheld where it is not, and the hard-refresh / keyboard-name / ETag checks each handoff requires are written. Suite 2920 passed, probe 74 passed. Open requests: [consolidated list](./research_loop/evidence/CODEX_REQUESTS_FROM_CLAUDE_P13_P16.md). · **`CG-P14-01`/`CG-P15-01`/`CG-P16-01` closed by Codex at `ccc4c6e5` and consumed at `c650307d`** — UTC axis ticks under the presentation ruling (with the required 1280→660 resize acceptance: labels thin, geometry, endpoints, legend and request count byte-identical), the candidate-selection metric rendered as the typed absence it is with the installed catalogue default asserted absent, and the verify result carrying its own `verification_scope` instead of the snapshot's. Suite 2928 passed, probe 77 passed. · **P16 frontend review correction pending Codex source-capability disposition** — Thanhvuong S07 correction at `65a8acc5` (4 frontend files, +581/−96; product-route browser 82/82 on the workspace's own preview, fixture-backed); receipt, test/hook evidence and every P16-B request with `CG-P16-02`/`CG-P16-03` unchanged: [Thanhvuong review addendum](./research_loop/evidence/P16/thanhvuong-review-addendum.md). P16-B remains `SOURCE_CAPABILITY_BLOCKED`, not done. |
+| [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | **AUDIT_REOPENED / 2026-09-22** — preserve [P17 retrospective-equity compatibility](./research_loop/evidence/P17/README.md). A05/A06/A08: revision coherence, ETag/cursor/deep-link and read-cost fixes; A09: retain/map actual route-supported outputs rather than waiting for an engine upgrade. No invented fills or execution state. Full route/FE acceptance remains open. Thanhvuong S08 frontend at `002e4098` (12 frontend files, +2182/−10; pushed to `primus-origin`, no PR; product-route browser 104/104 on the workspace own preview, API stubbed, 1280/660): [receipt](./research_loop/evidence/P17/thanhvuong-frontend-receipt.md), [backend requests](./research_loop/evidence/P17/thanhvuong-backend-requests.md) `CG-P17-01…03` OPEN, [test results](./research_loop/evidence/P17/thanhvuong-test-results.json), [implementation note](#p17-thanhvuong-frontend-implementation-note--screen-08-2026-09-23). P17-B remains `SOURCE_CAPABILITY_BLOCKED`, not done. |
+| [P18](#rl-p18) | P13–P17 | 09 | 09 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S09_BROWSER_PRINT_PENDING_CLAUDE** — RS-01…03 acceptance is consumed only as the persisted P13–P17 input boundary. Immutable report + bounded JSON/CSV export are complete and proven in [P18 evidence](./research_loop/evidence/P18/README.md); no source rerun/artifact/file access, runtime activation or product receipt is claimed. Claude owns [S09 consumer/print](./research_loop/evidence/P18/frontend-handoff-claude.md). Thanhvuong S09 frontend at `548e8d29` (13 frontend files, +3004/−14; pushed to `primus-origin`, no PR; product-route browser 128/128 at `93a435bb` and on head `47165016` in the 2026-09-23 independent audit, then 129/129 at `29c28f4a` and 131/131 at `548e8d29`, workspace own preview, API stubbed, 1280/660, print Letter/A4; the two audit layout defects are fixed in `29c28f4a` — sr-only equity table no longer adds blank scroll/pages (Letter PDF 7 → 5 pages), table cells keep words whole; `548e8d29` makes the sheet follow the hi-fi geometry block by block, remaining deviations are only missing fields `CG-P18-01…07` (PDF Letter 5 → 4, A4 5 → 3) — `open_debt` empty): [receipt](./research_loop/evidence/P18/thanhvuong-frontend-receipt.md), [backend requests](./research_loop/evidence/P18/thanhvuong-backend-requests.md) `CG-P18-01…11` OPEN, [test results](./research_loop/evidence/P18/thanhvuong-test-results.json), [implementation note](#p18-thanhvuong-frontend-implementation-note--screen-09-2026-09-23). |
+| [P19](#rl-p19) | P07,P10,P12,P15 | 10 | 10 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S10_BROWSER_HIFI_PENDING_CLAUDE** — bounded persisted lineage, source-attested promotion-fact lane and generated client are proven in [P19 evidence](./research_loop/evidence/P19/README.md). No source-pick heuristic, UI receipt, deployment or product activation is claimed. Claude owns [Screen 10 handoff](./research_loop/evidence/P19/frontend-handoff-claude.md). Thanhvuong S10 frontend at `9c4afb18`, **aligned to hi-fi per Bobby 2026-09-24** (10 frontend files; pushed to `primus-origin`, no PR). History: product-route browser 107/117 at `30dcbdfc` (one 660 layout bug B1, fixed in `74f26200`), 119/119 at `74f26200`; an independent audit found A1 mono font, A2 loading/refusal layout, A3 403/404 badge, all fixed in `1fb29010` (134/134). R1 `c9dd195e` locks 7 visual points to the hi-fi (`VD-P19-01…07`: 4 lifecycle filters, bands in server order, wrapping chips, dot rail, promotion rule and rules verbatim, disabled probes toggle, collapsed cards). R2 receipt at `c9dd195e` (tree `46d101c0`): tsc 0, build 0, vitest 171 files · 3067 pass · 1 skip, S10 52/52 (+ boundary 66/66), whole Research probe 119/119 first pass (`--workers=1`), workspace own preview, API stubbed, 1280/660/dark, overflow 0 at 660, 120-attempt windowed tree, 16 filter combinations, GATES RESET 0 requests. R3 `9c4afb18` (tree `9f3f917f`) closes the last two spec-over-hi-fi exceptions on the hi-fi per Bobby 2026-09-24 (`VD-P19-02` bands in server order, SUPERSEDED above ACTIVE; `VD-P19-04` rail step 26px; spec T01/§9.2 differ, hi-fi wins): S10 52/52, vitest 3067 pass · 1 skip, whole Research probe 119/119 (`--workers=1`; first pass 117/119 only because the probe counted the legacy `/api/runs` 4 s poll, harness fixed, no src change). Field-driven cells stay open in `open_debt`; not `VERIFIED`, feature-dark, no `REAL_API_E2E_RECEIPT`: [receipt](./research_loop/evidence/P19/thanhvuong-frontend-receipt.md), [backend requests](./research_loop/evidence/P19/thanhvuong-backend-requests.md) `CG-P19-01…14` (11 WITHDRAWN, 13 OPEN), [test results](./research_loop/evidence/P19/thanhvuong-test-results.json), [debt register](./research_loop/evidence/P19/thanhvuong-debt-register.json), [rollback](./research_loop/evidence/P19/thanhvuong-rollback.md), [implementation note](#p19-thanhvuong-frontend-implementation-note--screen-10-2026-09-24). |
+| [P20](#rl-p20) | P13,P15,P18,P19 | 13 | 10 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S13_BROWSER_HIFI_PENDING_CLAUDE** — [P20 evidence](./research_loop/evidence/P20/README.md) proves the bounded same-origin reader, exact raw-return correlation and operational cache. It does not claim a source rerun, product route receipt, deployment or activation. Claude owns [Screen 13 typed consumer/browser handoff](./research_loop/evidence/P20/frontend-handoff-claude.md). Thanhvuong S13 frontend `P20-A S13 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · pushed, no PR` at `eeeae14f` (tree `58f27644`; 6 code commits `92cdc844 → 0910ecc3 → f3d6169d → 009cedb8 → 034aef11 → eeeae14f` on `295901b7`, 10 frontend files +2900/−2; `eeeae14f` fixes independent-audit findings A1–A5, A8, A10). Canonical route `/research/quantbt/alphas/:alphaId/compare?mode=attempts\|markets\|pair&runs=`, spec route kept as resolver (unknown mode passed through to the server's 400); one generated GET `researchCompareGetV1` with ETag/304 (single-slot validator); REFUSED pair renders no hidden chart/table; correlation labelled `PORTAL_DERIVED`, absent never `0`; Δ labelled `B − A · as published` (server direction, `CG-P20-09`). Receipt at `eeeae14f`: tsc 0, build 0, vitest 172 files · 3094 pass · 1 skip, S13 + boundary 41/41, whole Research probe 162/162 (`--workers=1`), workspace own preview, API stubbed (no canonical compare fixture, `CG-P20-01`), 76 receipts (23 light gates + 15 dark gates, each at 1280/660) with overflow 0 / console 0 / mutation 0; dark-theme evidence exists only from this post-audit receipt. Hi-fi deltas recorded as `VD-P20-01…29` per Bobby 2026-09-24 (copy/layout points `REQUIRES_BOBBY_DECISION`, e.g. "two alphas", "engine-published", Δ direction; field-driven cells `03…06`). Baseline `72d2638b` not integrated (`3e7055d5` RunLibrary rewrite conflicts). Not `VERIFIED`, feature-dark, no `REAL_API_E2E_RECEIPT`, no axe, open implementation debt `S13-REFUSED-STATE-ATTR` / `S13-BACK-REFETCH` / `S13-DELTA-DIRECTION-LABEL`: [receipt](./research_loop/evidence/P20/thanhvuong-frontend-receipt.md), [backend requests](./research_loop/evidence/P20/thanhvuong-backend-requests.md) `CG-P20-01…11` (all OPEN), [test results](./research_loop/evidence/P20/thanhvuong-test-results.json), [debt register](./research_loop/evidence/P20/thanhvuong-debt-register.json), [rollback](./research_loop/evidence/P20/thanhvuong-rollback.md), [implementation note](#p20-thanhvuong-frontend-implementation-note--screen-13-2026-09-24). |
 | [P21](#rl-p21) | P07,P16–P19 | 11 composer | 11 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S11_PRODUCT_BROWSER_PENDING_CLAUDE** — Codex / [P21 packet](./research_loop/evidence/P21/README.md): same-origin bounded 17-field/12-item composer, actor-local declaration CAS, immutable Portal-local seal/pins and separate `NOT_DELIVERED`/`NOT_APPROVED` lifecycle are proven. No P22 publication, Approval mirror, Execution/QuantBT/source-byte call, deployment or browser acceptance is claimed. Claude owns [the S11 handoff](./research_loop/evidence/P21/frontend-handoff-claude.md). |
 | [P22](#rl-p22) | P02,P10,P21 | 11 handoff | 11 | PLANNED / unassigned / — |
 | [P23](#rl-p23) | P11–P22 | mọi màn | 12 | PLANNED / unassigned / — |
@@ -5129,6 +5129,55 @@ reason rather than a fake ledger; local playback is presentation only and must
 not issue a request per animation frame. See
 [P17 handoff](./research_loop/evidence/P17/frontend-handoff-claude.md).
 
+#### P17 Thanhvuong frontend implementation note — Screen 08 (2026-09-23)
+
+**Trạng thái:** `P17_A_S08_FRONTEND_COMPOSED · PRODUCT_ROUTE_BROWSER_RECEIPT · NOT_VERIFIED`.
+Nhánh `feat/thanhvuong/research-p17-p21`, base `21f9a98b`, code head `002e4098`,
+12 file frontend (+2182/−10). Không có thay đổi contract/backend/runtime. P17-B
+vẫn `SOURCE_CAPABILITY_BLOCKED`.
+
+**Đọc chi tiết (packet):** [receipt](./research_loop/evidence/P17/thanhvuong-frontend-receipt.md)
+(bảng đã đọc file@commit, mapping hi-fi → component → field → state → assertion,
+so hi-fi §4.1, discrepancy §7) ·
+[backend requests](./research_loop/evidence/P17/thanhvuong-backend-requests.md) ·
+[test results](./research_loop/evidence/P17/thanhvuong-test-results.json) ·
+[debt register](./research_loop/evidence/P17/thanhvuong-debt-register.json) ·
+[rollback](./research_loop/evidence/P17/thanhvuong-rollback.md).
+
+- **Đã giao:** route `/research/quantbt/runs/:runId/execute` (`researchReplayDetailGetV1`
+  + retained RS-02 chỉ đọc khi người dùng bấm); transport chỉ chạy trên sample
+  đã tải, 0 request khi play/seek; 409 `CURSOR_EXPIRED` → bỏ token, hồi phục đúng
+  một lần bằng `at_ordinal`; hash `seq` chỉ ghi khi playhead dừng; mọi panel
+  hi-fi giữ chỗ và in reason code (6 panel vắng, 13 route capability, 2 source
+  absence); hub Stage 4 và link "next" của S07 trỏ tới S08.
+- **Evidence:** tsc/build PASS; unit 2971 pass/1 skip (S08 36/36); browser toàn
+  Research 104/104 trên preview riêng 4417, API stub, 1280/660; 20/20 ảnh state
+  overflow 0, console sạch. Chưa có `REAL_API_E2E_RECEIPT` (feature-dark), axe.
+- **Geometry hi-fi đã sửa ở `548e8d29` (rule 9):** passport ngang; identity +
+  headline một hàng (6 tile 2 × 3); equity có caption hai đầu, trục từ chuỗi
+  server, legend, nhãn fold, underwater 92px; certification chain + artifacts
+  và promotion + provenance hai cột; 660 xếp chồng. Còn lệch chỉ vì thiếu field
+  (`CG-P18-01…07`, receipt §4).
+- **Lỗi tìm ra và đã sửa trong phase:** thiếu panel PnL distribution (`3cf70794`);
+  retained 409 đọc sai và 403 xác nhận run tồn tại, trái addendum RF-01/RF-02
+  (`002e4098`); nhãn test trùng ID Guide (`9ee85241`); 501 `/api/runs/:id` (`737d279d`).
+- **Backend request (@codex), kiểm lại 2026-09-23 trên `e39bacfa`, đều OPEN:**
+  `CG-P17-01` fixture replay canonical; `CG-P17-02` fact retained-lane theo run +
+  mã `RESEARCH_CURRENT_SOURCE_*` trong generated contract; `CG-P17-03` ngữ nghĩa
+  `emitted_point_count` / `source_observation_count`. Tám hàng P17-B giữ tên theo
+  [capability matrix](./research_loop/evidence/P17/source-capability-matrix.md).
+- **Bobby quyết:** tích hợp baseline `952ad48f…e39bacfa` (1 xung đột
+  `FreezeDetail.tsx`; S08 → `toResearchRefusal` + `recovery`); tiêu đề S08
+  (`VISUAL_DECISION_REQUIRED`); LENS / dòng artifact / COPY EVIDENCE LINK / Reveal;
+  hook workspace; axe.
+- **Exit gate còn lại cho P17-A frontend:** tích hợp baseline + chạy lại toàn bộ
+  test; `REAL_API_E2E_RECEIPT` S08 trên lane preview RF-02 khi replay được bật ở
+  đó; ba `CG-P17-*` được trả lời hoặc ghi là vắng thật; quyết định của Bobby ở trên.
+- **Rollback/handoff:** revert từng commit theo
+  [rollback](./research_loop/evidence/P17/thanhvuong-rollback.md); route backend
+  vẫn `FEATURE_RESEARCH_REPLAY=false`. Handoff cho P18 (S09): S08 không publish
+  fact nào mới; Report đọc từ contract của nó, không từ S08.
+
 <a id="rl-p13-p17-audit"></a>
 ### P13–P17 cross-review checkpoint — Astra, trước P18
 
@@ -5295,6 +5344,78 @@ Terra/Claude prompts and audit command/results are in the appendix §§6–7.
 - **Bounded export delivery:** `research.report-export.v1` publishes exactly JSON/CSV via one caller/revision/format-deduplicated PostgreSQL job, 512 KiB maximum, a finite 1–16-claim worker lease and server-only filenames. CSV formula and path injection are neutralized; `PARQUET`/`ARCHIVE` remain typed unavailable rather than triggering a fallback read. Approval annotation is stored separately and cannot rewrite the frozen core.
 - **Evidence and handoff:** focused service/controller/config units, generated contract guard and fresh disposable PostgreSQL migration/immutability/size proof pass. The precise packet is [P18 evidence](./research_loop/evidence/P18/README.md); Claude must consume [the P18 handoff](./research_loop/evidence/P18/frontend-handoff-claude.md) for rich S09/browser/print acceptance. Feature remains dark; no deployment, runtime worker or product-route receipt is claimed.
 
+#### P18 Thanhvuong frontend implementation note — Screen 09 (2026-09-23)
+
+**Trạng thái:** `P18_A_S09_FRONTEND_COMPOSED · PRODUCT_ROUTE_BROWSER_RECEIPT · NOT_VERIFIED`.
+Nhánh `feat/thanhvuong/research-p17-p21`, base `19310912`, code head `548e8d29`,
+13 file frontend (+3004/−14; riêng `548e8d29` +590/−246). Không có thay đổi contract/backend/runtime; backend
+P18 vẫn `FEATURE_DARK`. Checkpoint Astra "do not enter P18 yet" và board
+`S09_BROWSER_PRINT_PENDING_CLAUDE` được xử lý như P17: frontend consumer trên
+contract đã publish, không claim `VERIFIED`, Bobby quyết.
+
+**Đọc chi tiết (packet):** [receipt](./research_loop/evidence/P18/thanhvuong-frontend-receipt.md)
+(bảng đã đọc file@commit, Guide `P18-T01…T12` FE cover/PENDING, mapping hi-fi →
+component → field → state → assertion, so hi-fi §4, discrepancy §4.1/§7, scale
+refine §8) ·
+[backend requests](./research_loop/evidence/P18/thanhvuong-backend-requests.md) ·
+[test results](./research_loop/evidence/P18/thanhvuong-test-results.json) ·
+[debt register](./research_loop/evidence/P18/thanhvuong-debt-register.json) ·
+[rollback](./research_loop/evidence/P18/thanhvuong-rollback.md).
+
+- **Đã giao:** route `/research/quantbt/runs/:runId/report` với 4 operation
+  generated (`researchReportDetailGetV1` + ETag/304; export create kèm CSRF,
+  status poll 2000 ms chỉ khi QUEUED/RUNNING và dừng khi terminal/unmount/tab
+  ẩn, 409 giữ job; download chỉ qua `download_href` khi READY). Sheet in được:
+  16 khối theo hi-fi, số in nguyên chuỗi `ExactDecimal`, digest/revision đầy đủ,
+  equity SVG tĩnh với caption `emitted N of M · sampling`, stage không bao giờ
+  in PASS, ô hi-fi không có field giữ chỗ với reason code. Warnings in trong
+  sheet; approval annotation và exports chỉ trên màn hình. Print CSS scoped
+  (`@page 0.55in`, thead lặp, `break-inside: avoid`), không `doc-page.js`, 0 CSS
+  global. Hub "generate report → 09" và S08 "next: Run Report" thành link;
+  Screen 11 vẫn refused.
+- **Evidence:** tsc/build PASS; unit 170 file · 3010 pass · 1 skip (S09 39/39,
+  `29c28f4a`);
+  browser toàn Research 128/128 trên `93a435bb`, probe S09 chạy lại 46/46 trên
+  `aea76f69` (clip `[]` ở screen/print/Letter/A4, cert box đúng chỗ); preview
+  riêng 4417, API stub theo shape `report.service.ts`, 1280/660, print
+  emulation 0 request, PDF Letter/A4. Audit độc lập 2026-09-23 chạy lại toàn
+  bộ probe Research trên head `47165016`: **128/128**; sau khi sửa lỗi audit,
+  toàn bộ probe Research trên `29c28f4a`: **129/129** (`scrollHeight` 1280
+  6 049 → 3 307, PDF Letter 7 → 5 trang, A4 6 → 5, 1 `h1`, không chữ nào bị bẻ
+  trong ô bảng); sau vòng geometry hi-fi (`548e8d29`): **131/131** (thêm probe
+  `hifi-geometry`), unit 3015 pass · 1 skip (S09 44/44), PDF Letter 5 → 4 trang,
+  A4 5 → 3. Chưa có
+  `REAL_API_E2E_RECEIPT` (`FEATURE_RESEARCH_REPORTS=false`), axe.
+- **Lỗi audit đã sửa ở `29c28f4a` (`open_debt` rỗng):** bảng `sr-only` điểm equity
+  cao 4 818 px (thêm ~2 800 px cuộn trống và 2 trang trắng cuối PDF Letter) nay
+  nằm trong wrapper clip `.rr-sr`, ẩn khi in; `.rr-table td` hết `break-all`
+  (`word-break: normal; overflow-wrap: break-word`), chỉ `.rr-long` còn bẻ; title
+  report là `h2` (một `h1`); verdict rule đọc từ `provenance.verdict_rule_revision`.
+- **Lỗi tìm ra và đã sửa trong phase:** giá trị sealed bị cắt ở provenance line
+  (`aea76f69`); cert box rớt dòng ở 1280 (`aea76f69`); PDF không lề (`aea76f69`);
+  annotation mutable lọt vào bản in (`93a435bb`); nhãn "archive" (`aea76f69`).
+- **Backend request (@codex), kiểm lại 2026-09-23 trên `e39bacfa` (và
+  `6a87f77b`), đều OPEN:** `CG-P18-01` passport key/label; `02` certification
+  grade; `03` strategy cho title; `04` cột per-fold; `05` kết quả từng stage;
+  `06` IS equity series; `07` artifact filename/bytes; `08` caption params
+  handoff; `09` fixture canonical P18; `10` 409 trên GET report chưa khai trong
+  OpenAPI; `11` identity theo spec §16.3 + binding scratch (thêm ở audit,
+  kiểm lại trên baseline `361f68b4`).
+- **Bobby quyết:** tích hợp baseline `e39bacfa…6a87f77b` (file P18 chung với
+  baseline chỉ `EvidenceFlow.tsx`, merge-file 0 xung đột; xung đột
+  `FreezeDetail.tsx` của P17 còn; S09 → `toResearchRefusal`); tiêu đề S09 + badge
+  certification (`VISUAL_DECISION_REQUIRED`); axe; PDF làm PR artifact; flake
+  `PortalShell.test.tsx`; 401 → session-expired (U07).
+- **Exit gate còn lại cho P18-A frontend:** tích hợp baseline
+  (`361f68b4`, `QuantBTModule.tsx` merge-file 0 xung đột) + chạy lại toàn bộ unit
+  và 131 probe; `REAL_API_E2E_RECEIPT` S09 (export đọc nội dung thật, Guide
+  T01/T09/T12) khi cờ report bật trên lane preview RF-02; spec T03/T04/T05/T06/T08;
+  `CG-P18-*` được trả lời hoặc ghi là vắng thật; quyết định của Bobby ở trên.
+- **Rollback/handoff:** revert từng commit theo
+  [rollback](./research_loop/evidence/P18/thanhvuong-rollback.md); backend vẫn
+  `FEATURE_RESEARCH_REPORTS=false`. Handoff cho P19 (S10): S09 không publish fact
+  nào mới; lineage đọc từ contract của nó, không từ S09.
+
 <a id="rl-p19"></a>
 ### P19 — Attempt lineage, semantic diffs và exposure
 
@@ -5314,6 +5435,120 @@ Terra/Claude prompts and audit command/results are in the appendix §§6–7.
 - **Truthful current-source gaps:** An absent DR03/source pick remains `NOT_PUBLISHED` (`P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK`), not newest/ACTIVE/metric/Sharpe selection. Missing persisted P08/P10 manifests remain a typed semantic-diff absence, and no Clone/Reproduce/Upgrade action is fabricated while current P10 only supports `NEW`. These are source facts/UI consumer work, not a backend waiver.
 - **Evidence/handoff:** focused service/controller/contract tests, disposable PostgreSQL migration/immutability/runtime-privilege/bound proof, production-source compile, generated contract/snapshot and capability ledger are recorded in [P19 evidence](./research_loop/evidence/P19/README.md). Claude must consume [the P19 handoff](./research_loop/evidence/P19/frontend-handoff-claude.md) and return the rich S10 browser/HiFi receipt before P19 is product-close; no UI/browser/deployment acceptance is claimed by this backend delivery.
 
+#### P19 Thanhvuong frontend implementation note — Screen 10 (2026-09-24)
+
+**Trạng thái:** `P19_A_S10_FRONTEND_COMPOSED · PRODUCT_ROUTE_BROWSER_RECEIPT · NOT_VERIFIED`.
+
+- Nhánh `feat/thanhvuong/research-p17-p21`, base `f37b3b75`.
+- Code: `3a11bfd3` client + hook · `0ec4b6af` màn hình, route, link · `30dcbdfc` unit `S10-U01…U42` · `74f26200` sửa B1 660 · `1fb29010` sửa audit A1–A3 (tree `6b7e0419`, 3 file +163/−16) · `c9dd195e` khớp hi-fi 7 điểm (R1, tree `46d101c0`, 2 file +811/−613 và +292/−41) · `9c4afb18` thứ tự band và bước rail theo hi-fi (R3, tree `9f3f917f`, 2 file +4/−7 và +3/−3).
+- 10 file frontend, +2806/−1 (riêng `74f26200` +2/−2).
+- Không đổi contract, backend hay runtime. Backend P19 vẫn `FEATURE_DARK` (`CONTROL_API_FEATURE_RESEARCH_LINEAGE=false`).
+- Checkpoint Astra "do not enter P18 yet" chưa gỡ, còn board ghi `S10_BROWSER_HIFI_PENDING_CLAUDE`. Xử lý như P17/P18: làm frontend consumer trên contract đã publish, không claim `VERIFIED`; Bobby quyết.
+
+**Đọc chi tiết (packet):**
+- [receipt](./research_loop/evidence/P19/thanhvuong-frontend-receipt.md): bảng đã đọc file@commit (nhánh, `9060a7c4`, `62d7d864`); Guide `P19-T01…T13` phần FE cover được; route/link; mapping hi-fi → component → field → state → assertion; spec T01–T12; so hi-fi §5.4; discrepancy §7; Reuse report §11.
+- [backend requests](./research_loop/evidence/P19/thanhvuong-backend-requests.md)
+- [test results](./research_loop/evidence/P19/thanhvuong-test-results.json)
+- [debt register](./research_loop/evidence/P19/thanhvuong-debt-register.json)
+- [rollback](./research_loop/evidence/P19/thanhvuong-rollback.md)
+
+- **Đã giao** (mô tả bản trước R1; R1 `c9dd195e` đổi filter, band, chip, rail, copy, toggle theo ledger `VD-P19-01…07` bên dưới):
+  - Route `/research/quantbt/alphas/:alphaId/lineage` (đặt trước `alphas/:alphaId/:version`), deep link `?av=` / `?attempt=`.
+  - Một operation generated `researchAttemptLineageGetV1`: 1 GET, `limit` 128, không poll. Không có ETag vì contract không khai.
+  - Layout 2 cột theo hi-fi (571/381 px ở 1280, hi-fi 581/387), xếp 1 cột ở 660. 9 `data-panel`, giữ đủ cả khi loading và refusal (từ `1fb29010`): header · root card với 1 band mỗi version, chip cuộn trong band, promotion pick PUBLISHED/NOT_PUBLISHED · filter + counter "showing n of m attempts · total" · cây DFS theo `parent_attempt_id` (ảo hoá khi > 40 node) · selected · diff · promotion rule · rules · counts.
+  - Diff chip in nguyên từ `semantic_diff.changes`. GATES RESET là span trơ: 0 request, 0 state.
+  - ABANDONED/FAILED giữ lại kèm reason.
+  - `technical_retry_count` không cộng vào attempt.
+  - Child runs theo `relationship_kind`; bounded coverage được disclosure.
+  - Exposure NOT_PUBLISHED không in 0.
+  - Ô hi-fi không có field ghi "not a field of the lineage contract".
+  - Link vào từ Run Library (nhóm alpha) và Alpha Import (S14); link ra evidence/report/New Run/Alpha Import; Screen 11 vẫn refused.
+- **Audit độc lập (2026-09-24) và A-fix:**
+  - A1 MAJOR: reset `.ln-page button { font: inherit }` thắng class chip → chip/filter/toggle/retry 12px Inter. **Sửa ở `1fb29010`** bằng `:where(.ln-page) button`; probe computed 1280/660: chip 8.5px, filter/toggle 9.5px, retry 10.5px, đều `var(--font-mono)`.
+  - A2: loading/refusal chỉ còn header · notice · rules. **Sửa ở `1fb29010`**: đủ 10 `data-panel` (9 khối + notice) ở loading và 400/401/403/404/503, mỗi khối loading/withheld, 0 chữ số.
+  - A3: badge 403 ≠ 404. **Sửa ở `1fb29010`**: 404 → `denied`, cùng badge "⊘ DENIED" và câu F-04 với 403. S09 vẫn 404 → `empty` (Bobby quyết).
+  - A4–A6 (docs): sửa trích dẫn subtitle hi-fi ("Immutable nodes · every config change is a sibling attempt with its own hash."), rules verbatim theo spec §2.5 (hi-fi khác), thêm bảng copy hi-fi ≠ spec; sửa Reuse report (`AbsentPanel` private trong `ExecuteDetail.tsx`, `Absent` cục bộ hợp lý); "counts reconcile Library definitions" ghi `NOT_RUN` + `CG-P19-13`.
+  - Tree `6b7e0419`: tsc PASS, build PASS; vitest 171 file · 3058 pass · 1 skip; S10 43/43; probe Research **134/134** ở lượt chính thức (lượt đầu 133/134: 1 assert probe phụ thuộc cỡ chip cũ, sửa probe). Flake probe `fix-hypothesis` (audit) ghi `known_flake`.
+- **Vòng khớp hi-fi (R1 `c9dd195e`, receipt R2 2026-09-24):**
+  - Bobby 2026-09-24: "version này chốt theo đúng khớp với HIFI; nếu có gì không hợp lý thì mở version mới để làm gọn đúng scope; 6–7 visual decision phải ghi vào Unified plan; khi làm P20 sẽ đẻ thêm debt mới nên ghi vào handoff lẫn Unified cho các phase sau."
+  - Tree `46d101c0`: tsc 0, build 0; vitest 171 file · 3067 pass · 1 skip; S10 52/52 (kèm boundary 66/66); probe Research **119/119** lượt đầu (`--workers=1`: fixtures 8, product 74, r2 37).
+  - Copy title, subtitle, source chip, promotion rule, rules: probe so chuỗi hi-fi ↔ product, trùng khớp. 4 filter đúng nhãn, 16 tổ hợp: counter = số row = `aria-pressed`.
+  - 1280 hai cột 571/381 (hi-fi 581/387); 660 một cột, overflow 0; chip wrap (overflow 0, 2/7 dòng); 16 rail; card đóng khi tải, click mở/đóng; toggle probes disabled `CG-P19-03`; 403 và 404 cùng một bộ (denied).
+  - Không có bug làm fail assertion. Lệch còn lại phân loại ở [receipt §13](./research_loop/evidence/P19/thanhvuong-frontend-receipt.md#13-vòng-khớp-hi-fi-r1-c9dd195e-và-receipt-r2).
+- **R3 — đóng 2 ngoại lệ cuối theo hi-fi (`9c4afb18`, tree `9f3f917f`, 2026-09-24):**
+  - Bobby chốt: hai ngoại lệ `VD-P19-02` và `VD-P19-04` theo hi-fi. `bandOrder` trả nguyên thứ tự server (hi-fi vẽ SUPERSEDED trên ACTIVE), `RAIL_STEP` 22 → 26. **Discrepancy ghi rõ:** spec T01 (ACTIVE-first) và spec §9.2 (22px) khác hi-fi; hi-fi thắng theo Bobby 2026-09-24.
+  - Gate: S10 52/52, tsc 0, build 0, vitest toàn bộ 3067 pass · 1 skip. Unit U04/U46/railWidth đổi theo.
+  - Browser (preview riêng 4417, API stub): band `[SUPERSEDED, ACTIVE]` = thứ tự server ở 1280/660, sáng và tối; rail depth 1 = 60px (34 + 26), 16 rail, 0 sai; overflow 0, console 0, mutation 0 ở cả 30 receipt. Probe Research toàn bộ `--workers=1` **119/119** (fixtures 8 + product 74 + r3 37). Lượt đầu 117/119: 2 fail `gates-no-request` do probe đếm cả poll legacy `/api/runs` 4 s (B5), không do S10; sửa harness, không sửa src. Chi tiết ở [receipt §13.6](./research_loop/evidence/P19/thanhvuong-frontend-receipt.md#136-r3-9c4afb18--đóng-vd-p19-02-và-vd-p19-04-theo-hi-fi).
+
+**Visual decision ledger (Bobby 2026-09-24: build phải khớp hi-fi; lệch → mở version mới)**
+
+| id | điểm | bản trước (tự chọn) | bản nay (hi-fi) | cách map contract | còn treo gì |
+|---|---|---|---|---|---|
+| `VD-P19-01` | Filter | 6 nhóm state thô của contract (draft / in-flight / ready / failed / abandoned / cancelled), counter "· {total} total" | 4 chip `active · draft · superseded · abandoned`, bật/tắt độc lập, tắt hết = hiện hết, counter "showing n of m attempts" (+ "· {total} on record" chỉ khi bounded) | `lineageStatus`: attempt ABANDONED → ABANDONED; DRAFT/PREFLIGHT_VALID → DRAFT; version ACTIVE → ACTIVE; version SUPERSEDED/ABANDONED → SUPERSEDED; version DRAFT → DRAFT; version không trả → `null`. Chỉ chia nhóm, không so metric | Mọi attempt của version ACTIVE đều mang ACTIVE (`CG-P19-14`); chip state thô (READY/FAILED…) vẫn hiện cạnh status khi khác |
+| `VD-P19-02` | Thứ tự band | Theo server (`registered_at ASC`); R1 `c9dd195e` đổi thành ACTIVE trước (spec T01) | **Theo server, như hi-fi (SUPERSEDED trên ACTIVE)** — `9c4afb18` | `bandOrder`: trả nguyên mảng server, không tách, không `.sort` | **Đã khớp hi-fi ở `9c4afb18`** (Bobby 2026-09-24). Discrepancy: spec T01 ghi ACTIVE-first ≠ hi-fi; hi-fi thắng |
+| `VD-P19-03` | Attempt chip | Cuộn ngang trong band, mono 8.5px, radius 3 | Wrap (`flex-wrap`), mono 9.5px, radius 999, band là hàng trong root card | `attempts[]` nhóm theo `alpha_version_id`, thứ tự server | ID dài (ULID) wrap nhiều dòng hơn id ngắn của hi-fi (`att_01`); id ngắn là field-driven |
+| `VD-P19-04` | Rail cha–con | Thụt DFS, không chấm | Rail + chấm 11px theo status, connector `::before` −13px / 12px, **bước 26px như hi-fi** (R1 22px, `9c4afb18` → 26) | `parent_attempt_id` / `parent_state`, độ sâu cap 8; rộng 34 + min(depth, 8) × 26 | **Đã khớp hi-fi ở `9c4afb18`** (Bobby 2026-09-24). Discrepancy: spec §9.2 ghi 22px ≠ hi-fi 26px; hi-fi thắng |
+| `VD-P19-05` | Promotion rule | Câu viết lại theo contract (D12) | Câu hi-fi nguyên văn; pick là hàng cuối root card; NOT_PUBLISHED giữ banner + reason | Pick chỉ từ `versions[].promotion_pick`, không suy từ best/newest/ACTIVE | Câu "Only the ACTIVE attempt promotes" trong khi 3 attempt cùng hiện ACTIVE → cần status promotion cấp attempt (`CG-P19-14`) |
+| `VD-P19-06` | Copy + rules footer | Title/subtitle/rules/pick theo spec 10 §2.5; counts nằm cuối | Title, subtitle, source chip, rules nguyên văn hi-fi; rules là panel cuối (… promotion-rule · counts · rules) | Copy tĩnh; `read_authority` thật (PORTAL_PERSISTED_RESEARCH) ở title và heading counts | Source chip ghi "attempts.json" (hi-fi) khác `read_authority`; panel counts không có trong hi-fi (disclosure theo handoff) |
+| `VD-P19-07` | Toggle probes + card | Expand-all; card mở sẵn khi ≤ 40 attempt | Toggle "show probe attempts" đúng chỗ hi-fi, nét đứt, `disabled` + `data-reason-code` `CG-P19-03`; mỗi band có chip `+ probes` disabled; không số; card đóng khi tải, click mở | Không field: contract không phân loại storied/probe | Số probe ("+24 probes", "show 46 probe attempts") và kiểu row storied/probe chờ `CG-P19-03` |
+
+**Rule cho các phase sau (P20+):**
+- Mỗi màn phải khớp **cả hi-fi lẫn spec**. Khi hai nguồn lệch nhau, hi-fi thắng (Bobby 2026-09-24), trừ ngoại lệ đã có `VD` được Bobby duyệt.
+- FE **không tự chọn** lệch. Mọi điểm lệch ghi `VD-PXX-NN` vào ledger trong note của phase đó (bảng như trên) **và** trong handoff; cần gọn scope thì mở version mới.
+- Ô hi-fi không có field: giữ đúng vị trí và hình dạng hi-fi, hiện typed absence (lý do + reason code), kèm request `CG-PXX-NN` cho codex. Không in `0` / `-` / `N/A` thay số.
+- Nợ mới phát sinh khi làm P20 (và các phase sau) ghi vào **cả** handoff của phase **lẫn** Unified (dòng §13 + note), không chỉ ở packet.
+
+- **Evidence trước audit:**
+  - Head `74f26200` (chạy lại 2026-09-24): tsc PASS, build PASS; vitest 171 file · 3057 pass · 1 skip, pass ngay lần đầu; S10 42/42 (kèm boundary 56/56).
+  - Browser vòng 1 trên `30dcbdfc`: toàn Research 107/117. 1280 và dark đạt mọi gate. 10 fail đều do B1 ở 660.
+  - Browser vòng 2 trên `74f26200`: 119/119 (chỉ probe của implementer; lượt đầy đủ của audit 124/127). Overflow 0 ở 660 cho mọi state; chip cuộn trong band (sw 2523 > cw 462, `docScrollX` 0).
+  - Virtual 120 attempt: DOM 23–30 node; chip sâu được chọn và cuộn tới, focus giữ.
+  - Filter × counter khớp số row DOM. `?av=` giữ qua reload và back/forward. Keyboard Tab/Enter.
+  - Refusal: 400 terminal / 401 denied / 403 denied / 404 empty (nay `denied`, A3) / 503 unavailable + retry, cùng câu F-04, `leak=false`.
+  - Console S10 0, mutation 0.
+  - Chạy trên preview riêng 4417 với API stub theo shape `lineage.service.ts`.
+  - Chưa có: `REAL_API_E2E_RECEIPT`, axe.
+- **Lỗi tìm ra và đã sửa trong phase** (B1, N1 ở `74f26200`; A1–A3 ở `1fb29010`). Sau R3 `open_debt` **không rỗng** (hai ngoại lệ spec-over-hi-fi đã đóng ở `9c4afb18`): câu promotion rule vs mapping ACTIVE, các lệch "khác" ở trên và trùng lặp cục bộ — xem [debt register](./research_loop/evidence/P19/thanhvuong-debt-register.json):
+  - **B1:** cột trái giãn max-content ở ≤ 900 px, trang tràn 2 029 / 7 665 / 87 px. Sửa ở `74f26200` bằng `align-items: stretch`.
+  - **N1:** root in "root — no parent" hai lần. Sửa ở `74f26200`.
+  - `tokens.test.ts` bắt raw color; sửa trước commit.
+- **Discrepancy còn lại sau R1 (chi tiết + bằng chứng ở receipt §13):**
+  - **Field-driven** (contract thiếu field, giữ vị trí hi-fi + typed absence): số probe và row storied/probe (`03`); exercised/untried (`06`); outcome "best C · promote closed" (`07`); rc chip và dòng pick "→ rc_ (draft) · gate R1 next" (`04`); cert/OOS/claim/decay/verdict (`05`); spec line và note tường thuật của card (`08`); nhãn run `R-WFO-118` (product in `run_id`); symbol/timeframe trên breadcrumb; id ngắn `att_01` và hash alpha ngắn; note tường thuật của diff; counter hi-fi chỉ đếm attempt storied; status promotion cấp attempt (`14`).
+  - **Spec ≠ hi-fi, hi-fi thắng:** copy, chip 9.5px radius 999, band là hàng, opacity .82 — đã áp ở R1. Thứ tự band theo server/SUPERSEDED trên ACTIVE (`VD-P19-02`, spec T01 ACTIVE-first) và bước rail 26px (`VD-P19-04`, spec §9.2 22px) — **đã về hi-fi ở `9c4afb18`** (Bobby 2026-09-24); không còn ngoại lệ giữ spec về layout. "import new version →" chỉ có ở spec, vẫn giữ.
+  - **Khác:** "cert not published" thay "cert —" (rule cấm `-`); panel counts không có trong hi-fi; chip state thô cạnh status; chrome module QuantBT phía trên breadcrumb; dark và 660 (hi-fi không có); path diff dài bẻ giữa từ; "rc & publish →" chưa route; lưới dark 602/402 vs light 571/381 cùng viewport.
+  - Vẫn giữ từ trước: không ETag; 404 → `denied` như 403 (S09 vẫn 404 → `empty`); "notes/fork navigation" partial theo P10 NEW-only; `> 128` chỉ trả 128 attempt **cũ nhất**; hi-fi không responsive ở 660.
+- **Backend request (@codex), kiểm lại 2026-09-24 trên `9060a7c4` và `62d7d864`; OPEN trừ `11` WITHDRAWN:**
+  - `CG-P19-01` fixture canonical (healthy/partial/empty/bounded)
+  - `02` ETag/304
+  - `03` storied/probe
+  - `04` rc ref
+  - `05` cert/OOS/decay
+  - `06` exercised/untried
+  - `07` outcome/why superseded
+  - `08` spec line
+  - `09` cursor/thứ tự > 128
+  - `10` lộ trình promotion pick DR-03
+  - `11` badge 403/404 — WITHDRAWN (frontend sửa ở `1fb29010`)
+  - `12` telemetry §12
+  - `13` bảng định nghĩa counts lineage ↔ Run Library (thêm sau audit A6)
+  - `14` status promotion cấp attempt, để "the ACTIVE attempt" có nghĩa (thêm ở R2; `03`/`04`/`05` mở rộng theo R1: số probe mỗi version, rc và cert theo attempt/pick)
+  - Kiểm lại lần cuối ở R2 trên baseline `bb25bf39`, head `c9dd195e`.
+- **Bobby quyết:**
+  - Tích hợp baseline `9060a7c4 → 62d7d864 → bb25bf39`. Không file S10 nào trùng. `62d7d864` thêm field required vào `research-alpha-import.d.ts`, ảnh hưởng AlphaImport. `bb25bf39` chỉ là docs (audit P11–P15, RF-05/RF-06; chèn 2 dòng Unified ngay trên bảng §13 và 24 dòng RF-05/06, gần nhưng không chạm dòng P19 và note này). Xung đột `FreezeDetail.tsx` của P17 vẫn còn.
+  - ~~`VISUAL_DECISION_REQUIRED`~~ — Bobby đã quyết 2026-09-24: khớp hi-fi; ghi ở ledger `VD-P19-01…07`. Hai ngoại lệ cuối (`VD-P19-02` thứ tự band, `VD-P19-04` bước rail) Bobby chốt theo hi-fi; đã đóng ở `9c4afb18`.
+  - Đồng bộ badge 404 của S09 với S10 (S10 đã sửa).
+  - axe.
+  - Poll legacy `/api/runs` 4 s.
+  - Flake `PortalShell` / `tradeReplayEvents`.
+- **Exit gate còn lại cho P19-A frontend:**
+  - Tích hợp baseline (nay `bb25bf39`), rồi chạy lại toàn bộ unit và toàn bộ probe Research (119 trên tree `9f3f917f`, như tree `46d101c0`; 134 trên tree `6b7e0419` gồm cả probe audit).
+  - `REAL_API_E2E_RECEIPT` S10 khi cờ lineage và run library bật trên một lane preview. Nhánh pick PUBLISHED cần `CG-P19-10` (exit gate DR-03).
+  - axe (spec T12); telemetry §12; spec T01/T02/T07/T08 theo nghĩa hi-fi khi có field.
+  - `CG-P19-*` được trả lời hoặc ghi là vắng thật (kể cả `13` cho test "counts reconcile Library definitions", đang `NOT_RUN`); quyết định của Bobby ở trên.
+- **Rollback/handoff:**
+  - Revert 7 commit code theo thứ tự ngược (`9c4afb18` trước, rồi `c9dd195e`), theo [rollback](./research_loop/evidence/P19/thanhvuong-rollback.md). Backend vẫn `FEATURE_RESEARCH_LINEAGE=false`.
+  - Handoff cho P20 (compare): S10 không publish fact mới; so sánh same-alpha đọc từ contract của P20. Link "lineage →" có thể dùng làm lối vào.
+
 <a id="rl-p20"></a>
 ### P20 — Compare modes và derived correlation
 
@@ -5332,6 +5567,117 @@ Terra/Claude prompts and audit command/results are in the appendix §§6–7.
 - **Numeric/source authority:** Pair math reads only exact sealed RS-02 observation revisions whose P08/P14/run digests agree. It calculates Pearson raw-return correlation in PostgreSQL over exact timestamp inner joins, labels it `PORTAL_DERIVED` with formula/version/n/missing policy, and separately returns common-window metrics. It never forward-fills, zero-fills, substitutes P13 sampled series for raw data, relabels original P13 metrics or promotes a run. Current P14 protocol supports only conservative `WALK_FORWARD_OOS_COMPATIBILITY`; stronger source claims stay typed absent.
 - **Bounded operational layer:** Migration `1723680000054` adds only an indexed, 15-minute, workspace/binding-scoped compare cache (512 KiB response cap, 64-row per-workspace expired sweep). Runtime has `SELECT`/`INSERT`/`DELETE`, not `UPDATE`; cache rows are explicitly included in disposable test cleanup and are not evidence/approval/source truth.
 - **Evidence/handoff:** focused service/controller/contract/config tests, fresh disposable PostgreSQL migration/correlation/cache proof, production-source compile, generated OpenAPI/snapshot/contracts suite and capability-ledger test pass. Details are in [P20 evidence](./research_loop/evidence/P20/README.md). Claude must consume [the P20 handoff](./research_loop/evidence/P20/frontend-handoff-claude.md) for rich S13/browser/HiFi acceptance. Real Delta runtime evidence, browser evidence and activation remain separate gates and are not claimed by this backend delivery.
+
+<a id="p20-thanhvuong-frontend-implementation-note--screen-13-2026-09-24"></a>
+#### P20 Thanhvuong frontend implementation note — Screen 13 (2026-09-24)
+
+**Trạng thái:** `P20_A_S13_FRONTEND_COMPOSED · PRODUCT_ROUTE_BROWSER_RECEIPT · NOT_VERIFIED`.
+
+- Nhánh `feat/thanhvuong/research-p17-p21`, base `295901b7` (docs P19 R3).
+- Code: `92cdc844` client + hook (tree `4a3caffc`, +480) · `0910ecc3` màn hình, route, link (tree `b3241d95`, +1643/−2) · `f3d6169d` unit `S13-U01…U23` (tree `8252a329`, +669) · `009cedb8` ladder đọc weak → strong như hi-fi (tree `686ad2df`, +20/−13) · `034aef11` nhãn ngày mini chart + copy banner markets (tree `e2d7d388`, +11/−3) · `eeeae14f` sửa audit A1–A5, A8, A10 + unit `S13-U24…U26` (tree `58f27644`, +114/−21).
+- 10 file frontend, +2900/−2 (`git diff --numstat 295901b7 eeeae14f`).
+- Docs: `e731cfa6` + `7800e8e2` (trước audit), `e5cf9a7f` packet sau audit + commit chứa note này (sau audit).
+- Không đổi contract, backend hay runtime. Backend P20 vẫn `FEATURE_DARK` (`CONTROL_API_FEATURE_RESEARCH_COMPARE=false`). Contract `researchCompareGetV1` 1.0.0 (OpenAPI SHA-256 `cd393d5664637adc`, d.ts `6d7b51a94e8adb53`, commit cuối `a4acd5e2`).
+- Như P17–P19: frontend consumer trên contract đã publish, không claim `VERIFIED`; Bobby quyết.
+
+**Đọc chi tiết (packet):**
+- [receipt](./research_loop/evidence/P20/thanhvuong-frontend-receipt.md): bảng đã đọc file@commit; Guide `P20-T01…T12` phần FE; route/link §3; mapping hi-fi → component → field → state → assertion §4; spec T01–T11 §5.3; so hi-fi G1–G19 §5.4; ledger §6; discrepancy D1–D12 §7; Reuse report §11; audit độc lập A1–A10 + C1–C6 §12.
+- [backend requests](./research_loop/evidence/P20/thanhvuong-backend-requests.md)
+- [test results](./research_loop/evidence/P20/thanhvuong-test-results.json)
+- [debt register](./research_loop/evidence/P20/thanhvuong-debt-register.json)
+- [rollback](./research_loop/evidence/P20/thanhvuong-rollback.md)
+- [handoff addendum](./research_loop/evidence/P20/frontend-handoff-claude.md#thanhvuong-addendum--nợ-mới-p20-cho-các-phase-sau-2026-09-24)
+
+- **Đã giao:**
+  - Route canonical `/research/quantbt/alphas/:alphaId/compare?mode=attempts|markets|pair&runs=a,b` (đặt trước `alphas/:alphaId/:version`). Route spec `/research/quantbt/compare?alpha=&runs=` là resolver: có `alpha=` → `Navigate` sang canonical; chỉ có `runs=` → trang designed + `RESOLVER_NEEDS_ALPHA`, 0 request.
+  - Một operation generated `researchCompareGetV1`: 1 GET mỗi lần đổi mode/cặp, ETag/`If-None-Match` → 304, không poll, response cũ bị bỏ khi đổi cặp (không trộn run).
+  - Ba mode theo hi-fi: attempts (ladder claim, trajectory `trajectory.text`), markets (small multiples chỉ từ card server, caption no-overlay), pair (overlay 2 màu từ điểm đã giữ, bảng delta A/B/Δ, correlation card). `PairResult` REFUSED → `pair:null`: không có chart/bảng ẩn trong DOM, chip key 4 phần tô đỏ phần lệch chỉ để hiển thị.
+  - Correlation `PORTAL_DERIVED` in formula · version · n · window · missing policy; `NOT_PUBLISHED` in reason code, không `0`/`NaN`.
+  - Refusal HTTP 400 terminal / 401 denied / 403 = 404 denied (như S10 sau A3) / 503 unavailable + retry, giữ layout designed.
+  - Link vào: Run Library CompareBar (`compareEntryHref`, thêm `alpha=` khi 2 run cùng `binding.alpha_id`) và S10 "compare →" (cạnh `.ln-links`). Link ra: Runs, lineage (S10), evidence (S04). Screen 11 chưa có route nên không vẽ link.
+- **Mapping tóm tắt** (bản đầy đủ ở receipt §4): ladder ← `attempts[]` (thứ tự server, bày đảo ngược) + `claim.family/rank/origin`; market card ← `markets[]` + `caption`; overlay ← `pair.overlay` (≤ 192 điểm); delta Δ ← `pair.common_window.metrics`; A/B ← `original_metrics` (scope P13, không Δ); correlation ← `pair.correlation`; meta ← `read_authority · revision · as_of · coverage · source_absences`.
+- **Evidence (receipt gói C-2 trên head `eeeae14f`, tree `58f27644`, Node v20.20.2, sau audit):**
+  - tsc 0, build 0 (8.92s); vitest 172 file · 3094 pass · 1 skip, không flake `PortalShell`; S13 + boundary 41/41 (S13 27 = U01…U26, U15 each; boundary 14).
+  - Probe Research toàn bộ `--workers=1` **162/162** (fixtures 8, product 74, tvp20 80), 4.4 phút; preview riêng 4417, API stub theo shape `compare.contract.ts` / `compare.service.ts`.
+  - 76 RECEIPT = 23 gate theme sáng × 1280/660 + 15 gate theme tối (`data-theme=operations`) × 1280/660: overflow 0, console 0, mutation 0, request lạ 0, chữ số trần ngoài mono 0. Gate mới: hướng Δ `B − A · as published`, Δ 0 không tô, foot pair-partial không "matched", markets `[data-mini-meta]` chỉ ở card AVAILABLE, resolver `mode=foo` → 400.
+  - Sửa audit C1: receipt gói C (head `034aef11`, 128/128, "42 RECEIPT") chỉ chạy theme sáng, dòng cũ ghi "(sáng/tối)" là sai; theme tối chỉ có evidence từ receipt C-2 (`~/tv-shots/p20/final2/`). Đếm "21 gate × 2" cũ cũng sai (bảng 19 hàng, 46 test).
+  - Log SHA-256 (ngoài repo, `~/tv-shots/p20/final2/`): vitest `efddb2da599ef1e1`, S13 `38bbc27ad19da8d6`, playwright `fe151f443fd274a5`, probe `35e3038508ed11ad`.
+  - Chưa có: `REAL_API_E2E_RECEIPT`, `V11-P20-DR`, axe, telemetry.
+
+**Visual decision ledger `VD-P20-01…29`** (Bobby 2026-09-24: build khớp hi-fi; lệch → ghi VD, mở version mới khi cần. CLAUDE.md §3.3 hiển thị trung thực đứng trên hi-fi: copy hi-fi mâu thuẫn contract thì render đúng contract và ghi `REQUIRES_BOBBY_DECISION`)
+
+| id | hi-fi | contract / spec | quyết định trong code | state |
+|---|---|---|---|---|
+| `VD-P20-01` | Mode "two alphas, one key", EChart 2, guard "both alphas", footer "Two alphas on one key" | Pair = 2 run **cùng Alpha** (spec §1/§6) | Giữ vị trí/hình hi-fi; copy "two runs, one key", overlay "Two runs, one key — overlay from retained points"; guard bỏ "both alphas" | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-02` | Correlation "comparison.json · engine-published"; spec §8 "the engine did not publish one" | `source_label=PORTAL_DERIVED` + formula/version/n/window/missing policy | Card giữ hình hi-fi; meta in `PORTAL_DERIVED · formula · version · n · window · missing_policy`; absent → "correlation not derived — {reason_code}" | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-03` | Cert B/C chip, sched "mode_1 × global", pill ACTIVE/SUPERSEDED, note tự do | Run không có cert, schedule, lifecycle; `claim.text` nullable | cert absent `CG-P20-03`; sched absent `CG-P20-02`; pill = `run_state` (`CG-P20-08`); note = `claim.text` hoặc absent; không viền ACTIVE | field-driven |
+| `VD-P20-04` | "OOS Sharpe per fold, per attempt" + toggle 5/32 folds | Không có per-fold | Khung + caption hi-fi + absent `CG-P20-04`; không dựng toggle demo | field-driven |
+| `VD-P20-05` | Config diff ở attempts "from attempts.json" | `intentional_differences` chỉ có ở pair | Khung + header hi-fi, thân absent `CG-P20-05`; nguồn ghi `PORTAL_PERSISTED_RESEARCH` | field-driven |
+| `VD-P20-06` | Delta 6 hàng "engine-published" | `common_window.metrics` 3 key; `original_metrics` 5 key; không có win rate | 6 hàng A/B/Δ; Δ chỉ từ `common_window`; hàng chỉ có original → A/B + scope, Δ absent; win rate absent `CG-P20-06`; claim class `family (rank)`, Δ = `weaker_claim` | field-driven |
+| `VD-P20-07` | Pair sub-toggle demo 2 cặp | Cặp chọn bằng URL `runs=` | Không dựng toggle demo; chip 2 run id từ URL | demo control |
+| `VD-P20-08` | Không có dòng disclosure | Handoff "comparison state faithful" | Dòng meta mono dưới header (`read_authority · revision · as_of · coverage · source_absences`) | `AWAITING_DECISION` (nhóm `S10-COUNTS-PANEL`, B3) |
+| `VD-P20-09` | Route `/compare?runs=a,b` / `?alpha=&mode=` | Contract cần `alphaId` trong path | Canonical trong Alpha; route spec làm resolver | route |
+| `VD-P20-10` | Footer rules verbatim ("Two alphas", "engine-published", "the UI checks equality…") | Portal-derived; key do server so | Verbatim trừ 3 cụm: "Two runs on one key", "correlation is Portal-derived from sealed raw returns", "the UI never constructs or compares one; the server refuses". Chưa phủ (audit A7): "only the ACTIVE node may promote" giữ verbatim theo rule 2026-09-24, Bobby quyết | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-11` | Subtitle "Two ideas on one key overlay…" | Như `01` | "Two runs on one key overlay…" | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-12` | Không có state pair thiếu run | Pair cần đúng 2 id | Không gửi request; panel-local `PAIR_NEEDS_TWO` + link Runs, khung giữ | rule over hi-fi |
+| `VD-P20-13` | Delta header "engine-published; the UI subtracts nothing else" | Common window do Portal tính | "metric deltas — server-published; the UI subtracts nothing" | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-14` | Ladder weak → strong trái sang phải, "claim ↑ →", rule đọc trái sang phải | Server trả strong → weak (rank asc); spec T01 "sort đúng bậc" | `009cedb8`: bày mảng server đảo ngược (`data-ladder-order=server-reversed`, không sort số), mũi tên + rule hi-fi verbatim, nhãn "server order, read right to left · N returned" | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-15` | Tag "EChart N" + narrative demo có số | Không có field tường thuật (chỉ `trajectory.text`) | Không in tag và narrative demo. Chưa phủ (audit A6): banner attempts còn số demo "1.31 … 1.19" (`ATTEMPTS_RULE`), giữ verbatim theo rule 2026-09-24, Bobby quyết | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-16` | Mismatch chỉ nằm trong câu | Spec §4/§7 chip 4 phần, phần lệch đỏ; handoff: không so key ở browser | Tô đỏ bằng `===` từng phần chỉ để hiển thị; từ chối là `state=REFUSED` của server | rule over hi-fi |
+| `VD-P20-17` | Claim chip không có origin | `claim.origin` (`PORTAL_DERIVED_FROM_SOURCE_PROTOCOL`) | Dòng mờ `origin {claim.origin}` dưới chip | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-18` | S10 root card đúng 3 link | S13 cần lối vào từ S10 | "compare →" đặt cạnh `.ln-links` (`.ln-compare`); S10-U49 khoá 3 link | route |
+| `VD-P20-19` | Rank 3 amber nhạt; nền correlation tint | Token gate U02 cấm `color-mix()` / raw color | `var(--warn)`; nền correlation `var(--accent-soft)` | rule over hi-fi |
+| `VD-P20-20` | Banner markets "…Small multiples only: …" | Caption server (spec §8) đã có "small multiples only" | `034aef11`: bỏ cụm lặp | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-21` | Δ đọc A − B | Server `subtractDecimal` trả right − left = B − A | `eeeae14f`: header `Δ` + `B − A · as published`, không tính lại; chờ `CG-P20-09` | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-22` | Title 1 dòng, seg dưới subtitle | Bố cục | Seg cùng hàng subtitle, title 2 dòng ở 1280 (trước là debt `S13-G1-HEADER-LAYOUT`) | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-23` | Không có weaker claim / intentional differences | Handoff rich composition; spec §8 | Hai khối render ở pair | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-24` | Không có dòng phụ | Disclosure sampling/count | Route·protocol, sampling markets, figcaption overlay, foot common-window | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-25` | Banner markets "Three different ComparisonContractKeys — …" | Caption server | Bỏ cả câu | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-26` | Caption correlation "daily OOS returns · overlapping window only" | formula/n/window/missing policy | Meta `n · window · missing_policy` | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-27` | Trục y overlay 5 nhãn | Dùng lại `equitySvg`, không rebase | 2 nhãn max/min | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-28` | Δ tô theo tốt/xấu | FE không suy diễn "tốt hơn" | Tô theo dấu; Δ 0 không tô (`eeeae14f`) | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-29` | "OOS sharpe (stitched)" | Giá trị là `original_metrics`, không stitched | "OOS sharpe" (`eeeae14f`) | `REQUIRES_BOBBY_DECISION` |
+
+- **Audit 2026-09-24** (độc lập, trên head `7800e8e2`, chi tiết ở [receipt §12](./research_loop/evidence/P20/thanhvuong-frontend-receipt.md#12-audit-độc-lập-p20-và-commit-eeeae14f)):
+  - A1 Δ không ghi hướng · A2 Δ 0 tô xanh · A3 số foot/meta không mono · A4 count `0` trong block NOT_PUBLISHED · A5 nhãn "(stitched)" · A8 aria mũi tên sai ở 660 · A10 resolver nuốt mode lạ → **sửa ở `eeeae14f`** + unit `S13-U24…U26` + probe gate a–e.
+  - A6 (số demo trong `ATTEMPTS_RULE`) và A7 ("ACTIVE node" trong `COMPARE_RULES`) → giữ copy hi-fi verbatim theo rule 2026-09-24, ghi ở `VD-P20-15` / `VD-P20-10`, Bobby quyết.
+  - A9 (`data-compare-state=available` khi REFUSED) → giữ theo B6, debt `S13-REFUSED-STATE-ATTR`.
+  - Lệch hi-fi chưa có VD → `VD-P20-21…29`. Docs C1–C6 sửa trong packet (đếm gate, theme tối, debt rỗng, câu ETag, sort, VD-10/15).
+  - Backend request mới `CG-P20-09` (hướng Δ `RIGHT_MINUS_LEFT`), `CG-P20-10` (count khi block NOT_PUBLISHED), `CG-P20-11` (khoá sort thứ hai attempts: spec OOS vs code NET_RETURN).
+  - Debt mới (`open_implementation_debt`): `S13-REFUSED-STATE-ATTR` (A9, chờ B6), `S13-BACK-REFETCH` (validator ETag một slot: chỉ gửi `If-None-Match` khi quay lại đúng key vừa đọc; back/forward qua key khác đọc lại 200), `S13-DELTA-DIRECTION-LABEL` (chờ `CG-P20-09`).
+
+- **Lỗi tìm ra và đã sửa trong phase:** token gate `color-mix()` + hex trong comment (`VD-P20-19`); S10-U49 link compare trong `.ln-links` (`VD-P20-18`); ladder ngược hướng đọc hi-fi (`009cedb8`, `VD-P20-14`); **mini chart markets 1280 nhãn trục X chồng nhau** (gói B finding 1, ảnh `575e025b89d9cd86` → `034aef11`, receipt C `45fc7c0bfd3d4e17` 2 nhãn không chồng); banner markets lặp (`VD-P20-20`); audit A1–A5, A8, A10 (`eeeae14f`).
+- **Discrepancy** (bằng chứng ở receipt §7): D1 route spec ≠ contract path (`VD-P20-09`); D2 hi-fi "two alphas" ≠ pair cùng Alpha; D3 spec "engine-published" ≠ `PORTAL_DERIVED`; D4 fixture `alpha_momentum_btc` không qua regex `^[a-z][a-z0-9-]{2,63}$` (`CG-P20-07`); D5 hi-fi ECharts CDN → SVG tĩnh dùng lại `equitySvg` (S09); D6 source hôm nay chỉ `WALK_FORWARD_OOS_COMPATIBILITY`; D7 thứ tự ladder; D8 baseline `8bd81b01` 404 → terminal `notFound` ≠ S13 403 = 404 `denied`; D9 baseline DQ-08 `researchFormat.ts` ≠ S13 in Decimal nguyên chuỗi; D10 sort attempts spec OOS desc ≠ server NET_RETURN desc (`CG-P20-11`); D11 hướng Δ hi-fi A − B ≠ server B − A (`CG-P20-09`); D12 server gửi count `0` trong block NOT_PUBLISHED (`CG-P20-10`).
+- **Nợ cho phase sau (P21+)** — [debt register](./research_loop/evidence/P20/thanhvuong-debt-register.json) `open_debt` không rỗng:
+  - `open_implementation_debt`: `S13-REFUSED-STATE-ATTR` (gói B finding 3 = audit A9): `data-compare-state=available` cho cả pair REFUSED và zero-variance; refusal chỉ ở `data-pair-state` / `data-correlation-absent` (B6). `S13-BACK-REFETCH` (gói B finding 4 = audit C4): validator ETag một slot, back/forward qua key khác đọc lại 200 (5 GET mode-switch ở cả 1280 và 660). `S13-DELTA-DIRECTION-LABEL` (A1): nhãn hướng Δ là hằng theo code server, chờ `CG-P20-09`.
+  - `S13-G1-HEADER-LAYOUT` → đã ghi thành `VD-P20-22`.
+  - `S13-MINI-LABELS-UNIT`: nhãn mini chart chỉ khoá ở probe browser.
+  - `S13-FIELD-DRIVEN-CELLS` (`VD-P20-03…06`) chờ `CG-P20-02…06/08`; `S13-COPY-VS-HIFI` (`VD-P20-01/02/10/11/13/14/15/17/20/21…29`) chờ B2; `S13-DISCLOSURE-LINE` (`VD-P20-08`) chờ B3.
+  - Deferred: `S13-AXE` (B4), `S13-REAL-API` (B5, cờ tắt), `S13-LOCAL-DUPLICATION` (gộp `call<T>` / refusal mapper vào RF-04; baseline đã có `researchRefusal.ts`).
+- **Not run:** `REAL_API_E2E_RECEIPT` S13 và `V11-P20-DR` (feature-dark, không có cặp Delta thật trên lane này); axe spec T10 (axe-core không có trong lock); telemetry; unit cho nhãn mini chart.
+- **Backend request (@codex), tất cả OPEN, kiểm lại 2026-09-24 trên `bb25bf39` và `72d2638b` (`09…11` thêm sau audit, trên `eeeae14f`)** ([backend requests](./research_loop/evidence/P20/thanhvuong-backend-requests.md)):
+  - `CG-P20-01` fixture canonical compare (5 case spec §10) + Problem
+  - `02` schedule / mode per run
+  - `03` cert per run
+  - `04` OOS Sharpe per fold
+  - `05` intentional differences ở attempts mode
+  - `06` win rate + OOS Sharpe stitched common-window
+  - `07` alpha id fixture `apps/portal/frontend/e2e/research-foundation/run-library.json` vs regex compare
+  - `08` lifecycle ACTIVE/SUPERSEDED per run
+  - `09` hướng Δ common-window `RIGHT_MINUS_LEFT` (field hoặc xác nhận; audit A1)
+  - `10` count field khi block NOT_PUBLISHED: `null` hay rule UI (audit A4)
+  - `11` khoá sort thứ hai attempts: OOS (spec) hay NET_RETURN (code) (audit C5)
+- **Bobby quyết:**
+  - **B1** tích hợp baseline `bb25bf39 → 72d2638b` (7 commit, chưa merge/rebase): `3e7055d5` viết lại `RunLibrary.tsx` (CompareBar thành nút disabled "not built yet") — xung đột chắc chắn với entry `alpha=` của S13; `8bd81b01` sửa `QuantBTModule.tsx` (khác vùng), 404 → `notFound`, DQ-08. Không commit nào chạm compare contract/service/evidence P20. Xung đột `FreezeDetail.tsx` (P17) và `research-alpha-import.d.ts` (P19) vẫn còn.
+  - **B2** copy `VD-P20-01/02/10/11/13/14/15/17` (+ `20`, + `21…29` sau audit, + copy verbatim audit A6/A7): đề xuất mở version hi-fi mới ("two runs, one key", correlation Portal-derived, chốt hướng ladder và hướng Δ, bỏ narrative/số demo, bỏ "ACTIVE node").
+  - **B3** `VD-P20-08` dòng meta (cùng nhóm `S10-COUNTS-PANEL`).
+  - **B4** axe.
+  - **B5** bật `CONTROL_API_FEATURE_RESEARCH_COMPARE` trên lane preview + cặp Delta thật cho `REAL_API_E2E_RECEIPT` / `V11-P20-DR`.
+  - **B6** `data-compare-state` cho pair REFUSED (audit A9, debt `S13-REFUSED-STATE-ATTR`).
+- **Exit gate còn lại cho P20-A frontend:** B1 rồi chạy lại toàn bộ unit + toàn bộ probe Research (162 trên tree `58f27644`, sáng + tối); `REAL_API_E2E_RECEIPT` + `V11-P20-DR` (B5); axe T10; `CG-P20-01…11` được trả lời hoặc ghi là vắng thật; B2/B3/B6; `open_implementation_debt` đóng.
+- **Rollback/handoff:**
+  - Revert 4 commit docs rồi 6 commit code theo thứ tự ngược (`eeeae14f` trước, `92cdc844` cuối), theo [rollback](./research_loop/evidence/P20/thanhvuong-rollback.md). Backend vẫn `FEATURE_RESEARCH_COMPARE=false`.
+  - Handoff cho P21 (S11): S13 chỉ GET, không publish fact, không chọn/promote run; rank không phải publish pick. Link S13 → S11 sẽ nối khi S11 có route.
 
 <a id="rl-p21"></a>
 ### P21 — Release Candidate composer và immutable evidence pack

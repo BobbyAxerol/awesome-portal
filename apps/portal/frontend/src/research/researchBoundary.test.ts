@@ -81,6 +81,10 @@ describe("no internal identifier or direct source access on the Research surface
     "splitClient.ts",
     "searchClient.ts",
     "freezeClient.ts",
+    "replayClient.ts",
+    "reportClient.ts",
+    "lineageClient.ts",
+    "compareClient.ts",
   ];
 
   /*

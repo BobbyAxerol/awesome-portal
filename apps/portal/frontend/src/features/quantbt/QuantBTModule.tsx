@@ -68,6 +68,11 @@ const EvidenceFlowRoute = lazyNamed(() => import("../../research/EvidenceFlowRou
 const SplitRoute = lazyNamed(() => import("../../research/SplitRoute"), "SplitRoute");
 const SearchRoute = lazyNamed(() => import("../../research/SearchRoute"), "SearchRoute");
 const FreezeRoute = lazyNamed(() => import("../../research/FreezeRoute"), "FreezeRoute");
+const ExecuteRoute = lazyNamed(() => import("../../research/ExecuteRoute"), "ExecuteRoute");
+const ReportRoute = lazyNamed(() => import("../../research/ReportRoute"), "ReportRoute");
+const CompareRoute = lazyNamed(() => import("../../research/CompareRoute"), "CompareRoute");
+const CompareResolverRoute = lazyNamed(() => import("../../research/CompareRoute"), "CompareResolverRoute");
+const LineageRoute = lazyNamed(() => import("../../research/LineageRoute"), "LineageRoute");
 
 function RunStatusBadge({ status }: { status: string | null }) {
   if (!status) return null;
@@ -232,9 +237,9 @@ function LegacyTabRedirect() {
  * Module
  * ---------------------------------------------------------------------- */
 
-/** The Research Loop screens: S00, S01, S02, S03–S07, S12, S14. */
+/** The Research Loop screens mounted through P20. */
 const RESEARCH_SCREEN =
-  /\/research\/quantbt\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze)|runs)\/?$/;
+  /\/research\/quantbt\/(journey|atlas|alpha-import|alphas\/[^/]+\/(lineage|compare)|compare|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report)|runs)\/?$/;
 
 /** Research screens that draw their own HiFi frame (padding, max width): 01, 03, 04, 05, 06. */
 const OWN_FRAME_SCREEN = /\/research\/quantbt\/(runs|runs\/(?!new\/?$)[^/]+\/(progress|evidence|split|search))\/?$/;
@@ -275,7 +280,7 @@ export function QuantBTModule() {
     /* Screen 03 reads a P11 run through its own contract. The legacy passport
        fetch would ask `/api/runs/{id}` for a run that legacy store never had,
        which is the same defect one level down. */
-    if (/\/runs\/[^/]+\/(progress|evidence|split|search|freeze)(\/|$)/.test(location.pathname)) return null;
+    if (/\/runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report)(\/|$)/.test(location.pathname)) return null;
     return segment;
   }, [location.pathname]);
 
@@ -404,11 +409,24 @@ export function QuantBTModule() {
         <Route path="runs/:runId/search" element={<SearchRoute />} />
         {/* P16 · Screen 07. */}
         <Route path="runs/:runId/freeze" element={<FreezeRoute />} />
+        {/* P17 · Screen 08. Before this route existed the path fell through to
+          * `runs/:runId/*` and the legacy workspace. */}
+        <Route path="runs/:runId/execute" element={<ExecuteRoute />} />
+        {/* P18 · Screen 09. */}
+        <Route path="runs/:runId/report" element={<ReportRoute />} />
         {/* Screen 14's canonical route, resolved as `FD-P09-02`: under QuantBT
           * rather than under the still-COMMISSIONED ALPHA_POOL feature.
           * Legacy `imports` below is untouched. */}
         <Route path="alpha-import" element={<AlphaImportRoute />} />
         <Route path="imports" element={<ImportInbox />} />
+        {/* P19 · Screen 10. Declared before `alphas/:alphaId/:version` so a
+          * reader never has to know that the static segment also outranks it. */}
+        <Route path="alphas/:alphaId/lineage" element={<LineageRoute />} />
+        {/* P20 · Screen 13, canonical inside one Alpha (VD-P20-09); also
+          * declared before `alphas/:alphaId/:version`. `compare` is the route
+          * spec 13 names, kept as a resolver ahead of the `:tab` redirect. */}
+        <Route path="alphas/:alphaId/compare" element={<CompareRoute />} />
+        <Route path="compare" element={<CompareResolverRoute />} />
         <Route path="alphas/:alphaId/:version" element={<AlphaVersionDetail />} />
         {/* P12 · Screen 01 on the canonical route spec 01 names. The screen it
           * replaces is not deleted — it stays reachable at `runs/legacy`, so

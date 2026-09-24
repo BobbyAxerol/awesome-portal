@@ -19,9 +19,9 @@
  *  - **The server owns comparability.** Two runs compare only when their
  *    `comparison.key` values are present and identical, wherever the rows
  *    are — a selection hidden by a filter is still looked up by id.
- *  - **Unbuilt screens are named, never navigated to.** Compare (13, P20) and
- *    Attempt Lineage (10, P19) render disabled with the phase that delivers
- *    them.
+ *  - **Linked screens keep the server's authority.** Compare (13) and Attempt
+ *    Lineage (10) open their routes; each screen still renders typed refusal
+ *    or absence instead of inventing a source fact.
  *
  * Look and copy follow the hi-fi `QuantBT 01 Run Library.dc.html`, measured
  * block by block; behaviour and data follow spec 01 (DQ-02).
@@ -31,8 +31,6 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Link } from "react-router-dom";
 
 import {
-  COMPARE_DEFERRED,
-  COMPARE_PHASE,
   COMPARE_PICK_ONE_MORE,
   COMPARE_REFUSAL,
   RC_PHASE,
@@ -48,6 +46,8 @@ import {
   mayCompare,
   unavailableReason as stateSentence,
 } from "./runLibraryClient";
+import { compareEntryHref } from "./compareClient";
+import { lineageHref } from "./lineageClient";
 import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
@@ -84,9 +84,6 @@ export const LEGACY_BINDING_LABEL = "no binding · legacy";
 export const SCRATCH_TITLE =
   "no alpha_version binding — NOT_PUBLISHABLE, rc_ can never be composed from this run";
 export const boundTitle = (alphaName: string, av: string) => `bound to ${alphaName} ${av} — publishable evidence`;
-
-/** Screen 10 Attempt Lineage is not built; P19 delivers it. */
-export const LINEAGE_PHASE = "P19";
 
 const JOURNEY_MAP = "/research/quantbt/journey";
 const NEW_RUN = "/research/quantbt/runs/new";
@@ -1280,7 +1277,11 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
   if (selection.length === 0) return null;
   const both = selection.length === 2;
   const reading = both && selection.some((run) => run.item === null && run.pending);
-  const comparable = both && mayCompare(selection[0].item ?? undefined, selection[1].item ?? undefined);
+  const sameContract = both && mayCompare(selection[0].item ?? undefined, selection[1].item ?? undefined);
+  const alphaA = selection[0]?.item?.binding?.alpha_id ?? null;
+  const sharedAlpha =
+    alphaA !== null && alphaA === (selection[1]?.item?.binding?.alpha_id ?? null) ? alphaA : null;
+  const comparable = sameContract && sharedAlpha !== null;
   const mode: CompareMode = !both ? "pending" : reading ? "reading" : comparable ? "ready" : "refused";
   const unknown = both && !reading && selection.some((run) => run.item === null);
 
@@ -1290,10 +1291,12 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
       : mode === "reading"
         ? "reading the selected run hidden by the filter, to learn its ComparisonContractKey…"
         : mode === "ready"
-          ? COMPARE_DEFERRED
+          ? "same Alpha and ComparisonContractKey — open Compare to inspect them."
           : unknown
             ? "one selected run could not be read, so its ComparisonContractKey is unknown — the button refuses."
-            : COMPARE_REFUSAL;
+            : sameContract
+              ? "Compare reads one Alpha at a time; these runs are not bound to the same Alpha."
+              : COMPARE_REFUSAL;
 
   const border =
     mode === "ready" ? "var(--accent)" : mode === "refused" ? "var(--bad)" : mode === "pending" ? "var(--accent-2)" : "var(--line)";
@@ -1341,34 +1344,27 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
           </span>
         ) : null}
       </span>
-      {/* Screen 13 is not built: the button never navigates (FE-S01-05). */}
-      <button
-        type="button"
-        disabled
-        data-action="open-compare"
-        data-phase={COMPARE_PHASE}
-        title={
-          mode === "ready"
-            ? `Screen 13 Compare is not built yet — phase ${COMPARE_PHASE} delivers it.`
-            : mode === "refused" && !unknown
-              ? COMPARE_REFUSAL
-              : note
-        }
-        style={{
-          border: `1px ${mode === "ready" ? "solid var(--accent)" : "dashed var(--line-strong)"}`,
-          borderRadius: 6,
-          background: mode === "ready" ? "var(--accent-soft)" : "var(--paper-sunken)",
-          color: mode === "ready" ? "var(--accent)" : "var(--ink-faint)",
-          padding: "5px 14px",
-          fontFamily: MONO,
-          fontSize: 10,
-          letterSpacing: ".05em",
-          textTransform: "uppercase",
-          cursor: "not-allowed",
-        }}
-      >
-        {mode === "ready" ? `open compare · ${COMPARE_PHASE}` : "compare"}
-      </button>
+      {mode === "ready" ? (
+        <Link
+          to={compareEntryHref(selection.map((run) => run.runId), sharedAlpha)}
+          data-action="open-compare"
+          className="mono rounded-[6px] border px-[14px] py-[5px] text-[10px] uppercase tracking-[.05em]"
+          style={{ borderColor: "var(--accent)", background: "var(--accent-soft)", color: "var(--accent)" }}
+        >
+          open compare →
+        </Link>
+      ) : (
+        <button
+          type="button"
+          disabled
+          data-action="open-compare"
+          title={note}
+          className="mono rounded-[6px] border border-dashed px-[14px] py-[5px] text-[10px] uppercase tracking-[.05em]"
+          style={{ borderColor: "var(--line-strong)", background: "var(--paper-sunken)", color: "var(--ink-faint)", cursor: "not-allowed" }}
+        >
+          compare
+        </button>
+      )}
       <button
         type="button"
         data-action="clear"
@@ -1500,6 +1496,8 @@ interface RunGroup {
   title: string;
   sub: string;
   rows: readonly RunLibraryItem[];
+  /** The bound alpha, when the group has one: its header links to Screen 10. */
+  alphaId?: string;
 }
 
 /**
@@ -1532,6 +1530,7 @@ export function groupRuns(items: readonly RunLibraryItem[]): RunGroup[] {
     }
     groups.set(key, {
       key,
+      ...(bound ? { alphaId: bound.alpha_id } : {}),
       order: bound ? ["a", bound.alpha_name, bound.av] : [key, "", ""],
       title: bound
         ? `${bound.alpha_name} · ${bound.av}`
@@ -1720,14 +1719,10 @@ export function RunLibrary(props: RunLibraryProps) {
         </div>
         <span className="flex flex-none flex-wrap items-center" style={{ gap: 8 }}>
           <span
-            role="link"
-            aria-disabled="true"
-            data-link-disabled="attempt-lineage"
-            data-phase={LINEAGE_PHASE}
-            title={`Screen 10 Attempt Lineage is not built yet — phase ${LINEAGE_PHASE} delivers it.`}
-            style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)", cursor: "not-allowed" }}
+            data-lineage-hint
+            style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}
           >
-            attempt lineage · {LINEAGE_PHASE}
+            lineage ↗ select an alpha group below
           </span>
           <Link
             to={JOURNEY_MAP}
@@ -1911,7 +1906,7 @@ export function RunLibrary(props: RunLibraryProps) {
       ) : listVisible ? (
         <ResearchPanel title="runs" variant="plain" state={state} recovery={retry}>
           <div className="flex flex-col" style={{ gap: 14 }} data-runs>
-            {(filters.group ? groupRuns(items) : [{ key: "all", title: "", sub: "", rows: items }]).map((group) => (
+            {(filters.group ? groupRuns(items) : [{ key: "all", title: "", sub: "", rows: items, alphaId: undefined }]).map((group) => (
               <div key={group.key} className="flex flex-col" style={{ gap: 14 }}>
                 {filters.group ? (
                   <div className="flex flex-wrap items-baseline" style={{ gap: 10, padding: "6px 2px 0" }} data-group={group.key}>
@@ -1921,6 +1916,17 @@ export function RunLibrary(props: RunLibraryProps) {
                       <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }} data-group-count>
                         {group.rows.length} of this page
                       </span>
+                    ) : null}
+                    {group.alphaId ? (
+                      <Link
+                        to={lineageHref(group.alphaId)}
+                        className="mono text-[9.5px]"
+                        style={{ color: "var(--accent)" }}
+                        data-action="open-lineage"
+                        data-lineage-alpha={group.alphaId}
+                      >
+                        lineage →
+                      </Link>
                     ) : null}
                     <span className="flex-1" style={{ borderBottom: "1px solid var(--line)" }} />
                   </div>

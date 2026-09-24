@@ -13,6 +13,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { freezeClock, settle, stubPortalApi } from "./fixtures";
 
@@ -1902,4 +1905,152 @@ test("S07 verification result carries its own scope", async ({ page }) => {
   await expect(page.locator("[data-verify-scope='PORTAL_RETAINED_DIGEST_BINDING_ONLY']")).toContainText(
     "this verification covers",
   );
+});
+
+/*
+ * S07 hi-fi F1/F2/F4 — the rich panels, laid out, at both widths.
+ *
+ * Unit tests prove each panel prints only published facts; only a browser can
+ * prove the frozen table's columns actually line up and the data-time track
+ * and Stage 4 card fit without pushing the page sideways.
+ */
+for (const [name, width] of [
+  ["laptop", 1280],
+  ["mobile", 660],
+] as const) {
+  test(`S07 lines up the frozen table and keeps F1/F4 at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(FREEZE);
+    await settle(page);
+
+    // F1 — the three published windows on one data-time track, endpoints printed.
+    await expect(page.locator("[data-data-time-axis='3'] [data-axis-window]")).toHaveCount(3);
+    await expect(page.locator("[data-axis-start]")).toHaveText("2024-01-02 00:00Z");
+    await expect(page.locator("[data-axis-end]")).toHaveText("2026-03-11 00:00Z");
+
+    // F2 — every range track starts at the same x and has the same width,
+    // whatever the width of the value beside it.
+    const tracks = await page
+      .locator("[data-frozen-position]")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const box = (node.parentElement as HTMLElement).getBoundingClientRect();
+          return [Math.round(box.left), Math.round(box.width)];
+        }),
+      );
+    expect(tracks).toHaveLength(3);
+    expect(new Set(tracks.map(([left]) => left)).size, JSON.stringify(tracks)).toBe(1);
+    expect(new Set(tracks.map(([, w]) => w)).size, JSON.stringify(tracks)).toBe(1);
+    const values = await page
+      .locator("[data-frozen-value]")
+      .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().right)));
+    expect(new Set(values).size, JSON.stringify(values)).toBe(1);
+
+    // F4 — kept, with one published digest and nothing marked bound.
+    const card = page.locator("[data-panel='stage4-binding']");
+    await expect(card).toBeVisible();
+    await expect(card.locator("[data-binding-published='true']")).toHaveCount(1);
+    await expect(card).not.toContainText("✓");
+
+    // Laptop puts F2 beside F3/F4, as the hi-fi does; mobile stacks them.
+    const frozen = await page.locator("[data-panel='frozen-parameters']").boundingBox();
+    const integrity = await page.locator("[data-integrity]").boundingBox();
+    expect(frozen && integrity).toBeTruthy();
+    if (name === "laptop") expect(integrity!.x).toBeGreaterThan(frozen!.x + frozen!.width - 1);
+    else expect(integrity!.y).toBeGreaterThan(frozen!.y + frozen!.height - 1);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: `${OUT}/s07-freeze-composed-${name}.png`, fullPage: true });
+    expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+  });
+}
+
+/*
+ * A BLOCKED snapshot on the product route: the route state must not read an
+ * intentionally empty frozen table as an empty scope and hide the mismatch.
+ */
+for (const [name, width] of [
+  ["laptop", 1280],
+  ["mobile", 660],
+] as const) {
+  test(`S07 keeps a BLOCKED mismatch on screen at ${name}`, async ({ page }) => {
+    const noise = recorder(page);
+    await freezeClock(page);
+    await stubPortalApi(page, "healthy");
+    const detail = JSON.parse(
+      readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), "research-foundation", "freeze-detail.json"),
+        "utf8",
+      ),
+    );
+    detail.freeze.frozen_parameters = [];
+    detail.freeze.integrity.state = "BLOCKED";
+    detail.freeze.integrity.checks[1] = {
+      ...detail.freeze.integrity.checks[1],
+      state: "MISMATCH",
+      observed_digest: "sha256:ffffff",
+    };
+    await page.route(/\/api\/v1\/quantbt\/runs\/[^/]+\/freeze(\?|$)/, (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detail) }),
+    );
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(FREEZE);
+    await settle(page);
+
+    await expect(page.locator("[data-integrity='BLOCKED']")).toBeVisible();
+    await expect(
+      page.locator("[data-check='P10_MANIFEST_BINDING'] [data-check-state='MISMATCH']"),
+    ).toBeVisible();
+    await expect(page.locator("[data-frozen]")).toHaveCount(0);
+    await expect(page.locator("[data-frozen-blocked]")).toBeVisible();
+    await expect(page.locator("[data-verify-live][role='status']")).toHaveCount(1);
+    const text = (await page.locator("[data-screen='freeze-detail']").textContent()) ?? "";
+    expect(text).not.toMatch(/chain intact|integrity verified|No rows in this scope/i);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: `${OUT}/s07-freeze-blocked-${name}.png`, fullPage: true });
+    expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
+  });
+}
+
+/*
+ * Spec 07 T16 — under reduced motion nothing on S07 moves, before or after
+ * the verification answer lands. Same measure as the product-route rule above:
+ * a duration above a millisecond, not a literal `0s`.
+ */
+test("S07 honours reduced motion before and after a verification", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const noise = recorder(page);
+  await freezeClock(page);
+  await stubPortalApi(page, "healthy");
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto(FREEZE);
+  await settle(page);
+
+  const moving = () =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll("[data-screen='freeze-detail'] *"))
+        .map((node) => {
+          const style = getComputedStyle(node);
+          const longest = (value: string) =>
+            Math.max(0, ...value.split(",").map((part) => Number.parseFloat(part) || 0));
+          return Math.max(longest(style.animationDuration), longest(style.transitionDuration));
+        })
+        .filter((seconds) => seconds > 0.001).length,
+    );
+
+  expect(await moving(), "S07 animates on load under reduced motion").toBe(0);
+  await page.locator("[data-action='verify']").click();
+  await expect(page.locator("[data-verify-result='PARTIAL_MATCH']")).toBeVisible();
+  expect(await moving(), "S07 animates after verify under reduced motion").toBe(0);
+  expect(withoutPassportRefusal(noise), noise.join("\n")).toEqual([]);
 });

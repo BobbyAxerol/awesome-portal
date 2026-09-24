@@ -119,7 +119,7 @@ const DEEP_DIVE: Record<PreviewStage, { screen: string; path: string | null; pha
   split: { screen: "05 Split", path: "split" },
   search: { screen: "06 Search", path: "search" },
   freeze: { screen: "07 Freeze", path: "freeze" },
-  execute: { screen: "08 Execute", path: null, phase: "P17" },
+  execute: { screen: "08 Execute", path: "execute" },
 };
 
 /**
@@ -2826,9 +2826,16 @@ function ClaimTab({ hub }: { hub: EvidenceHub }) {
 
       <section className="flex flex-col gap-2.5 rounded-[8px] border p-4" data-claim-next style={PANEL_STYLE}>
         <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <PanelLabel>next — hooks only, gates designed in a later round</PanelLabel>
+          <PanelLabel>next — report and later gates</PanelLabel>
           <span className="inline-flex flex-wrap gap-2">
-            <UnroutedAction label="generate run report →" screen="09" phase="P18" primary />
+            <Link
+              to={`/research/quantbt/runs/${encodeURIComponent(hub.run_id)}/report`}
+              data-action="generate-report"
+              className="mono rounded-[6px] border px-3 py-1 text-[10px] font-semibold uppercase tracking-[.05em]"
+              style={{ color: "var(--accent-contrast)", borderColor: "var(--accent)", background: "var(--accent)" }}
+            >
+              generate run report →
+            </Link>
             <UnroutedAction label="release candidate →" screen="11" phase="P21" />
           </span>
         </div>

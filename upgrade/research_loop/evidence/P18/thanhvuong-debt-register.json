@@ -1,0 +1,190 @@
+{
+  "phase": "P18",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-09-23",
+  "tree": "548e8d29a7bf13d5f87a0ecdfd11e6bfba121e8c",
+  "open_implementation_debt": [],
+  "resolved_in_phase": [
+    {
+      "id": "S09-CLIP-PROVENANCE",
+      "what": "sealed revision strings clipped at the provenance line (word-break normal + .rr-block overflow hidden; 1280 sw 478 > cw 380, Letter 478 > 377, A4 478 > 366)",
+      "status": "RESOLVED",
+      "evidence": "aea76f69; .rr-long overflow-wrap anywhere / word-break break-all, block overflow visible; S09-U28; rerun probe CLIP/CLIP-PAPER == []"
+    },
+    {
+      "id": "S09-HEADER-CERT",
+      "what": "certification box dropped below the title at 1280 and on Letter",
+      "status": "RESOLVED",
+      "evidence": "aea76f69; S09-U30; rerun probe CERT 1280 beside=true (screen + print Letter)"
+    },
+    {
+      "id": "S09-PRINT-MARGIN",
+      "what": "page.pdf output had no page margin (no @page rule; doc-page.js forbidden)",
+      "status": "RESOLVED",
+      "evidence": "aea76f69; scoped @page { margin: 0.55in } while the route is mounted; S09-U29"
+    },
+    {
+      "id": "S09-ANNOTATION-NOPRINT",
+      "what": "mutable approval annotation printed inside the sealed sheet; warnings order",
+      "status": "RESOLVED",
+      "evidence": "93a435bb; warnings print after artifacts, annotation + exports after the footer in .no-print; S09-U27; browser print annotation display none, warnings visible"
+    },
+    {
+      "id": "S09-LABEL-ARCHIVE",
+      "what": "'archive' export label lower-case unlike JSON/CSV/Parquet",
+      "status": "RESOLVED",
+      "evidence": "aea76f69; S09-U31"
+    },
+    {
+      "id": "S09-SRONLY-TABLE-HEIGHT",
+      "what": "the 240-row sr-only table measures 4818 px (a table cannot shrink below its rows, so height:1px/overflow:hidden do not clip it); 1280: document scrollHeight 6049 vs .rr-page bottom 3257 (~2800 px blank scroll); print 816: 5746 vs sheet bottom 2611; page.pdf Letter 7 pages, 5 with the table removed (>= 2 trailing blank pages)",
+      "found_by": "independent audit 2026-09-23, browser on 47165016",
+      "status": "RESOLVED",
+      "evidence": "29c28f4a; the sr-only equity table sits in a clipping block wrapper <div className=\"rr-sr sr-only\" data-sr-equity-table> (position absolute, 1px, overflow hidden, clip) and the print block hides .rr-sr; S09-U32; ~/tv-shots/p18-fix2 probe AUDIT-SR: 1280 scrollHeight 6049 -> 3307 (page bottom 3243, the 64 px is shell padding, identical with and without the table), print 816 2597 == sheet bottom 2597, PDF Letter 7 -> 5 pages and A4 6 -> 5 (same count with the table removed)"
+    },
+    {
+      "id": "S09-TABLE-WORD-BREAK",
+      "what": "every table cell breaks inside ordinary words: artifact state 'seal|ed' (7/7 cells two lines), header 'STAT|E', names 'selection_|trace', 'fill_ledge|r', 'metrics_su|mmary' at 1280 and print 816; clip-audit passes because nothing overflows",
+      "found_by": "independent audit 2026-09-23, screenshot p18-audit-full-1280.png",
+      "status": "RESOLVED",
+      "evidence": "29c28f4a; .rr-table td { word-break: normal; overflow-wrap: break-word } and only .rr-table td.rr-long keeps break-all. break-word, not the suggested anywhere: anywhere lowers the min-content width, so the auto-layout table narrows the column and still split 'sealed' in the browser (measured); S09-U33; p18-fix2 probe split-word check (Range.getClientRects per word) [] on screen 1280 and on Letter; CLIP/CLIP-PAPER still []"
+    },
+    {
+      "id": "S09-DOUBLE-H1",
+      "what": "the page had two h1 ('QuantBT Backtest' from the module header and 'QuantBT Run Report'); audit a11y note",
+      "found_by": "independent audit 2026-09-23 (receipt §5.5 a11y row)",
+      "status": "RESOLVED",
+      "evidence": "29c28f4a; report title is h2 [data-report-title]; the module header owns the page's one h1; S09-U34; p18-fix2 probe h1 count 1 on screen and print 816"
+    },
+    {
+      "id": "S09-VERDICT-RULE-HARDCODE",
+      "what": "the fold verdict caption carried a hard-coded verdict rule string instead of the contract field; audit note",
+      "found_by": "independent audit 2026-09-23 (audit notes)",
+      "status": "RESOLVED",
+      "evidence": "29c28f4a; caption [data-verdict-rule] reads provenance.verdict_rule_revision verbatim; S09-U35 (value from provenance, no hard-coded string in source)"
+    },
+    {
+      "id": "S09-HIFI-GEOMETRY",
+      "what": "five blocks and the header did not follow the hi-fi sheet geometry although the contract carries the data (CLAUDE.md rule 9): passport listed vertically, identity and headline stacked, equity without axes/legend/underwater strip, certification chain + artifacts and promotion + provenance stacked; metrics header cells split words at 660",
+      "found_by": "coordinator hi-fi review 2026-09-23 (p18-hifi-09-1280-visible.png)",
+      "status": "RESOLVED",
+      "evidence": "548e8d29; passport flex row, identity 1.15 : headline 1 (6 tiles 2 x 3 + headline_footnote), equity two-sided figcaption + 215 px plot with server-string y labels, <= 6 UTC day labels, fold labels, legend (IS not published CG-P18-06), 92 px underwater labelled with drawdown_fraction; chain 1.1 : artifacts 1; promotion/provenance one two-column card; footer/header per hi-fi; 660 stacks, print keeps rows; th keeps words whole; S09-U36..U40 (+U23/U33); ~/tv-shots/p18-hifi probe hifi-geometry GEOM 1280/Letter/660 and GEOM-SPLIT [], full Research 131/131; remaining deviations only missing fields CG-P18-01..07 (receipt §4)"
+    }
+  ],
+  "backend_requests": [
+    {
+      "id": "CG-P18-01",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-01",
+      "what": "passport key/label"
+    },
+    {
+      "id": "CG-P18-02",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-02",
+      "what": "certification grade"
+    },
+    {
+      "id": "CG-P18-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-03",
+      "what": "run-specific title (strategy)"
+    },
+    {
+      "id": "CG-P18-04",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-04",
+      "what": "per-fold columns"
+    },
+    {
+      "id": "CG-P18-05",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-05",
+      "what": "per-stage result"
+    },
+    {
+      "id": "CG-P18-06",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-06",
+      "what": "IS equity series"
+    },
+    {
+      "id": "CG-P18-07",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-07",
+      "what": "artifact filename/bytes"
+    },
+    {
+      "id": "CG-P18-08",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-08",
+      "what": "params-handoff caption (can fold into 04)"
+    },
+    {
+      "id": "CG-P18-09",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-09",
+      "what": "canonical P18 fixture"
+    },
+    {
+      "id": "CG-P18-10",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-10",
+      "what": "409 on GET report not declared in OpenAPI"
+    },
+    {
+      "id": "CG-P18-11",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P18-11",
+      "what": "identity rows of spec §16.3 + scratch binding (spec T05); added in the 2026-09-23 audit"
+    }
+  ],
+  "source_capability_blocked": [],
+  "source_capability_note": "P18 has no source-capability matrix; source absences (per-fold rows, audited fills, selection trace, artifact bytes, promotion approval, execution-state replay) are typed reason codes in the contract and render verbatim.",
+  "explicit_downstream_gates": [
+    {
+      "id": "P18-FE-DG-01",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "integrate the moved baseline e39bacfa (now 361f68b4; 361f68b4 also touches QuantBTModule.tsx, git merge-file 0 conflicts): EvidenceFlow.tsx merges cleanly; P17 FreezeDetail.tsx conflict remains; S09 to toResearchRefusal + RefusalNote + RESEARCH_REPORT_* in SURFACE_CODES; rerun all tests + 129 probes"
+    },
+    {
+      "id": "P18-FE-DG-02",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_FEATURE_FLAG",
+      "what": "REAL_API_E2E_RECEIPT for S09 on the RF-02 preview lane once FEATURE_RESEARCH_REPORTS is on there"
+    },
+    {
+      "id": "P18-FE-DG-03",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "axe (not in lock file); spec 09 T08"
+    },
+    {
+      "id": "P18-FE-DG-04",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "VISUAL_DECISION_REQUIRED: S09 title and certification badge (with CG-P18-02/03)"
+    },
+    {
+      "id": "P18-FE-DG-05",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_ROUTE",
+      "what": "'Release Candidate & Publish' (no-print bar) and Hub 'release candidate -> 11' become links once Screen 11 has a route"
+    }
+  ],
+  "audit_head": "47165016334d8b9298273b2deb2e1ea728bbdcdf",
+  "open_debt": [],
+  "fix_head": "548e8d29a7bf13d5f87a0ecdfd11e6bfba121e8c"
+}
