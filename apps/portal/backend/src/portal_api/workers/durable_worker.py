@@ -56,6 +56,31 @@ logger = logging.getLogger("portal_api.durable_worker")
 RunExecutor = Callable[[dict[str, Any], str, Path], Awaitable[dict[str, Any]]]
 
 
+
+# Control API marks the P10 producer DISPATCHED only after Portal's 202
+# receipt returns, while this worker may already hold the job: the first
+# run_started post can race that write and get a stale-lease 409. The start
+# gate therefore retries within a bounded window instead of failing the run
+# on the first refusal (seen on the preview's first retained run).
+START_ACK_WINDOW_SECONDS = 15.0
+START_ACK_RETRY_SECONDS = 0.25
+
+
+async def _await_start_acknowledged(
+    relay: Any,
+    *,
+    window_seconds: float = START_ACK_WINDOW_SECONDS,
+    retry_seconds: float = START_ACK_RETRY_SECONDS,
+) -> bool:
+    deadline = time.monotonic() + window_seconds
+    while True:
+        if await relay.flush():
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        await asyncio.sleep(retry_seconds)
+
+
 class _ProgressJournalRecoveryRequired(DurableRunError):
     """Stop a reclaimed P11 attempt before it can execute ambiguously.
 
@@ -267,7 +292,7 @@ class DurableQuantWorker:
                     # P05 reserve requires a RUNNING P06 lease. A source
                     # journal alone is not authority: wait for its exact
                     # start event to be accepted before executing the child.
-                    if progress_relay is None or not await progress_relay.flush():
+                    if progress_relay is None or not await _await_start_acknowledged(progress_relay):
                         raise ResearchRetainedReceiptError("P05 start lease was not acknowledged")
                 if progress_relay is not None:
                     progress_relay_stop = asyncio.Event()

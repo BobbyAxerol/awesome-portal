@@ -26,9 +26,9 @@ const terminalIngress = {
   },
 };
 
-function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<string, unknown> }) {
+function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<string, unknown>; scope?: Record<string, unknown>; reportRefuses?: boolean }) {
   const progress = {
-    resolveIngress: vi.fn().mockResolvedValue(ingressScope),
+    resolveIngress: vi.fn().mockResolvedValue({ ...ingressScope, ...options?.scope }),
     persistIngress: vi.fn().mockResolvedValue({
       inserted: false,
       event: terminalIngress.event,
@@ -56,7 +56,11 @@ function subject(options?: { evidenceFailsOnce?: boolean; current?: Record<strin
   // P18 is dark in these RS-01 recovery cases. Keeping the sidecar explicit
   // proves Progress does not construct/export a report unless its own feature
   // is admitted in the deployment config.
-  const reports = { materializeTerminal: vi.fn().mockResolvedValue(false) };
+  const reports = {
+    materializeTerminal: options?.reportRefuses
+      ? vi.fn().mockRejectedValue(Object.assign(new Error("Report source facts are not sealed yet."), { code: "RESEARCH_REPORT_NOT_READY", status: 409 }))
+      : vi.fn().mockResolvedValue(false),
+  };
   const service = new ResearchProgressService(
     progress as never, metadata as never, fanout as never, {} as never,
     evidence as never, split as never, reports as never,
@@ -96,6 +100,18 @@ describe("RS-01 terminal materialization and retry recovery", () => {
     expect(evidence.ingest).toHaveBeenCalledTimes(2);
     expect(progress.markTerminalMaterialized).toHaveBeenCalledTimes(1);
     expect(fanout.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("W1: a Delta WFO terminal is not held hostage by the P04-shaped P18 report sidecar", async () => {
+    const wfo = subject({ scope: { executionProfileId: "p10.delta-signal-notional-wfo.v1" }, reportRefuses: true });
+    await wfo.service.ingest(terminalIngress as never);
+    expect(wfo.reports.materializeTerminal).not.toHaveBeenCalled();
+    expect(wfo.progress.markTerminalMaterialized).toHaveBeenCalledTimes(1);
+
+    // A P04 run keeps the retryable report sidecar exactly as before.
+    const p04 = subject({ scope: { executionProfileId: "p04.fixed-qualification.v1" }, reportRefuses: true });
+    await expect(p04.service.ingest(terminalIngress as never)).rejects.toMatchObject({ code: "RESEARCH_REPORT_NOT_READY" });
+    expect(p04.progress.markTerminalMaterialized).not.toHaveBeenCalled();
   });
 
   it("RF01-B3: projects retained tables without widening the vocabulary or leaking identity", async () => {

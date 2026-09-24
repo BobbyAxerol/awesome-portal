@@ -133,7 +133,14 @@ export class ResearchProgressService {
     // projections. It is never an engine/export trigger: a duplicate sealed
     // completion callback is the only recovery path if report assembly needs
     // retrying after a transient local failure.
-    await this.reports.materializeTerminal(ingressScope, input);
+    // The P18 report is assembled over the P04-shaped P13–P17 projections. A
+    // Delta WFO run publishes its facts through the retained current-source
+    // lane instead and never has those sidecars, so assembling here would
+    // refuse its terminal event forever (seen on the W1 preview with REPORTS
+    // on). Its report is P18 work over current-source, not this sidecar.
+    if (ingressScope.executionProfileId !== DELTA_WFO_PROFILE_ID) {
+      await this.reports.materializeTerminal(ingressScope, input);
+    }
     await this.applyLifecycle(ingressScope, input);
     const isTerminal = input.event.event_type === "run_completed" || input.event.event_type === "run_failed";
     if (isTerminal) await this.progress.markTerminalMaterialized(ingressScope, input);

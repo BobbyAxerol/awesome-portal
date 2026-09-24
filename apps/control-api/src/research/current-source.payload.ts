@@ -39,6 +39,13 @@ export const CurrentSourceSummarySchema = z.object({
     embargo: z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]), reason_code: z.string().nullable() }).strict(),
     strict_outer_oos_selection: z.object({ state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]), reason_code: z.string().nullable() }).strict(),
   }).strict(),
+  // The RS-02 exporter has always written these row counts; a real export
+  // could not seal until the schema admitted them (W1 preview receipt).
+  counts: z.object({
+    folds: z.number().int().positive().max(1_000_000),
+    trials: z.number().int().positive().max(1_000_000),
+    candidates: z.number().int().nonnegative().max(1_000_000),
+  }).strict().optional(),
   derived: z.object({
     monthly_returns: z.object({
       source_observation_count: z.number().int().nonnegative().max(2_000_000),

@@ -3210,8 +3210,11 @@ export class ResearchMetadataRepository {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact manifest schema version is unsupported.", 400);
     }
     this.assertArtifactParts(input.parts);
+    const documents = input.documents ?? [];
+    this.assertArtifactDocuments(documents);
     const expectedRows = input.parts.reduce((total, part) => total + part.rowCount, 0);
-    const expectedBytes = input.parts.reduce((total, part) => total + part.byteCount, 0);
+    const expectedBytes = input.parts.reduce((total, part) => total + part.byteCount, 0)
+      + documents.reduce((total, document) => total + document.byteCount, 0);
     if (expectedRows !== input.totalRows || expectedBytes !== input.totalBytes) {
       throw new ResearchMetadataError(
         "RESEARCH_INVALID_INPUT",
@@ -4432,6 +4435,21 @@ export class ResearchMetadataRepository {
       throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Trial objective shape is invalid.", 400);
     }
     requireBoundedObject(input.params, "trial params", RESEARCH_DB_BUDGET.maxConfigJsonBytes);
+  }
+
+  private assertArtifactDocuments(documents: NonNullable<ResearchArtifactSealInput["documents"]>): void {
+    if (documents.length > 16) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact document count is outside the bounded contract.", 400);
+    }
+    const names = new Set<string>();
+    for (const document of documents) {
+      if (!isOpaqueId(document.name) || document.relativePath !== `documents/${document.name}.json` || names.has(document.name)) {
+        throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Artifact documents must be unique and remain under documents/.", 400);
+      }
+      requireDigest(document.documentDigest, "document.documentDigest");
+      requirePositiveSafeInteger(document.byteCount, "document.byteCount", 1_048_576);
+      names.add(document.name);
+    }
   }
 
   private assertArtifactParts(parts: ResearchArtifactSealInput["parts"]): void {

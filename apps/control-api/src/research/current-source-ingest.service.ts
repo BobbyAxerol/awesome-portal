@@ -87,8 +87,14 @@ export class ResearchCurrentSourceIngestService {
       || input.profile_id !== DELTA_WFO_PROFILE.current_source.profile_id) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal names a lane pair outside the run execution profile.", 400);
     }
-    if (!CurrentSourceSummarySchema.safeParse(input.summary).success) {
+    const summary = CurrentSourceSummarySchema.safeParse(input.summary);
+    if (!summary.success) {
       throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source seal summary is incompatible.", 400);
+    }
+    const counts = summary.data.counts;
+    if (counts && (counts.folds !== input.table_rows.FOLD || counts.trials !== input.table_rows.TRIAL
+      || counts.candidates !== input.table_rows.CANDIDATE)) {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_INVALID", "Current-source summary counts disagree with the sealed table rows.", 400);
     }
     const result = await this.repository.seal(scope, {
       runId: input.run_id,

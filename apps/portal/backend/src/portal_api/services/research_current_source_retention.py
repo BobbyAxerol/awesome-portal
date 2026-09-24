@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -59,6 +60,20 @@ _TABLE_KIND_BY_ARTIFACT = {
 # (bounded, same bytes).  Every other non-200 status -- 400/403/404/413 and
 # above all 409 -- is a deterministic refusal and fails closed at once.
 _RETRYABLE_STATUSES = frozenset({502, 503, 504})
+
+
+
+def _problem_code(exc: urllib.error.HTTPError) -> str:
+    """The Control API Problem code only (bounded; never the message or body)."""
+
+    try:
+        decoded = json.loads(exc.read(2048).decode("utf-8"))
+    except Exception:  # an unreadable body must not mask the refusal itself
+        return ""
+    code = decoded.get("error", {}).get("code") if isinstance(decoded, dict) else None
+    if isinstance(code, str) and re.fullmatch(r"[A-Z0-9_]{1,96}", code):
+        return f" {code}"
+    return ""
 
 
 class ResearchCurrentSourceRetentionError(RuntimeError):
@@ -237,6 +252,17 @@ class ResearchCurrentSourceRetentionClient:
             "total_rows": manifest["totals"]["rows"],
             "total_bytes": manifest["totals"]["bytes"],
             "parts": parts,
+            # The RS-02 export also writes manifest-bound JSON documents; their
+            # bytes are in totals.bytes, so the seal names them.
+            "documents": [
+                {
+                    "name": document["name"],
+                    "relative_path": document["relative_path"],
+                    "document_digest": document["sha256"],
+                    "byte_count": document["bytes"],
+                }
+                for document in manifest.get("documents", [])
+            ],
         })
         if sealed.get("schema_version") != "research.artifact-seal.v1" or sealed.get("sealed") is not True:
             raise ResearchCurrentSourceRetentionError("P05 seal acknowledgement is incompatible")
@@ -327,13 +353,13 @@ class ResearchCurrentSourceRetentionClient:
             except urllib.error.HTTPError as exc:
                 if exc.code == 409:
                     raise ResearchCurrentSourceRetentionError(
-                        f"RS-02 {operation} conflicts with immutable retained facts (409)", status=409
+                        f"RS-02 {operation} conflicts with immutable retained facts (409{_problem_code(exc)})", status=409
                     ) from exc
                 if exc.code in _RETRYABLE_STATUSES:
                     last_error = exc
                     continue
                 raise ResearchCurrentSourceRetentionError(
-                    f"RS-02 {operation} was refused ({exc.code})", status=exc.code
+                    f"RS-02 {operation} was refused ({exc.code}{_problem_code(exc)})", status=exc.code
                 ) from exc
             except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
                 last_error = exc

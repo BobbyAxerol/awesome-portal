@@ -491,6 +491,15 @@ export interface ResearchArtifactSealInput {
   totalRows: number;
   totalBytes: number;
   parts: readonly ResearchArtifactPartInput[];
+  /** Manifest-bound JSON documents; their bytes are part of totalBytes. */
+  documents?: readonly ResearchArtifactDocumentInput[];
+}
+
+export interface ResearchArtifactDocumentInput {
+  name: string;
+  relativePath: string;
+  documentDigest: string;
+  byteCount: number;
 }
 
 export interface ResearchArtifactReferenceInput {

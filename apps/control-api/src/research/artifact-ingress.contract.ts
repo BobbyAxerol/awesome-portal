@@ -28,12 +28,25 @@ const Part = z.object({
   sequence_max: z.string().max(160).nullable().optional(),
 }).strict();
 
+/**
+ * A non-Parquet JSON document the P05 manifest also binds (RS-02 exports a
+ * summary document). Its bytes count toward the manifest totals, so the seal
+ * must name it for the totals check to hold; the manifest digest binds it.
+ */
+const Document = z.object({
+  name: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$/),
+  relative_path: z.string().regex(/^documents\/[A-Za-z0-9][A-Za-z0-9_.-]{0,95}\.json$/).max(128),
+  document_digest: Digest,
+  byte_count: z.number().int().positive().max(1_048_576),
+}).strict();
+
 export const ResearchArtifactSealIngressSchema = Identity.extend({
   manifest_digest: Digest,
   manifest_schema_version: z.literal("research.artifact-manifest.v1"),
   total_rows: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   total_bytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   parts: z.array(Part).min(1).max(128),
+  documents: z.array(Document).max(16).optional(),
 }).strict();
 
 const TableKind = z.enum(["OBSERVATION", "FOLD", "TRIAL", "CANDIDATE", "SELECTION"]);

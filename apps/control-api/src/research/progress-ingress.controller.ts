@@ -104,6 +104,12 @@ export class ResearchProgressIngressController {
           sequenceMin: part.sequence_min ?? null,
           sequenceMax: part.sequence_max ?? null,
         })),
+        documents: (input.documents ?? []).map((document) => ({
+          name: document.name,
+          relativePath: document.relative_path,
+          documentDigest: document.document_digest,
+          byteCount: document.byte_count,
+        })),
       },
     );
     return { schema_version: "research.artifact-seal.v1", sealed: true, replayed: result.replayed };

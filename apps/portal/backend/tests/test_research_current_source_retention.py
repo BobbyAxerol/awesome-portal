@@ -74,7 +74,16 @@ def test_w1_retention_order_and_exact_wire(wfo_source: Path, tmp_path: Path) -> 
     reserve = api.bodies("reserve")[0]
     assert set(reserve) == identity | {"retention_class"}
     p05_seal = api.bodies("seal")[0]
-    assert set(p05_seal) == identity | {"manifest_digest", "manifest_schema_version", "total_rows", "total_bytes", "parts"}
+    assert set(p05_seal) == identity | {"manifest_digest", "manifest_schema_version", "total_rows", "total_bytes", "parts", "documents"}
+    # Control API refuses a seal whose totals differ from its named parts and
+    # documents; the RS-02 export writes JSON documents, so both must be named.
+    assert p05_seal["documents"], "the RS-02 export binds at least one JSON document"
+    assert p05_seal["total_bytes"] == (
+        sum(part["byte_count"] for part in p05_seal["parts"])
+        + sum(document["byte_count"] for document in p05_seal["documents"])
+    )
+    assert p05_seal["total_rows"] == sum(part["row_count"] for part in p05_seal["parts"])
+    assert all(document["relative_path"] == f"documents/{document['name']}.json" for document in p05_seal["documents"])
     # Control API's Zod part contract: sequence bounds are strings or null.
     assert all(part["sequence_min"] is None or isinstance(part["sequence_min"], str) for part in p05_seal["parts"])
     assert len(p05_seal["parts"]) <= 128
