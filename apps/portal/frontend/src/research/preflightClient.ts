@@ -152,6 +152,8 @@ const REFUSAL: Record<PreflightProblemCode, PreflightRefusalPresentation> = {
   /* The engine refused this configuration. Retrying it unchanged cannot help. */
   RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED: { ...NO, state: "terminal" },
   RESEARCH_PREFLIGHT_ROUTE_UNKNOWN: { ...NO, state: "terminal" },
+  /* W4 CG-P08-03: an invalid mode × schedule used to surface as a 502. */
+  RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED: { ...NO, state: "terminal", highlightsInput: true },
   RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED: { ...NO, state: "terminal", highlightsInput: true },
   RESEARCH_PREFLIGHT_RESOURCE_REFUSED: { ...NO, state: "terminal", highlightsInput: true },
   RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE: { ...NO, state: "terminal", highlightsInput: true },

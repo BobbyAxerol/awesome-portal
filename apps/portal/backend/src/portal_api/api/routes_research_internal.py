@@ -21,6 +21,7 @@ from portal_api.services.research_alpha_analyzer import MAX_SOURCE_BYTES, analyz
 from portal_api.services.durable_runs import AttemptRegistry, DurableRunError
 from portal_api.services.research_preflight_snapshot import (
     ResearchPreflightSnapshotError,
+    refusal_detail,
 )
 
 router = APIRouter(prefix="/internal/research", include_in_schema=False)
@@ -43,6 +44,9 @@ class PreflightSnapshotRequest(BaseModel):
     required_columns: tuple[str, ...] = Field(default=("open", "high", "low", "close", "volume"), min_length=1, max_length=16)
     warmup_bars: int = Field(default=0, ge=0, le=100_000)
     requires_funding: bool = False
+    # CG-P08-05: swept dimensions counted by Control API from the immutable
+    # AlphaVersion declaration and the overrides; the ceiling is the release's.
+    swept_dimensions: int = Field(default=0, ge=0, le=128)
 
 
 class ProgressCancellationRequest(BaseModel):
@@ -109,7 +113,9 @@ async def create_preflight_snapshot(
     except ResearchPreflightSnapshotError as exc:
         # Control API maps this fixed private vocabulary to its same-origin
         # typed problem codes. No raw market data, source path or stack leaks.
-        raise HTTPException(status_code=409, detail={"code": exc.code}) from exc
+        # CG-P08-03 adds the failed gate, the requested-spec field path and a
+        # bounded authored/engine sentence; still no data, path or stack.
+        raise HTTPException(status_code=409, detail=refusal_detail(exc, body.requested_spec)) from exc
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail="invalid preflight snapshot contract") from exc
 

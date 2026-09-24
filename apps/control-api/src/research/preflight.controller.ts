@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
+import type { ZodIssue } from "zod";
 
 import { constantTimeEqual, sha256 } from "../auth/argon";
 import { csrfCookieFrom, CSRF_HEADER, originAllowed } from "../auth/cookies";
@@ -15,6 +16,7 @@ import {
   ResearchPreflightTokenSchema,
 } from "./preflight.contract";
 import { ResearchPreflightError } from "./preflight.error";
+import { admissionFieldPath } from "./preflight-gates";
 import { asResearchPreflightError, ResearchPreflightService } from "./preflight.service";
 import { ResearchRunAdmissionService } from "./run-admission.service";
 
@@ -40,7 +42,7 @@ export class ResearchPreflightController {
   async create(@Req() request: PreflightRequest, @Body() body: unknown) {
     this.assertMutationSecurity(request);
     const parsed = ResearchPreflightCreateRequestSchema.safeParse(body);
-    if (!parsed.success) this.invalid();
+    if (!parsed.success) this.invalid(parsed.error.issues);
     const workspaceId = await this.workspace(request, parsed.data.workspace_id);
     try {
       const scope = { workspaceId, actorUserId: request.portalUser.userId };
@@ -50,16 +52,13 @@ export class ResearchPreflightController {
         parsed.data.requested_spec,
         this.requestId(request),
       );
-      return {
-        ...response,
-        // P08 keeps its immutable response shape; P10 now supplies the one
-        // server-owned predicate that this same response may expose.
-        may_create_run: await this.runAdmission.mayCreate(
-          request.portalUser,
-          scope,
-          response.preflight_token,
-        ),
-      };
+      // P08 keeps its immutable response shape; P10 now supplies the one
+      // server-owned predicate that this same response may expose.
+      return this.withAdmission(response, await this.runAdmission.admissionFacts(
+        request.portalUser,
+        scope,
+        response.preflight_token,
+      ));
     } catch (error) {
       return asResearchPreflightError(error);
     }
@@ -81,21 +80,49 @@ export class ResearchPreflightController {
         scope,
         token.data,
       );
-      return {
-        ...response,
-        may_create_run: await this.runAdmission.mayCreate(
-          request.portalUser,
-          scope,
-          response.preflight_token,
-        ),
-      };
+      return this.withAdmission(response, await this.runAdmission.admissionFacts(
+        request.portalUser,
+        scope,
+        response.preflight_token,
+      ));
     } catch (error) {
       return asResearchPreflightError(error);
     }
   }
 
-  private invalid(): never {
-    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "Invalid Research preflight request.", 400);
+  /** CG-P08-03: the typed reason and field path behind `may_create_run`. */
+  private withAdmission<T extends object>(
+    response: T,
+    facts: { allowed: boolean; code: string | null; message: string | null },
+  ): T & { may_create_run: boolean; run_admission: { may_create_run: boolean; code: string | null; message: string | null; field_path: readonly string[] } } {
+    return {
+      ...response,
+      may_create_run: facts.allowed,
+      run_admission: {
+        may_create_run: facts.allowed,
+        code: facts.allowed ? null : facts.code,
+        message: facts.allowed ? null : facts.message,
+        field_path: facts.allowed ? [] : admissionFieldPath(facts.message),
+      },
+    };
+  }
+
+  /**
+   * CG-P08-03: a 400 names every invalid requested-spec field so Screen 02
+   * can send the reader to the step that owns it. Paths only — never values.
+   */
+  private invalid(issues: readonly ZodIssue[] = []): never {
+    const fieldPaths = issues
+      .map((issue) => issue.path.map(String))
+      .map((path) => (path[0] === "requested_spec" ? path.slice(1) : path))
+      .filter((path) => path.length > 0 && path.length <= 6 && path.every((part) => /^[A-Za-z0-9_]{1,64}$/.test(part)))
+      .slice(0, 16);
+    throw new ResearchPreflightError(
+      "RESEARCH_PREFLIGHT_INVALID",
+      "Invalid Research preflight request.",
+      400,
+      fieldPaths.length > 0 ? { field_paths: fieldPaths } : undefined,
+    );
   }
 
   private async workspace(request: PreflightRequest, rawWorkspaceId: string | undefined): Promise<string> {

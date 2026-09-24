@@ -1019,6 +1019,15 @@
                 "type": "null"
               }
             ]
+          },
+          "required_request_fields": {
+            "description": "CG-P02-02: requested-spec fields this mode × schedule needs before preflight admits it (e.g. walk_forward.inner).",
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.]{1,79}$"
+            }
           }
         }
       },
@@ -1624,7 +1633,10 @@
         ],
         "properties": {
           "schema_version": {
-            "const": "research.walk-forward-options.v1"
+            "enum": [
+              "research.walk-forward-options.v1",
+              "research.walk-forward-options.v2"
+            ]
           },
           "frequency": {
             "type": "array",
@@ -1722,6 +1734,165 @@
             "maxItems": 4,
             "items": {
               "$ref": "#/components/schemas/AtlasSourceLocator"
+            }
+          },
+          "train_window": {
+            "description": "CG-P08-02: the manifest-owned rolling train width (requested-spec v2 walk_forward.train_window).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requested_spec_field",
+              "pattern",
+              "required_when",
+              "rule",
+              "source"
+            ],
+            "properties": {
+              "requested_spec_field": {
+                "const": "walk_forward.train_window"
+              },
+              "pattern": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "required_when": {
+                "const": "window_mode=rolling"
+              },
+              "rule": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              },
+              "source": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "$ref": "#/components/schemas/AtlasSourceLocator"
+                }
+              }
+            }
+          },
+          "temporal_guards": {
+            "description": "CG-P02-02: label horizon, purge and embargo in bars (requested-spec v2).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fields",
+              "minimum",
+              "maximum",
+              "release_default",
+              "rule",
+              "source"
+            ],
+            "properties": {
+              "fields": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "enum": [
+                    "label_horizon_bars",
+                    "purge_bars",
+                    "embargo_bars"
+                  ]
+                }
+              },
+              "minimum": {
+                "const": 0
+              },
+              "maximum": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+              },
+              "release_default": {
+                "const": 0
+              },
+              "rule": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              },
+              "source": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "$ref": "#/components/schemas/AtlasSourceLocator"
+                }
+              }
+            }
+          },
+          "inner_folds": {
+            "description": "CG-P02-02: nested inner folds for mode_1_decay × per_fold_causal (requested-spec v2 walk_forward.inner).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "applies_to",
+              "requested_spec_field",
+              "split_frequency",
+              "window_mode",
+              "train_window_pattern",
+              "min_folds_release_default",
+              "min_folds_maximum",
+              "rule",
+              "source"
+            ],
+            "properties": {
+              "applies_to": {
+                "const": "mode_1_decay×per_fold_causal"
+              },
+              "requested_spec_field": {
+                "const": "walk_forward.inner"
+              },
+              "split_frequency": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,31}$"
+                }
+              },
+              "window_mode": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,31}$"
+                }
+              },
+              "train_window_pattern": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "min_folds_release_default": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 64
+              },
+              "min_folds_maximum": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 64
+              },
+              "rule": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              },
+              "source": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "$ref": "#/components/schemas/AtlasSourceLocator"
+                }
+              }
             }
           }
         }
@@ -1821,6 +1992,16 @@
               }
             ],
             "description": "RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed."
+          },
+          "preflight_limits": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtlasPreflightLimits"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -2356,6 +2537,103 @@
             "maxItems": 4,
             "items": {
               "$ref": "#/components/schemas/AtlasSourceLocator"
+            }
+          }
+        }
+      },
+      "AtlasPreflightLimits": {
+        "description": "CG-P08-05: ceilings P08 enforces server-side, each naming its source. None is an engine limit.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "sweep_dimension_ceiling",
+          "outer_fold_ceiling",
+          "estimated_cpu_seconds_ceiling"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.preflight-limits.v1"
+          },
+          "sweep_dimension_ceiling": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "value_source",
+              "basis"
+            ],
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "value_source": {
+                "enum": [
+                  "PORTAL_POLICY",
+                  "P08_PREFLIGHT_BOUND"
+                ]
+              },
+              "basis": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
+            }
+          },
+          "outer_fold_ceiling": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "value_source",
+              "basis"
+            ],
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "value_source": {
+                "enum": [
+                  "PORTAL_POLICY",
+                  "P08_PREFLIGHT_BOUND"
+                ]
+              },
+              "basis": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
+            }
+          },
+          "estimated_cpu_seconds_ceiling": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "value_source",
+              "basis"
+            ],
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "value_source": {
+                "enum": [
+                  "PORTAL_POLICY",
+                  "P08_PREFLIGHT_BOUND"
+                ]
+              },
+              "basis": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
             }
           }
         }

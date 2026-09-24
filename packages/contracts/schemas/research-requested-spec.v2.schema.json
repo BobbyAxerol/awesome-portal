@@ -1,0 +1,833 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "research.requested-spec.v2",
+  "title": "Research requested specification v2",
+  "description": "CG-P02-02: v1 plus requested-spec fields for rolling train width, temporal guards (label horizon, purge, embargo) and causal Mode 1 inner folds on an advanced walk-forward. Additive and versioned: every v1 document is unchanged. P08 validates each field against the pinned QuantBT engine and refuses what it cannot build with a typed reason and field path.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "alpha_binding",
+    "not_publishable",
+    "strategy_id",
+    "execution_route",
+    "route_params",
+    "data",
+    "protocol",
+    "optimization_mode",
+    "optimization_schedule",
+    "parameter_space_overrides",
+    "optuna_trials",
+    "early_stopping",
+    "random_seed",
+    "optimization_config",
+    "client"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "research.requested-spec.v2"
+    },
+    "alpha_binding": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "alpha_id",
+            "alpha_version_id"
+          ],
+          "properties": {
+            "alpha_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            },
+            "alpha_version_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            }
+          }
+        }
+      ]
+    },
+    "not_publishable": {
+      "type": "boolean"
+    },
+    "strategy_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+    },
+    "execution_route": {
+      "enum": [
+        "signal_notional",
+        "pct_equity",
+        "intrabar_bracket",
+        "dca_ladder",
+        "reactive",
+        "event_driven",
+        "native_event_lifecycle",
+        "orders",
+        "fill_replay",
+        "basket",
+        "arbitrage",
+        "portfolio",
+        "nautilus_dca_grid",
+        "options"
+      ]
+    },
+    "route_params": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intrabar": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "level_mode",
+            "same_bar_policy",
+            "tick_size"
+          ],
+          "properties": {
+            "level_mode": {
+              "enum": [
+                "hlc_conservative",
+                "ohlc_path",
+                "close_only"
+              ]
+            },
+            "same_bar_policy": {
+              "enum": [
+                "stop_first",
+                "target_first",
+                "ambiguity_flag"
+              ]
+            },
+            "tick_size": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "pattern": "^[+-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            }
+          }
+        },
+        "portfolio": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "sizing"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "longshort",
+                "market_neutral",
+                "directional",
+                "equal_weight",
+                "risk_parity",
+                "beta_neutral"
+              ]
+            },
+            "sizing": {
+              "enum": [
+                "equal_weight",
+                "risk_parity",
+                "vol_target",
+                "kelly_fraction",
+                "fixed_notional",
+                "atr_risk",
+                "min_variance",
+                "score_weighted"
+              ]
+            }
+          }
+        },
+        "reactive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "runtime",
+            "audit_mode"
+          ],
+          "properties": {
+            "runtime": {
+              "enum": [
+                "R0",
+                "R1",
+                "R2",
+                "R3",
+                "R3B"
+              ]
+            },
+            "audit_mode": {
+              "enum": [
+                "minimal",
+                "standard",
+                "audit"
+              ]
+            }
+          }
+        },
+        "dca": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "base_order_usd",
+            "safety_orders",
+            "step_scale"
+          ],
+          "properties": {
+            "base_order_usd": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "pattern": "^[+-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            "safety_orders": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "step_scale": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96,
+              "pattern": "^[+-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset_id",
+        "symbol",
+        "timeframe"
+      ],
+      "properties": {
+        "dataset_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+        }
+      }
+    },
+    "protocol": {
+      "enum": [
+        "three_window_decay",
+        "advanced"
+      ]
+    },
+    "windows": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "is",
+        "oos",
+        "holdout"
+      ],
+      "properties": {
+        "is": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end_exclusive"
+          ],
+          "properties": {
+            "start": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "end_exclusive": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        },
+        "oos": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end_exclusive"
+          ],
+          "properties": {
+            "start": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "end_exclusive": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        },
+        "holdout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end_exclusive"
+          ],
+          "properties": {
+            "start": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "end_exclusive": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        }
+      }
+    },
+    "walk_forward": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end_exclusive",
+        "split_mode",
+        "frequency",
+        "window_mode"
+      ],
+      "properties": {
+        "start": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "end_exclusive": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "split_mode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+        },
+        "frequency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+        },
+        "window_mode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+        },
+        "train_window": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,4}(D|h)$",
+          "maxLength": 8,
+          "description": "Rolling train width (required for rolling, refused for expanding)."
+        },
+        "label_horizon_bars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bars removed from each train tail for label horizon before OOS."
+        },
+        "purge_bars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bars purged from each train tail before the label horizon."
+        },
+        "embargo_bars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bars skipped after each OOS fold before the next OOS starts."
+        },
+        "inner": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Nested inner folds; only mode_1_decay with per_fold_causal.",
+          "required": [
+            "split_frequency",
+            "window_mode",
+            "train_window"
+          ],
+          "properties": {
+            "split_frequency": {
+              "enum": [
+                "single",
+                "yearly",
+                "semi_yearly",
+                "quarterly",
+                "monthly",
+                "weekly"
+              ]
+            },
+            "window_mode": {
+              "enum": [
+                "expanding",
+                "rolling"
+              ]
+            },
+            "train_window": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,4}(D|h)$",
+              "maxLength": 8
+            },
+            "min_folds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64
+            }
+          }
+        }
+      }
+    },
+    "optimization_mode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+    },
+    "optimization_schedule": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+    },
+    "parameter_space_overrides": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "kind",
+              "low",
+              "high"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+              },
+              "kind": {
+                "const": "sweep"
+              },
+              "low": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              },
+              "high": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "kind",
+              "value"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+              },
+              "kind": {
+                "const": "pin"
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "optuna_trials": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "early_stopping": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      ]
+    },
+    "random_seed": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        }
+      ]
+    },
+    "optimization_config": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 191,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+      },
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ]
+      }
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine_release_id",
+        "config_digest"
+      ],
+      "properties": {
+        "engine_release_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+        },
+        "config_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "not_publishable": {
+            "const": true
+          }
+        },
+        "required": [
+          "not_publishable"
+        ]
+      },
+      "then": {
+        "properties": {
+          "alpha_binding": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "alpha_binding": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "alpha_id",
+              "alpha_version_id"
+            ],
+            "properties": {
+              "alpha_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+              },
+              "alpha_version_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "protocol": {
+            "const": "three_window_decay"
+          }
+        },
+        "required": [
+          "protocol"
+        ]
+      },
+      "then": {
+        "required": [
+          "windows"
+        ],
+        "not": {
+          "required": [
+            "walk_forward"
+          ]
+        }
+      },
+      "else": {
+        "required": [
+          "walk_forward"
+        ],
+        "not": {
+          "required": [
+            "windows"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_route": {
+            "const": "intrabar_bracket"
+          }
+        },
+        "required": [
+          "execution_route"
+        ]
+      },
+      "then": {
+        "properties": {
+          "route_params": {
+            "required": [
+              "intrabar"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "portfolio"
+                  ]
+                },
+                {
+                  "required": [
+                    "reactive"
+                  ]
+                },
+                {
+                  "required": [
+                    "dca"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_route": {
+            "const": "portfolio"
+          }
+        },
+        "required": [
+          "execution_route"
+        ]
+      },
+      "then": {
+        "properties": {
+          "route_params": {
+            "required": [
+              "portfolio"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "intrabar"
+                  ]
+                },
+                {
+                  "required": [
+                    "reactive"
+                  ]
+                },
+                {
+                  "required": [
+                    "dca"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_route": {
+            "const": "reactive"
+          }
+        },
+        "required": [
+          "execution_route"
+        ]
+      },
+      "then": {
+        "properties": {
+          "route_params": {
+            "required": [
+              "reactive"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "intrabar"
+                  ]
+                },
+                {
+                  "required": [
+                    "portfolio"
+                  ]
+                },
+                {
+                  "required": [
+                    "dca"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_route": {
+            "const": "dca_ladder"
+          }
+        },
+        "required": [
+          "execution_route"
+        ]
+      },
+      "then": {
+        "properties": {
+          "route_params": {
+            "required": [
+              "dca"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "intrabar"
+                  ]
+                },
+                {
+                  "required": [
+                    "portfolio"
+                  ]
+                },
+                {
+                  "required": [
+                    "reactive"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_route": {
+            "enum": [
+              "signal_notional",
+              "pct_equity",
+              "event_driven",
+              "native_event_lifecycle",
+              "orders",
+              "fill_replay",
+              "basket",
+              "arbitrage",
+              "nautilus_dca_grid",
+              "options"
+            ]
+          }
+        },
+        "required": [
+          "execution_route"
+        ]
+      },
+      "then": {
+        "properties": {
+          "route_params": {
+            "maxProperties": 0
+          }
+        }
+      }
+    }
+  ]
+}

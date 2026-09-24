@@ -191,6 +191,8 @@ const ScheduleFactSchema = z.object({
   oos_use_state: z.enum(["SELECTION_INPUT", "WITHHELD_UNTIL_S4", "RETROSPECTIVE", "REPORT_ONLY", "NOT_APPLICABLE"]).nullable().optional(),
   oos_use_condition: z.string().min(1).max(300).nullable().optional(),
   params_semantics: FactToken,
+  /** CG-P02-02, additive: requested-spec fields this pair needs at preflight. */
+  required_request_fields: z.array(z.string().regex(/^[a-z][a-z0-9_.]{1,79}$/)).max(4).optional(),
   cert_cap: NotPublishedFactSchema,
   source: SourcesSchema,
 }).strict();
@@ -300,8 +302,41 @@ const WalkForwardOptionValueSchema = z.object({
   admission: z.enum(["ADMITTED", "NOT_ADMITTED"]),
   reason: z.string().min(1).max(400).nullable().optional(),
 }).strict();
+const PreflightLimitSchema = z.object({
+  value: z.number().int().min(1).max(1_000_000),
+  value_source: z.enum(["PORTAL_POLICY", "P08_PREFLIGHT_BOUND"]),
+  basis: z.string().min(1).max(300),
+}).strict();
+
 const AtlasWalkForwardOptionsSchema = z.object({
-  schema_version: z.literal("research.walk-forward-options.v1"),
+  schema_version: z.enum(["research.walk-forward-options.v1", "research.walk-forward-options.v2"]),
+  /** CG-P08-02 / CG-P02-02, v2 only: the requested-spec v2 rules. */
+  train_window: z.object({
+    requested_spec_field: z.literal("walk_forward.train_window"),
+    pattern: z.string().min(1).max(80),
+    required_when: z.literal("window_mode=rolling"),
+    rule: z.string().min(1).max(400),
+    source: SourcesSchema,
+  }).strict().nullable().optional(),
+  temporal_guards: z.object({
+    fields: z.array(z.enum(["label_horizon_bars", "purge_bars", "embargo_bars"])).length(3),
+    minimum: z.literal(0),
+    maximum: z.number().int().min(1).max(100_000),
+    release_default: z.literal(0),
+    rule: z.string().min(1).max(400),
+    source: SourcesSchema,
+  }).strict().nullable().optional(),
+  inner_folds: z.object({
+    applies_to: z.literal("mode_1_decay×per_fold_causal"),
+    requested_spec_field: z.literal("walk_forward.inner"),
+    split_frequency: z.array(z.string().regex(/^[a-z][a-z0-9_]{1,31}$/)).min(1).max(8),
+    window_mode: z.array(z.string().regex(/^[a-z][a-z0-9_]{1,31}$/)).min(1).max(4),
+    train_window_pattern: z.string().min(1).max(80),
+    min_folds_release_default: z.number().int().min(1).max(64),
+    min_folds_maximum: z.number().int().min(1).max(64),
+    rule: z.string().min(1).max(400),
+    source: SourcesSchema,
+  }).strict().nullable().optional(),
   frequency: z.array(WalkForwardOptionValueSchema).min(1).max(8),
   frequency_default: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
   window_mode: z.array(WalkForwardOptionValueSchema).min(1).max(4),
@@ -323,6 +358,13 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
     optimizer_defaults: AtlasOptimizerDefaultsSchema,
     submission_constraints: AtlasSubmissionConstraintsSchema,
     walk_forward_options: AtlasWalkForwardOptionsSchema.nullable().optional(),
+    /** CG-P08-05, additive: the ceilings P08 enforces, each naming its source. */
+    preflight_limits: z.object({
+      schema_version: z.literal("research.preflight-limits.v1"),
+      sweep_dimension_ceiling: PreflightLimitSchema,
+      outer_fold_ceiling: PreflightLimitSchema,
+      estimated_cpu_seconds_ceiling: PreflightLimitSchema,
+    }).strict().nullable().optional(),
     config_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable().optional(),
   }).strict(),
   historical_releases: z.array(z.object({

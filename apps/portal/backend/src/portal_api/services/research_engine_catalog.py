@@ -156,25 +156,70 @@ class WalkForwardOptionValue(CatalogModel):
         return self
 
 
+class TrainWindowRule(CatalogModel):
+    """CG-P08-02: the manifest-owned rolling train width (requested-spec v2)."""
+
+    requested_spec_field: Literal["walk_forward.train_window"]
+    pattern: str = Field(min_length=1, max_length=80)
+    required_when: Literal["window_mode=rolling"]
+    rule: str = Field(min_length=1, max_length=400)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+
+class TemporalGuardsRule(CatalogModel):
+    """CG-P02-02: label horizon, purge and embargo in bars (requested-spec v2)."""
+
+    fields: tuple[Literal["label_horizon_bars", "purge_bars", "embargo_bars"], ...] = Field(min_length=3, max_length=3)
+    minimum: Literal[0]
+    maximum: int = Field(ge=1, le=100_000)
+    release_default: Literal[0]
+    rule: str = Field(min_length=1, max_length=400)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+
+class InnerFoldsRule(CatalogModel):
+    """CG-P02-02: nested inner folds for causal Mode 1 (requested-spec v2)."""
+
+    applies_to: Literal["mode_1_decay×per_fold_causal"]
+    requested_spec_field: Literal["walk_forward.inner"]
+    split_frequency: tuple[str, ...] = Field(min_length=1, max_length=8)
+    window_mode: tuple[str, ...] = Field(min_length=1, max_length=4)
+    train_window_pattern: str = Field(min_length=1, max_length=80)
+    min_folds_release_default: int = Field(ge=1, le=64)
+    min_folds_maximum: int = Field(ge=1, le=64)
+    rule: str = Field(min_length=1, max_length=400)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+
 class WalkForwardOptions(CatalogModel):
     """Published walk-forward values for New Run (RF02-B2).
 
     The engine's accepted values, each with the Portal's admission, so the
     browser renders the contract instead of a hardcoded list and preflight's
-    refusal of a value is something the reader was told beforehand.
+    refusal of a value is something the reader was told beforehand. v2 adds
+    the requested-spec v2 rules (CG-P02-02, CG-P08-02); v1 manifests still load.
     """
 
-    schema_version: Literal["research.walk-forward-options.v1"]
+    schema_version: Literal["research.walk-forward-options.v1", "research.walk-forward-options.v2"]
     frequency: tuple[WalkForwardOptionValue, ...] = Field(min_length=1, max_length=8)
     frequency_default: str
     window_mode: tuple[WalkForwardOptionValue, ...] = Field(min_length=1, max_length=4)
     window_mode_default: str
     split_mode_form: Literal["source_instant"]
     split_mode_rule: str = Field(min_length=1, max_length=400)
+    train_window: TrainWindowRule | None = None
+    temporal_guards: TemporalGuardsRule | None = None
+    inner_folds: InnerFoldsRule | None = None
     source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
 
     @model_validator(mode="after")
     def validate_defaults(self) -> "WalkForwardOptions":
+        v2 = self.schema_version == "research.walk-forward-options.v2"
+        if v2 != all(item is not None for item in (self.train_window, self.temporal_guards, self.inner_folds)):
+            raise ValueError("walk-forward options v2 publishes exactly the train-window, guard and inner-fold rules")
+        rolling = next((item for item in self.window_mode if item.value == "rolling"), None)
+        if rolling is not None and rolling.admission == "ADMITTED" and self.train_window is None:
+            raise ValueError("rolling may be admitted only with a manifest-owned train width")
         for values, default, label in (
             (self.frequency, self.frequency_default, "frequency"),
             (self.window_mode, self.window_mode_default, "window_mode"),
@@ -188,6 +233,26 @@ class WalkForwardOptions(CatalogModel):
 
     def admitted(self, field: Literal["frequency", "window_mode"]) -> frozenset[str]:
         return frozenset(item.value for item in getattr(self, field) if item.admission == "ADMITTED")
+
+
+class PreflightLimit(CatalogModel):
+    value: int = Field(ge=1, le=1_000_000)
+    value_source: Literal["PORTAL_POLICY", "P08_PREFLIGHT_BOUND"]
+    basis: str = Field(min_length=1, max_length=300)
+
+
+class PreflightLimits(CatalogModel):
+    """CG-P08-05: the ceilings P08 enforces server-side, each naming its source.
+
+    None of these is an engine limit. The sweep ceiling is the Portal policy
+    spec 02 §8/§26 puts in the manifest; the fold and CPU bounds are P08's own
+    persistence/declaration bounds, published so the form states them.
+    """
+
+    schema_version: Literal["research.preflight-limits.v1"]
+    sweep_dimension_ceiling: PreflightLimit
+    outer_fold_ceiling: PreflightLimit
+    estimated_cpu_seconds_ceiling: PreflightLimit
 
 
 class EngineRelease(CatalogModel):
@@ -204,6 +269,7 @@ class EngineRelease(CatalogModel):
     optimizer_defaults: OptimizerDefaults | None = None
     submission_constraints: SubmissionConstraints | None = None
     walk_forward_options: WalkForwardOptions | None = None
+    preflight_limits: PreflightLimits | None = None
 
 
 class CapabilityAxes(CatalogModel):
@@ -359,6 +425,8 @@ class ScheduleFact(CatalogModel):
     oos_use_state: OosUseState | None = None
     oos_use_condition: str | None = Field(default=None, min_length=1, max_length=300)
     params_semantics: str = Field(pattern=r"^[a-z][a-z0-9_]{1,79}$")
+    # CG-P02-02: requested-spec fields this pair needs before preflight admits it.
+    required_request_fields: tuple[str, ...] = Field(default=(), max_length=4)
     cert_cap: NotPublishedFact
     source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
 
@@ -556,6 +624,8 @@ class ReleaseRuntimePublic(CatalogModel):
     submission_constraints: SubmissionConstraints
     # RF02-B2, additive: absent only on a manifest written before it existed.
     walk_forward_options: WalkForwardOptions | None = None
+    # CG-P08-05, additive: the ceilings P08 enforces, with their sources.
+    preflight_limits: PreflightLimits | None = None
     # RF02 / CG-P10-01: the digest a New Run form sends as
     # `client.config_digest`. It covers exactly the release facts above that
     # the browser renders — not the private catalog digest — so the form can
@@ -679,11 +749,12 @@ def release_config_digest(release: EngineRelease) -> str:
     """sha256 of the canonical browser-visible configuration of one release.
 
     Canonical form: UTF-8 JSON, sorted keys, no whitespace, over release_id,
-    trial_ceiling, optimizer_defaults, submission_constraints and
-    walk_forward_options exactly as the Atlas publishes them.
+    trial_ceiling, optimizer_defaults, submission_constraints,
+    walk_forward_options and (when published) preflight_limits exactly as the
+    Atlas publishes them.
     """
 
-    facts = {
+    facts: dict[str, object] = {
         "release_id": release.release_id,
         "trial_ceiling": release.trial_ceiling,
         "optimizer_defaults": None
@@ -696,6 +767,9 @@ def release_config_digest(release: EngineRelease) -> str:
         if release.walk_forward_options is None
         else release.walk_forward_options.model_dump(mode="json"),
     }
+    if release.preflight_limits is not None:
+        # CG-P08-05, additive: a manifest without limits keeps its digest.
+        facts["preflight_limits"] = release.preflight_limits.model_dump(mode="json")
     encoded = json.dumps(facts, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
@@ -823,6 +897,7 @@ class ResearchEngineCatalogService:
                 or historical.optimizer_defaults is not None
                 or historical.submission_constraints is not None
                 or historical.walk_forward_options is not None
+                or historical.preflight_limits is not None
             ):
                 raise ResearchEngineCatalogLoadError(
                     "RESEARCH_ENGINE_CATALOG_SOURCE_INVALID",
@@ -986,8 +1061,17 @@ class ResearchEngineCatalogService:
             optimizer_defaults=release.optimizer_defaults,  # type: ignore[arg-type]
             submission_constraints=release.submission_constraints,  # type: ignore[arg-type]
             walk_forward_options=release.walk_forward_options,
+            preflight_limits=release.preflight_limits,
             config_digest=release_config_digest(release),
         )
+
+    def preflight_limits(self) -> PreflightLimits:
+        """The current release's server-side preflight ceilings (CG-P08-05)."""
+
+        current = next(release for release in self._catalog.releases if release.role == "current")
+        if current.preflight_limits is None:
+            raise ResearchEngineCatalogError("current release publishes no preflight limits")
+        return current.preflight_limits
 
     def walk_forward_options(self) -> WalkForwardOptions:
         """The current release's published walk-forward values (RF02-B2)."""

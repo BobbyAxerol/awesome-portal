@@ -108,7 +108,7 @@ describe("P09 published Research foundation contract", () => {
       historical_identity: { release_id: "er_quantbt_108", facts_state: "NOT_PUBLISHED" } });
     const current = fixture("research-foundation.atlas-current.valid.json");
     expect(current).toMatchObject({ selected_release_kind: "CURRENT", historical_identity: null,
-      atlas: { manifest_revision: 6, modes: expect.any(Array), routes: expect.any(Array) } });
+      atlas: { manifest_revision: 7, modes: expect.any(Array), routes: expect.any(Array) } });
     expect(current.atlas.modes).toHaveLength(5);
     expect(current.atlas.routes).toHaveLength(14);
     expect(current.atlas.claims).toHaveLength(7);

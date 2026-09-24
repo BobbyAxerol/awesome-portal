@@ -4,7 +4,7 @@
   "selected_release_kind": "CURRENT",
   "atlas": {
     "schema_version": "research-engine-atlas.v1",
-    "manifest_revision": 6,
+    "manifest_revision": 7,
     "current_release": {
       "release_id": "er_quantbt_111",
       "package": "quantbt-engine",
@@ -248,7 +248,7 @@
         "reason": "The current P10 adapter is a fixed-parameter qualification path. Release defaults describe the pinned engine and Portal protocol; they do not grant browser override authority."
       },
       "walk_forward_options": {
-        "schema_version": "research.walk-forward-options.v1",
+        "schema_version": "research.walk-forward-options.v2",
         "frequency": [
           {
             "value": "single",
@@ -290,13 +290,92 @@
           },
           {
             "value": "rolling",
-            "admission": "NOT_ADMITTED",
-            "reason": "Rolling needs a train width the manifest does not own yet; preflight refuses it with RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED rather than inferring one."
+            "admission": "ADMITTED",
+            "reason": null
           }
         ],
         "window_mode_default": "expanding",
         "split_mode_form": "source_instant",
         "split_mode_rule": "The first outer out-of-sample instant in the dataset's source timezone, optionally prefixed walk_forward_. It must lie strictly inside walk_forward.start and end_exclusive; there is no release default to fall back on.",
+        "train_window": {
+          "requested_spec_field": "walk_forward.train_window",
+          "pattern": "^[1-9][0-9]{0,4}(D|h)$",
+          "required_when": "window_mode=rolling",
+          "rule": "Requested-spec v2 only. A whole number of days (D) or hours (h) passed to the engine as WalkForwardConfig.train_window; required for rolling, refused for expanding. Preflight never infers one.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "356-361",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "`expanding` keeps the first train timestamp fixed"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "496-497",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "if mode == \"rolling\" and self.train_window is None:"
+            }
+          ]
+        },
+        "temporal_guards": {
+          "fields": [
+            "label_horizon_bars",
+            "purge_bars",
+            "embargo_bars"
+          ],
+          "minimum": 0,
+          "maximum": 10000,
+          "release_default": 0,
+          "rule": "Requested-spec v2 only. Bars removed from the train tail (label horizon, purge) before each OOS start, and bars skipped after each OOS fold (embargo). The engine builds the fold plan; preflight publishes each guarded span.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "392-395",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "label_horizon_bars, purge_bars, embargo_bars:"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "3024-3033",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "label_start = test_start - int(config.label_horizon_bars)"
+            }
+          ]
+        },
+        "inner_folds": {
+          "applies_to": "mode_1_decay×per_fold_causal",
+          "requested_spec_field": "walk_forward.inner",
+          "split_frequency": [
+            "single",
+            "yearly",
+            "semi_yearly",
+            "quarterly",
+            "monthly",
+            "weekly"
+          ],
+          "window_mode": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$",
+          "min_folds_release_default": 2,
+          "min_folds_maximum": 64,
+          "rule": "Requested-spec v2 only, and only for mode_1_decay with per_fold_causal: nested folds inside each outer IS window so decay selection never sees that fold's OOS. Preflight asks the engine to build them and refuses when a fold has too few.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "380-386",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "inner_split_frequency, inner_window_mode, inner_train_window:"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "545-549",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "causal Mode 1 requires inner_split_frequency, inner_window_mode, \""
+            }
+          ]
+        },
         "source": [
           {
             "path": "quantbt/walkforward.py",
@@ -318,7 +397,25 @@
           }
         ]
       },
-      "config_digest": "909514e09820e9fc8c2a37946c66053aaf7a9106875c73ed97165f7d1d02f452"
+      "preflight_limits": {
+        "schema_version": "research.preflight-limits.v1",
+        "sweep_dimension_ceiling": {
+          "value": 8,
+          "value_source": "PORTAL_POLICY",
+          "basis": "Spec 02 §8/§26: at most 8 swept dimensions per run; pinned and fixed parameters do not count. A Portal release policy, not an engine limit."
+        },
+        "outer_fold_ceiling": {
+          "value": 128,
+          "value_source": "P08_PREFLIGHT_BOUND",
+          "basis": "One fold plan is persisted as a bounded metadata document; a longer plan is refused rather than truncated."
+        },
+        "estimated_cpu_seconds_ceiling": {
+          "value": 86400,
+          "value_source": "P08_PREFLIGHT_BOUND",
+          "basis": "Declared evaluations (folds × trials × seeds) are estimated before a snapshot is sealed; above this the preflight refuses. P10/P06 reserve real resources separately."
+        }
+      },
+      "config_digest": "69c9431ee0ca57987fa9e7feff35af8dccc7ac575dc74cc5f72812a3c8e72220"
     },
     "historical_releases": [
       {
@@ -1401,23 +1498,10 @@
         "display_name": "Decay robustness",
         "valid_schedules": [
           "global",
-          "per_fold_decay"
+          "per_fold_decay",
+          "per_fold_causal"
         ],
-        "invalid_schedules": [
-          {
-            "schedule": "per_fold_causal",
-            "admission": "NOT_ADMITTED",
-            "reason": "QuantBT 1.1.1 supports causal Mode 1 only with robust_decay, inner_split_frequency, inner_window_mode and inner_train_window. The current Portal requested-spec and preflight cannot carry and validate those fields; this pair is descriptive, not a runnable Portal admission.",
-            "source": [
-              {
-                "path": "quantbt/walkforward.py",
-                "lines": "532-548",
-                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
-                "anchor": "causal Mode 1 requires inner_split_frequency, inner_window_mode,"
-              }
-            ]
-          }
-        ],
+        "invalid_schedules": [],
         "default_schedule": "global",
         "objective_summary": "Ranks OOS stability against IS-to-OOS decay.",
         "suspect": "A high average OOS score with broad decay dispersion requires review.",
@@ -1443,6 +1527,7 @@
               "oos_use_state": "RETROSPECTIVE",
               "oos_use_condition": "With the release-default candidate_selection_metric robust_decay. The engine records NOT_USED for plateau/IS-only/full-sample metrics.",
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -1478,6 +1563,7 @@
               "oos_use_state": "SELECTION_INPUT",
               "oos_use_condition": null,
               "params_semantics": "last_completed_fold_selected_params",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -1494,6 +1580,44 @@
                   "lines": "1250-1287",
                   "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
                   "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            },
+            {
+              "schedule": "per_fold_causal",
+              "validation_claim": "strict_nested_fold_local_retraining",
+              "chronological_validation_claim": "strict_outer_oos_after_frozen_selection",
+              "causality_claim": "strict_nested_fold_local_retraining",
+              "causality_schedule_v2": "engine_enforced_nested_v2",
+              "oos_use": "NOT_USED",
+              "oos_use_state": "WITHHELD_UNTIL_S4",
+              "oos_use_condition": null,
+              "params_semantics": "last_completed_fold_selected_params",
+              "required_request_fields": [
+                "walk_forward.inner"
+              ],
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1256-1266",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "elif schedule == \"per_fold_causal\":"
                 },
                 {
                   "path": "quantbt/core/wfo_contracts.py",
@@ -1716,6 +1840,7 @@
               "oos_use_state": "REPORT_ONLY",
               "oos_use_condition": null,
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -2015,6 +2140,7 @@
               "oos_use_state": "RETROSPECTIVE",
               "oos_use_condition": "With the release-default candidate_selection_metric robust_decay. The engine records NOT_USED for plateau/IS-only/full-sample metrics.",
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -2305,6 +2431,7 @@
               "oos_use_state": "REPORT_ONLY",
               "oos_use_condition": null,
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -2340,6 +2467,7 @@
               "oos_use_state": "WITHHELD_UNTIL_S4",
               "oos_use_condition": null,
               "params_semantics": "last_completed_fold_selected_params",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -2679,6 +2807,7 @@
               "oos_use_state": "NOT_APPLICABLE",
               "oos_use_condition": null,
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -3182,5 +3311,5 @@
     }
   },
   "historical_identity": null,
-  "etag": "W/\"research-atlas-3c00d1e3269753dc719d35f9\""
+  "etag": "W/\"research-atlas-41b0a84240ff493e04b15bdd\""
 }

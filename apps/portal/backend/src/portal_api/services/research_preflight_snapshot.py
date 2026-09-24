@@ -24,6 +24,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+import numpy as np
 import pandas as pd
 
 from portal_api.adapters.market_data import (
@@ -41,7 +42,9 @@ from portal_api.services.data_catalog import (
     SnapshotStore,
 )
 from portal_api.domain.errors import PortalDomainError
+from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.services.research_engine_catalog import (
+    ResearchEngineCatalogError,
     ResearchEngineCatalogService,
     WalkForwardOptions,
 )
@@ -83,11 +86,68 @@ _TIMEFRAME_PATTERN = re.compile(
 
 
 class ResearchPreflightSnapshotError(ValueError):
-    """Known, typed P08 refusal from the private data authority."""
+    """Known, typed P08 refusal from the private data authority.
 
-    def __init__(self, code: str, message: str) -> None:
+    CG-P08-03: a refusal names the gate that failed and the requested-spec
+    field path it maps to, so Screen 02 can send the reader to the step that
+    can fix it. Both are optional; ``refusal_detail`` fills a code-level
+    default when a raise site has nothing more precise.
+    """
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        field_path: tuple[str, ...] | None = None,
+        gate: str | None = None,
+    ) -> None:
         self.code = code
+        self.field_path = field_path
+        self.gate = gate
         super().__init__(message)
+
+
+REQUESTED_SPEC_VERSIONS = frozenset({"research.requested-spec.v1", "research.requested-spec.v2"})
+REQUESTED_SPEC_V2_WALK_FORWARD_FIELDS = (
+    "train_window",
+    "label_horizon_bars",
+    "purge_bars",
+    "embargo_bars",
+    "inner",
+)
+MAXIMUM_TEMPORAL_GUARD_BARS = 10_000
+_TRAIN_WINDOW_PATTERN = re.compile(r"^[1-9][0-9]{0,4}(D|h)$")
+
+# Code-level defaults for CG-P08-03 when a raise site gives no precise path.
+_DEFAULT_REFUSAL = {
+    "RESEARCH_PREFLIGHT_RELEASE_STALE": ("release_current", ("client", "engine_release_id")),
+    "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN": ("route_admitted", ("execution_route",)),
+    "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED": ("route_admitted", ("execution_route",)),
+    "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED": ("mode_schedule_admitted", ("optimization_schedule",)),
+    "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE": ("required_inputs", ("data",)),
+    "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE": ("required_inputs", ("data",)),
+    "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE": ("dataset_available", ("data",)),
+    "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE": ("warmup_available", ("data",)),
+    "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE": ("snapshot_bounded", ("data",)),
+    "RESEARCH_PREFLIGHT_RESOURCE_REFUSED": ("resource_ceiling", ("optuna_trials",)),
+}
+
+
+def refusal_detail(exc: ResearchPreflightSnapshotError, requested: Mapping[str, object] | None) -> dict[str, object]:
+    """The bounded private refusal document Control API maps to field paths."""
+    gate, path = _DEFAULT_REFUSAL.get(exc.code, ("requested_spec", ()))
+    if exc.code in {"RESEARCH_PREFLIGHT_TOPOLOGY_INVALID", "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED"}:
+        protocol = requested.get("protocol") if isinstance(requested, Mapping) else None
+        gate, path = "topology", (("windows",) if protocol == "three_window_decay" else ("walk_forward",))
+    return {
+        "code": exc.code,
+        "gate": exc.gate or gate,
+        "field_path": list(exc.field_path if exc.field_path is not None else path),
+        # Messages are authored here or come from the engine's own validator;
+        # neither carries source rows, paths or credentials. Bounded anyway.
+        "message": str(exc)[:400],
+    }
 
 
 def canonical_json(value: object) -> str:
@@ -289,7 +349,18 @@ def _route_capability(
         raise ResearchPreflightSnapshotError(
             "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN", "The selected execution route is not in the current engine catalog."
         )
-    mode = engine_catalog.validate_mode_schedule(mode_id=requested_mode, schedule=requested_schedule)
+    try:
+        mode = engine_catalog.validate_mode_schedule(mode_id=requested_mode, schedule=requested_schedule)
+    except ResearchEngineCatalogError as exc:
+        # Previously this escaped as a bare ValueError and reached the browser
+        # as a 502 "rejected" — a declaration error reported as an outage.
+        known = any(item.mode_id == requested_mode for item in engine_catalog.catalog.modes)
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED",
+            str(exc),
+            field_path=("optimization_schedule",) if known else ("optimization_mode",),
+            gate="mode_schedule_admitted",
+        ) from exc
     axes = route.axes
     # P08 may only create an executable-input manifest for a route whose
     # adapter and evidence surface are published. "P04_BASELINE_ONLY" means
@@ -429,10 +500,15 @@ def _advanced_topology(
     # P02 has no rolling train-width control. Claiming an exact rolling plan
     # would silently invent an engine default, so fail closed until the
     # manifest owns the width field (published as NOT_ADMITTED with a reason).
-    if window_mode not in options.admitted("window_mode"):
+    if window_mode not in options.admitted("window_mode") or window_mode != "expanding":
+        # v1 has no train-width field. The manifest now admits rolling, but
+        # only with requested-spec v2 `walk_forward.train_window` (CG-P08-02);
+        # this calendar plan would silently build an expanding train instead.
         raise ResearchPreflightSnapshotError(
             "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
-            "Rolling walk-forward requires a manifest-owned train width; P08 will not infer one.",
+            "Rolling walk-forward requires walk_forward.train_window (requested-spec v2); P08 will not infer one.",
+            field_path=("walk_forward", "train_window"),
+            gate="rolling_train_width",
         )
     raw_split = split_mode.removeprefix("walk_forward_")
     try:
@@ -501,6 +577,390 @@ def _advanced_topology(
     return start, end, topology
 
 
+def _v2_walk_forward_fields(requested: Mapping[str, object]) -> dict[str, object]:
+    """Parse CG-P02-02 requested-spec v2 fields; v1 must not carry them."""
+    version = requested.get("schema_version")
+    spec = requested.get("walk_forward")
+    present = {
+        key: spec[key]
+        for key in REQUESTED_SPEC_V2_WALK_FORWARD_FIELDS
+        if isinstance(spec, Mapping) and key in spec
+    }
+    if version != "research.requested-spec.v2":
+        if present:
+            first = sorted(present)[0]
+            raise ResearchPreflightSnapshotError(
+                "RESEARCH_PREFLIGHT_INVALID",
+                "Temporal guards, rolling width and inner folds need requested-spec v2.",
+                field_path=("walk_forward", first),
+                gate="requested_spec",
+            )
+        return {}
+    result: dict[str, object] = {}
+    for name in ("label_horizon_bars", "purge_bars", "embargo_bars"):
+        value = present.get(name, 0)
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= MAXIMUM_TEMPORAL_GUARD_BARS:
+            raise ResearchPreflightSnapshotError(
+                "RESEARCH_PREFLIGHT_INVALID",
+                f"walk_forward.{name} must be an integer from 0 to {MAXIMUM_TEMPORAL_GUARD_BARS}.",
+                field_path=("walk_forward", name),
+                gate="temporal_guards",
+            )
+        result[name] = value
+    train_window = present.get("train_window")
+    if train_window is not None and (
+        not isinstance(train_window, str) or not _TRAIN_WINDOW_PATTERN.fullmatch(train_window)
+    ):
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_INVALID",
+            "walk_forward.train_window must be a whole number of days (D) or hours (h).",
+            field_path=("walk_forward", "train_window"),
+            gate="rolling_train_width",
+        )
+    result["train_window"] = train_window
+    inner = present.get("inner")
+    if inner is not None:
+        inner_spec = _require_object(inner, "walk_forward.inner")
+        inner_window = inner_spec.get("train_window")
+        min_folds = inner_spec.get("min_folds", 2)
+        if not isinstance(inner_window, str) or not _TRAIN_WINDOW_PATTERN.fullmatch(inner_window):
+            raise ResearchPreflightSnapshotError(
+                "RESEARCH_PREFLIGHT_INVALID",
+                "walk_forward.inner.train_window must be a whole number of days (D) or hours (h).",
+                field_path=("walk_forward", "inner", "train_window"),
+                gate="inner_folds",
+            )
+        if isinstance(min_folds, bool) or not isinstance(min_folds, int) or not 1 <= min_folds <= 64:
+            raise ResearchPreflightSnapshotError(
+                "RESEARCH_PREFLIGHT_INVALID",
+                "walk_forward.inner.min_folds must be an integer from 1 to 64.",
+                field_path=("walk_forward", "inner", "min_folds"),
+                gate="inner_folds",
+            )
+        result["inner"] = {
+            "split_frequency": _require_text(inner_spec.get("split_frequency"), "walk_forward.inner.split_frequency", maximum=32),
+            "window_mode": _require_text(inner_spec.get("window_mode"), "walk_forward.inner.window_mode", maximum=32),
+            "train_window": inner_window,
+            "min_folds": min_folds,
+        }
+    else:
+        result["inner"] = None
+    return result
+
+
+def _next_instant(index: pd.DatetimeIndex, last: pd.Timestamp, logical_end: pd.Timestamp) -> pd.Timestamp:
+    """Half-open end for an engine span whose last bar is ``last``."""
+    position = int(index.searchsorted(last, side="right"))
+    return index[position] if position < len(index) else logical_end
+
+
+def _engine_span(
+    span: Mapping[str, object] | None,
+    index: pd.DatetimeIndex,
+    logical_end: pd.Timestamp,
+) -> dict[str, object] | None:
+    if span is None:
+        return None
+    first = pd.Timestamp(span["first"])
+    last = pd.Timestamp(span["last"])
+    return _range_metadata(first, _next_instant(index, last, logical_end), bars=int(span["bars"]))
+
+
+def _engine_advanced_topology(
+    requested: Mapping[str, object],
+    frame: pd.DataFrame,
+    *,
+    source_timezone: str,
+    options: WalkForwardOptions,
+    gateway: QuantBTGateway,
+    v2: Mapping[str, object],
+    trials: int,
+) -> tuple[pd.Timestamp, pd.Timestamp, dict[str, object]]:
+    """CG-P02-02/P08-02: a requested-spec v2 plan built by the engine itself.
+
+    Rolling width, label horizon, purge, embargo and nested inner folds are
+    all validated and materialized by QuantBT 1.1.1's own public fold builder
+    over the exact closed-bar index of the analysis range. The v1 calendar plan
+    above is unchanged, so every existing v1 digest stays byte-identical.
+    """
+    spec = _require_object(requested.get("walk_forward"), "walk_forward")
+    start, end = _interval(spec, source_timezone=source_timezone, label="walk_forward")
+    if end > inferred_end_exclusive(frame.index):
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE",
+            "The requested walk-forward end exceeds the available closed-bar source range.",
+            field_path=("walk_forward", "end_exclusive"),
+        )
+    frequency = _require_text(spec.get("frequency"), "walk_forward.frequency", maximum=32)
+    window_mode = _require_text(spec.get("window_mode"), "walk_forward.window_mode", maximum=32)
+    if frequency not in options.admitted("frequency"):
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+            "The selected fold frequency is not certified.",
+            field_path=("walk_forward", "frequency"),
+        )
+    if window_mode not in options.admitted("window_mode"):
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+            "The selected window mode is not admitted by the current release.",
+            field_path=("walk_forward", "window_mode"),
+        )
+    train_window = v2.get("train_window")
+    if window_mode == "rolling" and train_window is None:
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+            "Rolling walk-forward requires walk_forward.train_window; P08 will not infer one.",
+            field_path=("walk_forward", "train_window"),
+            gate="rolling_train_width",
+        )
+    if window_mode == "expanding" and train_window is not None:
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID",
+            "An expanding walk-forward keeps its first train bar fixed; walk_forward.train_window applies only to rolling.",
+            field_path=("walk_forward", "train_window"),
+            gate="rolling_train_width",
+        )
+    raw_split = _require_text(spec.get("split_mode"), "walk_forward.split_mode", maximum=64).removeprefix("walk_forward_")
+    try:
+        first_oos = parse_source_instant(raw_split, source_timezone=source_timezone)
+    except ResearchPreflightSnapshotError as exc:
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+            "The first out-of-sample boundary is not certified.",
+            field_path=("walk_forward", "split_mode"),
+        ) from exc
+    if not (start < first_oos < end):
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID",
+            "The first out-of-sample boundary must lie inside the selected range.",
+            field_path=("walk_forward", "split_mode"),
+        )
+    mode = _require_text(requested.get("optimization_mode"), "optimization_mode", maximum=64)
+    schedule = _require_text(requested.get("optimization_schedule"), "optimization_schedule", maximum=64)
+    inner = v2.get("inner")
+    causal_mode_one = mode == "mode_1_decay" and schedule == "per_fold_causal"
+    if inner is not None and not causal_mode_one:
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID",
+            "Inner folds apply only to mode_1_decay with per_fold_causal; the engine would ignore them here.",
+            field_path=("walk_forward", "inner"),
+            gate="inner_folds",
+        )
+    if causal_mode_one and inner is None:
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+            "mode_1_decay with per_fold_causal requires walk_forward.inner so decay selection stays inside outer IS.",
+            field_path=("walk_forward", "inner"),
+            gate="inner_folds",
+        )
+    index = frame.index[(frame.index >= start) & (frame.index < end)]
+    config_fields: dict[str, object] = {
+        "split_mode": f"walk_forward_{_iso_utc(first_oos)}",
+        "split_frequency": frequency,
+        "window_mode": window_mode,
+        "train_window": train_window,
+        "label_horizon_bars": v2["label_horizon_bars"],
+        "purge_bars": v2["purge_bars"],
+        "embargo_bars": v2["embargo_bars"],
+        "optimization_mode": mode,
+        "optimization_schedule": schedule,
+        "optuna_trials": trials,
+    }
+    if isinstance(inner, Mapping):
+        config_fields.update(
+            {
+                "inner_split_frequency": inner["split_frequency"],
+                "inner_window_mode": inner["window_mode"],
+                "inner_train_window": inner["train_window"],
+                "inner_min_folds": inner["min_folds"],
+            }
+        )
+    try:
+        plan = gateway.walk_forward_fold_plan(index=index, config_fields=config_fields)
+    except (ValueError, NotImplementedError) as exc:
+        text = str(exc)
+        path: tuple[str, ...] = ("walk_forward",)
+        gate = "topology"
+        if "inner" in text:
+            path, gate = ("walk_forward", "inner"), "inner_folds"
+        elif "train_window" in text or "rolling" in text:
+            path, gate = ("walk_forward", "train_window"), "rolling_train_width"
+        elif "purge" in text or "embargo" in text or "label_horizon" in text:
+            path, gate = ("walk_forward",), "temporal_guards"
+        elif "optimization" in text:
+            path, gate = ("optimization_schedule",), "mode_schedule_admitted"
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+            f"QuantBT 1.1.1 refused this walk-forward plan: {text}"[:400],
+            field_path=path,
+            gate=gate,
+        ) from exc
+    if len(plan) > PREFLIGHT_MAXIMUM_FOLD_ROWS:
+        raise ResearchPreflightSnapshotError(
+            "RESEARCH_PREFLIGHT_RESOURCE_REFUSED",
+            "The selected walk-forward range exceeds the bounded authoritative fold-plan ceiling.",
+            field_path=("walk_forward",),
+            gate="outer_fold_ceiling",
+        )
+    folds = []
+    for row in plan:
+        guards = {
+            name: _engine_span(row[name], index, end)
+            for name in ("label_horizon", "purge", "embargo")
+        }
+        fold: dict[str, object] = {
+            "fold_id": f"fold_{row['fold_id']:03d}",
+            "train": _engine_span(row["train"], index, end),
+            "outer_oos": _engine_span(row["test"], index, end),
+            "state": "BOUNDARY_FIXED_NOT_EVALUATED",
+            "guards": guards,
+        }
+        if row["inner"] is not None:
+            fold["inner_fold_count"] = len(row["inner"])
+        folds.append(fold)
+    topology: dict[str, object] = {
+        "protocol": "advanced_walk_forward",
+        "frequency": frequency,
+        "window_mode": window_mode,
+        "folds": folds,
+        "sealed_holdout": None,
+        "plan_source": "quantbt.walkforward.WalkForwardEngine.build_folds",
+        "train_window": train_window,
+        "temporal_guards": {
+            "label_horizon_bars": v2["label_horizon_bars"],
+            "purge_bars": v2["purge_bars"],
+            "embargo_bars": v2["embargo_bars"],
+        },
+        "inner_validation": dict(inner) if isinstance(inner, Mapping) else None,
+    }
+    topology["topology_digest"] = sha256_json(topology)
+    return start, end, topology
+
+
+def _gap_scan(
+    frame: pd.DataFrame,
+    *,
+    timeframe: str,
+    calendar_policy: str,
+    windows: list[tuple[str, pd.Timestamp, pd.Timestamp, bool]],
+    max_gap_ratio: float,
+) -> dict[str, object]:
+    """CG-P08-06: per-window missing-bar scan of the sealed snapshot index.
+
+    Only timestamps are read, never prices. A sealed holdout window is not
+    scanned per window at all (its integrity is the snapshot's), matching the
+    spec rule that nothing on the split screen reads the seal. The verdict
+    uses the snapshot family's own quality profile; the engine and the source
+    publish no critical/watch classification for an individual gap run.
+    """
+    if calendar_policy != "CRYPTO_24_7":
+        return {
+            "state": "NOT_PUBLISHED",
+            "reason": "The source publishes no session calendar, so an absent bar cannot be told from a closed session.",
+            "windows": [],
+        }
+    step = _timeframe_delta(timeframe)
+    rows: list[dict[str, object]] = []
+    index = frame.index
+    # The whole scan is persisted in one bounded metadata document, so item
+    # detail has a budget; counts are always complete and omissions counted.
+    item_budget = 48
+    for label, start, end, sealed in windows:
+        base = {
+            "window": label,
+            "start_utc_ms": utc_milliseconds(start),
+            "end_exclusive_utc_ms": utc_milliseconds(end),
+        }
+        if sealed:
+            rows.append({
+                **base,
+                "state": "SEALED",
+                "bars": None,
+                "expected_bars": None,
+                "missing_bars": None,
+                "gap_runs": None,
+                "verdict": None,
+                "items": [],
+                "items_omitted": 0,
+                "note": "sealed — integrity checked at snapshot time, content unread",
+            })
+            continue
+        # Bars sit on the epoch-anchored cadence; a window edge between bars
+        # must not turn the whole grid into "missing".
+        grid = pd.date_range(start.ceil(step), end, freq=step, inclusive="left")
+        present = index[(index >= start) & (index < end)]
+        missing = grid.difference(present)
+        runs: list[tuple[pd.Timestamp, int]] = []
+        if len(missing):
+            values = missing.asi8
+            breaks = np.flatnonzero(np.diff(values) != step.value) + 1
+            starts = np.r_[0, breaks]
+            lengths = np.diff(np.r_[starts, len(values)])
+            runs = [(missing[int(first)], int(count)) for first, count in zip(starts, lengths)]
+        expected = int(len(grid))
+        ratio = (len(missing) / expected) if expected else 0.0
+        verdict = "PASS" if not runs else ("CRITICAL" if ratio > max_gap_ratio else "WATCH")
+        shown = runs[: max(0, min(4, item_budget))]
+        item_budget -= len(shown)
+        rows.append({
+            **base,
+            "state": "SCANNED",
+            "bars": int(len(present)),
+            "expected_bars": expected,
+            "missing_bars": int(len(missing)),
+            "gap_runs": len(runs),
+            "verdict": verdict,
+            "items": [
+                {"start_utc_ms": utc_milliseconds(first), "missing_bars": count}
+                for first, count in shown
+            ],
+            "items_omitted": len(runs) - len(shown),
+            "note": None,
+        })
+    return {
+        "state": "SCANNED",
+        "reason": None,
+        "max_gap_ratio": max_gap_ratio,
+        "classification": "WATCH when a window misses any bar; CRITICAL when its missing ratio exceeds the snapshot quality profile. The source publishes no per-run severity.",
+        "windows": rows,
+    }
+
+
+def _holdout_seal(sealed_holdout: Mapping[str, object], snapshot_content_hash: str, source_manifest_digest: str) -> dict[str, object]:
+    """CG-P08-06 (DR-01): the read-only seal record P08 can prove.
+
+    The digest binds the half-open holdout range, its bar count and the
+    immutable snapshot it lives in. Nothing reads the sealed values, so the
+    read log is empty by construction; the unlock authority is DR-01 and is
+    not invented here. The certificate cap follows CG-P04-05.
+    """
+    basis = {
+        "start_utc_ms": sealed_holdout["start_utc_ms"],
+        "end_exclusive_utc_ms": sealed_holdout["end_exclusive_utc_ms"],
+        "bars": sealed_holdout.get("bars"),
+        "snapshot_content_hash": snapshot_content_hash,
+        "source_manifest_digest": source_manifest_digest,
+    }
+    return {
+        "schema_version": "research.holdout-seal.v1",
+        "seal_digest": sha256_json(basis),
+        "digest_basis": "sha256 of the half-open holdout range, its bar count, the snapshot content hash and the source manifest digest",
+        "read_log": {
+            "state": "NO_READER",
+            "reads": [],
+            "reason": "No Research route or worker reads sealed holdout values; P08 returns boundaries only.",
+        },
+        "unlock": {
+            "state": "OWNER_SCOPE_REQUIRED",
+            "reason": "DR-01: no holdout unlock authority, route or actor is published; nothing may unseal or evaluate it.",
+        },
+        "cap": {
+            "state": "NOT_PUBLISHED",
+            "reason": "QuantBT 1.1.1 publishes no per-mode certification cap (CG-P04-05), so no holdout cap is claimed.",
+        },
+    }
+
+
 def _resource_estimate(
     *,
     frame: pd.DataFrame,
@@ -549,6 +1009,9 @@ class ResearchPreflightSnapshotService:
     provider: MarketDataProvider
     snapshots: SnapshotStore
     engine_catalog: ResearchEngineCatalogService
+    # The pinned engine boundary, used only to *plan* a requested-spec v2
+    # walk-forward (never to run one). Defaults to the process gateway.
+    gateway: QuantBTGateway | None = None
 
     def build(self, payload: Mapping[str, object]) -> dict[str, object]:
         requested = _require_object(payload.get("requested_spec"), "requested_spec")
@@ -559,10 +1022,13 @@ class ResearchPreflightSnapshotService:
             raise ResearchPreflightSnapshotError(
                 "RESEARCH_PREFLIGHT_INVALID", "The submitted requested specification digest is invalid."
             )
-        if requested.get("schema_version") != "research.requested-spec.v1":
+        if requested.get("schema_version") not in REQUESTED_SPEC_VERSIONS:
             raise ResearchPreflightSnapshotError(
-                "RESEARCH_PREFLIGHT_INVALID", "The requested specification version is not supported."
+                "RESEARCH_PREFLIGHT_INVALID",
+                "The requested specification version is not supported.",
+                field_path=("schema_version",),
             )
+        v2_fields = _v2_walk_forward_fields(requested)
         data = _require_object(requested.get("data"), "requested_spec.data")
         dataset_id = _require_text(data.get("dataset_id"), "data.dataset_id", maximum=128)
         symbol = _require_text(data.get("symbol"), "data.symbol", maximum=64).upper()
@@ -640,9 +1106,40 @@ class ResearchPreflightSnapshotService:
         # Seal only that declared subset for the future worker; full-source
         # content is still recorded separately as immutable source provenance.
         snapshot_frame = market.frame.loc[:, list(required_columns)].copy()
+        trials = _require_nonnegative_integer(
+            requested.get("optuna_trials"), "optuna_trials", 2_147_483_647
+        )
+        if trials < 1:
+            raise ResearchPreflightSnapshotError(
+                "RESEARCH_PREFLIGHT_INVALID", "optuna_trials must be at least one.", field_path=("optuna_trials",)
+            )
+        is_v2 = requested.get("schema_version") == "research.requested-spec.v2"
+        if (
+            capability["optimization_mode"] == "mode_1_decay"
+            and capability["optimization_schedule"] == "per_fold_causal"
+            and not (protocol == "advanced" and is_v2)
+        ):
+            # The catalog admits this pair only with nested inner folds, which
+            # exist only on a requested-spec v2 advanced walk-forward.
+            raise ResearchPreflightSnapshotError(
+                "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED",
+                "mode_1_decay with per_fold_causal needs an advanced walk-forward with walk_forward.inner (requested-spec v2).",
+                field_path=("walk_forward", "inner") if protocol == "advanced" else ("protocol",),
+                gate="mode_schedule_admitted",
+            )
         if protocol == "three_window_decay":
             _, _, topology = _three_window_topology(
                 requested, market.frame, source_timezone=source_timezone
+            )
+        elif is_v2:
+            _, _, topology = _engine_advanced_topology(
+                requested,
+                market.frame,
+                source_timezone=source_timezone,
+                options=self.engine_catalog.walk_forward_options(),
+                gateway=self.gateway or QuantBTGateway(),
+                v2=v2_fields,
+                trials=trials,
             )
         else:
             _, _, topology = _advanced_topology(
@@ -652,17 +1149,26 @@ class ResearchPreflightSnapshotService:
                 options=self.engine_catalog.walk_forward_options(),
             )
         _assert_metadata_bound("fold-plan", topology)
-        trials = _require_nonnegative_integer(
-            requested.get("optuna_trials"), "optuna_trials", 2_147_483_647
-        )
-        if trials < 1:
-            raise ResearchPreflightSnapshotError(
-                "RESEARCH_PREFLIGHT_INVALID", "optuna_trials must be at least one."
-            )
         published_ceiling = self.engine_catalog.public_document().current_release.trial_ceiling
         if trials > published_ceiling:
             raise ResearchPreflightSnapshotError(
-                "RESEARCH_PREFLIGHT_RESOURCE_REFUSED", "The requested trial count exceeds the current release's published ceiling."
+                "RESEARCH_PREFLIGHT_RESOURCE_REFUSED",
+                "The requested trial count exceeds the current release's published ceiling.",
+                field_path=("optuna_trials",),
+                gate="trial_ceiling",
+            )
+        limits = self.engine_catalog.preflight_limits()
+        swept_dimensions = _require_nonnegative_integer(
+            payload.get("swept_dimensions", 0), "swept_dimensions", 128
+        )
+        if swept_dimensions > limits.sweep_dimension_ceiling.value:
+            # CG-P08-05: counted by Control API from the immutable AlphaVersion
+            # declaration and the overrides; the ceiling is the release's.
+            raise ResearchPreflightSnapshotError(
+                "RESEARCH_PREFLIGHT_RESOURCE_REFUSED",
+                f"sweep dims {swept_dimensions} > {limits.sweep_dimension_ceiling.value} — pin params or drop entries.",
+                field_path=("parameter_space_overrides",),
+                gate="sweep_ceiling",
             )
         # Refuse obviously unadmissible work *before* serializing a snapshot.
         # This keeps a rejected trial budget from accumulating an unreferenced
@@ -678,13 +1184,17 @@ class ResearchPreflightSnapshotService:
             raise ResearchPreflightSnapshotError(
                 "RESEARCH_PREFLIGHT_RESOURCE_REFUSED",
                 "The declared work exceeds the configured future worker ceiling.",
+                field_path=("optuna_trials",),
+                gate="resource_ceiling",
             )
         warmup_end = logical_start
         warmup_count = _bar_count(market.frame, query_start, warmup_end)
         if warmup_count < warmup_bars:
             raise ResearchPreflightSnapshotError(
                 "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE",
-                "The selected data range does not contain the declared warmup bars."
+                "The selected data range does not contain the declared warmup bars.",
+                field_path=("windows", "is", "start") if protocol == "three_window_decay" else ("walk_forward", "start"),
+                gate="warmup_available",
             )
         query_digest = sha256_json(
             {
@@ -729,8 +1239,46 @@ class ResearchPreflightSnapshotService:
         )
         if resource["admission_state"] != "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING":
             raise ResearchPreflightSnapshotError(
-                "RESEARCH_PREFLIGHT_RESOURCE_REFUSED", "The declared work exceeds the configured future worker ceiling."
+                "RESEARCH_PREFLIGHT_RESOURCE_REFUSED",
+                "The declared work exceeds the configured future worker ceiling.",
+                field_path=("optuna_trials",),
+                gate="resource_ceiling",
             )
+        # CG-P08-05: the ceilings this preflight was checked against, named
+        # with their source, so Screen 02 renders the rule the server applied.
+        resource["ceilings"] = {
+            "trial_ceiling": published_ceiling,
+            "sweep_dimension_ceiling": limits.sweep_dimension_ceiling.value,
+            "swept_dimensions": swept_dimensions,
+            "outer_fold_ceiling": limits.outer_fold_ceiling.value,
+            "estimated_cpu_seconds_ceiling": limits.estimated_cpu_seconds_ceiling.value,
+        }
+        calendar_policy = "CRYPTO_24_7" if descriptor.venue == "BINANCE" else "SOURCE_DECLARED"
+        if protocol == "three_window_decay":
+            fold = topology["folds"][0]
+            holdout = topology["sealed_holdout"]
+            scan_windows = [
+                ("IS", pd.Timestamp(fold["train"]["start_utc"]), pd.Timestamp(fold["train"]["end_exclusive_utc"]), False),
+                ("OOS", pd.Timestamp(fold["outer_oos"]["start_utc"]), pd.Timestamp(fold["outer_oos"]["end_exclusive_utc"]), False),
+                ("holdout", pd.Timestamp(holdout["start_utc"]), pd.Timestamp(holdout["end_exclusive_utc"]), True),
+            ]
+        else:
+            scan_windows = [("analysis", logical_start, logical_end, False)] + [
+                (
+                    str(item["fold_id"]),
+                    pd.Timestamp(item["outer_oos"]["start_utc"]),
+                    pd.Timestamp(item["outer_oos"]["end_exclusive_utc"]),
+                    False,
+                )
+                for item in topology["folds"]
+            ]
+        gap_scan = _gap_scan(
+            market.frame,
+            timeframe=timeframe,
+            calendar_policy=calendar_policy,
+            windows=scan_windows,
+            max_gap_ratio=float(_snapshot_family(market).quality.max_gap_ratio),
+        )
         snapshot = {
             "snapshot_id": identity.snapshot_id,
             "snapshot_content_hash": identity.content_hash,
@@ -746,7 +1294,7 @@ class ResearchPreflightSnapshotService:
                 "state": "BOUNDARY_ONLY_NOT_FIT",
             },
             "timezone": source_timezone,
-            "calendar_policy": "CRYPTO_24_7" if descriptor.venue == "BINANCE" else "SOURCE_DECLARED",
+            "calendar_policy": calendar_policy,
             "closed_bar_policy": "CLOSED_BARS_ONLY",
             "columns": list(required_columns),
             "quality": {
@@ -760,6 +1308,18 @@ class ResearchPreflightSnapshotService:
                 "state": "SNAPSHOT_INTEGRITY_ONLY",
             },
             "provenance": _safe_provenance(market.load_metadata),
+            # CG-P08-06. Both live in the snapshot document: the topology and
+            # effective-spec digests of every existing request stay unchanged.
+            "gap_scan": gap_scan,
+            "holdout_seal": _holdout_seal(
+                topology["sealed_holdout"], identity.content_hash, _source_manifest_digest(market)
+            )
+            if protocol == "three_window_decay"
+            else {
+                "schema_version": "research.holdout-seal.v1",
+                "state": "NOT_DECLARED",
+                "reason": "An advanced walk-forward declares no sealed holdout segment; every outer OOS window is evaluated.",
+            },
         }
         effective_spec = {
             "schema_version": EFFECTIVE_SPEC_SCHEMA_VERSION,

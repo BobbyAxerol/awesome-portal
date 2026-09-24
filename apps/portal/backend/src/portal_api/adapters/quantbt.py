@@ -35,6 +35,11 @@ PUBLIC_ROUTE_FACTORIES: dict[str, tuple[str, Mapping[str, object]]] = {
 }
 
 
+def _never_called_strategy(*_args: object, **_kwargs: object) -> None:
+    """Placeholder for fold planning; build_folds/prepare never call it."""
+    raise RuntimeError("P08 fold planning must never evaluate a strategy")
+
+
 class QuantBTGateway:
     """Lazy boundary for the pinned QuantBT package installed from PyPI.
 
@@ -268,6 +273,58 @@ class QuantBTGateway:
     def validate_advanced_walkforward(self, *, config_fields: Mapping[str, object]) -> None:
         """Fail fast on invalid public WalkForwardConfig combinations."""
         self.build_advanced_walkforward_config(config_fields=config_fields)
+
+    def walk_forward_fold_plan(
+        self,
+        *,
+        index: pd.DatetimeIndex,
+        config_fields: Mapping[str, object],
+    ) -> list[dict[str, Any]]:
+        """Build, never run, the engine's own outer and nested fold plan.
+
+        ``WalkForwardConfig`` validates the combination (rolling width, temporal
+        guards, causal Mode 1 inner fields); ``WalkForwardEngine.build_folds``
+        and ``PreparedWalkForwardContext.prepare`` are the public objects a run
+        uses, so a P08 plan cannot drift from the executed one. The placeholder
+        strategy is never invoked by either call. Engine refusals propagate as
+        ``ValueError``/``NotImplementedError`` for the caller to type.
+        """
+        self._module()
+        walkforward_module = importlib.import_module("quantbt.walkforward")
+        config = walkforward_module.WalkForwardConfig(**dict(config_fields))
+        engine = walkforward_module.WalkForwardEngine(strategy=_never_called_strategy, config=config)
+        folds = engine.build_folds(index)
+        prepared = None
+        if config.optimization_mode == "mode_1_decay" and config.optimization_schedule == "per_fold_causal":
+            prepared = walkforward_module.PreparedWalkForwardContext.prepare(
+                data=pd.DataFrame(index=index),
+                datetime_index=index,
+                folds=folds,
+                config=config,
+            )
+
+        def span(values: pd.DatetimeIndex) -> dict[str, Any] | None:
+            if len(values) == 0:
+                return None
+            return {"first": values[0], "last": values[-1], "bars": int(len(values))}
+
+        plan: list[dict[str, Any]] = []
+        for fold in folds:
+            inner = prepared.inner_folds_for(fold) if prepared is not None else None
+            plan.append(
+                {
+                    "fold_id": int(fold.fold_id),
+                    "train": span(fold.train_index),
+                    "test": span(fold.test_index),
+                    "label_horizon": span(fold.label_horizon_index),
+                    "purge": span(fold.purge_index),
+                    "embargo": span(fold.embargo_index),
+                    "inner": None
+                    if inner is None
+                    else [{"train": span(item.train_index), "test": span(item.test_index)} for item in inner],
+                }
+            )
+        return plan
 
     def run_advanced_walkforward(
         self,

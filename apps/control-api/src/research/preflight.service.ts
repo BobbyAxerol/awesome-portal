@@ -21,6 +21,7 @@ import {
   type ResearchRequestedSpec,
 } from "./preflight.contract";
 import { ResearchPreflightSnapshotClient } from "./preflight.client";
+import { preflightGates } from "./preflight-gates";
 import { ResearchPreflightError } from "./preflight.error";
 import { ResearchMetadataRepository } from "./repository";
 
@@ -58,6 +59,26 @@ interface ResolvedSourceRequirements {
   requiredColumns: readonly string[];
   warmupBars: number;
   requiresFunding: boolean;
+  /** CG-P08-05: swept dimensions after overrides; P08's private side applies the ceiling. */
+  sweptDimensions: number;
+}
+
+/**
+ * CG-P08-05: swept dimensions, counted from the immutable declaration.
+ *
+ * A declared range or categorical parameter is swept unless the request pins
+ * it; a `fixed` declaration never is. A scratch request has no declaration,
+ * so only its explicit sweep overrides count.
+ */
+export function sweptDimensionCount(
+  declaredSpace: Readonly<Record<string, { kind: string }>> | null,
+  spec: ResearchRequestedSpec,
+): number {
+  if (declaredSpace === null) {
+    return spec.parameter_space_overrides.filter((override) => override.kind === "sweep").length;
+  }
+  const pinned = new Set(spec.parameter_space_overrides.filter((override) => override.kind === "pin").map((override) => override.name));
+  return Object.entries(declaredSpace).filter(([name, declared]) => declared.kind !== "fixed" && !pinned.has(name)).length;
 }
 
 /** P08 checks only immutable P07 declarations; preflight is not execution admission. */
@@ -67,10 +88,14 @@ export function assertDeclaredOptimization(alpha: ResearchAlphaVersionDataContra
     declaration = projectResearchAlphaVersionDeclaration(alpha.declaredContract, alpha.entrypoint);
   } catch (error) {
     if (!(error instanceof ResearchAlphaVersionDeclarationError)) throw error;
-    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "The bound AlphaVersion declaration is unavailable.", 409);
+    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "The bound AlphaVersion declaration is unavailable.", 409, {
+      gate: "alpha_declaration", field_path: ["alpha_binding"],
+    });
   }
   if (declaration.determinism.seed_required && spec.random_seed === null) {
-    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "The bound AlphaVersion requires random_seed.", 409);
+    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "The bound AlphaVersion requires random_seed.", 409, {
+      gate: "alpha_declaration", field_path: ["random_seed"],
+    });
   }
   const sameScalar = (left: unknown, right: unknown): boolean =>
     typeof left === typeof right && left === right;
@@ -83,7 +108,9 @@ export function assertDeclaredOptimization(alpha: ResearchAlphaVersionDataContra
   for (const override of spec.parameter_space_overrides) {
     const declared = declaration.parameter_space[override.name];
     if (!declared) {
-      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "A parameter override is not declared by the bound AlphaVersion.", 409);
+      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "A parameter override is not declared by the bound AlphaVersion.", 409, {
+        gate: "alpha_declaration", field_path: ["parameter_space_overrides"],
+      });
     }
     let valid = false;
     if (override.kind === "pin") {
@@ -96,7 +123,9 @@ export function assertDeclaredOptimization(alpha: ResearchAlphaVersionDataContra
         typeof override.low === "number" && typeof override.high === "number" && override.low <= override.high;
     }
     if (!valid) {
-      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "A parameter override exceeds the bound AlphaVersion declaration.", 409);
+      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "A parameter override exceeds the bound AlphaVersion declaration.", 409, {
+        gate: "alpha_declaration", field_path: ["parameter_space_overrides"],
+      });
     }
   }
 }
@@ -136,6 +165,7 @@ export class ResearchPreflightService {
       requiredColumns: requirements.requiredColumns,
       warmupBars: requirements.warmupBars,
       requiresFunding: requirements.requiresFunding,
+      sweptDimensions: requirements.sweptDimensions,
       requestId,
     });
     this.assertPrivateTruth(privateResult, requestedSpecDigest, requestedSpec);
@@ -186,7 +216,10 @@ export class ResearchPreflightService {
     requestedSpec: ResearchRequestedSpec,
   ): Promise<ResolvedSourceRequirements> {
     if (!requestedSpec.alpha_binding) {
-      return { requiredColumns: DEFAULT_COLUMNS, warmupBars: 0, requiresFunding: false };
+      return {
+        requiredColumns: DEFAULT_COLUMNS, warmupBars: 0, requiresFunding: false,
+        sweptDimensions: sweptDimensionCount(null, requestedSpec),
+      };
     }
     const alpha = await this.repository.loadAlphaVersionDataContract(
       scope,
@@ -194,13 +227,15 @@ export class ResearchPreflightService {
       requestedSpec.alpha_binding.alpha_version_id,
     );
     assertDeclaredOptimization(alpha, requestedSpec);
-    return this.parseAlphaRequirements(alpha, requestedSpec.data.timeframe);
+    const requirements = this.parseAlphaRequirements(alpha, requestedSpec.data.timeframe);
+    const declaration = projectResearchAlphaVersionDeclaration(alpha.declaredContract, alpha.entrypoint);
+    return { ...requirements, sweptDimensions: sweptDimensionCount(declaration.parameter_space, requestedSpec) };
   }
 
   private parseAlphaRequirements(
     alpha: ResearchAlphaVersionDataContract,
     selectedTimeframe: string,
-  ): ResolvedSourceRequirements {
+  ): Omit<ResolvedSourceRequirements, "sweptDimensions"> {
     const contract = alpha.declaredContract;
     const columns = contract.required_columns;
     const timeframes = contract.timeframes;
@@ -212,6 +247,7 @@ export class ResearchPreflightService {
         "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE",
         "The bound AlphaVersion does not declare a compatible bounded candle-input contract.",
         409,
+        { gate: "required_inputs", field_path: ["alpha_binding"] },
       );
     }
     if (!Array.isArray(timeframes) || !timeframes.includes(selectedTimeframe)) {
@@ -219,6 +255,7 @@ export class ResearchPreflightService {
         "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE",
         "The selected timeframe is not declared by the bound AlphaVersion.",
         409,
+        { gate: "alpha_declaration", field_path: ["data", "timeframe"] },
       );
     }
     if (!Number.isSafeInteger(warmup) || typeof warmup !== "number" || warmup < 0 || warmup > MAX_ALPHA_WARMUP_BARS) {
@@ -226,6 +263,7 @@ export class ResearchPreflightService {
         "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE",
         "The bound AlphaVersion does not declare a valid warmup boundary.",
         409,
+        { gate: "warmup_available", field_path: ["alpha_binding"] },
       );
     }
     // P07's admitted source contract has no funding field. A future version
@@ -357,7 +395,9 @@ export class ResearchPreflightService {
     return {
       schema_version: "research.preflight.v1",
       preflight_token: record.preflightToken,
+      issued_at_utc_ms: record.createdAt.getTime(),
       expires_at_utc_ms: record.expiresAt.getTime(),
+      gates: preflightGates(source, requested.data),
       // P08 is deliberately preflight-only.  Publish the negative authority
       // rather than making a client infer it from a token, an object state or
       // a browser-held role.  P10 may change this only alongside a create

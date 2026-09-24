@@ -191,6 +191,8 @@ export interface components {
             cert_cap: components["schemas"]["AtlasNotPublishedFact"];
             source: components["schemas"]["AtlasSourceLocator"][];
             oos_use_state?: ("SELECTION_INPUT" | "WITHHELD_UNTIL_S4" | "RETROSPECTIVE" | "REPORT_ONLY" | "NOT_APPLICABLE") | null;
+            /** @description CG-P02-02: requested-spec fields this mode × schedule needs before preflight admits it (e.g. walk_forward.inner). */
+            required_request_fields?: string[];
         };
         AtlasObjectiveFact: {
             /** @constant */
@@ -313,8 +315,8 @@ export interface components {
             reason: string;
         };
         AtlasWalkForwardOptions: {
-            /** @constant */
-            schema_version: "research.walk-forward-options.v1";
+            /** @enum {unknown} */
+            schema_version: "research.walk-forward-options.v1" | "research.walk-forward-options.v2";
             frequency: {
                 value: string;
                 /** @enum {unknown} */
@@ -333,6 +335,41 @@ export interface components {
             split_mode_form: "source_instant";
             split_mode_rule: string;
             source: components["schemas"]["AtlasSourceLocator"][];
+            /** @description CG-P08-02: the manifest-owned rolling train width (requested-spec v2 walk_forward.train_window). */
+            train_window?: {
+                /** @constant */
+                requested_spec_field: "walk_forward.train_window";
+                pattern: string;
+                /** @constant */
+                required_when: "window_mode=rolling";
+                rule: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            };
+            /** @description CG-P02-02: label horizon, purge and embargo in bars (requested-spec v2). */
+            temporal_guards?: {
+                fields: ("label_horizon_bars" | "purge_bars" | "embargo_bars")[];
+                /** @constant */
+                minimum: 0;
+                maximum: number;
+                /** @constant */
+                release_default: 0;
+                rule: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            };
+            /** @description CG-P02-02: nested inner folds for mode_1_decay × per_fold_causal (requested-spec v2 walk_forward.inner). */
+            inner_folds?: {
+                /** @constant */
+                applies_to: "mode_1_decay×per_fold_causal";
+                /** @constant */
+                requested_spec_field: "walk_forward.inner";
+                split_frequency: string[];
+                window_mode: string[];
+                train_window_pattern: string;
+                min_folds_release_default: number;
+                min_folds_maximum: number;
+                rule: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            };
         };
         AtlasRelease: {
             release_id: components["schemas"]["Identifier"];
@@ -351,6 +388,7 @@ export interface components {
             config_digest?: string | null;
             /** @description RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed. */
             walk_forward_options?: components["schemas"]["AtlasWalkForwardOptions"] | null;
+            preflight_limits?: components["schemas"]["AtlasPreflightLimits"] | null;
         };
         HistoricalRelease: {
             release_id: components["schemas"]["Identifier"];
@@ -456,6 +494,29 @@ export interface components {
             support_matrix: components["schemas"]["AtlasSupportMatrix"] | null;
             route_params: components["schemas"]["AtlasRouteParams"] | null;
             source: components["schemas"]["AtlasSourceLocator"][];
+        };
+        /** @description CG-P08-05: ceilings P08 enforces server-side, each naming its source. None is an engine limit. */
+        AtlasPreflightLimits: {
+            /** @constant */
+            schema_version: "research.preflight-limits.v1";
+            sweep_dimension_ceiling: {
+                value: number;
+                /** @enum {unknown} */
+                value_source: "PORTAL_POLICY" | "P08_PREFLIGHT_BOUND";
+                basis: string;
+            };
+            outer_fold_ceiling: {
+                value: number;
+                /** @enum {unknown} */
+                value_source: "PORTAL_POLICY" | "P08_PREFLIGHT_BOUND";
+                basis: string;
+            };
+            estimated_cpu_seconds_ceiling: {
+                value: number;
+                /** @enum {unknown} */
+                value_source: "PORTAL_POLICY" | "P08_PREFLIGHT_BOUND";
+                basis: string;
+            };
         };
     };
     responses: {

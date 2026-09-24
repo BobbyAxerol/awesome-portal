@@ -111,6 +111,10 @@ export class HttpErrorFilter implements ExceptionFilter {
         ...(exception instanceof ResearchCurrentSourceError && exception.details
           ? { details: exception.details }
           : {}),
+        // W4 CG-P08-03: the failed gate and requested-spec field path(s).
+        ...(exception instanceof ResearchPreflightError && exception.details
+          ? { details: exception.details }
+          : {}),
       });
       return;
     }

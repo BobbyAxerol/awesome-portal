@@ -62,6 +62,27 @@ describe("P08 published Research preflight contract", () => {
     expect(document).not.toContain("private_dsn");
     expect(document).toContain("propertyNames");
   });
+  it("W4 CG-P02-02/P08-02/03/05/06: publishes requested-spec v2, gates, admission reason, ceilings, gap scan and seal", () => {
+    const v1 = JSON.parse(readFileSync(packagedRequestedSpecPath, "utf8"));
+    const v2 = JSON.parse(readFileSync(join(ROOT, "schemas", "research-requested-spec.v2.schema.json"), "utf8"));
+    // Additive: v2 is v1 plus exactly five walk_forward fields and its own version.
+    expect(v2.properties.schema_version).toEqual({ const: "research.requested-spec.v2" });
+    const added = Object.keys(v2.properties.walk_forward.properties).filter((key) => !(key in v1.properties.walk_forward.properties));
+    expect(added.sort()).toEqual(["embargo_bars", "inner", "label_horizon_bars", "purge_bars", "train_window"]);
+    expect({ ...v2.properties, schema_version: null, walk_forward: null }).toEqual({ ...v1.properties, schema_version: null, walk_forward: null });
+    const generated = readFileSync(generatedPath, "utf8");
+    for (const needle of [
+      '"research-requested-spec.v2.schema"', "PreflightGate", "RunAdmission", "GapScan", "HoldoutSeal",
+      "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED", "field_paths", "OWNER_SCOPE_REQUIRED", "NOT_RECORDED",
+    ]) expect(generated).toContain(needle);
+    const fixture: components["schemas"]["ResearchPreflightV1"] = JSON.parse(
+      readFileSync(join(ROOT, "fixtures", "research-preflight.response.valid.json"), "utf8"),
+    );
+    expect(fixture.gates?.every((gate) => gate.field_path.length >= 0 && gate.message.length > 0)).toBe(true);
+    expect(fixture.snapshot.gap_scan?.windows.find((window) => window.window === "holdout")?.state).toBe("SEALED");
+    expect(fixture.resource_estimate.ceilings?.sweep_dimension_ceiling).toBe(8);
+  });
+
   it("pins one typed, sanitized public response from the P08 producer", () => {
     const fixture: components["schemas"]["ResearchPreflightV1"] = JSON.parse(
       readFileSync(join(ROOT, "fixtures", "research-preflight.response.valid.json"), "utf8"),

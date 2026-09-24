@@ -354,13 +354,17 @@ def test_p04_t03_valid_and_invalid_mode_schedule_pairs_are_explicit() -> None:
         for item in mode.invalid_schedules:
             with pytest.raises(ResearchEngineCatalogError, match="not valid"):
                 service.validate_mode_schedule(mode_id=mode.mode_id, schedule=item.schedule)
+    # W4 CG-P02-02: requested-spec v2 carries the inner-fold fields and P08
+    # validates them against the engine, so the pair CG-P04-02 published as
+    # NOT_ADMITTED is now valid — but only with walk_forward.inner.
     mode_one = next(mode for mode in service.catalog.modes if mode.mode_id == "mode_1_decay")
-    causal = next(item for item in mode_one.invalid_schedules if item.schedule == "per_fold_causal")
-    assert causal.admission == "NOT_ADMITTED"
-    assert "inner_split_frequency" in causal.reason
+    assert "per_fold_causal" in mode_one.valid_schedules
+    assert all(item.schedule != "per_fold_causal" for item in mode_one.invalid_schedules)
+    causal = next(fact for fact in mode_one.facts.schedules if fact.schedule == "per_fold_causal")
+    assert causal.required_request_fields == ("walk_forward.inner",)
+    assert causal.causality_schedule_v2 == "engine_enforced_nested_v2"
     assert causal.source[0].sha256 == "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256"
-    with pytest.raises(ResearchEngineCatalogError, match="not valid"):
-        service.validate_mode_schedule(mode_id="mode_1_decay", schedule="per_fold_causal")
+    assert service.validate_mode_schedule(mode_id="mode_1_decay", schedule="per_fold_causal") == mode_one
     for mode in service.catalog.modes:
         for schedule in mode.valid_schedules:
             assert service.validate_mode_schedule(mode_id=mode.mode_id, schedule=schedule) == mode
@@ -692,6 +696,8 @@ def test_rf02_t05_release_config_digest_is_published_and_moves_with_the_facts(tm
         "optimizer_defaults": current["optimizer_defaults"],
         "submission_constraints": current["submission_constraints"],
         "walk_forward_options": current["walk_forward_options"],
+        # W4 CG-P08-05: published ceilings are part of the browser-visible release.
+        "preflight_limits": current["preflight_limits"],
     }
     expected = hashlib.sha256(
         json.dumps(facts, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
