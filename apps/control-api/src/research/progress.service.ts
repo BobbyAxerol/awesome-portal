@@ -311,9 +311,7 @@ export class ResearchProgressService {
 
   private effectiveStatus(current: ProgressRunRead): ResearchProgressReadResponse["current"]["effective_status"] {
     if (current.jobState === "CANCELLED") return "CANCELLED";
-    if ((current.jobState === "FAILED" || current.jobState === "SUCCEEDED") && current.terminalMaterialization !== "READY") {
-      return "FINISHING";
-    }
+    if (current.terminalMaterialization === "PENDING") return "FINISHING";
     if (current.jobState === "FAILED") return "FAILED";
     if (current.jobState === "SUCCEEDED") return "COMPLETED";
     if (current.progress) return current.progress.status;

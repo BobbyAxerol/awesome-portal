@@ -316,6 +316,34 @@ describe("Research Loop P06 · durable scheduler and lease authority", () => {
     expect(retry).toMatchObject({ jobId: second.job.jobId, ordinal: 2, leaseEpoch: 2 });
   });
 
+  it("clears a pending retry deadline when a retry-wait job is cancelled", async () => {
+    await seedIdentity();
+    const { job } = await enqueue(scopeA, "cancel-retry-wait");
+    const claim = await repository.claimNextDurableJob(scopeA, { workerId: "p06-cancel-retry" });
+    expect(claim?.jobId).toBe(job.jobId);
+    await repository.markDurableJobRunning(scopeA, claim!);
+    await pool.query(
+      `UPDATE research.worker_attempts SET expires_at = now() - interval '1 second'
+        WHERE workspace_id = $1 AND worker_attempt_id = $2`,
+      [scopeA.workspaceId, claim!.workerAttemptId],
+    );
+    expect(await repository.recoverExpiredDurableJobs(scopeA)).toEqual({ recovered: 1, terminal: 0 });
+    await pool.query(
+      `UPDATE research.jobs SET retry_not_before = now() + interval '1 day'
+        WHERE workspace_id = $1 AND job_id = $2`,
+      [scopeA.workspaceId, job.jobId],
+    );
+
+    expect(await repository.requestDurableJobCancellation(scopeA, {
+      jobId: job.jobId, reason: "cancel pending retry",
+    })).toMatchObject({ terminal: true });
+    const row = (await pool.query(
+      `SELECT state, retry_not_before FROM research.jobs WHERE workspace_id = $1 AND job_id = $2`,
+      [scopeA.workspaceId, job.jobId],
+    )).rows[0];
+    expect(row).toMatchObject({ state: "CANCELLED", retry_not_before: null });
+  });
+
   it("P06-T06/T13: heavy admission is single-slot and cancellation releases the slot", async () => {
     await seedIdentity();
     const first = await enqueue(scopeA, "heavy-a", "HEAVY");

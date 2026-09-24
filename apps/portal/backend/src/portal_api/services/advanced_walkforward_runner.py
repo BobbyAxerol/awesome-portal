@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 from datetime import UTC, datetime
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Literal, Mapping
 
 import pandas as pd
 
@@ -58,7 +58,11 @@ def _utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _config_fields(config: AdvancedWalkForwardConfig) -> dict[str, Any]:
+def _config_fields(
+    config: AdvancedWalkForwardConfig,
+    *,
+    target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
+) -> dict[str, Any]:
     opt = config.optimization
     return {
         "split_mode": config.split_mode,
@@ -67,7 +71,7 @@ def _config_fields(config: AdvancedWalkForwardConfig) -> dict[str, Any]:
         "train_window": config.train_window,
         "min_train_bars": config.min_train_bars,
         "min_test_bars": config.min_test_bars,
-        "target_mode": "pct_equity",
+        "target_mode": target_mode,
         "fill_value": config.fill_value,
         "optimization_mode": config.optimization_mode.value,
         "optimization_schedule": config.optimization_schedule.value,
@@ -128,17 +132,17 @@ class AdvancedWalkForwardRunner:
         self._gateway = gateway
         self._artifacts = artifacts
 
-    def validate_capabilities(self) -> None:
-        """Matrix-driven gate: pct_equity must be a supported target mode."""
+    def validate_capabilities(self, target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity") -> None:
+        """Require the selected target mode in the pinned engine support matrix."""
         rows = self._gateway.walkforward_capabilities()
         supported = {
             str(row.get("target_mode"))
             for row in rows
             if str(row.get("status")).strip().lower() == "supported"
         }
-        if "pct_equity" not in supported:
+        if target_mode not in supported:
             raise AdvancedWalkForwardError(
-                "pct_equity is not a supported walk-forward target mode in this QuantBT build"
+                f"{target_mode} is not a supported walk-forward target mode in this QuantBT build"
             )
 
     def run(
@@ -147,6 +151,8 @@ class AdvancedWalkForwardRunner:
         market: PreparedMarketData,
         run_id: str,
         progress: Callable[[str], None] | None = None,
+        *,
+        target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.ADVANCED_WALK_FORWARD:
             raise AdvancedWalkForwardError("AdvancedWalkForwardRunner requires protocol=advanced_walk_forward")
@@ -157,14 +163,16 @@ class AdvancedWalkForwardRunner:
             if progress is not None:
                 progress(name)
 
-        self.validate_capabilities()
+        if request.execution.target_mode != target_mode:
+            raise AdvancedWalkForwardError("requested execution target mode does not match the server-selected WFO adapter")
+        self.validate_capabilities(target_mode)
         config = request.calibration
         active_market = slice_market_range(
             market,
             start=config.data_start,
             end_exclusive=config.data_end_exclusive,
         )
-        fields = _config_fields(config)
+        fields = _config_fields(config, target_mode=target_mode)
         self._gateway.validate_advanced_walkforward(config_fields=fields)
         wf_config = self._gateway.build_advanced_walkforward_config(config_fields=fields)
 
@@ -195,6 +203,7 @@ class AdvancedWalkForwardRunner:
             ),
             fixed_params=fixed_params,
             account_kwargs=account_kwargs,
+            target_mode=target_mode,
         )
         completed_at = _utc_now_iso()
 
@@ -262,6 +271,7 @@ class AdvancedWalkForwardRunner:
                     "analysis_content_hash": active_market.content_hash,
                     "config_hash": request.config_hash(),
                     "random_seed": config.random_seed,
+                    "target_mode": target_mode,
                     "started_at": started_at,
                     "completed_at": completed_at,
                     "warnings": warnings,

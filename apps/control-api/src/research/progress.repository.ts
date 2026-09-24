@@ -43,6 +43,7 @@ interface ReadRunRow {
   retention_floor_sequence: string | number | null;
   received_at: Date | null;
   terminal_materialized: boolean;
+  source_terminal_event: boolean;
 }
 
 interface ProgressEventRow {
@@ -344,7 +345,8 @@ export class ResearchProgressRepository {
                 job.queue_class, job.created_at AS job_created_at, job.retry_not_before,
                 producer.created_at, snapshot.snapshot, snapshot.source_latest_sequence,
                 snapshot.retention_floor_sequence, snapshot.received_at,
-                (terminal.source_sequence IS NOT NULL) AS terminal_materialized
+                (terminal.source_sequence IS NOT NULL) AS terminal_materialized,
+                COALESCE(latest_event.event_type IN ('run_completed', 'run_failed'), false) AS source_terminal_event
            FROM research.run_producers producer
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
@@ -357,6 +359,11 @@ export class ResearchProgressRepository {
             AND terminal.run_id = snapshot.run_id
             AND terminal.worker_attempt_id = snapshot.worker_attempt_id
             AND terminal.source_sequence = snapshot.source_latest_sequence
+          LEFT JOIN research.run_progress_events latest_event
+            ON latest_event.workspace_id = snapshot.workspace_id
+            AND latest_event.run_id = snapshot.run_id
+            AND latest_event.worker_attempt_id = snapshot.worker_attempt_id
+            AND latest_event.source_sequence = snapshot.source_latest_sequence
           WHERE producer.workspace_id = $1 AND producer.run_id = $2
           ORDER BY producer.created_at DESC
           LIMIT 1`,
@@ -437,9 +444,16 @@ export class ResearchProgressRepository {
         retentionFloorSequence: row.retention_floor_sequence === null ? 0 : asSafeNumber(row.retention_floor_sequence, "retention floor"),
         receivedAt: row.received_at,
         hasCurrentAttempt: row.worker_attempt_id !== null && row.lease_epoch !== null,
-        terminalMaterialization: TERMINAL_JOB_STATES.has(row.job_state)
+        // Sidecar materialisation is required only after a source-owned
+        // terminal event. A Control-side cancel/failure before any terminal
+        // source event has nothing to materialise and must not remain PENDING
+        // forever. Conversely, a terminal source event stays PENDING even in
+        // the small window before P06 applies its terminal job transition.
+        terminalMaterialization: row.source_terminal_event
           ? (row.terminal_materialized ? "READY" : "PENDING")
-          : "NOT_REQUIRED",
+          // A durable SUCCEEDED job without its required source terminal event
+          // is inconsistent; keep it fail-closed instead of reporting success.
+          : row.job_state === "SUCCEEDED" ? "PENDING" : "NOT_REQUIRED",
         retainedArtifacts,
       };
     });

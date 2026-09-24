@@ -53,12 +53,21 @@ CURRENT_SOURCE_RECEIPT_SCHEMA: Final = "research.current-source-artifact.v1"
 CURRENT_SOURCE_ENGINE_OPERATION: Final = "walk_forward"
 CURRENT_SOURCE_TARGET_MODE: Final = "pct_equity"
 CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-wfo-global.v1"
+SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID: Final = "rs02.quantbt-signal-notional-wfo.v1"
+SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID: Final = "rs02.delta-signal-notional-wfo.v1"
 MAXIMUM_OPTUNA_TRIALS: Final = 64
 MAXIMUM_TABLE_BATCH_ROWS: Final = 200
 MAXIMUM_DERIVED_SERIES_POINTS: Final = 192
 MAXIMUM_PARAMETER_FIELDS: Final = 24
 RETURN_DISTRIBUTION_BUCKETS: Final = 12
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_CURRENT_SOURCE_PROFILES: Final = {
+    CURRENT_SOURCE_PROFILE_ID: (CURRENT_SOURCE_ADAPTER_ID, CURRENT_SOURCE_TARGET_MODE),
+    SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID: (
+        SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID,
+        "signal_notional",
+    ),
+}
 
 
 class CurrentSourceArtifactError(RuntimeError):
@@ -91,15 +100,17 @@ class CurrentSourceAdmission:
     lease_seconds: int
 
     def validate(self) -> None:
-        if self.profile_id != CURRENT_SOURCE_PROFILE_ID:
+        profile = _CURRENT_SOURCE_PROFILES.get(self.profile_id)
+        if profile is None:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_PROFILE_REJECTED",
                 "The current-source profile is not installed.",
             )
-        if self.engine_operation != CURRENT_SOURCE_ENGINE_OPERATION or self.target_mode != CURRENT_SOURCE_TARGET_MODE:
+        expected_adapter, expected_target_mode = profile
+        if self.engine_operation != CURRENT_SOURCE_ENGINE_OPERATION or self.target_mode != expected_target_mode:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_ROUTE_REJECTED",
-                "The current-source adapter accepts only QuantBT walk_forward with pct_equity.",
+                f"The {expected_adapter} adapter accepts only QuantBT walk_forward with {expected_target_mode}.",
             )
         if self.optimization_mode != "mode_1_decay" or self.optimization_schedule != "global":
             raise CurrentSourceArtifactError(
@@ -210,6 +221,30 @@ def default_current_source_admission() -> CurrentSourceAdmission:
         optimization_schedule="global",
         random_seed=42,
         optuna_trials=8,
+        maximum_runtime_seconds=300,
+        maximum_rss_bytes=2 * 1024 * 1024 * 1024,
+        maximum_disk_bytes=4 * 1024 * 1024 * 1024,
+        lease_seconds=90,
+    )
+
+
+def signal_notional_current_source_admission() -> CurrentSourceAdmission:
+    """Return the separately versioned real-HMD-qualified Signal Notional profile.
+
+    The first qualification is pinned to the measured three-trial run, one
+    deterministic seed and global Mode 1. It is not a generic strategy
+    executor and grants no authority to execute imported Python source.
+    Widening this profile requires a new measured source receipt.
+    """
+
+    return CurrentSourceAdmission(
+        profile_id=SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID,
+        engine_operation=CURRENT_SOURCE_ENGINE_OPERATION,
+        target_mode="signal_notional",
+        optimization_mode="mode_1_decay",
+        optimization_schedule="global",
+        random_seed=42,
+        optuna_trials=3,
         maximum_runtime_seconds=300,
         maximum_rss_bytes=2 * 1024 * 1024 * 1024,
         maximum_disk_bytes=4 * 1024 * 1024 * 1024,
@@ -490,6 +525,7 @@ class CurrentSourceArtifactAdapter:
         """
 
         admission.validate()
+        source_adapter_id = _CURRENT_SOURCE_PROFILES[admission.profile_id][0]
         if identity.run_id != run_id or fence.run_id != run_id:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_FENCE_REJECTED",
@@ -557,7 +593,7 @@ class CurrentSourceArtifactAdapter:
             writer.write_small_document("source_metrics", self._document(metrics))
             writer.write_small_document("source_coverage", {
                 "schema_version": "research.current-source-coverage.v1",
-                "source_adapter_id": CURRENT_SOURCE_ADAPTER_ID,
+                "source_adapter_id": source_adapter_id,
                 "profile_id": admission.profile_id,
                 "source_transform_digest": source_transform_digest,
                 "available": ["observations", "returns", "positions", "folds", "trials", "candidates", "selection"],
@@ -593,6 +629,7 @@ class CurrentSourceArtifactAdapter:
             source_transform_digest=source_transform_digest,
             profile_id=admission.profile_id,
             summary=summary,
+            source_adapter_id=source_adapter_id,
         )
         return CurrentSourceArtifactExport(candidate=candidate, receipt=receipt)
 
@@ -614,6 +651,9 @@ class CurrentSourceArtifactAdapter:
             )
 
     def _assert_admission_matches_source(self, config: Mapping[str, Any], admission: CurrentSourceAdmission) -> None:
+        execution = config.get("execution")
+        if not isinstance(execution, Mapping) or execution.get("target_mode") != admission.target_mode:
+            raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ROUTE_REJECTED", "The retained run target mode does not match its admitted source profile.")
         calibration = config.get("calibration")
         if not isinstance(calibration, Mapping):
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_CONFIG_INVALID", "The source configuration lacks calibration facts.")
@@ -1123,6 +1163,8 @@ class CurrentSourceArtifactAdapter:
 
 __all__ = [
     "CURRENT_SOURCE_ADAPTER_ID",
+    "SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID",
+    "SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID",
     "CURRENT_SOURCE_ENGINE_OPERATION",
     "CURRENT_SOURCE_PROFILE_ID",
     "CURRENT_SOURCE_RECEIPT_SCHEMA",
@@ -1135,5 +1177,6 @@ __all__ = [
     "CurrentSourceRetentionBatch",
     "current_source_schema_registry",
     "default_current_source_admission",
+    "signal_notional_current_source_admission",
     "iter_current_source_retention_batches",
 ]

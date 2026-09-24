@@ -2620,6 +2620,7 @@ export class ResearchMetadataRepository {
       const updated = await client.query<{ cancel_version: string | number }>(
         `UPDATE research.jobs
             SET state = $3,
+                retry_not_before = NULL,
                 cancellation_requested_at = now(),
                 terminal_reason = CASE WHEN $4 THEN 'CANCELLED_BEFORE_CLAIM' ELSE terminal_reason END,
                 cancel_version = cancel_version + 1,

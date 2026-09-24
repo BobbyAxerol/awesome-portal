@@ -8,13 +8,21 @@ retains actual WFO output rather than a fixture or a browser-time rerun.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from golden_fixture import build_market_frame
-from portal_api.adapters.market_data import DatasetDescriptor, PreparedMarketData
+from portal_api.adapters.market_data import (
+    CRYPTO_BINANCE_DATASET_ID,
+    DatasetDescriptor,
+    HistoricalMarketDataProvider,
+    MarketDataQuery,
+    PreparedMarketData,
+    load_historical_data_runtime,
+)
 from portal_api.adapters.quantbt import QuantBTGateway
 from portal_api.domain.enums import OptimizationMode, OptimizationSchedule
 from portal_api.domain.requests import (
@@ -30,10 +38,13 @@ from portal_api.repositories.artifacts import ArtifactRepository
 from portal_api.services.advanced_walkforward_runner import AdvancedWalkForwardRunner
 from portal_api.services.current_source_artifacts import (
     CURRENT_SOURCE_ADAPTER_ID,
+    SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID,
+    SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID,
     CurrentSourceArtifactAdapter,
     CurrentSourceArtifactError,
     _decimal_object,
     default_current_source_admission,
+    signal_notional_current_source_admission,
     iter_current_source_retention_batches,
 )
 from portal_api.services.research_artifacts import ArtifactFence, ArtifactIdentity, ResearchArtifactStore
@@ -54,7 +65,7 @@ def _market() -> PreparedMarketData:
     )
 
 
-def _request() -> PortalRunRequest:
+def _request(*, target_mode: str = "pct_equity", optuna_trials: int = 8) -> PortalRunRequest:
     parameter_space = ParameterSpaceConfig({
         key: ParameterSpec(
             kind="float_range" if isinstance(low, float) else "int_range",
@@ -72,7 +83,7 @@ def _request() -> PortalRunRequest:
         protocol="advanced_walk_forward",
         parameter_space=parameter_space,
         account=AccountConfig(),
-        execution=ExecutionConfig(),
+        execution=ExecutionConfig(target_mode=target_mode),
         calibration=AdvancedWalkForwardConfig(
             split_mode="2024-01-08",
             split_frequency="weekly",
@@ -80,7 +91,7 @@ def _request() -> PortalRunRequest:
             optimization_mode=OptimizationMode.MODE_1_DECAY,
             optimization_schedule=OptimizationSchedule.GLOBAL,
             fold_boundary_position_policy="carry",
-            optuna_trials=8,
+            optuna_trials=optuna_trials,
             optuna_early_stopping=None,
             random_seed=42,
             optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5),
@@ -199,6 +210,122 @@ def test_current_source_retention_bridge_pages_only_sealed_rows(exported) -> Non
             assert all(len(row["payload"]["parameters"]) <= 24 for row in batch.rows)
 
 
+def test_signal_notional_current_source_profile_retains_the_same_bounded_relations(tmp_path: Path) -> None:
+    source = ArtifactRepository(tmp_path / "source-runs")
+    retained = ResearchArtifactStore(tmp_path / "retained")
+    run_id = "run-rs02-signal-notional"
+    request = _request(target_mode="signal_notional", optuna_trials=3)
+    runner = AdvancedWalkForwardRunner(gateway=QuantBTGateway(), artifacts=source)
+
+    result = runner.run(request, _market(), run_id, target_mode="signal_notional")
+    assert result["n_folds"] >= 2
+
+    fence = _fence(run_id)
+    exported = CurrentSourceArtifactAdapter(
+        source_artifacts=source,
+        retained_artifacts=retained,
+    ).export_advanced_walkforward(
+        run_id=run_id,
+        identity=_identity(run_id),
+        fence=fence,
+        admission=signal_notional_current_source_admission(),
+        fence_validator=lambda candidate: candidate == fence,
+    )
+
+    assert exported.receipt.source_adapter_id == SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID
+    assert exported.receipt.profile_id == SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID
+    assert exported.receipt.table_rows["folds"] >= 2
+    assert exported.receipt.table_rows["trials"] >= 3
+    assert exported.receipt.table_rows["candidates"] >= 1
+    assert exported.receipt.as_dict()["coverage"]["observations"] == "AVAILABLE_DIRECT"
+    batches = list(iter_current_source_retention_batches(
+        retained_artifacts=retained,
+        receipt=exported.receipt,
+        cursor_secret=b"rs02-current-source-cursor-secret-at-least-32-bytes",
+    ))
+    assert {batch.table_kind for batch in batches} == {
+        "OBSERVATION", "FOLD", "TRIAL", "CANDIDATE", "SELECTION",
+    }
+    assert all(len(batch.rows) <= 200 for batch in batches)
+
+
+@pytest.mark.skipif(
+    os.getenv("PORTAL_RUN_HMD_REAL_SMOKE") != "1",
+    reason="external-data-unavailable: opt in with PORTAL_RUN_HMD_REAL_SMOKE=1",
+)
+def test_signal_notional_real_hmd_wfo_is_sealed_by_p05(tmp_path: Path) -> None:
+    """Real HMD → pinned QuantBT WFO → bounded local P05 seal; no runtime/API write."""
+
+    start = pd.Timestamp("2026-06-01T00:00:00Z")
+    split = pd.Timestamp("2026-07-01T00:00:00Z")
+    end = pd.Timestamp("2026-07-15T00:00:00Z")
+    runtime = load_historical_data_runtime(Path(os.environ["HISTORICAL_MARKET_DATA_ROOT"]))
+    market = HistoricalMarketDataProvider(runtime=runtime, engine="duckdb").load(
+        MarketDataQuery(
+            dataset_id=CRYPTO_BINANCE_DATASET_ID,
+            symbol="BTCUSDT",
+            timeframe="1h",
+            start=start,
+            end_exclusive=end,
+        )
+    )
+    request = _request(target_mode="signal_notional", optuna_trials=3)
+    request = request.model_copy(update={
+        "dataset_id": CRYPTO_BINANCE_DATASET_ID,
+        "symbol": "BTCUSDT",
+        "calibration": request.calibration.model_copy(update={
+            "data_start": start.to_pydatetime(),
+            "data_end_exclusive": end.to_pydatetime(),
+            "split_mode": split.isoformat(),
+        }),
+    })
+    run_id = "run-rs02-real-hmd-p05"
+    source = ArtifactRepository(tmp_path / "source-runs")
+    retained = ResearchArtifactStore(tmp_path / "retained")
+    result = AdvancedWalkForwardRunner(gateway=QuantBTGateway(), artifacts=source).run(
+        request,
+        market,
+        run_id,
+        target_mode="signal_notional",
+    )
+    assert result["n_folds"] >= 2
+
+    digest = request.config_hash()
+    identity = ArtifactIdentity(
+        artifact_id="rs02-real-hmd-p05-artifact",
+        artifact_revision=1,
+        workspace_id="ws-rs02",
+        run_id=run_id,
+        engine_release_id="quantbt-1.1.1",
+        engine_build_ref=SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID,
+        request_spec_digest=digest,
+        effective_spec_digest=digest,
+        dataset_binding_digest=market.content_hash,
+    )
+    exported = CurrentSourceArtifactAdapter(
+        source_artifacts=source,
+        retained_artifacts=retained,
+    ).export_advanced_walkforward(
+        run_id=run_id,
+        identity=identity,
+        fence=_fence(run_id),
+        admission=signal_notional_current_source_admission(),
+        fence_validator=lambda candidate: candidate == _fence(run_id),
+    )
+
+    assert exported.receipt.source_adapter_id == SIGNAL_NOTIONAL_CURRENT_SOURCE_ADAPTER_ID
+    assert exported.receipt.profile_id == SIGNAL_NOTIONAL_CURRENT_SOURCE_PROFILE_ID
+    assert exported.receipt.table_rows["folds"] >= 2
+    assert exported.receipt.table_rows["trials"] >= 3
+    assert exported.receipt.total_rows == sum(exported.receipt.table_rows.values())
+    manifest, manifest_digest = retained._load_and_verify_manifest(  # noqa: SLF001 -- verify exact P05 bytes in this custody test
+        exported.receipt.artifact_id,
+        verify_parts=True,
+    )
+    assert manifest_digest == exported.receipt.manifest_digest
+    assert manifest["totals"]["rows"] == exported.receipt.total_rows
+
+
 def test_current_source_adapter_rejects_mismatched_mode_without_fallback(tmp_path: Path) -> None:
     source = ArtifactRepository(tmp_path / "source-runs")
     run_id = "run-rs02-mode"
@@ -206,7 +333,7 @@ def test_current_source_adapter_rejects_mismatched_mode_without_fallback(tmp_pat
     (directory / "manifest.json").write_text(json.dumps({
         "quantbt_version": "1.1.1", "protocol": "advanced_walk_forward", "status": "COMPLETED",
     }), encoding="utf-8")
-    (directory / "config.json").write_text(json.dumps({"calibration": {
+    (directory / "config.json").write_text(json.dumps({"execution": {"target_mode": "pct_equity"}, "calibration": {
         "optimization_mode": "none", "optimization_schedule": "global", "random_seed": 42, "optuna_trials": 8,
     }}), encoding="utf-8")
     adapter = CurrentSourceArtifactAdapter(

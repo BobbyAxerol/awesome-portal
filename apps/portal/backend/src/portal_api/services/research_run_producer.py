@@ -19,7 +19,8 @@ import json
 import os
 import re
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation, ROUND_CEILING
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,7 @@ from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
 from portal_api.services.research_supervisor import (
     IsolatedResearchSupervisor,
+    ResearchChildLimits,
     ResearchChildReceipt,
     ResearchSupervisorError,
 )
@@ -100,6 +102,31 @@ def _sha256_canonical_json(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _cpu_budget_tick_payload(used_cpu_seconds: float, cpu_cap_seconds: int) -> dict[str, Any]:
+    """Render measured/enforced child CPU as the P11 core-minute budget fact."""
+
+    if isinstance(used_cpu_seconds, bool) or not isinstance(used_cpu_seconds, (int, float)):
+        raise ResearchRunProducerError("P11 child CPU usage is invalid")
+    if isinstance(cpu_cap_seconds, bool) or not isinstance(cpu_cap_seconds, int) or cpu_cap_seconds < 1:
+        raise ResearchRunProducerError("P11 child CPU cap is invalid")
+    try:
+        used_seconds = Decimal(str(used_cpu_seconds))
+    except InvalidOperation as exc:
+        raise ResearchRunProducerError("P11 child CPU usage is invalid") from exc
+    if not used_seconds.is_finite() or used_seconds < 0:
+        raise ResearchRunProducerError("P11 child CPU usage is invalid")
+
+    cap_seconds = Decimal(cpu_cap_seconds)
+    used_core_minutes = (used_seconds / Decimal(60)).quantize(Decimal("0.001"), rounding=ROUND_CEILING)
+    cap_core_minutes = (cap_seconds / Decimal(60)).quantize(Decimal("0.001"), rounding=ROUND_CEILING)
+    pct = int((used_seconds * Decimal(100) / cap_seconds).to_integral_value(rounding=ROUND_CEILING))
+    return {
+        "used": format(used_core_minutes, "f"),
+        "cap": format(cap_core_minutes, "f"),
+        "pct": min(100, max(0, pct)),
+    }
+
+
 def _timestamp_index_column(schema: pa.Schema) -> str:
     """Resolve the one Pandas index field from a sealed SnapshotStore parquet.
 
@@ -135,6 +162,7 @@ class ResearchRunProducerExecutor:
     snapshots: SnapshotStore
     supervisor: IsolatedResearchSupervisor
     market_root: Path
+    child_limits: ResearchChildLimits = field(default_factory=ResearchChildLimits)
 
     async def __call__(
         self,
@@ -265,10 +293,19 @@ class ResearchRunProducerExecutor:
             # the child receipt is immutable from this point onward.
             progress("stage_completed", {"stage": "S3"})
             progress("stage_started", {"stage": "S4"})
+            # Publish the exact CPU ceiling before entering P06. CPU usage is
+            # not observable from this parent callback while the child runs;
+            # the measured value is published immediately after its receipt.
+            progress("budget_tick", _cpu_budget_tick_payload(0, self.child_limits.cpu_seconds))
             child = self.supervisor.run_p04_delta_qualification(
                 receipt,
+                limits=self.child_limits,
                 on_child_alive=(lambda: progress("heartbeat", {})) if progress_journal is not None else None,
             )
+            progress("budget_tick", _cpu_budget_tick_payload(
+                child.cpu_seconds,
+                child.enforced_limits.get("cpu_seconds", 0),
+            ))
             progress("trial_completed", {
                 "fold": 1,
                 "trial": 1,

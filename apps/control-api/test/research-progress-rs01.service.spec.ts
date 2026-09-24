@@ -133,6 +133,21 @@ describe("RS-01 terminal materialization and retry recovery", () => {
     });
   });
 
+  it("keeps a source-terminal snapshot in FINISHING while P06 lifecycle application is pending", async () => {
+    const { service } = subject({ current: {
+      runId: "run_rs01", jobState: "RUNNING", progress: null,
+      sourceLatestSequence: 9, retentionFloorSequence: 0, receivedAt: null,
+      hasCurrentAttempt: true, terminalMaterialization: "PENDING", retainedArtifacts: [],
+    } });
+    const response = await service.read(
+      { role: "ADMIN" } as never,
+      { workspaceId: "research-workspace", actorUserId: "research-owner" },
+      "run_rs01",
+    );
+    expect(response.current.effective_status).toBe("FINISHING");
+    expect(response.current.terminal_materialization).toBe("PENDING");
+  });
+
   it("distinguishes queued and cancelled-before-source from missing source callbacks", async () => {
     for (const [jobState, availability, effectiveStatus] of [
       ["QUEUED", "QUEUED_NO_SOURCE", "QUEUED"],

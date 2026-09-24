@@ -12,6 +12,10 @@ from portal_api.services import research_progress_relay as relay_module
 from portal_api.services.research_progress import ResearchProgressError, ResearchProgressJournal
 from portal_api.services.research_progress_recovery import ResearchProgressRecovery
 from portal_api.services.research_progress_relay import ResearchProgressRelay
+from portal_api.services.research_run_producer import (
+    ResearchRunProducerError,
+    _cpu_budget_tick_payload,
+)
 
 
 _DIGEST = "a" * 64
@@ -21,6 +25,30 @@ _USAGE = {
     "scratch_bytes": 0,
     "fd_peak": 4,
 }
+
+
+def test_p11_budget_tick_uses_measured_cpu_and_exact_child_cap() -> None:
+    assert _cpu_budget_tick_payload(7.0, 45) == {
+        "used": "0.117",
+        "cap": "0.750",
+        "pct": 16,
+    }
+    assert _cpu_budget_tick_payload(0, 45) == {
+        "used": "0.000",
+        "cap": "0.750",
+        "pct": 0,
+    }
+    assert _cpu_budget_tick_payload(50, 45) == {
+        "used": "0.834",
+        "cap": "0.750",
+        "pct": 100,
+    }
+
+
+@pytest.mark.parametrize("used", [-0.1, float("nan"), float("inf")])
+def test_p11_budget_tick_rejects_invalid_measured_cpu(used: float) -> None:
+    with pytest.raises(ResearchRunProducerError, match="CPU usage is invalid"):
+        _cpu_budget_tick_payload(used, 45)
 
 
 def _journal(tmp_path: Path) -> ResearchProgressJournal:

@@ -26,6 +26,7 @@ from portal_api.services.research_progress import ResearchProgressJournal
 from portal_api.services.research_run_producer import (
     ResearchRunProducerError,
     ResearchRunProducerExecutor,
+    _cpu_budget_tick_payload,
 )
 from portal_api.services.research_supervisor import IsolatedResearchSupervisor
 import portal_api.workers.durable_worker as durable_worker_module
@@ -204,12 +205,20 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
         snapshot_id=identity.snapshot_id,
         snapshot_content_hash=identity.content_hash,
     )
+    producer_request = ResearchRunProducerRequest.model_validate(payload)
+    progress_journal = ResearchProgressJournal(
+        tmp_path / "progress",
+        run_id=producer_request.run_id,
+        attempt_id=producer_request.worker_attempt_id,
+        lease_epoch=producer_request.lease_epoch,
+    )
     # The worker's async wrapper delegates this exact bounded implementation
     # to a thread. Test the implementation synchronously so pytest does not
     # retain an unrelated default-executor thread after the real child exits.
     result = executor._execute_sync(
-        ResearchRunProducerRequest.model_validate(payload),
+        producer_request,
         tmp_path / "engine-output",
+        progress_journal,
     )
 
     assert result["status"] == "COMPLETED"
@@ -217,6 +226,21 @@ def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_o
     receipt_path = tmp_path / "engine-output" / "rrun_p10_real" / "research" / "p10-receipt.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    budget_events = [
+        event["payload"]
+        for event in progress_journal.events_after(0)["events"]
+        if event["event_type"] == "budget_tick"
+    ]
+    assert len(budget_events) == 2
+    assert budget_events[0] == {"used": "0.000", "cap": "0.750", "pct": 0}
+    assert budget_events[-1] == _cpu_budget_tick_payload(
+        receipt["resource"]["cpu_seconds"],
+        receipt["resource"]["enforced_limits"]["cpu_seconds"],
+    )
+    assert progress_journal.snapshot()["budget"] == {
+        **budget_events[-1],
+        "unit": "core-min",
+    }
     assert config["schema_version"] == "research.p10.run-config.v1"
     assert config["requested_spec"] == payload["research"]["requested_spec"]
     assert receipt["holdout_rows_exposed_to_child"] == 0
