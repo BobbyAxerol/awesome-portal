@@ -2,26 +2,10 @@
   "phase": "P19",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-24",
-  "tree": "46d101c047bfc5b8ee6b9caf18de7d2f936ff0cd",
-  "head": "c9dd195e2c7bb9710af8babf7b56c655ce2c6da1",
+  "tree": "9f3f917f97d13c8694008c0d04279f47c85c37ea",
+  "head": "9c4afb1805862487adcbd626977568132426506f",
   "open_implementation_debt": [],
   "open_debt": [
-    {
-      "id": "VD-P19-02 S10-BAND-ORDER",
-      "what": "version bands are ACTIVE-first (spec T01, R1 task); the hi-fi draws the SUPERSEDED band above ACTIVE",
-      "class": "spec≠hi-fi (spec kept, exception to 'hi-fi wins')",
-      "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "evidence": "bandOrder (LineageDetail.tsx:166), U46; probe r2 full bands [ACTIVE, SUPERSEDED]; Unified VD ledger"
-    },
-    {
-      "id": "VD-P19-04 S10-RAIL-STEP",
-      "what": "rail step 22px (spec) instead of the hi-fi's 26px",
-      "class": "spec≠hi-fi (spec kept, exception to 'hi-fi wins')",
-      "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "evidence": "RAIL_STEP = 22 (LineageDetail.tsx:115), U48; probe r2 16 rails"
-    },
     {
       "id": "VD-P19-05 S10-PROMOTION-RULE-VS-ACTIVE",
       "what": "promotion rule reads 'Only the ACTIVE attempt promotes' verbatim, but lineageStatus maps every attempt of the ACTIVE version to ACTIVE (3 in the probe fixture)",
@@ -134,7 +118,23 @@
       "what": "filters, band order, chip wrap, dot rail, promotion rule, copy/rules footer, probes toggle/cards had been chosen by the frontend against the hi-fi",
       "found_by": "Bobby 2026-09-24: 'version này chốt theo đúng khớp với HIFI; nếu có gì không hợp lý thì mở version mới'",
       "status": "RESOLVED",
-      "evidence": "c9dd195e (tree 46d101c0): U44-U52; R2 probe 119/119 first pass; ledger VD-P19-01…07 in the Unified P19 note; two exceptions stay in open_debt (VD-P19-02, VD-P19-04)"
+      "evidence": "c9dd195e (tree 46d101c0): U44-U52; R2 probe 119/119 first pass; ledger VD-P19-01…07 in the Unified P19 note; the last two exceptions (VD-P19-02, VD-P19-04) closed on the hi-fi in 9c4afb18 (see entries below)"
+    },
+    {
+      "id": "VD-P19-02 S10-BAND-ORDER",
+      "what": "version bands were ACTIVE-first (spec T01, R1 task) while the hi-fi draws them in the server's registration order with the SUPERSEDED band above ACTIVE",
+      "found_by": "R2 receipt (probe r2 full bands [ACTIVE, SUPERSEDED] vs hi-fi); Bobby 2026-09-24 closed it on the hi-fi",
+      "status": "RESOLVED",
+      "discrepancy": "spec T01 (ACTIVE-first) != hi-fi (server order); hi-fi wins per Bobby 2026-09-24",
+      "evidence": "9c4afb18 (tree 9f3f917f): bandOrder returns the server array unchanged (LineageDetail.tsx:166), unit U04/U46; S10 52/52, vitest 3067 pass · 1 skip; R3 probe full 1280/660 light+dark: server [SUPERSEDED, ACTIVE] == bands [SUPERSEDED, ACTIVE]; whole Research probe 119/119"
+    },
+    {
+      "id": "VD-P19-04 S10-RAIL-STEP",
+      "what": "rail step was 22px (spec §9.2) instead of the hi-fi's 26px",
+      "found_by": "R2 receipt; Bobby 2026-09-24 closed it on the hi-fi",
+      "status": "RESOLVED",
+      "discrepancy": "spec §9.2 (22px) != hi-fi (26px); hi-fi wins per Bobby 2026-09-24",
+      "evidence": "9c4afb18 (tree 9f3f917f): RAIL_STEP = 26 (LineageDetail.tsx:115), unit railWidth(3) = 34 + 3 × 26; R3 probe full 1280/660 light+dark: depth-1 rail 60px (34 + 26), 16 rails, 0 wrong width, overflow 0"
     }
   ],
   "deferred": [
@@ -267,7 +267,7 @@
       "id": "P19-FE-DG-01",
       "owner": "Bobby",
       "state": "AWAITING_DECISION",
-      "what": "integrate the moved baseline 9060a7c4 (now bb25bf39 via 62d7d864): no S10 file differs; 62d7d864 adds required fields to research-alpha-import.d.ts (affects AlphaImport, not S10); bb25bf39 is docs only; P17 FreezeDetail.tsx conflict remains; rerun all unit tests + the whole Research probe (119 on tree 46d101c0)"
+      "what": "integrate the moved baseline 9060a7c4 (now bb25bf39 via 62d7d864): no S10 file differs; 62d7d864 adds required fields to research-alpha-import.d.ts (affects AlphaImport, not S10); bb25bf39 is docs only; P17 FreezeDetail.tsx conflict remains; rerun all unit tests + the whole Research probe (119 on tree 9f3f917f, as on 46d101c0)"
     },
     {
       "id": "P19-FE-DG-02",
@@ -285,7 +285,7 @@
       "id": "P19-FE-DG-04",
       "owner": "Bobby",
       "state": "PARTLY_DECIDED",
-      "what": "Bobby decided 2026-09-24 (match the hi-fi); remaining: VD-P19-02 band order and VD-P19-04 rail step, and field-driven cells with CG-P19-03/04/05/14"
+      "what": "Bobby decided 2026-09-24 (match the hi-fi); VD-P19-02 band order and VD-P19-04 rail step closed on the hi-fi in 9c4afb18; remaining: field-driven cells with CG-P19-03/04/05/14"
     },
     {
       "id": "P19-FE-DG-05",

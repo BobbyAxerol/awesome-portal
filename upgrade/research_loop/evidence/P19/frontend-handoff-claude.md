@@ -55,7 +55,8 @@ Phần trên của codex giữ nguyên; mục này chỉ bổ sung.
 
 - **Quyết định Bobby 2026-09-24:** S10 version này chốt theo đúng hi-fi; điểm nào không hợp lý thì mở version mới để làm gọn scope.
 - **Trạng thái S10:** code `c9dd195e` (R1) khớp hi-fi 7 điểm, ghi thành ledger `VD-P19-01…07` trong [Unified note P19](../../../UNIFIED_IMPLEMENTATION_PLAN.md#p19-thanhvuong-frontend-implementation-note--screen-10-2026-09-24). Receipt R2 cùng head: vitest 3067 pass · 1 skip, S10 52/52, probe Research 119/119; chi tiết ở [receipt §13](./thanhvuong-frontend-receipt.md#13-vòng-khớp-hi-fi-r1-c9dd195e-và-receipt-r2).
-- **Còn treo:** hai ngoại lệ spec-over-hi-fi (`VD-P19-02` thứ tự band, `VD-P19-04` bước rail 22/26) chờ Bobby; ô hi-fi thiếu field chờ `CG-P19-03…08`, `10`, `14` ([backend requests](./thanhvuong-backend-requests.md)).
+- **R3 (`9c4afb18`, tree `9f3f917f`):** hai ngoại lệ spec-over-hi-fi đã về hi-fi theo Bobby 2026-09-24: `VD-P19-02` band theo thứ tự server (hi-fi SUPERSEDED trên ACTIVE; spec T01 ghi ACTIVE-first), `VD-P19-04` bước rail 26px (spec §9.2 ghi 22px). Hi-fi thắng; discrepancy spec ↔ hi-fi ghi ở ledger. S10 52/52, vitest 3067 pass · 1 skip, probe Research 119/119 ([receipt §13.6](./thanhvuong-frontend-receipt.md#136-r3-9c4afb18--đóng-vd-p19-02-và-vd-p19-04-theo-hi-fi)).
+- **Còn treo:** ô hi-fi thiếu field chờ `CG-P19-03…08`, `10`, `14` ([backend requests](./thanhvuong-backend-requests.md)); các lệch "khác" trong `open_debt` của [debt register](./thanhvuong-debt-register.json). Không còn ngoại lệ layout giữ spec.
 - **Rule cho P20+** (bản đầy đủ ở Unified note):
   - màn phải khớp cả hi-fi lẫn spec, lệch thì hi-fi thắng;
   - FE không tự chọn lệch: ghi `VD-PXX-NN` vào ledger của note phase và vào handoff phase; cần thì mở version mới;

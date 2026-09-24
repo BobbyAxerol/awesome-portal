@@ -7,6 +7,7 @@
 - Receipt này chỉ ghi thay đổi frontend và evidence. Nó không đổi rule, contract hay phase gate, và **không** gọi P19 là `VERIFIED`.
 - **Sau audit độc lập (2026-09-24):** code sửa A1–A3 ở `1fb29010` (tree `6b7e0419`), docs sửa A4–A6 trong commit docs sau audit. Chi tiết và số chạy lại ở [§12](#12-audit-p19-và-a-fix). Các số trước audit ở §5 được giữ làm lịch sử.
 - **Vòng khớp hi-fi (Bobby 2026-09-24):** code R1 `c9dd195e` (tree `46d101c0`) khớp hi-fi 7 điểm, ledger `VD-P19-01…07`; receipt R2 trên cùng head ở [§13](#13-vòng-khớp-hi-fi-r1-c9dd195e-và-receipt-r2). **Spec ≠ hi-fi thì hi-fi thắng.** Các mô tả "chip cuộn", "thụt DFS", "6 nhóm state", "expand-all", "promotion rule viết lại" ở §4–§7 là bản trước R1, giữ làm lịch sử.
+- **R3 (`9c4afb18`, tree `9f3f917f`):** Bobby chốt 2 ngoại lệ cuối theo hi-fi — band theo thứ tự server (SUPERSEDED trên ACTIVE, `VD-P19-02`) và bước rail 26px (`VD-P19-04`). Spec T01/§9.2 khác hi-fi; hi-fi thắng. Receipt ở [§13.6](#136-r3-9c4afb18--đóng-vd-p19-02-và-vd-p19-04-theo-hi-fi). Mô tả "ACTIVE trước" và "× 22" ở §13.1–§13.3 là bản R1/R2, giữ làm lịch sử.
 
 ## 0. Packet và những gì đã đọc
 
@@ -17,7 +18,7 @@
 | `thanhvuong-frontend-receipt.md` | Receipt này: đã đọc, git, file, route/link, mapping hi-fi, so hi-fi, evidence, discrepancy, Reuse report, kết luận, audit + A-fix (§12), vòng khớp hi-fi R1/R2 (§13) |
 | [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md) | `CG-P19-01…14` theo template CLAUDE.md §5 (`11` WITHDRAWN sau audit, `13` thêm sau audit, `14` thêm ở R2), kèm locator/actual/expected/đề xuất/test/fallback; việc Bobby quyết B1–B6; kiểm lại ngày 2026-09-24 |
 | [thanhvuong-test-results.json](./thanhvuong-test-results.json) | Evidence máy đọc được: tree SHA, từng gate (lệnh, exit, số đếm), `not_run`, SHA-256 ảnh/log (không commit) |
-| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | Nợ đã đóng (B1 ở `74f26200`; audit A1–A3 ở `1fb29010`; `VD-P19-01…07` ở `c9dd195e`); `open_debt` còn thật sau R2 (ngoại lệ spec-over-hi-fi, câu promotion rule vs mapping ACTIVE, lệch "khác"); deferred, request mở, downstream gate |
+| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | Nợ đã đóng (B1 ở `74f26200`; audit A1–A3 ở `1fb29010`; `VD-P19-01…07` ở `c9dd195e`); `VD-P19-02`/`04` đóng ở `9c4afb18`; `open_debt` còn thật sau R3 (câu promotion rule vs mapping ACTIVE, lệch "khác", ô field-driven); deferred, request mở, downstream gate |
 | [thanhvuong-rollback.md](./thanhvuong-rollback.md) | Revert từng commit, mới nhất trước |
 
 Dòng trạng thái ở Unified §13 và implementation note dưới
@@ -450,7 +451,7 @@ Probe tạm `e2e/_probe-research-tvp19fix.spec.ts` (SHA `109bdb10803653f4`) = pr
 
 **Quyết định Bobby 2026-09-24:** "version này chốt theo đúng khớp với HIFI; nếu có gì không hợp lý thì mở version mới để làm gọn đúng scope; 6–7 visual decision phải ghi vào Unified plan; khi làm P20 sẽ đẻ thêm debt mới nên ghi vào handoff lẫn Unified cho các phase sau."
 
-**Nguyên tắc từ vòng này: spec ≠ hi-fi thì hi-fi thắng.** Chỗ nào vẫn giữ spec là ngoại lệ, có `VD` và chờ Bobby chốt (bảng 13.4).
+**Nguyên tắc từ vòng này: spec ≠ hi-fi thì hi-fi thắng.** Chỗ nào vẫn giữ spec là ngoại lệ, có `VD` và chờ Bobby chốt (bảng 13.4). Sau R3 (`9c4afb18`) không còn ngoại lệ layout giữ spec ([§13.6](#136-r3-9c4afb18--đóng-vd-p19-02-và-vd-p19-04-theo-hi-fi)).
 
 ### 13.1 Commit R1
 
@@ -458,9 +459,9 @@ Probe tạm `e2e/_probe-research-tvp19fix.spec.ts` (SHA `109bdb10803653f4`) = pr
 - `LineageDetail.tsx` +811/−613, `lineageDetail.test.tsx` +292/−41. `lineageClient.ts`, `useLineage.ts`, `LineageRoute.tsx` không đổi. Không backend, contract, package hay lock file.
 - 7 điểm = ledger `VD-P19-01…07` trong [Unified note P19](../../../UNIFIED_IMPLEMENTATION_PLAN.md#p19-thanhvuong-frontend-implementation-note--screen-10-2026-09-24):
   1. 4 filter `active · draft · superseded · abandoned`, bật/tắt độc lập, counter "showing n of m attempts".
-  2. Band ACTIVE trước (tách bằng `filter`, không `.sort`).
+  2. Band ACTIVE trước (tách bằng `filter`, không `.sort`). R3 `9c4afb18`: thứ tự server như hi-fi.
   3. Chip wrap, mono 9.5px, radius 999.
-  4. Rail cha–con có chấm, 34 + min(depth, 8) × 22.
+  4. Rail cha–con có chấm, 34 + min(depth, 8) × 22. R3 `9c4afb18`: × 26 như hi-fi.
   5. Promotion rule nguyên văn hi-fi; pick chỉ từ `promotion_pick`.
   6. Title, subtitle, source chip, rules nguyên văn hi-fi; rules là panel cuối.
   7. Toggle "show probe attempts" đúng chỗ hi-fi, `disabled` + `CG-P19-03`; chip `+ probes` disabled mỗi band; bỏ expand-all; card đóng khi tải.
@@ -527,8 +528,8 @@ Probe tạm `e2e/_probe-research-tvp19fix.spec.ts` (SHA `109bdb10803653f4`) = pr
 | Chip | 8.5px, radius 3 | 9.5px, radius 999 | hi-fi |
 | Band | card riêng, viền trái 3px | hàng trong root card | hi-fi |
 | Opacity SUPERSEDED/ABANDONED | .72 | .82 | hi-fi |
-| **Thứ tự band** | ACTIVE-first (T01) | SUPERSEDED trên ACTIVE | **spec — ngoại lệ, `VD-P19-02`, chờ Bobby** |
-| **Bước rail** | 22px | 26px | **spec — ngoại lệ, `VD-P19-04`, chờ Bobby** |
+| **Thứ tự band** | ACTIVE-first (T01) | SUPERSEDED trên ACTIVE (thứ tự server) | **hi-fi từ `9c4afb18`** (`VD-P19-02`, Bobby 2026-09-24; R1/R2 giữ spec) |
+| **Bước rail** | 22px (§9.2) | 26px | **hi-fi từ `9c4afb18`** (`VD-P19-04`, Bobby 2026-09-24; R1/R2 giữ spec) |
 | "import new version →" | có | không | giữ (spec), chỉ ở band ACTIVE |
 
 **Khác:**
@@ -568,3 +569,68 @@ Probe tạm `e2e/_probe-research-tvp19fix.spec.ts` (SHA `109bdb10803653f4`) = pr
 | `p19-r2-refusal-503-1280.png` | `c140bc2ed60920d2` | `p19-r2-refusal-503-660.png` | `ae91fa7f634233db` |
 
 `p19-r2-filter-1280.png` trùng SHA với `p19-r2-loading-resolved-1280.png`: cả hai chụp trạng thái full sau khi tải, trước khi đổi filter. Ảnh 403 và 404 khác SHA chỉ vì request id. Danh sách đầy đủ (kể cả ảnh probe product/fixtures) ở [thanhvuong-test-results.json](./thanhvuong-test-results.json) `evidence_store.sha256_prefix_r2_tree_46d101c0`.
+
+### 13.6 R3 `9c4afb18` — đóng VD-P19-02 và VD-P19-04 theo hi-fi
+
+**Quyết định Bobby 2026-09-24:** hai ngoại lệ còn giữ spec ở R2 theo hi-fi.
+
+- Commit `9c4afb1805862487adcbd626977568132426506f` `fix(research): S10 band order and rail step follow the hi-fi`. Parent `715321f5`, tree `9f3f917f97d13c8694008c0d04279f47c85c37ea`.
+- `LineageDetail.tsx` +4/−7:
+  - `bandOrder` trả nguyên mảng server, không tách ACTIVE, không `.sort`.
+  - `RAIL_STEP` 22 → 26.
+- `lineageDetail.test.tsx` +3/−3: U04, U46, `railWidth(3) = 34 + 3 × 26`.
+- Không đổi client, hook, route, contract hay backend.
+- **Discrepancy ghi rõ:**
+  - Spec T01 ghi band ACTIVE-first; hi-fi vẽ theo thứ tự đăng ký (SUPERSEDED trên ACTIVE).
+  - Spec §9.2 ghi bước rail 22px; hi-fi dùng 26px.
+  - Hi-fi thắng theo Bobby 2026-09-24. Ledger `VD-P19-02`/`04` trong Unified ghi "đã khớp hi-fi ở `9c4afb18`".
+
+| Gate (head `9c4afb18`) | Kết quả | SHA log |
+|---|---|---|
+| `npx tsc -b --noEmit` | exit 0 | lead chạy trước R3, không có log trong store R3 |
+| `npm run build` | exit 0, chỉ cảnh báo chunk | `a7359a42adf7a274` |
+| vitest S10 (`lineageDetail`) | **52/52** | lead chạy trước R3 |
+| vitest toàn bộ | **171 file · 3067 pass · 1 skip** | lead chạy trước R3 |
+| Probe Research toàn bộ `--workers=1` | **119/119**, 2.8 phút: fixtures 8 + product 74 + r3 37 | `playwright.log` `de425c27a0b5d632`, `probe.log` `f8abef542b2583c2` |
+
+**Lượt đầu 117/119:** 2 fail `r2 gates-no-request` ở 1280 và 660.
+- Request thêm giữa lúc click chip và lúc click GATES trong panel diff là `GET /api/runs`, tức poll legacy 4 s (`QuantBTModule.tsx`, Bobby B5). S10 không gửi request đó.
+- Đã sửa harness: probe bỏ `GET /api/runs` khỏi phép đếm và ghi riêng `legacyRunsPoll=1`. Không sửa src.
+- Log lượt đầu: `playwright-pass1.log` `dc7f4c2dd753a377`, `probe-pass1.log` `f2e39b482f2bb4c7`.
+
+**Assertion R3 (probe tạm `_probe-research-tvp19r3.spec.ts` `a812b0b87abf0b3f`, config `c157d8f15cf57c7c`):**
+
+| Nhóm | Kết quả browser |
+|---|---|
+| Thứ tự band | Full và full-dark, 1280 và 660: thứ tự server `[SUPERSEDED, ACTIVE]` = `[data-band]` `[SUPERSEDED, ACTIVE]` |
+| Rail | Rail depth 1 là `[60, 60]` = 34 + 26, ở cả 1280/660, sáng/tối. 16 rail, 0 sai bề rộng theo 34 + min(depth, 8) × 26. `::before` −13px / 12px |
+| Overflow / console | Cả 30 dòng RECEIPT: overflow 0, noise console S10 0, mutation 0 |
+| GATES RESET | Click trên row và trên panel diff: 0 request mới ngoài poll legacy; selection không đổi; 0 mutation |
+| Keyboard | 3 Tab tới chip đầu (R2 là 4; chip đầu giờ là `att_01` thuộc band SUPERSEDED). Enter chọn, lọc, mở card |
+| Còn lại, như R2 | Lưới 571/381 (dark 602/402); chip wrap 2/7 dòng; font; 16 tổ hợp filter; partial; empty; virtual 120 (DOM 23 → 30); `?av=`; refusal 400/401/403/404/503; link; copy hi-fi = product; hi-fi 1280 overflow 0, 660 overflow 13 |
+
+**Dọn dẹp:**
+- Preview 4417 (setsid, PID 4090383 kèm con 4090411 / 4090412) đã kill; `ss -ltnp | grep 4417` rỗng.
+- Probe và config tạm đã xoá khỏi repo; bản sao nằm ở `~/tv-shots/p19r3/*.copy`.
+- `git status --short` rỗng. Không đụng 4317–4320.
+
+**Ảnh R3** (`~/tv-shots/p19r3/`, không commit; đủ 89 SHA ở [test results](./thanhvuong-test-results.json) `evidence_store.sha256_prefix_r3_tree_9f3f917f`):
+
+| File | SHA-256 | File | SHA-256 |
+|---|---|---|---|
+| `p19-r3-full-1280.png` | `0ba8f621460a916d` | `p19-r3-full-660.png` | `61be51d657f727b7` |
+| `p19-r3-full-dark-1280.png` | `55296cfacbdef115` | `p19-r3-full-dark-660.png` | `55e18948cba94896` |
+| `p19r3-compare-1280.png` (hi-fi ↔ product) | `6e72465d68d18ffb` | `p19r3-compare-660.png` | `b9df9f9f4fcf4353` |
+| `p19r3-hifi-1280.png` | `1d0d841b5185c58b` | `p19r3-hifi-660.png` | `03b582cef17e3397` |
+| `p19-r3-gates-1280.png` | `aa0d7285d0c079a3` | `p19-r3-gates-660.png` | `03152df87818e609` |
+| `p19-r3-keyboard-1280.png` | `0888f314e5974caa` | `p19-r3-keyboard-660.png` | `6a4ecbd1e9431ecb` |
+
+- Ảnh refusal 400/401/403/503 và empty trùng SHA với R2, vì các màn này không có band hay rail.
+- `open_debt` sau R3 còn:
+  - `VD-P19-05` (promotion rule vs mapping ACTIVE, `CG-P19-14`);
+  - cert not published;
+  - panel counts;
+  - source chip khác `read_authority`;
+  - chip state thô;
+  - key diff bẻ giữa từ;
+  - ô field-driven (`CG-P19-03…08`, `14`).

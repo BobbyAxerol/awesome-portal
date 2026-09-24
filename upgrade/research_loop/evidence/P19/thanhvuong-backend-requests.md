@@ -26,6 +26,8 @@ Kết quả kiểm:
 - `git ls-tree -r <ref> --name-only | grep -i "fixtures.*lineage"` exit 1 ở `c9dd195e` và `bb25bf39`.
 - Grep d.ts ở cả hai ref không có `presentation_kind`, `probe`, `storied`, `release_candidate`, `cert`, `spec_label`, `exercised`, `outcome`, `next_cursor` hay status promotion cấp attempt. Mọi request OPEN vẫn OPEN.
 
+**R3 (`9c4afb18`, 2026-09-24):** commit chỉ đổi `LineageDetail.tsx` và `lineageDetail.test.tsx` (thứ tự band, bước rail); không chạm contract, OpenAPI, d.ts hay backend. Trạng thái request giữ nguyên như R2.
+
 **Sau R2: 13 OPEN (`01…10`, `12`, `13`, `14`), 1 WITHDRAWN (`11`).** `14` mới; `03`, `04`, `05` mở rộng theo ô hi-fi mà R1 đặt đúng chỗ (số probe mỗi version, rc và cert theo attempt/pick).
 
 **Sau audit (2026-09-24, lịch sử): 12 OPEN (`01…10`, `12`, `13`), 1 WITHDRAWN (`11`).** Chúng được liệt kê ở §1.
@@ -310,10 +312,10 @@ P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pi
 | # | Việc | Lý do | Đề xuất |
 |---|---|---|---|
 | B1 | Tích hợp baseline `9060a7c4` (nay `bb25bf39`, qua `62d7d864`) | File S10 không trùng với baseline (cả 10 file giống nhau giữa `9060a7c4` và `62d7d864`). `62d7d864` đổi `research-alpha-import.d.ts` (thêm field required `check`, `note`, `expires_at_utc_ms`), ảnh hưởng AlphaImport khi tích hợp. `bb25bf39` chỉ là docs (P11–P15 audit, RF-05/06), không chạm lineage/S10; Unified có chèn gần bảng §13. Xung đột `FreezeDetail.tsx` của P17 vẫn còn | Bobby merge/rebase hoặc cho phép Thanhvuong làm; chạy lại toàn bộ unit và 119 probe |
-| B2 | ~~`VISUAL_DECISION_REQUIRED`~~ → **đã quyết 2026-09-24**: khớp hi-fi, lệch thì mở version mới | R1 `c9dd195e` áp 7 điểm, ghi ledger `VD-P19-01…07` trong Unified note P19. Còn 2 ngoại lệ giữ spec: thứ tự band ACTIVE-first (`VD-P19-02`, hi-fi SUPERSEDED trên) và bước rail 22 vs 26 (`VD-P19-04`) | Bobby chốt 2 ngoại lệ: theo hi-fi (version mới, đổi code nhỏ) hay giữ; ô thiếu field chờ `CG-P19-03…08`, `14` |
+| B2 | ~~`VISUAL_DECISION_REQUIRED`~~ → **đã quyết 2026-09-24**: khớp hi-fi, lệch thì mở version mới | R1 `c9dd195e` áp 7 điểm, ghi ledger `VD-P19-01…07` trong Unified note P19. Hai ngoại lệ cuối Bobby chốt theo hi-fi, **đã đóng ở `9c4afb18`**: thứ tự band theo server, SUPERSEDED trên ACTIVE (`VD-P19-02`; spec T01 ghi ACTIVE-first) và bước rail 26px (`VD-P19-04`; spec §9.2 ghi 22px). Hi-fi thắng | Xong phần layout; ô thiếu field vẫn chờ `CG-P19-03…08`, `14` |
 | B3 | F-04 badge 403/404 ở S09 | S10 đã sửa ở `1fb29010` (403 = 404 `denied`, `CG-P19-11` WITHDRAWN). S09 (`reportClient.ts`) vẫn 404 → `empty` | Bobby quyết có mở `fix/*` đồng bộ S09 không |
 | B4 | axe | axe-core không có trong lock | Như P16–P18 |
-| B5 | Poll legacy `GET /api/runs` 4 s trong `QuantBTModule.tsx` (dòng 231) chạy trên mọi route, kể cả S10 | Ngoài S10 | `fix/*` riêng nếu cần |
+| B5 | Poll legacy `GET /api/runs` 4 s trong `QuantBTModule.tsx` (dòng 231) chạy trên mọi route, kể cả S10 | Ngoài S10. R3: poll này rơi vào cửa sổ đo `gates-no-request` của probe (lượt đầu 117/119); probe loại `GET /api/runs` khỏi phép đếm, S10 vẫn 0 request | `fix/*` riêng nếu cần |
 | B6 | Flake `PortalShell.test.tsx` và `tradeReplayEvents.test.tsx` | Ngoài diff; vòng này full chạy 1 lần là pass | `fix/*` riêng nếu cần |
 
 ## 4. Trạng thái
@@ -335,4 +337,4 @@ P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pi
 | CG-P19-13 | Codex | OPEN (thêm sau audit A6) |
 | CG-P19-14 | Codex | OPEN (thêm ở R2: status promotion cấp attempt) |
 | B1, B3–B6 | Bobby | Chờ quyết |
-| B2 | Bobby | Đã quyết 2026-09-24 (khớp hi-fi); còn chốt `VD-P19-02`, `VD-P19-04` |
+| B2 | Bobby | Đã quyết 2026-09-24 (khớp hi-fi); `VD-P19-02`, `VD-P19-04` đã về hi-fi ở `9c4afb18` — đóng |
