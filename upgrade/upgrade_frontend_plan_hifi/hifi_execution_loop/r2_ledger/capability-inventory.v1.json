@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 180,
+ "route_count": 183,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1516,6 +1516,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/research/runs/:runId/requested-spec",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "W2 CG-P11-07 read-only clone source: the immutable requested_spec of a run the session/workspace may read, fetched only when the user opens New Run from a failed/cancelled run (?from=). A clone is a fresh preflight + NEW intent; this read creates, retries or mutates nothing.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
    "route": "GET /api/v1/research/runs/:runId/events",
    "controller": "research/progress.controller.ts",
    "interaction_class": "AUTO_READ",
@@ -1564,6 +1574,26 @@
    "evidence": "P05 retained artifact seal is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing and manifest/part digest validation only.",
    "owner": "codex",
    "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/current-source/batches",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "W1 RS-02 current-source row ingest is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing, a SEALED P05 artifact of the same revision and manifest digest, per-kind payload schemas, at most 200 rows and 1,000,000 bytes per batch.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/current-source/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "W1 RS-02 current-source seal is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing, Delta WFO execution profile only; requested/effective/dataset digests come from run_producers, never from the body.",
+   "owner": "claude",
+   "test_owner": "claude"
   },
   {
     "route": "POST /internal/research/progress/events",
