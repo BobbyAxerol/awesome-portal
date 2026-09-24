@@ -91,11 +91,11 @@ genuine `CG-P20-*` source/contract requests.
 
 Phần trên của codex giữ nguyên; mục này chỉ bổ sung, theo rule Bobby 2026-09-24 ([Unified note P19](../../../UNIFIED_IMPLEMENTATION_PLAN.md#p19-thanhvuong-frontend-implementation-note--screen-10-2026-09-24)): mọi lệch hi-fi ghi `VD-P20-NN` vào cả handoff lẫn Unified.
 
-- **Trạng thái S13:** `P20-A S13 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · NOT_VERIFIED`. Code `92cdc844 → 0910ecc3 → f3d6169d → 009cedb8 → 034aef11` (tree `e2d7d388`, 10 file +2807/−2 trên base `295901b7`). Backend vẫn `CONTROL_API_FEATURE_RESEARCH_COMPARE=false`; browser receipt dùng API stub theo shape `compare.contract.ts` / `compare.service.ts` vì chưa có fixture compare canonical (`CG-P20-01`).
-- **Receipt trên head `034aef11`:** tsc 0, build 0, vitest 172 file · 3091 pass · 1 skip, S13 + boundary 38/38, probe Research toàn bộ 128/128 (`--workers=1`), 42 RECEIPT overflow 0 / console 0 / mutation 0, mini chart markets ≤ 2 nhãn trục X không chồng ở 1280/660. Chi tiết ở [receipt](./thanhvuong-frontend-receipt.md).
+- **Trạng thái S13:** `P20-A S13 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · NOT_VERIFIED`. Code `92cdc844 → 0910ecc3 → f3d6169d → 009cedb8 → 034aef11 → eeeae14f` (tree `58f27644`, 10 file +2900/−2 trên base `295901b7`; `eeeae14f` sửa audit độc lập A1–A5, A8, A10). Đã push lên `primus-origin`, chưa PR. Backend vẫn `CONTROL_API_FEATURE_RESEARCH_COMPARE=false`; browser receipt dùng API stub theo shape `compare.contract.ts` / `compare.service.ts` vì chưa có fixture compare canonical (`CG-P20-01`).
+- **Receipt trên head `eeeae14f` (gói C-2, sau audit):** tsc 0, build 0, vitest 172 file · 3094 pass · 1 skip, S13 + boundary 41/41, probe Research toàn bộ 162/162 (`--workers=1`), 76 RECEIPT (23 gate sáng + 15 gate tối, mỗi gate 1280/660) overflow 0 / console 0 / mutation 0, mini chart markets ≤ 2 nhãn trục X không chồng. Receipt trước (`034aef11`, 128/128, 42 RECEIPT) chỉ có theme sáng. Chi tiết ở [receipt](./thanhvuong-frontend-receipt.md).
 - **Route:** canonical `/research/quantbt/alphas/{alphaId}/compare?mode=attempts|markets|pair&runs=a,b`; route spec `/research/quantbt/compare?alpha=&runs=` chỉ còn là resolver.
 
-**Visual decision ledger rút gọn** (bản đầy đủ: [receipt §6](./thanhvuong-frontend-receipt.md#6-visual-decision-ledger-vd-p2001-20) và [Unified note P20](../../../UNIFIED_IMPLEMENTATION_PLAN.md#p20-thanhvuong-frontend-implementation-note--screen-13-2026-09-24)):
+**Visual decision ledger rút gọn** (bản đầy đủ: [receipt §6](./thanhvuong-frontend-receipt.md#6-visual-decision-ledger-vd-p20-0129) và [Unified note P20](../../../UNIFIED_IMPLEMENTATION_PLAN.md#p20-thanhvuong-frontend-implementation-note--screen-13-2026-09-24)):
 
 | VD | Điểm lệch hi-fi | Product | State |
 |---|---|---|---|
@@ -108,26 +108,36 @@ Phần trên của codex giữ nguyên; mục này chỉ bổ sung, theo rule Bo
 | `VD-P20-07` | Pair sub-toggle demo | chip 2 run đọc từ URL `runs=` | demo control |
 | `VD-P20-08` | (không có) | dòng meta disclosure dưới header | `AWAITING_DECISION` (nhóm `S10-COUNTS-PANEL`) |
 | `VD-P20-09` | Route `/compare?runs=` | canonical trong Alpha + resolver | route |
-| `VD-P20-10` | Footer rules verbatim | đổi 3 cụm (two runs, Portal-derived, server refuses) | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-10` | Footer rules verbatim | đổi 3 cụm (two runs, Portal-derived, server refuses); "ACTIVE node" chưa phủ (audit A7), giữ verbatim, Bobby quyết | `REQUIRES_BOBBY_DECISION` |
 | `VD-P20-11` | Subtitle "Two ideas…" | "Two runs…" | `REQUIRES_BOBBY_DECISION` |
 | `VD-P20-12` | (không có state thiếu run) | `PAIR_NEEDS_TWO`, 0 request | rule over hi-fi |
 | `VD-P20-13` | Delta header "engine-published" | "server-published" | `REQUIRES_BOBBY_DECISION` |
 | `VD-P20-14` | Ladder weak → strong, "claim ↑ →" | bày mảng server đảo ngược, không sort theo số (`009cedb8`) | `REQUIRES_BOBBY_DECISION` |
-| `VD-P20-15` | Tag "EChart N" + narrative demo có số | không in | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-15` | Tag "EChart N" + narrative demo có số | không in; số demo trong banner attempts chưa phủ (audit A6), giữ verbatim, Bobby quyết | `REQUIRES_BOBBY_DECISION` |
 | `VD-P20-16` | Mismatch chỉ trong câu | chip key 4 phần, phần lệch đỏ chỉ để hiển thị; từ chối là của server | rule over hi-fi |
 | `VD-P20-17` | Claim chip không có origin | dòng mờ `origin {claim.origin}` | `REQUIRES_BOBBY_DECISION` |
 | `VD-P20-18` | S10 root card 3 link | "compare →" đặt cạnh `.ln-links` | route |
 | `VD-P20-19` | Rank 3 amber nhạt, nền correlation tint | `var(--warn)` / `var(--accent-soft)` (token gate) | rule over hi-fi |
 | `VD-P20-20` | Banner markets lặp "Small multiples only" | bỏ cụm lặp (`034aef11`) | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-21` | Δ đọc A − B | header `Δ` + `B − A · as published` (hướng server), không tính lại (`CG-P20-09`) | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-22` | Title 1 dòng, seg dưới subtitle | seg cùng hàng subtitle, title 2 dòng ở 1280 | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-23` | (không có) | khối weaker claim + bảng intentional differences | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-24` | (không có) | dòng route·protocol, sampling markets, figcaption overlay, foot common-window | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-25` | Banner markets "Three different ComparisonContractKeys…" | bỏ cả câu | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-26` | Caption correlation "daily OOS returns · overlapping window only" | meta `n · window · missing_policy` | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-27` | Trục y overlay 5 nhãn | 2 nhãn max/min (`equitySvg`) | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-28` | Δ tô theo tốt/xấu | tô theo dấu; Δ 0 không tô | `REQUIRES_BOBBY_DECISION` |
+| `VD-P20-29` | "OOS sharpe (stitched)" | "OOS sharpe" | `REQUIRES_BOBBY_DECISION` |
 
-**Backend request `CG-P20-01…08`** (@codex, tất cả OPEN, kiểm lại trên `bb25bf39` và `72d2638b`; chi tiết ở [backend requests](./thanhvuong-backend-requests.md)): `01` fixture canonical compare 5 case spec §10 + Problem · `02` schedule/mode per run · `03` cert per run · `04` OOS Sharpe per fold · `05` intentional differences ở attempts mode · `06` win rate + OOS Sharpe stitched common-window · `07` alpha id fixture `run-library.json` (`alpha_momentum_btc`) không qua regex compare · `08` lifecycle ACTIVE/SUPERSEDED per run.
+**Audit độc lập 2026-09-24** ([receipt §12](./thanhvuong-frontend-receipt.md#12-audit-độc-lập-p20-và-commit-eeeae14f)): A1–A5, A8, A10 sửa ở `eeeae14f` (hướng Δ, Δ 0, số mono, count trong block NOT_PUBLISHED, "(stitched)", aria mũi tên, resolver mode lạ); A6/A7 giữ copy hi-fi verbatim (ghi ở VD-15/VD-10); A9 giữ theo B6; lệch hi-fi chưa có VD → `VD-P20-21…29`; docs C1–C6 sửa trong packet.
+
+**Backend request `CG-P20-01…11`** (@codex, tất cả OPEN, kiểm lại trên `bb25bf39` và `72d2638b`; `09…11` thêm 2026-09-24 sau audit; chi tiết ở [backend requests](./thanhvuong-backend-requests.md)): `01` fixture canonical compare 5 case spec §10 + Problem · `02` schedule/mode per run · `03` cert per run · `04` OOS Sharpe per fold · `05` intentional differences ở attempts mode · `06` win rate + OOS Sharpe stitched common-window · `07` alpha id fixture `run-library.json` (`alpha_momentum_btc`) không qua regex compare · `08` lifecycle ACTIVE/SUPERSEDED per run · `09` hướng Δ `RIGHT_MINUS_LEFT` (field hoặc xác nhận) · `10` count khi block NOT_PUBLISHED (`null` hay rule UI) · `11` khoá sort thứ hai attempts (spec OOS vs code NET_RETURN).
 
 **Nợ mở cho phase sau (P21+)** — [debt register](./thanhvuong-debt-register.json):
-- `S13-COMPARE-STATE-REFUSED`: `data-compare-state=available` cả khi pair REFUSED / zero-variance; refusal chỉ nằm ở `data-pair-state` (Bobby B6).
-- `S13-BACK-ETAG-660`: Back ở 660 gửi thêm 1 GET attempts không có `If-None-Match` (validator ETag một slot); không sai dữ liệu.
-- `S13-G1-HEADER-LAYOUT`: header lệch hi-fi, chưa có VD; DQ-01 ở baseline `8bd81b01` bỏ module header.
+- `open_implementation_debt`: `S13-REFUSED-STATE-ATTR` (A9): `data-compare-state=available` cả khi pair REFUSED / zero-variance, chờ B6 · `S13-BACK-REFETCH`: validator ETag một slot, chỉ gửi `If-None-Match` khi quay lại đúng key vừa đọc; back/forward qua key khác đọc lại 200 · `S13-DELTA-DIRECTION-LABEL` (A1): nhãn hướng Δ chờ `CG-P20-09`.
+- `S13-G1-HEADER-LAYOUT` → đã ghi thành `VD-P20-22`.
 - `S13-MINI-LABELS-UNIT`: nhãn mini chart chỉ khoá bằng probe browser, chưa có unit.
-- `S13-FIELD-DRIVEN-CELLS` (`VD-P20-03…06`) chờ `CG-P20-02…06/08`; copy `VD-P20-01/02/10/11/13/14/15/17/20` chờ Bobby (B2, đề xuất mở version hi-fi mới); `VD-P20-08` chờ B3.
+- `S13-FIELD-DRIVEN-CELLS` (`VD-P20-03…06`) chờ `CG-P20-02…06/08`; copy `VD-P20-01/02/10/11/13/14/15/17/20/21…29` + copy verbatim audit A6/A7 chờ Bobby (B2, đề xuất mở version hi-fi mới); `VD-P20-08` chờ B3.
 - Deferred: axe (B4, axe-core không có trong lock), `REAL_API_E2E_RECEIPT` + `V11-P20-DR` (B5, cờ tắt), gộp `call<T>` / refusal mapper vào RF-04.
 - Tích hợp baseline `72d2638b` (B1): `3e7055d5` viết lại `RunLibrary.tsx` (CompareBar disabled "not built yet") xung đột chắc chắn với entry `alpha=` của S13; `8bd81b01` 404 → terminal `notFound` và DQ-08 `researchFormat.ts` khác cách S13 (403 = 404 `denied`, in Decimal nguyên chuỗi).
 
