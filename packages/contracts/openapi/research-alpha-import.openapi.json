@@ -130,7 +130,8 @@
         "properties": {
           "workspace_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
           "original_filename": { "type": "string", "minLength": 4, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}[.]py$" },
-          "source_text": { "type": "string", "minLength": 1, "maxLength": 262144, "description": "Also bounded to 256 KiB of UTF-8 bytes by the server." }
+          "source_text": { "type": "string", "minLength": 1, "maxLength": 262144, "description": "Also bounded to 256 KiB of UTF-8 bytes by the server." },
+          "expected_source_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
         }
       },
       "GatesRequest": {
@@ -170,7 +171,7 @@
               "code": {
                 "enum": [
                   "SESSION_REQUIRED", "REQUEST_REJECTED",
-                  "RESEARCH_ALPHA_IMPORT_INVALID", "RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE", "RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED",
+                  "RESEARCH_ALPHA_IMPORT_INVALID", "RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE", "RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED", "RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH",
                   "RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND", "RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED", "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED", "RESEARCH_ALPHA_IMPORT_GATES_FAILED",
                   "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED", "RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT", "RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED",
                   "RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN", "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT"

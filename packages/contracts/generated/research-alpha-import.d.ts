@@ -106,6 +106,7 @@ export interface components {
             original_filename: string;
             /** @description Also bounded to 256 KiB of UTF-8 bytes by the server. */
             source_text: string;
+            expected_source_digest?: string;
         };
         GatesRequest: {
             workspace_id?: string;
@@ -124,7 +125,7 @@ export interface components {
         Problem: {
             error: {
                 /** @enum {unknown} */
-                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_ALPHA_IMPORT_INVALID" | "RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE" | "RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED" | "RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND" | "RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED" | "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED" | "RESEARCH_ALPHA_IMPORT_GATES_FAILED" | "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED" | "RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT" | "RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED" | "RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN" | "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT";
+                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_ALPHA_IMPORT_INVALID" | "RESEARCH_ALPHA_IMPORT_ANALYSIS_UNAVAILABLE" | "RESEARCH_ALPHA_IMPORT_ANALYSIS_REJECTED" | "RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH" | "RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND" | "RESEARCH_ALPHA_IMPORT_SOURCE_EXPIRED" | "RESEARCH_ALPHA_IMPORT_GATES_REQUIRED" | "RESEARCH_ALPHA_IMPORT_GATES_FAILED" | "RESEARCH_ALPHA_IMPORT_DIGEST_ALREADY_REGISTERED" | "RESEARCH_ALPHA_IMPORT_VERSION_CONFLICT" | "RESEARCH_ALPHA_IMPORT_ADMISSION_SATURATED" | "RESEARCH_ALPHA_IMPORT_ACTIVATION_FORBIDDEN" | "RESEARCH_ALPHA_IMPORT_ACTIVATION_CONFLICT";
                 message: string;
             };
             request_id: string;
@@ -203,6 +204,9 @@ export interface components {
             /** @enum {unknown} */
             state: "parsed" | "missing";
             value?: unknown;
+            /** @enum {unknown} */
+            check: "VERIFY" | "GATED";
+            note: string;
         };
         /** @description research.alpha-source.v1: the Parse receipt. It intentionally contains a read-only mirror, not source bytes or a mutable declared contract. */
         SourceResponse: {
@@ -212,6 +216,7 @@ export interface components {
             source_digest: components["schemas"]["Digest"];
             analysis_digest: components["schemas"]["Digest"];
             parse_ok: boolean;
+            expires_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             mirror: components["schemas"]["MirrorField"][];
         };
         GateRow: {
@@ -222,6 +227,8 @@ export interface components {
             state: "PASS" | "FAIL" | "SKIPPED";
             message: string;
             ms: number;
+            /** @enum {unknown} */
+            quarantine_code?: "QUARANTINED_CONTRACT" | "QUARANTINED_ENTRYPOINT" | "QUARANTINED_DIGEST_ALREADY_REGISTERED" | "QUARANTINED_PARAMETER_SPACE" | "QUARANTINED_DETERMINISM" | "QUARANTINED_DATA_CONTRACT" | "QUARANTINED_LOOKAHEAD";
         };
         /** @description research.alpha-import-gates.v1: server-ordered gates. The client renders this order and must never synthesize PASS or skip state. */
         GatesResponse: {
@@ -233,6 +240,7 @@ export interface components {
             analysis_digest: components["schemas"]["Digest"];
             gates: components["schemas"]["GateRow"][];
             all_pass: boolean;
+            expires_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             /** @constant */
             static_scan_disclosure: "Static scan — runtime causality is proven per run at Stage 3/4.";
         };

@@ -54,3 +54,22 @@ P07 ruling `CG-P07-06`: `may_activate` is the caller's server-derived permission
 The request-list statuses in `CODEX_REQUESTS_FROM_CLAUDE_P01_P10.md` remain authoritative. The larger contract/producer work still includes P02 advanced WF; P04 mode/schedule facts and route matrix; P05 artifact writer; P06 live child progress and attempt read; P07 registry/gates; P08 advanced preflight/catalog; P10 scoped adapter widening and progress facts; P11 snapshot completeness. DQ-03/05/07/10/11 were approved by Bobby, but approval is not implementation evidence. Source facts that cannot be proven remain typed `NOT_PUBLISHED`, never sample values.
 
 Claude RF-04 may consume the delivered generated contracts now. For historical Atlas, branch on `selected_release_kind`; `atlas` is null with a typed historical identity. For Journey, use descriptor revision 2 and verify the 28-card HiFi inventory (the earlier audit said 27 incorrectly). Do not infer a reachable browser route solely from a server `AVAILABLE` badge; the frontend route map still owns path resolution.
+
+## Continuation 2026-09-24 — partial source-backed P06/P07/P08
+
+- `CG-P07-03` stays OPEN: the private AST parser publishes `check=VERIFY|GATED` and a per-field note on its eight literal mirror rows. VERIFY is not PASS. The class/output/route claims in HiFi are not source facts under Bobby's DQ-05 ruling; no 14-field value was invented.
+- `CG-P07-04` stays OPEN: parse/gate receipts now expose server expiry in UTC milliseconds; parse optionally verifies caller-declared source SHA-256 before custody; failed gates emit exact `QUARANTINED_*` codes. `RUNNING` is only client request-in-flight state for this synchronous operation. Parser time is not attributable per gate.
+- `CG-P06-02` stays OPEN for trial/fold/ETA: P06 reports a bounded heartbeat only while its confined child is observed alive via the existing P11 durable journal. It does not infer percent, tqdm, fold segments or resource use from elapsed time. Callback failure kills the exact process group.
+- `CG-P08-05` stays OPEN for sweep/evaluation ceiling and full advanced-WF rules: P08 refuses trials above the current release's catalog-published ceiling and validates seed/pin/sweep against the immutable AlphaVersion declaration before snapshot serialization. P10 execution admission remains narrower than preflight.
+
+Focused proof: P07 disposable PostgreSQL 9/9, Control API digest 2/2, generated contract 5/5, parser 10/10; P06/P10 real-child tests 11/11 excluding the known local `nats-py`-missing test; P08 snapshot 13/13; combined Python 45/45; Control API build and frontend TypeScript pass. NATS is NOT_RUN, not PASS. No runtime, dev/main, protected Execution, source DB or FE composition changed.
+
+RF-04 handoff to Claude: consume regenerated `research-alpha-import.d.ts` fields in S14: actual parse/gate expiry, typed digest mismatch, gate `quarantine_code`, and mirror VERIFY distinct from PASS. Never synthesize absent 14-field values or a running gate from terminal receipts. Claude's uncommitted `foundation.test.tsx` was not staged or edited by Codex.
+
+Next dependency order remains P10 executable current-source profile → P05 WFO retention/importer, then P06 child trial/fold facts and remaining P08 validation. A P07 imported source is not an installed executor; binding it to the fixed P04 Delta child would mislabel results. `CG-P10-02`, `CG-P05-01` and all remaining IDs remain OPEN until producer/retention receipts exist.
+
+### P08 declared-optimization continuation — 2026-09-24
+
+P08 now loads the immutable database entrypoint with the exact AlphaVersion declaration and rejects a missing required seed, undeclared parameter, pin/sweep outside a declared range/step, or categorical value outside the declared set before snapshot creation. The existing private adapter also refuses `optuna_trials` above the current release trial ceiling before sealing. This is **not** P10 execution admission: imported/DRAFT versions and WFO still require a real installed adapter. `CG-P08-05` remains OPEN for the independently sourced sweep/evaluation ceiling and full advanced-WF fields.
+
+Evidence: generated-wire P08 focused 4/4, Control API build, isolated PostgreSQL preflight 10/10. No frontend file was staged or edited. RF-04 can consume the current typed refusal but must not display a green executable-WFO state from a successful preflight.

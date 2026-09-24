@@ -298,6 +298,7 @@ export interface ResearchPreflightManifestRecord extends ResearchPreflightManife
 export interface ResearchAlphaVersionDataContract {
   alphaId: string;
   alphaVersionId: string;
+  entrypoint: string;
   declaredContract: Record<string, unknown>;
 }
 

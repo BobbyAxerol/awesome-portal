@@ -289,6 +289,7 @@ def test_p08_t07_resource_refusal_is_truthful_and_does_not_implicitly_queue(serv
     authority, _ = service
     before = authority.snapshots.list()
     assert error_code(lambda: authority.build(payload(requested(trials=2_147_483_647)))) == "RESEARCH_PREFLIGHT_RESOURCE_REFUSED"
+    assert error_code(lambda: authority.build(payload(requested(trials=4001)))) == "RESEARCH_PREFLIGHT_RESOURCE_REFUSED"
     # A plainly inadmissible study is refused before snapshot serialization,
     # so a browser retry cannot leave unreferenced immutable frames behind.
     assert authority.snapshots.list() == before

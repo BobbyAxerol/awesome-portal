@@ -116,6 +116,7 @@ interface AlphaImportRegistryRow {
 interface AlphaVersionDataContractRow {
   alpha_id: string;
   alpha_version_id: string;
+  entrypoint: string;
   declared_contract: Record<string, unknown> | string;
 }
 
@@ -1305,7 +1306,7 @@ export class ResearchMetadataRepository {
     requireOpaqueId(alphaVersionId, "alphaVersionId");
     return this.withScopedRead(scope, async (client) => {
       const result = await client.query<AlphaVersionDataContractRow>(
-        `SELECT version.alpha_id, version.alpha_version_id, version.declared_contract
+        `SELECT version.alpha_id, version.alpha_version_id, version.entrypoint, version.declared_contract
            FROM research.alpha_versions version
           WHERE version.workspace_id = $1
             AND version.alpha_id = $2
@@ -1333,6 +1334,7 @@ export class ResearchMetadataRepository {
         alphaId: row.alpha_id,
         alphaVersionId: row.alpha_version_id,
         declaredContract: decodeObject(row.declared_contract, "AlphaVersion data contract"),
+        entrypoint: row.entrypoint,
       };
     });
   }

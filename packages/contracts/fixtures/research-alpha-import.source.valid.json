@@ -4,8 +4,9 @@
   "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "analysis_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "parse_ok": true,
+  "expires_at_utc_ms": 1790000000000,
   "mirror": [
-    { "field": "entrypoint", "state": "parsed", "value": "generate_signals" },
-    { "field": "warmup_bars", "state": "parsed", "value": 32 }
+    { "field": "entrypoint", "state": "parsed", "value": "generate_signals", "check": "VERIFY", "note": "Literal declaration parsed from the submitted source; validation is reported by the ordered gates." },
+    { "field": "warmup_bars", "state": "parsed", "value": 32, "check": "VERIFY", "note": "Literal declaration parsed from the submitted source; validation is reported by the ordered gates." }
   ]
 }

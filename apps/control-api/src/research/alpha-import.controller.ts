@@ -68,7 +68,7 @@ export class ResearchAlphaImportController {
       return await this.service.parse(
         request.portalUser,
         { workspaceId, actorUserId: request.portalUser.userId },
-        { originalFilename: parsed.data.original_filename, sourceText: parsed.data.source_text },
+        { originalFilename: parsed.data.original_filename, sourceText: parsed.data.source_text, expectedSourceDigest: parsed.data.expected_source_digest },
         this.requestId(request),
       );
     } catch (error) {

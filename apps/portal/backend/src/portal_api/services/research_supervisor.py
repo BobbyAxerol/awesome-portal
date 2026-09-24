@@ -20,7 +20,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 class ResearchSupervisorError(RuntimeError):
@@ -134,6 +134,7 @@ class IsolatedResearchSupervisor:
         receipt: ResearchChildReceipt,
         *,
         limits: ResearchChildLimits = ResearchChildLimits(),
+        on_child_alive: Callable[[], None] | None = None,
     ) -> ResearchChildResult:
         limits.validate()
         for label, value in (("job_id", receipt.job_id), ("run_id", receipt.run_id), ("worker_attempt_id", receipt.worker_attempt_id)):
@@ -226,13 +227,27 @@ class IsolatedResearchSupervisor:
                 preexec_fn=self._limit_preexec(limits),
             )
             try:
-                return_code = process.wait(timeout=limits.wall_seconds)
+                if on_child_alive is not None and process.poll() is None:
+                    on_child_alive()
+                while True:
+                    remaining = limits.wall_seconds - (time.monotonic() - started)
+                    if remaining <= 0:
+                        return_code = process.poll()
+                        if return_code is not None:
+                            break
+                        raise subprocess.TimeoutExpired(command, limits.wall_seconds)
+                    try:
+                        return_code = process.wait(timeout=min(5.0, remaining))
+                        break
+                    except subprocess.TimeoutExpired:
+                        if on_child_alive is not None and process.poll() is None:
+                            on_child_alive()
             except subprocess.TimeoutExpired as error:
                 self._kill_process_group(process)
-                raise ResearchSupervisorError(
-                    "P06 child exceeded its wall-clock limit and was killed",
-                    code="RESOURCE_EXCEEDED",
-                ) from error
+                raise ResearchSupervisorError("P06 child exceeded its wall-clock limit and was killed", code="RESOURCE_EXCEEDED") from error
+            except Exception:
+                self._kill_process_group(process)
+                raise
         elapsed = time.monotonic() - started
         after = resource.getrusage(resource.RUSAGE_CHILDREN)
         if return_code != 0:

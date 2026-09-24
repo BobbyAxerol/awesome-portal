@@ -16,6 +16,7 @@ export const ResearchAlphaImportParseRequestSchema = z.object({
   workspace_id: WorkspaceIdSchema,
   original_filename: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}[.]py$/),
   source_text: z.string().min(1).max(256 * 1024),
+  expected_source_digest: DigestSchema.optional(),
 }).strict();
 
 export const ResearchAlphaImportGatesRequestSchema = z.object({
@@ -53,6 +54,8 @@ export const ResearchAlphaAnalysisResponseSchema = z.object({
     field: z.string().max(128),
     state: z.enum(["parsed", "missing"]),
     value: z.unknown().optional(),
+    check: z.enum(["VERIFY", "GATED"]),
+    note: z.string().min(1).max(256),
   }).strict()).max(16),
   gate_facts: z.object({
     contract_complete: z.boolean(),
@@ -87,6 +90,7 @@ export interface ResearchAlphaImportGateRow {
   state: ResearchAlphaImportGateState;
   message: string;
   ms: number;
+  quarantine_code?: "QUARANTINED_CONTRACT" | "QUARANTINED_ENTRYPOINT" | "QUARANTINED_DIGEST_ALREADY_REGISTERED" | "QUARANTINED_PARAMETER_SPACE" | "QUARANTINED_DETERMINISM" | "QUARANTINED_DATA_CONTRACT" | "QUARANTINED_LOOKAHEAD";
 }
 
 export interface ResearchAlphaImportParseResponse {
@@ -95,6 +99,7 @@ export interface ResearchAlphaImportParseResponse {
   source_digest: string;
   analysis_digest: string;
   parse_ok: boolean;
+  expires_at_utc_ms: number;
   mirror: readonly (ResearchAlphaAnalysis["mirror"][number])[];
 }
 
@@ -106,6 +111,7 @@ export interface ResearchAlphaImportGatesResponse {
   analysis_digest: string;
   gates: readonly ResearchAlphaImportGateRow[];
   all_pass: boolean;
+  expires_at_utc_ms: number;
   static_scan_disclosure: "Static scan — runtime causality is proven per run at Stage 3/4.";
 }
 

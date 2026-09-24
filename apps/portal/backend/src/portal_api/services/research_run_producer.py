@@ -265,7 +265,10 @@ class ResearchRunProducerExecutor:
             # the child receipt is immutable from this point onward.
             progress("stage_completed", {"stage": "S3"})
             progress("stage_started", {"stage": "S4"})
-            child = self.supervisor.run_p04_delta_qualification(receipt)
+            child = self.supervisor.run_p04_delta_qualification(
+                receipt,
+                on_child_alive=(lambda: progress("heartbeat", {})) if progress_journal is not None else None,
+            )
             progress("trial_completed", {
                 "fold": 1,
                 "trial": 1,

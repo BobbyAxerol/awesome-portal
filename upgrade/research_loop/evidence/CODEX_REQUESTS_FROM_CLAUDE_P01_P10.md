@@ -144,3 +144,7 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 | Id | Gap → need | Status |
 |---|---|---|
 | `CG-P11-03` | Progress snapshot: run identity (or a documented join with the P13 evidence read), per-fold pct / best J / trial / params digest, declared fold count, structured `claim.cursor`, artifact `DENIED` + note + rows, 403 in the GET contract | OPEN |
+
+**RF-03 continuation 2026-09-24:** Source-backed partial additions are recorded in [RF-03 packet](./RF-03/README.md). `CG-P07-03/04`, `CG-P06-02`, and `CG-P08-05` remain OPEN for the missing parts; generated `research-alpha-import.d.ts` already contains the additive mirror/expiry/quarantine contract for RF-04. P10 WFO producer and P05 importer are not falsely marked delivered.
+
+**RF-03 P08 continuation 2026-09-24:** `CG-P08-05` is partial, not DELIVERED. Exact bound AlphaVersion entrypoint/declaration now enforces `seed_required` and declared pin/sweep domains before snapshot; private snapshot enforces current-release `trial_ceiling`. Generated-wire 4/4 and isolated PostgreSQL 10/10 pass. No executable WFO or sweep/evaluation ceiling is inferred; see [RF-03 packet](./RF-03/README.md).

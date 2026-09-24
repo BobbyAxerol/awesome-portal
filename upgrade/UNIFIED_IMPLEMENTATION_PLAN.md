@@ -4326,6 +4326,10 @@ campaign sau khi Bobby tự merge qua PR.
 
 **P07 registry checkpoint `a1926f25`, 2026-09-23:** source-backed name, strategy ID, full digest, required columns, warmup and literal version mirror are published in generated `research-alpha-import.d.ts` with additive client rollout. `CG-P07-05` delivered by `349657bb`: immutable registration-time predecessor, typed historical-unknown, generated contract and P07 disposable PostgreSQL 9/9; P07/P08 warmup bound fixed by `348632e5`. `CG-P07-03` remains OPEN for the unverified 14-field mirror. P07 PostgreSQL 9/9, parser 9/9, contract 5/5, build, FE TypeScript and full pre-commit 813/813 Control API tests pass; no runtime activation. See [RF-03 packet](./research_loop/evidence/RF-03/README.md).
 
+**RF-03 continuation 2026-09-24 — still IN_PROGRESS:** P07 literal mirror `VERIFY|GATED`, parse/gate TTL, optional exact source SHA-256 check and typed quarantine codes; P06 observed child liveness heartbeat; P08 release trial ceiling before snapshot seal. Focused P07 PG 9/9, parser 10/10, contracts 5/5, Control API digest 2/2, P06/P10 real-child 11/11 excluding missing local `nats-py`, P08 13/13, build/TypeScript pass. These are truthful partial deliveries, not closure of `CG-P07-03/04`, `CG-P06-02` or `CG-P08-05`; see [RF-03 continuation](./research_loop/evidence/RF-03/README.md). P10 executable WFO and P05 retained WFO remain the critical path. RF-04 is Claude-owned; Codex touched no frontend composition or visual baseline.
+
+**P08 declared-optimization checkpoint 2026-09-24:** exact persisted AlphaVersion entrypoint/declaration now enforces required seed and declared pin/sweep domains before snapshot; the private snapshot path also enforces current-release trial ceiling. Focused generated-wire 4/4 and isolated PostgreSQL 10/10 pass. `CG-P08-05` stays OPEN for an independently sourced sweep/evaluation ceiling and advanced-WF admission. This does not widen P10; RF-04 must consume only typed current facts.
+
 <a id="rl-rf-04"></a>
 ### RF-04 — Frontend P01–P10: sửa, chuẩn hoá theo HiFi, tối ưu tốc độ, nối màn (Claude)
 

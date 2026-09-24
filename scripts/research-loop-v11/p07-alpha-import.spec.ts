@@ -76,7 +76,7 @@ function analysisFor(sourceText: string): ResearchAlphaAnalysis {
       ? "Static scan found no configured future-data heuristic. This is not a runtime causality certificate."
       : "SKIPPED because a prior gate failed; no causality claim is made.",
   };
-  const mirror = [{ field: "entrypoint", state: valid ? "parsed" as const : "missing" as const, ...(valid ? { value: "generate_signals" } : {}) }];
+  const mirror = [{ field: "entrypoint", state: valid ? "parsed" as const : "missing" as const, check: valid ? "VERIFY" as const : "GATED" as const, note: valid ? "Literal declaration parsed from the submitted source; validation is reported by the ordered gates." : "This field is not declared in the submitted source; no value has been inferred.", ...(valid ? { value: "generate_signals" } : {}) }];
   const sourceDigest = sha256(sourceText);
   return {
     schema_version: "research.alpha-analysis.v1",
@@ -188,6 +188,10 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     const { parsed, gates, result } = await register(source());
     expect(parsed.schema_version).toBe("research.alpha-source.v1");
     expect(gates.schema_version).toBe("research.alpha-import-gates.v1");
+    expect(parsed.expires_at_utc_ms).toBeGreaterThan(Date.now());
+    expect(gates.expires_at_utc_ms).toBeGreaterThan(Date.now());
+    expect(gates.expires_at_utc_ms).toBeLessThanOrEqual(parsed.expires_at_utc_ms);
+    expect(parsed.mirror[0]).toMatchObject({ check: "VERIFY", state: "parsed" });
     expect(gates.all_pass).toBe(true);
     expect(gates.gates.map((gate) => gate.n)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(gates.gates.every((gate) => gate.state === "PASS")).toBe(true);
@@ -308,6 +312,7 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     expect(replay.replayed).toBe(true);
     const duplicateGateRun = await service.gates(admin, scopeA, first.parsed.source_file_ref, "p07-request");
     expect(duplicateGateRun.gates[2]).toMatchObject({ n: 3, state: "FAIL" });
+    expect(duplicateGateRun.gates[2]).toMatchObject({ quarantine_code: "QUARANTINED_DIGEST_ALREADY_REGISTERED" });
     expect(duplicateGateRun.gates.slice(3).every((gate) => gate.state === "SKIPPED")).toBe(true);
 
     const sameVersionDifferentBytes = await register(source("0.3.0", "different-bytes"), "p07-alpha").catch((error: unknown) => error);

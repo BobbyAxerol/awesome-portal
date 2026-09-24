@@ -34,17 +34,20 @@ def test_p06_t05_t08_actual_quantbt_child_is_separate_network_pid_and_resource_b
     """The P06 child is a process namespace, not `asyncio.to_thread` theatre."""
 
     monkeypatch.setenv("DATABASE_URL", "postgres://must-not-reach-child")
+    observed_child_alive: list[bool] = []
     monkeypatch.setenv("NATS_URL", "nats://must-not-reach-child")
     supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=MARKET_PATH.parent)
     parent_network_namespace = os.readlink("/proc/self/ns/net")
     result = supervisor.run_p04_delta_qualification(
         _receipt(tmp_path),
         limits=ResearchChildLimits(memory_bytes=4 * 1024 * 1024 * 1024, cpu_seconds=45, wall_seconds=90),
+        on_child_alive=lambda: observed_child_alive.append(True),
     )
     assert result.launcher_pid != os.getpid()
     assert result.child_pid != os.getpid()
     assert result.network_namespace != parent_network_namespace
     assert result.engine_version == "1.1.1"
+    assert observed_child_alive, "the supervisor must report an actually running child"
     assert result.bars == 500
     assert result.num_trades == 8
     assert result.final_equity == pytest.approx(20_589.74597203475)

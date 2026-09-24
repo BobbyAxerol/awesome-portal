@@ -55,10 +55,18 @@ export class ResearchAlphaImportService {
   async parse(
     user: PortalUser,
     scope: ResearchScope,
-    input: { originalFilename: string; sourceText: string },
+    input: { originalFilename: string; sourceText: string; expectedSourceDigest?: string },
     requestId: string,
   ): Promise<ResearchAlphaImportParseResponse> {
     this.assertSourceSize(input.sourceText);
+    if (input.expectedSourceDigest !== undefined &&
+        input.expectedSourceDigest !== createHash("sha256").update(Buffer.from(input.sourceText, "utf8")).digest("hex")) {
+      throw new ResearchAlphaImportError(
+        "RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH",
+        "Submitted source bytes do not match the declared SHA-256 digest; reselect the exact file before parsing.",
+        409,
+      );
+    }
     // Keep temporary single-file custody bounded even if a UI repeatedly
     // re-parses drafts. Only expired, unbound rows owned by this actor move.
     await this.repository.cleanupExpiredUnboundAlphaImportSources(
@@ -85,6 +93,7 @@ export class ResearchAlphaImportService {
       source_digest: source.sourceDigest,
       analysis_digest: source.analysisDigest,
       parse_ok: analysis.parse_ok,
+      expires_at_utc_ms: source.expiresAt.getTime(),
       mirror: analysis.mirror,
     };
   }
@@ -125,6 +134,7 @@ export class ResearchAlphaImportService {
       analysis_digest: source.analysisDigest,
       gates,
       all_pass: allPass,
+      expires_at_utc_ms: expiresAt.getTime(),
       static_scan_disclosure: STATIC_SCAN_DISCLOSURE,
     };
   }
@@ -287,7 +297,8 @@ export class ResearchAlphaImportService {
       const started = performance.now();
       const outcome = await stateAndMessage();
       const ms = Math.max(0, Math.round(performance.now() - started));
-      gates.push({ n, name, state: outcome.pass ? "PASS" : "FAIL", message: outcome.message, ms });
+      const quarantineCodes = ["QUARANTINED_CONTRACT", "QUARANTINED_ENTRYPOINT", "QUARANTINED_DIGEST_ALREADY_REGISTERED", "QUARANTINED_PARAMETER_SPACE", "QUARANTINED_DETERMINISM", "QUARANTINED_DATA_CONTRACT", "QUARANTINED_LOOKAHEAD"] as const;
+      gates.push({ n, name, state: outcome.pass ? "PASS" : "FAIL", message: outcome.message, ms, ...(!outcome.pass ? { quarantine_code: quarantineCodes[n - 1] } : {}) });
       if (!outcome.pass) failed = true;
     };
     await add(1, async () => ({ pass: analysis.parse_ok && analysis.gate_facts.contract_complete, message: analysis.gate_facts.contract_message }));

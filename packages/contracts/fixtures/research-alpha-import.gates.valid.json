@@ -14,5 +14,6 @@
     { "n": 7, "name": "no-lookahead-static-scan", "state": "PASS", "message": "Static scan is heuristic only.", "ms": 2 }
   ],
   "all_pass": true,
+  "expires_at_utc_ms": 1790000000000,
   "static_scan_disclosure": "Static scan — runtime causality is proven per run at Stage 3/4."
 }

@@ -12,6 +12,7 @@ import {
   type ResearchScope,
   ResearchMetadataError,
 } from "./contracts";
+import { projectResearchAlphaVersionDeclaration, ResearchAlphaVersionDeclarationError } from "./alpha-version-declaration";
 import {
   ResearchPreflightPrivateResponseSchema,
   ResearchRequestedSpecSchema,
@@ -57,6 +58,47 @@ interface ResolvedSourceRequirements {
   requiredColumns: readonly string[];
   warmupBars: number;
   requiresFunding: boolean;
+}
+
+/** P08 checks only immutable P07 declarations; preflight is not execution admission. */
+export function assertDeclaredOptimization(alpha: ResearchAlphaVersionDataContract, spec: ResearchRequestedSpec): void {
+  let declaration: ReturnType<typeof projectResearchAlphaVersionDeclaration>;
+  try {
+    declaration = projectResearchAlphaVersionDeclaration(alpha.declaredContract, alpha.entrypoint);
+  } catch (error) {
+    if (!(error instanceof ResearchAlphaVersionDeclarationError)) throw error;
+    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "The bound AlphaVersion declaration is unavailable.", 409);
+  }
+  if (declaration.determinism.seed_required && spec.random_seed === null) {
+    throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "The bound AlphaVersion requires random_seed.", 409);
+  }
+  const sameScalar = (left: unknown, right: unknown): boolean =>
+    typeof left === typeof right && left === right;
+  const rangeContains = (value: unknown, low: number, high: number, step: number, integral: boolean): boolean => {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < low || value > high ||
+        (integral && !Number.isInteger(value))) return false;
+    const steps = (value - low) / step;
+    return Math.abs(steps - Math.round(steps)) <= 1e-9;
+  };
+  for (const override of spec.parameter_space_overrides) {
+    const declared = declaration.parameter_space[override.name];
+    if (!declared) {
+      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "A parameter override is not declared by the bound AlphaVersion.", 409);
+    }
+    let valid = false;
+    if (override.kind === "pin") {
+      if (declared.kind === "fixed") valid = sameScalar(override.value, declared.value);
+      else if (declared.kind === "categorical") valid = declared.values.some((value) => sameScalar(override.value, value));
+      else valid = rangeContains(override.value, declared.low, declared.high, declared.step, declared.kind === "int_range");
+    } else if (declared.kind === "int_range" || declared.kind === "float_range") {
+      valid = rangeContains(override.low, declared.low, declared.high, declared.step, declared.kind === "int_range") &&
+        rangeContains(override.high, declared.low, declared.high, declared.step, declared.kind === "int_range") &&
+        typeof override.low === "number" && typeof override.high === "number" && override.low <= override.high;
+    }
+    if (!valid) {
+      throw new ResearchPreflightError("RESEARCH_PREFLIGHT_INVALID", "A parameter override exceeds the bound AlphaVersion declaration.", 409);
+    }
+  }
 }
 
 @Injectable()
@@ -151,6 +193,7 @@ export class ResearchPreflightService {
       requestedSpec.alpha_binding.alpha_id,
       requestedSpec.alpha_binding.alpha_version_id,
     );
+    assertDeclaredOptimization(alpha, requestedSpec);
     return this.parseAlphaRequirements(alpha, requestedSpec.data.timeframe);
   }
 

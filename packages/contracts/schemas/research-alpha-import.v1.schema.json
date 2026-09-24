@@ -41,11 +41,13 @@
     "MirrorField": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["field", "state"],
+      "required": ["field", "state", "check", "note"],
       "properties": {
         "field": { "type": "string", "minLength": 1, "maxLength": 128 },
         "state": { "enum": ["parsed", "missing"] },
-        "value": {}
+        "value": {},
+        "check": { "enum": ["VERIFY", "GATED"] },
+        "note": { "type": "string", "minLength": 1, "maxLength": 256 }
       }
     },
     "GateRow": {
@@ -67,7 +69,10 @@
         },
         "state": { "enum": ["PASS", "FAIL", "SKIPPED"] },
         "message": { "type": "string", "maxLength": 512 },
-        "ms": { "type": "integer", "minimum": 0, "maximum": 3600000 }
+        "ms": { "type": "integer", "minimum": 0, "maximum": 3600000 },
+        "quarantine_code": {
+          "enum": ["QUARANTINED_CONTRACT", "QUARANTINED_ENTRYPOINT", "QUARANTINED_DIGEST_ALREADY_REGISTERED", "QUARANTINED_PARAMETER_SPACE", "QUARANTINED_DETERMINISM", "QUARANTINED_DATA_CONTRACT", "QUARANTINED_LOOKAHEAD"]
+        }
       }
     },
     "DeclarationScalar": {
@@ -199,13 +204,14 @@
       "type": "object",
       "additionalProperties": false,
       "description": "research.alpha-source.v1: the Parse receipt. It intentionally contains a read-only mirror, not source bytes or a mutable declared contract.",
-      "required": ["schema_version", "source_file_ref", "source_digest", "analysis_digest", "parse_ok", "mirror"],
+      "required": ["schema_version", "source_file_ref", "source_digest", "analysis_digest", "parse_ok", "expires_at_utc_ms", "mirror"],
       "properties": {
         "schema_version": { "const": "research.alpha-source.v1" },
         "source_file_ref": { "$ref": "#/$defs/OpaqueId" },
         "source_digest": { "$ref": "#/$defs/Digest" },
         "analysis_digest": { "$ref": "#/$defs/Digest" },
         "parse_ok": { "type": "boolean" },
+        "expires_at_utc_ms": { "$ref": "#/$defs/UtcMilliseconds" },
         "mirror": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/MirrorField" } }
       }
     },
@@ -213,7 +219,7 @@
       "type": "object",
       "additionalProperties": false,
       "description": "research.alpha-import-gates.v1: server-ordered gates. The client renders this order and must never synthesize PASS or skip state.",
-      "required": ["schema_version", "gate_receipt_id", "source_file_ref", "source_digest", "analysis_digest", "gates", "all_pass", "static_scan_disclosure"],
+      "required": ["schema_version", "gate_receipt_id", "source_file_ref", "source_digest", "analysis_digest", "gates", "all_pass", "expires_at_utc_ms", "static_scan_disclosure"],
       "properties": {
         "schema_version": { "const": "research.alpha-import-gates.v1" },
         "gate_receipt_id": { "$ref": "#/$defs/OpaqueId" },
@@ -222,6 +228,7 @@
         "analysis_digest": { "$ref": "#/$defs/Digest" },
         "gates": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "$ref": "#/$defs/GateRow" } },
         "all_pass": { "type": "boolean" },
+        "expires_at_utc_ms": { "$ref": "#/$defs/UtcMilliseconds" },
         "static_scan_disclosure": { "const": "Static scan — runtime causality is proven per run at Stage 3/4." }
       }
     },

@@ -426,6 +426,12 @@ def _mirror(contract: dict[str, object]) -> tuple[dict[str, object], ...]:
             "field": name,
             "state": "parsed" if value is not None else "missing",
             **({"value": value} if value is not None else {}),
+            "check": "VERIFY" if value is not None else "GATED",
+            "note": (
+                "Literal declaration parsed from the submitted source; validation is reported by the ordered gates."
+                if value is not None else
+                "This field is not declared in the submitted source; no value has been inferred."
+            ),
         }
         for name, value in fields
     )

@@ -659,6 +659,11 @@ class ResearchPreflightSnapshotService:
             raise ResearchPreflightSnapshotError(
                 "RESEARCH_PREFLIGHT_INVALID", "optuna_trials must be at least one."
             )
+        published_ceiling = self.engine_catalog.public_document().current_release.trial_ceiling
+        if trials > published_ceiling:
+            raise ResearchPreflightSnapshotError(
+                "RESEARCH_PREFLIGHT_RESOURCE_REFUSED", "The requested trial count exceeds the current release's published ceiling."
+            )
         # Refuse obviously unadmissible work *before* serializing a snapshot.
         # This keeps a rejected trial budget from accumulating an unreferenced
         # content-addressed frame. The final estimate below rechecks with the
