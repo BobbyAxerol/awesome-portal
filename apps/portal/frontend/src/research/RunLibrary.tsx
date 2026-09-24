@@ -227,7 +227,7 @@ const WITHHELD_WORDS: Record<Availability["state"], string> = {
 function Withheld({ availability, what }: { availability: Availability; what?: string }) {
   return (
     <span
-      className="mono text-[10px] italic leading-[16px]"
+      className="mono text-[10px] italic"
       style={{ color: "var(--ink-faint)" }}
       data-withheld={availability.state}
       data-reason-code={availability.reason_code ?? undefined}
@@ -242,11 +242,15 @@ function Withheld({ availability, what }: { availability: Availability; what?: s
 function StatusPill({ status }: { status: RunStatus }) {
   const tone = STATUS_TONE[status] ?? { background: "var(--paper-sunken)", ink: "var(--ink-soft)" };
   const running = status === "RUNNING";
+  /* The hi-fi pulses the whole RUNNING pill (rl-pulse, 2 s, 1 → .35); only
+     a running run beats, so a still pill is itself a fact. The shared
+     `data-motion` rule stops it for a reader who asked for no motion. */
   return (
     <span
-      className="inline-flex items-center gap-[5px]"
+      className="inline-flex items-center"
       data-status={status}
       role={running ? "status" : undefined}
+      data-motion={running ? "pulse" : undefined}
       style={{
         borderRadius: 999,
         padding: "1px 8px",
@@ -255,19 +259,9 @@ function StatusPill({ status }: { status: RunStatus }) {
         fontWeight: 600,
         background: tone.background,
         color: tone.ink,
+        ...(running ? ({ "--rs-motion-duration": "2s" } as CSSProperties) : {}),
       }}
     >
-      {/* The dot beats only while the run does. Spec 01 §3.4 gives it to
-          RUNNING alone, so a still pill is itself a fact. `motion-safe`
-          leaves it steady for a reader who asked for no motion. */}
-      {running ? (
-        <span
-          data-pulse
-          aria-hidden="true"
-          className="motion-safe:animate-pulse inline-block h-[6px] w-[6px] rounded-full"
-          style={{ background: tone.ink }}
-        />
-      ) : null}
       {status}
     </span>
   );
@@ -306,7 +300,8 @@ function EvidenceTrail({ stages }: { stages: readonly StageCell[] }) {
               data-stage-state={stage?.state ?? "pend"}
               data-tooltip-source={provenance}
               title={title}
-              className={`inline-flex items-center justify-center${stage?.state === "run" ? " motion-safe:animate-pulse" : ""}`}
+              className="inline-flex items-center justify-center"
+              data-motion={stage?.state === "run" ? "pulse" : undefined}
               style={{
                 width: 34,
                 height: 20,
@@ -317,6 +312,8 @@ function EvidenceTrail({ stages }: { stages: readonly StageCell[] }) {
                 fontFamily: MONO,
                 fontSize: 9,
                 fontWeight: 700,
+                /* hi-fi: the running cell beats at 1.6 s */
+                ...(stage?.state === "run" ? ({ "--rs-motion-duration": "1.6s" } as CSSProperties) : {}),
               }}
             >
               {key}
@@ -328,18 +325,29 @@ function EvidenceTrail({ stages }: { stages: readonly StageCell[] }) {
   );
 }
 
+/** Hi-fi sparkline captions, by the series the server says it is. */
 const SPARK_LABEL: Record<string, string> = {
-  oos_equity: "OOS equity",
-  search_progress: "search progress",
+  oos_equity: "stitched OOS equity",
+  search_progress: "equity — building",
   failed: "equity — none",
 };
+
+/** The hi-fi draws 24 columns in a 150 × 26 box. */
+const SPARK_COLUMNS = 24;
+
+/** Spec 01 §4.3: the placeholder reads, when hovered, that no series is shown. */
+export const SPARKLINE_UNAVAILABLE = "sparkline unavailable";
+
+const SPARK_BOX: CSSProperties = { gap: 1, height: 26, width: 150 };
 
 /**
  * The lazy sparkline.
  *
  * The placeholder is the resting state, not a loading artefact: a series the
  * server has not published never becomes a line, and no artifact or Parquet
- * path is ever fetched to produce one.
+ * path is ever fetched to produce one. It is drawn as the same 24 columns in
+ * the paper's quiet grey (spec 01 §4.3), all one height, so it cannot be read
+ * as a shape.
  */
 function Sparkline({
   item,
@@ -374,59 +382,87 @@ function Sparkline({
     };
   }, [item.run_id, onVisible]);
 
-  const label = item.sparkline.kind ? SPARK_LABEL[item.sparkline.kind] : "equity";
+  const label = item.sparkline.kind ? SPARK_LABEL[item.sparkline.kind] ?? "equity" : "equity";
   const available = isAvailable(item.sparkline.availability) && values && values.length > 0;
-  const peak = available ? Math.max(...values.map((v) => Math.abs(Number(v) || 0)), 1) : 1;
+  const shown = available ? values.slice(-SPARK_COLUMNS) : [];
+  const numbers = shown.map((value) => Math.abs(Number(value) || 0));
+  const peak = Math.max(...numbers, 1);
+  /* Hi-fi column ink by what the run is: a finished series in the OOS
+     accent, a series still being searched in the train tint, a failed one
+     in the quiet line colour. */
+  const ink =
+    item.sparkline.kind === "failed" || item.status === "FAILED"
+      ? "var(--line-strong)"
+      : item.sparkline.kind === "search_progress" || item.status === "RUNNING"
+        ? "var(--viz-train)"
+        : "var(--role-oos)";
 
   return (
     <span className="flex flex-none flex-col" style={{ gap: 3 }} data-sparkline={item.run_id} ref={box}>
       <span style={LABEL_9}>{label}</span>
       {available ? (
-        <span className="flex items-end" style={{ gap: 1, height: 26, width: 150 }} data-sparkline-values={values.length}>
-          {values.slice(0, 24).map((value, index) => (
+        <span className="flex items-end" style={SPARK_BOX} data-sparkline-values={shown.length}>
+          {numbers.map((value, index) => (
             <span
               key={index}
               className="flex-1 rounded-[1px]"
-              style={{
-                height: `${Math.max(6, (Math.abs(Number(value) || 0) / peak) * 100)}%`,
-                background: index === values.length - 1 ? "var(--role-oos)" : "var(--viz-train)",
-              }}
+              style={{ height: `${Math.max(12, (value / peak) * 96)}%`, background: ink, opacity: 0.75 }}
             />
           ))}
         </span>
       ) : (
-        /*
-         * The placeholder keeps the series' footprint, so a card with no
-         * series is the same height as one with a series — but it says which
-         * kind of nothing it is rather than being an empty grey box a reader
-         * would read as "still loading".
-         */
         <span
-          className="mono flex items-center justify-center rounded-[2px] text-[9px] italic"
+          className="flex items-end"
+          style={SPARK_BOX}
           data-sparkline-placeholder={item.sparkline.availability.state}
           data-reason-code={item.sparkline.availability.reason_code ?? undefined}
           title={
             item.sparkline.availability.state === "AVAILABLE"
-              ? "The series is read when the card scrolls into view."
-              : reasonSentence(item.sparkline.availability)
+              ? `${SPARKLINE_UNAVAILABLE} until the card scrolls into view`
+              : `${SPARKLINE_UNAVAILABLE} — ${reasonSentence(item.sparkline.availability)}`
           }
-          style={{ height: 26, width: 150, background: "var(--line-soft)", color: "var(--ink-faint)" }}
+          role="img"
+          aria-label={SPARKLINE_UNAVAILABLE}
         >
-          {item.sparkline.availability.state === "AVAILABLE"
-            ? "reads when visible"
-            : WITHHELD_WORDS[item.sparkline.availability.state]}
+          {Array.from({ length: SPARK_COLUMNS }, (_, index) => (
+            <span
+              key={index}
+              aria-hidden="true"
+              className="flex-1 rounded-[1px]"
+              style={{ height: "50%", background: "var(--line-soft)" }}
+            />
+          ))}
         </span>
       )}
     </span>
   );
 }
 
-/** DQ-08: round by unit for display; the exact server string stays in `title`. */
-const METRIC_UNIT: Partial<Record<MetricCell["role"], string>> = {
-  OOS_SHARPE: "ratio",
-  DECAY: "ratio",
-  TRADE_COUNT: "count",
-};
+/**
+ * A stat value for its slot (DQ-08, hi-fi figures).
+ *
+ * The hi-fi shows ratios at two places (`1.19`, `0.23`) and counts whole
+ * (`214`); the server's exact string stays in `title`. Anything else — a
+ * progress phrase, a duration the server already wrote — is shown as sent.
+ */
+const TWO_DP = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+export function statDisplay(metric: Pick<MetricCell, "role" | "value">): string | null {
+  if (metric.value === null) return null;
+  const parsed = Number(metric.value);
+  switch (metric.role) {
+    case "OOS_SHARPE":
+    case "DECAY":
+      return Number.isFinite(parsed) && metric.value.trim() !== "" ? TWO_DP.format(parsed) : metric.value;
+    case "TRADE_COUNT":
+      return formatMetric(metric.value, "count") ?? metric.value;
+    default:
+      return metric.value;
+  }
+}
+
+/** The reader's glyph for a withheld stat: its slot keeps a dash, the reason rides in `title`. */
+export const STAT_WITHHELD = "—";
 
 function Stats({ stats }: { stats: readonly MetricCell[] }) {
   return (
@@ -435,27 +471,36 @@ function Stats({ stats }: { stats: readonly MetricCell[] }) {
        stats into two rows. */
     <span className="flex flex-wrap" style={{ gap: 18, flex: "1 0 auto" }} data-stats>
       {stats.map((metric) => {
-        const shown =
-          isAvailable(metric.availability) && metric.value !== null
-            ? (METRIC_UNIT[metric.role] ? formatMetric(metric.value, METRIC_UNIT[metric.role]) : null) ?? metric.value
-            : null;
+        const shown = isAvailable(metric.availability) ? statDisplay(metric) : null;
         return (
           <span key={metric.key} className="flex flex-col" style={{ gap: 1 }} data-metric={metric.role}>
             <span style={LABEL_9}>{metric.label}</span>
-            <span
-              style={{
-                fontFamily: MONO,
-                fontSize: 13,
-                fontWeight: 600,
-                color:
-                  metric.tone === "BAD" ? "var(--bad)" : metric.tone === "ACCENT" ? "var(--accent)" : "var(--ink)",
-              }}
-              title={shown !== null && metric.value !== null ? metric.value : undefined}
-            >
-              {/* A withheld value keeps its slot and says so rather than
-                  becoming a zero. */}
-              {shown !== null ? shown : <Withheld availability={metric.availability} />}
-            </span>
+            {shown !== null ? (
+              <span
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color:
+                    metric.tone === "BAD" ? "var(--bad)" : metric.tone === "ACCENT" ? "var(--accent)" : "var(--ink)",
+                }}
+                title={metric.value !== null && metric.value !== shown ? metric.value : undefined}
+              >
+                {shown}
+              </span>
+            ) : (
+              /* A withheld value keeps its slot as a dash, never a zero; the
+                 sentence says why and the code stays for diagnostics. */
+              <span
+                style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: "var(--ink-faint)" }}
+                data-withheld={metric.availability.state}
+                data-reason-code={metric.availability.reason_code ?? undefined}
+                title={reasonSentence(metric.availability)}
+                aria-label={`${metric.label}: ${WITHHELD_WORDS[metric.availability.state]}`}
+              >
+                {STAT_WITHHELD}
+              </span>
+            )}
           </span>
         );
       })}
@@ -533,6 +578,57 @@ function openTarget(item: RunLibraryItem): { to: string; label: string; title?: 
   return { to: `/research/quantbt/runs/${id}/evidence`, label: "open evidence →" };
 }
 
+/**
+ * The run id: always the whole id, never a shortened one.
+ *
+ * Real ids are 37 characters; at full width they pushed the date and link to
+ * a second header row (card 131 px against the hi-fi's 101). The id now takes
+ * the room the row has and ellipsises the rest; `title` carries the full id
+ * and a click copies it, so nothing is lost to the cut.
+ */
+function RunId({ runId }: { runId: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  const copy = () => {
+    const clipboard = typeof navigator !== "undefined" ? navigator.clipboard : undefined;
+    if (!clipboard) return;
+    void clipboard.writeText(runId).then(
+      () => setCopied(true),
+      () => undefined,
+    );
+  };
+  return (
+    <button
+      type="button"
+      data-run-id={runId}
+      data-copied={copied || undefined}
+      onClick={copy}
+      title={copied ? `${runId} — copied` : `${runId} — click to copy`}
+      aria-label={`run ${runId}, copy id`}
+      className="truncate text-left"
+      style={{
+        flex: "1 1 96px",
+        minWidth: 72,
+        maxWidth: "max-content",
+        border: 0,
+        padding: 0,
+        background: "transparent",
+        color: "var(--ink)",
+        fontFamily: MONO,
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: "copy",
+      }}
+    >
+      {runId}
+    </button>
+  );
+}
+
 function CompareCheck({ runId, selected, onToggle }: { runId: string; selected: boolean; onToggle: () => void }) {
   /* 15 px box inside a 24 px target (spec 01 §8 hit-target rule). */
   return (
@@ -600,7 +696,7 @@ function RunCard({
         style={{ gap: 10, paddingBottom: 8, borderBottom: "1px solid var(--line-soft)" }}
       >
         <CompareCheck runId={item.run_id} selected={selected} onToggle={() => onToggle(item.run_id)} />
-        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{item.run_id}</span>
+        <RunId runId={item.run_id} />
         <StatusPill status={item.status} />
 
         {item.mode.display !== null && (isAvailable(item.mode.availability) || item.mode.availability.state === "LEGACY_METADATA_ONLY") ? (
@@ -627,7 +723,7 @@ function RunCard({
         {item.binding ? (
           <span
             data-binding={item.binding.alpha_version_id}
-            title={`${boundTitle(item.binding.alpha_name, item.binding.av)}\ndigest ${item.binding.digest}`}
+            title={boundTitle(item.binding.alpha_name, item.binding.av)}
             style={DATA_CHIP}
           >
             {item.binding.alpha_name} · {item.binding.av}
@@ -699,7 +795,8 @@ function RunCard({
           <Link
             to={open.to}
             title={open.title}
-            style={{ fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--accent)" }}
+            className="text-[color:var(--accent)]"
+            style={{ fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em" }}
             data-open={item.run_id}
             {...(open.label === "open evidence →" ? { "data-open-evidence": item.run_id } : {})}
           >
@@ -840,14 +937,19 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
         <span data-compare-note {...(mode === "refused" && !unknown ? { "data-compare-refusal": true } : {})}>
           {note}
         </span>
-        <span className="flex flex-wrap" style={{ gap: "0 10px", fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
-          {selection.map((run) => (
-            <span key={run.runId} data-compare-selected={run.runId} data-hidden={run.hidden}>
-              {run.runId}
-              {run.hidden ? " (hidden by filter)" : ""}
-            </span>
-          ))}
-        </span>
+        {/* The hi-fi bar is one line. The ids join it only when a selected
+            run is off screen (spec 01 §12.5) — otherwise its card is right
+            there, outlined. */}
+        {selection.some((run) => run.hidden) ? (
+          <span className="flex flex-wrap" style={{ gap: "0 10px", fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
+            {selection.map((run) => (
+              <span key={run.runId} data-compare-selected={run.runId} data-hidden={run.hidden}>
+                {run.runId}
+                {run.hidden ? " (hidden by filter)" : ""}
+              </span>
+            ))}
+          </span>
+        ) : null}
       </span>
       {/* Screen 13 is not built: the button never navigates (FE-S01-05). */}
       <button
@@ -901,6 +1003,8 @@ function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[];
 
 interface RunGroup {
   key: string;
+  /** Hi-fi order: bound alphas by name, then av; scratch after them all. */
+  order: readonly [rank: string, alphaName: string, av: string];
   title: string;
   sub: string;
   rows: readonly RunLibraryItem[];
@@ -933,6 +1037,7 @@ export function groupRuns(items: readonly RunLibraryItem[]): RunGroup[] {
     }
     groups.set(key, {
       key,
+      order: bound ? ["a", bound.alpha_name, bound.av] : [key, "", ""],
       title: bound
         ? `${bound.alpha_name} · ${bound.av}`
         : scratch
@@ -954,7 +1059,13 @@ export function groupRuns(items: readonly RunLibraryItem[]): RunGroup[] {
   }
   /* Scratch and unbound rows sort last: they can never support an approval,
      so they do not belong above the rows that can. */
-  return [...groups.values()].sort((left, right) => left.key.localeCompare(right.key));
+  const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  return [...groups.values()].sort(
+    (left, right) =>
+      byText(left.order[0], right.order[0]) ||
+      left.order[1].localeCompare(right.order[1]) ||
+      left.order[2].localeCompare(right.order[2]),
+  );
 }
 
 /* ------------------------------------------------------------ the filter */
@@ -1125,7 +1236,12 @@ export function RunLibrary(props: RunLibraryProps) {
           >
             attempt lineage · {LINEAGE_PHASE}
           </span>
-          <Link to={JOURNEY_MAP} data-link="journey-map" style={{ fontFamily: MONO, fontSize: 10, color: "var(--accent)" }}>
+          <Link
+            to={JOURNEY_MAP}
+            data-link="journey-map"
+            className="text-[color:var(--accent)]"
+            style={{ fontFamily: MONO, fontSize: 10 }}
+          >
             journey map ↗
           </Link>
           <Link

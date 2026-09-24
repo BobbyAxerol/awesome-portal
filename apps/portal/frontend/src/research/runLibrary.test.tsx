@@ -319,9 +319,13 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
   it("never turns a NOT_PUBLISHED metric into a zero", () => {
     view();
     const decay = document.querySelector('[data-metric="DECAY"]') as HTMLElement;
-    expect(decay.textContent).toContain("not published");
+    // Hi-fi slot: a dash in the value place, the sentence in `title`.
+    const withheld = decay.querySelector("[data-withheld]") as HTMLElement;
+    expect(withheld.textContent).toBe("—");
+    expect(withheld.getAttribute("aria-label")).toContain("not published");
+    expect(withheld.getAttribute("title")).toBeTruthy();
     expect(decay.textContent).not.toMatch(/\b0\b/);
-    expect(decay.querySelector("[data-withheld]")?.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
+    expect(withheld.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
   });
 
   it("keeps a legacy row and names it as not current evidence", () => {
