@@ -6,6 +6,7 @@
 - Browser receipt chỉ dùng **API stub** dựng theo shape `lineage.contract.ts` / `lineage.service.ts`, vì chưa có fixture canonical (`CG-P19-01`).
 - Receipt này chỉ ghi thay đổi frontend và evidence. Nó không đổi rule, contract hay phase gate, và **không** gọi P19 là `VERIFIED`.
 - **Sau audit độc lập (2026-09-24):** code sửa A1–A3 ở `1fb29010` (tree `6b7e0419`), docs sửa A4–A6 trong commit docs sau audit. Chi tiết và số chạy lại ở [§12](#12-audit-p19-và-a-fix). Các số trước audit ở §5 được giữ làm lịch sử.
+- **Vòng khớp hi-fi (Bobby 2026-09-24):** code R1 `c9dd195e` (tree `46d101c0`) khớp hi-fi 7 điểm, ledger `VD-P19-01…07`; receipt R2 trên cùng head ở [§13](#13-vòng-khớp-hi-fi-r1-c9dd195e-và-receipt-r2). **Spec ≠ hi-fi thì hi-fi thắng.** Các mô tả "chip cuộn", "thụt DFS", "6 nhóm state", "expand-all", "promotion rule viết lại" ở §4–§7 là bản trước R1, giữ làm lịch sử.
 
 ## 0. Packet và những gì đã đọc
 
@@ -13,10 +14,10 @@
 
 | File | Nội dung |
 |---|---|
-| `thanhvuong-frontend-receipt.md` | Receipt này: đã đọc, git, file, route/link, mapping hi-fi, so hi-fi, evidence, discrepancy, Reuse report, kết luận, audit + A-fix (§12) |
-| [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md) | `CG-P19-01…13` theo template CLAUDE.md §5 (`11` WITHDRAWN sau audit, `13` thêm sau audit), kèm locator/actual/expected/đề xuất/test/fallback; việc Bobby quyết B1–B6; kiểm lại ngày 2026-09-24 |
+| `thanhvuong-frontend-receipt.md` | Receipt này: đã đọc, git, file, route/link, mapping hi-fi, so hi-fi, evidence, discrepancy, Reuse report, kết luận, audit + A-fix (§12), vòng khớp hi-fi R1/R2 (§13) |
+| [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md) | `CG-P19-01…14` theo template CLAUDE.md §5 (`11` WITHDRAWN sau audit, `13` thêm sau audit, `14` thêm ở R2), kèm locator/actual/expected/đề xuất/test/fallback; việc Bobby quyết B1–B6; kiểm lại ngày 2026-09-24 |
 | [thanhvuong-test-results.json](./thanhvuong-test-results.json) | Evidence máy đọc được: tree SHA, từng gate (lệnh, exit, số đếm), `not_run`, SHA-256 ảnh/log (không commit) |
-| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | `open_debt` rỗng (B1 đóng ở `74f26200`; audit A1–A3 đóng ở `1fb29010`); nợ đã đóng, deferred, request mở, downstream gate |
+| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | Nợ đã đóng (B1 ở `74f26200`; audit A1–A3 ở `1fb29010`; `VD-P19-01…07` ở `c9dd195e`); `open_debt` còn thật sau R2 (ngoại lệ spec-over-hi-fi, câu promotion rule vs mapping ACTIVE, lệch "khác"); deferred, request mở, downstream gate |
 | [thanhvuong-rollback.md](./thanhvuong-rollback.md) | Revert từng commit, mới nhất trước |
 
 Dòng trạng thái ở Unified §13 và implementation note dưới
@@ -444,3 +445,126 @@ Probe tạm `e2e/_probe-research-tvp19fix.spec.ts` (SHA `109bdb10803653f4`) = pr
 | `p19fix-empty-660.png` | `dc046189d139d513` | `p19fix-hifi-1280.png` / `-660.png` | `1d0d841b5185c58b` / `6238fc39c4c9d064` |
 
 Ảnh 403 và 404 khác SHA chỉ vì request id in trong notice (`req_p19_403` vs `req_p19_404`); badge, state và câu giống hệt (FIX-A3). Ảnh full/partial/dark khác SHA so với vòng 2 vì chip giờ 8.5px mono (A1). Danh sách đầy đủ (kể cả `all/`) ở [thanhvuong-test-results.json](./thanhvuong-test-results.json) `evidence_store.sha256_prefix_afix_tree_6b7e0419`.
+
+## 13. Vòng khớp hi-fi (R1 `c9dd195e`) và receipt R2
+
+**Quyết định Bobby 2026-09-24:** "version này chốt theo đúng khớp với HIFI; nếu có gì không hợp lý thì mở version mới để làm gọn đúng scope; 6–7 visual decision phải ghi vào Unified plan; khi làm P20 sẽ đẻ thêm debt mới nên ghi vào handoff lẫn Unified cho các phase sau."
+
+**Nguyên tắc từ vòng này: spec ≠ hi-fi thì hi-fi thắng.** Chỗ nào vẫn giữ spec là ngoại lệ, có `VD` và chờ Bobby chốt (bảng 13.4).
+
+### 13.1 Commit R1
+
+- `c9dd195e2c7bb9710af8babf7b56c655ce2c6da1` `feat(research): S10 matches hi-fi filters, order, chips, rail and copy`. Parent `dacbbd75`, tree `46d101c047bfc5b8ee6b9caf18de7d2f936ff0cd`.
+- `LineageDetail.tsx` +811/−613, `lineageDetail.test.tsx` +292/−41. `lineageClient.ts`, `useLineage.ts`, `LineageRoute.tsx` không đổi. Không backend, contract, package hay lock file.
+- 7 điểm = ledger `VD-P19-01…07` trong [Unified note P19](../../../UNIFIED_IMPLEMENTATION_PLAN.md#p19-thanhvuong-frontend-implementation-note--screen-10-2026-09-24):
+  1. 4 filter `active · draft · superseded · abandoned`, bật/tắt độc lập, counter "showing n of m attempts".
+  2. Band ACTIVE trước (tách bằng `filter`, không `.sort`).
+  3. Chip wrap, mono 9.5px, radius 999.
+  4. Rail cha–con có chấm, 34 + min(depth, 8) × 22.
+  5. Promotion rule nguyên văn hi-fi; pick chỉ từ `promotion_pick`.
+  6. Title, subtitle, source chip, rules nguyên văn hi-fi; rules là panel cuối.
+  7. Toggle "show probe attempts" đúng chỗ hi-fi, `disabled` + `CG-P19-03`; chip `+ probes` disabled mỗi band; bỏ expand-all; card đóng khi tải.
+
+### 13.2 Gate R2 (head `c9dd195e`, 2026-09-24, workspace)
+
+| Gate | Lệnh | Exit | Kết quả | SHA log |
+|---|---|---|---|---|
+| Typecheck | `npx tsc -b --noEmit` | 0 | 0 lỗi | `bcb1a61798abda8d` |
+| Build | `npm run build` | 0 | chỉ cảnh báo chunk | `8c1bca03581fe047` |
+| S10 + boundary | `npx vitest run src/research/lineageDetail.test.tsx src/research/researchBoundary.test.ts` | 0 | **66/66** (`lineageDetail` 52, `researchBoundary` 14) | `df6738425bee3d2b` |
+| Unit toàn bộ | `npx vitest run` | 0 | **171 file · 3067 pass · 1 skip** (3068), 86.1 s, không flake | `e276b8a59681a6bb` |
+| Probe Research toàn bộ | `RESEARCH_SHOT_DIR=~/tv-shots/p19r2 npx playwright test -c .tv-probe.config.ts --workers=1` | 0 | **119/119** lượt đầu, 2.6 phút: fixtures 8 + product 74 + r2 37 | `playwright.log` `6e2cb46e8254dddd`, `probe.log` `bd1e58114364d01d` |
+
+- Preview riêng `npx vite preview --port 4417 --strictPort --host 127.0.0.1` (chạy nền bằng `setsid`, PID ghi ở `preview.pid`; tiến trình 3983513 / 3983552 / 3983553), API stub theo shape `lineage.service.ts` (fixture canonical vẫn chưa có, `CG-P19-01`).
+- Probe tạm `e2e/_probe-research-tvp19r2.spec.ts` (SHA `4a2a5eef4bb65f7b`) = harness probe audit + assertion theo hi-fi; config tạm `.tv-probe.config.ts` (SHA `75c00c3a4819ea01`). Cả hai đã xoá khỏi repo (bản sao `~/tv-shots/p19r2/*.copy`); không còn `test-results/`; preview đã kill, `ss -ltnp | grep 4417` rỗng; `git status --short` rỗng.
+
+### 13.3 Assertion R2 theo hi-fi (1280 và 660)
+
+| Nhóm | Kết quả browser |
+|---|---|
+| Full + dark | 1280 hai cột 571/381 (dark 602/402); 660 một cột, overflow 0. Band `["ACTIVE","SUPERSEDED"]`. Chip wrap: `overflow-x` visible, over 0, 2/7 dòng (dark 660: 2/5); thử cuộn chip → scrollLeft 0, docX 0. 16 rail, 0 sai bề rộng; `::before` −13px / 12px |
+| Card | 0 detail khi tải; click mở (detail 1, `aria-expanded=true`), click lần hai đóng. Không expand-all |
+| Toggle probes | `disabled`, title chứa `CG-P19-03`, 0 chữ số; 2 chip `+ probes` đều disabled |
+| Font | `.ln-chip` / `.ln-fchip` / `.ln-toggle` / `.ln-cfg` 9.5px `"JetBrains Mono"`; `.ln-cert` 9px. "cert not published", không "N/A" |
+| Filter × counter | Nhóm ACTIVE 3, DRAFT 1, SUPERSEDED 11, ABANDONED 1. Cả 16 tổ hợp: counter = số row = `aria-pressed`. Nhãn `active, draft, superseded, abandoned` |
+| Partial | "showing 4 of 4 attempts · 140 on record"; note bounded `P19_BOUNDED_GRAPH_LIMIT_REACHED`; child runs PARTIAL; pick NOT_PUBLISHED `P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK`; diff PARENT_OUTSIDE / NOT_PUBLISHED; không số 0 giả |
+| Empty | "showing 0 of 0 attempts" + "No attempt is recorded for this alpha yet." |
+| Virtual 120 | DOM 23 → 30 sau cuộn; chip sâu `att_39` được chọn, trong khung, detail mở, focus giữ; không chồng row; "showing 120 of 120 attempts" |
+| GATES RESET | SPAN, không onclick/role; click row và panel diff: 0 request mới, selection không đổi, 0 mutation |
+| Deep link `?av=av_0_9_2` | bandTop 8 lúc tải và sau reload, `att_01` được chọn; chọn attempt → URL thêm `&attempt=` (replace); Back khôi phục selection (vị trí cuộn không khôi phục, chỉ ghi nhận) |
+| Keyboard | 4 Tab tới chip đầu; focus ring double box-shadow; Enter chọn; Enter trên filter DRAFT → "showing 1 of 16 attempts"; Enter trên card mở detail |
+| Refusal 400/401/403/404/503 | 10 panel, pending 6, có request id, không lộ, 1 GET `limit=128`; 503 retry → 2 GET. 403 và 404 cùng bộ (denied, badge denied, cùng câu, 6× denied) |
+| Link | evidence `/research/quantbt/runs/run_…/evidence`, report `…/report`, runs `?group=1&alpha=`, `/runs/new`, `/alpha-import`; rc là SPAN chưa route; Run Library → lineage → evidence chạy |
+| Copy | Title, subtitle, source chip, promotion rule, rules: chuỗi hi-fi = chuỗi product. Nhãn filter bằng nhau; format counter bằng nhau (hi-fi "showing 6 of 52") |
+| Hi-fi | 1280 overflow 0, cao 1493; 660 overflow 13 (hi-fi không responsive) |
+
+**Bug:** không có bug nào làm fail assertion. Probe pass lượt đầu, không sửa src.
+
+### 13.4 Lệch còn lại, phân loại
+
+**Field-driven** (contract thiếu field; giữ vị trí/hình dạng hi-fi + typed absence):
+
+| Ô hi-fi | Product | Request |
+|---|---|---|
+| "+24 probes", "show 46 probe attempts", kiểu row storied/probe | chip `+ probes` và toggle disabled, không số | `CG-P19-03` |
+| rc chip, dòng pick "→ rc_ (draft) · gate R1 next" | "rc & publish →" SPAN chưa route | `CG-P19-04` |
+| cert / OOS / claim / decay / verdict | "cert not published", NotInContract | `CG-P19-05` |
+| exercised / untried | NotInContract | `CG-P19-06` |
+| outcome "best C · promote closed" | NotInContract | `CG-P19-07` |
+| spec line và note tường thuật của card | `intent_kind` · `space_signature`, `reason` của server | `CG-P19-08` |
+| "the ACTIVE attempt" (câu promotion rule) | mọi attempt của version ACTIVE hiện ACTIVE (3 trong fixture) | `CG-P19-14` (mới) |
+| nhãn run `R-WFO-118` | `primary_run.run_id` | chưa có request (không có field label) |
+| "BTCUSDT · 4h" trên breadcrumb | không hiện | chưa có request |
+| id ngắn `att_01`, hash alpha ngắn | ULID dài: chip wrap nhiều dòng hơn, header card 2 dòng | chưa có request (hiển thị, không phải field) |
+| note tường thuật của diff | chip từ `semantic_diff.changes` | không request (hi-fi minh hoạ) |
+| counter hi-fi chỉ đếm attempt storied | counter đếm mọi attempt | theo `CG-P19-03` |
+
+**Spec ≠ hi-fi — hi-fi thắng:**
+
+| Điểm | Spec | Hi-fi | Product |
+|---|---|---|---|
+| Copy title/subtitle/rules/promotion rule | spec §2.5 | hi-fi | hi-fi |
+| Chip | 8.5px, radius 3 | 9.5px, radius 999 | hi-fi |
+| Band | card riêng, viền trái 3px | hàng trong root card | hi-fi |
+| Opacity SUPERSEDED/ABANDONED | .72 | .82 | hi-fi |
+| **Thứ tự band** | ACTIVE-first (T01) | SUPERSEDED trên ACTIVE | **spec — ngoại lệ, `VD-P19-02`, chờ Bobby** |
+| **Bước rail** | 22px | 26px | **spec — ngoại lệ, `VD-P19-04`, chờ Bobby** |
+| "import new version →" | có | không | giữ (spec), chỉ ở band ACTIVE |
+
+**Khác:**
+
+| Điểm | Ghi chú |
+|---|---|
+| "cert not published" thay "cert —" | CLAUDE.md cấm `-` thay số |
+| Panel counts | Không có trong hi-fi; handoff bắt disclosure |
+| Chip state thô cạnh status (READY, FAILED…) | Chỉ khi khác status suy ra |
+| Source chip "attempts.json" | Nguyên văn hi-fi; `read_authority` thật là PORTAL_PERSISTED_RESEARCH (ở title và heading counts) |
+| Chrome module QuantBT ("QuantBT Backtest REAL", Runs/Imports/New run) trên breadcrumb | Shell dùng chung |
+| Dark và 660 | Hi-fi không có |
+| Path diff dài bẻ giữa từ ("optimization.effective_sc hedule") | Hiển thị |
+| Lưới dark 602/402 vs light 571/381 cùng viewport | Hiển thị |
+| Ảnh fullPage có topbar/sidebar sticky nằm giữa ảnh | Artefact chụp, không phải bug |
+
+### 13.5 Ảnh R2 (`~/tv-shots/p19r2/`, không commit)
+
+| File | SHA-256 | File | SHA-256 |
+|---|---|---|---|
+| `p19r2-hifi-1280.png` (= ảnh hi-fi A-fix) | `1d0d841b5185c58b` | `p19r2-hifi-660.png` | `03b582cef17e3397` |
+| `p19r2-compare-1280.png` (hi-fi ↔ product) | `4984b76cd91f44bd` | `p19r2-compare-660.png` | `fcaf727215ab4f40` |
+| `p19-r2-full-1280.png` | `64b0967a4633f7c8` | `p19-r2-full-660.png` | `63b7bd6a16d09ec0` |
+| `p19-r2-full-dark-1280.png` | `f6db2bbac9292853` | `p19-r2-full-dark-660.png` | `21635bcd8aac2544` |
+| `p19-r2-filter-1280.png` | `5884f0320cc34130` | `p19-r2-filter-660.png` | `e6ed41d3896fab72` |
+| `p19r2-loading-1280.png` | `67bcfaf11a8062b8` | `p19r2-loading-660.png` | `8f41aab881fa9a97` |
+| `p19-r2-partial-1280.png` | `fecb0f56aa8479c4` | `p19-r2-partial-660.png` | `672111b81e8c8687` |
+| `p19-r2-empty-1280.png` | `f2ee64ce82b48560` | `p19-r2-empty-660.png` | `f9903941f3198227` |
+| `p19-r2-virtual-120-1280.png` | `4b3a4b5659dec347` | `p19-r2-virtual-120-660.png` | `0537b39f046b4b59` |
+| `p19-r2-gates-1280.png` | `deda6f6f97c4927c` | `p19-r2-gates-660.png` | `cc647f7bdc060b2a` |
+| `p19-r2-deep-link-av-1280.png` | `6f747f16e605784a` | `p19-r2-deep-link-av-660.png` | `5810880e171114bd` |
+| `p19-r2-keyboard-1280.png` | `0dd548fb9bbf5321` | `p19-r2-keyboard-660.png` | `72647f86dfed468a` |
+| `p19-r2-refusal-400-1280.png` | `5ab296593bbccb75` | `p19-r2-refusal-400-660.png` | `96cded78b72b674f` |
+| `p19-r2-refusal-401-1280.png` | `5be22b9f20e5ddf3` | `p19-r2-refusal-401-660.png` | `d6966b2aac51b4d6` |
+| `p19-r2-refusal-403-1280.png` | `80cc5bd94577dd25` | `p19-r2-refusal-403-660.png` | `36ad1dcc1eb43dd3` |
+| `p19-r2-refusal-404-1280.png` | `7f43c30a78d3a293` | `p19-r2-refusal-404-660.png` | `de8d9de8c17ae141` |
+| `p19-r2-refusal-503-1280.png` | `c140bc2ed60920d2` | `p19-r2-refusal-503-660.png` | `ae91fa7f634233db` |
+
+`p19-r2-filter-1280.png` trùng SHA với `p19-r2-loading-resolved-1280.png`: cả hai chụp trạng thái full sau khi tải, trước khi đổi filter. Ảnh 403 và 404 khác SHA chỉ vì request id. Danh sách đầy đủ (kể cả ảnh probe product/fixtures) ở [thanhvuong-test-results.json](./thanhvuong-test-results.json) `evidence_store.sha256_prefix_r2_tree_46d101c0`.

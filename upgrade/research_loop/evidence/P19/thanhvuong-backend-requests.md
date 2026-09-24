@@ -19,7 +19,16 @@ Kết quả kiểm:
 - `git ls-tree -r <ref> --name-only | grep -i "fixtures.*lineage"` exit 1 ở `HEAD`, `9060a7c4` và `62d7d864`. Chưa có fixture lineage ở đâu.
 - `9060a7c4..62d7d864` chỉ gồm `62d7d864` (RF-03 preflight/progress) và không chạm lineage.
 
-**Sau audit (2026-09-24): 12 OPEN (`01…10`, `12`, `13`), 1 WITHDRAWN (`11`).** Chúng được liệt kê ở §1.
+**Kiểm lại lần R2 (2026-09-24, sau `git fetch`):**
+- Code head `c9dd195e` (R1 khớp hi-fi, tree `46d101c0`); baseline `primus-origin/docs/research-loop-plan` = **`bb25bf39`**.
+- `62d7d864..bb25bf39` chỉ gồm `bb25bf39` (docs: audit P11–P15, RF-05/RF-06, request Codex P11–P15). `git diff --stat 62d7d864 bb25bf39 -- <OpenAPI lineage> <d.ts lineage> apps/control-api/src/research/lineage* upgrade/research_loop/evidence/P19` **rỗng**.
+- OpenAPI và d.ts lineage ở `c9dd195e` và `bb25bf39`: commit cuối `5e844a90`, SHA-256 vẫn `9bdfae71d1b850c6…` / `c6e8b25f01f61b59…`.
+- `git ls-tree -r <ref> --name-only | grep -i "fixtures.*lineage"` exit 1 ở `c9dd195e` và `bb25bf39`.
+- Grep d.ts ở cả hai ref không có `presentation_kind`, `probe`, `storied`, `release_candidate`, `cert`, `spec_label`, `exercised`, `outcome`, `next_cursor` hay status promotion cấp attempt. Mọi request OPEN vẫn OPEN.
+
+**Sau R2: 13 OPEN (`01…10`, `12`, `13`, `14`), 1 WITHDRAWN (`11`).** `14` mới; `03`, `04`, `05` mở rộng theo ô hi-fi mà R1 đặt đúng chỗ (số probe mỗi version, rc và cert theo attempt/pick).
+
+**Sau audit (2026-09-24, lịch sử): 12 OPEN (`01…10`, `12`, `13`), 1 WITHDRAWN (`11`).** Chúng được liệt kê ở §1.
 - `CG-P19-11` WITHDRAWN: handoff dòng 29 đã trả lời chính sách F-04; frontend tự sửa ở `1fb29010` (404 → `denied`, cùng badge với 403). Giữ số thứ tự.
 - `CG-P19-13` thêm theo audit A6: bảng định nghĩa đối chiếu `lineage.counts` với Run Library.
 
@@ -75,9 +84,9 @@ Backend request (@codex)
 
 ```text
 Backend request (@codex)
-- Endpoint/field cần: AttemptNode.presentation_kind: "STORIED" | "PROBE" (server phân loại theo spec 10 §3 / §14), hoặc xác nhận P19 không có phân loại
+- Endpoint/field cần: AttemptNode.presentation_kind: "STORIED" | "PROBE" (server phân loại theo spec 10 §3 / §14), và (R2) số probe mỗi version `LineageVersion.probe_count` + tổng probe của alpha, hoặc xác nhận P19 không có phân loại
 - Lý do UI: hi-fi và spec vẽ 6 storied card + 46 probe row nhóm theo tuần, cùng toggle "show 46 probes"; spec T01/T02/T04 dựa vào đây
-- Ảnh hưởng hiện tại: mọi attempt là node cùng loại; toggle probes được thay bằng expand-all (VISUAL_DECISION_REQUIRED)
+- Ảnh hưởng hiện tại: mọi attempt là node cùng loại. Từ R1 `c9dd195e`: toggle "show probe attempts" ở đúng chỗ hi-fi nhưng `disabled` + `data-reason-code=CG-P19-03`; mỗi band có chip `+ probes` disabled, không số (hi-fi "+24 probes", "show 46 probe attempts"); counter đếm mọi attempt (hi-fi chỉ đếm storied)
 - Đề xuất schema: field enum + reason_code khi nguồn không phân loại — additive
 ```
 
@@ -88,7 +97,7 @@ Backend request (@codex)
 | Expected | Server cấp nhãn, hoặc xác nhận vắng thật để spec T01/T02 ghi `NOT_APPLICABLE_PROVEN` |
 | Đề xuất nhỏ nhất | `presentation_kind` + `availability` |
 | Test khi có | U20 counter theo storied/probe; probe T01 "showing 6 of 52"; T02 toggle |
-| Fallback đang chạy | Expand-all; counter "showing n of m attempts · total" |
+| Fallback đang chạy | Từ `c9dd195e`: toggle + chip `+ probes` disabled với lý do `PROBES_REASON` (`LineageDetail.tsx:80–81`), không số; counter "showing n of m attempts" đếm mọi attempt (U50; probe R2 `r2 full`). Trước R1: expand-all |
 
 ### CG-P19-04 — release-candidate ref trên attempt / pick
 
@@ -102,12 +111,12 @@ Backend request (@codex)
 
 | Mục | Nội dung |
 |---|---|
-| Locator | `AttemptNode`, `PromotionPick` trong d.ts (không có rc); spec 10 §2.2, §2.3, T07 |
+| Locator | `AttemptNode`, `PromotionPick` trong d.ts (không có rc); spec 10 §2.2, §2.3, T07; hi-fi: chip rc trên attempt và dòng pick "→ rc_ (draft) · gate R1 next" (R2: cần theo **từng attempt và từng pick**) |
 | Actual | Không có field |
 | Expected | Ref rc typed, hoặc xác nhận rc thuộc P21 và không bao giờ nằm trên lineage |
 | Đề xuất nhỏ nhất | `release_candidate: { rc_id, state } \| null` + availability |
 | Test khi có | Chip rc; link sang Screen 11 khi có route (downstream `P19-FE-DG-05`) |
-| Fallback đang chạy | Không có chip rc; banner pick in attempt + run + source rev/digest/as-of |
+| Fallback đang chạy | Không có chip rc; banner pick in attempt + run + source rev/digest/as-of; "rc & publish →" là SPAN chưa route, title NOT_IN_CONTRACT (probe R2 `r2 links`) |
 
 ### CG-P19-05 — mini-metrics cert / OOS / decay
 
@@ -121,12 +130,12 @@ Backend request (@codex)
 
 | Mục | Nội dung |
 |---|---|
-| Locator | `AttemptNode.primary_run` (run_id, state, digests, engine_release_id, technical_retry_count); `LineageDetail.tsx` `NOT_IN_CONTRACT` (dòng 66) |
+| Locator | `AttemptNode.primary_run` (run_id, state, digests, engine_release_id, technical_retry_count); `LineageDetail.tsx` `NOT_IN_CONTRACT`; từ `c9dd195e` "cert not published" (`LineageDetail.tsx:1025`, `:1085`) ở chỗ hi-fi "cert —". R2: cert/OOS/claim/decay/verdict cần theo **từng attempt và từng pick** |
 | Actual | Không có metric. Frontend không được tính hay gộp |
 | Expected | Metric có scope, hoặc Codex xác nhận S10 không in metric và dùng link sang S09 |
 | Đề xuất nhỏ nhất | Xác nhận "không có ở P19" |
 | Test khi có | U22 theo field |
-| Fallback đang chạy | NOT_IN_CONTRACT + link "run report" `/runs/{id}/report` |
+| Fallback đang chạy | NOT_IN_CONTRACT / "cert not published" (không `-`, không `N/A`) + link "run report" `/runs/{id}/report` |
 
 ### CG-P19-06 — exercised / untried trên version
 
@@ -272,6 +281,26 @@ Backend request (@codex)
 | Test khi có | Unit/probe: dựng cùng tập attempt cho S10 và Run Library, so từng count theo bảng |
 | Fallback đang chạy | `NOT_RUN` + lý do; không suy định nghĩa ở frontend |
 
+### CG-P19-14 — status promotion cấp attempt (thêm ở R2)
+
+```text
+Backend request (@codex)
+- Endpoint/field cần: AttemptNode.promotion_state (vd. "PROMOTED" | "NOT_PROMOTED" | "SUPERSEDED") hoặc một con trỏ version-level `promoted_attempt_id` do server cấp, kèm availability/reason_code khi nguồn không publish — hoặc xác nhận P19 không có khái niệm "the ACTIVE attempt"
+- Lý do UI: hi-fi (và từ R1 promotion rule nguyên văn) ghi "Only the ACTIVE attempt promotes"; filter hi-fi chia attempt theo ACTIVE/DRAFT/SUPERSEDED/ABANDONED. Contract chỉ có lifecycle của version, nên FE suy status từ version: mọi attempt của version ACTIVE đều hiện ACTIVE (3 attempt trong fixture probe) — câu rule và hình vẽ mâu thuẫn nhau
+- Ảnh hưởng hiện tại: /research/quantbt/alphas/:alphaId/lineage — filter "active", dot rail, chip status và câu promotion rule
+- Đề xuất schema: (chỉ đề xuất — codex quyết) field enum additive trên AttemptNode, hoặc `LineageVersion.promoted_attempt_id: string | null` + `promoted_attempt_state` absence; không endpoint mới
+```
+
+| Mục | Nội dung |
+|---|---|
+| Locator | `research-attempt-lineage.d.ts` `AttemptNode.state` (lifecycle attempt: DRAFT/PREFLIGHT_VALID/…/ABANDONED) và `LineageVersion.lifecycle_state`; `LineageDetail.tsx:147` `lineageStatus`, `:70` `PROMOTION_RULE`; hi-fi `QuantBT 10 Attempt Lineage.dc.html` promotion rule + filter row |
+| Actual | Status ACTIVE/SUPERSEDED cấp attempt là suy từ version (partition, không so metric). Probe R2 full: ACTIVE 3, DRAFT 1, SUPERSEDED 11, ABANDONED 1; cả 3 attempt của version ACTIVE mang ACTIVE. Pick chỉ từ `promotion_pick` (hiện NOT_PUBLISHED ở mọi nơi, `CG-P19-10`) |
+| Expected | Đúng một attempt được gọi là "ACTIVE"/promoted theo fact server, hoặc Codex xác nhận khái niệm đó là version-level để Bobby chốt đổi câu/nhãn (version mới) |
+| Đề xuất nhỏ nhất | `LineageVersion.promoted_attempt_id` (nullable) + reason code khi không publish; nếu trùng nghĩa với `promotion_pick.attempt_id` thì chỉ cần câu xác nhận |
+| Test khi có | U44 đổi mapping: ACTIVE chỉ cho attempt promoted, các attempt khác của version ACTIVE ra nhóm riêng; U49 giữ câu rule; probe `r2 filter-counter` 16 tổ hợp theo nhóm mới |
+| Fallback đang chạy | Mapping `lineageStatus` (U44, U45), câu rule nguyên văn hi-fi, `VD-P19-05` ghi mâu thuẫn trong ledger |
+| Recheck | 2026-09-24 trên `c9dd195e` và baseline `bb25bf39`: d.ts không có field promotion cấp attempt → OPEN |
+
 ## 2. Không có hàng source-capability riêng
 
 P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pick, historical semantic diff, exposure fact, active version, bounded graph/child) đều đã có reason code `P19_*` trong contract và được in nguyên văn. Frontend không cấp ID mới cho chúng ngoài `CG-P19-*` ở trên.
@@ -280,8 +309,8 @@ P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pi
 
 | # | Việc | Lý do | Đề xuất |
 |---|---|---|---|
-| B1 | Tích hợp baseline `9060a7c4` (nay `62d7d864`) | File S10 không trùng với baseline (cả 10 file giống nhau giữa `9060a7c4` và `62d7d864`). `62d7d864` đổi `research-alpha-import.d.ts` (thêm field required `check`, `note`, `expires_at_utc_ms`), ảnh hưởng AlphaImport khi tích hợp. Xung đột `FreezeDetail.tsx` của P17 vẫn còn | Bobby merge/rebase hoặc cho phép Thanhvuong làm; chạy lại toàn bộ unit và 119 probe |
-| B2 | `VISUAL_DECISION_REQUIRED` | storied/probe (toggle → expand-all); rc/cert/OOS/decay; chip cuộn trong band vs wrap; rail chấm vs thụt DFS; thứ tự band theo server vs ACTIVE-first (T01) | Giữ như hiện tại đến khi có `CG-P19-03…05`; rail chấm có thể làm theo hi-fi nếu Bobby muốn |
+| B1 | Tích hợp baseline `9060a7c4` (nay `bb25bf39`, qua `62d7d864`) | File S10 không trùng với baseline (cả 10 file giống nhau giữa `9060a7c4` và `62d7d864`). `62d7d864` đổi `research-alpha-import.d.ts` (thêm field required `check`, `note`, `expires_at_utc_ms`), ảnh hưởng AlphaImport khi tích hợp. `bb25bf39` chỉ là docs (P11–P15 audit, RF-05/06), không chạm lineage/S10; Unified có chèn gần bảng §13. Xung đột `FreezeDetail.tsx` của P17 vẫn còn | Bobby merge/rebase hoặc cho phép Thanhvuong làm; chạy lại toàn bộ unit và 119 probe |
+| B2 | ~~`VISUAL_DECISION_REQUIRED`~~ → **đã quyết 2026-09-24**: khớp hi-fi, lệch thì mở version mới | R1 `c9dd195e` áp 7 điểm, ghi ledger `VD-P19-01…07` trong Unified note P19. Còn 2 ngoại lệ giữ spec: thứ tự band ACTIVE-first (`VD-P19-02`, hi-fi SUPERSEDED trên) và bước rail 22 vs 26 (`VD-P19-04`) | Bobby chốt 2 ngoại lệ: theo hi-fi (version mới, đổi code nhỏ) hay giữ; ô thiếu field chờ `CG-P19-03…08`, `14` |
 | B3 | F-04 badge 403/404 ở S09 | S10 đã sửa ở `1fb29010` (403 = 404 `denied`, `CG-P19-11` WITHDRAWN). S09 (`reportClient.ts`) vẫn 404 → `empty` | Bobby quyết có mở `fix/*` đồng bộ S09 không |
 | B4 | axe | axe-core không có trong lock | Như P16–P18 |
 | B5 | Poll legacy `GET /api/runs` 4 s trong `QuantBTModule.tsx` (dòng 231) chạy trên mọi route, kể cả S10 | Ngoài S10 | `fix/*` riêng nếu cần |
@@ -289,13 +318,13 @@ P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pi
 
 ## 4. Trạng thái
 
-| ID | Chủ | Trạng thái 2026-09-24 (baseline `9060a7c4` / `62d7d864`) |
+| ID | Chủ | Trạng thái 2026-09-24, kiểm lại R2 (head `c9dd195e`, baseline `bb25bf39`) |
 |---|---|---|
 | CG-P19-01 | Codex | OPEN |
 | CG-P19-02 | Codex | OPEN |
-| CG-P19-03 | Codex | OPEN (kèm B2) |
-| CG-P19-04 | Codex | OPEN (kèm B2) |
-| CG-P19-05 | Codex | OPEN (kèm B2) |
+| CG-P19-03 | Codex | OPEN (mở rộng R2: số probe mỗi version) |
+| CG-P19-04 | Codex | OPEN (mở rộng R2: rc theo attempt/pick) |
+| CG-P19-05 | Codex | OPEN (mở rộng R2: cert/OOS/decay theo attempt/pick) |
 | CG-P19-06 | Codex | OPEN |
 | CG-P19-07 | Codex | OPEN |
 | CG-P19-08 | Codex | OPEN |
@@ -304,4 +333,6 @@ P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pi
 | CG-P19-11 | — | WITHDRAWN (frontend sửa ở `1fb29010`, audit A3) |
 | CG-P19-12 | Codex | OPEN |
 | CG-P19-13 | Codex | OPEN (thêm sau audit A6) |
-| B1–B6 | Bobby | Chờ quyết |
+| CG-P19-14 | Codex | OPEN (thêm ở R2: status promotion cấp attempt) |
+| B1, B3–B6 | Bobby | Chờ quyết |
+| B2 | Bobby | Đã quyết 2026-09-24 (khớp hi-fi); còn chốt `VD-P19-02`, `VD-P19-04` |

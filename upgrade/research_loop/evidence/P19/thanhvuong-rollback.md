@@ -4,6 +4,13 @@ Rollback này chỉ đụng frontend: không đổi contract, backend, migration
 
 Thứ tự: revert commit mới nhất trước. Sau mỗi bước Portal vẫn build được.
 
+## R1. `c9dd195e` — khớp hi-fi 7 điểm (Bobby 2026-09-24)
+
+- **Nội dung commit:** `LineageDetail.tsx` +811/−613 (4 filter hi-fi + `lineageStatus`, `bandOrder` ACTIVE trước, chip wrap, rail có chấm, promotion rule và rules nguyên văn hi-fi, toggle probes disabled `CG-P19-03`, bỏ expand-all, card đóng khi tải), `lineageDetail.test.tsx` +292/−41 (U14/U15/U18 sửa, U44–U52 mới).
+- **Ảnh hưởng khi revert:** màn quay về bản trước R1 (tree `6b7e0419`): 6 nhóm state thô, band theo thứ tự server, chip cuộn trong band 8.5px, thụt DFS, promotion rule viết lại, expand-all, card mở sẵn khi ≤ 40 attempt. Ledger `VD-P19-01…07` khi đó không còn đúng với code.
+- **Dữ liệu và request:** không đổi (vẫn 1 GET `limit=128`, không mutation). Client, hook, route không đổi trong commit này.
+- **Thứ tự:** revert đầu tiên, trước `1fb29010`.
+
 ## 0. `1fb29010` — sửa sau audit (A1–A3)
 
 - **Nội dung commit:** `LineageDetail.tsx` +101/−2 (reset `:where(.ln-page) button`, `PendingFrame`), `lineageClient.ts` +10/−9 (404 → denied), `lineageDetail.test.tsx` +52/−5 (U01/U29–U33, U43).
@@ -12,7 +19,7 @@ Thứ tự: revert commit mới nhất trước. Sau mỗi bước Portal vẫn 
   - Loading và refusal chỉ còn header · notice · rules.
   - 404 lại là `empty` ("∅ EMPTY"), khác badge 403.
 - **Dữ liệu và request:** không đổi (vẫn 1 GET `limit=128`, không mutation).
-- **Thứ tự:** revert đầu tiên, trước `74f26200`.
+- **Thứ tự:** revert sau `c9dd195e`, trước `74f26200`.
 
 ## 1. `74f26200` — cột 660 và copy của root
 
@@ -52,7 +59,7 @@ Thứ tự: revert commit mới nhất trước. Sau mỗi bước Portal vẫn 
 ## Lệnh
 
 ```bash
-git revert --no-edit 1fb29010 74f26200 30dcbdfc 0ec4b6af 3a11bfd3
+git revert --no-edit c9dd195e 1fb29010 74f26200 30dcbdfc 0ec4b6af 3a11bfd3
 ```
 
 Hook vẫn chạy như thường. Không dùng `--no-verify`.
@@ -60,6 +67,8 @@ Hook vẫn chạy như thường. Không dùng `--no-verify`.
 ## Docs commit
 
 Docs commit `7b0dda84` gồm packet này, một dòng §13 và implementation note `#rl-p19`. Docs commit sau audit chỉ sửa packet và note. Cả hai chỉ thêm evidence; revert docs commit sau audit trước `7b0dda84`, cùng với phần code nó mô tả. Chỉ revert riêng `1fb29010` thì phải revert cả docs commit sau audit, vì packet mô tả tree `6b7e0419`.
+
+Docs commit `docs(research): P19 hi-fi alignment, visual decision ledger and packet` (sau `dacbbd75`) sửa dòng §13, note `#rl-p19` (ledger `VD-P19-01…07` + rule P20+), addendum cuối handoff và 5 file packet để mô tả tree `46d101c0`. Chỉ revert riêng `c9dd195e` thì revert cả docs commit này trước (mới nhất trước), vì ledger và receipt §13 mô tả code R1. Thứ tự revert toàn bộ docs: docs commit R2 → `dacbbd75` → `4f1ee187` → `7b0dda84`.
 
 ## Backend
 

@@ -2,10 +2,83 @@
   "phase": "P19",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-24",
-  "tree": "6b7e041936995c307f24f04f999855f513edb821",
-  "head": "1fb290102055b29d83eb0875f7b5cbcd51b4593b",
+  "tree": "46d101c047bfc5b8ee6b9caf18de7d2f936ff0cd",
+  "head": "c9dd195e2c7bb9710af8babf7b56c655ce2c6da1",
   "open_implementation_debt": [],
-  "open_debt": [],
+  "open_debt": [
+    {
+      "id": "VD-P19-02 S10-BAND-ORDER",
+      "what": "version bands are ACTIVE-first (spec T01, R1 task); the hi-fi draws the SUPERSEDED band above ACTIVE",
+      "class": "spec≠hi-fi (spec kept, exception to 'hi-fi wins')",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "evidence": "bandOrder (LineageDetail.tsx:166), U46; probe r2 full bands [ACTIVE, SUPERSEDED]; Unified VD ledger"
+    },
+    {
+      "id": "VD-P19-04 S10-RAIL-STEP",
+      "what": "rail step 22px (spec) instead of the hi-fi's 26px",
+      "class": "spec≠hi-fi (spec kept, exception to 'hi-fi wins')",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "evidence": "RAIL_STEP = 22 (LineageDetail.tsx:115), U48; probe r2 16 rails"
+    },
+    {
+      "id": "VD-P19-05 S10-PROMOTION-RULE-VS-ACTIVE",
+      "what": "promotion rule reads 'Only the ACTIVE attempt promotes' verbatim, but lineageStatus maps every attempt of the ACTIVE version to ACTIVE (3 in the probe fixture)",
+      "class": "field-driven",
+      "owner": "Codex (CG-P19-14), then Bobby",
+      "state": "BLOCKED_ON_BACKEND",
+      "evidence": "PROMOTION_RULE (:70), lineageStatus (:147), U44/U49; probe r2 filter groups ACTIVE 3"
+    },
+    {
+      "id": "S10-CERT-NOT-PUBLISHED",
+      "what": "hi-fi 'cert —' is rendered 'cert not published' because CLAUDE.md forbids '-' in place of a value",
+      "class": "other (rule over hi-fi)",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "evidence": "LineageDetail.tsx:1025, :1085; probe r2 fonts/cert"
+    },
+    {
+      "id": "S10-COUNTS-PANEL",
+      "what": "a counts panel that is not in the hi-fi (disclosure the handoff requires)",
+      "class": "other (handoff over hi-fi)",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "evidence": "LINEAGE_PANELS order … promotion-rule, counts, rules; U49"
+    },
+    {
+      "id": "S10-SOURCE-CHIP-VS-READ-AUTHORITY",
+      "what": "source chip copies the hi-fi 'attempts.json' while the response's read_authority is PORTAL_PERSISTED_RESEARCH (shown in title and counts heading)",
+      "class": "other (hi-fi copy vs contract fact)",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "evidence": "LINEAGE_SOURCE_CHIP (:60); probe r2 copy"
+    },
+    {
+      "id": "S10-RAW-STATE-CHIP",
+      "what": "a raw state chip (READY, FAILED…) beside the derived status when they differ; not in the hi-fi",
+      "class": "other",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "evidence": "U51"
+    },
+    {
+      "id": "S10-DIFF-KEY-WRAP",
+      "what": "long semantic-diff keys wrap mid-word ('optimization.effective_sc hedule')",
+      "class": "other (display)",
+      "owner": "Thanhvuong",
+      "state": "OPEN",
+      "evidence": "r2 shots full-660 / partial-660"
+    },
+    {
+      "id": "S10-FIELD-DRIVEN-CELLS",
+      "what": "hi-fi cells with no contract field kept in place as typed absence: probe counts and storied/probe rows, rc chip and pick 'gate' line, cert/OOS/claim/decay/verdict, exercised/untried, outcome, card spec line and narrative, run label R-WFO-118, symbol/timeframe breadcrumb, short ids",
+      "class": "field-driven",
+      "owner": "Codex (CG-P19-03…08, 14)",
+      "state": "BLOCKED_ON_BACKEND",
+      "evidence": "receipt §13.4; backend requests"
+    }
+  ],
   "resolved_in_phase": [
     {
       "id": "S10-660-HORIZONTAL-OVERFLOW (B1)",
@@ -55,6 +128,13 @@
       "found_by": "independent audit",
       "status": "RESOLVED",
       "evidence": "docs commit after audit: receipt §4, §5.4 (hi-fi != spec copy table), §10, §11, §12; test-results not_run + known_flake; CG-P19-13"
+    },
+    {
+      "id": "S10-VISUAL-DECISION (VD-P19-01…07, formerly B2 VISUAL_DECISION_REQUIRED)",
+      "what": "filters, band order, chip wrap, dot rail, promotion rule, copy/rules footer, probes toggle/cards had been chosen by the frontend against the hi-fi",
+      "found_by": "Bobby 2026-09-24: 'version này chốt theo đúng khớp với HIFI; nếu có gì không hợp lý thì mở version mới'",
+      "status": "RESOLVED",
+      "evidence": "c9dd195e (tree 46d101c0): U44-U52; R2 probe 119/119 first pass; ledger VD-P19-01…07 in the Unified P19 note; two exceptions stay in open_debt (VD-P19-02, VD-P19-04)"
     }
   ],
   "deferred": [
@@ -71,13 +151,6 @@
       "reason": "CONTROL_API_FEATURE_RESEARCH_LINEAGE=false; no source pick fact",
       "owner": "Thanhvuong",
       "state": "BLOCKED_ON_FEATURE_FLAG"
-    },
-    {
-      "id": "S10-VISUAL-DECISION",
-      "what": "VISUAL_DECISION_REQUIRED: storied/probe (toggle -> expand-all), rc/cert/OOS/decay, chip scroll vs wrap, dot rail vs DFS indent, band order server vs ACTIVE-first",
-      "reason": "hi-fi != spec != contract",
-      "owner": "Bobby",
-      "state": "AWAITING_DECISION"
     },
     {
       "id": "S10-LOCAL-DUPLICATION",
@@ -107,21 +180,21 @@
       "owner": "Codex",
       "state": "OPEN",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-03",
-      "what": "storied/probe classification by the server, or confirmation there is none"
+      "what": "storied/probe classification by the server, or confirmation there is none — R2: plus probe count per version"
     },
     {
       "id": "CG-P19-04",
       "owner": "Codex",
       "state": "OPEN",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-04",
-      "what": "release-candidate ref on attempt/pick (rc chip, 'gate R1 next')"
+      "what": "release-candidate ref on attempt/pick (rc chip, 'gate R1 next') — R2: per attempt and per pick"
     },
     {
       "id": "CG-P19-05",
       "owner": "Codex",
       "state": "OPEN",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-05",
-      "what": "cert/OOS/decay mini-metrics or a typed link to the report contract"
+      "what": "cert/OOS/decay mini-metrics or a typed link to the report contract — R2: per attempt and per pick"
     },
     {
       "id": "CG-P19-06",
@@ -178,6 +251,13 @@
       "state": "OPEN",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-13",
       "what": "definition table reconciling lineage.counts with the Run Library's alpha grouping (which runs/attempts each count includes), so the Unified test 'counts reconcile Library definitions' can run; or confirmation counts are self-contained"
+    },
+    {
+      "id": "CG-P19-14",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-14",
+      "what": "attempt-level promotion status (or version-level promoted_attempt_id) so 'Only the ACTIVE attempt promotes' names one attempt; or confirmation the concept is version-level"
     }
   ],
   "source_capability_blocked": [],
@@ -187,7 +267,7 @@
       "id": "P19-FE-DG-01",
       "owner": "Bobby",
       "state": "AWAITING_DECISION",
-      "what": "integrate the moved baseline 9060a7c4 (now 62d7d864): no S10 file differs between the two; 62d7d864 adds required fields to research-alpha-import.d.ts (affects AlphaImport, not S10); P17 FreezeDetail.tsx conflict remains; rerun all unit tests + the full Research probe (134 on tree 6b7e0419)"
+      "what": "integrate the moved baseline 9060a7c4 (now bb25bf39 via 62d7d864): no S10 file differs; 62d7d864 adds required fields to research-alpha-import.d.ts (affects AlphaImport, not S10); bb25bf39 is docs only; P17 FreezeDetail.tsx conflict remains; rerun all unit tests + the whole Research probe (119 on tree 46d101c0)"
     },
     {
       "id": "P19-FE-DG-02",
@@ -204,8 +284,8 @@
     {
       "id": "P19-FE-DG-04",
       "owner": "Bobby",
-      "state": "AWAITING_DECISION",
-      "what": "VISUAL_DECISION_REQUIRED (with CG-P19-03/04/05)"
+      "state": "PARTLY_DECIDED",
+      "what": "Bobby decided 2026-09-24 (match the hi-fi); remaining: VD-P19-02 band order and VD-P19-04 rail step, and field-driven cells with CG-P19-03/04/05/14"
     },
     {
       "id": "P19-FE-DG-05",
@@ -220,5 +300,14 @@
       "what": "load canonical fixtures in S10-U* and the probe once CG-P19-01 lands; run spec T01/T10 against the 52-attempt fixture"
     }
   ],
-  "known_flake_note": "probe-only flake: 'fix-hypothesis stacked grid @660' timed out once in the audit's full pass and passed alone; passed in both A-fix passes (test-results known_flake)"
+  "known_flake_note": "probe-only flake: 'fix-hypothesis stacked grid @660' timed out once in the audit's full pass and passed alone; passed in both A-fix passes (test-results known_flake)",
+  "rule_for_later_phases": {
+    "source": "Bobby 2026-09-24, recorded in the Unified P19 note",
+    "rules": [
+      "each screen matches both the hi-fi and the spec; when they differ the hi-fi wins unless Bobby approves a VD exception",
+      "the frontend never picks a deviation on its own: record VD-PXX-NN in the phase note ledger and the handoff; open a new version when scope needs trimming",
+      "a hi-fi cell with no field keeps the hi-fi position and shape, renders a typed absence, and gets a CG-PXX-NN request",
+      "new debt created while doing P20 and later goes into both the phase handoff and Unified"
+    ]
+  }
 }

@@ -2,8 +2,8 @@
   "phase": "P19",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-24",
-  "tree": "6b7e041936995c307f24f04f999855f513edb821",
-  "head": "1fb290102055b29d83eb0875f7b5cbcd51b4593b",
+  "tree": "46d101c047bfc5b8ee6b9caf18de7d2f936ff0cd",
+  "head": "c9dd195e2c7bb9710af8babf7b56c655ce2c6da1",
   "workspace": {
     "user": "thanhvuong",
     "branch": "feat/thanhvuong/research-p17-p21",
@@ -14,18 +14,23 @@
       "0ec4b6afc9b5d6d1b74a13fc0a90d110e4c5c8e8",
       "30dcbdfc8655d0a81f606fb9065ac87e14a44287",
       "74f262005e9cf292294c5acc2b1a955d5731a9ab",
-      "1fb290102055b29d83eb0875f7b5cbcd51b4593b"
+      "1fb290102055b29d83eb0875f7b5cbcd51b4593b",
+      "c9dd195e2c7bb9710af8babf7b56c655ce2c6da1"
     ],
     "baseline": {
       "at_plan": "9060a7c4",
-      "at_packet_close": "62d7d8640c8ebaf9955ad5f185a8d6f319f604ea"
+      "at_packet_close": "62d7d8640c8ebaf9955ad5f185a8d6f319f604ea",
+      "at_r2": "bb25bf3915bfa5c6c78a407b4bfda4e27832203e",
+      "note_r2": "62d7d864..bb25bf39 is one docs-only commit (P11-P15 audit, RF-05/RF-06); no lineage contract, service, P19 evidence or S10 file differs"
     },
     "node": "v20.20.2",
     "playwright": "1.62.1",
     "chromium": "headless (Desktop Chrome)",
     "docs_commits": [
       "7b0dda843b7b05c975e8168201389c707acadb9b",
-      "docs(research): P19 packet after audit (this commit)"
+      "4f1ee1879e88ea96639662cd42e98bf5982e994f",
+      "dacbbd75123348e8bc50a04eee9c13d3338ed37b",
+      "docs(research): P19 hi-fi alignment, visual decision ledger and packet (this commit)"
     ]
   },
   "contract": {
@@ -37,7 +42,7 @@
     "etag": false,
     "canonical_fixture": false
   },
-  "lane_note": "Unit, typecheck and build are real executions in the workspace on head 74f26200 (rerun by package C on 2026-09-24). The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the lineage API stubbed from the lineage.contract.ts / lineage.service.ts shape (no canonical fixture: CG-P19-01), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). Round 1 ran on 30dcbdfc (107/117; the 10 failures were all the 660 layout bug B1). B1 and the duplicated root copy were fixed in 74f26200; round 2 on 74f26200 is 119/119. No REAL_API_E2E_RECEIPT: CONTROL_API_FEATURE_RESEARCH_LINEAGE=false. After the independent audit (A1-A6), A1-A3 were fixed in 1fb29010 (tree 6b7e0419); on that tree unit 171 files / 3058 passed / 1 skipped, S10 43/43, and the full Research probe (audit probe + A-fix tests) 134/134 on the official pass (first pass 133/134: one probe assert depended on the old 12px chip size). The earlier '119/119' is the implementer's probe only; the audit's full pass had one probe flake (fix-hypothesis timeout, passes alone).",
+  "lane_note": "Unit, typecheck and build are real executions in the workspace on head 74f26200 (rerun by package C on 2026-09-24). The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the lineage API stubbed from the lineage.contract.ts / lineage.service.ts shape (no canonical fixture: CG-P19-01), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). Round 1 ran on 30dcbdfc (107/117; the 10 failures were all the 660 layout bug B1). B1 and the duplicated root copy were fixed in 74f26200; round 2 on 74f26200 is 119/119. No REAL_API_E2E_RECEIPT: CONTROL_API_FEATURE_RESEARCH_LINEAGE=false. After the independent audit (A1-A6), A1-A3 were fixed in 1fb29010 (tree 6b7e0419); on that tree unit 171 files / 3058 passed / 1 skipped, S10 43/43, and the full Research probe (audit probe + A-fix tests) 134/134 on the official pass (first pass 133/134: one probe assert depended on the old 12px chip size). The earlier '119/119' is the implementer's probe only; the audit's full pass had one probe flake (fix-hypothesis timeout, passes alone). R1 (c9dd195e, tree 46d101c0) aligned S10 to the hi-fi per Bobby 2026-09-24 (visual decisions VD-P19-01..07 in the Unified P19 note). R2 re-ran every gate on that head: tsc 0, build 0, vitest 171 files / 3067 passed / 1 skipped, S10 52/52 (+ researchBoundary 14 = 66/66), and the whole Research probe set (fixtures 8 + product 74 + r2 37) 119/119 on the first pass with --workers=1 on the same stubbed 4417 preview. The r2 probe asserts the hi-fi (copy verbatim, 4 filters x 16 combinations, ACTIVE-first bands, wrapping chips, rails, collapsed cards, disabled probes toggle CG-P19-03).",
   "results": [
     {
       "gate": "apps/portal/frontend npx tsc -b --noEmit",
@@ -228,6 +233,65 @@
         "overflow_660": "0 for full, partial, virtual-120, empty, dark, refusals"
       },
       "log_sha256_prefix": "ff03d6aff991180b"
+    },
+    {
+      "gate": "apps/portal/frontend npx tsc -b --noEmit",
+      "scope": "head c9dd195e (R2)",
+      "result": "PASS",
+      "exit": 0,
+      "log_sha256_prefix": "bcb1a61798abda8d"
+    },
+    {
+      "gate": "apps/portal/frontend npm run build",
+      "scope": "head c9dd195e (R2)",
+      "result": "PASS",
+      "exit": 0,
+      "note": "only the pre-existing chunk-size warning",
+      "log_sha256_prefix": "8c1bca03581fe047"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run src/research/lineageDetail.test.tsx src/research/researchBoundary.test.ts",
+      "scope": "head c9dd195e (R2)",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "66/66 = lineageDetail S10-U01..U52 (52) + researchBoundary (14)",
+      "log_sha256_prefix": "df6738425bee3d2b"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run (full)",
+      "scope": "head c9dd195e (R2)",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "171 files, 3067 passed, 1 skipped (3068)",
+      "duration_s": 86.1,
+      "note": "passed on the first run; no flake",
+      "log_sha256_prefix": "e276b8a59681a6bb"
+    },
+    {
+      "gate": "RESEARCH_SHOT_DIR=~/tv-shots/p19r2 npx playwright test -c .tv-probe.config.ts --workers=1",
+      "scope": "head c9dd195e, whole Research probe set (_probe-research-fixtures, _probe-research-product, _probe-research-tvp19r2)",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "119/119 on the first pass (fixtures 8, product 74, r2 37); 2.6 min",
+      "assertions": {
+        "full_1280": "two columns 571/381 (dark 602/402); bands [ACTIVE, SUPERSEDED]; chips wrap (overflow-x visible, over 0, 2/7 lines; dark 660 2/5); chip scroll attempt scrollLeft 0, docX 0; 16 rails, 0 wrong width; ::before -13px/12px",
+        "cards": "0 details at load; click opens (aria-expanded true), second click closes; no expand-all",
+        "probes_toggle": "disabled, title contains CG-P19-03, no digits; 2 '+ probes' chips disabled",
+        "fonts": ".ln-chip/.ln-fchip/.ln-toggle/.ln-cfg 9.5px JetBrains Mono; .ln-cert 9px; 'cert not published', no N/A",
+        "filter_counter": "groups ACTIVE 3, DRAFT 1, SUPERSEDED 11, ABANDONED 1; all 16 combinations: counter = rows = aria-pressed; labels active, draft, superseded, abandoned",
+        "partial": "'showing 4 of 4 attempts · 140 on record'; P19_BOUNDED_GRAPH_LIMIT_REACHED; child runs PARTIAL; pick NOT_PUBLISHED P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK; diff PARENT_OUTSIDE / NOT_PUBLISHED; no fake zeros",
+        "empty": "'showing 0 of 0 attempts' + 'No attempt is recorded for this alpha yet.'",
+        "virtual_120": "DOM 23 -> 30 after scroll; deep chip att_39 selected, in view, detail open, focus kept; no row overlap; 'showing 120 of 120 attempts'",
+        "gates_reset": "SPAN, no onclick/role; clicks on row and diff panel: 0 new requests, selection unchanged, 0 mutations",
+        "deep_link_av": "?av=av_0_9_2 bandTop 8 on load and after reload, att_01 selected; picking an attempt adds &attempt= via replace; Back restores selection (scroll position not restored; observation only)",
+        "keyboard": "4 Tabs to first chip; double box-shadow focus ring; Enter selects; Enter on DRAFT filter -> 'showing 1 of 16 attempts'; Enter on a card opens its detail",
+        "refusals": "400 terminal / 401 denied / 403 denied / 404 denied / 503 unavailable: 10 panels, pending 6, request id, no leak, one GET limit=128; 503 retry -> 2 GETs; 403 and 404 identical tuple",
+        "links": "evidence /research/quantbt/runs/run_.../evidence, report .../report, runs ?group=1&alpha=, /runs/new, /alpha-import; rc is an unrouted SPAN; Run Library -> lineage -> evidence works",
+        "copy": "title, subtitle, source chip, promotion rule, rules: hi-fi string == product string; filter labels equal; counter format equal"
+      },
+      "bugs": "none failed an assertion; no source change",
+      "log_sha256_prefix": "6e2cb46e8254dddd",
+      "probe_log_sha256_prefix": "bd1e58114364d01d"
     }
   ],
   "hifi_compare": {
@@ -251,6 +315,47 @@
     "product_660": {
       "two_col": false,
       "overflow_after_74f26200": 0
+    },
+    "r2_c9dd195e": {
+      "hifi_1280": {
+        "overflow": 0,
+        "height_px": 1493,
+        "shot_sha256_prefix": "1d0d841b5185c58b"
+      },
+      "hifi_660": {
+        "overflow": 13,
+        "note": "hi-fi is not responsive",
+        "shot_sha256_prefix": "03b582cef17e3397"
+      },
+      "product_1280": {
+        "left": 571,
+        "right": 381,
+        "dark_left": 602,
+        "dark_right": 402,
+        "overflow": 0
+      },
+      "product_660": {
+        "two_col": false,
+        "overflow": 0
+      },
+      "composite_sha256_prefix": {
+        "1280": "4984b76cd91f44bd",
+        "660": "fcaf727215ab4f40"
+      },
+      "copy_equal": [
+        "title",
+        "subtitle",
+        "source chip",
+        "promotion rule",
+        "rules",
+        "filter labels",
+        "counter format"
+      ],
+      "open_spec_over_hifi": [
+        "VD-P19-02 band order ACTIVE-first (hi-fi SUPERSEDED above ACTIVE)",
+        "VD-P19-04 rail step 22 (hi-fi 26)"
+      ],
+      "deviation_classes": "field-driven / spec≠hi-fi (hi-fi wins) / other, listed in receipt §13.4"
     }
   },
   "not_run": [
@@ -263,8 +368,8 @@
       "reason": "axe-core not in this branch's lock file; Bobby decides (as P16-P18); chip aria-label asserted in unit U05"
     },
     {
-      "gate": "spec 10 T01/T02/T04/T07/T08 with the hi-fi meaning (storied/probe, probe toggle, rc chip, exercised/untried)",
-      "reason": "contract carries no such fields (CG-P19-03/04/06); equivalent behaviour covered where possible (receipt §5.3)"
+      "gate": "spec 10 T01/T02/T04/T07/T08 with the hi-fi meaning (probe counts, storied/probe rows, enabled probe toggle, rc chip, exercised/untried, attempt-level promotion)",
+      "reason": "contract carries no such fields (CG-P19-03/04/06/14). Since c9dd195e the toggle and '+ probes' chips sit where the hi-fi puts them but are disabled with reason CG-P19-03 (U50, probe r2 full); rc is an unrouted span"
     },
     {
       "gate": "spec 10 T10 with real data / canonical 52-attempt fixture",
@@ -276,19 +381,25 @@
     },
     {
       "gate": "spec 10 §13.8 screenshot diff <= 1% against hi-fi",
-      "reason": "hi-fi and contract differ by design (receipt §5.4); side-by-side composite recorded instead"
+      "reason": "after R1 the layout follows the hi-fi, but field-driven cells, long ULIDs vs short hi-fi ids and the two spec-over-hi-fi exceptions still differ (receipt §13.4); side-by-side composites recorded instead (r2 1280/660)"
     },
     {
       "gate": "Unified #rl-p19 test 'counts reconcile Library definitions'",
       "reason": "there is no shared definition table between lineage.counts (total/returned/draft/submitted/failed/abandoned/child_runs/technical_retries) and the Run Library's alpha grouping, so there is nothing to reconcile against without inventing a definition; requested as CG-P19-13. The in-screen reconciliation (counter vs DOM rows vs counts) is covered by U20 and probe FILTER"
+    },
+    {
+      "gate": "REAL_API_E2E_RECEIPT for the R1 hi-fi layout",
+      "reason": "same as above: feature-dark; R2 ran on the stubbed preview only"
     }
   ],
   "evidence_store": {
-    "location": "~/tv-shots/p19/ (round 1 top level + package C logs c-*.log), ~/tv-shots/p19/all/ (round 1 full suite, tree 30dcbdfc), ~/tv-shots/p19/v2/ (round 2 full suite, tree 74f26200) in the thanhvuong workspace; not committed (A4.1); A-fix: ~/tv-shots/p19fix/ (A-fix shots and logs) and ~/tv-shots/p19fix/all/ (full suite RESEARCH_SHOT_DIR)",
+    "location": "~/tv-shots/p19/ (round 1 top level + package C logs c-*.log), ~/tv-shots/p19/all/ (round 1 full suite, tree 30dcbdfc), ~/tv-shots/p19/v2/ (round 2 full suite, tree 74f26200) in the thanhvuong workspace; not committed (A4.1); A-fix: ~/tv-shots/p19fix/ (A-fix shots and logs) and ~/tv-shots/p19fix/all/ (full suite RESEARCH_SHOT_DIR); R2 (head c9dd195e): ~/tv-shots/p19r2/ (gate logs, r2 shots, product/fixture probe shots, probe and config copies)",
     "probe_spec_sha256_prefix": {
       "round 1 (_probe-research-tvp19.spec.ts)": "88055a1beaf0bfdf",
       "round 2 (_probe-research-tvp19.v2.spec.ts)": "9baaf8285db74f02",
-      "A-fix (_probe-research-tvp19fix.spec.ts = audit probe + A-fix)": "109bdb10803653f4"
+      "A-fix (_probe-research-tvp19fix.spec.ts = audit probe + A-fix)": "109bdb10803653f4",
+      "r2 (_probe-research-tvp19r2.spec.ts)": "4a2a5eef4bb65f7b",
+      "r2 config (.tv-probe.config.ts)": "75c00c3a4819ea01"
     },
     "package_c_logs": {
       "c-tsc.log": "bcb1a61798abda8d",
@@ -553,7 +664,8 @@
     "identical_render_pairs": [
       "round 1: full-660 = links-660 = loading-resolved-660 (79d352d4...)",
       "round 1: full-1280 = links-1280 = loading-resolved-1280 (408014f9...)",
-      "round 2: v2 full-660 = links-660 = loading-resolved-660 = fix-hypothesis-full-660 (a60b5115...)"
+      "round 2: v2 full-660 = links-660 = loading-resolved-660 = fix-hypothesis-full-660 (a60b5115...)",
+      "r2: p19-r2-filter-1280 = p19-r2-loading-resolved-1280 (5884f032...); p19r2-virtual-120-* = p19-r2-virtual-120-*; p19r2-hifi-1280 = A-fix hifi-1280 (1d0d841b...)"
     ],
     "sha256_prefix_afix_tree_6b7e0419": {
       "all/p19-compare-1280.png": "a4412ab0fcbabc70",
@@ -683,13 +795,106 @@
       "tsc.log": "e3b0c44298fc1c14",
       "vitest-full.log": "2c83b9be2655d513",
       "vitest-s10.log": "603ddb1430b10632"
+    },
+    "sha256_prefix_r2_tree_46d101c0": {
+      "build.log": "8c1bca03581fe047",
+      "gates.sh": "9a764ea5079111d1",
+      "p19-r2-deep-link-av-1280.png": "6f747f16e605784a",
+      "p19-r2-deep-link-av-660.png": "5810880e171114bd",
+      "p19-r2-empty-1280.png": "f2ee64ce82b48560",
+      "p19-r2-empty-660.png": "f9903941f3198227",
+      "p19-r2-filter-1280.png": "5884f0320cc34130",
+      "p19-r2-filter-660.png": "e6ed41d3896fab72",
+      "p19-r2-full-1280.png": "64b0967a4633f7c8",
+      "p19-r2-full-660.png": "63b7bd6a16d09ec0",
+      "p19-r2-full-dark-1280.png": "f6db2bbac9292853",
+      "p19-r2-full-dark-660.png": "21635bcd8aac2544",
+      "p19-r2-gates-1280.png": "deda6f6f97c4927c",
+      "p19-r2-gates-660.png": "cc647f7bdc060b2a",
+      "p19-r2-keyboard-1280.png": "0dd548fb9bbf5321",
+      "p19-r2-keyboard-660.png": "72647f86dfed468a",
+      "p19-r2-loading-resolved-1280.png": "5884f0320cc34130",
+      "p19-r2-loading-resolved-660.png": "193e0c30d372c269",
+      "p19-r2-partial-1280.png": "fecb0f56aa8479c4",
+      "p19-r2-partial-660.png": "672111b81e8c8687",
+      "p19-r2-refusal-400-1280.png": "5ab296593bbccb75",
+      "p19-r2-refusal-400-660.png": "96cded78b72b674f",
+      "p19-r2-refusal-401-1280.png": "5be22b9f20e5ddf3",
+      "p19-r2-refusal-401-660.png": "d6966b2aac51b4d6",
+      "p19-r2-refusal-403-1280.png": "80cc5bd94577dd25",
+      "p19-r2-refusal-403-660.png": "36ad1dcc1eb43dd3",
+      "p19-r2-refusal-404-1280.png": "7f43c30a78d3a293",
+      "p19-r2-refusal-404-660.png": "de8d9de8c17ae141",
+      "p19-r2-refusal-503-1280.png": "c140bc2ed60920d2",
+      "p19-r2-refusal-503-660.png": "ae91fa7f634233db",
+      "p19-r2-virtual-120-1280.png": "4b3a4b5659dec347",
+      "p19-r2-virtual-120-660.png": "0537b39f046b4b59",
+      "p19r2-compare-1280.png": "4984b76cd91f44bd",
+      "p19r2-compare-660.png": "fcaf727215ab4f40",
+      "p19r2-hifi-1280.png": "1d0d841b5185c58b",
+      "p19r2-hifi-660.png": "03b582cef17e3397",
+      "p19r2-loading-1280.png": "67bcfaf11a8062b8",
+      "p19r2-loading-660.png": "8f41aab881fa9a97",
+      "p19r2-virtual-120-1280.png": "4b3a4b5659dec347",
+      "p19r2-virtual-120-660.png": "0537b39f046b4b59",
+      "playwright.log": "6e2cb46e8254dddd",
+      "preview.log": "9291f11129fb0f1f",
+      "preview.pid": "e1e802e5c5b2cdc2",
+      "probe.log": "bd1e58114364d01d",
+      "probe.sh": "926ae5d06d4c3bd6",
+      "probe.spec.ts.copy": "4a2a5eef4bb65f7b",
+      "research-fixtures-laptop.png": "eb0d8a2829eb41a3",
+      "research-fixtures-mobile.png": "3780b86e6dee2d91",
+      "s00-journey-laptop.png": "fcee7a7ab51ca6d2",
+      "s00-journey-mobile.png": "ebd426ef2d1d3df0",
+      "s01-run-library-laptop.png": "d63670a5818e362d",
+      "s01-run-library-mobile.png": "5e9529ab67fd1f7a",
+      "s02-new-run-created.png": "06787c52b6ce791d",
+      "s02-new-run-laptop.png": "9a1fae10bfc0affc",
+      "s02-new-run-mobile.png": "e9667a5bafc913e9",
+      "s02-preflight-660.png": "8f91c266584640e2",
+      "s02-preflight.png": "7a644c4e8539dc20",
+      "s02-release-defaults.png": "e7484a5071690541",
+      "s02-validators.png": "d2f3621dcc520704",
+      "s03-console.png": "823a2073bd652432",
+      "s03-progress-laptop.png": "1c5b38f5537cab56",
+      "s03-progress-mobile.png": "91d2be6aed9e46c5",
+      "s04-evidence-laptop.png": "50167363db7bd366",
+      "s04-evidence-mobile.png": "172d58d09caca85c",
+      "s05-split-660.png": "541cdd880c9946db",
+      "s05-split-laptop.png": "d74a24fcd67c93fc",
+      "s05-split-mobile.png": "b42a5e8392565262",
+      "s05-split.png": "7137d5254b46ff42",
+      "s06-search-laptop.png": "f685802ae4c1ba32",
+      "s06-search-mobile.png": "0c279508e8e3e11f",
+      "s07-freeze-blocked-laptop.png": "de3ad8fb39a1371a",
+      "s07-freeze-blocked-mobile.png": "ee25b6b6938da53a",
+      "s07-freeze-composed-laptop.png": "ad46d6abc8793e4f",
+      "s07-freeze-composed-mobile.png": "1310d43bc85cbc9a",
+      "s07-freeze-laptop.png": "ad46d6abc8793e4f",
+      "s07-freeze-mobile.png": "1310d43bc85cbc9a",
+      "s12-atlas-claims-laptop.png": "678811c10ff6240e",
+      "s12-atlas-claims-mobile.png": "a5cef74b3e02f490",
+      "s12-atlas-modes-laptop.png": "0ee53f61132a858e",
+      "s12-atlas-modes-mobile.png": "4306463408bd8d83",
+      "s12-atlas-routes-laptop.png": "e64d8d033b8cec1a",
+      "s12-atlas-routes-mobile.png": "b8f51aee08582ba6",
+      "s14-alpha-import-route.png": "5627bc472e5ac070",
+      "s14-clean-660.png": "6175baafc9ac169b",
+      "s14-clean.png": "d3cb4b70ad9eb0b1",
+      "s14-failing.png": "cf904659688751ff",
+      "tsc.log": "bcb1a61798abda8d",
+      "tv-probe.config.ts.copy": "75c00c3a4819ea01",
+      "vitest-full.log": "e276b8a59681a6bb",
+      "vitest-s10.log": "df6738425bee3d2b"
     }
   },
   "known_flake": [
     "src/app/PortalShell.test.tsx > 'mounts QuantBT under its canonical route with no nested topbar' fails intermittently in a full vitest run and passes alone (recorded P16-P18). Not seen in the package C full run on 74f26200.",
     "src/execution/tradeReplayEvents.test.tsx: one load flake during package A's pre-commit run; passed alone and in the final full run. Outside the S10 diff, not changed (Bobby B6).",
     "e2e/_probe-research-tvp19*.spec.ts 'fix-hypothesis stacked grid @660' (diagnostic probe test, not product): timed out once in the audit's full pass and passed alone (audit playwright-fixhyp.log 219b9609a8ef083e); passed in both A-fix passes.",
-    "Pre-audit '119/119' counted only the implementer's probe; the audit's full pass was 124/127 (1 probe flake above, 1 probe bug, 1 product bug A1)."
+    "Pre-audit '119/119' counted only the implementer's probe; the audit's full pass was 124/127 (1 probe flake above, 1 probe bug, 1 product bug A1).",
+    "R1 (c9dd195e, before the compact-card change): one full vitest run failed src/app/PortalShell.test.tsx 'mounts QuantBT under its canonical route with no nested topbar' with an unhandled RunLibrary filtered_rows error in the same run; the file passes 18/18 alone with and without the S10 change; not reproduced in R1's final full run nor in R2's full run (3067 passed)."
   ],
   "tree_history": {
     "pre_audit": {
@@ -699,6 +904,11 @@
     "after_audit_fix": {
       "tree": "6b7e041936995c307f24f04f999855f513edb821",
       "head": "1fb290102055b29d83eb0875f7b5cbcd51b4593b"
+    },
+    "r1_hifi_alignment": {
+      "tree": "46d101c047bfc5b8ee6b9caf18de7d2f936ff0cd",
+      "head": "c9dd195e2c7bb9710af8babf7b56c655ce2c6da1",
+      "decision": "Bobby 2026-09-24: this version locks to the hi-fi; VD-P19-01..07"
     }
   },
   "audit": {
