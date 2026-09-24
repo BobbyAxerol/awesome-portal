@@ -39,6 +39,13 @@ export interface LibraryFilters {
   group: boolean;
   /** Compare selection: at most two, FIFO. */
   sel: readonly string[];
+  /**
+   * The page, as the opaque cursor the server issued (FE-S01-07). In the URL
+   * so a reload or a shared link lands on the same page; dropped whenever a
+   * filter changes, because a cursor binds the query it was issued for.
+   */
+  cursor?: string;
+  before?: string;
 }
 
 const STATUS_VALUES: readonly RunStatus[] = [
@@ -71,7 +78,9 @@ export function filtersFromSearch(search: string): LibraryFilters {
     mode: list("mode"),
     alpha: list("alpha"),
     group: params.get("group") === "1",
-    sel: list("sel").slice(0, 2),
+    sel: [...new Set(list("sel"))].slice(0, 2),
+    ...(params.get("cursor") ? { cursor: params.get("cursor") as string } : {}),
+    ...(params.get("before") && !params.get("cursor") ? { before: params.get("before") as string } : {}),
   };
 }
 
@@ -84,8 +93,37 @@ export function searchFromFilters(filters: LibraryFilters): string {
   if (filters.alpha.length) params.set("alpha", filters.alpha.join(","));
   if (filters.group) params.set("group", "1");
   if (filters.sel.length) params.set("sel", filters.sel.join(","));
+  if (filters.cursor) params.set("cursor", filters.cursor);
+  else if (filters.before) params.set("before", filters.before);
   const text = params.toString();
   return text ? `?${text}` : "";
+}
+
+/**
+ * The part of the filters the server answers: text, status, mode, alpha.
+ * `group` and `sel` are view state and never cost a request (FE-S01-02).
+ */
+export function filterKeyOf(filters: LibraryFilters): string {
+  return searchFromFilters({ q: filters.q, status: filters.status, mode: filters.mode, alpha: filters.alpha, group: false, sel: [] });
+}
+
+/** The filter key plus the page: exactly what one list request asks. */
+export function queryKeyOf(filters: LibraryFilters): string {
+  return searchFromFilters({
+    q: filters.q,
+    status: filters.status,
+    mode: filters.mode,
+    alpha: filters.alpha,
+    group: false,
+    sel: [],
+    cursor: filters.cursor,
+    before: filters.before,
+  });
+}
+
+/** Clears every server filter; keeps grouping and the compare selection. */
+export function clearedFilters(filters: LibraryFilters): LibraryFilters {
+  return { q: "", status: [], mode: [], alpha: [], group: filters.group, sel: filters.sel };
 }
 
 /** FIFO selection, capped at two (spec 01 §3.3). */
@@ -94,6 +132,21 @@ export function toggleSelection(current: readonly string[], runId: string): read
   /* Picking a third replaces the oldest rather than refusing: the reader is
      allowed to try a pairing and be told why it does not work. */
   return [...current, runId].slice(-2);
+}
+
+/**
+ * One selected run, resolved wherever it lives (FE-S01-04).
+ *
+ * A selection survives a filter that hides it (spec 01 pitfall 5), so the
+ * compare bar cannot look its key up among the visible rows alone. `hidden`
+ * says the row is not on the page in view; `pending` says its row is still
+ * being read by id; neither makes a comparison valid or invalid on its own.
+ */
+export interface SelectedRun {
+  runId: string;
+  item: RunLibraryItem | null;
+  hidden: boolean;
+  pending: boolean;
 }
 
 export interface RunLibraryController {
@@ -105,9 +158,14 @@ export interface RunLibraryController {
   items: readonly RunLibraryItem[];
   state: ResearchState;
   refusal: LibraryRefusal | null;
+  selection: readonly SelectedRun[];
 
   loadNext: () => void;
   loadPrevious: () => void;
+  /** Back to the newest page of the same filter (an expired cursor's way out). */
+  firstPage: () => void;
+  /** Reads the same page again — the retry of a failed read. */
+  reload: () => void;
 
   /** Registers a card as visible, for the running poll and the lazy sparkline. */
   observeVisible: (runId: string, visible: boolean) => void;
@@ -120,11 +178,18 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
   const navigate = useNavigate();
 
   const filters = useMemo(() => filtersFromSearch(location.search), [location.search]);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
   const [response, setResponse] = useState<RunLibraryResponse | null>(null);
   const [refusal, setRefusal] = useState<LibraryRefusal | null>(null);
-  const [cursor, setCursor] = useState<{ cursor?: string; before?: string }>({});
+  const [nonce, setNonce] = useState(0);
   const [sparklines, setSparklines] = useState<ReadonlyMap<string, readonly string[]>>(new Map());
   const [polling, setPolling] = useState(false);
+  /* Rows read by id for a selection the current page does not show. */
+  const [lookedUp, setLookedUp] = useState<ReadonlyMap<string, RunLibraryItem>>(new Map());
+  const lookupAsked = useRef<Set<string>>(new Set());
+  const [lookupFailed, setLookupFailed] = useState<ReadonlySet<string>>(new Set());
 
   const visible = useRef<Set<string>>(new Set());
   const sparklineAsked = useRef<Set<string>>(new Set());
@@ -148,12 +213,22 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
    */
   const pollStopped = useRef(false);
 
-  /* A filter change resets paging: a cursor binds the filter it was issued
-     for, so carrying it across a change would ask for a page of another
-     query. */
-  const filterKey = searchFromFilters({ ...filters, sel: [] });
+  /*
+   * The request, as a string (FE-S01-01/02/03).
+   *
+   * The list effect used to depend on the filter arrays and on a separate
+   * cursor state. Every URL change — ticking a compare box, toggling "group"
+   * — rebuilt the arrays and refetched; and a filter change reset the cursor
+   * in a second effect, so each load and each filter sent the request twice,
+   * the first time with the old page's cursor under the new filter. The page
+   * now lives in the URL beside the filters, a filter change drops it in the
+   * same navigation, and the effect keys on the one string the server
+   * actually answers.
+   */
+  const filterKey = filterKeyOf(filters);
+  const queryKey = queryKeyOf(filters);
+
   useEffect(() => {
-    setCursor({});
     /* A new question may be answered differently, so the stop is lifted with
        the filter that earned it. */
     pollStopped.current = false;
@@ -161,32 +236,43 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
 
   const setFilters = useCallback(
     (next: LibraryFilters) => {
-      const selChanged = next.sel.join(",") !== filters.sel.join(",");
-      /* `sel` is navigation and pushes; a filter is a view and replaces, so
-         back does not walk through every keystroke. */
-      navigate({ search: searchFromFilters(next) }, { replace: !selChanged });
+      const current = filtersRef.current;
+      /* A cursor binds the filter it was issued for; carrying it across a
+         change would ask for a page of another query. */
+      const target =
+        filterKeyOf(next) !== filterKeyOf(current) ? { ...next, cursor: undefined, before: undefined } : next;
+      const selChanged = target.sel.join(",") !== current.sel.join(",");
+      const pageChanged = (target.cursor ?? "") !== (current.cursor ?? "") || (target.before ?? "") !== (current.before ?? "");
+      /* `sel` and the page are navigation and push; a filter is a view and
+         replaces, so back does not walk through every keystroke. */
+      navigate({ search: searchFromFilters(target) }, { replace: !selChanged && !pageChanged });
     },
-    [filters.sel, navigate],
+    [navigate],
   );
 
   const toggleSel = useCallback(
-    (runId: string) => setFilters({ ...filters, sel: toggleSelection(filters.sel, runId) }),
-    [filters, setFilters],
+    (runId: string) => {
+      const current = filtersRef.current;
+      setFilters({ ...current, sel: toggleSelection(current.sel, runId) });
+    },
+    [setFilters],
   );
 
   /* ------------------------------------------------------------ the page */
 
   useEffect(() => {
     const controller = new AbortController();
+    const query = filtersFromSearch(queryKey);
     runLibraryApi
       .list(
         {
           workspace_id: workspaceId,
-          q: filters.q || undefined,
-          status: filters.status.length ? filters.status : undefined,
-          mode: filters.mode.length ? filters.mode : undefined,
-          alpha: filters.alpha.length ? filters.alpha : undefined,
-          ...cursor,
+          q: query.q || undefined,
+          status: query.status.length ? query.status : undefined,
+          mode: query.mode.length ? query.mode : undefined,
+          alpha: query.alpha.length ? query.alpha : undefined,
+          cursor: query.cursor,
+          before: query.before,
         },
         controller.signal,
       )
@@ -199,7 +285,56 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
         setRefusal(toLibraryRefusal(error));
       });
     return () => controller.abort();
-  }, [cursor, filters.alpha, filters.mode, filters.q, filters.status, workspaceId]);
+  }, [queryKey, workspaceId, nonce]);
+
+  /* ------------------------------------------- selection beyond the page */
+
+  const selKey = filters.sel.join(",");
+  useEffect(() => {
+    if (response === null) return;
+    const onPage = new Set(response.items.map((item) => item.run_id));
+    const missing = selKey
+      .split(",")
+      .filter((id) => id && !onPage.has(id) && !lookedUp.has(id) && !lookupAsked.current.has(id));
+    if (missing.length === 0) return;
+    for (const id of missing) lookupAsked.current.add(id);
+
+    const controller = new AbortController();
+    runLibraryApi
+      .list({ workspace_id: workspaceId, ids: missing }, controller.signal)
+      .then((found) => {
+        setLookedUp((previous) => {
+          const next = new Map(previous);
+          for (const row of found.items) next.set(row.run_id, row);
+          return next;
+        });
+        /*
+         * Spec 01 §15.3: `sel` never holds an id that does not exist. The id
+         * read answered for this workspace, so an id it did not return is not
+         * a run the reader can compare — a hand-typed `?sel=R-FAKE-1` is
+         * dropped rather than shown as a selection.
+         */
+        const returned = new Set(found.items.map((row) => row.run_id));
+        const absent = new Set(missing.filter((id) => !returned.has(id)));
+        if (absent.size === 0) return;
+        const current = filtersRef.current;
+        const kept = current.sel.filter((id) => !absent.has(id));
+        if (kept.length !== current.sel.length) {
+          navigate({ search: searchFromFilters({ ...current, sel: kept }) }, { replace: true });
+        }
+      })
+      .catch(() => {
+        /* An aborted read is asked again by the next run of this effect; a
+           failed one keeps the selection — the bar says the key is unknown
+           rather than dropping a run the reader chose. */
+        if (controller.signal.aborted) {
+          for (const id of missing) lookupAsked.current.delete(id);
+          return;
+        }
+        setLookupFailed((previous) => new Set([...previous, ...missing]));
+      });
+    return () => controller.abort();
+  }, [response, selKey, lookedUp, navigate, workspaceId]);
 
   /* -------------------------------------------------- the running poll */
 
@@ -344,8 +479,23 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
 
   const items = response?.items ?? [];
 
+  const selection = useMemo<readonly SelectedRun[]>(() => {
+    const onPage = new Map((response?.items ?? []).map((item) => [item.run_id, item]));
+    return filters.sel.map((runId) => {
+      const item = onPage.get(runId) ?? lookedUp.get(runId) ?? null;
+      return {
+        runId,
+        item,
+        hidden: response !== null && !onPage.has(runId),
+        pending: item === null && !lookupFailed.has(runId),
+      };
+    });
+  }, [filters.sel, lookedUp, lookupFailed, response]);
+
   const state: ResearchState = refusal
-    ? refusalState(refusal, response !== null)
+    ? /* A denial withholds what was on screen: it may belong to a scope the
+         session no longer reaches (state semantics v1, `denied`). */
+      refusalState(refusal, response !== null && refusal.state !== "denied")
     : response === null
       ? researchState({ kind: "in-flight", hasAcceptedResponse: false })
       : researchState({ kind: "ok", rowCount: items.length });
@@ -358,13 +508,20 @@ export function useRunLibrary(workspaceId?: string): RunLibraryController {
     items,
     state,
     refusal,
+    selection,
     loadNext: () => {
       const next = response?.page.next_cursor;
-      if (next) setCursor({ cursor: next });
+      if (next) setFilters({ ...filtersRef.current, cursor: next, before: undefined });
     },
     loadPrevious: () => {
       const previous = response?.page.prev_cursor;
-      if (previous) setCursor({ before: previous });
+      if (previous) setFilters({ ...filtersRef.current, cursor: undefined, before: previous });
+    },
+    firstPage: () => setFilters({ ...filtersRef.current, cursor: undefined, before: undefined }),
+    reload: () => {
+      setRefusal(null);
+      pollStopped.current = false;
+      setNonce((n) => n + 1);
     },
     observeVisible,
     sparklines,

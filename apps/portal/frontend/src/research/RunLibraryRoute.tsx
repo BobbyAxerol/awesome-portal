@@ -25,6 +25,9 @@ export function RunLibraryRoute() {
       onVisible={library.observeVisible}
       onLoadNext={library.loadNext}
       onLoadPrevious={library.loadPrevious}
+      selection={library.selection}
+      onRetry={library.reload}
+      onFirstPage={library.firstPage}
     />
   );
 }

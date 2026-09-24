@@ -1,71 +1,210 @@
 /**
- * Screen 01 · Run Library (P12 composition scope).
+ * Screen 01 · Run Library (P12 composition scope; RF-06 FE-S01 pass).
  *
  * Spec 01's founding rule: **the library renders evidence, it does not rank.**
  * Every certificate, claim and metric arrives from its own run's Stage 5 with
  * an availability beside it, and the screen shows exactly what was published.
  *
- * Three habits, each with a rule behind it:
+ * Habits, each with a rule behind it:
  *
- *  - **An unavailable fact keeps its place and states its reason.** A
- *    `NOT_PUBLISHED` metric is not `0`, a `LEGACY_METADATA_ONLY` row is not
- *    current engine evidence, and `rc: null` reserves no chip at all.
+ *  - **An unavailable fact keeps its place and states its reason** (DQ-14).
+ *    A `NOT_PUBLISHED` metric is not `0`, a `LEGACY_METADATA_ONLY` row is not
+ *    current engine evidence, a null certificate is `cert —`, and `rc: null`
+ *    reserves no chip at all. Tooltips carry a sentence, never a raw code;
+ *    the code rides on `data-reason-code` for diagnostics.
+ *  - **Copy that asserts a fact appears only when the run published it**
+ *    (DQ-15). "claim not issued" is printed because the server said
+ *    `SOURCE_CLAIM_NOT_ISSUED`; a failed or cancelled run gets its own line.
  *  - **The server owns comparability.** Two runs compare only when their
- *    `comparison.key` values are present and identical; the refusal copy is
- *    verbatim, and the button refuses rather than producing a side-by-side
- *    that would be a lie.
- *  - **Every card is selectable.** Validity is decided at the compare bar, so
- *    a reader may try a pairing and be told why it does not work (§3.3).
+ *    `comparison.key` values are present and identical, wherever the rows
+ *    are — a selection hidden by a filter is still looked up by id.
+ *  - **Unbuilt screens are named, never navigated to.** Compare (13, P20) and
+ *    Attempt Lineage (10, P19) render disabled with the phase that delivers
+ *    them.
+ *
+ * Look and copy follow the hi-fi `QuantBT 01 Run Library.dc.html`, measured
+ * block by block; behaviour and data follow spec 01 (DQ-02).
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import {
+  COMPARE_DEFERRED,
+  COMPARE_PHASE,
   COMPARE_PICK_ONE_MORE,
   COMPARE_REFUSAL,
   type Availability,
   type MetricCell,
   type RunLibraryItem,
   type RunLibraryResponse,
+  type RunStatus,
   type StageCell,
   isAvailable,
   mayCompare,
-  unavailableReason,
+  unavailableReason as stateSentence,
 } from "./runLibraryClient";
+import { formatMetric } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
-import type { LibraryFilters } from "./useRunLibrary";
+import { clearedFilters, type LibraryFilters, type SelectedRun } from "./useRunLibrary";
 import type { ResearchState } from "./state";
 
 /* --------------------------------------------------------------- verbatim */
 
+/** Hi-fi title and subtitle (DQ-02: the hi-fi wins on copy). */
+export const TITLE = "Run Library — the entry point";
 export const SUBTITLE =
-  "Every card carries its own evidence — the trail, the claim, the certificate. The library renders them; it ranks nothing.";
+  "Every run wears its claim, its certification, and its evidence trail on the outside. No number without the conditions it was earned under.";
 
+/** Spec 01 §17 and the hi-fi, verbatim — the two agree word for word. */
 export const RULES_FOOTER =
-  "A card shows what its own run published: the trail it walked, the claim Stage 5 issued or withheld, and the certificate that claim earned. Nothing here is scored against anything else.";
+  "Certification and claim strings come from each run's Stage 5 — the library renders them, it ranks nothing. Compare only unlocks for runs sharing a ComparisonContractKey (symbol · timeframe · route · protocol); two different contracts side by side would be a comparison lie, so the button refuses instead of obliging. Superseded attempts stay visible for lineage and are excluded from every approval path.";
 
 export const CLAIM_PENDING = "claim pending — engine issues it at Stage 5, never before";
+export const CLAIM_FAILED =
+  "no claim — the run failed before Stage 5; failure detail lives in the run console";
+/** A cancelled run's claim line — the status is published, so this may say so. */
+export const CLAIM_CANCELLED = "no claim — the run was cancelled before Stage 5";
+/** FE-S01-08: the face of `SOURCE_CLAIM_NOT_ISSUED`, the server's own verdict. */
+export const CLAIM_NOT_ISSUED = "claim not issued";
 
 export const LEGACY_NOTE =
   "legacy 1.0.8 metadata — retained for lineage, not current engine evidence.";
 
+export const EMPTY_NONE = "No runs yet.";
+export const filteredEmpty = (total: number) => `0 of ${total} runs match — loosen a filter.`;
+
+export const SCRATCH_TITLE =
+  "no alpha_version binding — NOT_PUBLISHABLE, rc_ can never be composed from this run";
+export const boundTitle = (alphaName: string, av: string) => `bound to ${alphaName} ${av} — publishable evidence`;
+
+/** Screen 10 Attempt Lineage is not built; P19 delivers it. */
+export const LINEAGE_PHASE = "P19";
+
+const JOURNEY_MAP = "/research/quantbt/journey";
+const NEW_RUN = "/research/quantbt/runs/new";
+
 const STAGE_KEYS: readonly StageCell["key"][] = ["S1", "S2", "S3", "S4", "S5"];
+
+/** Status chips in the filter bar: the hi-fi three, then the two the data has. */
+const STATUS_CHIPS: readonly RunStatus[] = ["COMPLETED", "RUNNING", "QUEUED", "FAILED", "CANCELLED"];
+
+/**
+ * Reader sentences for the reason codes the library publishes (FE-S01-09).
+ *
+ * A tooltip is for a person: the code stays on the element as
+ * `data-reason-code` for diagnostics, and the words say what it means. An
+ * unknown code falls back to its availability state's sentence, never to the
+ * raw code.
+ */
+export const REASON_SENTENCES: Record<string, string> = {
+  SOURCE_CLAIM_NOT_ISSUED: "Stage 5 finished without issuing a claim for this run.",
+  SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE: "The engine did not publish a methodology certificate for this run.",
+  SOURCE_DID_NOT_PUBLISH_METRIC: "The engine did not publish this metric for this run.",
+  P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES:
+    "No equity series is published to the library for this run; the library never derives one from run outputs.",
+  P12_DOES_NOT_INFER_FINAL_METRICS_FROM_PROGRESS_OR_ARTIFACTS:
+    "Final metrics are not published to the library for this run; they are never inferred from progress or run outputs.",
+  P11_PROGRESS_SNAPSHOT_NOT_PUBLISHED: "This run published no progress snapshot.",
+  LEGACY_1_0_8_PROTOCOL_METADATA_ONLY: "Recorded by the legacy 1.0.8 engine as protocol metadata only.",
+  LEGACY_DATASET_ID_DOES_NOT_DECLARE_SYMBOL_TIMEFRAME:
+    "The legacy dataset id does not declare a symbol or timeframe.",
+  LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS: "The legacy 1.0.8 engine did not publish progress, a claim or a certificate.",
+  LEGACY_1_0_8_DOES_NOT_PUBLISH_COMPARISON_COMPATIBILITY:
+    "The legacy 1.0.8 engine did not publish a comparison contract key.",
+  LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES: "The legacy 1.0.8 engine did not publish a sparkline series.",
+};
+
+/** The sentence for a withheld fact: its code's own, else its state's. */
+export function reasonSentence(availability: Availability): string {
+  const code = availability.reason_code;
+  return code && code in REASON_SENTENCES ? REASON_SENTENCES[code] : stateSentence(availability);
+}
+
+/* ---------------------------------------------------------------- styling */
+
+const MONO = "var(--font-mono)";
 
 const STAGE_TONE: Record<StageCell["state"], { border: string; background: string; ink: string }> = {
   done: { border: "var(--accent)", background: "var(--accent-soft)", ink: "var(--accent)" },
-  cap: { border: "var(--role-holdout)", background: "var(--paper)", ink: "var(--role-holdout)" },
-  blocked: { border: "var(--bad)", background: "var(--bad-bg-soft)", ink: "var(--bad)" },
-  run: { border: "var(--good)", background: "var(--paper-raised)", ink: "var(--good)" },
-  pend: { border: "var(--line)", background: "var(--paper-raised)", ink: "var(--line-strong)" },
+  cap: { border: "var(--accent-2)", background: "var(--accent-2-soft)", ink: "var(--accent-2)" },
+  blocked: { border: "var(--bad)", background: "var(--bad-bg)", ink: "var(--bad)" },
+  run: { border: "var(--accent)", background: "var(--accent-soft)", ink: "var(--accent)" },
+  pend: { border: "var(--line)", background: "var(--paper-sunken)", ink: "var(--ink-faint)" },
 };
 
 const CERT_TONE: Record<string, string> = {
   A: "var(--good)",
-  B: "var(--role-holdout)",
-  C: "var(--role-holdout)",
+  B: "var(--accent-2)",
+  C: "var(--lifecycle-degraded)",
   D: "var(--bad)",
 };
+
+const STATUS_TONE: Partial<Record<RunStatus, { background: string; ink: string }>> = {
+  COMPLETED: { background: "var(--good-bg)", ink: "var(--good)" },
+  FAILED: { background: "var(--bad-bg)", ink: "var(--bad)" },
+  RUNNING: { background: "var(--accent-soft)", ink: "var(--accent)" },
+  RECOVERY_REQUIRED: { background: "var(--warn-bg)", ink: "var(--warn)" },
+};
+
+/** Hi-fi chip grammar (spec 01 §2.3): off / on / on-warn. */
+function chipStyle(on: boolean, warn = false, radius = "999px"): CSSProperties {
+  const tone = on ? (warn ? "var(--accent-2)" : "var(--accent)") : null;
+  return {
+    border: `1px solid ${tone ?? "var(--line)"}`,
+    background: on ? (warn ? "var(--accent-2-soft)" : "var(--accent-soft)") : "var(--paper-raised)",
+    color: tone ?? "var(--ink-soft)",
+    padding: "2px 9px",
+    fontFamily: MONO,
+    fontSize: 10,
+    borderRadius: radius,
+  };
+}
+
+const DATA_CHIP: CSSProperties = {
+  fontFamily: MONO,
+  fontSize: 10,
+  border: "1px solid var(--line)",
+  borderRadius: 999,
+  background: "var(--paper)",
+  padding: "1px 8px",
+  color: "var(--ink-soft)",
+};
+
+const LABEL_9: CSSProperties = {
+  fontSize: 9,
+  textTransform: "uppercase",
+  letterSpacing: ".07em",
+  color: "var(--ink-faint)",
+};
+
+const CARD: CSSProperties = {
+  border: "1px solid var(--line)",
+  borderRadius: 8,
+  background: "var(--paper-raised)",
+  boxShadow: "var(--shadow-e1)",
+  padding: "12px 16px",
+};
+
+function Divider() {
+  return <span aria-hidden="true" style={{ width: 1, height: 18, background: "var(--line)" }} />;
+}
+
+function GroupLabel({ children }: { children: ReactNode }) {
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        textTransform: "uppercase",
+        letterSpacing: ".07em",
+        fontWeight: 500,
+        color: "var(--ink-faint)",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
 /* ------------------------------------------------------------------ parts */
 
@@ -91,7 +230,8 @@ function Withheld({ availability, what }: { availability: Availability; what?: s
       className="mono text-[10px] italic leading-[16px]"
       style={{ color: "var(--ink-faint)" }}
       data-withheld={availability.state}
-      title={unavailableReason(availability)}
+      data-reason-code={availability.reason_code ?? undefined}
+      title={reasonSentence(availability)}
     >
       {what ? `${what} — ` : ""}
       {WITHHELD_WORDS[availability.state]}
@@ -99,57 +239,33 @@ function Withheld({ availability, what }: { availability: Availability; what?: s
   );
 }
 
-function Chip({
-  children,
-  tone = "var(--ink-soft)",
-  border = "var(--line)",
-  dashed,
-  ...rest
-}: {
-  children: React.ReactNode;
-  tone?: string;
-  border?: string;
-  dashed?: boolean;
-} & Record<string, unknown>) {
+function StatusPill({ status }: { status: RunStatus }) {
+  const tone = STATUS_TONE[status] ?? { background: "var(--paper-sunken)", ink: "var(--ink-soft)" };
+  const running = status === "RUNNING";
   return (
     <span
-      className="mono rounded-[3px] border px-[5px] text-[10px] leading-[16px]"
-      style={{
-        color: tone,
-        borderColor: border,
-        borderStyle: dashed ? "dashed" : "solid",
-        background: "var(--paper-raised)",
-      }}
-      {...rest}
-    >
-      {children}
-    </span>
-  );
-}
-
-function StatusPill({ status }: { status: RunLibraryItem["status"] }) {
-  const tone =
-    status === "COMPLETED"
-      ? "var(--good)"
-      : status === "FAILED"
-        ? "var(--bad)"
-        : status === "RUNNING"
-          ? "var(--accent)"
-          : "var(--ink-faint)";
-  return (
-    <span
-      className="mono inline-flex items-center gap-[4px] rounded-full border px-[6px] text-[8.5px] font-bold uppercase leading-[15px]"
+      className="inline-flex items-center gap-[5px]"
       data-status={status}
-      style={{ color: tone, borderColor: tone }}
+      role={running ? "status" : undefined}
+      style={{
+        borderRadius: 999,
+        padding: "1px 8px",
+        fontFamily: MONO,
+        fontSize: 10,
+        fontWeight: 600,
+        background: tone.background,
+        color: tone.ink,
+      }}
     >
       {/* The dot beats only while the run does. Spec 01 §3.4 gives it to
           RUNNING alone, so a still pill is itself a fact. `motion-safe`
           leaves it steady for a reader who asked for no motion. */}
-      {status === "RUNNING" ? (
+      {running ? (
         <span
           data-pulse
-          className="motion-safe:animate-pulse inline-block h-[5px] w-[5px] rounded-full"
-          style={{ background: tone }}
+          aria-hidden="true"
+          className="motion-safe:animate-pulse inline-block h-[6px] w-[6px] rounded-full"
+          style={{ background: tone.ink }}
         />
       ) : null}
       {status}
@@ -168,11 +284,9 @@ function StatusPill({ status }: { status: RunLibraryItem["status"] }) {
 function EvidenceTrail({ stages }: { stages: readonly StageCell[] }) {
   const byKey = new Map(stages.map((stage) => [stage.key, stage]));
   return (
-    <div className="flex flex-col gap-1" data-trail>
-      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        evidence trail
-      </span>
-      <div className="flex gap-1">
+    <span className="flex flex-none flex-col" style={{ gap: 3 }} data-trail>
+      <span style={LABEL_9}>evidence trail</span>
+      <span className="flex" style={{ gap: 3 }}>
         {STAGE_KEYS.map((key) => {
           const stage = byKey.get(key);
           const tone = stage ? STAGE_TONE[stage.state] : STAGE_TONE.pend;
@@ -186,21 +300,39 @@ function EvidenceTrail({ stages }: { stages: readonly StageCell[] }) {
           return (
             <span
               key={key}
+              role="img"
+              aria-label={`${key}: ${title}`}
               data-stage-cell={key}
               data-stage-state={stage?.state ?? "pend"}
               data-tooltip-source={provenance}
               title={title}
-              className="mono inline-flex h-[18px] w-[26px] items-center justify-center rounded-[3px] border text-[9px]"
-              style={{ color: tone.ink, borderColor: tone.border, background: tone.background }}
+              className={`inline-flex items-center justify-center${stage?.state === "run" ? " motion-safe:animate-pulse" : ""}`}
+              style={{
+                width: 34,
+                height: 20,
+                borderRadius: 3,
+                border: `1px solid ${tone.border}`,
+                background: tone.background,
+                color: tone.ink,
+                fontFamily: MONO,
+                fontSize: 9,
+                fontWeight: 700,
+              }}
             >
               {key}
             </span>
           );
         })}
-      </div>
-    </div>
+      </span>
+    </span>
   );
 }
+
+const SPARK_LABEL: Record<string, string> = {
+  oos_equity: "OOS equity",
+  search_progress: "search progress",
+  failed: "equity — none",
+};
 
 /**
  * The lazy sparkline.
@@ -218,7 +350,7 @@ function Sparkline({
   values: readonly string[] | undefined;
   onVisible: (runId: string, visible: boolean) => void;
 }) {
-  const box = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const node = box.current;
@@ -242,34 +374,22 @@ function Sparkline({
     };
   }, [item.run_id, onVisible]);
 
-  const kind = item.sparkline.kind;
-  const label =
-    kind === "oos_equity"
-      ? "OOS equity"
-      : kind === "search_progress"
-        ? "search progress"
-        : kind === "failed"
-          ? "run failed"
-          : null;
-
+  const label = item.sparkline.kind ? SPARK_LABEL[item.sparkline.kind] : "equity";
   const available = isAvailable(item.sparkline.availability) && values && values.length > 0;
   const peak = available ? Math.max(...values.map((v) => Math.abs(Number(v) || 0)), 1) : 1;
 
   return (
-    <div className="flex flex-col gap-1" data-sparkline={item.run_id} ref={box}>
-      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-        {label ?? "series"}
-      </span>
+    <span className="flex flex-none flex-col" style={{ gap: 3 }} data-sparkline={item.run_id} ref={box}>
+      <span style={LABEL_9}>{label}</span>
       {available ? (
-        <span className="flex h-[26px] w-[150px] items-end gap-[1px]" data-sparkline-values={values.length}>
+        <span className="flex items-end" style={{ gap: 1, height: 26, width: 150 }} data-sparkline-values={values.length}>
           {values.slice(0, 24).map((value, index) => (
             <span
               key={index}
               className="flex-1 rounded-[1px]"
               style={{
                 height: `${Math.max(6, (Math.abs(Number(value) || 0) / peak) * 100)}%`,
-                background:
-                  index === values.length - 1 ? "var(--role-oos)" : "var(--viz-train)",
+                background: index === values.length - 1 ? "var(--role-oos)" : "var(--viz-train)",
               }}
             />
           ))}
@@ -282,50 +402,168 @@ function Sparkline({
          * would read as "still loading".
          */
         <span
-          className="mono flex h-[26px] w-[150px] items-center justify-center rounded-[2px] text-[9px] italic"
+          className="mono flex items-center justify-center rounded-[2px] text-[9px] italic"
           data-sparkline-placeholder={item.sparkline.availability.state}
-          title={unavailableReason(item.sparkline.availability)}
-          style={{ background: "var(--paper-sunken)", color: "var(--ink-faint)" }}
+          data-reason-code={item.sparkline.availability.reason_code ?? undefined}
+          title={
+            item.sparkline.availability.state === "AVAILABLE"
+              ? "The series is read when the card scrolls into view."
+              : reasonSentence(item.sparkline.availability)
+          }
+          style={{ height: 26, width: 150, background: "var(--line-soft)", color: "var(--ink-faint)" }}
         >
           {item.sparkline.availability.state === "AVAILABLE"
             ? "reads when visible"
             : WITHHELD_WORDS[item.sparkline.availability.state]}
         </span>
       )}
-    </div>
+    </span>
   );
 }
 
+/** DQ-08: round by unit for display; the exact server string stays in `title`. */
+const METRIC_UNIT: Partial<Record<MetricCell["role"], string>> = {
+  OOS_SHARPE: "ratio",
+  DECAY: "ratio",
+  TRADE_COUNT: "count",
+};
+
 function Stats({ stats }: { stats: readonly MetricCell[] }) {
   return (
-    <div className="flex flex-wrap gap-4" data-stats>
-      {stats.map((metric) => (
-        <span key={metric.key} className="flex flex-col gap-[2px]" data-metric={metric.role}>
-          <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-            {metric.label}
+    /* Grows like the hi-fi's `flex:1` but never shrinks below its three
+       cells: a long claim line wraps under them instead of folding the
+       stats into two rows. */
+    <span className="flex flex-wrap" style={{ gap: 18, flex: "1 0 auto" }} data-stats>
+      {stats.map((metric) => {
+        const shown =
+          isAvailable(metric.availability) && metric.value !== null
+            ? (METRIC_UNIT[metric.role] ? formatMetric(metric.value, METRIC_UNIT[metric.role]) : null) ?? metric.value
+            : null;
+        return (
+          <span key={metric.key} className="flex flex-col" style={{ gap: 1 }} data-metric={metric.role}>
+            <span style={LABEL_9}>{metric.label}</span>
+            <span
+              style={{
+                fontFamily: MONO,
+                fontSize: 13,
+                fontWeight: 600,
+                color:
+                  metric.tone === "BAD" ? "var(--bad)" : metric.tone === "ACCENT" ? "var(--accent)" : "var(--ink)",
+              }}
+              title={shown !== null && metric.value !== null ? metric.value : undefined}
+            >
+              {/* A withheld value keeps its slot and says so rather than
+                  becoming a zero. */}
+              {shown !== null ? shown : <Withheld availability={metric.availability} />}
+            </span>
           </span>
-          <span
-            className="mono text-[13px] font-semibold"
-            style={{
-              color:
-                metric.tone === "BAD"
-                  ? "var(--bad)"
-                  : metric.tone === "ACCENT"
-                    ? "var(--accent)"
-                    : "var(--ink)",
-            }}
-          >
-            {/* The value is the server's exact string; a withheld one keeps
-                its slot and says so rather than becoming a zero. */}
-            {isAvailable(metric.availability) && metric.value !== null ? (
-              metric.value
-            ) : (
-              <Withheld availability={metric.availability} />
-            )}
-          </span>
-        </span>
-      ))}
-    </div>
+        );
+      })}
+    </span>
+  );
+}
+
+/** The claim line: the server's sentence, or the one fact the row published about its absence. */
+function ClaimQuote({ item }: { item: RunLibraryItem }) {
+  const legacy = item.source_kind === "LEGACY_1_0_8_METADATA";
+  const availability = item.claim.availability;
+  let body: ReactNode;
+  let kind: string;
+  if (isAvailable(availability) && item.claim.text !== null) {
+    body = item.claim.text;
+    kind = "issued";
+  } else if (!legacy && (item.status === "RUNNING" || item.status === "QUEUED")) {
+    body = CLAIM_PENDING;
+    kind = "pending";
+  } else if (item.status === "FAILED") {
+    body = CLAIM_FAILED;
+    kind = "failed";
+  } else if (item.status === "CANCELLED") {
+    body = CLAIM_CANCELLED;
+    kind = "cancelled";
+  } else if (availability.reason_code === "SOURCE_CLAIM_NOT_ISSUED") {
+    body = <span title={reasonSentence(availability)}>{CLAIM_NOT_ISSUED}</span>;
+    kind = "not-issued";
+  } else {
+    body = <Withheld availability={availability} what="claim" />;
+    kind = "withheld";
+  }
+  return (
+    <blockquote
+      data-claim={item.run_id}
+      data-claim-kind={kind}
+      data-reason-code={availability.reason_code ?? undefined}
+      style={{
+        fontFamily: MONO,
+        fontSize: 9.5,
+        color: kind === "issued" || kind === "pending" ? "var(--accent-2)" : "var(--ink-soft)",
+        fontStyle: kind === "issued" || kind === "pending" ? undefined : "italic",
+        borderLeft: "2px solid var(--accent-2)",
+        paddingLeft: 6,
+        maxWidth: 300,
+        lineHeight: 1.45,
+      }}
+    >
+      {/* Never truncated: a claim that is cut is a claim that is changed. */}
+      {body}
+    </blockquote>
+  );
+}
+
+/** Where a card's one link goes, by what the row is (spec 01 §15.4). */
+function openTarget(item: RunLibraryItem): { to: string; label: string; title?: string } {
+  const id = encodeURIComponent(item.run_id);
+  if (item.source_kind === "LEGACY_1_0_8_METADATA") {
+    return {
+      to: `/research/quantbt/runs/${id}/overview`,
+      label: "open legacy run →",
+      title: "A legacy 1.0.8 row opens in the legacy run workspace; it has no Evidence Flow.",
+    };
+  }
+  if (item.status === "RUNNING" || item.status === "QUEUED") {
+    return { to: `/research/quantbt/runs/${id}/progress`, label: "watch progress →" };
+  }
+  if (item.status === "CANCELLED") {
+    return {
+      to: `/research/quantbt/runs/${id}/progress`,
+      label: "open progress →",
+      title: "A cancelled run sealed no evidence; its record and attempts are on Run Progress.",
+    };
+  }
+  return { to: `/research/quantbt/runs/${id}/evidence`, label: "open evidence →" };
+}
+
+function CompareCheck({ runId, selected, onToggle }: { runId: string; selected: boolean; onToggle: () => void }) {
+  /* 15 px box inside a 24 px target (spec 01 §8 hit-target rule). */
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={selected}
+      aria-label={`select ${runId} for compare`}
+      title="select for compare"
+      data-compare-check={runId}
+      onClick={onToggle}
+      className="inline-flex flex-none items-center justify-center"
+      style={{ width: 24, height: 24, margin: "-4.5px", padding: 0, border: 0, background: "transparent", alignSelf: "center" }}
+    >
+      <span
+        aria-hidden="true"
+        className="inline-flex items-center justify-center"
+        style={{
+          width: 15,
+          height: 15,
+          border: `1px solid ${selected ? "var(--accent-2)" : "var(--line-strong)"}`,
+          borderRadius: 3,
+          background: selected ? "var(--accent-2-soft)" : "var(--paper-raised)",
+          color: "var(--accent-2)",
+          fontSize: 10,
+          lineHeight: 1,
+        }}
+      >
+        {selected ? "×" : ""}
+      </span>
+    </button>
   );
 }
 
@@ -343,198 +581,316 @@ function RunCard({
   onVisible: (runId: string, visible: boolean) => void;
 }) {
   const legacy = item.source_kind === "LEGACY_1_0_8_METADATA";
-  const running = item.status === "RUNNING";
+  const open = openTarget(item);
+  const cert = isAvailable(item.certificate.availability) ? item.certificate.grade : null;
 
   return (
     <article
       data-run={item.run_id}
       data-source-kind={item.source_kind}
       data-row-kind={item.row_kind}
-      className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
-      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+      data-selected={selected}
+      style={{
+        ...CARD,
+        ...(selected ? { outline: "2px solid var(--accent-2)", outlineOffset: 1 } : {}),
+      }}
     >
       <header
-        className="flex flex-wrap items-baseline gap-2 border-b pb-2"
-        style={{ borderColor: "var(--line-soft)" }}
+        className="flex flex-wrap items-baseline"
+        style={{ gap: 10, paddingBottom: 8, borderBottom: "1px solid var(--line-soft)" }}
       >
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={() => onToggle(item.run_id)}
-          aria-label={`Select ${item.run_id} for comparison`}
-          data-compare-check={item.run_id}
-        />
-        <span className="mono text-[13px] font-bold">{item.run_id}</span>
+        <CompareCheck runId={item.run_id} selected={selected} onToggle={() => onToggle(item.run_id)} />
+        <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{item.run_id}</span>
         <StatusPill status={item.status} />
 
-        {isAvailable(item.mode.availability) && item.mode.display !== null ? (
-          <Chip data-mode={item.mode.key ?? ""}>{item.mode.display}</Chip>
+        {item.mode.display !== null && (isAvailable(item.mode.availability) || item.mode.availability.state === "LEGACY_METADATA_ONLY") ? (
+          /* FE-S01-14: a legacy row's mode is still the server's value; it is
+             shown, marked as legacy metadata, rather than replaced by a word. */
+          <span
+            data-mode={item.mode.key ?? ""}
+            data-mode-state={item.mode.availability.state}
+            data-reason-code={item.mode.availability.reason_code ?? undefined}
+            title={isAvailable(item.mode.availability) ? undefined : reasonSentence(item.mode.availability)}
+            style={
+              isAvailable(item.mode.availability)
+                ? DATA_CHIP
+                : { ...DATA_CHIP, borderStyle: "dashed", borderColor: "var(--line-strong)" }
+            }
+          >
+            {item.mode.display}
+            {isAvailable(item.mode.availability) ? "" : " · legacy"}
+          </span>
         ) : (
           <Withheld availability={item.mode.availability} what="mode" />
         )}
 
         {item.binding ? (
-          <Chip
+          <span
             data-binding={item.binding.alpha_version_id}
-            title={`${item.binding.alpha_name} · ${item.binding.av} · ${item.binding.digest}`}
+            title={`${boundTitle(item.binding.alpha_name, item.binding.av)}\ndigest ${item.binding.digest}`}
+            style={DATA_CHIP}
           >
             {item.binding.alpha_name} · {item.binding.av}
-          </Chip>
+          </span>
+        ) : legacy ? (
+          <span
+            data-binding="legacy"
+            title="The legacy 1.0.8 engine recorded no alpha binding for this run — neither bound nor scratch."
+            className="mono text-[10px] italic"
+            style={{ color: "var(--ink-faint)" }}
+          >
+            binding — legacy metadata
+          </span>
         ) : isAvailable(item.binding_availability) ? (
-          <Chip data-binding="scratch" tone="var(--role-holdout)" border="var(--role-holdout)" dashed>
+          <span
+            data-binding="scratch"
+            title={SCRATCH_TITLE}
+            style={{
+              ...DATA_CHIP,
+              border: "1px dashed var(--accent-2)",
+              background: "var(--paper)",
+              color: "var(--accent-2)",
+            }}
+          >
             scratch
-          </Chip>
+          </span>
         ) : (
           <Withheld availability={item.binding_availability} what="binding" />
         )}
 
         {isAvailable(item.instrument.availability) && item.instrument.display !== null ? (
-          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-instrument>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }} data-instrument>
             {item.instrument.display}
           </span>
-        ) : null}
+        ) : (
+          <Withheld availability={item.instrument.availability} what="instrument" />
+        )}
 
         {/* `rc` is pinned null by the contract: no chip, and no space kept for
             one. Reserving a slot for a fact that cannot exist is a promise. */}
 
-        {isAvailable(item.certificate.availability) && item.certificate.grade !== null ? (
-          <Chip
-            data-certificate={item.certificate.grade}
-            tone={CERT_TONE[item.certificate.grade]}
-            border={CERT_TONE[item.certificate.grade]}
-          >
-            {item.certificate.grade}
-          </Chip>
-        ) : null}
-
-        <span className="mono ml-auto text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-created>
-          {new Date(item.created_at_utc_ms).toISOString().slice(0, 16).replace("T", " ")}Z
+        <span
+          data-certificate={cert ?? "none"}
+          data-reason-code={cert ? undefined : (item.certificate.availability.reason_code ?? undefined)}
+          title={cert ? `methodology certificate ${cert}` : reasonSentence(item.certificate.availability)}
+          style={{
+            fontFamily: MONO,
+            fontSize: 10,
+            fontWeight: 700,
+            border: `1.5px solid ${cert ? CERT_TONE[cert] : "var(--line-strong)"}`,
+            color: cert ? CERT_TONE[cert] : "var(--ink-faint)",
+            borderRadius: 3,
+            padding: "0 7px",
+          }}
+        >
+          cert {cert ?? "—"}
         </span>
 
-        {running ? (
+        {/* Date and link travel together: when the head wraps, the link stays
+            beside its date at the right edge instead of starting a lone row. */}
+        <span className="ml-auto inline-flex items-baseline whitespace-nowrap" style={{ gap: 10 }}>
+          <span
+            style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }}
+            data-created
+            title={new Date(item.created_at_utc_ms).toISOString()}
+          >
+            {new Date(item.created_at_utc_ms).toISOString().slice(0, 16).replace("T", " ")}Z
+          </span>
           <Link
-            to={`/research/quantbt/runs/${encodeURIComponent(item.run_id)}/progress`}
-            className="mono text-[10px] uppercase"
-            style={{ color: "var(--accent)" }}
+            to={open.to}
+            title={open.title}
+            style={{ fontFamily: MONO, fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--accent)" }}
             data-open={item.run_id}
+            {...(open.label === "open evidence →" ? { "data-open-evidence": item.run_id } : {})}
           >
-            watch progress →
+            {open.label}
           </Link>
-        ) : (
-          /*
-           * Spec 01 §2.5 row 10 sends a settled run to Screen 04. That screen
-           * has no route yet, so the affordance is shown refused rather than
-           * pointed at a URL that would 404 — the reader learns the evidence
-           * view exists and is not open yet, which is the true state.
-           */
-          /* P13 opened Screen 04, so this is a link again. */
-          <Link
-            to={`/research/quantbt/runs/${encodeURIComponent(item.run_id)}/evidence`}
-            className="mono text-[10px] uppercase"
-            style={{ color: "var(--accent)" }}
-            data-open-evidence={item.run_id}
-          >
-            open evidence →
-          </Link>
-        )}
+        </span>
       </header>
 
       {legacy ? (
-        <p className="text-[10.5px]" style={{ color: "var(--role-holdout)" }} data-legacy-note>
+        <p className="text-[10.5px]" style={{ color: "var(--accent-2)", paddingTop: 6 }} data-legacy-note>
           {LEGACY_NOTE}
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-start gap-5">
+      <div className="flex flex-wrap items-center" style={{ gap: 18, paddingTop: 8 }}>
         <EvidenceTrail stages={item.stages} />
         <Sparkline item={item} values={sparkline} onVisible={onVisible} />
         <Stats stats={item.stats} />
-        <blockquote
-          className="mono max-w-[300px] border-l-2 pl-2 text-[9.5px] leading-[1.5]"
-          style={{ borderColor: "var(--role-holdout)", color: "var(--role-holdout)" }}
-          data-claim={item.run_id}
-        >
-          {/* Never truncated: a claim that is cut is a claim that is changed. */}
-          {isAvailable(item.claim.availability) && item.claim.text !== null ? (
-            item.claim.text
-          ) : running ? (
-            CLAIM_PENDING
-          ) : (
-            <Withheld availability={item.claim.availability} />
-          )}
-        </blockquote>
+        <ClaimQuote item={item} />
       </div>
 
       {item.superseded_note !== null ? (
-        <p
-          className="border-t border-dashed pt-1.5 text-[10px]"
-          style={{ borderColor: "var(--line)", color: "var(--ink-faint)", opacity: 0.7 }}
+        <div
+          className="flex items-baseline"
+          style={{
+            marginTop: 8,
+            borderTop: "1px dashed var(--line)",
+            paddingTop: 6,
+            gap: 10,
+            fontFamily: MONO,
+            fontSize: 10,
+            color: "var(--ink-faint)",
+            opacity: 0.7,
+          }}
           data-superseded
         >
-          <span className="mono mr-1.5 font-bold">superseded</span>
-          {item.superseded_note}
-        </p>
+          <span
+            style={{
+              textTransform: "uppercase",
+              letterSpacing: ".06em",
+              border: "1px solid var(--line-strong)",
+              borderRadius: 3,
+              padding: "0 5px",
+            }}
+          >
+            superseded
+          </span>
+          <span>{item.superseded_note}</span>
+        </div>
       ) : null}
     </article>
   );
 }
 
+/** Spec 01 §7: five static skeleton cards in the card's own frame, no shimmer. */
+function SkeletonCards() {
+  const block = (width: number | string, height: number): CSSProperties => ({
+    display: "block",
+    width,
+    height,
+    borderRadius: 3,
+    background: "var(--line-soft)",
+  });
+  return (
+    <div role="status" aria-label="Loading runs" className="flex flex-col" style={{ gap: 14 }} data-skeleton>
+      {[0, 1, 2, 3, 4].map((index) => (
+        <div key={index} aria-hidden="true" style={CARD}>
+          <div className="flex items-center" style={{ gap: 10, paddingBottom: 8, borderBottom: "1px solid var(--line-soft)" }}>
+            <span style={block(15, 15)} />
+            <span style={block(220, 14)} />
+            <span style={block(70, 14)} />
+            <span style={block(180, 14)} />
+            <span style={{ ...block(120, 12), marginLeft: "auto" }} />
+          </div>
+          <div className="flex items-center" style={{ gap: 18, paddingTop: 8 }}>
+            <span style={block(182, 34)} />
+            <span style={block(150, 34)} />
+            <span style={block(240, 34)} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* --------------------------------------------------------------- compare */
 
-function CompareBar({
-  selected,
-  items,
-  onClear,
-}: {
-  selected: readonly string[];
-  items: readonly RunLibraryItem[];
-  onClear: () => void;
-}) {
-  if (selected.length === 0) return null;
-  const [a, b] = selected.map((id) => items.find((item) => item.run_id === id));
-  const comparable = mayCompare(a, b);
-  const both = selected.length === 2;
+type CompareMode = "pending" | "reading" | "ready" | "refused";
+
+function CompareBar({ selection, onClear }: { selection: readonly SelectedRun[]; onClear: () => void }) {
+  if (selection.length === 0) return null;
+  const both = selection.length === 2;
+  const reading = both && selection.some((run) => run.item === null && run.pending);
+  const comparable = both && mayCompare(selection[0].item ?? undefined, selection[1].item ?? undefined);
+  const mode: CompareMode = !both ? "pending" : reading ? "reading" : comparable ? "ready" : "refused";
+  const unknown = both && !reading && selection.some((run) => run.item === null);
+
+  const note =
+    mode === "pending"
+      ? COMPARE_PICK_ONE_MORE
+      : mode === "reading"
+        ? "reading the selected run hidden by the filter, to learn its ComparisonContractKey…"
+        : mode === "ready"
+          ? COMPARE_DEFERRED
+          : unknown
+            ? "one selected run could not be read, so its ComparisonContractKey is unknown — the button refuses."
+            : COMPARE_REFUSAL;
+
+  const border =
+    mode === "ready" ? "var(--accent)" : mode === "refused" ? "var(--bad)" : mode === "pending" ? "var(--accent-2)" : "var(--line)";
 
   return (
     <div
-      className="flex flex-wrap items-center gap-2.5 rounded-[6px] border px-3 py-2"
-      data-compare-bar={both ? (comparable ? "ready" : "refused") : "pending"}
+      role="region"
+      aria-label="compare selection"
+      className="flex flex-wrap items-center"
+      data-compare-bar={mode}
       style={{
-        borderColor: both ? (comparable ? "var(--accent)" : "var(--bad)") : "var(--line)",
-        background: both ? (comparable ? "var(--accent-soft)" : "var(--bad-bg-soft)") : "var(--paper-raised)",
+        position: "sticky",
+        bottom: 14,
+        zIndex: 5,
+        gap: 14,
+        border: `1px solid ${border}`,
+        borderRadius: 8,
+        background: "var(--paper-raised)",
+        boxShadow: "var(--shadow-e3)",
+        padding: "10px 16px",
+        color: mode === "refused" ? "var(--bad)" : "var(--ink-soft)",
       }}
     >
-      <span className="mono text-[10px]">{selected.join(" · ")}</span>
-      {!both ? (
-        <span className="text-[10.5px]" style={{ color: "var(--ink-soft)" }}>
-          {COMPARE_PICK_ONE_MORE}
+      <span
+        className="flex-none"
+        style={{ fontFamily: MONO, fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 700 }}
+      >
+        compare · {selection.length} selected
+      </span>
+      <span className="flex min-w-[200px] flex-1 flex-col" style={{ fontSize: 11.5, lineHeight: 1.5 }}>
+        <span data-compare-note {...(mode === "refused" && !unknown ? { "data-compare-refusal": true } : {})}>
+          {note}
         </span>
-      ) : comparable ? (
-        <Link
-          to={`/research/quantbt/compare?runs=${selected.join(",")}`}
-          className="btn-ghost mono text-[10px]"
-          data-action="open-compare"
-        >
-          open compare →
-        </Link>
-      ) : (
-        <>
-          <button
-            type="button"
-            className="btn-ghost mono text-[10px]"
-            data-action="open-compare"
-            disabled
-            style={{ opacity: 0.4, cursor: "not-allowed" }}
-            title={COMPARE_REFUSAL}
-          >
-            open compare →
-          </button>
-          <span className="text-[10.5px]" style={{ color: "var(--bad)" }} data-compare-refusal>
-            {COMPARE_REFUSAL}
-          </span>
-        </>
-      )}
-      <button type="button" className="btn-ghost mono ml-auto text-[10px]" data-action="clear" onClick={onClear}>
+        <span className="flex flex-wrap" style={{ gap: "0 10px", fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)" }}>
+          {selection.map((run) => (
+            <span key={run.runId} data-compare-selected={run.runId} data-hidden={run.hidden}>
+              {run.runId}
+              {run.hidden ? " (hidden by filter)" : ""}
+            </span>
+          ))}
+        </span>
+      </span>
+      {/* Screen 13 is not built: the button never navigates (FE-S01-05). */}
+      <button
+        type="button"
+        disabled
+        data-action="open-compare"
+        data-phase={COMPARE_PHASE}
+        title={
+          mode === "ready"
+            ? `Screen 13 Compare is not built yet — phase ${COMPARE_PHASE} delivers it.`
+            : mode === "refused" && !unknown
+              ? COMPARE_REFUSAL
+              : note
+        }
+        style={{
+          border: `1px ${mode === "ready" ? "solid var(--accent)" : "dashed var(--line-strong)"}`,
+          borderRadius: 6,
+          background: mode === "ready" ? "var(--accent-soft)" : "var(--paper-sunken)",
+          color: mode === "ready" ? "var(--accent)" : "var(--ink-faint)",
+          padding: "5px 14px",
+          fontFamily: MONO,
+          fontSize: 10,
+          letterSpacing: ".05em",
+          textTransform: "uppercase",
+          cursor: "not-allowed",
+        }}
+      >
+        {mode === "ready" ? `open compare · ${COMPARE_PHASE}` : "compare"}
+      </button>
+      <button
+        type="button"
+        data-action="clear"
+        onClick={onClear}
+        style={{
+          border: 0,
+          background: "transparent",
+          fontFamily: MONO,
+          fontSize: 10,
+          color: "var(--ink-soft)",
+          textDecoration: "underline",
+          minHeight: 24,
+        }}
+      >
         clear
       </button>
     </div>
@@ -553,17 +909,18 @@ interface RunGroup {
 /**
  * Groups the loaded page by alpha binding (spec 01 §2.4).
  *
- * Only the page in hand is grouped, and the header says so: with keyset
- * paging the next page may carry more rows of the same alpha, so a count here
- * is a count of what is loaded, never of the library. Ordering inside a group
- * is the order the server sent, so grouping never becomes a re-rank.
+ * Only the page in hand is grouped: with keyset paging the next page may
+ * carry more rows of the same alpha. Ordering inside a group is the order the
+ * server sent, so grouping never becomes a re-rank. A legacy 1.0.8 row with
+ * no recorded binding is its own group — it is not scratch (FE-S01-14).
  */
 export function groupRuns(items: readonly RunLibraryItem[]): RunGroup[] {
   const groups = new Map<string, RunGroup>();
   for (const item of items) {
     const bound = item.binding;
-    const scratch = bound === null && isAvailable(item.binding_availability);
-    const key = bound ? `a:${bound.alpha_id}:${bound.av}` : scratch ? "zz:scratch" : "zz:withheld";
+    const legacy = bound === null && item.source_kind === "LEGACY_1_0_8_METADATA";
+    const scratch = bound === null && !legacy && isAvailable(item.binding_availability);
+    const key = bound ? `a:${bound.alpha_id}:${bound.av}` : scratch ? "zz:scratch" : legacy ? "zzz:legacy" : "zz:withheld";
     const strategy =
       isAvailable(item.strategy_id.availability) && item.strategy_id.value !== null
         ? item.strategy_id.value
@@ -576,20 +933,59 @@ export function groupRuns(items: readonly RunLibraryItem[]): RunGroup[] {
     }
     groups.set(key, {
       key,
-      title: bound ? `${bound.alpha_name} · ${bound.av}` : scratch ? "scratch" : "binding not published",
+      title: bound
+        ? `${bound.alpha_name} · ${bound.av}`
+        : scratch
+          ? "scratch — unbound"
+          : legacy
+            ? "legacy 1.0.8 — binding not recorded"
+            : "binding not published",
       sub: bound
         ? strategy === null
           ? "runs below share one immutable code artifact"
           : `strategy ${strategy} · runs below share one immutable code artifact`
         : scratch
           ? "iterate freely · NOT_PUBLISHABLE"
-          : `${item.binding_availability.state.toLowerCase().replace(/_/g, " ")} — these rows name no alpha version, so they share nothing that could be called one`,
+          : legacy
+            ? "retained for lineage · not current engine evidence"
+            : `${WITHHELD_WORDS[item.binding_availability.state]} — these rows name no alpha version, so they share nothing that could be called one`,
       rows: [item],
     });
   }
   /* Scratch and unbound rows sort last: they can never support an approval,
      so they do not belong above the rows that can. */
   return [...groups.values()].sort((left, right) => left.key.localeCompare(right.key));
+}
+
+/* ------------------------------------------------------------ the filter */
+
+/** Spec 01 §6: the text filter is written to the URL 150 ms after the last key. */
+export const FILTER_DEBOUNCE_MS = 150;
+
+function useDebouncedQuery(filters: LibraryFilters, onFilters: (next: LibraryFilters) => void) {
+  const [draft, setDraft] = useState(filters.q);
+  const sent = useRef(filters.q);
+  const latest = useRef({ filters, onFilters });
+  latest.current = { filters, onFilters };
+
+  /* The URL moved on its own (back, forward, "clear filters"): follow it. */
+  useEffect(() => {
+    if (filters.q !== sent.current) {
+      sent.current = filters.q;
+      setDraft(filters.q);
+    }
+  }, [filters.q]);
+
+  useEffect(() => {
+    if (draft === sent.current) return;
+    const timer = window.setTimeout(() => {
+      sent.current = draft;
+      latest.current.onFilters({ ...latest.current.filters, q: draft });
+    }, FILTER_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [draft]);
+
+  return [draft, setDraft] as const;
 }
 
 /* ----------------------------------------------------------------- screen */
@@ -605,6 +1001,10 @@ export interface RunLibraryProps {
   onVisible: (runId: string, visible: boolean) => void;
   onLoadNext: () => void;
   onLoadPrevious: () => void;
+  /** Resolved selection, including rows a filter hides. Derived from `items` when absent. */
+  selection?: readonly SelectedRun[];
+  onRetry?: () => void;
+  onFirstPage?: () => void;
 }
 
 export function RunLibrary(props: RunLibraryProps) {
@@ -619,257 +1019,374 @@ export function RunLibrary(props: RunLibraryProps) {
     onVisible,
     onLoadNext,
     onLoadPrevious,
+    onRetry,
+    onFirstPage,
   } = props;
 
+  const selection: readonly SelectedRun[] =
+    props.selection ??
+    filters.sel.map((runId) => {
+      const item = items.find((row) => row.run_id === runId) ?? null;
+      return { runId, item, hidden: item === null, pending: false };
+    });
+
+  const [draft, setDraft] = useDebouncedQuery(filters, onFilters);
   const catalog = response?.filter_catalog;
 
   function toggleIn<T extends string>(list: readonly T[], value: T): T[] {
     return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
   }
 
+  /*
+   * Chips = the catalog ∪ what the URL asks for (FE-S01-06). An Atlas deep
+   * link to a mode no run uses yet still shows its chip pressed, so the
+   * reader sees why the list is empty and can un-press it.
+   */
+  const modeChips = [
+    ...(catalog?.modes ?? []).map((mode) => ({ key: mode.key, display: mode.display, catalogued: true })),
+    ...filters.mode
+      .filter((key) => !(catalog?.modes ?? []).some((mode) => mode.key === key))
+      .map((key) => ({ key, display: key, catalogued: false })),
+  ];
+  const alphaChips = [
+    ...(catalog?.alphas ?? []).map((alpha) => ({ key: alpha.alpha_id, display: alpha.alpha_name, catalogued: true })),
+    ...filters.alpha
+      .filter((key) => key !== "scratch" && !(catalog?.alphas ?? []).some((alpha) => alpha.alpha_id === key))
+      .map((key) => ({ key, display: key, catalogued: false })),
+  ];
+  const showScratch = Boolean(catalog?.scratch_available) || filters.alpha.includes("scratch");
+  const anyFilter = filters.q !== "" || filters.status.length > 0 || filters.mode.length > 0 || filters.alpha.length > 0;
+  const clearAll = () => onFilters(clearedFilters(filters));
+
+  const ledger = response?.claim_ledger;
+  const ledgerTotal = ledger ? ledger.issued + ledger.not_issued + ledger.pending_source + ledger.failed : 0;
+  const ledgerWidth = Math.min(ledgerTotal * 14, 168);
+
+  const loading = state.state === "loading";
+  const listVisible =
+    response !== null && (state.state === "available" || state.state === "empty" || state.retainsContent);
+  const paged = Boolean(response?.page.has_more || response?.page.has_previous);
+
+  const counter = response
+    ? items.length === response.page.filtered_rows
+      ? `${response.page.filtered_rows} of ${response.page.total_rows} runs`
+      : `${items.length} shown · ${response.page.filtered_rows} of ${response.page.total_rows} runs match`
+    : null;
+
+  const retry = onRetry ? (
+    <button
+      type="button"
+      className="btn-ghost mono text-[10px] uppercase"
+      data-action="retry"
+      onClick={onRetry}
+      style={{ minHeight: 24 }}
+    >
+      retry
+    </button>
+  ) : undefined;
+
+  const cursorExpired = (filters.cursor || filters.before) && state.state === "terminal";
+
   return (
     <div
       data-screen="run-library"
-      className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col gap-3.5 px-4 py-4"
-      style={{ background: "var(--paper)", color: "var(--ink)" }}
+      className="mx-auto flex w-full min-w-0 max-w-[1280px] flex-col"
+      style={{ background: "var(--paper)", color: "var(--ink)", gap: 14, padding: "18px 26px 72px", fontSize: 13 }}
     >
-      <header className="flex flex-wrap items-end justify-between gap-2.5">
-        <div className="flex flex-col gap-[3px]">
-          <h1
-            className="text-[22px] font-light tracking-[-.01em]"
-            style={{ fontFamily: "Newsreader, Georgia, serif" }}
-          >
-            Run Library
+      <header
+        className="flex flex-wrap items-end justify-between"
+        style={{ gap: "10px 16px", borderBottom: "1px solid var(--line)", paddingBottom: 10 }}
+      >
+        <div className="flex flex-col" style={{ gap: 3 }}>
+          <nav aria-label="Breadcrumb" className="flex items-center" style={{ gap: 6, fontSize: 12, color: "var(--ink-soft)" }}>
+            <span>QuantBT Research</span>
+            <span aria-hidden="true" style={{ color: "var(--ink-faint)" }}>
+              /
+            </span>
+            <span aria-current="page" style={{ color: "var(--ink)" }}>
+              Runs
+            </span>
+          </nav>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 300, letterSpacing: "-.01em", lineHeight: 1 }}>
+            {TITLE}
           </h1>
-          <p
-            className="text-[13.5px] italic"
-            style={{ fontFamily: "Newsreader, Georgia, serif", color: "var(--ink-faint)" }}
-          >
+          <p style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: 13.5, color: "var(--ink-faint)" }}>
             {SUBTITLE}
           </p>
         </div>
-        <Link
-          to="/research/quantbt/runs/new"
-          className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase"
-          style={{ borderColor: "var(--accent)", color: "var(--accent)" }}
-          data-new-run
-        >
-          new run →
-        </Link>
+        <span className="flex flex-none flex-wrap items-center" style={{ gap: 8 }}>
+          <span
+            role="link"
+            aria-disabled="true"
+            data-link-disabled="attempt-lineage"
+            data-phase={LINEAGE_PHASE}
+            title={`Screen 10 Attempt Lineage is not built yet — phase ${LINEAGE_PHASE} delivers it.`}
+            style={{ fontFamily: MONO, fontSize: 10, color: "var(--ink-faint)", cursor: "not-allowed" }}
+          >
+            attempt lineage · {LINEAGE_PHASE}
+          </span>
+          <Link to={JOURNEY_MAP} data-link="journey-map" style={{ fontFamily: MONO, fontSize: 10, color: "var(--accent)" }}>
+            journey map ↗
+          </Link>
+          <Link
+            to={NEW_RUN}
+            data-new-run
+            style={{
+              display: "inline-block",
+              border: "1px solid var(--accent)",
+              borderRadius: 6,
+              background: "var(--accent)",
+              color: "var(--accent-contrast)",
+              padding: "6px 16px",
+              fontFamily: MONO,
+              fontSize: 11,
+              letterSpacing: ".05em",
+              textTransform: "uppercase",
+              textDecoration: "none",
+            }}
+          >
+            + new run · preflight first
+          </Link>
+        </span>
       </header>
 
       <div
-        className="flex flex-wrap items-center gap-2 rounded-[6px] border px-3.5 py-2"
-        style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+        className="flex flex-wrap items-center"
+        style={{
+          border: "1px solid var(--line)",
+          borderRadius: 6,
+          background: "var(--paper-raised)",
+          boxShadow: "var(--shadow-e1)",
+          padding: "9px 14px",
+          gap: 8,
+        }}
         data-filter-bar
+        role="search"
       >
         <input
-          value={filters.q}
-          onChange={(event) => onFilters({ ...filters, q: event.target.value })}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
           placeholder="filter by run id, alpha, symbol…"
           aria-label="Filter runs"
-          className="mono w-[230px] rounded-[5px] border px-2 py-1 text-[11px]"
-          style={{ borderColor: "var(--line)", background: "var(--paper)" }}
+          style={{
+            border: "1px solid var(--line)",
+            borderRadius: 6,
+            background: "var(--paper)",
+            padding: "4px 10px",
+            fontFamily: MONO,
+            fontSize: 11,
+            color: "var(--ink)",
+            width: 230,
+            maxWidth: "100%",
+          }}
         />
 
-        <span className="mono text-[10px] uppercase" style={{ color: "var(--ink-faint)" }}>
-          status
-        </span>
-        {(["COMPLETED", "RUNNING", "FAILED"] as const).map((status) => (
+        <Divider />
+        <GroupLabel>status</GroupLabel>
+        {STATUS_CHIPS.map((status) => {
+          const on = filters.status.includes(status);
+          return (
+            <button
+              key={status}
+              type="button"
+              data-filter-status={status}
+              data-selected={on}
+              aria-pressed={on}
+              onClick={() => onFilters({ ...filters, status: toggleIn(filters.status, status) })}
+              style={chipStyle(on)}
+            >
+              {status.toLowerCase()}
+            </button>
+          );
+        })}
+
+        <Divider />
+        <GroupLabel>mode</GroupLabel>
+        {modeChips.map((mode) => {
+          const on = filters.mode.includes(mode.key);
+          return (
+            <button
+              key={mode.key}
+              type="button"
+              data-filter-mode={mode.key}
+              data-selected={on}
+              data-uncatalogued={mode.catalogued ? undefined : true}
+              aria-pressed={on}
+              title={mode.catalogued ? undefined : "No run in this workspace uses this mode yet."}
+              onClick={() => onFilters({ ...filters, mode: toggleIn(filters.mode, mode.key) })}
+              style={{ ...chipStyle(on), ...(mode.catalogued ? {} : { borderStyle: "dashed" }) }}
+            >
+              {mode.display}
+            </button>
+          );
+        })}
+
+        <Divider />
+        <GroupLabel>alpha</GroupLabel>
+        {alphaChips.map((alpha) => {
+          const on = filters.alpha.includes(alpha.key);
+          return (
+            <button
+              key={alpha.key}
+              type="button"
+              data-filter-alpha={alpha.key}
+              data-selected={on}
+              data-uncatalogued={alpha.catalogued ? undefined : true}
+              aria-pressed={on}
+              title={alpha.catalogued ? undefined : "No run in this workspace is bound to this alpha yet."}
+              onClick={() => onFilters({ ...filters, alpha: toggleIn(filters.alpha, alpha.key) })}
+              style={{ ...chipStyle(on), ...(alpha.catalogued ? {} : { borderStyle: "dashed" }) }}
+            >
+              {alpha.display}
+            </button>
+          );
+        })}
+        {showScratch ? (
           <button
-            key={status}
             type="button"
-            data-filter-status={status}
-            data-selected={filters.status.includes(status)}
-            onClick={() => onFilters({ ...filters, status: toggleIn(filters.status, status) })}
-            className="mono rounded-full border px-2.5 py-px text-[10px]"
-            style={{
-              borderColor: filters.status.includes(status) ? "var(--accent)" : "var(--line)",
-              background: filters.status.includes(status) ? "var(--accent-soft)" : "var(--paper-raised)",
-              color: filters.status.includes(status) ? "var(--accent)" : "var(--ink-soft)",
-            }}
+            data-filter-alpha="scratch"
+            data-selected={filters.alpha.includes("scratch")}
+            aria-pressed={filters.alpha.includes("scratch")}
+            title="runs with no alpha_version binding — NOT_PUBLISHABLE"
+            onClick={() => onFilters({ ...filters, alpha: toggleIn(filters.alpha, "scratch") })}
+            style={chipStyle(filters.alpha.includes("scratch"), true)}
           >
-            {status.toLowerCase()}
+            scratch only
           </button>
-        ))}
-
-        {catalog && catalog.modes.length > 0 ? (
-          <>
-            <span className="mono text-[10px] uppercase" style={{ color: "var(--ink-faint)" }}>
-              mode
-            </span>
-            {catalog.modes.map((mode) => (
-              <button
-                key={mode.key}
-                type="button"
-                data-filter-mode={mode.key}
-                data-selected={filters.mode.includes(mode.key)}
-                onClick={() => onFilters({ ...filters, mode: toggleIn(filters.mode, mode.key) })}
-                className="mono rounded-full border px-2.5 py-px text-[10px]"
-                style={{
-                  borderColor: filters.mode.includes(mode.key) ? "var(--accent)" : "var(--line)",
-                  color: filters.mode.includes(mode.key) ? "var(--accent)" : "var(--ink-soft)",
-                }}
-              >
-                {mode.display}
-              </button>
-            ))}
-          </>
-        ) : null}
-
-        {catalog && catalog.alphas.length > 0 ? (
-          <>
-            <span className="mono text-[10px] uppercase" style={{ color: "var(--ink-faint)" }}>
-              alpha
-            </span>
-            {catalog.alphas.map((alpha) => (
-              <button
-                key={alpha.alpha_id}
-                type="button"
-                data-filter-alpha={alpha.alpha_id}
-                data-selected={filters.alpha.includes(alpha.alpha_id)}
-                onClick={() => onFilters({ ...filters, alpha: toggleIn(filters.alpha, alpha.alpha_id) })}
-                className="mono rounded-full border px-2.5 py-px text-[10px]"
-                style={{
-                  borderColor: filters.alpha.includes(alpha.alpha_id) ? "var(--accent)" : "var(--line)",
-                  color: filters.alpha.includes(alpha.alpha_id) ? "var(--accent)" : "var(--ink-soft)",
-                }}
-              >
-                {alpha.alpha_name}
-              </button>
-            ))}
-            {catalog.scratch_available ? (
-              <button
-                type="button"
-                data-filter-alpha="scratch"
-                data-selected={filters.alpha.includes("scratch")}
-                onClick={() => onFilters({ ...filters, alpha: toggleIn(filters.alpha, "scratch") })}
-                className="mono rounded-full border px-2.5 py-px text-[10px]"
-                style={{
-                  borderColor: "var(--role-holdout)",
-                  color: "var(--role-holdout)",
-                  background: filters.alpha.includes("scratch") ? "var(--paper)" : "var(--paper-raised)",
-                }}
-              >
-                scratch only
-              </button>
-            ) : null}
-          </>
         ) : null}
 
         <button
           type="button"
           data-filter-group
           data-selected={filters.group}
+          aria-pressed={filters.group}
+          title="group runs by alpha · version"
           onClick={() => onFilters({ ...filters, group: !filters.group })}
-          className="mono rounded-[6px] border px-2.5 py-px text-[10px]"
-          style={{
-            borderColor: filters.group ? "var(--accent)" : "var(--line)",
-            color: filters.group ? "var(--accent)" : "var(--ink-soft)",
-          }}
+          style={chipStyle(filters.group, false, "6px")}
         >
           group by alpha
         </button>
 
-        {response ? (
-          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-counter>
-            {response.page.filtered_rows} of {response.page.total_rows} runs
+        {counter ? (
+          <span
+            style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }}
+            data-counter
+            title={paged ? "Runs are read 50 at a time, newest first; the count is of the whole match." : undefined}
+          >
+            {counter}
           </span>
         ) : null}
 
-        {response ? (
-          <span className="mono ml-auto flex items-center gap-2 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-claim-ledger>
-            {/* Spec 01 §2.3 item 10: the ledger is a bar as well as a caption,
-                so the shape of the page's claim families is readable without
-                doing arithmetic. Each segment is sized by its own count, and
-                a family with no rows takes no width rather than a sliver. */}
-            <span className="flex h-[10px] w-[86px] overflow-hidden rounded-[2px]" data-ledger-bar>
+        {ledger ? (
+          <span className="ml-auto flex flex-wrap items-center" style={{ gap: 8 }} data-claim-ledger>
+            {/* Spec 01 §2.3 item 10: the ledger is a bar as well as a caption.
+                Each segment is sized by its own count; a family with no rows
+                takes no width rather than a sliver. */}
+            <span
+              className="flex items-center overflow-hidden"
+              style={{ gap: 2, height: 10, borderRadius: 5 }}
+              data-ledger-bar
+            >
               {(
                 [
-                  ["issued", response.claim_ledger.issued, "var(--good)"],
-                  ["not-issued", response.claim_ledger.not_issued, "var(--ink-mute)"],
-                  ["pending", response.claim_ledger.pending_source, "var(--role-holdout)"],
-                  ["failed", response.claim_ledger.failed, "var(--bad)"],
+                  ["issued", ledger.issued, "var(--good)"],
+                  ["not-issued", ledger.not_issued, "var(--ink-mute)"],
+                  ["pending", ledger.pending_source, "var(--accent-2)"],
+                  ["failed", ledger.failed, "var(--bad)"],
                 ] as const
               ).map(([family, count, tone]) => {
-                const total =
-                  response.claim_ledger.issued +
-                  response.claim_ledger.not_issued +
-                  response.claim_ledger.pending_source +
-                  response.claim_ledger.failed;
-                if (count === 0 || total === 0) return null;
+                if (count === 0 || ledgerTotal === 0) return null;
                 return (
                   <span
                     key={family}
                     data-ledger-segment={family}
                     title={`${count} ${family.replace("-", " ")}`}
-                    style={{ background: tone, width: `${(count / total) * 100}%` }}
+                    style={{
+                      display: "inline-block",
+                      height: 10,
+                      borderRadius: 2,
+                      background: tone,
+                      width: Math.max(4, (count / ledgerTotal) * ledgerWidth),
+                    }}
                   />
                 );
               })}
             </span>
-            claims · {response.claim_ledger.issued} issued · {response.claim_ledger.not_issued} not
-            issued · {response.claim_ledger.pending_source} pending · {response.claim_ledger.failed} failed
+            <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }}>
+              claims · {ledger.issued} issued · {ledger.not_issued} not issued · {ledger.pending_source} pending ·{" "}
+              {ledger.failed} failed
+            </span>
           </span>
         ) : null}
       </div>
 
-      <ResearchPanel
-        title="runs"
-        meta={response ? `as of ${new Date(response.as_of_utc_ms).toISOString()}` : undefined}
-        state={state}
-        minBodyHeight={180}
-      >
-        {items.length === 0 ? (
-          <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-empty>
-            No run matches this filter. The filter bar above is unchanged so the selection can be
-            widened.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2.5" data-runs>
-            {(filters.group ? groupRuns(items) : [{ key: "all", title: "", sub: "", rows: items }]).map(
-              (group) => (
-                <div key={group.key} className="flex flex-col gap-2.5">
-                  {filters.group ? (
-                    <div
-                      className="flex flex-wrap items-baseline gap-2.5 px-[2px] pt-1.5"
-                      data-group={group.key}
-                    >
-                      <span className="mono text-[11px] font-bold">{group.title}</span>
-                      <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-                        {group.sub}
-                      </span>
-                      <span
-                        className="mono text-[9.5px]"
-                        style={{ color: "var(--ink-faint)" }}
-                        data-group-count
-                      >
+      {loading ? (
+        <SkeletonCards />
+      ) : listVisible && items.length === 0 && state.state !== "stale" ? (
+        <div style={{ ...CARD, padding: "18px 16px" }} className="flex flex-wrap items-center" data-empty>
+          <span className="flex-1" style={{ fontSize: 12.5, color: "var(--ink-soft)" }} data-empty-copy>
+            {response && response.page.total_rows === 0 && !anyFilter
+              ? EMPTY_NONE
+              : filteredEmpty(response?.page.total_rows ?? 0)}
+          </span>
+          {response && response.page.total_rows === 0 && !anyFilter ? (
+            <Link to={NEW_RUN} className="btn-ghost mono text-[10px] uppercase">
+              new run →
+            </Link>
+          ) : anyFilter ? (
+            <button type="button" className="btn-ghost mono text-[10px] uppercase" data-action="clear-filters" onClick={clearAll}>
+              clear filters
+            </button>
+          ) : null}
+        </div>
+      ) : listVisible ? (
+        <ResearchPanel title="runs" variant="plain" state={state} recovery={retry}>
+          <div className="flex flex-col" style={{ gap: 14 }} data-runs>
+            {(filters.group ? groupRuns(items) : [{ key: "all", title: "", sub: "", rows: items }]).map((group) => (
+              <div key={group.key} className="flex flex-col" style={{ gap: 14 }}>
+                {filters.group ? (
+                  <div className="flex flex-wrap items-baseline" style={{ gap: 10, padding: "6px 2px 0" }} data-group={group.key}>
+                    <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700 }}>{group.title}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }}>{group.sub}</span>
+                    {paged ? (
+                      <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--ink-faint)" }} data-group-count>
                         {group.rows.length} of this page
                       </span>
-                      <span
-                        className="h-px flex-1 self-center"
-                        style={{ background: "var(--line)" }}
-                      />
-                    </div>
-                  ) : null}
-                  {group.rows.map((item) => (
-                    <RunCard
-                      key={item.run_id}
-                      item={item}
-                      selected={filters.sel.includes(item.run_id)}
-                      onToggle={onToggleSel}
-                      sparkline={sparklines.get(item.run_id)}
-                      onVisible={onVisible}
-                    />
-                  ))}
-                </div>
-              ),
-            )}
+                    ) : null}
+                    <span className="flex-1" style={{ borderBottom: "1px solid var(--line)" }} />
+                  </div>
+                ) : null}
+                {group.rows.map((item) => (
+                  <RunCard
+                    key={item.run_id}
+                    item={item}
+                    selected={filters.sel.includes(item.run_id)}
+                    onToggle={onToggleSel}
+                    sparkline={sparklines.get(item.run_id)}
+                    onVisible={onVisible}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
-        )}
-      </ResearchPanel>
+        </ResearchPanel>
+      ) : (
+        /* Spec 01 §7: an error card mid-page with its code (in details) and
+           `retry`; the filter bar above stays. */
+        <ResearchPanel title="run library" state={state} recovery={retry} minBodyHeight={72}>
+          {null}
+        </ResearchPanel>
+      )}
 
-      {response?.page.has_previous || response?.page.has_more ? (
+      {cursorExpired && onFirstPage ? (
+        <div className="flex gap-2">
+          <button type="button" className="btn-ghost mono text-[10px] uppercase" data-action="first-page" onClick={onFirstPage}>
+            back to the newest page
+          </button>
+        </div>
+      ) : null}
+
+      {listVisible && paged ? (
         <div className="flex gap-2" data-paging>
           <button
             type="button"
@@ -896,17 +1413,13 @@ export function RunLibrary(props: RunLibraryProps) {
         </div>
       ) : null}
 
-      <CompareBar
-        selected={filters.sel}
-        items={items}
-        onClear={() => onFilters({ ...filters, sel: [] })}
-      />
+      <CompareBar selection={selection} onClear={() => onFilters({ ...filters, sel: [] })} />
 
-      <footer className="flex flex-col gap-1">
-        <span className="mono text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+      <footer className="flex flex-col" style={{ gap: 3, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+        <span style={{ fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--ink-faint)" }}>
           rules of this screen
         </span>
-        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-rules-footer>
+        <p style={{ fontSize: 11, color: "var(--ink-soft)", lineHeight: 1.6 }} data-rules-footer>
           {RULES_FOOTER}
         </p>
       </footer>

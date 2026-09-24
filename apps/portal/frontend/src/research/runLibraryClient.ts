@@ -139,9 +139,21 @@ export const runLibraryApi = {
 export const COMPARE_REFUSAL =
   "these two runs do not share a ComparisonContractKey (symbol · timeframe · route · protocol) — a side-by-side would be a comparison lie, so the button refuses.";
 
-/** Spec 01 §2.6 — shown while only one run is selected. */
+/**
+ * Shown while only one run is selected — the hi-fi's sentence (DQ-02: the
+ * hi-fi wins on copy; spec 01 §2.6 has a shorter draft of the same rule).
+ */
 export const COMPARE_PICK_ONE_MORE =
-  "pick one more run sharing the same ComparisonContractKey…";
+  "select a second run to compare — only runs sharing a ComparisonContractKey (symbol · timeframe · route · protocol) can sit side by side";
+
+/**
+ * Screen 13 Compare is not built; phase P20 delivers it. The button says so
+ * and stays disabled rather than navigating to a route that bounces back here
+ * and loses the selection (FE-S01-05).
+ */
+export const COMPARE_PHASE = "P20";
+export const COMPARE_DEFERRED =
+  "same ComparisonContractKey — comparable. The Compare screen (13) is not built yet; phase P20 delivers it.";
 
 /**
  * Whether two selected runs may be compared.
@@ -174,10 +186,20 @@ export function isAvailable(availability: Availability): boolean {
   return availability.state === "AVAILABLE";
 }
 
-/** The sentence a withheld fact carries, from the server's own reason code. */
+/**
+ * The state's reader sentence (FE-S01-09). Screen 01 layers its per-code
+ * sentences on top (`RunLibrary.tsx`); nothing here ever returns a raw code.
+ */
+const STATE_SENTENCES: Record<Availability["state"], string> = {
+  AVAILABLE: "Published.",
+  NOT_PUBLISHED: "Not published by the engine for this run.",
+  LEGACY_METADATA_ONLY: "Recorded by the legacy 1.0.8 engine as metadata only — not current engine evidence.",
+  PENDING_SOURCE_CALLBACK: "Waiting for the engine to report it.",
+};
+
+/** The sentence a withheld fact carries when no more specific one is known. */
 export function unavailableReason(availability: Availability): string {
-  if (availability.reason_code) return availability.reason_code;
-  return availability.state;
+  return STATE_SENTENCES[availability.state];
 }
 
 /* -------------------------------------------------------------------------

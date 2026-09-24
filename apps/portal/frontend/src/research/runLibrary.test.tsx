@@ -291,7 +291,11 @@ describe("P12-T03 — the server owns comparability", () => {
       filters: { ...EMPTY_FILTERS, sel: ["A", "B"] },
     });
     expect(document.querySelector("[data-compare-bar]")?.getAttribute("data-compare-bar")).toBe("ready");
-    expect(document.querySelector('[data-action="open-compare"]')?.getAttribute("href")).toContain("runs=A,B");
+    /* RF-06 FE-S01-05: Screen 13 is not built, so "ready" names its phase
+       instead of linking to a route that bounces back here. */
+    const button = document.querySelector('[data-action="open-compare"]') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute("data-phase")).toBe("P20");
   });
 
   it("never compares labels or names", () => {
@@ -334,12 +338,13 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
     expect(document.body.textContent).not.toMatch(/\brc_\b/);
   });
 
-  it("shows a certificate chip only when the grade is published", () => {
+  it("shows a grade only when it is published, and cert — otherwise (spec 01 §4.4)", () => {
     view();
     expect(document.querySelector("[data-certificate]")?.getAttribute("data-certificate")).toBe("B");
     cleanup();
     view({ response: page([item({ certificate: { grade: null, availability: NOT_PUBLISHED } })]) });
-    expect(document.querySelector("[data-certificate]")).toBeNull();
+    expect(document.querySelector("[data-certificate]")?.getAttribute("data-certificate")).toBe("none");
+    expect(document.querySelector("[data-certificate]")?.textContent).toBe("cert —");
   });
 
   it("renders a pending claim for a running run and never a completed one", () => {
@@ -572,7 +577,7 @@ describe("P12-T06 — typed refusals keep the route and stop the poll", () => {
     [400, "terminal", false],
     [401, "denied", true],
     [403, "denied", true],
-    [404, "empty", true],
+    [404, "terminal", true],
     [503, "unavailable", false],
   ])("maps %i", (status, expected, stops) => {
     const refusal = toLibraryRefusal(new PortalApiError("said so", status, "CODE", "r"));
