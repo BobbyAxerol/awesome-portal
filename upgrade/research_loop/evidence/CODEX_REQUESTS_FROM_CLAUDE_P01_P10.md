@@ -148,3 +148,37 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 **RF-03 continuation 2026-09-24:** Source-backed partial additions are recorded in [RF-03 packet](./RF-03/README.md). `CG-P07-03/04`, `CG-P06-02`, and `CG-P08-05` remain OPEN for the missing parts; generated `research-alpha-import.d.ts` already contains the additive mirror/expiry/quarantine contract for RF-04. P10 WFO producer and P05 importer are not falsely marked delivered.
 
 **RF-03 P08 continuation 2026-09-24:** `CG-P08-05` is partial, not DELIVERED. Exact bound AlphaVersion entrypoint/declaration now enforces `seed_required` and declared pin/sweep domains before snapshot; private snapshot enforces current-release `trial_ceiling`. Generated-wire 4/4 and isolated PostgreSQL 10/10 pass. No executable WFO or sweep/evaluation ceiling is inferred; see [RF-03 packet](./RF-03/README.md).
+
+## Round 2 — what is still open for P01–P10 (Claude, 2026-09-24)
+
+Frontend RF-04/RF-06 is done to the HiFi wherever data exists; every remaining
+gap on screens 00/02/03/05/12/14 (and the P11 read S03 needs) is one of these:
+
+| Id | Why it still matters on screen |
+|---|---|
+| `CG-P10-02` (APPROVED_PENDING_IMPLEMENTATION, DQ-11) | the biggest blocker: only the fixed Delta profile runs, so no fold, trial, study, selection or retained source reaches 03/04/05/06/07 |
+| `CG-P06-03` (APPROVED_PENDING_MEASUREMENT) | caps sized for one real walk-forward over historical data |
+| `CG-P05-01` | retention writer for RS-02 observations; `current-source` still answers 409 PENDING_RETENTION |
+| `CG-P06-02`, `CG-P10-04`, `CG-P11-03` | live progress from the child: per-fold pct, eta, rate, budget_tick, fold segments, claim + cursor, run identity on the snapshot |
+| `CG-P02-02`, `CG-P08-02` | inner folds, purge/embargo/label horizon, rolling train width |
+| `CG-P04-04`, `-06`, `-07` | 4-state OOS use; route description/method/status/backend/route_params; claim qualifier + locators, term meanings, mode weights |
+| `CG-P07-03`, `-04` | mirror 14 fields + check verdicts; gate RUNNING, per-gate ms, QUARANTINED_* codes, expires_at, declared digest |
+| `CG-P08-03`…`-06` | per-gate preflight list + field_path; dataset catalog; server-side rule checks; gap scan / holdout seal |
+| `CG-RF02-01`, `CG-RF02-02` | narrow seccomp/AppArmor profile; NATS image test for the consumer fix |
+
+Evidence Claude wrote while matching the HiFi, to read before starting:
+[AUDIT_P01_P10 §1–§6](./AUDIT_P01_P10_CLAUDE_2026-09-23.md),
+[AUDIT_P11_P15 §4–§8](./AUDIT_P11_P15_CLAUDE_2026-09-24.md) (every "not
+published" shell on 01/03/04/05/06 names the id it waits for),
+[CODEX_REQUESTS_FROM_CLAUDE_P11_P15.md](./CODEX_REQUESTS_FROM_CLAUDE_P11_P15.md)
+(RF-05, next after this list), [RF-02 packet](./RF-02/README.md) deviation list.
+
+**Test bar for every item above (Bobby, 2026-09-24):** real, not stubbed — the
+isolated preview stack (`scripts/research-preview/preview.sh`, :8095) with the
+pinned QuantBT 1.1.1 wheel and the read-only historical market data store; at
+least one Advanced walk-forward run over real history (several folds, real
+optimizer trials) once `CG-P10-02` lands, plus the fixed profile as a
+regression; the receipt names the run ids, dataset/symbol/timeframe/windows,
+image IDs from `identity.json`, the exact responses the screens read, and what
+stayed NOT_PUBLISHED with its reason. A fixture or unit test alone does not
+close an item.

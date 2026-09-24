@@ -108,3 +108,72 @@ Then:
 - Debt registers P13, P14, P15, RS-02, RS-03 declare `in_scope_backend_debt: []`
   while the board says `AUDIT_REOPENED` (Astra A12).
 - Board rows P13–P15 still read "AUDIT_REOPENED / 2026-09-22" without the RS-01 delivery.
+
+## Ownership split — agreed by Bobby and Codex, 2026-09-24
+
+| Owner | Ids | Files |
+|---|---|---|
+| **Claude** (backend + frontend) | `CG-P12-02…10` | `apps/control-api/src/research/run-library.*`, `research-run-library.openapi.json` |
+| **Claude** | `CG-P13-03`, `-04`, `-06`, `-10`, `-11`, `-12`, `-13` (evidence) | `evidence.*`, `evidence-metric-registry.ts`, `research-evidence.openapi.json`, new `portal_api/services/research_evidence_metrics.py` (+ one additive call in `workers/research_child.py`, announced to Codex) |
+| **Claude** | `CG-P13-09`, `CG-P14-03…06`, `CG-P15-02`, `-05`, `CG-P13-13` (split/search) | `current-source.service/error`, `split.*`, `search.*`, their OpenAPI files |
+| **Codex** | `CG-P11-03…09`, `CG-P13-05`, `-07`, `-08`, `CG-P14-02`, `CG-P15-03`, `-04` | progress, producer/worker/supervisor, retention, admission, RS-02 |
+
+Migration numbers reserved for Claude's RF-05 work: `1723680000060`–`1723680000069`.
+Claude's backend goes through Codex review as in RF-01/RF-02. Test bar as in
+CODEX_REQUESTS_FROM_CLAUDE_P01_P10.md "Round 2": real receipts on the preview
+stack with QuantBT 1.1.1 and historical data.
+
+## RF-05 Claude delivery notes for Codex (2026-09-24, after review fix-up)
+
+**Deploy order.** (1) apply migrations `1723680000060` (run-library search
+document v2) and `1723680000061` (evidence series kinds `ROLLING_SHARPE_63`,
+`ROLLING_BETA_63`) → (2) deploy control-api → (3) only then deploy the
+portal-api worker/child. `progress.contract.ts` `ResearchEvidenceSourceSchema`
+is `.strict()`: an old control-api refuses a receipt that carries the new
+`oos_analytics` block, and a refused terminal ingest blocks the run's terminal
+lifecycle (`progress.service.ts` ingests evidence first). The reverse order is
+safe: the new control-api accepts receipts without the block.
+
+**Migration ordering risk.** Claude used `060`/`061` (from the reserved
+`060…069`). If Codex's next migrations are numbered `058`/`059` and land after
+`060`/`061` have run anywhere (preview, dev, stable), node-pg-migrate's order
+check refuses to start. Please number new Codex migrations `≥ 1723680000070`
+(or `≥ 062` if the reservation is released), or confirm none are pending below
+`060`.
+
+**Two edits outside the agreed split** (both additive, four lines each):
+- `progress.contract.ts`: `oos_analytics: ResearchEvidenceOosAnalyticsSourceSchema.optional()`
+  in `ResearchEvidenceSourceSchema`. This makes the progress ingress contract
+  import `evidence.contract.ts`, so a change to the analytics block schema is
+  now a change to the terminal-event ingress contract (and vice versa for
+  strictness). Coordinate before either side tightens it.
+- `http-error.filter.ts`: forwards `ResearchCurrentSourceError.details`
+  (`lane_state`, `effective_status`) on a 409, the same way it already does for
+  `CurrentSourceProxyError`. Any change to the filter's `details` handling
+  affects the current-source refusal body.
+
+**Current-source NOT_APPLICABLE lane.** `current-source.service.ts`
+`notApplicable()` answers a typed 200 only for runs whose P10 adapter-contract
+digest equals `P04_DELTA_ADAPTER_CONTRACT_DIGEST`, and hardcodes
+`lane.retainable_profile_id = "rs02.delta-wfo-global.v1"` (the contract's
+`ProvenanceSchema` also pins that profile id and the
+`rs02.quantbt-advanced-wfo.v1` adapter id). Codex's uncommitted
+`current_source_artifacts.py` adds `rs02.delta-signal-notional-wfo.v1` /
+`rs02.quantbt-signal-notional-wfo.v1`. Question: do signal-notional WFO runs
+get a different P10 adapter-contract digest? If yes, they are correctly
+treated as retainable (409 pending states, never NOT_APPLICABLE), but the
+hardcoded `retainable_profile_id` and the provenance literals must widen to
+the installed profile set before those seals are readable.
+
+**Split-read concurrency slot.** On the no-seal path, `notApplicable()` reads
+the run's adapter digest through `ResearchSplitRepository.hub()`, which takes
+one of the split repository's `MAXIMUM_CONCURRENT_SPLIT_READS = 2` admission
+slots (queue 8). A burst of current-source reads for unsealed runs therefore
+competes with Screen-05 split reads and can return a 503 "admission
+saturated". Not changed in this fix-up: avoiding the slot simply would need
+`CurrentSourceRepository.runState()` to also return
+`research.run_producers.adapter_contract_digest` (one join, inside the
+current-source repository's own scoped read), which is outside the files in
+Claude's split. Suggested follow-up for whoever owns
+`current-source.repository.ts`; `notApplicable()` would then take the digest
+from `runState` and the `splitRows` dependency can be dropped.
