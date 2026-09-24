@@ -163,6 +163,12 @@ const REFUSAL: Record<ProblemCode, RefusalPresentation> = {
     requiresRefresh: false,
     invalidatesSource: false,
   },
+  RESEARCH_ALPHA_IMPORT_DIGEST_MISMATCH: {
+    state: "terminal",
+    mayRetry: false,
+    requiresRefresh: true,
+    invalidatesSource: true,
+  },
   /* The reference is gone or expired: the bytes must be parsed again. */
   RESEARCH_ALPHA_IMPORT_SOURCE_NOT_FOUND: {
     state: "terminal",

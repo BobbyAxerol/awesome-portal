@@ -42,6 +42,8 @@ export interface ResearchPanelProps {
   recovery?: ReactNode;
   /** Minimum body height so the frame does not collapse while loading. */
   minBodyHeight?: number;
+  /** S00 reading canvas keeps the state boundary without a nested card. */
+  variant?: "framed" | "plain";
 }
 
 const STATE_GLYPH: Record<string, string> = {
@@ -148,6 +150,7 @@ export function ResearchPanel({
   state,
   children,
   actions,
+  variant = "framed",
   recovery,
   minBodyHeight = 72,
 }: ResearchPanelProps) {
@@ -158,8 +161,8 @@ export function ResearchPanel({
 
   return (
     <section
-      className="flex flex-col rounded-[6px] border"
-      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+      className={variant === "plain" ? "flex flex-col" : "flex flex-col rounded-[6px] border"}
+      style={variant === "plain" ? undefined : { borderColor: "var(--line)", background: "var(--paper-raised)" }}
       data-research-panel={title}
       data-state={state.state}
       // A named region: a screen reader should be able to reach this panel by
@@ -167,7 +170,7 @@ export function ResearchPanel({
       aria-label={title}
       aria-busy={isLoading || undefined}
     >
-      <header
+      {variant === "framed" ? <header
         className="flex flex-wrap items-baseline justify-between gap-2 border-b px-3 py-2"
         style={{ borderColor: "var(--line)" }}
       >
@@ -182,9 +185,9 @@ export function ResearchPanel({
             {meta}
           </span>
         ) : null}
-      </header>
+      </header> : null}
 
-      <div className="flex flex-col gap-2 px-3 py-2.5" style={{ minHeight: minBodyHeight }}>
+      <div className={variant === "plain" ? "flex flex-col gap-2" : "flex flex-col gap-2 px-3 py-2.5"} style={{ minHeight: minBodyHeight }}>
         {isLoading ? <PanelSkeleton height={minBodyHeight} /> : null}
         {!isLoading && state.state !== "available" ? <StateNotice state={state} /> : null}
         {!isLoading && contentVisible ? children : null}

@@ -60,6 +60,8 @@ export interface RunProgressController {
 
   /** Console lines, newest last, capped at the display window. */
   lines: readonly ConsoleLine[];
+  /** Older retained page, separate from the live 500-line ring. */
+  olderLines: readonly ConsoleLine[];
   /** True when older lines were dropped from the display window. */
   linesDropped: boolean;
   loadOlder: () => void;
@@ -82,10 +84,12 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   const [cancelling, setCancelling] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResponse | null>(null);
   const [linesDropped, setLinesDropped] = useState(false);
+  const [olderLines, setOlderLines] = useState<readonly ConsoleLine[]>([]);
 
   /* The console ring. Never React state: a line per trial through state
      re-renders the whole screen (spec 03 pitfall 3). */
   const ring = useRef<ConsoleLine[]>([]);
+  const bootstrappedConsoleRun = useRef<string | null>(null);
   const [, bumpConsole] = useState(0);
   const flushTimer = useRef<number | null>(null);
 
@@ -101,6 +105,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
 
   const status = read?.current.effective_status ?? null;
   const live = status !== null && isLive(status);
+  const consoleAvailable = read?.run_id === runId && read.progress !== null;
 
   const flushConsole = useCallback(() => {
     if (flushTimer.current !== null) return;
@@ -337,15 +342,43 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
 
   /* --------------------------------------------------------------- console */
 
+  /* A snapshot carries progress counters, not the retained console page.
+     Load the newest bounded window once per run; SSE then adds live lines.
+     Reconciliation/poll must not refetch the page on every progress tick. */
+  useEffect(() => {
+    if (!consoleAvailable || !read?.progress || bootstrappedConsoleRun.current === runId) return;
+    bootstrappedConsoleRun.current = runId;
+    ring.current = [];
+    setOlderLines([]);
+    setLinesDropped(false);
+    const controller = new AbortController();
+    const { latest_sequence, retention_floor_sequence } = read.progress;
+    const after = Math.max(0, retention_floor_sequence - 1, latest_sequence - CONSOLE_WINDOW);
+    void progressApi
+      .console(runId, after, controller.signal)
+      .then((page) => appendLines(page.lines))
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) fail(error);
+      });
+    return () => controller.abort();
+  }, [appendLines, consoleAvailable, fail, runId]);
+
   const loadOlder = useCallback(() => {
     const floor = read?.progress?.retention_floor_sequence ?? 0;
-    const oldest = ring.current[0]?.sequence ?? read?.progress?.latest_sequence ?? 0;
-    const after = Math.max(floor, oldest - CONSOLE_WINDOW);
+    const oldest = olderLines[0]?.sequence ?? ring.current[0]?.sequence ?? (read?.progress?.latest_sequence ?? 0) + 1;
+    if (oldest <= floor) return;
+    const after = Math.max(0, floor - 1, oldest - CONSOLE_WINDOW - 1);
     progressApi
       .console(runId, after)
-      .then((page) => appendLines(page.lines))
+      .then((page) => {
+        const earlier = page.lines.filter((line) => line.sequence < oldest);
+        setOlderLines((previous) => {
+          const bySequence = new Map([...earlier, ...previous].map((line) => [line.sequence, line]));
+          return [...bySequence.values()].sort((a, b) => a.sequence - b.sequence).slice(-CONSOLE_WINDOW);
+        });
+      })
       .catch(fail);
-  }, [appendLines, fail, read, runId]);
+  }, [fail, olderLines, read, runId]);
 
   /* ---------------------------------------------------------------- cancel */
 
@@ -409,6 +442,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     state,
     refusal,
     lines: ring.current,
+    olderLines,
     linesDropped,
     loadOlder,
     transport,

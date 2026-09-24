@@ -30,10 +30,10 @@ import type {
   JourneyPhase,
 } from "./foundationClient";
 import { ResearchPanel } from "./ResearchPanel";
-import { resolveScreenRoute } from "./screenRoutes";
+import { resolveJourneyCardRoute } from "./screenRoutes";
 import type { ResearchState } from "./state";
 import { CursorNotice } from "./CursorNotice";
-import { encodeInspectionCursor, type CursorProblem } from "./inspectionCursor";
+import { decodeInspectionCursor, encodeInspectionCursor, type CursorProblem } from "./inspectionCursor";
 
 /** Spec 00 §3.2 — the three card kinds, distinguished visually. */
 const TAG_STYLE: Record<
@@ -107,7 +107,7 @@ function TagLegend() {
   );
 }
 
-function CardBody({ card }: { card: JourneyCard }) {
+function CardBody({ card, blocked }: { card: JourneyCard; blocked: string | null }) {
   const tone = TAG_STYLE[card.target_kind];
   return (
     <>
@@ -119,7 +119,7 @@ function CardBody({ card }: { card: JourneyCard }) {
           className="mono flex-none rounded-[3px] border px-[5px] text-[8.5px] uppercase leading-[15px]"
           style={{ color: tone.ink, borderColor: tone.border, fontWeight: tone.weight }}
         >
-          {TAG_LABEL[card.target_kind]}
+          {blocked ?? TAG_LABEL[card.target_kind]}
         </span>
       </span>
       <span className="text-[10.5px] leading-[1.45]" style={{ color: "var(--ink-soft)" }}>
@@ -129,16 +129,20 @@ function CardBody({ card }: { card: JourneyCard }) {
   );
 }
 
-function JourneyCardLink({ card }: { card: JourneyCard }) {
-  const route = resolveScreenRoute(card.target_key);
-  const blocked = unreachableReason(card, route);
+function JourneyCardLink({ card, runId }: { card: JourneyCard; runId: string | null }) {
+  const route = resolveJourneyCardRoute(card.target_key, runId);
+  const decoded = card.target_fragment ? decodeInspectionCursor(card.target_fragment) : null;
+  const fragment = decoded && decoded.problems.length === 0 ? encodeInspectionCursor(decoded.cursor) : "";
+  const href = route && fragment ? `${route}#${fragment}` : route;
+  const blocked = card.requires_run && !runId && card.availability === "AVAILABLE"
+    ? "SELECT RUN" : unreachableReason(card, route);
   const tone = TAG_STYLE[card.target_kind];
 
   const shared = {
     "data-card": card.card_id,
     "data-card-kind": card.target_kind,
     "data-card-availability": card.availability,
-    className: "jm-card flex min-w-[180px] max-w-[300px] flex-1 flex-col gap-1 rounded-[8px] px-3 py-2.5",
+    className: "jm-card flex min-w-[180px] max-w-[300px] flex-1 flex-col gap-1 rounded-[8px] px-3 py-2.5 shadow-[0_1px_2px_rgba(28,37,50,.05)] transition-[filter,border-color] duration-[120ms] hover:brightness-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]",
     style: {
       border: `${card.target_kind === "RESEARCH_SCREEN" ? 1.5 : 1}px solid ${tone.border}`,
       background: tone.background,
@@ -151,8 +155,8 @@ function JourneyCardLink({ card }: { card: JourneyCard }) {
     /* Drawn, never hidden: the map of the domain must stay complete. The
        badge carries the reason, so a greyed card is not a mystery. */
     return (
-      <span {...shared} data-card-unreachable={blocked ?? "NOT ROUTED"} aria-disabled="true">
-        <CardBody card={card} />
+      <span {...shared} tabIndex={0} role="link" aria-label={`${card.title}: ${blocked ?? "NOT ROUTED"}`} data-card-unreachable={blocked ?? "NOT ROUTED"} aria-disabled="true">
+        <CardBody card={card} blocked={blocked ?? "NOT ROUTED"} />
         <span className="mono text-[8.5px] font-bold" style={{ color: "var(--ink-faint)" }}>
           {blocked ?? "NOT ROUTED"}
         </span>
@@ -161,22 +165,22 @@ function JourneyCardLink({ card }: { card: JourneyCard }) {
   }
 
   return (
-    <Link {...shared} to={route} data-card-route={route}>
-      <CardBody card={card} />
+    <Link {...shared} to={href ?? route} data-card-route={href ?? route}>
+      <CardBody card={card} blocked={null} />
     </Link>
   );
 }
 
-function PhaseRow({ phase }: { phase: JourneyPhase }) {
+function PhaseRow({ phase, runId }: { phase: JourneyPhase; runId: string | null }) {
   return (
-    <div className="flex flex-wrap items-start gap-3.5" data-phase={phase.phase_id}>
+    <section className="flex flex-wrap items-start gap-3.5" data-phase={phase.phase_id}>
       <div className="w-[150px] flex-none pt-1.5">
         <div className="mono text-[11px] font-bold" style={{ color: "var(--accent)" }}>
           P{phase.ordinal}
         </div>
-        <div className="text-[13px] font-semibold" style={{ color: "var(--ink)" }}>
+        <h2 className="text-[13px] font-semibold" style={{ color: "var(--ink)" }}>
           {phase.title}
-        </div>
+        </h2>
         <div className="text-[10.5px] leading-[1.45]" style={{ color: "var(--ink-faint)" }}>
           {phase.description}
         </div>
@@ -187,7 +191,7 @@ function PhaseRow({ phase }: { phase: JourneyPhase }) {
       >
         {phase.cards.map((card, index) => (
           <span key={card.card_id} className="contents">
-            <JourneyCardLink card={card} />
+            <JourneyCardLink card={card} runId={runId} />
             {/* The last card of a phase carries no arrow: the flow ends here. */}
             {index < phase.cards.length - 1 ? (
               /* Hidden once the cards stack: an arrow pointing right while the
@@ -195,7 +199,7 @@ function PhaseRow({ phase }: { phase: JourneyPhase }) {
               <span
                 aria-hidden="true"
                 data-arrow
-                className="hidden self-center text-[12px] md:inline"
+                className="self-center text-[12px]"
                 style={{ color: "var(--line-strong)" }}
               >
                 →
@@ -204,7 +208,7 @@ function PhaseRow({ phase }: { phase: JourneyPhase }) {
           </span>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -275,6 +279,8 @@ export interface JourneyMapProps {
   linkProblems?: readonly CursorProblem[];
   /** The run the link scopes to, when it names one — lets the cursor open in Screen 04. */
   runId?: string | null;
+  /** Retry only a failed read; never a content or promotion action. */
+  onRetry?: () => void;
 }
 
 /**
@@ -286,7 +292,7 @@ export function evidenceHrefFor(runId: string, inspection: InspectionCursor): st
   return `/research/quantbt/runs/${encodeURIComponent(runId)}/evidence${hash ? `#${hash}` : ""}`;
 }
 
-export function JourneyMap({ descriptor, inspection, state, linkProblems = [], runId = null }: JourneyMapProps) {
+export function JourneyMap({ descriptor, inspection, state, linkProblems = [], runId = null, onRetry }: JourneyMapProps) {
   return (
     <div
       data-screen="journey-map"
@@ -310,6 +316,8 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
 
       <ResearchPanel
         title="journey"
+        variant="plain"
+        recovery={onRetry ? <button type="button" onClick={onRetry} className="btn-ghost self-start">Retry map read</button> : undefined}
         meta={descriptor ? `revision ${descriptor.revision}` : undefined}
         state={state}
         minBodyHeight={160}
@@ -317,15 +325,38 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
         {descriptor ? (
           <div className="flex flex-col gap-3" data-phases>
             {descriptor.phases.map((phase) => (
-              <PhaseRow key={phase.phase_id} phase={phase} />
+              <PhaseRow key={phase.phase_id} phase={phase} runId={runId} />
             ))}
-            <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-descriptor-digest>
+            <p className="sr-only" data-descriptor-digest>
               {descriptor.descriptor_id} · {descriptor.content_sha256}
             </p>
           </div>
         ) : null}
       </ResearchPanel>
 
+      {descriptor?.mapping ? (
+        <section data-mapping className="mt-1 rounded-[8px] border bg-[var(--paper-raised)] px-4 py-3" style={{ borderColor: "var(--line)" }}>
+          <h2 className="text-[13px] font-semibold" style={{ color: "var(--ink)" }}>What the redesign adds</h2>
+          <div className="mt-2 grid gap-1.5">
+            {descriptor.mapping.map((row, index) => (
+              <div key={`${row.shipped_target_key}:${row.mine_target_key}:${index}`} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-3 border-t py-2 text-[11px] sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(0,2fr)]" style={{ borderColor: "var(--line-soft)" }}>
+                <span className="mono" style={{ color: "var(--ink-faint)" }}>{row.shipped}</span>
+                <span aria-hidden="true" style={{ color: "var(--accent)" }}>→</span>
+                <span className="font-semibold" style={{ color: "var(--ink)" }}>{row.mine}</span>
+                <span className="col-span-3 text-[10.5px] sm:col-span-1" style={{ color: "var(--ink-soft)" }}>{row.adds}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <CursorNotice problems={linkProblems} />
+      {inspection && runId ? (
+        <Link to={evidenceHrefFor(runId, inspection)} className="self-start text-[11px] font-semibold" style={{ color: "var(--accent)" }} data-open-evidence>
+          Open this run in Evidence Flow →
+        </Link>
+      ) : null}
+      <div className="hidden" aria-hidden="true">
       <ResearchPanel title="deep link inspection" state={state} minBodyHeight={56}>
         <CursorNotice problems={linkProblems} />
         {inspection ? <InspectionStrip inspection={inspection} /> : null}
@@ -340,6 +371,7 @@ export function JourneyMap({ descriptor, inspection, state, linkProblems = [], r
           </Link>
         ) : null}
       </ResearchPanel>
+      </div>
     </div>
   );
 }

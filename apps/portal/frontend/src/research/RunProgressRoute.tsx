@@ -24,6 +24,7 @@ export function RunProgressRoute() {
       state={progress.state}
       transport={progress.transport}
       lines={progress.lines}
+      olderLines={progress.olderLines}
       linesDropped={progress.linesDropped}
       onLoadOlder={progress.loadOlder}
       foldCursor={progress.foldCursor}

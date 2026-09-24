@@ -14,9 +14,9 @@
  * import is measured against, the same text for every reader, and giving it a
  * lifecycle would invent a fourth authority state the backend does not have.
  *
- * The copy is verbatim from `QuantBT 14 Alpha Import.dc.html`. It is reference
- * documentation, so paraphrasing it would put a second, drifting description
- * of the adapter contract in front of the people writing against it.
+ * The visual grouping follows the HiFi, but the copy follows the current
+ * restricted-definition parser and seven-gate contract. HiFi class/Numba
+ * examples are not accepted by this release and must not be advertised.
  */
 
 /** Which stage a chip's unlock belongs to, for its tone. */
@@ -50,113 +50,45 @@ function unlock(label: string): AnatomyUnlock {
 
 export const CODE_ANATOMY: readonly AnatomySection[] = [
   {
-    section: "specification.py — the immutable thesis",
-    unlocks: [unlock("all routes")],
-    code: `@dataclass(frozen=True, slots=True)
-class StrategySpecification:
-    strategy_id · display_name · version
-    default_timeframe · required_columns
-    structural_contract: dict          # thesis flags: entries, exits,
-                                       # atr_filter, hard_stop_loss…
-    parameter_space: {name: (low, high, step)}`,
-    note: "Provenance for UI and audit — it never re-implements logic. Immutable per version; changing it is a new av_. parameter_space tuples are what New Run's sweep/pin table renders.",
+    section: "literal ALPHA_CONTRACT",
+    unlocks: [unlock("contract-complete gate")],
+    code: `ALPHA_CONTRACT = {"schema_version":"research.alpha-source.v1",
+  "version":"0.1.0","entrypoint":"generate_signals","timeframes":["1h"],
+  "required_columns":["open","high","low","close","volume"],
+  "warmup_bars":32,"determinism":{"seed_required":true},
+  "parameter_space":{"window":{"kind":"int_range","low":8,"high":64,"step":1}}}`,
+    note: "The restricted parser reads one literal declaration; the server verifies and gates each mirrored field. Browser edits do not change it.",
   },
   {
-    section: "errors + validators — fail with names, not booleans",
+    section: "one restricted entrypoint",
+    unlocks: [unlock("entrypoint-importable gate")],
+    code: `def generate_signals(context):\n    return context`,
+    note: "The current importer accepts one .py source and one restricted function definition. It installs no dependencies and does not execute an arbitrary package at import.",
+  },
+  {
+    section: "seven ordered gates",
     unlocks: [unlock("quarantine gates")],
-    code: `class StrategyParameterError(ValueError)
-class StrategyDataError(ValueError)
-
-_validate_input(frame):
-    required_columns ⊆ frame.columns
-    DatetimeIndex · UTC · monotonic · unique · float64
-_validate_params(params):
-    raise with the sorted MISSING KEYS listed`,
-    note: "The pipeline's smoke gate asserts these raise correctly — an import whose validator swallows errors fails the gate. Portal preflight reuses the same messages verbatim.",
-  },
-  {
-    section: "compute block — pure indicator functions",
-    unlocks: [unlock("numba speed")],
-    code: `def _rsi(close, length): …     # pure, vectorized
-def _atr(high, low, close, n): …
-def _rvol(volume, n): …        # no state, no IO`,
-    note: "One job each, and NOT optional style: any loop that numpy can vectorize must be vectorized or @njit — the perf gate AST-scans for python-loop indicators and fails the import (QUARANTINED_PERF_FLOOR). The engine core is rust/numba-fast; a slow alpha is a UX regression the pipeline refuses.",
-  },
-  {
-    section: "strategy + risk block — entries, exits, intents",
-    unlocks: [unlock("intrabar_bracket"), unlock("dca_ladder")],
-    code: `def _entries(ind, p): …   # long: signal_line_crossing
-def _exits(ind, p): …     # short/exit: direction_change
-def _risk(frame, p):      # OPTIONAL intent columns
-    stop_value / take_profit_value / trailing_value
-    ladder_level              # 0 flat · 1 base · 2+ safety`,
-    note: "Declare only what the thesis has (structural_contract says hard_stop_loss: true, trailing: false — the code must match). Emitting intent columns unlocks intrabar_bracket_v1; ladder levels unlock dca_ladder. No intents ⇒ close_target_v2 only, honestly.",
-  },
-  {
-    section: "public surface — the ONLY two functions the adapter calls",
-    unlocks: [unlock("walk_forward"), unlock("signal_notional")],
-    code: `def generate_signals(data, params) -> DataFrame:
-    _validate_input(data); _validate_params(params)
-    return data.copy() + [pos_weight, exit_type, exit_price]
-    # input NEVER mutated
-
-def build_walkforward_signal(data, params,
-        train_index, test_index, fold) -> Series:
-    frame = data.loc[: test_index[-1]]   # CAUSAL CUTOFF
-    return sig.reindex(test_index).fillna(0.0)`,
-    note: "Output index is exactly test_index; no bar after test_index[-1] is ever read — the no-lookahead gate shifts inputs and asserts signals do not move. pos_weight is -1/0/1 (use_pyramiding=false) or fractional scale.",
-  },
-  {
-    section: "warm_up + hygiene — what is forbidden",
-    unlocks: [unlock("determinism gate")],
-    code: `def warm_up(params=None): …
-    # compile Numba ONCE on a synthetic frame
-    # deterministic · side-effect free · idempotent
-
-# forbidden anywhere in the package:
-# print/display/plot · mutable module globals
-# absolute paths · external IO · unseeded RNG`,
-    note: "warm_up runs before timing so compile cost never pollutes a benchmark. The determinism gate runs the package twice seeded and requires byte-identical output.",
+    code: `contract-complete · entrypoint-importable · digest-unique\nparameter-space-sane · determinism-declared · data-contract-known\nno-lookahead-static-scan`,
+    note: "A FAIL makes later gates SKIPPED. Gate 7 is static only; runtime causality is proven per run at Stage 3/4. PASS permits registration, not automatic activation or every route.",
   },
 ];
 
 export interface UnlockRow {
   /** What the module emits. */
   output: string;
-  /** Which execution routes that output makes reachable. */
+  /** What the current source actually proves; never a route entitlement. */
   routes: string;
 }
 
 export const UNLOCK_MAP: readonly UnlockRow[] = [
-  {
-    output: "pos_weight (-1/0/1 or fractional)",
-    routes: "signal_notional · pct_equity · walk_forward · train_test_split",
-  },
-  {
-    output: "+ stop_value · take_profit_value · trailing_value",
-    routes: "intrabar_bracket_v1 (SL/TP inside the bar, ambiguity flagged)",
-  },
-  {
-    output: "+ ladder_level (0 · 1 · 2+)",
-    routes: "dca_ladder (base + safety orders at grid touches)",
-  },
-  {
-    output: "position matrix (per-symbol weights)",
-    routes: "portfolio — 6 modes × 8 sizing rules",
-  },
-  {
-    output: "OrderIntent / OrderCommand tape",
-    routes: "orders · native_event_lifecycle (OCO, cancel/replace)",
-  },
-  {
-    output: "reactive on_bar kernel",
-    routes: "native_event_strategy R0–R3B (wake-driven)",
-  },
+  { output: "Literal contract", routes: "Parsed fields are mirrored with VERIFY/GATED labels; no route is admitted yet." },
+  { output: "Seven passing gates", routes: "The exact source may be registered; static scan is not runtime proof." },
+  { output: "Admitted version", routes: "Run eligibility is decided by the installed release manifest and preflight, not by this page." },
 ];
 
-/** Verbatim footer of the unlock panel. */
+/** Current-authority disclosure for the reference panel. */
 export const UNLOCK_FOOTER =
-  "Routes are capability-gated per release — declare an output the code does not produce and the smoke gate fails, not the run.";
+  "This page does not certify runtime behaviour. The installed release and each run preflight decide admissible routes.";
 
 /** Says what this substage is, so it cannot be read as a stage of the import. */
 export const ANATOMY_SUBSTAGE_NOTE =

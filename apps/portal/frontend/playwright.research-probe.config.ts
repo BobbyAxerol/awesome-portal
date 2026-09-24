@@ -4,5 +4,5 @@ export default defineConfig({
   testMatch: ["**/_probe-research-*.spec.ts"],
   timeout: 60_000,
   reporter: "list",
-  use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4317" },
+  use: { ...devices["Desktop Chrome"], baseURL: process.env.RESEARCH_PROBE_BASE_URL ?? "http://127.0.0.1:4317" },
 });

@@ -11,14 +11,14 @@
  * no route is offered, and the step says why.
  */
 
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { NewRun } from "./NewRun";
 import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import { type DraftConstraints, type ParameterEntry, type RunDraft, parameterEntriesFrom } from "./runDraft";
+import { STEPS, type DraftConstraints, type ParameterEntry, type RunDraft, parameterEntriesFrom } from "./runDraft";
 import { useNewRun } from "./useNewRun";
 import { researchState, type ResearchState } from "./state";
 
@@ -98,6 +98,7 @@ export function parametersFor(
 }
 
 export function NewRunRoute() {
+  const location = useLocation();
   const [atlas, setAtlas] = useState<AtlasResponse | null>(null);
   const [atlasState, setAtlasState] = useState<ResearchState>(() =>
     researchState({ kind: "in-flight", hasAcceptedResponse: false }),
@@ -165,6 +166,17 @@ export function NewRunRoute() {
     [document, registry, draft.alphaVersionId],
   );
   const run = useNewRun(draft, limits);
+  const prefilledFor = useRef<string | null>(null);
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const alpha = query.get("alpha");
+    const version = query.get("av");
+    if (!alpha || !version || prefilledFor.current === version) return;
+    const entry = registry.find((candidate) => candidate.alpha_id === alpha && candidate.alpha_version_id === version);
+    if (!entry) return;
+    prefilledFor.current = version;
+    run.patch({ alphaId: entry.alpha_id, alphaVersionId: entry.alpha_version_id, strategyId: entry.strategy_id ?? entry.alpha_id });
+  }, [location.search, registry, run]);
 
   /*
    * Binding a version adopts its declared parameter space, once.
@@ -231,6 +243,7 @@ export function NewRunRoute() {
 
   return (
     <NewRun
+      initialStep={STEPS.find((step) => step.id === new URLSearchParams(location.search).get("step"))?.id ?? "context"}
       draft={run.draft}
       patch={run.patch}
       limits={limits}
@@ -238,6 +251,7 @@ export function NewRunRoute() {
       atlasState={atlasState}
       declarationState={registryState}
       declarationBound={registry.some((e) => e.alpha_version_id === run.draft.alphaVersionId)}
+      registry={registry}
       preflight={run.preflight.preflight}
       preflightState={run.preflight.preflightState}
       clearedBecause={run.preflight.clearedBecause}

@@ -163,7 +163,9 @@ export function formatMirrorValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return JSON.stringify(value);
+  if (Array.isArray(value)) return value.map(formatMirrorValue).join(" · ");
+  if (typeof value === "object") return Object.entries(value).map(([key, entry]) => `${key}: ${formatMirrorValue(entry)}`).join(" · ");
+  return "";
 }
 
 function MirrorTable({ mirror }: { mirror: readonly MirrorField[] }) {
@@ -236,6 +238,9 @@ function GateList({
 
   return (
     <div className="flex flex-col gap-1.5">
+      <div className="mono flex gap-2 border-b pb-1 text-[9px] font-semibold uppercase" style={{ color: "var(--ink-faint)", borderColor: "var(--line-soft)" }} data-gate-header>
+        <span className="w-[16px]">#</span><span className="w-[186px]">gate</span><span className="w-[58px]">state</span><span>elapsed</span>
+      </div>
       <ol className="flex flex-col" role="list" data-gates>
         {gates.slice(0, revealed).map((gate) => (
           <li
@@ -252,7 +257,7 @@ function GateList({
               {gate.name}
             </span>
             <span className="flex-none font-bold" style={{ width: 58, color: gateTone(gate.state) }}>
-              {gate.state}
+              <span aria-hidden="true">● </span>{gate.state}
             </span>
             <span className="flex-none" style={{ width: 52, color: "var(--ink-faint)" }}>
               {gate.ms} ms
@@ -273,20 +278,37 @@ function GateList({
   );
 }
 
-function RegistryChip({ entry }: { entry: RegistryEntry }) {
+function RegistryChip({ entry, onActivate, busy, refusal }: { entry: RegistryEntry; onActivate?: (entry: RegistryEntry) => void; busy: boolean; refusal: ImportRefusal | null }) {
   const active = entry.lifecycle_state === "ACTIVE";
+  const canActivate = entry.lifecycle_state === "DRAFT" && entry.may_activate && onActivate;
   return (
-    <span
+    <div
       data-registry-entry={entry.alpha_version_id}
       data-lifecycle={entry.lifecycle_state}
-      className="mono rounded-[3px] border px-[5px] text-[9.5px] leading-[16px]"
-      style={{
-        color: active ? "var(--good)" : "var(--ink-soft)",
-        borderColor: active ? "var(--good)" : "var(--line)",
-      }}
+      className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border px-3 py-2 text-[10px]"
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
-      {entry.version_label} · {entry.lifecycle_state}
-    </span>
+      <div className="flex flex-wrap items-baseline gap-2">
+        <span className="font-semibold" style={{ color: "var(--ink)" }}>{entry.display_name ?? entry.alpha_id}</span>
+        <span className="mono">{entry.version_label}</span>
+        <span className="mono" style={{ color: active ? "var(--good)" : "var(--role-holdout)" }}>{entry.lifecycle_state}</span>
+        <span className="mono" style={{ color: "var(--ink-faint)" }}>rev {entry.alpha_revision}</span>
+      </div>
+      {canActivate ? (
+        <button
+          type="button"
+          disabled={busy}
+          title={busy ? "An activation request is already in progress." : undefined}
+          onClick={() => onActivate(entry)}
+          className="btn-ghost"
+          aria-label={`Activate ${entry.version_label}`}>
+          {busy ? "Activating…" : "Activate"}
+        </button>
+      ) : entry.lifecycle_state === "DRAFT" ? (
+        <span style={{ color: "var(--ink-faint)" }}>{ACTIVATION_NOT_ADMITTED}</span>
+      ) : null}
+      {refusal ? <p role="alert" className="w-full" style={{ color: "var(--bad)" }}>{refusal.message}</p> : null}
+    </div>
   );
 }
 
@@ -309,7 +331,7 @@ function CodeAnatomy() {
         className="mono cursor-pointer px-3 py-2 text-[10px] uppercase tracking-[.07em]"
         style={{ color: "var(--ink-soft)" }}
       >
-        Code anatomy — standard classes · route unlocks
+        Code anatomy — current single-file contract
       </summary>
 
       <div className="flex flex-col gap-2.5 px-3 pb-3">
@@ -333,7 +355,7 @@ function CodeAnatomy() {
                 >
                   <h4
                     className="text-[10px] font-medium uppercase tracking-[.07em]"
-                    style={{ color: "var(--ink-faint)" }}
+                    style={{ fontFamily: "var(--font-body)", color: "var(--ink-faint)" }}
                   >
                     {entry.section}
                   </h4>
@@ -382,7 +404,7 @@ function CodeAnatomy() {
               className="text-[10px] font-bold uppercase tracking-[.07em]"
               style={{ color: "var(--accent)" }}
             >
-              declare more → unlock more routes
+              what this release proves
             </h4>
             {UNLOCK_MAP.map((row) => (
               <span
@@ -440,6 +462,8 @@ export interface AlphaImportProps {
   onRunGates: () => void;
   onRegister: () => void;
   onActivate: () => void;
+  onActivateEntry?: (entry: RegistryEntry) => void;
+  activationAttemptId?: string | null;
   /** True only when the server itself admitted activation for this actor. */
   activationAdmitted: boolean;
   /** The step in flight. Every write button is inert while one is outstanding. */
@@ -476,6 +500,8 @@ export function AlphaImport(props: AlphaImportProps) {
     onRunGates,
     onRegister,
     onActivate,
+    onActivateEntry,
+    activationAttemptId = null,
     activationAdmitted,
     busyStep = null,
     activationRefusal = null,
@@ -498,6 +524,7 @@ export function AlphaImport(props: AlphaImportProps) {
   const gatesAllPass = gates?.all_pass === true;
   /* Lifecycle may only ever report the server's own word. */
   const lifecycle = activation?.lifecycle_state ?? registration?.lifecycle_state ?? null;
+  const visibleRegistry = alphaId.trim() ? registry.filter((entry) => entry.alpha_id === alphaId.trim()) : registry;
 
   function acceptFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -516,6 +543,11 @@ export function AlphaImport(props: AlphaImportProps) {
       style={{ background: "var(--paper)", color: "var(--ink)" }}
     >
       <header className="flex flex-col gap-[3px] border-b pb-2.5" style={{ borderColor: "var(--line)" }}>
+        <div className="flex flex-wrap gap-3 text-[10px] font-semibold" style={{ color: "var(--accent)" }}>
+          <a href="/research/quantbt/journey">Journey map</a>
+          <a href="/research/quantbt/runs">Run Library</a>
+          <a href={registration ? `/research/quantbt/runs/new?alpha=${encodeURIComponent(registration.alpha_id)}&av=${encodeURIComponent(registration.alpha_version_id)}` : "/research/quantbt/runs/new"}>New Run →</a>
+        </div>
         <h1
           className="text-[22px] font-light tracking-[-.01em]"
           style={{ fontFamily: "Newsreader, Georgia, serif" }}
@@ -591,6 +623,11 @@ export function AlphaImport(props: AlphaImportProps) {
           {fileName ? (
             <p className="mono pt-1 text-[10px]" style={{ color: "var(--ink)" }}>
               {fileName}
+            </p>
+          ) : null}
+          {sourceText ? (
+            <p className="mono pt-1 text-[9px]" style={{ color: "var(--ink-soft)" }} data-source-custody>
+              {new TextEncoder().encode(sourceText).byteLength} UTF-8 bytes · {parse ? `server digest ${parse.source_digest.slice(0, 18)}…` : "server digest pending parse"} · {gates?.all_pass ? "seven gates passed" : "gate decision pending"}
             </p>
           ) : null}
         </div>
@@ -747,9 +784,10 @@ export function AlphaImport(props: AlphaImportProps) {
                 ) : null}
               </div>
 
-              <span className="mono break-all text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
-                {registration.source_digest}
-              </span>
+              <details className="mono text-[9.5px]" data-registration-digest>
+                <summary style={{ color: "var(--ink-faint)" }}>source digest {registration.source_digest.slice(0, 18)}…</summary>
+                <span className="break-all">{registration.source_digest}</span>
+              </details>
 
               {registration.supersedes ? (
                 <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
@@ -807,8 +845,10 @@ export function AlphaImport(props: AlphaImportProps) {
       {/* -------------------------------------------------------- registry */}
       <ResearchPanel title="alpha registry" state={registryState} minBodyHeight={48}>
         <div className="flex flex-wrap gap-1.5" data-registry-strip>
-          {registry.map((entry) => (
-            <RegistryChip key={entry.alpha_version_id} entry={entry} />
+          {visibleRegistry.length === 0 ? (
+            <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>{alphaId.trim() ? "No versions for this alpha id." : "Enter an alpha id above to inspect its versions."}</span>
+          ) : visibleRegistry.map((entry) => (
+            <RegistryChip key={entry.alpha_version_id} entry={entry} onActivate={onActivateEntry} busy={busyStep !== null} refusal={activationAttemptId === entry.alpha_version_id ? activationRefusal : null} />
           ))}
         </div>
       </ResearchPanel>

@@ -34,6 +34,7 @@ import {
   toFoundationRefusal,
 } from "./foundationClient";
 import { researchState, type ResearchState } from "./state";
+import journeySnapshot from "../../../../../packages/contracts/fixtures/research-foundation.journey-v2.valid.json";
 
 /** What a foundation read produced, as the screen needs to see it. */
 interface ReadResult<T> {
@@ -104,6 +105,7 @@ function useFoundationRead<T>(
 
 export function JourneyMapRoute() {
   const location = useLocation();
+  const [retry, setRetry] = useState(0);
 
   /* A malformed link is a refusal before any request: sending a query we
      already know is contradictory would spend a round trip to be told so. */
@@ -122,14 +124,26 @@ export function JourneyMapRoute() {
       if (query === null) return Promise.reject((parsed as { error: unknown }).error);
       return foundationApi.journey(query, signal);
     },
-    [query === null ? "conflict" : JSON.stringify(query)],
+    [query === null ? "conflict" : JSON.stringify(query), retry],
   );
+
+  /* A version-pinned, contract-tested snapshot keeps the reading map visible
+     during a transient read failure. It never replaces a 401/403 refusal. */
+  const snapshotAllowed = !read.data && (read.state.state === "unavailable" || read.state.state === "failed-retryable");
+  const accepted = read.data ?? (snapshotAllowed ? journeySnapshot as JourneyResponse : null);
+  const viewState: ResearchState = snapshotAllowed ? {
+    state: "stale",
+    reason: "Showing the bundled map while the live descriptor is unavailable. Availability may have changed.",
+    mayRetry: true,
+    retainsContent: true,
+  } : read.state;
 
   return (
     <JourneyMap
-      descriptor={read.data?.descriptor ?? null}
+      descriptor={accepted?.descriptor ?? null}
       inspection={read.data?.inspection ?? null}
-      state={read.state}
+      state={viewState}
+      onRetry={() => setRetry((value) => value + 1)}
       linkProblems={linkProblems}
       runId={query?.run_id ?? null}
     />

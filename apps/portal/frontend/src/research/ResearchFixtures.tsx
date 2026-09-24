@@ -180,15 +180,16 @@ const FIXTURE_GATE_NAMES: GateRow["name"][] = [
 const FIXTURE_SOURCE: SourceResponse = {
   schema_version: "research.alpha-source.v1",
   source_file_ref: "sfr_fixture",
+  expires_at_utc_ms: 4102444800000,
   source_digest: "sha256:4f1c2b9ae0d1",
   analysis_digest: "sha256:aa91b3ce7742",
   parse_ok: true,
   mirror: [
-    { field: "entrypoint", state: "parsed", value: "alpha.delta_rsi:run" },
-    { field: "warmup_bars", state: "parsed", value: 120 },
-    { field: "parameter_space", state: "parsed", value: { rsi_len: [5, 30], poly_deg: [2, 4] } },
-    { field: "determinism", state: "parsed", value: "seeded" },
-    { field: "data_contract", state: "parsed", value: "ohlcv.1m.v2" },
+    { field: "entrypoint", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "alpha.delta_rsi:run" },
+    { field: "warmup_bars", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: 120 },
+    { field: "parameter_space", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: { rsi_len: [5, 30], poly_deg: [2, 4] } },
+    { field: "determinism", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "seeded" },
+    { field: "data_contract", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "ohlcv.1m.v2" },
   ],
 };
 
@@ -196,11 +197,11 @@ const FIXTURE_SOURCE_INCOMPLETE: SourceResponse = {
   ...FIXTURE_SOURCE,
   parse_ok: false,
   mirror: [
-    { field: "entrypoint", state: "parsed", value: "alpha.delta_rsi:run" },
-    { field: "warmup_bars", state: "missing" },
-    { field: "parameter_space", state: "parsed", value: { rsi_len: [5, 30] } },
-    { field: "determinism", state: "missing" },
-    { field: "data_contract", state: "parsed", value: "ohlcv.1m.v2" },
+    { field: "entrypoint", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "alpha.delta_rsi:run" },
+    { field: "warmup_bars", state: "missing", check: "VERIFY", note: "Fixture-only source mirror" },
+    { field: "parameter_space", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: { rsi_len: [5, 30] } },
+    { field: "determinism", state: "missing", check: "VERIFY", note: "Fixture-only source mirror" },
+    { field: "data_contract", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "ohlcv.1m.v2" },
   ],
 };
 
@@ -208,6 +209,7 @@ function fixtureGates(failAt: number | null): GatesResponse {
   return {
     schema_version: "research.alpha-import-gates.v1",
     gate_receipt_id: "grc_fixture",
+    expires_at_utc_ms: 4102444800000,
     source_file_ref: "sfr_fixture",
     source_digest: "sha256:4f1c2b9ae0d1",
     analysis_digest: "sha256:aa91b3ce7742",

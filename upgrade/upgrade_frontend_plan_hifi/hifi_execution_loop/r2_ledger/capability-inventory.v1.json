@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 178,
+ "route_count": 180,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1542,6 +1542,26 @@
    "consumer": "TYPED_FRONTEND_PORT",
    "unused_capability": true,
    "evidence": "P11 ADMIN-only, CSRF/origin-protected cancellation first wins the Control API durable-job CAS, then attempts a narrow private marker for the exact current lease. It cannot retry, start a worker, alter a sealed artifact or become a generic CLI route; Claude owns the S03 cancel-race receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/reserve",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "P05 retained artifact reservation: exact research_progress_writer principal, current P06 lease/fencing, feature gate and workspace scope; never browser or general CLI authority.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "P05 retained artifact seal is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing and manifest/part digest validation only.",
    "owner": "codex",
    "test_owner": "codex"
   },

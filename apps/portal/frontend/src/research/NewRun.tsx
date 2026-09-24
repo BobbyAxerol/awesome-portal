@@ -25,6 +25,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { AtlasDocument } from "./atlas";
 import { ResearchPanel } from "./ResearchPanel";
+import { PreflightPanel } from "./PreflightPanel";
 import {
   type DraftConstraints,
   type ParameterEntry,
@@ -40,6 +41,7 @@ import {
   sweptCount,
 } from "./runDraft";
 import type { AtlasRelease } from "./foundationClient";
+import type { RegistryEntry } from "./alphaImportClient";
 import type { RunCreateResponse } from "./runCreateClient";
 import type { PreflightResponse } from "./preflightClient";
 import type { ResearchState } from "./state";
@@ -167,9 +169,19 @@ function WizardBar({
             type="button"
             role="tab"
             aria-selected={isCurrent}
+            aria-current={isCurrent ? "step" : undefined}
             data-step-pill={step.id}
             data-step-state={hasError ? "error" : isCurrent ? "current" : "valid"}
             onClick={() => onPick(step.id)}
+            onKeyDown={(event) => {
+              const next = event.key === "Home" ? 0 : event.key === "End" ? STEPS.length - 1
+                : event.key === "ArrowRight" ? (index + 1) % STEPS.length
+                  : event.key === "ArrowLeft" ? (index + STEPS.length - 1) % STEPS.length : null;
+              if (next === null) return;
+              event.preventDefault();
+              onPick(STEPS[next]!.id);
+              (event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role=tab]")[next])?.focus();
+            }}
             className="flex flex-none items-center gap-2 rounded-[6px] px-3 py-1.5"
             style={{ background: isCurrent ? "var(--accent-soft)" : "transparent" }}
           >
@@ -201,31 +213,33 @@ function ContextStep({
   draft,
   patch,
   limits,
+  registry,
 }: {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
   limits: DraftConstraints;
+  registry: readonly RegistryEntry[];
 }) {
+  const bound = registry.find((entry) => entry.alpha_id === draft.alphaId && entry.alpha_version_id === draft.alphaVersionId);
+  const alphaIds = [...new Set(registry.map((entry) => entry.alpha_id))];
   return (
     <Card title="Context — alpha &amp; version binding">
       <div className="flex flex-wrap items-end gap-2.5">
         <Field label="Alpha">
-          <input
-            className={INPUT_CLASS}
-            style={inputStyle()}
-            value={draft.alphaId}
-            onChange={(e) => patch({ alphaId: e.target.value })}
-            aria-label="Alpha"
-          />
+          {draft.bound ? (
+            <select className={INPUT_CLASS} style={inputStyle()} value={draft.alphaId} onChange={(event) => patch({ alphaId: event.target.value, alphaVersionId: "", strategyId: "" })} aria-label="Alpha" data-alpha-selector disabled={registry.length === 0} title={registry.length === 0 ? "No registry entry is available for the bound declaration." : undefined}>
+              <option value="">Select an alpha</option>
+              {alphaIds.map((id) => <option key={id} value={id}>{registry.find((entry) => entry.alpha_id === id)?.display_name ?? id}</option>)}
+            </select>
+          ) : <input className={INPUT_CLASS} style={inputStyle()} value={draft.alphaId} onChange={(event) => patch({ alphaId: event.target.value })} aria-label="Alpha" />}
         </Field>
         <Field label="Version (immutable after submit)">
-          <input
-            className={INPUT_CLASS}
-            style={inputStyle()}
-            value={draft.alphaVersionId}
-            onChange={(e) => patch({ alphaVersionId: e.target.value })}
-            aria-label="Alpha version"
-          />
+          {draft.bound ? (
+            <select className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" data-version-selector disabled={registry.length === 0 || !draft.alphaId} title={registry.length === 0 ? "No registry entry is available for the bound declaration." : !draft.alphaId ? "Select an alpha first." : undefined}>
+              <option value="">Select a version</option>
+              {registry.filter((entry) => entry.alpha_id === draft.alphaId).map((entry) => <option key={entry.alpha_version_id} value={entry.alpha_version_id}>{entry.version_label} · {entry.lifecycle_state} · {entry.source_digest_prefix}</option>)}
+            </select>
+          ) : <input className={INPUT_CLASS} style={inputStyle()} value={draft.alphaVersionId} onChange={(event) => patch({ alphaVersionId: event.target.value })} aria-label="Alpha version" />}
         </Field>
         <div className="flex flex-none gap-1" role="group" aria-label="Binding mode">
           {([true, false] as const).map((bound) => (
@@ -255,6 +269,10 @@ function ContextStep({
           data-passport
         >
           {([
+            ["alpha", bound?.display_name ?? bound?.alpha_id ?? null],
+            ["version", bound?.version_label ?? null],
+            ["lifecycle", bound?.lifecycle_state ?? null],
+            ["source", bound?.source_digest_prefix ?? null],
             ["entrypoint", limits.entrypoint ?? null],
             ["declared timeframes", limits.declaredTimeframes?.join(" · ") || null],
           ] as const).map(([label, value]) => (
@@ -436,6 +454,11 @@ function DataStep({
   limits: DraftConstraints;
   error: string | null;
 }) {
+  const publishedTimeframes = limits.declaredTimeframes ?? [];
+  const timeframeOptions = publishedTimeframes.length > 0
+    ? publishedTimeframes
+    : draft.timeframe ? [draft.timeframe] : [];
+  const timeframeDeclared = publishedTimeframes.includes(draft.timeframe);
   return (
     <Card title="Data">
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-data-note>
@@ -463,21 +486,28 @@ function DataStep({
         <Field label="Timeframe *">
           <select
             className={INPUT_CLASS}
-            style={inputStyle(
-              limits.declaredTimeframes !== null &&
-                limits.declaredTimeframes.length > 0 &&
-                !limits.declaredTimeframes.includes(draft.timeframe),
-            )}
+            style={inputStyle(publishedTimeframes.length > 0 && !timeframeDeclared)}
             value={draft.timeframe}
             onChange={(e) => patch({ timeframe: e.target.value })}
             aria-label="Timeframe"
+            disabled={publishedTimeframes.length === 0}
+            title={publishedTimeframes.length === 0 ? "The bound version has not published its timeframes." : undefined}
           >
-            {["15m", "1h", "4h", "1d"].map((tf) => (
+            {timeframeOptions.map((tf) => (
               <option key={tf} value={tf}>
                 {tf}
               </option>
             ))}
           </select>
+          {publishedTimeframes.length === 0 ? (
+            <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
+              Version timeframes not published; preflight remains authoritative.
+            </span>
+          ) : !timeframeDeclared ? (
+            <span className="text-[10px]" style={{ color: "var(--bad)" }}>
+              The bound version does not declare {draft.timeframe}. Select one of its published timeframes.
+            </span>
+          ) : null}
         </Field>
       </div>
       {error ? <ErrorBlock message={error} /> : null}
@@ -1061,11 +1091,15 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 function ReviewRail({
   draft,
   blocking,
+  atlas,
 }: {
   draft: RunDraft;
   blocking: readonly { step: StepId; message: string }[];
+  atlas: AtlasDocument | null;
 }) {
   const overrides = Object.keys(draft.optimizationConfigOverrides);
+  const mode = atlas?.modes.find((item) => item.mode_id === draft.optimizationMode);
+  const scheduleFact = mode?.facts?.schedules.find((item) => item.schedule === draft.optimizationSchedule);
   return (
     <aside
       className="flex w-full flex-col gap-2 rounded-[8px] border px-3 py-2.5 lg:sticky lg:top-3 lg:w-[320px] lg:flex-none"
@@ -1076,6 +1110,45 @@ function ReviewRail({
       <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         review
       </h3>
+      <section className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-window-timeline>
+        <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]">Window timeline</h4>
+        {draft.protocol === "three_window_decay" ? (
+          <div className="mt-1 flex flex-col gap-1">
+            {(["is", "oos", "holdout"] as const).map((key) => (
+              <div key={key} className="grid grid-cols-[42px_1fr] gap-1 text-[10px]">
+                <span className="mono uppercase" style={{ color: "var(--ink-faint)" }}>{key}</span>
+                <span className="mono break-words">{draft.windows[key].start || "not declared"} → {draft.windows[key].endExclusive || "not declared"}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mono mt-1 text-[10px]" data-advanced-timeline>
+            {draft.walkForward.start || "not declared"} → {draft.walkForward.endExclusive || "not declared"}
+            {" · "}{draft.walkForward.frequency || "frequency not declared"}
+            {" · "}{draft.walkForward.windowMode || "window mode not declared"}
+          </p>
+        )}
+        <p className="mt-1 text-[9px]" style={{ color: "var(--ink-faint)" }}>
+          Declaration only · fold boundaries are decided by preflight.
+        </p>
+      </section>
+      <section className="rounded-[6px] border px-2.5 py-2" style={{ borderColor: "var(--line-soft)" }} data-claim-forecast>
+        <h4 className="text-[10px] font-semibold uppercase tracking-[.05em]">Claim forecast</h4>
+        {scheduleFact && mode?.valid_schedules.includes(draft.optimizationSchedule) ? (
+          <>
+            <p className="mt-1 text-[10.5px] leading-[1.5]">{scheduleFact.chronological_validation_claim}</p>
+            <p className="mono mt-1 text-[9px]" style={{ color: "var(--ink-faint)" }}>
+              {mode.mode_id} × {scheduleFact.schedule} · cert ceiling not published
+            </p>
+          </>
+        ) : (
+          <p className="mt-1 text-[10px]" style={{ color: "var(--ink-faint)" }}>
+            {draft.optimizationMode && draft.optimizationSchedule
+              ? "No admitted mode × schedule fact was published for this selection."
+              : "Choose an admitted mode and schedule to read the release claim."}
+          </p>
+        )}
+      </section>
       <div className="flex flex-col">
         <Row label="alpha binding">
           {draft.bound
@@ -1161,6 +1234,10 @@ export interface NewRunProps {
   declarationState?: ResearchState;
   /** True when the selected version was found and its declaration adopted. */
   declarationBound?: boolean;
+  /** Exact safe registry read; no legacy Alpha API fallback. */
+  registry?: readonly RegistryEntry[];
+  /** Optional deep link; the route accepts only known wizard step ids. */
+  initialStep?: StepId;
 
   preflight: PreflightResponse | null;
   preflightState: ResearchState;
@@ -1185,6 +1262,7 @@ export function NewRun(props: NewRunProps) {
     atlasState,
     declarationState,
     declarationBound,
+    registry = [],
     preflight,
     preflightState,
     clearedBecause,
@@ -1196,15 +1274,20 @@ export function NewRun(props: NewRunProps) {
     outcomeUnknown,
     onSubmit,
     onRecheck,
+    initialStep = "context",
   } = props;
 
-  const [step, setStep] = useState<StepId>("context");
+  const [step, setStep] = useState<StepId>(initialStep);
+  const [visited, setVisited] = useState<ReadonlySet<StepId>>(() => new Set(initialStep === "context" ? [] : [initialStep]));
+  useEffect(() => {
+    setStep(initialStep);
+  }, [initialStep]);
   const blocking = useMemo(() => blockingProblems(draft, limits), [draft, limits]);
   const errorByStep = useMemo(
     () => new Map(blocking.map((problem) => [problem.step, problem.message])),
     [blocking],
   );
-  const errorSteps = useMemo(() => new Set(errorByStep.keys()), [errorByStep]);
+  const errorSteps = useMemo(() => new Set([...errorByStep.keys()].filter((key) => visited.has(key))), [errorByStep, visited]);
   const missing = useMemo(() => missingConstraints(limits), [limits]);
 
   return (
@@ -1214,6 +1297,11 @@ export function NewRun(props: NewRunProps) {
       style={{ background: "var(--paper)", color: "var(--ink)" }}
     >
       <header className="flex flex-col gap-1.5 border-b pb-2.5" style={{ borderColor: "var(--line)" }}>
+        <div className="flex flex-wrap gap-3 text-[10px] font-semibold" style={{ color: "var(--accent)" }}>
+          <a href="/research/quantbt/runs">Run Library</a>
+          <a href="/research/quantbt/alpha-import">Import a version</a>
+          <a href="/research/quantbt/atlas">Full route atlas</a>
+        </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <h1
             className="text-[22px] font-light tracking-[-.01em]"
@@ -1250,13 +1338,16 @@ export function NewRun(props: NewRunProps) {
         </p>
       </header>
 
-      <WizardBar current={step} onPick={setStep} errors={errorSteps} />
+      <WizardBar current={step} onPick={(next) => {
+        setVisited((previous) => new Set([...previous, step, next]));
+        setStep(next);
+      }} errors={errorSteps} />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           {step === "context" ? (
             <>
-              <ContextStep draft={draft} patch={patch} limits={limits} />
+              <ContextStep draft={draft} patch={patch} limits={limits} registry={registry} />
               {/* What could not be read, named. A rule the browser did not get
                   is not a rule that passed — and a blank space would read as
                   the second thing. */}
@@ -1338,28 +1429,7 @@ export function NewRun(props: NewRunProps) {
                 ) : null}
               </div>
 
-              <ResearchPanel
-                title="preflight"
-                meta={preflight ? preflight.preflight_token : undefined}
-                state={preflightState}
-                minBodyHeight={86}
-              >
-                {preflight ? (
-                  <div className="flex flex-col">
-                    <Row label="effective spec">{preflight.effective_spec_digest}</Row>
-                    <Row label="dataset binding">{preflight.dataset_binding_digest}</Row>
-                    <Row label="manifest">{preflight.manifest_digest}</Row>
-                    <Row label="folds">{preflight.topology.folds.length}</Row>
-                    <Row label="may create run">
-                      {/* Published display state. Admission is re-evaluated at
-                          submit, so this is reported, never trusted as a gate. */}
-                      <span data-may-create={String(preflight.may_create_run)}>
-                        {String(preflight.may_create_run)}
-                      </span>
-                    </Row>
-                  </div>
-                ) : null}
-              </ResearchPanel>
+              <PreflightPanel preflight={preflight} state={preflightState} />
 
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -1411,7 +1481,7 @@ export function NewRun(props: NewRunProps) {
           ) : null}
         </div>
 
-        <ReviewRail draft={draft} blocking={blocking} />
+        <ReviewRail draft={draft} blocking={blocking} atlas={atlas} />
       </div>
     </div>
   );

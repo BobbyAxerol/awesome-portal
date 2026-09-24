@@ -35,6 +35,7 @@ import {
   type Stage,
 } from "./progressClient";
 import { ArtifactPanel } from "./ArtifactPanel";
+import { encodeInspectionCursor } from "./inspectionCursor";
 import { ResearchPanel } from "./ResearchPanel";
 import type { Transport } from "./useRunProgress";
 import type { ResearchState } from "./state";
@@ -128,7 +129,7 @@ function TransportDot({ transport, live }: { transport: Transport; live: boolean
     <span className="flex items-center gap-1.5" data-transport={transport}>
       <span
         aria-hidden="true"
-        className="inline-block h-[7px] w-[7px] rounded-full"
+        className={`inline-block h-[7px] w-[7px] rounded-full ${streaming && live ? "motion-safe:animate-pulse" : ""}`}
         data-pulse={streaming && live ? "true" : undefined}
         style={{ background: streaming && live ? "var(--good)" : "var(--ink-faint)" }}
       />
@@ -187,13 +188,17 @@ function StageRail({
   );
 }
 
-function Bar({ pct, tone }: { pct: number; tone: string }) {
+function Bar({ pct, tone, label }: { pct: number; tone: string; label: string }) {
   const clamped = Math.max(0, Math.min(100, pct));
   return (
     <span
-      className="relative block h-[10px] flex-1 overflow-hidden rounded-[5px]"
+      className="relative block h-[14px] flex-1 overflow-hidden rounded-[5px]"
       style={{ background: "var(--paper-sunken)" }}
-      role="presentation"
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuenow={clamped}
+      aria-valuemax={100}
     >
       <span
         className="absolute inset-y-0 left-0 rounded-[5px]"
@@ -214,7 +219,7 @@ function OverallBlock({ snapshot }: { snapshot: ProgressSnapshot }) {
         <span className="mono w-[62px] flex-none text-[9.5px] uppercase" style={{ color: "var(--ink-faint)" }}>
           overall
         </span>
-        <Bar pct={overall.pct} tone="var(--accent)" />
+        <Bar pct={overall.pct} tone="var(--accent)" label="Overall run progress" />
         <span className="mono flex-none text-[10.5px]">{overall.pct}%</span>
         <span className="mono flex-none text-[10px]" style={{ color: "var(--ink-soft)" }}>
           elapsed {overall.elapsed_s}s
@@ -237,7 +242,7 @@ function OverallBlock({ snapshot }: { snapshot: ProgressSnapshot }) {
         <span className="mono w-[62px] flex-none text-[9.5px] uppercase" style={{ color: "var(--ink-faint)" }}>
           budget
         </span>
-        <Bar pct={budget.pct} tone={budgetTone} />
+        <Bar pct={budget.pct} tone={budgetTone} label="Compute budget used" />
         <span className="mono flex-none text-[10px]" style={{ color: budgetTone }}>
           {/* Exact decimal strings, never parsed into a float. */}
           {budget.used}/{budget.cap === null ? <Absent what="no cap" /> : budget.cap} {budget.unit}
@@ -418,11 +423,13 @@ function FoldGantt({
  */
 function TrialConsole({
   lines,
+  olderLines,
   dropped,
   onLoadOlder,
   foldFilter,
 }: {
   lines: readonly ConsoleLine[];
+  olderLines: readonly ConsoleLine[];
   dropped: boolean;
   onLoadOlder: () => void;
   foldFilter: number | null;
@@ -503,7 +510,7 @@ function TrialConsole({
         onWheel={(event) => {
           if (event.deltaY < 0) setFollow(false);
         }}
-        className="mono flex max-h-[260px] flex-col gap-px overflow-y-auto rounded-[6px] px-3 py-2 text-[10.5px]"
+        className="mono flex h-[260px] max-h-[260px] flex-col gap-px overflow-y-auto rounded-[6px] px-3 py-2 text-[10.5px]"
         style={{ background: "var(--ink)", color: "var(--paper)" }}
       >
         {dropped ? (
@@ -526,6 +533,18 @@ function TrialConsole({
           ))
         )}
       </div>
+      {olderLines.length > 0 ? (
+        <details data-console-history className="rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line)" }} open>
+          <summary className="mono cursor-pointer text-[10px]">Earlier retained lines · {olderLines.length}</summary>
+          <ol className="mono mt-2 max-h-[260px] overflow-y-auto text-[10px]">
+            {olderLines.map((line) => (
+              <li key={line.sequence} data-history-line={line.sequence}>
+                [{new Date(line.occurred_at_utc_ms).toISOString().slice(11, 19)}] {line.text}
+              </li>
+            ))}
+          </ol>
+        </details>
+      ) : null}
     </div>
   );
 }
@@ -709,9 +728,10 @@ function ClaimPassport({
         {notIssued ? notIssuedText(claim.text, status) : claim.text}
       </p>
       {issued && claim.cursor !== null ? (
-        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-claim-cursor>
-          {claim.cursor}
-        </span>
+        <details className="mono text-[9.5px]" data-claim-cursor>
+          <summary style={{ color: "var(--ink-faint)" }}>claim cursor</summary>
+          <span className="break-all">{claim.cursor}</span>
+        </details>
       ) : null}
     </div>
   );
@@ -726,6 +746,7 @@ export interface RunProgressProps {
   state: ResearchState;
   transport: Transport;
   lines: readonly ConsoleLine[];
+  olderLines?: readonly ConsoleLine[];
   linesDropped: boolean;
   onLoadOlder: () => void;
   foldCursor: number | null;
@@ -742,6 +763,7 @@ export function RunProgress(props: RunProgressProps) {
     state,
     transport,
     lines,
+    olderLines = [],
     linesDropped,
     onLoadOlder,
     foldCursor,
@@ -756,6 +778,29 @@ export function RunProgress(props: RunProgressProps) {
   /* Completion is the source's seal and nothing else. */
   const sealed = snapshot?.readiness.mandatory === "SEALED";
 
+  if (read === null && state.state === "empty") {
+    return (
+      <main data-screen="run-progress" data-run-not-found className="px-4 py-6">
+        <h1>Run not found in this workspace</h1>
+        <p>The requested run is unavailable here. No progress has been inferred.</p>
+        <a href="/research/quantbt/runs">Open Run Library →</a>
+      </main>
+    );
+  }
+  if (read && snapshot === null &&
+      (read.availability === "QUEUED_NO_SOURCE" || read.availability === "CANCELLED_BEFORE_SOURCE")) {
+    return (
+      <main data-screen="run-progress" data-no-source={read.availability} className="px-4 py-6">
+        <a href="/research/quantbt/runs">← Runs</a>
+        <h1>{read.availability === "QUEUED_NO_SOURCE" ? "Run queued" : "Run cancelled"}</h1>
+        <p>{read.availability === "QUEUED_NO_SOURCE"
+          ? "The run is queued; no source progress has been published yet."
+          : "The run was cancelled before source progress began. No progress or claim exists."}</p>
+        {read.queue ? <p data-queue-class>Queue: {read.queue.queue_class}</p> : null}
+      </main>
+    );
+  }
+
   return (
     <div
       data-screen="run-progress"
@@ -763,6 +808,9 @@ export function RunProgress(props: RunProgressProps) {
       style={{ background: "var(--paper)", color: "var(--ink)" }}
     >
       <header className="flex flex-col gap-1.5 border-b pb-2.5" style={{ borderColor: "var(--line)" }}>
+        <nav aria-label="Research breadcrumbs" className="mono text-[10px]">
+          <a href="/research/quantbt/runs">Runs</a> <span aria-hidden="true">/</span> Progress
+        </nav>
         <div className="flex flex-wrap items-center gap-2.5">
           <h1
             className="text-[22px] font-light tracking-[-.01em]"
@@ -790,7 +838,7 @@ export function RunProgress(props: RunProgressProps) {
         </p>
         {read?.availability === "PENDING_SOURCE_CALLBACK" ? (
           <p className="text-[10.5px]" style={{ color: "var(--role-holdout)" }} data-pending-source>
-            PENDING_SOURCE_CALLBACK — the run exists and its source has not reported yet.
+            The run exists. Waiting for its source to report progress.
           </p>
         ) : null}
         {snapshot?.source.partial ? (
@@ -800,6 +848,22 @@ export function RunProgress(props: RunProgressProps) {
         ) : null}
       </header>
 
+      {read && (read.queue || (read.attempts?.length ?? 0) > 0) ? (
+        <details data-queue-attempts className="rounded-[6px] border px-3 py-2" style={{ borderColor: "var(--line)" }}>
+          <summary className="cursor-pointer mono text-[10px]">
+            Queue &amp; attempts · {read.queue?.queue_class ?? "class not published"} · {read.attempts?.length ?? 0} observed
+          </summary>
+          <ol className="mt-2 space-y-1">
+            {(read.attempts ?? []).map((attempt) => (
+              <li key={attempt.ordinal} className="mono text-[10px]">
+                #{attempt.ordinal} · {attempt.state} · claimed {new Date(attempt.claimed_at_utc_ms).toISOString()}
+                {attempt.started_at_utc_ms !== null ? ` · started ${new Date(attempt.started_at_utc_ms).toISOString()}` : ""}
+                {attempt.ended_at_utc_ms !== null ? ` · ended ${new Date(attempt.ended_at_utc_ms).toISOString()}` : ""}
+              </li>
+            ))}
+          </ol>
+        </details>
+      ) : null}
       <ResearchPanel title="stages" state={state} minBodyHeight={64}>
         {snapshot ? <StageRail stages={snapshot.stages} claimState={snapshot.claim.state} /> : null}
       </ResearchPanel>
@@ -827,6 +891,7 @@ export function RunProgress(props: RunProgressProps) {
       <ResearchPanel title="trial console" state={state} minBodyHeight={120}>
         <TrialConsole
           lines={lines}
+          olderLines={olderLines}
           dropped={linesDropped}
           onLoadOlder={onLoadOlder}
           foldFilter={foldCursor}
@@ -845,6 +910,19 @@ export function RunProgress(props: RunProgressProps) {
         {snapshot && status !== null ? (
           <div className="flex flex-col gap-2">
             <ClaimPassport claim={snapshot.claim} status={status} />
+            {sealed ? (
+              <a
+                data-open-evidence
+                className="mono self-start text-[10px] font-semibold"
+                href={`/research/quantbt/runs/${encodeURIComponent(runId)}/evidence#${encodeInspectionCursor({
+                  stage: snapshot.claim.state === "ISSUED" ? "claim" : "summary",
+                  ...(foldCursor !== null ? { fold: String(foldCursor) } : {}),
+                })}`}
+                style={{ color: "var(--accent)" }}
+              >
+                Open Evidence Flow →
+              </a>
+            ) : null}
             {snapshot.failure !== null ? (
               <p
                 role="alert"
@@ -907,9 +985,7 @@ export function RunProgress(props: RunProgressProps) {
 
         {read !== null && !read.current.may_retry ? (
           <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-retry-reason>
-            {/* Fail-closed: the contract states why, and the page repeats it
-                rather than offering a retry the server does not have. */}
-            {read.current.retry_reason}
+            This release does not offer retry from Run Progress.
           </span>
         ) : null}
       </div>

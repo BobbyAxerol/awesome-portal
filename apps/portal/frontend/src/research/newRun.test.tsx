@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NewRun, UNKNOWN_OUTCOME_NOTE } from "./NewRun";
+import type { PreflightResponse } from "./preflightClient";
 import { constraintsFrom, emptyDraft, parametersFor } from "./NewRunRoute";
 import {
   RUN_CREATE_PROBLEM_CODES,
@@ -157,9 +158,10 @@ const ATLAS: AtlasDocument = {
 
 const OK = researchState({ kind: "ok", rowCount: 1 });
 
-function preflightResponse(mayCreate = false) {
+function preflightResponse(mayCreate = false): PreflightResponse {
+  const fixture = JSON.parse(readFileSync(join(__dirname, "../../e2e/research-foundation/preflight.json"), "utf8")) as PreflightResponse;
   return {
-    schema_version: "research.preflight.v1",
+    ...fixture,
     preflight_token: "pf_01",
     expires_at_utc_ms: 1800000000000,
     may_create_run: mayCreate,
@@ -167,13 +169,7 @@ function preflightResponse(mayCreate = false) {
     effective_spec_digest: "sha256:eff",
     dataset_binding_digest: "sha256:bind",
     manifest_digest: "sha256:man",
-    effective_spec: {} as never,
-    dataset_binding: {} as never,
-    snapshot: {} as never,
-    topology: { protocol: "advanced_walk_forward", frequency: "quarterly", window_mode: "expanding", folds: [], sealed_holdout: null, topology_digest: "sha256:t" } as never,
-    resource_estimate: {} as never,
-    capability: {} as never,
-  } as never;
+  };
 }
 
 let sent: { url: string; body: Record<string, unknown> }[] = [];
@@ -600,6 +596,34 @@ describe("P10-T13 — the four release-default groups stay locked", () => {
  * Composition
  * ---------------------------------------------------------------------- */
 
+describe("RF-04 FE-S02-06 — timeframe choices come only from the bound declaration", () => {
+  it("offers only the published choices", () => {
+    view();
+    goToStep("data");
+    const select = screen.getByLabelText("Timeframe") as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value)).toEqual(["1h", "4h"]);
+    expect([...select.options].map((option) => option.textContent?.trim())).toEqual(["1h", "4h"]);
+    expect([...select.options].map((option) => option.value)).not.toContain("1d");
+  });
+
+  it("does not invent a selectable timeframe when declaration is unavailable", () => {
+    view({ limits: { ...LIMITS, declaredTimeframes: null } });
+    goToStep("data");
+    const select = screen.getByLabelText("Timeframe") as HTMLSelectElement;
+    expect(select.disabled).toBe(true);
+    expect(select.value).toBe("4h");
+    expect(screen.getByText(/Version timeframes not published/)).toBeTruthy();
+  });
+  it("shows draft windows and only the selected published mode×schedule claim", () => {
+    const manifest = JSON.parse(readFileSync(join(__dirname, "../../e2e/research-foundation/atlas.json"), "utf8")) as { atlas: AtlasDocument };
+    const selected = manifest.atlas.modes[0]!.facts!.schedules[0]!;
+    view({ atlas: manifest.atlas, draft: draft({ optimizationMode: manifest.atlas.modes[0]!.mode_id, optimizationSchedule: selected.schedule }) });
+    expect(document.querySelector("[data-window-timeline]")?.textContent).toContain("2022-01-01T00:00");
+    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain(selected.chronological_validation_claim);
+    expect(document.querySelector("[data-claim-forecast]")?.textContent).toContain("cert ceiling not published");
+  });
+});
+
 describe("P10-T05 — all eight steps are present and the route grid is manifest-driven", () => {
   it("renders eight step pills", () => {
     view();
@@ -642,6 +666,8 @@ describe("P10-T05 — all eight steps are present and the route grid is manifest
   it("marks a step with a problem and says what needs attention", () => {
     view({ draft: draft({ symbol: "" }) });
     const pill = document.querySelector('[data-step-pill="data"]') as HTMLElement;
+    expect(pill.getAttribute("data-step-state")).toBe("valid");
+    fireEvent.click(pill);
     expect(pill.getAttribute("data-step-state")).toBe("error");
     expect(pill.textContent).toContain("needs attention");
   });

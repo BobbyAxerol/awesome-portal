@@ -63,6 +63,8 @@ export interface AlphaImportController {
   onRunGates: () => void;
   onRegister: () => void;
   onActivate: () => void;
+  onActivateEntry: (entry: RegistryEntry) => void;
+  activationAttemptId: string | null;
   activationAdmitted: boolean;
   /** The step whose request is in flight; every write button is inert meanwhile. */
   busyStep: Step | null;
@@ -80,6 +82,7 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
   const [gates, setGates] = useState<GatesResponse | null>(null);
   const [registration, setRegistration] = useState<RegistrationResponse | null>(null);
   const [activation, setActivation] = useState<ActivationResponse | null>(null);
+  const [activationAttemptId, setActivationAttemptId] = useState<string | null>(null);
   const [registry, setRegistry] = useState<readonly RegistryEntry[]>([]);
 
   const [pending, setPending] = useState<Step | null>(null);
@@ -117,6 +120,7 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
     setGates(null);
     setRegistration(null);
     setActivation(null);
+    setActivationAttemptId(null);
     setRefusal(null);
   }, []);
 
@@ -199,6 +203,7 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
   const onActivate = useCallback(() => {
     if (pending !== null || !registration) return;
     setPending("activate");
+    setActivationAttemptId(registration.alpha_version_id);
     setRefusal(null);
     alphaImportApi
       .activate(registration.alpha_version_id, {
@@ -215,10 +220,25 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
       .catch(fail);
   }, [fail, loadRegistry, pending, registration, workspaceId]);
 
+  const onActivateEntry = useCallback((entry: RegistryEntry) => {
+    if (pending !== null || entry.lifecycle_state !== "DRAFT" || !entry.may_activate) return;
+    setPending("activate");
+    setActivationAttemptId(entry.alpha_version_id);
+    setRefusal(null);
+    alphaImportApi.activate(entry.alpha_version_id, {
+      workspace_id: workspaceId,
+      expected_alpha_revision: entry.alpha_revision,
+    }).then((response) => {
+      if (registration?.alpha_version_id === entry.alpha_version_id) setActivation(response);
+      setPending(null);
+      loadRegistry();
+    }).catch(fail);
+  }, [fail, loadRegistry, pending, registration, workspaceId]);
+
   /* Which step the outstanding refusal belongs to. Attaching it to every panel
      would claim three failures where one happened. */
   const lastAttempted: Step | null = refusal
-    ? registration
+    ? activationAttemptId ? "activate" : registration
       ? "activate"
       : gates
         ? "register"
@@ -271,6 +291,8 @@ export function useAlphaImport(workspaceId?: string): AlphaImportController {
     onRunGates,
     onRegister,
     onActivate,
+    onActivateEntry,
+    activationAttemptId,
     /* The generated RegistrationResponse is the only authority for this
        affordance; never infer it from a browser-held role or lifecycle. */
     activationAdmitted: registration?.may_activate === true,

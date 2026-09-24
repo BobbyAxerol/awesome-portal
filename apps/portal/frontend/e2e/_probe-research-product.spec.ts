@@ -10,6 +10,8 @@
  * The claims under test are the ones only a browser can settle: one shell, no
  * overflow, a clean console, keyboard reach, and reduced motion honoured.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { freezeClock, settle, stubPortalApi } from "./fixtures";
@@ -39,28 +41,33 @@ for (const [name, width, height] of [
     await freezeClock(page);
     await stubPortalApi(page, "healthy");
     await page.setViewportSize({ width, height });
+    const journeyV2 = JSON.parse(readFileSync(resolve(
+      process.cwd(),
+      "../../../packages/contracts/fixtures/research-foundation.journey-v2.valid.json",
+    ), "utf8")) as { descriptor: { phases: { cards: unknown[] }[] } };
+    await page.route("**/api/v1/research/journey*", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(journeyV2),
+    }));
     await page.goto(JOURNEY);
     await settle(page);
 
     await expect(page.locator("[data-screen='journey-map']")).toBeVisible();
     await expect(page.getByRole("heading", { name: "QuantBT Backtest — journey map" })).toBeVisible();
 
-    // Eight phases and fourteen cards, exactly as the descriptor declares.
+    // All cards in the canonical v2 descriptor, not the stale P09 v1 stub.
     await expect(page.locator("[data-phase]")).toHaveCount(8);
-    await expect(page.locator("[data-card]")).toHaveCount(14);
+    await expect(page.locator("[data-card]")).toHaveCount(journeyV2.descriptor.phases.reduce((n, phase) => n + phase.cards.length, 0));
 
     // One shell: the Portal's. The screen adds no second navigation.
     await expect(page.locator(".portal-shell")).toHaveCount(1);
     await expect(page.locator("[data-screen='journey-map'] nav")).toHaveCount(0);
     await expect(page.locator("[data-screen='journey-map'] aside")).toHaveCount(0);
 
-    // The flow arrow only means something while the cards sit side by side.
+    // At 660 px two short cards still sit side by side: keep the flow cue.
     const arrows = await page.locator("[data-arrow]:visible").count();
-    if (width >= 768) {
-      expect(arrows, "no flow arrows at laptop width").toBeGreaterThan(0);
-    } else {
-      expect(arrows, "arrows still point right while the cards stack").toBe(0);
-    }
+    expect(arrows, `no flow arrows at ${width}px`).toBeGreaterThan(0);
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -335,10 +342,11 @@ test("S02 declares, previews and creates a run through the real routes", async (
 
   // Fill the declaration through the form the reader uses.
   await page.locator("[data-step-pill='context']").click();
-  await page.getByLabel("Alpha", { exact: true }).fill("delta_rsi");
-  await page.getByLabel("Alpha version").fill("av_0_3_0");
+  await page.getByLabel("Alpha", { exact: true }).selectOption("delta-rsi-polynomial-alpha");
+  await page.getByLabel("Alpha version").selectOption("av_delta_rsi_polynomial_alpha_1_0_0");
   await page.locator("[data-step-pill='strategy']").click();
-  await page.getByLabel("Strategy id").fill("delta_rsi_polynomial");
+  await expect(page.getByLabel("Strategy id")).toHaveValue("delta-rsi-polynomial-alpha");
+  await expect(page.getByLabel("Strategy id")).toHaveAttribute("readonly", "");
   await page.locator("[data-step-pill='data']").click();
   await page.getByLabel("Dataset").fill("ds_btcusdt_4h");
   await page.getByLabel("Symbol").fill("BTCUSDT");
@@ -422,7 +430,7 @@ test("S14 renders on its canonical route and keeps three authority states", asyn
   expect(noise, noise.join("\n")).toEqual([]);
 });
 
-test("S02's four Spec 02 validators fire from the typed response", async ({ page }) => {
+test("S02 uses the typed declaration and release validators", async ({ page }) => {
   const noise = recorder(page);
   await freezeClock(page);
   await stubPortalApi(page, "healthy");
@@ -434,28 +442,25 @@ test("S02's four Spec 02 validators fire from the typed response", async ({ page
      fire once the exact bound version is found. Anything less and the screen
      must say what it could not read rather than pass silently. */
   await page.locator("[data-step-pill='context']").click();
-  await page.getByLabel("Alpha", { exact: true }).fill("delta-rsi-polynomial-alpha");
-  await page.getByLabel("Alpha version").fill("av_delta_rsi_polynomial_alpha_1_0_0");
+  await page.getByLabel("Alpha", { exact: true }).selectOption("delta-rsi-polynomial-alpha");
+  await page.getByLabel("Alpha version").selectOption("av_delta_rsi_polynomial_alpha_1_0_0");
   await expect(page.locator("[data-declaration-bound]")).toHaveAttribute(
     "data-declaration-bound",
     "true",
   );
   await expect(page.locator("[data-missing-constraints]")).toHaveCount(0);
 
-  // 1. the entrypoint pin, naming the version and the declared entrypoint
+  // The server pins strategy_id to alpha_id; the entrypoint remains a separate declaration fact.
   await page.locator("[data-step-pill='strategy']").click();
-  await page.getByLabel("Strategy id").fill("something_else");
-  await expect(page.locator("[data-step-card] [data-step-error]")).toContainText(
-    "Strategy is pinned by av_delta_rsi_polynomial_alpha_1_0_0 (entrypoint alpha.delta_rsi:run)",
-  );
-  await page.getByLabel("Strategy id").fill("alpha.delta_rsi:run");
+  await expect(page.getByLabel("Strategy id")).toHaveValue("delta-rsi-polynomial-alpha");
+  await expect(page.getByLabel("Strategy id")).toHaveAttribute("readonly", "");
 
-  // 2. the declared timeframe list
+  // The browser offers only the bound declaration's timeframes. A disallowed
+  // value remains covered by validateData's unit test and server preflight.
   await page.locator("[data-step-pill='data']").click();
   await page.getByLabel("Symbol").fill("BTCUSDT");
-  await page.getByLabel("Timeframe").selectOption("1d");
-  await expect(page.locator("[data-step-card] [data-step-error]")).toHaveText(
-    "The strategy declares only 1h, 4h.",
+  await expect(page.getByLabel("Timeframe").locator("option")).toHaveText(
+    ["1h", "4h"],
   );
   await page.getByLabel("Timeframe").selectOption("4h");
 
@@ -528,6 +533,7 @@ for (const [name, width] of [
     await expect(page.locator(".portal-shell")).toHaveCount(1);
 
     // Five stages, in order, and never a sixth.
+    await expect(page.locator("[data-stage]")).toHaveCount(5);
     const stages = await page
       .locator("[data-stage]")
       .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("data-stage")));
@@ -621,7 +627,7 @@ test("S03 console is a bounded log region, and cancel confirms once", async ({ p
   // Cancel is one confirm step, and there is no retry to offer.
   await page.locator("[data-action='cancel']").click();
   await expect(page.locator("[data-action='cancel-confirm']")).toBeVisible();
-  await expect(page.locator("[data-retry-reason]")).toHaveText("P12_OWNED_NO_P11_RETRY_ROUTE");
+  await expect(page.locator("[data-retry-reason]")).toHaveText("This release does not offer retry from Run Progress.");
 
   await page.screenshot({ path: `${OUT}/s03-console.png`, fullPage: true });
   expect(noise, noise.join("\n")).toEqual([]);
@@ -1822,6 +1828,7 @@ test("S05 ticks are presentation: density follows width, facts do not", async ({
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.goto(SPLIT);
   await settle(page);
+  await expect(page.locator("[data-tick]")).toHaveCount(5);
 
   const read = async () => ({
     ticks: await page.locator("[data-tick]").allTextContents(),
@@ -1845,6 +1852,7 @@ test("S05 ticks are presentation: density follows width, facts do not", async ({
   // nothing else.
   await page.setViewportSize({ width: 660, height: 1000 });
   await settle(page);
+  await expect.poll(() => page.locator("[data-tick]").count()).toBeLessThan(wide.ticks.length);
   const narrow = await read();
 
   expect(narrow.ticks.length).toBeLessThan(wide.ticks.length);

@@ -867,9 +867,7 @@ describe("P11-T08 — cancel is the server's decision and retry is not offered",
 
   it("states why there is no retry instead of offering one", () => {
     view();
-    expect(document.querySelector("[data-retry-reason]")?.textContent).toBe(
-      "P12_OWNED_NO_P11_RETRY_ROUTE",
-    );
+    expect(document.querySelector("[data-retry-reason]")?.textContent).toContain("does not offer retry");
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
   });
 
@@ -897,11 +895,57 @@ describe("P11-T08 — cancel is the server's decision and retry is not offered",
   });
 });
 
+describe("RF-04 — console and truthful no-source states", () => {
+  it("backfills one bounded console page before SSE and does not repeat it on snapshot refresh", async () => {
+    stubFetch((url) => url.includes("/console?")
+      ? [200, { schema_version: "research.console-page.v1", run_id: "run_01", lines: [
+          { sequence: 39, occurred_at_utc_ms: 1789836580000, tone: "INFO", text: "retained line", fold: null, trial: null },
+        ], next_after_seq: null, retention_floor_sequence: 1 }]
+      : [200, read()]);
+    const { result } = renderHook(() => useRunProgress("run_01"));
+    await waitFor(() => expect(result.current.lines.map((line) => line.text)).toContain("retained line"));
+    expect(fetched.filter((url) => url.includes("/console?"))).toHaveLength(1);
+    await act(async () => { FakeEventSource.last().emit(read()); });
+    expect(fetched.filter((url) => url.includes("/console?"))).toHaveLength(1);
+  });
+
+  it("keeps an older page separate from the live 500-line ring", async () => {
+    const line = (sequence: number) => ({ sequence, occurred_at_utc_ms: 1789836572000 + sequence, tone: "INFO" as const, text: `line ${sequence}`, fold: null, trial: null });
+    stubFetch((url) => url.includes("/console?")
+      ? [200, { schema_version: "research.console-page.v1", run_id: "run_01", lines:
+          url.includes("after_seq=400") ? Array.from({ length: 500 }, (_, index) => line(index + 401))
+            : Array.from({ length: 400 }, (_, index) => line(index + 1)),
+          next_after_seq: null, retention_floor_sequence: 1 }]
+      : [200, read({}, { latest_sequence: 900 })]);
+    const { result } = renderHook(() => useRunProgress("run_01"));
+    await waitFor(() => expect(result.current.lines).toHaveLength(500));
+    act(() => result.current.loadOlder());
+    await waitFor(() => expect(result.current.olderLines).toHaveLength(400));
+    expect(result.current.lines).toHaveLength(500);
+    expect(result.current.olderLines[0]?.sequence).toBe(1);
+  });
+
+  it("reserves the console height and renders queued, cancelled and not-found without false progress", () => {
+    view();
+    expect(document.querySelector("[data-console-box]")?.className).toContain("h-[260px]");
+    cleanup();
+    view({ read: read({ availability: "QUEUED_NO_SOURCE", progress: null, queue: { queue_class: "HEAVY", queued_at_utc_ms: 1789836572000, retry_not_before_utc_ms: null } }) });
+    expect(document.querySelector("[data-no-source]")?.getAttribute("data-no-source")).toBe("QUEUED_NO_SOURCE");
+    expect(document.querySelectorAll("[data-research-panel]")).toHaveLength(0);
+    cleanup();
+    view({ read: read({ availability: "CANCELLED_BEFORE_SOURCE", progress: null }) });
+    expect(document.querySelector("[data-no-source]")?.getAttribute("data-no-source")).toBe("CANCELLED_BEFORE_SOURCE");
+    cleanup();
+    view({ read: null, state: { state: "empty", reason: "Run not found.", mayRetry: false, retainsContent: false } });
+    expect(document.querySelector("[data-run-not-found]")).toBeTruthy();
+  });
+});
+
 describe("P11-T09 — typed availability and refusals keep the composition", () => {
   it("reports PENDING_SOURCE_CALLBACK inside the screen", () => {
     view({ read: read({ availability: "PENDING_SOURCE_CALLBACK" }) });
     expect(document.querySelector("[data-pending-source]")?.textContent).toContain(
-      "PENDING_SOURCE_CALLBACK",
+      "Waiting for its source to report progress",
     );
     // The composition is intact, not replaced by an envelope.
     expect(document.querySelectorAll("[data-research-panel]").length).toBeGreaterThanOrEqual(6);
@@ -916,7 +960,7 @@ describe("P11-T09 — typed availability and refusals keep the composition", () 
   it.each([
     [401, "denied", true],
     [403, "denied", true],
-    [404, "empty", false],
+    [404, "terminal", false],
     [409, "terminal", true],
     [503, "unavailable", false],
   ])("maps %i to %s", (status, expected, closes) => {

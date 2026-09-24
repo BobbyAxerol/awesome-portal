@@ -64,15 +64,16 @@ function sourceResponse(overrides: Partial<SourceResponse> = {}): SourceResponse
   return {
     schema_version: "research.alpha-source.v1",
     source_file_ref: "sfr_01HZ",
+    expires_at_utc_ms: 4102444800000,
     source_digest: "sha256:4f1c2b9ae0",
     analysis_digest: "sha256:aa91b3ce77",
     parse_ok: true,
     mirror: [
-      { field: "entrypoint", state: "parsed", value: "alpha.delta_rsi:run" },
-      { field: "warmup_bars", state: "parsed", value: 120 },
-      { field: "parameter_space", state: "parsed", value: { rsi_len: [5, 30] } },
-      { field: "determinism", state: "parsed", value: "seeded" },
-      { field: "data_contract", state: "parsed", value: "ohlcv.1m.v2" },
+      { field: "entrypoint", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "alpha.delta_rsi:run" },
+      { field: "warmup_bars", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: 120 },
+      { field: "parameter_space", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: { rsi_len: [5, 30] } },
+      { field: "determinism", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "seeded" },
+      { field: "data_contract", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "ohlcv.1m.v2" },
     ],
     ...overrides,
   };
@@ -99,6 +100,7 @@ function gatesResponse(failAt: number | null = null): GatesResponse {
   return {
     schema_version: "research.alpha-import-gates.v1",
     gate_receipt_id: "grc_01HZQ7",
+    expires_at_utc_ms: 4102444800000,
     source_file_ref: "sfr_01HZ",
     source_digest: "sha256:4f1c2b9ae0",
     analysis_digest: "sha256:aa91b3ce77",
@@ -220,7 +222,7 @@ describe("T01 — a clean module mirrors every field and opens step 2", () => {
     expect(screen.getByText("alpha.delta_rsi:run")).toBeTruthy();
     expect(screen.getByText("120")).toBeTruthy();
     // A non-scalar is shown exactly, not summarised into "5 keys".
-    expect(screen.getByText('{"rsi_len":[5,30]}')).toBeTruthy();
+    expect(screen.getByText("rsi_len: 5 · 30")).toBeTruthy();
   });
 
   it("offers no editable contract field anywhere in the mirror", () => {
@@ -264,8 +266,8 @@ describe("T02 — a missing field is red, and the failure cascades to SKIPPED", 
     const parse = sourceResponse({
       parse_ok: false,
       mirror: [
-        { field: "entrypoint", state: "parsed", value: "alpha.delta_rsi:run" },
-        { field: "warmup_bars", state: "missing" },
+        { field: "entrypoint", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "alpha.delta_rsi:run" },
+        { field: "warmup_bars", state: "missing", check: "VERIFY", note: "Fixture-only source mirror" },
       ],
     });
     render(<AlphaImport {...props({ parse, parseState: OK })} />);
@@ -671,7 +673,7 @@ describe("T11 — contractual copy is byte-exact", () => {
   });
 
   it("maps every refusal code the contract declares", () => {
-    expect(PROBLEM_CODES).toHaveLength(14);
+    expect(PROBLEM_CODES).toHaveLength(15);
     for (const code of PROBLEM_CODES) {
       const refusal = toRefusal(new PortalApiError("server sentence", 400, code, "req_1"));
       expect(refusal.code).toBe(code);

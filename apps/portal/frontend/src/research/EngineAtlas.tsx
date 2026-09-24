@@ -330,7 +330,7 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
 function claimTone(claim: string): { color: string; border: string } {
   if (claim.startsWith("strict")) return { color: "var(--good)", border: "var(--good)" };
   if (claim.startsWith("selection_adjusted")) return { color: "var(--accent-2)", border: "var(--accent-2)" };
-  if (claim.startsWith("not_causal") || claim.includes("retrospective")) return { color: "var(--accent-2)", border: "var(--accent-2)" };
+  if (claim.startsWith("not_causal") || claim.includes("retrospective")) return { color: "var(--bad)", border: "var(--bad)" };
   return { color: "var(--bad)", border: "var(--bad)" };
 }
 
@@ -403,7 +403,7 @@ function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
   }
   const objective = facts.objective;
   return (
-    <div className="flex flex-col gap-1.5" data-objective>
+    <div className="flex flex-col gap-1.5 border-l-2 pl-2.5" style={{ borderColor: "var(--accent)" }} data-objective>
       {objective.stages.map((stage) => (
         <div key={stage.stage} className="flex flex-col gap-0.5">
           <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
@@ -492,6 +492,9 @@ export function ModeCard({ mode, schedule, onSchedule, runId }: ModeCardProps) {
               <span
                 key={candidate}
                 data-schedule-invalid={candidate}
+                tabIndex={0}
+                role="note"
+                aria-label={`${candidate}: not admitted by this mode in the installed release manifest`}
                 title="Not in this mode's valid schedules in the installed release manifest."
                 className="mono rounded-[3px] border border-dashed px-[6px] text-[9.5px] leading-[17px] line-through"
                 style={{ borderColor: "var(--line)", color: "var(--ink-faint)" }}
@@ -962,7 +965,7 @@ export function EngineAtlas({
         role="tablist"
         aria-label="Engine Atlas sections"
       >
-        {ATLAS_TABS.map((candidate) => {
+        {ATLAS_TABS.map((candidate, index) => {
           const selected = candidate === tab;
           return (
             <button
@@ -970,8 +973,18 @@ export function EngineAtlas({
               type="button"
               role="tab"
               aria-selected={selected}
+              tabIndex={selected ? 0 : -1}
               data-tab={candidate}
               onClick={() => onTabChange(candidate)}
+              onKeyDown={(event) => {
+                const next = event.key === "ArrowRight" ? (index + 1) % ATLAS_TABS.length
+                  : event.key === "ArrowLeft" ? (index + ATLAS_TABS.length - 1) % ATLAS_TABS.length
+                    : event.key === "Home" ? 0 : event.key === "End" ? ATLAS_TABS.length - 1 : -1;
+                if (next < 0) return;
+                event.preventDefault();
+                onTabChange(ATLAS_TABS[next]!);
+                event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+              }}
               className="rounded-[5px] px-3.5 py-[5px] text-[11.5px] font-medium"
               style={{
                 background: selected ? "var(--accent-soft)" : "transparent",
@@ -985,6 +998,7 @@ export function EngineAtlas({
       </div>
 
       <ResearchPanel
+        variant="plain"
         title={`atlas · ${tab}`}
         meta={doc ? `manifest revision ${doc.manifest_revision}` : undefined}
         state={state}

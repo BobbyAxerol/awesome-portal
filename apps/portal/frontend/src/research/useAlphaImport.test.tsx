@@ -42,10 +42,11 @@ const REGISTRY_ENTRY: RegistryEntry = {
 const SOURCE: SourceResponse = {
   schema_version: "research.alpha-source.v1",
   source_file_ref: "sfr_01HZ",
+  expires_at_utc_ms: 4102444800000,
   source_digest: "sha256:4f1c2b9ae0",
   analysis_digest: "sha256:aa91b3ce77",
   parse_ok: true,
-  mirror: [{ field: "entrypoint", state: "parsed", value: "alpha.delta_rsi:run" }],
+  mirror: [{ field: "entrypoint", state: "parsed", check: "VERIFY", note: "Fixture-only source mirror", value: "alpha.delta_rsi:run" }],
 };
 
 function draft(mayActivate: boolean): RegistrationResponse {
@@ -148,6 +149,31 @@ describe("activation admission comes from the server, not from lifecycle", () =>
     // DRAFT is exactly the state a lifecycle-based guess would have admitted.
     expect(result.current.registration?.lifecycle_state).toBe("DRAFT");
     expect(result.current.activationAdmitted).toBe(false);
+  });
+});
+
+describe("DRAFT activation after reload uses registry authority", () => {
+  it("sends the exact registry revision and refuses a caller without may_activate", async () => {
+    const allowed = { ...REGISTRY_ENTRY, lifecycle_state: "DRAFT" as const, may_activate: true, alpha_revision: 9 };
+    stub((url, method) => {
+      if (method === "GET") return [200, { schema_version: "research.alpha-registry.v1", entries: [allowed] }];
+      if (method === "POST" && url.endsWith("/activate")) return [200, {
+        schema_version: "research.alpha-activation.v1", alpha_id: allowed.alpha_id,
+        alpha_version_id: allowed.alpha_version_id, lifecycle_state: "ACTIVE",
+        superseded_alpha_version_id: null, alpha_revision: 10, replayed: false,
+      }];
+      return [404, {}];
+    });
+    const { result } = renderHook(() => useAlphaImport());
+    await waitFor(() => expect(result.current.registry).toHaveLength(1));
+    await act(async () => result.current.onActivateEntry({ ...allowed, may_activate: false }));
+    expect(sent.filter((request) => request.method === "POST")).toHaveLength(0);
+    await act(async () => result.current.onActivateEntry(allowed));
+    await waitFor(() => expect(sent.some((request) => request.method === "POST")).toBe(true));
+    expect(sent.find((request) => request.method === "POST")).toMatchObject({
+      url: `/api/v1/research/alphas/${allowed.alpha_version_id}/activate`,
+      body: { expected_alpha_revision: 9 },
+    });
   });
 });
 

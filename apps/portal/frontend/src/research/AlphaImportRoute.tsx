@@ -37,6 +37,8 @@ export function AlphaImportRoute() {
       onRunGates={controller.onRunGates}
       onRegister={controller.onRegister}
       onActivate={controller.onActivate}
+      onActivateEntry={controller.onActivateEntry}
+      activationAttemptId={controller.activationAttemptId}
       activationAdmitted={controller.activationAdmitted}
       busyStep={controller.busyStep}
       activationRefusal={controller.activationRefusal}

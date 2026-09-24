@@ -435,6 +435,9 @@ export function PreflightPanel({ preflight, state, clearedBecause }: PreflightPa
             <Row label="manifest" wide>
               {preflight.manifest_digest}
             </Row>
+            <Row label="may create run" wide>
+              <span data-may-create={String(preflight.may_create_run)}>{String(preflight.may_create_run)}</span>
+            </Row>
             <Row label="intent" wide>
               {preflight.effective_spec.intent.kind} · {preflight.effective_spec.intent.reproduction_semantics}
             </Row>
