@@ -112,9 +112,12 @@ export function absenceReason(fact: { reason_code?: string | null; availability?
  * ---------------------------------------------------------------------- */
 
 /**
- * Fixed copy per refusal. 403 and 404 say the same sentence on purpose: the
- * server answers a foreign workspace and an unknown Alpha identically, so the
- * screen must not turn either into an existence hint (audit F-04).
+ * Fixed copy per refusal. 403 and 404 say the same sentence and take the same
+ * state (and so the same badge) on purpose: the server answers a foreign
+ * workspace and an unknown Alpha identically, so the screen must not turn
+ * either into an existence hint (audit F-04). `denied` is the state both take:
+ * it withholds content without claiming the alpha has none, which `empty`
+ * would.
  */
 export const LINEAGE_NEUTRAL_REFUSAL =
   "This alpha may not exist or may be outside your access — nothing here confirms either.";
@@ -160,13 +163,11 @@ export function toLineageRefusal(error: unknown): LineageRefusal {
     status,
     requestId: error.requestId,
     state:
-      status === 401 || status === 403
+      status === 401 || status === 403 || status === 404
         ? "denied"
-        : status === 404
-          ? "empty"
-          : status >= 500
-            ? "unavailable"
-            : "terminal",
+        : status >= 500
+          ? "unavailable"
+          : "terminal",
     mayRetry: status >= 500,
     terminal: status === 400 || status === 401 || status === 403 || status === 404,
   };

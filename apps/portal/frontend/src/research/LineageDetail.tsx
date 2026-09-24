@@ -41,6 +41,7 @@ import {
   type SemanticChange,
   type SemanticDiff,
 } from "./lineageClient";
+import type { ResearchState } from "./state";
 import type { LineageController } from "./useLineage";
 import { iso } from "./utcMinute";
 
@@ -202,7 +203,9 @@ const LINEAGE_CSS = `
 .ln-mono { font-family: var(--font-mono); }
 .ln-page a { color: var(--accent); text-decoration: none; }
 .ln-page a:hover { text-decoration: underline; }
-.ln-page button { font: inherit; }
+/* Zero-specificity reset (:where): it only beats the global button reset by
+   source order and loses to every chip class below, so chips keep their mono size. */
+:where(.ln-page) button { font: inherit; }
 .ln-page a:focus-visible, .ln-page button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ln-long { overflow-wrap: anywhere; word-break: break-all; min-width: 0; }
 .ln-head { display: flex; flex-direction: column; gap: 3px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
@@ -262,6 +265,7 @@ const LINEAGE_CSS = `
 .ln-toggle { border: 1px dashed var(--line-strong); background: var(--paper-raised); color: var(--ink-soft); padding: 1px 9px;
   font-family: var(--font-mono); font-size: 9.5px; border-radius: 999px; cursor: pointer; }
 .ln-toggle[aria-pressed="true"] { border-style: solid; border-color: var(--accent-2); background: var(--accent-2-soft); color: var(--accent-2); }
+.ln-fchip:disabled, .ln-toggle:disabled { cursor: not-allowed; opacity: .6; }
 .ln-count { margin-left: auto; font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-faint); }
 .ln-block { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised); min-width: 0; }
 .ln-block > .t { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px; padding: 9px 14px 6px;
@@ -1214,6 +1218,101 @@ function Notice({ controller }: { controller: LineageController }) {
   );
 }
 
+/* ------------------------------------------------- no lineage in hand */
+
+/** What a withheld block says while loading, or after a refusal. Never a digit. */
+export const PENDING_REASON = {
+  loading: "the lineage has not answered yet",
+  refused: "withheld — the notice above says why",
+} as const;
+
+/**
+ * A block's place while there is no lineage to put in it: the state word and
+ * why, never a number and never a guessed value.
+ */
+function Pending({ what, state }: { what: string; state: ResearchState["state"] }) {
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-pending={what} data-pending-state={state}>
+      <span className="ln-absent">
+        {what} — {state}
+      </span>
+      <span className="ln-reason">{state === "loading" ? PENDING_REASON.loading : PENDING_REASON.refused}</span>
+    </span>
+  );
+}
+
+/**
+ * The hi-fi frame with no lineage behind it (loading or a refusal): every
+ * block keeps its place and its heading, each says it is loading or withheld,
+ * and the controls that would act on a lineage are disabled. The promotion
+ * rule and the screen's rules are copy, not data, so they read as usual.
+ */
+function PendingFrame({ state }: { state: ResearchState["state"] }) {
+  const why = state === "loading" ? "filters open once the lineage has answered" : "no lineage to filter — the notice above says why";
+  return (
+    <>
+      <div className="ln-grid" data-lineage-pending={state}>
+        <div className="ln-left">
+          <section className="ln-card0" data-panel="root" data-panel-state={state} aria-label="alpha root and version ledger">
+            <div className="h">
+              <span className="ln-k">root · alpha</span>
+              <Pending what="alpha and its version bands" state={state} />
+            </div>
+            <div className="ln-bands">
+              <Pending what="attempt chips and promotion pick" state={state} />
+            </div>
+          </section>
+          <div className="ln-filters" data-panel="filters" data-panel-state={state} role="group" aria-label="attempt filters">
+            {STATUS_GROUPS.map((group) => (
+              <button key={group.key} type="button" className="ln-fchip" data-filter={group.key} aria-pressed={false} disabled title={why}>
+                {group.label}
+              </button>
+            ))}
+            <button type="button" className="ln-toggle" aria-pressed={false} disabled title={why}>
+              show attempt detail
+            </button>
+            <span className="ln-count" data-counter-pending={state}>
+              counter — {state === "loading" ? "waiting for the lineage" : "withheld"}
+            </span>
+          </div>
+          <section className="ln-block" data-panel="tree" data-panel-state={state} aria-label="attempt tree">
+            <h3 className="t">
+              <span>attempt tree — returned children nest under their returned parent</span>
+            </h3>
+            <div className="b">
+              <Pending what="attempt tree" state={state} />
+            </div>
+          </section>
+        </div>
+        <aside className="ln-right" aria-label="selected attempt detail">
+          <section className="ln-block" data-panel="selected" data-panel-state={state} aria-label="selected attempt">
+            <h3 className="t">selected attempt</h3>
+            <div className="b">
+              <Pending what="selected attempt" state={state} />
+            </div>
+          </section>
+          <section className="ln-block" data-panel="diff" data-panel-state={state} aria-label="diff vs parent">
+            <h3 className="t">diff vs parent — config keys only</h3>
+            <div className="b">
+              <Pending what="diff vs parent" state={state} />
+            </div>
+          </section>
+          <PromotionRule />
+        </aside>
+      </div>
+      <Rules />
+      <section className="ln-block" data-panel="counts" data-panel-state={state} aria-label="attempt counts and coverage">
+        <h3 className="t">
+          <span>counts — the multiple-testing disclosure</span>
+        </h3>
+        <div className="b">
+          <Pending what="counts and coverage" state={state} />
+        </div>
+      </section>
+    </>
+  );
+}
+
 /* ---------------------------------------------------------------- screen */
 
 /** Nearest ancestor that scrolls vertically, else the document's scroller. */
@@ -1452,7 +1551,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       ) : (
         <>
           <Notice controller={controller} />
-          <Rules />
+          <PendingFrame state={state.state} />
         </>
       )}
     </div>

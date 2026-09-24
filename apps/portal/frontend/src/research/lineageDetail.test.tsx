@@ -11,7 +11,10 @@
  *    typed absence; GATES RESET is a disclosure chip that does nothing.
  *  - **Bounded means bounded.** PARTIAL coverage and bounded child runs say so;
  *    retries are never attempts; 100+ attempts render a window.
- *  - **Refusals are neutral.** 403 and 404 say the same F-04 sentence.
+ *  - **Refusals are neutral.** 403 and 404 say the same F-04 sentence and
+ *    take the same state and badge.
+ *  - **No lineage, same frame.** Loading and every refusal keep all nine
+ *    blocks in place, each loading or withheld, with no number in any of them.
  */
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -351,6 +354,27 @@ const node = (id: string) => document.querySelector(`[data-attempt="${id}"]`) as
 const counter = () => document.querySelector("[data-counter]")?.textContent;
 const locationText = () => document.querySelector("[data-location]")?.textContent ?? "";
 
+/** The blocks in order when no lineage is in hand: the notice sits under the header. */
+const PENDING_ORDER = ["header", "notice", ...LINEAGE_PANELS.slice(1)];
+
+/** Every block keeps its place, says the state, and carries no lineage fact or digit. */
+function expectPendingFrame(state: string) {
+  const order = [...document.querySelectorAll("[data-panel]")].map((el) => el.getAttribute("data-panel"));
+  expect(order).toEqual(PENDING_ORDER);
+  for (const name of ["root", "filters", "tree", "selected", "diff", "counts"]) {
+    expect(panel(name).getAttribute("data-panel-state"), name).toBe(state);
+  }
+  for (const name of LINEAGE_PANELS.filter((n) => n !== "header")) {
+    expect(panel(name).textContent, name).not.toMatch(/\d/);
+  }
+  expect(document.querySelectorAll("[data-pending]").length).toBeGreaterThanOrEqual(6);
+  expect(document.querySelector("[data-band]")).toBeNull();
+  expect(document.querySelector("[data-attempt]")).toBeNull();
+  expect(document.querySelector("[data-count]")).toBeNull();
+  expect(document.querySelector("[data-counter]")).toBeNull();
+  for (const button of panel("filters").querySelectorAll("button")) expect((button as HTMLButtonElement).disabled).toBe(true);
+}
+
 async function ready() {
   await screen.findByText("rules of this screen");
   await waitFor(() => expect(document.querySelector('[data-panel="root"]')).toBeTruthy());
@@ -365,7 +389,7 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(screenState()).toBe("loading");
     expect(panel("header")).toBeTruthy();
     expect(panel("rules")).toBeTruthy();
-    expect(panel("root")).toBeNull();
+    expectPendingFrame("loading");
     expect(screen.getByRole("status", { name: "Loading" })).toBeTruthy();
     expect(screen.getByText(LINEAGE_TITLE)).toBeTruthy();
   });
@@ -764,7 +788,7 @@ describe("S10 Attempt Lineage — refusals", () => {
     renderRoute();
     await screen.findByText(LINEAGE_REFUSAL_COPY[400]);
     expect(screenState()).toBe("terminal");
-    expect(panel("root")).toBeNull();
+    expectPendingFrame("terminal");
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
   });
 
@@ -773,11 +797,13 @@ describe("S10 Attempt Lineage — refusals", () => {
     renderRoute();
     await screen.findByText(LINEAGE_REFUSAL_COPY[401]);
     expect(screenState()).toBe("denied");
+    expectPendingFrame("denied");
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
     expect(calls).toHaveLength(1);
   });
 
-  it("S10-U31 403 and 404 say the same neutral F-04 sentence and never echo the server's prose", async () => {
+  it("S10-U31 403 and 404 say the same neutral F-04 sentence, take the same state and badge, never echo the server's prose", async () => {
+    const seen: string[][] = [];
     for (const [status, code] of [
       [403, "RESEARCH_LINEAGE_FORBIDDEN"],
       [404, "RESEARCH_LINEAGE_NOT_FOUND"],
@@ -788,9 +814,19 @@ describe("S10 Attempt Lineage — refusals", () => {
       expect(document.body.textContent).not.toContain("alice@example");
       expect(document.body.textContent).not.toContain("alpha_momentum_btc");
       expect(document.querySelector("[data-request-id]")?.textContent).toBe("request req_p19");
+      const badge = panel("notice").querySelector("[data-research-state]") as HTMLElement;
+      seen.push([
+        String(screenState()),
+        String(panel("notice").getAttribute("data-lineage-notice")),
+        String(badge.getAttribute("data-research-state")),
+        String(badge.textContent),
+      ]);
+      expectPendingFrame("denied");
       cleanup();
       vi.restoreAllMocks();
     }
+    expect(seen[0][0]).toBe("denied");
+    expect(seen[1]).toEqual(seen[0]);
     expect(LINEAGE_REFUSAL_COPY[403]).toBe(LINEAGE_REFUSAL_COPY[404]);
   });
 
@@ -799,6 +835,7 @@ describe("S10 Attempt Lineage — refusals", () => {
     renderRoute();
     await screen.findByText(LINEAGE_REFUSAL_COPY[503]);
     expect(screenState()).toBe("unavailable");
+    expectPendingFrame("unavailable");
     fireEvent.click(document.querySelector('[data-action="retry"]') as HTMLElement);
     await ready();
     expect(calls).toHaveLength(2);
@@ -814,7 +851,7 @@ describe("S10 Attempt Lineage — refusals", () => {
       [400, "terminal", false, true],
       [401, "denied", false, true],
       [403, "denied", false, true],
-      [404, "empty", false, true],
+      [404, "denied", false, true],
       [503, "unavailable", true, false],
       [500, "unavailable", true, false],
     ]);
@@ -954,5 +991,15 @@ describe("S10 Attempt Lineage — scale and pure parts", () => {
     expect(library).toContain("lineageHref(group.alphaId)");
     const importer = readFileSync(join(process.cwd(), "src", "research", "AlphaImport.tsx"), "utf8");
     expect(importer).toContain("lineageHref(registration.alpha_id)");
+  });
+
+  it("S10-U43 the button font reset has zero specificity, so every chip class keeps its mono size", () => {
+    /* jsdom computes no cascade; the browser probe measures the computed font. This guards the source. */
+    const source = readFileSync(join(process.cwd(), "src", "research", "LineageDetail.tsx"), "utf8");
+    expect(source).toContain(":where(.ln-page) button { font: inherit; }");
+    expect(source).not.toMatch(/^\.ln-page button\s*\{/m);
+    for (const cls of ["ln-chip", "ln-fchip", "ln-toggle", "ln-btn"]) {
+      expect(source, cls).toMatch(new RegExp(`^\\.${cls} \\{[^}]*font-family: var\\(--font-mono\\)`, "m"));
+    }
   });
 });
