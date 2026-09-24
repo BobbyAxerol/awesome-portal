@@ -221,3 +221,29 @@ search", mode "declared not executed", a reason in every optimizer panel).
    items (-03, -05…-11).
 3. **Wave C — consume RF-05 contracts** as each is DELIVERED; real-API receipt
    per screen at 1440/1280/660.
+
+## 7. RF-06 status — 2026-09-24 (Claude)
+
+Bobby: "xử lý hết phần frontend đang có lỗi … làm luôn". DQ-13…15 applied as
+recommended (DQ-14 shells with typed reasons, DQ-15 fact-asserting copy only
+when published); recorded as delegated, for Bobby's later review.
+
+| Area | Status |
+|---|---|
+| FE-X-10 cursor seed + next-stage stage, FE-S04-06 clamp | fixed (`evidenceCursor.ts`, hub calls `clampToObserved`) |
+| FE-X-11 states | fixed: 404 → terminal "not found" + `notFound` → run-not-found page with Runs link; first-read 409 → failed-retryable, never STALE; pending → partial |
+| FE-X-12 current-source reads | fixed on S05/S06 (skipped when the lane cannot apply). S04 passport still reads it on READY runs: no typed fixed-profile fact in the hub, so skipping would be a frontend inference — waits `CG-P13-09` |
+| FE-X-13 formatting | new `researchFormat.ts` (unit-aware, exact value kept in title/copy) |
+| FE-X-15 module header | removed on Research Loop screens (DQ-01); legacy screens keep it |
+| S01 FE-S01-01…14 | all fixed; list requests on load 3→1, typing 7 keys 14→1, checkbox 1→0 |
+| S04 FE-S04-01…13 | all fixed; charts lazy (route chunk 15 KB gz, ECharts only on chart mount), time axis, % tooltips, sticky under the measured topbar |
+| S05 FE-S05-01…08, S06 FE-S06-01…08 | fixed except: A1 `levels` (not served), near-bound θ* ticks (would be browser judgement), search cinema and S05 lens (not built) |
+| **S03 (P11) FE-S03-13…19 and round-2 S03 items** | **handed to Codex's RF-04 run**, which is editing `RunProgress.tsx`/`useRunProgress.ts` in the same checkout; not touched here except one test expectation (404 → terminal) in `runProgress.test.tsx`, left uncommitted for Codex's commit |
+
+Deviations for Bobby's review: card height S01 131 px vs HiFi 101 (real ids
+are long; shorten id?); strip/tab card not sticky below 768 px; strip colour
+`var(--paper)` (no `#fdfbf5` token); RUNNING/QUEUED on S04 get a banner, not the
+spec §23 redirect; S05/S06 use the HiFi title/subtitle (DQ-02); a few added
+lines not in HiFi/spec (cancelled-claim line, "open progress →", "open legacy
+run →", P19/P20/P21 disabled labels). The e2e probe (`_probe-research-product`,
+Codex's working copy) expects `128400.00`; the tile now reads `128,400.00`.
