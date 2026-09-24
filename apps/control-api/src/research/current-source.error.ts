@@ -10,6 +10,14 @@ export class ResearchCurrentSourceError extends Error {
       | "RESEARCH_CURRENT_SOURCE_UNAVAILABLE",
     message: string,
     readonly status: 400 | 403 | 404 | 409 | 503,
+    /**
+     * RF-05 CG-P13-09: machine-readable refusal state. Serialized as the
+     * Problem body's `details`; never carries a path, table or lease.
+     */
+    readonly details?: {
+      lane_state: "PENDING_SOURCE" | "PENDING_RETENTION" | "NOT_RETAINED_LEGACY" | "NOT_RETAINED_TERMINAL";
+      effective_status: string;
+    },
   ) {
     super(message);
     this.name = "ResearchCurrentSourceError";

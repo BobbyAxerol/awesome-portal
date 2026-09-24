@@ -35,13 +35,15 @@ export interface components {
             state: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_APPLICABLE";
             reason_code: components["schemas"]["ReasonCode"] | null;
         };
+        /** @description Half-open UTC range. Closed to extra members wherever it is composed (unevaluatedProperties on the composing schema). */
         Range: {
             start_utc_ms: components["schemas"]["UtcMilliseconds"];
             end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
         };
+        /** @description NOT_APPLICABLE (RF-05): the run's protocol cannot carry the fact. NOT_PUBLISHED: the fact applies and the source did not publish it. NOT_ASSERTED: nobody claimed it. */
         AbsentFact: {
             /** @enum {unknown} */
-            state: "NOT_PUBLISHED" | "NOT_ASSERTED";
+            state: "NOT_PUBLISHED" | "NOT_ASSERTED" | "NOT_APPLICABLE";
             reason_code: components["schemas"]["ReasonCode"];
             availability: components["schemas"]["Availability"];
         };
@@ -101,8 +103,41 @@ export interface components {
             };
             source_seal: components["schemas"]["AbsentFact"];
             unlock: components["schemas"]["AbsentFact"];
+            /** @description RF-05: why `bars` is null — P10 counts only rows copied into the child tape and never copies the holdout. */
+            bars_absence: components["schemas"]["AbsentFact"];
             availability: components["schemas"]["Availability"];
         }) | components["schemas"]["AbsentFact"];
+        /** @description RF-05 CG-P14-05: dataset, symbol and bar interval from the P08 dataset binding whose canonical digest equals provenance.dataset_binding_digest. bar_interval_ms is parsed from the bound timeframe (<n>m|h|d|w); null with a reason when the timeframe has no fixed duration. */
+        DatasetFact: {
+            /** @constant */
+            state: "AVAILABLE";
+            dataset_id: string;
+            symbol: string;
+            timeframe: string;
+            bar_interval_ms: number | null;
+            /** @constant */
+            provenance: "P08_DATASET_BINDING";
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            availability: components["schemas"]["Availability"];
+        } | {
+            /** @enum {unknown} */
+            state: "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY";
+            dataset_id: null;
+            symbol: null;
+            timeframe: null;
+            bar_interval_ms: null;
+            /** @constant */
+            provenance: "NONE";
+            reason_code: components["schemas"]["ReasonCode"];
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description RF-05 CG-P14-06: one absent fact, as a JSON pointer (RFC 6901) into the field that owns it. */
+        AbsenceIndexEntry: {
+            key: string;
+            pointer: string;
+            /** @enum {unknown} */
+            state: "NOT_PUBLISHED" | "NOT_ASSERTED" | "NOT_APPLICABLE";
+        };
         Problem: {
             error: {
                 code: string;
@@ -121,7 +156,11 @@ export interface components {
             availability: components["schemas"]["Availability"];
             /** @enum {unknown} */
             readiness: "COMPLETE" | "PARTIAL" | "NOT_READY";
+            /** @description RF-05 CG-P14-04: time of the durable fact named by as_of_basis; stable for one immutable revision, never read time. */
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
+            /** @enum {unknown} */
+            as_of_basis: "P14_PROJECTION_RECEIVED_AT" | "RUN_STATE_UPDATED_AT" | "LEGACY_READ_MODEL_UPDATED_AT";
+            dataset: components["schemas"]["DatasetFact"];
             provenance: {
                 source_adapter_id: "p04.delta-rsi.v1" | null;
                 engine_version: "1.1.1" | null;
@@ -162,6 +201,16 @@ export interface components {
                     availability: components["schemas"]["Availability"];
                 };
             };
+            /**
+             * @description RF-05 CG-P14-06: protocol.*, windows.* and actions.* are the authoritative location of every absence.
+             * @constant
+             */
+            absence_authority: "FIELD_LOCAL";
+            absence_index: components["schemas"]["AbsenceIndexEntry"][];
+            /**
+             * @deprecated
+             * @description Deprecated since RF-05; each value equals the field-local fact named in absence_index. Kept readable for older clients.
+             */
             source_absences: {
                 [key: string]: components["schemas"]["AbsentFact"];
             };
@@ -181,12 +230,15 @@ export interface components {
     parameters: {
         RunId: components["schemas"]["RunId"];
         WorkspaceId: components["schemas"]["WorkspaceId"];
+        /** @description Entity-tag list or *; W/ prefixes are compared weakly. */
         IfNoneMatch: string;
     };
     requestBodies: never;
     headers: {
-        /** @description Quoted immutable P14 projection revision. */
+        /** @description Quoted strong representation validator for one immutable P14 revision (RF-05: a digest of the exact published body, not the bare revision). A proxy may weaken it to W/"…"; the server compares weakly. */
         Etag: string;
+        /** @description Per-session read; revalidate before reuse. */
+        CacheControl: "private, no-cache";
     };
     pathItems: never;
 }
@@ -198,6 +250,7 @@ export interface operations {
                 workspace_id?: components["parameters"]["WorkspaceId"];
             };
             header?: {
+                /** @description Entity-tag list or *; W/ prefixes are compared weakly. */
                 "If-None-Match"?: components["parameters"]["IfNoneMatch"];
             };
             path: {
@@ -211,15 +264,18 @@ export interface operations {
             200: {
                 headers: {
                     ETag: components["headers"]["Etag"];
+                    "Cache-Control": components["headers"]["CacheControl"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SplitDetail"];
                 };
             };
-            /** @description The exact immutable P14 projection has not changed */
+            /** @description The If-None-Match validator (weak comparison) names this exact representation */
             304: {
                 headers: {
+                    ETag: components["headers"]["Etag"];
+                    "Cache-Control": components["headers"]["CacheControl"];
                     [name: string]: unknown;
                 };
                 content?: never;

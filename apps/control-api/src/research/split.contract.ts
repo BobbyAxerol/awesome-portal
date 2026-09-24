@@ -41,8 +41,13 @@ const RangeSchema = RangeShape.superRefine((value, context) => {
   }
 });
 
+/**
+ * RF-05 CG-P14-03: `NOT_APPLICABLE` is added for a fact the run's protocol
+ * cannot carry (a three-window request has no purge, embargo or inner folds),
+ * distinct from `NOT_PUBLISHED` (the fact applies and nothing answered it).
+ */
 const AbsentFactSchema = z.object({
-  state: z.enum(["NOT_PUBLISHED", "NOT_ASSERTED"]),
+  state: z.enum(["NOT_PUBLISHED", "NOT_ASSERTED", "NOT_APPLICABLE"]),
   reason_code: ReasonCodeSchema,
   availability: ResearchSplitAvailabilitySchema,
 }).strict();
@@ -89,7 +94,48 @@ const HoldoutWindowSchema = RangeShape.extend({
   }).strict(),
   source_seal: AbsentFactSchema,
   unlock: AbsentFactSchema,
+  // RF-05 CG-P14-03: why `bars` is null. P10 counts only rows copied into the
+  // child tape; the holdout is never copied, so its bar count is not published.
+  bars_absence: AbsentFactSchema,
   availability: ResearchSplitAvailabilitySchema,
+}).strict();
+
+/** RF-05 CG-P14-05: the bar interval bound by the P08 dataset binding. */
+const DatasetFactSchema = z.union([
+  z.object({
+    state: z.literal("AVAILABLE"),
+    dataset_id: z.string().min(1).max(191),
+    symbol: z.string().min(1).max(64),
+    timeframe: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/),
+    // Parsed from the bound timeframe identifier (`<n>m|h|d|w`); null when the
+    // identifier has no fixed duration, never guessed from observed bars.
+    bar_interval_ms: z.number().int().positive().max(31_536_000_000).nullable(),
+    provenance: z.literal("P08_DATASET_BINDING"),
+    reason_code: ReasonCodeSchema.nullable(),
+    availability: ResearchSplitAvailabilitySchema,
+  }).strict(),
+  z.object({
+    state: z.enum(["NOT_PUBLISHED", "PENDING_SOURCE_CALLBACK", "LEGACY_METADATA_ONLY"]),
+    dataset_id: z.null(),
+    symbol: z.null(),
+    timeframe: z.null(),
+    bar_interval_ms: z.null(),
+    provenance: z.literal("NONE"),
+    reason_code: ReasonCodeSchema,
+    availability: ResearchSplitAvailabilitySchema,
+  }).strict(),
+]);
+
+/**
+ * RF-05 CG-P14-06: the absence of a fact is stated once, where the fact
+ * lives (`protocol.*`, `windows.*`, `actions.*`). `absence_index` lists each
+ * absent fact once as a JSON pointer into that authoritative location;
+ * `source_absences` is kept only so older readers keep working.
+ */
+const AbsenceIndexEntrySchema = z.object({
+  key: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/),
+  pointer: z.string().regex(/^(?:\/[a-z][a-z0-9_]{0,63}){1,4}$/),
+  state: z.enum(["NOT_PUBLISHED", "NOT_ASSERTED", "NOT_APPLICABLE"]),
 }).strict();
 
 export const ResearchSplitResponseSchema = z.object({
@@ -100,7 +146,11 @@ export const ResearchSplitResponseSchema = z.object({
   etag: z.string().regex(/^"p14r1_[0-9a-f]{64}"$/).nullable(),
   availability: ResearchSplitAvailabilitySchema,
   readiness: z.enum(["COMPLETE", "PARTIAL", "NOT_READY"]),
+  // RF-05 CG-P14-04: the time of the durable fact this representation is
+  // built from (see `as_of_basis`), stable for one immutable revision.
   as_of_utc_ms: UtcMsSchema,
+  as_of_basis: z.enum(["P14_PROJECTION_RECEIVED_AT", "RUN_STATE_UPDATED_AT", "LEGACY_READ_MODEL_UPDATED_AT"]),
+  dataset: DatasetFactSchema,
   provenance: z.object({
     source_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
     engine_version: z.literal("1.1.1").nullable(),
@@ -139,6 +189,9 @@ export const ResearchSplitResponseSchema = z.object({
       availability: ResearchSplitAvailabilitySchema,
     }).strict(),
   }).strict(),
+  absence_authority: z.literal("FIELD_LOCAL"),
+  absence_index: z.array(AbsenceIndexEntrySchema).max(32),
+  /** @deprecated since RF-05 — read the field-local fact via `absence_index`. */
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), AbsentFactSchema),
 }).strict();
 

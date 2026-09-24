@@ -46,8 +46,28 @@ export interface SplitHubRow {
   readiness: "COMPLETE" | "PARTIAL" | null;
   sourceSplitDigest: string | null;
   receivedAt: Date | null;
+  /**
+   * Private P08 dataset binding stored beside the P10 preflight manifest.
+   * Readers publish only digest-verified public facts from it (dataset,
+   * symbol, timeframe); it is never forwarded as a whole.
+   */
+  datasetBinding: JsonValue;
+  /**
+   * RF-05 CG-P14-04: the time of the durable fact a representation is built
+   * from — the immutable projection's receipt, else the run's last durable
+   * state change, else the legacy read model's update. Stable for one
+   * immutable revision; never the read transaction's clock.
+   */
+  sourceAsOfUtcMs: number;
+  sourceAsOfBasis: SplitSourceAsOfBasis;
+  /** The read transaction's clock. Retained for readers that still publish it (P16). */
   asOfUtcMs: number;
 }
+
+export type SplitSourceAsOfBasis =
+  | "P14_PROJECTION_RECEIVED_AT"
+  | "RUN_STATE_UPDATED_AT"
+  | "LEGACY_READ_MODEL_UPDATED_AT";
 
 interface HubQueryRow {
   run_id: string;
@@ -64,8 +84,11 @@ interface HubQueryRow {
   readiness: "COMPLETE" | "PARTIAL" | null;
   source_split_digest: string | null;
   received_at: Date | null;
+  dataset_binding: JsonValue;
+  projection_received_at_utc_ms: string | number | null;
+  state_updated_at_utc_ms: string | number;
 }
-interface LegacyRunRow { run_id: string; }
+interface LegacyRunRow { run_id: string; updated_at_utc_ms: string | number; }
 interface TimestampRow { as_of_utc_ms: string | number; }
 
 const MAXIMUM_CONCURRENT_SPLIT_READS = 2;
@@ -182,7 +205,12 @@ export class ResearchSplitRepository {
                 projection.projection,
                 projection.readiness,
                 projection.source_split_digest,
-                projection.received_at
+                projection.received_at,
+                preflight.dataset_binding,
+                floor(extract(epoch FROM projection.received_at) * 1000)::bigint AS projection_received_at_utc_ms,
+                floor(extract(epoch FROM GREATEST(
+                  producer.updated_at, job.updated_at, COALESCE(snapshot.received_at, producer.updated_at)
+                )) * 1000)::bigint AS state_updated_at_utc_ms
            FROM research.run_producers producer
            JOIN research.jobs job
              ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
@@ -190,6 +218,10 @@ export class ResearchSplitRepository {
              ON snapshot.workspace_id = producer.workspace_id
             AND snapshot.run_id = producer.run_id
             AND snapshot.worker_attempt_id = producer.worker_attempt_id
+           LEFT JOIN research.preflight_manifests preflight
+             ON preflight.workspace_id = producer.workspace_id
+            AND preflight.preflight_token = producer.preflight_token
+            AND preflight.actor_user_id = producer.actor_user_id
            LEFT JOIN LATERAL (
              SELECT projection_revision, projection, readiness, source_split_digest, received_at
                FROM research.run_split_projections_v1
@@ -220,11 +252,22 @@ export class ResearchSplitRepository {
           readiness: row.readiness,
           sourceSplitDigest: row.source_split_digest,
           receivedAt: row.received_at,
+          datasetBinding: row.dataset_binding,
+          ...(row.projection_received_at_utc_ms !== null && row.projection_revision !== null
+            ? {
+              sourceAsOfUtcMs: asSafeNonNegative(row.projection_received_at_utc_ms, "projection timestamp"),
+              sourceAsOfBasis: "P14_PROJECTION_RECEIVED_AT" as const,
+            }
+            : {
+              sourceAsOfUtcMs: asSafeNonNegative(row.state_updated_at_utc_ms, "run-state timestamp"),
+              sourceAsOfBasis: "RUN_STATE_UPDATED_AT" as const,
+            }),
           asOfUtcMs,
         };
       }
       const legacy = await client.query<LegacyRunRow>(
-        "SELECT run_id FROM public.run_read_models WHERE workspace_id = $1 AND run_id = $2 LIMIT 1",
+        `SELECT run_id, floor(extract(epoch FROM updated_at) * 1000)::bigint AS updated_at_utc_ms
+           FROM public.run_read_models WHERE workspace_id = $1 AND run_id = $2 LIMIT 1`,
         [scope.workspaceId, runId],
       );
       if (legacy.rowCount !== 1) return null;
@@ -234,7 +277,10 @@ export class ResearchSplitRepository {
         requestedSpecDigest: null, effectiveSpecDigest: null, datasetBindingDigest: null, manifestDigest: null,
         legacyRequest: null,
         progressSnapshot: null, jobState: null, revision: null, projection: null, readiness: null,
-        sourceSplitDigest: null, receivedAt: null, asOfUtcMs,
+        sourceSplitDigest: null, receivedAt: null, datasetBinding: null,
+        sourceAsOfUtcMs: asSafeNonNegative(legacy.rows[0]!.updated_at_utc_ms, "legacy timestamp"),
+        sourceAsOfBasis: "LEGACY_READ_MODEL_UPDATED_AT" as const,
+        asOfUtcMs,
       };
     }, signal);
   }

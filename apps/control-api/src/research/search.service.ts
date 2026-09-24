@@ -37,6 +37,104 @@ const FIXED_DIAGNOSTIC_REASON = "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_SEARCH_DIAGN
 const STRICT_OOS_REASON = "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS";
 const CANDIDATE_SELECTION_METRIC_REASON = "P15_DECLARED_REQUEST_DID_NOT_BIND_CANDIDATE_SELECTION_METRIC";
 const REQUESTED_OPTIMIZER_NOT_PUBLISHED_REASON = "P10_REQUESTED_OPTIMIZER_DECLARATION_NOT_PUBLISHED";
+const NO_VALIDATION_CLAIM_REASON = "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_VALIDATION_CLAIM";
+const NO_CHRONOLOGICAL_CLAIM_REASON = "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_CHRONOLOGICAL_CLAIM";
+const NO_SCORING_BACKEND_REASON = "P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND";
+const NOT_DECLARED_CLAIM_REASON = "P15_NO_OPTIMIZER_DECLARED_NO_MODE_CLAIM";
+
+/** Bump when the representation changes for an unchanged content revision. */
+const SEARCH_REPRESENTATION_VERSION = "research.search-detail.v1+rf05.1";
+
+/**
+ * RF-05 CG-P15-02 (Astra A06): `revision` names the immutable content and is
+ * fold-independent; the HTTP validator names the exact representation,
+ * including `inspection.requested_fold`, so another fold's ETag cannot 304.
+ */
+function representationEtag(body: { etag: string | null }): string {
+  const { etag: _etag, ...representation } = body;
+  return `"p15r1_${sha256ResearchJson({ representation_version: SEARCH_REPRESENTATION_VERSION, representation })}"`;
+}
+
+function absentClaim(state: "NOT_APPLICABLE" | "NOT_PUBLISHED", reasonCode: string, parent?: Availability) {
+  return {
+    state,
+    value: null,
+    provenance: "NONE" as const,
+    reason_code: reasonCode,
+    availability: parent ?? availability(state, reasonCode),
+  };
+}
+
+/**
+ * RF-05 CG-P15-05. A declared-but-unexecuted optimizer has no mode claim;
+ * the only run-sourced fact is P14's outer-OOS evaluation state.
+ */
+function currentClaimRow(
+  optimizer: { mode: string | null; schedule: string | null },
+  declaredBackend: "proxy" | "endpoint" | null,
+  source: ResearchSplitSource,
+  strictOosReason: string,
+) {
+  const declared = optimizer.mode !== null && optimizer.schedule !== null;
+  const claimReason = (reason: string) => (declared ? reason : NOT_DECLARED_CLAIM_REASON);
+  return {
+    basis: declared ? "DECLARED_NOT_EXECUTED" as const : "NOT_DECLARED" as const,
+    validation_claim: absentClaim("NOT_APPLICABLE", claimReason(NO_VALIDATION_CLAIM_REASON)),
+    chronological_claim: absentClaim("NOT_APPLICABLE", claimReason(NO_CHRONOLOGICAL_CLAIM_REASON)),
+    oos_used_for_selection: {
+      state: "NOT_ASSERTED" as const,
+      value: null,
+      provenance: "NONE" as const,
+      reason_code: strictOosReason,
+      availability: availability("NOT_PUBLISHED", strictOosReason),
+    },
+    oos_column: {
+      state: "REPORT_ONLY" as const,
+      source_evaluation_state: source.windows.outer_oos.evaluation_state,
+      provenance: "P14_SOURCE_RECEIPT" as const,
+      reason_code: null,
+      availability: availability("AVAILABLE", null),
+    },
+    scoring_backend: {
+      state: "NOT_APPLICABLE" as const,
+      declared_value: declaredBackend,
+      provenance: declaredBackend ? "RUN_REQUESTED_SPEC" as const : "NONE" as const,
+      reason_code: claimReason(NO_SCORING_BACKEND_REASON),
+      availability: availability("NOT_APPLICABLE", claimReason(NO_SCORING_BACKEND_REASON)),
+    },
+    mode_reference: declared ? {
+      mode: optimizer.mode!,
+      schedule: optimizer.schedule!,
+      operation_id: "researchEngineAtlasGetV1" as const,
+      relation: "DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE" as const,
+    } : null,
+  };
+}
+
+/** Pending/legacy/mismatch: every claim fact keeps the envelope's own availability. */
+function absentClaimRow(sourceAvailability: Availability, reason: string) {
+  return {
+    basis: "NOT_PUBLISHED" as const,
+    validation_claim: absentClaim("NOT_PUBLISHED", reason, sourceAvailability),
+    chronological_claim: absentClaim("NOT_PUBLISHED", reason, sourceAvailability),
+    oos_used_for_selection: absentClaim("NOT_PUBLISHED", reason, sourceAvailability),
+    oos_column: {
+      state: "NOT_PUBLISHED" as const,
+      source_evaluation_state: null,
+      provenance: "NONE" as const,
+      reason_code: reason,
+      availability: sourceAvailability,
+    },
+    scoring_backend: {
+      state: "NOT_PUBLISHED" as const,
+      declared_value: null,
+      provenance: "NONE" as const,
+      reason_code: reason,
+      availability: sourceAvailability,
+    },
+    mode_reference: null,
+  };
+}
 
 function availability(state: AvailabilityState, reasonCode: string | null): Availability {
   return { state, reason_code: reasonCode };
@@ -103,13 +201,26 @@ function exactDecimal(value: number): string {
   return String(value);
 }
 
-function requestedOptimizer(value: unknown): { mode: string | null; schedule: string | null } {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return { mode: null, schedule: null };
+function requestedSpecRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const research = (value as Record<string, unknown>).research;
-  if (!research || typeof research !== "object" || Array.isArray(research)) return { mode: null, schedule: null };
+  if (!research || typeof research !== "object" || Array.isArray(research)) return null;
   const requestedSpec = (research as Record<string, unknown>).requested_spec;
-  if (!requestedSpec || typeof requestedSpec !== "object" || Array.isArray(requestedSpec)) return { mode: null, schedule: null };
-  const record = requestedSpec as Record<string, unknown>;
+  if (!requestedSpec || typeof requestedSpec !== "object" || Array.isArray(requestedSpec)) return null;
+  return requestedSpec as Record<string, unknown>;
+}
+
+/** The scoring backend the request declared, if any; a declaration, not an executed fact. */
+function declaredScoringBackend(value: unknown): "proxy" | "endpoint" | null {
+  const config = requestedSpecRecord(value)?.optimization_config;
+  if (!config || typeof config !== "object" || Array.isArray(config)) return null;
+  const backend = (config as Record<string, unknown>).scoring_backend;
+  return backend === "proxy" || backend === "endpoint" ? backend : null;
+}
+
+function requestedOptimizer(value: unknown): { mode: string | null; schedule: string | null } {
+  const record = requestedSpecRecord(value);
+  if (!record) return { mode: null, schedule: null };
   const valid = (candidate: unknown): string | null =>
     typeof candidate === "string" && /^[A-Za-z0-9_:-]{1,120}$/.test(candidate) ? candidate : null;
   return {
@@ -257,15 +368,16 @@ export class ResearchSearchService {
       requested_optimizer: optimizer,
     };
     const revision = `p15r1_${sha256ResearchJson(revisionPayload)}`;
-    return {
+    const body = {
       schema_version: "research.search-detail.v1",
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: row.runId,
       revision,
-      etag: `"${revision}"`,
+      etag: null as string | null,
       availability: available,
       readiness: "PARTIAL",
-      as_of_utc_ms: row.asOfUtcMs,
+      as_of_utc_ms: row.sourceAsOfUtcMs,
+      as_of_basis: row.sourceAsOfBasis,
       provenance: {
         source_adapter_id: source.source.execution_adapter_id,
         adapter_contract_digest: row.adapterContractDigest,
@@ -289,6 +401,7 @@ export class ResearchSearchService {
         candidate_selection_metric: metric,
         availability: declaredOptimizer ? available : availability("NOT_PUBLISHED", REQUESTED_OPTIMIZER_NOT_PUBLISHED_REASON),
       },
+      claim_row: currentClaimRow(optimizer, declaredScoringBackend(row.legacyRequest), source, strictOos.reason_code),
       fixed_profile: {
         state: "FIXED_PROFILE_NO_SEARCH",
         adapter_contract_digest: row.adapterContractDigest,
@@ -330,6 +443,8 @@ export class ResearchSearchService {
       },
       source_absences: sourceAbsences,
     };
+    body.etag = representationEtag(body);
+    return body;
   }
 
   private absentDetail(row: SplitHubRow, sourceAvailability: Availability, requestedFold: number | null): unknown {
@@ -349,7 +464,8 @@ export class ResearchSearchService {
       etag: null,
       availability: sourceAvailability,
       readiness: "NOT_READY",
-      as_of_utc_ms: row.asOfUtcMs,
+      as_of_utc_ms: row.sourceAsOfUtcMs,
+      as_of_basis: row.sourceAsOfBasis,
       provenance: {
         source_adapter_id: null,
         adapter_contract_digest: null,
@@ -369,6 +485,7 @@ export class ResearchSearchService {
         candidate_selection_metric: metric,
         availability: sourceAvailability,
       },
+      claim_row: absentClaimRow(sourceAvailability, reason),
       fixed_profile: {
         state: "NOT_PUBLISHED",
         adapter_contract_digest: null,

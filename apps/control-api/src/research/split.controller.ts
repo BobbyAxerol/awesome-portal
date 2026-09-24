@@ -5,6 +5,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
+import { sendRevalidatable } from "./etag";
 import { ResearchSplitReadQuerySchema, ResearchSplitRunIdSchema } from "./split.contract";
 import { ResearchSplitError } from "./split.error";
 import { ResearchSplitService } from "./split.service";
@@ -36,12 +37,7 @@ export class ResearchSplitController {
     const body = await this.withAbort(request, (signal) => this.service.detail(
       { workspaceId, actorUserId: request.portalUser.userId }, runId, signal,
     ));
-    if (body.etag) {
-      reply.header("etag", body.etag);
-      const candidate = request.headers["if-none-match"];
-      if (!Array.isArray(candidate) && candidate === body.etag) return reply.code(304).send();
-    }
-    return reply.send(body);
+    return sendRevalidatable(reply, request, body);
   }
 
   private async withAbort<T>(request: FastifyRequest, work: (signal: AbortSignal) => Promise<T>): Promise<T> {

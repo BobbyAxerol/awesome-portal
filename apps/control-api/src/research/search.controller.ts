@@ -8,6 +8,7 @@ import { WorkspacesRepository } from "../repos/workspaces";
 import { ResearchSearchReadQuerySchema, ResearchSearchRunIdSchema } from "./search.contract";
 import { ResearchSearchError } from "./search.error";
 import { ResearchSearchService } from "./search.service";
+import { sendRevalidatable } from "./etag";
 
 interface SearchRequest extends FastifyRequest {
   portalUser: { userId: string };
@@ -38,12 +39,9 @@ export class ResearchSearchController {
       runId,
       { ...(query.data.fold === undefined ? {} : { fold: query.data.fold }) },
     );
-    if (body.etag) {
-      reply.header("etag", body.etag);
-      const candidate = request.headers["if-none-match"];
-      if (!Array.isArray(candidate) && candidate === body.etag) return reply.code(304).send();
-    }
-    return reply.send(body);
+    // RF-05 CG-P15-02: the service's ETag already names the requested fold,
+    // so fold 1's validator can never 304 a fold-3 request.
+    return sendRevalidatable(reply, request, body);
   }
 
   private runId(raw: string): string {

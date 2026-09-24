@@ -45,6 +45,9 @@ function currentP04Row(overrides: Record<string, unknown> = {}) {
     readiness: "PARTIAL" as const,
     sourceSplitDigest: sha256ResearchJson(source),
     receivedAt: new Date("2026-09-22T00:00:00.000Z"),
+    sourceAsOfUtcMs: Date.parse("2026-09-22T00:00:00.000Z"),
+    sourceAsOfBasis: "P14_PROJECTION_RECEIVED_AT" as const,
+    datasetBinding: null,
     asOfUtcMs: 1_727_000_000_000,
     ...overrides,
   };
@@ -160,8 +163,9 @@ describe("P15 current-source Search / ledger / diagnostics authority", () => {
       readiness: null,
       sourceSplitDigest: null,
       receivedAt: null,
+      sourceAsOfBasis: "LEGACY_READ_MODEL_UPDATED_AT" as const,
     });
-    const pending = currentP04Row({ projection: null, jobState: "RUNNING" });
+    const pending = currentP04Row({ projection: null, jobState: "RUNNING", sourceAsOfBasis: "RUN_STATE_UPDATED_AT" as const });
     const repository = { hub: vi.fn().mockResolvedValueOnce(legacy).mockResolvedValueOnce(pending) };
     const service = new ResearchSearchService(repository as never, { FEATURE_RESEARCH_SEARCH: "true" } as never);
 

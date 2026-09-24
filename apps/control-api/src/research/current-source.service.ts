@@ -1,7 +1,7 @@
 /** RS-02 retained-current-source named BFF projection service. */
 
 import { Buffer } from "node:buffer";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { z } from "zod";
 
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -15,6 +15,9 @@ import {
   ResearchCurrentSourceReplayResponseSchema,
   ResearchCurrentSourceSearchResponseSchema,
   ResearchCurrentSourceSplitResponseSchema,
+  ResearchCurrentSourceNotApplicableResponseSchema,
+  type ResearchCurrentSourceNotApplicableResponse,
+  type ResearchCurrentSourceOperation,
   type ResearchCurrentSourceEvidenceResponse,
   type ResearchCurrentSourceEvidenceSeriesResponse,
   type ResearchCurrentSourcePageQuery,
@@ -31,7 +34,13 @@ import {
   type CurrentSourceStoredRow,
   type CurrentSourceTableKind,
 } from "./current-source.repository";
+import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
+import { ResearchSplitError } from "./split.error";
+import { ResearchSplitRepository } from "./split.repository";
+
+/** RF-05 CG-P13-09: the P04 fixed qualification can never be sealed into the RS-02 lane. */
+const P04_FIXED_PROFILE_NOT_RETAINABLE_REASON = "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION";
 
 const RESPONSE_MAX_BYTES = 1_048_576;
 const DISPLAY_SERIES_LIMIT = 192;
@@ -133,6 +142,10 @@ const CandidatePayloadSchema = z.object({
   parameters: ParameterMapSchema,
 }).strict();
 
+function isSeal(value: CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse): value is CurrentSourceSealRow {
+  return "artifactRevision" in value;
+}
+
 function available(): Availability { return { state: "AVAILABLE", reason_code: null }; }
 function fact(state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE", reasonCode: string | null) {
   const outer = state === "AVAILABLE" ? available() : { state, reason_code: reasonCode } as Availability;
@@ -199,6 +212,12 @@ export class ResearchCurrentSourceService {
   constructor(
     private readonly repository: ResearchCurrentSourceRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    /**
+     * Read only on the no-seal path, to learn the run's immutable P10
+     * adapter binding (RF-05 CG-P13-09). Optional so a unit harness without
+     * it keeps the previous refusal behaviour.
+     */
+    @Optional() private readonly splitRows?: ResearchSplitRepository,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -207,8 +226,9 @@ export class ResearchCurrentSourceService {
     });
   }
 
-  async evidence(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchCurrentSourceEvidenceResponse> {
-    const seal = await this.requireSeal(scope, runId, signal);
+  async evidence(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchCurrentSourceEvidenceResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "evidence", signal);
+    if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
     const value = {
       schema_version: "research.current-source-evidence.v1" as const,
@@ -246,8 +266,9 @@ export class ResearchCurrentSourceService {
     runId: string,
     kind: "EQUITY" | "RETURNS" | "POSITIONS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION",
     signal?: AbortSignal,
-  ): Promise<ResearchCurrentSourceEvidenceSeriesResponse> {
-    const seal = await this.requireSeal(scope, runId, signal);
+  ): Promise<ResearchCurrentSourceEvidenceSeriesResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "evidence_series", signal);
+    if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
     const source = await this.seriesValues(scope, runId, seal, summary, kind, signal);
     const value = {
@@ -261,8 +282,9 @@ export class ResearchCurrentSourceService {
     return this.valid(ResearchCurrentSourceEvidenceSeriesResponseSchema, value);
   }
 
-  async split(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchCurrentSourceSplitResponse> {
-    const seal = await this.requireSeal(scope, runId, signal);
+  async split(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchCurrentSourceSplitResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "split", signal);
+    if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
     const page = await this.repository.rows(scope, runId, seal.artifactRevision, "FOLD", { limit: 256 }, signal);
     if (page.totalRows !== seal.tableRows.FOLD || page.hasMore || page.hasPrevious) {
@@ -295,8 +317,9 @@ export class ResearchCurrentSourceService {
     runId: string,
     query: ResearchCurrentSourcePageQuery,
     signal?: AbortSignal,
-  ): Promise<ResearchCurrentSourceSearchResponse> {
-    const seal = await this.requireSeal(scope, runId, signal);
+  ): Promise<ResearchCurrentSourceSearchResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "search", signal);
+    if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
     const currentRevision = revision("search", seal);
     const page = await this.readPage(scope, runId, seal, "TRIAL", query, currentRevision, "research.current-source.search.v1", signal);
@@ -346,8 +369,9 @@ export class ResearchCurrentSourceService {
     return this.valid(ResearchCurrentSourceSearchResponseSchema, value);
   }
 
-  async freeze(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchCurrentSourceFreezeResponse> {
-    const seal = await this.requireSeal(scope, runId, signal);
+  async freeze(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<ResearchCurrentSourceFreezeResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "freeze", signal);
+    if (!isSeal(seal)) return seal;
     const summary = parseSummary(seal);
     const observedImportDigest = await this.repository.verifyRetainedImport(scope, seal, signal);
     const integrityState = observedImportDigest === seal.retainedImportDigest ? "MATCH" as const : "MISMATCH" as const;
@@ -385,8 +409,9 @@ export class ResearchCurrentSourceService {
     runId: string,
     query: ResearchCurrentSourcePageQuery,
     signal?: AbortSignal,
-  ): Promise<ResearchCurrentSourceReplayResponse> {
-    const seal = await this.requireSeal(scope, runId, signal);
+  ): Promise<ResearchCurrentSourceReplayResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "replay", signal);
+    if (!isSeal(seal)) return seal;
     const currentRevision = revision("replay", seal);
     const page = await this.readPage(scope, runId, seal, "OBSERVATION", query, currentRevision, "research.current-source.replay.v1", signal);
     const selectedOrdinal = this.selectedOrdinal(scope.workspaceId, runId, currentRevision, "OBSERVATION", query);
@@ -435,22 +460,85 @@ export class ResearchCurrentSourceService {
     return this.valid(ResearchCurrentSourceReplayResponseSchema, value);
   }
 
-  private async requireSeal(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<CurrentSourceSealRow> {
+  private async requireSeal(
+    scope: ResearchScope,
+    runId: string,
+    operation: ResearchCurrentSourceOperation,
+    signal?: AbortSignal,
+  ): Promise<CurrentSourceSealRow | ResearchCurrentSourceNotApplicableResponse> {
     this.requireEnabled();
     const seal = await this.repository.sealForRead(scope, runId, signal);
     if (seal) return seal;
     const state = await this.repository.runState(scope, runId, signal);
     if (!state) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_NOT_FOUND", "Research run was not found.", 404);
+    const refuse = (laneState: NonNullable<ResearchCurrentSourceError["details"]>["lane_state"], message: string): never => {
+      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", message, 409, {
+        lane_state: laneState,
+        effective_status: state.effectiveStatus,
+      });
+    };
     if (state.sourceKind === "LEGACY_1_0_8_METADATA") {
-      throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_CONFLICT", "This historical run is NOT_RETAINED_LEGACY; it has no current-source bytes.", 409);
+      return refuse("NOT_RETAINED_LEGACY", "This historical run is NOT_RETAINED_LEGACY; it has no current-source bytes.");
     }
-    throw new ResearchCurrentSourceError(
-      "RESEARCH_CURRENT_SOURCE_CONFLICT",
-      state.effectiveStatus === "COMPLETED"
-        ? "Current QuantBT output is PENDING_RETENTION; a sealed retained artifact is required."
-        : "Current QuantBT output is not yet retained.",
-      409,
-    );
+    const notApplicable = await this.notApplicable(scope, runId, operation, signal);
+    if (notApplicable) return notApplicable;
+    if (state.effectiveStatus === "COMPLETED") {
+      return refuse("PENDING_RETENTION", "Current QuantBT output is PENDING_RETENTION; a sealed retained artifact is required.");
+    }
+    if (state.effectiveStatus === "CANCELLED" || state.effectiveStatus === "FAILED") {
+      return refuse("NOT_RETAINED_TERMINAL", "This run ended without a retained current-source artifact.");
+    }
+    return refuse("PENDING_SOURCE", "Current QuantBT output is not yet retained.");
+  }
+
+  /**
+   * RF-05 CG-P13-09. A run admitted under the P04 fixed qualification can
+   * never be sealed into the RS-02 Advanced-WFO lane, whatever its status;
+   * answer that as a typed 200 instead of a retryable-looking 409. The test
+   * is the run's immutable P10 adapter-contract digest, not a name or mode.
+   */
+  private async notApplicable(
+    scope: ResearchScope,
+    runId: string,
+    operation: ResearchCurrentSourceOperation,
+    signal?: AbortSignal,
+  ): Promise<ResearchCurrentSourceNotApplicableResponse | null> {
+    if (!this.splitRows) return null;
+    let adapterContractDigest: string | null;
+    try {
+      adapterContractDigest = (await this.splitRows.hub(scope, runId, signal))?.adapterContractDigest ?? null;
+    } catch (error) {
+      if (error instanceof ResearchSplitError) {
+        throw error.code === "RESEARCH_SPLIT_FORBIDDEN"
+          ? new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_FORBIDDEN", "Access denied.", 403)
+          : new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Current-source lane state is temporarily unavailable.", 503);
+      }
+      throw error;
+    }
+    if (adapterContractDigest !== P04_DELTA_ADAPTER_CONTRACT_DIGEST) return null;
+    const revisionValue = `rs02_not-applicable_${sha256ResearchJson({
+      schema_version: "research.current-source-not-applicable.v1",
+      run_id: runId,
+      operation,
+      run_adapter_contract_digest: adapterContractDigest,
+      reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON,
+    })}`;
+    return this.valid(ResearchCurrentSourceNotApplicableResponseSchema, {
+      schema_version: "research.current-source-not-applicable.v1",
+      read_authority: "PORTAL_RETAINED_CURRENT_SOURCE",
+      run_id: runId,
+      revision: revisionValue,
+      etag: `"${revisionValue}"`,
+      availability: { state: "NOT_APPLICABLE", reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON },
+      lane: {
+        state: "NOT_APPLICABLE",
+        operation,
+        run_profile: "P04_FIXED_QUALIFICATION",
+        run_adapter_contract_digest: adapterContractDigest,
+        retainable_profile_id: "rs02.delta-wfo-global.v1",
+        reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON,
+      },
+    });
   }
 
   private common(kind: string, seal: CurrentSourceSealRow) {

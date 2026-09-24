@@ -27,12 +27,14 @@ describe("P14 Split projection authority", () => {
     expect(write.sourceSplitDigest).toBe(digest);
     expect(write.projectionRevision).toMatch(/^p14r1_[0-9a-f]{64}$/);
     repository.hub.mockResolvedValue({
-      kind: "DURABLE", runId: "run_p14", requestedSpecDigest: "1".repeat(64), effectiveSpecDigest: "2".repeat(64), datasetBindingDigest: "3".repeat(64), manifestDigest: "b".repeat(64), progressSnapshot: null, jobState: "SUCCEEDED", revision: write.projectionRevision, projection: write.projection, readiness: write.readiness, sourceSplitDigest: digest, receivedAt: new Date(), asOfUtcMs: 1,
+      kind: "DURABLE", runId: "run_p14", requestedSpecDigest: "1".repeat(64), effectiveSpecDigest: "2".repeat(64), datasetBindingDigest: "3".repeat(64), manifestDigest: "b".repeat(64), progressSnapshot: null, jobState: "SUCCEEDED", revision: write.projectionRevision, projection: write.projection, readiness: write.readiness, sourceSplitDigest: digest, receivedAt: new Date(), datasetBinding: null, sourceAsOfUtcMs: 1_727_000_000_000, sourceAsOfBasis: "P14_PROJECTION_RECEIVED_AT", asOfUtcMs: 1,
     });
     const detail = await service.detail(scope, "run_p14");
     expect(detail.windows.holdout).toMatchObject({ child_input_state: "NOT_EXPOSED_TO_CHILD_TAPE", evaluation_state: "NOT_EVALUATED", result_exposure_state: "NOT_EXPOSED" });
     expect(detail.actions.holdout_unlock).toMatchObject({ state: "NOT_PUBLISHED", href: null });
     expect(detail.protocol.selection).toMatchObject({ state: "FIXED_PROFILE_NO_SEARCH" });
+    expect(detail.as_of_utc_ms).toBe(1_727_000_000_000);
+    expect(detail.dataset).toMatchObject({ state: "NOT_PUBLISHED", reason_code: "P14_DATASET_BINDING_NOT_PUBLISHED" });
   });
 
   it("rejects a split digest that does not bind the terminal receipt", async () => {

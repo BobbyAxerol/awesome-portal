@@ -150,6 +150,80 @@ export interface components {
             dataset_binding_digest: components["schemas"]["Digest"] | null;
             manifest_digest: components["schemas"]["Digest"] | null;
         };
+        /** @description RF-05 CG-P15-05: a run-sourced claim token, or a typed absence. A declared-but-unexecuted optimizer has no mode claim. */
+        ClaimTokenFact: {
+            /** @constant */
+            state: "CONFIRMED";
+            value: string;
+            /** @constant */
+            provenance: "RUN_SOURCE_RECEIPT";
+            reason_code: null;
+            availability: components["schemas"]["Availability"];
+        } | {
+            /** @enum {unknown} */
+            state: "NOT_APPLICABLE" | "NOT_PUBLISHED";
+            value: null;
+            /** @constant */
+            provenance: "NONE";
+            reason_code: components["schemas"]["ReasonCode"];
+            availability: components["schemas"]["Availability"];
+        };
+        OosUsedForSelection: {
+            /** @constant */
+            state: "CONFIRMED";
+            /** @enum {unknown} */
+            value: "USED" | "NOT_USED";
+            /** @constant */
+            provenance: "RUN_SOURCE_RECEIPT";
+            reason_code: null;
+            availability: components["schemas"]["Availability"];
+        } | {
+            /** @enum {unknown} */
+            state: "NOT_ASSERTED" | "NOT_APPLICABLE" | "NOT_PUBLISHED";
+            value: null;
+            /** @constant */
+            provenance: "NONE";
+            reason_code: components["schemas"]["ReasonCode"];
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description Screen-06 OOS column chip. REPORT_ONLY: the outer-OOS window was observed after the parameters were fixed and fed no selection inside this run (P14 evaluation_state); strict outer-OOS selection stays NOT_ASSERTED in oos_used_for_selection. */
+        OosColumn: {
+            /** @enum {unknown} */
+            state: "SELECTION_INPUT" | "RETROSPECTIVE" | "REPORT_ONLY" | "WITHHELD" | "NOT_APPLICABLE" | "NOT_PUBLISHED";
+            source_evaluation_state: "P04_OBSERVED_AFTER_FIXED_PROFILE" | null;
+            /** @enum {unknown} */
+            provenance: "P14_SOURCE_RECEIPT" | "NONE";
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description declared_value is what the request declared (requested_spec.optimization_config.scoring_backend); it is an executed fact only when state is CONFIRMED. */
+        ScoringBackend: {
+            /** @enum {unknown} */
+            state: "CONFIRMED" | "NOT_APPLICABLE" | "NOT_PUBLISHED";
+            declared_value: ("proxy" | "endpoint") | null;
+            /** @enum {unknown} */
+            provenance: "RUN_REQUESTED_SPEC" | "RUN_SOURCE_RECEIPT" | "NONE";
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description RF-05 CG-P15-05 Screen-06 claim row. What the declared mode would claim is Atlas release metadata (researchEngineAtlasGetV1), referenced by mode_reference and never copied in as run evidence. */
+        ClaimRow: {
+            /** @enum {unknown} */
+            basis: "DECLARED_NOT_EXECUTED" | "NOT_DECLARED" | "NOT_PUBLISHED";
+            validation_claim: components["schemas"]["ClaimTokenFact"];
+            chronological_claim: components["schemas"]["ClaimTokenFact"];
+            oos_used_for_selection: components["schemas"]["OosUsedForSelection"];
+            oos_column: components["schemas"]["OosColumn"];
+            scoring_backend: components["schemas"]["ScoringBackend"];
+            mode_reference: {
+                mode: string;
+                schedule: string;
+                /** @constant */
+                operation_id: "researchEngineAtlasGetV1";
+                /** @constant */
+                relation: "DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE";
+            } | null;
+        };
         Problem: {
             error: {
                 code: string;
@@ -168,10 +242,14 @@ export interface components {
             availability: components["schemas"]["Availability"];
             /** @enum {unknown} */
             readiness: "PARTIAL" | "NOT_READY";
+            /** @description RF-05 CG-P14-04: time of the P14 fact named by as_of_basis; never read time. */
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
+            /** @enum {unknown} */
+            as_of_basis: "P14_PROJECTION_RECEIVED_AT" | "RUN_STATE_UPDATED_AT" | "LEGACY_READ_MODEL_UPDATED_AT";
             provenance: components["schemas"]["Provenance"];
             source_profile: components["schemas"]["SourceProfile"];
             requested_optimizer: components["schemas"]["RequestedOptimizer"];
+            claim_row: components["schemas"]["ClaimRow"];
             fixed_profile: components["schemas"]["FixedProfile"] | components["schemas"]["UnavailableFixedProfile"];
             selection: components["schemas"]["Selection"];
             inspection: components["schemas"]["Inspection"];
@@ -198,12 +276,15 @@ export interface components {
         WorkspaceId: components["schemas"]["WorkspaceId"];
         /** @description Requested inspection fold. Current P04 has no optimizer fold; response returns typed NOT_APPLICABLE rather than treating one as a trial fold. */
         Fold: number;
+        /** @description Entity-tag list or *; W/ prefixes are compared weakly. */
         IfNoneMatch: string;
     };
     requestBodies: never;
     headers: {
-        /** @description Quoted immutable P15 source-derived revision. */
+        /** @description Quoted strong representation validator (RF-05): a digest of the exact published body, so it differs per requested fold for one content revision. A proxy may weaken it to W/"…"; the server compares weakly. */
         Etag: string;
+        /** @description Per-session read; revalidate before reuse. */
+        CacheControl: "private, no-cache";
     };
     pathItems: never;
 }
@@ -217,6 +298,7 @@ export interface operations {
                 fold?: components["parameters"]["Fold"];
             };
             header?: {
+                /** @description Entity-tag list or *; W/ prefixes are compared weakly. */
                 "If-None-Match"?: components["parameters"]["IfNoneMatch"];
             };
             path: {
@@ -230,15 +312,18 @@ export interface operations {
             200: {
                 headers: {
                     ETag: components["headers"]["Etag"];
+                    "Cache-Control": components["headers"]["CacheControl"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SearchDetail"];
                 };
             };
-            /** @description The exact immutable P15 source-derived revision has not changed */
+            /** @description The If-None-Match validator (weak comparison) names this exact representation, including the requested fold */
             304: {
                 headers: {
+                    ETag: components["headers"]["Etag"];
+                    "Cache-Control": components["headers"]["CacheControl"];
                     [name: string]: unknown;
                 };
                 content?: never;

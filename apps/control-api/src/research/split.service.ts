@@ -51,6 +51,137 @@ function sourceAbsence(value: SourceAbsence) {
   };
 }
 
+const THREE_WINDOW_NOT_APPLICABLE = {
+  purge: "P14_THREE_WINDOW_PROTOCOL_HAS_NO_PURGE",
+  embargo: "P14_THREE_WINDOW_PROTOCOL_HAS_NO_EMBARGO",
+  inner_folds: "P14_THREE_WINDOW_PROTOCOL_HAS_NO_INNER_FOLDS",
+} as const;
+const HOLDOUT_BARS_REASON = "P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE";
+
+/**
+ * Bump when the published representation changes for an unchanged immutable
+ * revision, so a validator issued for an older representation cannot 304.
+ */
+const SPLIT_REPRESENTATION_VERSION = "research.split-detail.v1+rf05.1";
+
+function notApplicable(reasonCode: string) {
+  return {
+    state: "NOT_APPLICABLE" as const,
+    reason_code: reasonCode,
+    availability: availability("NOT_APPLICABLE", reasonCode),
+  };
+}
+
+type AbsenceIndexEntry = { key: string; pointer: string; state: "NOT_PUBLISHED" | "NOT_ASSERTED" | "NOT_APPLICABLE" };
+
+/** RF-05 CG-P14-06: one pointer per absent fact, into the field that owns it. */
+const PROJECTED_ABSENCE_POINTERS: ReadonlyArray<readonly [string, string]> = [
+  ["strict_outer_oos", "/protocol/selection/strict_outer_oos"],
+  ["fold_plan", "/protocol/fold_plan"],
+  ["inner_folds", "/protocol/inner_folds"],
+  ["purge", "/protocol/purge"],
+  ["embargo", "/protocol/embargo"],
+  ["theta_per_fold", "/protocol/theta_per_fold"],
+  ["gap_scan", "/protocol/gap_scan"],
+  ["holdout_seal", "/windows/holdout/source_seal"],
+  ["holdout_unlock", "/windows/holdout/unlock"],
+  ["holdout_bars", "/windows/holdout/bars_absence"],
+];
+/** Without a projection every window is itself the absent fact; its unlock is subsumed. */
+const ABSENT_DETAIL_POINTERS: ReadonlyArray<readonly [string, string]> = [
+  ["strict_outer_oos", "/protocol/selection/strict_outer_oos"],
+  ["fold_plan", "/protocol/fold_plan"],
+  ["inner_folds", "/protocol/inner_folds"],
+  ["purge", "/protocol/purge"],
+  ["embargo", "/protocol/embargo"],
+  ["theta_per_fold", "/protocol/theta_per_fold"],
+  ["gap_scan", "/protocol/gap_scan"],
+  ["warmup", "/windows/warmup"],
+  ["is", "/windows/is"],
+  ["outer_oos", "/windows/outer_oos"],
+  ["holdout", "/windows/holdout"],
+];
+
+function absenceIndex(body: unknown, pointers: ReadonlyArray<readonly [string, string]>): AbsenceIndexEntry[] {
+  const entries: AbsenceIndexEntry[] = [];
+  for (const [key, pointer] of pointers) {
+    const node = pointer.split("/").slice(1).reduce<unknown>(
+      (value, part) => (value && typeof value === "object" ? (value as Record<string, unknown>)[part] : undefined),
+      body,
+    );
+    const state = node && typeof node === "object" ? (node as { state?: unknown }).state : undefined;
+    if (state === "NOT_PUBLISHED" || state === "NOT_ASSERTED" || state === "NOT_APPLICABLE") {
+      entries.push({ key, pointer, state });
+    }
+  }
+  return entries;
+}
+
+/**
+ * RF-05 CG-P14-04/CG-P13-13 (Astra A06): the HTTP validator names the exact
+ * published representation, not only the immutable content revision. With
+ * `as_of_utc_ms` now a stored source time, the body is deterministic.
+ */
+function representationEtag(body: { etag: string | null }): string {
+  const { etag: _etag, ...representation } = body;
+  return `"p14r1_${sha256ResearchJson({ representation_version: SPLIT_REPRESENTATION_VERSION, representation })}"`;
+}
+
+const DatasetBindingPublicSchema = z.object({
+  dataset_id: z.string().min(1).max(191),
+  symbol: z.string().min(1).max(64),
+  timeframe: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/),
+}).passthrough();
+
+const INTERVAL_UNIT_MS: Record<string, number> = { m: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000 };
+
+function barIntervalMs(timeframe: string): number | null {
+  const match = /^([1-9][0-9]{0,3})([mhdw])$/.exec(timeframe);
+  if (!match) return null;
+  const value = Number(match[1]) * INTERVAL_UNIT_MS[match[2]!]!;
+  return Number.isSafeInteger(value) && value <= 31_536_000_000 ? value : null;
+}
+
+/**
+ * RF-05 CG-P14-05: the dataset/timeframe fact comes from the P08 binding
+ * that P10 pinned by digest, so it exists before the source callback. The
+ * binding is published only when its canonical digest equals the producer's.
+ */
+function datasetFact(row: SplitHubRow, fallback: Availability) {
+  const absent = (state: "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY", reasonCode: string) => ({
+    state,
+    dataset_id: null,
+    symbol: null,
+    timeframe: null,
+    bar_interval_ms: null,
+    provenance: "NONE" as const,
+    reason_code: reasonCode,
+    availability: availability(state, reasonCode),
+  });
+  if (row.kind === "LEGACY") {
+    return absent("LEGACY_METADATA_ONLY", fallback.reason_code ?? "LEGACY_1_0_8_DOES_NOT_PUBLISH_P14_SPLIT_TRUTH");
+  }
+  if (!row.datasetBinding || !row.datasetBindingDigest) {
+    return absent("NOT_PUBLISHED", "P14_DATASET_BINDING_NOT_PUBLISHED");
+  }
+  if (sha256ResearchJson(row.datasetBinding) !== row.datasetBindingDigest) {
+    return absent("NOT_PUBLISHED", "P14_DATASET_BINDING_DIGEST_MISMATCH");
+  }
+  const parsed = DatasetBindingPublicSchema.safeParse(row.datasetBinding);
+  if (!parsed.success) return absent("NOT_PUBLISHED", "P14_DATASET_BINDING_TIMEFRAME_NOT_PUBLISHED");
+  const interval = barIntervalMs(parsed.data.timeframe);
+  return {
+    state: "AVAILABLE" as const,
+    dataset_id: parsed.data.dataset_id,
+    symbol: parsed.data.symbol,
+    timeframe: parsed.data.timeframe,
+    bar_interval_ms: interval,
+    provenance: "P08_DATASET_BINDING" as const,
+    reason_code: interval === null ? "P14_TIMEFRAME_HAS_NO_FIXED_BAR_INTERVAL" : null,
+    availability: availability("AVAILABLE", null),
+  };
+}
+
 function parseProjection(value: unknown): StoredProjection | null {
   const parsed = StoredProjectionSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
@@ -133,10 +264,17 @@ export class ResearchSplitService {
     if (!projection) return this.absentDetail(row, fallback);
 
     const source = projection.source;
+    // RF-05 CG-P14-03: a three-window request has no field that could carry a
+    // purge, an embargo or inner folds, so those facts do not apply to it.
+    // The immutable source row keeps its original wording; only the reader's
+    // classification changes, and `revision` still names the same source.
+    const threeWindow = source.protocol.kind === "THREE_WINDOW_CURRENT";
+    const protocolFact = (key: keyof typeof THREE_WINDOW_NOT_APPLICABLE, value: SourceAbsence) =>
+      threeWindow ? notApplicable(THREE_WINDOW_NOT_APPLICABLE[key]) : sourceAbsence(value);
     const absences = {
-      purge: sourceAbsence(source.absences.purge),
-      embargo: sourceAbsence(source.absences.embargo),
-      inner_folds: sourceAbsence(source.absences.inner_folds),
+      purge: protocolFact("purge", source.absences.purge),
+      embargo: protocolFact("embargo", source.absences.embargo),
+      inner_folds: protocolFact("inner_folds", source.absences.inner_folds),
       theta_per_fold: sourceAbsence(source.absences.theta_per_fold),
       gap_scan: sourceAbsence(source.absences.gap_scan),
       holdout_unlock: sourceAbsence(source.absences.holdout_unlock),
@@ -145,15 +283,17 @@ export class ResearchSplitService {
     const warmup = source.windows.warmup.state === "AVAILABLE"
       ? { ...source.windows.warmup, availability: available }
       : { ...source.windows.warmup, availability: availability("NOT_APPLICABLE", source.windows.warmup.reason_code) };
-    return {
+    const body = {
       schema_version: "research.split-detail.v1",
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: row.runId,
       revision: row.revision,
-      etag: row.revision ? `"${row.revision}"` : null,
+      etag: null as string | null,
       availability: available,
       readiness: row.readiness ?? "PARTIAL",
-      as_of_utc_ms: row.asOfUtcMs,
+      as_of_utc_ms: row.sourceAsOfUtcMs,
+      as_of_basis: row.sourceAsOfBasis,
+      dataset: datasetFact(row, fallback),
       provenance: {
         source_adapter_id: source.source.execution_adapter_id,
         engine_version: source.source.engine_version,
@@ -188,6 +328,7 @@ export class ResearchSplitService {
           physical_io: source.source.physical_io,
           source_seal: sourceAbsence({ state: "NOT_PUBLISHED", reason_code: "P04_SOURCE_DID_NOT_PUBLISH_HOLDOUT_SEAL" }),
           unlock: absences.holdout_unlock,
+          bars_absence: sourceAbsence({ state: "NOT_PUBLISHED", reason_code: HOLDOUT_BARS_REASON }),
           availability: available,
         },
       },
@@ -198,8 +339,13 @@ export class ResearchSplitService {
           availability: absences.holdout_unlock.availability,
         },
       },
+      absence_authority: "FIELD_LOCAL",
+      absence_index: [] as AbsenceIndexEntry[],
       source_absences: absences,
     };
+    body.absence_index = absenceIndex(body, PROJECTED_ABSENCE_POINTERS);
+    if (row.revision) body.etag = representationEtag(body);
+    return body;
   }
 
   private absentDetail(row: SplitHubRow, fallback: Availability): unknown {
@@ -208,7 +354,7 @@ export class ResearchSplitService {
       reason_code: fallback.reason_code ?? "P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED",
       availability: fallback,
     };
-    return {
+    const body = {
       schema_version: "research.split-detail.v1",
       read_authority: "PORTAL_PERSISTED_RESEARCH",
       run_id: row.runId,
@@ -216,7 +362,9 @@ export class ResearchSplitService {
       etag: null,
       availability: fallback,
       readiness: "NOT_READY",
-      as_of_utc_ms: row.asOfUtcMs,
+      as_of_utc_ms: row.sourceAsOfUtcMs,
+      as_of_basis: row.sourceAsOfBasis,
+      dataset: datasetFact(row, fallback),
       provenance: {
         source_adapter_id: null, engine_version: null, input_scope: null, source_transform_digest: null,
         requested_spec_digest: row.requestedSpecDigest,
@@ -233,11 +381,15 @@ export class ResearchSplitService {
       },
       windows: { warmup: unavailable, is: unavailable, outer_oos: unavailable, holdout: unavailable },
       actions: { holdout_unlock: { state: "NOT_PUBLISHED", href: null, availability: fallback } },
+      absence_authority: "FIELD_LOCAL",
+      absence_index: [] as AbsenceIndexEntry[],
       source_absences: {
         fold_plan: unavailable, strict_outer_oos: unavailable, inner_folds: unavailable, purge: unavailable,
         embargo: unavailable, theta_per_fold: unavailable, gap_scan: unavailable, holdout_unlock: unavailable,
       },
     };
+    body.absence_index = absenceIndex(body, ABSENT_DETAIL_POINTERS);
+    return body;
   }
 
   private rowAvailability(row: SplitHubRow): Availability {

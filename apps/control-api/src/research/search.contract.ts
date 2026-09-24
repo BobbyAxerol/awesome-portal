@@ -111,6 +111,84 @@ const CandidateSelectionMetricSchema = z.discriminatedUnion("state", [
   }).strict(),
 ]);
 
+/**
+ * RF-05 CG-P15-05 · Screen-06 claim row. Each fact is sourced from the run
+ * (its P14 receipt or its requested spec) or is a typed absence. A declared
+ * but unexecuted optimizer carries no mode validation, chronology or scoring
+ * backend claim: those describe a search that did not happen. The engine
+ * Atlas remains the place to read what the declared mode would claim; it is
+ * referenced, never copied in as run evidence (same rule as CG-P15-01).
+ */
+const ClaimTokenFactSchema = z.discriminatedUnion("state", [
+  z.object({
+    state: z.literal("CONFIRMED"),
+    value: z.string().regex(/^[a-z][a-z0-9_]{1,79}$/),
+    provenance: z.literal("RUN_SOURCE_RECEIPT"),
+    reason_code: z.null(),
+    availability: ResearchSearchAvailabilitySchema,
+  }).strict(),
+  z.object({
+    state: z.enum(["NOT_APPLICABLE", "NOT_PUBLISHED"]),
+    value: z.null(),
+    provenance: z.literal("NONE"),
+    reason_code: ReasonCodeSchema,
+    availability: ResearchSearchAvailabilitySchema,
+  }).strict(),
+]);
+
+const OosUsedForSelectionSchema = z.discriminatedUnion("state", [
+  z.object({
+    state: z.literal("CONFIRMED"),
+    value: z.enum(["USED", "NOT_USED"]),
+    provenance: z.literal("RUN_SOURCE_RECEIPT"),
+    reason_code: z.null(),
+    availability: ResearchSearchAvailabilitySchema,
+  }).strict(),
+  z.object({
+    state: z.enum(["NOT_ASSERTED", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+    value: z.null(),
+    provenance: z.literal("NONE"),
+    reason_code: ReasonCodeSchema,
+    availability: ResearchSearchAvailabilitySchema,
+  }).strict(),
+]);
+
+const OosColumnSchema = z.object({
+  // The HiFi four-state chip plus typed absences. REPORT_ONLY: the outer-OOS
+  // window was observed after the parameters were fixed and fed no selection
+  // inside this run; strict outer-OOS selection stays NOT_ASSERTED above.
+  state: z.enum(["SELECTION_INPUT", "RETROSPECTIVE", "REPORT_ONLY", "WITHHELD", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+  source_evaluation_state: z.literal("P04_OBSERVED_AFTER_FIXED_PROFILE").nullable(),
+  provenance: z.enum(["P14_SOURCE_RECEIPT", "NONE"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  availability: ResearchSearchAvailabilitySchema,
+}).strict();
+
+const ScoringBackendSchema = z.object({
+  state: z.enum(["CONFIRMED", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+  // What the request declared, if it declared one. Not an executed fact
+  // unless `state` is CONFIRMED.
+  declared_value: z.enum(["proxy", "endpoint"]).nullable(),
+  provenance: z.enum(["RUN_REQUESTED_SPEC", "RUN_SOURCE_RECEIPT", "NONE"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  availability: ResearchSearchAvailabilitySchema,
+}).strict();
+
+const ClaimRowSchema = z.object({
+  basis: z.enum(["DECLARED_NOT_EXECUTED", "NOT_DECLARED", "NOT_PUBLISHED"]),
+  validation_claim: ClaimTokenFactSchema,
+  chronological_claim: ClaimTokenFactSchema,
+  oos_used_for_selection: OosUsedForSelectionSchema,
+  oos_column: OosColumnSchema,
+  scoring_backend: ScoringBackendSchema,
+  mode_reference: z.object({
+    mode: ModeOrScheduleSchema,
+    schedule: ModeOrScheduleSchema,
+    operation_id: z.literal("researchEngineAtlasGetV1"),
+    relation: z.literal("DECLARED_MODE_RELEASE_METADATA_NOT_RUN_EVIDENCE"),
+  }).strict().nullable(),
+}).strict();
+
 export const ResearchSearchResponseSchema = z.object({
   schema_version: z.literal("research.search-detail.v1"),
   read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
@@ -119,7 +197,9 @@ export const ResearchSearchResponseSchema = z.object({
   etag: z.string().regex(/^"p15r1_[0-9a-f]{64}"$/).nullable(),
   availability: ResearchSearchAvailabilitySchema,
   readiness: z.enum(["PARTIAL", "NOT_READY"]),
+  // RF-05 CG-P14-04: source time of the P14 fact this read is built from.
   as_of_utc_ms: UtcMsSchema,
+  as_of_basis: z.enum(["P14_PROJECTION_RECEIVED_AT", "RUN_STATE_UPDATED_AT", "LEGACY_READ_MODEL_UPDATED_AT"]),
   provenance: z.object({
     source_adapter_id: z.literal("p04.delta-rsi.v1").nullable(),
     adapter_contract_digest: DigestSchema.nullable(),
@@ -151,6 +231,7 @@ export const ResearchSearchResponseSchema = z.object({
     candidate_selection_metric: CandidateSelectionMetricSchema,
     availability: ResearchSearchAvailabilitySchema,
   }).strict(),
+  claim_row: ClaimRowSchema,
   fixed_profile: z.union([FixedProfileSchema, AbsentFixedProfileSchema]),
   selection: z.object({
     state: z.enum(["FIXED_PARAMETER_PROFILE", "NOT_PUBLISHED"]),

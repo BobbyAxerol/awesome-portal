@@ -366,12 +366,49 @@ export interface components {
                 candles: components["schemas"]["Fact"];
             };
         };
+        /** @description RF-05 CG-P13-09: the run's immutable P10 adapter binding is the P04 fixed qualification, which can never be sealed into the RS-02 Advanced-WFO lane. Nothing is pending; do not retry. */
+        LaneNotApplicable: {
+            /** @constant */
+            schema_version: "research.current-source-not-applicable.v1";
+            /** @constant */
+            read_authority: "PORTAL_RETAINED_CURRENT_SOURCE";
+            run_id: components["schemas"]["RunId"];
+            revision: string;
+            etag: string;
+            availability: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason_code: string;
+            };
+            lane: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                /** @enum {unknown} */
+                operation: "evidence" | "evidence_series" | "split" | "search" | "freeze" | "replay";
+                /** @constant */
+                run_profile: "P04_FIXED_QUALIFICATION";
+                run_adapter_contract_digest: components["schemas"]["Digest"];
+                /** @constant */
+                retainable_profile_id: "rs02.delta-wfo-global.v1";
+                reason_code: string;
+            };
+        };
+        /**
+         * @description RF-05 CG-P13-09: `details.lane_state` of a 409 RESEARCH_CURRENT_SOURCE_CONFLICT. PENDING_SOURCE: the run has not completed. PENDING_RETENTION: completed, sealed artifact not yet retained. NOT_RETAINED_LEGACY: a 1.0.8 metadata row, never retained. NOT_RETAINED_TERMINAL: cancelled/failed without a retained artifact.
+         * @enum {unknown}
+         */
+        LaneState: "PENDING_SOURCE" | "PENDING_RETENTION" | "NOT_RETAINED_LEGACY" | "NOT_RETAINED_TERMINAL";
         Problem: {
             error: {
                 code: string;
                 message: string;
             };
             request_id?: string;
+            /** @description Present on a 409 RESEARCH_CURRENT_SOURCE_CONFLICT (RF-05). */
+            details?: {
+                lane_state: components["schemas"]["LaneState"];
+                effective_status: string;
+            };
         };
     };
     responses: {
@@ -391,7 +428,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Evidence"];
+                "application/json": components["schemas"]["Evidence"] | components["schemas"]["LaneNotApplicable"];
             };
         };
         /** @description Bounded local retained-source evidence series */
@@ -401,7 +438,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["EvidenceSeries"];
+                "application/json": components["schemas"]["EvidenceSeries"] | components["schemas"]["LaneNotApplicable"];
             };
         };
         /** @description Observed Advanced WFO fold plan */
@@ -411,7 +448,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Split"];
+                "application/json": components["schemas"]["Split"] | components["schemas"]["LaneNotApplicable"];
             };
         };
         /** @description Bounded retained trial/candidate ledger */
@@ -420,7 +457,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Search"];
+                "application/json": components["schemas"]["Search"] | components["schemas"]["LaneNotApplicable"];
             };
         };
         /** @description Local retained manifest/batch-receipt verification; no GET reopens source artifact bytes */
@@ -430,7 +467,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Freeze"];
+                "application/json": components["schemas"]["Freeze"] | components["schemas"]["LaneNotApplicable"];
             };
         };
         /** @description Bounded retained research-model replay */
@@ -439,7 +476,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Replay"];
+                "application/json": components["schemas"]["Replay"] | components["schemas"]["LaneNotApplicable"];
             };
         };
     };

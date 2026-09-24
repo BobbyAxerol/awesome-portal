@@ -107,6 +107,10 @@ export class HttpErrorFilter implements ExceptionFilter {
         ...(exception instanceof CurrentSourceProxyError && exception.details
           ? { details: exception.details }
           : {}),
+        // RF-05 CG-P13-09: typed retained-lane state on a 409 refusal.
+        ...(exception instanceof ResearchCurrentSourceError && exception.details
+          ? { details: exception.details }
+          : {}),
       });
       return;
     }

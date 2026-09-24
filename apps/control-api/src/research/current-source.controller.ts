@@ -13,6 +13,7 @@ import {
 } from "./current-source.contract";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchCurrentSourceService } from "./current-source.service";
+import { sendRevalidatable } from "./etag";
 
 interface CurrentSourceRequest extends FastifyRequest {
   portalUser: { userId: string };
@@ -113,11 +114,9 @@ export class ResearchCurrentSourceController {
     }
   }
 
+  /** RF-05 CG-P13-13: the same weak If-None-Match + private/no-cache rule as split/search/evidence. */
   private conditional(reply: FastifyReply, request: FastifyRequest, body: { etag: string }) {
-    reply.header("etag", body.etag);
-    const candidate = request.headers["if-none-match"];
-    if (!Array.isArray(candidate) && candidate === body.etag) return reply.code(304).send();
-    return reply.send(body);
+    return sendRevalidatable(reply, request, body);
   }
 
   private invalid(): never {

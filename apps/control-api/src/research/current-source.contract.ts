@@ -306,6 +306,49 @@ export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
   }).strict(),
 }).strict();
 
+/**
+ * RF-05 CG-P13-09 · typed answer for a run whose admitted profile can never
+ * enter the RS-02 retained lane (the P04 fixed qualification). It is a 200,
+ * not a refusal: nothing is pending, so a screen can skip the lane without
+ * logging an error. Pending/legacy/terminal remain 409 refusals whose
+ * `details.lane_state` names the state (see `ResearchCurrentSourceLaneState`).
+ */
+export const ResearchCurrentSourceOperationSchema = z.enum([
+  "evidence", "evidence_series", "split", "search", "freeze", "replay",
+]);
+
+export const ResearchCurrentSourceNotApplicableResponseSchema = z.object({
+  schema_version: z.literal("research.current-source-not-applicable.v1"),
+  read_authority: z.literal("PORTAL_RETAINED_CURRENT_SOURCE"),
+  run_id: ResearchCurrentSourceRunIdSchema,
+  revision: z.string().regex(/^rs02_[a-z0-9_-]{2,32}_[0-9a-f]{64}$/),
+  etag: z.string().regex(/^"rs02_[a-z0-9_-]{2,32}_[0-9a-f]{64}"$/),
+  availability: z.object({
+    state: z.literal("NOT_APPLICABLE"),
+    reason_code: ReasonCodeSchema,
+  }).strict(),
+  lane: z.object({
+    state: z.literal("NOT_APPLICABLE"),
+    operation: ResearchCurrentSourceOperationSchema,
+    run_profile: z.literal("P04_FIXED_QUALIFICATION"),
+    run_adapter_contract_digest: DigestSchema,
+    retainable_profile_id: z.literal("rs02.delta-wfo-global.v1"),
+    reason_code: ReasonCodeSchema,
+  }).strict(),
+}).strict();
+
+/** `details` of a 409 `RESEARCH_CURRENT_SOURCE_CONFLICT` refusal. */
+export const ResearchCurrentSourceLaneStateSchema = z.enum([
+  "PENDING_SOURCE",
+  "PENDING_RETENTION",
+  "NOT_RETAINED_LEGACY",
+  "NOT_RETAINED_TERMINAL",
+]);
+
+export type ResearchCurrentSourceNotApplicableResponse = z.infer<typeof ResearchCurrentSourceNotApplicableResponseSchema>;
+export type ResearchCurrentSourceOperation = z.infer<typeof ResearchCurrentSourceOperationSchema>;
+export type ResearchCurrentSourceLaneState = z.infer<typeof ResearchCurrentSourceLaneStateSchema>;
+
 export type ResearchCurrentSourceReadQuery = z.infer<typeof ResearchCurrentSourceReadQuerySchema>;
 export type ResearchCurrentSourcePageQuery = z.infer<typeof ResearchCurrentSourcePageQuerySchema>;
 export type ResearchCurrentSourceEvidenceResponse = z.infer<typeof ResearchCurrentSourceEvidenceResponseSchema>;

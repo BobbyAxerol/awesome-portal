@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchCurrentSourceService } from "../src/research/current-source.service";
+import type { ResearchCurrentSourceNotApplicableResponse } from "../src/research/current-source.contract";
+
+/** RF-05: these fixtures are sealed RS-02 runs; a not-applicable lane answer here is a test failure. */
+function sealed<T>(value: T | ResearchCurrentSourceNotApplicableResponse): T {
+  if ((value as { schema_version?: string }).schema_version === "research.current-source-not-applicable.v1") {
+    throw new Error("expected a sealed current-source response");
+  }
+  return value as T;
+}
 import {
   currentSourceImportDigest,
   type CurrentSourceSealRow,
@@ -118,15 +127,15 @@ describe("RS-02 retained current-source named read models", () => {
       verifyRetainedImport: vi.fn().mockResolvedValue("f".repeat(64)),
     };
     const current = service(repository);
-    const evidence = await current.evidence(scope, "run-rs02");
-    const split = await current.split(scope, "run-rs02");
-    const search = await current.search(scope, "run-rs02", { limit: 100 });
-    const freeze = await current.freeze(scope, "run-rs02");
-    const initialReplay = await current.replay(scope, "run-rs02", { limit: 100 });
-    const replay = await current.replay(scope, "run-rs02", {
+    const evidence = sealed(await current.evidence(scope, "run-rs02"));
+    const split = sealed(await current.split(scope, "run-rs02"));
+    const search = sealed(await current.search(scope, "run-rs02", { limit: 100 }));
+    const freeze = sealed(await current.freeze(scope, "run-rs02"));
+    const initialReplay = sealed(await current.replay(scope, "run-rs02", { limit: 100 }));
+    const replay = sealed(await current.replay(scope, "run-rs02", {
       limit: 100,
       at: initialReplay.replay.rows[1]!.playback_cursor,
-    });
+    }));
 
     expect(evidence.passport.artifact_table_rows).toMatchObject({ observations: 3, trials: 2 });
     expect(split.fold_plan.folds).toHaveLength(2);
@@ -143,7 +152,7 @@ describe("RS-02 retained current-source named read models", () => {
     });
     expect(replay.route_capabilities.model_positions.state).toBe("AVAILABLE");
     expect(replay.route_capabilities.fills.reason_code).toBe("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS");
-    const distribution = await current.evidenceSeries(scope, "run-rs02", "RETURN_DISTRIBUTION");
+    const distribution = sealed(await current.evidenceSeries(scope, "run-rs02", "RETURN_DISTRIBUTION"));
     expect(distribution.values).toHaveLength(2);
     expect(repository.rows).toHaveBeenCalled();
   });
@@ -161,9 +170,9 @@ describe("RS-02 retained current-source named read models", () => {
       verifyRetainedImport: vi.fn().mockResolvedValue("0".repeat(64)),
     };
     const current = service(repository);
-    const replay = await current.replay(scope, "run-rs02", { limit: 100 });
-    const search = await current.search(scope, "run-rs02", { limit: 100 });
-    const freeze = await current.freeze(scope, "run-rs02");
+    const replay = sealed(await current.replay(scope, "run-rs02", { limit: 100 }));
+    const search = sealed(await current.search(scope, "run-rs02", { limit: 100 }));
+    const freeze = sealed(await current.freeze(scope, "run-rs02"));
 
     await expect(current.replay(scope, "run-rs02", {
       limit: 1,
@@ -215,7 +224,7 @@ describe("RS-02 retained current-source named read models", () => {
       }), sampleRows: vi.fn(), verifyRetainedImport: vi.fn(),
     };
     const current = service(repository);
-    const first = await current.replay(scope, "run-rs02", { limit: 1 });
+    const first = sealed(await current.replay(scope, "run-rs02", { limit: 1 }));
     const token = first.replay.page.next_cursor;
     expect(token).toMatch(/^kc1\./);
     await current.replay(scope, "run-rs02", { limit: 1, cursor: token! });
@@ -257,7 +266,7 @@ describe("RS-02 retained current-source named read models", () => {
       }),
     };
 
-    const response = await service(repository).search(scope, "run-rs02", { limit: 200 });
+    const response = sealed(await service(repository).search(scope, "run-rs02", { limit: 200 }));
     expect(Buffer.byteLength(JSON.stringify(response), "utf8")).toBeLessThan(1_048_576);
     expect(response.candidates.rows).toHaveLength(64);
     expect(response.candidates.rows[0]).not.toHaveProperty("source_payload");
