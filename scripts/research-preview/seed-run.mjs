@@ -63,6 +63,10 @@ console.log("binding", binding.alpha_version_id, binding.replayed ? "replayed" :
 const atlas = need(await call("GET", "/api/v1/research/quantbt/atlas"), "atlas");
 const release = atlas.atlas.current_release;
 
+// SEED_PROFILE=wfo seeds the W1 Delta signal-notional walk-forward profile
+// (locked shape: weekly/expanding, Mode 1 global, 3 trials, seed 42); the
+// default seeds the P04 fixed three-window qualification as before.
+const wfo = process.env.SEED_PROFILE === "wfo";
 const requested_spec = {
   schema_version: "research.requested-spec.v1",
   alpha_binding: { alpha_id: binding.alpha_id, alpha_version_id: binding.alpha_version_id },
@@ -71,18 +75,31 @@ const requested_spec = {
   execution_route: "signal_notional",
   route_params: {},
   data: { dataset_id: process.env.SEED_DATASET ?? "crypto-binance-1m", symbol: process.env.SEED_SYMBOL ?? "BTCUSDT", timeframe: "1h" },
-  protocol: "three_window_decay",
-  windows: {
-    is: { start: "2026-05-01T00:00", end_exclusive: "2026-07-01T00:00" },
-    oos: { start: "2026-07-01T00:00", end_exclusive: "2026-08-01T00:00" },
-    holdout: { start: "2026-08-01T00:00", end_exclusive: "2026-08-15T00:00" },
-  },
+  ...(wfo
+    ? {
+        protocol: "advanced",
+        walk_forward: {
+          start: "2026-06-01T00:00:00Z",
+          end_exclusive: "2026-07-15T00:00:00Z",
+          split_mode: "2026-07-01T00:00:00Z",
+          frequency: "weekly",
+          window_mode: "expanding",
+        },
+      }
+    : {
+        protocol: "three_window_decay",
+        windows: {
+          is: { start: "2026-05-01T00:00", end_exclusive: "2026-07-01T00:00" },
+          oos: { start: "2026-07-01T00:00", end_exclusive: "2026-08-01T00:00" },
+          holdout: { start: "2026-08-01T00:00", end_exclusive: "2026-08-15T00:00" },
+        },
+      }),
   optimization_mode: "mode_1_decay",
   optimization_schedule: "global",
   parameter_space_overrides: [],
-  optuna_trials: 1,
+  optuna_trials: wfo ? 3 : 1,
   early_stopping: null,
-  random_seed: null,
+  random_seed: wfo ? 42 : null,
   optimization_config: {},
   client: { engine_release_id: release.release_id, config_digest: release.config_digest },
 };
@@ -116,5 +133,5 @@ while (Date.now() < deadline) {
   if (["COMPLETED", "FAILED", "CANCELLED"].includes(status) && materialized !== "PENDING") break;
   await new Promise((resolve) => setTimeout(resolve, 5000));
 }
-writeFileSync(`${home}/seeded-run.json`, JSON.stringify({ run_id: runId, final: last, at: new Date().toISOString() }, null, 2), { mode: 0o600 });
+writeFileSync(`${home}/${wfo ? "seeded-wfo-run.json" : "seeded-run.json"}`, JSON.stringify({ run_id: runId, profile: wfo ? "wfo" : "p04", final: last, at: new Date().toISOString() }, null, 2), { mode: 0o600 });
 console.log("done", runId, last);
