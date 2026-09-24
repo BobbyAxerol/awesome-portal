@@ -237,6 +237,9 @@ export const SPLIT_WITHHELD_WORDS: Record<SplitAvailability["state"], string> = 
 export const ABSENT_WORDS: Record<AbsentFact["state"], string> = {
   NOT_PUBLISHED: "not published",
   NOT_ASSERTED: "not asserted",
+  /* RF-05 CG-P14-03: a fact the protocol has no place for (e.g. purge on a
+     three-window run) is not missing — it does not apply. */
+  NOT_APPLICABLE: "not applicable",
 };
 
 export function reasonOf(fact: { reason_code?: string | null; availability?: SplitAvailability }): string {

@@ -42,7 +42,7 @@ function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
     row_kind: "LOGICAL_RUN",
     relationship: { kind: "PRIMARY", logical_run_key: "primary", parent_run_id: null, technical_retry_count: 0 },
     status: "COMPLETED",
-    mode: { display: "mode_1_decay · three_window_decay", key: "mode_1_decay", availability: AVAILABLE },
+    mode: { display: "mode_1_decay · three_window_decay", key: "mode_1_decay", availability: AVAILABLE, schedule: null, protocol: null },
     strategy_id: { value: "delta-rsi", availability: AVAILABLE },
     binding: {
       alpha_id: "delta-rsi",
@@ -53,10 +53,13 @@ function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
     },
     binding_availability: AVAILABLE,
     rc: null,
+    rc_availability: { state: "NOT_PUBLISHED", reason_code: "P21_NO_PERSISTED_RELEASE_CANDIDATE" },
+    status_basis: { kind: "DURABLE_LIFECYCLE", availability: { state: "AVAILABLE", reason_code: null } },
+    evidence_revision: null,
     instrument: { display: "BTCUSDT · 1h", availability: AVAILABLE },
     created_at_utc_ms: 1790226080369,
     certificate: { grade: null, availability: NO_CERT },
-    claim: { text: null, availability: NOT_ISSUED },
+    claim: { state: null, text: null, availability: NOT_ISSUED },
     stages: (["S1", "S2", "S3", "S4", "S5"] as const).map((key) => ({
       key,
       state: "done" as const,
@@ -65,9 +68,9 @@ function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
       availability: AVAILABLE,
     })),
     stats: [
-      { key: "oos_sharpe", label: "OOS sharpe", role: "OOS_SHARPE", value: null, tone: "DEFAULT", availability: NO_METRICS },
-      { key: "decay", label: "Δ decay", role: "DECAY", value: null, tone: "DEFAULT", availability: NO_METRICS },
-      { key: "trades", label: "trades", role: "TRADE_COUNT", value: null, tone: "DEFAULT", availability: NO_METRICS },
+      { key: "oos_sharpe", label: "OOS sharpe", role: "OOS_SHARPE", value: null, tone: "DEFAULT", availability: NO_METRICS, scope: null, definition_id: null },
+      { key: "decay", label: "Δ decay", role: "DECAY", value: null, tone: "DEFAULT", availability: NO_METRICS, scope: null, definition_id: null },
+      { key: "trades", label: "trades", role: "TRADE_COUNT", value: null, tone: "DEFAULT", availability: NO_METRICS, scope: null, definition_id: null },
     ],
     superseded_note: null,
     comparison: { key: "rck1_same", availability: AVAILABLE },
@@ -94,7 +97,7 @@ function page(items: RunLibraryItem[], pageOverrides: Partial<RunLibraryResponse
       ...pageOverrides,
     },
     counters: { logical_runs: 12, worker_children: 0, technical_retries: 0, legacy_metadata_rows: 1 },
-    claim_ledger: { issued: 0, not_issued: 7, pending_source: 5, failed: 0 },
+    claim_ledger: { issued: 0, not_issued: 7, pending_source: 5, failed: 0, cancelled_before_source: 0, legacy_metadata_only: 0 },
     filter_catalog: {
       alphas: [{ alpha_id: "delta-rsi", alpha_name: "Delta-RSI Polynomial Alpha" }],
       modes: [{ key: "mode_1_decay", display: "mode_1_decay" }],
@@ -390,7 +393,7 @@ describe("FE-S01-08 — the claim face uses the server's reason", () => {
   });
 
   it("gives a cancelled run its own line, not a pending promise", () => {
-    view({ response: page([item({ status: "CANCELLED", claim: { text: null, availability: { state: "NOT_PUBLISHED", reason_code: "P11_PROGRESS_SNAPSHOT_NOT_PUBLISHED" } } })]) });
+    view({ response: page([item({ status: "CANCELLED", claim: { state: null, text: null, availability: { state: "NOT_PUBLISHED", reason_code: "P11_PROGRESS_SNAPSHOT_NOT_PUBLISHED" } } })]) });
     expect(document.querySelector("[data-claim]")?.textContent).toBe(CLAIM_CANCELLED);
   });
 });
@@ -508,7 +511,7 @@ describe("FE-S01-14 — a legacy row", () => {
     source_kind: "LEGACY_1_0_8_METADATA",
     row_kind: "LEGACY_RUN",
     status: "QUEUED",
-    mode: { display: "three_window_decay", key: "three_window_decay", availability: { state: "LEGACY_METADATA_ONLY", reason_code: "LEGACY_1_0_8_PROTOCOL_METADATA_ONLY" } },
+    mode: { display: "three_window_decay", key: "three_window_decay", availability: { state: "LEGACY_METADATA_ONLY", reason_code: "LEGACY_1_0_8_PROTOCOL_METADATA_ONLY" }, schedule: null, protocol: "three_window_decay" },
     binding: null,
   });
 

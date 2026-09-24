@@ -74,7 +74,7 @@ function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
       technical_retry_count: 0,
     },
     status: "COMPLETED",
-    mode: { display: "mode_1_decay · per_fold_causal", key: "mode_1_decay", availability: AVAILABLE },
+    mode: { display: "mode_1_decay · per_fold_causal", key: "mode_1_decay", availability: AVAILABLE, schedule: null, protocol: null },
     strategy_id: { value: "delta_rsi", availability: AVAILABLE },
     binding: {
       alpha_id: "alpha_momentum_btc",
@@ -85,10 +85,13 @@ function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
     },
     binding_availability: AVAILABLE,
     rc: null,
+    rc_availability: { state: "NOT_PUBLISHED", reason_code: "P21_NO_PERSISTED_RELEASE_CANDIDATE" },
+    status_basis: { kind: "DURABLE_LIFECYCLE", availability: { state: "AVAILABLE", reason_code: null } },
+    evidence_revision: null,
     instrument: { display: "BTCUSDT · 4h", availability: AVAILABLE },
     created_at_utc_ms: 1789836572000,
     certificate: { grade: "B", availability: AVAILABLE },
-    claim: { text: "STRICT_OUTER_OOS — OOS read once after freeze", availability: AVAILABLE },
+    claim: { state: null, text: "STRICT_OUTER_OOS — OOS read once after freeze", availability: AVAILABLE },
     stages: [
       { key: "S1", state: "done", tip: "S1 Split — done", tooltip_source: "SOURCE_VERBATIM", availability: AVAILABLE },
       { key: "S2", state: "cap", tip: "S2 Search — strict schedule, no cap", tooltip_source: "SOURCE_VERBATIM", availability: AVAILABLE },
@@ -97,9 +100,9 @@ function item(overrides: Partial<RunLibraryItem> = {}): RunLibraryItem {
       { key: "S5", state: "pend", tip: null, tooltip_source: "NOT_PUBLISHED", availability: NOT_PUBLISHED },
     ],
     stats: [
-      { key: "oos_sharpe", label: "OOS sharpe", role: "OOS_SHARPE", value: "1.049", tone: "DEFAULT", availability: AVAILABLE },
-      { key: "decay", label: "Δ decay", role: "DECAY", value: null, tone: "DEFAULT", availability: NOT_PUBLISHED },
-      { key: "trades", label: "trades", role: "TRADE_COUNT", value: "214", tone: "DEFAULT", availability: AVAILABLE },
+      { key: "oos_sharpe", label: "OOS sharpe", role: "OOS_SHARPE", value: "1.049", tone: "DEFAULT", availability: AVAILABLE, scope: null, definition_id: null },
+      { key: "decay", label: "Δ decay", role: "DECAY", value: null, tone: "DEFAULT", availability: NOT_PUBLISHED, scope: null, definition_id: null },
+      { key: "trades", label: "trades", role: "TRADE_COUNT", value: "214", tone: "DEFAULT", availability: AVAILABLE, scope: null, definition_id: null },
     ],
     superseded_note: null,
     comparison: { key: "BTCUSDT·4h·close_target_v2·walk_forward", availability: AVAILABLE },
@@ -125,7 +128,7 @@ function page(items: RunLibraryItem[], overrides: Partial<RunLibraryResponse> = 
       order: "CREATED_AT_DESC_RUN_ID_DESC",
     },
     counters: { logical_runs: items.length, worker_children: 0, technical_retries: 0, legacy_metadata_rows: 0 },
-    claim_ledger: { issued: 1, not_issued: 0, pending_source: 0, failed: 0 },
+    claim_ledger: { issued: 1, not_issued: 0, pending_source: 0, failed: 0, cancelled_before_source: 0, legacy_metadata_only: 0 },
     filter_catalog: {
       alphas: [{ alpha_id: "alpha_momentum_btc", alpha_name: "alpha_momentum_btc" }],
       modes: [{ key: "mode_1_decay", display: "mode_1" }],
@@ -354,7 +357,7 @@ describe("P12-T04 — an unavailable fact keeps its place and states its reason"
   it("renders a pending claim for a running run and never a completed one", () => {
     view({
       response: page([
-        item({ status: "RUNNING", claim: { text: null, availability: { state: "PENDING_SOURCE_CALLBACK", reason_code: null } } }),
+        item({ status: "RUNNING", claim: { state: null, text: null, availability: { state: "PENDING_SOURCE_CALLBACK", reason_code: null } } }),
       ]),
     });
     expect(screen.getByText(CLAIM_PENDING)).toBeTruthy();
