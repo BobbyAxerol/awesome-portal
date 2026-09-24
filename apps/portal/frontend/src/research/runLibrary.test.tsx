@@ -294,11 +294,9 @@ describe("P12-T03 — the server owns comparability", () => {
       filters: { ...EMPTY_FILTERS, sel: ["A", "B"] },
     });
     expect(document.querySelector("[data-compare-bar]")?.getAttribute("data-compare-bar")).toBe("ready");
-    /* RF-06 FE-S01-05: Screen 13 is not built, so "ready" names its phase
-       instead of linking to a route that bounces back here. */
-    const button = document.querySelector('[data-action="open-compare"]') as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    expect(button.getAttribute("data-phase")).toBe("P20");
+    const link = document.querySelector('[data-action="open-compare"]') as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toBe("/research/quantbt/compare?runs=A,B&alpha=alpha_momentum_btc");
+    expect(link.textContent).toContain("open compare");
   });
 
   it("never compares labels or names", () => {

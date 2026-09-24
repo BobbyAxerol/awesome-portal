@@ -128,7 +128,10 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
     : researchState(
         detail === null
           ? { kind: "in-flight", hasAcceptedResponse: false }
-          : { kind: "ok", rowCount: detail.freeze.frozen_parameters.length },
+          : // A BLOCKED snapshot empties the frozen table on purpose; its
+            // checks are the answer, so they — not the parameters — decide
+            // whether the read came back empty.
+            { kind: "ok", rowCount: detail.freeze.integrity.checks.length },
       );
 
   return {

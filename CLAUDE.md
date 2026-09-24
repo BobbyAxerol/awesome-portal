@@ -359,6 +359,37 @@ không tự chọn mô tả tiện lợi.
    critique/addendum cũ (A13.1). Khi đọc xong, ghi vào receipt của phase là đã
    đọc bản nào — không phải "đã đọc handoff", mà đúng tên file và commit.
 
+10. **Mỗi phase đóng phải có đủ gói hồ sơ, commit và push lên remote**
+    (Vuong chốt 2026-09-23). Không được chỉ gửi tin nhắn cho Bobby. Phase chưa
+    được coi là xong khi thiếu bất kỳ mục nào dưới đây trong
+    `upgrade/research_loop/evidence/PXX/`:
+
+    | # | File | Phải có |
+    |---|---|---|
+    | 1 | `thanhvuong-frontend-receipt.md` | bảng đã đọc file@commit (§7.9); mapping hi-fi → component → field → state → assertion; so hi-fi; discrepancy; commit + numstat |
+    | 2 | `thanhvuong-backend-requests.md` | mỗi request theo mẫu §5, kèm locator / actual / expected / đề xuất nhỏ nhất / test khi có / fallback đang chạy; **ngày kiểm lại + commit baseline** (§7.6); hàng source-capability giữ đúng tên matrix; mục Bobby quyết riêng; bảng trạng thái |
+    | 3 | `thanhvuong-test-results.json` | tree SHA; mỗi gate có lệnh, exit code, số pass/fail/skip; mục `not_run` có lý do; SHA-256 của ảnh/log **không** commit |
+    | 4 | `thanhvuong-debt-register.json` | nợ còn mở, nợ đã đóng kèm commit, backend request, downstream gate |
+    | 5 | `thanhvuong-rollback.md` | revert theo từng commit, ảnh hưởng, cờ feature |
+
+    Thêm vào Unified plan:
+
+    - Dòng §13 của phase: head commit, số file / numstat, trạng thái push, link
+      tới cả năm file.
+    - **Implementation note** dưới `#rl-pXX`, đặt trước audit, theo mẫu note
+      RF-02. Note gồm: trạng thái, Đọc chi tiết, đã giao, evidence, lỗi đã sửa,
+      backend request, việc Bobby quyết, exit gate còn lại, rollback/handoff.
+
+    Chạy hook bằng tay rồi mới commit docs. Push nhánh lên `primus-origin`,
+    không force, rồi đối chiếu SHA trên remote. Tin nhắn cho Bobby chỉ **trỏ
+    tới** gói hồ sơ này.
+
+    **Vì sao có luật này.** Ở P17 (2026-09-23), tin nhắn cho Bobby đã có test
+    và request, nhưng repo chỉ có receipt. Backend request, test results và
+    rollback nằm ngoài repo, còn Unified plan không có note nào. Người đọc
+    plan không thể biết phase đang ở đâu, và codex không có file nào để trả
+    lời request.
+
 ## 8. Scale refine — bắt buộc cho mỗi màn Execution Loop
 
 Hi-fi mô tả trạng thái đẹp ở 1440px với dữ liệu mẫu nhỏ. Thực tế: nhiều alpha,

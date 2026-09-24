@@ -1,0 +1,89 @@
+{
+  "phase": "P17",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-09-23",
+  "tree": "002e4098ff996dead286e5c4af5241d2524b2c48",
+  "open_implementation_debt": [],
+  "resolved_in_phase": [
+    {
+      "id": "S08-HIFI-PNL",
+      "what": "hi-fi trade PnL distribution panel was missing",
+      "status": "RESOLVED",
+      "evidence": "3cf70794; S08-U04 panel order test; browser absent-panels=6"
+    },
+    {
+      "id": "S08-REFUSAL-RF02",
+      "what": "retained 409 read as a profile refusal; 403 copy confirmed the run exists",
+      "status": "RESOLVED",
+      "evidence": "002e4098; S08-U06/U07; browser RETAINED + refusal-403"
+    },
+    {
+      "id": "S08-TEST-LABELS",
+      "what": "local test groups reused guide IDs P17-T0x",
+      "status": "RESOLVED",
+      "evidence": "9ee85241"
+    },
+    {
+      "id": "S08-501",
+      "what": "legacy /api/runs/:id lookup on /execute returned 501",
+      "status": "RESOLVED",
+      "evidence": "737d279d; browser noise 0"
+    }
+  ],
+  "backend_requests": [
+    {
+      "id": "CG-P17-01",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-01"
+    },
+    {
+      "id": "CG-P17-02",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-02"
+    },
+    {
+      "id": "CG-P17-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P17-03"
+    }
+  ],
+  "source_capability_blocked": [
+    "account/position state at playhead",
+    "orders/fills/trades",
+    "event order / same timestamp",
+    "OCO / partial fill / multi-leg",
+    "candles / SL-TP / MAE-MFE",
+    "funding / capital / fold reset",
+    "child audit / reused original",
+    "certificate badge"
+  ],
+  "explicit_downstream_gates": [
+    {
+      "id": "P17-FE-DG-01",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "integrate moved baseline (FreezeDetail.tsx conflict; S08 to toResearchRefusal + recovery)"
+    },
+    {
+      "id": "P17-FE-DG-02",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "S08 title VISUAL_DECISION_REQUIRED; LENS / artifact line / COPY EVIDENCE LINK / Reveal"
+    },
+    {
+      "id": "P17-FE-DG-03",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "workspace hooks; axe"
+    },
+    {
+      "id": "P17-FE-DG-04",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_FEATURE_FLAG",
+      "what": "REAL_API_E2E_RECEIPT on the RF-02 preview lane once replay is on there"
+    }
+  ]
+}
