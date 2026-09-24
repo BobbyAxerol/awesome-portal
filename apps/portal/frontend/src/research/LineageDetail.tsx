@@ -214,7 +214,7 @@ const LINEAGE_CSS = `
 .ln-left { flex: 1.5 1 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .ln-right { flex: 1 1 0; min-width: 300px; max-width: 430px; position: sticky; top: 12px; display: flex; flex-direction: column; gap: 12px; }
 @media (max-width: 900px) {
-  .ln-grid { flex-direction: column; }
+  .ln-grid { flex-direction: column; align-items: stretch; }
   .ln-right { position: static; max-width: none; min-width: 0; width: 100%; }
 }
 .ln-card0 { border: 1px solid var(--accent); border-radius: 8px; background: var(--paper-raised); box-shadow: var(--shadow-e1); overflow: hidden; }
@@ -452,7 +452,7 @@ function GatesChip({ diff }: { diff: SemanticDiff }) {
 
 function DiffChips({ diff }: { diff: SemanticDiff }) {
   const regular = diff.changes.filter((change) => change.kind !== "ALPHA_VERSION");
-  if (diff.state === "ROOT") return <span className="ln-spec" data-diff-state="ROOT">root — no parent</span>;
+  if (diff.state === "ROOT") return <span className="ln-spec" data-diff-state="ROOT">diff vs parent — none, this attempt is a root</span>;
   if (diff.state !== "AVAILABLE") {
     return (
       <span data-diff-state={diff.state}>
