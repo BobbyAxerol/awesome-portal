@@ -44,7 +44,7 @@
     ],
     "diff_numstat_base_to_head": "10 files +2807/-2 (git diff --numstat 295901b7 034aef11)",
     "docs_commits": [
-      "DOCS1_SHA docs(research): P20 Thanhvuong packet — S13 Compare receipt, requests, debt, rollback",
+      "e731cfa6 docs(research): P20 Thanhvuong packet — S13 Compare receipt, requests, debt, rollback",
       "this commit — docs(research): P20 §13 row, implementation note and handoff addendum"
     ],
     "baseline": {
