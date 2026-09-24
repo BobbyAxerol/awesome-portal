@@ -34,6 +34,7 @@ import { QuantBTSubnav } from "./QuantBTSubnav";
 import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
 import { PortalApiError } from "../../lib/api";
+import "../../research/researchScreen.css";
 
 /*
  * Every screen is its own chunk (RF-04, FE-X-01/02).
@@ -235,6 +236,9 @@ function LegacyTabRedirect() {
 const RESEARCH_SCREEN =
   /\/research\/quantbt\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze)|runs)\/?$/;
 
+/** Research screens that draw their own HiFi frame (padding, max width): 01, 03, 04, 05, 06. */
+const OWN_FRAME_SCREEN = /\/research\/quantbt\/(runs|runs\/(?!new\/?$)[^/]+\/(progress|evidence|split|search))\/?$/;
+
 /** Path segments under `runs/` that name a screen rather than a run. */
 const RESERVED_RUN_SEGMENTS = new Set(["new", "legacy"]);
 
@@ -368,6 +372,12 @@ export function QuantBTModule() {
       )}
 
       <Suspense fallback={<StateView kind="loading" message="Loading screen…" />}>
+      {/* Research Loop screens own their HiFi padding, width, type scale and
+          motion (researchScreen.css); legacy screens keep the shell's. */}
+      <div
+        className={onResearchScreen ? "research-screen" : undefined}
+        data-own-frame={OWN_FRAME_SCREEN.test(location.pathname) || undefined}
+      >
       <Routes>
         <Route path="new" element={<ConfigWorkspace />} />
         {/* The quarantine inbox lives under QuantBT because it is about the
@@ -411,6 +421,7 @@ export function QuantBTModule() {
         <Route index element={<Navigate to={`${QUANTBT_ROOT}/runs`} replace />} />
         <Route path="*" element={<Navigate to={QUANTBT_ROOT} replace />} />
       </Routes>
+      </div>
       </Suspense>
     </>
   );

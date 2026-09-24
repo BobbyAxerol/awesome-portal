@@ -1,0 +1,112 @@
+/*
+ * Research Loop screen chrome (RF-06 fidelity pass, HiFi release-v1.1).
+ *
+ * Scoped to `.research-screen`, which QuantBTModule puts around the Research
+ * Loop routes only; legacy QuantBT screens and every other module keep the
+ * shell's rules. Two measured root causes this file removes, on every screen:
+ *
+ *  - the HiFi screens are `font-size: 13px; line-height: normal`; the build
+ *    inherited 16px / 1.5, so every chip, pill and label stack was 2–6 px taller;
+ *  - the shell's content padding (24/32/64) sat around each screen's own HiFi
+ *    padding, so content started ~32 px late and ~64 px narrower. On these
+ *    routes the screen owns its padding and max width, as the HiFi does.
+ */
+
+/* Only screens that draw their own HiFi frame opt in (`data-own-frame`):
+   01, 03, 04, 05, 06. The others keep the shell's gutter until they do. */
+.portal-content:has(.research-screen[data-own-frame]) {
+  padding: 0;
+  max-width: none;
+}
+
+.research-screen {
+  font-size: 13px;
+  line-height: normal;
+}
+
+/* HiFi global control motion: 120 ms on colour changes only. */
+.research-screen button,
+.research-screen a,
+.research-screen [role="tab"],
+.research-screen [role="checkbox"] {
+  transition:
+    border-color 120ms cubic-bezier(0.2, 0, 0.2, 1),
+    color 120ms cubic-bezier(0.2, 0, 0.2, 1),
+    background-color 120ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.research-screen a:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+/* HiFi focus ring: a paper gap, then the accent ring. */
+.research-screen :focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--paper-raised),
+    0 0 0 4px var(--accent);
+}
+
+/* Motion vocabulary of the HiFi, one name each:
+ *  - `rs-pulse`: opacity 1 → .35 → 1 (rl-/rp-/sw-/sr-pulse in the HiFi files);
+ *  - `rs-flow`: the freeze-line arrow drift on Screen 06.
+ * Elements opt in with `data-motion` and a duration custom property. */
+@keyframes rs-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes rs-flow {
+  0% {
+    transform: translateX(-4px);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(4px);
+    opacity: 0.2;
+  }
+}
+
+@keyframes rs-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.research-screen [data-motion="pulse"] {
+  animation: rs-pulse var(--rs-motion-duration, 1.6s) ease infinite;
+}
+
+.research-screen [data-motion="flow"] {
+  animation: rs-flow var(--rs-motion-duration, 1.6s) ease-in-out infinite;
+}
+
+.research-screen [data-motion="caret"] {
+  animation: rs-caret var(--rs-motion-duration, 1s) steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-screen [data-motion] {
+    animation: none !important;
+  }
+  .research-screen button,
+  .research-screen a,
+  .research-screen [role="tab"],
+  .research-screen [role="checkbox"] {
+    transition: none;
+  }
+}
