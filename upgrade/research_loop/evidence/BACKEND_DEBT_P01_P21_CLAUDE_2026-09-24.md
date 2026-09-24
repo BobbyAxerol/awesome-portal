@@ -212,3 +212,14 @@ dùng chung với production, nơi `FEATURE_RESEARCH_RUN_PRODUCER` đang tắt; 
 `runs/new` lúc này sẽ đưa người dùng production vào màn 02 chưa gửi được run.
 Đổi link **cùng lúc** bật RUN_PRODUCER cho môi trường đó (W7), kèm chạy
 `test_portal_registry_contract`.
+
+## 9. Tiến độ — 2026-09-24 (cập nhật sau W0/W1)
+
+| Đợt | Trạng thái | Commit / receipt |
+|---|---|---|
+| W0 | Xong: split-read slot, verify-generated +4 spec, e2e ignore spec real-API, runbook P21 | `10a490e3`, `eb68b89b` |
+| W1 | **Xong với REAL_API_E2E_RECEIPT**: WFO signal-notional thật qua P10 → P06 → P05 → RS-02, 5 read current-source 200 AVAILABLE, P04 vẫn NOT_APPLICABLE | `7009ddcb` + bản sửa R1–R4; [receipt](./RF-03/w1-preview-receipt.json), [design §6](./RF-03/W1_WFO_SPINE_DESIGN_CLAUDE_2026-09-24.md) |
+
+Đã đóng: `CG-P05-01`, `CG-P10-02` (Delta built-in), `CG-P06-03`, `CG-P11-05`, `CG-P11-04` (DOC_STALE → DELIVERED `5bc77b9b`).
+Mở tiếp theo: W2 (P11 màn 03: `CG-P11-03/-07/-08/-09`, `CG-P06-02`/`CG-P10-04`) và W3 (P13–P15 trên dữ liệu WFO thật).
+Việc riêng còn treo: `test_m0_freeze` đỏ sẵn trên HEAD — sửa bằng commit riêng; Codex dùng migration 063 trong dải 060–069 của Claude.

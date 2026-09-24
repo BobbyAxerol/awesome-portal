@@ -149,3 +149,36 @@ Còn lại để đóng W1: receipt preview real-API (bật cờ, `seed-run --pr
 SEALED, P04 vẫn NOT_APPLICABLE). Rủi ro ghi nhận: digest batch TS sắp key bằng
 `localeCompare`, Python theo code-point — trùng với mọi key hiện có; tên tham số tương lai
 trộn `_` và chữ hoa có thể lệch (không đổi bây giờ vì sẽ đổi digest RS-02 cũ).
+
+## 6. REAL_API_E2E_RECEIPT trên preview — 2026-09-24
+
+Receipt: [w1-preview-receipt.json](./w1-preview-receipt.json). Run `rrun_93bd9b92c086051a590f9747efe0d02e`
+tạo qua BFF same-origin (`SEED_PROFILE=wfo node scripts/research-preview/seed-run.mjs`), chạy
+trong child P06 thật, retain qua P05 + ingest RS-02, rồi đọc lại:
+
+| Read | Kết quả |
+|---|---|
+| progress | 200, `COMPLETED` / `READY`, seq 26 |
+| current-source evidence / split / search / freeze / replay | cả 5: **200 AVAILABLE**, provenance `rs02.quantbt-signal-notional-wfo.v1` / `rs02.delta-signal-notional-wfo.v1` |
+| passport | 1056 observation, 2 fold, 3 trial, 1 candidate, 1 selection; equity 20000 → 19926.51 (−0.37%), max DD −0.67% |
+| fold plan | 2 fold expanding, mốc train/test thật (test 1: 2026-07-01 → 07-08; test 2: 07-08 → 07-15) |
+| search | 3 trial COMPLETE, selection `trial 0` kèm 8 tham số Delta |
+| P04 cũ `rrun_8d756a95…` | vẫn 200 `NOT_APPLICABLE` / `P04_FIXED_QUALIFICATION` |
+
+Stack: build từ worktree sạch ở `dec66741` cộng đúng diff sửa lỗi commit ngay sau; migration
+cuối 062; image id nằm trong receipt.
+
+**Bốn lỗi chỉ lộ ra trên stack thật** (test cục bộ đều xanh, vì fake server nhận mọi thứ):
+
+| # | Triệu chứng | Nguyên nhân | Sửa |
+|---|---|---|---|
+| R1 | Mọi run (cả P04) FAILED ngay khi bật RETAINED_ARTIFACTS: "P05 start lease was not acknowledged" | Control API chỉ đặt `DISPATCHED` sau khi Portal trả 202; worker gửi `run_started` trước đó → 409 stale lease; cổng P05 chỉ flush **một lần** | `_await_start_acknowledged`: thử lại trong cửa sổ 15 s rồi mới fail closed |
+| R2 | P05 seal 400 `RESEARCH_INVALID_INPUT` | Manifest RS-02 có `documents` (JSON), byte của chúng nằm trong `totals.bytes`; seal chỉ khai part Parquet | Seal khai `documents` (≤ 16, dưới `documents/`), Control API kiểm totals = parts + documents |
+| R3 | current-source seal 400 | Exporter luôn ghi `summary.counts`; schema TS strict chưa nhận (chưa từng có export thật nào được seal trước W1) | Schema nhận `counts`, ingest bắt buộc khớp `table_rows`; fixture từ body thật |
+| R4 | Run WFO kẹt FINISHING mãi | Preview bật REPORTS; report P18 lắp trên sidecar P13–P17 dạng P04 → 409 `RESEARCH_REPORT_NOT_READY` vĩnh viễn cho WFO | Terminal WFO bỏ qua sidecar P18 dạng P04; report WFO là việc P18 trên current-source |
+
+Thêm: client retention giờ ghi kèm mã Problem khi bị từ chối (không kèm message/body), vì lần
+này phải vá tạm trong container mới đọc được lý do.
+
+Đóng: `CG-P05-01`, `CG-P10-02` (phần Delta built-in; import/DRAFT vẫn chờ `CG-RF02-01`),
+`CG-P06-03` (đo: CPU ≈ 5–9 s / 120, RSS ≈ 300–330 MiB), `CG-P11-05` (preview bật RETAINED_ARTIFACTS).
