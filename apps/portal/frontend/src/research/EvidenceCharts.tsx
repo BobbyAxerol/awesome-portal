@@ -35,16 +35,26 @@ import type {
   EquityPoint,
   EvidenceSeries,
   RollingReturnPoint,
+  RollingSharpePoint,
 } from "./evidenceClient";
 import { formatFractionAxis, formatMetric } from "./researchFormat";
 
 /** HiFi heights (measured on the `.dc.html`): equity 380, underwater 180, rolling/distribution 230. */
 export const CHART_HEIGHT = { equity: 380, underwater: 180, rolling: 230, distribution: 230 } as const;
 
+const RATIO_2DP = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** A ratio (Sharpe) as the HiFi prints one (`1.19`): two decimals, the screen's minus. */
+export function ratio(value: string | number): string {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? withMinus(RATIO_2DP.format(parsed)) : "";
+}
+
 export const SERIES_NAME = {
   equity: "OOS equity",
   drawdown: "OOS drawdown",
   rolling: "rolling 20-observation return",
+  rollingSharpe: "rolling 63-day Sharpe",
   distribution: "observations",
 } as const;
 
@@ -398,6 +408,47 @@ export function distributionOption(buckets: Bucket[]) {
   });
 }
 
+/**
+ * RF-05 CG-P13-04: QuantBT's rolling Sharpe over 63 UTC daily OOS returns, as
+ * the server published it. HiFi EChart 3's Sharpe line: 1.5px, accent.
+ */
+export function rollingSharpeOption(points: RollingSharpePoint[]) {
+  const { accent } = paletteNow();
+  const ratioPointer = { label: { formatter: (param: { value: unknown }) => ratio(Number(param.value)) } };
+  return baseOption({
+    ...noChartApparatus(),
+    useUTC: true,
+    grid: { left: 50, right: 20, top: 30, bottom: 40, containLabel: true },
+    xAxis: TIME_AXIS,
+    yAxis: {
+      type: "value",
+      scale: true,
+      axisLabel: { formatter: (value: number) => ratio(value) },
+      axisPointer: ratioPointer,
+    },
+    tooltip: {
+      ...hifiTooltip(),
+      formatter: (params: unknown) => {
+        const param = first(params);
+        const point = points[param?.dataIndex ?? -1];
+        return point
+          ? `${utcZ(point.at_utc_ms)}<br/>${tooltipRow(param, SERIES_NAME.rollingSharpe, ratio(point.sharpe))}`
+          : "";
+      },
+    },
+    series: [
+      {
+        type: "line",
+        name: SERIES_NAME.rollingSharpe,
+        showSymbol: false,
+        data: points.map((point) => [point.at_utc_ms, Number(point.sharpe)]),
+        lineStyle: { width: 1.5, color: accent },
+        itemStyle: { color: accent },
+      },
+    ],
+  });
+}
+
 /* ---------------------------------------------------------- components */
 
 /**
@@ -451,6 +502,25 @@ export function RollingChart({ series }: { series: EvidenceSeries }) {
         rows={points.map((point) => ({
           key: String(point.at_utc_ms),
           cells: [new Date(point.at_utc_ms).toISOString(), point.return_fraction],
+        }))}
+      />
+    </div>
+  );
+}
+
+export function RollingSharpeChart({ series }: { series: EvidenceSeries }) {
+  const points = series.values as RollingSharpePoint[];
+  const option = useMemo(() => rollingSharpeOption(points), [points]);
+  return (
+    <div data-chart="rolling-sharpe">
+      <EChart option={option} height={CHART_HEIGHT.rolling} />
+      <ExactTable
+        id="rolling-sharpe"
+        caption="Rolling 63-day Sharpe, exact values"
+        head={["time (UTC)", "sharpe"]}
+        rows={points.map((point) => ({
+          key: String(point.at_utc_ms),
+          cells: [new Date(point.at_utc_ms).toISOString(), point.sharpe],
         }))}
       />
     </div>

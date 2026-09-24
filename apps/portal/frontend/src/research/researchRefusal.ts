@@ -47,6 +47,13 @@ export interface ResearchRefusal {
    * the Run Library — rather than an empty frame.
    */
   notFound: boolean;
+  /**
+   * RF-05 CG-P13-09: the `details.lane_state` a current-source `409` carried,
+   * when the error that produced this refusal exposes one (`laneState`).
+   * Absent or null on every other refusal. Additive: `message` is unchanged,
+   * a screen that wants the lane's own sentence reads `CURRENT_SOURCE_LANE_COPY`.
+   */
+  laneState?: CurrentSourceLaneState | null;
 }
 
 type Kind = "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "UNAVAILABLE" | "INVALID" | "NOT_RETAINED";
@@ -208,6 +215,9 @@ export function toResearchRefusal(error: unknown): ResearchRefusal {
     stopsPolling: closed,
     sessionExpired,
     notFound,
+    /* Only a refusal that carried a lane state gains the key, so every other
+       refusal is exactly the object it was before RF-05. */
+    ...(laneStateOfError(error) !== null ? { laneState: laneStateOfError(error) } : {}),
   };
 }
 
@@ -240,4 +250,114 @@ export function refusalDetail(refusal: Pick<ResearchRefusal, "code" | "detail" |
     (part): part is string => Boolean(part),
   );
   return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/* -------------------------------------------------------------------------
+ * RF-05 additions (RF-06 wave C) — additive only.
+ *
+ * 1. The current-source lane state. A `409 RESEARCH_CURRENT_SOURCE_CONFLICT`
+ *    now carries `details.lane_state` (contract `LaneState`), so a screen says
+ *    which of the four it is instead of reading the server's message text.
+ * 2. Screen sentences for the reason codes RF-05 introduced. A reason code is
+ *    diagnostics; the sentence is what a person reads.
+ * ---------------------------------------------------------------------- */
+
+/** Contract `research-current-source` `LaneState`, spelled out. */
+export type CurrentSourceLaneState =
+  | "PENDING_SOURCE"
+  | "PENDING_RETENTION"
+  | "NOT_RETAINED_LEGACY"
+  | "NOT_RETAINED_TERMINAL";
+
+export const CURRENT_SOURCE_LANE_STATES: readonly CurrentSourceLaneState[] = [
+  "PENDING_SOURCE",
+  "PENDING_RETENTION",
+  "NOT_RETAINED_LEGACY",
+  "NOT_RETAINED_TERMINAL",
+];
+
+/** A value from the wire, accepted only if it is one of the four. */
+export function readLaneState(value: unknown): CurrentSourceLaneState | null {
+  return typeof value === "string" && (CURRENT_SOURCE_LANE_STATES as readonly string[]).includes(value)
+    ? (value as CurrentSourceLaneState)
+    : null;
+}
+
+/**
+ * The lane state an error carries, if any. Duck-typed on `laneState` so any
+ * client's typed conflict error (a `PortalApiError` subclass that keeps the
+ * `details.lane_state` of its problem body) resolves the same way.
+ */
+export function laneStateOfError(error: unknown): CurrentSourceLaneState | null {
+  if (typeof error !== "object" || error === null || !("laneState" in error)) return null;
+  return readLaneState((error as { laneState: unknown }).laneState);
+}
+
+/**
+ * A current-source 409 that names its lane state. Still a `PortalApiError`,
+ * so `toResearchRefusal` classifies it exactly as before and adds `laneState`.
+ */
+export class ResearchLaneConflictError extends PortalApiError {
+  readonly laneState: CurrentSourceLaneState;
+
+  constructor(message: string, status: number, code: string | null, requestId: string | null, laneState: CurrentSourceLaneState) {
+    super(message, status, code, requestId);
+    this.name = "ResearchLaneConflictError";
+    this.laneState = laneState;
+  }
+}
+
+/** Screen copy per lane state (the contract's `LaneState` description, as sentences). */
+export const CURRENT_SOURCE_LANE_COPY: Record<CurrentSourceLaneState, string> = {
+  PENDING_SOURCE: "The run has not completed, so the retained source has nothing for it yet.",
+  PENDING_RETENTION: "The run completed; its sealed artifact has not been retained yet.",
+  NOT_RETAINED_LEGACY: "This is a legacy 1.0.8 metadata run. It was never retained, and never will be.",
+  NOT_RETAINED_TERMINAL: "The run was cancelled or failed before a sealed artifact was retained.",
+};
+
+/**
+ * Sentences for the reason codes the RF-05 contracts publish (research-evidence
+ * registry v3 and series, current-source not-applicable). An unknown code has
+ * no sentence here; the caller falls back to its availability word.
+ */
+export const REASON_CODE_SENTENCES: Record<string, string> = {
+  P13_SOURCE_PREDATES_OOS_ANALYTICS:
+    "This run was sealed before OOS analytics were published, so the engine's OOS figures were never recorded for it.",
+  P13_SOURCE_EVIDENCE_NOT_PUBLISHED: "This run published no sealed evidence.",
+  P13_OOS_HAS_NO_MONTH_WITH_PRIOR_CALENDAR_CLOSE:
+    "No OOS month has a prior calendar month-end close to measure from, so no monthly return exists.",
+  P13_OOS_DAILY_RETURNS_BELOW_ROLLING_WINDOW:
+    "The OOS window has fewer daily returns than the 63-day rolling window, so no rolling value exists.",
+  P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT:
+    "The IS/OOS boundary is not in the run's receipt, so no IS Sharpe was measured and no decay can be stated.",
+  P13_OOS_RETURN_ZERO_VARIANCE:
+    "OOS returns have zero variance; the engine's ratio would be a placeholder, not a measurement.",
+  P13_OOS_HAS_NO_DOWNSIDE_RETURNS: "OOS has no downside return, so the Sortino ratio is undefined.",
+  P13_OOS_HAS_NO_LOSING_RETURNS: "OOS has no losing return, so the profit factor is undefined.",
+  P13_OOS_HAS_NO_LONG_EXPOSURE_BARS: "No OOS bar held a long position, so there is no long-bar hit rate.",
+  P13_OOS_HAS_NO_SHORT_EXPOSURE_BARS: "No OOS bar held a short position, so there is no short-bar hit rate.",
+  P13_OOS_LONG_EXPOSURE_NOT_IN_EVERY_SYMBOL:
+    "Not every symbol held a long position in OOS, so the engine's long-bar hit rate is not one figure for the run.",
+  P13_OOS_SHORT_EXPOSURE_NOT_IN_EVERY_SYMBOL:
+    "Not every symbol held a short position in OOS, so the engine's short-bar hit rate is not one figure for the run.",
+  P13_OOS_SPAN_BELOW_ONE_DAY: "The OOS span is shorter than one day, so no annualised figure is defined.",
+  P13_QUANTBT_CAGR_CLAMPED: "QuantBT clamped the CAGR at its bound, so the value would be a limit, not a measurement.",
+  P13_RECEIPT_BYTE_BUDGET_EXHAUSTED: "The run's receipt reached its size budget before this analytic was recorded.",
+  P13_ENGINE_LOCATOR_MISMATCH:
+    "The engine field this figure is read from did not match its declared locator, so it is withheld rather than guessed.",
+  P13_ENGINE_RESULT_NOT_AVAILABLE_TO_ANALYTICS:
+    "The engine result was not available to the analytics step, so nothing was read from it.",
+  P13_ROLLING_SHARPE_ZERO_VARIANCE_WINDOWS:
+    "Some 63-day windows have zero variance; their Sharpe would be a placeholder, so the series is withheld.",
+  P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS:
+    "The first month is not contiguous with the published months, so the monthly series is withheld.",
+  P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK:
+    "This run's adapter published no benchmark series, so no beta against a benchmark can be stated.",
+  RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION:
+    "This run is bound to the P04 fixed qualification, which the retained lane never holds. Nothing is pending.",
+};
+
+/** The sentence for a reason code, or null when this module has none. */
+export function reasonCodeSentence(code: string | null | undefined): string | null {
+  return code && code in REASON_CODE_SENTENCES ? REASON_CODE_SENTENCES[code] : null;
 }

@@ -6,7 +6,9 @@
  *
  *  - **P13 `research-evidence`** publishes the immutable Hub projection: the
  *    metric registry, the Stage-5 claim and its methodology certificate, the
- *    stage timeline, four named series and the run's typed source absences.
+ *    stage timeline, six named series (RF-05 added rolling Sharpe and beta),
+ *    the registry-v3 OOS performance block, the run's lifecycle and the run's
+ *    typed source absences.
  *    Every run that sealed has one.
  *  - **RS-02 `research-current-source`** publishes the retained Advanced-WFO
  *    passport for the one admitted profile. It rejects every other profile
@@ -31,7 +33,7 @@ import type { components as EvidenceComponents } from "@portal/contracts-researc
 import type { components as CurrentSourceComponents } from "@portal/contracts-research-current-source";
 
 import { PortalApiError } from "../lib/api";
-import { toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
+import { ResearchLaneConflictError, readLaneState, toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 
 type HubSchemas = EvidenceComponents["schemas"];
 type SourceSchemas = CurrentSourceComponents["schemas"];
@@ -53,9 +55,26 @@ export type MonthlyReturnPoint = HubSchemas["MonthlyReturnPoint"];
 export type RollingReturnPoint = HubSchemas["RollingReturnPoint"];
 export type DistributionBucket = HubSchemas["DistributionBucket"];
 export type CorrectedDistributionBucket = HubSchemas["CorrectedDistributionBucket"];
+/* RF-05 (CG-P13-03/04/10/11/12) — the Hub's additive blocks. */
+export type OosPerformance = HubSchemas["OosPerformance"];
+export type PerformanceMetric = HubSchemas["PerformanceMetric"];
+export type Lifecycle = HubSchemas["Lifecycle"];
+export type RevisionBinding = HubSchemas["RevisionBinding"];
+export type RollingSharpePoint = HubSchemas["RollingSharpePoint"];
 
 export type CurrentSourceEvidence = SourceSchemas["Evidence"];
 export type CurrentSourceAvailability = SourceSchemas["Availability"];
+/** RF-05 CG-P13-09: the typed 200 for a run whose profile the lane never holds. */
+export type CurrentSourceNotApplicable = SourceSchemas["LaneNotApplicable"];
+
+export const CURRENT_SOURCE_NOT_APPLICABLE_SCHEMA = "research.current-source-not-applicable.v1";
+
+/** Whether a 200 from the current-source read is the typed not-applicable answer. */
+export function isLaneNotApplicable(
+  body: CurrentSourceEvidence | CurrentSourceNotApplicable,
+): body is CurrentSourceNotApplicable {
+  return (body as { schema_version?: unknown }).schema_version === CURRENT_SOURCE_NOT_APPLICABLE_SCHEMA;
+}
 
 /**
  * The four published paths, spelled as the OpenAPI documents publish them.
@@ -70,6 +89,10 @@ export const SERIES_KINDS: readonly SeriesKind[] = [
   "MONTHLY_RETURNS",
   "ROLLING_RETURNS_20",
   "RETURN_DISTRIBUTION",
+  /* RF-05 CG-P13-04: rolling Sharpe over 63 UTC daily OOS returns, and rolling
+     beta, which stays a typed absence until a benchmark is published. */
+  "ROLLING_SHARPE_63",
+  "ROLLING_BETA_63",
 ] as const;
 
 /** The contract's own ceiling, named once so a test can assert the screen honours it. */
@@ -104,15 +127,21 @@ async function call<T>(path: string, etag?: string | null, signal?: AbortSignal)
     let message = `${response.status} ${response.statusText}`;
     let code: string | null = null;
     let requestId: string | null = response.headers.get("x-request-id");
+    let laneState: ReturnType<typeof readLaneState> = null;
     try {
-      const problem = (await response.json()) as Partial<HubSchemas["Problem"]>;
+      const problem = (await response.json()) as Partial<SourceSchemas["Problem"]>;
       if (problem?.error?.message) message = problem.error.message;
       code = problem?.error?.code ?? null;
       requestId = problem?.request_id ?? requestId;
+      /* RF-05 CG-P13-09: a current-source 409 names its lane state. It rides
+         on the error so the screen never has to read the message text. */
+      laneState = readLaneState(problem?.details?.lane_state);
     } catch {
       /* non-JSON error body: keep the status line the server gave */
     }
-    throw new PortalApiError(message, response.status, code, requestId);
+    throw laneState !== null
+      ? new ResearchLaneConflictError(message, response.status, code, requestId, laneState)
+      : new PortalApiError(message, response.status, code, requestId);
   }
   return (await response.json()) as T;
 }
@@ -138,9 +167,9 @@ export const evidenceApi = {
       options.signal,
     ),
 
-  /** `researchCurrentSourceEvidenceGetV1` */
+  /** `researchCurrentSourceEvidenceGetV1` — the passport, or the typed not-applicable answer. */
   currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
-    call<CurrentSourceEvidence>(
+    call<CurrentSourceEvidence | CurrentSourceNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/evidence${query(options.workspaceId)}`,
       null,
       options.signal,
@@ -162,7 +191,16 @@ export const evidenceApi = {
  */
 export function seriesMatchesHub(hub: EvidenceHub, series: EvidenceSeries): boolean {
   if (hub.revision === null || series.revision === null) return false;
-  return hub.revision === series.revision;
+  if (hub.revision !== series.revision) return false;
+  /*
+   * RF-05 CG-P13-11: a RUN_INPUT_BOUND revision hashes the run id with the
+   * evidence, so two runs never share one. A SOURCE_CONTENT_ONLY revision
+   * (pre-RF-05) names only the evidence bytes, and two runs with identical
+   * output share it — so the run id must match as well. A Hub that does not
+   * say which (an older responder) is held to the stricter rule.
+   */
+  if (hub.revision_binding?.value !== "RUN_INPUT_BOUND") return hub.run_id === series.run_id;
+  return true;
 }
 
 /*

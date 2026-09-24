@@ -28,12 +28,16 @@ import {
   unavailableReason,
   type Availability,
   type CurrentSourceEvidence,
+  type CurrentSourceNotApplicable,
   type EvidenceHub,
   type EvidenceRefusal,
   type EvidenceSeries,
   type FoldNavigation,
+  type Lifecycle,
   type Metric,
   type MonthlyReturnPoint,
+  type OosPerformance,
+  type PerformanceMetric,
   type SeriesKind,
 } from "./evidenceClient";
 import {
@@ -42,15 +46,16 @@ import {
   type EvidenceCursor,
   type EvidenceStage,
 } from "./evidenceCursor";
-import { refusalDetail } from "./researchRefusal";
+import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, refusalDetail } from "./researchRefusal";
 import { formatMetric, shortDigest } from "./researchFormat";
 import type { PassportSlot, SeriesSlot } from "./useEvidence";
 import type { ResearchState } from "./state";
 
-/* The chart chunk. Four entry points, one module, fetched once. */
+/* The chart chunk. Five entry points, one module, fetched once. */
 const EquityChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.EquityChart })));
 const DrawdownChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DrawdownChart })));
 const RollingChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.RollingChart })));
+const RollingSharpeChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.RollingSharpeChart })));
 const DistributionChart = lazy(() => import("./EvidenceCharts").then((m) => ({ default: m.DistributionChart })));
 
 /**
@@ -180,11 +185,50 @@ export function Withheld({
       className="mono text-[10px] italic leading-[16px]"
       style={{ color: "var(--ink-faint)" }}
       data-withheld={availability.state}
-      title={unavailableReason(availability as Availability)}
+      data-reason-code={availability.reason_code ?? undefined}
+      title={reasonTitle(availability as Availability)}
     >
       {what ? `${what} — ` : ""}
       {WITHHELD_WORDS[availability.state]}
     </span>
+  );
+}
+
+/**
+ * A reason for a person, with its code kept for diagnostics: the RF-05
+ * sentence when the shared module has one, else the bare code or state.
+ */
+export function reasonTitle(availability: Availability): string {
+  const sentence = reasonCodeSentence(availability.reason_code);
+  return sentence !== null ? `${sentence} (${availability.reason_code})` : unavailableReason(availability);
+}
+
+/**
+ * A withheld fact whose panel has room to say why in words: the state word,
+ * then the reason's sentence (DQ-14 — the shell keeps its place and its
+ * reason). `extra` is a published fact that makes the reason concrete.
+ */
+function AbsenceNote({
+  availability,
+  what,
+  extra,
+}: {
+  availability: Availability;
+  what?: string;
+  extra?: ReactNode;
+}) {
+  const sentence = reasonCodeSentence(availability.reason_code);
+  return (
+    <p
+      className="text-[11px] leading-[1.5]"
+      style={{ color: "var(--ink-soft)" }}
+      data-absence-note={availability.state}
+      data-reason-code={availability.reason_code ?? undefined}
+    >
+      <Withheld availability={availability} what={what} />
+      {sentence !== null ? <span data-reason-sentence> — {sentence}</span> : null}
+      {extra ? <> {extra}</> : null}
+    </p>
   );
 }
 
@@ -247,9 +291,9 @@ function Pill({
   );
 }
 
-/** Tone of a durable run status. The word itself is rendered exactly. */
+/** Tone of a run status word. The word itself is rendered exactly. */
 function statusTone(status: string): { color: string; background: string } {
-  if (status === "READY") return { color: "var(--good)", background: "var(--good-bg)" };
+  if (status === "READY" || status === "COMPLETED") return { color: "var(--good)", background: "var(--good-bg)" };
   if (status === "FAILED" || status === "RECOVERY_REQUIRED") return { color: "var(--bad)", background: "var(--bad-bg)" };
   if (status === "CANCELLED") return { color: "var(--ink-soft)", background: "var(--paper-sunken)" };
   return { color: "var(--accent)", background: "var(--accent-soft)" };
@@ -262,6 +306,30 @@ function statusTone(status: string): { color: string; background: string } {
 function runStatus(hub: EvidenceHub | null): string | null {
   const status = hub?.core.run_identity?.status;
   return status && isAvailable(status.availability) ? status.value : null;
+}
+
+/**
+ * RF-05 CG-P13-10/12: the Hub's lifecycle block, when it publishes one. It is
+ * the typed answer to "is this run still on its way, or finished, and how" —
+ * what `readiness` alone could not say about a cancelled run.
+ */
+function lifecycleOf(hub: EvidenceHub | null): Lifecycle | null {
+  const lifecycle = hub?.lifecycle;
+  return lifecycle && isAvailable(lifecycle.availability) ? lifecycle : null;
+}
+
+/**
+ * The word the status pill prints: the lifecycle's `display_status` — the
+ * same vocabulary Screen 01 uses (READY reads COMPLETED) — and, from an older
+ * responder without the block, the durable status as sent.
+ */
+export function statusWord(hub: EvidenceHub | null): { word: string; durable: string | null; vocabulary: string | null } | null {
+  const lifecycle = lifecycleOf(hub);
+  if (lifecycle !== null && lifecycle.display_status !== null) {
+    return { word: lifecycle.display_status, durable: lifecycle.durable_status, vocabulary: lifecycle.vocabulary };
+  }
+  const durable = runStatus(hub);
+  return durable !== null ? { word: durable, durable, vocabulary: null } : null;
 }
 
 /* --------------------------------------------------------- claims passport */
@@ -468,6 +536,17 @@ function ClaimPassport({
         {hub ? (
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
             <span data-registry={hub.metric_registry_version}>{hub.metric_registry_version}</span>
+            {hub.oos_performance ? (
+              <>
+                {" · "}
+                <span
+                  data-registry={hub.oos_performance.registry_version}
+                  title={hub.oos_performance.report_locator ?? reasonTitle(hub.oos_performance.availability)}
+                >
+                  {hub.oos_performance.registry_version}
+                </span>
+              </>
+            ) : null}
             {" · "}
             <span data-readiness={hub.readiness}>
               readiness <b className="font-semibold" style={{ color: "var(--ink-soft)" }}>{hub.readiness}</b>
@@ -505,6 +584,7 @@ function RunHeader({
 }) {
   const core = hub?.core ?? null;
   const identity = core?.run_identity;
+  const status = statusWord(hub);
 
   return (
     <header
@@ -524,19 +604,26 @@ function RunHeader({
         * out. An older responder that does not send it leaves the header
         * thinner — the shell stays, and nothing is invented to fill it.
         */}
+      {status !== null ? (
+        <span
+          className="inline-flex items-center rounded-full px-2 py-px text-[11px] font-semibold"
+          style={statusTone(status.word)}
+          data-run-status={status.word}
+          data-durable-status={status.durable ?? undefined}
+          title={
+            status.vocabulary !== null
+              ? `durable ${status.durable ?? "not published"} · ${status.vocabulary}`
+              : `durable ${status.durable ?? "not published"}`
+          }
+        >
+          {status.word}
+        </span>
+      ) : identity ? (
+        <Withheld availability={identity.status.availability} what="status" />
+      ) : null}
+
       {identity ? (
         <>
-          {isAvailable(identity.status.availability) && identity.status.value !== null ? (
-            <span
-              className="inline-flex items-center rounded-full px-2 py-px text-[11px] font-semibold"
-              style={statusTone(identity.status.value)}
-              data-run-status={identity.status.value}
-            >
-              {identity.status.value}
-            </span>
-          ) : (
-            <Withheld availability={identity.status.availability} what="status" />
-          )}
 
           {isAvailable(identity.mode.availability) && identity.mode.value !== null ? (
             <Pill data-mode={identity.mode.value}>
@@ -795,8 +882,9 @@ function DatasetPanel({ hub, id, onClose }: { hub: EvidenceHub; id: string; onCl
 function tabSub(stage: EvidenceStage, cursor: EvidenceCursor, hub: EvidenceHub | null): string {
   if (hub === null) return "—";
   if (stage === "summary") {
-    const shown = hub.metrics.filter((metric) => isAvailable(metric.availability)).length;
-    return `${shown} of ${hub.metrics.length} metrics · ${hub.series.length} series`;
+    const all = [...hub.metrics, ...(hub.oos_performance?.metrics ?? [])];
+    const shown = all.filter((metric) => isAvailable(metric.availability)).length;
+    return `${shown} of ${all.length} metrics · ${hub.series.length} series`;
   }
   if (stage === "claim") {
     const certificate = hub.claim.methodology_certificate;
@@ -1153,17 +1241,6 @@ function CursorBar({
 
 /* ---------------------------------------------------------------- metrics */
 
-const METRIC_ORDER: Metric["key"][] = [
-  "FINAL_EQUITY",
-  "NET_RETURN_FRACTION",
-  "MAX_DRAWDOWN_FRACTION",
-  "TRADE_COUNT",
-  "BARS_PROCESSED",
-  "INITIAL_EQUITY",
-  "BENCHMARK_RETURN_FRACTION",
-  "FUNDING_TOTAL",
-];
-
 /** The tone of a signed fraction, read from the sign of the server's string. */
 function signTone(metric: Metric): string {
   if (metric.unit !== "FRACTION" || metric.value === null) return "var(--ink)";
@@ -1211,7 +1288,7 @@ function MetricTile({ metric }: { metric: Metric }) {
   const display = shown ? tileValue(metric) : null;
   return (
     <div
-      className="flex min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
+      className="flex min-h-[90px] min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
       data-metric={metric.key}
       style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
     >
@@ -1244,6 +1321,145 @@ function MetricTile({ metric }: { metric: Metric }) {
         title={`${metric.scope} · ${metric.unit} · ${metric.origin} · ${metric.definition_id}`}
       >
         {SCOPE_WORD[metric.scope]} · {UNIT_WORD[metric.unit]} · {ORIGIN_WORD[metric.origin]}
+      </span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------ OOS performance */
+
+/**
+ * RF-05 CG-P13-03 — registry v3, QuantBT's own OOS performance figures.
+ *
+ * The tiles follow the HiFi row (`Final Equity · Total Return · Sharpe · Max
+ * Drawdown · Trades`), then the rest of registry v3 and the v2 metrics that
+ * are not in the HiFi row. A value is the engine's field, named by its
+ * `source_locator` in the tile foot where the HiFi prints its source file.
+ */
+type TileKey = Metric["key"] | PerformanceMetric["key"];
+export const TILE_ORDER: TileKey[] = [
+  "FINAL_EQUITY",
+  "NET_RETURN_FRACTION",
+  "OOS_SHARPE",
+  "MAX_DRAWDOWN_FRACTION",
+  "TRADE_COUNT",
+  "OOS_SORTINO",
+  "OOS_CAGR_FRACTION",
+  "OOS_PROFIT_FACTOR",
+  "OOS_LONG_HIT_RATE_FRACTION",
+  "OOS_SHORT_HIT_RATE_FRACTION",
+  "OOS_SHARPE_DECAY",
+  "BARS_PROCESSED",
+  "INITIAL_EQUITY",
+  "BENCHMARK_RETURN_FRACTION",
+  "FUNDING_TOTAL",
+];
+
+/** QuantBT's long/short hit rates count bars, not trades: never "win rate". */
+const HIT_RATE_KEYS = new Set<PerformanceMetric["key"]>(["OOS_LONG_HIT_RATE_FRACTION", "OOS_SHORT_HIT_RATE_FRACTION"]);
+
+const RATIO_2DP = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** A ratio the way the HiFi prints Sharpe (`1.19`): two decimals, U+2212. */
+export function formatRatio(value: string | null): string | null {
+  if (value === null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? RATIO_2DP.format(parsed).replace(/^-/, "\u2212") : null;
+}
+
+/**
+ * A registry-v3 value as the tile prints it (DQ-08): a ratio to two
+ * decimals, a fraction as a percentage with two. A hit rate is a share of
+ * bars, not a change, so it carries no sign.
+ */
+export function performanceValue(metric: PerformanceMetric): string | null {
+  if (metric.value === null) return null;
+  if (metric.unit === "RATIO") return formatRatio(metric.value);
+  const shown = formatMetric(metric.value, "fraction");
+  if (shown === null) return null;
+  return HIT_RATE_KEYS.has(metric.key) ? shown.replace(/^\+/, "") : shown.replace(/^-/, "\u2212");
+}
+
+/** The tile foot: segment · unit · the engine field it was read from. */
+export function performanceFoot(metric: PerformanceMetric): string {
+  const unit = HIT_RATE_KEYS.has(metric.key) ? "percent of bars" : metric.unit === "RATIO" ? "ratio" : "percent";
+  const source =
+    metric.source_locator ?? (metric.origin === "NOT_PUBLISHED" ? ORIGIN_WORD.NOT_PUBLISHED : "locator not published");
+  return `${metric.scope.toLowerCase()} · ${unit} · ${source}`;
+}
+
+/** Everything the block says about where a v3 value came from, for the foot's title. */
+function performanceProvenance(metric: PerformanceMetric, block: OosPerformance): string {
+  const sample = block.return_sample;
+  return [
+    `${metric.scope} · ${metric.unit} · ${metric.origin} · ${metric.definition_id}`,
+    `${block.registry_version}`,
+    metric.source_locator !== null ? `field ${metric.source_locator}` : null,
+    block.report_locator !== null ? `report ${block.report_locator}` : null,
+    block.scope_locator !== null ? `scope ${block.scope_locator}` : null,
+    sample !== null
+      ? `sample ${sample.observation_count} ${sample.kind} returns · annualisation ${sample.annualization_periods}`
+      : null,
+    HIT_RATE_KEYS.has(metric.key) ? "a per-bar hit rate: the share of exposed bars that gained, not a trade win rate" : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join("\n");
+}
+
+function PerformanceTile({ metric, block }: { metric: PerformanceMetric; block: OosPerformance }) {
+  const shown = isAvailable(metric.availability) && metric.value !== null;
+  const display = shown ? performanceValue(metric) : null;
+  const tone =
+    metric.key === "OOS_CAGR_FRACTION" && metric.value !== null
+      ? metric.value.trim().startsWith("-")
+        ? "var(--bad)"
+        : "var(--good)"
+      : "var(--ink)";
+  return (
+    <div
+      className="flex min-h-[90px] min-w-0 flex-col gap-[3px] rounded-[6px] border px-3 py-2"
+      data-metric={metric.key}
+      data-registry-version={block.registry_version}
+      style={{ borderColor: "var(--line-soft)", background: "var(--paper-raised)" }}
+    >
+      <span className="text-[10px] font-medium uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        {metric.label}
+      </span>
+      {shown && metric.value !== null ? (
+        <span
+          className="mono text-[22px] font-semibold leading-[28px]"
+          style={{ color: tone, fontVariantNumeric: "tabular-nums" }}
+          data-metric-value={metric.key}
+          data-exact={metric.value}
+          title={metric.value}
+          onCopy={(event) => {
+            event.clipboardData.setData("text/plain", metric.value as string);
+            event.preventDefault();
+          }}
+        >
+          {display ?? metric.value}
+        </span>
+      ) : (
+        <span className="leading-[28px]">
+          <Withheld availability={metric.availability} />
+        </span>
+      )}
+      <span
+        className="mono text-[9.5px]"
+        style={{ color: "var(--ink-faint)" }}
+        data-metric-scope={metric.scope}
+        data-source-locator={metric.source_locator ?? undefined}
+        title={performanceProvenance(metric, block)}
+      >
+        {/* A locator wraps at its own separators, never inside a word. */}
+        {performanceFoot(metric)
+          .split(/(?<=[./])/)
+          .map((part, index) => (
+            <span key={index}>
+              {index > 0 ? <wbr /> : null}
+              {part}
+            </span>
+          ))}
       </span>
     </div>
   );
@@ -1297,7 +1513,8 @@ function SamplingLine({ series }: { series: EvidenceSeries }) {
       style={{ color: "var(--ink-faint)" }}
       data-sampling={series.source_sample.sampling ?? "NOT_PUBLISHED"}
     >
-      {formatMetric(series.source_sample.emitted_point_count, "count")} points from{" "}
+      {formatMetric(series.source_sample.emitted_point_count, "count")}{" "}
+      {series.source_sample.emitted_point_count === 1 ? "point" : "points"} from{" "}
       {series.source_sample.source_observation_count === null
         ? "an unpublished number of"
         : formatMetric(series.source_sample.source_observation_count, "count")}{" "}
@@ -1307,44 +1524,26 @@ function SamplingLine({ series }: { series: EvidenceSeries }) {
 }
 
 /**
- * The frame every lazy series panel keeps, whatever the answer turns out to be.
- *
- * Two HiFi grammars: a `figure` (EChart n in gold, Newsreader title, 16px
- * padding, raised) for the charts, and a `card` (uppercase label header, 14px
- * padding, flat) for the monthly strip.
+ * What a lazy series slot shows, whatever the answer turns out to be. Shared
+ * by the full panels and the two halves of the rolling figure.
  */
-function SeriesPanel({
+function useSeriesBody({
   kind,
-  title,
-  chartNo,
-  variant = "figure",
-  footnote,
-  footer,
   link,
   slot,
   onNeeded,
   emptyReason,
-  className,
-  style,
+  absentExtra,
   children,
 }: {
   kind: SeriesKind;
-  title: string;
-  /** The HiFi's `EChart n` label; figures only. */
-  chartNo?: number;
-  variant?: "figure" | "card";
-  footnote?: ReactNode;
-  /** The provenance row under the chart (HiFi EChart 1). */
-  footer?: (series: EvidenceSeries | null) => ReactNode;
   link: EvidenceHub["series"][number] | undefined;
   slot: SeriesSlot | undefined;
   onNeeded: (kind: SeriesKind) => void;
-  /** What an answered series with no points means, in this panel's words. */
   emptyReason: string;
-  className?: string;
-  style?: React.CSSProperties;
+  absentExtra?: ReactNode;
   children: (series: EvidenceSeries) => ReactNode;
-}) {
+}): { body: ReactNode; state: string; ready: EvidenceSeries | null } {
   /* The read starts when the panel is on screen and its link says the series
      exists — not on mount, and never for a series the Hub declared absent. */
   const available = link !== undefined && isAvailable(link.availability);
@@ -1352,13 +1551,19 @@ function SeriesPanel({
     if (available) onNeeded(kind);
   }, [available, kind, onNeeded]);
 
-  const ready = slot?.state === "ready" ? slot.series : null;
+  const answered = slot?.state === "ready" ? slot.series : null;
+  /* RF-05: a series can itself answer NOT_APPLICABLE with its reason (e.g. a
+     zero-month MONTHLY_RETURNS); that is an absence, not an empty chart. */
+  const withheld = answered !== null && !isAvailable(answered.availability) ? answered.availability : null;
+  const ready = withheld === null ? answered : null;
   const empty = ready !== null && ready.values.length === 0;
 
-  const body = !available && link !== undefined ? (
-    <Withheld availability={link.availability} what={kind} />
-  ) : link === undefined ? (
-    <Withheld availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={kind} />
+  const body = link === undefined ? (
+    <AbsenceNote availability={{ state: "NOT_PUBLISHED", reason_code: null }} what={kind} />
+  ) : !available ? (
+    <AbsenceNote availability={link.availability} extra={absentExtra} />
+  ) : withheld !== null ? (
+    <AbsenceNote availability={withheld} extra={absentExtra} />
   ) : empty ? (
     /* FE-S04-10: an answered series with no points is not a blank body. */
     <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-series-empty>
@@ -1381,7 +1586,53 @@ function SeriesPanel({
     </p>
   );
 
-  const state = empty ? "empty" : (slot?.state ?? (available ? "idle" : "absent"));
+  const state = withheld !== null ? "absent" : empty ? "empty" : (slot?.state ?? (available ? "idle" : "absent"));
+  return { body, state, ready };
+}
+
+/**
+ * The frame every lazy series panel keeps, whatever the answer turns out to be.
+ *
+ * Two HiFi grammars: a `figure` (EChart n in gold, Newsreader title, 16px
+ * padding, raised) for the charts, and a `card` (uppercase label header, 14px
+ * padding, flat) for the monthly strip.
+ */
+function SeriesPanel({
+  kind,
+  title,
+  chartNo,
+  variant = "figure",
+  footnote,
+  footer,
+  link,
+  slot,
+  onNeeded,
+  emptyReason,
+  absentExtra,
+  className,
+  style,
+  children,
+}: {
+  kind: SeriesKind;
+  title: string;
+  /** The HiFi's `EChart n` label; figures only. */
+  chartNo?: number;
+  variant?: "figure" | "card";
+  footnote?: ReactNode;
+  /** The provenance row under the chart (HiFi EChart 1). */
+  footer?: (series: EvidenceSeries | null) => ReactNode;
+  link: EvidenceHub["series"][number] | undefined;
+  slot: SeriesSlot | undefined;
+  onNeeded: (kind: SeriesKind) => void;
+  /** What an answered series with no points means, in this panel's words. */
+  emptyReason: string;
+  /** A published fact that makes an absence concrete (e.g. the sample size). */
+  absentExtra?: ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  children: (series: EvidenceSeries) => ReactNode;
+}) {
+  const { body, state, ready } = useSeriesBody({ kind, link, slot, onNeeded, emptyReason, absentExtra, children });
 
   if (variant === "card") {
     return (
@@ -1472,6 +1723,150 @@ function ProvenanceRow({ hub, series, kind }: { hub: EvidenceHub; series: Eviden
   );
 }
 
+/**
+ * One half of the rolling figure: its own label, its own lazy series, and — as
+ * an empty shell of the chart's height (DQ-14) — its typed reason when the
+ * source did not publish it.
+ */
+function RollingHalf({
+  kind,
+  label,
+  link,
+  slot,
+  onNeeded,
+  absentExtra,
+  children,
+}: {
+  kind: SeriesKind;
+  label: string;
+  link: EvidenceHub["series"][number] | undefined;
+  slot: SeriesSlot | undefined;
+  onNeeded: (kind: SeriesKind) => void;
+  absentExtra?: ReactNode;
+  children: (series: EvidenceSeries) => ReactNode;
+}) {
+  const { body, state, ready } = useSeriesBody({
+    kind,
+    link,
+    slot,
+    onNeeded,
+    emptyReason: "the source published this window with no points, so no line is drawn.",
+    absentExtra,
+    children,
+  });
+  const drawn = ready !== null && ready.values.length > 0;
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5" data-series-panel={kind} data-series-state={state}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="mono text-[10.5px]" style={{ color: "var(--ink-soft)" }}>
+          {label}
+        </span>
+        {ready ? <SamplingLine series={ready} /> : null}
+      </div>
+      {drawn ? (
+        body
+      ) : (
+        <div
+          className="flex items-center rounded-[4px] border border-dashed px-3"
+          style={{ minHeight: 230, borderColor: "var(--line)", background: "var(--paper-sunken)" }}
+          data-rolling-shell={kind}
+        >
+          {body}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * HiFi EChart 3 — "Strategy behavior": rolling Sharpe and rolling beta. The
+ * HiFi draws both on one chart with two axes; spec 04 §2.6 draws them as two
+ * small charts side by side, which is what this does, so each keeps its own
+ * reason when absent. Beta needs a benchmark series, and none is published
+ * (the contract types `ROLLING_BETA_63` as an absence until one is).
+ */
+function RollingFigure({
+  hub,
+  series,
+  ensureSeries,
+}: {
+  hub: EvidenceHub;
+  series: ReadonlyMap<SeriesKind, SeriesSlot>;
+  ensureSeries: (kind: SeriesKind) => void;
+}) {
+  const linkFor = (kind: SeriesKind) => hub.series.find((entry) => entry.kind === kind);
+  const sample = hub.oos_performance?.return_sample ?? null;
+  const sharpeLink = linkFor("ROLLING_SHARPE_63");
+  /* DQ-15: the concrete count is printed only when the Hub published it. */
+  const belowWindow =
+    sharpeLink?.availability.reason_code === "P13_OOS_DAILY_RETURNS_BELOW_ROLLING_WINDOW" &&
+    sample !== null &&
+    sample.kind === "DAILY_UTC_EQUITY" ? (
+      <span className="mono" data-return-sample={sample.observation_count}>
+        ({sample.observation_count} daily UTC returns published; the window needs 63.)
+      </span>
+    ) : undefined;
+  return (
+    <figure className="m-0 min-w-0 flex-[1.4_1_520px] rounded-[8px] border p-4" data-rolling-figure style={PANEL_STYLE}>
+      <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
+        <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
+          EChart 3
+        </span>
+        <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+          Strategy behavior — rolling 63-day Sharpe · rolling beta vs benchmark
+        </span>
+      </figcaption>
+      <div className="grid gap-3.5 sm:grid-cols-2">
+        <RollingHalf
+          kind="ROLLING_SHARPE_63"
+          label="rolling 63-day Sharpe"
+          link={sharpeLink}
+          slot={series.get("ROLLING_SHARPE_63")}
+          onNeeded={ensureSeries}
+          absentExtra={belowWindow}
+        >
+          {(loaded) => (
+            <ChartFrame height={230}>
+              <RollingSharpeChart series={loaded} />
+            </ChartFrame>
+          )}
+        </RollingHalf>
+        <RollingHalf
+          kind="ROLLING_BETA_63"
+          label="rolling 63-day beta vs benchmark"
+          link={linkFor("ROLLING_BETA_63")}
+          slot={series.get("ROLLING_BETA_63")}
+          onNeeded={ensureSeries}
+        >
+          {/* The contract never gives this series values; if it ever did, this
+              screen has no beta chart yet and says so instead of drawing one. */}
+          {(loaded) => (
+            <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
+              {formatMetric(loaded.values.length, "count")} points published; this screen draws no beta chart yet.
+            </p>
+          )}
+        </RollingHalf>
+      </div>
+      <div className="mt-2 text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
+        Read from the Evidence Hub&apos;s rolling series — QuantBT&apos;s rolling Sharpe over 63 daily OOS returns;
+        the UI computes nothing. A Sharpe that only lives in one regime, or a beta drifting toward 1, is a behavior
+        finding the headline tiles cannot show.
+      </div>
+    </figure>
+  );
+}
+
+/**
+ * HiFi monthly cell tint: depth follows magnitude, `0.15 + 9·|r|`, capped at
+ * 0.85. A colour depth for reading, not a number on screen — the value printed
+ * under the cell is the server's own, rounded by DQ-08.
+ */
+export function monthTint(returnFraction: string): number {
+  const magnitude = Math.abs(Number(returnFraction));
+  if (!Number.isFinite(magnitude)) return 0.15;
+  return Math.min(0.85, 0.15 + magnitude * 9);
+}
+
 function MonthlyHeat({ series }: { series: EvidenceSeries }) {
   const points = series.values as MonthlyReturnPoint[];
   return (
@@ -1480,19 +1875,20 @@ function MonthlyHeat({ series }: { series: EvidenceSeries }) {
         const negative = point.return_fraction.trim().startsWith("-");
         const month = new Date(point.month_start_utc_ms).toISOString().slice(0, 7);
         const shown = formatMetric(point.return_fraction, "fraction");
-        /* HiFi tick: `3/24` — month without its zero, two-digit year. */
+        /* HiFi tick: `7/26` — month without its zero, two-digit year. */
         const tick = `${month.slice(5).replace(/^0/, "")}/${month.slice(2, 4)}`;
         return (
           <span
             key={point.month_start_utc_ms}
-            className="flex min-w-0 flex-1 flex-col gap-0.5"
+            className="flex min-w-0 max-w-[56px] flex-1 flex-col gap-0.5"
             data-month={month}
             data-exact={point.return_fraction}
-            title={`${month} · ${shown ?? point.return_fraction}`}
+            title={`${month} · ${shown ?? point.return_fraction} · exact ${point.return_fraction}`}
           >
             <span
               className="block h-[26px] rounded-[3px]"
-              style={{ background: negative ? "var(--bad-bg)" : "var(--good-bg)" }}
+              data-month-cell
+              style={{ background: negative ? "var(--bad)" : "var(--good)", opacity: monthTint(point.return_fraction) }}
             />
             <span
               className="mono text-center text-[8.5px]"
@@ -1515,30 +1911,16 @@ function MonthlyHeat({ series }: { series: EvidenceSeries }) {
 
 /**
  * Why a run has no retained passport, in words that name the cause
- * (FE-S04-09). The retention lane answers one refusal code for every case
- * (`CG-P13-09`), so the cause is read from the run's own status first and
- * then from the lane's state word in the server's sentence — never from a
- * profile the run was not checked against.
+ * (FE-S04-09). RF-05 CG-P13-09 made the cause typed: a `409` carries
+ * `details.lane_state`, so the sentence is chosen from that and never from the
+ * server's message text. Without a lane state (an older responder) the code
+ * alone decides, with one generic sentence.
  */
-function passportCause(refusal: EvidenceRefusal | null, status: string | null): { key: string; sentence: string } | null {
-  if (status !== null && ENDED_UNSEALED.has(status)) {
-    return {
-      key: "NOT_RETAINABLE",
-      sentence: `not retainable — this run is ${status} and never sealed an output, so there is nothing to retain.`,
-    };
+function passportCause(refusal: EvidenceRefusal): { key: string; sentence: string } | null {
+  if (refusal.laneState) {
+    return { key: refusal.laneState, sentence: CURRENT_SOURCE_LANE_COPY[refusal.laneState] };
   }
-  const detail = refusal?.detail ?? "";
-  if (/PENDING_RETENTION/.test(detail)) {
-    return {
-      key: "PENDING_RETENTION",
-      sentence:
-        "pending retention — the run's QuantBT output has not been sealed into retained storage yet. The passport appears once retention completes; nothing here is read from the live output instead.",
-    };
-  }
-  if (/NOT_RETAINED_LEGACY|legacy/i.test(detail)) {
-    return { key: "NOT_RETAINED_LEGACY", sentence: "not retained — this run predates retained storage." };
-  }
-  if (refusal?.code === "RESEARCH_CURRENT_SOURCE_CONFLICT") {
+  if (refusal.code === "RESEARCH_CURRENT_SOURCE_CONFLICT") {
     return {
       key: "NOT_RETAINED",
       sentence: "not retained yet — no sealed retained artifact exists for this run. Nothing here is read from the live output instead.",
@@ -1547,46 +1929,105 @@ function passportCause(refusal: EvidenceRefusal | null, status: string | null): 
   return null;
 }
 
+/** Profile words for the typed not-applicable answer. */
+const RUN_PROFILE_WORDS: Record<string, string> = {
+  P04_FIXED_QUALIFICATION: "the P04 fixed qualification",
+};
+
+/**
+ * RF-05 CG-P13-09: the lane answered `200` — this run's profile is one it
+ * never holds. That is a fact about the run, rendered as not applicable with
+ * its reason, and it is not an error: nothing is pending, nothing to retry.
+ */
+function PassportNotApplicable({ answer }: { answer: CurrentSourceNotApplicable }) {
+  const profile = RUN_PROFILE_WORDS[answer.lane.run_profile] ?? answer.lane.run_profile;
+  const sentence =
+    reasonCodeSentence(answer.lane.reason_code) ??
+    `This run is bound to ${profile}, which the retained lane never holds. Nothing is pending.`;
+  return (
+    <div className="flex flex-col gap-1.5" data-passport-not-applicable>
+      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-passport-cause="NOT_APPLICABLE">
+        <Withheld availability={{ state: "NOT_APPLICABLE", reason_code: answer.lane.reason_code }} /> — {sentence} The
+        lane retains <span className="mono">{answer.lane.retainable_profile_id}</span> runs only.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Pill data-run-profile={answer.lane.run_profile}>{answer.lane.run_profile}</Pill>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={answer.lane.run_adapter_contract_digest}>
+          adapter contract {shortDigest(answer.lane.run_adapter_contract_digest, 12)}…
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Whether the passport read is skipped, and why. With a lifecycle block, only
+ * an in-progress run is skipped — the lane would answer PENDING_SOURCE, and a
+ * 409 on every visit is noise. Every other run is asked, and the lane's typed
+ * answer is rendered. An older responder without the block keeps the RF-06
+ * wave-A rule (skip a run the Hub says never sealed).
+ */
+function passportSkipOf(hub: EvidenceHub): { key: string; sentence: string } | null {
+  const lifecycle = lifecycleOf(hub);
+  if (lifecycle !== null) {
+    return lifecycle.phase === "IN_PROGRESS"
+      ? { key: "PENDING_SOURCE", sentence: `${CURRENT_SOURCE_LANE_COPY.PENDING_SOURCE} It is read once the run seals.` }
+      : null;
+  }
+  const status = runStatus(hub);
+  if (status !== null && ENDED_UNSEALED.has(status)) {
+    return {
+      key: "NOT_RETAINABLE",
+      sentence: `not retainable — this run is ${status} and never sealed an output, so there is nothing to retain.`,
+    };
+  }
+  if (hub.readiness === "NOT_READY" || (status !== null && LIVE.has(status))) {
+    return {
+      key: "NOT_SEALED",
+      sentence: "not read — the hub has no sealed evidence for this run, so there is no retained output to ask for.",
+    };
+  }
+  return null;
+}
+
 function PassportPanel({
   slot,
   onNeeded,
-  status,
-  sealed,
+  skip,
 }: {
   slot: PassportSlot;
   onNeeded: () => void;
-  status: string | null;
-  /** False when the hub says the run has no sealed evidence — the read cannot apply. */
-  sealed: boolean;
+  /** A typed reason not to ask: the run is still in progress (nothing to retain yet). */
+  skip: { key: string; sentence: string } | null;
 }) {
-  /* FE-X-12: skip the read whose lane cannot apply. */
+  /* FE-X-12, now server-driven: the read is skipped only while the Hub's
+     lifecycle says the run is in progress; every other answer is the lane's. */
+  const asks = skip === null;
   useEffect(() => {
-    if (sealed) onNeeded();
-  }, [onNeeded, sealed]);
+    if (asks) onNeeded();
+  }, [asks, onNeeded]);
 
-  const skipped = !sealed ? passportCause(null, status) ?? {
-    key: "NOT_SEALED",
-    sentence: "not read — the hub has no sealed evidence for this run, so there is no retained output to ask for.",
-  } : null;
   const refusal = slot.state === "refused" ? slot.refusal : null;
-  const cause = skipped ?? (refusal ? passportCause(refusal, status) : null);
+  const cause = refusal ? passportCause(refusal) : null;
 
   return (
     <section
       className="flex flex-col gap-2 rounded-[8px] border p-4"
-      data-passport={skipped ? "skipped" : slot.state}
+      data-passport={skip ? "skipped" : slot.state}
       style={PANEL_STYLE}
     >
       <PanelLabel>retained source passport</PanelLabel>
 
-      {skipped ? (
-        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-passport-cause={skipped.key}>
-          {skipped.sentence}
+      {skip ? (
+        <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-passport-cause={skip.key}>
+          {skip.sentence}
         </p>
       ) : slot.state === "ready" ? (
         <RetainedPassport evidence={slot.evidence} />
+      ) : slot.state === "not-applicable" ? (
+        <PassportNotApplicable answer={slot.answer} />
       ) : refusal ? (
-        <div className="flex flex-col gap-1" data-passport-refusal>
+        <div className="flex flex-col gap-1" data-passport-refusal data-lane-state={refusal.laneState ?? undefined}>
           {cause ? (
             <>
               <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-passport-cause={cause.key}>
@@ -1775,6 +2216,51 @@ const VERDICT_COLUMNS: [string, "left" | "right"][] = [
  * The per-fold verdict table, kept at full shape (DQ-14): header, sort pills
  * and column heads, with one row saying the rows are not published.
  */
+/**
+ * The verdict header (spec 04 §2.6: "5 folds · 3 PASS · 1 WARN · 1 DRAG — OOS
+ * 1.186, decay +0.18 …"), in the slot the HiFi gives it — the per-fold
+ * table's header. Each clause is printed only from a published fact (DQ-15):
+ * the fold count is the observed set, the verdict tally is left to the
+ * header's "per-fold metrics · not published" note (CG-P13-08), and OOS
+ * Sharpe and decay are the registry-v3 values or their typed absences. The spec's closing clause about the claim is not asserted.
+ */
+function VerdictSummary({ hub }: { hub: EvidenceHub }) {
+  const folds = hub.core.fold_navigation;
+  const observed = folds && isAvailable(folds.availability) ? (folds.published_fold_count ?? folds.observed_folds.length) : null;
+  const metrics = hub.oos_performance?.metrics ?? [];
+  const sharpe = metrics.find((metric) => metric.key === "OOS_SHARPE");
+  const decay = metrics.find((metric) => metric.key === "OOS_SHARPE_DECAY");
+  const clause = (metric: PerformanceMetric | undefined, name: string, signed: boolean) => {
+    if (metric === undefined) return null;
+    if (isAvailable(metric.availability) && metric.value !== null) {
+      const shown = formatRatio(metric.value);
+      const sign = signed && !metric.value.trim().startsWith("-") ? "+" : "";
+      return (
+        <span data-verdict-fact={metric.key} data-exact={metric.value} title={metric.value}>
+          {name} {sign}
+          {shown ?? metric.value}
+        </span>
+      );
+    }
+    return (
+      <span data-verdict-fact={metric.key} data-withheld={metric.availability.state} title={reasonTitle(metric.availability)}>
+        {name} {WITHHELD_WORDS[metric.availability.state]}
+      </span>
+    );
+  };
+  const sharpeClause = clause(sharpe, "OOS Sharpe", false);
+  const decayClause = clause(decay, "decay", true);
+  return (
+    <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }} data-verdict-summary>
+      {observed !== null ? `${observed} observed ${observed === 1 ? "fold" : "folds"}` : "observed folds not published"}
+      {sharpeClause !== null || decayClause !== null ? " — " : null}
+      {sharpeClause}
+      {sharpeClause !== null && decayClause !== null ? ", " : null}
+      {decayClause}
+    </span>
+  );
+}
+
 function VerdictTable({ hub }: { hub: EvidenceHub }) {
   const perFold = hub.source_absences.per_fold_metrics;
   return (
@@ -1786,6 +2272,7 @@ function VerdictTable({ hub }: { hub: EvidenceHub }) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
         <span className="inline-flex flex-wrap items-center gap-2.5">
           <PanelLabel>per-fold verdict — which fold carries the run, which fold drags it</PanelLabel>
+          <VerdictSummary hub={hub} />
         </span>
         <span className="inline-flex flex-wrap items-center gap-1.5">
           {[
@@ -1840,7 +2327,7 @@ function VerdictTable({ hub }: { hub: EvidenceHub }) {
         className="border-t px-3 py-[7px] text-[10.5px] leading-[1.5]"
         style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
       >
-        The Evidence contract publishes run-final metrics and four named series; it publishes no per-fold metric,
+        The Evidence contract publishes run-final metrics and six named series; it publishes no per-fold metric,
         verdict or threshold rule. A verdict drawn here would be this screen&apos;s opinion, not the engine&apos;s.
       </div>
     </section>
@@ -1909,11 +2396,20 @@ function SummaryTab({
   ensurePassport: () => void;
 }) {
   const linkFor = (kind: SeriesKind) => hub.series.find((entry) => entry.kind === kind);
-  const ordered = METRIC_ORDER.map((key) => hub.metrics.find((metric) => metric.key === key)).filter(
-    (metric): metric is Metric => metric !== undefined,
-  );
-  const status = runStatus(hub);
-  const sealed = hub.readiness !== "NOT_READY" && !(status !== null && (ENDED_UNSEALED.has(status) || LIVE.has(status)));
+  const performance = hub.oos_performance ?? null;
+  /* One grid, HiFi row first. A registry-v3 key appears only when the Hub
+     sends the block (an older responder does not); a v2 key only when sent. */
+  const tiles = TILE_ORDER.flatMap((key): ReactNode[] => {
+    const v2 = hub.metrics.find((metric) => metric.key === key);
+    if (v2) return [<MetricTile key={key} metric={v2} />];
+    const v3 = performance?.metrics.find((metric) => metric.key === key);
+    return v3 && performance ? [<PerformanceTile key={key} metric={v3} block={performance} />] : [];
+  });
+  /* A v2 key this screen does not order still gets its tile, after the rest. */
+  const unordered = hub.metrics
+    .filter((metric) => !TILE_ORDER.includes(metric.key))
+    .map((metric) => <MetricTile key={metric.key} metric={metric} />);
+  const passportSkip = passportSkipOf(hub);
 
   return (
     <section data-screen-label="Summary" className="flex flex-col gap-3.5">
@@ -1925,9 +2421,8 @@ function SummaryTab({
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(max(150px, calc((100% - 32px) / 5)), 1fr))" }}
         data-metrics
       >
-        {ordered.map((metric) => (
-          <MetricTile key={metric.key} metric={metric} />
-        ))}
+        {tiles}
+        {unordered}
       </div>
 
       <SeriesPanel
@@ -1994,23 +2489,7 @@ function SummaryTab({
       <VerdictTable hub={hub} />
 
       <div className="flex flex-wrap gap-3.5">
-        <SeriesPanel
-          kind="ROLLING_RETURNS_20"
-          chartNo={3}
-          title="Strategy behavior — rolling 20-observation return"
-          className="flex-[1.4_1_520px]"
-          link={linkFor("ROLLING_RETURNS_20")}
-          slot={series.get("ROLLING_RETURNS_20")}
-          onNeeded={ensureSeries}
-          emptyReason="the source published no rolling window for this run, so no line is drawn."
-          footnote="Read from the Evidence Hub's published rolling series — the UI computes nothing."
-        >
-          {(loaded) => (
-            <ChartFrame height={230}>
-              <RollingChart series={loaded} />
-            </ChartFrame>
-          )}
-        </SeriesPanel>
+        <RollingFigure hub={hub} series={series} ensureSeries={ensureSeries} />
         <SeriesPanel
           kind="RETURN_DISTRIBUTION"
           chartNo={4}
@@ -2040,18 +2519,41 @@ function SummaryTab({
           slot={series.get("MONTHLY_RETURNS")}
           onNeeded={ensureSeries}
           emptyReason="no calendar month was published for this run — the source emitted 0 monthly values, so no cell is drawn. A month is never reduced from the equity series here."
-          footnote="One cell per calendar month, value in %. The reading to look for is clustering — three red cells in a row is a regime, not noise."
+          footnote="One cell per calendar month, value in %. Depth of tint = magnitude; the reading to look for is clustering — three red cells in a row is a regime, not noise."
         >
           {(loaded) => <MonthlyHeat series={loaded} />}
         </SeriesPanel>
         <BehaviorCard />
       </div>
 
+      {/*
+        * Not in the HiFi: before RF-05 this series stood in EChart 3's place.
+        * Rolling Sharpe now takes that place; the 20-observation return is
+        * still published evidence, so it keeps a figure of its own rather
+        * than disappearing from the screen.
+        */}
+      <SeriesPanel
+        kind="ROLLING_RETURNS_20"
+        chartNo={5}
+        title="Rolling 20-observation return — stitched OOS"
+        link={linkFor("ROLLING_RETURNS_20")}
+        slot={series.get("ROLLING_RETURNS_20")}
+        onNeeded={ensureSeries}
+        emptyReason="the source published no rolling window for this run, so no line is drawn."
+        footnote="Read from the Evidence Hub's published rolling series — the UI computes nothing."
+      >
+        {(loaded) => (
+          <ChartFrame height={230}>
+            <RollingChart series={loaded} />
+          </ChartFrame>
+        )}
+      </SeriesPanel>
+
       <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
         {SAMPLING_NOTE} Every series is capped at {SERIES_POINT_CAP} points by the contract.
       </p>
 
-      <PassportPanel slot={passport} onNeeded={ensurePassport} status={status} sealed={sealed} />
+      <PassportPanel slot={passport} onNeeded={ensurePassport} skip={passportSkip} />
     </section>
   );
 }
@@ -2415,51 +2917,144 @@ function RunNotFound({ runId }: { runId: string }) {
   );
 }
 
+/** The notice's one action, in the HiFi outline-button grammar. */
+function NoticeLink({ to, action, children }: { to: string; action: string; children: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      data-action={action}
+      className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase"
+      style={{ color: "var(--accent)", borderColor: "var(--accent)" }}
+    >
+      {children}
+    </Link>
+  );
+}
+
 /**
- * The run is not sealed. What that means depends on its durable status
- * (`run_identity.status`), so the sentence and the way out do too: a live run
- * is sent to its progress screen, a cancelled one is not told to watch it.
+ * What the reader is told about a run whose evidence is not sealed, and the
+ * one way out. RF-05 CG-P13-12 made this typed: `lifecycle.phase` says whether
+ * the run is still on its way (the only case that earns "watch progress"),
+ * and `terminal_outcome` how a finished one ended — so a cancelled run is
+ * never told to wait. An older responder without the block falls back to the
+ * durable status, as in RF-06 wave A.
  */
-function SealNotice({ runId, status }: { runId: string; status: string | null }) {
+export function sealNoticeOf(
+  runId: string,
+  hub: EvidenceHub,
+): { key: string; sentence: string; action: ReactNode } | null {
   const progress = `/research/quantbt/runs/${encodeURIComponent(runId)}/progress`;
-  let sentence: string;
-  let action: ReactNode = null;
-  if (status !== null && LIVE.has(status)) {
-    sentence = `This run is ${status} and has not sealed its evidence yet. The hub shows what the projection holds; the run's live state lives on its progress screen.`;
-    action = (
-      <Link to={progress} data-action="watch-progress" className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase" style={{ color: "var(--accent)", borderColor: "var(--accent)" }}>
-        watch progress →
-      </Link>
-    );
-  } else if (status === "CANCELLED") {
-    sentence =
-      "This run is CANCELLED. It stopped before sealing evidence, so no metric, series or claim was produced for it, and none will arrive.";
-    action = (
-      <Link to="/research/quantbt/runs" data-action="open-runs" className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase" style={{ color: "var(--accent)", borderColor: "var(--accent)" }}>
-        ← Run Library
-      </Link>
-    );
-  } else if (status === "FAILED" || status === "RECOVERY_REQUIRED") {
-    sentence = `This run is ${status}. It ended before sealing evidence; its progress record shows where it stopped.`;
-    action = (
-      <Link to={progress} data-action="open-progress-record" className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase" style={{ color: "var(--accent)", borderColor: "var(--accent)" }}>
-        open progress record →
-      </Link>
-    );
-  } else {
-    sentence =
-      "The evidence projection for this run is not ready (readiness NOT_READY). Nothing below is inferred from the run's status.";
+  const runs = "/research/quantbt/runs";
+  const watch = (
+    <NoticeLink to={progress} action="watch-progress">
+      watch progress →
+    </NoticeLink>
+  );
+  const record = (
+    <NoticeLink to={progress} action="open-progress-record">
+      open progress record →
+    </NoticeLink>
+  );
+  const library = (
+    <NoticeLink to={runs} action="open-runs">
+      ← Run Library
+    </NoticeLink>
+  );
+  const notReady =
+    "The evidence projection for this run is not ready (readiness NOT_READY). Nothing below is inferred from the run's status.";
+
+  const lifecycle = lifecycleOf(hub);
+  if (lifecycle !== null) {
+    const word = lifecycle.display_status ?? lifecycle.durable_status ?? "in progress";
+    if (lifecycle.phase === "IN_PROGRESS") {
+      return {
+        key: "IN_PROGRESS",
+        sentence: `This run is ${word} and has not sealed its evidence yet. The hub shows what the projection holds; the run's live state lives on its progress screen.`,
+        action: watch,
+      };
+    }
+    if (hub.readiness !== "NOT_READY") return null;
+    if (lifecycle.phase === "TERMINAL" && lifecycle.terminal_outcome === "CANCELLED") {
+      return {
+        key: "CANCELLED",
+        sentence:
+          "This run was cancelled. It stopped before sealing evidence, so no metric, series or claim was produced for it, and none will arrive.",
+        action: library,
+      };
+    }
+    if (lifecycle.phase === "TERMINAL" && lifecycle.terminal_outcome === "FAILED") {
+      return {
+        key: "FAILED",
+        sentence: "This run failed before sealing evidence, so none will arrive. Its progress record shows where it stopped.",
+        action: record,
+      };
+    }
+    if (lifecycle.phase === "TERMINAL" && lifecycle.terminal_outcome === "COMPLETED") {
+      return {
+        key: "COMPLETED",
+        sentence: `This run completed, but its evidence projection is not published (${reasonTitle(hub.availability)}).`,
+        action: null,
+      };
+    }
+    if (lifecycle.phase === "ATTENTION_REQUIRED") {
+      return {
+        key: "ATTENTION_REQUIRED",
+        sentence: `This run needs attention (${word}). It stopped before sealing evidence; its progress record shows where.`,
+        action: record,
+      };
+    }
+    if (lifecycle.phase === "LEGACY") {
+      return {
+        key: "LEGACY",
+        sentence: "This is a legacy run recorded as metadata only. It has no sealed evidence to show, and none will arrive.",
+        action: library,
+      };
+    }
+    return { key: "NOT_PUBLISHED", sentence: notReady, action: null };
   }
+
+  if (hub.readiness !== "NOT_READY") return null;
+  const status = runStatus(hub);
+  if (status !== null && LIVE.has(status)) {
+    return {
+      key: status,
+      sentence: `This run is ${status} and has not sealed its evidence yet. The hub shows what the projection holds; the run's live state lives on its progress screen.`,
+      action: watch,
+    };
+  }
+  if (status === "CANCELLED") {
+    return {
+      key: status,
+      sentence:
+        "This run is CANCELLED. It stopped before sealing evidence, so no metric, series or claim was produced for it, and none will arrive.",
+      action: library,
+    };
+  }
+  if (status === "FAILED" || status === "RECOVERY_REQUIRED") {
+    return {
+      key: status,
+      sentence: `This run is ${status}. It ended before sealing evidence; its progress record shows where it stopped.`,
+      action: record,
+    };
+  }
+  return { key: "UNKNOWN", sentence: notReady, action: null };
+}
+
+function SealNotice({ runId, hub }: { runId: string; hub: EvidenceHub }) {
+  const notice = sealNoticeOf(runId, hub);
+  if (notice === null) return null;
+  const lifecycle = lifecycleOf(hub);
   return (
     <section
       className="flex flex-wrap items-center gap-3 rounded-[8px] border px-4 py-2.5"
-      data-not-ready={status ?? "UNKNOWN"}
+      data-not-ready={notice.key}
+      data-phase={lifecycle?.phase ?? undefined}
       style={{ borderColor: "var(--role-holdout)", background: "var(--paper-sunken)" }}
     >
       <p className="text-[11.5px]" style={{ color: "var(--ink-soft)" }}>
-        {sentence}
+        {notice.sentence}
       </p>
-      {action}
+      {notice.action}
     </section>
   );
 }
@@ -2581,8 +3176,6 @@ export function EvidenceFlow({
 
   if (notFound) return <RunNotFound runId={runId} />;
 
-  const status = runStatus(hub);
-
   return (
     <div
       className="mx-auto flex w-full max-w-[1440px] flex-col gap-3.5 px-7 pb-16 pt-5"
@@ -2601,7 +3194,7 @@ export function EvidenceFlow({
 
       <ClaimPassport hub={hub} state={state} onJump={onStage} />
 
-      {hub && hub.readiness === "NOT_READY" ? <SealNotice runId={runId} status={status} /> : null}
+      {hub ? <SealNotice runId={runId} hub={hub} /> : null}
 
       {/* Tabs and cursor: one card, sticky (HiFi). */}
       <div

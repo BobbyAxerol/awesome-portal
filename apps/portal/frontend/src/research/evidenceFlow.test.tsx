@@ -40,6 +40,7 @@ import {
 import { useEvidence } from "./useEvidence";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
+import { ResearchLaneConflictError } from "./researchRefusal";
 
 afterEach(cleanup);
 
@@ -720,6 +721,8 @@ describe("P13-T08 — the surface requests only the four named operations", () =
       "MONTHLY_RETURNS",
       "ROLLING_RETURNS_20",
       "RETURN_DISTRIBUTION",
+      "ROLLING_SHARPE_63",
+      "ROLLING_BETA_63",
     ]);
   });
 
@@ -1110,13 +1113,16 @@ describe("RF-06 FE-S04-08 — the Atlas link carries this run's cell", () => {
 });
 
 describe("RF-06 FE-S04-09 — the passport refusal names the real cause", () => {
+  /* RF-05 CG-P13-09: the cause is the 409's typed `details.lane_state`, not
+     the message text (see evidenceFlow.rf05.test.tsx for the text-only case). */
   const pending = () =>
     toEvidenceRefusal(
-      new PortalApiError(
+      new ResearchLaneConflictError(
         "Current QuantBT output is PENDING_RETENTION; a sealed retained artifact is required.",
         409,
         "RESEARCH_CURRENT_SOURCE_CONFLICT",
         "req_1",
+        "PENDING_RETENTION",
       ),
     );
 
@@ -1124,7 +1130,7 @@ describe("RF-06 FE-S04-09 — the passport refusal names the real cause", () => 
     const { container } = view({ passport: { state: "refused", refusal: pending() } });
     const panel = container.querySelector("[data-passport-refusal]");
     expect(panel?.querySelector("[data-passport-cause]")?.getAttribute("data-passport-cause")).toBe("PENDING_RETENTION");
-    expect(panel?.textContent).toContain("pending retention");
+    expect(panel?.textContent).toContain("has not been retained yet");
     expect(panel?.textContent).not.toMatch(/Advanced-WFO profile|admits one/);
   });
 

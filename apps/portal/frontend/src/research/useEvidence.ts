@@ -8,7 +8,7 @@
  *    It is immutable at a revision, so a reread sends `If-None-Match` and a
  *    `304` keeps the copy in hand instead of repainting it.
  *  - **A series is read when a panel asks for it, once.** The handoff forbids
- *    eager-fetching all four: a reader who never opens the distribution panel
+ *    eager-fetching all six: a reader who never opens the distribution panel
  *    never pays for it, and a chart nobody is looking at cannot be the reason
  *    a page is slow.
  *  - **A series at another revision is discarded.** It is not drawn, not
@@ -17,8 +17,10 @@
  *    mismatch that survives a reread is shown as a panel state rather than
  *    retried in a loop.
  *  - **The retained passport is a second, optional read.** RS-02 admits one
- *    Advanced-WFO profile and refuses every other; its refusal is kept as the
- *    panel's typed state, never raised to the route.
+ *    Advanced-WFO profile. For a run bound to any other profile it answers a
+ *    typed `200` not-applicable (RF-05 CG-P13-09) — an answer, not an error —
+ *    and a `409` names its lane state; both stay the panel's typed state and
+ *    never reach the route.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,9 +28,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   NOT_MODIFIED,
   evidenceApi,
+  isLaneNotApplicable,
   seriesMatchesHub,
   toEvidenceRefusal,
   type CurrentSourceEvidence,
+  type CurrentSourceNotApplicable,
   type EvidenceHub,
   type EvidenceRefusal,
   type EvidenceSeries,
@@ -49,6 +53,8 @@ export type PassportSlot =
   | { state: "idle" }
   | { state: "loading" }
   | { state: "ready"; evidence: CurrentSourceEvidence }
+  /** RF-05: the lane can never hold this run; nothing is pending. */
+  | { state: "not-applicable"; answer: CurrentSourceNotApplicable }
   | { state: "refused"; refusal: EvidenceRefusal };
 
 export interface EvidenceController {
@@ -164,7 +170,9 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
       .currentSource(runId, { workspaceId })
       .then((answer) => {
         if (answer === NOT_MODIFIED) return;
-        setPassport({ state: "ready", evidence: answer });
+        setPassport(
+          isLaneNotApplicable(answer) ? { state: "not-applicable", answer } : { state: "ready", evidence: answer },
+        );
       })
       .catch((error: unknown) => {
         /* RS-02 admits one profile and refuses the rest. That refusal is a
