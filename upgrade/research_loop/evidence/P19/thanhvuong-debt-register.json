@@ -1,0 +1,188 @@
+{
+  "phase": "P19",
+  "owner": "Thanhvuong (Claude, frontend)",
+  "date": "2026-09-24",
+  "tree": "76be6f8bab72b591db82780aa8fcb432078acb1d",
+  "head": "74f262005e9cf292294c5acc2b1a955d5731a9ab",
+  "open_implementation_debt": [],
+  "open_debt": [],
+  "resolved_in_phase": [
+    {
+      "id": "S10-660-HORIZONTAL-OVERFLOW (B1)",
+      "what": "under @media (max-width:900px) .ln-grid switched to flex-direction column but kept align-items flex-start, so .ln-left took its max-content width (2657 px in a 596 px container); page overflow 2029 px (full), 7665 px (120 attempts), 87 px (partial); band chips no longer scrolled inside their band",
+      "found_by": "package B browser receipt on 30dcbdfc (p19-full-660.png 79d352d49adcd900, OVERFLOW-CULPRIT in probe.log); jsdom cannot see it",
+      "status": "RESOLVED",
+      "evidence": "74f26200; LineageDetail.tsx line 217 .ln-grid { flex-direction: column; align-items: stretch; }; round 2 119/119, overflow 0 at 660 for every state, chips scroll inside the band (sw 2523 > cw 462, docScrollX 0)"
+    },
+    {
+      "id": "S10-ROOT-COPY-DUPLICATE (N1)",
+      "what": "a root attempt's detail printed 'root — no parent' twice (parent line and ROOT diff chip)",
+      "found_by": "package B (p19-full-dark-1280.png)",
+      "status": "RESOLVED",
+      "evidence": "74f26200; LineageDetail.tsx line 455 ROOT diff now reads 'diff vs parent — none, this attempt is a root'; round 2 root detail count 1 at 660 and 1280 (p19-v2-root-detail-*.png)"
+    },
+    {
+      "id": "S10-TOKENS-RAW-COLOR",
+      "what": "color-mix() and a hex value in a comment tripped tokens.test.ts in package A's pre-commit",
+      "found_by": "package A pre-commit",
+      "status": "RESOLVED",
+      "evidence": "fixed before commit 0ec4b6af: var(--accent-2-soft) and prose; tokens.test.ts green in the full run"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "S10-AXE",
+      "what": "axe scan (spec 10 T12)",
+      "reason": "axe-core not in lock file",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION"
+    },
+    {
+      "id": "S10-REAL-API",
+      "what": "REAL_API_E2E_RECEIPT",
+      "reason": "CONTROL_API_FEATURE_RESEARCH_LINEAGE=false; no source pick fact",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_FEATURE_FLAG"
+    },
+    {
+      "id": "S10-VISUAL-DECISION",
+      "what": "VISUAL_DECISION_REQUIRED: storied/probe (toggle -> expand-all), rc/cert/OOS/decay, chip scroll vs wrap, dot rail vs DFS indent, band order server vs ACTIVE-first",
+      "reason": "hi-fi != spec != contract",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION"
+    },
+    {
+      "id": "S10-LOCAL-DUPLICATION",
+      "what": "local Absent component (LineageDetail.tsx 379) duplicates AbsentPanel/Withheld from EvidenceFlow.tsx; local short() digest helper (338) with no shared util",
+      "reason": "consolidation belongs to RF-04 frontend normalisation, not S10",
+      "owner": "Thanhvuong",
+      "state": "DEFERRED_TO_RF-04"
+    }
+  ],
+  "backend_requests": [
+    {
+      "id": "CG-P19-01",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-01",
+      "what": "canonical P19 fixture (healthy/partial/empty/bounded + Problem)"
+    },
+    {
+      "id": "CG-P19-02",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-02",
+      "what": "ETag/304 on GET lineage or confirmation it is intentionally absent"
+    },
+    {
+      "id": "CG-P19-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-03",
+      "what": "storied/probe classification by the server, or confirmation there is none"
+    },
+    {
+      "id": "CG-P19-04",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-04",
+      "what": "release-candidate ref on attempt/pick (rc chip, 'gate R1 next')"
+    },
+    {
+      "id": "CG-P19-05",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-05",
+      "what": "cert/OOS/decay mini-metrics or a typed link to the report contract"
+    },
+    {
+      "id": "CG-P19-06",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-06",
+      "what": "exercised/untried (routes, modes, param ranges) on the version"
+    },
+    {
+      "id": "CG-P19-07",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-07",
+      "what": "outcome / why-superseded text"
+    },
+    {
+      "id": "CG-P19-08",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-08",
+      "what": "spec line / config label built server-side"
+    },
+    {
+      "id": "CG-P19-09",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-09",
+      "what": "paging/cursor beyond 128 and ordering: today the oldest 128 are returned and the newest are cut"
+    },
+    {
+      "id": "CG-P19-10",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-10",
+      "what": "DR-03 source-attested promotion pick: owner and roadmap (today NOT_PUBLISHED everywhere)"
+    },
+    {
+      "id": "CG-P19-11",
+      "owner": "Codex / Bobby",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-11",
+      "what": "F-04 badge policy 403 vs 404 (question only; frontend can change)"
+    },
+    {
+      "id": "CG-P19-12",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-12",
+      "what": "telemetry sink for spec 10 §12 events"
+    }
+  ],
+  "source_capability_blocked": [],
+  "source_capability_note": "P19 has no source-capability matrix; source absences (promotion pick, historical semantic diff, exposure fact, active version, bounded graph/child runs) are typed P19_* reason codes in the contract and render verbatim.",
+  "explicit_downstream_gates": [
+    {
+      "id": "P19-FE-DG-01",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "integrate the moved baseline 9060a7c4 (now 62d7d864): no S10 file differs between the two; 62d7d864 adds required fields to research-alpha-import.d.ts (affects AlphaImport, not S10); P17 FreezeDetail.tsx conflict remains; rerun all unit tests + 119 probes"
+    },
+    {
+      "id": "P19-FE-DG-02",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_FEATURE_FLAG",
+      "what": "REAL_API_E2E_RECEIPT for S10 once FEATURE_RESEARCH_LINEAGE (+ RUN_LIBRARY) is on in a preview lane; PUBLISHED pick branch needs CG-P19-10"
+    },
+    {
+      "id": "P19-FE-DG-03",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "axe (not in lock file); spec 10 T12"
+    },
+    {
+      "id": "P19-FE-DG-04",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "VISUAL_DECISION_REQUIRED (with CG-P19-03/04/05)"
+    },
+    {
+      "id": "P19-FE-DG-05",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_ROUTE",
+      "what": "'rc & publish' and the pick banner link become links once Screen 11 has a route"
+    },
+    {
+      "id": "P19-FE-DG-06",
+      "owner": "Thanhvuong",
+      "state": "BLOCKED_ON_BACKEND",
+      "what": "load canonical fixtures in S10-U* and the probe once CG-P19-01 lands; run spec T01/T10 against the 52-attempt fixture"
+    }
+  ]
+}

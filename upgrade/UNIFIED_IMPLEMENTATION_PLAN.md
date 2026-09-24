@@ -3623,7 +3623,7 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P16](#rl-p16) | P13–P15 | 07 | 08 | **AUDIT_REOPENED / 2026-09-22** — preserve [P16 partial binding verifier](./research_loop/evidence/P16/README.md); never relabel `PARTIAL_MATCH` as artifact integrity PASS. A10: expected-byte verification, historical bindings and supported diagnostic/reuse paths remain implementation work. P05/P11 foundations already exist. S07 FE/product receipt pending; no runtime activation. · FE_FREEZE_MOUNTED / Claude — Screen 07 mounted at `/research/quantbt/runs/:runId/freeze`, on the shared cursor. Typed only from `@portal/contracts-research-freeze` and `@portal/contracts-research-current-source`: composition +683, tests +600, client +215, container +140, route +34, probe +126, fixtures +143 — `git diff --stat` 12 files, +2138/−2. `P16-T01…T07` 23 tests pass; tsc 0, full frontend suite **168 files / 0 failures**, build 0, product browser probe **67/67** (6 of them S07), 0 console output beyond the deliberately refused retained read, 0 px overflow at 1280 and 660. **A match is only as wide as its published scope:** `PARTIAL` is rendered as `PORTAL_RETAINED_DIGEST_BINDING_ONLY` with that scope in words beside every mark, both digests are printed per check, the unattested source artifact bytes sit in the same panel as the matches, and a browser test asserts the screen never says chain intact. **`BLOCKED` empties the frozen table on purpose** and names the mismatched check with both digests. **One POST, from one click:** it carries the same-origin CSRF proof, cannot overlap itself, and rereads the snapshot only after the typed result — unit and browser tests both assert that mount, a fold-carrying hash, a fold change and repeated renders send nothing. What-if offers no control at all (`may_submit`/`may_create` pinned false), and `NOT_ASSERTED` ordering draws no verdict. Five hi-fi elements are deliberately not built, each recorded with its contract reason. **Fixture receipts only** — no backend called, no baseline re-recorded, no threshold widened; Astra items stay open for backend. **One request to Codex:** `CG-P16-01` — carry `verification_scope` on `FreezeVerification` itself so a re-read's result carries its own qualification. [Claude P16 composition](./research_loop/evidence/P16/frontend-composition-claude.md) · **Re-audited 2026-09-23 (`bdeb0268`)** — published facts the first pass rendered nowhere are now on screen (provenance on all three deep dives; S05 `result_exposure_state`; S06/S07 `readiness`; S07 window `evaluation_state`, frozen `bound_state` and the verification's `freeze_revision`), spec copy corrected to verbatim where it is true and deliberately withheld where it is not, and the hard-refresh / keyboard-name / ETag checks each handoff requires are written. Suite 2920 passed, probe 74 passed. Open requests: [consolidated list](./research_loop/evidence/CODEX_REQUESTS_FROM_CLAUDE_P13_P16.md). · **`CG-P14-01`/`CG-P15-01`/`CG-P16-01` closed by Codex at `ccc4c6e5` and consumed at `c650307d`** — UTC axis ticks under the presentation ruling (with the required 1280→660 resize acceptance: labels thin, geometry, endpoints, legend and request count byte-identical), the candidate-selection metric rendered as the typed absence it is with the installed catalogue default asserted absent, and the verify result carrying its own `verification_scope` instead of the snapshot's. Suite 2928 passed, probe 77 passed. · **P16 frontend review correction pending Codex source-capability disposition** — Thanhvuong S07 correction at `65a8acc5` (4 frontend files, +581/−96; product-route browser 82/82 on the workspace's own preview, fixture-backed); receipt, test/hook evidence and every P16-B request with `CG-P16-02`/`CG-P16-03` unchanged: [Thanhvuong review addendum](./research_loop/evidence/P16/thanhvuong-review-addendum.md). P16-B remains `SOURCE_CAPABILITY_BLOCKED`, not done. |
 | [P17](#rl-p17) | P05,P11,P13,P16 | 08 | 09 | **AUDIT_REOPENED / 2026-09-22** — preserve [P17 retrospective-equity compatibility](./research_loop/evidence/P17/README.md). A05/A06/A08: revision coherence, ETag/cursor/deep-link and read-cost fixes; A09: retain/map actual route-supported outputs rather than waiting for an engine upgrade. No invented fills or execution state. Full route/FE acceptance remains open. Thanhvuong S08 frontend at `002e4098` (12 frontend files, +2182/−10; pushed to `primus-origin`, no PR; product-route browser 104/104 on the workspace own preview, API stubbed, 1280/660): [receipt](./research_loop/evidence/P17/thanhvuong-frontend-receipt.md), [backend requests](./research_loop/evidence/P17/thanhvuong-backend-requests.md) `CG-P17-01…03` OPEN, [test results](./research_loop/evidence/P17/thanhvuong-test-results.json), [implementation note](#p17-thanhvuong-frontend-implementation-note--screen-08-2026-09-23). P17-B remains `SOURCE_CAPABILITY_BLOCKED`, not done. |
 | [P18](#rl-p18) | P13–P17 | 09 | 09 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S09_BROWSER_PRINT_PENDING_CLAUDE** — RS-01…03 acceptance is consumed only as the persisted P13–P17 input boundary. Immutable report + bounded JSON/CSV export are complete and proven in [P18 evidence](./research_loop/evidence/P18/README.md); no source rerun/artifact/file access, runtime activation or product receipt is claimed. Claude owns [S09 consumer/print](./research_loop/evidence/P18/frontend-handoff-claude.md). Thanhvuong S09 frontend at `548e8d29` (13 frontend files, +3004/−14; pushed to `primus-origin`, no PR; product-route browser 128/128 at `93a435bb` and on head `47165016` in the 2026-09-23 independent audit, then 129/129 at `29c28f4a` and 131/131 at `548e8d29`, workspace own preview, API stubbed, 1280/660, print Letter/A4; the two audit layout defects are fixed in `29c28f4a` — sr-only equity table no longer adds blank scroll/pages (Letter PDF 7 → 5 pages), table cells keep words whole; `548e8d29` makes the sheet follow the hi-fi geometry block by block, remaining deviations are only missing fields `CG-P18-01…07` (PDF Letter 5 → 4, A4 5 → 3) — `open_debt` empty): [receipt](./research_loop/evidence/P18/thanhvuong-frontend-receipt.md), [backend requests](./research_loop/evidence/P18/thanhvuong-backend-requests.md) `CG-P18-01…11` OPEN, [test results](./research_loop/evidence/P18/thanhvuong-test-results.json), [implementation note](#p18-thanhvuong-frontend-implementation-note--screen-09-2026-09-23). |
-| [P19](#rl-p19) | P07,P10,P12,P15 | 10 | 10 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S10_BROWSER_HIFI_PENDING_CLAUDE** — bounded persisted lineage, source-attested promotion-fact lane and generated client are proven in [P19 evidence](./research_loop/evidence/P19/README.md). No source-pick heuristic, UI receipt, deployment or product activation is claimed. Claude owns [Screen 10 handoff](./research_loop/evidence/P19/frontend-handoff-claude.md). |
+| [P19](#rl-p19) | P07,P10,P12,P15 | 10 | 10 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S10_BROWSER_HIFI_PENDING_CLAUDE** — bounded persisted lineage, source-attested promotion-fact lane and generated client are proven in [P19 evidence](./research_loop/evidence/P19/README.md). No source-pick heuristic, UI receipt, deployment or product activation is claimed. Claude owns [Screen 10 handoff](./research_loop/evidence/P19/frontend-handoff-claude.md). Thanhvuong S10 frontend at `74f26200` (10 frontend files, +2806/−1; pushed to `primus-origin`, no PR; product-route browser 107/117 at `30dcbdfc` — the 10 failures were one 660 layout bug B1, fixed in `74f26200` — then the full Research suite 119/119 at `74f26200`, workspace own preview, API stubbed, 1280/660/dark, overflow 0 at 660, 120-attempt windowed tree, GATES RESET 0 requests; unit 3057 pass · 1 skip, S10 42/42; `open_debt` empty; not `VERIFIED`, feature-dark, no `REAL_API_E2E_RECEIPT`): [receipt](./research_loop/evidence/P19/thanhvuong-frontend-receipt.md), [backend requests](./research_loop/evidence/P19/thanhvuong-backend-requests.md) `CG-P19-01…12` OPEN, [test results](./research_loop/evidence/P19/thanhvuong-test-results.json), [debt register](./research_loop/evidence/P19/thanhvuong-debt-register.json), [rollback](./research_loop/evidence/P19/thanhvuong-rollback.md), [implementation note](#p19-thanhvuong-frontend-implementation-note--screen-10-2026-09-24). |
 | [P20](#rl-p20) | P13,P15,P18,P19 | 13 | 10 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S13_BROWSER_HIFI_PENDING_CLAUDE** — [P20 evidence](./research_loop/evidence/P20/README.md) proves the bounded same-origin reader, exact raw-return correlation and operational cache. It does not claim a source rerun, product route receipt, deployment or activation. Claude owns [Screen 13 typed consumer/browser handoff](./research_loop/evidence/P20/frontend-handoff-claude.md). |
 | [P21](#rl-p21) | P07,P16–P19 | 11 composer | 11 | **BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK · S11_PRODUCT_BROWSER_PENDING_CLAUDE** — Codex / [P21 packet](./research_loop/evidence/P21/README.md): same-origin bounded 17-field/12-item composer, actor-local declaration CAS, immutable Portal-local seal/pins and separate `NOT_DELIVERED`/`NOT_APPROVED` lifecycle are proven. No P22 publication, Approval mirror, Execution/QuantBT/source-byte call, deployment or browser acceptance is claimed. Claude owns [the S11 handoff](./research_loop/evidence/P21/frontend-handoff-claude.md). |
 | [P22](#rl-p22) | P02,P10,P21 | 11 handoff | 11 | PLANNED / unassigned / — |
@@ -5214,6 +5214,88 @@ refine §8) ·
 - **Integrity and boundedness:** Migration `1723680000053` adds only lookup indexes and immutable `research.attempt_promotion_pick_facts_v1`. A pick must bind the exact same-version attempt/run and Portal runtime has `SELECT`, not write, authority. Read-time validation rejects duplicate/cyclic/cross-Alpha graph corruption. Attempts are capped at 128 with explicit `P19_BOUNDED_GRAPH_LIMIT_REACHED`; child runs are independently capped at 32 per attempt with `P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT`, never silently omitted.
 - **Truthful current-source gaps:** An absent DR03/source pick remains `NOT_PUBLISHED` (`P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK`), not newest/ACTIVE/metric/Sharpe selection. Missing persisted P08/P10 manifests remain a typed semantic-diff absence, and no Clone/Reproduce/Upgrade action is fabricated while current P10 only supports `NEW`. These are source facts/UI consumer work, not a backend waiver.
 - **Evidence/handoff:** focused service/controller/contract tests, disposable PostgreSQL migration/immutability/runtime-privilege/bound proof, production-source compile, generated contract/snapshot and capability ledger are recorded in [P19 evidence](./research_loop/evidence/P19/README.md). Claude must consume [the P19 handoff](./research_loop/evidence/P19/frontend-handoff-claude.md) and return the rich S10 browser/HiFi receipt before P19 is product-close; no UI/browser/deployment acceptance is claimed by this backend delivery.
+
+#### P19 Thanhvuong frontend implementation note — Screen 10 (2026-09-24)
+
+**Trạng thái:** `P19_A_S10_FRONTEND_COMPOSED · PRODUCT_ROUTE_BROWSER_RECEIPT · NOT_VERIFIED`.
+
+- Nhánh `feat/thanhvuong/research-p17-p21`, base `f37b3b75`.
+- Code: `3a11bfd3` client + hook · `0ec4b6af` màn hình, route, link · `30dcbdfc` unit `S10-U01…U42` · `74f26200` sửa B1 660.
+- 10 file frontend, +2806/−1 (riêng `74f26200` +2/−2).
+- Không đổi contract, backend hay runtime. Backend P19 vẫn `FEATURE_DARK` (`CONTROL_API_FEATURE_RESEARCH_LINEAGE=false`).
+- Checkpoint Astra "do not enter P18 yet" chưa gỡ, còn board ghi `S10_BROWSER_HIFI_PENDING_CLAUDE`. Xử lý như P17/P18: làm frontend consumer trên contract đã publish, không claim `VERIFIED`; Bobby quyết.
+
+**Đọc chi tiết (packet):**
+- [receipt](./research_loop/evidence/P19/thanhvuong-frontend-receipt.md): bảng đã đọc file@commit (nhánh, `9060a7c4`, `62d7d864`); Guide `P19-T01…T13` phần FE cover được; route/link; mapping hi-fi → component → field → state → assertion; spec T01–T12; so hi-fi §5.4; discrepancy §7; Reuse report §11.
+- [backend requests](./research_loop/evidence/P19/thanhvuong-backend-requests.md)
+- [test results](./research_loop/evidence/P19/thanhvuong-test-results.json)
+- [debt register](./research_loop/evidence/P19/thanhvuong-debt-register.json)
+- [rollback](./research_loop/evidence/P19/thanhvuong-rollback.md)
+
+- **Đã giao:**
+  - Route `/research/quantbt/alphas/:alphaId/lineage` (đặt trước `alphas/:alphaId/:version`), deep link `?av=` / `?attempt=`.
+  - Một operation generated `researchAttemptLineageGetV1`: 1 GET, `limit` 128, không poll. Không có ETag vì contract không khai.
+  - Layout 2 cột theo hi-fi (571/381 px ở 1280, hi-fi 581/387), xếp 1 cột ở 660. 9 `data-panel`: header · root card với 1 band mỗi version, chip cuộn trong band, promotion pick PUBLISHED/NOT_PUBLISHED · filter + counter "showing n of m attempts · total" · cây DFS theo `parent_attempt_id` (ảo hoá khi > 40 node) · selected · diff · promotion rule · rules · counts.
+  - Diff chip in nguyên từ `semantic_diff.changes`. GATES RESET là span trơ: 0 request, 0 state.
+  - ABANDONED/FAILED giữ lại kèm reason.
+  - `technical_retry_count` không cộng vào attempt.
+  - Child runs theo `relationship_kind`; bounded coverage được disclosure.
+  - Exposure NOT_PUBLISHED không in 0.
+  - Ô hi-fi không có field ghi "not a field of the lineage contract".
+  - Link vào từ Run Library (nhóm alpha) và Alpha Import (S14); link ra evidence/report/New Run/Alpha Import; Screen 11 vẫn refused.
+- **Evidence:**
+  - Head `74f26200` (chạy lại 2026-09-24): tsc PASS, build PASS; vitest 171 file · 3057 pass · 1 skip, pass ngay lần đầu; S10 42/42 (kèm boundary 56/56).
+  - Browser vòng 1 trên `30dcbdfc`: toàn Research 107/117. 1280 và dark đạt mọi gate. 10 fail đều do B1 ở 660.
+  - Browser vòng 2 trên `74f26200`: **119/119**. Overflow 0 ở 660 cho mọi state; chip cuộn trong band (sw 2523 > cw 462, `docScrollX` 0).
+  - Virtual 120 attempt: DOM 23–30 node; chip sâu được chọn và cuộn tới, focus giữ.
+  - Filter × counter khớp số row DOM. `?av=` giữ qua reload và back/forward. Keyboard Tab/Enter.
+  - Refusal: 400 terminal / 401 denied / 403 denied / 404 empty / 503 unavailable + retry, cùng câu F-04, `leak=false`.
+  - Console S10 0, mutation 0.
+  - Chạy trên preview riêng 4417 với API stub theo shape `lineage.service.ts`.
+  - Chưa có: `REAL_API_E2E_RECEIPT`, axe.
+- **Lỗi tìm ra và đã sửa trong phase (`open_debt` rỗng):**
+  - **B1:** cột trái giãn max-content ở ≤ 900 px, trang tràn 2 029 / 7 665 / 87 px. Sửa ở `74f26200` bằng `align-items: stretch`.
+  - **N1:** root in "root — no parent" hai lần. Sửa ở `74f26200`.
+  - `tokens.test.ts` bắt raw color; sửa trước commit.
+- **Discrepancy (hi-fi ≠ spec ≠ contract):**
+  - storied/probe, rc chip, cert/OOS/decay, exercised/untried, outcome/why superseded, spec line: contract không có.
+  - Không có ETag.
+  - 4 filter hi-fi so với 6 nhóm state của contract.
+  - Band theo thứ tự server (`registered_at ASC`), không ACTIVE-first như spec T01.
+  - Chip cuộn thay vì wrap; thụt DFS thay vì rail chấm.
+  - Promotion rule viết lại, vì câu hi-fi "Only the ACTIVE attempt promotes" mâu thuẫn contract.
+  - Toggle probe thay bằng expand-all.
+  - 404 → empty theo tiền lệ S09, nhưng badge 403 ≠ 404.
+  - `> 128` chỉ trả 128 attempt **cũ nhất**; attempt mới nhất bị cắt.
+  - Hi-fi không responsive ở 660: cột trái còn 8 px.
+- **Backend request (@codex), kiểm lại 2026-09-24 trên `9060a7c4` và `62d7d864`, đều OPEN:**
+  - `CG-P19-01` fixture canonical (healthy/partial/empty/bounded)
+  - `02` ETag/304
+  - `03` storied/probe
+  - `04` rc ref
+  - `05` cert/OOS/decay
+  - `06` exercised/untried
+  - `07` outcome/why superseded
+  - `08` spec line
+  - `09` cursor/thứ tự > 128
+  - `10` lộ trình promotion pick DR-03
+  - `11` badge 403/404 (chỉ hỏi)
+  - `12` telemetry §12
+- **Bobby quyết:**
+  - Tích hợp baseline `9060a7c4 → 62d7d864`. Không file S10 nào trùng. `62d7d864` thêm field required vào `research-alpha-import.d.ts`, ảnh hưởng AlphaImport. Xung đột `FreezeDetail.tsx` của P17 vẫn còn.
+  - `VISUAL_DECISION_REQUIRED`: storied/probe, rc/cert, chip wrap/cuộn, rail chấm, thứ tự band.
+  - Badge 403/404.
+  - axe.
+  - Poll legacy `/api/runs` 4 s.
+  - Flake `PortalShell` / `tradeReplayEvents`.
+- **Exit gate còn lại cho P19-A frontend:**
+  - Tích hợp baseline, rồi chạy lại toàn bộ unit và 119 probe.
+  - `REAL_API_E2E_RECEIPT` S10 khi cờ lineage và run library bật trên một lane preview. Nhánh pick PUBLISHED cần `CG-P19-10` (exit gate DR-03).
+  - axe (spec T12); telemetry §12; spec T01/T02/T07/T08 theo nghĩa hi-fi khi có field.
+  - `CG-P19-*` được trả lời hoặc ghi là vắng thật; quyết định của Bobby ở trên.
+- **Rollback/handoff:**
+  - Revert 4 commit theo thứ tự ngược, theo [rollback](./research_loop/evidence/P19/thanhvuong-rollback.md). Backend vẫn `FEATURE_RESEARCH_LINEAGE=false`.
+  - Handoff cho P20 (compare): S10 không publish fact mới; so sánh same-alpha đọc từ contract của P20. Link "lineage →" có thể dùng làm lối vào.
 
 <a id="rl-p20"></a>
 ### P20 — Compare modes và derived correlation

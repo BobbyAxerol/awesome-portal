@@ -1,0 +1,362 @@
+# P19 — Thanhvuong frontend receipt (Screen 10 Attempt Lineage)
+
+**Trạng thái:** `P19-A S10 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · đã push lên primus-origin, chưa PR`.
+
+- Backend P19 vẫn là `BACKEND_AND_TYPED_CONTRACT_COMPLETE · FEATURE_DARK` ([P19 README](./README.md)): `CONTROL_API_FEATURE_RESEARCH_LINEAGE=false`, cần `RUN_LIBRARY`.
+- Browser receipt chỉ dùng **API stub** dựng theo shape `lineage.contract.ts` / `lineage.service.ts`, vì chưa có fixture canonical (`CG-P19-01`).
+- Receipt này chỉ ghi thay đổi frontend và evidence. Nó không đổi rule, contract hay phase gate, và **không** gọi P19 là `VERIFIED`.
+
+## 0. Packet và những gì đã đọc
+
+**Packet P19 của Thanhvuong** (năm file cạnh file này):
+
+| File | Nội dung |
+|---|---|
+| `thanhvuong-frontend-receipt.md` | Receipt này: đã đọc, git, file, route/link, mapping hi-fi, so hi-fi, evidence, discrepancy, Reuse report, kết luận |
+| [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md) | `CG-P19-01…12` theo template CLAUDE.md §5, kèm locator/actual/expected/đề xuất/test/fallback; việc Bobby quyết B1–B6; kiểm lại ngày 2026-09-24 |
+| [thanhvuong-test-results.json](./thanhvuong-test-results.json) | Evidence máy đọc được: tree SHA, từng gate (lệnh, exit, số đếm), `not_run`, SHA-256 ảnh/log (không commit) |
+| [thanhvuong-debt-register.json](./thanhvuong-debt-register.json) | `open_debt` rỗng (B1 đóng ở `74f26200`); nợ đã đóng, deferred, request mở, downstream gate |
+| [thanhvuong-rollback.md](./thanhvuong-rollback.md) | Revert từng commit, mới nhất trước |
+
+Dòng trạng thái ở Unified §13 và implementation note dưới
+[`#rl-p19`](../../../UNIFIED_IMPLEMENTATION_PLAN.md#rl-p19) đều trỏ về packet này.
+
+**Đã đọc (`READ`), theo CLAUDE.md §7.9.** Commit ghi trong bảng là commit cuối chạm file đó (`git log -1 --format=%h <ref> -- <file>`).
+- Baseline `primus-origin/docs/research-loop-plan` lúc lập plan là `9060a7c4`.
+- Lúc đóng packet (sau `git fetch`, 2026-09-24), baseline là `62d7d864` (1 commit: `feat(research): strengthen RF-03 source-backed preflight and progress`).
+- Commit đó **không chạm** file lineage nào (contract, service, evidence P19), cũng không chạm file frontend S10 nào. Nó chỉ đổi `research-alpha-import.d.ts` và Unified (vùng RF-03).
+
+| File | Nhánh (`74f26200`) | Baseline `9060a7c4` | `62d7d864` |
+|---|---|---|---|
+| `CLAUDE.md` (§3, §5, §7.9, §7.10, §8) | `19310912` | `8ca7bc11` | `8ca7bc11` |
+| `upgrade/research_loop/CLAUDE-FOR-thanhvuong.md` | `30fb9f21` | `30fb9f21` | `30fb9f21` |
+| `upgrade/research_loop/THANHVUONG_P17_P21_FRONTEND_HANDOFF.md` | `30fb9f21` | `51b11247` | `51b11247` |
+| `upgrade/UNIFIED_IMPLEMENTATION_PLAN.md` (§13, `#rl-p19`, note P18 làm mẫu) | `f37b3b75` | `9060a7c4` | `62d7d864` (chỉ thêm 2 đoạn RF-03/P08, không đổi `#rl-p19`) |
+| `evidence/P19/frontend-handoff-claude.md` | `5e844a90` | `5e844a90` | `5e844a90` |
+| `evidence/P19/README.md`, `evidence/P19/phase-report.md` | `5e844a90` | `5e844a90` | `5e844a90` |
+| `evidence/P18/thanhvuong-*` (packet mẫu, 5 file) | `f37b3b75` | — (chưa có trên baseline) | — |
+| `RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md` §P19 (`P19-T01…T13`, `V11-P19-DR/BR/GX`) | `a402f7b9` | `a402f7b9` | `a402f7b9` |
+| `release-v1.1/docs/screens/10_attempt_lineage.md` (T01–T12, §3 data contract, §4 pitfalls, §9 CSS ledger, §11, §12 telemetry, §13 reviewer) | `a402f7b9` | `a402f7b9` | `a402f7b9` |
+| `release-v1.1/QuantBT 10 Attempt Lineage.dc.html`, mở trong browser ở 1280 và 660 | `a402f7b9` | `a402f7b9` | `a402f7b9` |
+| `packages/contracts/openapi/research-attempt-lineage.openapi.json` + `generated/research-attempt-lineage.d.ts` | `5e844a90` | `5e844a90` | `5e844a90` |
+| `apps/control-api/src/research/lineage.{contract,controller,error,repository,service}.ts` (chỉ đọc, để lấy key, reason code và thứ tự thật cho stub) | `5e844a90` | `5e844a90` | `5e844a90` |
+
+Contract đã tiêu thụ: `research-attempt-lineage.openapi.json` `version 1.0.0`, SHA-256 `9bdfae71d1b850c6…`; `generated/research-attempt-lineage.d.ts` SHA-256 `c6e8b25f01f61b59…`.
+- Chỉ có một operation, `researchAttemptLineageGetV1`.
+- Không có ETag/304. Không có fixture lineage ở cả ba ref: `git ls-tree -r <ref> --name-only | grep -i "fixtures.*lineage"` exit 1 ở `HEAD`, `9060a7c4`, `62d7d864`.
+
+### 0.1 Guide `P19-T01…T13` + `V11-P19-*` — frontend cover được gì
+
+| ID | Nội dung Guide | Frontend hôm nay |
+|---|---|---|
+| T01 / T09 | Retry không tăng attempt count; draft/retry không phình total | **Có (hiển thị):** `technical_retry_count` in ở dạng "technical retries: N (not attempts)", không cộng vào counter hay counts (U15; browser G2: retries 4, attempts 16). Việc đếm là của backend |
+| T02 / T03 | Seed/space mới → attempt mới; code đổi → AlphaVersion mới | Backend. Frontend in `intent_kind`, `space_signature`, band theo `alpha.versions[]`, và chip GATES RESET khi `kind=ALPHA_VERSION` / `gates_reset` (U04, U09) |
+| T04 / T06 | Cycle, cross-workspace, concurrent | Backend (phase-report PASS). Frontend chỉ lồng node dưới parent **có trong tập trả về**; `OUTSIDE_RETURNED_GRAPH` → depth 0 kèm chip (U06, U07, U39) |
+| T05 | Abandoned/failed vẫn còn | **Có:** ABANDONED opacity .72 + reason; FAILED + reason; không lọc bỏ (U12, U13; browser G2) |
+| T07 / T11 | Không chọn theo Sharpe; pick vắng không bị thay | **Có:** pick chỉ từ `promotion_pick` PUBLISHED; NOT_PUBLISHED → PICK_ABSENT + reason; không sort/compare (U16, U17, U42 grep) |
+| T08 | Toàn bộ test S10 | Một phần: xem §5.3 (spec T01–T12). T02/T04/T07/T08 theo nghĩa hi-fi không làm được vì contract thiếu field; T12 (axe) chưa chạy |
+| T10 | Quan hệ audit/reproduction không suy từ thời gian/tên | **Có:** `child_runs[].relationship_kind` in nguyên văn; `child_runs_coverage=PARTIAL` → chip bounded (U14; browser G2 `AUDIT_OF_SELECTION`, `REPRODUCTION_OF_RUN`) |
+| T12 | GATES RESET không gây mutation | **Có:** chip là `span`, không handler, không role; click → 0 request, selection/URL không đổi (U10; browser G7: request trước = sau, 0 POST/PUT/PATCH/DELETE cả phiên) |
+| T13 | Exposure không mất; không leak | **Có (hiển thị):** exposure RECORDED → count/roles/latest; NOT_PUBLISHED → typed absence, không in 0 (U18; browser G3 `fakeZero=false`). 403/404 cùng câu trung tính, không in prose server (U31; browser G10 `leak=false`) |
+| `V11-P19-DR` | Delta/dữ liệu | **PENDING**: lane này không có compute hay data thật |
+| `V11-P19-BR` | Browser/visual/action | Một phần: `PRODUCT_ROUTE_BROWSER_RECEIPT` với API stub, trên preview riêng (không phải dev host) |
+| `V11-P19-GX` | Protected hash, no-debt, report | Một phần: hook chạy tay, `git diff --check`, `open_debt` rỗng. Chưa có rebuild/deploy receipt |
+
+`READ` khác `IMPLEMENTED` khác `VERIFIED` (A4.1).
+
+## 1. Git: base, head, branch
+
+| Mục | Giá trị |
+|---|---|
+| Branch | `feat/thanhvuong/research-p17-p21`; remote duy nhất là `primus-origin` |
+| Base của P19 | `f37b3b757f55b5bd35f8d0623d6ea90188da5cba` (docs P18 sau vòng geometry hi-fi) |
+| Commit code P19 | `3a11bfd32b25e885563c9b2bb84c3b313575b692` feat(research): S10 lineage client + hook<br>`0ec4b6afc9b5d6d1b74a13fc0a90d110e4c5c8e8` feat(research): S10 Attempt Lineage screen, route and links<br>`30dcbdfc8655d0a81f606fb9065ac87e14a44287` test(research): S10 unit lane S10-U01..S10-U42<br>`74f262005e9cf292294c5acc2b1a955d5731a9ab` fix(research): S10 stacks columns without horizontal overflow at 660 |
+| Ghi chú lịch sử | Báo cáo gói A ghi commit 2–3 là `2e757c49` / `4dec3257`. Hai commit này được amend local **trước khi push**, thành `0ec4b6af` / `30dcbdfc`. Trailer của cả 4 commit nay đều là `Claude Fable 5.1`; numstat giống báo cáo gói A. Không merge, rebase hay force |
+| Docs commit | Commit docs này: packet 5 file + dòng §13 + implementation note `#rl-p19` |
+| Tác giả | `Vuong <thanhvuong11052003@gmail.com>`, trailer `Co-Authored-By: Claude Fable 5.1` |
+| Baseline | `docs/research-loop-plan`: `9060a7c4` lúc lập plan, `62d7d864` lúc đóng packet. **Chưa merge/rebase**; Bobby quyết cách tích hợp (§6, B1) |
+| Push / PR | Push `f37b3b75..<commit docs này>` lên `primus-origin` (pre-push chạy tay exit 0), không force. Chưa có PR |
+
+## 2. File đã sửa (`git diff --numstat f37b3b75 74f26200`)
+
+| File | + | − | Mục đích |
+|---|---:|---:|---|
+| `src/research/lineageClient.ts` | 217 | 0 | Một operation đúng tên generated: `get(alphaId, {workspaceId, limit, signal})` qua `call<T>` / `PortalApiError`.<br>`toLineageRefusal`: 400 terminal, 401 denied, 403 denied, 404 empty; 403 và 404 dùng chung một câu trung tính F-04; 503 unavailable + retry.<br>`lineageState` suy từ `coverage` / `child_runs_coverage` / `source_absences` |
+| `src/research/useLineage.ts` | 88 | 0 | Một lần đọc khi mount, `limit` = 128 (trần contract). Không poll, không refetch on focus, không ETag. Retry là một lần đọc mới |
+| `src/research/LineageDetail.tsx` | 1460 | 0 | Màn S10 với 9 `data-panel` (`LINEAGE_PANELS`, dòng 74).<br>Tree DFS được ảo hoá khi > 40 node (`VIRTUAL_THRESHOLD`, dòng 89; hàng 34 px, detail 208 px).<br>GATES RESET là `span` trơ. `PROMOTION_RULE` viết lại theo contract (dòng 61).<br>CSS scoped; media 900 px `align-items: stretch` (dòng 217, sửa B1).<br>Diff của root ghi "diff vs parent — none, this attempt is a root" (dòng 455) |
+| `src/research/LineageRoute.tsx` | 50 | 0 | Route, đọc `?av=` một lần, ghi `?attempt=` bằng `replace` |
+| `src/research/lineageDetail.test.tsx` | 958 | 0 | 42 test `S10-U01…U42` |
+| `src/research/RunLibrary.tsx` | 14 | 0 | Link "lineage →" ở header nhóm alpha. Chỉ hiện ở chế độ group-by-alpha (`RunGroup.alphaId` tuỳ chọn). Chỉ thêm, không đổi logic P12 |
+| `src/research/AlphaImport.tsx` | 10 | 0 | Panel đăng ký S14: "lineage →" tới `registration.alpha_id` |
+| `src/features/quantbt/QuantBTModule.tsx` | 5 | 1 | Mount `alphas/:alphaId/lineage` **trước** `alphas/:alphaId/:version`; thêm lineage vào regex `onReferenceRoute` (dòng 273) để caption module không bị lặp |
+| `src/research/researchBoundary.test.ts` | 1 | 0 | Thêm `lineageClient.ts` vào allowlist network |
+| `tsconfig.json` | 3 | 0 | Alias `@portal/contracts-research-attempt-lineage` |
+| **Tổng** | **2806** | **1** | 10 file, tất cả thuộc `apps/portal/frontend/**`. Riêng `74f26200`: `LineageDetail.tsx` +2/−2 |
+
+Không đụng backend, `packages/contracts/**`, OpenAPI, fixture canonical, migration, `apps/portal/strategy/**`, control-plane, deploy, `package.json` hay lock file.
+
+Không có DTO tự định nghĩa, không parse prose lỗi, không tính số. Số được in bằng `String(n)`: không `toFixed`, `Intl` hay `toLocaleString`, và không `sort(`. U42 kiểm các điều này bằng grep.
+
+## 3. Route và link
+
+| Hướng | Từ → tới | Điều kiện |
+|---|---|---|
+| Canonical | `/research/quantbt/alphas/{alphaId}/lineage[?av=&attempt=]` | `?av=` đọc lúc mount (mở band, cuộn bằng `scrollTop` của container, không dùng `scrollIntoView`); `?attempt=` ghi bằng `history.replace` |
+| Vào | Run Library header nhóm alpha → S10 | Chỉ khi group-by-alpha (`?group=1`), N3 |
+| Vào | Alpha Import (S14), panel đăng ký → S10 | Khi có `registration.alpha_id` (U41: router link trong router, anchor same-origin ngoài router) |
+| Vào (chưa nối) | `features/imports/AlphaVersionDetail.tsx` | Feature imports legacy, namespace khác (`api.alphaVersion`); không nối |
+| Ra | breadcrumb "Runs" / "runs →" | `/research/quantbt/runs?group=1&alpha={alphaId}` |
+| Ra | "new run →" / "declare at New Run →" | `/research/quantbt/runs/new` |
+| Ra | "import new version →" (chỉ band ACTIVE) | `/research/quantbt/alpha-import` |
+| Ra | "open evidence →" / "run report" / run link trên node | `/research/quantbt/runs/{primary_run.run_id}/evidence` và `/report`; chỉ khi có `run_id` (U23) |
+| Ra (refused) | "rc & publish" | `span` có `title` "Screen 11 Release Candidate & Publish has no published route yet." |
+
+## 4. Mapping hi-fi → component / `data-panel` → field contract → state / absence → assertion
+
+Viewport 1280 và 660. "Unit" là vitest `S10-Uxx`; "Browser" là probe gate `Gx` trên product route (§5.2). Dòng RECEIPT nào cũng `noise=0 mutations=0`, và sau `74f26200` thì `overflow=0` ở mọi state.
+
+| Phần tử hi-fi | Component / `data-panel` | Field contract | Typed state / absence | Unit | Browser |
+|---|---|---|---|---|---|
+| Breadcrumb + title + subtitle | `header` | `alpha.alpha_id`, `counts.total_attempts`, `counts.returned_attempts`, `read_authority`, `as_of_utc_ms` | Mọi state, kể cả loading/refusal (chỉ còn header · notice · rules) | U01, U02 | G1 loading: `digits_in_screen=0`, panels `header,notice,rules` |
+| Root card: alpha name/id + links runs/new run/rc & publish | `root` | `alpha.name`, `alpha.alpha_id`, `active_version_state` / `active_version_availability` | `P19_ALPHA_HAS_NO_ACTIVE_VERSION` → absence | U02, U26 | G11 href đúng; rc là SPAN |
+| Version band (`av · state` + digest + entry + outcome) | `root` `[data-band]` | `alpha.versions[]`: `label`, `lifecycle_state`, `code_digest` (rút gọn, bản đầy đủ ở `title`), `entrypoint`, `registered_at_utc_ms` | Outcome không có field → NOT_IN_CONTRACT | U04, U27 | G2 bands `SUPERSEDED, ACTIVE` (thứ tự server) |
+| Hàng attempt chips | `[data-band-chips]` button `aria-label="attempt {id} — {state}"` | `attempts[]` lọc theo `alpha_version_id`, thứ tự server | Chip ẩn bởi filter → chọn chip sẽ nới filter (U21) | U05, U21, U37 | G2/v2: chip cuộn **trong band** (660: sw 2523 > cw 462, `docScrollX=0`); G9 Tab → Enter chọn, focus giữ |
+| Hàng exercised / untried | `root` | — | NOT_IN_CONTRACT; untried vẫn giữ link "declare at New Run →" | U27 | G2 |
+| PROMOTION PICK banner | `root` (mỗi band) | `alpha.versions[].promotion_pick`: attempt, run, `source_contract_rev`, `source_digest`, `source_as_of` | PUBLISHED; NOT_PUBLISHED → PICK_ABSENT + `P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK` | U16, U17 | G2 2× PUBLISHED; G3 2× NOT_PUBLISHED + reason |
+| Filter row + counter + toggle probes | `filters` | `attempts[].state` (6 nhóm hiển thị: draft / in-flight / ready / failed / abandoned / cancelled), `counts.returned_attempts`, `counts.total_attempts` | Counter luôn "showing {n} of {returned} attempts · {total} total"; nhóm rỗng có câu riêng. Toggle probes → expand-all (không có storied/probe) | U20 | G6 mọi chip đơn và tổ hợp: counter = số row DOM = kỳ vọng |
+| Cây attempt (card storied / probe row) | `tree` | `attempt_id`, `state`, `intent_kind`, `alpha_version_label`, `created_at_utc_ms`, `primary_run.effective_spec_digest`, `primary_run.run_id`, `parent_attempt_id`, `parent_state` | DFS chỉ lồng dưới parent có trong tập trả về; `OUTSIDE_RETURNED_GRAPH` → chip | U06, U07, U39 | G2 depth 0–3, 16 node; G3 chip parent outside |
+| Diff chips (`k: from → to`) | `tree` detail `DiffChips` | `semantic_diff.changes[path, kind, before, after]`, `semantic_diff.state` | ROOT → "diff vs parent — none, this attempt is a root"; NOT_PUBLISHED / PARENT_OUTSIDE → reason; null → "not set" | U08, U11 | G3 `P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE_FOR_PARENT_DIFF`, `P19_PARENT_OUTSIDE_BOUNDED_GRAPH`; v2 root detail 1 dòng "root — no parent" |
+| Chip đỏ GATES RESET | `[data-gates=true]` span | `kind=ALPHA_VERSION` / `semantic_diff.gates_reset` | Chỉ disclosure; không handler | U09, U10, U11 | G7 click ở tree và diff panel: request trước = sau, selection/URL giữ |
+| ABANDONED card | `tree` `.ln-abandoned` | `state`, `reason` | opacity .72; null → "abandoned — reason not published" | U12, U13 | G2 opacity `0.72` + reason |
+| Metrics mini (cert · OOS · decay) | `selected` | — | NOT_IN_CONTRACT | U27 | G2 |
+| Child runs | `tree` detail | `child_runs[].relationship_kind/run_kind/run_id/state`, `child_runs_coverage` | PARTIAL → "+ more child runs not returned (P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT)" | U14 | G2/G3 |
+| Technical retries | `tree` detail, `selected` | `primary_run.technical_retry_count` | Phụ, "(not attempts)" | U15 | G2 retries 4 ≠ attempts 16 |
+| Exposure | `tree` detail, `selected` | `exposure.state/count/roles/latest` | NOT_PUBLISHED → `P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT`, không in count | U18 | G3 `fakeZero=false` |
+| "selected attempt — att_NN" | `selected` | parent, intent, version, `primary_run.{run_id,state,engine_release_id,effective_spec_digest,dataset_binding_digest}`, `space_signature`, created/updated | Draft không có run → không có link evidence, ghi rõ run facts vắng | U22, U23 | G11 evidence/report href |
+| "diff vs parent — config keys only" | `diff` | `semantic_diff` (gates row đứng đầu) | ROOT / NOT_PUBLISHED / PARENT_OUTSIDE notes | U22 | G7 |
+| Promotion rule | `promotion-rule` | — | Viết lại theo contract (D12) | U26 | — |
+| Rules footer | `rules` | — (spec §2.5 verbatim) | Mọi state | U26 | Còn ở mọi refusal |
+| (không có trong hi-fi) Counts strip | `counts` | 8 số `counts.*`, `coverage.state/reason_code/oldest_returned_created_at_utc_ms`, `as_of` | PARTIAL + `P19_BOUNDED_GRAPH_LIMIT_REACHED` | U19, U26 | G2 strip 16/16/1/15/4/1/2/4; G3 "4 of 140" |
+| Deep link `?av=` / `?attempt=` | `LineageRoute` | — | — | U24, U25, U36 | G8: band ở đầu scroller (8 px), reload giống hệt, back/forward giữ `?attempt=` |
+| Virtual 100 attempt | `tree[data-virtual=true]` | — | > 40 node | U34–U38 | G5 120 attempt: DOM 23 → 30 sau cuộn, chip sâu (depth 38) chọn + cuộn tới, focus giữ, expand-all không chồng hàng |
+| Screen state / refusal | `notice`, `ResearchPanel` | HTTP status + `error.code` `RESEARCH_LINEAGE_*` | loading, available, partial, empty, denied, unavailable, terminal | U29–U33, U40 | G10 400 terminal / 401 denied / 403 denied / 404 empty / 503 unavailable + retry; `leak=false`; có request id |
+
+## 5. Evidence
+
+### 5.1 Test lanes (`apps/portal/frontend`, Node v20.20.2)
+
+| Lane | Lệnh | Exit | Kết quả |
+|---|---|---:|---|
+| **Typecheck (head `74f26200`)** | `npx tsc -b --noEmit` | 0 | PASS (`c-tsc.log` `bcb1a61798abda8d`) |
+| **Build (head `74f26200`)** | `npm run build` | 0 | PASS, chỉ có cảnh báo chunk cũ (`c-build.log` `021b3474db7e908e`) |
+| **Unit toàn bộ (head `74f26200`)** | `npx vitest run` | 0 | **171 file · 3057 pass · 1 skip** (3058), 78.8 s, pass ngay lần đầu, không flake (`c-vitest-full.log` `83143952a88afb60`) |
+| **Unit S10 + boundary (head `74f26200`)** | `npx vitest run src/research/lineageDetail.test.tsx src/research/researchBoundary.test.ts` | 0 | **56/56** = S10 42 (`S10-U01…U42`) + boundary 14 (`c-vitest-s10.log` `75843967beed8882`) |
+| Unit toàn bộ (gói A, `4dec3257` = `30dcbdfc` trước amend) | `npx vitest run` | 0 | 171 file · 3057 pass · 1 skip. Trước commit 2 có một lần pre-commit fail do flake `tradeReplayEvents.test.tsx` (pass khi chạy riêng và ở lần full cuối) |
+| **Browser vòng 1 (tree `30dcbdfc`)** | `RESEARCH_SHOT_DIR=~/tv-shots/p19/all npx playwright test -c .tv-probe.config.ts --workers=1` | 1 | **107/117** (fixtures 8/8, product 74/74, tvp19 25/35). Cả 10 fail đều là overflow / chip-scroll @660 do B1. 1280 + dark: mọi gate G1–G13 PASS (`full-suite.log` `29bcfdacf8d47274`) |
+| **Browser vòng 2 (tree `74f26200`)** | `RESEARCH_SHOT_DIR=~/tv-shots/p19/v2 V2_SHOT_DIR=~/tv-shots/p19 npx playwright test -c .tv-probe.config.ts --workers=1` | 0 | **119/119** (fixtures 8, product 74, tvp19 37 = 36 + v2 receipt), 2.7 phút. Mọi RECEIPT @660 `overflow=0 noise=0 mutations=0` (`probe2.log` `5a2ec13c49955e3b`, `v2/probe.log` `a39e96e0d0cb9e74`). Lượt đầu 118/119: probe v2 bấm expand-all làm đóng detail đã mở; đã sửa probe, không sửa src (`probe2-run1.log` `0a4c04744f7e4560`) |
+
+Môi trường: Playwright 1.62.1, Chromium headless. Preview là `vite preview` riêng của workspace ở `127.0.0.1:4417`, dựng từ build trên, đã kill đúng các PID (kể cả tiến trình node con); `ss -ltnp | grep 4417` rỗng.
+- Không đụng preview 4317–4320 của Bobby.
+- Spec probe tạm và config tạm **không commit, đã xoá** trên server. Bản sao nằm ở scratchpad của phiên: vòng 1 `88055a1beaf0bfdf`, vòng 2 `9baaf8285db74f02`.
+
+### 5.2 Browser receipt — `PRODUCT_ROUTE_BROWSER_RECEIPT` (API stub)
+
+Route `/research/quantbt/alphas/alpha_momentum_btc/lineage`. Stub `page.route("**/api/v1/research/alphas/*/lineage*")` cộng với `stubPortalApi(page,"healthy")`.
+- Body dựng theo `research-attempt-lineage.d.ts`.
+- `counts`, `source_absences` và `coverage` suy theo đúng logic `lineage.service.ts` / `lineage.repository.ts` (submitted = state ≠ DRAFT; PARTIAL ⇔ `hasMore`).
+- Dark: `data-theme="operations"`.
+
+| Gate | Vòng 1 (`30dcbdfc`) | Vòng 2 (`74f26200`) |
+|---|---|---|
+| G1 loading | 1280 pass; 660 phần loading pass, sau khi resolve thì overflow (B1) | pass, overflow 0 |
+| G2 full COMPLETE + dark | 1280 pass (light + dark): 9 panel đúng thứ tự, 16 attempt, depth 0–3, strip đúng, GATES là span, opacity .72. 660 fail: overflow 2 029 px, chip không cuộn trong band | pass; 660 chip sw 2523 > cw 462, scrollLeft 2061, `docScrollX=0`; dark 660 scrollLeft 2029 |
+| G3 partial | 1280 pass; 660 overflow 87 px | pass (581 > 462, scrollLeft 119) |
+| G4 empty | pass cả hai width | pass |
+| G5 virtual 120 | 1280 pass; 660 ảo hoá pass, overflow 7 665 px | pass (chip 8159/7965/7192 > 462) |
+| G6 filter × counter | 1280 pass; 660 filter pass, overflow | pass |
+| G7 GATES RESET 0 request | pass về request; 660 overflow | pass |
+| G8 deep link `?av=` + reload + back/forward | pass về hành vi; 660 overflow | pass |
+| G9 keyboard | pass về phím; ring `solid 2px`, `:focus-visible`; 660 overflow | pass |
+| G10 refusal 400/401/403/404/503 | pass cả 10 | pass |
+| G11 link Run Library → S10 → evidence/report | pass về href; 660 overflow | pass |
+| G12 overflow / console | 1280 overflow 0; 660 chỉ 0 ở empty và refusal; console S10 0 | overflow 0 mọi state; console S10 0; mutation 0 |
+| G13 hi-fi | chụp + đo (§5.4) | chụp lại |
+| Root detail copy (N1) | "root — no parent" in hai lần liền nhau | 1 lần; dòng diff "diff vs parent — none, this attempt is a root" |
+
+Console: S10 có 0 error/warning. Các dòng được tách thành expected/foreign:
+- Mỗi test refusal có 1 dòng `Failed to load resource … status of N` (expected).
+- Test links có 1 dòng 404 của fixture evidence (`run_att_…/evidence` không có trong `stubPortalApi`), thuộc phase evidence (foreign).
+
+Screenshot và log **không commit** (A4.1). Chúng nằm ở `~/tv-shots/p19/`, `~/tv-shots/p19/all/` (vòng 1) và `~/tv-shots/p19/v2/` (vòng 2). SHA-256 16 hex đầu:
+
+| File | SHA-256 | File | SHA-256 |
+|---|---|---|---|
+| `p19-v2-full-1280.png` | `37ccd68beeeb0e0b` | `p19-v2-full-660.png` | `a60b51156e361091` |
+| `p19-v2-partial-660.png` | `75bdfe8acdb5de5c` | `p19-v2-virtual-120-660.png` | `1172fa82f848af0b` |
+| `p19-v2-root-detail-1280.png` | `d68e7a0f8f77c01b` | `p19-v2-root-detail-660.png` | `720ec1c6c4b9803b` |
+| `v2/p19-full-dark-1280.png` | `6f365a9e72ccbc3c` | `v2/p19-full-dark-660.png` | `2caf4a857bb049f7` |
+| `v2/p19-virtual-120-1280.png` | `ec086952be963023` | `v2/p19-partial-1280.png` | `03ba11caba54e0b8` |
+| `v2/p19-empty-1280.png` | `a406532c2715a5c5` | `v2/p19-empty-660.png` | `5d01349de900b316` |
+| `p19-full-660.png` (vòng 1, evidence B1) | `79d352d49adcd900` | `p19-fix-hypothesis-full-660.png` | `ba7e3be9780e0878` |
+| `p19-hifi-10-1280.png` | `1d0d841b5185c58b` | `p19-hifi-10-660.png` | `7556ab819fd35aca` |
+| `p19-compare-1280.png` (vòng 1) | `0d5132730795ad8e` | `p19-compare-660.png` (vòng 1) | `2baac764f3b8b696` |
+| `v2/p19-compare-1280.png` | `8a527bb2d9c6e5d4` | `v2/p19-compare-660.png` | `6d9b041f16c2f79d` |
+
+Danh sách đầy đủ (vòng 1 + vòng 2, hơn 200 dòng) nằm ở [thanhvuong-test-results.json](./thanhvuong-test-results.json) `evidence_store`.
+
+### 5.3 Spec 10 test matrix (T01–T12)
+
+| Spec | Nội dung | Trạng thái |
+|---|---|---|
+| T01 | 2 band (ACTIVE trước), 6 storied, probe ẩn, "showing 6 of 52" | **Một phần:** band và counter có (G2, U04, U20), nhưng band theo thứ tự server (`registered_at ASC`) chứ không đưa ACTIVE lên trước. Contract không có storied/probe (D1, D11) |
+| T02 | toggle probes | **Không làm được theo hi-fi:** không có phân loại probe; thay bằng expand-all (D13, `VISUAL_DECISION_REQUIRED`) |
+| T03 | filter ABANDONED | **Có** (G6, U20) |
+| T04 | click chip probe đang ẩn → bật toggle + expand | **Tương đương:** chip của node bị filter ẩn sẽ nới filter và mở node (U21, U37) |
+| T05 | diff av → chip đỏ GATES RESET | **Có** (U09, G7) |
+| T06 | promotion pick banner + link 11 | **Một phần:** banner mỗi band theo `promotion_pick`; link 11 refused vì Screen 11 chưa có route |
+| T07 | rc chip | **Không có field** (`CG-P19-04`) |
+| T08 | exercised/untried, untried → 02 | **Một phần:** NOT_IN_CONTRACT; link "declare at New Run →" vẫn có (`CG-P19-06`) |
+| T09 | `?av=` bằng `scrollTop` | **Có** (G8, U24, U36; U42 grep `scrollIntoView` = 0) |
+| T10 | 100 attempt ảo hoá, chip band cuộn mượt | **Có** với 120 attempt (G5, U34–U38) |
+| T11 | 660 không tràn | **Có** sau `74f26200` (vòng 2 overflow 0) |
+| T12 | axe | **Chưa chạy:** axe-core không có trong lock. Có kiểm `aria-label` của chip (U05) |
+
+### 5.4 So hi-fi với product (1280 / 660)
+
+Evidence: hi-fi `p19-hifi-10-1280.png` / `-660.png`, ghép cạnh product ở `p19-compare-*.png`. Vì server không có ImageMagick/PIL, ảnh ghép được dựng bằng chính Chromium. `support.js` có trong repo, nên hi-fi render đủ.
+
+| Khối | Hi-fi | Product | Phân loại |
+|---|---|---|---|
+| Khung 2 cột @1280 | trái 581 / phải 387 px, sticky | trái 571 / phải 381 px, sticky | **Khớp** (lệch ≤ 10 px do padding của shell) |
+| @660 | vẫn 2 cột: cột trái bị bóp còn 8 px, overflow 13 (hi-fi không responsive) | 1 cột, panel phải xuống dưới; overflow 0 sau `74f26200` | Hi-fi không có chuẩn cho 660; product xếp chồng |
+| Header | "Attempt lineage" + subtitle tĩnh "52 attempts, 6 worth telling…" | Title theo spec §2.1; subtitle đếm từ `counts`, không bịa "6 worth telling" | field-driven |
+| Band | outcome, "+24 probes", exercised, chip **wrap** | label/lifecycle/digest/entrypoint/registered; chip **nowrap, cuộn ngang trong band** | outcome/probes/exercised: field-driven; wrap → cuộn: `VISUAL_DECISION_REQUIRED` (D14, theo spec pitfall 6) |
+| Promotion pick | 1 banner cuối root card, rc + "gate R1 next" | 1 banner **mỗi band** (pick theo version) | field-driven (`CG-P19-04`, `CG-P19-10`) |
+| Filter row | 4 state + "show 46 probe attempts" + "showing 6 of 52" | 6 nhóm state contract + expand-all + "showing n of m attempts · total" | field-driven + `VISUAL_DECISION_REQUIRED` |
+| Node | rail dọc có chấm; id · run · cert · av · rc · cfg; spec/diff/note | thụt DFS có gạch nối; id/state/intent/av/created/spec digest/run link/GATES | cert/rc/note/spec text: field-driven; rail vs thụt: `VISUAL_DECISION_REQUIRED` (D15) |
+| Selected | mode×schedule / claim / OOS / cert + verdict | rows theo field contract; cert · OOS · decay = NOT_IN_CONTRACT | field-driven |
+| Diff | k / a→b + note | k / a→b; gates row đứng đầu; null → "not set" | **Khớp bố cục** |
+| Promotion rule | "Only the ACTIVE attempt promotes…" | Câu viết lại theo contract | quyết định nội dung (D12) |
+| Rules + counts | Rules footer | Rules verbatim + counts strip 8 số | spec / contract |
+
+## 6. Việc Bobby quyết
+
+Chi tiết và đề xuất: [thanhvuong-backend-requests.md §3](./thanhvuong-backend-requests.md#3-việc-bobby-quyết-không-phải-backend).
+
+- **B1** — Tích hợp baseline `9060a7c4` → `62d7d864`.
+  - File S10 không trùng với baseline.
+  - `62d7d864` đổi `research-alpha-import.d.ts` (thêm field required `check`/`note`/`expires_at_utc_ms`). Việc này ảnh hưởng AlphaImport khi tích hợp, không ảnh hưởng S10.
+  - Xung đột `FreezeDetail.tsx` của P17 vẫn còn.
+- **B2** — `VISUAL_DECISION_REQUIRED`: storied/probe (toggle → expand-all), rc/cert/OOS/decay, chip cuộn vs wrap, rail chấm vs thụt DFS, thứ tự band theo server vs ACTIVE-first.
+- **B3** — F-04: 403 và 404 cùng câu nhưng badge khác nhau ("⊘ DENIED" vs "∅ EMPTY"). Có cần badge giống hệt không?
+- **B4** — Cách chạy axe (không có trong lock).
+- **B5** — Poll legacy `GET /api/runs` 4 s của `QuantBTModule` (dòng 231) chạy trên mọi route, kể cả S10. Có mở `fix/*` riêng không?
+- **B6** — Flake `PortalShell.test.tsx` / `tradeReplayEvents.test.tsx` ngoài diff.
+
+## 7. Discrepancy và lỗi tìm ra trong phase
+
+| # | Mục | Hi-fi / spec | Contract | Đang làm | Loại |
+|---|---|---|---|---|---|
+| D0 | Astra checkpoint "do not enter P18 yet" (Unified `#rl-p13-p17-audit`) chưa gỡ, trong khi board §13 là `S10_BROWSER_HIFI_PENDING_CLAUDE` và handoff giao Claude | — | — | Xử lý như P17/P18: làm consumer trên contract đã publish, **không claim `VERIFIED`** | Bobby quyết |
+| D1 | storied / probe | spec §3 `kind` do server phân loại; hi-fi 6 card + 46 row theo tuần, J metric | Không có | Mọi attempt là node cùng loại | `CG-P19-03`, `VISUAL_DECISION_REQUIRED` |
+| D2 | rc chip, "gate R1 next" | có | Không có | Không vẽ | `CG-P19-04` |
+| D3 | cert / OOS / decay | có | Không có | NOT_IN_CONTRACT | `CG-P19-05` |
+| D4 | exercised / untried | có | Không có | NOT_IN_CONTRACT; giữ link untried | `CG-P19-06` |
+| D5 | Outcome / "why superseded" | có | Có `reason` cho ABANDONED/FAILED; không có outcome | NOT_IN_CONTRACT | `CG-P19-07` |
+| D6 | Spec line (mode × schedule, space) / cfg label | có | Chỉ có `effective_spec_digest`, `space_signature` | In digest rút gọn | `CG-P19-08` |
+| D7 | ETag / 304 | — | Không khai | Không gửi `If-None-Match`, không giữ bản cache; SPA quay lại là GET mới | `CG-P19-02` |
+| D8 | > 128 attempt | spec fixture 52 | `ORDER BY created_at ASC LIMIT 129`, không có cursor | In PARTIAL + "{returned} of {total}"; không gọi thêm. Hệ quả: history dài chỉ thấy **phần cũ nhất**, attempt mới nhất bị cắt | `CG-P19-09` |
+| D9 | Fixture canonical | spec §10 52 attempt | Không có | Stub theo shape service | `CG-P19-01` |
+| D10 | Filter | 4 state (ACTIVE/SUPERSEDED/ABANDONED/DRAFT) | `AttemptNode.state` là lifecycle attempt khác | 6 nhóm; `data-state` giữ enum thật | field-driven |
+| D11 | Thứ tự band | T01: ACTIVE trước | `ORDER BY registered_at ASC` | Giữ thứ tự server (không sort, U42) | `VISUAL_DECISION_REQUIRED` |
+| D12 | Promotion rule | "Only the ACTIVE attempt promotes" | Pick là fact source-attested theo version; handoff cấm suy từ ACTIVE | Viết lại (`PROMOTION_RULE`, dòng 61), giữ câu thứ hai | mâu thuẫn hi-fi ↔ contract |
+| D13 | Toggle probes | có | Không có probe | Expand-all | `VISUAL_DECISION_REQUIRED` |
+| D14 | Chip | hi-fi wrap | — | Cuộn ngang trong band (spec pitfall 6, plan §1.4) | hi-fi ≠ spec |
+| D15 | Rail chấm | có | — | Thụt DFS có gạch nối (spec pitfall 1 "cây thụt cấp") | có thể làm theo hi-fi |
+| D16 | 404 | handoff: không gợi ý tồn tại | 404 cả khi không phải member workspace | 404 → `empty` theo tiền lệ S09; câu giống 403 nhưng badge khác | B3 |
+| D17 | Telemetry §12 | 5 event | — | Chưa có | `not_run` |
+| D18 | Promotion pick DR-03 | spec T06 banner | Source hôm nay không publish pick (`NOT_PUBLISHED`) | Nhánh PUBLISHED chỉ thử bằng stub | `CG-P19-10` |
+
+Lỗi tìm ra và đã sửa trong phase:
+
+| Mục | Tìm ra ở | Xử lý |
+|---|---|---|
+| **B1**: ở ≤ 900 px, cột trái giãn theo max-content. Trang tràn 2 029 px (full), 7 665 (120 attempt), 87 (partial); chip hết cuộn trong band | Gói B, `p19-full-660.png` `79d352d49adcd900`; jsdom không bắt được | **Sửa ở `74f26200`**: `.ln-grid { flex-direction: column; align-items: stretch; }` trong media 900 px (dòng 217). Vòng 2: overflow 0 mọi state, chip cuộn trong band |
+| **N1**: detail của root in "root — no parent" hai lần | Gói B | **Sửa ở `74f26200`**: dòng diff ROOT → "diff vs parent — none, this attempt is a root" (dòng 455) |
+| `tokens.test.ts` bắt `color-mix()` + hex trong comment | Pre-commit gói A | Sửa trước commit 2: `var(--accent-2-soft)` + prose |
+
+Ghi chú nhỏ (không phải lỗi S10):
+- **N2** — `QuantBTModule` poll `GET /api/runs` mỗi 4 s trên mọi route (legacy). S10 "1 read" chỉ đúng cho request lineage (B5).
+- **N3** — Link "lineage →" của Run Library chỉ hiện khi group-by-alpha. Link quay lại từ S10 có mang `?group=1`.
+- **N5** — Fixture partial có returned 4 < limit 128. Server thật chỉ báo PARTIAL khi đã trả đủ 128. Đây là giới hạn của stub, UI tương đương.
+- **N6** — Tree không ảo hoá nằm trong `.ln-scroll max-height:72vh`, nên ảnh full-page chỉ thấy phần đầu tree. Đúng thiết kế.
+- Không cache vì không có ETag (D7).
+
+## 8. Scale refine (CLAUDE.md §8)
+
+| Ô | S10 |
+|---|---|
+| **Cardinality** | Contract: attempt ≤ 128/request, child run ≤ 32/attempt, số version không giới hạn trong DTO. Probe dùng 16 (full) và 120 (virtual, chuỗi sâu 39) |
+| **Break point** | Tree > 40 node → windowing (hàng 34 px, detail 208 px, overscan 6, viewport 560 px). Band chips: 120 chip trong 1 band vẫn cuộn trong band ở 660 (sw 8159) |
+| **Degradation** | > 128 → PARTIAL + "{returned} of {total}", không gọi thêm (không có cursor). Child > 32 → chip bounded |
+| **Server contract** | Đã có: `limit` 1–128, `coverage`, `child_runs_coverage`, `counts`. Cần: cursor/thứ tự newest-first (`CG-P19-09`), fixture (`CG-P19-01`) |
+| **Invariant** | Không sort/compare; số in bằng `String(n)`; NOT_PUBLISHED không thành 0; GATES RESET không có handler |
+| **Perf budget** | 1 GET lineage mỗi lần vào; load ≈ 0.76–0.99 s (preview local); click chip sâu → chọn 83–96 ms; DOM 23–30 node ở 120 attempt |
+
+## 9. Request cho Codex
+
+Receipt đầy đủ theo template CLAUDE.md §5: [thanhvuong-backend-requests.md](./thanhvuong-backend-requests.md). Tóm tắt:
+
+| ID | Nội dung |
+|---|---|
+| `CG-P19-01` | fixture canonical |
+| `02` | ETag/304 |
+| `03` | storied/probe |
+| `04` | release-candidate ref |
+| `05` | cert/OOS/decay |
+| `06` | exercised/untried |
+| `07` | outcome / why superseded |
+| `08` | spec line / config label |
+| `09` | paging/cursor > 128 + thứ tự |
+| `10` | lộ trình promotion pick DR-03 |
+| `11` | chính sách badge 403/404 F-04 (chỉ hỏi) |
+| `12` | telemetry §12 |
+
+Tất cả OPEN; kiểm lại 2026-09-24 trên `9060a7c4` và `62d7d864`.
+
+## 10. Kết luận có phạm vi
+
+- **`P19-A S10 frontend composed · PRODUCT_ROUTE_BROWSER_RECEIPT · đã push, chưa PR`.**
+  - Frontend bám hi-fi trong giới hạn contract: mọi khối hi-fi giữ chỗ; ô không có field in typed absence hoặc NOT_IN_CONTRACT.
+  - B1 (660) và N1 đã sửa ở `74f26200`; `open_debt` rỗng.
+  - Toàn bộ probe Research trên head: 119/119. Unit 3057 pass / 1 skip; S10 42/42.
+- **Chưa `VERIFIED`.** Còn thiếu:
+  - `REAL_API_E2E_RECEIPT` (feature-dark).
+  - axe.
+  - Spec T01/T02/T07/T08 theo nghĩa hi-fi (thiếu field).
+  - Telemetry §12.
+  - Tích hợp baseline (B1).
+  - `CG-P19-*`.
+  - `VISUAL_DECISION_REQUIRED` (B2).
+
+## 11. Reuse report (v0.5 §11.3)
+
+| Tái dùng | Từ đâu |
+|---|---|
+| `ResearchPanel` (state frame, `aria-busy`) | `research/ResearchPanel.tsx` |
+| `iso()` UTC phút | `research/utcMinute.ts` (P18) |
+| `PortalApiError` | `lib/api` |
+| `ResearchState` / `researchState` | `research/state.ts` |
+| Mẫu `call<T>` riêng trong client (mỗi client Research có một bản, theo quy ước) và copy refusal F-04 | theo `replayClient.ts` / `reportClient.ts` |
+| Token màu `--ink-*`, `--accent`, `--accent-2-soft`, `--warn`, `--bad`; font mono cho số | Fund Paper tokens (`tokens.test.ts` xanh) |
+
+Mới:
+- Windowing tự viết (`windowRange`, `treeOrder`), không thêm package.
+- CSS scoped `ln-*`.
+
+**Trùng lặp cục bộ (ghi lại, không sửa trong phase này):**
+- `Absent` (`LineageDetail.tsx` dòng 379) làm cùng việc với `AbsentPanel` / `Withheld` export từ `EvidenceFlow.tsx`, nhưng không dùng lại chúng.
+- `short()` rút gọn digest (dòng 338, 12 ký tự + "…", bản đầy đủ ở `title`) là hàm cục bộ; chưa có util digest ngắn dùng chung. P18 in digest đầy đủ.
+- Gộp lại nên làm ở RF-04 (chuẩn hoá frontend), không làm trong S10.
+
+Không có màu raw ngoài token. Không copy asset bên ngoài. Không thêm dependency.
