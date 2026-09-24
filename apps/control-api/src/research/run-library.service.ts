@@ -642,7 +642,12 @@ export class ResearchRunLibraryService {
           ? unavailable("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES")
           : status === "COMPLETED"
             ? this.equityAvailability(row.evidence_revision, row.evidence_equity_state, row.evidence_equity_reason)
-            : unavailable("NOT_PUBLISHED", "P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES"),
+            /* Same rule as the lazy /sparkline read: a run that never received a
+               source (e.g. cancelled before it) says so, rather than blaming
+               the reader for a series that could not exist. */
+            : progress && sourceActual(progress)
+              ? unavailable("NOT_PUBLISHED", "P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES")
+              : source,
       },
       evidence_revision: this.evidenceEnabled() ? this.evidenceRevision(row.evidence_revision) : null,
       source_updated_at_utc_ms: utcMs(sourceUpdated, "source update timestamp"),
