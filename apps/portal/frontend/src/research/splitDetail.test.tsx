@@ -14,7 +14,7 @@
  *    marked, rather than disappearing because the run was long.
  */
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,8 +22,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   HOLDOUT_RULE_NO_READ,
   HOLDOUT_RULE_UNLOCK,
-  SPLIT_RULES_FOOTER,
+  SPLIT_RULES_BASE,
+  SPLIT_RULES_FOLD_PLAN,
   SPLIT_SUBTITLE,
+  SPLIT_TITLE,
   SplitScreen,
 } from "./SplitDetail";
 import {
@@ -38,7 +40,10 @@ import {
   type SplitDetail,
 } from "./splitClient";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
-import { useSplit } from "./useSplit";
+import { forgetSplitReads, splitState, useSplit } from "./useSplit";
+import { SplitRoute } from "./SplitRoute";
+import { clampFold, parseCursorNotes, seedCursor, useEvidenceCursor } from "./evidenceCursor";
+import { monthTicks } from "./splitClient";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
 
@@ -234,7 +239,7 @@ function view(overrides: Partial<React.ComponentProps<typeof SplitScreen>> = {})
         state={OK}
         cursor={DEFAULT_CURSOR}
         onFold={vi.fn()}
-        folds={{ state: "idle" }}
+        folds={{ state: "not-applicable", reason: "P04_PUBLISHES_NO_FOLD_PLAN" }}
         ensureFolds={vi.fn()}
         onReread={vi.fn()}
         {...overrides}
@@ -265,6 +270,7 @@ function stub(responder: (url: string) => [number, unknown]) {
 beforeEach(() => {
   requested = [];
   vi.unstubAllGlobals();
+  forgetSplitReads();
 });
 
 /* -------------------------------------------------------------------------
@@ -373,7 +379,7 @@ describe("P14-T02 — every published window is drawn and labelled", () => {
     expect(container.querySelector("[data-window='warmup']")).toBeTruthy();
     expect(container.querySelector("[data-window='is']")).toBeTruthy();
     expect(container.querySelector("[data-window='outer_oos']")).toBeTruthy();
-    expect(container.querySelector("[data-window-legend='is']")?.textContent).toContain("2994 bars");
+    expect(container.querySelector("[data-window-legend='is']")?.textContent).toContain("2,994 bars");
   });
 
   it("marks a window too thin to see rather than dropping it", () => {
@@ -427,7 +433,8 @@ describe("P14-T03 — the holdout is described, never opened", () => {
   it("says a semantic exclusion is not a physical attestation", () => {
     const { container } = view();
     const physical = container.querySelector("[data-absent='physical I/O attestation']");
-    expect(physical?.textContent).toContain("not published");
+    // The server's own word for it: NOT_ATTESTED.
+    expect(physical?.textContent).toContain("not attested");
     expect(physical?.querySelector("[title]")?.getAttribute("title")).toBe(
       "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED",
     );
@@ -442,10 +449,15 @@ describe("P14-T03 — the holdout is described, never opened", () => {
     expect(container.querySelector("a[data-action-unlock]")).toBeNull();
   });
 
-  it("keeps the two rules that hold whatever the source published", () => {
-    view();
+  it("keeps the rule that holds whatever the source published, and no unlock workflow it did not", () => {
+    const { container } = view();
     expect(screen.getByText(HOLDOUT_RULE_NO_READ)).toBeTruthy();
-    expect(screen.getByText(HOLDOUT_RULE_UNLOCK)).toBeTruthy();
+    // RF-06 DQ-15: the unlock record and authority are not published, so the
+    // sentence describing an unlock workflow is not shown as fact.
+    expect(screen.queryByText(HOLDOUT_RULE_UNLOCK)).toBeNull();
+    const unlock = container.querySelector("[data-action-unlock]");
+    expect(unlock?.getAttribute("aria-disabled")).toBe("true");
+    expect(unlock?.getAttribute("title")).toContain("Screen 10 (P19)");
   });
 
   it("claims no certificate cap, because none is published here", () => {
@@ -473,12 +485,13 @@ describe("P14-T04 — an unasserted selector is neither a pass nor a gap", () =>
     expect(container.querySelector("[data-protocol-strip]")?.textContent).not.toMatch(/PASS|FAIL/);
   });
 
-  it("keeps every protocol absence in its own row with its reason", () => {
+  it("states every protocol absence exactly once, with its reason (FE-S05-06)", () => {
     const { container } = view();
-    const absences = container.querySelector("[data-protocol-absences]");
-    for (const name of ["fold plan", "inner folds", "purge", "embargo", "θ* per fold", "gap scan"]) {
-      expect(absences?.querySelector(`[data-absent="${name}"]`), name).toBeTruthy();
+    for (const name of ["fold plan", "inner folds", "purge", "embargo", "θ* per fold", "gap scan", "strict outer OOS", "source seal", "unlock record", "physical I/O attestation"]) {
+      expect(container.querySelectorAll(`[data-absent="${name}"]`), name).toHaveLength(1);
     }
+    // source_absences repeats names already stated; they are not printed again.
+    expect(container.querySelector("[data-source-absences]")).toBeNull();
   });
 });
 
@@ -531,8 +544,14 @@ describe("P14-T05 — folds come from the one operation that publishes them", ()
  * ---------------------------------------------------------------------- */
 
 describe("P14-T06 — one split read, one optional fold read", () => {
-  it("reads the split on mount and no fold operation until asked", async () => {
-    stub(() => [200, detail()]);
+  it("reads the split on mount and asks the fold lane once, only when it can apply", async () => {
+    const admitted = detail({
+      protocol: {
+        ...detail().protocol,
+        selection: { ...detail().protocol.selection, state: "NOT_PUBLISHED" },
+      },
+    } as Partial<SplitDetail>);
+    stub((url) => (url.includes("current-source") ? [200, sourceSplit()] : [200, admitted]));
     const { result } = renderHook(() => useSplit("R-WFO-118"));
     await waitFor(() => expect(result.current.detail).not.toBeNull());
     expect(requested).toEqual(["/api/v1/quantbt/runs/R-WFO-118/split"]);
@@ -541,8 +560,19 @@ describe("P14-T06 — one split read, one optional fold read", () => {
       result.current.ensureFolds();
       result.current.ensureFolds();
     });
-    await waitFor(() => expect(result.current.folds.state).not.toBe("idle"));
+    await waitFor(() => expect(result.current.folds.state).toBe("ready"));
     expect(requested.filter((url) => url.includes("current-source/split"))).toHaveLength(1);
+  });
+
+  it("FE-S05-02 / FE-X-12: never asks the fold lane for a fixed profile", async () => {
+    stub(() => [200, detail()]);
+    const { result } = renderHook(() => useSplit("R-WFO-118"));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    await act(async () => {
+      result.current.ensureFolds();
+    });
+    expect(result.current.folds.state).toBe("not-applicable");
+    expect(requested.filter((url) => url.includes("current-source"))).toHaveLength(0);
   });
 
   it("sends the ETag on a reread and keeps the copy on 304", async () => {
@@ -563,7 +593,7 @@ describe("P14-T06 — one split read, one optional fold read", () => {
   it("classifies each refusal the contract declares", () => {
     const of = (status: number) => toSplitRefusal(new PortalApiError("no", status, null, null));
     expect(of(401).state).toBe("denied");
-    expect(of(404).state).toBe("empty");
+    expect(of(404).state).toBe("terminal");
     expect(of(409).state).toBe("stale");
     expect(of(503).state).toBe("unavailable");
     expect(of(400).state).toBe("terminal");
@@ -592,10 +622,11 @@ describe("P14-T07 — the surface requests only the two named operations", () =>
     expect(code).not.toMatch(/\/internal\/|parquet|artifact|fold_plan\.json|journal/i);
   });
 
-  it("keeps the verbatim copy spec 05 fixes", () => {
-    view();
+  it("keeps the HiFi title and subtitle, and the footer sentence that is always true", () => {
+    const { container } = view();
+    expect(screen.getByText(SPLIT_TITLE)).toBeTruthy();
     expect(screen.getByText(SPLIT_SUBTITLE)).toBeTruthy();
-    expect(screen.getByText(SPLIT_RULES_FOOTER)).toBeTruthy();
+    expect(container.querySelector("[data-rules-footer]")?.textContent).toBe(SPLIT_RULES_BASE);
   });
 
   it("carries the cursor back to the hub", () => {
@@ -603,5 +634,204 @@ describe("P14-T07 — the surface requests only the two named operations", () =>
     const back = container.querySelector("[data-action='back-to-hub']");
     expect(back?.getAttribute("href")).toContain("/runs/R-WFO-118/evidence#");
     expect(back?.getAttribute("href")).toContain("fold=4");
+  });
+});
+
+
+/* -------------------------------------------------------------------------
+ * RF-06 — cursor, states, reads and HiFi shells (each fails on the P14 build)
+ * ---------------------------------------------------------------------- */
+
+function mountRoute(hash: string, path = "/research/quantbt/runs/R-WFO-118/split") {
+  window.history.replaceState(null, "", `${path}${hash}`);
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/research/quantbt/runs/:runId/split" element={<SplitRoute />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe("RF-06 FE-X-10 / FE-S05-01 — the screen's own stage seeds the cursor", () => {
+  it("a hash with no stage opens on the screen's stage, not the hub's summary", () => {
+    expect(seedCursor("", { ...DEFAULT_CURSOR, stage: "split" }).cursor.stage).toBe("split");
+    expect(seedCursor("#fold=3", { ...DEFAULT_CURSOR, stage: "split" }).cursor).toMatchObject({ stage: "split", fold: 3 });
+    // A stage the hash names still wins.
+    expect(seedCursor("#stage=claim&fold=2", { ...DEFAULT_CURSOR, stage: "split" }).cursor.stage).toBe("claim");
+  });
+
+  it("the hook writes the seeded stage, so the way back lands on the split tab", () => {
+    window.history.replaceState(null, "", "/research/quantbt/runs/R-WFO-118/split");
+    const { result } = renderHook(() => useEvidenceCursor({ stage: "split" }));
+    expect(result.current.cursor.stage).toBe("split");
+    expect(window.location.hash).toBe("#stage=split&fold=1");
+  });
+
+  it("an edited hash without a stage keeps the stage in hand", () => {
+    window.history.replaceState(null, "", "/x#stage=split&fold=1");
+    const { result } = renderHook(() => useEvidenceCursor({ stage: "split" }));
+    act(() => {
+      window.history.replaceState(null, "", "/x#fold=4");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(result.current.cursor).toMatchObject({ stage: "split", fold: 4 });
+  });
+
+  it("bare /split: Evidence Flow carries stage=split, next-stage carries stage=search", async () => {
+    stub(() => [200, detail()]);
+    const { container } = mountRoute("");
+    await waitFor(() => expect(container.querySelector("[data-card='fold-construction']")).toBeTruthy());
+    expect(container.querySelector("[data-action='back-to-hub']")?.getAttribute("href")).toBe(
+      "/research/quantbt/runs/R-WFO-118/evidence#stage=split&fold=1",
+    );
+    expect(container.querySelector("[data-action='next-stage']")?.getAttribute("href")).toBe(
+      "/research/quantbt/runs/R-WFO-118/search#stage=search&fold=1",
+    );
+  });
+});
+
+describe("RF-06 FE-S04-06 — an unobserved fold is clamped, with a notice", () => {
+  it("follows golden cases 8 and 9", () => {
+    expect(clampFold(99, [1, 2, 3, 4, 5])).toEqual({
+      fold: 5,
+      note: { code: "CURSOR_FOLD_CLAMPED", from: 99, to: 5, reason: "BEYOND_LAST" },
+    });
+    expect(seedCursor("#fold=0", DEFAULT_CURSOR).cursor.fold).toBe(1);
+    expect(parseCursorNotes("#fold=0")).toEqual([{ code: "CURSOR_FOLD_CLAMPED", from: 0, to: 1, reason: "BELOW_FIRST" }]);
+    expect(clampFold(3, [1, 2, 4]).fold).toBe(2);
+    // No observed set: nothing to clamp against, nothing invented.
+    expect(clampFold(40, [])).toEqual({ fold: 40, note: null });
+    expect(clampFold(3, [1, 2, 3])).toEqual({ fold: 3, note: null });
+  });
+
+  it("clamps on the route once the retained source publishes its folds", async () => {
+    const admitted = detail({
+      protocol: { ...detail().protocol, selection: { ...detail().protocol.selection, state: "NOT_PUBLISHED" } },
+    } as Partial<SplitDetail>);
+    stub((url) => (url.includes("current-source") ? [200, sourceSplit()] : [200, admitted]));
+    const { container } = mountRoute("#stage=split&fold=9");
+    await waitFor(() => expect(window.location.hash).toBe("#stage=split&fold=3"));
+    expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 9");
+    expect(container.querySelector("[data-fold-row='3']")?.getAttribute("data-current")).toBe("true");
+  });
+});
+
+describe("RF-06 FE-S05-02 — the fold lane is not asked for a fixed profile", () => {
+  it("mounting the route issues one split read and no current-source read", async () => {
+    stub(() => [200, detail()]);
+    const { container } = mountRoute("#stage=split&fold=1");
+    await waitFor(() => expect(container.querySelector("[data-fold-anatomy='not-applicable']")).toBeTruthy());
+    expect(requested).toEqual(["/api/v1/quantbt/runs/R-WFO-118/split"]);
+    expect(container.querySelector("[data-absent-reason='fold plan']")?.textContent).toBe("P04_PUBLISHES_NO_FOLD_PLAN");
+  });
+});
+
+describe("RF-06 FE-S05-04 — pending ≠ empty, 404 ≠ empty, first-read 409 ≠ stale", () => {
+  it("a source that has not reported is partial, never empty", () => {
+    const pending = detail({ readiness: "NOT_READY", availability: { state: "PENDING_SOURCE_CALLBACK", reason_code: "P04_PENDING" } });
+    expect(splitState(pending, null).state).toBe("partial");
+    expect(splitState(pending, null).retainsContent).toBe(true);
+  });
+
+  it("a first-read 409 is a retryable failure, not stale", () => {
+    const refusal = toSplitRefusal(new PortalApiError("conflict", 409, null, null));
+    expect(splitState(null, refusal).state).toBe("failed-retryable");
+    expect(splitState(null, refusal).mayRetry).toBe(true);
+  });
+
+  it("a 404 is terminal and leads back to the Run Library, with no live stage links", async () => {
+    stub(() => [404, { error: { code: "RESEARCH_SPLIT_NOT_FOUND", message: "Research run was not found." } }]);
+    const { container } = mountRoute("");
+    await waitFor(() => expect(container.querySelector("[data-run-not-found]")).toBeTruthy());
+    expect(container.querySelector("[data-state]")?.getAttribute("data-state")).toBe("terminal");
+    expect(container.querySelector("[data-action='run-library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(container.querySelector("[data-action='next-stage']")).toBeNull();
+    expect(container.querySelector("[data-action='back-to-hub']")).toBeNull();
+  });
+});
+
+describe("RF-06 FE-S05-08 — a revisit revalidates instead of re-reading", () => {
+  it("shows the accepted split immediately and sends its ETag", async () => {
+    const seen: (HeadersInit | undefined)[] = [];
+    let reads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        seen.push(init?.headers);
+        reads += 1;
+        const status = reads === 1 ? 200 : 304;
+        return { ok: status === 200, status, statusText: "", headers: new Headers(), json: async () => detail() } as unknown as Response;
+      }),
+    );
+    const first = renderHook(() => useSplit("R-WFO-118"));
+    await waitFor(() => expect(first.result.current.detail).not.toBeNull());
+    first.unmount();
+
+    const second = renderHook(() => useSplit("R-WFO-118"));
+    expect(second.result.current.detail).not.toBeNull();
+    expect(second.result.current.state.state).not.toBe("loading");
+    await waitFor(() => expect(reads).toBe(2));
+    expect(seen[1]).toEqual({ "If-None-Match": '"p14r1_55aa10"' });
+  });
+});
+
+describe("RF-06 FE-S05-03 — copy asserts only what the run published", () => {
+  it("claims no sealed holdout, fold_plan source or true-scale purge", () => {
+    const { container } = view();
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/sealed holdout|fold_plan artifact|true scale|\bSEALED\b|cert cap: ≤/i);
+    expect(text).not.toContain(SPLIT_RULES_FOLD_PLAN);
+  });
+
+  it("adds the fold-plan sentence only when a fold plan was published", () => {
+    const { container } = view({ folds: { state: "ready", split: sourceSplit() } });
+    expect(container.querySelector("[data-rules-footer]")?.textContent).toContain(SPLIT_RULES_FOLD_PLAN);
+  });
+});
+
+describe("RF-06 FE-S05-05…08 — the HiFi frames stay, as shells", () => {
+  it("keeps fold construction, θ* flow, fold table and the three cards", () => {
+    const { container } = view();
+    for (const card of ["fold-construction", "theta-flow", "fold-table", "boundary-integrity", "stitched-oos", "feeds-forward"]) {
+      expect(container.querySelector(`[data-card='${card}']`), card).toBeTruthy();
+    }
+    // Screen 08 is not built: named with its phase, not linked.
+    const next = container.querySelector("[data-next-execute]");
+    expect(next?.tagName).toBe("SPAN");
+    expect(next?.textContent).toContain("P17");
+  });
+
+  it("prints as-of in UTC minutes and digests shortened, the exact value in the title", () => {
+    const { container } = view();
+    const asOf = container.querySelector("[data-as-of]");
+    expect(asOf?.textContent).toMatch(/as-of \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC/);
+    expect(asOf?.textContent).not.toMatch(/\.\d{3}Z/);
+    const bundle = container.querySelector("[data-bundle-digest]");
+    expect(bundle?.getAttribute("title")).toBe("sha256:bundle01");
+    expect(container.querySelector("[data-action='copy-evidence-link']")).toBeTruthy();
+  });
+
+  it("paints warmup grey, never in the holdout's colour, and labels each segment for a screen reader", () => {
+    const { container } = view();
+    const warmup = container.querySelector("[data-window='warmup']") as HTMLElement;
+    expect(warmup.style.background).not.toContain("--role-holdout");
+    for (const key of ["warmup", "is", "outer_oos", "holdout"]) {
+      const segment = container.querySelector(`[data-window='${key}']`);
+      expect(segment?.getAttribute("role"), key).toBe("img");
+      expect(segment?.getAttribute("aria-label"), key).toBeTruthy();
+    }
+  });
+
+  it("puts axis marks on UTC month starts inside the published range", () => {
+    const timeline = { start_utc_ms: Date.UTC(2026, 3, 18, 12), end_exclusive_utc_ms: Date.UTC(2026, 7, 15) };
+    const marks = monthTicks(timeline, 12);
+    expect(marks.map((mark) => mark.label)).toEqual(["2026-05", "2026-06", "2026-07", "2026-08"]);
+    for (const mark of marks) {
+      expect(new Date(mark.at_utc_ms).getUTCDate()).toBe(1);
+      expect(mark.at_utc_ms).toBeGreaterThanOrEqual(timeline.start_utc_ms);
+      expect(mark.at_utc_ms).toBeLessThan(timeline.end_exclusive_utc_ms);
+    }
+    expect(monthTicks(timeline, 2).length).toBeLessThanOrEqual(2);
   });
 });

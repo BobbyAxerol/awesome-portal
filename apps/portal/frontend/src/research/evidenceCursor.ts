@@ -76,6 +76,74 @@ function positiveInt(raw: string | undefined): number | null {
 interface Read {
   cursor: EvidenceCursor;
   problems: CursorProblem[];
+  /** RF-06 corrections the parse itself made (fold 0 → 1), for the notice. */
+  notes: CursorNote[];
+  /** Which interpreted keys the hash actually named (FE-X-10). */
+  named: { stage: boolean; fold: boolean };
+}
+
+/* -------------------------------------------------------------------------
+ * Cursor notes — RF-06 FE-S04-06, FE-S06-05, FE-S06-06
+ *
+ * A problem (above, from the codec) is a key the link carried that the codec
+ * refused. A note is different: the key was readable, but this screen moved
+ * or declined it against what the run published — a fold beyond the observed
+ * set, a mode the run was not submitted with. Each one is said, never done
+ * silently.
+ * ---------------------------------------------------------------------- */
+
+export type CursorNote =
+  | {
+      code: "CURSOR_FOLD_CLAMPED";
+      from: number;
+      to: number;
+      /** `BELOW_FIRST` / `BEYOND_LAST` / `NOT_OBSERVED` against an observed set; `OUT_OF_RANGE` against the read's own bound. */
+      reason: "BELOW_FIRST" | "BEYOND_LAST" | "NOT_OBSERVED" | "OUT_OF_RANGE";
+    }
+  | {
+      code: "CURSOR_KEY_NOT_APPLIED";
+      key: "mode" | "schedule";
+      value: string;
+      /** The run's own published value, or null when the run published none. */
+      run: string | null;
+    };
+
+export function cursorNoteText(note: CursorNote): string {
+  if (note.code === "CURSOR_FOLD_CLAMPED") {
+    switch (note.reason) {
+      case "BELOW_FIRST":
+        return `This link asked for fold ${note.from}. Folds start at ${note.to}, so fold ${note.to} is shown.`;
+      case "BEYOND_LAST":
+        return `This link asked for fold ${note.from}, beyond the last observed fold. The last observed fold, ${note.to}, is shown.`;
+      case "NOT_OBSERVED":
+        return `This link asked for fold ${note.from}, which this run did not observe. Fold ${note.to} is shown.`;
+      case "OUT_OF_RANGE":
+        return `This link asked for fold ${note.from}, outside the range this read accepts. Fold ${note.to} is shown instead.`;
+    }
+  }
+  return note.run === null
+    ? `This link asks for ${note.key} “${note.value}”, but this run published no ${note.key} to check it against. It was not applied.`
+    : `This link asks for ${note.key} “${note.value}”; this run's ${note.key} is “${note.run}”, fixed at submit. The run's own ${note.key} is shown and the link's is not carried on.`;
+}
+
+/**
+ * Golden cases 8–9 of spec 04 §30: a fold beyond the observed set is the last
+ * observed fold, a fold below it is the first. A fold between observed folds
+ * steps back to the nearest observed one below it. With no observed set there
+ * is nothing to clamp against, and the fold is left alone.
+ */
+export function clampFold(
+  fold: number,
+  observed: readonly number[],
+): { fold: number; note: CursorNote | null } {
+  const set = [...new Set(observed.filter((value) => Number.isSafeInteger(value) && value >= 1))].sort((a, b) => a - b);
+  if (set.length === 0 || set.includes(fold)) return { fold, note: null };
+  const first = set[0];
+  const last = set[set.length - 1];
+  if (fold < first) return { fold: first, note: { code: "CURSOR_FOLD_CLAMPED", from: fold, to: first, reason: "BELOW_FIRST" } };
+  if (fold > last) return { fold: last, note: { code: "CURSOR_FOLD_CLAMPED", from: fold, to: last, reason: "BEYOND_LAST" } };
+  const below = set.filter((value) => value < fold).pop() ?? first;
+  return { fold: below, note: { code: "CURSOR_FOLD_CLAMPED", from: fold, to: below, reason: "NOT_OBSERVED" } };
 }
 
 function readHash(hash: string): Read {
@@ -85,8 +153,14 @@ function readHash(hash: string): Read {
     if (!INTERPRETED.has(key)) carried[key] = value;
   }
 
-  const fold = positiveInt(decoded.fold);
-  if (decoded.fold !== undefined && fold === null) {
+  const notes: CursorNote[] = [];
+  let fold = positiveInt(decoded.fold);
+  if (decoded.fold !== undefined && fold === null && /^0+$/.test(decoded.fold)) {
+    /* Golden case 9: `#fold=0` clamps to fold 1 — a readable number below
+       the first fold, not an unreadable value. */
+    fold = 1;
+    notes.push({ code: "CURSOR_FOLD_CLAMPED", from: 0, to: 1, reason: "BELOW_FIRST" });
+  } else if (decoded.fold !== undefined && fold === null) {
     /* `fold` always has a value on these screens, so an unreadable one cannot
        be carried silently — it is replaced by the default, and said so. */
     problems.push({ code: "CURSOR_VALUE_UNREADABLE", key: "fold" });
@@ -106,7 +180,29 @@ function readHash(hash: string): Read {
     seq,
   };
   if (Object.keys(carried).length > 0) cursor.carried = carried;
-  return { cursor, problems };
+  return {
+    cursor,
+    problems,
+    notes,
+    named: { stage: decoded.stage !== undefined && isCursorStage(decoded.stage), fold: fold !== null },
+  };
+}
+
+/**
+ * FE-X-10: the cursor a screen opens with.
+ *
+ * `parseCursor` fills an absent `stage` with the hub's default, `summary`.
+ * A deep dive must not: Screen 05 opened without a hash is on the split
+ * stage, and the way back to the hub should land on the split tab. So the
+ * screen's own seed wins for every interpreted key the hash did not name,
+ * and the hash wins for every key it did.
+ */
+export function seedCursor(hash: string, seed: EvidenceCursor): Read {
+  const read = readHash(hash);
+  const cursor: EvidenceCursor = { ...read.cursor };
+  if (!read.named.stage) cursor.stage = seed.stage;
+  if (!read.named.fold) cursor.fold = seed.fold;
+  return { ...read, cursor };
 }
 
 export function parseCursor(hash: string): EvidenceCursor {
@@ -116,6 +212,11 @@ export function parseCursor(hash: string): EvidenceCursor {
 /** What the codec refused in this hash — for the screen's notice, never dropped silently. */
 export function parseCursorProblems(hash: string): CursorProblem[] {
   return readHash(hash).problems;
+}
+
+/** What the parse corrected in this hash (fold 0 → 1) — for the screen's notice. */
+export function parseCursorNotes(hash: string): CursorNote[] {
+  return readHash(hash).notes;
 }
 
 /**
@@ -148,6 +249,24 @@ export interface EvidenceCursorController {
   cursor: EvidenceCursor;
   /** RF01-F5: what the codec refused in the arriving hash, for the screen's notice. */
   problems: CursorProblem[];
+  /** RF-06: what this screen corrected or declined against the run, for the same notice. */
+  notes: CursorNote[];
+  /**
+   * FE-S04-06: moves an unobserved fold onto the observed set (golden cases
+   * 8–9) and records a note. A no-op when the fold is observed or the set is
+   * empty. Safe to call from an effect on every render of the set.
+   */
+  clampToObserved: (observed: readonly number[]) => void;
+  /**
+   * Moves the fold to `to` because the read cannot accept the one the link
+   * carried (FE-S06-06), and says so.
+   */
+  replaceFold: (to: number, reason: "OUT_OF_RANGE") => void;
+  /**
+   * FE-S06-05: drops a key the run contradicts (or cannot confirm) so it is
+   * not forwarded into every outgoing link, and says so.
+   */
+  decline: (key: "mode" | "schedule", run: string | null) => void;
   setStage: (stage: EvidenceStage) => void;
   setFold: (fold: number) => void;
   update: (patch: Partial<EvidenceCursor>) => void;
@@ -163,13 +282,20 @@ export interface EvidenceCursorController {
  * reader expects from a screen whose whole state is one cursor.
  */
 export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): EvidenceCursorController {
-  const seed = useMemo(() => ({ ...DEFAULT_CURSOR, ...defaults }), [defaults]);
-  const [cursor, setCursor] = useState<EvidenceCursor>(() =>
-    typeof window === "undefined" ? seed : { ...seed, ...parseCursor(window.location.hash) },
-  );
-  const [problems, setProblems] = useState<CursorProblem[]>(() =>
-    typeof window === "undefined" ? [] : parseCursorProblems(window.location.hash),
-  );
+  /* Callers pass an object literal; the seed is keyed on its values so a
+     re-render does not reset anything. */
+  const seedKey = JSON.stringify(defaults);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the serialised defaults
+  const seed = useMemo(() => ({ ...DEFAULT_CURSOR, ...defaults }), [seedKey]);
+  const [initial] = useState(() => (typeof window === "undefined" ? null : seedCursor(window.location.hash, seed)));
+  const [cursor, setCursor] = useState<EvidenceCursor>(() => initial?.cursor ?? seed);
+  const [problems, setProblems] = useState<CursorProblem[]>(() => initial?.problems ?? []);
+  const [notes, setNotes] = useState<CursorNote[]>(() => initial?.notes ?? []);
+  const addNote = useCallback((note: CursorNote) => {
+    setNotes((previous) =>
+      previous.some((existing) => JSON.stringify(existing) === JSON.stringify(note)) ? previous : [...previous, note],
+    );
+  }, []);
 
   /* Mount writes the full key set even when the reader arrived without a hash,
      so the address bar always describes what is on screen. */
@@ -185,8 +311,11 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
      legitimate way to move the cursor. */
   useEffect(() => {
     const onHashChange = () => {
-      setCursor((previous) => ({ ...previous, ...parseCursor(window.location.hash) }));
-      setProblems(parseCursorProblems(window.location.hash));
+      /* An edited hash that names no stage keeps the stage in hand (FE-X-10). */
+      setCursor((previous) => seedCursor(window.location.hash, previous).cursor);
+      const read = seedCursor(window.location.hash, DEFAULT_CURSOR);
+      setProblems(read.problems);
+      setNotes(read.notes);
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
@@ -206,9 +335,56 @@ export function useEvidenceCursor(defaults: Partial<EvidenceCursor> = {}): Evide
     });
   }, []);
 
+  const clampToObserved = useCallback(
+    (observed: readonly number[]) => {
+      setCursor((previous) => {
+        const { fold, note } = clampFold(previous.fold, observed);
+        if (note === null) return previous;
+        addNote(note);
+        return { ...previous, fold };
+      });
+    },
+    [addNote],
+  );
+
+  const replaceFold = useCallback(
+    (to: number, reason: "OUT_OF_RANGE") => {
+      setCursor((previous) => {
+        if (previous.fold === to) return previous;
+        addNote({ code: "CURSOR_FOLD_CLAMPED", from: previous.fold, to, reason });
+        return { ...previous, fold: to };
+      });
+    },
+    [addNote],
+  );
+
+  const decline = useCallback(
+    (key: "mode" | "schedule", run: string | null) => {
+      setCursor((previous) => {
+        const value = key === "schedule" ? previous.schedule : (previous.carried?.mode ?? null);
+        if (value === null) return previous;
+        addNote({ code: "CURSOR_KEY_NOT_APPLIED", key, value, run });
+        const next: EvidenceCursor = { ...previous };
+        if (key === "schedule") next.schedule = null;
+        if (previous.carried && key in previous.carried) {
+          const carried = { ...previous.carried };
+          delete carried[key];
+          if (Object.keys(carried).length > 0) next.carried = carried;
+          else delete next.carried;
+        }
+        return next;
+      });
+    },
+    [addNote],
+  );
+
   return {
     cursor,
     problems,
+    notes,
+    clampToObserved,
+    replaceFold,
+    decline,
     /* Stage is one key of the cursor. Everything else survives the change —
        the invariant spec 04 §2.4 and test T03 are about. */
     setStage: useCallback((stage: EvidenceStage) => update({ stage }), [update]),

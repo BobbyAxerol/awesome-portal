@@ -1,15 +1,26 @@
 /**
- * What the inspection cursor codec refused in the arriving link (RF01-F5).
+ * What the inspection cursor codec refused in the arriving link (RF01-F5), and
+ * what the screen corrected or declined against the run (RF-06).
  *
  * P02 rule 1 makes a duplicate or unsupported key a typed error. A screen that
  * swallowed it would open somewhere the link did not point and never say so;
- * this names each refused key in fixed copy and lets the screen stand.
+ * this names each refused key in fixed copy and lets the screen stand. RF-06
+ * adds the second kind: a readable key the run contradicts — a fold it never
+ * observed, a mode it was not submitted with — is moved or declined, and the
+ * same notice says which and why.
  */
 
 import { cursorProblemText, type CursorProblem } from "./inspectionCursor";
+import { cursorNoteText, type CursorNote } from "./evidenceCursor";
 
-export function CursorNotice({ problems }: { problems: readonly CursorProblem[] }) {
-  if (problems.length === 0) return null;
+export function CursorNotice({
+  problems,
+  notes = [],
+}: {
+  problems: readonly CursorProblem[];
+  notes?: readonly CursorNote[];
+}) {
+  if (problems.length === 0 && notes.length === 0) return null;
   return (
     <div
       role="status"
@@ -30,16 +41,32 @@ export function CursorNotice({ problems }: { problems: readonly CursorProblem[] 
           {cursorProblemText(problem)}
         </span>
       ))}
+      {notes.map((note) => (
+        <span
+          key={JSON.stringify(note)}
+          className="text-[11.5px] leading-[1.55]"
+          style={{ color: "var(--ink-soft)" }}
+          data-cursor-note={note.code}
+        >
+          {cursorNoteText(note)}
+        </span>
+      ))}
     </div>
   );
 }
 
 /** The notice placed above a routed screen, on the screen's own column. */
-export function RouteCursorNotice({ problems }: { problems: readonly CursorProblem[] }) {
-  if (problems.length === 0) return null;
+export function RouteCursorNotice({
+  problems,
+  notes = [],
+}: {
+  problems: readonly CursorProblem[];
+  notes?: readonly CursorNote[];
+}) {
+  if (problems.length === 0 && notes.length === 0) return null;
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1280px] px-2 pb-2">
-      <CursorNotice problems={problems} />
+      <CursorNotice problems={problems} notes={notes} />
     </div>
   );
 }

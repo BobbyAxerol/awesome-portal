@@ -12,12 +12,19 @@
  * for itself.
  */
 import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SEARCH_RULES_FOOTER, SEARCH_SUBTITLE, SearchScreen } from "./SearchDetail";
+import {
+  SEARCH_RULES_BASE,
+  SEARCH_RULES_FIXED_PROFILE,
+  SEARCH_SUBTITLE,
+  SEARCH_TITLE,
+  SearchScreen,
+} from "./SearchDetail";
+import { SearchRoute } from "./SearchRoute";
 import {
   DIAGNOSTIC_KEYS,
   toSearchRefusal,
@@ -25,7 +32,7 @@ import {
   type SearchDetail,
 } from "./searchClient";
 import { DEFAULT_CURSOR } from "./evidenceCursor";
-import { useSearch } from "./useSearch";
+import { forgetSearchReads, searchState, useSearch } from "./useSearch";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
 
@@ -270,7 +277,18 @@ function stub(responder: (url: string) => [number, unknown]) {
 beforeEach(() => {
   requested = [];
   vi.unstubAllGlobals();
+  forgetSearchReads();
 });
+
+/** A run the retained lane could admit: the search read does not rule a ledger out. */
+function admitted(): SearchDetail {
+  const base = detail();
+  return {
+    ...base,
+    source_profile: { state: "NOT_PUBLISHED", reason_code: "P15_SOURCE_NOT_REPORTED", availability: { state: "NOT_PUBLISHED", reason_code: "P15_SOURCE_NOT_REPORTED" } },
+    ledger: { ...base.ledger, state: "NOT_PUBLISHED", availability: { state: "NOT_PUBLISHED", reason_code: "P04_RAN_NO_TRIALS" } },
+  } as SearchDetail;
+}
 
 /* -------------------------------------------------------------------------
  * P15-T01 — a fixed qualification is not a broken optimizer
@@ -490,7 +508,7 @@ describe("P15-T06 — one search read, one optional ledger read", () => {
     stub((url) =>
       url.includes("current-source")
         ? [404, { error: { code: "NOT_ADMITTED", message: "no" } }]
-        : [200, detail()],
+        : [200, admitted()],
     );
     const { result } = renderHook(() => useSearch("R-WFO-118", null));
     await waitFor(() => expect(result.current.detail).not.toBeNull());
@@ -536,7 +554,7 @@ describe("P15-T06 — one search read, one optional ledger read", () => {
   it("classifies each refusal and keeps the screen", () => {
     const of = (status: number) => toSearchRefusal(new PortalApiError("no", status, null, null));
     expect(of(403).state).toBe("denied");
-    expect(of(404).state).toBe("empty");
+    expect(of(404).state).toBe("terminal");
     expect(of(503).state).toBe("unavailable");
 
     const { container } = view({
@@ -557,9 +575,166 @@ describe("P15-T06 — one search read, one optional ledger read", () => {
     expect(screenCode).not.toMatch(/\.sort\(|Math\.max\(|reduce\(/);
   });
 
-  it("keeps the verbatim copy", () => {
-    view();
+  it("keeps the HiFi title and subtitle, and the footer the read supports", () => {
+    const { container } = view();
+    expect(screen.getByText(SEARCH_TITLE)).toBeTruthy();
     expect(screen.getByText(SEARCH_SUBTITLE)).toBeTruthy();
-    expect(screen.getByText(SEARCH_RULES_FOOTER)).toBeTruthy();
+    expect(container.querySelector("[data-rules-footer]")?.textContent).toBe(
+      `${SEARCH_RULES_BASE} ${SEARCH_RULES_FIXED_PROFILE}`,
+    );
+  });
+});
+
+
+/* -------------------------------------------------------------------------
+ * RF-06 — cursor, ETag, lanes, states and HiFi layout (each fails on P15 build)
+ * ---------------------------------------------------------------------- */
+
+function mountRoute(hash: string, path = "/research/quantbt/runs/R-WFO-118/search") {
+  window.history.replaceState(null, "", `${path}${hash}`);
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/research/quantbt/runs/:runId/search" element={<SearchRoute />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+function foldEcho(url: string): SearchDetail {
+  const fold = new URL(url, "http://x").searchParams.get("fold");
+  const base = detail();
+  return { ...base, inspection: { ...base.inspection, requested_fold: fold === null ? null : Number(fold) } } as SearchDetail;
+}
+
+describe("RF-06 FE-S06-01 / FE-X-10 — bare /search opens on the search stage", () => {
+  it("links back to the hub's search tab and forward to freeze on its own stage", async () => {
+    stub((url) => [200, foldEcho(url)]);
+    const { container } = mountRoute("");
+    await waitFor(() => expect(container.querySelector("[data-panel='search-space']")).toBeTruthy());
+    expect(window.location.hash).toBe("#stage=search&fold=1");
+    expect(container.querySelector("[data-action='back-to-hub']")?.getAttribute("href")).toBe(
+      "/research/quantbt/runs/R-WFO-118/evidence#stage=search&fold=1",
+    );
+    expect(container.querySelector("[data-action='next-stage']")?.getAttribute("href")).toBe(
+      "/research/quantbt/runs/R-WFO-118/freeze#stage=freeze&fold=1",
+    );
+  });
+});
+
+describe("RF-06 FE-S06-02 — an ETag belongs to the query it answered", () => {
+  it("a fold change sends no ETag from the previous fold and shows the new fold", async () => {
+    const seen: { url: string; headers: HeadersInit | undefined }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        seen.push({ url, headers: init?.headers });
+        // The server's ETag ignores the fold (CG-P15-02): answer 304 to any If-None-Match.
+        const status = init?.headers ? 304 : 200;
+        return { ok: status === 200, status, statusText: "", headers: new Headers(), json: async () => foldEcho(url) } as unknown as Response;
+      }),
+    );
+    const { result, rerender } = renderHook(({ fold }) => useSearch("R-WFO-118", fold), { initialProps: { fold: 1 } });
+    await waitFor(() => expect(result.current.detail?.inspection.requested_fold).toBe(1));
+    rerender({ fold: 3 });
+    await waitFor(() => expect(result.current.detail?.inspection.requested_fold).toBe(3));
+    expect(seen[seen.length - 1]).toEqual({ url: "/api/v1/quantbt/runs/R-WFO-118/search?fold=3", headers: undefined });
+  });
+});
+
+describe("RF-06 FE-S06-03 / FE-X-12 — no retained-ledger read when the ledger cannot exist", () => {
+  it("answers from the search read and never calls current-source", async () => {
+    stub(() => [200, detail()]);
+    const { result } = renderHook(() => useSearch("R-WFO-118", 1));
+    await waitFor(() => expect(result.current.detail).not.toBeNull());
+    await act(async () => result.current.ensureLedger());
+    expect(result.current.ledger.state).toBe("not-applicable");
+    expect(requested.filter((url) => url.includes("current-source"))).toHaveLength(0);
+  });
+
+  it("the ledger shell names the typed reason and no pending-retention sentence", () => {
+    const { container } = view({ ledger: { state: "not-applicable", reason: "P04_RAN_NO_TRIALS" } });
+    const shell = container.querySelector("[data-ledger-shell]");
+    expect(shell?.textContent).toContain("P04_RAN_NO_TRIALS");
+    expect(container.textContent).not.toMatch(/pending retention/i);
+  });
+});
+
+describe("RF-06 FE-S06-04 — the footer asserts a fixed profile only when the read did", () => {
+  it("says nothing about the run while loading, refused or 404", () => {
+    for (const state of [
+      researchState({ kind: "in-flight", hasAcceptedResponse: false }),
+      { state: "unavailable", reason: "down", mayRetry: true, retainsContent: false } as const,
+    ]) {
+      const { container, unmount } = view({ detail: null, state });
+      expect(container.querySelector("[data-rules-footer]")?.textContent).toBe(SEARCH_RULES_BASE);
+      unmount();
+    }
+  });
+});
+
+describe("RF-06 FE-S06-05 — an Atlas mode/schedule the run contradicts is acknowledged, not forwarded", () => {
+  it("declines a mode that differs, keeps a schedule that matches, and says so", async () => {
+    stub((url) => [200, foldEcho(url)]);
+    const { container } = mountRoute("#stage=search&mode=mode_2_sbb&schedule=per_fold_causal");
+    await waitFor(() => expect(container.querySelector("[data-cursor-note='CURSOR_KEY_NOT_APPLIED']")).toBeTruthy());
+    expect(container.querySelector("[data-cursor-note]")?.textContent).toContain("mode_1_decay");
+    const next = container.querySelector("[data-action='next-stage']")?.getAttribute("href") ?? "";
+    expect(next).not.toContain("mode=");
+    expect(next).toContain("schedule=per_fold_causal");
+    expect(requested.every((url) => !url.includes("mode"))).toBe(true);
+  });
+});
+
+describe("RF-06 FE-S06-06 — a fold the read cannot accept is replaced before it is sent", () => {
+  it("fold=999 never reaches the server and the notice says what was shown", async () => {
+    stub((url) => [200, foldEcho(url)]);
+    const { container } = mountRoute("#stage=search&fold=999");
+    await waitFor(() => expect(container.querySelector("[data-panel='inspection']")).toBeTruthy());
+    expect(requested.some((url) => url.includes("fold=999"))).toBe(false);
+    expect(container.querySelector("[data-cursor-note='CURSOR_FOLD_CLAMPED']")?.textContent).toContain("fold 999");
+    expect(window.location.hash).toBe("#stage=search&fold=1");
+    expect(container.querySelector("[data-research-state='terminal']")).toBeNull();
+  });
+});
+
+describe("RF-06 FE-X-11 — states", () => {
+  it("a first-read 409 is retryable, not stale; a 404 leads to the Run Library", async () => {
+    expect(searchState(null, toSearchRefusal(new PortalApiError("c", 409, null, null))).state).toBe("failed-retryable");
+    stub(() => [404, { error: { code: "RESEARCH_SEARCH_NOT_FOUND", message: "Research run was not found." } }]);
+    const { container } = mountRoute("");
+    await waitFor(() => expect(container.querySelector("[data-run-not-found]")).toBeTruthy());
+    expect(container.querySelector("[data-action='run-library']")?.getAttribute("href")).toBe("/research/quantbt/runs");
+    expect(container.querySelector("[data-action='next-stage']")).toBeNull();
+    expect(container.querySelector("[data-rules-footer]")?.textContent).toBe(SEARCH_RULES_BASE);
+  });
+});
+
+describe("RF-06 FE-S06-07/08 — HiFi layout", () => {
+  it("lays Stage A, the freeze line and Stage B on a 1.08 : 52px : 1 grid, ledger full width below", () => {
+    const { container } = view();
+    const grid = container.querySelector("[data-stage-grid]") as HTMLElement;
+    expect(grid.className).toContain("grid-cols-[1.08fr_52px_1fr]");
+    expect(grid.querySelector("[data-ledger]")).toBeNull();
+    expect(container.querySelector("[data-ledger]")).toBeTruthy();
+    // Stage B keeps its frames.
+    for (const panel of ["pool-freeze", "formula", "selection", "parameter_frequency", "inspection"]) {
+      expect(container.querySelector(`[data-stage='B'] [data-panel='${panel}']`), panel).toBeTruthy();
+    }
+  });
+
+  it("A1 carries the served kind; the claim row, copy link and formatted as-of are present", () => {
+    const { container } = view();
+    expect(container.querySelector("[data-kind='rsi_len']")?.textContent).toBe("NUMERIC");
+    expect(container.querySelector("[data-claim-row]")).toBeTruthy();
+    expect(container.querySelector("[data-action='copy-evidence-link']")).toBeTruthy();
+    expect(container.querySelector("[data-as-of]")?.textContent).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$/);
+    expect(container.querySelector("[data-bundle-digest]")?.getAttribute("title")).toBe("sha256:bundle01");
+  });
+
+  it("prints every absence once — source_absences does not repeat a panel's", () => {
+    const { container } = view();
+    expect(container.querySelectorAll("[data-gap-fact='objective components']")).toHaveLength(1);
+    expect(container.querySelector("[data-source-absences]")).toBeNull();
   });
 });

@@ -164,11 +164,51 @@ export function axisTicks(timeline: Range, count: number): { at_utc_ms: number; 
   return ticks;
 }
 
+/**
+ * RF-06 FE-S05-07: month-start ticks.
+ *
+ * Still presentation under the P14 ruling — UTC month starts that fall inside
+ * the published range, labelled `YYYY-MM`. A reader scans "2026-05" faster
+ * than an arbitrary evenly-spaced day. When the range holds fewer than two
+ * month starts the evenly-spaced ticks are used instead; when it holds more
+ * than `maxCount`, every n-th month is kept so the labels never collide.
+ */
+export function monthTicks(timeline: Range, maxCount: number): { at_utc_ms: number; label: string }[] {
+  const { start_utc_ms: start, end_exclusive_utc_ms: end } = timeline;
+  if (end <= start || maxCount < 2) return [];
+  const starts: number[] = [];
+  const first = new Date(start);
+  let year = first.getUTCFullYear();
+  let month = first.getUTCMonth();
+  if (Date.UTC(year, month, 1) < start) month += 1;
+  for (;;) {
+    const at = Date.UTC(year, month, 1);
+    if (at >= end) break;
+    starts.push(at);
+    month += 1;
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
+    if (starts.length > 600) break;
+  }
+  if (starts.length < 2) return axisTicks(timeline, maxCount);
+  const every = Math.ceil(starts.length / maxCount);
+  return starts
+    .filter((_, index) => index % every === 0)
+    .map((at) => ({ at_utc_ms: at, label: new Date(at).toISOString().slice(0, 7) }));
+}
+
 /** How many ticks a width can carry without the labels colliding. */
 export function tickCountForWidth(width: number): number {
   if (width < 520) return 2;
   if (width < 900) return 3;
   return 5;
+}
+
+/** How many month labels (`YYYY-MM`, ~52px each) a track width carries. */
+export function monthTickBudget(width: number): number {
+  return Math.max(2, Math.min(12, Math.floor(width / 90)));
 }
 
 /* -------------------------------------------------------------------------
