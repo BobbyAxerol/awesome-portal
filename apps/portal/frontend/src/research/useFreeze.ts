@@ -14,13 +14,15 @@ import {
   NOT_MODIFIED,
   freezeApi,
   toFreezeRefusal,
+  isFreezeLaneNotApplicable,
   type CurrentSourceFreeze,
+  type CurrentSourceNotApplicable,
   type FreezeDetail,
   type FreezeRefusal,
   type FreezeVerification,
 } from "./freezeClient";
 import { researchState, type ResearchState } from "./state";
-import { refusalState } from "./researchRefusal";
+import { laneStateOfError, refusalState, type CurrentSourceLaneState } from "./researchRefusal";
 
 export type VerifySlot =
   | { state: "idle" }
@@ -32,7 +34,9 @@ export type RetainedSlot =
   | { state: "idle" }
   | { state: "loading" }
   | { state: "ready"; freeze: CurrentSourceFreeze }
-  | { state: "refused"; refusal: FreezeRefusal };
+  /* RF-05 CG-P13-09: the lane answered that this run's profile is one it never holds. */
+  | { state: "not-applicable"; answer: CurrentSourceNotApplicable }
+  | { state: "refused"; refusal: FreezeRefusal; laneState: CurrentSourceLaneState | null };
 
 export interface FreezeController {
   detail: FreezeDetail | null;
@@ -104,9 +108,13 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
       .currentSource(runId, { workspaceId })
       .then((answer) => {
         if (answer === NOT_MODIFIED) return;
-        setRetained({ state: "ready", freeze: answer });
+        setRetained(
+          isFreezeLaneNotApplicable(answer) ? { state: "not-applicable", answer } : { state: "ready", freeze: answer },
+        );
       })
-      .catch((error: unknown) => setRetained({ state: "refused", refusal: toFreezeRefusal(error) }));
+      .catch((error: unknown) =>
+        setRetained({ state: "refused", refusal: toFreezeRefusal(error), laneState: laneStateOfError(error) }),
+      );
   }, [runId, workspaceId]);
 
   useEffect(() => {

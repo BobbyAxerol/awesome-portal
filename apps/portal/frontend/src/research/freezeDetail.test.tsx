@@ -23,7 +23,7 @@ import { FREEZE_RULES_FOOTER, FREEZE_SUBTITLE, FreezeScreen } from "./FreezeDeta
 import {
   BLOCKED_NOTE,
   PARTIAL_SCOPE_NOTE,
-  toFreezeRefusal,
+  isFreezeLaneNotApplicable, toFreezeRefusal,
   type CurrentSourceFreeze,
   type FreezeDetail,
 } from "./freezeClient";
@@ -534,10 +534,53 @@ describe("P16-T05 — retained custody is narrow, and says so", () => {
       retained: {
         state: "refused",
         refusal: toFreezeRefusal(new PortalApiError("Not an admitted profile.", 404, "NOT_ADMITTED", null)),
+        laneState: null,
       },
     });
     expect(container.querySelector("[data-retained-refusal]")?.textContent).toContain("Not an admitted profile.");
     expect(container.querySelector("[data-integrity]")).toBeTruthy();
+  });
+
+  /* RF-05 CG-P13-09 changed the lane: a fixed-profile run gets a typed 200.
+     S07 read that body as a retained Freeze and crashed on `integrity.state`
+     (real-API receipt, 2026-09-24). */
+  it("renders the typed not-applicable 200 instead of crashing on it", () => {
+    const answer = {
+      schema_version: "research.current-source-not-applicable.v1" as const,
+      read_authority: "PORTAL_RETAINED_CURRENT_SOURCE" as const,
+      run_id: "rrun_3935d7d16bbccabcc43382108ffca89d",
+      revision: "csna_1",
+      etag: '"csna_1"',
+      availability: { state: "NOT_APPLICABLE" as const, reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION" },
+      lane: {
+        state: "NOT_APPLICABLE" as const,
+        operation: "freeze" as const,
+        run_profile: "P04_FIXED_QUALIFICATION" as const,
+        run_adapter_contract_digest: "a".repeat(64),
+        retainable_profile_id: "rs02.delta-wfo-global.v1" as const,
+        reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION",
+      },
+    };
+    expect(isFreezeLaneNotApplicable(answer)).toBe(true);
+    const { container } = view({ retained: { state: "not-applicable", answer } });
+    const note = container.querySelector("[data-retained-not-applicable]");
+    expect(note?.textContent).toContain("not applicable");
+    expect(note?.textContent).toContain("nothing is pending");
+    expect(container.querySelector("[data-retained-state]")).toBeNull();
+    expect(container.querySelector("[data-retained-refusal]")).toBeNull();
+  });
+
+  it("names the lane state of a 409, not the server's message text", () => {
+    const { container } = view({
+      retained: {
+        state: "refused",
+        refusal: toFreezeRefusal(new PortalApiError("Current QuantBT output is PENDING_RETENTION.", 409, "RESEARCH_CURRENT_SOURCE_CONFLICT", null)),
+        laneState: "PENDING_RETENTION",
+      },
+    });
+    const refusal = container.querySelector("[data-retained-refusal]");
+    expect(refusal?.querySelector("[data-lane-state='PENDING_RETENTION']")).toBeTruthy();
+    expect(refusal?.textContent).not.toContain("admits one Advanced-WFO profile");
   });
 });
 

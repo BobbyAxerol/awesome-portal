@@ -24,7 +24,7 @@ import type { components as CurrentSourceComponents } from "@portal/contracts-re
 
 import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
 import { PortalApiError } from "../lib/api";
-import { toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
+import { ResearchLaneConflictError, readLaneState, toResearchRefusal, type ResearchRefusal } from "./researchRefusal";
 
 type FreezeSchemas = FreezeComponents["schemas"];
 type SourceSchemas = CurrentSourceComponents["schemas"];
@@ -39,6 +39,15 @@ export type Integrity = FreezeSchemas["Integrity"];
 export type FreezeWindow = FreezeSchemas["Window"];
 
 export type CurrentSourceFreeze = SourceSchemas["Freeze"];
+/** RF-05 CG-P13-09: the typed 200 for a run whose profile the retained lane never holds. */
+export type CurrentSourceNotApplicable = SourceSchemas["LaneNotApplicable"];
+
+/** Whether a 200 from the current-source read is the typed not-applicable answer. */
+export function isFreezeLaneNotApplicable(
+  body: CurrentSourceFreeze | CurrentSourceNotApplicable,
+): body is CurrentSourceNotApplicable {
+  return (body as { schema_version?: unknown }).schema_version === "research.current-source-not-applicable.v1";
+}
 
 const RUNS = "/api/v1/quantbt/runs";
 
@@ -76,14 +85,20 @@ async function call<T>(path: string, init?: RequestInit & { etag?: string | null
     let message = `${response.status} ${response.statusText}`;
     let code: string | null = null;
     let requestId: string | null = response.headers.get("x-request-id");
+    let laneState: ReturnType<typeof readLaneState> = null;
     try {
-      const problem = (await response.json()) as Partial<FreezeSchemas["Problem"]>;
+      const problem = (await response.json()) as Partial<FreezeSchemas["Problem"]> & {
+        details?: { lane_state?: unknown };
+      };
       if (problem?.error?.message) message = problem.error.message;
       code = problem?.error?.code ?? null;
       requestId = problem?.request_id ?? requestId;
+      laneState = readLaneState(problem?.details?.lane_state);
     } catch {
       /* non-JSON error body: keep the status line the server gave */
     }
+    /* RF-05 CG-P13-09: a current-source conflict names its lane state. */
+    if (laneState !== null) throw new ResearchLaneConflictError(message, response.status, code, requestId, laneState);
     throw new PortalApiError(message, response.status, code, requestId);
   }
   return (await response.json()) as T;
@@ -109,7 +124,7 @@ export const freezeApi = {
 
   /** `researchCurrentSourceFreezeGetV1` */
   currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
-    call<CurrentSourceFreeze>(
+    call<CurrentSourceFreeze | CurrentSourceNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/freeze${query({ workspaceId: options.workspaceId })}`,
       { signal: options.signal },
     ),

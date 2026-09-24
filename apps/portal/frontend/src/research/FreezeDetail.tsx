@@ -25,6 +25,7 @@ import { Link } from "react-router-dom";
 
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
+import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
 import {
   BLOCKED_NOTE,
   FREEZE_GAP_WORDS,
@@ -399,10 +400,27 @@ function RetainedPanel({ slot, onNeeded }: { slot: RetainedSlot; onNeeded: () =>
 
       {slot.state === "ready" ? (
         <RetainedRows freeze={slot.freeze} />
+      ) : slot.state === "not-applicable" ? (
+        /* RF-05 CG-P13-09: a typed 200 — this run's profile is one the retained
+           lane never holds. Nothing is pending and nothing failed. */
+        <p
+          className="text-[11px] leading-[1.5]"
+          style={{ color: "var(--ink-soft)" }}
+          data-retained-not-applicable
+          title={`${slot.answer.lane.reason_code} · profile ${slot.answer.lane.run_profile} · adapter ${slot.answer.lane.run_adapter_contract_digest}`}
+        >
+          <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }}>not applicable</span> — this run is
+          bound to the P04 fixed qualification, which the retained lane never holds. There is no manifest, row count or
+          batch receipt to compare, and nothing is pending.
+        </p>
       ) : slot.state === "refused" ? (
         <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-retained-refusal>
-          <RefusalNote refusal={slot.refusal} /> The retained-source lane admits one Advanced-WFO profile; for any other
-          run there is no manifest, row count or batch receipt to compare.
+          {slot.laneState ? (
+            /* The server names why the lane is empty; its message text is not read. */
+            <span data-lane-state={slot.laneState}>{CURRENT_SOURCE_LANE_COPY[slot.laneState]}</span>
+          ) : (
+            <RefusalNote refusal={slot.refusal} />
+          )}
         </p>
       ) : (
         <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
