@@ -157,14 +157,58 @@ quyết về việc merge này.
 | W7 | Receipt real-API từng phase trên preview, PG lane P18–P21, đóng board | Điều kiện đóng mọi phase |
 | — | CG-RF02-01 (seccomp hẹp) → thực thi source import | Việc bảo mật; làm song song W2–W3, trước khi mở import |
 
-## 6. Bobby cần quyết
+## 6. Quyết định của Bobby — 2026-09-24
 
-1. **Nhánh Thanhvuong (TV):** (a) merge TV vào base và Claude xử lý xung đột,
-   giữ S07 của base; (b) Claude port từng màn, TV đóng lại; (c) Thanhvuong vẫn
-   tiếp tục P17–P21 frontend và Claude chỉ làm backend + S11.
-   **Claude khuyến nghị (a)**: giữ công và lịch sử, và xung đột tập trung ở vài file.
-2. **A10c (what-if/lưới 81 ô):** làm như implementation debt, hay chấp nhận là
-   source exclusion (U:5040)?
-3. **Mốc P21↔P22:** đồng ý ranh giới §0 (Claude giữ S11 và contract P21, Codex
-   làm backend P22 sau khi contract P21 đóng băng)?
-4. **Sửa hook `verify-workspace.sh`** để chạy lane research (file dùng chung toàn repo)?
+| # | Quyết định | Hệ quả |
+|---|---|---|
+| D1 | Nhánh Thanhvuong do **Codex merge** vào `docs/research-loop-plan` (worktree tích hợp riêng, giữ nguyên 44 commit, không rebase/force-push; xung đột ở `QuantBTModule.tsx`, `EvidenceFlow.tsx`, `FreezeDetail.tsx`, `RunLibrary.tsx`) | Claude **không sửa 4 file đó** cho tới khi merge vào base; sau đó Claude nhận S08/S09/S10/S13 làm tiếp, làm S11 mới. Yêu cầu Bobby: không mất code, docs, evidence nào |
+| D2 | **A10c phải làm** — luôn cố gắng trả nợ, so với HiFi và sáng tạo | A10c chuyển từ "SOURCE_CAPABILITY_BLOCKED" (U:5040) sang việc thật (§7) |
+| D3 | Claude làm **tạm đến P21** | P22+ của Codex |
+| D4 | Hook/tooling dùng chung được sửa khi cần cho sản phẩm; không hỏi việc vặt | Sửa `verify-workspace.sh`/`verify-generated.sh` khi cần, ghi lý do trong commit |
+| D5 | Việc cần duyệt phải kèm giải thích, không hỏi trống | Áp dụng từ nay |
+
+## 7. A10c là gì và cách làm
+
+**Là gì.** Màn 07 (Freeze) trong HiFi có một thẻ **what-if sandbox** (spec
+`release-v1.1/docs/screens/07_s3_freeze.md` §2.5, §3, §4): hai slider quanh θ*
+đã freeze (`entry_z ±0.4`, `atr_mult ±1.0`), kéo slider thì hiện **ΔJ₁ preview**
+đọc từ một **lưới 9×9 = 81 ô do server tính sẵn** quanh θ* (FE không tự tính), và
+nút **"create sibling attempt →"** mở màn 02 với bản nháp copy tham số mới. Luật
+gốc: what-if **không bao giờ ghi lên tham số đã freeze** — nó tạo một attempt
+anh em có `config_hash` mới, nối lineage về run này (P19).
+
+**Vì sao đang nợ.** Astra A10 (`P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md:266`)
+chỉ ra P16 chưa có (a) verify byte artifact, (b) binding tham số lịch sử, (c)
+what-if. Plan §P16 (U:5040) xếp (c) là "SOURCE_CAPABILITY_BLOCKED": source P04 cố
+định không publish evaluation identity/grid/objective, nên không có gì để đọc.
+Hiện `freeze.contract.ts:130-148` trả `NOT_APPLICABLE`, `may_submit=false`.
+
+**Cách làm (sau W1, vì cần WFO thật đã retain):**
+
+1. **Nguồn ô lưới = evaluation đã có.** Khi WFO signal-notional chạy qua P10→P06,
+   Optuna đã đánh giá nhiều điểm; P05 retain trial ledger (CG-P15-03). Ô nào
+   trùng đúng một evaluation đã có (khoá = params + dataset + objective + seed +
+   engine) thì đọc ΔJ₁ từ đó. Ô chưa có → **typed missing**, không nội suy.
+2. **Job chẩn đoán tường minh.** Nút "evaluate grid" (không phải lúc mở màn,
+   không phải lúc kéo slider) tạo một Research job có admission/cancel/audit,
+   dedup theo khoá trên, trần 81 evaluation; tiến độ đi qua P11 như mọi run.
+   Kết quả seal vào P05 thành bảng `WHATIF_GRID` bất biến.
+3. **Read.** `GET …/freeze?fold=k` thêm `whatif: { sliders, grid, coverage, job }`
+   — `coverage` ghi "37 / 81 cells evaluated" để không ô trống nào giả là 0.
+4. **Sibling attempt.** "create sibling attempt →" gọi read requested-spec cho
+   clone (chung với CG-P11-07 `?from=`), mở màn 02 với draft đã đổi tham số; P19
+   lineage ghi quan hệ `SIBLING_OF`. Không chạm run gốc.
+5. **Run P04 cố định / không có search:** giữ card theo HiFi, slider disabled kèm
+   lý do "this run froze a fixed profile — no evaluated neighbourhood exists"
+   (Astra A11: giữ bố cục, không dựng số giả).
+
+Test: đúng 81 ô unique, không job nào chạy khi mount/kéo slider, ô thiếu không
+thành 0, passport freeze không đổi sau job, run fixed trả disabled có lý do.
+
+## 8. Registry New Run — ghi chú rủi ro
+
+`registry.json:1206` trỏ New Run về `/research/quantbt/new` (màn cũ). Registry
+dùng chung với production, nơi `FEATURE_RESEARCH_RUN_PRODUCER` đang tắt; trỏ sang
+`runs/new` lúc này sẽ đưa người dùng production vào màn 02 chưa gửi được run.
+Đổi link **cùng lúc** bật RUN_PRODUCER cho môi trường đó (W7), kèm chạy
+`test_portal_registry_contract`.
