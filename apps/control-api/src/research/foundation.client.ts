@@ -7,7 +7,9 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { ResearchEngineAtlasPrivateSchema, type ResearchEngineAtlasPrivate } from "./foundation.contract";
 import { ResearchFoundationError } from "./foundation.error";
 
-const MAX_PRIVATE_RESPONSE_BYTES = 128 * 1024;
+// CG-P04-06/07 engine facts roughly doubled the document; keep the same bound
+// as the P08 private client rather than silently truncating a larger Atlas.
+const MAX_PRIVATE_RESPONSE_BYTES = 256 * 1024;
 
 /**
  * The one P09 server-side adapter call.  It is intentionally a read-only,

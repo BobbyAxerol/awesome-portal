@@ -215,6 +215,87 @@ class CapabilityAxes(CatalogModel):
     admission: Literal["P04_BASELINE_ONLY", "NOT_ADMITTED", "DEFERRED"]
 
 
+class ResolvedBackend(CatalogModel):
+    """What the pinned factory resolves with no caller override (CG-P04-06)."""
+
+    state: Literal["RESOLVED", "SPEC_DEPENDENT"]
+    value: str | None = Field(default=None, max_length=80)
+    engine_mode: str | None = Field(default=None, max_length=80)
+    reason: str | None = Field(default=None, max_length=300)
+
+    @model_validator(mode="after")
+    def validate_state(self) -> "ResolvedBackend":
+        if (self.state == "RESOLVED") != (self.value is not None and self.reason is None):
+            raise ValueError("a RESOLVED backend has a value and no reason; SPEC_DEPENDENT has a reason and no value")
+        return self
+
+
+class SupportMatrixRow(CatalogModel):
+    spec_id: str = Field(min_length=1, max_length=80)
+    status: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    backends: str = Field(min_length=1, max_length=120)
+    route: str = Field(min_length=1, max_length=200)
+    detail: str = Field(min_length=1, max_length=200)
+
+
+class SupportMatrix(CatalogModel):
+    """Pass-through of the engine's own public support-matrix function."""
+
+    function: Literal["arbitrage_support_matrix", "nautilus_support_matrix"]
+    executable: int = Field(ge=0, le=32)
+    total: int = Field(ge=1, le=32)
+    rows: tuple[SupportMatrixRow, ...] = Field(min_length=1, max_length=32)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=2)
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> "SupportMatrix":
+        if self.total != len(self.rows) or self.executable != sum(
+            1 for row in self.rows if row.status == "supported"
+        ):
+            raise ValueError("support matrix counts must be derived from its rows")
+        return self
+
+
+class RouteParamField(CatalogModel):
+    name: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    engine_field: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    requested_spec_values: tuple[str, ...] = Field(max_length=16)
+    engine_values: tuple[str, ...] = Field(max_length=16)
+    accepted_by_engine: tuple[str, ...] = Field(max_length=16)
+    note: str = Field(min_length=1, max_length=300)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=2)
+
+    @model_validator(mode="after")
+    def validate_subset(self) -> "RouteParamField":
+        if not set(self.accepted_by_engine) <= set(self.requested_spec_values):
+            raise ValueError("accepted_by_engine must be a subset of requested_spec_values")
+        return self
+
+
+class RouteParams(CatalogModel):
+    group: Literal["intrabar", "portfolio", "reactive", "dca"]
+    fields: tuple[RouteParamField, ...] = Field(min_length=1, max_length=8)
+
+
+class RouteEngineFacts(CatalogModel):
+    """CG-P04-06: route facts read from the pinned wheel, each with a locator."""
+
+    description: str = Field(min_length=1, max_length=300)
+    method: Literal["wfo", "tape", "single_pass"]
+    walk_forward_status: Literal["supported", "partial", "not_listed"]
+    method_basis: str = Field(min_length=1, max_length=300)
+    resolved_backend: ResolvedBackend
+    support_matrix: SupportMatrix | None = None
+    route_params: RouteParams | None = None
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+    @model_validator(mode="after")
+    def validate_method(self) -> "RouteEngineFacts":
+        if (self.method == "wfo") != (self.walk_forward_status in {"supported", "partial"}):
+            raise ValueError("only a walk-forward-listed route has the wfo method")
+        return self
+
+
 class RouteDescriptor(CatalogModel):
     route_id: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
     family: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
@@ -227,6 +308,8 @@ class RouteDescriptor(CatalogModel):
     axes: CapabilityAxes
     reason: str = Field(min_length=1, max_length=500)
     required_input_class: str = Field(min_length=1, max_length=120)
+    # CG-P04-06, additive: absent only on a manifest written before it existed.
+    engine_facts: RouteEngineFacts | None = None
 
 
 Schedule = Literal["global", "per_fold_decay", "per_fold_causal"]
@@ -236,6 +319,27 @@ class NotPublishedFact(CatalogModel):
     state: Literal["NOT_PUBLISHED"]
     reason: str = Field(min_length=1, max_length=400)
     source: SourceLocator | None = None
+
+
+OosUseState = Literal[
+    "SELECTION_INPUT", "WITHHELD_UNTIL_S4", "RETROSPECTIVE", "REPORT_ONLY", "NOT_APPLICABLE"
+]
+
+
+def expected_oos_use_state(*, mode_id: str, schedule: str, oos_use: str) -> OosUseState:
+    """The engine's own branch (walkforward.py 1250-1287), as one of five words.
+
+    per_fold_decay feeds OOS into selection; per_fold_causal freezes the
+    selection before the outer OOS is read; the global schedule either reads
+    OOS back retrospectively or only reports it. Mode 5 has no held-out window.
+    """
+    if mode_id == "mode_5_full_robust":
+        return "NOT_APPLICABLE"
+    if schedule == "per_fold_decay":
+        return "SELECTION_INPUT"
+    if schedule == "per_fold_causal":
+        return "WITHHELD_UNTIL_S4"
+    return "RETROSPECTIVE" if oos_use == "USED" else "REPORT_ONLY"
 
 
 class ScheduleFact(CatalogModel):
@@ -250,6 +354,9 @@ class ScheduleFact(CatalogModel):
         "engine_enforced_nested_v2",
     ]
     oos_use: Literal["USED", "NOT_USED"]
+    # CG-P04-04: the four OOS states the Atlas renders, plus n/a for the
+    # full-sample mode. Additive; validated against the engine branch.
+    oos_use_state: OosUseState | None = None
     oos_use_condition: str | None = Field(default=None, min_length=1, max_length=300)
     params_semantics: str = Field(pattern=r"^[a-z][a-z0-9_]{1,79}$")
     cert_cap: NotPublishedFact
@@ -269,6 +376,23 @@ class ObjectiveCoefficient(CatalogModel):
     note: str | None = Field(default=None, min_length=1, max_length=200)
 
 
+class ObjectiveTerm(CatalogModel):
+    """CG-P04-07: what one objective term means, citing the engine lines."""
+
+    symbol: str = Field(min_length=1, max_length=160)
+    meaning: str = Field(min_length=1, max_length=300)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=2)
+
+
+class ObjectiveWeight(CatalogModel):
+    """CG-P04-07: a release-default selection weight of modes 2-5."""
+
+    name: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    release_default: str = Field(pattern=r"^-?[0-9]+(\.[0-9]+)?$")
+    role: str = Field(min_length=1, max_length=200)
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=2)
+
+
 class ObjectiveFact(CatalogModel):
     state: Literal["PUBLISHED"]
     direction: Literal["maximize", "minimize"]
@@ -276,6 +400,8 @@ class ObjectiveFact(CatalogModel):
     stages: tuple[ObjectiveStage, ...] = Field(min_length=1, max_length=4)
     coefficients: tuple[ObjectiveCoefficient, ...] = Field(max_length=8)
     note: str | None = Field(default=None, min_length=1, max_length=300)
+    terms: tuple[ObjectiveTerm, ...] = Field(default=(), max_length=12)
+    weights: tuple[ObjectiveWeight, ...] = Field(default=(), max_length=16)
     source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
 
 
@@ -330,6 +456,37 @@ class ModeDescriptor(CatalogModel):
             fact_schedules = tuple(fact.schedule for fact in self.facts.schedules)
             if fact_schedules != self.valid_schedules:
                 raise ValueError("facts.schedules must describe exactly valid_schedules, in order")
+            for fact in self.facts.schedules:
+                if fact.oos_use_state is not None and fact.oos_use_state != expected_oos_use_state(
+                    mode_id=self.mode_id, schedule=fact.schedule, oos_use=fact.oos_use
+                ):
+                    raise ValueError("oos_use_state must follow the engine's schedule branch")
+        return self
+
+
+class ClaimQualifier(CatalogModel):
+    """CG-P04-07: the engine's meaning of a level and whether it derives it.
+
+    ``result_metadata_*`` is what ``certify_result_metadata`` returns for the
+    contract's engine id. A different level is published as such, never
+    reconciled into agreement; NOT_DERIVABLE means the certifier has no
+    branch for this contract and the catalog level is the Portal record.
+    """
+
+    level_name: str = Field(pattern=r"^[A-Z][A-Z0-9_]{1,63}$")
+    level_description: str = Field(pattern=r"^[a-z][a-z0-9_]{1,119}$")
+    result_metadata_derivation: Literal[
+        "ENGINE_DERIVES_SAME_LEVEL", "ENGINE_DERIVES_OTHER_LEVEL", "NOT_DERIVABLE"
+    ]
+    result_metadata_level: int | None = Field(default=None, ge=0, le=4)
+    result_metadata_status: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]{1,79}$")
+    source: tuple[SourceLocator, ...] = Field(min_length=1, max_length=4)
+
+    @model_validator(mode="after")
+    def validate_derivation(self) -> "ClaimQualifier":
+        derived = self.result_metadata_derivation != "NOT_DERIVABLE"
+        if derived != (self.result_metadata_level is not None and self.result_metadata_status is not None):
+            raise ValueError("a derived qualifier carries the engine level and status; NOT_DERIVABLE carries neither")
         return self
 
 
@@ -338,6 +495,21 @@ class ClaimDescriptor(CatalogModel):
     engine_certification: str = Field(pattern=r"^[A-Z][A-Z0-9_-]{1,63}$")
     numeric_guarantee: str = Field(min_length=1, max_length=400)
     never_claims: str = Field(min_length=1, max_length=500)
+    # CG-P04-07, additive.
+    qualifier: ClaimQualifier | None = None
+
+    @model_validator(mode="after")
+    def validate_qualifier(self) -> "ClaimDescriptor":
+        if self.qualifier is None:
+            return self
+        level = self.engine_certification.removeprefix("L")
+        same = level.isdigit() and int(level) == self.qualifier.result_metadata_level
+        derivation = self.qualifier.result_metadata_derivation
+        if (derivation == "ENGINE_DERIVES_SAME_LEVEL" and not same) or (
+            derivation == "ENGINE_DERIVES_OTHER_LEVEL" and same
+        ):
+            raise ValueError("the qualifier derivation must agree with the catalog level")
+        return self
 
 
 class EvidenceContractDescriptor(CatalogModel):
@@ -408,6 +580,36 @@ class ResearchRoutePublic(CatalogModel):
     axes: CapabilityAxes
     reason: str
     required_input_class: str
+    # CG-P04-06, additive: the engine-sourced facts and the one status word
+    # derived from them (see route_status_word), never a hand-set label.
+    status_word: str | None = None
+    engine_facts: RouteEngineFacts | None = None
+
+
+def route_status_word(route: RouteDescriptor) -> str | None:
+    """One Atlas status word per route, derived from published facts only.
+
+    DEFERRED (Portal deferral) > DEFAULT (sole new-run default) > the engine
+    support matrix (EXPERIMENTAL when nothing in it is executable, n/m when
+    only part is) > LEGACY (the factory resolves the legacy backend) >
+    SUPPORTED. A route without engine facts gets no word rather than a guess.
+    """
+    facts = route.engine_facts
+    if facts is None:
+        return None
+    if route.axes.admission == "DEFERRED":
+        return "DEFERRED"
+    if route.default_for_new_runs:
+        return "DEFAULT"
+    matrix = facts.support_matrix
+    if matrix is not None:
+        if matrix.executable == 0 and any(row.status == "experimental" for row in matrix.rows):
+            return "EXPERIMENTAL"
+        if matrix.executable < matrix.total:
+            return f"{matrix.executable}/{matrix.total}"
+    if facts.resolved_backend.value == "legacy":
+        return "LEGACY"
+    return "SUPPORTED"
 
 
 class ResearchEngineAtlasDocument(CatalogModel):
@@ -820,6 +1022,8 @@ class ResearchEngineCatalogService:
                     axes=route.axes,
                     reason=route.reason,
                     required_input_class=route.required_input_class,
+                    status_word=route_status_word(route),
+                    engine_facts=route.engine_facts,
                 )
                 for route in self._catalog.routes
             ),

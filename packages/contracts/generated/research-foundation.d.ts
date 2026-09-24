@@ -132,6 +132,15 @@ export interface components {
             engine_certification: string;
             numeric_guarantee: string;
             never_claims: string;
+            qualifier?: {
+                level_name: string;
+                level_description: string;
+                /** @enum {unknown} */
+                result_metadata_derivation: "ENGINE_DERIVES_SAME_LEVEL" | "ENGINE_DERIVES_OTHER_LEVEL" | "NOT_DERIVABLE";
+                result_metadata_level: number | null;
+                result_metadata_status: string | null;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            } | null;
         };
         /** @description Exact P04 declared evidence envelope. P09 publishes declaration only; it neither writes evidence nor exposes a worker control. */
         EvidenceContract: {
@@ -151,6 +160,8 @@ export interface components {
             axes: components["schemas"]["CapabilityAxes"];
             reason: string;
             required_input_class: string;
+            status_word?: string | null;
+            engine_facts?: components["schemas"]["AtlasRouteEngineFacts"] | null;
         };
         /** @description Where a fact is stated in the pinned engine package: file, line range, the file digest carried by the wheel RECORD, and a string that occurs in that range. */
         AtlasSourceLocator: {
@@ -179,6 +190,7 @@ export interface components {
             params_semantics: string;
             cert_cap: components["schemas"]["AtlasNotPublishedFact"];
             source: components["schemas"]["AtlasSourceLocator"][];
+            oos_use_state?: ("SELECTION_INPUT" | "WITHHELD_UNTIL_S4" | "RETROSPECTIVE" | "REPORT_ONLY" | "NOT_APPLICABLE") | null;
         };
         AtlasObjectiveFact: {
             /** @constant */
@@ -200,6 +212,19 @@ export interface components {
             }[];
             note?: string | null;
             source: components["schemas"]["AtlasSourceLocator"][];
+            /** @description CG-P04-07: what each objective term means, citing the engine lines that compute it. */
+            terms?: {
+                symbol: string;
+                meaning: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            }[];
+            /** @description CG-P04-07: release-default selection weights of modes 2-5 (WalkForwardConfig defaults), each citing where the engine applies it. */
+            weights?: {
+                name: string;
+                release_default: string;
+                role: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            }[];
         };
         AtlasReadsFact: {
             /** @constant */
@@ -381,6 +406,56 @@ export interface components {
             /** @constant */
             facts_state: "NOT_PUBLISHED";
             facts_reason: string;
+        };
+        /** @description CG-P04-06: the backend the pinned constructor resolves with no caller override. SPEC_DEPENDENT means the constructor needs a typed specification first; its support matrix lists backends per specification. */
+        AtlasResolvedBackend: {
+            /** @enum {unknown} */
+            state: "RESOLVED" | "SPEC_DEPENDENT";
+            value: string | null;
+            engine_mode: string | null;
+            reason: string | null;
+        };
+        /** @description CG-P04-06: pass-through of the engine's public support-matrix function (arbitrage_support_matrix or nautilus_support_matrix). */
+        AtlasSupportMatrix: {
+            /** @enum {unknown} */
+            function: "arbitrage_support_matrix" | "nautilus_support_matrix";
+            executable: number;
+            total: number;
+            rows: {
+                spec_id: string;
+                status: string;
+                backends: string;
+                route: string;
+                detail: string;
+            }[];
+            source: components["schemas"]["AtlasSourceLocator"][];
+        };
+        /** @description CG-P04-06: per requested-spec route_params field, the P02 value list next to the engine's own vocabulary; accepted_by_engine is their exact intersection. */
+        AtlasRouteParams: {
+            /** @enum {unknown} */
+            group: "intrabar" | "portfolio" | "reactive" | "dca";
+            fields: {
+                name: string;
+                engine_field: string | null;
+                requested_spec_values: string[];
+                engine_values: string[];
+                accepted_by_engine: string[];
+                note: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            }[];
+        };
+        /** @description CG-P04-06: route facts read from the pinned QuantBT wheel, each with a source locator. Descriptive; never run admission. */
+        AtlasRouteEngineFacts: {
+            description: string;
+            /** @enum {unknown} */
+            method: "wfo" | "tape" | "single_pass";
+            /** @enum {unknown} */
+            walk_forward_status: "supported" | "partial" | "not_listed";
+            method_basis: string;
+            resolved_backend: components["schemas"]["AtlasResolvedBackend"];
+            support_matrix: components["schemas"]["AtlasSupportMatrix"] | null;
+            route_params: components["schemas"]["AtlasRouteParams"] | null;
+            source: components["schemas"]["AtlasSourceLocator"][];
         };
     };
     responses: {

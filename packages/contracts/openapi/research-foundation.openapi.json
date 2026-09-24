@@ -687,6 +687,74 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "qualifier": {
+            "anyOf": [
+              {
+                "description": "CG-P04-07: the engine's own meaning of the certification level, and whether certify_result_metadata derives the same level for this contract. A different level is published as such.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "level_name",
+                  "level_description",
+                  "result_metadata_derivation",
+                  "result_metadata_level",
+                  "result_metadata_status",
+                  "source"
+                ],
+                "properties": {
+                  "level_name": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+                  },
+                  "level_description": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]{1,119}$"
+                  },
+                  "result_metadata_derivation": {
+                    "enum": [
+                      "ENGINE_DERIVES_SAME_LEVEL",
+                      "ENGINE_DERIVES_OTHER_LEVEL",
+                      "NOT_DERIVABLE"
+                    ]
+                  },
+                  "result_metadata_level": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "result_metadata_status": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,79}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "source": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 4,
+                    "items": {
+                      "$ref": "#/components/schemas/AtlasSourceLocator"
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -777,6 +845,28 @@
           "required_input_class": {
             "type": "string",
             "maxLength": 191
+          },
+          "status_word": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z0-9/]{1,16}$",
+                "description": "CG-P04-06: one word derived server-side from published facts (DEFERRED, DEFAULT, EXPERIMENTAL, n/m, LEGACY, SUPPORTED); null when the manifest has no engine facts for the route."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "engine_facts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtlasRouteEngineFacts"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -912,6 +1002,23 @@
             "items": {
               "$ref": "#/components/schemas/AtlasSourceLocator"
             }
+          },
+          "oos_use_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SELECTION_INPUT",
+                  "WITHHELD_UNTIL_S4",
+                  "RETROSPECTIVE",
+                  "REPORT_ONLY",
+                  "NOT_APPLICABLE"
+                ],
+                "description": "CG-P04-04: per_fold_decay feeds OOS into selection; per_fold_causal withholds it until after selection is frozen; global reads it back retrospectively (USED) or only reports it (NOT_USED); mode_5 has no held-out window."
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -1038,6 +1145,78 @@
             "items": {
               "$ref": "#/components/schemas/AtlasSourceLocator"
             }
+          },
+          "terms": {
+            "description": "CG-P04-07: what each objective term means, citing the engine lines that compute it.",
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "symbol",
+                "meaning",
+                "source"
+              ],
+              "properties": {
+                "symbol": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                },
+                "meaning": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "source": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "items": {
+                    "$ref": "#/components/schemas/AtlasSourceLocator"
+                  }
+                }
+              }
+            }
+          },
+          "weights": {
+            "description": "CG-P04-07: release-default selection weights of modes 2-5 (WalkForwardConfig defaults), each citing where the engine applies it.",
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "release_default",
+                "role",
+                "source"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                },
+                "release_default": {
+                  "type": "string",
+                  "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+                },
+                "role": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "source": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "items": {
+                    "$ref": "#/components/schemas/AtlasSourceLocator"
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -1163,14 +1342,35 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["schedule", "admission", "reason", "source"],
+              "required": [
+                "schedule",
+                "admission",
+                "reason",
+                "source"
+              ],
               "properties": {
-                "schedule": {"enum": ["global", "per_fold_decay", "per_fold_causal"]},
-                "admission": {"const": "NOT_ADMITTED"},
-                "reason": {"type": "string", "minLength": 1, "maxLength": 400},
+                "schedule": {
+                  "enum": [
+                    "global",
+                    "per_fold_decay",
+                    "per_fold_causal"
+                  ]
+                },
+                "admission": {
+                  "const": "NOT_ADMITTED"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 400
+                },
                 "source": {
-                  "type": "array", "minItems": 1, "maxItems": 4,
-                  "items": {"$ref": "#/components/schemas/AtlasSourceLocator"}
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "items": {
+                    "$ref": "#/components/schemas/AtlasSourceLocator"
+                  }
                 }
               }
             }
@@ -1859,6 +2059,304 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 400
+          }
+        }
+      },
+      "AtlasResolvedBackend": {
+        "description": "CG-P04-06: the backend the pinned constructor resolves with no caller override. SPEC_DEPENDENT means the constructor needs a typed specification first; its support matrix lists backends per specification.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "value",
+          "engine_mode",
+          "reason"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "RESOLVED",
+              "SPEC_DEPENDENT"
+            ]
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "engine_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "AtlasSupportMatrix": {
+        "description": "CG-P04-06: pass-through of the engine's public support-matrix function (arbitrage_support_matrix or nautilus_support_matrix).",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "function",
+          "executable",
+          "total",
+          "rows",
+          "source"
+        ],
+        "properties": {
+          "function": {
+            "enum": [
+              "arbitrage_support_matrix",
+              "nautilus_support_matrix"
+            ]
+          },
+          "executable": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 32
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32
+          },
+          "rows": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "spec_id",
+                "status",
+                "backends",
+                "route",
+                "detail"
+              ],
+              "properties": {
+                "spec_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "status": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                },
+                "backends": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "route": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "detail": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              }
+            }
+          },
+          "source": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/AtlasSourceLocator"
+            }
+          }
+        }
+      },
+      "AtlasRouteParams": {
+        "description": "CG-P04-06: per requested-spec route_params field, the P02 value list next to the engine's own vocabulary; accepted_by_engine is their exact intersection.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "group",
+          "fields"
+        ],
+        "properties": {
+          "group": {
+            "enum": [
+              "intrabar",
+              "portfolio",
+              "reactive",
+              "dca"
+            ]
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "engine_field",
+                "requested_spec_values",
+                "engine_values",
+                "accepted_by_engine",
+                "note",
+                "source"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                },
+                "engine_field": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "requested_spec_values": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "engine_values": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "accepted_by_engine": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "note": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "source": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "items": {
+                    "$ref": "#/components/schemas/AtlasSourceLocator"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AtlasRouteEngineFacts": {
+        "description": "CG-P04-06: route facts read from the pinned QuantBT wheel, each with a source locator. Descriptive; never run admission.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "description",
+          "method",
+          "walk_forward_status",
+          "method_basis",
+          "resolved_backend",
+          "support_matrix",
+          "route_params",
+          "source"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "method": {
+            "enum": [
+              "wfo",
+              "tape",
+              "single_pass"
+            ]
+          },
+          "walk_forward_status": {
+            "enum": [
+              "supported",
+              "partial",
+              "not_listed"
+            ]
+          },
+          "method_basis": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "resolved_backend": {
+            "$ref": "#/components/schemas/AtlasResolvedBackend"
+          },
+          "support_matrix": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtlasSupportMatrix"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "route_params": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtlasRouteParams"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/AtlasSourceLocator"
+            }
           }
         }
       }
