@@ -33,6 +33,7 @@ import {
   mayCompare,
   unavailableReason,
 } from "./runLibraryClient";
+import { lineageHref } from "./LineageDetail";
 import { ResearchPanel } from "./ResearchPanel";
 import type { LibraryFilters } from "./useRunLibrary";
 import type { ResearchState } from "./state";
@@ -548,6 +549,8 @@ interface RunGroup {
   title: string;
   sub: string;
   rows: readonly RunLibraryItem[];
+  /** The bound alpha, when the group has one: its header links to Screen 10. */
+  alphaId?: string;
 }
 
 /**
@@ -576,6 +579,7 @@ export function groupRuns(items: readonly RunLibraryItem[]): RunGroup[] {
     }
     groups.set(key, {
       key,
+      ...(bound ? { alphaId: bound.alpha_id } : {}),
       title: bound ? `${bound.alpha_name} · ${bound.av}` : scratch ? "scratch" : "binding not published",
       sub: bound
         ? strategy === null
@@ -846,6 +850,16 @@ export function RunLibrary(props: RunLibraryProps) {
                       >
                         {group.rows.length} of this page
                       </span>
+                      {group.alphaId ? (
+                        <Link
+                          className="mono text-[9.5px]"
+                          to={lineageHref(group.alphaId)}
+                          data-action="open-lineage"
+                          data-lineage-alpha={group.alphaId}
+                        >
+                          lineage →
+                        </Link>
+                      ) : null}
                       <span
                         className="h-px flex-1 self-center"
                         style={{ background: "var(--line)" }}

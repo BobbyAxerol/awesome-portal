@@ -54,6 +54,7 @@ import { SearchRoute } from "../../research/SearchRoute";
 import { FreezeRoute } from "../../research/FreezeRoute";
 import { ExecuteRoute } from "../../research/ExecuteRoute";
 import { ReportRoute } from "../../research/ReportRoute";
+import { LineageRoute } from "../../research/LineageRoute";
 import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
@@ -269,7 +270,7 @@ export function QuantBTModule() {
   // also have dropped the caption from New Run and the import inbox, which are
   // outside this phase and inside the visual baseline.
   const onReferenceRoute =
-    /\/(journey|atlas|alpha-import|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze))(\/|$)/.test(location.pathname) ||
+    /\/(journey|atlas|alpha-import|alphas\/[^/]+\/lineage|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze))(\/|$)/.test(location.pathname) ||
     /\/runs$/.test(location.pathname);
 
   const actions = (
@@ -371,6 +372,9 @@ export function QuantBTModule() {
           * Legacy `imports` below is untouched. */}
         <Route path="alpha-import" element={<AlphaImportRoute />} />
         <Route path="imports" element={<ImportInbox />} />
+        {/* P19 · Screen 10. Declared before `alphas/:alphaId/:version` so a
+          * reader never has to know that the static segment also outranks it. */}
+        <Route path="alphas/:alphaId/lineage" element={<LineageRoute />} />
         <Route path="alphas/:alphaId/:version" element={<AlphaVersionDetail />} />
         {/* P12 · Screen 01 on the canonical route spec 01 names. The screen it
           * replaces is not deleted — it stays reachable at `runs/legacy`, so

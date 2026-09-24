@@ -43,6 +43,7 @@ import type {
   RegistryEntry,
   SourceResponse,
 } from "./alphaImportClient";
+import { LineageLink, lineageHref } from "./LineageDetail";
 import {
   ANATOMY_SUBSTAGE_NOTE,
   CODE_ANATOMY,
@@ -733,6 +734,15 @@ export function AlphaImport(props: AlphaImportProps) {
               <span className="mono break-all text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
                 {registration.source_digest}
               </span>
+
+              {/* Screen 10: the registration response names its alpha. */}
+              <LineageLink
+                to={lineageHref(registration.alpha_id)}
+                className="mono text-[10px]"
+                action="open-lineage"
+              >
+                lineage →
+              </LineageLink>
 
               {registration.supersedes ? (
                 <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
