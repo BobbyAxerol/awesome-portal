@@ -34,6 +34,7 @@ import type {
   DistributionBucket,
   EquityPoint,
   EvidenceSeries,
+  FoldBoundary,
   RollingReturnPoint,
   RollingSharpePoint,
 } from "./evidenceClient";
@@ -178,8 +179,23 @@ function ExactTable({
 
 /* ------------------------------------------------------------ builders */
 
+
+function boundaryMarks(boundaries: readonly FoldBoundary[]) {
+  if (boundaries.length === 0) return {};
+  const tone = canvasTokens(activeTheme()).accent2;
+  return {
+    markLine: {
+      symbol: "none",
+      silent: true,
+      lineStyle: { type: "dashed" as const, color: tone, width: 1 },
+      label: { show: true, formatter: "{b}", color: tone, fontSize: 9, fontFamily: "JetBrains Mono, monospace" },
+      data: boundaries.map((boundary) => ({ xAxis: boundary.at_utc_ms, name: boundary.label })),
+    },
+  };
+}
+
 /** Exported for unit tests: jsdom never initialises a canvas, so the option is the testable surface. */
-export function equityOption(points: EquityPoint[]) {
+export function equityOption(points: EquityPoint[], boundaries: readonly FoldBoundary[] = []) {
   const role = roleColorsNow();
   return baseOption({
     ...noChartApparatus(),
@@ -211,12 +227,13 @@ export function equityOption(points: EquityPoint[]) {
         data: points.map((point) => [point.at_utc_ms, Number(point.equity)]),
         lineStyle: { width: 1.75, color: role.oos },
         itemStyle: { color: role.oos },
+        ...boundaryMarks(boundaries),
       },
     ],
   });
 }
 
-export function drawdownOption(points: EquityPoint[]) {
+export function drawdownOption(points: EquityPoint[], boundaries: readonly FoldBoundary[] = []) {
   const tone = roleColorsNow().oos;
   const { ink, paperRaised } = paletteNow();
   /* A trough exists only if the series the server sent goes below zero. */
@@ -250,6 +267,7 @@ export function drawdownOption(points: EquityPoint[]) {
         data: points.map((point) => [point.at_utc_ms, Number(point.drawdown_fraction)]),
         lineStyle: { width: 1.25, color: tone, opacity: 0.8 },
         itemStyle: { color: tone },
+        ...boundaryMarks(boundaries),
         ...(hasTrough
           ? {
               markPoint: {
@@ -451,13 +469,24 @@ export function rollingSharpeOption(points: RollingSharpePoint[]) {
 
 /* ---------------------------------------------------------- components */
 
+const NO_BOUNDARIES: readonly FoldBoundary[] = [];
+
 /**
  * EChart 1 — the stitched OOS equity. Its exact values (and the drawdown the
  * same points carry) are in the screen-reader table beneath it.
  */
-export function EquityChart({ series }: { series: EvidenceSeries }) {
-  const points = series.values as EquityPoint[];
-  const equity = useMemo(() => equityOption(points), [points]);
+export function EquityChart({
+  series,
+  points: given,
+  boundaries = NO_BOUNDARIES,
+}: {
+  series?: EvidenceSeries;
+  /** W3: the retained lane's observations, drawn as they were served. */
+  points?: EquityPoint[];
+  boundaries?: readonly FoldBoundary[];
+}) {
+  const points = given ?? ((series?.values ?? []) as EquityPoint[]);
+  const equity = useMemo(() => equityOption(points, boundaries), [points, boundaries]);
   return (
     <div data-chart="equity">
       <EChart option={equity} height={CHART_HEIGHT.equity} />
@@ -479,9 +508,17 @@ export function EquityChart({ series }: { series: EvidenceSeries }) {
  * figure as the HiFi draws it. It reads the same response: not a second
  * measurement, and no second request.
  */
-export function DrawdownChart({ series }: { series: EvidenceSeries }) {
-  const points = series.values as EquityPoint[];
-  const drawdown = useMemo(() => drawdownOption(points), [points]);
+export function DrawdownChart({
+  series,
+  points: given,
+  boundaries = NO_BOUNDARIES,
+}: {
+  series?: EvidenceSeries;
+  points?: EquityPoint[];
+  boundaries?: readonly FoldBoundary[];
+}) {
+  const points = given ?? ((series?.values ?? []) as EquityPoint[]);
+  const drawdown = useMemo(() => drawdownOption(points, boundaries), [points, boundaries]);
   return (
     <div data-chart="drawdown">
       <EChart option={drawdown} height={CHART_HEIGHT.underwater} />

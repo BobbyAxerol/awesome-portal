@@ -1033,7 +1033,8 @@ describe("RF-06 S05 fidelity — fold rows are buttons the arrow keys walk", () 
     const rows = [...container.querySelectorAll("[data-fold-row]")];
     expect(rows.map((row) => row.getAttribute("tabindex"))).toEqual(["-1", "0", "-1"]);
     expect(rows[0].querySelector("span")?.className).toContain("w-[64px]");
-    expect(container.querySelector("[data-fold-range='1']")?.textContent).toMatch(/^\[2024-01-01 ⋯ .*\)$/);
+    // W3: a retained fold ends on its last bar (inclusive), so the range is closed.
+    expect(container.querySelector("[data-fold-range='1']")?.textContent).toMatch(/^\[2024-01-01 ⋯ .*\]$/);
     // The cursor's fold is lit; the others are dimmed as in the HiFi.
     expect((rows[0].querySelector("[data-fold-segment='train']") as HTMLElement).style.opacity).toBe("0.55");
     expect((rows[1].querySelector("[data-fold-segment='train']") as HTMLElement).style.opacity).toBe("1");
@@ -1243,5 +1244,47 @@ describe("RF-06 wave C — S05 consumes the RF-05 split fields", () => {
     }
     expect(container.querySelector("[data-as-of]")?.getAttribute("title")).toContain("RUN_STATE_UPDATED_AT");
     expect(container.textContent).not.toContain("n/a · three-window");
+  });
+});
+/* -------------------------------------------------------------------------
+ * W3 — Screen 05 on a real retained WFO run (CG-P14-02)
+ * ---------------------------------------------------------------------- */
+
+const W3_SPLIT = (JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as {
+  split: CurrentSourceSplit;
+}).split;
+
+describe("W3 — the fold plan carries QuantBT's own windows, guards and per-fold score", () => {
+  it("states the run-level guards the engine published, never a 'not published' shell for them", () => {
+    const { container } = view({ folds: { state: "ready", split: W3_SPLIT } });
+    const guard = (what: string) => container.querySelector(`[data-guard='${what}']`);
+    expect(guard("purge_bars")?.textContent).toBe("0 bars");
+    expect(guard("embargo_bars")?.textContent).toBe("0 bars");
+    expect(guard("label_horizon_bars")?.textContent).toBe("0 bars");
+    expect(guard("warmup_policy")?.textContent).toBe("none");
+    expect(guard("inner_folds")?.getAttribute("data-guard-state")).toBe("NOT_APPLICABLE");
+    expect(container.querySelector("[data-strict-outer-oos]")?.getAttribute("data-strict-outer-oos")).toBe("OOS_USED_FOR_SELECTION");
+    expect(container.querySelector("[data-inner-row]")).toBeNull();
+  });
+
+  it("fills the fold table: bars, purge/embargo per fold and the selected parameters' S_IS / S_OOS / decay", () => {
+    const { container } = view({ folds: { state: "ready", split: W3_SPLIT } });
+    const row = container.querySelector("[data-fold-table-row='1']") as HTMLElement;
+    expect([...row.querySelectorAll("[data-count-cell]")].map((cell) => cell.textContent)).toEqual(["720", "168"]);
+    expect([...row.querySelectorAll("[data-window-cell]")].map((cell) => cell.textContent)).toEqual(["0", "0"]);
+    const scores = [...row.querySelectorAll("[data-score-cell]")];
+    expect(scores.map((cell) => cell.getAttribute("data-score-cell"))).toEqual([
+      "-0.3591250351173603", "-7.799572637865059", "7.440447602747699",
+    ]);
+    expect(scores.map((cell) => cell.textContent)).toEqual(["−0.359", "−7.800", "+7.440"]);
+    const second = container.querySelector("[data-fold-table-row='2']") as HTMLElement;
+    expect([...second.querySelectorAll("[data-count-cell]")].map((cell) => cell.textContent)).toEqual(["888", "168"]);
+  });
+
+  it("a pre-W3 split body keeps the protocol shells and never prints a zero for missing bars", () => {
+    const { container } = view({ folds: { state: "ready", split: sourceSplit() } });
+    expect(container.querySelector("[data-guard]")).toBeNull();
+    expect(container.querySelector("[data-count-cell]")).toBeNull();
+    expect(container.querySelector("[data-fold-table-row='1']")?.textContent).not.toMatch(/\b0 bars\b/);
   });
 });

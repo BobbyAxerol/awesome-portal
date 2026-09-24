@@ -308,7 +308,8 @@ describe("W3 · S06 search: ledger, roles, diagnostics (CG-P15-03/04)", () => {
     expect(search.selection.roles.raw_best_is_equals_selected).toBe(true);
     expect(search.candidates.rows[0]!.facts).toMatchObject({ stage: "oos_candidate_selection", objective_kind: "MODE_1_DECAY_J", source_trial_id: "0" });
     expect(search.candidates.rows[0]!.facts.metrics.mean_oos_sharpe.value).toBe("-5.354970424211971");
-    expect(search.search_contract).toMatchObject({ optimization_schedule: "global", n_studies: 1, optuna_trials_scope: "global", trial_ledger_mode: "compact" });
+    expect(search.search_contract).toMatchObject({ optimization_schedule: "global", n_studies: 1, optuna_trials_scope: "global", trial_ledger_mode: "compact",
+      validation_claim: "walk_forward_oos", oos_used_for_selection: true, scoring_backend: "endpoint" });
   });
 
   it("P15-T04/T05/T08: constraints, dedupe and sampler/warm-start stay typed absences; the probe recomposes every objective", async () => {

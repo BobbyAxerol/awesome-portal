@@ -374,6 +374,10 @@ export interface components {
                 candidate_selection_metric: string | null;
                 top_is_fraction: components["schemas"]["Decimal"] | null;
                 top_is_k: number | null;
+                validation_claim: string | null;
+                chronological_claim: string | null;
+                oos_used_for_selection: boolean | null;
+                scoring_backend: string | null;
                 availability: components["schemas"]["Availability"];
             };
         };

@@ -1119,3 +1119,73 @@ describe("RF-06 wave C — S06 consumes claim_row and as_of_basis", () => {
     expect(asOf?.getAttribute("title")).toContain("as-of basis P14_PROJECTION_RECEIVED_AT");
   });
 });
+/* -------------------------------------------------------------------------
+ * W3 — Screen 06 on a real retained WFO run (CG-P15-03/04, A12 P13-T10/P15-T10)
+ * ---------------------------------------------------------------------- */
+
+const W3_SEARCH = (JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as {
+  search: CurrentSourceSearch;
+}).search;
+
+describe("W3 — the retained ledger labels what each number measures", () => {
+  it("prints each trial's IS score and parameters, and 'not evaluated' where the IS stage never scored OOS", () => {
+    const { container } = view({ ledger: { state: "ready", search: W3_SEARCH } });
+    const row = container.querySelector("[data-trial='0']") as HTMLElement;
+    expect(row.querySelector("[data-trial-is]")?.textContent).toBe("−1.44");
+    expect(row.querySelector("[data-trial-oos]")?.textContent).toBe("not evaluated · IS stage");
+    expect(row.querySelector("[data-trial-state]")?.textContent).toBe("COMPLETE");
+    const note = row.querySelector("[data-trial-note]")?.textContent ?? "";
+    expect(note).toContain("is_search · all outer folds · objective = IS mean Sharpe");
+    expect(note).toContain("window=34");
+    expect(note).not.toContain("parameters not published");
+    expect(container.querySelector("[data-ledger-scope]")?.textContent).toContain("global study · compact ledger");
+  });
+
+  it("keeps the candidate replay ledger separate, with S̄_OOS, decay and J", () => {
+    const { container } = view({ ledger: { state: "ready", search: W3_SEARCH } });
+    const candidate = container.querySelector("[data-candidate-selected='true']") as HTMLElement;
+    expect(candidate).toBeTruthy();
+    expect(candidate.textContent).toContain("−5.35");
+    expect(candidate.textContent).toContain("3.91");
+    expect(candidate.textContent).toContain("−9.81");
+  });
+
+  it("Stage B shows the pool, the formula term by term and raw best vs selected — no shell left for a published fact", () => {
+    const { container } = view({ ledger: { state: "ready", search: W3_SEARCH } });
+    expect([...container.querySelectorAll("[data-pool-row]")].map((row) => row.getAttribute("data-pool-row"))).toEqual([
+      "Optuna trials (Stage A)", "candidate pool", "selected",
+    ]);
+    expect([...container.querySelectorAll("[data-formula-term]")].map((row) => row.getAttribute("data-formula-term"))).toEqual([
+      "mean_oos_sharpe", "std_decay", "positive_mean_decay",
+    ]);
+    expect(container.querySelector("[data-formula-total]")?.textContent).toContain("4 of 4 retained objectives recompose");
+    expect(container.querySelector("[data-role-card='raw-best']")?.textContent).toContain("best_trial 0");
+    expect(container.querySelector("[data-role-card='raw-best']")?.textContent).toContain("−1.44");
+    expect(container.querySelector("[data-role-card='selected']")?.textContent).toContain("−9.81");
+    expect(container.querySelector("[data-centroid]")?.getAttribute("data-centroid")).toBe("NOT_APPLICABLE");
+    expect(container.querySelector("[data-selected-ref]")).toBeNull();
+    expect(container.querySelector("[data-panel='prune_reasons']")?.getAttribute("data-panel-state")).toBe("NOT_APPLICABLE");
+    const validation = container.querySelector("[data-claim-fact='validation claim']");
+    expect(validation?.getAttribute("data-claim-state")).toBe("RETAINED_SOURCE");
+    expect(validation?.textContent).toContain("walk_forward_oos");
+  });
+
+  it("A12 P13-T10 / P15-T10: picking a non-selected trial changes the inspected row only — θ*, the selected card and the next-stage link stay", () => {
+    const search = JSON.parse(JSON.stringify(W3_SEARCH)) as CurrentSourceSearch;
+    const { container } = view({ ledger: { state: "ready", search } });
+    const before = {
+      selected: container.querySelector("[data-role-card='selected']")?.textContent,
+      next: container.querySelector("[data-action='next-stage']")?.getAttribute("href"),
+      chip: container.querySelector("[data-selected-trial]")?.getAttribute("data-selected-trial"),
+    };
+    fireEvent.click(container.querySelector("[data-trial='2']") as Element);
+    expect(container.querySelector("[data-trial='2']")?.getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector("[data-trial='0']")?.getAttribute("data-trial-selected")).toBe("true");
+    expect({
+      selected: container.querySelector("[data-role-card='selected']")?.textContent,
+      next: container.querySelector("[data-action='next-stage']")?.getAttribute("href"),
+      chip: container.querySelector("[data-selected-trial]")?.getAttribute("data-selected-trial"),
+    }).toEqual(before);
+    expect(search).toEqual(W3_SEARCH);
+  });
+});

@@ -250,6 +250,36 @@ function Fact({
   );
 }
 
+/**
+ * W3 · CG-P14-02: a run-level guard the retained WFO lane published — the
+ * engine's own value (`0 bars`, `none`), `n/a` where the schedule has no such
+ * thing, or the typed absence. Never a zero standing in for "not published".
+ */
+type GuardFact = CurrentSourceSplit["guards"]["purge_bars"];
+
+function GuardValue({ fact, unit, what }: { fact: GuardFact; unit?: "bars"; what: string }) {
+  if (fact.state === "AVAILABLE" && fact.value !== null) {
+    const text = typeof fact.value === "number" && unit === "bars" ? bars(fact.value) : String(fact.value);
+    return (
+      <span data-guard={what} data-guard-value={String(fact.value)} title={`QuantBT ${what}, published for this run`}>
+        {text}
+      </span>
+    );
+  }
+  if (fact.state === "NOT_APPLICABLE") {
+    return (
+      <span className="mono" style={{ color: "var(--ink-soft)" }} data-guard={what} data-guard-state="NOT_APPLICABLE" title={fact.reason_code ?? undefined}>
+        n/a
+      </span>
+    );
+  }
+  return (
+    <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} data-guard={what} data-guard-state={fact.state} title={fact.reason_code ?? undefined}>
+      not published
+    </span>
+  );
+}
+
 /** A day in UTC, for axes and spans. The exact instant rides in the title. */
 function day(at: number): string {
   return new Date(at).toISOString().slice(0, 10);
@@ -590,7 +620,7 @@ function FoldAnatomy({
           protocol card states once as `n/a · three-window` — so no row is drawn
           here as if something were missing. A run whose protocol has them but
           did not publish them keeps the row, with the reason. */}
-      {inner.state === "NOT_APPLICABLE" ? null : (
+      {inner.state === "NOT_APPLICABLE" || slot.state === "ready" ? null : (
         <div className="flex items-baseline gap-2" data-inner-row>
           <span className="mono w-[64px] flex-none text-[9.5px]" style={{ color: "var(--accent)" }}>
             └ inner
@@ -798,9 +828,9 @@ function FoldRows({
                   className="mono hidden w-[196px] flex-none text-right text-[10px] lg:block"
                   style={{ color: "var(--ink-faint)" }}
                   data-fold-range={number}
-                  title={`${exact(start)} → ${exact(end)} (end exclusive)`}
+                  title={`${exact(start)} → ${exact(end)} (the fold's last bar, inclusive)`}
                 >
-                  [{day(start)} ⋯ {day(end)})
+                  [{day(start)} ⋯ {day(end)}]
                 </span>
               ) : null}
             </button>
@@ -1026,6 +1056,8 @@ export function SplitScreen({
   const kind = detail?.protocol.kind ?? null;
   const fixed = detail?.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH";
   const foldPlanReady = folds.state === "ready";
+  /* Optional: a pre-W3 responder sends the split without its guards. */
+  const retainedGuards = folds.state === "ready" ? (folds.split as Partial<CurrentSourceSplit>).guards ?? null : null;
 
   return (
     <div className={`${SCREEN_FRAME} max-w-[1440px]`} data-screen="split-detail" data-run={runId}>
@@ -1156,6 +1188,27 @@ export function SplitScreen({
                 ) : null}
                 {/* A three-window run has no inner folds: stated here, once, as the
                     answer it is. Where the protocol has them, the fold card owns the row. */}
+                {retainedGuards ? (
+                  /* W3 · CG-P14-02: the retained WFO lane publishes the engine's own guards. */
+                  <>
+                    <Fact k="inner folds" data-fact="inner folds">
+                      <GuardValue fact={retainedGuards.inner_folds} what="inner_folds" />
+                    </Fact>
+                    <Fact k="purge" tone="var(--bad)" data-fact="purge">
+                      <GuardValue fact={retainedGuards.purge_bars} unit="bars" what="purge_bars" />
+                    </Fact>
+                    <Fact k="embargo" tone="var(--accent-2)" data-fact="embargo">
+                      <GuardValue fact={retainedGuards.embargo_bars} unit="bars" what="embargo_bars" />
+                    </Fact>
+                    <Fact k="label horizon" data-fact="label horizon">
+                      <GuardValue fact={retainedGuards.label_horizon_bars} unit="bars" what="label_horizon_bars" />
+                    </Fact>
+                    <Fact k="warmup" data-fact="warmup">
+                      <GuardValue fact={retainedGuards.warmup_policy} what="warmup_policy" />
+                    </Fact>
+                  </>
+                ) : (
+                  <>
                 {detail.protocol.inner_folds.state === "NOT_APPLICABLE" ? (
                   <Fact k="inner folds" data-fact="inner folds">
                     <Absent fact={detail.protocol.inner_folds} what="inner folds" indexKey="inner_folds" />
@@ -1168,6 +1221,8 @@ export function SplitScreen({
                 <Fact k="embargo" tone="var(--accent-2)" data-fact="embargo">
                   <Absent fact={detail.protocol.embargo} what="embargo" indexKey="embargo" />
                 </Fact>
+                  </>
+                )}
                 {hasRange(detail.windows.holdout) ? (
                   /* HiFi `holdout_state · SEALED · LOCKED`; the server's word is metadata-bound, not sealed. */
                   <Fact k="holdout_state" tone="var(--accent-2)" data-fact="holdout_state">
@@ -1175,8 +1230,19 @@ export function SplitScreen({
                   </Fact>
                 ) : null}
                 <Fact k="strict outer OOS">
-                  {/* `NOT_ASSERTED` is not a pass and not a failure: no badge. */}
-                  <Absent fact={detail.protocol.selection.strict_outer_oos} what="strict outer OOS" indexKey="strict_outer_oos" />
+                  {retainedGuards && retainedGuards.oos_used_for_selection.value === true ? (
+                    /* QuantBT's own flag: the selector read OOS, so this is not a strict outer-OOS run. */
+                    <span data-strict-outer-oos="OOS_USED_FOR_SELECTION" style={{ color: "var(--accent-2)" }} title="QuantBT oos_used_for_selection = true">
+                      no · OOS used for selection
+                    </span>
+                  ) : retainedGuards && retainedGuards.oos_used_for_selection.value === false ? (
+                    <span data-strict-outer-oos="OOS_NOT_USED" title="QuantBT oos_used_for_selection = false">
+                      OOS not used for selection
+                    </span>
+                  ) : (
+                    /* `NOT_ASSERTED` is not a pass and not a failure: no badge. */
+                    <Absent fact={detail.protocol.selection.strict_outer_oos} what="strict outer OOS" indexKey="strict_outer_oos" />
+                  )}
                 </Fact>
                 <Fact k="readiness">
                   <span
@@ -1720,15 +1786,60 @@ function ProtocolCell({ fact }: { fact: AbsentFact }) {
   );
 }
 
-function SpanCell({ range }: { range: Range | null }) {
+/** W3: a per-fold bar count the retained fold plan published (QuantBT's `train_bars` / `test_bars`). */
+function CountCell({ value, reason }: { value: number | null; reason: string | null }) {
+  if (value === null) return <AbsentCell reason={reason ?? "the retained fold plan publishes no bar count for this fold"} />;
+  return (
+    <td className={`${TD} text-right`} style={{ color: "var(--ink-soft)" }} data-count-cell={value}>
+      {formatMetric(value, "bars")}
+    </td>
+  );
+}
+
+/** W3: a per-fold purge/embargo window from QuantBT's fold table; `0` is a published zero, not a gap. */
+function WindowCell({ window }: { window: CurrentSourceSplit["fold_plan"]["folds"][number]["anatomy"]["purge"] }) {
+  if (window.state !== "AVAILABLE" || window.bars === null) {
+    return <AbsentCell reason={window.reason_code ?? "not published"} word="not published" />;
+  }
+  return (
+    <td
+      className={`${TD} text-right`}
+      style={{ color: "var(--ink-soft)" }}
+      data-window-cell={window.bars}
+      title={window.start_utc_ms !== null && window.end_utc_ms !== null ? `${exact(window.start_utc_ms)} → ${exact(window.end_utc_ms)}` : "QuantBT published this window as empty for the fold"}
+    >
+      {window.bars}
+    </td>
+  );
+}
+
+/** W3: QuantBT's per-fold score of the selected parameters, as a ratio (U+2212). */
+function ScoreCell({ value, reason, signed = false }: { value: string | null; reason: string; signed?: boolean }) {
+  const shown = formatMetric(value, "ratio");
+  if (value === null || shown === null) return <AbsentCell reason={reason} />;
+  const text = `${signed && !value.trim().startsWith("-") ? "+" : ""}${shown.replace(/^-/, "\u2212")}`;
+  return (
+    <td className={`${TD} text-right`} title={value} data-score-cell={value}>
+      {text}
+    </td>
+  );
+}
+
+/**
+ * `closed`: a retained WFO fold's end is QuantBT's last bar of the window
+ * (`test_end` = 07-07 23:00 for a week ending 07-08), so it is printed as a
+ * closed interval — a half-open bracket there would drop that last day.
+ */
+function SpanCell({ range, closed = false }: { range: Range | null; closed?: boolean }) {
   return range ? (
     <td
       className={`${TD} whitespace-nowrap`}
       style={{ color: "var(--ink-soft)" }}
-      title={`${exact(range.start_utc_ms)} → ${exact(range.end_exclusive_utc_ms)} (end exclusive)`}
+      title={`${exact(range.start_utc_ms)} → ${exact(range.end_exclusive_utc_ms)} (${closed ? "last bar, inclusive" : "end exclusive"})`}
       data-span-cell
+      data-span-closed={closed || undefined}
     >
-      {halfOpenShort(range)}
+      {closed ? `${halfOpenShort(range).slice(0, -1)}]` : halfOpenShort(range)}
     </td>
   ) : (
     <AbsentCell word="not published" reason="this fold published no boundary for this window" right={false} />
@@ -1778,6 +1889,9 @@ function FoldTable({
               const number = index + 1;
               const current = cursor.fold === number;
               const { train, test } = foldSpans(fold);
+              /* Optional: a pre-W3 responder sends the fold without them. */
+              const anatomy = (fold as Partial<typeof fold>).anatomy;
+              const score = (fold as Partial<typeof fold>).score;
               return (
                 <tr
                   key={fold.fold_id}
@@ -1803,16 +1917,16 @@ function FoldTable({
                   >
                     {fold.fold_id}
                   </td>
-                  <SpanCell range={train} />
-                  <AbsentCell reason="the retained fold plan publishes no bar count per fold" />
-                  {purge}
-                  <SpanCell range={test} />
-                  <AbsentCell reason="the retained fold plan publishes no bar count per fold" />
-                  {embargo}
+                  <SpanCell range={train} closed />
+                  <CountCell value={anatomy?.train_bars ?? null} reason={anatomy?.reason_code ?? null} />
+                  {anatomy ? <WindowCell window={anatomy.purge} /> : purge}
+                  <SpanCell range={test} closed />
+                  <CountCell value={anatomy?.test_bars ?? null} reason={anatomy?.reason_code ?? null} />
+                  {anatomy ? <WindowCell window={anatomy.embargo} /> : embargo}
                   <AbsentCell reason={reasonOf(detail.protocol.theta_per_fold)} word="θ* not published" right={false} />
-                  <AbsentCell reason={metricReason} />
-                  <AbsentCell reason={metricReason} />
-                  <AbsentCell reason={metricReason} />
+                  <ScoreCell value={score?.is_sharpe ?? null} reason={score?.reason_code ?? metricReason} />
+                  <ScoreCell value={score?.oos_sharpe ?? null} reason={score?.reason_code ?? metricReason} />
+                  <ScoreCell value={score?.decay ?? null} reason={score?.reason_code ?? metricReason} signed />
                 </tr>
               );
             })

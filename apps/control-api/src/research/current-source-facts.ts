@@ -392,6 +392,10 @@ export function searchContract(facts: CurrentSourceFacts | undefined) {
     candidate_selection_metric: search?.candidate_selection_metric ?? null,
     top_is_fraction: search?.top_is_fraction ?? null,
     top_is_k: search?.top_is_k ?? null,
+    validation_claim: facts?.claims.validation_claim ?? null,
+    chronological_claim: facts?.claims.chronological_validation_claim ?? null,
+    oos_used_for_selection: facts?.claims.oos_used_for_selection ?? null,
+    scoring_backend: facts?.execution.scoring_backend ?? null,
     availability: facts ? { state: "AVAILABLE" as const, reason_code: null }
       : { state: "NOT_PUBLISHED" as const, reason_code: RS02_SEAL_PREDATES_SOURCE_FACTS },
   };

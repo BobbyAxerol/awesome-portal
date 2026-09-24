@@ -490,6 +490,11 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     candidate_selection_metric: FactTokenValueSchema.nullable(),
     top_is_fraction: DecimalSchema.nullable(),
     top_is_k: z.number().int().nonnegative().max(1_000_000).nullable(),
+    /** The S06 claim row, the same verbatim QuantBT tokens as the S04 claim strip. */
+    validation_claim: FactTokenValueSchema.nullable(),
+    chronological_claim: FactTokenValueSchema.nullable(),
+    oos_used_for_selection: z.boolean().nullable(),
+    scoring_backend: FactTokenValueSchema.nullable(),
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
   ledger: z.object({
