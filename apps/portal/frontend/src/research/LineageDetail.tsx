@@ -110,9 +110,9 @@ export const DETAIL_HEIGHT = 208;
 export const OVERSCAN = 6;
 /** The windowed list's viewport when the container cannot be measured. */
 export const VIEWPORT_HEIGHT = 560;
-/** Rail column: hi-fi base width, plus one step per depth (spec §9.2: 22px). */
+/** Rail column: hi-fi base width, plus one step per depth (hi-fi: 26px; spec §9.2 says 22px — hi-fi wins per Bobby 2026-09-24, VD-P19-04). */
 export const RAIL_BASE = 34;
-export const RAIL_STEP = 22;
+export const RAIL_STEP = 26;
 /** Deeper nodes stop indenting so a long chain cannot push the card off a 660px screen. */
 export const RAIL_MAX_DEPTH = 8;
 
@@ -162,12 +162,9 @@ export function counterText(shown: number, returned: number, total: number): str
   return total === returned ? base : `${base} · ${total} on record`;
 }
 
-/** ACTIVE versions first (spec T01), each side in the server's order. A partition on state, no sort. */
+/** Bands in the server's order, as the hi-fi draws them (SUPERSEDED above ACTIVE). Spec T01 asked ACTIVE-first; hi-fi wins per Bobby 2026-09-24 (VD-P19-02). No partition, no sort. */
 export function bandOrder(versions: readonly LineageVersion[]): LineageVersion[] {
-  return [
-    ...versions.filter((version) => version.lifecycle_state === "ACTIVE"),
-    ...versions.filter((version) => version.lifecycle_state !== "ACTIVE"),
-  ];
+  return [...versions];
 }
 
 /* ----------------------------------------------------------------- tree */

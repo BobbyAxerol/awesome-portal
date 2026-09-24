@@ -1116,7 +1116,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     expect(node("att_07")).toBeNull();
   });
 
-  it("S10-U46 puts the ACTIVE version first and keeps the server's order for the rest and for each band's chips", async () => {
+  it("S10-U46 keeps the server's order for bands (hi-fi: SUPERSEDED above ACTIVE) and for each band's chips", async () => {
     const body = lineage();
     body.alpha.versions = [
       version("alphaver_090", "av_0_9_0", "DRAFT"),
@@ -1127,7 +1127,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
     renderRoute();
     await ready();
     const bands = [...document.querySelectorAll("[data-band]")].map((b) => b.getAttribute("data-band-label"));
-    expect(bands).toEqual(["av_0_9_3", "av_0_9_0", "av_0_9_2", "av_0_9_1"]);
+    expect(bands).toEqual(["av_0_9_0", "av_0_9_2", "av_0_9_3", "av_0_9_1"]);
     expect(bandOrder(body.alpha.versions).map((v) => v.label)).toEqual(bands);
     const active = document.querySelector('[data-band="alphaver_093"]') as HTMLElement;
     expect([...active.querySelectorAll("[data-chip]")].map((c) => c.getAttribute("data-chip"))).toEqual(["att_03", "att_05", "att_06"]);
@@ -1163,7 +1163,7 @@ describe("S10 Attempt Lineage — hi-fi as fixed by the owner (R1)", () => {
       expect(rail.querySelector(".ln-dot")).toBeTruthy();
     }
     expect(railWidth(0)).toBe(34);
-    expect(railWidth(3)).toBe(34 + 3 * 22);
+    expect(railWidth(3)).toBe(34 + 3 * 26);
     expect(railWidth(30)).toBe(railWidth(8));
     expect(node("att_03").querySelector(".ln-dot")?.getAttribute("data-status")).toBe("ACTIVE");
     const css = document.querySelector("style")?.textContent ?? "";
