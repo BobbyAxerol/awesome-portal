@@ -10,7 +10,7 @@
  *
  * Run: npx playwright test -c playwright.research-preview.config.ts
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { expect, test, type Page } from "@playwright/test";
 
@@ -127,6 +127,76 @@ for (const [name, width, height] of VIEWPORTS) {
         (line) => !(refusalsExplained && /^error: Failed to load resource: the server responded with a status of 409 /.test(line)),
       );
       expect(unexplained, `${screenId} console:\n${observed.noise.join("\n")}`).toEqual([]);
+    });
+  }
+}
+
+/**
+ * W1–W3 · the same screens on a real Delta signal-notional WFO run
+ * (`SEED_PROFILE=wfo node scripts/research-preview/seed-run.mjs`). Beyond
+ * "renders cleanly", each screen is checked against the value the real API
+ * served for that run (V11 BR: what the page says equals what the server said).
+ */
+const WFO_SEED = `${HOME}/seeded-wfo-run.json`;
+const WFO_RUN = existsSync(WFO_SEED) ? (JSON.parse(readFileSync(WFO_SEED, "utf8")) as { run_id: string }).run_id : null;
+const minus = (value: string | number) => {
+  const fixed = Number(value).toFixed(2);
+  return fixed.startsWith("-") ? `−${fixed.slice(1)}` : fixed;
+};
+
+const WFO_SCREENS = [
+  ["S03", "progress", "[data-screen='run-progress']"],
+  ["S04", "evidence", "[data-screen='evidence-flow']"],
+  ["S05", "split", "[data-screen='split-detail']"],
+  ["S06", "search", "[data-screen='search-detail']"],
+  ["S07", "freeze", "[data-screen='freeze-detail']"],
+] as const;
+
+for (const [name, width, height] of VIEWPORTS) {
+  for (const [screenId, leaf, selector] of WFO_SCREENS) {
+    test(`WFO ${screenId} on real reads at ${name}`, async ({ page }) => {
+      test.skip(!WFO_RUN, "no seeded WFO run on this preview");
+      const observed = observe(page);
+      await page.setViewportSize({ width, height });
+      await signIn(page);
+      const read = async (lane: string) => (await (await page.request.get(`/api/v1/quantbt/runs/${WFO_RUN}/current-source/${lane}`)).json()) as any;
+      await page.goto(`/research/quantbt/runs/${WFO_RUN}/${leaf}`);
+      await expect(page.locator(selector)).toBeVisible({ timeout: 20_000 });
+      await page.waitForLoadState("networkidle");
+
+      if (screenId === "S03") {
+        const progress = (await (await page.request.get(`/api/v1/research/runs/${WFO_RUN}/progress`)).json()) as any;
+        expect(progress.current.effective_status).toBe("COMPLETED");
+        await expect(page.locator(selector)).toContainText(progress.run.instrument.symbol ?? "BTCUSDT");
+      }
+      if (screenId === "S04") {
+        const evidence = await read("evidence");
+        await expect(page.locator("[data-retained-verdicts='AVAILABLE'] [data-verdict-row]")).toHaveCount(evidence.fold_verdicts.rows.length);
+        const observations = evidence.passport.artifact_table_rows.observations as number;
+        await expect(page.locator("[data-retained-sampling]").first()).toContainText(observations.toLocaleString("en-US"));
+        await expect(page.locator("[data-claim-field='validation_claim']")).toHaveAttribute("data-claim-value", evidence.claim.validation_claim.value);
+      }
+      if (screenId === "S05") {
+        const split = await read("split");
+        await expect(page.locator("[data-fold-table-row]")).toHaveCount(split.fold_plan.folds.length);
+      }
+      if (screenId === "S06") {
+        const search = await read("search");
+        await expect(page.locator("[data-trial] [data-trial-is]")).toHaveCount(search.ledger.trials.length);
+        await expect(page.locator("[data-role-card='selected']")).toContainText(minus(search.selection.objective));
+      }
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      await page.screenshot({ path: `${OUT}/WFO-${screenId}-${name}.png`, fullPage: true });
+      writeFileSync(
+        `${OUT}/WFO-${screenId}-${name}.json`,
+        JSON.stringify({ screen: screenId, viewport: name, run: WFO_RUN, overflow, requests: [...new Set(observed.requests)], failures: observed.failures, refusalCodes: observed.refusalCodes, noise: observed.noise }, null, 2),
+        { mode: 0o600 },
+      );
+      for (const request of observed.requests) expect(request, `${screenId} reached a private route`).not.toMatch(/\/internal\//);
+      expect(overflow, `${screenId} horizontal overflow at ${width}`).toBeLessThanOrEqual(1);
+      expect(observed.failures, `${screenId} failed reads`).toEqual([]);
+      expect(observed.noise, `${screenId} console:\n${observed.noise.join("\n")}`).toEqual([]);
     });
   }
 }
