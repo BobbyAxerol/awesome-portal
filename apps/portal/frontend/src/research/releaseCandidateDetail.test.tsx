@@ -778,6 +778,9 @@ describe("Screen 11 Release Candidate", () => {
     expect(panel("publish-ghost").querySelector("[data-reason-code]")?.textContent).toBe("P22_PUBLICATION_NOT_COMMISSIONED");
     expect(panel("mirror-ghost").textContent).toContain("R1 · RESEARCH EVIDENCE");
     expect(panel("mirror-ghost").textContent).toContain("SLA starts at publish");
+    /* VD-P21-20: the hi-fi's bare "—" status is a typed absence here (hard rule 3). */
+    expect(panel("mirror-ghost").querySelector("[data-mirror-status]")?.textContent).toBe("status not published");
+    for (const leaf of Array.from(panel("mirror-ghost").querySelectorAll("span"))) expect(leaf.textContent?.trim()).not.toBe("—");
     expect(screen.queryByRole("button", { name: /^publish/i })).toBeNull();
   });
 
