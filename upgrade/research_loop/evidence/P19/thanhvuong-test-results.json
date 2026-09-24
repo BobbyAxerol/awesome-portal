@@ -2,8 +2,8 @@
   "phase": "P19",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-24",
-  "tree": "76be6f8bab72b591db82780aa8fcb432078acb1d",
-  "head": "74f262005e9cf292294c5acc2b1a955d5731a9ab",
+  "tree": "6b7e041936995c307f24f04f999855f513edb821",
+  "head": "1fb290102055b29d83eb0875f7b5cbcd51b4593b",
   "workspace": {
     "user": "thanhvuong",
     "branch": "feat/thanhvuong/research-p17-p21",
@@ -13,7 +13,8 @@
       "3a11bfd32b25e885563c9b2bb84c3b313575b692",
       "0ec4b6afc9b5d6d1b74a13fc0a90d110e4c5c8e8",
       "30dcbdfc8655d0a81f606fb9065ac87e14a44287",
-      "74f262005e9cf292294c5acc2b1a955d5731a9ab"
+      "74f262005e9cf292294c5acc2b1a955d5731a9ab",
+      "1fb290102055b29d83eb0875f7b5cbcd51b4593b"
     ],
     "baseline": {
       "at_plan": "9060a7c4",
@@ -21,7 +22,11 @@
     },
     "node": "v20.20.2",
     "playwright": "1.62.1",
-    "chromium": "headless (Desktop Chrome)"
+    "chromium": "headless (Desktop Chrome)",
+    "docs_commits": [
+      "7b0dda843b7b05c975e8168201389c707acadb9b",
+      "docs(research): P19 packet after audit (this commit)"
+    ]
   },
   "contract": {
     "openapi": "packages/contracts/openapi/research-attempt-lineage.openapi.json",
@@ -32,7 +37,7 @@
     "etag": false,
     "canonical_fixture": false
   },
-  "lane_note": "Unit, typecheck and build are real executions in the workspace on head 74f26200 (rerun by package C on 2026-09-24). The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the lineage API stubbed from the lineage.contract.ts / lineage.service.ts shape (no canonical fixture: CG-P19-01), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). Round 1 ran on 30dcbdfc (107/117; the 10 failures were all the 660 layout bug B1). B1 and the duplicated root copy were fixed in 74f26200; round 2 on 74f26200 is 119/119. No REAL_API_E2E_RECEIPT: CONTROL_API_FEATURE_RESEARCH_LINEAGE=false.",
+  "lane_note": "Unit, typecheck and build are real executions in the workspace on head 74f26200 (rerun by package C on 2026-09-24). The browser lane is PRODUCT_ROUTE_BROWSER_RECEIPT with the lineage API stubbed from the lineage.contract.ts / lineage.service.ts shape (no canonical fixture: CG-P19-01), on the workspace's own vite preview 127.0.0.1:4417 (not Bobby's 4317-4320). Round 1 ran on 30dcbdfc (107/117; the 10 failures were all the 660 layout bug B1). B1 and the duplicated root copy were fixed in 74f26200; round 2 on 74f26200 is 119/119. No REAL_API_E2E_RECEIPT: CONTROL_API_FEATURE_RESEARCH_LINEAGE=false. After the independent audit (A1-A6), A1-A3 were fixed in 1fb29010 (tree 6b7e0419); on that tree unit 171 files / 3058 passed / 1 skipped, S10 43/43, and the full Research probe (audit probe + A-fix tests) 134/134 on the official pass (first pass 133/134: one probe assert depended on the old 12px chip size). The earlier '119/119' is the implementer's probe only; the audit's full pass had one probe flake (fix-hypothesis timeout, passes alone).",
   "results": [
     {
       "gate": "apps/portal/frontend npx tsc -b --noEmit",
@@ -152,6 +157,77 @@
         "v2/probe.log": "a39e96e0d0cb9e74",
         "build2.log": "66e24f10cebefd8c"
       }
+    },
+    {
+      "gate": "apps/portal/frontend npx tsc -b --noEmit",
+      "scope": "tree 6b7e0419 (A-fix)",
+      "result": "PASS",
+      "exit": 0,
+      "log_sha256_prefix": "e3b0c44298fc1c14",
+      "note": "empty log"
+    },
+    {
+      "gate": "apps/portal/frontend npm run build",
+      "scope": "tree 6b7e0419 (A-fix)",
+      "result": "PASS",
+      "exit": 0,
+      "log_sha256_prefix": "c029f52c0cbc06c4"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run src/research/lineageDetail.test.tsx",
+      "scope": "tree 6b7e0419 (A-fix)",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "43/43 (S10-U01..U43)",
+      "log_sha256_prefix": "603ddb1430b10632"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run (full, draft)",
+      "scope": "A-fix draft before the disabled-reason title",
+      "result": "FAIL",
+      "exit": 1,
+      "counts": "3057 passed, 1 failed, 1 skipped",
+      "note": "src/execution/disabledReason.test.ts flagged the two disabled pending-frame buttons without a reason; title added, then the run below"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run (full)",
+      "scope": "tree 6b7e0419 (A-fix)",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "171 files, 3058 passed, 1 skipped (3059)",
+      "duration_s": 82.1,
+      "note": "no flake",
+      "log_sha256_prefix": "2c83b9be2655d513"
+    },
+    {
+      "gate": "RESEARCH_SHOT_DIR=~/tv-shots/p19fix/all V2_SHOT_DIR=AUDIT_SHOT_DIR=FIX_SHOT_DIR=~/tv-shots/p19fix npx playwright test -c .tv-probe.config.ts --workers=1 (first pass)",
+      "scope": "tree 6b7e0419, full Research probe (audit probe + A-fix tests)",
+      "result": "FAIL_PROBE_HARNESS",
+      "exit": 1,
+      "counts": "133/134",
+      "note": "v2 receipt asserted that the partial fixture's chips scroll inside the band; with A1 the 8.5px chips fit (sw 462 = cw 462). Probe relaxed for partial only (fit or scroll); full and virtual-120 must still scroll. No src change",
+      "log_sha256_prefix": "11ed20394b0d3aa0"
+    },
+    {
+      "gate": "same command (official A-fix pass)",
+      "scope": "tree 6b7e0419, full Research probe",
+      "result": "PASS",
+      "exit": 0,
+      "counts": "134/134 (fixtures 8, product 74, tvp19fix 52); 4.4 min; fix-hypothesis passed this time",
+      "assertions": {
+        "A1_fonts_1280_660": {
+          "ln-chip band": "8.5px JetBrains Mono",
+          "ln-chip pick": "8.5px JetBrains Mono",
+          "ln-fchip": "9.5px JetBrains Mono",
+          "ln-toggle": "9.5px JetBrains Mono",
+          "ln-btn retry": "10.5px JetBrains Mono"
+        },
+        "A2_frame": "loading + 400/401/403/404/503 at 1280 and 660: 10 data-panel, pending 6, digits [], overflow 0, filter buttons disabled with title, mutations 0",
+        "A3_badge": "403 == 404: denied / ⊘ / same F-04 sentence; 6 panels data-panel-state denied",
+        "css_ledger": "audit css-ledger passes: band 3px --good, chip 8.5px, avstate 8.5px, abandoned .72, GATES --bad",
+        "overflow_660": "0 for full, partial, virtual-120, empty, dark, refusals"
+      },
+      "log_sha256_prefix": "ff03d6aff991180b"
     }
   ],
   "hifi_compare": {
@@ -201,13 +277,18 @@
     {
       "gate": "spec 10 §13.8 screenshot diff <= 1% against hi-fi",
       "reason": "hi-fi and contract differ by design (receipt §5.4); side-by-side composite recorded instead"
+    },
+    {
+      "gate": "Unified #rl-p19 test 'counts reconcile Library definitions'",
+      "reason": "there is no shared definition table between lineage.counts (total/returned/draft/submitted/failed/abandoned/child_runs/technical_retries) and the Run Library's alpha grouping, so there is nothing to reconcile against without inventing a definition; requested as CG-P19-13. The in-screen reconciliation (counter vs DOM rows vs counts) is covered by U20 and probe FILTER"
     }
   ],
   "evidence_store": {
-    "location": "~/tv-shots/p19/ (round 1 top level + package C logs c-*.log), ~/tv-shots/p19/all/ (round 1 full suite, tree 30dcbdfc), ~/tv-shots/p19/v2/ (round 2 full suite, tree 74f26200) in the thanhvuong workspace; not committed (A4.1)",
+    "location": "~/tv-shots/p19/ (round 1 top level + package C logs c-*.log), ~/tv-shots/p19/all/ (round 1 full suite, tree 30dcbdfc), ~/tv-shots/p19/v2/ (round 2 full suite, tree 74f26200) in the thanhvuong workspace; not committed (A4.1); A-fix: ~/tv-shots/p19fix/ (A-fix shots and logs) and ~/tv-shots/p19fix/all/ (full suite RESEARCH_SHOT_DIR)",
     "probe_spec_sha256_prefix": {
       "round 1 (_probe-research-tvp19.spec.ts)": "88055a1beaf0bfdf",
-      "round 2 (_probe-research-tvp19.v2.spec.ts)": "9baaf8285db74f02"
+      "round 2 (_probe-research-tvp19.v2.spec.ts)": "9baaf8285db74f02",
+      "A-fix (_probe-research-tvp19fix.spec.ts = audit probe + A-fix)": "109bdb10803653f4"
     },
     "package_c_logs": {
       "c-tsc.log": "bcb1a61798abda8d",
@@ -473,10 +554,214 @@
       "round 1: full-660 = links-660 = loading-resolved-660 (79d352d4...)",
       "round 1: full-1280 = links-1280 = loading-resolved-1280 (408014f9...)",
       "round 2: v2 full-660 = links-660 = loading-resolved-660 = fix-hypothesis-full-660 (a60b5115...)"
-    ]
+    ],
+    "sha256_prefix_afix_tree_6b7e0419": {
+      "all/p19-compare-1280.png": "a4412ab0fcbabc70",
+      "all/p19-compare-660.png": "e57e25422cc14e4d",
+      "all/p19-deep-link-av-1280.png": "0c28ff24c2e152a3",
+      "all/p19-deep-link-av-660.png": "6da42dea8ab2d2b7",
+      "all/p19-deep-link-av-viewport-1280.png": "aa16edff03077678",
+      "all/p19-deep-link-av-viewport-660.png": "80efe07df70f0ae2",
+      "all/p19-empty-1280.png": "d120867db8a58031",
+      "all/p19-empty-660.png": "dc046189d139d513",
+      "all/p19-filter-empty-group-1280.png": "db0ffd871cf5ae7a",
+      "all/p19-filter-empty-group-660.png": "9094fb88e23638de",
+      "all/p19-fix-hypothesis-full-660.png": "b83971a8ba1962fd",
+      "all/p19-full-1280.png": "ac161ac16d5be74c",
+      "all/p19-full-660.png": "b83971a8ba1962fd",
+      "all/p19-full-band-scrolled-1280.png": "176e6d5529aab59f",
+      "all/p19-full-band-scrolled-660.png": "01e109c61fc518a1",
+      "all/p19-full-dark-1280.png": "fc48b3d78b11a640",
+      "all/p19-full-dark-660.png": "7dfbe7598ade6368",
+      "all/p19-full-dark-band-scrolled-1280.png": "4ee71518648ae0c1",
+      "all/p19-full-dark-band-scrolled-660.png": "1120b560fbed26c2",
+      "all/p19-gates-no-request-1280.png": "88e714f311f732f9",
+      "all/p19-gates-no-request-660.png": "65175aceed5ea898",
+      "all/p19-hifi-10-1280.png": "d1552c264c5c0185",
+      "all/p19-hifi-10-660.png": "03b582cef17e3397",
+      "all/p19-keyboard-1280.png": "3e640c4f5810fa1c",
+      "all/p19-keyboard-660.png": "f7affacff9a47e53",
+      "all/p19-keyboard-focus-zoom-1280.png": "ccbbb5c75e61d217",
+      "all/p19-keyboard-focus-zoom-660.png": "98c75a16a29dd90c",
+      "all/p19-links-1280.png": "ac161ac16d5be74c",
+      "all/p19-links-660.png": "b83971a8ba1962fd",
+      "all/p19-links-runlibrary-1280.png": "1d7c0fc12c2e14fd",
+      "all/p19-links-runlibrary-660.png": "e5bea4ca5266d4ac",
+      "all/p19-loading-1280.png": "e3a6d0105c749352",
+      "all/p19-loading-660.png": "879aef533c069bb5",
+      "all/p19-loading-resolved-1280.png": "ac161ac16d5be74c",
+      "all/p19-loading-resolved-660.png": "b83971a8ba1962fd",
+      "all/p19-partial-1280.png": "109044bdf65f051c",
+      "all/p19-partial-660.png": "0d3ec7f9614c64d3",
+      "all/p19-refusal-400-1280.png": "8d39fbae8ac17004",
+      "all/p19-refusal-400-660.png": "fe3a06f4b75d1660",
+      "all/p19-refusal-401-1280.png": "2eebe86ec30c8cd7",
+      "all/p19-refusal-401-660.png": "8d768dbbb70b7147",
+      "all/p19-refusal-403-1280.png": "e933b2f699e3005c",
+      "all/p19-refusal-403-660.png": "f83aa7de0bd17ba2",
+      "all/p19-refusal-404-1280.png": "bc8887915c6468f9",
+      "all/p19-refusal-404-660.png": "40e231ce94fdb2a0",
+      "all/p19-refusal-503-1280.png": "d8bbf8a0563bb869",
+      "all/p19-refusal-503-660.png": "687080eadf194bcd",
+      "all/p19-virtual-120-1280.png": "2d5bf4d2c706d596",
+      "all/p19-virtual-120-660.png": "58205f3066a38086",
+      "all/probe.log": "c44d0a0f48301c2c",
+      "all/research-fixtures-laptop.png": "17d8f9e5a51011fc",
+      "all/research-fixtures-mobile.png": "d80df11434d718c2",
+      "all/s00-journey-laptop.png": "fcee7a7ab51ca6d2",
+      "all/s00-journey-mobile.png": "ebd426ef2d1d3df0",
+      "all/s01-run-library-laptop.png": "cdebd11366a4d158",
+      "all/s01-run-library-mobile.png": "a83e1c59c65d676a",
+      "all/s02-new-run-created.png": "2ec82ca4c2a4e98c",
+      "all/s02-new-run-laptop.png": "9a1fae10bfc0affc",
+      "all/s02-new-run-mobile.png": "e9667a5bafc913e9",
+      "all/s02-preflight-660.png": "7b9dfb998c235923",
+      "all/s02-preflight.png": "f8ff036cdeaa17be",
+      "all/s02-release-defaults.png": "e7484a5071690541",
+      "all/s02-validators.png": "d2f3621dcc520704",
+      "all/s03-console.png": "823a2073bd652432",
+      "all/s03-progress-laptop.png": "1c5b38f5537cab56",
+      "all/s03-progress-mobile.png": "91d2be6aed9e46c5",
+      "all/s04-evidence-laptop.png": "50167363db7bd366",
+      "all/s04-evidence-mobile.png": "172d58d09caca85c",
+      "all/s05-split-660.png": "17da27e323bc36bd",
+      "all/s05-split-laptop.png": "d74a24fcd67c93fc",
+      "all/s05-split-mobile.png": "b42a5e8392565262",
+      "all/s05-split.png": "862e3a2177b59d1e",
+      "all/s06-search-laptop.png": "f685802ae4c1ba32",
+      "all/s06-search-mobile.png": "0c279508e8e3e11f",
+      "all/s07-freeze-blocked-laptop.png": "1a2f3eaa13e70bde",
+      "all/s07-freeze-blocked-mobile.png": "ee25b6b6938da53a",
+      "all/s07-freeze-composed-laptop.png": "ad46d6abc8793e4f",
+      "all/s07-freeze-composed-mobile.png": "1310d43bc85cbc9a",
+      "all/s07-freeze-laptop.png": "ad46d6abc8793e4f",
+      "all/s07-freeze-mobile.png": "1310d43bc85cbc9a",
+      "all/s12-atlas-claims-laptop.png": "678811c10ff6240e",
+      "all/s12-atlas-claims-mobile.png": "a5cef74b3e02f490",
+      "all/s12-atlas-modes-laptop.png": "0ee53f61132a858e",
+      "all/s12-atlas-modes-mobile.png": "4306463408bd8d83",
+      "all/s12-atlas-routes-laptop.png": "e64d8d033b8cec1a",
+      "all/s12-atlas-routes-mobile.png": "b8f51aee08582ba6",
+      "all/s14-alpha-import-route.png": "5627bc472e5ac070",
+      "all/s14-clean-660.png": "6175baafc9ac169b",
+      "all/s14-clean.png": "d3cb4b70ad9eb0b1",
+      "all/s14-failing.png": "cf904659688751ff",
+      "build.log": "c029f52c0cbc06c4",
+      "p19-v2-full-1280.png": "ac161ac16d5be74c",
+      "p19-v2-full-660.png": "b83971a8ba1962fd",
+      "p19-v2-partial-660.png": "f1b40438ce8929b5",
+      "p19-v2-root-detail-1280.png": "d68e7a0f8f77c01b",
+      "p19-v2-root-detail-660.png": "720ec1c6c4b9803b",
+      "p19-v2-virtual-120-660.png": "4ab57ec6ca40430f",
+      "p19fix-chips-1280.png": "ac161ac16d5be74c",
+      "p19fix-chips-660.png": "b83971a8ba1962fd",
+      "p19fix-empty-660.png": "dc046189d139d513",
+      "p19fix-full-1280.png": "ac161ac16d5be74c",
+      "p19fix-full-660.png": "b83971a8ba1962fd",
+      "p19fix-full-dark-1280.png": "fc48b3d78b11a640",
+      "p19fix-full-dark-660.png": "7dfbe7598ade6368",
+      "p19fix-hifi-1280.png": "1d0d841b5185c58b",
+      "p19fix-hifi-660.png": "6238fc39c4c9d064",
+      "p19fix-loading-1280.png": "e3a6d0105c749352",
+      "p19fix-loading-660.png": "879aef533c069bb5",
+      "p19fix-partial-660.png": "f1b40438ce8929b5",
+      "p19fix-refusal-400-1280.png": "8d39fbae8ac17004",
+      "p19fix-refusal-400-660.png": "fe3a06f4b75d1660",
+      "p19fix-refusal-401-1280.png": "2eebe86ec30c8cd7",
+      "p19fix-refusal-401-660.png": "8d768dbbb70b7147",
+      "p19fix-refusal-403-1280.png": "ec6971fbc2d35e7b",
+      "p19fix-refusal-403-660.png": "f83aa7de0bd17ba2",
+      "p19fix-refusal-404-1280.png": "bc8887915c6468f9",
+      "p19fix-refusal-404-660.png": "40e231ce94fdb2a0",
+      "p19fix-refusal-503-1280.png": "d8bbf8a0563bb869",
+      "p19fix-refusal-503-660.png": "687080eadf194bcd",
+      "p19fix-virtual-120-660.png": "05fd5ac05404850e",
+      "playwright-run1.log": "11ed20394b0d3aa0",
+      "playwright.log": "ff03d6aff991180b",
+      "preview.log": "9291f11129fb0f1f",
+      "preview.pid": "1b839a358770157a",
+      "tsc.log": "e3b0c44298fc1c14",
+      "vitest-full.log": "2c83b9be2655d513",
+      "vitest-s10.log": "603ddb1430b10632"
+    }
   },
   "known_flake": [
     "src/app/PortalShell.test.tsx > 'mounts QuantBT under its canonical route with no nested topbar' fails intermittently in a full vitest run and passes alone (recorded P16-P18). Not seen in the package C full run on 74f26200.",
-    "src/execution/tradeReplayEvents.test.tsx: one load flake during package A's pre-commit run; passed alone and in the final full run. Outside the S10 diff, not changed (Bobby B6)."
-  ]
+    "src/execution/tradeReplayEvents.test.tsx: one load flake during package A's pre-commit run; passed alone and in the final full run. Outside the S10 diff, not changed (Bobby B6).",
+    "e2e/_probe-research-tvp19*.spec.ts 'fix-hypothesis stacked grid @660' (diagnostic probe test, not product): timed out once in the audit's full pass and passed alone (audit playwright-fixhyp.log 219b9609a8ef083e); passed in both A-fix passes.",
+    "Pre-audit '119/119' counted only the implementer's probe; the audit's full pass was 124/127 (1 probe flake above, 1 probe bug, 1 product bug A1)."
+  ],
+  "tree_history": {
+    "pre_audit": {
+      "tree": "76be6f8bab72b591db82780aa8fcb432078acb1d",
+      "head": "74f262005e9cf292294c5acc2b1a955d5731a9ab"
+    },
+    "after_audit_fix": {
+      "tree": "6b7e041936995c307f24f04f999855f513edb821",
+      "head": "1fb290102055b29d83eb0875f7b5cbcd51b4593b"
+    }
+  },
+  "audit": {
+    "by": "independent audit (Opus 5.5), 2026-09-24, on head 7b0dda84 / code 74f26200",
+    "rerun_by_audit": "tsc 0, build 0, vitest 171 files 3057 passed 1 skipped, S10 42/42, full probe 124/127 (1 probe flake fix-hypothesis, 1 probe bug audit 660, 1 product bug A1)",
+    "findings": [
+      {
+        "id": "A1",
+        "severity": "MAJOR",
+        "kind": "code",
+        "what": ".ln-page button {font: inherit} (0,1,1) beat .ln-chip/.ln-fchip/.ln-toggle/.ln-btn: 12px Inter instead of mono 8.5-10.5px",
+        "status": "FIXED",
+        "commit": "1fb29010",
+        "evidence": "probe FIX-A1 1280+660: ln-chip 8.5px, ln-fchip 9.5px, ln-toggle 9.5px, ln-btn 10.5px, all JetBrains Mono = var(--font-mono); audit css-ledger passes; unit S10-U43"
+      },
+      {
+        "id": "A2",
+        "severity": "MINOR",
+        "kind": "code+docs",
+        "what": "loading/refusal rendered only header, notice, rules",
+        "status": "FIXED",
+        "commit": "1fb29010",
+        "evidence": "probe FIX-A2 1280+660: loading and 400/401/403/404/503 all 10 data-panel (header, notice, root, filters, tree, selected, diff, promotion-rule, rules, counts), pending=6, digits=[], overflow 0; unit expectPendingFrame in U01/U29-U32"
+      },
+      {
+        "id": "A3",
+        "severity": "MINOR",
+        "kind": "code",
+        "what": "403 denied vs 404 empty badge with the same F-04 sentence",
+        "status": "FIXED",
+        "commit": "1fb29010",
+        "evidence": "probe FIX-A3: 403 == 404 {screen denied, badge denied, glyph ⊘, text '⊘ DENIED This alpha may not exist ...'}; unit U31 tuple equality, U33 table 404 -> denied"
+      },
+      {
+        "id": "A4",
+        "severity": "MINOR",
+        "kind": "docs",
+        "what": "hi-fi subtitle misquoted; rules called verbatim against hi-fi",
+        "status": "DOCS_CORRECTED",
+        "evidence": "receipt §5.4 hi-fi != spec copy table; rules verbatim to spec §2.5"
+      },
+      {
+        "id": "A5",
+        "severity": "MINOR",
+        "kind": "docs",
+        "what": "Reuse report claimed AbsentPanel/Withheld exported from EvidenceFlow.tsx",
+        "status": "DOCS_CORRECTED",
+        "evidence": "receipt §11: AbsentPanel private in ExecuteDetail.tsx:143, Withheld typed on evidence Availability; local Absent justified; real imports listed"
+      },
+      {
+        "id": "A6",
+        "severity": "MINOR",
+        "kind": "docs/test",
+        "what": "'counts reconcile Library definitions' neither tested nor in not_run",
+        "status": "DOCS_CORRECTED",
+        "evidence": "not_run entry below; CG-P19-13"
+      },
+      {
+        "id": "N1-N5",
+        "severity": "NOTE",
+        "status": "RECORDED",
+        "evidence": "receipt §12.1"
+      }
+    ]
+  }
 }

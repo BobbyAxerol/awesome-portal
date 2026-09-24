@@ -2,8 +2,8 @@
   "phase": "P19",
   "owner": "Thanhvuong (Claude, frontend)",
   "date": "2026-09-24",
-  "tree": "76be6f8bab72b591db82780aa8fcb432078acb1d",
-  "head": "74f262005e9cf292294c5acc2b1a955d5731a9ab",
+  "tree": "6b7e041936995c307f24f04f999855f513edb821",
+  "head": "1fb290102055b29d83eb0875f7b5cbcd51b4593b",
   "open_implementation_debt": [],
   "open_debt": [],
   "resolved_in_phase": [
@@ -27,6 +27,34 @@
       "found_by": "package A pre-commit",
       "status": "RESOLVED",
       "evidence": "fixed before commit 0ec4b6af: var(--accent-2-soft) and prose; tokens.test.ts green in the full run"
+    },
+    {
+      "id": "S10-BUTTON-FONT-RESET (audit A1, MAJOR)",
+      "what": ".ln-page button { font: inherit } (specificity 0,1,1) beat .ln-chip/.ln-fchip/.ln-toggle/.ln-btn (0,1,0): band chips, filter chips, toggle and retry rendered 12px Inter instead of the spec §9 mono sizes",
+      "found_by": "independent audit, browser computed style (AUDIT-CSS / AUDIT-CHIPFONT / AUDIT-BTNFONT); jsdom cannot see it",
+      "status": "RESOLVED",
+      "evidence": "1fb29010: reset is :where(.ln-page) button { font: inherit; }; probe FIX-A1 at 1280 and 660: ln-chip 8.5px, ln-fchip 9.5px, ln-toggle 9.5px, ln-btn 10.5px, all var(--font-mono) (JetBrains Mono); unit S10-U43"
+    },
+    {
+      "id": "S10-FRAME-ON-LOADING-AND-REFUSAL (audit A2)",
+      "what": "loading and every refusal rendered only header, notice and rules instead of the hi-fi frame (handoff lines 29/33: panel-local states never replace the route)",
+      "found_by": "independent audit (AUDIT-REFUSAL panels=[header,notice,rules] x5)",
+      "status": "RESOLVED",
+      "evidence": "1fb29010: PendingFrame keeps root, filters, tree, selected, diff, promotion-rule, rules, counts; probe FIX-A2 at 1280 and 660: 10 data-panel, pending 6, digits [] for loading and 400/401/403/404/503; unit expectPendingFrame (U01, U29-U32)"
+    },
+    {
+      "id": "S10-F04-BADGE (audit A3)",
+      "what": "403 denied '⊘ DENIED' vs 404 empty '∅ EMPTY' with the same F-04 sentence: the badge was an existence hint",
+      "found_by": "independent audit (AUDIT-REFUSAL 403 state=denied, 404 state=empty)",
+      "status": "RESOLVED",
+      "evidence": "1fb29010: toLineageRefusal maps 404 -> denied; probe FIX-A3 403 == 404 (denied, ⊘, same sentence); unit U31/U33. S09 still maps 404 -> empty (receipt D19, Bobby B3)"
+    },
+    {
+      "id": "S10-PACKET-DOCS (audit A4-A6, N2-N5)",
+      "what": "hi-fi subtitle misquoted and rules called verbatim against hi-fi (A4); AbsentPanel/Withheld reuse claim wrong (A5); 'counts reconcile Library definitions' missing from not_run (A6); .ln-abandoned / --warn / 119/119 wording",
+      "found_by": "independent audit",
+      "status": "RESOLVED",
+      "evidence": "docs commit after audit: receipt §4, §5.4 (hi-fi != spec copy table), §10, §11, §12; test-results not_run + known_flake; CG-P19-13"
     }
   ],
   "deferred": [
@@ -53,7 +81,7 @@
     },
     {
       "id": "S10-LOCAL-DUPLICATION",
-      "what": "local Absent component (LineageDetail.tsx 379) duplicates AbsentPanel/Withheld from EvidenceFlow.tsx; local short() digest helper (338) with no shared util",
+      "what": "local short() digest helper and per-client call<T> with no shared util (the local Absent/Pending components are intentional: AbsentPanel is a private, non-exported function in ExecuteDetail.tsx:143 and Withheld in EvidenceFlow.tsx:120 is typed on the evidence Availability enum, a different state set; corrected per audit A5)",
       "reason": "consolidation belongs to RF-04 frontend normalisation, not S10",
       "owner": "Thanhvuong",
       "state": "DEFERRED_TO_RF-04"
@@ -133,9 +161,9 @@
     {
       "id": "CG-P19-11",
       "owner": "Codex / Bobby",
-      "state": "OPEN",
+      "state": "WITHDRAWN",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-11",
-      "what": "F-04 badge policy 403 vs 404 (question only; frontend can change)"
+      "what": "F-04 badge policy 403 vs 404: answered by the handoff (line 29); frontend fixed it in 1fb29010 (404 -> denied), no backend needed"
     },
     {
       "id": "CG-P19-12",
@@ -143,6 +171,13 @@
       "state": "OPEN",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P19-12",
       "what": "telemetry sink for spec 10 §12 events"
+    },
+    {
+      "id": "CG-P19-13",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P19-13",
+      "what": "definition table reconciling lineage.counts with the Run Library's alpha grouping (which runs/attempts each count includes), so the Unified test 'counts reconcile Library definitions' can run; or confirmation counts are self-contained"
     }
   ],
   "source_capability_blocked": [],
@@ -152,7 +187,7 @@
       "id": "P19-FE-DG-01",
       "owner": "Bobby",
       "state": "AWAITING_DECISION",
-      "what": "integrate the moved baseline 9060a7c4 (now 62d7d864): no S10 file differs between the two; 62d7d864 adds required fields to research-alpha-import.d.ts (affects AlphaImport, not S10); P17 FreezeDetail.tsx conflict remains; rerun all unit tests + 119 probes"
+      "what": "integrate the moved baseline 9060a7c4 (now 62d7d864): no S10 file differs between the two; 62d7d864 adds required fields to research-alpha-import.d.ts (affects AlphaImport, not S10); P17 FreezeDetail.tsx conflict remains; rerun all unit tests + the full Research probe (134 on tree 6b7e0419)"
     },
     {
       "id": "P19-FE-DG-02",
@@ -184,5 +219,6 @@
       "state": "BLOCKED_ON_BACKEND",
       "what": "load canonical fixtures in S10-U* and the probe once CG-P19-01 lands; run spec T01/T10 against the 52-attempt fixture"
     }
-  ]
+  ],
+  "known_flake_note": "probe-only flake: 'fix-hypothesis stacked grid @660' timed out once in the audit's full pass and passed alone; passed in both A-fix passes (test-results known_flake)"
 }

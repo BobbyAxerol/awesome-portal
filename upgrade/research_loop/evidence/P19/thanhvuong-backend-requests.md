@@ -19,7 +19,9 @@ Kết quả kiểm:
 - `git ls-tree -r <ref> --name-only | grep -i "fixtures.*lineage"` exit 1 ở `HEAD`, `9060a7c4` và `62d7d864`. Chưa có fixture lineage ở đâu.
 - `9060a7c4..62d7d864` chỉ gồm `62d7d864` (RF-03 preflight/progress) và không chạm lineage.
 
-**Cả mười hai `CG-P19-*` đều OPEN.** Chúng được liệt kê ở §1.
+**Sau audit (2026-09-24): 12 OPEN (`01…10`, `12`, `13`), 1 WITHDRAWN (`11`).** Chúng được liệt kê ở §1.
+- `CG-P19-11` WITHDRAWN: handoff dòng 29 đã trả lời chính sách F-04; frontend tự sửa ở `1fb29010` (404 → `denied`, cùng badge với 403). Giữ số thứ tự.
+- `CG-P19-13` thêm theo audit A6: bảng định nghĩa đối chiếu `lineage.counts` với Run Library.
 
 Luật ghi (handoff `THANHVUONG_P17_P21_FRONTEND_HANDOFF.md` + CLAUDE.md §5):
 - Mỗi request có locator, actual, expected, đề xuất nhỏ nhất an toàn, test cần có và fallback đang chạy.
@@ -221,24 +223,16 @@ Backend request (@codex)
 | Test khi có | Real-API probe: banner PUBLISHED link đúng attempt/run |
 | Fallback đang chạy | PICK_ABSENT + reason (U17) |
 
-### CG-P19-11 — chính sách badge 403 / 404 (F-04), chỉ hỏi
+### CG-P19-11 — chính sách badge 403 / 404 (F-04) — **WITHDRAWN**
 
-```text
-Backend request (@codex) — chỉ hỏi, frontend tự sửa được
-- Endpoint/field cần: xác nhận F-04 có đòi badge/state giống hệt cho 403 và 404 không
-- Lý do UI: 404 được trả cả khi user không phải member workspace; S10 in cùng câu trung tính cho 403 và 404, nhưng state khác nhau (403 denied "⊘ DENIED", 404 empty "∅ EMPTY") theo tiền lệ S09
-- Ảnh hưởng hiện tại: người xem vẫn phân biệt được 403 với 404 qua badge
-- Đề xuất schema: không
-```
+**Trạng thái: WITHDRAWN (2026-09-24, sau audit A3).** Đây không phải việc backend: handoff `frontend-handoff-claude.md` dòng 29 đã cấm biến 404 thành gợi ý tồn tại. Frontend tự sửa ở `1fb29010`: `toLineageRefusal` map 404 → `denied` như 403, cùng badge "⊘ DENIED", cùng câu F-04. Số thứ tự giữ nguyên để không lệch tham chiếu.
 
 | Mục | Nội dung |
 |---|---|
-| Locator | `lineageClient.ts` dòng 115–171 (`LINEAGE_NEUTRAL_REFUSAL` cho 403 và 404; 404 → empty); `lineage.error.ts` `RESEARCH_LINEAGE_FORBIDDEN` (403, declared), `RESEARCH_LINEAGE_NOT_FOUND` (404) |
-| Actual | Câu giống nhau, badge khác nhau |
-| Expected | Một quy tắc chung cho Research (S09 và S10 đang dùng chung tiền lệ) |
-| Đề xuất nhỏ nhất | Codex/Bobby trả lời; nếu cần giống hệt thì frontend map 404 → denied ở cả S09 và S10 |
-| Test khi có | U31 assert state |
-| Fallback đang chạy | Như trên (B3) |
+| Locator | `lineageClient.ts` `toLineageRefusal` (403/404/401 → `denied`) |
+| Trước | Câu giống nhau, badge khác nhau (403 denied, 404 empty, theo tiền lệ S09) |
+| Sau | Cùng state, badge và câu (probe `FIX-A3`; unit U31, U33) |
+| Còn lại | S09 (`reportClient.ts`) vẫn 404 → `empty`: Bobby quyết có đồng bộ không (§3 B3). Không cần backend |
 
 ### CG-P19-12 — telemetry spec 10 §12
 
@@ -259,6 +253,25 @@ Backend request (@codex)
 | Test khi có | Unit assert event |
 | Fallback đang chạy | Không phát (ghi `not_run`) |
 
+### CG-P19-13 — bảng định nghĩa đối chiếu counts lineage ↔ Run Library
+
+```text
+Backend request (@codex)
+- Endpoint/field cần: định nghĩa (tài liệu hoặc field mô tả) cho từng số trong lineage.counts (total/returned/draft/submitted/failed/abandoned/child_runs/technical_retries) so với cách Run Library nhóm run theo alpha: count nào gồm attempt/run nào, có tính child run, retry, draft, workspace nào — hoặc xác nhận counts lineage tự đủ và không cần khớp Run Library
+- Lý do UI: Unified #rl-p19 đòi test "counts reconcile Library definitions"; hiện không có bảng định nghĩa chung nên frontend không có gì để đối chiếu mà không tự bịa định nghĩa
+- Ảnh hưởng hiện tại: test đó ghi NOT_RUN trong thanhvuong-test-results.json; S10 chỉ đối chiếu nội bộ (counter = số row DOM = counts, U20 + probe FILTER)
+- Đề xuất schema: (chỉ đề xuất — codex quyết) một bảng trong evidence P19 hoặc field additive `counts_definitions` trên response; không cần endpoint mới
+```
+
+| Mục | Nội dung |
+|---|---|
+| Locator | Unified `#rl-p19` "Tests FE/browser"; `lineage.contract.ts` `counts`; `runLibraryClient.ts` nhóm theo `alpha_id` |
+| Actual | Không có định nghĩa chung; test không chạy được |
+| Expected | Bảng định nghĩa hoặc xác nhận "không cần khớp" |
+| Đề xuất nhỏ nhất | Một bảng tài liệu trong evidence P19 |
+| Test khi có | Unit/probe: dựng cùng tập attempt cho S10 và Run Library, so từng count theo bảng |
+| Fallback đang chạy | `NOT_RUN` + lý do; không suy định nghĩa ở frontend |
+
 ## 2. Không có hàng source-capability riêng
 
 P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pick, historical semantic diff, exposure fact, active version, bounded graph/child) đều đã có reason code `P19_*` trong contract và được in nguyên văn. Frontend không cấp ID mới cho chúng ngoài `CG-P19-*` ở trên.
@@ -269,7 +282,7 @@ P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pi
 |---|---|---|---|
 | B1 | Tích hợp baseline `9060a7c4` (nay `62d7d864`) | File S10 không trùng với baseline (cả 10 file giống nhau giữa `9060a7c4` và `62d7d864`). `62d7d864` đổi `research-alpha-import.d.ts` (thêm field required `check`, `note`, `expires_at_utc_ms`), ảnh hưởng AlphaImport khi tích hợp. Xung đột `FreezeDetail.tsx` của P17 vẫn còn | Bobby merge/rebase hoặc cho phép Thanhvuong làm; chạy lại toàn bộ unit và 119 probe |
 | B2 | `VISUAL_DECISION_REQUIRED` | storied/probe (toggle → expand-all); rc/cert/OOS/decay; chip cuộn trong band vs wrap; rail chấm vs thụt DFS; thứ tự band theo server vs ACTIVE-first (T01) | Giữ như hiện tại đến khi có `CG-P19-03…05`; rail chấm có thể làm theo hi-fi nếu Bobby muốn |
-| B3 | F-04 badge 403 ≠ 404 | Câu giống nhau, badge khác nhau (`CG-P19-11`) | Chốt chung cho S09 và S10 |
+| B3 | F-04 badge 403/404 ở S09 | S10 đã sửa ở `1fb29010` (403 = 404 `denied`, `CG-P19-11` WITHDRAWN). S09 (`reportClient.ts`) vẫn 404 → `empty` | Bobby quyết có mở `fix/*` đồng bộ S09 không |
 | B4 | axe | axe-core không có trong lock | Như P16–P18 |
 | B5 | Poll legacy `GET /api/runs` 4 s trong `QuantBTModule.tsx` (dòng 231) chạy trên mọi route, kể cả S10 | Ngoài S10 | `fix/*` riêng nếu cần |
 | B6 | Flake `PortalShell.test.tsx` và `tradeReplayEvents.test.tsx` | Ngoài diff; vòng này full chạy 1 lần là pass | `fix/*` riêng nếu cần |
@@ -288,6 +301,7 @@ P19 không có `source-capability-matrix.md`. Các absence nguồn (promotion pi
 | CG-P19-08 | Codex | OPEN |
 | CG-P19-09 | Codex | OPEN |
 | CG-P19-10 | Codex | OPEN (chặn exit gate DR-03) |
-| CG-P19-11 | Codex / Bobby | OPEN (chỉ hỏi, kèm B3) |
+| CG-P19-11 | — | WITHDRAWN (frontend sửa ở `1fb29010`, audit A3) |
 | CG-P19-12 | Codex | OPEN |
+| CG-P19-13 | Codex | OPEN (thêm sau audit A6) |
 | B1–B6 | Bobby | Chờ quyết |

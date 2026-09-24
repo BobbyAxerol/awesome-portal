@@ -4,6 +4,16 @@ Rollback này chỉ đụng frontend: không đổi contract, backend, migration
 
 Thứ tự: revert commit mới nhất trước. Sau mỗi bước Portal vẫn build được.
 
+## 0. `1fb29010` — sửa sau audit (A1–A3)
+
+- **Nội dung commit:** `LineageDetail.tsx` +101/−2 (reset `:where(.ln-page) button`, `PendingFrame`), `lineageClient.ts` +10/−9 (404 → denied), `lineageDetail.test.tsx` +52/−5 (U01/U29–U33, U43).
+- **Ảnh hưởng khi revert:** A1–A3 quay lại.
+  - Chip band / filter / toggle / retry lại hiện 12px Inter thay vì mono.
+  - Loading và refusal chỉ còn header · notice · rules.
+  - 404 lại là `empty` ("∅ EMPTY"), khác badge 403.
+- **Dữ liệu và request:** không đổi (vẫn 1 GET `limit=128`, không mutation).
+- **Thứ tự:** revert đầu tiên, trước `74f26200`.
+
 ## 1. `74f26200` — cột 660 và copy của root
 
 - **Nội dung commit:** `.ln-grid` `align-items: stretch` trong media 900 px; dòng diff của root. File: `LineageDetail.tsx`, +2/−2.
@@ -42,14 +52,14 @@ Thứ tự: revert commit mới nhất trước. Sau mỗi bước Portal vẫn 
 ## Lệnh
 
 ```bash
-git revert --no-edit 74f26200 30dcbdfc 0ec4b6af 3a11bfd3
+git revert --no-edit 1fb29010 74f26200 30dcbdfc 0ec4b6af 3a11bfd3
 ```
 
 Hook vẫn chạy như thường. Không dùng `--no-verify`.
 
 ## Docs commit
 
-Docs commit gồm packet này, một dòng §13 và implementation note `#rl-p19`. Nó chỉ thêm evidence, và được revert cùng với phần code nó mô tả.
+Docs commit `7b0dda84` gồm packet này, một dòng §13 và implementation note `#rl-p19`. Docs commit sau audit chỉ sửa packet và note. Cả hai chỉ thêm evidence; revert docs commit sau audit trước `7b0dda84`, cùng với phần code nó mô tả. Chỉ revert riêng `1fb29010` thì phải revert cả docs commit sau audit, vì packet mô tả tree `6b7e0419`.
 
 ## Backend
 

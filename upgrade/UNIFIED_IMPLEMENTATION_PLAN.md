@@ -5220,7 +5220,7 @@ refine §8) ·
 **Trạng thái:** `P19_A_S10_FRONTEND_COMPOSED · PRODUCT_ROUTE_BROWSER_RECEIPT · NOT_VERIFIED`.
 
 - Nhánh `feat/thanhvuong/research-p17-p21`, base `f37b3b75`.
-- Code: `3a11bfd3` client + hook · `0ec4b6af` màn hình, route, link · `30dcbdfc` unit `S10-U01…U42` · `74f26200` sửa B1 660.
+- Code: `3a11bfd3` client + hook · `0ec4b6af` màn hình, route, link · `30dcbdfc` unit `S10-U01…U42` · `74f26200` sửa B1 660 · `1fb29010` sửa audit A1–A3 (tree `6b7e0419`, 3 file +163/−16).
 - 10 file frontend, +2806/−1 (riêng `74f26200` +2/−2).
 - Không đổi contract, backend hay runtime. Backend P19 vẫn `FEATURE_DARK` (`CONTROL_API_FEATURE_RESEARCH_LINEAGE=false`).
 - Checkpoint Astra "do not enter P18 yet" chưa gỡ, còn board ghi `S10_BROWSER_HIFI_PENDING_CLAUDE`. Xử lý như P17/P18: làm frontend consumer trên contract đã publish, không claim `VERIFIED`; Bobby quyết.
@@ -5235,7 +5235,7 @@ refine §8) ·
 - **Đã giao:**
   - Route `/research/quantbt/alphas/:alphaId/lineage` (đặt trước `alphas/:alphaId/:version`), deep link `?av=` / `?attempt=`.
   - Một operation generated `researchAttemptLineageGetV1`: 1 GET, `limit` 128, không poll. Không có ETag vì contract không khai.
-  - Layout 2 cột theo hi-fi (571/381 px ở 1280, hi-fi 581/387), xếp 1 cột ở 660. 9 `data-panel`: header · root card với 1 band mỗi version, chip cuộn trong band, promotion pick PUBLISHED/NOT_PUBLISHED · filter + counter "showing n of m attempts · total" · cây DFS theo `parent_attempt_id` (ảo hoá khi > 40 node) · selected · diff · promotion rule · rules · counts.
+  - Layout 2 cột theo hi-fi (571/381 px ở 1280, hi-fi 581/387), xếp 1 cột ở 660. 9 `data-panel`, giữ đủ cả khi loading và refusal (từ `1fb29010`): header · root card với 1 band mỗi version, chip cuộn trong band, promotion pick PUBLISHED/NOT_PUBLISHED · filter + counter "showing n of m attempts · total" · cây DFS theo `parent_attempt_id` (ảo hoá khi > 40 node) · selected · diff · promotion rule · rules · counts.
   - Diff chip in nguyên từ `semantic_diff.changes`. GATES RESET là span trơ: 0 request, 0 state.
   - ABANDONED/FAILED giữ lại kèm reason.
   - `technical_retry_count` không cộng vào attempt.
@@ -5243,17 +5243,23 @@ refine §8) ·
   - Exposure NOT_PUBLISHED không in 0.
   - Ô hi-fi không có field ghi "not a field of the lineage contract".
   - Link vào từ Run Library (nhóm alpha) và Alpha Import (S14); link ra evidence/report/New Run/Alpha Import; Screen 11 vẫn refused.
-- **Evidence:**
+- **Audit độc lập (2026-09-24) và A-fix:**
+  - A1 MAJOR: reset `.ln-page button { font: inherit }` thắng class chip → chip/filter/toggle/retry 12px Inter. **Sửa ở `1fb29010`** bằng `:where(.ln-page) button`; probe computed 1280/660: chip 8.5px, filter/toggle 9.5px, retry 10.5px, đều `var(--font-mono)`.
+  - A2: loading/refusal chỉ còn header · notice · rules. **Sửa ở `1fb29010`**: đủ 10 `data-panel` (9 khối + notice) ở loading và 400/401/403/404/503, mỗi khối loading/withheld, 0 chữ số.
+  - A3: badge 403 ≠ 404. **Sửa ở `1fb29010`**: 404 → `denied`, cùng badge "⊘ DENIED" và câu F-04 với 403. S09 vẫn 404 → `empty` (Bobby quyết).
+  - A4–A6 (docs): sửa trích dẫn subtitle hi-fi ("Immutable nodes · every config change is a sibling attempt with its own hash."), rules verbatim theo spec §2.5 (hi-fi khác), thêm bảng copy hi-fi ≠ spec; sửa Reuse report (`AbsentPanel` private trong `ExecuteDetail.tsx`, `Absent` cục bộ hợp lý); "counts reconcile Library definitions" ghi `NOT_RUN` + `CG-P19-13`.
+  - Tree `6b7e0419`: tsc PASS, build PASS; vitest 171 file · 3058 pass · 1 skip; S10 43/43; probe Research **134/134** ở lượt chính thức (lượt đầu 133/134: 1 assert probe phụ thuộc cỡ chip cũ, sửa probe). Flake probe `fix-hypothesis` (audit) ghi `known_flake`.
+- **Evidence trước audit:**
   - Head `74f26200` (chạy lại 2026-09-24): tsc PASS, build PASS; vitest 171 file · 3057 pass · 1 skip, pass ngay lần đầu; S10 42/42 (kèm boundary 56/56).
   - Browser vòng 1 trên `30dcbdfc`: toàn Research 107/117. 1280 và dark đạt mọi gate. 10 fail đều do B1 ở 660.
-  - Browser vòng 2 trên `74f26200`: **119/119**. Overflow 0 ở 660 cho mọi state; chip cuộn trong band (sw 2523 > cw 462, `docScrollX` 0).
+  - Browser vòng 2 trên `74f26200`: 119/119 (chỉ probe của implementer; lượt đầy đủ của audit 124/127). Overflow 0 ở 660 cho mọi state; chip cuộn trong band (sw 2523 > cw 462, `docScrollX` 0).
   - Virtual 120 attempt: DOM 23–30 node; chip sâu được chọn và cuộn tới, focus giữ.
   - Filter × counter khớp số row DOM. `?av=` giữ qua reload và back/forward. Keyboard Tab/Enter.
-  - Refusal: 400 terminal / 401 denied / 403 denied / 404 empty / 503 unavailable + retry, cùng câu F-04, `leak=false`.
+  - Refusal: 400 terminal / 401 denied / 403 denied / 404 empty (nay `denied`, A3) / 503 unavailable + retry, cùng câu F-04, `leak=false`.
   - Console S10 0, mutation 0.
   - Chạy trên preview riêng 4417 với API stub theo shape `lineage.service.ts`.
   - Chưa có: `REAL_API_E2E_RECEIPT`, axe.
-- **Lỗi tìm ra và đã sửa trong phase (`open_debt` rỗng):**
+- **Lỗi tìm ra và đã sửa trong phase (`open_debt` rỗng; thêm A1–A3 đóng ở `1fb29010`):**
   - **B1:** cột trái giãn max-content ở ≤ 900 px, trang tràn 2 029 / 7 665 / 87 px. Sửa ở `74f26200` bằng `align-items: stretch`.
   - **N1:** root in "root — no parent" hai lần. Sửa ở `74f26200`.
   - `tokens.test.ts` bắt raw color; sửa trước commit.
@@ -5265,10 +5271,12 @@ refine §8) ·
   - Chip cuộn thay vì wrap; thụt DFS thay vì rail chấm.
   - Promotion rule viết lại, vì câu hi-fi "Only the ACTIVE attempt promotes" mâu thuẫn contract.
   - Toggle probe thay bằng expand-all.
-  - 404 → empty theo tiền lệ S09, nhưng badge 403 ≠ 404.
+  - Copy title/subtitle/breadcrumb/rules/promotion rule/pick theo spec 10, không theo hi-fi (bảng ở receipt §5.4).
+  - 404 → `denied` như 403 (từ `1fb29010`); lệch tiền lệ S09 (404 → `empty`).
+  - "notes/fork navigation": partial theo P10 NEW-only (chỉ link New Run / import, không fork kèm parent).
   - `> 128` chỉ trả 128 attempt **cũ nhất**; attempt mới nhất bị cắt.
   - Hi-fi không responsive ở 660: cột trái còn 8 px.
-- **Backend request (@codex), kiểm lại 2026-09-24 trên `9060a7c4` và `62d7d864`, đều OPEN:**
+- **Backend request (@codex), kiểm lại 2026-09-24 trên `9060a7c4` và `62d7d864`; OPEN trừ `11` WITHDRAWN:**
   - `CG-P19-01` fixture canonical (healthy/partial/empty/bounded)
   - `02` ETag/304
   - `03` storied/probe
@@ -5279,22 +5287,23 @@ refine §8) ·
   - `08` spec line
   - `09` cursor/thứ tự > 128
   - `10` lộ trình promotion pick DR-03
-  - `11` badge 403/404 (chỉ hỏi)
+  - `11` badge 403/404 — WITHDRAWN (frontend sửa ở `1fb29010`)
   - `12` telemetry §12
+  - `13` bảng định nghĩa counts lineage ↔ Run Library (thêm sau audit A6)
 - **Bobby quyết:**
   - Tích hợp baseline `9060a7c4 → 62d7d864`. Không file S10 nào trùng. `62d7d864` thêm field required vào `research-alpha-import.d.ts`, ảnh hưởng AlphaImport. Xung đột `FreezeDetail.tsx` của P17 vẫn còn.
   - `VISUAL_DECISION_REQUIRED`: storied/probe, rc/cert, chip wrap/cuộn, rail chấm, thứ tự band.
-  - Badge 403/404.
+  - Đồng bộ badge 404 của S09 với S10 (S10 đã sửa).
   - axe.
   - Poll legacy `/api/runs` 4 s.
   - Flake `PortalShell` / `tradeReplayEvents`.
 - **Exit gate còn lại cho P19-A frontend:**
-  - Tích hợp baseline, rồi chạy lại toàn bộ unit và 119 probe.
+  - Tích hợp baseline, rồi chạy lại toàn bộ unit và toàn bộ probe Research (134 trên tree `6b7e0419`).
   - `REAL_API_E2E_RECEIPT` S10 khi cờ lineage và run library bật trên một lane preview. Nhánh pick PUBLISHED cần `CG-P19-10` (exit gate DR-03).
   - axe (spec T12); telemetry §12; spec T01/T02/T07/T08 theo nghĩa hi-fi khi có field.
-  - `CG-P19-*` được trả lời hoặc ghi là vắng thật; quyết định của Bobby ở trên.
+  - `CG-P19-*` được trả lời hoặc ghi là vắng thật (kể cả `13` cho test "counts reconcile Library definitions", đang `NOT_RUN`); quyết định của Bobby ở trên.
 - **Rollback/handoff:**
-  - Revert 4 commit theo thứ tự ngược, theo [rollback](./research_loop/evidence/P19/thanhvuong-rollback.md). Backend vẫn `FEATURE_RESEARCH_LINEAGE=false`.
+  - Revert 5 commit theo thứ tự ngược (`1fb29010` trước), theo [rollback](./research_loop/evidence/P19/thanhvuong-rollback.md). Backend vẫn `FEATURE_RESEARCH_LINEAGE=false`.
   - Handoff cho P20 (compare): S10 không publish fact mới; so sánh same-alpha đọc từ contract của P20. Link "lineage →" có thể dùng làm lối vào.
 
 <a id="rl-p20"></a>
