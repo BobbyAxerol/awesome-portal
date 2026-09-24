@@ -2,6 +2,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 
+import { CURRENT_SOURCE_RUN_STATE_SQL } from "../src/research/current-source.repository";
+import { RESEARCH_DB_RUNTIME_ROLE } from "../src/research/contracts";
 import { migrateTestDatabase } from "./harness";
 
 const baseUrl = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
@@ -89,6 +91,23 @@ describe("RS-02 disposable PostgreSQL retained-current-source proof", () => {
         VALUES ('ws_rs02', 'run_rs02', 1, $1, $1, 'FOLD', 0, $1, 1)`, [digest]))
         .rejects.toMatchObject({ code: "23505" });
     } finally {
+      await database.end();
+    }
+  });
+
+  it("runs the no-seal run-state join as the runtime role (library view + P10 binding)", async () => {
+    const database = new Pool({ connectionString: databaseUrl });
+    const client = await database.connect();
+    try {
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await client.query(`SET LOCAL ROLE ${RESEARCH_DB_RUNTIME_ROLE}`);
+      await client.query("SELECT set_config('research.workspace_id', $1, true)", [randomUUID()]);
+      const result = await client.query(CURRENT_SOURCE_RUN_STATE_SQL, [randomUUID(), "rrun_absent"]);
+      expect(result.rowCount).toBe(0);
+      expect(result.fields.map((field) => field.name)).toEqual(["source_kind", "effective_status", "adapter_contract_digest"]);
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
       await database.end();
     }
   });

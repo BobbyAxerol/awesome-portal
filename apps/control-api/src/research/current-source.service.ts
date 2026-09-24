@@ -1,7 +1,7 @@
 /** RS-02 retained-current-source named BFF projection service. */
 
 import { Buffer } from "node:buffer";
-import { Inject, Injectable, Optional } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { z } from "zod";
 
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -36,8 +36,6 @@ import {
 } from "./current-source.repository";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
-import { ResearchSplitError } from "./split.error";
-import { ResearchSplitRepository } from "./split.repository";
 
 /** RF-05 CG-P13-09: the P04 fixed qualification can never be sealed into the RS-02 lane. */
 const P04_FIXED_PROFILE_NOT_RETAINABLE_REASON = "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION";
@@ -212,12 +210,6 @@ export class ResearchCurrentSourceService {
   constructor(
     private readonly repository: ResearchCurrentSourceRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
-    /**
-     * Read only on the no-seal path, to learn the run's immutable P10
-     * adapter binding (RF-05 CG-P13-09). Optional so a unit harness without
-     * it keeps the previous refusal behaviour.
-     */
-    @Optional() private readonly splitRows?: ResearchSplitRepository,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -480,7 +472,7 @@ export class ResearchCurrentSourceService {
     if (state.sourceKind === "LEGACY_1_0_8_METADATA") {
       return refuse("NOT_RETAINED_LEGACY", "This historical run is NOT_RETAINED_LEGACY; it has no current-source bytes.");
     }
-    const notApplicable = await this.notApplicable(scope, runId, operation, signal);
+    const notApplicable = this.notApplicable(runId, operation, state.adapterContractDigest ?? null);
     if (notApplicable) return notApplicable;
     if (state.effectiveStatus === "COMPLETED") {
       return refuse("PENDING_RETENTION", "Current QuantBT output is PENDING_RETENTION; a sealed retained artifact is required.");
@@ -497,24 +489,11 @@ export class ResearchCurrentSourceService {
    * answer that as a typed 200 instead of a retryable-looking 409. The test
    * is the run's immutable P10 adapter-contract digest, not a name or mode.
    */
-  private async notApplicable(
-    scope: ResearchScope,
+  private notApplicable(
     runId: string,
     operation: ResearchCurrentSourceOperation,
-    signal?: AbortSignal,
-  ): Promise<ResearchCurrentSourceNotApplicableResponse | null> {
-    if (!this.splitRows) return null;
-    let adapterContractDigest: string | null;
-    try {
-      adapterContractDigest = (await this.splitRows.hub(scope, runId, signal))?.adapterContractDigest ?? null;
-    } catch (error) {
-      if (error instanceof ResearchSplitError) {
-        throw error.code === "RESEARCH_SPLIT_FORBIDDEN"
-          ? new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_FORBIDDEN", "Access denied.", 403)
-          : new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Current-source lane state is temporarily unavailable.", 503);
-      }
-      throw error;
-    }
+    adapterContractDigest: string | null,
+  ): ResearchCurrentSourceNotApplicableResponse | null {
     if (adapterContractDigest !== P04_DELTA_ADAPTER_CONTRACT_DIGEST) return null;
     const revisionValue = `rs02_not-applicable_${sha256ResearchJson({
       schema_version: "research.current-source-not-applicable.v1",
