@@ -10,12 +10,15 @@ import {
   ResearchEvidenceHubResponseSchema,
   ResearchEvidenceSeriesResponseSchema,
   type ResearchEvidenceHubResponse,
+  type ResearchEvidenceOosAnalyticsSource,
   type ResearchEvidenceSeriesKind,
   type ResearchEvidenceSeriesResponse,
 } from "./evidence.contract";
 import { ResearchEvidenceError } from "./evidence.error";
 import {
   RESEARCH_METRIC_REGISTRY_VERSION,
+  RESEARCH_PERFORMANCE_METRIC_DEFINITIONS,
+  RESEARCH_PERFORMANCE_METRIC_REGISTRY_VERSION,
   RESEARCH_WARNING_DEFINITIONS,
   researchMetricDefinitions,
   type ResearchMetricRegistryVersion,
@@ -24,6 +27,7 @@ import {
   ResearchEvidenceRepository,
   type EvidenceHubRow,
   type EvidenceProjectionWrite,
+  type EvidenceRunInputBinding,
   type EvidenceSeriesRow,
 } from "./evidence.repository";
 import { sha256ResearchJson } from "./preflight.service";
@@ -42,6 +46,19 @@ type Availability = {
   reason_code: string | null;
 };
 
+type StoredSeriesIdentity = {
+  digest: string;
+  source_observation_count: number | null;
+  emitted_point_count: number;
+  sampling: "FULL" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "FULL_RETURN_HISTOGRAM_V2" | null;
+};
+
+type CoreSeriesKind = "EQUITY_OOS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION";
+type AnalyticsSeriesKind = "ROLLING_SHARPE_63" | "ROLLING_BETA_63";
+
+/** RF-05: the analytics facts a projection keeps (rolling points live in the series table). */
+type StoredOosAnalytics = Omit<ResearchEvidenceOosAnalyticsSource, "rolling_sharpe_63" | "rolling_beta_63" | "monthly_leading">;
+
 interface StoredProjection {
   schema_version: "research.evidence-projection.v1";
   source: ResearchEvidenceSource["source"];
@@ -52,18 +69,55 @@ interface StoredProjection {
   direct: ResearchEvidenceSource["direct"];
   derived: Pick<ResearchEvidenceSource["derived"], "net_return_fraction" | "max_drawdown_fraction">;
   unavailable: ResearchEvidenceSource["unavailable"];
-  series: Record<ResearchEvidenceSeriesKind, Availability>;
-  series_identity?: Record<ResearchEvidenceSeriesKind, {
-    digest: string;
-    source_observation_count: number | null;
-    emitted_point_count: number;
-    sampling: "FULL" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "FULL_RETURN_HISTOGRAM_V2" | null;
-  }>;
+  series: Record<CoreSeriesKind, Availability> & Partial<Record<AnalyticsSeriesKind, Availability>>;
+  series_identity?: Record<CoreSeriesKind, StoredSeriesIdentity> & Partial<Record<AnalyticsSeriesKind, StoredSeriesIdentity>>;
+  /**
+   * RF-05 CG-P13-11: binds the revision to this run's immutable inputs so two
+   * runs with byte-identical evidence still get distinct revisions.
+   */
+  run_binding?: { run_id: string } & EvidenceRunInputBinding;
+  /** RF-05 CG-P13-03: engine OOS performance facts, verbatim from the receipt. */
+  oos_analytics?: StoredOosAnalytics;
+  /** RF-05 CG-P13-06: present only when the leading-month fact was not prepended. */
+  monthly_leading?: { state: "NOT_APPLIED"; reason_code: "P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS" };
 }
 
 const SERIES_KINDS: readonly ResearchEvidenceSeriesKind[] = [
   "EQUITY_OOS", "MONTHLY_RETURNS", "ROLLING_RETURNS_20", "RETURN_DISTRIBUTION",
+  "ROLLING_SHARPE_63", "ROLLING_BETA_63",
 ];
+
+/** RF-05 CG-P13-13: bumps every series ETag whenever the read-side body rule changes. */
+const EVIDENCE_SERIES_REPRESENTATION_VERSION = "research.evidence-series.v1+rf05.1";
+
+/** RF-05: a projection sealed before the child published `oos_analytics`. */
+const PREDATES_OOS_ANALYTICS = "P13_SOURCE_PREDATES_OOS_ANALYTICS";
+
+/** RF-05 CG-P13-06: an AVAILABLE series never carries zero points. */
+const EMPTY_SERIES_REASON: Record<ResearchEvidenceSeriesKind, string> = {
+  EQUITY_OOS: "P13_SOURCE_EMITTED_NO_OOS_EQUITY",
+  MONTHLY_RETURNS: "P13_OOS_HAS_NO_MONTH_WITH_PRIOR_CALENDAR_CLOSE",
+  ROLLING_RETURNS_20: "P04_OOS_OBSERVATIONS_BELOW_ROLLING_WINDOW",
+  RETURN_DISTRIBUTION: "P04_SOURCE_DID_NOT_PUBLISH_FINITE_RETURN_OBSERVATIONS",
+  ROLLING_SHARPE_63: "P13_OOS_DAILY_RETURNS_BELOW_ROLLING_WINDOW",
+  ROLLING_BETA_63: "P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK",
+};
+
+/**
+ * RF-05 CG-P13-10: the run-library wording, derived by the same rule as
+ * `research.run_library_rows_v1.effective_status` (job state, else durable).
+ */
+function displayStatus(jobState: string | null, runState: string | null) {
+  const state = jobState ?? runState;
+  if (state === null) return null;
+  if (state === "SUCCEEDED" || state === "READY") return "COMPLETED" as const;
+  if (state === "FAILED") return "FAILED" as const;
+  if (state === "CANCELLED") return "CANCELLED" as const;
+  if (state === "RUNNING" || state === "CLAIMED" || state === "SEALING" || state === "CANCEL_REQUESTED") return "RUNNING" as const;
+  if (state === "DRAFT") return "DRAFT" as const;
+  if (state === "RECOVERY_REQUIRED") return "RECOVERY_REQUIRED" as const;
+  return "QUEUED" as const;
+}
 
 const DURABLE_RUN_STATES = [
   "DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED",
@@ -99,6 +153,13 @@ const StoredUnavailableSchema = z.object({
 const StoredSeriesAvailabilitySchema = z.object({
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
   reason_code: z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/).nullable(),
+}).strict();
+
+const StoredIdentitySchema = (sampling: z.ZodTypeAny) => z.object({
+  digest: z.string().regex(/^[0-9a-f]{64}$/),
+  source_observation_count: z.number().int().nonnegative().nullable(),
+  emitted_point_count: z.number().int().nonnegative(),
+  sampling,
 }).strict();
 
 const StoredProjectionSchema = z.object({
@@ -146,6 +207,8 @@ const StoredProjectionSchema = z.object({
     MONTHLY_RETURNS: StoredSeriesAvailabilitySchema,
     ROLLING_RETURNS_20: StoredSeriesAvailabilitySchema,
     RETURN_DISTRIBUTION: StoredSeriesAvailabilitySchema,
+    ROLLING_SHARPE_63: StoredSeriesAvailabilitySchema.optional(),
+    ROLLING_BETA_63: StoredSeriesAvailabilitySchema.optional(),
   }).strict(),
   source_evidence_digest: z.string().regex(/^[0-9a-f]{64}$/).optional(),
   transform_revision: z.enum(["P13_SOURCE_R1", "P13_SOURCE_R2"]).optional(),
@@ -155,6 +218,28 @@ const StoredProjectionSchema = z.object({
     MONTHLY_RETURNS: z.object({ digest: z.string().regex(/^[0-9a-f]{64}$/), source_observation_count: z.number().int().positive(), emitted_point_count: z.number().int().nonnegative(), sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1", "TAIL_WINDOW_V1"]).nullable() }).strict(),
     ROLLING_RETURNS_20: z.object({ digest: z.string().regex(/^[0-9a-f]{64}$/), source_observation_count: z.number().int().nonnegative(), emitted_point_count: z.number().int().nonnegative(), sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]).nullable() }).strict(),
     RETURN_DISTRIBUTION: z.object({ digest: z.string().regex(/^[0-9a-f]{64}$/), source_observation_count: z.number().int().nonnegative(), emitted_point_count: z.number().int().nonnegative(), sampling: z.literal("FULL_RETURN_HISTOGRAM_V2").nullable() }).strict(),
+    ROLLING_SHARPE_63: StoredIdentitySchema(z.enum(["FULL", "EXTREMA_BUCKET_V1"]).nullable()).optional(),
+    ROLLING_BETA_63: StoredIdentitySchema(z.null()).optional(),
+  }).strict().optional(),
+  run_binding: z.object({
+    run_id: z.string().min(1).max(128),
+    requested_spec_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+    effective_spec_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+    dataset_binding_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+    manifest_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+  }).strict().optional(),
+  oos_analytics: z.object({
+    schema_version: z.literal("research.p13.oos-analytics.v1"),
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/).nullable(),
+    scope_locator: z.string().min(1).max(256).nullable(),
+    report_locator: z.string().min(1).max(256).nullable(),
+    return_sample: z.unknown(),
+    metrics: z.record(z.string(), z.unknown()),
+  }).strict().optional(),
+  monthly_leading: z.object({
+    state: z.literal("NOT_APPLIED"),
+    reason_code: z.literal("P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS"),
   }).strict().optional(),
 }).strict().superRefine((value, context) => {
   if (value.transform_revision === "P13_SOURCE_R2" && !value.source.direct_metric_scopes) {
@@ -196,7 +281,8 @@ export class ResearchEvidenceService {
     if (typeof eventDigest !== "string" || eventDigest !== sourceDigest) {
       throw new ResearchEvidenceError("RESEARCH_EVIDENCE_CONFLICT", "Research evidence does not match its terminal source digest.", 409);
     }
-    const write = this.buildWrite(input.run_id, input.event.sequence, source.data, sourceDigest);
+    const binding = await this.repository.inputBinding(scope, input.run_id);
+    const write = this.buildWrite(input.run_id, input.event.sequence, source.data, sourceDigest, binding);
     await this.repository.persist(scope, write);
   }
 
@@ -292,8 +378,11 @@ export class ResearchEvidenceService {
     sourceEventSequence: number,
     source: ResearchEvidenceSource,
     sourceDigest: string,
+    binding: EvidenceRunInputBinding | null = null,
   ): EvidenceProjectionWrite {
     const distribution = source.derived.return_distribution;
+    const analytics = source.oos_analytics;
+    const { months: monthly, note: monthlyLeadingNote } = this.monthlyWithLeadingBoundary(source);
     const series: EvidenceProjectionWrite["series"] = [
       {
         kind: "EQUITY_OOS", availabilityState: "AVAILABLE", reasonCode: null,
@@ -306,9 +395,9 @@ export class ResearchEvidenceService {
         kind: "MONTHLY_RETURNS", availabilityState: "AVAILABLE", reasonCode: null,
         sourceObservationCount: source.source.series_metadata?.monthly_returns.source_observation_count
           ?? source.source.oos_observation_count,
-        emittedPointCount: source.derived.monthly_returns.length,
+        emittedPointCount: monthly.length,
         sampling: source.source.series_metadata?.monthly_returns.sampling ?? source.source.chart_sampling,
-        values: source.derived.monthly_returns, digest: sha256ResearchJson(source.derived.monthly_returns),
+        values: monthly, digest: sha256ResearchJson(monthly),
       },
       {
         kind: "ROLLING_RETURNS_20", availabilityState: "AVAILABLE", reasonCode: null,
@@ -333,10 +422,35 @@ export class ResearchEvidenceService {
         digest: sha256ResearchJson(distribution.buckets),
       },
     ];
-    const rolling = series.find((item) => item.kind === "ROLLING_RETURNS_20");
-    if (rolling && rolling.values.length === 0) {
-      rolling.availabilityState = "NOT_APPLICABLE";
-      rolling.reasonCode = "P04_OOS_OBSERVATIONS_BELOW_ROLLING_WINDOW";
+    if (analytics) {
+      const rollingSharpe = analytics.rolling_sharpe_63;
+      series.push({
+        kind: "ROLLING_SHARPE_63",
+        availabilityState: rollingSharpe.state,
+        reasonCode: rollingSharpe.reason_code,
+        sourceObservationCount: rollingSharpe.source_observation_count,
+        emittedPointCount: rollingSharpe.points.length,
+        sampling: rollingSharpe.sampling,
+        values: rollingSharpe.points,
+        digest: sha256ResearchJson(rollingSharpe.points),
+      }, {
+        kind: "ROLLING_BETA_63",
+        availabilityState: analytics.rolling_beta_63.state,
+        reasonCode: analytics.rolling_beta_63.reason_code,
+        sourceObservationCount: null,
+        emittedPointCount: 0,
+        sampling: null,
+        values: [],
+        digest: sha256ResearchJson([]),
+      });
+    }
+    // CG-P13-06: an empty chart is a typed absence, never AVAILABLE/FULL.
+    for (const item of series) {
+      if (item.availabilityState === "AVAILABLE" && item.values.length === 0) {
+        item.availabilityState = "NOT_APPLICABLE";
+        item.reasonCode = EMPTY_SERIES_REASON[item.kind];
+        item.sampling = null;
+      }
     }
     const transformRevision = source.source.evidence_transform_revision ?? "P13_SOURCE_R1";
     const metricRegistryVersion: ResearchMetricRegistryVersion = transformRevision === "P13_SOURCE_R2"
@@ -354,6 +468,25 @@ export class ResearchEvidenceService {
         max_drawdown_fraction: source.derived.max_drawdown_fraction,
       },
       unavailable: source.unavailable,
+      run_binding: {
+        run_id: runId,
+        requested_spec_digest: binding?.requested_spec_digest ?? null,
+        effective_spec_digest: binding?.effective_spec_digest ?? null,
+        dataset_binding_digest: binding?.dataset_binding_digest ?? null,
+        manifest_digest: binding?.manifest_digest ?? null,
+      },
+      ...(analytics ? {
+        oos_analytics: {
+          schema_version: analytics.schema_version,
+          state: analytics.state,
+          reason_code: analytics.reason_code,
+          scope_locator: analytics.scope_locator,
+          report_locator: analytics.report_locator,
+          return_sample: analytics.return_sample,
+          metrics: analytics.metrics,
+        },
+      } : {}),
+      ...(monthlyLeadingNote ? { monthly_leading: monthlyLeadingNote } : {}),
       series: Object.fromEntries(series.map((item) => [item.kind, {
         state: item.availabilityState,
         reason_code: item.reasonCode,
@@ -380,6 +513,41 @@ export class ResearchEvidenceService {
       projection,
       series,
     };
+  }
+
+  /**
+   * CG-P13-06: prepend the leading OOS month when the child measured it from
+   * a true month-boundary close (the previous calendar close, the same rule
+   * as every later month).  Nothing is prepended when the transport window is
+   * already full or the fact does not reconcile with the OOS series.
+   */
+  private monthlyWithLeadingBoundary(source: ResearchEvidenceSource): {
+    months: ResearchEvidenceSource["derived"]["monthly_returns"];
+    note: StoredProjection["monthly_leading"];
+  } {
+    const months = source.derived.monthly_returns;
+    const leading = source.oos_analytics?.monthly_leading;
+    const metadata = source.source.series_metadata?.monthly_returns;
+    if (!leading || leading.state !== "AVAILABLE" || !leading.point || !metadata) return { months, note: undefined };
+    const firstEquity = source.equity_points[0]?.at_utc_ms;
+    const next = new Date(leading.point.month_start_utc_ms);
+    const nextMonthStart = Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 1);
+    // Contradictions: the leading month does not hold the first OOS bar, or
+    // the source already sent that month (or an earlier one).
+    const contradicts = firstEquity === undefined
+      || leading.point.month_start_utc_ms > firstEquity || firstEquity >= nextMonthStart
+      || (months.length > 0 && months[0]!.month_start_utc_ms < nextMonthStart);
+    if (contradicts) {
+      throw new ResearchEvidenceError("RESEARCH_EVIDENCE_INVALID", "Research evidence leading month does not reconcile to its OOS series.", 400);
+    }
+    if (metadata.sampling !== "FULL" || months.length >= 32 || metadata.omitted_leading_period_count < 1) return { months, note: undefined };
+    // The child groups only months with bars: a bar-less month after the
+    // leading one leaves months[0] later than expected.  Keep the months as
+    // sent and record why, rather than failing the terminal relay.
+    if (months.length > 0 && months[0]!.month_start_utc_ms !== nextMonthStart) {
+      return { months, note: { state: "NOT_APPLIED", reason_code: "P13_LEADING_MONTH_NOT_CONTIGUOUS_WITH_SOURCE_MONTHS" } };
+    }
+    return { months: [leading.point, ...months], note: undefined };
   }
 
   private mapHub(row: EvidenceHubRow): unknown {
@@ -433,11 +601,19 @@ export class ResearchEvidenceService {
       };
     });
     const series = SERIES_KINDS.map((kind) => {
-      const item = projection?.series[kind] ?? fallback;
+      const stored = projection?.series[kind];
+      const identity = projection?.series_identity?.[kind];
+      const item = !projection
+        ? fallback
+        : !stored
+          ? notPublished(PREDATES_OOS_ANALYTICS)
+          : stored.state === "AVAILABLE" && identity?.emitted_point_count === 0
+            ? notApplicable(EMPTY_SERIES_REASON[kind])
+            : stored;
       return {
         kind,
         availability: item,
-        href: projection ? `/api/v1/quantbt/runs/${row.runId}/evidence/series?kind=${kind}` : null,
+        href: projection && stored ? `/api/v1/quantbt/runs/${row.runId}/evidence/series?kind=${kind}` : null,
       };
     });
     const warnings = projection ? this.warnings(projection, sourceAbsences) : [];
@@ -474,6 +650,11 @@ export class ResearchEvidenceService {
         fold_navigation: foldNavigation,
       },
       metrics,
+      oos_performance: this.oosPerformance(projection, fallback),
+      lifecycle: this.lifecycle(row),
+      revision_binding: projection
+        ? { value: projection.run_binding ? "RUN_INPUT_BOUND" : "SOURCE_CONTENT_ONLY", availability: availability("AVAILABLE", null) }
+        : { value: null, availability: fallback },
       claim: this.claim(progress, hubAvailability),
       stages: this.stages(progress),
       series,
@@ -618,8 +799,102 @@ export class ResearchEvidenceService {
     };
   }
 
+  /** CG-P13-03: registry-v3 facts; a receipt locator that differs from the registry is refused. */
+  private oosPerformance(projection: StoredProjection | null, fallback: Availability) {
+    const analytics = projection?.oos_analytics;
+    const blockAvailability = !projection
+      ? fallback
+      : !analytics
+        ? notPublished(PREDATES_OOS_ANALYTICS)
+        : analytics.state === "AVAILABLE"
+          ? availability("AVAILABLE", null)
+          : notPublished(analytics.reason_code ?? PREDATES_OOS_ANALYTICS);
+    const sample = z.object({
+      kind: z.enum(["DAILY_UTC_EQUITY", "BAR"]),
+      observation_count: z.number().int().nonnegative(),
+      annualization_periods: z.string(),
+    }).strict().safeParse(analytics?.return_sample);
+    const metrics = RESEARCH_PERFORMANCE_METRIC_DEFINITIONS.map((definition) => {
+      const raw = analytics?.metrics[definition.sourceField];
+      const source = z.object({
+        state: z.enum(["AVAILABLE", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+        reason_code: z.string().nullable(),
+        value: z.string().nullable(),
+        locator: z.string().nullable(),
+      }).strict().safeParse(raw);
+      let metricAvailability: Availability;
+      let value: string | null = null;
+      let locator: string | null = null;
+      if (!analytics || analytics.state !== "AVAILABLE") {
+        metricAvailability = blockAvailability;
+      } else if (!source.success) {
+        metricAvailability = notPublished("P13_OOS_ANALYTICS_METRIC_INCOMPATIBLE");
+      } else if (source.data.state === "AVAILABLE") {
+        if (definition.origin !== "ENGINE_DIRECT" || source.data.locator !== definition.sourceLocator) {
+          metricAvailability = notPublished("P13_ENGINE_LOCATOR_MISMATCH");
+        } else {
+          metricAvailability = availability("AVAILABLE", null);
+          value = source.data.value;
+          locator = source.data.locator;
+        }
+      } else {
+        metricAvailability = availability(source.data.state, source.data.reason_code ?? "P13_OOS_ANALYTICS_METRIC_INCOMPATIBLE");
+      }
+      return {
+        key: definition.key,
+        label: definition.label,
+        unit: definition.unit,
+        scope: definition.scope,
+        frequency: definition.frequency,
+        origin: definition.origin,
+        definition_id: definition.definitionId,
+        source_locator: locator,
+        value,
+        availability: metricAvailability,
+      };
+    });
+    return {
+      registry_version: RESEARCH_PERFORMANCE_METRIC_REGISTRY_VERSION,
+      availability: blockAvailability,
+      scope_locator: blockAvailability.state === "AVAILABLE" ? analytics?.scope_locator ?? null : null,
+      report_locator: blockAvailability.state === "AVAILABLE" ? analytics?.report_locator ?? null : null,
+      return_sample: blockAvailability.state === "AVAILABLE" && sample.success ? sample.data : null,
+      metrics,
+    };
+  }
+
+  /** CG-P13-10/12: published status vocabulary and a typed terminal flag. */
+  private lifecycle(row: EvidenceHubRow) {
+    if (row.kind === "LEGACY") {
+      return {
+        vocabulary: "research.run-status-vocabulary.v1" as const,
+        durable_status: null, display_status: null, phase: "LEGACY" as const, terminal_outcome: null,
+        availability: availability("LEGACY_METADATA_ONLY", "LEGACY_1_0_8_DOES_NOT_PUBLISH_P13_EVIDENCE"),
+      };
+    }
+    const durable = isDurableRunState(row.runState ?? null) ? row.runState as DurableRunState : null;
+    const display = displayStatus(row.jobState ?? null, row.runState ?? null);
+    if (!display) {
+      return {
+        vocabulary: "research.run-status-vocabulary.v1" as const,
+        durable_status: durable, display_status: null, phase: "NOT_PUBLISHED" as const, terminal_outcome: null,
+        availability: notPublished("P13_DURABLE_RUN_IDENTITY_NOT_PUBLISHED"),
+      };
+    }
+    const terminal = display === "COMPLETED" || display === "FAILED" || display === "CANCELLED" ? display : null;
+    return {
+      vocabulary: "research.run-status-vocabulary.v1" as const,
+      durable_status: durable,
+      display_status: display,
+      phase: terminal ? "TERMINAL" as const : display === "RECOVERY_REQUIRED" ? "ATTENTION_REQUIRED" as const : "IN_PROGRESS" as const,
+      terminal_outcome: terminal,
+      availability: availability("AVAILABLE", null),
+    };
+  }
+
   private absentSeries(hub: EvidenceHubRow, kind: ResearchEvidenceSeriesKind) {
-    const availability = this.rowAvailability(hub);
+    // A sealed projection without this kind predates RF-05 OOS analytics.
+    const availability = hub.projection ? notPublished(PREDATES_OOS_ANALYTICS) : this.rowAvailability(hub);
     return {
       schema_version: "research.evidence-series.v1" as const,
       run_id: hub.runId,
@@ -633,11 +908,33 @@ export class ResearchEvidenceService {
   }
 
   private mapStoredSeries(runId: string, stored: EvidenceSeriesRow) {
+    const body = this.storedSeriesBody(runId, stored);
+    // RF-05: the tag names the representation, not only the revision, so a
+    // body whose read-side rule changed (e.g. CG-P13-06 below) never 304s
+    // against a copy cached under the bare `"<revision>"` tag.
+    return {
+      ...body,
+      etag: `"p13r1_${sha256ResearchJson({ representation_version: EVIDENCE_SERIES_REPRESENTATION_VERSION, representation: body })}"`,
+    };
+  }
+
+  private storedSeriesBody(runId: string, stored: EvidenceSeriesRow) {
+    // CG-P13-06: rows sealed before RF-05 may say AVAILABLE with no points.
+    if (stored.availabilityState === "AVAILABLE" && stored.emittedPointCount === 0) {
+      return {
+        schema_version: "research.evidence-series.v1" as const,
+        run_id: runId,
+        revision: stored.revision,
+        kind: stored.kind,
+        availability: notApplicable(EMPTY_SERIES_REASON[stored.kind]),
+        source_sample: { source_observation_count: stored.sourceObservationCount, emitted_point_count: 0, sampling: null },
+        values: [],
+      };
+    }
     return {
       schema_version: "research.evidence-series.v1" as const,
       run_id: runId,
       revision: stored.revision,
-      etag: `"${stored.revision}"`,
       kind: stored.kind,
       availability: availability(stored.availabilityState, stored.reasonCode),
       source_sample: {

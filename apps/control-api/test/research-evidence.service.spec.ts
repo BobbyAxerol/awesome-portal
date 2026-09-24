@@ -63,7 +63,7 @@ function progressSnapshot(folds: number[]) {
 describe("P13 Evidence Flow projection authority", () => {
   it("binds a terminal source receipt to its digest and persists bounded lazy vectors", async () => {
     const persist = vi.fn().mockResolvedValue(undefined);
-    const repository = { persist, hub: vi.fn(), series: vi.fn() };
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn() };
     const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
     const evidence = p13EvidenceSourceFixture();
     const digest = sha256ResearchJson(evidence);
@@ -93,7 +93,7 @@ describe("P13 Evidence Flow projection authority", () => {
     const evidence = p13EvidenceSourceFixture();
     const digest = sha256ResearchJson(evidence);
     const persist = vi.fn().mockResolvedValue(undefined);
-    const repository = { persist, hub: vi.fn(), series: vi.fn() };
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn() };
     const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
     await service.ingest(ingressScope, {
       run_id: "run_p13", event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: digest } }, evidence,
@@ -122,7 +122,7 @@ describe("P13 Evidence Flow projection authority", () => {
     const evidence = p13EvidenceSourceFixture();
     const digest = sha256ResearchJson(evidence);
     const persist = vi.fn().mockResolvedValue(undefined);
-    const repository = { persist, hub: vi.fn(), series: vi.fn() };
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn() };
     const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
     await service.ingest(ingressScope, {
       run_id: "run_p13", event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: digest } }, evidence,
@@ -170,7 +170,7 @@ describe("P13 Evidence Flow projection authority", () => {
     const evidence = p13EvidenceSourceFixture();
     const digest = sha256ResearchJson(evidence);
     const persist = vi.fn().mockResolvedValue(undefined);
-    const repository = { persist, hub: vi.fn(), series: vi.fn() };
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn() };
     const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
     await service.ingest(ingressScope, {
       run_id: "run_p13", event: { event_type: "run_completed", sequence: 9, payload: { evidence_digest: digest } }, evidence,
@@ -198,7 +198,7 @@ describe("P13 Evidence Flow projection authority", () => {
 
   it("changes immutable projection identity when only a retained series changes", async () => {
     const persist = vi.fn().mockResolvedValue(undefined);
-    const repository = { persist, hub: vi.fn(), series: vi.fn(), bundle: vi.fn() };
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn(), bundle: vi.fn() };
     const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
     const first = p13EvidenceSourceFixture();
     const corrected = {
@@ -238,7 +238,7 @@ describe("P13 Evidence Flow projection authority", () => {
 
   it("rejects a retained series whose bytes or digest do not match the projection revision", async () => {
     const persist = vi.fn().mockResolvedValue(undefined);
-    const repository = { persist, hub: vi.fn(), series: vi.fn(), bundle: vi.fn() };
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn(), bundle: vi.fn() };
     const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
     const evidence = p13EvidenceSourceFixture();
     const digest = sha256ResearchJson(evidence);
@@ -269,7 +269,7 @@ describe("P13 Evidence Flow projection authority", () => {
 
   it("keeps R1 labels immutable while publishing corrected R2 evaluation scopes", async () => {
     const persist = vi.fn().mockResolvedValue(undefined);
-    const repository = { persist, hub: vi.fn(), series: vi.fn(), bundle: vi.fn() };
+    const repository = { persist, inputBinding: vi.fn().mockResolvedValue(null), hub: vi.fn(), series: vi.fn(), bundle: vi.fn() };
     const service = new ResearchEvidenceService(repository as never, { FEATURE_RESEARCH_EVIDENCE: "true" } as never);
     const legacy = p13EvidenceSourceFixture();
     const corrected = {

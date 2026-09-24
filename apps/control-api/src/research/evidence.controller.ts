@@ -5,6 +5,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
+import { sendRevalidatable } from "./etag";
 import {
   ResearchEvidenceReadQuerySchema,
   ResearchEvidenceRunIdSchema,
@@ -39,7 +40,7 @@ export class ResearchEvidenceController {
     const body = await this.withAbort(request, (signal) => this.service.hub(
       { workspaceId, actorUserId: request.portalUser.userId }, runId, signal,
     ));
-    return this.conditional(reply, request, body.etag, body);
+    return this.conditional(reply, request, body);
   }
 
   @Get(":runId/evidence/series")
@@ -56,16 +57,20 @@ export class ResearchEvidenceController {
     const body = await this.withAbort(request, (signal) => this.service.series(
       { workspaceId, actorUserId: request.portalUser.userId }, runId, query.data.kind, signal,
     ));
-    return this.conditional(reply, request, body.etag, body);
+    return this.conditional(reply, request, body);
   }
 
-  private conditional(reply: FastifyReply, request: FastifyRequest, etag: string | null, body: unknown) {
-    if (etag) {
-      reply.header("etag", etag);
-      const candidate = request.headers["if-none-match"];
-      if (!Array.isArray(candidate) && candidate === etag) return reply.code(304).send();
-    }
-    return reply.send(body);
+  /**
+   * RF-05 CG-P13-13 · revalidation that survives the gateway.
+   *
+   * nginx gzip turns a strong `"p13r1_…"` into `W/"p13r1_…"`, so a browser
+   * echoes the weak form.  If-None-Match uses the weak comparison (RFC 9110
+   * §13.1.2): opaque tags are compared with any `W/` prefix removed, over a
+   * comma-separated list, and `*` matches any current representation.  Every
+   * 200/304 is `private` and must be revalidated before reuse.
+   */
+  private conditional(reply: FastifyReply, request: FastifyRequest, body: { etag: string | null }) {
+    return sendRevalidatable(reply, request, body);
   }
 
   private async withAbort<T>(request: FastifyRequest, work: (signal: AbortSignal) => Promise<T>): Promise<T> {

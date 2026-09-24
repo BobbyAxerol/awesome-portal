@@ -56,8 +56,11 @@ export interface components {
             state: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_APPLICABLE";
             reason_code: string | null;
         };
-        /** @enum {unknown} */
-        SeriesKind: "EQUITY_OOS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION";
+        /**
+         * @description ROLLING_SHARPE_63 is QuantBT rolling_sharpe over 63 UTC daily OOS returns (365-day annualisation). ROLLING_BETA_63 stays a typed NOT_PUBLISHED absence until a benchmark series is published; it never carries values.
+         * @enum {unknown}
+         */
+        SeriesKind: "EQUITY_OOS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION" | "ROLLING_SHARPE_63" | "ROLLING_BETA_63";
         Problem: {
             error: {
                 code: string;
@@ -193,6 +196,9 @@ export interface components {
                 fold_navigation?: components["schemas"]["FoldNavigation"];
             };
             metrics: components["schemas"]["Metric"][];
+            oos_performance?: components["schemas"]["OosPerformance"];
+            lifecycle?: components["schemas"]["Lifecycle"];
+            revision_binding?: components["schemas"]["RevisionBinding"];
             claim: components["schemas"]["Claim"];
             stages: components["schemas"]["Stage"][];
             series: components["schemas"]["SeriesLink"][];
@@ -200,6 +206,59 @@ export interface components {
             source_absences: {
                 [key: string]: components["schemas"]["Availability"];
             };
+        };
+        /** @description RF-05 registry v3 OOS performance fact. ENGINE_DIRECT values are QuantBT 1.1.1 full_report fields over QuantBT's own OOS scope; source_locator names the exact field. Engine sentinels (0.0 for zero variance, inf without losses, 0.0 without exposure) are typed absences, never values. */
+        PerformanceMetric: {
+            /** @enum {unknown} */
+            key: "OOS_SHARPE" | "OOS_SORTINO" | "OOS_CAGR_FRACTION" | "OOS_PROFIT_FACTOR" | "OOS_LONG_HIT_RATE_FRACTION" | "OOS_SHORT_HIT_RATE_FRACTION" | "OOS_SHARPE_DECAY";
+            label: string;
+            /** @enum {unknown} */
+            unit: "RATIO" | "FRACTION";
+            /** @constant */
+            scope: "OOS";
+            /** @constant */
+            frequency: "RUN_FINAL";
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "NOT_PUBLISHED";
+            definition_id: string;
+            source_locator: string | null;
+            value: components["schemas"]["ExactDecimal"] | null;
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description RF-05 CG-P13-03. Separate from `metrics` (registry v1/v2, frozen by P18 reports). Absent only from a Hub responder that predates RF-05. */
+        OosPerformance: {
+            /** @constant */
+            registry_version: "research.metric-registry.v3";
+            availability: components["schemas"]["Availability"];
+            scope_locator: string | null;
+            report_locator: string | null;
+            return_sample: {
+                /** @enum {unknown} */
+                kind: "DAILY_UTC_EQUITY" | "BAR";
+                observation_count: number;
+                annualization_periods: components["schemas"]["ExactDecimal"];
+            } | null;
+            metrics: components["schemas"]["PerformanceMetric"][];
+        };
+        /** @description RF-05 CG-P13-10/12. display_status uses the Screen-01 run-library rule (job state, else durable state): SUCCEEDED/READY->COMPLETED, RUNNING/CLAIMED/SEALING/CANCEL_REQUESTED->RUNNING, FAILED, CANCELLED, DRAFT, RECOVERY_REQUIRED, otherwise QUEUED. phase is the typed terminal flag; a CANCELLED or FAILED run without evidence is TERMINAL, not an in-progress NOT_READY. */
+        Lifecycle: {
+            /** @constant */
+            vocabulary: "research.run-status-vocabulary.v1";
+            durable_status: ("DRAFT" | "QUEUED" | "RUNNING" | "SEALING" | "READY" | "FAILED" | "CANCELLED" | "RECOVERY_REQUIRED") | null;
+            display_status: ("COMPLETED" | "RUNNING" | "FAILED" | "QUEUED" | "DRAFT" | "CANCELLED" | "RECOVERY_REQUIRED") | null;
+            /** @enum {unknown} */
+            phase: "IN_PROGRESS" | "TERMINAL" | "ATTENTION_REQUIRED" | "LEGACY" | "NOT_PUBLISHED";
+            terminal_outcome: ("COMPLETED" | "FAILED" | "CANCELLED") | null;
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description RF-05 CG-P13-11. RUN_INPUT_BOUND: the revision hashes this run id and its requested-spec, effective-spec, dataset-binding and manifest digests with the evidence, so two runs never share it. SOURCE_CONTENT_ONLY: an immutable pre-RF-05 revision naming only evidence bytes; runs with identical output may share it, so match run_id as well. */
+        RevisionBinding: {
+            value: ("RUN_INPUT_BOUND" | "SOURCE_CONTENT_ONLY") | null;
+            availability: components["schemas"]["Availability"];
+        };
+        RollingSharpePoint: {
+            at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            sharpe: components["schemas"]["ExactDecimal"];
         };
         EquityPoint: {
             at_utc_ms: components["schemas"]["UtcMilliseconds"];
@@ -239,7 +298,7 @@ export interface components {
                 emitted_point_count: number;
                 sampling: ("FULL" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "FULL_RETURN_HISTOGRAM_V2") | null;
             };
-            values: (components["schemas"]["EquityPoint"] | components["schemas"]["MonthlyReturnPoint"] | components["schemas"]["RollingReturnPoint"] | components["schemas"]["DistributionBucket"] | components["schemas"]["CorrectedDistributionBucket"])[];
+            values: (components["schemas"]["EquityPoint"] | components["schemas"]["MonthlyReturnPoint"] | components["schemas"]["RollingReturnPoint"] | components["schemas"]["RollingSharpePoint"] | components["schemas"]["DistributionBucket"] | components["schemas"]["CorrectedDistributionBucket"])[];
         };
     };
     responses: {
@@ -261,6 +320,8 @@ export interface components {
     };
     requestBodies: never;
     headers: {
+        /** @description RF-05 CG-P13-13: every 200/304 is `private, no-cache` (store privately, revalidate before reuse). If-None-Match uses weak comparison, so a gateway-weakened W/ tag still revalidates. */
+        CacheControl: "private, no-cache";
         /** @description Weak semantic validator for the full Hub representation. The separate `revision` field still pins immutable evidence series. */
         HubEtag: string;
         /** @description Quoted immutable P13 evidence-series revision. */
@@ -289,15 +350,18 @@ export interface operations {
             200: {
                 headers: {
                     ETag: components["headers"]["HubEtag"];
+                    "Cache-Control": components["headers"]["CacheControl"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["EvidenceHub"];
                 };
             };
-            /** @description The Hub's semantic representation has not changed */
+            /** @description The Hub's semantic representation has not changed (weak comparison) */
             304: {
                 headers: {
+                    ETag: components["headers"]["HubEtag"];
+                    "Cache-Control": components["headers"]["CacheControl"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -330,15 +394,18 @@ export interface operations {
             200: {
                 headers: {
                     ETag: components["headers"]["SeriesEtag"];
+                    "Cache-Control": components["headers"]["CacheControl"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["EvidenceSeries"];
                 };
             };
-            /** @description The exact immutable revision has not changed */
+            /** @description The exact immutable revision has not changed (weak comparison: a gzip-weakened W/ tag matches) */
             304: {
                 headers: {
+                    ETag: components["headers"]["SeriesEtag"];
+                    "Cache-Control": components["headers"]["CacheControl"];
                     [name: string]: unknown;
                 };
                 content?: never;

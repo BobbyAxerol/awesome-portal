@@ -30,7 +30,7 @@ import { ResearchSearchService } from "../../apps/control-api/src/research/searc
 import { ResearchFreezeService } from "../../apps/control-api/src/research/freeze.service";
 import { ResearchReplayService } from "../../apps/control-api/src/research/replay.service";
 import { migrateTestDatabase, truncateAll } from "../../apps/control-api/test/harness";
-import { p13EvidenceSourceFixture } from "../../apps/control-api/test/research-evidence.fixture";
+import { p13EvidenceSourceFixture, p13RealReceiptFixture } from "../../apps/control-api/test/research-evidence.fixture";
 import { p14SplitSourceFixture } from "../../apps/control-api/test/research-split.fixture";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
@@ -644,6 +644,59 @@ describe("Research Loop P11 · durable progress journal materialisation", () => 
         WHERE workspace_id = $1 AND run_id = $2`,
       [scope.workspaceId, run.runId],
     )).rejects.toThrow(/immutable/i);
+  });
+
+  it("P13-T20 (RF-05): a real engine receipt persists OOS analytics, six typed series and a run-input-bound revision", async () => {
+    const evidenceRepository = new ResearchEvidenceRepository(pool);
+    const evidenceService = new ResearchEvidenceService(evidenceRepository, {
+      ...config,
+      FEATURE_RESEARCH_EVIDENCE: "true",
+    } as ControlApiConfig);
+    const p13Service = new ResearchProgressService(
+      progress, metadata, new ResearchProgressFanout(), new FakeProgressPortalClient() as never,
+      evidenceService, new FakeSplitService() as never, new FakeReportService() as never, config,
+    );
+    const source = p13RealReceiptFixture("four_month_oos");
+    const run = await createDispatchedRun();
+    const completed = snapshot(run.runId, run.workerAttemptId, run.leaseEpoch, 1, {
+      status: "COMPLETED",
+      readiness: { mandatory: "SEALED", optional: "NOT_APPLICABLE" },
+      overall: { pct: 100, elapsed_s: 2, eta_s: null, trials_done: 1, trials_declared: 1, tqdm_line: "sealed" },
+      mandatory_bundle: { digest: "c".repeat(64), size: "42" },
+    });
+    await p13Service.ingest(ingress({
+      ...run, sequence: 1, eventType: "run_completed", progress: completed, evidence: source as never,
+    }));
+    const hub = await evidenceService.hub(scope, run.runId);
+    expect(hub.revision_binding).toEqual({ value: "RUN_INPUT_BOUND", availability: { state: "AVAILABLE", reason_code: null } });
+    expect(hub.lifecycle).toMatchObject({ durable_status: "READY", display_status: "COMPLETED", phase: "TERMINAL", terminal_outcome: "COMPLETED" });
+    expect(hub.oos_performance?.metrics.find((metric) => metric.key === "OOS_SHARPE")).toMatchObject({
+      value: source.oos_analytics.metrics.sharpe.value, source_locator: "full_report.sharpe",
+    });
+    const sharpe = await evidenceService.series(scope, run.runId, "ROLLING_SHARPE_63");
+    expect(sharpe).toMatchObject({ revision: hub.revision, availability: { state: "AVAILABLE" }, values: source.oos_analytics.rolling_sharpe_63.points });
+    const beta = await evidenceService.series(scope, run.runId, "ROLLING_BETA_63");
+    expect(beta).toMatchObject({ values: [], availability: { state: "NOT_PUBLISHED", reason_code: "P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK" } });
+    const monthly = await evidenceService.series(scope, run.runId, "MONTHLY_RETURNS");
+    expect(monthly.values[0]).toEqual(source.oos_analytics.monthly_leading.point);
+
+    // The revision is bound to the producer's own immutable input digests.
+    const bound = await pool.query<{ manifest_digest: string; effective_spec_digest: string; binding: Record<string, unknown>; series: string }>(
+      `SELECT producer.manifest_digest, producer.effective_spec_digest, projection.projection->'run_binding' AS binding,
+              (SELECT count(*)::text FROM research.run_evidence_series_v1 series
+                WHERE series.workspace_id = $1 AND series.run_id = $2) AS series
+         FROM research.run_producers producer
+         JOIN research.run_evidence_projections_v1 projection
+           ON projection.workspace_id = producer.workspace_id AND projection.run_id = producer.run_id
+        WHERE producer.workspace_id = $1 AND producer.run_id = $2`,
+      [scope.workspaceId, run.runId],
+    );
+    expect(bound.rows[0]?.series).toBe("6");
+    expect(bound.rows[0]?.binding).toMatchObject({
+      run_id: run.runId,
+      manifest_digest: bound.rows[0]?.manifest_digest,
+      effective_spec_digest: bound.rows[0]?.effective_spec_digest,
+    });
   });
 
   it("P14-T01/T04/T06/T10/T13: persists exact current-source chronology and never manufactures holdout authority", async () => {

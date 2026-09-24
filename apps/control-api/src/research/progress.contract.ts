@@ -10,6 +10,8 @@
 
 import { z } from "zod";
 
+import { ResearchEvidenceOosAnalyticsSourceSchema } from "./evidence.contract";
+
 const OpaqueIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/);
 export const ResearchProgressRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
@@ -255,6 +257,8 @@ export const ResearchEvidenceSourceSchema = z.object({
     audited_fills: ResearchEvidenceAvailabilitySchema,
     per_fold_metrics: ResearchEvidenceAvailabilitySchema,
   }).strict(),
+  /** RF-05 (P13 evidence owner): additive engine OOS analytics; see evidence.contract.ts. */
+  oos_analytics: ResearchEvidenceOosAnalyticsSourceSchema.optional(),
 }).strict().superRefine((value, context) => {
   if (value.source.emitted_equity_points !== value.equity_points.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence point count is inconsistent" });

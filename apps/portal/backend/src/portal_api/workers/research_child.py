@@ -388,6 +388,14 @@ def _p13_evidence_source(*, market, result, report: dict[str, Any], oos_start_ut
             "per_fold_metrics": {"state": "NOT_PUBLISHED", "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_METRICS"},
         },
     }
+    # RF-05 CG-P13-03/04/06: additive engine OOS analytics (services/research_evidence_metrics.py).
+    # An analytics failure is a typed absence, never a failed child run.
+    from portal_api.services import research_evidence_metrics as analytics
+    from quantbt.errors import QuantBTEngineError
+    try:
+        receipt["oos_analytics"] = analytics.oos_analytics(result=result, market=market, oos_start_utc_ms=oos_start_utc_ms, byte_budget=_MAX_EVIDENCE_RECEIPT_BYTES, receipt_bytes=len(json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8")))
+    except (ValueError, QuantBTEngineError):
+        receipt["oos_analytics"] = analytics.not_published_block()
     encoded = json.dumps(receipt, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
     if len(encoded) > _MAX_EVIDENCE_RECEIPT_BYTES:
         # This runs inside the bounded child before its terminal event is

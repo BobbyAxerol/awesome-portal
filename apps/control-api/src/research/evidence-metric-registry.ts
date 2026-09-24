@@ -123,3 +123,78 @@ export const RESEARCH_WARNING_DEFINITIONS = Object.freeze({
     copy: "The source observed zero return variance, so no synthetic distribution bins were created.",
   },
 });
+
+/**
+ * RF-05 CG-P13-03 · registry v3: OOS performance facts QuantBT computes.
+ *
+ * v3 does not relabel the eight v1/v2 facts: the Hub keeps publishing them in
+ * `metrics[]` under their original registry (P18 reports freeze that array).
+ * v3 adds a separate `oos_performance` block.  Each ENGINE_DIRECT value is
+ * QuantBT 1.1.1's own `full_report` field over the OOS scope that QuantBT's
+ * own `scoped_result(scope="oos")` cuts at the P08 boundary; `sourceLocator`
+ * names that field exactly and the reader refuses a receipt that names a
+ * different one.  Engine sentinels (0.0 for zero variance, inf without
+ * losses, 0.0 without exposure) arrive as typed absences, never as values.
+ */
+export const RESEARCH_PERFORMANCE_METRIC_REGISTRY_VERSION = "research.metric-registry.v3" as const;
+
+export type ResearchPerformanceMetricKey =
+  | "OOS_SHARPE" | "OOS_SORTINO" | "OOS_CAGR_FRACTION" | "OOS_PROFIT_FACTOR"
+  | "OOS_LONG_HIT_RATE_FRACTION" | "OOS_SHORT_HIT_RATE_FRACTION" | "OOS_SHARPE_DECAY";
+
+export type ResearchOosAnalyticsMetricField =
+  | "sharpe" | "sortino" | "cagr_fraction" | "profit_factor"
+  | "long_hit_rate_fraction" | "short_hit_rate_fraction" | "sharpe_decay";
+
+export interface ResearchPerformanceMetricDefinition {
+  key: ResearchPerformanceMetricKey;
+  /** Field name inside the child's `oos_analytics.metrics` receipt block. */
+  sourceField: ResearchOosAnalyticsMetricField;
+  label: string;
+  unit: "RATIO" | "FRACTION";
+  scope: "OOS";
+  frequency: "RUN_FINAL";
+  origin: "ENGINE_DIRECT" | "NOT_PUBLISHED";
+  definitionId: `research.metric.v3.${string}`;
+  /** Exact receipt locator an ENGINE_DIRECT value must carry; null otherwise. */
+  sourceLocator: string | null;
+  nullRule: string;
+}
+
+export const RESEARCH_PERFORMANCE_METRIC_DEFINITIONS: readonly ResearchPerformanceMetricDefinition[] = Object.freeze([
+  {
+    key: "OOS_SHARPE", sourceField: "sharpe", label: "OOS Sharpe", unit: "RATIO", scope: "OOS", frequency: "RUN_FINAL",
+    origin: "ENGINE_DIRECT", definitionId: "research.metric.v3.oos_sharpe", sourceLocator: "full_report.sharpe",
+    nullRule: "Absent when QuantBT's OOS return sample has fewer than two observations or zero variance (QuantBT reports 0.0 there).",
+  },
+  {
+    key: "OOS_SORTINO", sourceField: "sortino", label: "OOS Sortino", unit: "RATIO", scope: "OOS", frequency: "RUN_FINAL",
+    origin: "ENGINE_DIRECT", definitionId: "research.metric.v3.oos_sortino", sourceLocator: "full_report.sortino",
+    nullRule: "Absent when the OOS sample has no downside return (QuantBT reports inf or 0.0 there).",
+  },
+  {
+    key: "OOS_CAGR_FRACTION", sourceField: "cagr_fraction", label: "OOS CAGR", unit: "FRACTION", scope: "OOS", frequency: "RUN_FINAL",
+    origin: "ENGINE_DIRECT", definitionId: "research.metric.v3.oos_cagr_fraction", sourceLocator: "full_report.cagr_pct/100",
+    nullRule: "Absent for an OOS span under one day (QuantBT substitutes total return) or a clamped growth rate. Annualised from the OOS span; a short OOS window yields a large magnitude.",
+  },
+  {
+    key: "OOS_PROFIT_FACTOR", sourceField: "profit_factor", label: "OOS profit factor", unit: "RATIO", scope: "OOS", frequency: "RUN_FINAL",
+    origin: "ENGINE_DIRECT", definitionId: "research.metric.v3.oos_profit_factor", sourceLocator: "full_report.profit_factor",
+    nullRule: "Absent when the OOS return sample has no losing observation (QuantBT reports inf). Computed on QuantBT's return sample, not per trade.",
+  },
+  {
+    key: "OOS_LONG_HIT_RATE_FRACTION", sourceField: "long_hit_rate_fraction", label: "OOS long-bar hit rate", unit: "FRACTION", scope: "OOS", frequency: "RUN_FINAL",
+    origin: "ENGINE_DIRECT", definitionId: "research.metric.v3.oos_long_hit_rate_fraction", sourceLocator: "full_report.long_hitrate_pct/100",
+    nullRule: "Absent when no OOS bar held long exposure. Share of long-exposure bars with a positive portfolio return; not a per-trade win rate.",
+  },
+  {
+    key: "OOS_SHORT_HIT_RATE_FRACTION", sourceField: "short_hit_rate_fraction", label: "OOS short-bar hit rate", unit: "FRACTION", scope: "OOS", frequency: "RUN_FINAL",
+    origin: "ENGINE_DIRECT", definitionId: "research.metric.v3.oos_short_hit_rate_fraction", sourceLocator: "full_report.short_hitrate_pct/100",
+    nullRule: "Absent when no OOS bar held short exposure. Share of short-exposure bars with a positive portfolio return (QuantBT's definition).",
+  },
+  {
+    key: "OOS_SHARPE_DECAY", sourceField: "sharpe_decay", label: "Sharpe decay (IS → OOS)", unit: "RATIO", scope: "OOS", frequency: "RUN_FINAL",
+    origin: "NOT_PUBLISHED", definitionId: "research.metric.v3.oos_sharpe_decay", sourceLocator: null,
+    nullRule: "Never inferred: the P06 child receipt carries the OOS boundary only, so IS cannot be separated from optional warmup.",
+  },
+]);

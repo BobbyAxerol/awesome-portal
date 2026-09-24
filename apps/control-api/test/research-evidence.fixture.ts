@@ -36,3 +36,14 @@ export function p13EvidenceSourceFixture() {
     },
   };
 }
+
+/**
+ * RF-05 · two real P13 child receipts (QuantBT 1.1.1, P04 fixed profile,
+ * BTCUSDT 1h from the read-only historical store) carrying `oos_analytics`.
+ * Regenerate only from `research_child._p13_evidence_source`; never by hand.
+ */
+export function p13RealReceiptFixture(name: "four_month_oos" | "one_month_oos"): Record<string, any> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const document = require("./research-evidence-oos-analytics.fixture.json") as Record<string, { receipt: Record<string, any> }>;
+  return structuredClone(document[name]!.receipt);
+}

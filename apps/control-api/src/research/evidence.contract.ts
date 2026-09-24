@@ -23,6 +23,10 @@ export const ResearchEvidenceSeriesKindSchema = z.enum([
   "MONTHLY_RETURNS",
   "ROLLING_RETURNS_20",
   "RETURN_DISTRIBUTION",
+  /** RF-05 CG-P13-04: QuantBT rolling Sharpe over 63 UTC daily OOS returns. */
+  "ROLLING_SHARPE_63",
+  /** RF-05 CG-P13-04: typed absence until a benchmark series is published. */
+  "ROLLING_BETA_63",
 ]);
 
 export const ResearchEvidenceSeriesQuerySchema = ResearchEvidenceReadQuerySchema.extend({
@@ -30,6 +34,115 @@ export const ResearchEvidenceSeriesQuerySchema = ResearchEvidenceReadQuerySchema
 }).strict();
 
 export type ResearchEvidenceSeriesKind = z.infer<typeof ResearchEvidenceSeriesKindSchema>;
+
+const ReasonCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
+const LocatorSchema = z.string().min(1).max(256);
+
+/**
+ * RF-05 · additive `oos_analytics` block of the private P13 source receipt
+ * (`research.p13.evidence-source.v1`), produced in the confined child by
+ * `portal_api/services/research_evidence_metrics.py`.  Receipts without it
+ * stay valid and read as "predates OOS analytics".
+ */
+const OosAnalyticsMetricSourceSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  value: DecimalSchema.nullable(),
+  locator: z.string().regex(/^full_report\.[a-z_]{2,40}(?:\/100)?$/).nullable(),
+}).strict().superRefine((value, context) => {
+  const available = value.state === "AVAILABLE";
+  if (available !== (value.value !== null) || available !== (value.locator !== null) || available === (value.reason_code !== null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "OOS analytics metric state and payload are inconsistent" });
+  }
+});
+
+const RollingSharpePointSchema = z.object({
+  at_utc_ms: UtcMsSchema,
+  sharpe: DecimalSchema,
+}).strict();
+
+const MonthlyLeadingPointSchema = z.object({
+  month_start_utc_ms: UtcMsSchema,
+  return_fraction: DecimalSchema,
+}).strict();
+
+export const ResearchEvidenceOosAnalyticsSourceSchema = z.object({
+  schema_version: z.literal("research.p13.oos-analytics.v1"),
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  scope_locator: LocatorSchema.nullable(),
+  report_locator: LocatorSchema.nullable(),
+  return_sample: z.object({
+    kind: z.enum(["DAILY_UTC_EQUITY", "BAR"]),
+    observation_count: z.number().int().nonnegative().max(2_000_000),
+    annualization_periods: DecimalSchema,
+  }).strict().nullable(),
+  metrics: z.object({
+    sharpe: OosAnalyticsMetricSourceSchema,
+    sortino: OosAnalyticsMetricSourceSchema,
+    cagr_fraction: OosAnalyticsMetricSourceSchema,
+    profit_factor: OosAnalyticsMetricSourceSchema,
+    long_hit_rate_fraction: OosAnalyticsMetricSourceSchema,
+    short_hit_rate_fraction: OosAnalyticsMetricSourceSchema,
+    sharpe_decay: OosAnalyticsMetricSourceSchema,
+  }).strict(),
+  rolling_sharpe_63: z.object({
+    state: z.enum(["AVAILABLE", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    window_days: z.literal(63),
+    daily_return_count: z.number().int().nonnegative().max(2_000_000).nullable(),
+    locator: LocatorSchema.nullable(),
+    source_observation_count: z.number().int().nonnegative().max(2_000_000),
+    omitted_non_finite_count: z.number().int().nonnegative().max(2_000_000),
+    emitted_point_count: z.number().int().nonnegative().max(12),
+    sampling: z.enum(["FULL", "EXTREMA_BUCKET_V1"]).nullable(),
+    points: z.array(RollingSharpePointSchema).max(12),
+  }).strict(),
+  rolling_beta_63: z.object({
+    state: z.enum(["NOT_PUBLISHED", "NOT_APPLICABLE"]),
+    reason_code: ReasonCodeSchema,
+    window_days: z.literal(63),
+  }).strict(),
+  monthly_leading: z.object({
+    state: z.enum(["AVAILABLE", "NOT_APPLICABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    base_at_utc_ms: UtcMsSchema.nullable(),
+    point: MonthlyLeadingPointSchema.nullable(),
+  }).strict(),
+}).strict().superRefine((value, context) => {
+  const issue = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  if ((value.state === "AVAILABLE") === (value.reason_code !== null)) issue("OOS analytics block state is inconsistent");
+  if (value.state === "AVAILABLE" && (!value.scope_locator || !value.report_locator || !value.return_sample)) {
+    issue("available OOS analytics must name their engine scope, report and sample");
+  }
+  if (value.state === "NOT_PUBLISHED" && Object.values(value.metrics).some((metric) => metric.state === "AVAILABLE")) {
+    issue("unpublished OOS analytics must not carry metric values");
+  }
+  const rolling = value.rolling_sharpe_63;
+  if (
+    rolling.emitted_point_count !== rolling.points.length
+    || rolling.points.length > rolling.source_observation_count
+    || (rolling.state === "AVAILABLE") !== (rolling.points.length > 0)
+    || (rolling.state === "AVAILABLE") === (rolling.reason_code !== null)
+    || (rolling.sampling === null) !== (rolling.points.length === 0)
+    || (rolling.sampling === "FULL" && rolling.points.length !== rolling.source_observation_count)
+  ) issue("rolling Sharpe coverage is inconsistent");
+  for (let index = 1; index < rolling.points.length; index += 1) {
+    if (rolling.points[index]!.at_utc_ms <= rolling.points[index - 1]!.at_utc_ms) {
+      issue("rolling Sharpe must be strictly chronological");
+      break;
+    }
+  }
+  const leading = value.monthly_leading;
+  if (
+    (leading.state === "AVAILABLE") !== (leading.point !== null)
+    || (leading.state === "AVAILABLE") !== (leading.base_at_utc_ms !== null)
+    || (leading.state === "AVAILABLE") === (leading.reason_code !== null)
+    || (leading.point !== null && leading.base_at_utc_ms !== null && leading.base_at_utc_ms >= leading.point.month_start_utc_ms)
+  ) issue("monthly leading-boundary fact is inconsistent");
+});
+
+export type ResearchEvidenceOosAnalyticsSource = z.infer<typeof ResearchEvidenceOosAnalyticsSourceSchema>;
 
 export const ResearchEvidenceAvailabilitySchema = z.object({
   state: z.enum([
@@ -60,6 +173,84 @@ const MetricSchema = z.object({
   origin: z.enum(["ENGINE_DIRECT", "SOURCE_DERIVED", "NOT_PUBLISHED"]),
   definition_id: z.string().regex(/^research\.metric\.v1\.[a-z0-9_.-]{2,96}$/),
   value: DecimalSchema.nullable(),
+  availability: ResearchEvidenceAvailabilitySchema,
+}).strict();
+
+/** RF-05 CG-P13-03 · registry v3 performance fact (see evidence-metric-registry.ts). */
+const PerformanceMetricSchema = z.object({
+  key: z.enum([
+    "OOS_SHARPE",
+    "OOS_SORTINO",
+    "OOS_CAGR_FRACTION",
+    "OOS_PROFIT_FACTOR",
+    "OOS_LONG_HIT_RATE_FRACTION",
+    "OOS_SHORT_HIT_RATE_FRACTION",
+    "OOS_SHARPE_DECAY",
+  ]),
+  label: z.string().min(1).max(96),
+  unit: z.enum(["RATIO", "FRACTION"]),
+  scope: z.literal("OOS"),
+  frequency: z.literal("RUN_FINAL"),
+  origin: z.enum(["ENGINE_DIRECT", "NOT_PUBLISHED"]),
+  definition_id: z.string().regex(/^research\.metric\.v3\.[a-z0-9_.-]{2,96}$/),
+  /** Exact QuantBT `full_report` field the value was read from; null when absent. */
+  source_locator: z.string().min(1).max(96).nullable(),
+  value: DecimalSchema.nullable(),
+  availability: ResearchEvidenceAvailabilitySchema,
+}).strict().superRefine((value, context) => {
+  if ((value.availability.state === "AVAILABLE") !== (value.value !== null)
+    || (value.value !== null && value.source_locator === null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "performance metric availability and value are inconsistent" });
+  }
+});
+
+const OosPerformanceSchema = z.object({
+  registry_version: z.literal("research.metric-registry.v3"),
+  availability: ResearchEvidenceAvailabilitySchema,
+  /** QuantBT's own OOS scoping call (P08 boundary → last child bar). */
+  scope_locator: z.string().min(1).max(256).nullable(),
+  report_locator: z.string().min(1).max(256).nullable(),
+  /** The sample QuantBT computed ratios on: UTC-daily equity returns, or bar returns for a sub-2-day OOS. */
+  return_sample: z.object({
+    kind: z.enum(["DAILY_UTC_EQUITY", "BAR"]),
+    observation_count: z.number().int().nonnegative().max(2_000_000),
+    annualization_periods: DecimalSchema,
+  }).strict().nullable(),
+  metrics: z.array(PerformanceMetricSchema).length(7),
+}).strict();
+
+/**
+ * RF-05 CG-P13-10/12 · one published status vocabulary.
+ * `display_status` is the Screen-01 run-library wording derived by the same
+ * rule as `research.run_library_rows_v1` (job state, else durable state):
+ * SUCCEEDED/READY→COMPLETED, RUNNING/CLAIMED/SEALING/CANCEL_REQUESTED→RUNNING,
+ * FAILED, CANCELLED, DRAFT, RECOVERY_REQUIRED, anything else→QUEUED.
+ * `phase` is the typed terminal flag: a CANCELLED/FAILED run without evidence
+ * is TERMINAL, never an in-progress NOT_READY.
+ */
+const LifecycleSchema = z.object({
+  vocabulary: z.literal("research.run-status-vocabulary.v1"),
+  durable_status: z.enum(["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"]).nullable(),
+  display_status: z.enum(["COMPLETED", "RUNNING", "FAILED", "QUEUED", "DRAFT", "CANCELLED", "RECOVERY_REQUIRED"]).nullable(),
+  phase: z.enum(["IN_PROGRESS", "TERMINAL", "ATTENTION_REQUIRED", "LEGACY", "NOT_PUBLISHED"]),
+  terminal_outcome: z.enum(["COMPLETED", "FAILED", "CANCELLED"]).nullable(),
+  availability: ResearchEvidenceAvailabilitySchema,
+}).strict().superRefine((value, context) => {
+  if ((value.phase === "TERMINAL") !== (value.terminal_outcome !== null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "terminal outcome must accompany exactly the TERMINAL phase" });
+  }
+});
+
+/**
+ * RF-05 CG-P13-11 · what `revision` identifies.  RUN_INPUT_BOUND revisions
+ * hash the run id and its requested/effective-spec, dataset-binding and
+ * manifest digests with the evidence, so two runs never share one.
+ * SOURCE_CONTENT_ONLY marks an immutable pre-RF-05 revision that names only
+ * the evidence bytes: two runs with identical output may share it, so a
+ * consumer must also match `run_id`.
+ */
+const RevisionBindingSchema = z.object({
+  value: z.enum(["RUN_INPUT_BOUND", "SOURCE_CONTENT_ONLY"]).nullable(),
   availability: ResearchEvidenceAvailabilitySchema,
 }).strict();
 
@@ -200,13 +391,17 @@ export const ResearchEvidenceHubResponseSchema = z.object({
     fold_navigation: FoldNavigationSchema.optional(),
   }).strict(),
   metrics: z.array(MetricSchema).length(8),
+  /** Optional only for rolling-deploy compatibility, like `run_identity`. */
+  oos_performance: OosPerformanceSchema.optional(),
+  lifecycle: LifecycleSchema.optional(),
+  revision_binding: RevisionBindingSchema.optional(),
   claim: ClaimSchema,
   stages: z.array(StageSummarySchema).length(5),
   series: z.array(z.object({
     kind: ResearchEvidenceSeriesKindSchema,
     availability: ResearchEvidenceAvailabilitySchema,
     href: z.string().regex(/^\/api\/v1\/quantbt\/runs\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/evidence\/series\?kind=[A-Z0-9_]+$/).nullable(),
-  }).strict()).length(4),
+  }).strict()).length(6),
   warnings: z.array(WarningSchema).max(8),
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ResearchEvidenceAvailabilitySchema),
 }).strict();
@@ -223,6 +418,10 @@ const MonthlyPointSchema = z.object({
 const RollingPointSchema = z.object({
   at_utc_ms: UtcMsSchema,
   return_fraction: DecimalSchema,
+}).strict();
+const RollingSharpeSeriesPointSchema = z.object({
+  at_utc_ms: UtcMsSchema,
+  sharpe: DecimalSchema,
 }).strict();
 const DistributionPointSchema = z.object({
   lower_inclusive: DecimalSchema,
@@ -258,6 +457,7 @@ export const ResearchEvidenceSeriesResponseSchema = z.object({
     EquityPointSchema,
     MonthlyPointSchema,
     RollingPointSchema,
+    RollingSharpeSeriesPointSchema,
     DistributionPointSchema,
     CorrectedDistributionPointSchema,
   ])).max(192),
@@ -268,13 +468,21 @@ export const ResearchEvidenceSeriesResponseSchema = z.object({
   if (value.availability.state !== "AVAILABLE" && value.values.length !== 0) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "an unavailable evidence series must not carry display values" });
   }
+  // RF-05 CG-P13-06: zero points is never an AVAILABLE/FULL chart.
+  if (value.availability.state === "AVAILABLE" && value.values.length === 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "an available evidence series must carry at least one value" });
+  }
   const itemSchema = value.kind === "EQUITY_OOS"
     ? EquityPointSchema
     : value.kind === "MONTHLY_RETURNS"
       ? MonthlyPointSchema
       : value.kind === "ROLLING_RETURNS_20"
         ? RollingPointSchema
-        : z.union([DistributionPointSchema, CorrectedDistributionPointSchema]);
+        : value.kind === "ROLLING_SHARPE_63"
+          ? RollingSharpeSeriesPointSchema
+          : value.kind === "ROLLING_BETA_63"
+            ? z.never()
+            : z.union([DistributionPointSchema, CorrectedDistributionPointSchema]);
   for (const item of value.values) {
     if (!itemSchema.safeParse(item).success) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "evidence series item does not match its named kind" });

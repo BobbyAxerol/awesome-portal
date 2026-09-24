@@ -12,6 +12,21 @@ import type { ProgressIngressScope } from "./progress.repository";
 
 type JsonValue = Record<string, unknown> | unknown[] | string | null;
 
+export type EvidenceSeriesKind =
+  | "EQUITY_OOS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION"
+  | "ROLLING_SHARPE_63" | "ROLLING_BETA_63";
+
+/**
+ * RF-05 CG-P13-11 · the immutable P10 producer inputs a projection revision
+ * is bound to.  Read once at ingest; producer rows never change afterwards.
+ */
+export interface EvidenceRunInputBinding {
+  requested_spec_digest: string | null;
+  effective_spec_digest: string | null;
+  dataset_binding_digest: string | null;
+  manifest_digest: string | null;
+}
+
 export interface EvidenceProjectionWrite {
   runId: string;
   sourceEvidenceDigest: string;
@@ -24,7 +39,7 @@ export interface EvidenceProjectionWrite {
   /** A private, canonical JSON projection; browser reads receive the DTO. */
   projection: unknown;
   series: Array<{
-    kind: "EQUITY_OOS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION";
+    kind: EvidenceSeriesKind;
     availabilityState: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
     reasonCode: string | null;
     sourceObservationCount: number | null;
@@ -61,7 +76,7 @@ export interface EvidenceHubRow {
 
 export interface EvidenceSeriesRow {
   revision: string;
-  kind: "EQUITY_OOS" | "MONTHLY_RETURNS" | "ROLLING_RETURNS_20" | "RETURN_DISTRIBUTION";
+  kind: EvidenceSeriesKind;
   availabilityState: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
   reasonCode: string | null;
   sourceObservationCount: number | null;
@@ -272,6 +287,20 @@ export class ResearchEvidenceRepository {
           ],
         );
       }
+    });
+  }
+
+  /** Producer input digests for the exact attempt whose terminal event carries evidence. */
+  async inputBinding(scope: ProgressIngressScope, runId: string): Promise<EvidenceRunInputBinding | null> {
+    return this.withTransaction(scope.workspaceId, scope.actorUserId, false, async (client) => {
+      const result = await client.query<EvidenceRunInputBinding>(
+        `SELECT requested_spec_digest, effective_spec_digest, dataset_binding_digest, manifest_digest
+           FROM research.run_producers
+          WHERE workspace_id = $1 AND run_id = $2 AND worker_attempt_id = $3
+          LIMIT 1`,
+        [scope.workspaceId, runId, scope.workerAttemptId],
+      );
+      return result.rows[0] ?? null;
     });
   }
 
