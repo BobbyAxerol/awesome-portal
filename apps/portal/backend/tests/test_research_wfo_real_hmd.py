@@ -53,6 +53,97 @@ def _ms(value: pd.Timestamp) -> int:
     return int(value.value // 1_000_000)
 
 
+def _w3_dr_receipt(run_dir: Path, exported, batches) -> dict:
+    """W3 DR gate: every served number equals a direct recomputation from raw QuantBT output.
+
+    Exact decimal equality against ``Decimal(str(float))`` of the engine's
+    own parquet/JSON values; the only tolerance is 1e-12 on the derived fold
+    path facts, which this test recomputes independently in float.
+    """
+
+    from decimal import Decimal
+
+    stitched = pd.read_parquet(run_dir / "series" / "stitched.parquet")
+    trials = pd.read_parquet(run_dir / "wfo" / "trials.parquet")
+    selected = json.loads((run_dir / "selection" / "selected_params.json").read_text())
+    fold_metrics = json.loads((run_dir / "wfo" / "selected_fold_metrics.v1.json").read_text())["fold_metrics"]
+    rows: dict[str, list[dict]] = {}
+    for batch in batches:
+        rows.setdefault(batch.table_kind, []).extend(dict(row) for row in batch.rows)
+    summary = exported.receipt.summary
+    exact = lambda value: Decimal(str(value))  # noqa: E731
+
+    initial, final = stitched["equity"].iloc[0], stitched["equity"].iloc[-1]
+    assert Decimal(summary["metrics"]["initial_equity"]) == exact(initial)
+    assert Decimal(summary["metrics"]["final_equity"]) == exact(final)
+    assert Decimal(summary["metrics"]["max_drawdown_fraction"]) == min(exact(value) for value in stitched["drawdown"])
+    assert Decimal(summary["metrics"]["net_return_fraction"]) == exact(final) / exact(initial) - 1
+
+    served_trials = {row["sourceId"]: row["payload"] for row in rows["TRIAL"]}
+    for record in trials.to_dict(orient="records"):
+        payload = served_trials[str(record["trial_id"])]
+        assert Decimal(payload["objective"]) == exact(record["objective"])
+        assert {key: Decimal(value) for key, value in payload["parameters"].items()} == {
+            key: exact(value) for key, value in json.loads(record["params_json"]).items()
+        }
+    assert summary["selection"]["trial_id"] == str(selected["trial_id"])
+    assert Decimal(summary["selection"]["objective"]) == exact(selected["objective"])
+    assert {key: Decimal(value) for key, value in summary["selection"]["parameters"].items()} == {
+        key: exact(value) for key, value in selected["params"].items()
+    }
+
+    folds = []
+    for row, metrics in zip(rows["FOLD"], fold_metrics, strict=True):
+        facts = row["payload"]["fold_facts"]
+        for key in ("oos_sharpe", "is_sharpe", "decay", "oos_trade_count"):
+            assert Decimal(facts["oos_score"][key]) == exact(metrics[key]), key
+        start = pd.Timestamp(row["payload"]["test_start_utc_ms"], unit="ms", tz="UTC")
+        end = pd.Timestamp(row["payload"]["test_end_utc_ms"], unit="ms", tz="UTC")
+        window = stitched.loc[(stitched.index >= start) & (stitched.index <= end)]
+        base = float(stitched.loc[stitched.index < start, "equity"].iloc[-1])
+        peak = window["equity"].cummax().clip(lower=base)
+        recomputed = {
+            "return_fraction": float(window["equity"].iloc[-1] / base - 1),
+            "max_drawdown_fraction": float((window["equity"] / peak - 1).min()),
+            "worst_return_fraction": float(window["returns"].min()),
+        }
+        for key, value in recomputed.items():
+            assert abs(float(facts["oos_path"][key]) - value) <= 1e-12, key
+        folds.append({
+            "fold_id": row["sourceId"],
+            "oos_sharpe": facts["oos_score"]["oos_sharpe"],
+            "decay": facts["oos_score"]["decay"],
+            "oos_trade_count": facts["oos_score"]["oos_trade_count"],
+            **{key: facts["oos_path"][key] for key in recomputed},
+            "recomputed": recomputed,
+        })
+    numbers = {
+        "passport": dict(summary["metrics"]),
+        "selection": {"trial_id": summary["selection"]["trial_id"], "objective": summary["selection"]["objective"]},
+        "trials": {trial_id: payload["objective"] for trial_id, payload in served_trials.items()},
+        "folds": folds,
+        "claims": summary["source_facts"]["claims"],
+    }
+    expected = {
+        "passport": {
+            "initial_equity": str(exact(initial)),
+            "final_equity": str(exact(final)),
+            "max_drawdown_fraction": str(min(exact(value) for value in stitched["drawdown"])),
+        },
+        "selection": {
+            "trial_id": str(selected["trial_id"]),
+            "objective": str(exact(selected["objective"])),
+            "parameters": {key: str(exact(value)) for key, value in selected["params"].items()},
+        },
+        "trials": {str(record["trial_id"]): str(exact(record["objective"])) for record in trials.to_dict(orient="records")},
+        "folds": [
+            {"fold_id": fold["fold_id"], **{key: str(exact(metrics[key])) for key in ("oos_sharpe", "decay", "oos_trade_count")}, **fold["recomputed"]}
+            for fold, metrics in zip(folds, fold_metrics, strict=True)
+        ],
+    }
+    return {"numbers": numbers, "expected": expected}
+
+
 def test_w1_real_hmd_delta_wfo_child_within_half_the_cap(tmp_path: Path) -> None:
     runtime = load_historical_data_runtime(Path(os.environ["HISTORICAL_MARKET_DATA_ROOT"]))
     market = HistoricalMarketDataProvider(runtime=runtime, engine="duckdb").load(
@@ -160,6 +251,32 @@ def test_w1_real_hmd_delta_wfo_child_within_half_the_cap(tmp_path: Path) -> None
         "largest_batch_body_bytes": largest_body,
     })
     print("\nW1_REAL_HMD_MEASURED " + json.dumps(measured, sort_keys=True))
+    dr = _w3_dr_receipt(source_root / run_id, exported, batches)
+    print("W3_REAL_HMD_DR " + json.dumps(dr["numbers"], sort_keys=True))
+    export_dir = os.getenv("PORTAL_W3_DR_EXPORT_DIR")
+    if export_dir:
+        # Opt-in hand-off to the Control API DR spec
+        # (apps/control-api/test/research-w3-real-dr.spec.ts): the exact rows
+        # the worker would POST, the seal summary, and the raw recomputation.
+        Path(export_dir).mkdir(parents=True, exist_ok=True)
+        (Path(export_dir) / "w3-real-hmd-dr.json").write_text(json.dumps({
+            "run_id": run_id,
+            "table_rows": {
+                "OBSERVATION": exported.receipt.table_rows["observations"],
+                "FOLD": exported.receipt.table_rows["folds"],
+                "TRIAL": exported.receipt.table_rows["trials"],
+                "CANDIDATE": exported.receipt.table_rows["candidates"],
+                "SELECTION": exported.receipt.table_rows["selection"],
+            },
+            "manifest_digest": exported.receipt.manifest_digest,
+            "source_transform_digest": exported.receipt.source_transform_digest,
+            "summary": exported.receipt.summary,
+            "batches": [
+                {"table_kind": batch.table_kind, "batch_ordinal": batch.batch_ordinal, "batch_digest": batch.batch_digest, "rows": [dict(row) for row in batch.rows]}
+                for batch in batches
+            ],
+            "expected": dr["expected"],
+        }, sort_keys=True))
 
     assert result.n_folds >= 2
     assert result.trial_rows == 3

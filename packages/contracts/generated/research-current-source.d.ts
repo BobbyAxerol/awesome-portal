@@ -197,7 +197,8 @@ export interface components {
             source_observation_count: number;
             emitted_point_count: number;
             /** @enum {string} */
-            sampling: "FULL" | "RETENTION_STRIDE_V1" | "TAIL_WINDOW_V1" | "EXTREMA_BUCKET_V1" | "FULL_RETURN_HISTOGRAM_V2" | "NOT_APPLICABLE";
+            sampling: "FULL" | "RETENTION_STRIDE_V1" | "TAIL_WINDOW_V1" | "EXTREMA_BUCKET_V1" | "OBSERVATION_EXTREMA_BUCKET_V2" | "FULL_RETURN_HISTOGRAM_V2" | "NOT_APPLICABLE";
+            envelope: components["schemas"]["SeriesEnvelope"] | null;
         };
         Fold: {
             source_ordinal: number;
@@ -206,16 +207,28 @@ export interface components {
             train_end_utc_ms: components["schemas"]["UtcMs"] | null;
             test_start_utc_ms: components["schemas"]["UtcMs"] | null;
             test_end_utc_ms: components["schemas"]["UtcMs"] | null;
+            anatomy: components["schemas"]["FoldAnatomy"];
+            score: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                is_sharpe: components["schemas"]["Decimal"] | null;
+                oos_sharpe: components["schemas"]["Decimal"] | null;
+                decay: components["schemas"]["Decimal"] | null;
+                oos_trades: components["schemas"]["Decimal"] | null;
+            };
         };
         Trial: {
             source_ordinal: number;
             trial_id: string;
-            state: string;
+            /** @enum {string} */
+            state: "COMPLETE" | "PRUNED" | "FAIL" | "RUNNING" | "WAITING";
             objective: components["schemas"]["Decimal"] | null;
             parameters: {
                 [key: string]: components["schemas"]["Decimal"];
             };
             playback_cursor: components["schemas"]["OpaqueCursor"];
+            facts: components["schemas"]["TrialFacts"];
         };
         Candidate: {
             source_ordinal: number;
@@ -224,6 +237,7 @@ export interface components {
             parameters: {
                 [key: string]: components["schemas"]["Decimal"];
             };
+            facts: components["schemas"]["TrialFacts"];
         };
         Selection: {
             /** @constant */
@@ -234,6 +248,15 @@ export interface components {
                 [key: string]: components["schemas"]["Decimal"];
             };
             availability: components["schemas"]["Availability"];
+            /** @enum {string} */
+            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED";
+            roles: {
+                raw_best_is: components["schemas"]["SelectionRole"];
+                selected: components["schemas"]["SelectionRole"];
+                centroid: components["schemas"]["SelectionRole"];
+                raw_best_is_equals_selected: boolean | null;
+                candidate_source_trial_ids: string[];
+            };
         };
         Evidence: components["schemas"]["Common"] & {
             /** @constant */
@@ -263,6 +286,8 @@ export interface components {
                 audited_fills: components["schemas"]["Fact"];
                 benchmark: components["schemas"]["Fact"];
             };
+            claim: components["schemas"]["ClaimStrip"];
+            fold_verdicts: components["schemas"]["FoldVerdicts"];
         };
         EvidenceSeries: components["schemas"]["Common"] & {
             /** @constant */
@@ -289,6 +314,15 @@ export interface components {
                 embargo: components["schemas"]["Fact"];
                 strict_outer_oos_selection: components["schemas"]["Fact"];
             };
+            guards: {
+                label_horizon_bars: components["schemas"]["GuardFact"];
+                purge_bars: components["schemas"]["GuardFact"];
+                embargo_bars: components["schemas"]["GuardFact"];
+                warmup_policy: components["schemas"]["GuardFact"];
+                warmup_bars: components["schemas"]["GuardFact"];
+                inner_folds: components["schemas"]["GuardFact"];
+                oos_used_for_selection: components["schemas"]["GuardFact"];
+            };
         };
         Search: components["schemas"]["Common"] & {
             /** @constant */
@@ -300,6 +334,12 @@ export interface components {
                 trials: components["schemas"]["Trial"][];
                 page: components["schemas"]["Page"];
                 availability: components["schemas"]["Availability"];
+                fold_filter: {
+                    fold_id: string | null;
+                    /** @constant */
+                    rule: "TRIAL_FOLD_SCOPE_COVERS_FOLD";
+                    matched_rows: number;
+                };
             };
             candidates: {
                 source_candidate_count: number;
@@ -311,6 +351,34 @@ export interface components {
                 objective_components: components["schemas"]["Fact"];
                 prune_reasons: components["schemas"]["Fact"];
                 importance: components["schemas"]["Fact"];
+                probe: {
+                    /** @constant */
+                    schema_version: "research.current-source-search-probe.v1";
+                    objective_rows: number;
+                    objective_rows_recomposed: number;
+                    pruned_trial_count: number | null;
+                    decay_lambda: components["schemas"]["Decimal"] | null;
+                    decay_gamma: components["schemas"]["Decimal"] | null;
+                    sampler: components["schemas"]["Fact"];
+                    warm_start: components["schemas"]["Fact"];
+                    dedupe: components["schemas"]["Fact"];
+                };
+            };
+            search_contract: {
+                optimization_mode: string | null;
+                optimization_schedule: string | null;
+                n_studies: number | null;
+                optuna_trials_scope: string | null;
+                optuna_trials_per_study: number | null;
+                trial_ledger_mode: string | null;
+                candidate_selection_metric: string | null;
+                top_is_fraction: components["schemas"]["Decimal"] | null;
+                top_is_k: number | null;
+                validation_claim: string | null;
+                chronological_claim: string | null;
+                oos_used_for_selection: boolean | null;
+                scoring_backend: string | null;
+                availability: components["schemas"]["Availability"];
             };
         };
         Freeze: components["schemas"]["Common"] & {
@@ -424,6 +492,197 @@ export interface components {
                 effective_status: string;
             };
         };
+        ClaimFact: {
+            value: string | boolean | null;
+            source_key: string;
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: string | null;
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description S04 claim strip: engine tokens verbatim; an unpublished fact keeps value null with a typed reason. */
+        ClaimStrip: {
+            /** @constant */
+            schema_version: "research.current-source-claim-strip.v1";
+            validation_claim: components["schemas"]["ClaimFact"];
+            chronological_claim: components["schemas"]["ClaimFact"];
+            causality_claim: components["schemas"]["ClaimFact"];
+            oos_used_for_selection: components["schemas"]["ClaimFact"];
+            holdout: components["schemas"]["ClaimFact"];
+            execution_contract: {
+                value: string | boolean | null;
+                source_key: string;
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: string | null;
+                availability: components["schemas"]["Availability"];
+                signal_phase: string | null;
+                fill_phase: string | null;
+                accounting_certified: boolean | null;
+                execution_clock: string | null;
+            };
+            runtime_authority: {
+                value: string | boolean | null;
+                source_key: string;
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+                reason_code: string | null;
+                availability: components["schemas"]["Availability"];
+                final_account_runtime: string | null;
+                scoring_backend: string | null;
+                native_prepared_wfo_policy: string | null;
+                promotion_reason: components["schemas"]["Fact"];
+            };
+        };
+        FoldVerdictRow: {
+            source_ordinal: number;
+            fold_id: string;
+            test_start_utc_ms: components["schemas"]["UtcMs"] | null;
+            test_end_utc_ms: components["schemas"]["UtcMs"] | null;
+            oos_sharpe: components["schemas"]["Decimal"] | null;
+            is_sharpe: components["schemas"]["Decimal"] | null;
+            decay: components["schemas"]["Decimal"] | null;
+            oos_trades: components["schemas"]["Decimal"] | null;
+            max_drawdown_fraction: components["schemas"]["Decimal"] | null;
+            return_fraction: components["schemas"]["Decimal"] | null;
+            worst_return_fraction: components["schemas"]["Decimal"] | null;
+            worst_at_utc_ms: components["schemas"]["UtcMs"] | null;
+            observation_count: number | null;
+            /** @enum {string} */
+            verdict: "PASS" | "WARN" | "DRAG" | "NOT_EVALUATED";
+            failed_criteria: ("OOS_SHARPE" | "DECAY" | "MAX_DRAWDOWN")[];
+            drag_target: ("search" | "execute") | null;
+            reason_code: string | null;
+        };
+        /** @description Per-fold verdicts under a versioned server rule; the frontend holds no threshold. */
+        FoldVerdicts: {
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            availability: components["schemas"]["Availability"];
+            rule: {
+                /** @constant */
+                version: "research.fold-verdict.v1";
+                pass: {
+                    oos_sharpe_min: components["schemas"]["Decimal"];
+                    decay_max: components["schemas"]["Decimal"];
+                    max_drawdown_min: components["schemas"]["Decimal"];
+                };
+                warn: {
+                    oos_sharpe_min: components["schemas"]["Decimal"];
+                    decay_max: components["schemas"]["Decimal"];
+                    max_drawdown_min: components["schemas"]["Decimal"];
+                };
+                /** @constant */
+                score_basis: "QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1";
+                /** @constant */
+                path_basis: "RETAINED_STITCHED_OBSERVATIONS_V1";
+            };
+            /** @constant */
+            order: "WORST_FIRST";
+            counts: {
+                folds: number;
+                pass: number;
+                warn: number;
+                drag: number;
+                not_evaluated: number;
+            };
+            mean_oos_sharpe: components["schemas"]["Decimal"] | null;
+            mean_decay: components["schemas"]["Decimal"] | null;
+            rows: components["schemas"]["FoldVerdictRow"][];
+        };
+        SeriesEnvelope: {
+            first_at_utc_ms: components["schemas"]["UtcMs"];
+            last_at_utc_ms: components["schemas"]["UtcMs"];
+            first_equity: components["schemas"]["Decimal"];
+            last_equity: components["schemas"]["Decimal"];
+            min_equity: components["schemas"]["Decimal"];
+            min_equity_at_utc_ms: components["schemas"]["UtcMs"];
+            max_equity: components["schemas"]["Decimal"];
+            max_equity_at_utc_ms: components["schemas"]["UtcMs"];
+            min_drawdown_fraction: components["schemas"]["Decimal"];
+            min_drawdown_at_utc_ms: components["schemas"]["UtcMs"];
+            extrema_emitted: boolean;
+        };
+        FoldWindowFact: {
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            bars: number | null;
+            start_utc_ms: components["schemas"]["UtcMs"] | null;
+            end_utc_ms: components["schemas"]["UtcMs"] | null;
+        };
+        FoldAnatomy: {
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            train_bars: number | null;
+            test_bars: number | null;
+            warmup: components["schemas"]["FoldWindowFact"];
+            label_horizon: components["schemas"]["FoldWindowFact"];
+            purge: components["schemas"]["FoldWindowFact"];
+            embargo: components["schemas"]["FoldWindowFact"];
+            validation: components["schemas"]["FoldWindowFact"];
+            cutoff_utc_ms: components["schemas"]["UtcMs"] | null;
+            account_policy: string | null;
+        };
+        GuardFact: {
+            value: number | string | boolean | null;
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: string | null;
+        };
+        TrialMetric: {
+            value: components["schemas"]["Decimal"] | null;
+            reason_code: string | null;
+        };
+        TrialFacts: {
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            stage: string | null;
+            /** @enum {string} */
+            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED";
+            fold_scope: {
+                /** @enum {string} */
+                kind: "FOLD" | "ALL_OUTER_FOLDS" | "NOT_PUBLISHED";
+                fold_id: string | null;
+                reason_code: string | null;
+            };
+            source_trial_id: string | null;
+            pruned: boolean | null;
+            oos_seen_by_optuna: boolean | null;
+            metrics: {
+                mean_is_sharpe: components["schemas"]["TrialMetric"];
+                mean_oos_sharpe: components["schemas"]["TrialMetric"];
+                mean_decay: components["schemas"]["TrialMetric"];
+                std_decay: components["schemas"]["TrialMetric"];
+                temporal_score: components["schemas"]["TrialMetric"];
+            };
+            constraints: components["schemas"]["Fact"];
+            feasible: components["schemas"]["Fact"];
+            objective_components: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                formula: string | null;
+                terms: {
+                    term: string;
+                    weight: components["schemas"]["Decimal"];
+                    value: components["schemas"]["Decimal"];
+                    contribution: components["schemas"]["Decimal"];
+                }[];
+            };
+        };
+        SelectionRole: {
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: string | null;
+            trial_id: string | null;
+            objective: components["schemas"]["Decimal"] | null;
+            /** @enum {string} */
+            objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED";
+        };
     };
     responses: {
         /** @description Typed refusal with no source path, table selector, artifact locator, lease, raw market slice or credential. */
@@ -504,6 +763,8 @@ export interface components {
         At: components["schemas"]["OpaqueCursor"];
         Limit: number;
         IfNoneMatch: string;
+        /** @description W3: keep ledger rows whose published fold scope covers this retained fold id; cursors bind the filter. */
+        Fold: string;
     };
     requestBodies: never;
     headers: {
@@ -616,6 +877,8 @@ export interface operations {
                 /** @description Opaque playhead minted by this exact run/revision/relation. */
                 at?: components["parameters"]["At"];
                 limit?: components["parameters"]["Limit"];
+                /** @description W3: keep ledger rows whose published fold scope covers this retained fold id; cursors bind the filter. */
+                fold?: components["parameters"]["Fold"];
             };
             header?: never;
             path: {

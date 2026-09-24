@@ -32,6 +32,7 @@ import {
   seriesMatchesHub,
   toEvidenceRefusal,
   type CurrentSourceEvidence,
+  type CurrentSourceEvidenceSeries,
   type CurrentSourceNotApplicable,
   type EvidenceHub,
   type EvidenceRefusal,
@@ -57,6 +58,13 @@ export type PassportSlot =
   | { state: "not-applicable"; answer: CurrentSourceNotApplicable }
   | { state: "refused"; refusal: EvidenceRefusal };
 
+/** W3: the retained lane's equity relation (one read, after the passport answered). */
+export type RetainedSeriesSlot =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "ready"; series: CurrentSourceEvidenceSeries }
+  | { state: "refused"; refusal: EvidenceRefusal };
+
 export interface EvidenceController {
   hub: EvidenceHub | null;
   refusal: EvidenceRefusal | null;
@@ -66,6 +74,8 @@ export interface EvidenceController {
   ensureSeries: (kind: SeriesKind) => void;
   passport: PassportSlot;
   ensurePassport: () => void;
+  retainedSeries: RetainedSeriesSlot;
+  ensureRetainedSeries: () => void;
   /** Rereads the Hub — the one action a `409` or a transport failure offers. */
   reread: () => void;
 }
@@ -75,6 +85,8 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
   const [refusal, setRefusal] = useState<EvidenceRefusal | null>(null);
   const [series, setSeries] = useState<ReadonlyMap<SeriesKind, SeriesSlot>>(new Map());
   const [passport, setPassport] = useState<PassportSlot>({ state: "idle" });
+  const [retainedSeries, setRetainedSeries] = useState<RetainedSeriesSlot>({ state: "idle" });
+  const retainedAsked = useRef(false);
   const [generation, setGeneration] = useState(0);
 
   /* The Hub in a ref as well as state: a series response has to be checked
@@ -181,13 +193,29 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
       });
   }, [runId, workspaceId]);
 
+  /* W3: the retained equity relation, asked only for a sealed retained run. */
+  const ensureRetainedSeries = useCallback(() => {
+    if (retainedAsked.current) return;
+    retainedAsked.current = true;
+    setRetainedSeries({ state: "loading" });
+    evidenceApi
+      .currentSourceSeries(runId, "EQUITY", { workspaceId })
+      .then((answer) => {
+        if (answer === NOT_MODIFIED || answer.schema_version !== "research.current-source-evidence-series.v1") return;
+        setRetainedSeries({ state: "ready", series: answer });
+      })
+      .catch((error: unknown) => setRetainedSeries({ state: "refused", refusal: toEvidenceRefusal(error) }));
+  }, [runId, workspaceId]);
+
   /* A new run is a new question: every lazy answer belongs to the old one. */
   useEffect(() => {
     asked.current = new Set();
     retried.current = new Set();
     passportAsked.current = false;
+    retainedAsked.current = false;
     setSeries(new Map());
     setPassport({ state: "idle" });
+    setRetainedSeries({ state: "idle" });
   }, [runId]);
 
   const state: ResearchState = refusal
@@ -198,5 +226,5 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
           : { kind: "ok", rowCount: hub.metrics.length },
       );
 
-  return { hub, refusal, state, series, ensureSeries, passport, ensurePassport, reread };
+  return { hub, refusal, state, series, ensureSeries, passport, ensurePassport, retainedSeries, ensureRetainedSeries, reread };
 }

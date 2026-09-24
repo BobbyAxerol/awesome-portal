@@ -49,6 +49,8 @@ export function EvidenceFlowRoute() {
         ensureSeries={evidence.ensureSeries}
         passport={evidence.passport}
         ensurePassport={evidence.ensurePassport}
+        retainedSeries={evidence.retainedSeries}
+        ensureRetainedSeries={evidence.ensureRetainedSeries}
         onReread={evidence.reread}
       />
     </>

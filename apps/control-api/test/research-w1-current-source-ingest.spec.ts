@@ -449,7 +449,19 @@ describe("W1 current-source readers by execution profile", () => {
       tableRows: { OBSERVATION: 2, FOLD: 2, TRIAL: 3, CANDIDATE: 1, SELECTION: 1 }, totalRows: 9,
       summary, retainedAtUtcMs: 1_727_000_000_000,
     };
-    const service = new ResearchCurrentSourceService({ sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn() } as never, readerConfig as never);
+    // W3: evidence also reads the (pre-W3, fact-less) fold and candidate rows.
+    const rows = vi.fn().mockImplementation((_scope, _runId, _revision, kind: string) => {
+      const table: Record<string, Array<{ sourceOrdinal: number; sourceId: string; occurredAtUtcMs: null; payload: Record<string, unknown> }>> = {
+        FOLD: [0, 1].map((ordinal) => ({
+          sourceOrdinal: ordinal, sourceId: `fold_${ordinal}`, occurredAtUtcMs: null,
+          payload: { fold_id: `fold_${ordinal}`, train_start_utc_ms: 1, train_end_utc_ms: 2, test_start_utc_ms: 3, test_end_utc_ms: 4 },
+        })),
+        CANDIDATE: [{ sourceOrdinal: 0, sourceId: "c0", occurredAtUtcMs: null, payload: { candidate_id: "c0", objective: "0.4", parameters: { window: "32" } } }],
+      };
+      const found = table[kind] ?? [];
+      return { rows: found, hasMore: false, hasPrevious: false, totalRows: found.length };
+    });
+    const service = new ResearchCurrentSourceService({ sealForRead: vi.fn().mockResolvedValue(seal), runState: vi.fn(), rows } as never, readerConfig as never);
     const evidence = await service.evidence({ workspaceId: "ws_w1", actorUserId: "usr_w1" }, "rrun_w1");
     expect(ResearchCurrentSourceEvidenceResponseSchema.safeParse(evidence).success).toBe(true);
     expect((evidence as { provenance: Record<string, unknown> }).provenance).toMatchObject({

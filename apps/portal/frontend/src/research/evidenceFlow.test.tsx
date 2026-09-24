@@ -25,6 +25,8 @@ import {
   SERIES_KINDS,
   seriesMatchesHub,
   toEvidenceRefusal,
+  type CurrentSourceEvidence,
+  type CurrentSourceEvidenceSeries,
   type EvidenceHub,
   type EvidenceSeries,
   type Metric,
@@ -1426,5 +1428,145 @@ describe("RF-06 fidelity — claim tab next card", () => {
     const rc = container.querySelector("[data-action-unrouted='release candidate →']") as HTMLElement;
     expect(rc.getAttribute("data-primary")).toBeNull();
     expect(container.querySelectorAll("[data-soon-hook] button[disabled]")).toHaveLength(2);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * W3 — Screen 04 on a real retained WFO run (CG-P13-05/07/08)
+ *
+ * The retained bodies are what the Control API serves for the real QuantBT
+ * 1.1.1 Delta WFO on BTCUSDT 1h (`w3RealWfo.fixture.json`).
+ * ---------------------------------------------------------------------- */
+
+const W3 = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as {
+  evidence: CurrentSourceEvidence;
+  series: CurrentSourceEvidenceSeries;
+};
+const retainedPassport = { state: "ready" as const, evidence: W3.evidence };
+
+describe("W3 — a sealed retained WFO run fills the claim strip (CG-P13-07)", () => {
+  it("asks the retained lane on mount, from the hub level, not only when Summary is open", () => {
+    const ensurePassport = vi.fn();
+    view({ ensurePassport, cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
+    expect(ensurePassport).toHaveBeenCalled();
+  });
+
+  it("prints QuantBT's own claim tokens, each jumping to its stage; the WFO holdout reads n/a", () => {
+    const onStage = vi.fn();
+    const { container } = view({ passport: retainedPassport, onStage });
+    const value = (name: string) => container.querySelector(`[data-claim-field='${name}']`)?.getAttribute("data-claim-value");
+    expect(value("validation_claim")).toBe("walk_forward_oos");
+    expect(value("chronological_claim")).toBe("not_causal_multi_fold_global_calibration");
+    expect(value("oos_used_for_selection")).toBe("true");
+    expect(value("causality_claim")).toBe("retrospective_global_calibration");
+    expect(value("execution_contract")).toBe("close_target_v2");
+    expect(value("runtime authority")).toBe("native_vectorized");
+    expect(container.querySelector("[data-claim-field='holdout_state'] [data-claim-na]")?.textContent).toBe("n/a");
+    // No "not published" shell remains for a fact the lane answered.
+    expect(container.querySelectorAll("[data-claim-field='validation_claim']")).toHaveLength(1);
+    fireEvent.click(container.querySelector("[data-claim-field='oos_used_for_selection'] button") as Element);
+    expect(onStage).toHaveBeenCalledWith("search");
+  });
+
+  it("keeps the P04 lane's shells when the lane answered not applicable", () => {
+    const { container } = view({
+      passport: {
+        state: "not-applicable",
+        answer: {
+          schema_version: "research.current-source-not-applicable.v1",
+          read_authority: "PORTAL_RETAINED_CURRENT_SOURCE",
+          run_id: "R-WFO-118",
+          revision: "rs02_not-applicable_" + "a".repeat(64),
+          etag: '"rs02_not-applicable_' + "a".repeat(64) + '"',
+          availability: { state: "NOT_APPLICABLE", reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION" },
+          lane: {
+            state: "NOT_APPLICABLE",
+            operation: "evidence",
+            run_profile: "P04_FIXED_QUALIFICATION",
+            run_adapter_contract_digest: "9".repeat(64),
+            retainable_profile_id: "rs02.delta-wfo-global.v1",
+            reason_code: "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION",
+          },
+        },
+      },
+    });
+    expect(container.querySelector("[data-claim-field='validation_claim']")?.getAttribute("data-withheld")).toBe("NOT_PUBLISHED");
+    expect(container.querySelector("[data-retained-verdicts]")).toBeNull();
+    expect(container.querySelector("[data-gap='per-fold-verdict']")).toBeTruthy();
+  });
+});
+
+describe("W3 — per-fold verdicts from the server rule (CG-P13-08)", () => {
+  it("renders the HiFi columns worst first, formatted, with the server's verdict chips", () => {
+    const { container } = view({ passport: retainedPassport });
+    const table = container.querySelector("[data-retained-verdicts='AVAILABLE']") as HTMLElement;
+    expect(table).toBeTruthy();
+    expect(table.querySelector("[data-verdict-summary]")?.textContent).toContain("2 DRAG · 0 WARN · 0 PASS — OOS −5.35, decay +3.91");
+    const rows = [...table.querySelectorAll("[data-verdict-row]")];
+    expect(rows.map((row) => row.getAttribute("data-verdict-row"))).toEqual(["0", "1"]);
+    const cells = [...rows[0]!.querySelectorAll("td")].map((cell) => cell.textContent?.trim());
+    expect(cells.slice(0, 6)).toEqual(["fold_01", "−7.80", "+7.44", "5", "−0.38%", "−0.34%"]);
+    expect(cells[6]).toMatch(/^−0\.16% single bar · 2026-07-\d\d \d\d:\d\dZ$/);
+    expect(rows[0]!.querySelector("[data-verdict-chip]")?.textContent).toBe("DRAG");
+    // The exact server string rides in the title; the bar is clamped, not negative.
+    expect(rows[0]!.querySelector("[data-exact]")?.getAttribute("data-exact")).toBe("-7.799572637865059");
+    expect(rows[0]!.querySelector("[data-oos-bar]")?.getAttribute("data-oos-bar")).toBe("0");
+    expect(table.querySelector("[data-verdict-foot]")?.textContent).toContain("research.fold-verdict.v1");
+  });
+
+  it("moves the cursor on a row click and reorders by fold without refetching", () => {
+    const onFold = vi.fn();
+    const { container } = view({ passport: retainedPassport, onFold });
+    fireEvent.click(container.querySelector("[data-verdict-row='1']") as Element);
+    expect(onFold).toHaveBeenCalledWith(2);
+    fireEvent.click(container.querySelector("[data-verdict-sort='fold']") as Element);
+    expect([...container.querySelectorAll("[data-verdict-row]")].map((row) => row.getAttribute("data-verdict-row"))).toEqual(["0", "1"]);
+    const search = container.querySelector("[data-verdict-row='0'] [data-verdict-open='search']") as HTMLAnchorElement;
+    expect(search.getAttribute("href")).toContain("/search#");
+    expect(search.getAttribute("href")).toContain("fold=1");
+  });
+
+  it("a seal without per-fold facts reads 'not published', never 0", () => {
+    const evidence = JSON.parse(JSON.stringify(W3.evidence)) as CurrentSourceEvidence;
+    evidence.fold_verdicts = {
+      ...evidence.fold_verdicts,
+      state: "NOT_PUBLISHED",
+      reason_code: "RS02_SEAL_PREDATES_W3_SOURCE_FACTS_V1",
+      availability: { state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_W3_SOURCE_FACTS_V1" },
+      counts: { folds: 2, pass: 0, warn: 0, drag: 0, not_evaluated: 2 },
+      mean_oos_sharpe: null,
+      mean_decay: null,
+      rows: evidence.fold_verdicts.rows.map((row) => ({
+        ...row, oos_sharpe: null, is_sharpe: null, decay: null, oos_trades: null, max_drawdown_fraction: null,
+        return_fraction: null, worst_return_fraction: null, worst_at_utc_ms: null, observation_count: null,
+        verdict: "NOT_EVALUATED" as const, failed_criteria: [], drag_target: null,
+        reason_code: "RS02_RETAINED_ROW_PREDATES_W3_FACT_BLOCK_V1",
+      })),
+    };
+    const { container } = view({ passport: { state: "ready", evidence } });
+    const table = container.querySelector("[data-retained-verdicts]") as HTMLElement;
+    expect(table.textContent).not.toMatch(/\b0\.00\b|\+0\.00%/);
+    expect(table.querySelectorAll("[data-verdict-chip='NOT_EVALUATED']")).toHaveLength(2);
+    expect(table.textContent).toContain("not published");
+  });
+});
+
+describe("W3 — the retained equity is drawn at full resolution (CG-P13-05)", () => {
+  it("asks for the retained series, not the Hub's, and captions the whole relation with its extrema", () => {
+    const ensureRetainedSeries = vi.fn();
+    const ensureSeries = vi.fn();
+    const { container } = view({
+      passport: retainedPassport,
+      retainedSeries: { state: "ready", series: W3.series },
+      ensureRetainedSeries,
+      ensureSeries,
+    });
+    expect(ensureRetainedSeries).toHaveBeenCalled();
+    expect(ensureSeries).not.toHaveBeenCalledWith("EQUITY_OOS");
+    const caption = container.querySelector("[data-retained-sampling='FULL']") as HTMLElement;
+    expect(caption.textContent).toContain("all 1,056 retained observations");
+    expect(caption.querySelector("[data-envelope]")?.textContent).toContain("deepest drawdown −0.67%");
+    expect(container.querySelector("[data-fold-boundaries]")?.getAttribute("data-fold-boundaries")).toBe("2");
+    expect(container.querySelector("[data-series-panel='EQUITY_OOS']")).toBeNull();
   });
 });

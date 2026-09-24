@@ -208,6 +208,7 @@ class AdvancedWalkForwardRunner:
         completed_at = _utc_now_iso()
 
         self._write_wfo_artifacts(run_id, wf)
+        self._write_wfo_source_facts(run_id, wf, getattr(endpoint.result, "metadata", None))
         selected = _freeze_deployment_selection(wf, config)
         self._artifacts.write_json(
             run_id,
@@ -320,6 +321,107 @@ class AdvancedWalkForwardRunner:
 
                     table = _search_trials_only(table)
                 self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", _flatten_frame(table))
+
+    def _write_wfo_source_facts(
+        self,
+        run_id: str,
+        wf: Mapping[str, Any],
+        account_metadata: Mapping[str, Any] | None,
+    ) -> None:
+        """Retain two small, additive QuantBT fact documents (W3, CG-P13-07/08).
+
+        ``wfo/selected_fold_metrics.v1.json`` keeps the per-fold score rows
+        QuantBT computed for the *selected* parameter set (``best_trial``);
+        the compact trial ledger drops them.  ``wfo/source_contract.v1.json``
+        keeps the claim, temporal-guard, search and execution-contract facts
+        QuantBT published for this run, verbatim.  Neither replaces an
+        existing artifact, and no value is inferred: a key QuantBT did not
+        publish is simply absent.
+        """
+
+        best = wf.get("best_trial")
+        fold_metrics = best.get("fold_metrics") if isinstance(best, Mapping) else None
+        if isinstance(fold_metrics, list) and fold_metrics:
+            self._artifacts.write_json(
+                run_id,
+                "wfo/selected_fold_metrics.v1.json",
+                with_portal_provenance(
+                    "selected_fold_metrics.v1.json",
+                    canonicalize({
+                        "schema_version": "portal.wfo-selected-fold-metrics.v1",
+                        "source": "QuantBT walk_forward best_trial.fold_metrics",
+                        "trial_id": _sanitize(best.get("trial_id")),
+                        "fold_metrics": [
+                            _sanitize({str(key): value for key, value in row.items()})
+                            for row in fold_metrics
+                            if isinstance(row, Mapping)
+                        ],
+                    }),
+                ),
+            )
+        wf_keys = (
+            "validation_claim",
+            "causality_claim",
+            "chronological_validation_claim",
+            "oos_used_for_selection",
+            "full_sample_used_for_selection",
+            "params_semantics",
+            "causality_schedule_v2",
+            "signal_causality_scope",
+            "optimization_mode",
+            "optimization_schedule",
+            "label_horizon_bars",
+            "purge_bars",
+            "embargo_bars",
+            "warmup_policy",
+            "warmup_bars",
+            "inner_validation",
+            "fold_account_policy",
+            "fold_boundary_position_policy",
+            "account_execution",
+            "n_folds",
+            "n_studies",
+            "optuna_trials_scope",
+            "optuna_trials_configured_per_study",
+            "n_optuna_trial_rows",
+            "trial_ledger_mode",
+            "full_trial_metrics_retained",
+            "top_is_fraction",
+            "top_is_k",
+            "candidate_selection_metric",
+            "scoring_backend",
+            "min_trades_per_year",
+            "trade_penalty_factor",
+        )
+        walk_forward = {key: _sanitize(wf.get(key)) for key in wf_keys if key in wf}
+        native = wf.get("native_prepared_wfo")
+        if isinstance(native, Mapping):
+            walk_forward["native_prepared_wfo"] = _sanitize({
+                key: native.get(key)
+                for key in ("requested_policy", "resolved_policy", "execution_clock", "reason")
+                if key in native
+            })
+        account: dict[str, Any] = {}
+        if isinstance(account_metadata, Mapping):
+            for key in ("backend", "engine_id", "target_runtime", "kernel_version", "signal_phase", "fill_phase"):
+                if key in account_metadata:
+                    account[key] = _sanitize(account_metadata.get(key))
+            contract = account_metadata.get("execution_contract")
+            if isinstance(contract, Mapping):
+                account["execution_contract"] = _sanitize(dict(contract))
+        self._artifacts.write_json(
+            run_id,
+            "wfo/source_contract.v1.json",
+            with_portal_provenance(
+                "source_contract.v1.json",
+                canonicalize({
+                    "schema_version": "portal.wfo-source-contract.v1",
+                    "source": "QuantBT walk_forward metadata and final account metadata",
+                    "walk_forward": walk_forward,
+                    "final_account": account,
+                }),
+            ),
+        )
 
     def _write_compatible_fold_tables(self, run_id: str, table: pd.DataFrame) -> None:
         """Preserve the v1 consumer table across a QuantBT metadata expansion.

@@ -64,6 +64,22 @@ export type RollingSharpePoint = HubSchemas["RollingSharpePoint"];
 
 export type CurrentSourceEvidence = SourceSchemas["Evidence"];
 export type CurrentSourceAvailability = SourceSchemas["Availability"];
+/* W3 (CG-P13-05/07/08): the retained WFO lane's claim strip, fold verdicts and full-resolution series. */
+export type CurrentSourceClaimStrip = SourceSchemas["ClaimStrip"];
+export type CurrentSourceClaimFact = SourceSchemas["ClaimFact"];
+export type CurrentSourceFoldVerdicts = SourceSchemas["FoldVerdicts"];
+export type CurrentSourceFoldVerdictRow = SourceSchemas["FoldVerdictRow"];
+export type CurrentSourceEvidenceSeries = SourceSchemas["EvidenceSeries"];
+export type CurrentSourceSeriesEnvelope = SourceSchemas["SeriesEnvelope"];
+
+/**
+ * W3: a published fold start, drawn as the HiFi's dashed gold boundary. Only
+ * the retained WFO lane publishes one (its fold plan); the P13 Hub does not.
+ */
+export interface FoldBoundary {
+  at_utc_ms: number;
+  label: string;
+}
 /** RF-05 CG-P13-09: the typed 200 for a run whose profile the lane never holds. */
 export type CurrentSourceNotApplicable = SourceSchemas["LaneNotApplicable"];
 
@@ -171,6 +187,18 @@ export const evidenceApi = {
   currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
     call<CurrentSourceEvidence | CurrentSourceNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/evidence${query(options.workspaceId)}`,
+      null,
+      options.signal,
+    ),
+
+  /**
+   * `researchCurrentSourceEvidenceSeriesGetV1` — W3 CG-P13-05: every retained
+   * observation up to 2000, then an extrema-preserving sample, with the whole
+   * relation's envelope. Asked only once the evidence read answered.
+   */
+  currentSourceSeries: (runId: string, kind: "EQUITY", options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
+    call<CurrentSourceEvidenceSeries | CurrentSourceNotApplicable>(
+      `${RUNS}/${encodeURIComponent(runId)}/current-source/evidence/series${query(options.workspaceId, { kind })}`,
       null,
       options.signal,
     ),
