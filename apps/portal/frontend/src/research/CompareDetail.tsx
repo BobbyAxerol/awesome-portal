@@ -254,6 +254,7 @@ const COMPARE_CSS = `
 .cp-tcard > .t { padding: 8px 12px; border-bottom: 1px solid var(--line); }
 .cp-tcard > .body { padding: 10px 12px; }
 .cp-tcard > .foot { padding: 6px 12px; border-top: 1px solid var(--line-soft); font-size: 10px; color: var(--ink-faint); }
+.cp-tcard > .foot .num, .cp-corr .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .cp-diffcard { flex: 1.3 1 460px; }
 .cp-trajcard { flex: 1 1 320px; }
 .cp-trajcard p { font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
@@ -814,7 +815,7 @@ function LadderStep({ run, last }: { run: CompareRun; last: boolean }) {
     <>
       <LadderCard run={run} />
       {last ? null : (
-        <span className="cp-arrow" aria-label="claim strengthens to the right" data-ladder-arrow>
+        <span className="cp-arrow" aria-label="claim strengthens along the ladder" data-ladder-arrow>
           claim ↑ →
         </span>
       )}
@@ -914,9 +915,11 @@ function MarketTile({ card }: { card: MarketCard }) {
       </span>
       <RunLine run={run} />
       <MiniChart chart={chart} />
-      <span className="cp-faint" data-mini-meta>
-        {samplingLine(chart.sampling, chart.emitted_point_count, chart.source_observation_count)}
-      </span>
+      {chart.state === "AVAILABLE" ? (
+        <span className="cp-faint" data-mini-meta>
+          {samplingLine(chart.sampling, chart.emitted_point_count, chart.source_observation_count)}
+        </span>
+      ) : null}
       <div className="cp-mstats">
         <span>
           sharpe{" "}
@@ -1068,9 +1071,11 @@ function OverlayFigure({ result }: { result: PairComparable }) {
     <figure className="cp-fig cp-overlay" data-panel="overlay" data-pair-overlay={overlay.state} aria-label="two-run equity overlay">
       <figcaption>
         <span className="cp-figtitle">{OVERLAY_TITLE}</span>
-        <span className="cp-figmeta" data-overlay-meta>
-          {samplingLine(overlay.sampling, overlay.emitted_point_count, overlay.source_observation_count)}
-        </span>
+        {overlay.state === "AVAILABLE" ? (
+          <span className="cp-figmeta" data-overlay-meta>
+            {samplingLine(overlay.sampling, overlay.emitted_point_count, overlay.source_observation_count)}
+          </span>
+        ) : null}
       </figcaption>
       {plot ? (
         <div className="cp-plot" data-size="overlay" style={gutterOf(plot)}>
@@ -1151,8 +1156,18 @@ function commonRow(result: PairComparable, id: CommonMetric["key"], label: strin
     left: <SideValue value={metric.left_value} availability={metric.availability} what="A" />,
     right: <SideValue value={metric.right_value} availability={metric.availability} what="B" />,
     delta,
-    sign: metric.delta !== null && metric.availability.state === "AVAILABLE" ? (metric.delta.startsWith("-") ? "neg" : "pos") : null,
+    sign: metric.delta !== null && metric.availability.state === "AVAILABLE" ? deltaSign(metric.delta) : null,
   };
+}
+
+/**
+ * Spec §7 colours a Δ by its sign. A zero has none, so it is left uncoloured;
+ * nothing here decides whether a sign is good or bad for a metric
+ * (VD-P20-28).
+ */
+function deltaSign(delta: string): "pos" | "neg" | null {
+  if (/^-?0+(?:\.0+)?$/.test(delta)) return null;
+  return delta.startsWith("-") ? "neg" : "pos";
 }
 
 /** VD-P20-06: the hi-fi's six rows; a Δ only where the server published one. */
@@ -1167,7 +1182,7 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
   return [
     {
       id: "OOS_SHARPE",
-      label: "OOS sharpe (stitched)",
+      label: "OOS sharpe",
       scope: sharpeLeft?.scope ?? "original",
       left: <MetricValue metric={sharpeLeft} what="A" />,
       right: <MetricValue metric={sharpeRight} what="B" />,
@@ -1234,7 +1249,9 @@ function DeltaTable({ result }: { result: PairComparable }) {
               <th scope="col" data-side="right">
                 {right?.run_id ?? "B"}
               </th>
-              <th scope="col">Δ</th>
+              <th scope="col">
+                Δ<span className="scope" data-delta-direction>B − A · as published</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -1255,10 +1272,22 @@ function DeltaTable({ result }: { result: PairComparable }) {
         </table>
       </div>
       <div className="foot" data-common-window={window.state}>
-        {window.definition_id} · matched {window.matched_observation_count} · A source{" "}
-        {window.left_source_observation_count ?? "not published"} · B source {window.right_source_observation_count ?? "not published"} ·{" "}
-        {window.start_utc_ms !== null && window.end_utc_ms !== null ? `${iso(window.start_utc_ms)} → ${iso(window.end_utc_ms)}` : "window not published"}
-        {window.availability.state !== "AVAILABLE" ? ` · ${reasonOf(window.availability)}` : ""}
+        {window.state === "AVAILABLE" ? (
+          <>
+            {window.definition_id} · matched <span className="num">{window.matched_observation_count}</span> · A source{" "}
+            <span className="num">{window.left_source_observation_count ?? "not published"}</span> · B source{" "}
+            <span className="num">{window.right_source_observation_count ?? "not published"}</span> ·{" "}
+            <span className="num">
+              {window.start_utc_ms !== null && window.end_utc_ms !== null ? `${iso(window.start_utc_ms)} → ${iso(window.end_utc_ms)}` : "window not published"}
+            </span>
+          </>
+        ) : (
+          /* An unpublished window prints its reason, not its counts: a count
+             next to "not published" would read as a value (audit A4). */
+          <>
+            {window.definition_id} · common window not published · {reasonOf(window.availability)}
+          </>
+        )}
       </div>
     </section>
   );
@@ -1288,7 +1317,13 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
         </span>
       )}
       <span className="cp-faint" data-correlation-meta>
-        n {correlation.n} · {window} · {correlation.missing_policy}
+        {derived ? (
+          <>
+            n <span className="num">{correlation.n}</span> · <span className="num">{window}</span> · {correlation.missing_policy}
+          </>
+        ) : (
+          <>{correlation.missing_policy}</>
+        )}
       </span>
       <p>{CORRELATION_NOTE}</p>
     </section>

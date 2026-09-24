@@ -621,6 +621,64 @@ describe("S13 Compare — URL and switching", () => {
   });
 });
 
+describe("S13 Compare — audit fixes", () => {
+  it("S13-U24 a zero Δ carries no sign colour; the Δ header names the server's direction", async () => {
+    const data = pairData();
+    const net = data.common_window.metrics.find((metric) => metric.key === "NET_RETURN_FRACTION")!;
+    net.delta = "0.0000";
+    server([{ status: 200, body: pair("AVAILABLE", data) }]);
+    renderAt(`${base}?mode=pair&runs=run_a,run_b`);
+    await settled();
+    const cell = document.querySelector('[data-delta-row="NET_RETURN_FRACTION"] td.d') as HTMLElement;
+    expect(cell.textContent).toBe("0.0000");
+    expect(cell.getAttribute("data-sign")).toBeNull();
+    expect(document.querySelector("[data-delta-direction]")?.textContent).toBe("B − A · as published");
+    expect(document.querySelector('[data-delta-row="OOS_SHARPE"] td')?.textContent).not.toContain("stitched");
+  });
+
+  it("S13-U25 an unpublished common window or correlation prints its reason, never a count that reads as a value", async () => {
+    const data = pairData();
+    data.common_window = {
+      ...data.common_window,
+      state: "NOT_PUBLISHED",
+      matched_observation_count: 0,
+      left_source_observation_count: null,
+      right_source_observation_count: null,
+      start_utc_ms: null,
+      end_utc_ms: null,
+      metrics: data.common_window.metrics.map((metric) => ({ ...metric, left_value: null, right_value: null, delta: null, availability: np("P20_NO_COMMON_RAW_RETURN_WINDOW") })),
+      availability: np("P20_NO_COMMON_RAW_RETURN_WINDOW"),
+    };
+    data.correlation = {
+      ...data.correlation,
+      state: "NOT_PUBLISHED",
+      source_label: "NOT_PUBLISHED",
+      value: null,
+      n: 0,
+      common_window_start_utc_ms: null,
+      common_window_end_utc_ms: null,
+      availability: np("P20_NO_COMMON_RAW_RETURN_WINDOW"),
+    };
+    data.overlay = { ...data.overlay, state: "NOT_PUBLISHED", sampling: "NOT_APPLICABLE", emitted_point_count: 0, source_observation_count: null, points: [], availability: np("P20_COMMON_WINDOW_NOT_AVAILABLE") };
+    server([{ status: 200, body: pair("PARTIAL", data) }]);
+    renderAt(`${base}?mode=pair&runs=run_a,run_b`);
+    await settled();
+    const foot = document.querySelector('[data-common-window="NOT_PUBLISHED"]') as HTMLElement;
+    expect(foot.textContent).toContain("P20_NO_COMMON_RAW_RETURN_WINDOW");
+    expect(foot.textContent).not.toContain("matched");
+    const meta = document.querySelector("[data-correlation-meta]") as HTMLElement;
+    expect(meta.textContent).not.toMatch(/n\s+0/);
+    expect(document.querySelector("[data-overlay-meta]")).toBeNull();
+    expect(document.querySelector("[data-rho]")).toBeNull();
+  });
+
+  it("S13-U26 the resolver passes an unknown mode through so the server can refuse it", async () => {
+    server([problem(400, "RESEARCH_COMPARE_INVALID")]);
+    renderAt(`/research/quantbt/compare?alpha=${ALPHA}&mode=foo`);
+    await waitFor(() => expect(location()).toBe(`${base}?mode=foo`));
+  });
+});
+
 describe("S13 Compare — paths and sources", () => {
   it("S13-U20 comparePath sends runs only for a valid pair; hrefs encode as the routes expect", () => {
     expect(comparePath(ALPHA, { mode: "attempts", runs: ["a", "b"] })).toBe(`/api/v1/research/alphas/${ALPHA}/compare?mode=attempts`);

@@ -73,12 +73,12 @@ export function CompareResolverRoute() {
   if (alpha) {
     const runs = splitRuns(params.get("runs"));
     const mode = params.get("mode");
-    return (
-      <Navigate
-        replace
-        to={compareHref(alpha, { mode: isCompareMode(mode) ? mode : runs ? "pair" : undefined, runs })}
-      />
-    );
+    /* A mode the client does not know is passed through untouched: the
+       server owns the 400, and the resolver must not hide it (audit A10). */
+    const href = isCompareMode(mode) || mode === null
+      ? compareHref(alpha, { mode: isCompareMode(mode) ? mode : runs ? "pair" : undefined, runs })
+      : `${compareHref(alpha, { runs })}${runs ? "&" : "?"}mode=${encodeURIComponent(mode)}`;
+    return <Navigate replace to={href} />;
   }
   return <CompareContainer alphaId={null} />;
 }
