@@ -294,41 +294,37 @@ describe("RF-04 FE-S03-04 — a finished run without a claim is not called faile
   });
 });
 
-describe("P11-T01b — a running fold is visible", () => {
-  it("bounds the timeline with the server's own clock, not the last end", () => {
-    // The newest fold had only just started, so the last completed end was its
-    // own start and the band collapsed to nothing. `updated_at_utc_ms` is the
-    // server's notion of now; the page never reads the local clock.
+describe("P11-T01b / FE-S03-07 — the fold fill is trial progress, not wall time", () => {
+  it("fills a DONE fold completely, however short its time span", () => {
+    // The old time-scaled band drew a DONE fold at ~11 % of its track, which
+    // read as unfinished (FE-S03-07).
     view({
       read: read(
         {},
         {
           updated_at_utc_ms: 1789836590000,
           folds: [
-            { fold: 1, state: "DONE", started_at_utc_ms: 1789836572000, completed_at_utc_ms: 1789836580000 },
+            { fold: 1, state: "DONE", started_at_utc_ms: 1789836572000, completed_at_utc_ms: 1789836572010 },
             { fold: 2, state: "RUNNING", started_at_utc_ms: 1789836580000, completed_at_utc_ms: null },
           ],
         },
       ),
     });
-    const running = document.querySelector('[data-fold-band="2"]') as HTMLElement;
-    expect(Number.parseFloat(running.style.width)).toBeGreaterThan(10);
+    const done = document.querySelector('[data-fold-fill="1"]') as HTMLElement;
+    expect(done.style.width).toBe("100%");
   });
 
-  it("still draws something when no fold has completed", () => {
+  it("does not guess a running fold's share: no fill, a pulsing track", () => {
     view({
       read: read(
         {},
-        {
-          updated_at_utc_ms: 1789836590000,
-          folds: [
-            { fold: 1, state: "RUNNING", started_at_utc_ms: 1789836572000, completed_at_utc_ms: null },
-          ],
-        },
+        { folds: [{ fold: 1, state: "RUNNING", started_at_utc_ms: 1789836572000, completed_at_utc_ms: null }] },
       ),
     });
-    const band = document.querySelector('[data-fold-band="1"]') as HTMLElement;
-    expect(Number.parseFloat(band.style.width)).toBeGreaterThan(10);
+    expect(document.querySelector('[data-fold-fill="1"]')).toBeNull();
+    const track = document.querySelector('[data-fold-track="1"]') as HTMLElement;
+    expect(track.getAttribute("data-motion")).toBe("pulse");
+    expect(track.style.getPropertyValue("--rs-motion-duration")).toBe("1.8s");
   });
 
   it("reads no local clock anywhere on the surface", () => {
@@ -363,7 +359,7 @@ describe("P11-T01c — the source owns the segmentation and the certificate", ()
   it("draws a full Gantt only when the source says COMPLETE", () => {
     view({ read: withTimeline({ state: "COMPLETE", reason_code: null, segments }) });
     expect(document.querySelectorAll("[data-fold-segment]")).toHaveLength(3);
-    expect(document.querySelector("[data-fold-band]")).toBeNull();
+    expect(document.querySelector("[data-fold-fill]")).toBeNull();
   });
 
   it("draws exactly the published segments on PARTIAL and names the condition", () => {
@@ -381,7 +377,7 @@ describe("P11-T01c — the source owns the segmentation and the certificate", ()
     );
   });
 
-  it("keeps the whole-fold band on NOT_PUBLISHED", () => {
+  it("keeps the whole-fold fill on NOT_PUBLISHED", () => {
     view({
       read: withTimeline({
         state: "NOT_PUBLISHED",
@@ -390,7 +386,7 @@ describe("P11-T01c — the source owns the segmentation and the certificate", ()
       }),
     });
     expect(document.querySelectorAll("[data-fold-segment]")).toHaveLength(0);
-    expect(document.querySelector("[data-fold-band]")).toBeTruthy();
+    expect(document.querySelector("[data-fold-fill]")).toBeTruthy();
   });
 
   it("treats an absent field exactly as NOT_PUBLISHED", () => {
@@ -400,7 +396,7 @@ describe("P11-T01c — the source owns the segmentation and the certificate", ()
     expect(document.querySelector("[data-fold]")?.getAttribute("data-fold-timeline")).toBe(
       "NOT_PUBLISHED",
     );
-    expect(document.querySelector("[data-fold-band]")).toBeTruthy();
+    expect(document.querySelector("[data-fold-fill]")).toBeTruthy();
   });
 
   it("shows an A–D chip only for an issued certificate with a grade", () => {
@@ -866,7 +862,7 @@ describe("P11-T08 — cancel is the server's decision and retry is not offered",
   });
 
   it("states why there is no retry instead of offering one", () => {
-    view();
+    view({ read: read({ current: { ...read().current, effective_status: "COMPLETED", may_cancel: false } }), transport: "closed" });
     expect(document.querySelector("[data-retry-reason]")?.textContent).toContain("does not offer retry");
     expect(document.querySelector('[data-action="retry"]')).toBeNull();
   });
@@ -927,7 +923,7 @@ describe("RF-04 — console and truthful no-source states", () => {
 
   it("reserves the console height and renders queued, cancelled and not-found without false progress", () => {
     view();
-    expect(document.querySelector("[data-console-box]")?.className).toContain("h-[260px]");
+    expect((document.querySelector("[data-console-box]") as HTMLElement).style.height).toBe("330px");
     cleanup();
     view({ read: read({ availability: "QUEUED_NO_SOURCE", progress: null, queue: { queue_class: "HEAVY", queued_at_utc_ms: 1789836572000, retry_not_before_utc_ms: null } }) });
     expect(document.querySelector("[data-no-source]")?.getAttribute("data-no-source")).toBe("QUEUED_NO_SOURCE");

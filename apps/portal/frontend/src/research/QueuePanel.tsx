@@ -176,3 +176,94 @@ export function QueuePanel({
     </ResearchPanel>
   );
 }
+
+/* -------------------------------------------------------------------------
+ * Served queue and attempts (FE-S03-10)
+ * ---------------------------------------------------------------------- */
+
+import type { ProgressRead } from "./progressClient";
+import { formatUtc } from "./researchFormat";
+
+type ServedQueue = NonNullable<ProgressRead["queue"]>;
+type ServedAttempt = NonNullable<ProgressRead["attempts"]>[number];
+
+const ATTEMPT_TONE: Record<ServedAttempt["state"], { fg: string; border: string }> = {
+  CLAIMED: STATE_TONE.CLAIMED,
+  RUNNING: STATE_TONE.RUNNING,
+  SUCCEEDED: STATE_TONE.SUCCEEDED,
+  FAILED: STATE_TONE.FAILED,
+  /* A lost lease is not a failure of the research; it is the worker that
+     went away. It reads as caution, not as the run's verdict. */
+  LOST_LEASE: { fg: "var(--accent-2)", border: "var(--accent-2)" },
+  CANCELLED: STATE_TONE.CANCELLED,
+};
+
+function clock(ms: number | null): string | null {
+  return ms === null ? null : formatUtc(ms);
+}
+
+export interface ServedAttemptsProps {
+  queue?: ServedQueue;
+  attempts?: readonly ServedAttempt[];
+  /** Open by default when the run never reached its source. */
+  open?: boolean;
+}
+
+/**
+ * The queue class and the worker attempts the progress read serves, under the
+ * one logical run. Ordinal and scheduler timestamps only — the contract carries
+ * no worker identity, and neither does this list.
+ */
+export function ServedAttempts({ queue, attempts = [], open = false }: ServedAttemptsProps) {
+  if (!queue && attempts.length === 0) return null;
+  return (
+    <details
+      data-queue-attempts
+      open={open}
+      style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-faint)" }}
+    >
+      <summary style={{ cursor: "pointer" }}>
+        queue {queue ? <span style={{ color: "var(--ink-soft)" }}>{queue.queue_class}</span> : "class not published"}
+        {queue ? <> · queued {clock(queue.queued_at_utc_ms)}</> : null} · {attempts.length} worker attempt
+        {attempts.length === 1 ? "" : "s"}
+      </summary>
+      <div style={{ paddingTop: 4 }}>
+        {attempts.map((attempt) => {
+          const tone = ATTEMPT_TONE[attempt.state];
+          return (
+            <div
+              key={attempt.ordinal}
+              data-attempt-ordinal={attempt.ordinal}
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "baseline",
+                gap: "2px 10px",
+                padding: "4px 0",
+                borderBottom: "1px solid var(--line-soft)",
+              }}
+            >
+              <span style={{ width: 72 }}>attempt {attempt.ordinal}</span>
+              <span
+                data-job-state={attempt.state}
+                style={{
+                  border: `1px solid ${tone.border}`,
+                  color: tone.fg,
+                  borderRadius: 3,
+                  padding: "0 5px",
+                  fontSize: 9,
+                  letterSpacing: ".06em",
+                }}
+              >
+                {attempt.state}
+              </span>
+              <span>claimed {clock(attempt.claimed_at_utc_ms)}</span>
+              {attempt.started_at_utc_ms !== null ? <span>started {clock(attempt.started_at_utc_ms)}</span> : null}
+              {attempt.ended_at_utc_ms !== null ? <span>ended {clock(attempt.ended_at_utc_ms)}</span> : null}
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}

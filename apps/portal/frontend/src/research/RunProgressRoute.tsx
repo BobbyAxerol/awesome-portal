@@ -27,6 +27,10 @@ export function RunProgressRoute() {
       olderLines={progress.olderLines}
       linesDropped={progress.linesDropped}
       onLoadOlder={progress.loadOlder}
+      canLoadOlder={progress.canLoadOlder}
+      refusal={progress.refusal}
+      meta={progress.meta}
+      foldTrials={progress.foldTrials}
       foldCursor={progress.foldCursor}
       onPinFold={progress.pinFold}
       cancelling={progress.cancelling}
