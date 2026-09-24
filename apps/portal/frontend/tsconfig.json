@@ -79,6 +79,9 @@
       "@portal/contracts-research-attempt-lineage": [
         "../../../packages/contracts/generated/research-attempt-lineage.d.ts"
       ],
+      "@portal/contracts-research-compare": [
+        "../../../packages/contracts/generated/research-compare.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

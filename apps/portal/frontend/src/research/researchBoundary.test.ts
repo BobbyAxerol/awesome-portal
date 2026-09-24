@@ -84,6 +84,7 @@ describe("no internal identifier or direct source access on the Research surface
     "replayClient.ts",
     "reportClient.ts",
     "lineageClient.ts",
+    "compareClient.ts",
   ];
 
   /*
