@@ -9,12 +9,13 @@
  *  - **Writes are fenced and explicit.** A save sends the revision and source
  *    fingerprint in hand; a seal sends the persisted draft; neither fires on
  *    its own, and a refusal never loses the text the reader typed.
- *  - **Local seal ≠ publish.** Publish and the approval-inbox mirror are P22
- *    ghosts with nothing interactive inside them.
+ *  - **Local seal ≠ publish.** Before a delivered publication the mirror is a
+ *    ghost with nothing interactive inside it; publish is one fenced click
+ *    whose gate, state and mirror are the server's (P22, S11-U34…).
  *  - **Refusals are neutral.** 403 and 404 say the same sentence and take the
  *    same state; the server's prose is never rendered.
  */
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -23,8 +24,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ALPHA360_TITLE,
   CEILING_TITLE,
+  CLAIM_LEGEND,
+  CLAIM_REQUIRED,
   ENGCERT_TITLE,
+  MIRROR_CONDITIONS_NONE,
+  MIRROR_INBOX_LINK,
+  MIRROR_NOT_READABLE,
   MIRROR_NOTE,
+  MIRROR_OUTCOMES,
+  MIRROR_POOL_ABSENT,
+  MIRROR_PUBLISHED_NOTE,
+  MIRROR_SUPERSEDED,
+  PUBLISHED_SENTENCE,
+  PUBLISHING_LABEL,
+  RECONCILE_NOT_ADMITTED,
+  UNKNOWN_COPY,
   NOT_PUBLISHABLE_BADGE,
   RC_PANELS,
   RC_RULES,
@@ -38,18 +52,27 @@ import {
 } from "./ReleaseCandidateDetail";
 import { ReleaseCandidatePackRoute, ReleaseCandidateRoute } from "./ReleaseCandidateRoute";
 import {
+  RC_ACTOR_MISMATCH_COPY,
   RC_CONFLICT_COPY,
   RC_DENIED_COPY,
   RC_NEUTRAL_REFUSAL,
   RC_NOT_PUBLISHABLE_COPY,
+  RC_OPEN_APPROVAL_COPY,
+  RC_PUBLISH_REFUSED_COPY,
+  RC_RETRYABLE_COPY,
   RC_UNAVAILABLE_COPY,
   yamlText,
   type RcCompose,
   type RcField,
+  type RcMirror,
   type RcPack,
   type RcPackItem,
+  type RcPublication,
+  type RcPublicationResponse,
   type RcSealResponse,
 } from "./releaseCandidateClient";
+import { MIRROR_POLL_MS, nextMirrorView } from "./useReleaseCandidateMirror";
+import { PortalApiError } from "../lib/api";
 
 vi.mock("../auth/authApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../auth/authApi")>()),
@@ -59,6 +82,7 @@ vi.mock("../auth/authApi", async (importOriginal) => ({
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 /* ---------------------------------------------------------------- fixtures */
@@ -75,7 +99,7 @@ const T0 = Date.UTC(2026, 8, 20, 10, 30);
 const FP = "sha256:source-fp-1";
 const AVAILABLE = { state: "AVAILABLE", reason_code: null } as const;
 const np = (reason: string) => ({ state: "NOT_PUBLISHED", reason_code: reason }) as const;
-const VERDICT_TITLE = "local seal ready — downstream publish remains P22";
+const VERDICT_TITLE = "local seal ready — seal before publishing";
 const COMPOSE_PATH = `/api/v1/quantbt/runs/${RUN}/release-candidate`;
 
 const FIELD_KEYS: RcField["key"][] = [
@@ -157,6 +181,25 @@ function pack(): RcPackItem[] {
 
 type DraftOverrides = Partial<RcCompose["draft"]>;
 
+/** `Publication` with nothing recorded yet (shape of `publicationBlock`). */
+function publication(overrides: Partial<RcPublication> = {}): RcPublication {
+  return {
+    availability: np("P22_NOT_PUBLISHED"),
+    state: null,
+    release_candidate_id: RC,
+    approval_id: null,
+    conflicting_approval_id: null,
+    downstream_code: null,
+    downstream_receipt_digest: null,
+    attempt_count: null,
+    intent_actor: null,
+    updated_at_utc_ms: null,
+    reconcile_allowed: false,
+    claim_candidates: ["claim_m1"],
+    ...overrides,
+  };
+}
+
 function compose(overrides: Partial<RcCompose> = {}, draft: DraftOverrides = {}): RcCompose {
   const f = fields();
   return {
@@ -181,7 +224,7 @@ function compose(overrides: Partial<RcCompose> = {}, draft: DraftOverrides = {})
       { what: "data / universe", state: "UNSET", consequence: "no published predecessor to compare" },
       { what: "methodology", state: "UNSET", consequence: "no published predecessor to compare" },
     ],
-    published_comparison: { last_release_candidate_id: null, availability: np("P22_PUBLISHED_COMPARISON_NOT_COMMISSIONED") },
+    published_comparison: { last_release_candidate_id: null, availability: np("P22_NO_PUBLISHED_PREDECESSOR") },
     certification_axes: {
       methodology_claim: { value: "B", availability: AVAILABLE },
       engine_execution_contract: { value: null, availability: np("P21_ENGINE_EXECUTION_CERTIFICATION_NOT_PUBLISHED") },
@@ -215,12 +258,13 @@ function compose(overrides: Partial<RcCompose> = {}, draft: DraftOverrides = {})
       may_edit_draft: true,
       may_seal: true,
       seal_blocked_reason: null,
-      publish: { enabled: false, blocked_reason: "P22_PUBLICATION_NOT_COMMISSIONED" },
+      publish: { enabled: false, blocked_reason: "P21_LOCAL_SEAL_NOT_CREATED", release_candidate_id: null },
     },
+    publication: publication({ availability: np("P21_LOCAL_SEAL_NOT_CREATED"), release_candidate_id: null }),
     mirror: null,
     source_absences: {
       alpha_binding: AVAILABLE,
-      approval_mirror: np("P22_PUBLICATION_NOT_COMMISSIONED"),
+      approval_mirror: np("P22_NOT_PUBLISHED"),
       execution_deployment: { state: "NOT_APPLICABLE", reason_code: "P21_EXECUTION_DEPLOYMENT_NOT_APPLICABLE" },
     },
     ...overrides,
@@ -255,12 +299,124 @@ function sealedLocal(): RcCompose["local_seal"] {
   };
 }
 
-function sealed(): RcCompose {
+function sealed(pub: Partial<RcPublication> = {}, action: Partial<RcCompose["actions"]["publish"]> = {}): RcCompose {
   const base = compose();
   return {
     ...base,
     rail: base.rail.map((node) => (node.key === "release_candidate" ? { ...node, value: RC, detail: "SEALED_LOCAL", tone: "green" } : node)),
     local_seal: sealedLocal(),
+    actions: { ...base.actions, publish: { enabled: true, blocked_reason: null, release_candidate_id: RC, ...action } },
+    publication: publication(pub),
+  };
+}
+
+const PUBLISHED_AT = SEALED_AT + 3_600_000;
+const APPROVAL = "apr_01";
+const ACTOR = { user_id: "u_1", username: "researcher@bobby" };
+
+/** `Mirror` as `release-candidate-publication.service.ts` answers a readable R1 approval. */
+function mirror(overrides: Partial<RcMirror> = {}): RcMirror {
+  return {
+    schema_version: "research.release-candidate-approval-mirror.v1",
+    release_candidate_id: RC,
+    approval_id: APPROVAL,
+    href: `/governance/approvals/${APPROVAL}/r1`,
+    availability: AVAILABLE,
+    gate: "R1",
+    subject_id: ALPHA,
+    subject_label: `${RC} — ${ALPHA} alphaver_1`,
+    status: "PENDING",
+    effective_status: "PENDING",
+    sla_due_at: "2026-09-21T12:30:00.000Z",
+    expires_at: "2026-09-23T12:30:00.000Z",
+    created_at: "2026-09-20T12:30:00.000Z",
+    quorum_met: 0,
+    quorum_required: 1,
+    approval_version: 1,
+    evidence_set_hash: "sha256:evidence-set-1",
+    blocker_count: 0,
+    condition_count: 0,
+    conditions: [],
+    decision_outcomes: [],
+    rc_superseded: false,
+    as_of_utc_ms: PUBLISHED_AT,
+    ...overrides,
+  };
+}
+
+/** Without the R1 read authority: the id, the link and a typed absence, nothing else. */
+function deniedMirror(): RcMirror {
+  return mirror({
+    availability: { state: "NOT_APPLICABLE", reason_code: "GOVERNANCE_R1_READ_DENIED" },
+    gate: null,
+    subject_id: null,
+    subject_label: null,
+    status: null,
+    effective_status: null,
+    sla_due_at: null,
+    expires_at: null,
+    created_at: null,
+    quorum_met: null,
+    quorum_required: null,
+    approval_version: null,
+    evidence_set_hash: null,
+    blocker_count: null,
+    condition_count: null,
+  });
+}
+
+function published(m: RcMirror = mirror()): RcCompose {
+  const base = sealed();
+  return {
+    ...base,
+    state: "PUBLISHED",
+    rail: base.rail.map((node) => (node.key === "release_candidate" ? { ...node, value: RC, detail: "published · immutable", tone: "green" } : node)),
+    gate_verdict: { title: "published — immutable · R1 review in Approval Inbox", body: PUBLISHED_SENTENCE },
+    local_seal: { ...sealedLocal(), delivery_state: "DELIVERED", approval_state: "PENDING" },
+    actions: {
+      may_edit_draft: false,
+      may_seal: false,
+      seal_blocked_reason: "P22_ALREADY_PUBLISHED",
+      publish: { enabled: false, blocked_reason: "P22_ALREADY_PUBLISHED", release_candidate_id: RC },
+    },
+    publication: publication({
+      availability: AVAILABLE,
+      state: "DELIVERED",
+      approval_id: APPROVAL,
+      downstream_receipt_digest: "sha256:receipt-1",
+      attempt_count: 1,
+      intent_actor: ACTOR,
+      updated_at_utc_ms: PUBLISHED_AT,
+    }),
+    mirror: m,
+    source_absences: { alpha_binding: AVAILABLE, execution_deployment: { state: "NOT_APPLICABLE", reason_code: "P21_EXECUTION_DEPLOYMENT_OUT_OF_SCOPE" } },
+  };
+}
+
+/** An attempt the governance store did not confirm; only the intent actor may reconcile. */
+function unknownOutcome(): RcCompose {
+  return sealed(
+    { availability: AVAILABLE, state: "UNKNOWN", attempt_count: 1, intent_actor: ACTOR, updated_at_utc_ms: PUBLISHED_AT, reconcile_allowed: true },
+    { enabled: false, blocked_reason: "P22_PUBLICATION_PENDING_RECONCILE" },
+  );
+}
+
+function publicationAnswer(state: "DELIVERED" | "UNKNOWN", replayed = false): RcPublicationResponse {
+  const delivered = state === "DELIVERED";
+  return {
+    schema_version: "research.release-candidate-publication.v1",
+    release_candidate_id: RC,
+    run_id: RUN,
+    pack_digest: "sha256:pack-1",
+    publication_state: state,
+    replayed,
+    approval_id: delivered ? APPROVAL : null,
+    href: delivered ? `/governance/approvals/${APPROVAL}/r1` : null,
+    downstream_receipt_digest: delivered ? "sha256:receipt-1" : null,
+    attempt_count: 1,
+    delivery_state: delivered ? "DELIVERED" : "UNKNOWN",
+    approval_state: delivered ? "PENDING" : "UNKNOWN",
+    updated_at_utc_ms: PUBLISHED_AT,
   };
 }
 
@@ -309,15 +465,18 @@ interface Call {
 }
 
 const ok = (body: unknown, status = 200): Answer => ({ status, body });
+const SERVER_PROSE = "SECRET-SERVER-PROSE run owned by alice@example";
 const problem = (status: number, code: string): Answer => ({
   status,
-  body: { error: { code, message: "server prose: run owned by alice@example" }, request_id: `req_${status}` },
+  body: { error: { code, message: SERVER_PROSE }, request_id: `req_${status}` },
 });
 
-function server(answers: Partial<Record<"GET" | "PATCH" | "POST", Answer[]>>) {
+/** `MIRROR` answers GET …/mirror; every other GET is the composition. */
+function server(answers: Partial<Record<"GET" | "PATCH" | "POST" | "MIRROR", Answer[]>>) {
   const calls: Call[] = [];
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    const method = (init?.method ?? "GET").toUpperCase() as "GET" | "PATCH" | "POST";
+    const verb = (init?.method ?? "GET").toUpperCase() as "GET" | "PATCH" | "POST";
+    const method = verb === "GET" && String(input).includes("/mirror") ? "MIRROR" : verb;
     calls.push({
       url: String(input),
       method,
@@ -353,6 +512,8 @@ const panel = (name: string) => document.querySelector(`[data-panel="${name}"]`)
 const panelOrder = () => [...page().querySelectorAll(":scope [data-panel]")].map((el) => el.getAttribute("data-panel"));
 const row = (key: string) => document.querySelector(`[data-pack-row="${key}"]`) as HTMLElement;
 const sealButton = () => document.querySelector('[data-action="local-seal"]') as HTMLElement;
+const publishButton = () => document.querySelector('[data-action="publish"]') as HTMLElement;
+const reconcileButton = () => document.querySelector('[data-action="reconcile"]') as HTMLElement;
 
 async function ready(title = VERDICT_TITLE) {
   await screen.findByText(title);
@@ -390,7 +551,7 @@ describe("Screen 11 Release Candidate", () => {
     expect(screen.getByRole("heading", { level: 2, name: RC_TITLE })).toBeTruthy();
     expect(page().getAttribute("data-rc-state")).toBe("loading");
     expect(screen.getAllByRole("status", { name: "Loading" }).length).toBeGreaterThan(0);
-    expect(panelOrder()).toEqual(["header", "meta", "notice", "identity", "pack", "record", "seal", "publish-ghost", "mirror-ghost", "rules"]);
+    expect(panelOrder()).toEqual(["header", "meta", "notice", "identity", "pack", "record", "seal", "publish", "mirror-ghost", "rules"]);
     expect((sealButton() as HTMLElement).getAttribute("aria-disabled")).toBe("true");
     expect(screen.getByText(RC_RULES)).toBeTruthy();
   });
@@ -399,12 +560,13 @@ describe("Screen 11 Release Candidate", () => {
     server({ GET: [ok(unbound())] });
     renderCompose();
     await ready("local seal blocked — review evidence");
-    expect(panelOrder()).toEqual([...RC_PANELS.compose].filter((name) => name !== "sealed"));
+    const notNow = (...names: string[]) => [...RC_PANELS.compose].filter((name) => !names.includes(name));
+    expect(panelOrder()).toEqual(notNow("sealed", "publish-unknown", "published", "mirror"));
     cleanup();
     server({ GET: [ok(sealed())] });
     renderCompose();
     await ready();
-    expect(panelOrder()).toEqual([...RC_PANELS.compose].filter((name) => name !== "banner"));
+    expect(panelOrder()).toEqual(notNow("banner", "publish-unknown", "published", "mirror"));
   });
 
   it("S11-U03 prints the hi-fi title, subtitle, breadcrumb and verbatim copy", async () => {
@@ -418,7 +580,8 @@ describe("Screen 11 Release Candidate", () => {
       new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`),
     );
     expect(screen.getByText(SEAL_SENTENCE)).toBeTruthy();
-    expect(screen.getByText(SOD_NOTE)).toBeTruthy();
+    expect(within(panel("publish")).getByText(SOD_NOTE)).toBeTruthy();
+    expect(panel("seal").textContent).not.toContain(SOD_NOTE);
     expect(screen.getByText(MIRROR_NOTE)).toBeTruthy();
     expect(panel("pack").textContent).toContain(
       "DEGRADED travels as DEGRADED — the reviewer sees it. MISSING blocks publish. The two INPUT rows are the researcher's own signed declarations.",
@@ -482,7 +645,7 @@ describe("Screen 11 Release Candidate", () => {
     const caption = document.querySelector("[data-taxonomy-caption]")!;
     expect(caption.textContent).toContain("change taxonomy vs last published rc — ");
     expect(caption.querySelector("[data-last-rc]")).toBeNull();
-    expect(caption.querySelector("[data-reason-code]")?.textContent).toBe("P22_PUBLISHED_COMPARISON_NOT_COMMISSIONED");
+    expect(caption.querySelector("[data-reason-code]")?.textContent).toBe("P22_NO_PUBLISHED_PREDECESSOR");
     expect(document.querySelector("[data-verdict-body]")?.textContent).toBe("Every required row is present; the declarations are signed.");
   });
 
@@ -767,21 +930,24 @@ describe("Screen 11 Release Candidate", () => {
     expect(api.of("POST")).toHaveLength(0);
   });
 
-  it("S11-U25 publish and the approval-inbox mirror are P22 ghosts with nothing to operate", async () => {
-    server({ GET: [ok(compose())] });
+  it("S11-U25 before a delivered publication the mirror is a ghost with nothing to operate, and publish names its blocker", async () => {
+    const api = server({ GET: [ok(compose())] });
     renderCompose();
     await ready();
-    for (const name of ["publish-ghost", "mirror-ghost"]) {
-      const ghost = panel(name);
-      expect(ghost.querySelectorAll("button, a, input, textarea, select, [tabindex]"), name).toHaveLength(0);
-    }
-    expect(panel("publish-ghost").querySelector("[data-reason-code]")?.textContent).toBe("P22_PUBLICATION_NOT_COMMISSIONED");
-    expect(panel("mirror-ghost").textContent).toContain("R1 · RESEARCH EVIDENCE");
-    expect(panel("mirror-ghost").textContent).toContain("SLA starts at publish");
+    const ghost = panel("mirror-ghost");
+    expect(ghost.querySelectorAll("button, a, input, textarea, select, [tabindex]")).toHaveLength(0);
+    expect(ghost.textContent).toContain("R1 · RESEARCH EVIDENCE");
+    expect(ghost.textContent).toContain("SLA starts at publish");
+    expect(ghost.querySelector("[data-mirror-foot]")?.textContent).toBe("mirror not published · P22_NOT_PUBLISHED");
     /* VD-P21-20: the hi-fi's bare "—" status is a typed absence here (hard rule 3). */
-    expect(panel("mirror-ghost").querySelector("[data-mirror-status]")?.textContent).toBe("status not published");
-    for (const leaf of Array.from(panel("mirror-ghost").querySelectorAll("span"))) expect(leaf.textContent?.trim()).not.toBe("—");
-    expect(screen.queryByRole("button", { name: /^publish/i })).toBeNull();
+    expect(ghost.querySelector("[data-mirror-status]")?.textContent).toBe("status not published");
+    for (const leaf of Array.from(ghost.querySelectorAll("span"))) expect(leaf.textContent?.trim()).not.toBe("—");
+    const publish = publishButton();
+    expect(publish.textContent).toBe("seal the evidence pack first");
+    expect(publish.getAttribute("aria-disabled")).toBe("true");
+    expect(document.getElementById(publish.getAttribute("aria-describedby")!)?.textContent).toBe("P21_LOCAL_SEAL_NOT_CREATED");
+    fireEvent.click(publish);
+    expect(api.of("POST")).toHaveLength(0);
   });
 
   it("S11-U26 a read refused with 403 and with 404 is the same neutral denied state with no retry and no server prose", async () => {
@@ -848,6 +1014,440 @@ describe("Screen 11 Release Candidate", () => {
   });
 });
 
+describe("Screen 11 publish and approval mirror (P22)", () => {
+  const PUBLISH_PATH = `/api/v1/research/release-candidates/${RC}/publish`;
+  const PUBLISHED_TITLE = "published — immutable · R1 review in Approval Inbox";
+  const describedBy = (el: HTMLElement) => document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent;
+  const setVisibility = (state: "visible" | "hidden") => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+  };
+  afterEach(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+  });
+
+  it("S11-U34 a sealed candidate offers the hi-fi publish button with the rc id and keeps the SoD note", async () => {
+    const api = server({ GET: [ok(sealed())] });
+    renderCompose();
+    await ready();
+    const button = publishButton();
+    expect(button.textContent).toBe(`Publish release candidate ${RC}`);
+    expect(button.getAttribute("aria-disabled")).toBeNull();
+    expect(button.getAttribute("aria-describedby")).toBeNull();
+    const card = panel("publish");
+    expect(card.querySelector("[data-publish-sentence]")?.textContent).toBe(
+      `Publishing freezes this exact combination as ${RC} in the portal governance store. It creates no account, no allocation, and does not start Paper — it only makes the candidate reviewable.`,
+    );
+    expect(card.querySelector("[data-publish-rc]")?.className).toContain("rc-mono");
+    expect(within(card).getByText(SOD_NOTE)).toBeTruthy();
+    expect(card.querySelector("[data-claim-choice]")).toBeNull();
+    expect(api.of("POST")).toHaveLength(0);
+    expect(api.of("MIRROR")).toHaveLength(0);
+  });
+
+  it.each([
+    ["P22_PUBLICATION_DISABLED", "publish — not enabled in this build"],
+    ["P21_LOCAL_SEAL_NOT_CREATED", "seal the evidence pack first"],
+    ["P22_RUN_NOT_MIRRORED", "publish blocked — this run is not mirrored to the governance store"],
+    ["P22_PUBLICATION_PENDING_RECONCILE", "publication outcome unknown — reconcile first"],
+    ["P21_SCRATCH_RUN_UNBOUND", "publish blocked — bind alpha_version first"],
+    ["P22_PACK_NOT_CURRENT", "P22_PACK_NOT_CURRENT"],
+  ])("S11-U35 a publish blocked by %s is labelled, described by its code and sends nothing", async (code, label) => {
+    const api = server({ GET: [ok(sealed({}, { enabled: false, blocked_reason: code }))] });
+    renderCompose();
+    await ready();
+    const button = publishButton();
+    expect(button.textContent).toBe(label);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.getAttribute("data-publish-enabled")).toBe("false");
+    expect(describedBy(button)).toBe(code);
+    fireEvent.click(button);
+    expect(api.of("POST")).toHaveLength(0);
+  });
+
+  it("S11-U36 one click publishes with the pack fence, shows publishing…, then prints the server's PUBLISHED state, card and mirror", async () => {
+    const gate = deferred();
+    const api = server({ GET: [ok(sealed()), ok(published())], POST: [{ ...ok(publicationAnswer("DELIVERED"), 201), hold: gate.promise }] });
+    renderCompose();
+    await ready();
+    fireEvent.click(publishButton());
+    fireEvent.click(publishButton());
+    expect(publishButton().textContent).toBe(PUBLISHING_LABEL);
+    expect(publishButton().getAttribute("aria-busy")).toBe("true");
+    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
+    gate.release();
+    await screen.findByText(PUBLISHED_TITLE);
+    expect(api.of("POST")).toHaveLength(1);
+    const [post] = api.of("POST");
+    expect(post.url).toBe(PUBLISH_PATH);
+    expect(post.headers["x-portal-csrf"]).toBe("tok_123");
+    expect(post.body).toEqual({ schema_version: "research.release-candidate-publish-request.v1", expected_pack_digest: "sha256:pack-1" });
+    expect(api.of("GET")).toHaveLength(2);
+    const chip = document.querySelector("[data-state-chip]")!;
+    expect(chip.textContent).toBe("PUBLISHED");
+    expect(chip.getAttribute("data-s")).toBe("PUBLISHED");
+    const rc = document.querySelector('[data-rail-node="release_candidate"]')!;
+    expect(rc.getAttribute("data-tone")).toBe("green");
+    expect(rc.querySelector("[data-rail-detail]")?.textContent).toBe("published · immutable");
+    const card = panel("published");
+    expect(card.querySelector("h3")?.textContent).toBe("published — immutable");
+    expect(within(card).getByRole("link", { name: RC }).getAttribute("href")).toBe(`/research/quantbt/release-candidates/${RC}`);
+    expect(card.querySelector("[data-published-facts]")?.textContent).toBe(
+      `published_at 2026-09-20 12:30Z · by researcher@bobby · evidence digest sha256:evidence-set-1. ${PUBLISHED_SENTENCE}`,
+    );
+    expect(card.querySelector("[data-published-receipt]")?.textContent).toBe(`receipt sha256:receipt-1 · approval ${APPROVAL}`);
+    const mirrorCard = panel("mirror");
+    expect(panel("mirror-ghost")).toBeNull();
+    expect(mirrorCard.querySelector(".gate")?.textContent).toBe("R1 · RESEARCH EVIDENCE");
+    expect(mirrorCard.querySelector("[data-mirror-subject]")?.textContent).toBe(`${RC} — ${ALPHA} alphaver_1`);
+    expect(mirrorCard.querySelector("[data-mirror-status]")?.textContent).toBe("PENDING");
+    expect(mirrorCard.querySelector("[data-mirror-sla]")?.textContent).toBe(
+      "SLA due 2026-09-21T12:30:00.000Z · expires 2026-09-23T12:30:00.000Z · time left — not published",
+    );
+    expect(mirrorCard.querySelector("[data-mirror-meta]")?.textContent).toBe(`${MIRROR_POOL_ABSENT}·${MIRROR_CONDITIONS_NONE}·${MIRROR_OUTCOMES}`);
+    expect(within(mirrorCard).getByText(MIRROR_PUBLISHED_NOTE)).toBeTruthy();
+    expect(within(mirrorCard).getByRole("link", { name: MIRROR_INBOX_LINK }).getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
+    expect(mirrorCard.querySelectorAll("button, input, textarea, select")).toHaveLength(0);
+    expect(mirrorCard.querySelector("[data-mirror-superseded]")).toBeNull();
+    /* T07: a published candidate is read-only. */
+    expect(document.querySelectorAll('[data-action="edit-declaration"]')).toHaveLength(0);
+    expect(describedBy(sealButton())).toContain("published — immutable");
+    expect(publishButton()).toBeNull();
+    const absent = ["banner", "publish", "publish-unknown", "mirror-ghost"];
+    expect(panelOrder()).toEqual(RC_PANELS.compose.filter((name) => !absent.includes(name)));
+  });
+
+  it("S11-U37 a 202 shows the unknown-outcome card, never PUBLISHED, and reconcile recovers the receipt", async () => {
+    const api = server({
+      GET: [ok(sealed()), ok(unknownOutcome()), ok(published())],
+      POST: [ok(publicationAnswer("UNKNOWN"), 202), ok(publicationAnswer("DELIVERED"), 200)],
+    });
+    renderCompose();
+    await ready();
+    fireEvent.click(publishButton());
+    const unknown = await until('[data-panel="publish-unknown"]');
+    expect(unknown.textContent).toContain(UNKNOWN_COPY);
+    await waitFor(() => expect(api.of("GET")).toHaveLength(2));
+    await waitFor(() => expect(document.querySelector("[data-publication-facts]")).toBeTruthy());
+    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
+    expect(panel("published")).toBeNull();
+    expect(panel("mirror")).toBeNull();
+    expect(document.querySelector("[data-publication-facts]")?.textContent).toBe(
+      "publication UNKNOWN · attempt 1 · recorded 2026-09-20 12:30Z · by researcher@bobby",
+    );
+    await waitFor(() => expect(reconcileButton().getAttribute("aria-disabled")).toBeNull());
+    fireEvent.click(reconcileButton());
+    await screen.findByText(PUBLISHED_TITLE);
+    const posts = api.of("POST");
+    expect(posts).toHaveLength(2);
+    expect(posts[1].url).toBe(`${PUBLISH_PATH}/reconcile`);
+    expect(posts[1].headers["x-portal-csrf"]).toBe("tok_123");
+    expect(posts[1].body).toEqual({ schema_version: "research.release-candidate-publish-reconcile-request.v1" });
+    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("PUBLISHED");
+  });
+
+  it("S11-U38 a 409 on publish says the evidence changed and reads the composition again", async () => {
+    const moved = sealed();
+    moved.source_fingerprint = "sha256:source-fp-2";
+    const api = server({ GET: [ok(sealed()), ok(moved)], POST: [problem(409, "RESEARCH_PUBLICATION_CONFLICT")] });
+    renderCompose();
+    await ready();
+    fireEvent.click(publishButton());
+    const notice = await until('[data-write-notice="publish"][data-outcome="conflict"]');
+    expect(notice.firstElementChild?.textContent).toBe(RC_CONFLICT_COPY);
+    expect(notice.querySelector("[data-error-code]")?.textContent).toBe("RESEARCH_PUBLICATION_CONFLICT");
+    await waitFor(() => expect(panel("meta").textContent).toContain("sha256:source-fp-2"));
+    expect(api.of("GET")).toHaveLength(2);
+    expect(panel("published")).toBeNull();
+  });
+
+  it("S11-U39 an open R1 approval is reported, nothing is attached, and the server's conflicting id is printed without a link", async () => {
+    const conflict = sealed({ availability: AVAILABLE, state: "CONFLICT", conflicting_approval_id: "apr_00", attempt_count: 1, intent_actor: ACTOR, updated_at_utc_ms: PUBLISHED_AT });
+    const api = server({ GET: [ok(sealed()), ok(conflict)], POST: [problem(409, "RESEARCH_PUBLICATION_OPEN_APPROVAL_EXISTS")] });
+    renderCompose();
+    await ready();
+    fireEvent.click(publishButton());
+    const notice = await until('[data-write-notice="publish"][data-outcome="conflict"]');
+    expect(notice.firstElementChild?.textContent).toBe(RC_OPEN_APPROVAL_COPY);
+    await waitFor(() => expect(document.querySelector("[data-conflicting-approval]")?.textContent).toBe("apr_00"));
+    expect(panel("publish").querySelectorAll("a")).toHaveLength(0);
+    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
+    expect(panel("mirror")).toBeNull();
+    expect(panel("mirror-ghost")).toBeTruthy();
+    expect(api.of("MIRROR")).toHaveLength(0);
+  });
+
+  it("S11-U40 a retryable 409 says the publication did not settle, not that the evidence changed", async () => {
+    const pending = sealed(
+      { availability: AVAILABLE, state: "PENDING", attempt_count: 1, intent_actor: ACTOR, updated_at_utc_ms: PUBLISHED_AT, downstream_code: "APPROVAL_CREATE_SERIALIZATION_CONFLICT", reconcile_allowed: true },
+      { enabled: false, blocked_reason: "P22_PUBLICATION_PENDING_RECONCILE" },
+    );
+    server({ GET: [ok(sealed()), ok(pending)], POST: [problem(409, "RESEARCH_PUBLICATION_RETRYABLE")] });
+    renderCompose();
+    await ready();
+    fireEvent.click(publishButton());
+    const unknown = await until('[data-panel="publish-unknown"]');
+    const notice = await until('[data-write-notice="publish"][data-outcome="conflict"]');
+    expect(unknown.contains(notice)).toBe(true);
+    expect(notice.firstElementChild?.textContent).toBe(RC_RETRYABLE_COPY);
+    expect(notice.textContent).not.toContain(RC_CONFLICT_COPY);
+    await waitFor(() => expect(document.querySelector("[data-downstream-code]")?.textContent).toBe("APPROVAL_CREATE_SERIALIZATION_CONFLICT"));
+    expect(reconcileButton().getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it("S11-U41 a 422 ends that publish with its code, keeps the INPUT rows and reads nothing again", async () => {
+    const api = server({ GET: [ok(sealed())], POST: [problem(422, "RESEARCH_PUBLICATION_RUN_NOT_MIRRORED")] });
+    renderCompose();
+    await ready();
+    fireEvent.click(publishButton());
+    const notice = await until('[data-write-notice="publish"][data-outcome="terminal"]');
+    expect(notice.firstElementChild?.textContent).toBe(RC_PUBLISH_REFUSED_COPY);
+    expect(notice.querySelector("[data-error-code]")?.textContent).toBe("RESEARCH_PUBLICATION_RUN_NOT_MIRRORED");
+    expect(document.querySelectorAll('[data-action="edit-declaration"]')).toHaveLength(2);
+    expect(document.querySelector('[data-declared="KNOWN_LIMITATIONS_WAIVERS"]')?.textContent).toBe("fees modelled at taker");
+    expect(api.of("GET")).toHaveLength(1);
+    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
+  });
+
+  it("S11-U42 a 401 on publish locks every write, never retries and never polls", async () => {
+    const api = server({ GET: [ok(sealed())], POST: [problem(401, "UNAUTHENTICATED")] });
+    renderCompose();
+    await ready();
+    fireEvent.click(publishButton());
+    const notice = await until('[data-write-notice="publish"][data-outcome="denied"]');
+    expect(notice.firstElementChild?.textContent).toBe(RC_DENIED_COPY);
+    expect(publishButton().getAttribute("aria-disabled")).toBe("true");
+    expect(describedBy(publishButton())).toBe("writes are off — access changed");
+    fireEvent.click(publishButton());
+    fireEvent.click(sealButton());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(api.of("POST")).toHaveLength(1);
+    expect(api.of("MIRROR")).toHaveLength(0);
+    expect(page().getAttribute("data-mirror-polling")).toBe("false");
+  });
+
+  it("S11-U43 a publish refused with 403 and with 404 says the same neutral sentence", async () => {
+    const seen: string[] = [];
+    for (const status of [403, 404]) {
+      server({ GET: [ok(sealed())], POST: [problem(status, "RESEARCH_RELEASE_CANDIDATE_NOT_FOUND")] });
+      renderCompose();
+      await ready();
+      fireEvent.click(publishButton());
+      const notice = await until('[data-write-notice="publish"][data-outcome="denied"]');
+      seen.push(notice.firstElementChild!.textContent!);
+      cleanup();
+      vi.restoreAllMocks();
+    }
+    expect(seen[0]).toBe(`${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`);
+    expect(seen[1]).toBe(seen[0]);
+  });
+
+  it("S11-U44 a 503 on publish is unavailable, keeps DRAFT and lets the reader send it again", async () => {
+    const api = server({
+      GET: [ok(sealed()), ok(published())],
+      POST: [problem(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"), ok(publicationAnswer("DELIVERED"), 201)],
+    });
+    renderCompose();
+    await ready();
+    fireEvent.click(publishButton());
+    const notice = await until('[data-write-notice="publish"][data-outcome="unavailable"]');
+    expect(notice.firstElementChild?.textContent).toBe(RC_UNAVAILABLE_COPY);
+    expect(document.querySelector("[data-state-chip]")?.textContent).toBe("DRAFT");
+    expect(api.of("GET")).toHaveLength(1);
+    expect(publishButton().getAttribute("aria-disabled")).toBeNull();
+    fireEvent.click(publishButton());
+    await screen.findByText(PUBLISHED_TITLE);
+    expect(api.of("POST")).toHaveLength(2);
+  });
+
+  it("S11-U45 while PUBLISHED the mirror is read every 60 s; a later 5xx keeps the last read as stale with its as-of", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const approved = mirror({ status: "APPROVED", effective_status: "APPROVED", decision_outcomes: ["APPROVED"], as_of_utc_ms: PUBLISHED_AT + 60_000 });
+    const api = server({ GET: [ok(published())], MIRROR: [ok(approved), problem(503, "RESEARCH_PUBLICATION_MIRROR_UNAVAILABLE")] });
+    renderCompose();
+    await ready(PUBLISHED_TITLE);
+    expect(api.of("MIRROR")).toHaveLength(0);
+    await waitFor(() => expect(page().getAttribute("data-mirror-polling")).toBe("true"));
+    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
+    await waitFor(() => expect(panel("mirror").querySelector("[data-mirror-status]")?.textContent).toBe("APPROVED"));
+    expect(api.of("MIRROR")[0].url).toBe(`/api/v1/research/release-candidates/${RC}/mirror`);
+    expect(api.of("MIRROR")[0].headers["x-portal-csrf"]).toBeUndefined();
+    expect(panel("mirror").querySelector("[data-mirror-facts]")?.textContent).toContain("decisions APPROVED");
+    expect(page().getAttribute("data-mirror-requests")).toBe("1");
+    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
+    const stale = await until("[data-mirror-stale]");
+    expect(stale.textContent).toBe("mirror as of 2026-09-20 12:31Z — the governance store did not answer");
+    expect(panel("mirror").getAttribute("data-mirror-view")).toBe("stale");
+    expect(panel("mirror").querySelector("[data-mirror-status]")?.textContent).toBe("APPROVED");
+    expect(api.of("GET")).toHaveLength(1);
+    expect(document.body.textContent).not.toContain("SECRET-SERVER-PROSE");
+  });
+
+  it("S11-U46 a 401 on the mirror is denied: the facts go, the poll stops", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = server({ GET: [ok(published())], MIRROR: [problem(401, "UNAUTHENTICATED")] });
+    renderCompose();
+    await ready(PUBLISHED_TITLE);
+    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
+    const denied = await until("[data-mirror-denied]");
+    expect(denied.firstElementChild?.textContent).toBe(RC_DENIED_COPY);
+    expect(panel("mirror").querySelector("[data-mirror-status]")).toBeNull();
+    expect(panel("mirror").querySelector("[data-mirror-facts]")).toBeNull();
+    expect(panel("published").querySelector("[data-evidence-digest]")).toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS * 3));
+    expect(api.of("MIRROR")).toHaveLength(1);
+    expect(page().getAttribute("data-mirror-polling")).toBe("false");
+  });
+
+  it("S11-U47 a mirror read refused with 403 and with 404 reads the same", async () => {
+    const seen: string[] = [];
+    for (const status of [403, 404]) {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      server({ GET: [ok(published())], MIRROR: [problem(status, "RESEARCH_RELEASE_CANDIDATE_NOT_FOUND")] });
+      renderCompose();
+      await ready(PUBLISHED_TITLE);
+      await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
+      const denied = await until("[data-mirror-denied]");
+      seen.push(denied.firstElementChild!.textContent!);
+      cleanup();
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    }
+    expect(seen[0]).toBe(`${RC_DENIED_COPY} ${RC_NEUTRAL_REFUSAL}`);
+    expect(seen[1]).toBe(seen[0]);
+  });
+
+  it("S11-U48 a refused mirror read with no prior read is unavailable; with one it is stale; denial drops it", () => {
+    const prior = mirror();
+    const down = new PortalApiError("503", 503, "RESEARCH_PUBLICATION_MIRROR_UNAVAILABLE", "req_503");
+    expect(nextMirrorView(null, down)).toEqual({
+      mirror: null,
+      view: { state: "unavailable", status: 503, code: "RESEARCH_PUBLICATION_MIRROR_UNAVAILABLE", requestId: "req_503" },
+    });
+    expect(nextMirrorView(null, new TypeError("network"))).toEqual({ mirror: null, view: { state: "unavailable", status: 0, code: null, requestId: null } });
+    expect(nextMirrorView(prior, down)).toEqual({
+      mirror: prior,
+      view: { state: "stale", asOfUtcMs: PUBLISHED_AT, status: 503, code: "RESEARCH_PUBLICATION_MIRROR_UNAVAILABLE", requestId: "req_503" },
+    });
+    for (const status of [401, 403, 404]) {
+      const next = nextMirrorView(prior, new PortalApiError(String(status), status, "X", null));
+      expect(next.mirror).toBeNull();
+      expect(next.view.state).toBe("denied");
+    }
+  });
+
+  it("S11-U49 a hidden tab clears the timer, a visible one re-arms it, and unmounting stops it", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = server({ GET: [ok(published())], MIRROR: [ok(mirror())] });
+    const view = renderCompose();
+    await ready(PUBLISHED_TITLE);
+    await waitFor(() => expect(page().getAttribute("data-mirror-polling")).toBe("true"));
+    setVisibility("hidden");
+    await waitFor(() => expect(page().getAttribute("data-mirror-polling")).toBe("false"));
+    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS * 2));
+    expect(api.of("MIRROR")).toHaveLength(0);
+    setVisibility("visible");
+    await waitFor(() => expect(page().getAttribute("data-mirror-polling")).toBe("true"));
+    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS));
+    await waitFor(() => expect(api.of("MIRROR")).toHaveLength(1));
+    act(() => view.unmount());
+    await act(() => vi.advanceTimersByTimeAsync(MIRROR_POLL_MS * 3));
+    expect(api.of("MIRROR")).toHaveLength(1);
+  });
+
+  it("S11-U50 without the R1 read authority the mirror prints the id and link, 'not readable', and no status", async () => {
+    server({ GET: [ok(published(deniedMirror()))] });
+    renderCompose();
+    await ready(PUBLISHED_TITLE);
+    const card = panel("mirror");
+    expect(card.querySelector("[data-mirror-status]")?.textContent).toBe(`approval status: ${MIRROR_NOT_READABLE}`);
+    expect(card.querySelector(".rc-mstatus")).toBeNull();
+    expect(card.querySelector("[data-mirror-subject] [data-reason-code]")?.textContent).toBe("GOVERNANCE_R1_READ_DENIED");
+    expect(card.querySelector("[data-mirror-facts]")?.textContent).toContain(`approval ${APPROVAL} · version not published`);
+    expect(within(card).getByRole("link", { name: MIRROR_INBOX_LINK }).getAttribute("href")).toBe(`/governance/approvals/${APPROVAL}/r1`);
+    expect(panel("published").querySelector("[data-evidence-digest]")).toBeNull();
+    expect(panel("published").querySelector("[data-published-facts] [data-reason-code]")?.textContent).toBe("GOVERNANCE_R1_READ_DENIED");
+    for (const leaf of Array.from(card.querySelectorAll("*"))) {
+      if (leaf.children.length === 0) expect(["0", "-", "N/A", "—"]).not.toContain((leaf.textContent ?? "").trim());
+    }
+  });
+
+  it("S11-U51 rc_superseded is its own line; the raw status stays as the server sent it", async () => {
+    server({
+      GET: [ok(published(mirror({ status: "APPROVED", effective_status: "APPROVED", rc_superseded: true, conditions: ["paper only"], condition_count: 1 })))],
+    });
+    renderCompose();
+    await ready(PUBLISHED_TITLE);
+    const card = panel("mirror");
+    expect(card.querySelector("[data-mirror-status]")?.textContent).toBe("APPROVED");
+    expect(card.querySelector("[data-mirror-superseded]")?.textContent).toBe(MIRROR_SUPERSEDED);
+    expect(card.querySelector("[data-mirror-conditions]")?.textContent).toBe("conditions: paper only");
+  });
+
+  it("S11-U52 several mirrored claims need a choice from the server's list before publish sends it", async () => {
+    const api = server({
+      GET: [ok(sealed({ claim_candidates: ["claim_a", "claim_b"] })), ok(published())],
+      POST: [ok(publicationAnswer("DELIVERED"), 201)],
+    });
+    renderCompose();
+    await ready();
+    const choice = panel("publish").querySelector("[data-claim-choice]")!;
+    expect(choice.querySelector("legend")?.textContent).toBe(CLAIM_LEGEND);
+    expect([...choice.querySelectorAll("[data-claim]")].map((radio) => radio.getAttribute("data-claim"))).toEqual(["claim_a", "claim_b"]);
+    expect(publishButton().textContent).toBe(CLAIM_REQUIRED);
+    fireEvent.click(publishButton());
+    expect(api.of("POST")).toHaveLength(0);
+    fireEvent.click(choice.querySelector('[data-claim="claim_b"]')!);
+    expect(publishButton().textContent).toBe(`Publish release candidate ${RC}`);
+    fireEvent.click(publishButton());
+    await screen.findByText(PUBLISHED_TITLE);
+    expect(api.of("POST")[0].body).toEqual({
+      schema_version: "research.release-candidate-publish-request.v1",
+      expected_pack_digest: "sha256:pack-1",
+      methodology_claim_id: "claim_b",
+    });
+  });
+
+  it("S11-U53 no refusal on publish, reconcile or the mirror ever renders the server's prose", async () => {
+    for (const [status, code] of [
+      [409, "RESEARCH_PUBLICATION_CONFLICT"],
+      [422, "RESEARCH_PUBLICATION_REFUSED_DOWNSTREAM"],
+      [503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE"],
+    ] as const) {
+      server({ GET: [ok(sealed())], POST: [problem(status, code)] });
+      renderCompose();
+      await ready();
+      fireEvent.click(publishButton());
+      await until('[data-write-notice="publish"]');
+      expect(document.body.textContent, String(status)).not.toContain("SECRET-SERVER-PROSE");
+      cleanup();
+      vi.restoreAllMocks();
+    }
+    server({ GET: [ok(unknownOutcome())], POST: [problem(409, "RESEARCH_PUBLICATION_RECOVERY_ACTOR_MISMATCH")] });
+    renderCompose();
+    await ready();
+    fireEvent.click(reconcileButton());
+    const notice = await until('[data-write-notice="reconcile"]');
+    expect(notice.firstElementChild?.textContent).toBe(RC_ACTOR_MISMATCH_COPY);
+    expect(document.body.textContent).not.toContain("SECRET-SERVER-PROSE");
+  });
+
+  it("S11-U54 reconcile is off unless the server admits it for this reader", async () => {
+    const base = unknownOutcome();
+    const api = server({ GET: [ok({ ...base, publication: { ...base.publication, reconcile_allowed: false } })] });
+    renderCompose();
+    await ready();
+    const button = reconcileButton();
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(describedBy(button)).toBe(RECONCILE_NOT_ADMITTED);
+    fireEvent.click(button);
+    expect(api.of("POST")).toHaveLength(0);
+    expect(panel("publish")).toBeNull();
+  });
+});
+
 describe("Screen 11 sealed pack route", () => {
   const renderPack = () => renderAt(`/research/quantbt/release-candidates/${RC}`);
 
@@ -887,13 +1487,33 @@ describe("Screen 11 sealed pack route", () => {
 });
 
 describe("Screen 11 source guards", () => {
-  const S11 = ["ReleaseCandidateDetail.tsx", "ReleaseCandidateRoute.tsx", "releaseCandidateClient.ts", "useReleaseCandidate.ts"];
+  const S11 = [
+    "ReleaseCandidateDetail.tsx",
+    "ReleaseCandidateRoute.tsx",
+    "releaseCandidateClient.ts",
+    "useReleaseCandidate.ts",
+    "useReleaseCandidateMirror.ts",
+  ];
   const source = (name: string) => readFileSync(join(process.cwd(), "src", "research", name), "utf8");
 
   it("S11-U32 no S11 file formats, sorts or scrolls on the client", () => {
     for (const name of S11) {
       expect(source(name), name).not.toMatch(/toFixed|Intl|toLocaleString|sort\(|scrollIntoView/);
     }
+  });
+
+  it("S11-U55 no S11 file writes a raw hex colour; the PUBLISHED chip and the mirror/ghost borders are palette tokens", () => {
+    for (const name of S11) {
+      const code = source(name)
+        .split("\n")
+        .filter((line) => !line.trimStart().startsWith("*") && !line.trimStart().startsWith("//"))
+        .join("\n");
+      expect(code, name).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    }
+    const detail = source("ReleaseCandidateDetail.tsx");
+    expect(detail).toContain('.rc-state[data-s="SEALED_LOCAL"], .rc-state[data-s="PUBLISHED"] { border-color: var(--good); color: var(--good); background: var(--good-bg); }');
+    expect(detail).toContain(".rc-mirror { border: 1px solid var(--line);");
+    expect(detail).toContain(".rc-ghost { border: 1px dashed var(--line-strong);");
   });
 
   it("S11-U33 the routes are registered under QuantBT and the Hub and Report link to Screen 11", () => {
