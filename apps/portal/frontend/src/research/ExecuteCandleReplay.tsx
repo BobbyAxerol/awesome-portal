@@ -485,15 +485,16 @@ function Transport({
   const snap = useTransport(transport);
   const row = rows[snap.index];
   const disabled = rows.length < 2;
+  const stepReason = disabled ? "This fold window holds fewer than two bars, so there is nothing to step through." : undefined;
   const button = "mono rounded-[4px] border px-2 text-[11px] leading-[24px]";
   const style = { borderColor: "var(--line)", background: "var(--paper-raised)", color: "var(--ink-soft)" };
   const readout = row ? `bar ${snap.index + 1}/${rows.length} · source bar ${row.source_ordinal + 1} · ${iso(row.at_utc_ms)}` : "no bar";
   return (
     <div className="flex flex-wrap items-center gap-2 border-t pt-2" style={{ borderColor: "var(--line-soft)" }} data-transport data-playing={String(snap.playing)}>
       <span className="flex gap-1">
-        <button type="button" className={button} style={style} aria-label="previous fold" disabled={!canFold.previous} onClick={() => onFoldStep(-1)}>|◀</button>
-        <button type="button" className={button} style={style} aria-label="previous transition" disabled={disabled} onClick={() => onTransitionStep(-1)}>◀◀</button>
-        <button type="button" className={button} style={style} aria-label="step back" disabled={disabled} onClick={() => transport.step(-1)}>◀</button>
+        <button type="button" className={button} style={style} aria-label="previous fold" disabled={!canFold.previous} title={canFold.previous ? undefined : "Already on the first fold of this run."} onClick={() => onFoldStep(-1)}>|◀</button>
+        <button type="button" className={button} style={style} aria-label="previous transition" disabled={disabled} title={stepReason} onClick={() => onTransitionStep(-1)}>◀◀</button>
+        <button type="button" className={button} style={style} aria-label="step back" disabled={disabled} title={stepReason} onClick={() => transport.step(-1)}>◀</button>
         <button
           type="button"
           className={button}
@@ -502,13 +503,14 @@ function Transport({
           aria-pressed={snap.playing}
           data-action="play"
           disabled={disabled}
+          title={stepReason}
           onClick={() => transport.toggle()}
         >
           {snap.playing ? "❚❚" : "▶"}
         </button>
-        <button type="button" className={button} style={style} aria-label="step forward" disabled={disabled} onClick={() => transport.step(1)}>▶</button>
-        <button type="button" className={button} style={style} aria-label="next transition" disabled={disabled} onClick={() => onTransitionStep(1)}>▶▶</button>
-        <button type="button" className={button} style={style} aria-label="next fold" disabled={!canFold.next} onClick={() => onFoldStep(1)}>▶|</button>
+        <button type="button" className={button} style={style} aria-label="step forward" disabled={disabled} title={stepReason} onClick={() => transport.step(1)}>▶</button>
+        <button type="button" className={button} style={style} aria-label="next transition" disabled={disabled} title={stepReason} onClick={() => onTransitionStep(1)}>▶▶</button>
+        <button type="button" className={button} style={style} aria-label="next fold" disabled={!canFold.next} title={canFold.next ? undefined : "Already on the last fold of this run."} onClick={() => onFoldStep(1)}>▶|</button>
       </span>
       <span className="flex gap-1" role="group" aria-label="speed">
         {SPEEDS.map((speed) => (
@@ -533,6 +535,7 @@ function Transport({
         max={Math.max(0, rows.length - 1)}
         value={snap.index}
         disabled={rows.length === 0}
+        title={rows.length === 0 ? "No bar is loaded for this fold window yet." : undefined}
         aria-label="seek within the loaded fold window"
         aria-valuetext={row ? `bar ${snap.index + 1} of ${rows.length}` : "no bar"}
         data-seek
@@ -675,10 +678,10 @@ function TransitionLedger({
         </table>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn-ghost mono text-[10px]" disabled={!ledger.page.has_previous || slot.inFlight} onClick={() => onPage("previous")} data-action="transitions-previous">
+        <button type="button" className="btn-ghost mono text-[10px]" disabled={!ledger.page.has_previous || slot.inFlight} title={slot.inFlight ? "A page of transitions is loading." : ledger.page.has_previous ? undefined : "This is the first page of transitions."} onClick={() => onPage("previous")} data-action="transitions-previous">
           ‹ earlier
         </button>
-        <button type="button" className="btn-ghost mono text-[10px]" disabled={!ledger.page.has_more || slot.inFlight} onClick={() => onPage("next")} data-action="transitions-next">
+        <button type="button" className="btn-ghost mono text-[10px]" disabled={!ledger.page.has_more || slot.inFlight} title={slot.inFlight ? "A page of transitions is loading." : ledger.page.has_more ? undefined : "This is the last page of transitions."} onClick={() => onPage("next")} data-action="transitions-next">
           later ›
         </button>
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-transition-count>
@@ -1088,10 +1091,10 @@ export function CandleReplayBody({
         />
         <PlayheadState transport={transport} rows={rows} reveal={reveal} totals={execution.totals} />
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="btn-ghost mono text-[10px]" data-action="previous-window" disabled={!replay.replay.page.has_previous || inFlight} onClick={() => controller.retainedPreviousWindow?.()}>
+          <button type="button" className="btn-ghost mono text-[10px]" data-action="previous-window" disabled={!replay.replay.page.has_previous || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_previous ? undefined : "This window starts at the fold's first bar."} onClick={() => controller.retainedPreviousWindow?.()}>
             ‹ previous window
           </button>
-          <button type="button" className="btn-ghost mono text-[10px]" data-action="next-window" disabled={!replay.replay.page.has_more || inFlight} onClick={() => controller.retainedNextWindow?.()}>
+          <button type="button" className="btn-ghost mono text-[10px]" data-action="next-window" disabled={!replay.replay.page.has_more || inFlight} title={inFlight ? "A replay window is loading." : replay.replay.page.has_more ? undefined : "This window ends at the fold's last bar."} onClick={() => controller.retainedNextWindow?.()}>
             next window ›
           </button>
           <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
