@@ -1,0 +1,48 @@
+# P23 qualification profile. Apply only to an isolated Research project after
+# its own volumes, port and credentials have been provisioned. These are decimal
+# bytes; all eight long-running Research cgroups (including optional MinIO)
+# sum to 4,600,000,000 B, leaving 400,000,000 B below the 5 GB hard gate for
+# project-scoped one-shot jobs and accounting overhead. Docker memory.max counts
+# page cache; docker stats' displayed working-set number is not the gate.
+# Do not apply this overlay to dev, stable, Execution, or the shared preview.
+services:
+  quant-worker-py:
+    mem_limit: 1500000000
+    memswap_limit: 1500000000
+    pids_limit: 128
+  portal-api:
+    mem_limit: 800000000
+    memswap_limit: 800000000
+    pids_limit: 128
+  control-api:
+    mem_limit: 650000000
+    memswap_limit: 650000000
+    pids_limit: 128
+  portal-postgres:
+    mem_limit: 900000000
+    memswap_limit: 900000000
+    pids_limit: 128
+  portal-nats:
+    mem_limit: 150000000
+    memswap_limit: 150000000
+    pids_limit: 64
+  roadmap-task-board-api:
+    mem_limit: 200000000
+    memswap_limit: 200000000
+    pids_limit: 64
+  portal-web:
+    mem_limit: 100000000
+    memswap_limit: 100000000
+    pids_limit: 64
+  portal-minio:
+    mem_limit: 300000000
+    memswap_limit: 300000000
+    pids_limit: 128
+  control-api-migrate:
+    mem_limit: 350000000
+    memswap_limit: 350000000
+    pids_limit: 64
+  control-api-bootstrap:
+    mem_limit: 350000000
+    memswap_limit: 350000000
+    pids_limit: 64
