@@ -52,6 +52,7 @@ export interface LineageAttemptRow {
   alpha_version_label: string;
   state: string;
   intent_kind: string;
+  relation_kind?: string | null;
   reason: string | null;
   space_signature: string | null;
   created_at: Date;
@@ -196,6 +197,7 @@ export class ResearchLineageRepository {
                    FROM research.attempts first_attempt
                   WHERE first_attempt.workspace_id = version.workspace_id
                     AND first_attempt.alpha_version_id = version.alpha_version_id
+                    AND first_attempt.intent_kind <> 'DIAGNOSTIC'
                   ORDER BY first_attempt.created_at ASC, first_attempt.attempt_id ASC
                   LIMIT 1) AS first_attempt_id,
                 pick.attempt_id AS promotion_attempt_id, pick.run_id AS promotion_run_id,
@@ -217,7 +219,7 @@ export class ResearchLineageRepository {
                 attempt.alpha_version_id,
                 COALESCE('av_' || replace(version.declared_contract->>'version', '.', '_'), version.alpha_version_id)
                   AS alpha_version_label,
-                attempt.state, attempt.intent_kind, attempt.reason, attempt.space_signature,
+                attempt.state, attempt.intent_kind, attempt.reason, attempt.space_signature, attempt.relation_kind,
                 attempt.created_at, attempt.updated_at,
                 to_char(attempt.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at_cursor,
                 producer.execution_profile_id,
@@ -280,6 +282,9 @@ export class ResearchLineageRepository {
                 AND exposure_run.attempt_id = attempt.attempt_id
            ) exposure ON TRUE
           WHERE attempt.workspace_id = $1 AND version.alpha_id = $2
+            -- W5a A10c: a what-if diagnostic is not an attempt of the Alpha;
+            -- it is listed below as a DIAGNOSTIC_OF_RUN child of its parent.
+            AND attempt.intent_kind <> 'DIAGNOSTIC'
             ${boundary ? "AND (attempt.created_at < $4::timestamptz OR (attempt.created_at = $4::timestamptz AND attempt.attempt_id < $5))" : ""}
           ORDER BY attempt.created_at DESC, attempt.attempt_id DESC
           LIMIT $3`,
@@ -294,16 +299,26 @@ export class ResearchLineageRepository {
       const childRuns = ids.length === 0
         ? []
         : (await client.query<LineageChildRunRow>(
-          `WITH ranked_child_runs AS (
+          `WITH child_runs AS (
+             -- A what-if diagnostic run lives in its own DIAGNOSTIC attempt;
+             -- it is shown under the attempt of the run it diagnoses.
+             SELECT CASE WHEN own.intent_kind = 'DIAGNOSTIC' THEN own.parent_attempt_id ELSE run.attempt_id END AS attempt_id,
+                    run.run_id, run.run_kind, run.relationship_kind, run.parent_run_id, run.state, run.created_at
+               FROM research.runs run
+               JOIN research.attempts own
+                 ON own.workspace_id = run.workspace_id AND own.attempt_id = run.attempt_id
+              WHERE run.workspace_id = $1
+                AND run.relationship_kind <> 'PRIMARY'
+                AND (run.attempt_id = ANY($2::text[])
+                     OR (own.intent_kind = 'DIAGNOSTIC' AND own.parent_attempt_id = ANY($2::text[])))
+           ),
+           ranked_child_runs AS (
              SELECT attempt_id, run_id, run_kind, relationship_kind, parent_run_id, state, created_at,
                     row_number() OVER (
                       PARTITION BY attempt_id
                       ORDER BY created_at ASC, run_id ASC
                     ) AS row_number
-              FROM research.runs
-              WHERE workspace_id = $1
-                AND attempt_id = ANY($2::text[])
-                AND relationship_kind <> 'PRIMARY'
+              FROM child_runs
            )
            SELECT attempt_id, run_id, run_kind, relationship_kind, parent_run_id, state, created_at
              FROM ranked_child_runs
@@ -320,12 +335,17 @@ export class ResearchLineageRepository {
                ON version.workspace_id = attempt.workspace_id
               AND version.alpha_version_id = attempt.alpha_version_id
             WHERE attempt.workspace_id = $1 AND version.alpha_id = $2
+              AND attempt.intent_kind <> 'DIAGNOSTIC'
          ),
          selected_runs AS (
            SELECT run.run_id, run.attempt_id, run.relationship_kind
              FROM research.runs run
-             JOIN selected_attempts attempt ON attempt.attempt_id = run.attempt_id
+             JOIN research.attempts own
+               ON own.workspace_id = run.workspace_id AND own.attempt_id = run.attempt_id
             WHERE run.workspace_id = $1
+              AND (run.attempt_id IN (SELECT attempt_id FROM selected_attempts)
+                   OR (own.intent_kind = 'DIAGNOSTIC'
+                       AND own.parent_attempt_id IN (SELECT attempt_id FROM selected_attempts)))
          ),
          job_retries AS (
            SELECT job.job_id, COALESCE(max(worker.ordinal), 1) AS max_ordinal
@@ -429,6 +449,7 @@ export class ResearchLineageRepository {
             AND preflight.preflight_token = producer.preflight_token
             AND preflight.actor_user_id = producer.actor_user_id
           WHERE attempt.workspace_id = $1 AND version.alpha_id = $2
+            AND attempt.intent_kind <> 'DIAGNOSTIC'
           GROUP BY 1, 2, 3, 4, 5
           ORDER BY 1, 2 NULLS LAST, 3 NULLS LAST, 4 NULLS LAST
           LIMIT $3`,

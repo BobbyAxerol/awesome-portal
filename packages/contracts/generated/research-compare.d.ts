@@ -83,6 +83,11 @@ export interface components {
             comparison_contract_key: components["schemas"]["ComparisonContractKey"];
             claim: components["schemas"]["Claim"];
             original_metrics: components["schemas"]["Metric"][];
+            /** @enum {unknown} */
+            lane: "P04_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE" | "NOT_PUBLISHED";
+            schedule: components["schemas"]["RunSchedule"];
+            certification: components["schemas"]["RunCertification"];
+            alpha_version_lifecycle: components["schemas"]["RunLifecycle"];
             provenance: {
                 requested_spec_digest: components["schemas"]["Digest"] | null;
                 effective_spec_digest: components["schemas"]["Digest"] | null;
@@ -93,6 +98,47 @@ export interface components {
                 current_source_revision: string | null;
             };
         };
+        RunSchedule: {
+            mode: string | null;
+            schedule: string | null;
+            availability: components["schemas"]["Availability"];
+        };
+        RunCertification: {
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            grade: null;
+            reason_code: components["schemas"]["ReasonCode"];
+            availability: components["schemas"]["Availability"];
+        };
+        RunLifecycle: {
+            value: ("DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED") | null;
+            availability: components["schemas"]["Availability"];
+        };
+        FoldSeries: {
+            run_id: components["schemas"]["RunId"];
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            source_fold_count: number | null;
+            truncated: boolean;
+            folds: {
+                fold_id: string;
+                source_ordinal: number;
+                oos_sharpe: components["schemas"]["Decimal"] | null;
+                availability: components["schemas"]["Availability"];
+            }[];
+            availability: components["schemas"]["Availability"];
+        };
+        ConfigDiff: {
+            paths: {
+                /** @enum {unknown} */
+                path: "alpha_version" | "parameter_space_overrides" | "random_seed" | "optimization_mode" | "optimization_schedule" | "engine_config_digest";
+                values: {
+                    run_id: components["schemas"]["RunId"];
+                    value: string | null;
+                }[];
+            }[];
+            availability: components["schemas"]["Availability"];
+        };
         Coverage: {
             /** @enum {unknown} */
             state: "COMPLETE" | "PARTIAL";
@@ -102,7 +148,11 @@ export interface components {
         AttemptResult: {
             /** @constant */
             mode: "attempts";
+            /** @constant */
+            order: "CLAIM_RANK_ASC_OOS_SHARPE_DESC_NET_RETURN_DESC";
             attempts: components["schemas"]["Run"][];
+            fold_series: components["schemas"]["FoldSeries"][];
+            config_diff: components["schemas"]["ConfigDiff"];
             coverage: components["schemas"]["Coverage"];
             trajectory: {
                 /** @constant */
@@ -129,7 +179,7 @@ export interface components {
             /** @enum {unknown} */
             sampling: "FULL" | "RETENTION_STRIDE_V1" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "NOT_APPLICABLE";
             source_observation_count: number | null;
-            emitted_point_count: number;
+            emitted_point_count: number | null;
             points: {
                 at_utc_ms: components["schemas"]["UtcMilliseconds"];
                 equity: components["schemas"]["Decimal"];
@@ -187,12 +237,17 @@ export interface components {
             definition_id: "research.compare-common-window.v1";
             left_source_observation_count: number | null;
             right_source_observation_count: number | null;
-            matched_observation_count: number;
+            matched_observation_count: number | null;
             start_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
             end_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            /**
+             * @description Every metric delta is right - left (B - A); a contract invariant (CG-P20-09).
+             * @constant
+             */
+            delta_definition: "RIGHT_MINUS_LEFT";
             metrics: {
                 /** @enum {unknown} */
-                key: "NET_RETURN_FRACTION" | "MAX_DRAWDOWN_FRACTION" | "TRADE_COUNT";
+                key: "NET_RETURN_FRACTION" | "MAX_DRAWDOWN_FRACTION" | "TRADE_COUNT" | "OOS_SHARPE" | "WIN_RATE_FRACTION";
                 definition_id: string;
                 left_value: components["schemas"]["Decimal"] | null;
                 right_value: components["schemas"]["Decimal"] | null;
@@ -211,7 +266,7 @@ export interface components {
             /** @constant */
             formula_version: "p20.raw-return-v1";
             value: components["schemas"]["Decimal"] | null;
-            n: number;
+            n: number | null;
             common_window_start_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
             common_window_end_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
             /** @constant */
@@ -224,7 +279,7 @@ export interface components {
             /** @enum {unknown} */
             sampling: "FULL" | "RETENTION_STRIDE_V1" | "EXTREMA_BUCKET_V1" | "TAIL_WINDOW_V1" | "NOT_APPLICABLE";
             source_observation_count: number | null;
-            emitted_point_count: number;
+            emitted_point_count: number | null;
             points: {
                 at_utc_ms: components["schemas"]["UtcMilliseconds"];
                 left_equity: components["schemas"]["Decimal"];

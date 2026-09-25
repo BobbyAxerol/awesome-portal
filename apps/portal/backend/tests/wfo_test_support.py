@@ -160,6 +160,8 @@ class FakeControlApi:
             return {"schema_version": "research.current-source-batch-ack.v1", "accepted": True}
         if operation == "current-source/seal":
             return {"schema_version": "research.current-source-seal-ack.v1", "sealed": True}
+        if operation == "what-if/seal":
+            return {"schema_version": "research.whatif-grid-sealed.v1", "sealed": True, "replayed": False}
         return {"events": []}
 
     @property

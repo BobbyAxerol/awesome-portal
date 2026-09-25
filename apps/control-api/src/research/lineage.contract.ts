@@ -237,6 +237,8 @@ export const ResearchAttemptLineageNodeSchema = z.object({
   alpha_version_label: z.string().min(1).max(160),
   state: AttemptStateSchema,
   intent_kind: IntentKindSchema,
+  /** W5a: SIBLING_OF when this attempt was forked from a what-if node of its parent's run. */
+  relation_to_parent: z.enum(["SIBLING_OF"]).nullable(),
   reason: z.string().max(512).nullable(),
   space_signature: DigestSchema.nullable(),
   created_at_utc_ms: UtcMsSchema,

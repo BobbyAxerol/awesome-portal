@@ -201,6 +201,8 @@ export interface components {
             parent_attempt_id: components["schemas"]["OpaqueId"] | null;
             /** @enum {unknown} */
             parent_state: "ROOT" | "RETURNED" | "OUTSIDE_RETURNED_GRAPH";
+            /** @description W5a: SIBLING_OF when this attempt was forked from a Screen-07 what-if node of its parent attempt's run; its own intent and config_hash. */
+            relation_to_parent: "SIBLING_OF" | null;
             alpha_version_id: components["schemas"]["OpaqueId"];
             alpha_version_label: string;
             /** @enum {unknown} */

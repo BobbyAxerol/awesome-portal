@@ -256,17 +256,19 @@ Không mở request cho: ETag/304 (contract đã có, S13 dùng), badge 403/404 
 
 ## 4. Trạng thái
 
+**W6a 2026-09-25:** mọi `CG-P20-*` đã trả lời — xem [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md).
+
 | ID | Owner | State | Ghi chú |
 |---|---|---|---|
-| `CG-P20-01` | Codex | OPEN | fixture 5 case + Problem |
-| `CG-P20-02` | Codex | OPEN | schedule/mode per run |
-| `CG-P20-03` | Codex | OPEN | cert per run (cùng câu hỏi `CG-P19-05`) |
-| `CG-P20-04` | Codex | OPEN | OOS Sharpe per fold |
-| `CG-P20-05` | Codex | OPEN | config diff ở attempts |
-| `CG-P20-06` | Codex | OPEN | win rate + OOS stitched common-window |
-| `CG-P20-07` | Codex | OPEN | alpha id fixture run-library |
-| `CG-P20-08` | Codex | OPEN | lifecycle ACTIVE/SUPERSEDED per run (liên quan `CG-P19-14`) |
-| `CG-P20-09` | Codex | OPEN | hướng Δ `RIGHT_MINUS_LEFT` (audit A1, 2026-09-24) |
-| `CG-P20-10` | Codex | OPEN | count khi block NOT_PUBLISHED (audit A4, 2026-09-24) |
-| `CG-P20-11` | Codex (+ Bobby cho spec) | OPEN | khoá sort thứ hai attempts OOS vs NET_RETURN (audit C5, 2026-09-24) |
+| `CG-P20-01` | Codex → Claude (W6a) | DELIVERED | `c54e6b1f` — fixtures `research-compare.{attempts,markets,pair-ok,pair-mismatch,pair-nocorr,problems}.valid.json` from the real retained WFO seal · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-02` | Codex → Claude (W6a) | DELIVERED | `c54e6b1f` — `Run.schedule` {mode, schedule} from the P08 requested spec · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-03` | Codex → Claude (W6a) | DECIDED | `c54e6b1f` — typed `Run.certification` NOT_PUBLISHED `P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE` (same answer as CG-P18-02) · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-04` | Codex → Claude (W6a) | DELIVERED | `c54e6b1f` — `AttemptResult.fold_series` (≤32 folds, truncation flagged) from retained fold rows; P04 typed absence · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-05` | Codex → Claude (W6a) | DELIVERED | `c54e6b1f` — `AttemptResult.config_diff` over the pair allow-list · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-06` | Codex → Claude (W6a) | DECIDED | `c54e6b1f` — common window gains OOS_SHARPE + WIN_RATE_FRACTION typed NOT_APPLICABLE with reasons; original OOS Sharpe now published for WFO runs · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-07` | Codex → Claude (W6a) | DELIVERED | `c54e6b1f` — e2e fixtures use `alpha-momentum-btc` (every Research contract uses `^[a-z][a-z0-9-]{2,63}$`) · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-08` | Codex → Claude (W6a) | DELIVERED | `c54e6b1f` — `Run.alpha_version_lifecycle` from `research.alpha_versions` · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-09` | Codex → Claude (W6a) | DELIVERED | `c54e6b1f` — `common_window.delta_definition: RIGHT_MINUS_LEFT` + contract test · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-10` | Codex → Claude (W6a) | DECIDED | `c54e6b1f` — counts nullable: null when never measured, measured count kept; FE prints counts only in AVAILABLE blocks · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
+| `CG-P20-11` | Codex (+ Bobby cho spec) → Claude (W6a) | DELIVERED | `c54e6b1f` — order claim rank → OOS Sharpe → net return (spec §5 wins); `AttemptResult.order` names it · [W6A_P18_P20_CLAUDE_2026-09-25.md](../P18/W6A_P18_P20_CLAUDE_2026-09-25.md) |
 | B1–B6 | Bobby | AWAITING_DECISION | §3 |

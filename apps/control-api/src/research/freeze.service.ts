@@ -1,16 +1,21 @@
 /** P16 source-as-is Freeze / integrity projection and same-origin BFF. */
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import {
-  P04_DELTA_ADAPTER_CONTRACT_DIGEST,
-  P04_DELTA_BINDING,
-  P04_DELTA_FIXED_PARAMETERS,
-} from "./p04-delta.binding";
+  DEFAULT_PARAMETER_BINDING_REGISTRY,
+  declaredParameterRows,
+  RESEARCH_PARAMETER_BINDINGS,
+  ResearchParameterBindingRegistry,
+  type HistoricalParameterBinding,
+} from "./parameter-binding.registry";
 import { sha256ResearchJson } from "./preflight.service";
+import { bytesBlockChain, notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
+import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
+import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import {
@@ -44,6 +49,7 @@ const NO_DIAGNOSTIC_GRID = "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF
 const NO_DIAGNOSTIC_ADMISSION = "P04_FIXED_PROFILE_DOES_NOT_ACCEPT_DIAGNOSTIC_PARAMETER_OVERRIDES";
 const NO_SIBLING_DRAFT = "P04_FIXED_PROFILE_DOES_NOT_ACCEPT_SIBLING_PARAMETER_DRAFTS";
 const NO_ARTIFACT_BYTES = "P04_SOURCE_ARTIFACT_BYTES_NOT_PUBLISHED_TO_PORTAL";
+const HISTORICAL_BINDING_NOT_REGISTERED = "P16_HISTORICAL_PARAMETER_BINDING_NOT_REGISTERED";
 const WFO_PROFILE_NOT_P04_FREEZE = "P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE";
 
 function availability(state: AvailabilityState, reasonCode: string | null): Availability {
@@ -71,37 +77,27 @@ function parseProjection(value: unknown): StoredSplitProjection | null {
   return source.success ? { schema_version: "research.split-projection.v1", source: source.data } : null;
 }
 
-function exactDecimal(value: number): string {
-  if (!Number.isFinite(value)) {
-    throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Freeze parameter profile is incompatible.", 503);
+/**
+ * A10b: the frozen table is the run's own historical binding — looked up by
+ * the exact adapter digest its immutable producer row names — never the
+ * constants compiled into this release.
+ */
+function historicalParameters(binding: HistoricalParameterBinding) {
+  const rows = declaredParameterRows(binding.parameterSpace, binding.fixedParameters);
+  if (rows === null) {
+    throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Frozen parameter is outside its declaration.", 503);
   }
-  return String(value);
-}
-
-function staticParameters() {
-  const declared = P04_DELTA_BINDING.declaredContract.parameter_space;
-  return Object.entries(P04_DELTA_FIXED_PARAMETERS).map(([name, rawValue]) => {
-    const range = declared[name as keyof typeof declared];
-    if (!range) {
-      throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Freeze parameter declaration is incompatible.", 503);
-    }
-    const value = Number(rawValue);
-    const span = range.maximum - range.minimum;
-    const position = span > 0 ? Math.round(((value - range.minimum) / span) * 10_000) / 100 : 0;
-    if (!Number.isFinite(position) || position < 0 || position > 100 || value < range.minimum || value > range.maximum) {
-      throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Frozen parameter is outside its declaration.", 503);
-    }
-    return {
-      name,
-      kind: "NUMERIC" as const,
-      minimum: exactDecimal(range.minimum),
-      maximum: exactDecimal(range.maximum),
-      step: exactDecimal(range.step),
-      frozen_value: exactDecimal(value),
-      position_percent: position,
-      bound_state: "WITHIN_DECLARED_RANGE" as const,
-    };
-  });
+  return rows.map((row) => ({
+    name: row.name,
+    kind: "NUMERIC" as const,
+    minimum: row.minimum,
+    maximum: row.maximum,
+    step: row.step,
+    frozen_value: row.value,
+    position_percent: row.position_percent,
+    bound_state: "WITHIN_DECLARED_RANGE" as const,
+    bound_warning: row.bound_warning,
+  }));
 }
 
 function rowAvailability(row: SplitHubRow): Availability {
@@ -124,6 +120,10 @@ export class ResearchFreezeService {
   constructor(
     private readonly split: ResearchSplitRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(RESEARCH_PARAMETER_BINDINGS)
+    private readonly bindings: ResearchParameterBindingRegistry = DEFAULT_PARAMETER_BINDING_REGISTRY,
+    @Optional() @Inject(ResearchArtifactVerifyService)
+    private readonly bytes?: ResearchArtifactVerifyService,
   ) {}
 
   async detail(
@@ -133,7 +133,9 @@ export class ResearchFreezeService {
   ): Promise<ResearchFreezeResponse> {
     this.requireEnabled();
     const row = await this.row(scope, runId);
-    const response = this.mapDetail(row, query.fold ?? null);
+    // A10a: the newest durable byte receipt; a GET never re-reads bytes.
+    const bytes = await this.latestBytes(scope, runId);
+    const response = this.mapDetail(row, query.fold ?? null, bytes);
     const parsed = ResearchFreezeResponseSchema.safeParse(response);
     if (!parsed.success) {
       throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Freeze response is incompatible.", 503);
@@ -146,21 +148,31 @@ export class ResearchFreezeService {
     runId: string,
     query: { fold?: number },
   ): Promise<ResearchFreezeVerificationResponse> {
+    this.requireEnabled();
+    // A10a: the explicit action re-reads the sealed P05 bytes FIRST and
+    // persists its receipt; the snapshot below is then read against it.
+    const bytes = await this.verifyBytes(scope, runId);
     const detail = await this.detail(scope, runId, query);
-    const result = detail.freeze.integrity.state === "PARTIAL"
-      ? "PARTIAL_MATCH"
-      : detail.freeze.integrity.state === "BLOCKED"
-        ? "BLOCKED"
+    const hub = detail.freeze.integrity.state;
+    const bytesMatch = bytes.state === "MATCH";
+    const result = bytesBlockChain(bytes) || hub === "BLOCKED"
+      ? "BLOCKED"
+      : hub === "PARTIAL" || bytesMatch
+        ? "PARTIAL_MATCH"
         : "NOT_PUBLISHED";
+    const verificationScope = bytesMatch
+      ? hub === "PARTIAL" ? "PORTAL_RETAINED_DIGEST_BINDING_AND_P05_ARTIFACT_BYTES" : "P05_ARTIFACT_BYTES_ONLY"
+      : detail.freeze.integrity.verification_scope;
     const response = {
       schema_version: "research.freeze-verification.v1" as const,
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
       run_id: detail.run_id,
       freeze_revision: detail.revision,
-      verified_at_utc_ms: detail.as_of_utc_ms,
+      verified_at_utc_ms: bytes.verified_at_utc_ms ?? detail.as_of_utc_ms,
       result,
-      verification_scope: detail.freeze.integrity.verification_scope,
+      verification_scope: verificationScope,
       integrity: detail.freeze.integrity,
+      artifact_bytes: bytes,
     };
     const parsed = ResearchFreezeVerificationResponseSchema.safeParse(response);
     if (!parsed.success) {
@@ -187,24 +199,56 @@ export class ResearchFreezeService {
     }
   }
 
-  private mapDetail(row: SplitHubRow, requestedFold: number | null): unknown {
+  private async latestBytes(scope: ResearchScope, runId: string): Promise<ArtifactByteVerification> {
+    if (!this.bytes) return notYet("NOT_ENABLED", BYTE_VERIFY_NOT_ENABLED);
+    try {
+      return await this.bytes.latest(scope, runId);
+    } catch (error) {
+      if (error instanceof ArtifactVerifyStoreError && error.code === "FORBIDDEN") {
+        throw new ResearchFreezeError("RESEARCH_FREEZE_FORBIDDEN", "Access denied.", 403);
+      }
+      throw error;
+    }
+  }
+
+  private async verifyBytes(scope: ResearchScope, runId: string): Promise<ArtifactByteVerification> {
+    if (!this.bytes) return notYet("NOT_ENABLED", BYTE_VERIFY_NOT_ENABLED);
+    // The run must exist in this workspace before any private read happens.
+    await this.row(scope, runId);
+    try {
+      return await this.bytes.verify(scope, runId);
+    } catch (error) {
+      if (error instanceof ArtifactVerifyStoreError && error.code === "FORBIDDEN") {
+        throw new ResearchFreezeError("RESEARCH_FREEZE_FORBIDDEN", "Access denied.", 403);
+      }
+      throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Artifact verification is temporarily unavailable.", 503);
+    }
+  }
+
+  private mapDetail(row: SplitHubRow, requestedFold: number | null, bytes: ArtifactByteVerification): unknown {
     if (row.kind === "DURABLE" && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID) {
       // W1: a Delta WFO run shares the P04 executor digest but has no P04
       // fixed-parameter bundle to verify; its freeze truth is the retained
       // RS-02 current-source lane. Answer the existing typed absence.
-      return this.absentDetail(row, availability("NOT_APPLICABLE", WFO_PROFILE_NOT_P04_FREEZE), requestedFold);
+      return this.absentDetail(row, availability("NOT_APPLICABLE", WFO_PROFILE_NOT_P04_FREEZE), requestedFold, bytes);
     }
     const fallback = rowAvailability(row);
     const projection = row.projection ? parseProjection(row.projection) : null;
     if (row.projection && !projection) {
       throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Stored Freeze source is incompatible.", 503);
     }
-    if (!projection || row.kind !== "DURABLE") return this.absentDetail(row, fallback, requestedFold);
+    if (!projection || row.kind !== "DURABLE") return this.absentDetail(row, fallback, requestedFold, bytes);
 
     const source = projection.source;
-    const expectedBundleDigest = sha256ResearchJson(P04_DELTA_FIXED_PARAMETERS);
-    const checks = this.checks(row, source, expectedBundleDigest);
-    const integrity = this.integrity(checks, source);
+    // A10b: the run's own historical binding, by its exact adapter digest.
+    const binding = this.bindings.byAdapterDigest(row.adapterContractDigest);
+    const checks = this.checks(row, source, binding);
+    const bindingIntegrity = this.integrity(checks, source);
+    // A10a: a durable receipt that found corrupt or missing sealed bytes
+    // BLOCKS the chain — it never warns, and never rebaselines the binding.
+    const integrity = bytesBlockChain(bytes) && bindingIntegrity.state !== "NOT_PUBLISHED"
+      ? { ...bindingIntegrity, state: "BLOCKED" as const }
+      : bindingIntegrity;
     // The P14 receipt can still be inspected when the installed P04 binding
     // differs, but this release must not project its static parameters over a
     // different immutable bundle. A blocked verifier therefore preserves
@@ -227,6 +271,7 @@ export class ResearchFreezeService {
       source_manifest_digest: source.source.manifest_digest,
       source_parameter_bundle_digest: source.protocol.selection.parameter_bundle_digest,
       checks,
+      artifact_bytes: { receipt_id: bytes.receipt_id, state: bytes.state },
     })}`;
     return {
       schema_version: "research.freeze-detail.v1",
@@ -307,7 +352,7 @@ export class ResearchFreezeService {
         },
         // An observed bundle digest remains useful evidence, but static
         // values from this release are not evidence for a mismatched bundle.
-        frozen_parameters: bindingMatches ? staticParameters() : [],
+        frozen_parameters: bindingMatches && binding ? historicalParameters(binding) : [],
         integrity,
         what_if: {
           state: "NOT_APPLICABLE",
@@ -344,13 +389,14 @@ export class ResearchFreezeService {
         diagnostic_admission: noDiagnosticAdmission,
         sibling_draft: noSibling,
       },
+      artifact_bytes: bytes,
     };
   }
 
   private checks(
     row: SplitHubRow,
     source: ResearchSplitSource,
-    expectedBundleDigest: string,
+    binding: HistoricalParameterBinding | null,
   ) {
     const check = (
       key: "P04_ADAPTER_CONTRACT" | "P10_MANIFEST_BINDING" | "P04_FIXED_PARAMETER_BUNDLE",
@@ -364,14 +410,18 @@ export class ResearchFreezeService {
         expected_digest: expected,
         observed_digest: observed,
         availability: state === "NOT_PUBLISHED"
-          ? availability("NOT_PUBLISHED", `P16_${key}_NOT_PUBLISHED`)
+          ? availability("NOT_PUBLISHED", binding === null && key !== "P10_MANIFEST_BINDING"
+            ? HISTORICAL_BINDING_NOT_REGISTERED
+            : `P16_${key}_NOT_PUBLISHED`)
           : availability("AVAILABLE", null),
       };
     };
     return [
-      check("P04_ADAPTER_CONTRACT", P04_DELTA_ADAPTER_CONTRACT_DIGEST, row.adapterContractDigest),
+      // Expected = the registered historical binding for this exact digest.
+      // A release that installs a newer binding does not change this answer.
+      check("P04_ADAPTER_CONTRACT", binding?.adapterContractDigest ?? this.bindings.newestAdapterDigest(), row.adapterContractDigest),
       check("P10_MANIFEST_BINDING", row.manifestDigest, source.source.manifest_digest),
-      check("P04_FIXED_PARAMETER_BUNDLE", expectedBundleDigest, source.protocol.selection.parameter_bundle_digest),
+      check("P04_FIXED_PARAMETER_BUNDLE", binding?.fixedBundleDigest ?? null, source.protocol.selection.parameter_bundle_digest),
     ];
   }
 
@@ -393,7 +443,12 @@ export class ResearchFreezeService {
     };
   }
 
-  private absentDetail(row: SplitHubRow, fallback: Availability, requestedFold: number | null): unknown {
+  private absentDetail(
+    row: SplitHubRow,
+    fallback: Availability,
+    requestedFold: number | null,
+    bytes: ArtifactByteVerification,
+  ): unknown {
     const unavailable = unavailableGap(fallback, "P16_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED");
     return {
       schema_version: "research.freeze-detail.v1",
@@ -447,6 +502,7 @@ export class ResearchFreezeService {
         source_artifact_bytes: unavailable, what_if_grid: unavailable, diagnostic_admission: unavailable,
         sibling_draft: unavailable,
       },
+      artifact_bytes: bytes,
     };
   }
 

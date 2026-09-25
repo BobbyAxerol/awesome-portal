@@ -31,6 +31,12 @@ export interface StoredResearchReport {
   };
 }
 
+export interface SealedArtifactParts {
+  artifactRevision: number;
+  manifestDigest: string | null;
+  parts: Array<{ tableKind: string; partOrdinal: number; relativePath: string; partDigest: string }>;
+}
+
 export interface ResearchReportExportJob {
   jobId: string;
   runId: string;
@@ -220,6 +226,46 @@ export class ResearchReportRepository {
         [scope.workspaceId, runId],
       );
       return result.rowCount === 1 ? this.toStored(result.rows[0]!) : null;
+    });
+  }
+
+  /**
+   * CG-P18-07 · the sealed P05 parts of one exact artifact revision: their
+   * in-artifact relative path and part digest. Metadata only — no byte path
+   * is opened and nothing here is a download.
+   */
+  async sealedArtifactParts(scope: ResearchScope, runId: string, artifactRevision: number | null): Promise<SealedArtifactParts | null> {
+    return this.withTransaction(scope.workspaceId, scope.actorUserId, true, async (client) => {
+      await this.requireMembership(client, scope);
+      const artifact = await client.query<{ artifact_id: string; artifact_revision: string | number; manifest_digest: string | null }>(
+        `SELECT artifact_id, artifact_revision, manifest_digest
+           FROM research.artifacts
+          WHERE workspace_id = $1 AND run_id = $2 AND state = 'SEALED' AND artifact_revision > 0
+            AND ($3::bigint IS NULL OR artifact_revision = $3::bigint)
+          ORDER BY artifact_revision DESC
+          LIMIT 1`,
+        [scope.workspaceId, runId, artifactRevision],
+      );
+      const row = artifact.rows[0];
+      if (!row) return null;
+      const parts = await client.query<{ table_kind: string; part_ordinal: number; relative_path: string; part_digest: string }>(
+        `SELECT table_kind, part_ordinal, relative_path, part_digest
+           FROM research.artifact_parts
+          WHERE workspace_id = $1 AND artifact_id = $2
+          ORDER BY table_kind ASC, part_ordinal ASC
+          LIMIT 512`,
+        [scope.workspaceId, row.artifact_id],
+      );
+      return {
+        artifactRevision: Number(row.artifact_revision),
+        manifestDigest: row.manifest_digest,
+        parts: parts.rows.map((part) => ({
+          tableKind: part.table_kind,
+          partOrdinal: Number(part.part_ordinal),
+          relativePath: part.relative_path,
+          partDigest: part.part_digest,
+        })),
+      };
     });
   }
 

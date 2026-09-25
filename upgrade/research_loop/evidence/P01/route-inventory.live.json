@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 234,
+  "route_count": 237,
   "routes": [
     {
       "method": "DELETE",
@@ -1081,6 +1081,11 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/quantbt/runs/:runId/current-source/freeze/what-if/evaluate",
+      "owner": "apps/control-api/src/research/whatif.controller.ts"
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/quantbt/runs/:runId/freeze/verify",
       "owner": "apps/control-api/src/research/freeze.controller.ts"
     },
@@ -1141,6 +1146,11 @@
     },
     {
       "method": "POST",
+      "path": "/internal/research/artifacts/observe",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
+    },
+    {
+      "method": "POST",
       "path": "/internal/research/preflight-snapshots",
       "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
     },
@@ -1167,6 +1177,11 @@
     {
       "method": "POST",
       "path": "/internal/research/progress/artifacts/seal",
+      "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/research/progress/artifacts/what-if/seal",
       "owner": "apps/control-api/src/research/progress-ingress.controller.ts"
     },
     {

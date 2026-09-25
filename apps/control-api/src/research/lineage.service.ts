@@ -568,6 +568,8 @@ export class ResearchLineageService {
         alpha_version_label: row.alpha_version_label,
         state: row.state as Node["state"],
         intent_kind: row.intent_kind as Node["intent_kind"],
+        // W5a · P19: a Screen-07 what-if fork names its relation explicitly.
+        relation_to_parent: row.relation_kind === "SIBLING_OF" ? "SIBLING_OF" as const : null,
         reason,
         space_signature: row.space_signature,
         created_at_utc_ms: requiredUtcMs(row.created_at, "attempt creation timestamp"),

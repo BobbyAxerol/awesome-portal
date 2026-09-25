@@ -59,6 +59,22 @@ export interface CompareRunRow {
   evidence_equity_sampling: string | null;
   evidence_equity_source_observation_count: string | number | null;
   evidence_equity_values: JsonColumn;
+  /** CG-P20-08: the alpha version's registered lifecycle. */
+  alpha_version_lifecycle: string | null;
+  /** W6a: the retained Delta WFO lane — seal summary, fold rows (at most 33) and the selected candidate's metrics. */
+  current_profile_id: string | null;
+  current_source_summary: JsonColumn;
+  current_source_table_rows: JsonColumn;
+  current_source_folds: JsonColumn;
+  current_selected_mean_oos_sharpe: string | null;
+  current_selected_mean_decay: string | null;
+}
+
+export interface CompareRetainedEquityPoint {
+  runId: string;
+  atUtcMs: number;
+  equity: string;
+  sourceCount: number;
 }
 
 export interface CompareSnapshot {
@@ -382,7 +398,14 @@ export class ResearchCompareRepository {
                 current_source.source_transform_digest AS current_source_transform_digest,
                 evidence_equity.sampling AS evidence_equity_sampling,
                 evidence_equity.source_observation_count AS evidence_equity_source_observation_count,
-                evidence_equity.series_payload AS evidence_equity_values
+                evidence_equity.series_payload AS evidence_equity_values,
+                version.lifecycle_state AS alpha_version_lifecycle,
+                current_source.profile_id AS current_profile_id,
+                current_source.summary AS current_source_summary,
+                current_source.table_rows AS current_source_table_rows,
+                current_folds.folds AS current_source_folds,
+                current_candidate.mean_oos_sharpe AS current_selected_mean_oos_sharpe,
+                current_candidate.mean_decay AS current_selected_mean_decay
            FROM research.attempts attempt
            JOIN research.alpha_versions version
              ON version.workspace_id = attempt.workspace_id AND version.alpha_version_id = attempt.alpha_version_id
@@ -433,12 +456,47 @@ export class ResearchCompareRepository {
            ) split ON TRUE
            LEFT JOIN LATERAL (
              SELECT artifact_revision, manifest_digest, requested_spec_digest, effective_spec_digest,
-                    dataset_binding_digest, retained_import_digest, source_transform_digest
+                    dataset_binding_digest, retained_import_digest, source_transform_digest,
+                    profile_id, summary, table_rows
                FROM research.current_source_seals_v1 source_seal
               WHERE source_seal.workspace_id = attempt.workspace_id AND source_seal.run_id = primary_run.run_id
               ORDER BY source_seal.artifact_revision DESC
               LIMIT 1
            ) current_source ON TRUE
+           -- W6a (CG-P20-04): at most 33 retained fold rows per attempt, so
+           -- 32 are shown and a 33rd proves truncation; no raw series moves.
+           LEFT JOIN LATERAL (
+             SELECT json_agg(json_build_object(
+                      'source_ordinal', fold.source_ordinal,
+                      'fold_id', fold.payload->>'fold_id',
+                      'test_start_utc_ms', fold.payload->'test_start_utc_ms',
+                      'test_end_utc_ms', fold.payload->'test_end_utc_ms',
+                      'test_bars', fold.payload->'fold_facts'->'test_bars',
+                      'oos_sharpe', fold.payload->'fold_facts'->'oos_score'->>'oos_sharpe',
+                      'oos_trade_count', fold.payload->'fold_facts'->'oos_score'->>'oos_trade_count'
+                    ) ORDER BY fold.source_ordinal) AS folds
+               FROM (
+                 SELECT source_ordinal, payload
+                   FROM research.current_source_rows_v1 rows
+                  WHERE rows.workspace_id = attempt.workspace_id AND rows.run_id = primary_run.run_id
+                    AND rows.artifact_revision = current_source.artifact_revision AND rows.table_kind = 'FOLD'
+                  ORDER BY rows.source_ordinal ASC
+                  LIMIT 33
+               ) fold
+           ) current_folds ON current_source.artifact_revision IS NOT NULL
+           -- The selected candidate carries QuantBT's own mean OOS Sharpe / decay
+           -- (the same row Screen 04's fold verdict header reads).
+           LEFT JOIN LATERAL (
+             SELECT candidate.payload->'trial_facts'->'metrics'->>'mean_oos_sharpe' AS mean_oos_sharpe,
+                    candidate.payload->'trial_facts'->'metrics'->>'mean_decay' AS mean_decay
+               FROM research.current_source_rows_v1 candidate
+              WHERE candidate.workspace_id = attempt.workspace_id AND candidate.run_id = primary_run.run_id
+                AND candidate.artifact_revision = current_source.artifact_revision AND candidate.table_kind = 'CANDIDATE'
+                AND candidate.payload->'trial_facts'->>'source_trial_id' = current_source.summary->'selection'->>'trial_id'
+                AND candidate.payload->>'objective' IS NOT DISTINCT FROM current_source.summary->'selection'->>'objective'
+              ORDER BY candidate.source_ordinal ASC
+              LIMIT 1
+           ) current_candidate ON current_source.artifact_revision IS NOT NULL
           WHERE attempt.workspace_id = $1 AND version.alpha_id = $2
           -- A pair deep link may reference a historical run outside the
           -- normal 128-attempt ladder. Prioritize its two exact opaque IDs
@@ -464,6 +522,52 @@ export class ResearchCompareRepository {
         hasMore: rows.rows.length > maximumRows,
         asOfUtcMs,
       };
+    });
+  }
+
+  /**
+   * W6a · markets small multiples for retained WFO runs: per run, 95 equal
+   * ordinal buckets keep their first, last, minimum and maximum equity, so
+   * the global extrema always survive (EXTREMA_BUCKET_V1, never a stride).
+   */
+  async retainedEquity(
+    scope: ResearchScope,
+    runs: ReadonlyArray<{ runId: string; artifactRevision: number }>,
+  ): Promise<CompareRetainedEquityPoint[]> {
+    if (runs.length === 0) return [];
+    if (runs.length > 24) throw new ResearchCompareError("RESEARCH_COMPARE_UNAVAILABLE", "Compare markets budget is incompatible.", 503);
+    return this.withRead(scope, async (client) => {
+      const result = await client.query<{ run_id: string; at_utc_ms: string | number; equity: string; source_count: string | number }>(
+        `WITH wanted AS (
+           SELECT * FROM unnest($2::text[], $3::bigint[]) AS wanted(run_id, artifact_revision)
+         ), observations AS (
+           SELECT row.run_id, row.occurred_at_utc_ms, row.payload->>'equity' AS equity,
+                  row_number() OVER (PARTITION BY row.run_id ORDER BY row.source_ordinal) AS position,
+                  count(*) OVER (PARTITION BY row.run_id) AS source_count
+             FROM research.current_source_rows_v1 row
+             JOIN wanted ON wanted.run_id = row.run_id AND wanted.artifact_revision = row.artifact_revision
+            WHERE row.workspace_id = $1 AND row.table_kind = 'OBSERVATION'
+              AND row.payload->>'equity' ~ '${DECIMAL_PATTERN}'
+         ), bucketed AS (
+           SELECT *, ((position - 1) * 95) / source_count AS bucket FROM observations
+         ), picks AS (
+           (SELECT DISTINCT ON (run_id, bucket) run_id, position FROM bucketed ORDER BY run_id, bucket, position ASC)
+           UNION (SELECT DISTINCT ON (run_id, bucket) run_id, position FROM bucketed ORDER BY run_id, bucket, position DESC)
+           UNION (SELECT DISTINCT ON (run_id, bucket) run_id, position FROM bucketed ORDER BY run_id, bucket, equity::numeric ASC, position ASC)
+           UNION (SELECT DISTINCT ON (run_id, bucket) run_id, position FROM bucketed ORDER BY run_id, bucket, equity::numeric DESC, position ASC)
+         )
+         SELECT bucketed.run_id, bucketed.occurred_at_utc_ms AS at_utc_ms, bucketed.equity, bucketed.source_count
+           FROM bucketed JOIN picks USING (run_id, position)
+          ORDER BY bucketed.run_id, bucketed.position
+          LIMIT ${24 * 400}`,
+        [scope.workspaceId, runs.map((run) => run.runId), runs.map((run) => run.artifactRevision)],
+      );
+      return result.rows.map((row) => ({
+        runId: row.run_id,
+        atUtcMs: safeInteger(row.at_utc_ms, "retained equity timestamp"),
+        equity: row.equity,
+        sourceCount: safeInteger(row.source_count, "retained equity count"),
+      }));
     });
   }
 

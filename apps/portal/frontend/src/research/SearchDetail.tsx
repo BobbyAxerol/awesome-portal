@@ -51,6 +51,7 @@ import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME } from "./SplitDetail";
 import { LANE_STATE_COPY, laneNotApplicableSentence } from "./splitClient";
 import type { LedgerSlot, RetainedRunFacts } from "./useSearch";
+import { BoundWarningNote } from "./BoundWarning";
 import type { ResearchState } from "./state";
 
 /* --------------------------------------------------------------- verbatim */
@@ -477,10 +478,6 @@ const A1_COLUMNS: { head: string; width: number; right?: boolean }[] = [
 
 const LEVELS_REASON = "levels — the search read publishes no level count per parameter";
 
-/** HiFi A1 note, from the server's own bound state and placement — no browser threshold. */
-const BOUND_WORDS: Record<Parameter["bound_state"], string> = {
-  WITHIN_DECLARED_RANGE: "within range",
-};
 
 /**
  * The one panel with real content: the parameters the profile declares.
@@ -558,13 +555,9 @@ function ParameterTable({ parameters }: { parameters: readonly Parameter[] }) {
                 style={{ left: `${parameter.position_percent}%`, background: "var(--good)" }}
               />
             </span>
-            <span
-              className="w-[118px] flex-none text-[9px] [font-family:var(--font-body)]"
-              style={{ color: "var(--ink-faint)" }}
-              title={`${parameter.bound_state} · ${parameter.position_percent}% of the declared range`}
-              data-bound-state={parameter.bound_state}
-            >
-              {BOUND_WORDS[parameter.bound_state] ?? parameter.bound_state} · {Math.round(parameter.position_percent)}%
+            {/* DR-02: the shared server definition, the shared renderer (S06 = S07). */}
+            <span className="w-[118px] flex-none text-[9px]" data-bound-state={parameter.bound_state}>
+              <BoundWarningNote warning={parameter.bound_warning} positionPercent={parameter.position_percent} />
             </span>
           </span>
         </div>

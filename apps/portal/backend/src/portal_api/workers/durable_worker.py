@@ -26,6 +26,7 @@ from pydantic import ValidationError
 
 from portal_api.domain.research_delta_wfo_profile import DELTA_WFO_CPU_SECONDS, DELTA_WFO_OPTUNA_TRIALS
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
+from portal_api.domain.research_whatif_profile import WHATIF_CPU_SECONDS
 from portal_api.services.artifact_store import ContentAddressedArtifactStore
 from portal_api.services.durable_runs import (
     DEFAULT_GRACE_SECONDS,
@@ -50,6 +51,11 @@ from portal_api.services.research_current_source_retention import (
 )
 from portal_api.services.research_retained_receipt import ResearchRetainedReceiptClient, ResearchRetainedReceiptError
 from portal_api.services.research_run_producer import WFO_SOURCE_DIRNAME, parameter_bundle_digest
+from portal_api.services.research_whatif_retention import (
+    ResearchWhatIfRetentionClient,
+    ResearchWhatIfRetentionError,
+    read_whatif_results,
+)
 
 logger = logging.getLogger("portal_api.durable_worker")
 
@@ -227,7 +233,23 @@ class DurableQuantWorker:
         progress_relay: ResearchProgressRelay | None = None
         p10_temp_dir: Path | None = None
         is_delta_wfo = is_research_producer and research_request.research.is_delta_wfo
+        # W5a A10c: a what-if diagnostic runs its parent's WFO study in the
+        # same confined child and seals one WHATIF_GRID relation instead of
+        # an RS-02 current-source lane.
+        is_whatif = is_research_producer and research_request.research.is_whatif
+        whatif_job = research_request.research.whatif if is_whatif else None
         try:
+            if is_whatif and not (
+                _flag("PORTAL_FEATURE_RESEARCH_WHATIF")
+                and _flag("PORTAL_FEATURE_RESEARCH_WFO_PROFILE")
+                and _flag("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS")
+                and _flag("PORTAL_FEATURE_RESEARCH_PROGRESS")
+            ):
+                raise _DeltaWfoProfileUnavailable(
+                    "P16 what-if diagnostic requires PORTAL_FEATURE_RESEARCH_WHATIF, "
+                    "PORTAL_FEATURE_RESEARCH_WFO_PROFILE, PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS "
+                    "and PORTAL_FEATURE_RESEARCH_PROGRESS"
+                )
             if is_delta_wfo and not (
                 _flag("PORTAL_FEATURE_RESEARCH_WFO_PROFILE")
                 and _flag("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS")
@@ -253,9 +275,12 @@ class DurableQuantWorker:
                     run_id=run_id,
                     attempt_id=attempt.run_attempt_id,
                     lease_epoch=research_request.lease_epoch,
-                    planned_trials=DELTA_WFO_OPTUNA_TRIALS if is_delta_wfo else 1,
-                    cpu_cap_seconds=DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
-                    profile="DELTA_WFO" if is_delta_wfo else "P04_FIXED",
+                    planned_trials=(
+                        len(whatif_job.evaluations) if whatif_job is not None
+                        else DELTA_WFO_OPTUNA_TRIALS if is_delta_wfo else 1
+                    ),
+                    cpu_cap_seconds=WHATIF_CPU_SECONDS if is_whatif else DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
+                    profile="DELTA_WHATIF" if is_whatif else "DELTA_WFO" if is_delta_wfo else "P04_FIXED",
                 )
                 try:
                     progress_relay = ResearchProgressRelay.from_environment(
@@ -387,6 +412,38 @@ class DurableQuantWorker:
                     fence_validator=current_wfo_fence,
                 )
                 handoff_cursor = self._emit_retained_wfo_progress(progress_journal, retention)
+            elif is_whatif:
+                # W5a A10c: reserve → P05 whatif_results → P05 seal →
+                # WHATIF_GRID seal, all before `run_completed`. The frozen
+                # parent run is never written.
+                if progress_journal is None or whatif_job is None:
+                    raise ResearchWhatIfRetentionError("P16 what-if retention requires the P11 progress lease")
+                whatif_client = ResearchWhatIfRetentionClient.from_environment()
+                results = read_whatif_results(
+                    engine_root / WFO_SOURCE_DIRNAME / run_id / "whatif_results.json",
+                    grid_key=whatif_job.grid_key,
+                    evaluation_keys={entry.evaluation_key for entry in whatif_job.evaluations},
+                )
+
+                def current_whatif_fence(_fence: object) -> bool:
+                    current = self._registry.attempt(run_id, attempt.run_attempt_id)
+                    return (
+                        current is not None
+                        and current.status in {"CLAIMED", "RUNNING"}
+                        and self._registry.verify_lease(current, lease_token=lease_token)
+                        and not self._registry.cancellation_requested(
+                            run_id, attempt.run_attempt_id, lease_epoch=research_request.lease_epoch
+                        )
+                    )
+
+                await asyncio.to_thread(
+                    whatif_client.retain,
+                    request=research_request,
+                    results=results,
+                    artifact_root=Path(self._artifact_store.root),
+                    fence_validator=current_whatif_fence,
+                )
+                self._emit_whatif_trials(progress_journal, results)
             elif is_research_producer:
                 p04_parameters = research_request.research.p04_parameters
                 if p04_parameters is not None:
@@ -509,7 +566,7 @@ class DurableQuantWorker:
                     # (CG-P11-09), never a zero that reads as a measurement.
                     "usage": self._p11_usage(
                         result,
-                        cpu_cap_seconds=DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
+                        cpu_cap_seconds=WHATIF_CPU_SECONDS if is_whatif else DELTA_WFO_CPU_SECONDS if is_delta_wfo else 45,
                     ),
                 }
                 if evidence_digest is not None:
@@ -830,6 +887,34 @@ class DurableQuantWorker:
         }
         path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         path.chmod(0o600)
+
+    @staticmethod
+    def _emit_whatif_trials(journal: ResearchProgressJournal, results: list[dict[str, Any]]) -> None:
+        """Close the diagnostic study from its sealed results.
+
+        Trials seen live on the child's Optuna channel stay as they are; any
+        the channel missed are claimed from the sealed result rows. There is
+        no fold and no selection: a diagnostic evaluates, it never selects.
+        """
+
+        total = len(results)
+        live = int(journal.snapshot()["overall"]["trials_done"])
+        if live > total:
+            raise DurableRunError("P11 observed more live what-if trials than the sealed results hold")
+        for index in range(live + 1, total + 1):
+            state = results[index - 1]["state"]
+            journal.emit("trial_completed", {
+                "study": "GLOBAL",
+                "trial": index,
+                "eta_s": None,
+                "state": "COMPLETE" if state == "COMPLETE" else "PRUNED",
+                "tqdm_line": f"what-if · evaluation {index}/{total} · from sealed results",
+                "console": {
+                    "tone": "COMPLETE",
+                    "text": f"what-if evaluation {index} sealed (not observed live)",
+                    "trial": index,
+                },
+            })
 
     @staticmethod
     def _emit_retained_wfo_progress(

@@ -30,7 +30,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Explicitly re-read retained Freeze bindings without persisting a receipt or submitting work */
+        /** Explicitly re-read retained Freeze bindings and, when enabled, re-hash the sealed P05 artifact bytes into one immutable receipt; never submits work */
         post: operations["researchFreezeVerifyPostV1"];
         delete?: never;
         options?: never;
@@ -59,6 +59,19 @@ export interface components {
             reason_code: components["schemas"]["ReasonCode"];
             availability: components["schemas"]["Availability"];
         };
+        /** @description DR-02 research.bound-warning.v1: one relative definition shared by Search S06 and Freeze S07. Reference space is the declared range; AT_BOUND at <=6% or >=94%, NEAR_BOUND at <=18% or >=82% (inclusive, exact decimal); NOT_APPLICABLE with a typed reason for zero-width, categorical or out-of-declaration values. A display diagnostic, never a gate and never a claim that the value is not an optimum. */
+        BoundWarning: {
+            /** @constant */
+            definition_id: "research.bound-warning.v1";
+            /** @constant */
+            copy_version: "research.bound-warning-copy.v1";
+            /** @constant */
+            reference_space: "DECLARED_RANGE";
+            /** @enum {unknown} */
+            state: "AT_BOUND" | "NEAR_BOUND" | "INTERIOR" | "NOT_APPLICABLE";
+            side: ("LOWER" | "UPPER") | null;
+            reason_code: components["schemas"]["ReasonCode"] | null;
+        };
         Parameter: {
             name: string;
             /** @constant */
@@ -70,6 +83,7 @@ export interface components {
             position_percent: number;
             /** @constant */
             bound_state: "WITHIN_DECLARED_RANGE";
+            bound_warning: components["schemas"]["BoundWarning"];
         };
         Window: {
             start_utc_ms: components["schemas"]["UtcMilliseconds"];
@@ -197,6 +211,34 @@ export interface components {
             source_absences: {
                 [key: string]: components["schemas"]["SourceGap"];
             };
+            artifact_bytes: components["schemas"]["ArtifactByteVerification"];
+        };
+        ArtifactByteMismatch: {
+            /** @enum {unknown} */
+            kind: "MANIFEST" | "PART" | "DOCUMENT";
+            table_kind: string | null;
+            ordinal: number;
+            expected_digest: components["schemas"]["Digest"];
+            observed_digest: components["schemas"]["Digest"] | null;
+        };
+        /** @description A10a: one explicit verify re-reads the sealed P05 artifact bytes through a private observer and compares them with the digests stored at seal time. The receipt is durable and immutable; an expected digest is never rewritten from observed bytes. MISMATCH or MISSING BLOCKS the freeze. A GET only reports the newest receipt. */
+        ArtifactByteVerification: {
+            /** @constant */
+            schema_version: "research.artifact-byte-verification.v1";
+            /** @enum {unknown} */
+            state: "MATCH" | "MISMATCH" | "MISSING" | "NOT_VERIFIED" | "NOT_RETAINED" | "UNAVAILABLE" | "NOT_ENABLED";
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            /** @constant */
+            verification_scope: "P05_SEALED_MANIFEST_PARTS_AND_DOCUMENTS";
+            receipt_id: string | null;
+            verified_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            artifact_revision: number | null;
+            expected_manifest_digest: components["schemas"]["Digest"] | null;
+            observed_manifest_digest: components["schemas"]["Digest"] | null;
+            parts_checked: number;
+            parts_mismatched: number;
+            documents_checked: number;
+            mismatches: components["schemas"]["ArtifactByteMismatch"][];
         };
         FreezeVerification: {
             /** @constant */
@@ -209,11 +251,12 @@ export interface components {
             /** @enum {unknown} */
             result: "PARTIAL_MATCH" | "BLOCKED" | "NOT_PUBLISHED";
             /**
-             * @description Qualification of this explicit verification response itself; consumers must not borrow scope from a separately cached detail response.
+             * @description Qualification of this explicit verification response itself; consumers must not borrow scope from a separately cached detail response. Bytes enter the scope only when this verify's own receipt is MATCH.
              * @enum {unknown}
              */
-            verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY" | "NONE";
+            verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY" | "PORTAL_RETAINED_DIGEST_BINDING_AND_P05_ARTIFACT_BYTES" | "P05_ARTIFACT_BYTES_ONLY" | "NONE";
             integrity: components["schemas"]["Integrity"];
+            artifact_bytes: components["schemas"]["ArtifactByteVerification"];
         };
         Problem: {
             error: {

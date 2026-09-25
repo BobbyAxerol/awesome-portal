@@ -35,6 +35,25 @@ describe("P18 published Research Report contract", () => {
     expect(generated).not.toContain("artifacts: Record<string, never>[]");
   });
 
+  it("W6a: frozen core v2 is an additive, versioned union and GET never declares 409 (CG-P18-10)", () => {
+    const openApi = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      paths: Record<string, Record<string, { responses: Record<string, unknown>; description?: string }>>;
+      components: { schemas: Record<string, { oneOf?: unknown[] }> };
+    };
+    expect(openApi.components.schemas.FrozenCore!.oneOf).toEqual([
+      { $ref: "#/components/schemas/FrozenCoreV1" },
+      { $ref: "#/components/schemas/FrozenCoreV2" },
+    ]);
+    const get = openApi.paths["/api/v1/quantbt/runs/{runId}/report"]!.get!;
+    expect(Object.keys(get.responses)).not.toContain("409");
+    expect(get.description).toContain("RESEARCH_REPORT_NOT_FOUND");
+    const generated = readFileSync(generatedPath, "utf8");
+    for (const needle of [
+      "FrozenCoreV2", "ReportFactV2", "FoldRowV2", "StageCheck", "ArtifactV2", "ReportTitle", "Certification",
+      "RS02_RETAINED_CURRENT_SOURCE", "RS02_STITCHED_OUTER_TEST_WINDOWS", "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD",
+    ]) expect(generated).toContain(needle);
+  });
+
   it("does not expose a source relation/cursor, worker lease, artifact path or compute control", () => {
     const document = readFileSync(openApiPath, "utf8");
     for (const forbidden of [

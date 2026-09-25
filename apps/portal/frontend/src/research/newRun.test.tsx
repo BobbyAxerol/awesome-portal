@@ -1043,3 +1043,34 @@ describe("RF02-F2 — the P02 field map is covered 24/24", () => {
     expect(patch).toHaveBeenCalledWith({ optimizationMode: "mode_2_sbb", optimizationSchedule: "global" });
   });
 });
+
+describe("W5a · P16/P19 — a what-if fork opens as a sibling, never an edit", () => {
+  it("shows the pinned node read from the server grid and the untouched frozen run", () => {
+    view({
+      forkSource: { runId: "rrun_parent", cellId: "x6y4", state: "ready", parameters: { rvol: "1.4", slpercent: "2.3" }, reason: null },
+    });
+    const banner = document.querySelector("[data-fork-source]") as HTMLElement;
+    expect(banner.getAttribute("data-fork-source")).toBe("rrun_parent");
+    expect(banner.getAttribute("data-fork-cell")).toBe("x6y4");
+    expect(banner.getAttribute("data-fork-state")).toBe("ready");
+    expect(banner.textContent).toContain("sibling of");
+    expect(banner.querySelector("[data-fork-pins]")?.textContent).toBe("rvol 1.4 · slpercent 2.3");
+    expect(banner.textContent).toContain("The frozen run is untouched.");
+    expect(banner.querySelector("a")?.getAttribute("href")).toBe("/research/quantbt/runs/rrun_parent/freeze");
+  });
+
+  it("says plainly when the node is not on the grid, and pins nothing", () => {
+    view({
+      forkSource: { runId: "rrun_parent", cellId: "x9y9", state: "missing", parameters: null, reason: "Node x9y9 is not on that run's what-if grid — nothing was pinned." },
+    });
+    const banner = document.querySelector("[data-fork-source]") as HTMLElement;
+    expect(banner.getAttribute("data-fork-state")).toBe("missing");
+    expect(banner.querySelector("[data-fork-pins]")).toBeNull();
+    expect(banner.textContent).toContain("nothing was pinned");
+  });
+
+  it("renders no banner for an ordinary new run", () => {
+    view();
+    expect(document.querySelector("[data-fork-source]")).toBeNull();
+  });
+});

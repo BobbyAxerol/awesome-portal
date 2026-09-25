@@ -189,7 +189,7 @@ def test_w1_child_task_allowlist(tmp_path: Path, clean_child_environment: None) 
                 {"schema_version": "research.p06.child-receipt.v1", "task": task},
                 receipt_dir=tmp_path,
             )
-    assert research_child._ALLOWED_TASKS == frozenset({"P04_DELTA_SMOKE", "P10_DELTA_WFO"})
+    assert research_child._ALLOWED_TASKS == frozenset({"P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"})
 
 
 def test_w1_child_refuses_output_root_escape(tmp_path: Path, clean_child_environment: None) -> None:

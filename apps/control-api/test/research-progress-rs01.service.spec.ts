@@ -102,10 +102,12 @@ describe("RS-01 terminal materialization and retry recovery", () => {
     expect(fanout.publish).toHaveBeenCalledTimes(1);
   });
 
-  it("W1: a Delta WFO terminal is not held hostage by the P04-shaped P18 report sidecar", async () => {
+  it("W1/W6a: a Delta WFO terminal seals its report from the retained lane but is never held hostage by it", async () => {
     const wfo = subject({ scope: { executionProfileId: "p10.delta-signal-notional-wfo.v1" }, reportRefuses: true });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     await wfo.service.ingest(terminalIngress as never);
-    expect(wfo.reports.materializeTerminal).not.toHaveBeenCalled();
+    stderr.mockRestore();
+    expect(wfo.reports.materializeTerminal).toHaveBeenCalledWith(expect.anything(), expect.anything(), "RS02_RETAINED_CURRENT_SOURCE");
     expect(wfo.progress.markTerminalMaterialized).toHaveBeenCalledTimes(1);
 
     // A P04 run keeps the retryable report sidecar exactly as before.
