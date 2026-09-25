@@ -18,6 +18,9 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
+
+import { scaleToFolds, syntheticChildAudit, syntheticFoldOf, syntheticFoldWindow } from "../src/research/w5bFoldScale.fixture";
+import type { CurrentSourceReplay, ReplayChildAudit } from "../src/research/replayClient";
 import { expect, test, type Page } from "@playwright/test";
 
 const HOME = `${process.env.HOME}/.config/portal-research-preview`;
@@ -116,6 +119,70 @@ for (const [label, width] of [["1440", 1440], ["660", 660]] as const) {
     if (before.heap !== null && after.heap !== null) expect(after.heap - before.heap).toBeLessThan(32 * 1024 * 1024);
     expect(await page.locator("[data-transition-row]").count()).toBeLessThanOrEqual(50);
     console.log(`W5B_S08_BOUND ${label} ${JSON.stringify({ before, after })}`);
+    expect(noise).toEqual([]);
+  });
+}
+
+/* S08 T17: a 32-fold run (synthetic, derived from the real-HMD fixture shape). */
+for (const [label, width] of [["1440", 1440], ["660", 660]] as const) {
+  test(`fixture lane · S08 T17 with 32 folds at ${label}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const noise = watch(page);
+    await signIn(page);
+    const scaled = scaleToFolds(JSON.parse(FOLD0) as CurrentSourceReplay);
+    const audit = JSON.parse(AUDIT0) as ReplayChildAudit;
+    const auditReads: string[] = [];
+    await page.route("**/current-source/replay/transitions**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: LEDGER }));
+    await page.route("**/current-source/replay/child-audit**", (route) => {
+      const fold = Number(new URL(route.request().url()).searchParams.get("fold"));
+      auditReads.push(String(fold));
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(syntheticChildAudit(audit, fold)) });
+    });
+    await page.route(/\/current-source\/replay(\?.*)?$/, (route) => {
+      const fold = syntheticFoldOf(route.request().url());
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(fold === null ? scaled : syntheticFoldWindow(scaled, fold)) });
+    });
+    await page.goto(`/research/quantbt/runs/${RUN}/execute`);
+    await expect(page.locator("[data-child-audit='0']")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("[data-fold-strip-mode='scroll']")).toBeVisible();
+    await expect(page.locator("[data-fold-scroller] [data-fold]")).toHaveCount(32);
+    /* The strip is a usable row, not a sliver squeezed beside its caption. */
+    const scrollerWidth = await page.locator("[data-fold-scroller]").evaluate((node) => node.clientWidth);
+    expect(scrollerWidth).toBeGreaterThan(width === 660 ? 500 : 900);
+    const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(await overflow()).toBeLessThanOrEqual(0);
+    const nodesAt = () => page.evaluate(() => document.getElementsByTagName("*").length);
+    const nodes0 = await nodesAt();
+
+    /* Walk to the last fold with ‹ › and back with a click: each fold reads its window and its audit once. */
+    for (let fold = 1; fold <= 31; fold += 1) {
+      await page.locator("[aria-label='next fold']").click();
+      await expect(page.locator(`[data-child-audit='${fold}']`)).toBeVisible();
+    }
+    await expect(page.locator("[data-fold='31']")).toBeInViewport();
+    await page.locator("[data-fold='5']").click();
+    await expect(page.locator("[data-child-audit='5']")).toBeVisible();
+    await expect(page.locator("[data-fold='5']")).toBeInViewport();
+    expect(auditReads).toEqual([...Array.from({ length: 32 }, (_, fold) => String(fold)), "5"]);
+    await page.screenshot({ path: `${OUT}/folds32-${label}.png`, fullPage: true });
+
+    /* Playing a fold at 64× sends nothing and grows nothing. */
+    const reads = auditReads.length;
+    await page.locator("[data-speed='64']").click();
+    await page.locator("[data-action='play']").click();
+    await expect(page.locator("[data-transport]")).toHaveAttribute("data-playing", "false", { timeout: 20_000 });
+    expect(auditReads.length).toBe(reads);
+    const nodes1 = await nodesAt();
+    expect(Math.abs(nodes1 - nodes0)).toBeLessThan(60);
+    expect(await overflow()).toBeLessThanOrEqual(0);
+    console.log(`W5B_S08_T17 ${label} ${JSON.stringify({ nodes0, nodes1, auditReads: auditReads.length })}`);
+
+    const axe = await new AxeBuilder({ page }).include("[data-screen='execute-replay']").analyze();
+    const blocking = axe.violations
+      .filter((item) => item.impact === "serious" || item.impact === "critical")
+      .flatMap((item) => item.nodes.map((node) => ({ id: item.id, target: node.target, color: (node.any[0]?.data as { fgColor?: string } | undefined)?.fgColor })))
+      .filter((node) => !(node.id === "color-contrast" && node.color === "#939db0"));
+    expect(blocking).toEqual([]);
     expect(noise).toEqual([]);
   });
 }

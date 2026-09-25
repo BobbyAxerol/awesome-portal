@@ -341,17 +341,31 @@ function FoldStrip({
   const activeAt = replay.execution.fold_capital.segments.findIndex((segment) => segment.fold_id === activeFold);
   const capital = replay.execution.fold_capital;
   const overview = replay.execution.candle_overview;
+  /* S08 T17: past a dozen folds the strip is one scrolling, snapping row
+     (spec 08 §2.2) that keeps the active fold in view; fewer folds wrap. */
+  const scrolls = capital.segments.length > 12;
+  const strip = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!scrolls || activeFold === null) return;
+    const button = strip.current?.querySelector<HTMLElement>(`[data-fold="${activeFold}"]`);
+    button?.scrollIntoView?.({ block: "nearest", inline: "center" });
+  }, [activeFold, scrolls]);
   return (
-    <div className="flex flex-col gap-1.5" data-fold-strip={capital.segments.length}>
-      <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5" data-fold-strip={capital.segments.length} data-fold-strip-mode={scrolls ? "scroll" : "wrap"}>
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         <span className="mono text-[9.5px] uppercase tracking-[.1em]" style={{ color: "var(--ink-faint)" }}>
-          stitched account
+          stitched account{scrolls ? ` · ${capital.segments.length} folds` : ""}
         </span>
+        <div
+          ref={strip}
+          className={scrolls ? "order-last flex w-full min-w-0 basis-full snap-x items-center gap-1.5 overflow-x-auto pb-1" : "contents"}
+          {...(scrolls ? { tabIndex: 0, role: "region", "aria-label": "folds of the stitched account", "data-fold-scroller": "" } : {})}
+        >
         {capital.segments.map((segment, position) => {
           const current = segment.fold_id === activeFold;
           const ret = Number(segment.end_equity) / Number(segment.start_equity) - 1;
           return (
-            <span key={segment.fold_id} className="flex items-center gap-1.5">
+            <span key={segment.fold_id} className={`flex items-center gap-1.5${scrolls ? " flex-none snap-start" : ""}`}>
               {position > 0 ? (
                 <span
                   className="mono text-[10px]"
@@ -394,6 +408,7 @@ function FoldStrip({
             </span>
           );
         })}
+        </div>
         <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-fold-capital={capital.policy ?? ""}>
           capital {capital.policy ?? "not published"} · {words(capital.equity_continuity)}
           {capital.account_execution ? ` · ${words(capital.account_execution)}` : ""}

@@ -22,6 +22,7 @@ import { CLOSE_TARGET_NOTICE, REVEAL_HIDDEN, paddedRange, windowMarkers } from "
 import { ExecuteRoute } from "./ExecuteRoute";
 import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
+import { SYNTHETIC_FOLDS, scaleToFolds, syntheticChildAudit, syntheticFoldOf, syntheticFoldWindow } from "./w5bFoldScale.fixture";
 
 vi.mock("lightweight-charts", () => {
   /* jsdom has no canvas: a recording double, so the tests read the data the chart was given. */
@@ -285,4 +286,58 @@ describe("W3b fix · a flat window is not drawn on a ±50% axis", () => {
     expect(moving.min).toBeGreaterThan(19_900);
     expect(moving.max).toBeLessThanOrEqual(20_010);
   });
+});
+
+describe("S08 T17 · a 32-fold run (synthetic, derived from the real-HMD fixture)", () => {
+  const SCALED = scaleToFolds(FOLD0);
+
+  function fetch32() {
+    return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      const parsed = new URL(url, "http://x");
+      const path = parsed.pathname;
+      if (path.endsWith("/current-source/replay/transitions")) return jsonResponse(LEDGER);
+      if (path.endsWith("/current-source/replay/child-audit")) return jsonResponse(syntheticChildAudit(AUDIT0, Number(parsed.searchParams.get("fold"))));
+      if (path.endsWith("/current-source/replay")) {
+        const fold = syntheticFoldOf(url);
+        return jsonResponse(fold === null ? SCALED : syntheticFoldWindow(SCALED, fold));
+      }
+      if (path.endsWith("/current-source/evidence")) return jsonResponse(W3.evidence);
+      if (path.endsWith("/execute/replay")) return jsonResponse(HUB);
+      if (path.endsWith("/progress")) return jsonResponse(W3B.progress);
+      if (path.endsWith("/requested-spec")) return jsonResponse(W3B.requested_spec);
+      return jsonResponse({ error: { code: "UNEXPECTED" } }, 404);
+    });
+  }
+
+  it("scrolls the strip, jumps folds by their own cursors, and reads each fold's child audit once, on demand", async () => {
+    forgetRunIdentities();
+    const fetchMock = fetch32();
+    const { container } = mount();
+    await waitFor(() => expect(container.querySelector("[data-child-audit='0']")).toBeTruthy(), { timeout: 10_000 });
+    expect(container.querySelector("[data-fold-strip]")?.getAttribute("data-fold-strip")).toBe(String(SYNTHETIC_FOLDS));
+    expect(container.querySelector("[data-fold-strip-mode]")?.getAttribute("data-fold-strip-mode")).toBe("scroll");
+    expect(container.querySelectorAll("[data-fold-scroller] [data-fold]")).toHaveLength(SYNTHETIC_FOLDS);
+    expect(container.querySelectorAll("[data-fold-boundary]")).toHaveLength(SYNTHETIC_FOLDS - 1);
+    const audits = () => urls(fetchMock).filter((url) => url.includes("/replay/child-audit"));
+    expect(audits()).toHaveLength(1);
+
+    /* Next fold ×3 and a jump to fold 20: one window read + one child-audit read each. */
+    for (const target of [1, 2, 3]) {
+      fireEvent.click(container.querySelector("[aria-label='next fold']")!);
+      await waitFor(() => expect(container.querySelector(`[data-child-audit='${target}']`)).toBeTruthy());
+    }
+    fireEvent.click(container.querySelector("[data-fold='20']")!);
+    await waitFor(() => expect(container.querySelector("[data-child-audit='20']")).toBeTruthy());
+    expect(audits().map((url) => new URL(url, "http://x").searchParams.get("fold"))).toEqual(["0", "1", "2", "3", "20"]);
+    expect(container.querySelector("[data-fold='20']")?.getAttribute("aria-pressed")).toBe("true");
+
+    /* Playing inside a fold reads nothing; the DOM does not grow with the fold count. */
+    const before = fetchMock.mock.calls.length;
+    const nodes = container.querySelectorAll("*").length;
+    for (let step = 0; step < 40; step += 1) fireEvent.click(container.querySelector("[aria-label='step forward']")!);
+    expect(fetchMock.mock.calls.length).toBe(before);
+    expect(Math.abs(container.querySelectorAll("*").length - nodes)).toBeLessThan(20);
+    expect(container.querySelector("[data-overview-caption]")?.textContent).toContain("6,096 bars");
+  }, 60_000);
 });
