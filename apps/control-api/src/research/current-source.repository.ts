@@ -601,6 +601,72 @@ export class ResearchCurrentSourceRepository {
   }
 
   /**
+   * W5b (P17) · the observation rows whose retained bar block records a
+   * target transition, keyset-paged over the ORIGINAL observation ordinal.
+   * The ordinals are sparse by nature ({10, 12, 90}); next/previous land on
+   * the rows that exist and never on an ordinal in between. Backed by the
+   * partial index of migration 065.
+   */
+  async transitions(
+    scope: ResearchScope,
+    runId: string,
+    artifactRevision: number,
+    selection: { afterOrdinal?: number; beforeOrdinal?: number; limit: number },
+    signal?: AbortSignal,
+  ): Promise<CurrentSourcePage> {
+    return this.withScopedRead(scope, async (client) => {
+      const base = `workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = 'OBSERVATION'
+            AND (payload->'bar'->>'transition') = 'true'`;
+      const params: unknown[] = [scope.workspaceId, runId, artifactRevision];
+      let where = base;
+      let ordering = "source_ordinal ASC";
+      let reverse = false;
+      if (selection.afterOrdinal !== undefined) {
+        params.push(selection.afterOrdinal);
+        where += ` AND source_ordinal > $${params.length}`;
+      } else if (selection.beforeOrdinal !== undefined) {
+        params.push(selection.beforeOrdinal);
+        where += ` AND source_ordinal < $${params.length}`;
+        ordering = "source_ordinal DESC";
+        reverse = true;
+      }
+      params.push(selection.limit + 1);
+      const result = await client.query<SourceRowQueryRow>(
+        `SELECT source_ordinal, source_id, occurred_at_utc_ms, payload
+           FROM research.current_source_rows_v1
+          WHERE ${where}
+          ORDER BY ${ordering}
+          LIMIT $${params.length}`,
+        params,
+      );
+      const hasExtra = result.rows.length > selection.limit;
+      const pageRows = result.rows.slice(0, selection.limit);
+      if (reverse) pageRows.reverse();
+      const first = pageRows[0] ? asSafeNonNegative(pageRows[0].source_ordinal, "row ordinal") : null;
+      const last = pageRows.at(-1) ? asSafeNonNegative(pageRows.at(-1)!.source_ordinal, "row ordinal") : null;
+      const exists = async (operator: "<" | ">", ordinal: number) => (await client.query(
+        `SELECT 1 FROM research.current_source_rows_v1 WHERE ${base} AND source_ordinal ${operator} $4 LIMIT 1`,
+        [scope.workspaceId, runId, artifactRevision, ordinal],
+      )).rowCount === 1;
+      const total = await client.query<CountQueryRow>(
+        `SELECT count(*) AS count FROM research.current_source_rows_v1 WHERE ${base}`,
+        [scope.workspaceId, runId, artifactRevision],
+      );
+      return {
+        rows: pageRows.map((row) => ({
+          sourceOrdinal: asSafeNonNegative(row.source_ordinal, "row ordinal"),
+          sourceId: row.source_id,
+          occurredAtUtcMs: row.occurred_at_utc_ms === null ? null : asSafeNonNegative(row.occurred_at_utc_ms, "row timestamp"),
+          payload: asJsonRecord(row.payload, "row payload"),
+        })),
+        hasMore: last === null ? false : (!reverse && hasExtra) || await exists(">", last),
+        hasPrevious: first === null ? false : (reverse && hasExtra) || await exists("<", first),
+        totalRows: asSafeNonNegative(total.rows[0]?.count, "transition total"),
+      };
+    }, signal);
+  }
+
+  /**
    * W3 · CG-P13-05 (A02): the observation relation for a chart.
    *
    * Up to `maximum` rows, every retained row in source order (FULL). Past it,

@@ -11,6 +11,7 @@ import {
   ResearchCurrentSourceReadQuerySchema,
   ResearchCurrentSourceRunIdSchema,
   ResearchCurrentSourceSearchQuerySchema,
+  ResearchCurrentSourceTransitionsQuerySchema,
 } from "./current-source.contract";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchCurrentSourceService } from "./current-source.service";
@@ -81,6 +82,16 @@ export class ResearchCurrentSourceController {
     // token. A full refetch remains cheap/bounded and is the correct renewal.
     reply.header("cache-control", "private, no-store");
     return reply.send(await this.abortable(request, (signal) => this.service.replay(scope, runId, query, signal)));
+  }
+
+  /** W5b (P17): the close-target transition ledger, keyset over the original bar ordinal. */
+  @Get(":runId/current-source/replay/transitions")
+  async replayTransitions(@Req() request: CurrentSourceRequest, @Res() reply: FastifyReply, @Param("runId") rawRunId: string, @Query() rawQuery: unknown) {
+    const runId = this.runId(rawRunId);
+    const query = this.parse(ResearchCurrentSourceTransitionsQuerySchema, rawQuery);
+    const scope = await this.scope(request, query.workspace_id);
+    reply.header("cache-control", "private, no-store");
+    return reply.send(await this.abortable(request, (signal) => this.service.replayTransitions(scope, runId, query, signal)));
   }
 
   private runId(raw: string): string {

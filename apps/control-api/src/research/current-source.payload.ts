@@ -182,6 +182,127 @@ export const CurrentSourceFactsSchema = z.object({
   }).strict(),
 }).strict();
 
+/**
+ * W5b (P17) · one retained bar of the signal-notional final account: the
+ * candle the engine consumed, the account's own fee/turnover/funding and a
+ * running checkpoint. Mirrors `_attach_bar_ledger()` in the exporter. Absent
+ * on every seal retained before W5b.
+ */
+export const CurrentSourceBarSchema = z.object({
+  schema_version: z.literal("research.current-source-bar.v1"),
+  candle: z.object({
+    open: CurrentSourceDecimalSchema,
+    high: CurrentSourceDecimalSchema,
+    low: CurrentSourceDecimalSchema,
+    close: CurrentSourceDecimalSchema,
+    volume: CurrentSourceDecimalSchema.nullable(),
+  }).strict().nullable(),
+  fee: CurrentSourceDecimalSchema.nullable(),
+  turnover: CurrentSourceDecimalSchema.nullable(),
+  funding: CurrentSourceDecimalSchema.nullable(),
+  rejected_orders: FactCountSchema.nullable(),
+  reject_code: FactCountSchema.nullable(),
+  position_before: CurrentSourceDecimalSchema.nullable(),
+  transition: z.boolean(),
+  fold_id: FactTokenSchema.nullable(),
+  checkpoint: z.object({
+    cumulative_fee: CurrentSourceDecimalSchema.nullable(),
+    cumulative_turnover: CurrentSourceDecimalSchema.nullable(),
+    cumulative_funding: CurrentSourceDecimalSchema.nullable(),
+    transition_count: FactCountSchema,
+    rejected_orders: FactCountSchema.nullable(),
+  }).strict(),
+}).strict();
+
+const OverviewCandleSchema = z.object({
+  first_ordinal: FactCountSchema,
+  last_ordinal: FactCountSchema,
+  open_utc_ms: FactUtcMsSchema,
+  close_utc_ms: FactUtcMsSchema,
+  open: CurrentSourceDecimalSchema,
+  high: CurrentSourceDecimalSchema,
+  low: CurrentSourceDecimalSchema,
+  close: CurrentSourceDecimalSchema,
+  volume: CurrentSourceDecimalSchema.nullable(),
+  transitions: FactCountSchema,
+}).strict();
+
+/** W5b · the seal-time replay summary (`summary.replay`). */
+export const CurrentSourceReplaySummarySchema = z.object({
+  schema_version: z.literal("research.current-source-replay-summary.v1"),
+  account_contract: z.object({
+    orders_published: FactCountSchema.nullable(),
+    fills_published: FactCountSchema.nullable(),
+    trades_published: FactCountSchema.nullable(),
+    orders_count: FactCountSchema.nullable(),
+    fills_count: FactCountSchema.nullable(),
+    target_intent_kind: FactTokenSchema.nullable(),
+    intrabar_exit_model: FactTokenSchema.nullable(),
+    fill_price_policy: FactTokenSchema.nullable(),
+    same_bar_policy: FactTokenSchema.nullable(),
+    allow_partial_fill: z.boolean().nullable(),
+    slippage_bps: CurrentSourceDecimalSchema.nullable(),
+    fee_rate_oneway: CurrentSourceDecimalSchema.nullable(),
+    use_funding: z.boolean().nullable(),
+    oms_mode: FactTokenSchema.nullable(),
+    margin_mode: FactTokenSchema.nullable(),
+    report_level: FactTokenSchema.nullable(),
+    portfolio_mode: FactTokenSchema.nullable(),
+  }).strict(),
+  fold_capital: z.object({
+    account_execution: FactTokenSchema.nullable(),
+    policy: FactTokenSchema.nullable(),
+    boundary_position_policy: FactTokenSchema.nullable(),
+    boundary_events: z.array(z.object({
+      previous_fold_id: FactTokenSchema.nullable(),
+      fold_id: FactTokenSchema.nullable(),
+      boundary_utc_ms: FactUtcMsSchema.nullable(),
+      next_test_start_utc_ms: FactUtcMsSchema.nullable(),
+      gap_bars: FactCountSchema.nullable(),
+      policy: FactTokenSchema.nullable(),
+    }).strict()).max(256),
+  }).strict(),
+  totals: z.object({
+    bars: FactCountSchema,
+    transitions: FactCountSchema,
+    bars_with_turnover: FactCountSchema,
+    fee: CurrentSourceDecimalSchema.nullable(),
+    turnover: CurrentSourceDecimalSchema.nullable(),
+    funding: CurrentSourceDecimalSchema.nullable(),
+    rejected_orders: FactCountSchema.nullable(),
+  }).strict(),
+  fold_segments: z.array(z.object({
+    fold_id: FactTokenSchema,
+    first_ordinal: FactCountSchema,
+    last_ordinal: FactCountSchema,
+    bars: FactCountSchema,
+    start_basis: z.enum(["PREVIOUS_OBSERVATION", "FIRST_WINDOW_OBSERVATION"]),
+    start_equity: CurrentSourceDecimalSchema,
+    end_equity: CurrentSourceDecimalSchema,
+    start_position: CurrentSourceDecimalSchema.nullable(),
+    end_position: CurrentSourceDecimalSchema,
+    transitions: FactCountSchema,
+    fee: CurrentSourceDecimalSchema.nullable(),
+    turnover: CurrentSourceDecimalSchema.nullable(),
+  }).strict()).max(256),
+  candle_overview: z.object({
+    source_bar_count: FactCountSchema,
+    emitted_bucket_count: z.number().int().nonnegative().max(160),
+    bucket_bars: z.number().int().positive().max(2_000_000),
+    sampling: z.enum(["FULL", "OHLC_BUCKET_V1"]),
+    envelope: z.object({
+      max_high: CurrentSourceDecimalSchema,
+      max_high_at_utc_ms: FactUtcMsSchema,
+      min_low: CurrentSourceDecimalSchema,
+      min_low_at_utc_ms: FactUtcMsSchema,
+    }).strict(),
+    values: z.array(OverviewCandleSchema).max(160),
+  }).strict().nullable(),
+}).strict();
+
+export type CurrentSourceBar = z.infer<typeof CurrentSourceBarSchema>;
+export type CurrentSourceReplaySummary = z.infer<typeof CurrentSourceReplaySummarySchema>;
+
 export type CurrentSourceFoldFacts = z.infer<typeof CurrentSourceFoldFactsSchema>;
 export type CurrentSourceTrialFacts = z.infer<typeof CurrentSourceTrialFactsSchema>;
 export type CurrentSourceFacts = z.infer<typeof CurrentSourceFactsSchema>;
@@ -214,6 +335,8 @@ export const CurrentSourceSummarySchema = z.object({
   }).strict().optional(),
   // W3: run-level QuantBT facts (claims, guards, search, execution contract).
   source_facts: CurrentSourceFactsSchema.optional(),
+  // W5b (P17): the signal-notional replay ledger summary; absent before W5b.
+  replay: CurrentSourceReplaySummarySchema.optional(),
   derived: z.object({
     monthly_returns: z.object({
       source_observation_count: z.number().int().nonnegative().max(2_000_000),
@@ -255,6 +378,8 @@ export const CurrentSourceObservationPayloadSchema = z.object({
   accepted_position: CurrentSourceDecimalSchema,
   drawdown_fraction: CurrentSourceDecimalSchema,
   signal_target: CurrentSourceDecimalSchema.nullable(),
+  // W5b (P17): observations schema v2 only.
+  bar: CurrentSourceBarSchema.optional(),
 }).strict();
 
 export const CurrentSourceFoldPayloadSchema = z.object({

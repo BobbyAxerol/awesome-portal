@@ -60,6 +60,8 @@ MAXIMUM_TABLE_BATCH_ROWS: Final = 200
 MAXIMUM_DERIVED_SERIES_POINTS: Final = 192
 MAXIMUM_PARAMETER_FIELDS: Final = 24
 RETURN_DISTRIBUTION_BUCKETS: Final = 12
+# W5b: whole-run OHLC overview buckets kept in the seal summary (< 64 KiB total).
+MAXIMUM_CANDLE_OVERVIEW_BUCKETS: Final = 160
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _CURRENT_SOURCE_PROFILES: Final = {
     CURRENT_SOURCE_PROFILE_ID: (CURRENT_SOURCE_ADAPTER_ID, CURRENT_SOURCE_TARGET_MODE),
@@ -333,6 +335,9 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
             "drawdown_fraction": row.get("drawdown_fraction"),
             "signal_target": row.get("signal_target"),
         }
+        # W5b: observations schema v2 carries one declared bar block.
+        if isinstance(row.get("bar_json"), str):
+            payload["bar"] = dict(_json_object(row["bar_json"], "retained bar block"))
     elif table_kind == "folds":
         source_id = row.get("fold_id")
         at_utc_ms = None
@@ -440,27 +445,40 @@ def _decimal_object(value: object, label: str) -> Mapping[str, str]:
     return normalized
 
 
-def current_source_schema_registry() -> ArtifactSchemaRegistry:
-    """Return the finite, explicit table registry accepted by this adapter."""
+def current_source_schema_registry(*, bar_ledger: bool = False) -> ArtifactSchemaRegistry:
+    """Return the finite, explicit table registry accepted by this adapter.
+
+    ``bar_ledger`` selects the W5b observation schema v2: the v1 columns plus
+    one ``bar_json`` block per bar (the candle the engine consumed and the
+    final account's own fee/turnover/funding for that bar, with running
+    checkpoints). A source tree without ``series/account_ledger.v1.parquet``
+    keeps the v1 schema byte-for-byte.
+    """
 
     exact_decimal = pa.string()
     ordinal = pa.int64()
     utc_ms = pa.int64()
     json_text = pa.string()
+    observation_fields = [
+        pa.field("source_ordinal", ordinal, nullable=False),
+        pa.field("source_index_utc", pa.string(), nullable=False),
+        pa.field("at_utc_ms", utc_ms, nullable=False),
+        pa.field("equity", exact_decimal, nullable=False),
+        pa.field("return_fraction", exact_decimal, nullable=False),
+        pa.field("accepted_position", exact_decimal, nullable=False),
+        pa.field("drawdown_fraction", exact_decimal, nullable=False),
+        pa.field("signal_target", exact_decimal, nullable=True),
+    ]
+    if bar_ledger:
+        observation_fields.append(pa.field("bar_json", json_text, nullable=False))
     return ArtifactSchemaRegistry((
         ArtifactTableSchema(
             table_kind="observations",
-            schema_version="research.current-source-observations.v1",
-            arrow_schema=pa.schema((
-                pa.field("source_ordinal", ordinal, nullable=False),
-                pa.field("source_index_utc", pa.string(), nullable=False),
-                pa.field("at_utc_ms", utc_ms, nullable=False),
-                pa.field("equity", exact_decimal, nullable=False),
-                pa.field("return_fraction", exact_decimal, nullable=False),
-                pa.field("accepted_position", exact_decimal, nullable=False),
-                pa.field("drawdown_fraction", exact_decimal, nullable=False),
-                pa.field("signal_target", exact_decimal, nullable=True),
-            )),
+            schema_version=(
+                "research.current-source-observations.v2" if bar_ledger
+                else "research.current-source-observations.v1"
+            ),
+            arrow_schema=pa.schema(observation_fields),
             sequence_column="source_ordinal",
             id_column="source_index_utc",
             units={
@@ -590,6 +608,21 @@ class CurrentSourceArtifactAdapter:
             objective_terms=self._objective_terms(config),
         )
         selection_rows = [self._selection_row(selection)]
+        # W5b (P17): the final account's per-bar ledger and its counted
+        # order/fill/trade facts. Optional, so an older source tree keeps its
+        # v1 observation schema, its digest and its summary exactly.
+        account_ledger = self._optional_frame(raw_dir / "series" / "account_ledger.v1.parquet", "account ledger")
+        account_contract = self._optional_json(raw_dir / "wfo" / "account_contract.v1.json", "account contract")
+        replay_summary = None
+        if account_ledger is not None:
+            replay_summary = self._attach_bar_ledger(
+                observations,
+                stitched=self._read_frame(raw_dir / "series" / "stitched.parquet", "stitched series"),
+                ledger=account_ledger,
+                folds=folds,
+                account_contract=account_contract,
+                source_contract=source_contract,
+            )
         self._assert_admitted_output_bounds(
             observations=observations,
             folds=folds,
@@ -609,11 +642,15 @@ class CurrentSourceArtifactAdapter:
             # Only when present, so an older source tree keeps its digest.
             **{
                 key: value
-                for key, value in (("source_contract", source_contract), ("selected_fold_metrics", fold_metrics))
+                for key, value in (
+                    ("source_contract", source_contract),
+                    ("selected_fold_metrics", fold_metrics),
+                    ("account_contract", account_contract if account_ledger is not None else None),
+                )
                 if value is not None
             },
         )
-        registry = current_source_schema_registry()
+        registry = current_source_schema_registry(bar_ledger=account_ledger is not None)
         summary = self._summary(
             observations=observations,
             folds=folds,
@@ -629,6 +666,8 @@ class CurrentSourceArtifactAdapter:
                 selection=selection_rows[0],
             ),
         )
+        if replay_summary is not None:
+            summary["replay"] = replay_summary
         if len(json.dumps(canonicalize(summary), ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")) > 65_536:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE",
@@ -666,6 +705,8 @@ class CurrentSourceArtifactAdapter:
                 writer.write_small_document("source_contract", self._document(source_contract))
             if fold_metrics is not None:
                 writer.write_small_document("source_selected_fold_metrics", self._document(fold_metrics))
+            if account_ledger is not None and account_contract is not None:
+                writer.write_small_document("source_account_contract", self._document(account_contract))
             writer.write_small_document("current_source_summary", self._document(summary))
             candidate = writer.seal()
         except BaseException:
@@ -967,6 +1008,265 @@ class CurrentSourceArtifactAdapter:
             }
             record["fold_facts"] = facts
             fold["payload_json"] = self._canonical_json(record)
+
+    # ---------------------------------------------------------- W5b bars
+
+    def _attach_bar_ledger(
+        self,
+        observations: list[dict[str, Any]],
+        *,
+        stitched: pd.DataFrame,
+        ledger: pd.DataFrame,
+        folds: list[dict[str, Any]],
+        account_contract: Mapping[str, Any] | None,
+        source_contract: Mapping[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Add one ``bar_json`` block per observation and return the replay summary.
+
+        Each block holds what QuantBT's final account consumed and produced on
+        that bar: the candle (the analysed HMD bar in ``stitched.parquet``),
+        the fee, turnover, funding and rejected-order count (the account's own
+        series), and running checkpoints so a far seek reads the same state a
+        sequential replay would reach. ``transition`` is a change of the
+        engine's accepted position — the close-target route's only execution
+        event; it is never called a fill.
+        """
+
+        if len(stitched) != len(observations):
+            raise CurrentSourceArtifactError(
+                "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID",
+                "The stitched series and the retained observations disagree on bar count.",
+            )
+        aligned = ledger.reindex(stitched.index)
+        has_candle = {"open", "high", "low", "close"}.issubset(stitched.columns)
+        windows = [
+            (fold["fold_id"], fold["test_start_utc_ms"], fold["test_end_utc_ms"])
+            for fold in folds
+            if fold["test_start_utc_ms"] is not None and fold["test_end_utc_ms"] is not None
+        ]
+        columns = set(aligned.columns)
+        cumulative = {
+            name: (Decimal("0") if name in columns else None)
+            for name in ("fee", "turnover", "funding")
+        }
+        rejected_total = 0 if "rejected_orders" in columns else None
+        transitions = 0
+        bars_with_turnover = 0
+        previous_position: Decimal | None = None
+        for ordinal, (observation, (index, bar), (_, account)) in enumerate(
+            zip(observations, stitched.iterrows(), aligned.iterrows(), strict=True)
+        ):
+            timestamp = self._utc_timestamp(index, "bar")
+            if int(timestamp.value // 1_000_000) != observation["at_utc_ms"]:
+                raise CurrentSourceArtifactError(
+                    "RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID",
+                    "A bar ledger row is not aligned with its retained observation.",
+                )
+            position = Decimal(str(observation["accepted_position"]))
+            # QuantBT opens the account flat and never executes target[0]
+            # (`first_bar_target_policy`), so bar 0 transitions only if the
+            # engine itself reports a non-zero accepted position there.
+            transition = position != (previous_position if previous_position is not None else Decimal("0"))
+            transitions += int(transition)
+            values: dict[str, str | None] = {}
+            for name in ("fee", "turnover", "funding"):
+                values[name] = self._nullable_decimal(account.get(name), f"bar {name}") if name in columns else None
+                if values[name] is not None:
+                    cumulative[name] = (cumulative[name] or Decimal("0")) + Decimal(values[name])
+            if values["turnover"] is not None and Decimal(values["turnover"]) != 0:
+                bars_with_turnover += 1
+            rejected = self._fact_int(account.get("rejected_orders")) if "rejected_orders" in columns else None
+            if rejected is not None and rejected_total is not None:
+                rejected_total += rejected
+            at = observation["at_utc_ms"]
+            fold_id = next((fold for fold, start, end in windows if start <= at <= end), None)
+            block = {
+                "schema_version": "research.current-source-bar.v1",
+                "candle": None if not has_candle else {
+                    "open": self._decimal(bar["open"], "bar open"),
+                    "high": self._decimal(bar["high"], "bar high"),
+                    "low": self._decimal(bar["low"], "bar low"),
+                    "close": self._decimal(bar["close"], "bar close"),
+                    "volume": self._nullable_decimal(bar.get("volume"), "bar volume"),
+                },
+                "fee": values["fee"],
+                "turnover": values["turnover"],
+                "funding": values["funding"],
+                "rejected_orders": rejected,
+                "reject_code": self._fact_int(account.get("reject_code")) if "reject_code" in columns else None,
+                "position_before": None if previous_position is None else self._decimal(previous_position, "position before"),
+                "transition": transition,
+                "fold_id": fold_id,
+                "checkpoint": {
+                    "cumulative_fee": None if cumulative["fee"] is None else self._decimal(cumulative["fee"], "cumulative fee"),
+                    "cumulative_turnover": None if cumulative["turnover"] is None else self._decimal(cumulative["turnover"], "cumulative turnover"),
+                    "cumulative_funding": None if cumulative["funding"] is None else self._decimal(cumulative["funding"], "cumulative funding"),
+                    "transition_count": transitions,
+                    "rejected_orders": rejected_total,
+                },
+            }
+            observation["bar_json"] = self._canonical_json(block)
+            previous_position = position
+        return self._replay_summary(
+            observations,
+            folds=windows,
+            account_contract=account_contract,
+            source_contract=source_contract,
+            totals={
+                "bars": len(observations),
+                "transitions": transitions,
+                "bars_with_turnover": bars_with_turnover,
+                "fee": None if cumulative["fee"] is None else self._decimal(cumulative["fee"], "total fee"),
+                "turnover": None if cumulative["turnover"] is None else self._decimal(cumulative["turnover"], "total turnover"),
+                "funding": None if cumulative["funding"] is None else self._decimal(cumulative["funding"], "total funding"),
+                "rejected_orders": rejected_total,
+            },
+            has_candle=has_candle,
+        )
+
+    def _replay_summary(
+        self,
+        observations: list[dict[str, Any]],
+        *,
+        folds: list[tuple[str, int, int]],
+        account_contract: Mapping[str, Any] | None,
+        source_contract: Mapping[str, Any] | None,
+        totals: Mapping[str, Any],
+        has_candle: bool,
+    ) -> dict[str, Any]:
+        contract = account_contract or {}
+        plan = contract.get("account_execution_plan") if isinstance(contract.get("account_execution_plan"), Mapping) else None
+        walk_forward = source_contract.get("walk_forward") if isinstance(source_contract, Mapping) and isinstance(source_contract.get("walk_forward"), Mapping) else {}
+        events = []
+        if plan is not None and isinstance(plan.get("boundary_events"), list):
+            for event in plan["boundary_events"]:
+                if not isinstance(event, Mapping):
+                    continue
+                events.append({
+                    "previous_fold_id": self._nullable_identifier(None if event.get("previous_fold_id") is None else str(event.get("previous_fold_id"))),
+                    "fold_id": self._nullable_identifier(None if event.get("fold_id") is None else str(event.get("fold_id"))),
+                    "boundary_utc_ms": self._nullable_utc_ms(event.get("boundary_timestamp"), "fold boundary"),
+                    "next_test_start_utc_ms": self._nullable_utc_ms(event.get("next_test_start"), "next test start"),
+                    "gap_bars": self._fact_int(event.get("gap_bars")),
+                    "policy": self._fact_token(event.get("policy")),
+                })
+        segments = []
+        for fold_id, start, end in folds:
+            inside = [index for index, row in enumerate(observations) if start <= row["at_utc_ms"] <= end]
+            if not inside:
+                continue
+            first, last = inside[0], inside[-1]
+            bars = [json.loads(observations[index]["bar_json"]) for index in inside]
+            before = observations[first - 1] if first > 0 else None
+
+            def total(name: str) -> str | None:
+                values = [bar[name] for bar in bars]
+                if any(value is None for value in values):
+                    return None
+                return self._decimal(sum((Decimal(value) for value in values), Decimal("0")), f"fold {name}")
+
+            segments.append({
+                "fold_id": fold_id,
+                "first_ordinal": first,
+                "last_ordinal": last,
+                "bars": len(inside),
+                "start_basis": "PREVIOUS_OBSERVATION" if before is not None else "FIRST_WINDOW_OBSERVATION",
+                "start_equity": (before or observations[first])["equity"],
+                "end_equity": observations[last]["equity"],
+                "start_position": None if before is None else before["accepted_position"],
+                "end_position": observations[last]["accepted_position"],
+                "transitions": sum(1 for bar in bars if bar["transition"]),
+                "fee": total("fee"),
+                "turnover": total("turnover"),
+            })
+        return {
+            "schema_version": "research.current-source-replay-summary.v1",
+            "account_contract": {
+                "orders_published": self._fact_int(contract.get("orders_published")),
+                "fills_published": self._fact_int(contract.get("fills_published")),
+                "trades_published": self._fact_int(contract.get("trades_published")),
+                "orders_count": self._fact_int(contract.get("orders_count")),
+                "fills_count": self._fact_int(contract.get("fills_count")),
+                "target_intent_kind": self._fact_token(contract.get("target_intent_kind")),
+                "intrabar_exit_model": self._fact_token(contract.get("intrabar_exit_model")),
+                "fill_price_policy": self._fact_token(contract.get("fill_price_policy")),
+                "same_bar_policy": self._fact_token(contract.get("same_bar_policy")),
+                "allow_partial_fill": self._fact_bool(contract.get("allow_partial_fill")),
+                "slippage_bps": self._fact_decimal(contract.get("slippage_bps"), "slippage bps"),
+                "fee_rate_oneway": self._fact_decimal(contract.get("fee_rate_oneway"), "one-way fee rate"),
+                "use_funding": self._fact_bool(contract.get("use_funding")),
+                "oms_mode": self._fact_token(contract.get("oms_mode")),
+                "margin_mode": self._fact_token(contract.get("margin_mode")),
+                "report_level": self._fact_token(contract.get("report_level")),
+                "portfolio_mode": self._fact_token(contract.get("portfolio_mode")),
+            },
+            "fold_capital": {
+                "account_execution": self._fact_token(
+                    (plan or {}).get("execution_mode") or walk_forward.get("account_execution"),
+                ),
+                "policy": self._fact_token((plan or {}).get("policy") or walk_forward.get("fold_account_policy")),
+                "boundary_position_policy": self._fact_token(walk_forward.get("fold_boundary_position_policy")),
+                "boundary_events": events,
+            },
+            "totals": dict(totals),
+            "fold_segments": segments,
+            "candle_overview": self._candle_overview(observations) if has_candle else None,
+        }
+
+    def _candle_overview(self, observations: list[dict[str, Any]]) -> dict[str, Any]:
+        """At most 160 OHLC buckets over the whole run, extrema kept by construction.
+
+        A bucket's high is the maximum high and its low the minimum low of the
+        bars it covers; open is the first bar's open and close the last bar's
+        close. Downsampling can therefore never hide the run's price range.
+        """
+
+        count = len(observations)
+        bucket_bars = max(1, math.ceil(count / MAXIMUM_CANDLE_OVERVIEW_BUCKETS))
+        values = []
+        max_high: tuple[Decimal, int] | None = None
+        min_low: tuple[Decimal, int] | None = None
+        for start in range(0, count, bucket_bars):
+            members = observations[start : start + bucket_bars]
+            bars = [json.loads(row["bar_json"]) for row in members]
+            highs = [Decimal(bar["candle"]["high"]) for bar in bars]
+            lows = [Decimal(bar["candle"]["low"]) for bar in bars]
+            high, low = max(highs), min(lows)
+            high_at = members[highs.index(high)]["at_utc_ms"]
+            low_at = members[lows.index(low)]["at_utc_ms"]
+            if max_high is None or high > max_high[0]:
+                max_high = (high, high_at)
+            if min_low is None or low < min_low[0]:
+                min_low = (low, low_at)
+            volumes = [bar["candle"]["volume"] for bar in bars]
+            values.append({
+                "first_ordinal": start,
+                "last_ordinal": start + len(members) - 1,
+                "open_utc_ms": members[0]["at_utc_ms"],
+                "close_utc_ms": members[-1]["at_utc_ms"],
+                "open": bars[0]["candle"]["open"],
+                "high": self._decimal(high, "bucket high"),
+                "low": self._decimal(low, "bucket low"),
+                "close": bars[-1]["candle"]["close"],
+                "volume": None if any(volume is None for volume in volumes) else self._decimal(
+                    sum((Decimal(volume) for volume in volumes), Decimal("0")), "bucket volume",
+                ),
+                "transitions": sum(1 for bar in bars if bar["transition"]),
+            })
+        assert max_high is not None and min_low is not None  # count >= 1
+        return {
+            "source_bar_count": count,
+            "emitted_bucket_count": len(values),
+            "bucket_bars": bucket_bars,
+            "sampling": "FULL" if bucket_bars == 1 else "OHLC_BUCKET_V1",
+            "envelope": {
+                "max_high": self._decimal(max_high[0], "max high"),
+                "max_high_at_utc_ms": max_high[1],
+                "min_low": self._decimal(min_low[0], "min low"),
+                "min_low_at_utc_ms": min_low[1],
+            },
+            "values": values,
+        }
 
     def _fold_guards(self, record: Mapping[str, Any] | None) -> dict[str, Any] | None:
         if record is None:
