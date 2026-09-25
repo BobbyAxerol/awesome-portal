@@ -107,7 +107,7 @@ The P17 gate command mixes the three P17 files (2 + 2 + 8 = **12** tests) with t
 | T14 stitched handoff chip title | Tested (policy wording) | FE fold switch test |
 | T15 fold ‹ › : transport stops, seq0 | Tested (fold reads start cursor; `load` stops play) | FE fold tests |
 | T16 far seek no lock | Window kept, `inFlight` inline | FE/useReplay |
-| T17 32-fold strip | Strip wraps; not measured at 32 folds (only 2-fold real run) | open |
+| T17 32-fold strip | Tested on a synthetic 32-fold run (§11): scrolling snap strip, ‹ › and click, one window + one child-audit read per fold, no overflow at 1440/660, DOM bounded | FE T17 test; browser probe |
 | T18 hidden tab pause | Tested | `executeReplay.test.tsx` |
 | T19 keys | Tested | `executeReplay.test.tsx` |
 | T20 660px | Browser probe, no overflow | §7 |
@@ -178,6 +178,43 @@ Screenshots (not committed, SHA-256): `ledger-1440` 59f54609…, `ledger-660` 60
 - 660: the same, after two fixes. The child-audit table's scroll container is now focusable, and card headings are `h2` under the page `h1`. Before the fixes, axe reported `scrollable-region-focusable` and a moderate `heading-order`.
 - DOM stayed at 2396 nodes while playing a fold at 64×.
 - Screenshots are not committed. SHA-256: `ledger-1440` 65638f35…, `ledger-660` ad8fda6e…, `ledger-reveal-1440` 8ffddd10…, `ledger-reveal-660` de4ea8eb….
+
+## 11. Follow-up · S08 T17 at 32 folds (2026-09-25, coordinator request)
+
+**Fixture.** `apps/portal/frontend/src/research/w5bFoldScale.fixture.ts` builds a 32-fold run from the published real-HMD fixture. It keeps the same schema and is used by tests and the probe only.
+- The real fold-0 window (168 bars) is kept as it is.
+- `execution.fold_capital` becomes 32 weekly folds of 168 bars each, after the same 720-bar in-sample span, for 6,096 bars in all.
+- There are 31 carry-position boundaries. Equity is chained from the real fold 0 and fold 1 numbers.
+- The overview is rescaled to 6,096 bars.
+- Each fold gets its own opaque start cursor. A fold read returns the real bars relabelled with that fold id, and a child-audit read returns the real fold-0 audit relabelled.
+- It claims nothing about a real run. On screen, the window caption still shows the real bars' ordinals (721–888) beside the synthetic fold's range, which is expected.
+
+**Change (D18).** With more than 12 folds, the fold strip becomes a single horizontally scrolling, snapping row on its own full-width line (spec 08 §2.2). Keyboard users can focus and scroll it (`role=region`), and it keeps the active fold scrolled into view. With 12 folds or fewer the strip wraps as before.
+
+The first browser pass caught a real defect at 660: the scroller shrank to a sliver beside its caption. It now sits on its own row, and the probe asserts its width: more than 500 px at 660 and more than 900 px at 1440.
+
+**Assertions.**
+
+*Unit test (`executeCandleReplay.test.tsx`, "S08 T17"):*
+- The strip is in scroll mode, with 32 fold buttons and 31 boundaries.
+- Arrival reads the child audit of fold 0 only.
+- Three steps of "next fold" and one click on fold 20 read the child audit for exactly folds 0, 1, 2, 3 and 20, in that order.
+- 40 transport steps send no request and add fewer than 20 DOM nodes.
+- The overview caption reads 6,096 bars.
+
+*Browser probe, fixture lane, 1440 and 660:*
+- Walking through all 31 folds with ‹ › and then clicking fold 5 reads 33 child audits: one per fold visit (32) plus the return to fold 5.
+- Fold 31 and then fold 5 are scrolled into view.
+- No horizontal overflow.
+- Playing a fold at 64× sends no request. DOM stays at 2547 → 2547 nodes at both widths.
+- Axe finds no blocking violations; the only finding is the approved D-B1 `#939db0` contrast exception.
+- The console stays clean.
+
+**Gates.**
+- Frontend `src/research` plus `r2Ledger`: 1164/1164. `tsc` is clean and the build passes.
+- S08 browser probe: 6/6. That is the preview lane, the ledger lane and the T17 lane, each at 1440 and 660.
+
+Screenshots are not committed. SHA-256: `folds32-1440` 6fe42068…, `folds32-660` edae1649….
 
 ## 9. Rollback
 
