@@ -89,8 +89,27 @@ function privateResponse(spec: ResearchRequestedSpec): ResearchPreflightPrivateR
       row_count: 336, byte_count: 16_384, query: range, logical_range: range, warmup: { ...range, requested_bars: 0, state: "BOUNDARY_ONLY_NOT_FIT" },
       timezone: "UTC", calendar_policy: "CRYPTO_24_7", closed_bar_policy: "CLOSED_BARS_ONLY", columns: ["open", "high", "low", "close", "volume"],
       quality: { passed: true, rows: 336, gaps: 0, duplicates: 0, gap_ratio: 0, reason_codes: [], missing_bar_count: 0, state: "SNAPSHOT_INTEGRITY_ONLY" }, provenance: { loader_contract: "hmd-loader-v1" },
+      // W4 CG-P08-06: the per-window gap scan and read-only holdout seal the
+      // Python producer now seals beside the topology.
+      gap_scan: {
+        state: "SCANNED", reason: null, max_gap_ratio: 0.05,
+        classification: "WATCH when a window misses any bar; CRITICAL when its missing ratio exceeds the snapshot quality profile. The source publishes no per-run severity.",
+        windows: [
+          { window: "IS", start_utc_ms: 1_767_484_800_000, end_exclusive_utc_ms: 1_768_003_200_000, state: "SCANNED", bars: 144, expected_bars: 144, missing_bars: 0, gap_runs: 0, verdict: "PASS", items: [], items_omitted: 0, note: null },
+          { window: "OOS", start_utc_ms: 1_768_003_200_000, end_exclusive_utc_ms: 1_768_348_800_000, state: "SCANNED", bars: 96, expected_bars: 96, missing_bars: 0, gap_runs: 0, verdict: "PASS", items: [], items_omitted: 0, note: null },
+          { window: "holdout", start_utc_ms: 1_768_348_800_000, end_exclusive_utc_ms: 1_768_694_400_000, state: "SEALED", bars: null, expected_bars: null, missing_bars: null, gap_runs: null, verdict: null, items: [], items_omitted: 0, note: "sealed — integrity checked at snapshot time, content unread" },
+        ],
+      },
+      holdout_seal: {
+        schema_version: "research.holdout-seal.v1", seal_digest: "f".repeat(64),
+        digest_basis: "sha256 of the half-open holdout range, its bar count, the snapshot content hash and the source manifest digest",
+        read_log: { state: "NO_READER", reads: [], reason: "No Research route or worker reads sealed holdout values; P08 returns boundaries only." },
+        unlock: { state: "OWNER_SCOPE_REQUIRED", reason: "DR-01: no holdout unlock authority, route or actor is published; nothing may unseal or evaluate it." },
+        cap: { state: "NOT_PUBLISHED", reason: "QuantBT 1.1.1 publishes no per-mode certification cap (CG-P04-05), so no holdout cap is claimed." },
+      },
     },
-    topology, resource_estimate: { schema_version: "research.resource-estimate.v1", scope: "per_study_per_fold_per_seed; no product-wide trial claim is implied", trial_count: spec.optuna_trials, seed_count: 1, outer_fold_count: 1, evaluation_count: spec.optuna_trials, raw_frame_bytes: 16_384, snapshot_bytes: 16_384, estimated_memory_bytes: 8_388_608, estimated_scratch_bytes: 32_768, estimated_cpu_seconds: 1, admission_state: "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING", disclosure: "Estimate only. P10 must reserve worker resources." },
+    topology, resource_estimate: { schema_version: "research.resource-estimate.v1", scope: "per_study_per_fold_per_seed; no product-wide trial claim is implied", trial_count: spec.optuna_trials, seed_count: 1, outer_fold_count: 1, evaluation_count: spec.optuna_trials, raw_frame_bytes: 16_384, snapshot_bytes: 16_384, estimated_memory_bytes: 8_388_608, estimated_scratch_bytes: 32_768, estimated_cpu_seconds: 1, admission_state: "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING", disclosure: "Estimate only. P10 must reserve worker resources.",
+      ceilings: { trial_ceiling: 4000, sweep_dimension_ceiling: 8, swept_dimensions: 0, outer_fold_ceiling: 128, estimated_cpu_seconds_ceiling: 86_400 } },
     capability,
   };
 }
@@ -165,8 +184,12 @@ describe("Research Loop P08 · data snapshots, effective spec and preflight", ()
     expect({
       ...result,
       preflight_token: "rpft_fixture",
+      issued_at_utc_ms: 0,
       expires_at_utc_ms: 0,
     }).toEqual(fixture);
+    // W4 CG-P08-03/05: every gate the manifest records is a PASS row with a path.
+    expect(result.gates?.filter((gate) => gate.state === "NOT_RECORDED")).toEqual([]);
+    expect(result.gates?.find((gate) => gate.gate === "sweep_ceiling")?.field_path).toEqual(["parameter_space_overrides"]);
     expect(result).toMatchObject({ schema_version: "research.preflight.v1", may_create_run: false, requested_spec_digest: sha256ResearchJson(spec), capability: { preflight_admission: "PREFLIGHT_ONLY" } });
     expect(result.snapshot.closed_bar_policy).toBe("CLOSED_BARS_ONLY");
     expect(client.calls[0]).toMatchObject({ requiredColumns: ["open", "high", "low", "close", "volume"], warmupBars: 0, requiresFunding: false });

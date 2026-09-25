@@ -601,6 +601,52 @@ class HistoricalMarketDataProvider:
             ),
         )
 
+    #: The approved reader's documented layout for the Binance USD-M 1m store
+    #: (release manifest: canonical component crypto/binance_futures/1m,
+    #: partition_layout_version hive-symbol-year-month-v1).
+    FUTURES_1M_COMPONENT = ("crypto", "binance_futures", "1m")
+    MAXIMUM_LISTED_SYMBOLS = 512
+
+    def research_symbol_catalog(self, dataset_id: str) -> tuple[dict[str, object], ...]:
+        """CG-P08-04: symbols and month-partition coverage, from names only.
+
+        Lists directory names of the accepted storage release; never opens a
+        data file. Coverage is partition granularity, not the exact first or
+        last bar. A quarterly contract keeps its expiry suffix.
+        """
+        if dataset_id != CRYPTO_BINANCE_DATASET_ID or self._runtime is None:
+            raise DatasetNotFoundError(f"no symbol catalog for dataset_id: {dataset_id}")
+        root = self._runtime.storage_root.joinpath(*self.FUTURES_1M_COMPONENT)
+        rows: list[dict[str, object]] = []
+        for symbol_dir in sorted(root.glob("symbol=*")):
+            if len(rows) >= self.MAXIMUM_LISTED_SYMBOLS or not symbol_dir.is_dir():
+                continue
+            symbol = symbol_dir.name.split("=", 1)[1].upper()
+            if not _SYMBOL_PATTERN.fullmatch(symbol):
+                continue
+            months = sorted(
+                (int(year_dir.name[5:]), int(month_dir.name[6:]))
+                for year_dir in symbol_dir.glob("year=*")
+                if year_dir.name[5:].isdigit()
+                for month_dir in year_dir.glob("month=*")
+                if month_dir.name[6:].isdigit()
+            )
+            rows.append(
+                {
+                    "symbol": symbol,
+                    "contract_kind": "QUARTERLY" if re.search(r"_[0-9]{6}$", symbol) else "PERPETUAL",
+                    "coverage": None
+                    if not months
+                    else {
+                        "first_month": f"{months[0][0]:04d}-{months[0][1]:02d}",
+                        "last_month": f"{months[-1][0]:04d}-{months[-1][1]:02d}",
+                        "months": len(months),
+                        "granularity": "MONTH_PARTITION",
+                    },
+                }
+            )
+        return tuple(rows)
+
     def _new_loader(self):
         if self._loader_factory is not None:
             return self._loader_factory()

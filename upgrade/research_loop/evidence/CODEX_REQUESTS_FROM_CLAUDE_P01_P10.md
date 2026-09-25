@@ -64,7 +64,7 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 | Id | Gap → need | Blocks | Done when | Status |
 |---|---|---|---|---|
 | `CG-P02-01` | Generated `RequestedSpec` (`research-preflight.d.ts:348`) makes `$defs` required; `preflight.contract.ts` is `.strict()` → 400. Remove `$defs` from the wire type | S02 preflight on the real API | generated type has no `$defs`; a payload built from the type passes preflight | DELIVERED `3bb91fa5` · `research-preflight.d.ts:RequestedSpec` |
-| `CG-P02-02` | Fields for purge / embargo / label horizon, inner folds (`inner_split_frequency`, `inner_window_mode`, `inner_train_window`) and rolling train width (with P04/P08) | S02 advanced WF, rolling toggle; S05 purge/embargo/inner folds | requested-spec v-next + preflight admission; unsupported values refused with typed reasons | OPEN |
+| `CG-P02-02` | Fields for purge / embargo / label horizon, inner folds (`inner_split_frequency`, `inner_window_mode`, `inner_train_window`) and rolling train width (with P04/P08) | S02 advanced WF, rolling toggle; S05 purge/embargo/inner folds | requested-spec v-next + preflight admission; unsupported values refused with typed reasons | DELIVERED `bd25e790` · requested-spec v2, engine-built plan; P10 refuses v2 (no executor) · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
 | `CG-P02-03` | Capital / fee / slippage / sizing target | S02 review row | only if Bobby keeps it (DQ-12) | NOT_PUBLISHED · Bobby DQ-12: leave assumptions row out until versioned requested-spec facts exist |
 
 ## P04 — engine catalog / Atlas
@@ -73,10 +73,10 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 |---|---|---|---|
 | `CG-P04-02` | `mode_1_decay × per_fold_causal` absent from `research-engine-catalog.v1.json:343` though QuantBT 1.1.1 supports it (`walkforward.py:532-545`) — publish it, NOT_ADMITTED with reason if inner-fold fields are missing | S12 Rule One, default chip; S02 schedule options | DELIVERED `57cf04ee` · `research-foundation.d.ts:AtlasMode.invalid_schedules` · `{schedule:"per_fold_causal",admission:"NOT_ADMITTED",reason:"...inner_split_frequency...",source:[...]}` |
 | `CG-P04-03` | Reason per invalid schedule (`invalid_schedules[{schedule, reason, source}]`) | S12 struck chips "with the reason" | DELIVERED `05b4e96c` · `research-foundation.d.ts:AtlasMode.invalid_schedules` · all 15 mode×schedule pairs partitioned into admitted or sourced `NOT_ADMITTED`; example `{schedule:"per_fold_decay",reason:"...requires mode_1_decay...",source:[...]}` |
-| `CG-P04-04` | `oos_use` 4 states + n/a (selection input · withheld until S4 · retrospective · report only) | S12 claim block, S02 claim forecast | OPEN |
+| `CG-P04-04` | `oos_use` 4 states + n/a (selection input · withheld until S4 · retrospective · report only) | S12 claim block, S02 claim forecast | DELIVERED `bd2b60d1` · `AtlasScheduleFact.oos_use_state` · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
 | `CG-P04-05` | `cert_cap`, `avoid_when` typed only as NOT_PUBLISHED: rule they stay unpublished for 1.1.1 (and say so in the contract doc) or allow a value | S12 cap chip, S02/S05 cap | NOT_PUBLISHED · QuantBT 1.1.1 has no per-mode cert cap or avoid-when guidance; `AtlasNotPublishedFact` reason + cert source locator; see RF-03 packet |
-| `CG-P04-06` | Route description, method (wfo/tape), status word, resolved backend, arbitrage per-spec matrix, `route_params` option lists | S12 routes tab, S02 route grid + 4 route forms | OPEN |
-| `CG-P04-07` | Claims certification qualifier + locators; objective term meanings; mode 2–5 weights | S12 claims tab, term table | OPEN |
+| `CG-P04-06` | Route description, method (wfo/tape), status word, resolved backend, arbitrage per-spec matrix, `route_params` option lists | S12 routes tab, S02 route grid + 4 route forms | DELIVERED `bd2b60d1` · `AtlasRoute.engine_facts/status_word` · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
+| `CG-P04-07` | Claims certification qualifier + locators; objective term meanings; mode 2–5 weights | S12 claims tab, term table | DELIVERED `bd2b60d1` · `ClaimDescriptor.qualifier`, `AtlasObjectiveFact.terms/weights` · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
 | `CG-P04-08` | Engine sub-stage vocabulary for the S03 stepper | S03 11-pill stepper | NOT_PUBLISHED · Bobby DQ-04: five contract stages only; no 11 engine sub-stage source |
 
 ## P05 — artifact authority
@@ -102,8 +102,8 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
 | `CG-P07-02` | v1 file contract (literal `ALPHA_CONTRACT` + one function) vs the HiFi's class/dataclass module | S14 anatomy, entrypoint card | NOT_PUBLISHED · Bobby DQ-05: v1 literal ALPHA_CONTRACT and one function; class/dataclass not a published parser variant |
-| `CG-P07-03` | Mirror: add `version`; HiFi's 14 fields where the source has them; per-field check verdict + note | S14 mirror table | OPEN |
-| `CG-P07-04` | Gates: `RUNNING`, analyser time per gate, `QUARANTINED_*` codes, parse `expires_at`, declared digest to verify | S14 pipeline card | OPEN |
+| `CG-P07-03` | Mirror: add `version`; HiFi's 14 fields where the source has them; per-field check verdict + note | S14 mirror table | DELIVERED within DQ-05 `28cc9e63` · 16-row mirror, not-in-v1 fields never filled · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
+| `CG-P07-04` | Gates: `RUNNING`, analyser time per gate, `QUARANTINED_*` codes, parse `expires_at`, declared digest to verify | S14 pipeline card | DELIVERED `28cc9e63` (per-gate analyser time); RUNNING = client in-flight state (decision, synchronous gates) · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
 | `CG-P07-05` | `RegistryEntry`: `supersedes`, display name, `strategy_id`, `warmup_bars`, `required_columns`, full digest | S02 context/strategy/data steps, S14 registry strip | DELIVERED `a1926f25` + `349657bb` · `research-alpha-import.d.ts:RegistryEntry/AlphaVersionDeclaration`; `{supersedes:null,supersedes_state:"RECORDED",display_name:"Alpha demo",strategy_id:"alpha-demo",warmup_bars:32}`; historical predecessor is typed `HISTORICAL_NOT_RECORDED` |
 | `CG-P07-06` | `may_activate` is actor permission; combine with typed lifecycle DRAFT for first-activation affordance; ACTIVE exact replay remains idempotent | S14 activate affordance | DELIVERED `8f0c4c4e` · `research-alpha-import.d.ts:RegistryEntry`; [RF-03 ruling](./RF-03/README.md) |
 **RF-03 P07 registry checkpoint `a1926f25` (2026-09-23):** The list now emits database-backed `display_name`, `strategy_id=alpha_id` (approved DQ-07), full `source_digest`, and source-validated `declaration.required_columns/warmup_bars`; the AST mirror adds literal `version`. Generated `research-alpha-import.d.ts:RegistryEntry/AlphaVersionDeclaration` fields are additive during FE rollout; current server emits them. Canonical example: `{display_name:"Alpha demo",strategy_id:"alpha-demo",source_digest:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",declaration:{required_columns:["open","high","low","close","volume"],warmup_bars:32}}`. `CG-P07-05` is DELIVERED by migration `0057`: new versions retain registration-time supersession; pre-migration rows are typed historical-unknown. `CG-P07-03` remains OPEN for the unverified 14-field mirror. Proof: parser 9/9, P07 disposable PostgreSQL 9/9, contracts 5/5, Control API build, frontend TypeScript and full pre-commit 117/117 files, 813/813 tests. P07/P08 warmup ceiling is aligned at 100000 (`348632e5`); no activation/runtime changed.
@@ -113,11 +113,11 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
-| `CG-P08-02` | Rolling window mode (train width, with `CG-P02-02`) | S02 toggle, S05 rolling | OPEN |
-| `CG-P08-03` | Per-gate preflight list; typed reasons + `field_path` when `may_create_run=false`; `field_path[]` on 400 | S02 preflight result, error → step | OPEN |
-| `CG-P08-04` | Research dataset catalog (id, symbols, timeframes, availability) | S02 dataset select | OPEN |
-| `CG-P08-05` | Preflight checks trial ceiling, `seed_required`, declared bounds, sweep ceiling | S02 rules enforced server-side | OPEN |
-| `CG-P08-06` | S05 foundation facts: per-window gap scan, holdout seal record (DR-01), holdout cap; advanced `sealed_holdout` | S05 holdout + gap scan | OPEN (→P14) |
+| `CG-P08-02` | Rolling window mode (train width, with `CG-P02-02`) | S02 toggle, S05 rolling | DELIVERED `bd25e790` · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
+| `CG-P08-03` | Per-gate preflight list; typed reasons + `field_path` when `may_create_run=false`; `field_path[]` on 400 | S02 preflight result, error → step | DELIVERED `bd25e790` · `gates[]`, `run_admission`, `details.field_path(s)` · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
+| `CG-P08-04` | Research dataset catalog (id, symbols, timeframes, availability) | S02 dataset select | DELIVERED `28cc9e63` · `GET /api/v1/research/datasets` · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
+| `CG-P08-05` | Preflight checks trial ceiling, `seed_required`, declared bounds, sweep ceiling | S02 rules enforced server-side | DELIVERED `bd25e790` · `preflight_limits` + server sweep ceiling · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
+| `CG-P08-06` | S05 foundation facts: per-window gap scan, holdout seal record (DR-01), holdout cap; advanced `sealed_holdout` | S05 holdout + gap scan | DELIVERED `bd25e790` (cap NOT_PUBLISHED) · `snapshot.gap_scan/holdout_seal`; S05 projection is W3's · [W4](./RF-03/W4_P02_P08_CLAUDE_2026-09-24.md) |
 
 ## P09 — journey / atlas foundation
 

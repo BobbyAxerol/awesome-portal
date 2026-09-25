@@ -31,6 +31,7 @@ import type {
   Warmup,
 } from "./preflightClient";
 import { ResearchPanel } from "./ResearchPanel";
+import { formatUtc } from "./researchFormat";
 import type { ResearchState } from "./state";
 
 /* ------------------------------------------------------------------ parts */
@@ -238,6 +239,29 @@ export function FoldRow({
       </span>
       {/* The boundary is fixed; nothing here has been evaluated. */}
       <Constant value={fold.state} />
+      {fold.inner_fold_count !== undefined ? (
+        <span className="mono flex-none text-[9px]" style={{ color: "var(--ink-soft)" }} data-inner-count={fold.inner_fold_count}>
+          {fold.inner_fold_count} inner
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** CG-P02-02: the engine's guard spans for one fold, as bars and half-open ranges. */
+function GuardRow({ fold }: { fold: Fold }) {
+  const guards = fold.guards;
+  if (!guards) return null;
+  const spans = ([["label horizon", guards.label_horizon], ["purge", guards.purge], ["embargo", guards.embargo]] as const)
+    .filter(([, range]) => range !== null);
+  if (spans.length === 0) return null;
+  return (
+    <div className="mono flex flex-wrap gap-x-3 pl-[84px] text-[9px]" style={{ color: "var(--ink-faint)" }} data-guards={fold.fold_id}>
+      {spans.map(([label, range]) => (
+        <span key={label} title={range ? rangeLabel(range) : undefined}>
+          {label} {range?.bars ?? "?"} bars
+        </span>
+      ))}
     </div>
   );
 }
@@ -253,9 +277,21 @@ function TopologyBlock({ topology }: { topology: Topology }) {
             <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
               frequency {topology.frequency}
             </span>
-            {/* Expanding is the only certified window mode; rolling is refused
-                by the server, never derived here. */}
             <Constant value={topology.window_mode} />
+            {topology.train_window ? (
+              <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>train {topology.train_window}</span>
+            ) : null}
+            {topology.temporal_guards ? (
+              <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-temporal-guards-summary>
+                label {topology.temporal_guards.label_horizon_bars} · purge {topology.temporal_guards.purge_bars} · embargo{" "}
+                {topology.temporal_guards.embargo_bars} bars
+              </span>
+            ) : null}
+            {topology.plan_source ? (
+              <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} title={topology.plan_source} data-plan-source>
+                engine-built plan
+              </span>
+            ) : null}
           </>
         ) : null}
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
@@ -268,7 +304,10 @@ function TopologyBlock({ topology }: { topology: Topology }) {
 
       <div className="flex flex-col">
         {topology.folds.map((fold) => (
-          <FoldRow key={fold.fold_id} fold={fold} window={frame} />
+          <div key={fold.fold_id}>
+            <FoldRow fold={fold} window={frame} />
+            <GuardRow fold={fold} />
+          </div>
         ))}
       </div>
 
@@ -315,6 +354,119 @@ function SealedHoldoutCard({
   );
 }
 
+/* -------------------------------------------------------------- CG-P08-06 */
+
+const VERDICT_COLOR: Record<string, string> = { PASS: "var(--good)", WATCH: "var(--accent-2)", CRITICAL: "var(--bad)" };
+
+/** Per-window gap scan of the sealed snapshot (timestamps only, never prices). */
+function GapScanBlock({ scan }: { scan: NonNullable<Snapshot["gap_scan"]> }) {
+  if (scan.state === "NOT_PUBLISHED") {
+    return (
+      <p className="text-[10.5px]" style={{ color: "var(--ink-soft)" }} data-gap-scan="NOT_PUBLISHED">
+        <span className="mono text-[9px] font-bold uppercase" style={{ color: "var(--ink-faint)" }}>not published</span>{" "}
+        {scan.reason}
+      </p>
+    );
+  }
+  const scanned = scan.windows.filter((window) => window.state === "SCANNED");
+  const critical = scanned.filter((window) => window.verdict === "CRITICAL").length;
+  const watch = scanned.filter((window) => window.verdict === "WATCH").length;
+  return (
+    <div className="flex flex-col gap-1" data-gap-scan="SCANNED">
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
+        {scanned.length} windows · {critical} critical · {watch} watch
+      </span>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[480px] text-[10px]">
+          <thead>
+            <tr className="mono text-[8.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+              <th className="pr-2 text-left font-normal">window</th>
+              <th className="pr-2 text-right font-normal">bars</th>
+              <th className="pr-2 text-right font-normal">missing</th>
+              <th className="pr-2 text-right font-normal">gap runs</th>
+              <th className="text-left font-normal">verdict</th>
+            </tr>
+          </thead>
+          <tbody>
+            {scan.windows.map((window) => (
+              <tr key={window.window} className="border-t" style={{ borderColor: "var(--line-soft)" }} data-gap-window={window.window} data-gap-verdict={window.verdict ?? window.state}>
+                <td className="mono py-[2px] pr-2">{window.window}</td>
+                {window.state === "SEALED" ? (
+                  <td colSpan={4} className="py-[2px] italic" style={{ color: "var(--ink-faint)" }}>{window.note}</td>
+                ) : (
+                  <>
+                    <td className="mono py-[2px] pr-2 text-right">{groupDigits(window.bars ?? 0)}</td>
+                    <td className="mono py-[2px] pr-2 text-right">{groupDigits(window.missing_bars ?? 0)}</td>
+                    <td className="mono py-[2px] pr-2 text-right">{groupDigits(window.gap_runs ?? 0)}</td>
+                    <td className="py-[2px]">
+                      <span className="mono text-[9px] font-bold" style={{ color: VERDICT_COLOR[window.verdict ?? ""] ?? "var(--ink-soft)" }}>{window.verdict}</span>
+                      {window.items.length > 0 ? (
+                        <span className="mono ml-2 text-[9px]" style={{ color: "var(--ink-faint)" }}>
+                          {window.items.map((item) => `${formatUtc(item.start_utc_ms)} · ${item.missing_bars} bar${item.missing_bars === 1 ? "" : "s"}`).join(" / ")}
+                          {window.items_omitted > 0 ? ` +${window.items_omitted} more` : ""}
+                        </span>
+                      ) : null}
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {scan.classification ? (
+        <p className="text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }}>{scan.classification}</p>
+      ) : null}
+    </div>
+  );
+}
+
+/** DR-01 read-only seal record; never an unlock control. */
+function HoldoutSealBlock({ seal, issuedAt }: { seal: NonNullable<Snapshot["holdout_seal"]>; issuedAt: number | null }) {
+  if ("state" in seal) {
+    return (
+      <p className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-holdout-seal="NOT_DECLARED">
+        {seal.reason}
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-0.5" data-holdout-seal="SEALED">
+      <Row label="seal digest">{seal.seal_digest}</Row>
+      <Row label="sealed">{issuedAt ? `${formatUtc(issuedAt)} by the preflight actor` : "at preflight, by its actor"}</Row>
+      <Row label="read log">
+        {seal.read_log.reads.length} reads <Constant value={seal.read_log.state} />
+      </Row>
+      <Row label="unlock">
+        <Constant value={seal.unlock.state} /> <span className="text-[10px]" style={{ color: "var(--ink-soft)" }}>{seal.unlock.reason}</span>
+      </Row>
+      <Row label="cap">
+        <Constant value={seal.cap.state} /> <span className="text-[10px]" style={{ color: "var(--ink-soft)" }}>{seal.cap.reason}</span>
+      </Row>
+    </div>
+  );
+}
+
+/** CG-P08-03: every server gate this manifest passed, as the server named it. */
+function GateRows({ gates }: { gates: NonNullable<PreflightResponse["gates"]> }) {
+  return (
+    <ol className="flex flex-col" role="list" data-preflight-gates>
+      {gates.map((gate) => (
+        <li key={gate.gate} className="flex items-baseline gap-2 border-b py-[2px] text-[10.5px] last:border-b-0" style={{ borderColor: "var(--line-soft)" }} data-preflight-gate={gate.gate} data-gate-state={gate.state}>
+          <span className="mono w-[14px] flex-none font-bold" style={{ color: gate.state === "PASS" ? "var(--good)" : "var(--ink-faint)" }}>
+            {gate.state === "PASS" ? "✓" : "·"}
+          </span>
+          <span className="mono flex-none text-[9.5px]" style={{ width: 150, color: "var(--ink-soft)" }}>{gate.gate}</span>
+          <span className="flex-1" style={{ color: gate.state === "PASS" ? "var(--ink-soft)" : "var(--ink-faint)" }}>
+            {gate.state === "NOT_RECORDED" ? "not recorded — " : gate.state === "NOT_APPLICABLE" ? "n/a — " : ""}
+            {gate.message}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /* -------------------------------------------------------------- resource */
 
 function ResourceBlock({ estimate }: { estimate: ResourceEstimate }) {
@@ -348,6 +500,13 @@ function ResourceBlock({ estimate }: { estimate: ResourceEstimate }) {
         <Row label="admission" wide>
           <Constant value={estimate.admission_state} />
         </Row>
+        {estimate.ceilings ? (
+          <Row label="ceilings" wide>
+            trials {groupDigits(estimate.ceilings.trial_ceiling)} · sweep dims {estimate.ceilings.swept_dimensions}/
+            {estimate.ceilings.sweep_dimension_ceiling} · folds {estimate.ceilings.outer_fold_ceiling} · cpu{" "}
+            {groupDigits(estimate.ceilings.estimated_cpu_seconds_ceiling)} s
+          </Row>
+        ) : null}
       </div>
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-resource-disclosure>
         {estimate.disclosure}
@@ -409,6 +568,12 @@ export function PreflightPanel({ preflight, state, clearedBecause }: PreflightPa
         </p>
       ) : null}
 
+      {preflight?.gates ? (
+        <ResearchPanel title="server preflight" meta={`${preflight.gates.filter((gate) => gate.state === "PASS").length} gates passed`} state={state} minBodyHeight={96}>
+          <GateRows gates={preflight.gates} />
+        </ResearchPanel>
+      ) : null}
+
       <ResearchPanel
         title="preflight"
         meta={preflight ? preflight.schema_version : undefined}
@@ -457,6 +622,18 @@ export function PreflightPanel({ preflight, state, clearedBecause }: PreflightPa
       <ResearchPanel title="snapshot quality" state={state} minBodyHeight={86}>
         {preflight ? <QualityCounters quality={preflight.snapshot.quality} /> : null}
       </ResearchPanel>
+
+      {preflight?.snapshot.gap_scan ? (
+        <ResearchPanel title="gap scan" state={state} minBodyHeight={72}>
+          <GapScanBlock scan={preflight.snapshot.gap_scan} />
+        </ResearchPanel>
+      ) : null}
+
+      {preflight?.snapshot.holdout_seal ? (
+        <ResearchPanel title="holdout seal" state={state} minBodyHeight={48}>
+          <HoldoutSealBlock seal={preflight.snapshot.holdout_seal} issuedAt={preflight.issued_at_utc_ms ?? null} />
+        </ResearchPanel>
+      ) : null}
 
       <ResearchPanel title="engine capability" state={state} minBodyHeight={96}>
         {preflight ? <CapabilityBlock capability={preflight.capability} /> : null}

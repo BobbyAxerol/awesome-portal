@@ -72,6 +72,16 @@ export interface RunDraft {
     splitMode: string;
     frequency: string;
     windowMode: string;
+    /*
+     * Requested-spec v2 (CG-P02-02 / CG-P08-02). Empty means "not declared":
+     * an untouched field is never serialized, and a draft that sets none of
+     * them stays a v1 document byte for byte.
+     */
+    trainWindow?: string;
+    labelHorizonBars?: string;
+    purgeBars?: string;
+    embargoBars?: string;
+    inner?: { splitFrequency: string; windowMode: string; trainWindow: string; minFolds: string };
   };
   optimizationMode: string;
   optimizationSchedule: string;
@@ -109,6 +119,12 @@ export interface DraftConstraints {
   entrypoint: string | null;
   /** Routes the installed release will not run, with the engine's reason. */
   blockedRoutes: Readonly<Record<string, string>>;
+  /**
+   * The release's published sweep ceiling (`preflight_limits`, CG-P08-05), or
+   * null when the Atlas did not publish one — then the check does not run
+   * here and the server's preflight still applies it.
+   */
+  sweepCeiling?: number | null;
 }
 
 /** Facts the browser could not read, named so a panel can say which. */
@@ -121,7 +137,11 @@ export function missingConstraints(limits: DraftConstraints): readonly string[] 
   return missing;
 }
 
-/** Spec 02 §8 — the ceiling counts swept dimensions, not entries. */
+/**
+ * Spec 02 §8 — the ceiling counts swept dimensions, not entries. This is the
+ * value spec 02 names; the rule itself reads `limits.sweepCeiling` from the
+ * release (CG-P08-05) and only this label falls back to it.
+ */
 export const SWEEP_CEILING = 8;
 
 /* ------------------------------------------------------------- validators */
@@ -265,12 +285,54 @@ export function pinnedCount(draft: RunDraft): number {
   return draft.parameters.filter((entry) => entry.dimension === "pin").length;
 }
 
-export function validateParameters(draft: RunDraft): string | null {
+export function validateParameters(draft: RunDraft, limits?: DraftConstraints): string | null {
   const refused = draft.parameters.map(parameterStatus).find((s) => s.tone === "refused");
   if (refused) return `${refused.name}: ${refused.text}`;
   const swept = sweptCount(draft);
-  if (swept > SWEEP_CEILING) {
-    return `sweep dims ${swept} > ${SWEEP_CEILING} — pin params or drop entries.`;
+  const ceiling = limits?.sweepCeiling === undefined ? SWEEP_CEILING : limits.sweepCeiling;
+  if (ceiling !== null && swept > ceiling) {
+    return `sweep dims ${swept} > ${ceiling} — pin params or drop entries.`;
+  }
+  return null;
+}
+
+const TRAIN_WINDOW = /^[1-9][0-9]{0,4}(D|h)$/;
+
+/** True when the draft declares any requested-spec v2 field (CG-P02-02). */
+export function usesSpecV2(draft: RunDraft): boolean {
+  if (draft.protocol !== "advanced") return false;
+  const wf = draft.walkForward;
+  return (
+    wf.windowMode === "rolling" ||
+    Boolean(wf.trainWindow) ||
+    [wf.labelHorizonBars, wf.purgeBars, wf.embargoBars].some((value) => value !== undefined && value.trim() !== "") ||
+    (draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal")
+  );
+}
+
+/** Advanced walk-forward v2 rules, verbatim with the server's field names. */
+export function validateWalkForwardV2(draft: RunDraft): string | null {
+  if (draft.protocol !== "advanced") return null;
+  const wf = draft.walkForward;
+  if (wf.windowMode === "rolling" && !TRAIN_WINDOW.test(wf.trainWindow ?? "")) {
+    return "Rolling walk-forward requires a train width such as 180D or 72h.";
+  }
+  if (wf.windowMode !== "rolling" && wf.trainWindow) {
+    return "A train width applies only to rolling walk-forward.";
+  }
+  for (const [label, value] of [["label horizon", wf.labelHorizonBars], ["purge", wf.purgeBars], ["embargo", wf.embargoBars]] as const) {
+    if (value === undefined || value.trim() === "") continue;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 10_000) return `The ${label} must be a whole number of bars from 0 to 10000.`;
+  }
+  const causal = draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal";
+  if (causal) {
+    const inner = wf.inner;
+    if (!inner || !inner.splitFrequency || !inner.windowMode || !TRAIN_WINDOW.test(inner.trainWindow)) {
+      return "mode_1_decay with per_fold_causal needs inner folds: a frequency, a window mode and a train width.";
+    }
+    const minFolds = Number(inner.minFolds || "2");
+    if (!Number.isInteger(minFolds) || minFolds < 1 || minFolds > 64) return "Inner minimum folds must be a whole number from 1 to 64.";
   }
   return null;
 }
@@ -305,8 +367,8 @@ export function blockingProblems(
     ["route", validateRoute(draft, limits)],
     ["strategy", validateStrategy(draft, limits)],
     ["data", validateData(draft, limits)],
-    ["windows", validateWindows(draft)],
-    ["parameters", validateParameters(draft)],
+    ["windows", validateWindows(draft) ?? validateWalkForwardV2(draft)],
+    ["parameters", validateParameters(draft, limits)],
     ["optimization", validateOptimization(draft, limits)],
   ];
   return checks
@@ -407,8 +469,137 @@ export function serializeRequestedSpec(draft: RunDraft): RequestedSpec {
       frequency: draft.walkForward.frequency,
       window_mode: draft.walkForward.windowMode,
     };
+    /* CG-P02-02: v2 only when a v2 field is declared; each field only when set. */
+    if (usesSpecV2(draft)) {
+      const wf = draft.walkForward;
+      const bars = (value: string | undefined) => (value === undefined || value.trim() === "" ? undefined : Number(value));
+      const extra: Record<string, unknown> = {};
+      if (wf.windowMode === "rolling" && wf.trainWindow) extra.train_window = wf.trainWindow;
+      for (const [key, value] of [["label_horizon_bars", wf.labelHorizonBars], ["purge_bars", wf.purgeBars], ["embargo_bars", wf.embargoBars]] as const) {
+        const parsed = bars(value);
+        if (parsed !== undefined) extra[key] = parsed;
+      }
+      if (draft.optimizationMode === "mode_1_decay" && draft.optimizationSchedule === "per_fold_causal" && wf.inner) {
+        extra.inner = {
+          split_frequency: wf.inner.splitFrequency,
+          window_mode: wf.inner.windowMode,
+          train_window: wf.inner.trainWindow,
+          ...(wf.inner.minFolds.trim() !== "" ? { min_folds: Number(wf.inner.minFolds) } : {}),
+        };
+      }
+      (spec as { schema_version: string }).schema_version = "research.requested-spec.v2";
+      spec.walk_forward = { ...spec.walk_forward, ...extra } as typeof spec.walk_forward;
+    }
   }
   return spec;
+}
+
+/* ----------------------------------------------------- field path → step */
+
+/**
+ * CG-P08-03: which wizard step owns a requested-spec field path the server
+ * named in a refusal. Unknown paths point at Review, where the refusal is.
+ */
+export function stepForFieldPath(path: readonly string[] | null | undefined): StepId {
+  const head = path?.[0];
+  switch (head) {
+    case "alpha_binding":
+    case "not_publishable":
+      return "context";
+    case "strategy_id":
+    case "protocol":
+      return "strategy";
+    case "execution_route":
+    case "route_params":
+      return "route";
+    case "data":
+      return "data";
+    case "windows":
+    case "walk_forward":
+    case "optimization_mode":
+    case "optimization_schedule":
+      return "windows";
+    case "parameter_space_overrides":
+      return "parameters";
+    case "optuna_trials":
+    case "early_stopping":
+    case "random_seed":
+    case "optimization_config":
+      return "optimization";
+    default:
+      return "review";
+  }
+}
+
+/* ------------------------------------------------- clone (?from=<run>) */
+
+/**
+ * A new draft from a run's admitted requested spec (CG-P11-07, `?from=`).
+ *
+ * Every declared value is copied; nothing about the old run's preflight,
+ * token or digest is. The parameter table is rebuilt from the bound version's
+ * declaration by the route, then the copied overrides are re-applied on it.
+ */
+export function draftFromRequestedSpec(spec: RequestedSpec, base: RunDraft): RunDraft {
+  const wf = spec.walk_forward as (RequestedSpec["walk_forward"] & Record<string, unknown>) | undefined;
+  const text = (value: unknown) => (value === undefined || value === null ? "" : String(value));
+  const inner = wf?.inner as { split_frequency: string; window_mode: string; train_window: string; min_folds?: number } | undefined;
+  return {
+    ...base,
+    bound: spec.alpha_binding !== null,
+    alphaId: spec.alpha_binding?.alpha_id ?? "",
+    alphaVersionId: spec.alpha_binding?.alpha_version_id ?? "",
+    strategyId: spec.strategy_id,
+    protocol: spec.protocol,
+    executionRoute: spec.execution_route,
+    routeParams: spec.route_params,
+    datasetId: spec.data.dataset_id,
+    symbol: spec.data.symbol,
+    timeframe: spec.data.timeframe,
+    windows: spec.windows
+      ? {
+          is: { start: spec.windows.is.start, endExclusive: spec.windows.is.end_exclusive },
+          oos: { start: spec.windows.oos.start, endExclusive: spec.windows.oos.end_exclusive },
+          holdout: { start: spec.windows.holdout.start, endExclusive: spec.windows.holdout.end_exclusive },
+        }
+      : base.windows,
+    walkForward: wf
+      ? {
+          start: wf.start,
+          endExclusive: wf.end_exclusive,
+          splitMode: wf.split_mode,
+          frequency: wf.frequency,
+          windowMode: wf.window_mode,
+          trainWindow: text(wf.train_window) || undefined,
+          labelHorizonBars: text(wf.label_horizon_bars) || undefined,
+          purgeBars: text(wf.purge_bars) || undefined,
+          embargoBars: text(wf.embargo_bars) || undefined,
+          inner: inner
+            ? { splitFrequency: inner.split_frequency, windowMode: inner.window_mode, trainWindow: inner.train_window, minFolds: text(inner.min_folds) }
+            : undefined,
+        }
+      : base.walkForward,
+    optimizationMode: spec.optimization_mode,
+    optimizationSchedule: spec.optimization_schedule,
+    optunaTrials: String(spec.optuna_trials),
+    earlyStopping: text(spec.early_stopping),
+    randomSeed: text(spec.random_seed),
+    optimizationConfigOverrides: { ...spec.optimization_config },
+  };
+}
+
+/** Re-applies copied overrides onto a freshly projected declaration table. */
+export function applyOverrides(
+  entries: readonly ParameterEntry[],
+  overrides: RequestedSpec["parameter_space_overrides"],
+): readonly ParameterEntry[] {
+  return entries.map((entry) => {
+    const override = overrides.find((candidate) => candidate.name === entry.name);
+    if (!override) return entry;
+    return override.kind === "pin"
+      ? { ...entry, dimension: "pin" as const, low: String(override.value), high: "" }
+      : { ...entry, dimension: "sweep" as const, low: String(override.low), high: String(override.high) };
+  });
 }
 
 /* ------------------------------------------------- declaration projection */

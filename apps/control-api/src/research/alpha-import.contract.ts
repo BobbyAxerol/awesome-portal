@@ -50,11 +50,15 @@ export const ResearchAlphaAnalysisResponseSchema = z.object({
   analysis_digest: DigestSchema,
   parse_ok: z.boolean(),
   declared_contract: z.record(z.unknown()),
+  // CG-P07-03: HiFi's 14 fields within DQ-05. `state` says where a value
+  // came from; `check` is the verdict of the named gate (VERIFY = no gate
+  // reads it; NOT_APPLICABLE = the v1 file cannot carry it).
   mirror: z.array(z.object({
     field: z.string().max(128),
-    state: z.enum(["parsed", "missing"]),
+    state: z.enum(["parsed", "missing", "server_assigned", "server_computed", "not_in_contract"]),
     value: z.unknown().optional(),
-    check: z.enum(["VERIFY", "GATED"]),
+    check: z.enum(["PASS", "FAIL", "VERIFY", "GATED", "NOT_APPLICABLE"]),
+    gate: z.string().max(64).nullable().optional(),
     note: z.string().min(1).max(256),
   }).strict()).max(16),
   gate_facts: z.object({
@@ -71,6 +75,8 @@ export const ResearchAlphaAnalysisResponseSchema = z.object({
     no_lookahead_static_scan: z.boolean(),
     no_lookahead_message: z.string().max(512),
   }).strict(),
+  /** CG-P07-04: measured analyser time per check (µs); outside analysis_digest. */
+  gate_timings_us: z.record(z.string().max(64), z.number().int().nonnegative().max(600_000_000)).optional(),
 }).strict();
 
 export type ResearchAlphaAnalysis = z.infer<typeof ResearchAlphaAnalysisResponseSchema>;
@@ -90,6 +96,13 @@ export interface ResearchAlphaImportGateRow {
   state: ResearchAlphaImportGateState;
   message: string;
   ms: number;
+  /**
+   * CG-P07-04: where `ms` was measured. ANALYSER = the private parser's own
+   * check time for this gate (µs in `analyser_us`); CONTROL_API = measured here
+   * (gate 3's registry lookup). A SKIPPED gate has neither.
+   */
+  timing_source?: "ANALYSER" | "CONTROL_API" | null;
+  analyser_us?: number | null;
   quarantine_code?: "QUARANTINED_CONTRACT" | "QUARANTINED_ENTRYPOINT" | "QUARANTINED_DIGEST_ALREADY_REGISTERED" | "QUARANTINED_PARAMETER_SPACE" | "QUARANTINED_DETERMINISM" | "QUARANTINED_DATA_CONTRACT" | "QUARANTINED_LOOKAHEAD";
 }
 

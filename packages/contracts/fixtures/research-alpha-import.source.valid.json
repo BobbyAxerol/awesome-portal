@@ -6,7 +6,120 @@
   "parse_ok": true,
   "expires_at_utc_ms": 1790000000000,
   "mirror": [
-    { "field": "entrypoint", "state": "parsed", "value": "generate_signals", "check": "VERIFY", "note": "Literal declaration parsed from the submitted source; validation is reported by the ordered gates." },
-    { "field": "warmup_bars", "state": "parsed", "value": 32, "check": "VERIFY", "note": "Literal declaration parsed from the submitted source; validation is reported by the ordered gates." }
+    {
+      "field": "strategy_id",
+      "state": "server_assigned",
+      "check": "NOT_APPLICABLE",
+      "gate": null,
+      "note": "Assigned at registration as the alpha_id (DQ-07); never read from the file."
+    },
+    {
+      "field": "display_name",
+      "state": "server_assigned",
+      "check": "NOT_APPLICABLE",
+      "gate": null,
+      "note": "Assigned at registration; the v1 file does not declare it."
+    },
+    {
+      "field": "version",
+      "state": "missing",
+      "check": "GATED",
+      "gate": "contract-complete",
+      "note": "This field is not declared in the submitted source; no value has been inferred."
+    },
+    {
+      "field": "entrypoint",
+      "state": "parsed",
+      "value": "generate_signals",
+      "check": "PASS",
+      "gate": "entrypoint-importable",
+      "note": "One plain function, defined in a restricted namespace and never called."
+    },
+    {
+      "field": "default_timeframe",
+      "state": "not_in_contract",
+      "check": "NOT_APPLICABLE",
+      "gate": null,
+      "note": "v1 declares a timeframe list, not a default; New Run makes the reader choose."
+    },
+    {
+      "field": "timeframes",
+      "state": "missing",
+      "check": "GATED",
+      "gate": "data-contract-known",
+      "note": "This field is not declared in the submitted source; no value has been inferred."
+    },
+    {
+      "field": "required_columns",
+      "state": "missing",
+      "check": "GATED",
+      "gate": "data-contract-known",
+      "note": "This field is not declared in the submitted source; no value has been inferred."
+    },
+    {
+      "field": "warmup_bars",
+      "state": "parsed",
+      "value": 32,
+      "check": "PASS",
+      "gate": "contract-complete",
+      "note": "Bars before the first window; preflight checks the source has them."
+    },
+    {
+      "field": "determinism.seed_required",
+      "state": "missing",
+      "check": "GATED",
+      "gate": "determinism-declared",
+      "note": "This field is not declared in the submitted source; no value has been inferred."
+    },
+    {
+      "field": "parameter_space",
+      "state": "missing",
+      "check": "GATED",
+      "gate": "parameter-space-sane",
+      "note": "This field is not declared in the submitted source; no value has been inferred."
+    },
+    {
+      "field": "version_note",
+      "state": "missing",
+      "check": "GATED",
+      "gate": null,
+      "note": "This field is not declared in the submitted source; no value has been inferred."
+    },
+    {
+      "field": "artifact.digest",
+      "state": "server_computed",
+      "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "check": "PASS",
+      "gate": null,
+      "note": "SHA-256 of the exact submitted bytes, computed by the server; gate 3 checks it is not already registered."
+    },
+    {
+      "field": "structural_contract",
+      "state": "not_in_contract",
+      "check": "NOT_APPLICABLE",
+      "gate": null,
+      "note": "Not part of the v1 single-file contract (DQ-05); nothing is inferred for it."
+    },
+    {
+      "field": "supported_endpoint_ids",
+      "state": "not_in_contract",
+      "check": "NOT_APPLICABLE",
+      "gate": null,
+      "note": "Not part of the v1 single-file contract (DQ-05); nothing is inferred for it."
+    },
+    {
+      "field": "execution_contracts",
+      "state": "not_in_contract",
+      "check": "NOT_APPLICABLE",
+      "gate": null,
+      "note": "Not part of the v1 single-file contract (DQ-05); nothing is inferred for it."
+    },
+    {
+      "field": "output_contract",
+      "state": "not_in_contract",
+      "check": "NOT_APPLICABLE",
+      "gate": null,
+      "note": "Not part of the v1 single-file contract (DQ-05); nothing is inferred for it."
+    }
   ]
 }

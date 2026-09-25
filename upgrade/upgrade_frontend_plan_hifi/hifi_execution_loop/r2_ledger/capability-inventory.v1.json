@@ -1456,6 +1456,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/research/datasets",
+   "controller": "research/dataset-catalog.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "W4 CG-P08-04: bounded read-only research dataset catalog (datasets, timeframes, availability, symbols with month-partition coverage) from the approved historical reader's storage names through a signed private GET. No data file is opened and no path or price is returned. Screen 02's data step consumes it.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
    "route": "GET /api/v1/research/alphas",
    "controller": "research/alpha-import.controller.ts",
    "interaction_class": "AUTO_READ",

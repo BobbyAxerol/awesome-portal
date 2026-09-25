@@ -18,7 +18,9 @@ import { NewRun } from "./NewRun";
 import { type RegistryEntry, alphaImportApi, toRefusal } from "./alphaImportClient";
 import type { AtlasDocument } from "./atlas";
 import { type AtlasResponse, foundationApi, toFoundationRefusal } from "./foundationClient";
-import { STEPS, type DraftConstraints, type ParameterEntry, type RunDraft, parameterEntriesFrom } from "./runDraft";
+import { STEPS, type DraftConstraints, type ParameterEntry, type RunDraft, applyOverrides, draftFromRequestedSpec, parameterEntriesFrom } from "./runDraft";
+import { type DatasetCatalog, catalogFailureState, readDatasetCatalog } from "./datasetClient";
+import { type RunRequestedSpec, cloneFailureState, readRunRequestedSpec } from "./runCloneClient";
 import { useNewRun } from "./useNewRun";
 import { researchState, type ResearchState } from "./state";
 
@@ -85,6 +87,8 @@ export function constraintsFrom(
     trialCeiling: atlas ? atlas.current_release.trial_ceiling : null,
     entrypoint: declaration ? declaration.entrypoint : null,
     blockedRoutes: blocked,
+    /* CG-P08-05: the release's own sweep ceiling; null when unpublished. */
+    sweepCeiling: atlas ? (atlas.current_release.preflight_limits?.sweep_dimension_ceiling.value ?? null) : null,
   };
 }
 
@@ -159,6 +163,20 @@ export function NewRunRoute() {
     };
   }, []);
 
+  /* CG-P08-04: the research dataset catalog; the form works without it. */
+  const [catalog, setCatalog] = useState<DatasetCatalog | null>(null);
+  const [catalogReason, setCatalogReason] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    readDatasetCatalog(undefined, controller.signal)
+      .then((response) => setCatalog(response))
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setCatalogReason(catalogFailureState(error).reason);
+      });
+    return () => controller.abort();
+  }, []);
+
   const document = atlas?.atlas ?? null;
   const [draft, setDraft] = useState<RunDraft>(emptyDraft);
   const limits = useMemo(
@@ -166,6 +184,35 @@ export function NewRunRoute() {
     [document, registry, draft.alphaVersionId],
   );
   const run = useNewRun(draft, limits);
+
+  /*
+   * `?from=<runId>` (CG-P11-07): copy the run's admitted declaration into a
+   * NEW draft. The copy is only the declaration — a fresh preflight is owed,
+   * and the original run is never referenced by the new submission.
+   */
+  const fromRun = new URLSearchParams(location.search).get("from");
+  const [clone, setClone] = useState<{ runId: string; state: ResearchState; spec: RunRequestedSpec | null } | null>(null);
+  useEffect(() => {
+    if (!fromRun) return;
+    const controller = new AbortController();
+    setClone({ runId: fromRun, state: researchState({ kind: "in-flight", hasAcceptedResponse: false }), spec: null });
+    readRunRequestedSpec(fromRun, controller.signal)
+      .then((response) => {
+        setClone({ runId: fromRun, state: researchState({ kind: "ok", rowCount: 1 }), spec: response });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setClone({ runId: fromRun, state: cloneFailureState(fromRun, error), spec: null });
+      });
+    return () => controller.abort();
+  }, [fromRun]);
+  const clonedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!clone?.spec || clonedFor.current === clone.runId) return;
+    clonedFor.current = clone.runId;
+    const copied = draftFromRequestedSpec(clone.spec.requested_spec, run.draft);
+    run.patch({ ...copied, parameters: run.draft.parameters });
+  }, [clone, run]);
   const prefilledFor = useRef<string | null>(null);
   useEffect(() => {
     const query = new URLSearchParams(location.search);
@@ -192,8 +239,10 @@ export function NewRunRoute() {
     const declared = parametersFor(registry, run.draft.alphaVersionId);
     if (declared.length === 0 && run.draft.parameters.length === 0) return;
     adoptedFor.current = run.draft.alphaVersionId;
-    run.patch({ parameters: declared });
-  }, [registry, run]);
+    /* A clone re-applies the copied overrides on the version's own table. */
+    const copied = clone?.spec?.requested_spec.parameter_space_overrides ?? [];
+    run.patch({ parameters: copied.length > 0 ? applyOverrides(declared, copied) : declared });
+  }, [registry, run, clone]);
 
   /*
    * The release the form was built from travels with the declaration.
@@ -238,6 +287,17 @@ export function NewRunRoute() {
     if (createdId) navigate(`/research/quantbt/runs/${encodeURIComponent(createdId)}/progress`);
   }, [createdId, navigate]);
 
+  /* `?route=` from the Atlas "declare →" link preselects an offered route. */
+  const routeFromQuery = new URLSearchParams(location.search).get("route");
+  const routedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!routeFromQuery || routedFor.current === routeFromQuery || !document) return;
+    routedFor.current = routeFromQuery;
+    if (document.routes.some((route) => route.route_id === routeFromQuery) && !limits.blockedRoutes[routeFromQuery]) {
+      run.patch({ executionRoute: routeFromQuery as RunDraft["executionRoute"] });
+    }
+  }, [routeFromQuery, document, limits, run]);
+
   /* Keeps this component's copy of the draft in step with the controller's. */
   useEffect(() => setDraft(run.draft), [run.draft]);
 
@@ -256,6 +316,10 @@ export function NewRunRoute() {
       preflightState={run.preflight.preflightState}
       clearedBecause={run.preflight.clearedBecause}
       onRunPreflight={run.preflight.runPreflight}
+      preflightRefusal={run.preflight.refusal}
+      catalog={catalog}
+      catalogReason={catalogReason}
+      cloneSource={clone ? { runId: clone.runId, state: clone.state } : null}
       mayCreateRun={run.mayCreateRun}
       canSubmit={run.canSubmit}
       created={run.created}

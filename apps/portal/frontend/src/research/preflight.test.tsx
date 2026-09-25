@@ -462,7 +462,7 @@ describe("P08-T07 — the browser never derives the manifest", () => {
 
 describe("P08-T08 — refusals behave the way the handoff requires", () => {
   it("maps every code the contract declares", () => {
-    expect(PREFLIGHT_PROBLEM_CODES).toHaveLength(19);
+    expect(PREFLIGHT_PROBLEM_CODES).toHaveLength(20);
     for (const code of PREFLIGHT_PROBLEM_CODES) {
       const refusal = toPreflightRefusal(new PortalApiError("server sentence", 400, code, "req_1"));
       expect(refusal.code).toBe(code);

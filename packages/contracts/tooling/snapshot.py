@@ -59,6 +59,7 @@ TRACKED = (
     "schemas/research-artifact-manifest.v1.schema.json",
     "schemas/research-alpha-import.v1.schema.json",
     "schemas/research-requested-spec.v1.schema.json",
+    "schemas/research-requested-spec.v2.schema.json",
     "schemas/execution-contract-authority.v1.schema.json",
     "schemas/execution-market-context.v1.schema.json",
     "fixtures/problem.valid.json",

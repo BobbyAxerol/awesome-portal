@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 230,
+  "route_count": 232,
   "routes": [
     {
       "method": "DELETE",
@@ -781,6 +781,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/research/datasets",
+      "owner": "apps/control-api/src/research/dataset-catalog.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/research/journey",
       "owner": "apps/control-api/src/research/foundation.controller.ts"
     },
@@ -828,6 +833,11 @@
       "method": "GET",
       "path": "/api/workspaces/:workspace_id/runs",
       "owner": "apps/control-api/src/facade/facade.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/research/datasets",
+      "owner": "apps/portal/backend/src/portal_api/api/routes_research_internal.py"
     },
     {
       "method": "GET",

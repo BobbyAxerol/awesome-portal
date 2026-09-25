@@ -73,11 +73,55 @@ def test_p07_t01_valid_contract_is_parseable_without_executing_strategy_body() -
     assert result.gate_facts.parameter_space_sane is True
     assert result.gate_facts.no_lookahead_static_scan is True
     assert result.declared_contract["entrypoint"] == "generate_signals"
+    # W4 CG-P07-03: a parsed field carries the verdict of the gate that checks it.
     assert next(row for row in result.mirror if row["field"] == "version") == {
-        "field": "version", "state": "parsed", "value": "0.3.0", "check": "VERIFY",
-        "note": "Literal declaration parsed from the submitted source; validation is reported by the ordered gates.",
+        "field": "version", "state": "parsed", "value": "0.3.0", "check": "PASS",
+        "gate": "contract-complete",
+        "note": "Semantic version; a new version is a new immutable AlphaVersion.",
     }
     assert next(row for row in result.mirror if row["field"] == "version_note")["check"] == "GATED"
+
+
+def test_w4_cg_p07_03_mirror_lists_the_hifi_fields_within_dq05() -> None:
+    result = analyze_alpha_source(valid_source(), "alpha.py")
+    rows = {row["field"]: row for row in result.mirror}
+    assert len(result.mirror) == 16
+    for name in ("strategy_id", "display_name", "version", "default_timeframe", "required_columns",
+                 "structural_contract", "parameter_space", "entrypoint", "artifact.digest",
+                 "supported_endpoint_ids", "execution_contracts", "output_contract",
+                 "timeframes", "warmup_bars", "determinism.seed_required"):
+        assert name in rows, name
+    assert rows["strategy_id"]["state"] == "server_assigned" and "value" not in rows["strategy_id"]
+    assert rows["artifact.digest"] == {
+        "field": "artifact.digest", "state": "server_computed", "value": f"sha256:{result.source_digest}",
+        "check": "PASS", "gate": None,
+        "note": "SHA-256 of the exact submitted bytes, computed by the server; gate 3 checks it is not already registered.",
+    }
+    for name in ("structural_contract", "supported_endpoint_ids", "execution_contracts", "output_contract", "default_timeframe"):
+        assert rows[name]["state"] == "not_in_contract" and rows[name]["check"] == "NOT_APPLICABLE"
+        assert "value" not in rows[name]
+    assert rows["parameter_space"]["gate"] == "parameter-space-sane" and rows["parameter_space"]["check"] == "PASS"
+
+
+def test_w4_cg_p07_03_a_failed_gate_marks_its_fields_fail() -> None:
+    source = valid_source().replace('"seed_required": True', '"seed_required": "yes"')
+    result = analyze_alpha_source(source, "alpha.py")
+    if result.gate_facts.determinism_declared:
+        pytest.skip("fixture has no seed_required literal to corrupt")
+    row = next(row for row in result.mirror if row["field"] == "determinism.seed_required")
+    assert row["check"] == "FAIL" and row["gate"] == "determinism-declared"
+
+
+def test_w4_cg_p07_04_timings_are_measured_per_check_and_outside_the_digest() -> None:
+    first = analyze_alpha_source(valid_source(), "alpha.py")
+    second = analyze_alpha_source(valid_source(), "alpha.py")
+    assert set(first.gate_timings_us or {}) == {
+        "parse", "contract_complete", "entrypoint_restricted_definition_load", "parameter_space_sane",
+        "determinism_declared", "data_contract_known", "no_lookahead_static_scan",
+    }
+    assert all(isinstance(value, int) and value >= 0 for value in (first.gate_timings_us or {}).values())
+    assert first.analysis_digest == second.analysis_digest
+    assert first.as_dict()["gate_timings_us"] == first.gate_timings_us
 
 
 @pytest.mark.parametrize(

@@ -110,11 +110,91 @@ function AxisChips({ route }: { route: RouteDisplay }) {
 
 const ROUTE_COLUMNS = [
   { key: "route", width: 172 },
+  { key: "status", width: 86 },
   { key: "family", width: 76 },
-  { key: "contract", width: 230 },
+  { key: "contract", width: 170 },
   { key: "backend", width: 140 },
   { key: "report levels", width: 120 },
 ] as const;
+
+/** Tone of the server's status word (spec 12 §3; derived server-side, CG-P04-06). */
+export function statusTone(word: string | null | undefined): { color: string; dashed: boolean } {
+  if (!word) return { color: "var(--ink-faint)", dashed: true };
+  if (word === "DEFAULT") return { color: "var(--good)", dashed: false };
+  if (word === "DEFERRED") return { color: "var(--bad)", dashed: true };
+  if (word === "SUPPORTED") return { color: "var(--accent)", dashed: false };
+  return { color: "var(--accent-2)", dashed: false };
+}
+
+const METHOD_LABEL: Record<string, string> = {
+  wfo: "strategy-param route — walk-forward search applies",
+  tape: "tape-driven — single-pass replay; the walk-forward step collapses to the tape span",
+  single_pass: "single pass — the engine lists no walk-forward target for this route",
+};
+
+type EngineFacts = NonNullable<AtlasDocument["routes"][number]["engine_facts"]>;
+
+function RouteEngineDetail({ routeId, facts }: { routeId: string; facts: EngineFacts }) {
+  const matrix = facts.support_matrix ?? null;
+  const params = facts.route_params ?? null;
+  return (
+    <div className="flex w-full flex-col gap-1.5 sm:pl-[172px]" data-route-engine={routeId}>
+      <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink)" }} data-route-description={routeId}>
+        {facts.description}
+      </span>
+      <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }} data-route-method={facts.method} title={facts.method_basis}>
+        {METHOD_LABEL[facts.method] ?? facts.method}
+      </span>
+      {matrix ? (
+        <div className="flex flex-col" data-support-matrix={matrix.function}>
+          <span className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+            {matrix.function}() · {matrix.executable}/{matrix.total} executable
+          </span>
+          {matrix.rows.map((row) => (
+            <span
+              key={row.spec_id}
+              className="mono flex flex-wrap gap-x-2 text-[9.5px]"
+              data-support-row={row.spec_id}
+              data-support-status={row.status}
+              style={{ color: row.status === "supported" ? "var(--ink-soft)" : "var(--ink-faint)" }}
+            >
+              <span style={{ width: 170 }}>{row.spec_id}</span>
+              <span style={{ width: 110, color: row.status === "supported" ? "var(--good)" : "var(--accent-2)" }}>{row.status}</span>
+              <span className="flex-1 break-words">{row.status === "supported" ? row.backends : row.route}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {params ? (
+        <details className="text-[10px]" data-route-params={params.group}>
+          <summary className="mono cursor-pointer text-[9.5px]" style={{ color: "var(--accent)" }}>
+            route_params · {params.group} · engine vocabulary
+          </summary>
+          <div className="mt-1 flex flex-col gap-1">
+            {params.fields.map((field) => (
+              <div key={field.name} className="flex flex-col gap-0.5" data-route-param={field.name}>
+                <span className="mono text-[9.5px]">
+                  {field.name}
+                  {field.engine_field && field.engine_field !== field.name ? ` → ${field.engine_field}` : ""}
+                </span>
+                {field.engine_values.length > 0 ? (
+                  <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>engine: {field.engine_values.join(" · ")}</span>
+                ) : null}
+                {field.requested_spec_values.length > 0 ? (
+                  <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+                    form: {field.requested_spec_values.map((value) => (field.accepted_by_engine.includes(value) ? value : `${value}✕`)).join(" · ")}
+                  </span>
+                ) : null}
+                <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>{field.note}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      ) : null}
+      <Locators sources={facts.source} />
+    </div>
+  );
+}
 
 function RoutesTab({
   doc,
@@ -192,12 +272,30 @@ function RoutesTab({
               >
                 {row.routeId}
               </button>
-              {row.isDefaultForNewRuns ? (
-                <span className="ml-1.5 text-[9px]" style={{ color: "var(--accent)" }}>
-                  default
-                </span>
-              ) : null}
             </span>
+            {(() => {
+              const route = doc.routes.find((r) => r.route_id === row.routeId);
+              const word = route?.status_word ?? null;
+              const tone = statusTone(word);
+              return (
+                <span style={{ width: 86, flex: "none" }}>
+                  {word ? (
+                    <span
+                      className="mono rounded-[3px] border px-[5px] text-[9px] font-bold leading-[15px]"
+                      style={{ color: tone.color, borderColor: tone.color, borderStyle: tone.dashed ? "dashed" : "solid" }}
+                      data-status-word={word}
+                    >
+                      {word}
+                    </span>
+                  ) : (
+                    /* An older manifest has no engine facts: say so, never a dash. */
+                    <span className="mono text-[8.5px] italic" style={{ color: "var(--ink-faint)" }} data-status-word="none" title="This manifest publishes no engine facts for this route.">
+                      not published
+                    </span>
+                  )}
+                </span>
+              );
+            })()}
             <span
               className="mono text-[10px]"
               style={{ width: 76, flex: "none", color: "var(--ink-faint)" }}
@@ -206,16 +304,23 @@ function RoutesTab({
             </span>
             <span
               className="mono text-[10px]"
-              style={{ width: 230, flex: "none", color: "var(--ink-soft)" }}
+              style={{ width: 170, flex: "none", color: "var(--ink-soft)" }}
             >
               {doc.routes.find((r) => r.route_id === row.routeId)?.execution_contract}
             </span>
-            <span
-              className="mono text-[10px]"
-              style={{ width: 140, flex: "none", color: "var(--ink-soft)" }}
-            >
-              {row.backendLabel}
-            </span>
+            {(() => {
+              const resolved = doc.routes.find((r) => r.route_id === row.routeId)?.engine_facts?.resolved_backend ?? null;
+              return (
+                <span
+                  className="mono text-[10px]"
+                  style={{ width: 140, flex: "none", color: "var(--ink-soft)" }}
+                  data-resolved-backend={resolved?.state ?? "catalog"}
+                  title={resolved?.reason ?? (resolved?.engine_mode ? `engine mode ${resolved.engine_mode}` : undefined)}
+                >
+                  {resolved?.state === "RESOLVED" ? resolved.value : resolved?.state === "SPEC_DEPENDENT" ? "spec-dependent" : row.backendLabel}
+                </span>
+              );
+            })()}
             <span
               className="mono text-[10px]"
               style={{ width: 120, flex: "none", color: "var(--ink-faint)" }}
@@ -246,7 +351,23 @@ function RoutesTab({
               >
                 {row.reason}
               </span>
+              {/* Declaring is offered only for a route New Run can submit; a
+                  blocked route keeps its reason and no action (spec 12 §3). */}
+              {row.admitted ? (
+                <Link
+                  to={`/research/quantbt/runs/new?step=route&route=${encodeURIComponent(row.routeId)}`}
+                  className="mono text-[9.5px] font-semibold"
+                  style={{ color: "var(--accent)" }}
+                  data-declare-route={row.routeId}
+                >
+                  declare →
+                </Link>
+              ) : null}
             </div>
+            {(() => {
+              const facts = doc.routes.find((r) => r.route_id === row.routeId)?.engine_facts ?? null;
+              return facts ? <RouteEngineDetail routeId={row.routeId} facts={facts} /> : null;
+            })()}
           </div>
         ))}
 
@@ -318,6 +439,16 @@ function ClaimsTab({ doc }: { doc: AtlasDocument }) {
             >
               {claim.never_claims}
             </span>
+            {claim.qualifier ? (
+              <span className="mono text-[9.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-claim-qualifier={claim.qualifier.result_metadata_derivation}>
+                {claim.qualifier.level_name} · {claim.qualifier.level_description} ·{" "}
+                {claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_SAME_LEVEL"
+                  ? `certify_result_metadata derives the same level (${claim.qualifier.result_metadata_status})`
+                  : claim.qualifier.result_metadata_derivation === "ENGINE_DERIVES_OTHER_LEVEL"
+                    ? `certify_result_metadata derives L${claim.qualifier.result_metadata_level} (${claim.qualifier.result_metadata_status}) — the catalog level is the Portal record`
+                    : "certify_result_metadata has no branch for this contract — the catalog level is the Portal record"}
+              </span>
+            ) : null}
           </div>
         ))}
 
@@ -369,6 +500,22 @@ function NotPublished({ fact, label }: { fact: AtlasNotPublishedFact; label: str
   );
 }
 
+/** Spec 12 HiFi wording for the engine's OOS use of a mode × schedule (CG-P04-04). */
+export const OOS_STATE_LABEL: Record<string, string> = {
+  SELECTION_INPUT: "OOS: selection input",
+  WITHHELD_UNTIL_S4: "OOS: withheld until Stage 4",
+  RETROSPECTIVE: "OOS: retrospective",
+  REPORT_ONLY: "OOS: report only",
+  NOT_APPLICABLE: "no held-out window — train = test",
+};
+
+function oosStateColor(state: string): string {
+  if (state === "SELECTION_INPUT" || state === "RETROSPECTIVE") return "var(--accent-2)";
+  if (state === "REPORT_ONLY") return "var(--ink-mute)";
+  if (state === "WITHHELD_UNTIL_S4") return "var(--ink-faint)";
+  return "var(--bad)";
+}
+
 function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
   const tone = claimTone(fact.chronological_validation_claim);
   return (
@@ -384,7 +531,21 @@ function ScheduleClaim({ fact }: { fact: AtlasScheduleFact }) {
         <span className="mono text-[9.5px]" style={{ color: "var(--ink-soft)" }}>
           validation {fact.validation_claim}
         </span>
+        {fact.oos_use_state ? (
+          <span
+            className="mono rounded-[3px] border px-[6px] text-[10px] font-semibold leading-[16px]"
+            style={{ color: oosStateColor(fact.oos_use_state), borderColor: oosStateColor(fact.oos_use_state) }}
+            data-oos-state={fact.oos_use_state}
+          >
+            {OOS_STATE_LABEL[fact.oos_use_state] ?? fact.oos_use_state}
+          </span>
+        ) : null}
       </div>
+      {fact.required_request_fields && fact.required_request_fields.length > 0 ? (
+        <span className="text-[10px]" style={{ color: "var(--ink-soft)" }} data-required-fields={fact.schedule}>
+          needs <span className="mono">{fact.required_request_fields.join(", ")}</span> (requested-spec v2) — preflight refuses it without them.
+        </span>
+      ) : null}
       <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5 text-[10.5px]">
         <dt className="mono text-[9px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>causality</dt>
         <dd className="mono text-[10px]">{fact.causality_claim} · {fact.causality_schedule_v2}</dd>
@@ -434,6 +595,48 @@ function ObjectiveBlock({ facts }: { facts: AtlasModeFacts }) {
                   )}
                 </td>
                 <td style={{ color: "var(--ink-faint)" }}>{coefficient.note ?? "release default"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+      {objective.terms && objective.terms.length > 0 ? (
+        <table className="text-[10px]" data-objective-term-table>
+          <thead>
+            <tr className="mono text-[8.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+              <th className="pr-3 text-left font-normal">term</th>
+              <th className="pr-3 text-left font-normal">meaning</th>
+              <th className="text-left font-normal">source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {objective.terms.map((term) => (
+              <tr key={term.symbol} className="align-top" data-objective-term={term.symbol}>
+                <td className="mono py-[2px] pr-3" style={{ color: "var(--ink)" }}>{term.symbol}</td>
+                <td className="py-[2px] pr-3 leading-[1.45]" style={{ color: "var(--ink-soft)" }}>{term.meaning}</td>
+                <td className="mono py-[2px] text-[9px]" style={{ color: "var(--ink-faint)" }} title={term.source.map((item) => `${item.path}:${item.lines} sha256 ${item.sha256}`).join("\n")}>
+                  {term.source.map((item) => `${item.path.replace(/^quantbt\//, "")}:${item.lines}`).join(" · ")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+      {objective.weights && objective.weights.length > 0 ? (
+        <table className="text-[10px]" data-objective-weights>
+          <thead>
+            <tr className="mono text-[8.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)" }}>
+              <th className="pr-3 text-left font-normal">weight</th>
+              <th className="pr-3 text-left font-normal">release default</th>
+              <th className="text-left font-normal">role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {objective.weights.map((weight) => (
+              <tr key={weight.name} className="align-top" data-objective-weight={weight.name}>
+                <td className="mono py-[2px] pr-3">{weight.name}</td>
+                <td className="mono py-[2px] pr-3" title={weight.source.map((item) => `${item.path}:${item.lines}`).join(" · ")}>{weight.release_default}</td>
+                <td className="py-[2px] leading-[1.45]" style={{ color: "var(--ink-soft)" }}>{weight.role}</td>
               </tr>
             ))}
           </tbody>
@@ -660,14 +863,26 @@ function ModesTab({
             rule one
           </span>
           <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink)" }}>
-            {/* DQ-10 (2026-09-23): the example names only pairs this release
-                admits. The HiFi's `mode_1_decay + per_fold_causal` is not in the
-                QuantBT 1.1.1 manifest, so the sentence contradicted the struck
-                chip right below it (CG-P04-02). */}
+            {/* HiFi copy, restored in W4: requested-spec v2 carries the inner
+                folds, so `mode_1_decay + per_fold_causal` is a valid pair in
+                the manifest again (CG-P02-02; it was struck under DQ-10). */}
+            {/* An older manifest still strikes the pair; the sentence then names
+                only pairs it admits (DQ-10), so it never contradicts a chip. */}
             The claim comes from <span className="mono">mode × schedule</span>, never from the mode
-            alone. <span className="mono">mode_1_decay + per_fold_decay</span> is selection-adjusted
-            outer OOS; the same mode with <span className="mono">global</span> is a global calibration,
-            not causal. Click the schedule chips below and watch the claim change.
+            alone.{" "}
+            {doc.modes.find((mode) => mode.mode_id === "mode_1_decay")?.valid_schedules.includes("per_fold_causal") ? (
+              <>
+                <span className="mono">mode_1_decay + per_fold_causal</span> is strict outer OOS; the
+                same mode with <span className="mono">per_fold_decay</span> is selection-adjusted.
+              </>
+            ) : (
+              <>
+                <span className="mono">mode_1_decay + per_fold_decay</span> is selection-adjusted outer
+                OOS; the same mode with <span className="mono">global</span> is a global calibration, not
+                causal.
+              </>
+            )}{" "}
+            Click the schedule chips below and watch the claim change.
           </span>
         </div>
         <div
@@ -774,6 +989,22 @@ function ReleaseFacts({ release }: { release: CurrentRelease }) {
               <span style={{ color: "var(--ink-faint)" }}>walk-forward</span>{" "}
               frequency {options.frequency.filter((item) => item.admission === "ADMITTED").map((item) => item.value).join("/")} (default {options.frequency_default}) · window{" "}
               {options.window_mode.map((item) => `${item.value}${item.admission === "ADMITTED" ? "" : " (not admitted)"}`).join("/")}
+              {options.train_window ? ` · rolling needs ${options.train_window.requested_spec_field}` : ""}
+              {options.temporal_guards ? ` · guards ${options.temporal_guards.fields.join("/")} ≤ ${options.temporal_guards.maximum}` : ""}
+            </span>
+          ) : null}
+          {release.preflight_limits ? (
+            <span className="mono text-[10px] leading-[1.6]" data-preflight-limits>
+              <span style={{ color: "var(--ink-faint)" }}>preflight limits</span>{" "}
+              <span title={release.preflight_limits.sweep_dimension_ceiling.basis}>
+                sweep dims {release.preflight_limits.sweep_dimension_ceiling.value} ({release.preflight_limits.sweep_dimension_ceiling.value_source.toLowerCase()})
+              </span>
+              {" · "}
+              <span title={release.preflight_limits.outer_fold_ceiling.basis}>folds {release.preflight_limits.outer_fold_ceiling.value}</span>
+              {" · "}
+              <span title={release.preflight_limits.estimated_cpu_seconds_ceiling.basis}>
+                cpu {release.preflight_limits.estimated_cpu_seconds_ceiling.value.toLocaleString("en-US")} s
+              </span>
             </span>
           ) : null}
           <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>

@@ -85,6 +85,8 @@ describe("no internal identifier or direct source access on the Research surface
     "reportClient.ts",
     "lineageClient.ts",
     "compareClient.ts",
+    // W4: CG-P08-04 dataset catalog (Screen 02).
+    "datasetClient.ts",
   ];
 
   /*

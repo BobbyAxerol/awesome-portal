@@ -31,7 +31,8 @@
         "trial_ceiling": {"type": "integer", "minimum": 1, "maximum": 100000},
         "optimizer_defaults": {"$ref": "#/$defs/optimizerDefaults"},
         "submission_constraints": {"$ref": "#/$defs/submissionConstraints"},
-        "walk_forward_options": {"$ref": "#/$defs/walkForwardOptions"}
+        "walk_forward_options": {"$ref": "#/$defs/walkForwardOptions"},
+        "preflight_limits": {"$ref": "#/$defs/preflightLimits"}
       },
       "allOf": [
         {
@@ -149,7 +150,92 @@
         "default_for_new_runs": {"type": "boolean"},
         "axes": {"$ref": "#/$defs/axes"},
         "reason": {"type": "string", "minLength": 1, "maxLength": 500},
-        "required_input_class": {"type": "string", "minLength": 1, "maxLength": 120}
+        "required_input_class": {"type": "string", "minLength": 1, "maxLength": 120},
+        "engine_facts": {"$ref": "#/$defs/routeEngineFacts"}
+      }
+    },
+    "routeEngineFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "method", "walk_forward_status", "method_basis", "resolved_backend", "support_matrix", "route_params", "source"],
+      "properties": {
+        "description": {"type": "string", "minLength": 1, "maxLength": 300},
+        "method": {"enum": ["wfo", "tape", "single_pass"]},
+        "walk_forward_status": {"enum": ["supported", "partial", "not_listed"]},
+        "method_basis": {"type": "string", "minLength": 1, "maxLength": 300},
+        "resolved_backend": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "value", "engine_mode", "reason"],
+          "properties": {
+            "state": {"enum": ["RESOLVED", "SPEC_DEPENDENT"]},
+            "value": {"type": ["string", "null"], "maxLength": 80},
+            "engine_mode": {"type": ["string", "null"], "maxLength": 80},
+            "reason": {"type": ["string", "null"], "maxLength": 300}
+          }
+        },
+        "support_matrix": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["function", "executable", "total", "rows", "source"],
+              "properties": {
+                "function": {"enum": ["arbitrage_support_matrix", "nautilus_support_matrix"]},
+                "executable": {"type": "integer", "minimum": 0, "maximum": 32},
+                "total": {"type": "integer", "minimum": 1, "maximum": 32},
+                "rows": {
+                  "type": "array", "minItems": 1, "maxItems": 32,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["spec_id", "status", "backends", "route", "detail"],
+                    "properties": {
+                      "spec_id": {"type": "string", "minLength": 1, "maxLength": 80},
+                      "status": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+                      "backends": {"type": "string", "minLength": 1, "maxLength": 120},
+                      "route": {"type": "string", "minLength": 1, "maxLength": 200},
+                      "detail": {"type": "string", "minLength": 1, "maxLength": 200}
+                    }
+                  }
+                },
+                "source": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"$ref": "#/$defs/sourceLocator"}}
+              }
+            }
+          ]
+        },
+        "route_params": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["group", "fields"],
+              "properties": {
+                "group": {"enum": ["intrabar", "portfolio", "reactive", "dca"]},
+                "fields": {
+                  "type": "array", "minItems": 1, "maxItems": 8,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["name", "engine_field", "requested_spec_values", "engine_values", "accepted_by_engine", "note", "source"],
+                    "properties": {
+                      "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+                      "engine_field": {"type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+                      "requested_spec_values": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 64}},
+                      "engine_values": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 64}},
+                      "accepted_by_engine": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 64}},
+                      "note": {"type": "string", "minLength": 1, "maxLength": 300},
+                      "source": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"$ref": "#/$defs/sourceLocator"}}
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
       }
     },
     "mode": {
@@ -190,7 +276,20 @@
         "contract_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
         "engine_certification": {"type": "string", "pattern": "^[A-Z][A-Z0-9_-]{1,63}$"},
         "numeric_guarantee": {"type": "string", "minLength": 1, "maxLength": 400},
-        "never_claims": {"type": "string", "minLength": 1, "maxLength": 500}
+        "never_claims": {"type": "string", "minLength": 1, "maxLength": 500},
+        "qualifier": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level_name", "level_description", "result_metadata_derivation", "result_metadata_level", "result_metadata_status", "source"],
+          "properties": {
+            "level_name": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"},
+            "level_description": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,119}$"},
+            "result_metadata_derivation": {"enum": ["ENGINE_DERIVES_SAME_LEVEL", "ENGINE_DERIVES_OTHER_LEVEL", "NOT_DERIVABLE"]},
+            "result_metadata_level": {"type": ["integer", "null"], "minimum": 0, "maximum": 4},
+            "result_metadata_status": {"type": ["string", "null"], "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+            "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+          }
+        }
       }
     },
     "evidenceContract": {
@@ -224,14 +323,76 @@
       "additionalProperties": false,
       "required": ["schema_version", "frequency", "frequency_default", "window_mode", "window_mode_default", "split_mode_form", "split_mode_rule", "source"],
       "properties": {
-        "schema_version": {"const": "research.walk-forward-options.v1"},
+        "schema_version": {"enum": ["research.walk-forward-options.v1", "research.walk-forward-options.v2"]},
         "frequency": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "object", "additionalProperties": false, "required": ["value", "admission"], "properties": {"value": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"}, "admission": {"enum": ["ADMITTED", "NOT_ADMITTED"]}, "reason": {"type": "string", "minLength": 1, "maxLength": 400}}}},
         "frequency_default": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"},
         "window_mode": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "object", "additionalProperties": false, "required": ["value", "admission"], "properties": {"value": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"}, "admission": {"enum": ["ADMITTED", "NOT_ADMITTED"]}, "reason": {"type": "string", "minLength": 1, "maxLength": 400}}}},
         "window_mode_default": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"},
         "split_mode_form": {"const": "source_instant"},
         "split_mode_rule": {"type": "string", "minLength": 1, "maxLength": 400},
+        "train_window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requested_spec_field", "pattern", "required_when", "rule", "source"],
+          "properties": {
+            "requested_spec_field": {"const": "walk_forward.train_window"},
+            "pattern": {"type": "string", "minLength": 1, "maxLength": 80},
+            "required_when": {"const": "window_mode=rolling"},
+            "rule": {"type": "string", "minLength": 1, "maxLength": 400},
+            "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+          }
+        },
+        "temporal_guards": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fields", "minimum", "maximum", "release_default", "rule", "source"],
+          "properties": {
+            "fields": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"enum": ["label_horizon_bars", "purge_bars", "embargo_bars"]}},
+            "minimum": {"const": 0},
+            "maximum": {"type": "integer", "minimum": 1, "maximum": 100000},
+            "release_default": {"const": 0},
+            "rule": {"type": "string", "minLength": 1, "maxLength": 400},
+            "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+          }
+        },
+        "inner_folds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["applies_to", "requested_spec_field", "split_frequency", "window_mode", "train_window_pattern", "min_folds_release_default", "min_folds_maximum", "rule", "source"],
+          "properties": {
+            "applies_to": {"const": "mode_1_decay×per_fold_causal"},
+            "requested_spec_field": {"const": "walk_forward.inner"},
+            "split_frequency": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"}},
+            "window_mode": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"}},
+            "train_window_pattern": {"type": "string", "minLength": 1, "maxLength": 80},
+            "min_folds_release_default": {"type": "integer", "minimum": 1, "maximum": 64},
+            "min_folds_maximum": {"type": "integer", "minimum": 1, "maximum": 64},
+            "rule": {"type": "string", "minLength": 1, "maxLength": 400},
+            "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+          }
+        },
         "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
+      }
+    },
+    "preflightLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "value_source", "basis"],
+      "properties": {
+        "value": {"type": "integer", "minimum": 1, "maximum": 1000000},
+        "value_source": {"enum": ["PORTAL_POLICY", "P08_PREFLIGHT_BOUND"]},
+        "basis": {"type": "string", "minLength": 1, "maxLength": 300}
+      }
+    },
+    "preflightLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "sweep_dimension_ceiling", "outer_fold_ceiling", "estimated_cpu_seconds_ceiling"],
+      "properties": {
+        "schema_version": {"const": "research.preflight-limits.v1"},
+        "sweep_dimension_ceiling": {"$ref": "#/$defs/preflightLimit"},
+        "outer_fold_ceiling": {"$ref": "#/$defs/preflightLimit"},
+        "estimated_cpu_seconds_ceiling": {"$ref": "#/$defs/preflightLimit"}
       }
     },
     "sourceLocator": {
@@ -266,8 +427,10 @@
         "causality_claim": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
         "causality_schedule_v2": {"enum": ["retrospective_global_v2", "trusted_strategy_global_v2", "engine_enforced_per_fold_v2", "engine_enforced_nested_v2"]},
         "oos_use": {"enum": ["USED", "NOT_USED"]},
+        "oos_use_state": {"enum": ["SELECTION_INPUT", "WITHHELD_UNTIL_S4", "RETROSPECTIVE", "REPORT_ONLY", "NOT_APPLICABLE"]},
         "oos_use_condition": {"type": "string", "minLength": 1, "maxLength": 300},
         "params_semantics": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,79}$"},
+        "required_request_fields": {"type": "array", "maxItems": 4, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.]{1,79}$"}},
         "cert_cap": {"$ref": "#/$defs/notPublishedFact"},
         "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
       }
@@ -310,6 +473,35 @@
           }
         },
         "note": {"type": "string", "minLength": 1, "maxLength": 300},
+        "terms": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["symbol", "meaning", "source"],
+            "properties": {
+              "symbol": {"type": "string", "minLength": 1, "maxLength": 160},
+              "meaning": {"type": "string", "minLength": 1, "maxLength": 300},
+              "source": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"$ref": "#/$defs/sourceLocator"}}
+            }
+          }
+        },
+        "weights": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "release_default", "role", "source"],
+            "properties": {
+              "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+              "release_default": {"type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"},
+              "role": {"type": "string", "minLength": 1, "maxLength": 200},
+              "source": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"$ref": "#/$defs/sourceLocator"}}
+            }
+          }
+        },
         "source": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/sourceLocator"}}
       }
     },

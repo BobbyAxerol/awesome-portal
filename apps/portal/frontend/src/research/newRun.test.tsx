@@ -996,10 +996,14 @@ describe("RF02-F2 — the P02 field map is covered 24/24", () => {
         // The values are the manifest's, not a list in the component.
         const published = manifestAtlas.current_release.walk_forward_options!;
         expect([...frequency.options].map((option) => option.value)).toEqual(published.frequency.map((item) => item.value));
+        // W4 CG-P08-02: rolling is admitted with a manifest-owned train width.
         const rolling = [...windowMode.options].find((option) => option.value === "rolling")!;
-        expect(rolling.disabled).toBe(true);
-        expect(document.querySelector('[data-option-refused="rolling"]')?.textContent).toContain("RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED");
+        expect(rolling.disabled).toBe(false);
+        expect(document.querySelector('[data-option-refused="rolling"]')).toBeNull();
         expect(document.querySelector("[data-split-rule]")?.textContent).toBe(published.split_mode_rule);
+        at("windows", { protocol: "advanced", walkForward: { start: "", endExclusive: "", splitMode: "", frequency: "weekly", windowMode: "rolling" } });
+        expect(screen.getByLabelText("Train width")).toBeTruthy();
+        expect(screen.getByLabelText("Purge (bars)")).toBeTruthy();
       } else if (path.startsWith("parameter row")) {
         at("parameters", {
           parameters: [{ name: "window", dimension: "sweep", low: "20", high: "60", value: "", step: "2" } as never],

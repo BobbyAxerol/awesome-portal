@@ -81,17 +81,35 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     let message = `${response.status} ${response.statusText}`;
     let code: string | null = null;
     let requestId: string | null = response.headers.get("x-request-id");
+    let details: Schemas["Problem"]["details"] | null = null;
     try {
       const body = (await response.json()) as Partial<Schemas["Problem"]>;
       if (body?.error?.message) message = body.error.message;
       code = body?.error?.code ?? null;
       requestId = body?.request_id ?? requestId;
+      details = body?.details ?? null;
     } catch {
       /* non-JSON error body: keep the status line the server gave */
     }
-    throw new PortalApiError(message, response.status, code, requestId);
+    throw new PreflightApiError(message, response.status, code, requestId, details);
   }
   return (await response.json()) as T;
+}
+
+/** CG-P08-03: a refusal that also names the gate and the requested-spec field path. */
+export class PreflightApiError extends PortalApiError {
+  readonly details: Schemas["Problem"]["details"] | null;
+
+  constructor(
+    message: string,
+    status: number,
+    code: string | null,
+    requestId: string | null,
+    details: Schemas["Problem"]["details"] | null,
+  ) {
+    super(message, status, code, requestId);
+    this.details = details;
+  }
 }
 
 function query(workspaceId?: string): string {
@@ -152,6 +170,8 @@ const REFUSAL: Record<PreflightProblemCode, PreflightRefusalPresentation> = {
   /* The engine refused this configuration. Retrying it unchanged cannot help. */
   RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED: { ...NO, state: "terminal" },
   RESEARCH_PREFLIGHT_ROUTE_UNKNOWN: { ...NO, state: "terminal" },
+  /* W4 CG-P08-03: an invalid mode × schedule used to surface as a 502. */
+  RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED: { ...NO, state: "terminal", highlightsInput: true },
   RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED: { ...NO, state: "terminal", highlightsInput: true },
   RESEARCH_PREFLIGHT_RESOURCE_REFUSED: { ...NO, state: "terminal", highlightsInput: true },
   RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE: { ...NO, state: "terminal", highlightsInput: true },
@@ -182,6 +202,10 @@ export interface PreflightRefusal extends PreflightRefusalPresentation {
   message: string;
   status: number;
   requestId: string | null;
+  /** CG-P08-03: the gate that refused, when the server named one. */
+  gate?: string | null;
+  /** CG-P08-03: the requested-spec field path at fault (first of a 400's). */
+  fieldPath?: readonly string[] | null;
 }
 
 /**
@@ -216,6 +240,10 @@ export function toPreflightRefusal(error: unknown): PreflightRefusal {
     message: error.message,
     status: error.status,
     requestId: error.requestId,
+    gate: error instanceof PreflightApiError ? (error.details?.gate ?? null) : null,
+    fieldPath: error instanceof PreflightApiError
+      ? (error.details?.field_path ?? error.details?.field_paths?.[0] ?? null)
+      : null,
   };
 }
 

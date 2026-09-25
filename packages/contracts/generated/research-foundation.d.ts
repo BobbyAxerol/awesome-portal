@@ -132,6 +132,15 @@ export interface components {
             engine_certification: string;
             numeric_guarantee: string;
             never_claims: string;
+            qualifier?: {
+                level_name: string;
+                level_description: string;
+                /** @enum {unknown} */
+                result_metadata_derivation: "ENGINE_DERIVES_SAME_LEVEL" | "ENGINE_DERIVES_OTHER_LEVEL" | "NOT_DERIVABLE";
+                result_metadata_level: number | null;
+                result_metadata_status: string | null;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            } | null;
         };
         /** @description Exact P04 declared evidence envelope. P09 publishes declaration only; it neither writes evidence nor exposes a worker control. */
         EvidenceContract: {
@@ -151,6 +160,8 @@ export interface components {
             axes: components["schemas"]["CapabilityAxes"];
             reason: string;
             required_input_class: string;
+            status_word?: string | null;
+            engine_facts?: components["schemas"]["AtlasRouteEngineFacts"] | null;
         };
         /** @description Where a fact is stated in the pinned engine package: file, line range, the file digest carried by the wheel RECORD, and a string that occurs in that range. */
         AtlasSourceLocator: {
@@ -179,6 +190,9 @@ export interface components {
             params_semantics: string;
             cert_cap: components["schemas"]["AtlasNotPublishedFact"];
             source: components["schemas"]["AtlasSourceLocator"][];
+            oos_use_state?: ("SELECTION_INPUT" | "WITHHELD_UNTIL_S4" | "RETROSPECTIVE" | "REPORT_ONLY" | "NOT_APPLICABLE") | null;
+            /** @description CG-P02-02: requested-spec fields this mode × schedule needs before preflight admits it (e.g. walk_forward.inner). */
+            required_request_fields?: string[];
         };
         AtlasObjectiveFact: {
             /** @constant */
@@ -200,6 +214,19 @@ export interface components {
             }[];
             note?: string | null;
             source: components["schemas"]["AtlasSourceLocator"][];
+            /** @description CG-P04-07: what each objective term means, citing the engine lines that compute it. */
+            terms?: {
+                symbol: string;
+                meaning: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            }[];
+            /** @description CG-P04-07: release-default selection weights of modes 2-5 (WalkForwardConfig defaults), each citing where the engine applies it. */
+            weights?: {
+                name: string;
+                release_default: string;
+                role: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            }[];
         };
         AtlasReadsFact: {
             /** @constant */
@@ -288,8 +315,8 @@ export interface components {
             reason: string;
         };
         AtlasWalkForwardOptions: {
-            /** @constant */
-            schema_version: "research.walk-forward-options.v1";
+            /** @enum {unknown} */
+            schema_version: "research.walk-forward-options.v1" | "research.walk-forward-options.v2";
             frequency: {
                 value: string;
                 /** @enum {unknown} */
@@ -308,6 +335,41 @@ export interface components {
             split_mode_form: "source_instant";
             split_mode_rule: string;
             source: components["schemas"]["AtlasSourceLocator"][];
+            /** @description CG-P08-02: the manifest-owned rolling train width (requested-spec v2 walk_forward.train_window). */
+            train_window?: {
+                /** @constant */
+                requested_spec_field: "walk_forward.train_window";
+                pattern: string;
+                /** @constant */
+                required_when: "window_mode=rolling";
+                rule: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            };
+            /** @description CG-P02-02: label horizon, purge and embargo in bars (requested-spec v2). */
+            temporal_guards?: {
+                fields: ("label_horizon_bars" | "purge_bars" | "embargo_bars")[];
+                /** @constant */
+                minimum: 0;
+                maximum: number;
+                /** @constant */
+                release_default: 0;
+                rule: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            };
+            /** @description CG-P02-02: nested inner folds for mode_1_decay × per_fold_causal (requested-spec v2 walk_forward.inner). */
+            inner_folds?: {
+                /** @constant */
+                applies_to: "mode_1_decay×per_fold_causal";
+                /** @constant */
+                requested_spec_field: "walk_forward.inner";
+                split_frequency: string[];
+                window_mode: string[];
+                train_window_pattern: string;
+                min_folds_release_default: number;
+                min_folds_maximum: number;
+                rule: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            };
         };
         AtlasRelease: {
             release_id: components["schemas"]["Identifier"];
@@ -326,6 +388,7 @@ export interface components {
             config_digest?: string | null;
             /** @description RF02-B2. The walk-forward values New Run may offer, each with the Portal's admission; preflight admits exactly the ADMITTED ones. Optional for a manifest written before it existed. */
             walk_forward_options?: components["schemas"]["AtlasWalkForwardOptions"] | null;
+            preflight_limits?: components["schemas"]["AtlasPreflightLimits"] | null;
         };
         HistoricalRelease: {
             release_id: components["schemas"]["Identifier"];
@@ -381,6 +444,79 @@ export interface components {
             /** @constant */
             facts_state: "NOT_PUBLISHED";
             facts_reason: string;
+        };
+        /** @description CG-P04-06: the backend the pinned constructor resolves with no caller override. SPEC_DEPENDENT means the constructor needs a typed specification first; its support matrix lists backends per specification. */
+        AtlasResolvedBackend: {
+            /** @enum {unknown} */
+            state: "RESOLVED" | "SPEC_DEPENDENT";
+            value: string | null;
+            engine_mode: string | null;
+            reason: string | null;
+        };
+        /** @description CG-P04-06: pass-through of the engine's public support-matrix function (arbitrage_support_matrix or nautilus_support_matrix). */
+        AtlasSupportMatrix: {
+            /** @enum {unknown} */
+            function: "arbitrage_support_matrix" | "nautilus_support_matrix";
+            executable: number;
+            total: number;
+            rows: {
+                spec_id: string;
+                status: string;
+                backends: string;
+                route: string;
+                detail: string;
+            }[];
+            source: components["schemas"]["AtlasSourceLocator"][];
+        };
+        /** @description CG-P04-06: per requested-spec route_params field, the P02 value list next to the engine's own vocabulary; accepted_by_engine is their exact intersection. */
+        AtlasRouteParams: {
+            /** @enum {unknown} */
+            group: "intrabar" | "portfolio" | "reactive" | "dca";
+            fields: {
+                name: string;
+                engine_field: string | null;
+                requested_spec_values: string[];
+                engine_values: string[];
+                accepted_by_engine: string[];
+                note: string;
+                source: components["schemas"]["AtlasSourceLocator"][];
+            }[];
+        };
+        /** @description CG-P04-06: route facts read from the pinned QuantBT wheel, each with a source locator. Descriptive; never run admission. */
+        AtlasRouteEngineFacts: {
+            description: string;
+            /** @enum {unknown} */
+            method: "wfo" | "tape" | "single_pass";
+            /** @enum {unknown} */
+            walk_forward_status: "supported" | "partial" | "not_listed";
+            method_basis: string;
+            resolved_backend: components["schemas"]["AtlasResolvedBackend"];
+            support_matrix: components["schemas"]["AtlasSupportMatrix"] | null;
+            route_params: components["schemas"]["AtlasRouteParams"] | null;
+            source: components["schemas"]["AtlasSourceLocator"][];
+        };
+        /** @description CG-P08-05: ceilings P08 enforces server-side, each naming its source. None is an engine limit. */
+        AtlasPreflightLimits: {
+            /** @constant */
+            schema_version: "research.preflight-limits.v1";
+            sweep_dimension_ceiling: {
+                value: number;
+                /** @enum {unknown} */
+                value_source: "PORTAL_POLICY" | "P08_PREFLIGHT_BOUND";
+                basis: string;
+            };
+            outer_fold_ceiling: {
+                value: number;
+                /** @enum {unknown} */
+                value_source: "PORTAL_POLICY" | "P08_PREFLIGHT_BOUND";
+                basis: string;
+            };
+            estimated_cpu_seconds_ceiling: {
+                value: number;
+                /** @enum {unknown} */
+                value_source: "PORTAL_POLICY" | "P08_PREFLIGHT_BOUND";
+                basis: string;
+            };
         };
     };
     responses: {

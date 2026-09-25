@@ -86,6 +86,8 @@ function analysisFor(sourceText: string): ResearchAlphaAnalysis {
     declared_contract: declaredContract,
     mirror,
     gate_facts: facts,
+    // W4 CG-P07-04: measured, therefore outside analysis_digest.
+    gate_timings_us: { parse: 40, contract_complete: 60, entrypoint_restricted_definition_load: 900, parameter_space_sane: 11, determinism_declared: 3, data_contract_known: 7, no_lookahead_static_scan: 1_500 },
   };
 }
 
@@ -195,6 +197,12 @@ describe("Research Loop P07 · Alpha Registry, import and immutable binding", ()
     expect(gates.all_pass).toBe(true);
     expect(gates.gates.map((gate) => gate.n)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(gates.gates.every((gate) => gate.state === "PASS")).toBe(true);
+    // W4 CG-P07-04: parser gates carry the analyser's own time; gate 3 is timed here.
+    expect(gates.gates.map((gate) => [gate.timing_source, gate.analyser_us])).toEqual([
+      ["ANALYSER", 100], ["ANALYSER", 900], ["CONTROL_API", null], ["ANALYSER", 11],
+      ["ANALYSER", 3], ["ANALYSER", 7], ["ANALYSER", 1500],
+    ]);
+    expect(gates.gates[6]!.ms).toBe(2);
     expect(gates.static_scan_disclosure).toBe("Static scan — runtime causality is proven per run at Stage 3/4.");
     expect(result).toMatchObject({ schema_version: "research.alpha-registration.v1", lifecycle_state: "DRAFT", replayed: false, alpha_id: "p07-alpha", may_activate: true });
     expect(result.supersedes).toBeNull();

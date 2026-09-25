@@ -400,10 +400,12 @@ def test_rf02_t04_walk_forward_values_come_from_the_published_manifest(tmp_path:
     import shutil
 
     published = ResearchEngineCatalogService(REGISTRY_ROOT).walk_forward_options()
-    assert published.admitted("window_mode") == {"expanding"}
+    # W4 CG-P08-02: rolling is admitted now that the manifest owns the train
+    # width (requested-spec v2 walk_forward.train_window); a v1 request that
+    # asks for rolling is still refused because it cannot carry a width.
+    assert published.admitted("window_mode") == {"expanding", "rolling"}
     assert published.admitted("frequency") == {"single", "yearly", "semi_yearly", "quarterly", "monthly", "weekly"}
-    rolling = next(item for item in published.window_mode if item.value == "rolling")
-    assert rolling.admission == "NOT_ADMITTED" and "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED" in (rolling.reason or "")
+    assert published.train_window is not None and published.train_window.required_when == "window_mode=rolling"
     assert published.frequency_default == "quarterly" and published.window_mode_default == "expanding"
 
     # Withdraw `weekly` in a copy of the manifest: the same spec that passes
@@ -441,3 +443,309 @@ def test_rf02_t04_walk_forward_values_come_from_the_published_manifest(tmp_path:
         engine_catalog=ResearchEngineCatalogService(root),
     )
     assert error_code(lambda: withdrawn_authority.build(payload(spec))) == "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED"
+
+
+# W4 · CG-P02-02 / CG-P08-02 / -03 / -05 / -06 --------------------------------
+
+
+def advanced_spec(*, version: str = "research.requested-spec.v2", **walk_forward: object) -> dict[str, object]:
+    spec = requested()
+    spec.pop("windows")
+    spec["schema_version"] = version
+    spec["protocol"] = "advanced"
+    spec["walk_forward"] = {
+        "start": "2026-01-04T00:00:00",
+        "end_exclusive": "2026-01-18T00:00:00",
+        "split_mode": "2026-01-06T00:00:00",
+        "frequency": "weekly",
+        "window_mode": "expanding",
+        **walk_forward,
+    }
+    return spec
+
+
+def refusal(callable_) -> ResearchPreflightSnapshotError:
+    with pytest.raises(ResearchPreflightSnapshotError) as raised:
+        callable_()
+    return raised.value
+
+
+def test_w4_invalid_mode_schedule_is_a_typed_refusal_not_a_bare_value_error(service) -> None:
+    # Before W4 this escaped as ResearchEngineCatalogError -> private 400 ->
+    # a browser 502 "rejected": a declaration mistake reported as an outage.
+    authority, _ = service
+    spec = requested()
+    spec["optimization_mode"] = "mode_2_sbb"
+    spec["optimization_schedule"] = "per_fold_causal"
+    error = refusal(lambda: authority.build(payload(spec)))
+    assert error.code == "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED"
+    assert error.field_path == ("optimization_schedule",)
+
+
+def test_w4_v1_cannot_carry_v2_fields_and_rolling_still_needs_a_width(service) -> None:
+    authority, _ = service
+    v1 = advanced_spec(version="research.requested-spec.v1", purge_bars=2)
+    error = refusal(lambda: authority.build(payload(v1)))
+    assert (error.code, error.field_path) == ("RESEARCH_PREFLIGHT_INVALID", ("walk_forward", "purge_bars"))
+    rolling_v1 = advanced_spec(version="research.requested-spec.v1", window_mode="rolling")
+    assert refusal(lambda: authority.build(payload(rolling_v1))).code == "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED"
+    rolling_v2 = advanced_spec(window_mode="rolling")
+    error = refusal(lambda: authority.build(payload(rolling_v2)))
+    assert (error.code, error.field_path) == ("RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED", ("walk_forward", "train_window"))
+    expanding_with_width = advanced_spec(train_window="2D")
+    assert refusal(lambda: authority.build(payload(expanding_with_width))).field_path == ("walk_forward", "train_window")
+
+
+def test_w4_v2_rolling_plan_is_built_by_the_engine_with_a_manifest_owned_width(service) -> None:
+    authority, _ = service
+    result = authority.build(payload(advanced_spec(window_mode="rolling", train_window="2D")))
+    topology = result["topology"]
+    assert topology["window_mode"] == "rolling"
+    assert topology["train_window"] == "2D"
+    assert topology["plan_source"] == "quantbt.walkforward.WalkForwardEngine.build_folds"
+    folds = topology["folds"]
+    assert len(folds) == 2
+    # Rolling: the second fold's train starts two days before its OOS.
+    assert folds[1]["train"]["start_utc"] == "2026-01-11T00:00:00+00:00"
+    assert folds[1]["train"]["bars"] == 48
+    assert folds[0]["outer_oos"]["start_utc"] == "2026-01-06T00:00:00+00:00"
+    assert result["effective_spec"]["topology"] == topology
+
+
+def test_w4_v2_temporal_guards_are_published_as_engine_spans(service) -> None:
+    authority, _ = service
+    result = authority.build(payload(advanced_spec(label_horizon_bars=2, purge_bars=3, embargo_bars=4)))
+    topology = result["topology"]
+    assert topology["temporal_guards"] == {"label_horizon_bars": 2, "purge_bars": 3, "embargo_bars": 4}
+    first = topology["folds"][0]
+    assert first["train"]["bars"] == 43  # 48 train bars less 3 purge and 2 label bars
+    assert first["guards"]["purge"]["bars"] == 3
+    assert first["guards"]["label_horizon"]["bars"] == 2
+    assert first["guards"]["embargo"]["bars"] == 4
+    # The embargo pushes the next OOS start by four bars.
+    assert topology["folds"][1]["outer_oos"]["start_utc"] == "2026-01-13T04:00:00+00:00"
+    # Half-open: purge ends where the label horizon begins, which ends at OOS.
+    assert first["guards"]["purge"]["end_exclusive_utc_ms"] == first["guards"]["label_horizon"]["start_utc_ms"]
+    assert first["guards"]["label_horizon"]["end_exclusive_utc_ms"] == first["outer_oos"]["start_utc_ms"]
+
+
+def test_w4_causal_mode_one_needs_inner_folds_and_the_engine_counts_them(service) -> None:
+    authority, _ = service
+    causal = advanced_spec()
+    causal["optimization_schedule"] = "per_fold_causal"
+    error = refusal(lambda: authority.build(payload(causal)))
+    assert (error.code, error.field_path) == ("RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED", ("walk_forward", "inner"))
+    v1 = copy.deepcopy(causal)
+    v1["schema_version"] = "research.requested-spec.v1"
+    assert refusal(lambda: authority.build(payload(v1))).code == "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED"
+    causal["walk_forward"]["inner"] = {"split_frequency": "single", "window_mode": "expanding", "train_window": "12h", "min_folds": 1}
+    result = authority.build(payload(causal))
+    assert [fold["inner_fold_count"] for fold in result["topology"]["folds"]] == [1, 1]
+    assert result["topology"]["inner_validation"]["train_window"] == "12h"
+    too_many = copy.deepcopy(causal)
+    too_many["walk_forward"]["inner"] = {"split_frequency": "weekly", "window_mode": "expanding", "train_window": "1D", "min_folds": 2}
+    error = refusal(lambda: authority.build(payload(too_many)))
+    assert (error.code, error.field_path) == ("RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED", ("walk_forward", "inner"))
+    assert "inner_min_folds=2" in str(error)
+    decay = advanced_spec(inner={"split_frequency": "single", "window_mode": "expanding", "train_window": "12h", "min_folds": 1})
+    assert refusal(lambda: authority.build(payload(decay))).field_path == ("walk_forward", "inner")
+
+
+def test_w4_v1_plan_and_digest_inputs_are_unchanged(service) -> None:
+    authority, _ = service
+    result = authority.build(payload(advanced_spec(version="research.requested-spec.v1")))
+    topology = result["topology"]
+    assert set(topology) == {"protocol", "frequency", "window_mode", "folds", "sealed_holdout", "topology_digest"}
+    assert all(set(fold) == {"fold_id", "train", "outer_oos", "state"} for fold in topology["folds"])
+
+
+def test_w4_sweep_ceiling_is_enforced_server_side_with_its_field_path(service) -> None:
+    authority, _ = service
+    limits = authority.engine_catalog.preflight_limits()
+    assert limits.sweep_dimension_ceiling.value == 8
+    error = refusal(lambda: authority.build(payload(requested(), swept_dimensions=9)))
+    assert (error.code, error.field_path, error.gate) == (
+        "RESEARCH_PREFLIGHT_RESOURCE_REFUSED", ("parameter_space_overrides",), "sweep_ceiling"
+    )
+    result = authority.build(payload(requested(), swept_dimensions=8))
+    assert result["resource_estimate"]["ceilings"] == {
+        "trial_ceiling": 4000,
+        "sweep_dimension_ceiling": 8,
+        "swept_dimensions": 8,
+        "outer_fold_ceiling": 128,
+        "estimated_cpu_seconds_ceiling": 86400,
+    }
+
+
+def test_w4_published_bounds_are_the_ones_p08_applies() -> None:
+    from portal_api.services.research_preflight_snapshot import PREFLIGHT_MAXIMUM_FOLD_ROWS
+
+    limits = ResearchEngineCatalogService(REGISTRY_ROOT).preflight_limits()
+    assert limits.outer_fold_ceiling.value == PREFLIGHT_MAXIMUM_FOLD_ROWS
+    assert limits.estimated_cpu_seconds_ceiling.value == 86_400
+
+
+def test_w4_gap_scan_reads_timestamps_only_and_never_scans_the_seal(tmp_path: Path) -> None:
+    gappy = frame()
+    # Drop 3 IS bars and 2 OOS bars.
+    drop = [pd.Timestamp(t) for t in (
+        "2026-01-05T01:00:00Z", "2026-01-05T02:00:00Z", "2026-01-05T03:00:00Z",
+        "2026-01-11T10:00:00Z", "2026-01-12T10:00:00Z",
+    )]
+    authority = ResearchPreflightSnapshotService(
+        provider=MutableHistoricalProvider(gappy.drop(index=drop)),
+        snapshots=SnapshotStore(tmp_path / "gappy"),
+        engine_catalog=ResearchEngineCatalogService(REGISTRY_ROOT),
+    )
+    result = authority.build(payload(requested()))
+    scan = result["snapshot"]["gap_scan"]
+    assert scan["state"] == "SCANNED" and scan["max_gap_ratio"] == 0.05
+    rows = {row["window"]: row for row in scan["windows"]}
+    assert (rows["IS"]["missing_bars"], rows["IS"]["gap_runs"], rows["IS"]["verdict"]) == (3, 1, "WATCH")
+    assert rows["IS"]["items"] == [{"start_utc_ms": int(drop[0].value // 1_000_000), "missing_bars": 3}]
+    assert (rows["OOS"]["missing_bars"], rows["OOS"]["gap_runs"]) == (2, 2)
+    assert rows["holdout"]["state"] == "SEALED" and rows["holdout"]["missing_bars"] is None
+    assert rows["holdout"]["note"] == "sealed — integrity checked at snapshot time, content unread"
+
+
+def test_w4_holdout_seal_record_is_read_only_and_bound_to_the_snapshot(service) -> None:
+    authority, _ = service
+    first = authority.build(payload(requested()))
+    again = authority.build(payload(requested()))
+    seal = first["snapshot"]["holdout_seal"]
+    assert seal["seal_digest"] == again["snapshot"]["holdout_seal"]["seal_digest"]
+    assert seal["read_log"] == {
+        "state": "NO_READER",
+        "reads": [],
+        "reason": "No Research route or worker reads sealed holdout values; P08 returns boundaries only.",
+    }
+    assert seal["unlock"]["state"] == "OWNER_SCOPE_REQUIRED" and "DR-01" in seal["unlock"]["reason"]
+    assert seal["cap"]["state"] == "NOT_PUBLISHED"
+    # The seal lives beside the topology: the v1 topology digest input is unchanged.
+    assert "seal" not in first["topology"]["sealed_holdout"]
+    advanced = authority.build(payload(advanced_spec()))
+    assert advanced["snapshot"]["holdout_seal"]["state"] == "NOT_DECLARED"
+
+
+@pytest.mark.anyio
+async def test_w4_private_route_refusal_carries_gate_path_and_bounded_message(monkeypatch, tmp_path: Path) -> None:
+    secret = "p08-test-principal-secret-0123456789"
+    monkeypatch.setenv("INTERNAL_PRINCIPAL_SECRET", secret)
+    app = create_app()
+    app.state.research_preflight_snapshot_service = ResearchPreflightSnapshotService(
+        provider=MutableHistoricalProvider(frame()),
+        snapshots=SnapshotStore(tmp_path / "route-refusal"),
+        engine_catalog=ResearchEngineCatalogService(REGISTRY_ROOT),
+    )
+    spec = requested()
+    spec["optimization_mode"] = "mode_2_sbb"
+    spec["optimization_schedule"] = "per_fold_causal"
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            refused = await client.post(
+                "/internal/research/preflight-snapshots",
+                headers={"x-portal-principal": signed_internal_principal(secret)},
+                json=payload(spec, swept_dimensions=0),
+            )
+    finally:
+        app.state.run_manager.shutdown()
+    assert refused.status_code == 409
+    detail = refused.json()["detail"]
+    assert detail["code"] == "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED"
+    assert detail["gate"] == "mode_schedule_admitted"
+    assert detail["field_path"] == ["optimization_schedule"]
+    assert 0 < len(detail["message"]) <= 400 and "/" not in detail["message"]
+
+
+def test_w4_refusal_detail_names_gate_and_field_path() -> None:
+    from portal_api.services.research_preflight_snapshot import refusal_detail
+
+    explicit = ResearchPreflightSnapshotError(
+        "RESEARCH_PREFLIGHT_RESOURCE_REFUSED", "sweep dims 9 > 8", field_path=("parameter_space_overrides",), gate="sweep_ceiling"
+    )
+    assert refusal_detail(explicit, {}) == {
+        "code": "RESEARCH_PREFLIGHT_RESOURCE_REFUSED", "gate": "sweep_ceiling",
+        "field_path": ["parameter_space_overrides"], "message": "sweep dims 9 > 8",
+    }
+    default = ResearchPreflightSnapshotError("RESEARCH_PREFLIGHT_TOPOLOGY_INVALID", "bad")
+    assert refusal_detail(default, {"protocol": "three_window_decay"})["field_path"] == ["windows"]
+    assert refusal_detail(default, {"protocol": "advanced"})["field_path"] == ["walk_forward"]
+
+
+# W4 · CG-P08-04 research dataset catalog -------------------------------------
+
+
+def _hmd_provider(storage: Path):
+    from portal_api.adapters.market_data import HistoricalDataRuntime, HistoricalMarketDataProvider
+
+    runtime = HistoricalDataRuntime(
+        storage_root=storage, reader_version="test", loader_contract="hmd-loader-v1", manifest_digest="a" * 64,
+        environment_id="test", release_commit="0" * 40, release_tag="test", dataset_release_id="binance_perpetual_spot_quarterly",
+        loader_class=object,
+    )
+    return HistoricalMarketDataProvider(runtime=runtime)
+
+
+def test_w4_dataset_catalog_lists_symbols_and_month_coverage_from_names_only(tmp_path: Path) -> None:
+    from portal_api.services.research_dataset_catalog import build_research_dataset_catalog
+
+    root = tmp_path / "storage" / "crypto" / "binance_futures" / "1m"
+    for symbol, months in {"BTCUSDT": [(2024, 11), (2024, 12), (2025, 1)], "BTCUSDT_250328": [(2025, 1)], "ETHUSDT": []}.items():
+        base = root / f"symbol={symbol}"
+        base.mkdir(parents=True)
+        for year, month in months:
+            (base / f"year={year}" / f"month={month:02d}").mkdir(parents=True)
+    # A data file must never be opened: an unreadable one proves it.
+    part = root / "symbol=BTCUSDT" / "year=2024" / "month=11" / "part.parquet"
+    part.write_bytes(b"not parquet")
+    part.chmod(0)
+    catalog = build_research_dataset_catalog(_hmd_provider(tmp_path / "storage"))
+    part.chmod(0o600)
+    assert catalog["schema_version"] == "research.dataset-catalog.v1"
+    (dataset,) = catalog["datasets"]
+    assert dataset["dataset_id"] == "crypto-binance-1m" and dataset["calendar_policy"] == "CRYPTO_24_7"
+    assert "1h" in dataset["timeframes"]
+    symbols = {row["symbol"]: row for row in dataset["symbols"]["items"]}
+    assert dataset["symbols"]["state"] == "PUBLISHED" and dataset["symbols"]["total"] == 3
+    assert symbols["BTCUSDT"] == {
+        "symbol": "BTCUSDT", "contract_kind": "PERPETUAL",
+        "coverage": {"first_month": "2024-11", "last_month": "2025-01", "months": 3, "granularity": "MONTH_PARTITION"},
+    }
+    assert symbols["BTCUSDT_250328"]["contract_kind"] == "QUARTERLY"
+    assert symbols["ETHUSDT"]["coverage"] is None
+    assert str(tmp_path) not in json.dumps(catalog)
+
+
+def test_w4_dataset_catalog_says_not_published_rather_than_inventing_symbols(service) -> None:
+    from portal_api.adapters.market_data import UnavailableHistoricalMarketDataProvider
+    from portal_api.services.research_dataset_catalog import build_research_dataset_catalog
+
+    authority, provider = service
+    (dataset,) = build_research_dataset_catalog(provider)["datasets"]
+    assert dataset["symbols"] == {
+        "state": "NOT_PUBLISHED",
+        "reason": "This source answers any symbol by query and publishes no symbol list.",
+        "items": [], "total": None, "truncated": False,
+    }
+    (unavailable,) = build_research_dataset_catalog(UnavailableHistoricalMarketDataProvider("mount missing"))["datasets"]
+    assert unavailable["availability"] == "unavailable" and unavailable["unavailable_reason"] == "mount missing"
+    assert unavailable["symbols"]["state"] == "NOT_PUBLISHED"
+
+
+@pytest.mark.anyio
+async def test_w4_dataset_catalog_private_route_requires_hmac(monkeypatch) -> None:
+    secret = "p08-test-principal-secret-0123456789"
+    monkeypatch.setenv("INTERNAL_PRINCIPAL_SECRET", secret)
+    app = create_app()
+    app.state.market_data_provider = MutableHistoricalProvider(frame())
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            denied = await client.get("/internal/research/datasets")
+            allowed = await client.get(
+                "/internal/research/datasets", headers={"x-portal-principal": signed_internal_principal(secret)}
+            )
+    finally:
+        app.state.run_manager.shutdown()
+    assert denied.status_code == 401
+    assert allowed.status_code == 200
+    assert allowed.json()["datasets"][0]["dataset_id"] == "crypto-binance-1m"

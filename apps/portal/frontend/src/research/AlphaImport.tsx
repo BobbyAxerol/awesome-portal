@@ -169,40 +169,83 @@ export function formatMirrorValue(value: unknown): string {
   return "";
 }
 
+/** CG-P07-03: the state word of a mirror row, and its tone. */
+const MIRROR_STATE: Record<string, { label: string; color: string; dashed: boolean }> = {
+  parsed: { label: "parsed", color: "var(--good)", dashed: false },
+  missing: { label: "missing", color: "var(--bad)", dashed: false },
+  server_computed: { label: "server", color: "var(--accent)", dashed: false },
+  server_assigned: { label: "at register", color: "var(--ink-soft)", dashed: true },
+  not_in_contract: { label: "not in v1", color: "var(--ink-faint)", dashed: true },
+};
+
+/** CG-P07-03: the named gate's verdict for this field. VERIFY is not PASS. */
+const MIRROR_CHECK_COLOR: Record<string, string> = {
+  PASS: "var(--good)",
+  FAIL: "var(--bad)",
+  VERIFY: "var(--accent-2)",
+  GATED: "var(--bad)",
+  NOT_APPLICABLE: "var(--ink-faint)",
+};
+
 function MirrorTable({ mirror }: { mirror: readonly MirrorField[] }) {
   return (
     <div className="overflow-x-auto" data-mirror>
-      <dl style={{ minWidth: 470 }}>
-        {mirror.map((field) => (
-          <div
-            key={field.field}
-            data-mirror-field={field.field}
-            data-mirror-state={field.state}
-            className="flex items-baseline gap-2.5 border-b py-[3px] last:border-b-0"
-            style={{ borderColor: "var(--line-soft)" }}
-          >
-            <dt className="mono flex-none text-[10px]" style={{ width: 196, color: "var(--ink-soft)" }}>
-              {field.field}
-            </dt>
-            <dd className="mono flex-1 break-words text-[11px]" style={{ color: "var(--ink)" }}>
-              {/* A field the parser did not find has no value to print. The chip
-                  carries that fact; an invented dash would read as a value. */}
-              {field.state === "parsed" ? formatMirrorValue(field.value) : null}
-            </dd>
-            <span
-              className="mono flex-none rounded-[3px] border px-1 text-[8.5px] font-bold leading-[14px]"
-              style={{
-                color: field.state === "parsed" ? "var(--good)" : "var(--bad)",
-                borderColor: field.state === "parsed" ? "var(--good)" : "var(--bad)",
-              }}
+      <dl style={{ minWidth: 560 }}>
+        {mirror.map((field) => {
+          const state = MIRROR_STATE[field.state] ?? { label: field.state, color: "var(--ink-soft)", dashed: false };
+          const hasValue = field.state === "parsed" || field.state === "server_computed";
+          return (
+            <div
+              key={field.field}
+              data-mirror-field={field.field}
+              data-mirror-state={field.state}
+              data-mirror-check={field.check}
+              className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 border-b py-[3px] last:border-b-0"
+              style={{ borderColor: "var(--line-soft)" }}
             >
-              {field.state}
-            </span>
-          </div>
-        ))}
+              <dt className="mono flex-none text-[10px]" style={{ width: 196, color: "var(--ink-soft)" }}>
+                {field.field}
+              </dt>
+              <dd className="mono min-w-0 flex-1 break-words text-[11px]" style={{ color: "var(--ink)" }}>
+                {/* A field the parser did not find, or the v1 file cannot carry,
+                    has no value to print. The chip carries that fact; an invented
+                    dash would read as a value. */}
+                {hasValue ? formatMirrorValue(field.value) : null}
+              </dd>
+              <span
+                className="mono flex-none rounded-[3px] border px-1 text-[8.5px] font-bold leading-[14px]"
+                style={{ color: state.color, borderColor: state.color, borderStyle: state.dashed ? "dashed" : "solid" }}
+              >
+                {state.label}
+              </span>
+              <span
+                className="mono flex-none text-[8.5px] font-bold"
+                style={{ width: 92, color: MIRROR_CHECK_COLOR[field.check] ?? "var(--ink-soft)" }}
+                title={field.gate ? `checked by ${field.gate}` : undefined}
+                data-mirror-verdict={field.check}
+              >
+                {field.check}
+              </span>
+              <span className="w-full pl-[206px] text-[9.5px] leading-[1.45]" style={{ color: "var(--ink-faint)" }}>
+                {field.gate ? <span className="mono">{field.gate} · </span> : null}
+                {field.note}
+              </span>
+            </div>
+          );
+        })}
       </dl>
     </div>
   );
+}
+
+/** CG-P07-04: `0.214 ms · analyser`, or the whole ms Control API measured. */
+export function gateTiming(gate: GateRow): string | null {
+  if (gate.state === "SKIPPED") return null;
+  if (gate.timing_source === "ANALYSER" && typeof gate.analyser_us === "number") {
+    return `${(gate.analyser_us / 1000).toFixed(3)} ms · analyser`;
+  }
+  if (gate.timing_source === "CONTROL_API") return `${gate.ms} ms · registry`;
+  return `${gate.ms} ms`;
 }
 
 function gateTone(state: GateRow["state"]): string {
@@ -212,6 +255,45 @@ function gateTone(state: GateRow["state"]): string {
      reader the gate never ran. `--line-strong` is a border tone and fell below
      readable contrast on paper when it was used as text here. */
   return "var(--ink-mute)";
+}
+
+/** The seven gate names, in the order the server runs them. */
+export const GATE_ORDER = [
+  "contract-complete",
+  "entrypoint-importable",
+  "digest-unique",
+  "parameter-space-sane",
+  "determinism-declared",
+  "data-contract-known",
+  "no-lookahead-static-scan",
+] as const;
+
+/**
+ * CG-P07-04 · RUNNING. The gates run in one synchronous server request, so
+ * the only honest RUNNING is "this request is in flight": all seven rows show
+ * it together, and no row claims to have finished before the server says so.
+ */
+function RunningGates() {
+  return (
+    <ol className="flex flex-col" role="list" data-gates-running>
+      {GATE_ORDER.map((name, index) => (
+        <li
+          key={name}
+          data-gate={name}
+          data-gate-state="RUNNING"
+          className="mono flex flex-wrap items-baseline gap-x-2.5 border-b py-1 text-[10.5px] last:border-b-0"
+          style={{ borderColor: "var(--line-soft)" }}
+        >
+          <span className="flex-none text-right" style={{ width: 16, color: "var(--ink-faint)" }}>{index + 1}</span>
+          <span className="flex-none" style={{ width: 186 }}>{name}</span>
+          <span className="flex-none font-bold" style={{ width: 58, color: "var(--accent)" }}>
+            <span aria-hidden="true" data-motion="pulse">● </span>RUNNING
+          </span>
+          <span className="flex-none" style={{ color: "var(--ink-faint)" }}>in one server request</span>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 function GateList({
@@ -260,8 +342,8 @@ function GateList({
             <span className="flex-none font-bold" style={{ width: 58, color: gateTone(gate.state) }}>
               <span aria-hidden="true">● </span>{gate.state}
             </span>
-            <span className="flex-none" style={{ width: 52, color: "var(--ink-faint)" }}>
-              {gate.ms} ms
+            <span className="flex-none" style={{ width: 132, color: "var(--ink-faint)" }} data-gate-timing={gate.timing_source ?? "none"}>
+              {gateTiming(gate) ?? "—"}
             </span>
             {/* The engine's own sentence, on its own line so it is never cut. */}
             <span className="w-full break-words pl-[18px] text-[10px]" style={{ color: "var(--ink-soft)" }}>
@@ -702,20 +784,24 @@ export function AlphaImport(props: AlphaImportProps) {
           }
         />
 
-        <ResearchPanel
-          title="import gates"
-          meta={gates ? `receipt ${gates.gate_receipt_id.slice(0, 12)}` : undefined}
-          state={gatesState}
-          minBodyHeight={110}
-        >
-          {gates ? (
-            <GateList
-              gates={gates.gates}
-              disclosure={gates.static_scan_disclosure}
-              reducedMotion={reducedMotion}
-            />
-          ) : null}
-        </ResearchPanel>
+        {busyStep === "gates" ? (
+          <RunningGates />
+        ) : (
+          <ResearchPanel
+            title="import gates"
+            meta={gates ? `receipt ${gates.gate_receipt_id.slice(0, 12)}` : undefined}
+            state={gatesState}
+            minBodyHeight={110}
+          >
+            {gates ? (
+              <GateList
+                gates={gates.gates}
+                disclosure={gates.static_scan_disclosure}
+                reducedMotion={reducedMotion}
+              />
+            ) : null}
+          </ResearchPanel>
+        )}
 
         {anyGateFailed ? (
           <p role="alert" className="text-[11px]" style={{ color: "var(--bad)" }} data-fail-closed-note>

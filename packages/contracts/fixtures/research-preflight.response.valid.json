@@ -1,7 +1,133 @@
 {
   "schema_version": "research.preflight.v1",
   "preflight_token": "rpft_fixture",
+  "issued_at_utc_ms": 0,
   "expires_at_utc_ms": 0,
+  "gates": [
+    {
+      "gate": "requested_spec",
+      "state": "PASS",
+      "field_path": [
+        "schema_version"
+      ],
+      "message": "The request satisfies research.requested-spec.v1."
+    },
+    {
+      "gate": "alpha_declaration",
+      "state": "NOT_APPLICABLE",
+      "field_path": [
+        "alpha_binding"
+      ],
+      "message": "Scratch request: no AlphaVersion declaration binds it."
+    },
+    {
+      "gate": "release_current",
+      "state": "PASS",
+      "field_path": [
+        "client",
+        "engine_release_id"
+      ],
+      "message": "er_quantbt_111 is the current admitted preflight release."
+    },
+    {
+      "gate": "route_admitted",
+      "state": "PASS",
+      "field_path": [
+        "execution_route"
+      ],
+      "message": "signal_notional is admitted for preflight (P04_BASELINE_ONLY)."
+    },
+    {
+      "gate": "mode_schedule_admitted",
+      "state": "PASS",
+      "field_path": [
+        "optimization_schedule"
+      ],
+      "message": "mode_1_decay × global is a valid pair in this release."
+    },
+    {
+      "gate": "dataset_available",
+      "state": "PASS",
+      "field_path": [
+        "data"
+      ],
+      "message": "crypto-binance-1m · BTCUSDT · 1h is available."
+    },
+    {
+      "gate": "required_inputs",
+      "state": "PASS",
+      "field_path": [
+        "data"
+      ],
+      "message": "The source supplies every declared column: open, high, low, close, volume."
+    },
+    {
+      "gate": "warmup_available",
+      "state": "PASS",
+      "field_path": [
+        "windows",
+        "is",
+        "start"
+      ],
+      "message": "144 of 0 declared warmup bars precede the first window."
+    },
+    {
+      "gate": "topology",
+      "state": "PASS",
+      "field_path": [
+        "windows"
+      ],
+      "message": "IS → OOS → holdout are contiguous half-open windows, each with closed bars."
+    },
+    {
+      "gate": "trial_ceiling",
+      "state": "PASS",
+      "field_path": [
+        "optuna_trials"
+      ],
+      "message": "8 trials ≤ ceiling 4,000."
+    },
+    {
+      "gate": "sweep_ceiling",
+      "state": "PASS",
+      "field_path": [
+        "parameter_space_overrides"
+      ],
+      "message": "0 swept dimensions ≤ ceiling 8."
+    },
+    {
+      "gate": "outer_fold_ceiling",
+      "state": "PASS",
+      "field_path": [
+        "windows"
+      ],
+      "message": "1 outer folds ≤ ceiling 128."
+    },
+    {
+      "gate": "resource_ceiling",
+      "state": "PASS",
+      "field_path": [
+        "optuna_trials"
+      ],
+      "message": "~1 estimated CPU-s for 8 evaluations ≤ ceiling 86,400."
+    },
+    {
+      "gate": "snapshot_quality",
+      "state": "PASS",
+      "field_path": [
+        "data"
+      ],
+      "message": "Snapshot integrity passed: 0 gaps, 0 duplicates, ratio 0."
+    },
+    {
+      "gate": "gap_scan",
+      "state": "PASS",
+      "field_path": [
+        "data"
+      ],
+      "message": "2 windows scanned · 0 critical · 0 watch."
+    }
+  ],
   "may_create_run": false,
   "requested_spec_digest": "e64e1cd2fb8b00ebf92934ee5854452e1708d9fa26d9b7234f56faf4f461d506",
   "effective_spec_digest": "13330cbe2836c37562ca53ce4048d15ad2a06817fb8906d49c3c567aba264299",
@@ -159,6 +285,74 @@
     },
     "provenance": {
       "loader_contract": "hmd-loader-v1"
+    },
+    "gap_scan": {
+      "state": "SCANNED",
+      "reason": null,
+      "max_gap_ratio": 0.05,
+      "classification": "WATCH when a window misses any bar; CRITICAL when its missing ratio exceeds the snapshot quality profile. The source publishes no per-run severity.",
+      "windows": [
+        {
+          "window": "IS",
+          "start_utc_ms": 1767484800000,
+          "end_exclusive_utc_ms": 1768003200000,
+          "state": "SCANNED",
+          "bars": 144,
+          "expected_bars": 144,
+          "missing_bars": 0,
+          "gap_runs": 0,
+          "verdict": "PASS",
+          "items": [],
+          "items_omitted": 0,
+          "note": null
+        },
+        {
+          "window": "OOS",
+          "start_utc_ms": 1768003200000,
+          "end_exclusive_utc_ms": 1768348800000,
+          "state": "SCANNED",
+          "bars": 96,
+          "expected_bars": 96,
+          "missing_bars": 0,
+          "gap_runs": 0,
+          "verdict": "PASS",
+          "items": [],
+          "items_omitted": 0,
+          "note": null
+        },
+        {
+          "window": "holdout",
+          "start_utc_ms": 1768348800000,
+          "end_exclusive_utc_ms": 1768694400000,
+          "state": "SEALED",
+          "bars": null,
+          "expected_bars": null,
+          "missing_bars": null,
+          "gap_runs": null,
+          "verdict": null,
+          "items": [],
+          "items_omitted": 0,
+          "note": "sealed — integrity checked at snapshot time, content unread"
+        }
+      ]
+    },
+    "holdout_seal": {
+      "schema_version": "research.holdout-seal.v1",
+      "seal_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "digest_basis": "sha256 of the half-open holdout range, its bar count, the snapshot content hash and the source manifest digest",
+      "read_log": {
+        "state": "NO_READER",
+        "reads": [],
+        "reason": "No Research route or worker reads sealed holdout values; P08 returns boundaries only."
+      },
+      "unlock": {
+        "state": "OWNER_SCOPE_REQUIRED",
+        "reason": "DR-01: no holdout unlock authority, route or actor is published; nothing may unseal or evaluate it."
+      },
+      "cap": {
+        "state": "NOT_PUBLISHED",
+        "reason": "QuantBT 1.1.1 publishes no per-mode certification cap (CG-P04-05), so no holdout cap is claimed."
+      }
     }
   },
   "topology": {
@@ -208,7 +402,14 @@
     "estimated_scratch_bytes": 32768,
     "estimated_cpu_seconds": 1,
     "admission_state": "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING",
-    "disclosure": "Estimate only. P10 must reserve worker resources."
+    "disclosure": "Estimate only. P10 must reserve worker resources.",
+    "ceilings": {
+      "trial_ceiling": 4000,
+      "sweep_dimension_ceiling": 8,
+      "swept_dimensions": 0,
+      "outer_fold_ceiling": 128,
+      "estimated_cpu_seconds_ceiling": 86400
+    }
   },
   "capability": {
     "engine_release_id": "er_quantbt_111",

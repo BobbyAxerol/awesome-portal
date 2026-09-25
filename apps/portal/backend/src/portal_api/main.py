@@ -201,6 +201,7 @@ def create_app(
         provider=app.state.market_data_provider,
         snapshots=app.state.snapshot_store,
         engine_catalog=app.state.research_engine_catalog,
+        gateway=app.state.quantbt_gateway,
     )
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,

@@ -354,13 +354,17 @@ def test_p04_t03_valid_and_invalid_mode_schedule_pairs_are_explicit() -> None:
         for item in mode.invalid_schedules:
             with pytest.raises(ResearchEngineCatalogError, match="not valid"):
                 service.validate_mode_schedule(mode_id=mode.mode_id, schedule=item.schedule)
+    # W4 CG-P02-02: requested-spec v2 carries the inner-fold fields and P08
+    # validates them against the engine, so the pair CG-P04-02 published as
+    # NOT_ADMITTED is now valid — but only with walk_forward.inner.
     mode_one = next(mode for mode in service.catalog.modes if mode.mode_id == "mode_1_decay")
-    causal = next(item for item in mode_one.invalid_schedules if item.schedule == "per_fold_causal")
-    assert causal.admission == "NOT_ADMITTED"
-    assert "inner_split_frequency" in causal.reason
+    assert "per_fold_causal" in mode_one.valid_schedules
+    assert all(item.schedule != "per_fold_causal" for item in mode_one.invalid_schedules)
+    causal = next(fact for fact in mode_one.facts.schedules if fact.schedule == "per_fold_causal")
+    assert causal.required_request_fields == ("walk_forward.inner",)
+    assert causal.causality_schedule_v2 == "engine_enforced_nested_v2"
     assert causal.source[0].sha256 == "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256"
-    with pytest.raises(ResearchEngineCatalogError, match="not valid"):
-        service.validate_mode_schedule(mode_id="mode_1_decay", schedule="per_fold_causal")
+    assert service.validate_mode_schedule(mode_id="mode_1_decay", schedule="per_fold_causal") == mode_one
     for mode in service.catalog.modes:
         for schedule in mode.valid_schedules:
             assert service.validate_mode_schedule(mode_id=mode.mode_id, schedule=schedule) == mode
@@ -608,6 +612,21 @@ def test_rf02_t01_every_mode_fact_locator_matches_the_pinned_package() -> None:
             locators.extend(invalid.source)
         for group in (facts.objective, facts.reads):
             locators.extend(getattr(group, "source", ()) or ())
+        # W4 CG-P04-07: every term meaning and weight cites real engine lines.
+        for item in (*facts.objective.terms, *facts.objective.weights):
+            locators.extend(item.source)
+    # W4 CG-P04-06/07: route engine facts and claim qualifiers are located too.
+    for route in _service().catalog.routes:
+        assert route.engine_facts is not None, route.route_id
+        locators.extend(route.engine_facts.source)
+        if route.engine_facts.support_matrix is not None:
+            locators.extend(route.engine_facts.support_matrix.source)
+        if route.engine_facts.route_params is not None:
+            for field in route.engine_facts.route_params.fields:
+                locators.extend(field.source)
+    for claim in _service().catalog.claims:
+        assert claim.qualifier is not None, claim.contract_id
+        locators.extend(claim.qualifier.source)
     assert locators
     for locator in locators:
         path = _installed_quantbt_file(locator.path)
@@ -677,6 +696,8 @@ def test_rf02_t05_release_config_digest_is_published_and_moves_with_the_facts(tm
         "optimizer_defaults": current["optimizer_defaults"],
         "submission_constraints": current["submission_constraints"],
         "walk_forward_options": current["walk_forward_options"],
+        # W4 CG-P08-05: published ceilings are part of the browser-visible release.
+        "preflight_limits": current["preflight_limits"],
     }
     expected = hashlib.sha256(
         json.dumps(facts, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
@@ -692,3 +713,124 @@ def test_rf02_t05_release_config_digest_is_published_and_moves_with_the_facts(tm
 
     moved = ResearchEngineCatalogService(_root(tmp_path, mutate)).public_document()
     assert moved.current_release.config_digest != current["config_digest"]
+
+
+# W4 CG-P04-04 / 06 / 07 -------------------------------------------------------
+
+
+def test_w4_cg_p04_04_oos_state_follows_the_engine_schedule_branch(tmp_path: Path) -> None:
+    from portal_api.services.research_engine_catalog import expected_oos_use_state
+
+    seen = {}
+    for mode in _service().catalog.modes:
+        for fact in mode.facts.schedules:
+            assert fact.oos_use_state == expected_oos_use_state(
+                mode_id=mode.mode_id, schedule=fact.schedule, oos_use=fact.oos_use
+            )
+            seen[(mode.mode_id, fact.schedule)] = fact.oos_use_state
+    assert seen[("mode_1_decay", "per_fold_decay")] == "SELECTION_INPUT"
+    assert seen[("mode_1_decay", "global")] == "RETROSPECTIVE"
+    assert seen[("mode_2_sbb", "global")] == "REPORT_ONLY"
+    assert seen[("mode_4_is_only_robust", "per_fold_causal")] == "WITHHELD_UNTIL_S4"
+    assert seen[("mode_5_full_robust", "global")] == "NOT_APPLICABLE"
+
+    def mutate(source: dict[str, object]) -> None:
+        modes = source["modes"]
+        assert isinstance(modes, list)
+        modes[0]["facts"]["schedules"][0]["oos_use_state"] = "WITHHELD_UNTIL_S4"
+
+    with pytest.raises(ResearchEngineCatalogLoadError):
+        ResearchEngineCatalogService(_root(tmp_path, mutate))
+
+
+def test_w4_cg_p04_06_route_facts_agree_with_the_installed_engine() -> None:
+    import inspect
+
+    import quantbt
+    from quantbt.walkforward import walkforward_support_matrix
+
+    endpoint = quantbt.QuantBTEndpoint
+    wfo = {row["target_mode"]: row["status"] for row in walkforward_support_matrix(as_dataframe=False)}
+    document = _service().public_document()
+    for route in _service().catalog.routes:
+        facts = route.engine_facts
+        assert facts is not None
+        factory, kwargs = PUBLIC_ROUTE_FACTORIES[route.route_id]
+        doc = inspect.getdoc(getattr(endpoint, factory)) or ""
+        assert facts.description == doc.split("\n\n")[0].replace("\n", " ").strip()
+        listed = wfo.get(route.route_id)
+        if listed in {"supported", "partial"}:
+            assert facts.method == "wfo" and facts.walk_forward_status == listed
+        else:
+            assert facts.method in {"tape", "single_pass"} and facts.walk_forward_status == "not_listed"
+        if facts.resolved_backend.state == "RESOLVED":
+            config = getattr(endpoint, factory)(**dict(kwargs)).config
+            assert facts.resolved_backend.value == str(config.backend)
+            assert facts.resolved_backend.engine_mode == str(config.mode)
+        else:
+            with pytest.raises(TypeError):
+                getattr(endpoint, factory)(**dict(kwargs))
+    by_id = {route.route_id: route for route in document.routes}
+    arbitrage = by_id["arbitrage"].engine_facts.support_matrix
+    engine_matrix = endpoint.arbitrage_support_matrix()
+    assert [row.spec_id for row in arbitrage.rows] == list(engine_matrix)
+    assert all(row.status == engine_matrix[row.spec_id]["status"] for row in arbitrage.rows)
+    assert (arbitrage.executable, arbitrage.total) == (6, 9)
+    assert by_id["arbitrage"].status_word == "6/9"
+    assert by_id["signal_notional"].status_word == "DEFAULT"
+    assert by_id["options"].status_word == "DEFERRED"
+    assert by_id["pct_equity"].status_word == "LEGACY"
+    # Portal deferral outranks the engine's own "experimental" matrix row.
+    assert by_id["nautilus_dca_grid"].status_word == "DEFERRED"
+    assert by_id["nautilus_dca_grid"].engine_facts.support_matrix.rows[0].status == "experimental"
+    assert by_id["fill_replay"].engine_facts.method == "tape"
+
+
+def test_w4_cg_p04_06_route_params_publish_the_engine_vocabulary_not_the_draft() -> None:
+    from quantbt.core.execution_contract import IntrabarSameBarPolicy
+    from quantbt.core.intrabar_reference import IntrabarLevelMode
+    from quantbt.core.portfolio import PortfolioMode, PortfolioSizingMode
+
+    by_id = {route.route_id: route for route in _service().catalog.routes}
+    fields = {
+        (route_id, field.name): field
+        for route_id in ("intrabar_bracket", "portfolio", "reactive", "dca_ladder")
+        for field in by_id[route_id].engine_facts.route_params.fields
+    }
+    assert fields[("intrabar_bracket", "level_mode")].engine_values == tuple(item.value for item in IntrabarLevelMode)
+    assert fields[("intrabar_bracket", "level_mode")].accepted_by_engine == ()
+    assert fields[("intrabar_bracket", "same_bar_policy")].engine_values == tuple(item.value for item in IntrabarSameBarPolicy)
+    assert fields[("portfolio", "mode")].engine_values == tuple(item.value for item in PortfolioMode)
+    assert fields[("portfolio", "mode")].accepted_by_engine == fields[("portfolio", "mode")].requested_spec_values
+    assert fields[("portfolio", "sizing")].engine_values == tuple(item.value for item in PortfolioSizingMode)
+    assert fields[("reactive", "runtime")].accepted_by_engine == ("R1", "R2", "R3")
+    assert fields[("reactive", "audit_mode")].accepted_by_engine == ()
+    # The engine lower-cases reactive runtimes and accepts r1/r2/r3 aliases.
+    aliases = {"R1", "R2", "R3"}
+    for field in fields.values():
+        assert set(field.accepted_by_engine) == set(field.requested_spec_values) & (set(field.engine_values) | aliases)
+
+
+def test_w4_cg_p04_07_claim_qualifiers_terms_and_weights_are_the_engine_values() -> None:
+    from dataclasses import fields
+
+    from quantbt.core.certification import LEVEL_DESCRIPTIONS, CertificationLevel
+    from quantbt.walkforward import WalkForwardConfig
+
+    defaults = {field.name: field.default for field in fields(WalkForwardConfig)}
+    for claim in _service().catalog.claims:
+        level = CertificationLevel(int(claim.engine_certification.removeprefix("L")))
+        assert claim.qualifier.level_name == level.name
+        assert claim.qualifier.level_description == LEVEL_DESCRIPTIONS[level]
+    by_claim = {claim.contract_id: claim.qualifier for claim in _service().catalog.claims}
+    # The certifier derives L0 for event_lifecycle_v2: published as a difference, not hidden.
+    assert by_claim["event_lifecycle"].result_metadata_derivation == "ENGINE_DERIVES_OTHER_LEVEL"
+    assert by_claim["close_target_v2"].result_metadata_derivation == "ENGINE_DERIVES_SAME_LEVEL"
+    assert by_claim["reactive"].result_metadata_derivation == "NOT_DERIVABLE"
+    for mode in _service().catalog.modes:
+        objective = mode.facts.objective
+        assert objective.terms, mode.mode_id
+        if mode.mode_id != "mode_1_decay":
+            assert objective.weights, mode.mode_id
+        for weight in objective.weights:
+            assert float(weight.release_default) == float(defaults[weight.name]), weight.name

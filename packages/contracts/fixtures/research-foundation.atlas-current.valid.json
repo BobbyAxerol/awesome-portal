@@ -4,7 +4,7 @@
   "selected_release_kind": "CURRENT",
   "atlas": {
     "schema_version": "research-engine-atlas.v1",
-    "manifest_revision": 5,
+    "manifest_revision": 7,
     "current_release": {
       "release_id": "er_quantbt_111",
       "package": "quantbt-engine",
@@ -248,7 +248,7 @@
         "reason": "The current P10 adapter is a fixed-parameter qualification path. Release defaults describe the pinned engine and Portal protocol; they do not grant browser override authority."
       },
       "walk_forward_options": {
-        "schema_version": "research.walk-forward-options.v1",
+        "schema_version": "research.walk-forward-options.v2",
         "frequency": [
           {
             "value": "single",
@@ -290,13 +290,92 @@
           },
           {
             "value": "rolling",
-            "admission": "NOT_ADMITTED",
-            "reason": "Rolling needs a train width the manifest does not own yet; preflight refuses it with RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED rather than inferring one."
+            "admission": "ADMITTED",
+            "reason": null
           }
         ],
         "window_mode_default": "expanding",
         "split_mode_form": "source_instant",
         "split_mode_rule": "The first outer out-of-sample instant in the dataset's source timezone, optionally prefixed walk_forward_. It must lie strictly inside walk_forward.start and end_exclusive; there is no release default to fall back on.",
+        "train_window": {
+          "requested_spec_field": "walk_forward.train_window",
+          "pattern": "^[1-9][0-9]{0,4}(D|h)$",
+          "required_when": "window_mode=rolling",
+          "rule": "Requested-spec v2 only. A whole number of days (D) or hours (h) passed to the engine as WalkForwardConfig.train_window; required for rolling, refused for expanding. Preflight never infers one.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "356-361",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "`expanding` keeps the first train timestamp fixed"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "496-497",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "if mode == \"rolling\" and self.train_window is None:"
+            }
+          ]
+        },
+        "temporal_guards": {
+          "fields": [
+            "label_horizon_bars",
+            "purge_bars",
+            "embargo_bars"
+          ],
+          "minimum": 0,
+          "maximum": 10000,
+          "release_default": 0,
+          "rule": "Requested-spec v2 only. Bars removed from the train tail (label horizon, purge) before each OOS start, and bars skipped after each OOS fold (embargo). The engine builds the fold plan; preflight publishes each guarded span.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "392-395",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "label_horizon_bars, purge_bars, embargo_bars:"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "3024-3033",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "label_start = test_start - int(config.label_horizon_bars)"
+            }
+          ]
+        },
+        "inner_folds": {
+          "applies_to": "mode_1_decay×per_fold_causal",
+          "requested_spec_field": "walk_forward.inner",
+          "split_frequency": [
+            "single",
+            "yearly",
+            "semi_yearly",
+            "quarterly",
+            "monthly",
+            "weekly"
+          ],
+          "window_mode": [
+            "expanding",
+            "rolling"
+          ],
+          "train_window_pattern": "^[1-9][0-9]{0,4}(D|h)$",
+          "min_folds_release_default": 2,
+          "min_folds_maximum": 64,
+          "rule": "Requested-spec v2 only, and only for mode_1_decay with per_fold_causal: nested folds inside each outer IS window so decay selection never sees that fold's OOS. Preflight asks the engine to build them and refuses when a fold has too few.",
+          "source": [
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "380-386",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "inner_split_frequency, inner_window_mode, inner_train_window:"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "545-549",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "causal Mode 1 requires inner_split_frequency, inner_window_mode, \""
+            }
+          ]
+        },
         "source": [
           {
             "path": "quantbt/walkforward.py",
@@ -318,7 +397,25 @@
           }
         ]
       },
-      "config_digest": "909514e09820e9fc8c2a37946c66053aaf7a9106875c73ed97165f7d1d02f452"
+      "preflight_limits": {
+        "schema_version": "research.preflight-limits.v1",
+        "sweep_dimension_ceiling": {
+          "value": 8,
+          "value_source": "PORTAL_POLICY",
+          "basis": "Spec 02 §8/§26: at most 8 swept dimensions per run; pinned and fixed parameters do not count. A Portal release policy, not an engine limit."
+        },
+        "outer_fold_ceiling": {
+          "value": 128,
+          "value_source": "P08_PREFLIGHT_BOUND",
+          "basis": "One fold plan is persisted as a bounded metadata document; a longer plan is refused rather than truncated."
+        },
+        "estimated_cpu_seconds_ceiling": {
+          "value": 86400,
+          "value_source": "P08_PREFLIGHT_BOUND",
+          "basis": "Declared evaluations (folds × trials × seeds) are estimated before a snapshot is sealed; above this the preflight refuses. P10/P06 reserve real resources separately."
+        }
+      },
+      "config_digest": "69c9431ee0ca57987fa9e7feff35af8dccc7ac575dc74cc5f72812a3c8e72220"
     },
     "historical_releases": [
       {
@@ -348,7 +445,36 @@
           "admission": "P04_BASELINE_ONLY"
         },
         "reason": "P04 primary technical baseline; a future typed run request still owns workload admission.",
-        "required_input_class": "single_symbol_ohlcv_plus_signal"
+        "required_input_class": "single_symbol_ohlcv_plus_signal",
+        "status_word": "DEFAULT",
+        "engine_facts": {
+          "description": "Create a signal-notional endpoint.",
+          "method": "wfo",
+          "walk_forward_status": "supported",
+          "method_basis": "walkforward_support_matrix lists target_mode signal_notional as supported: Recommended default for single-symbol systematic alpha.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_vectorized",
+            "engine_mode": "signal_notional",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1186-1186",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create a signal-notional endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "pct_equity",
@@ -367,7 +493,36 @@
           "admission": "P04_BASELINE_ONLY"
         },
         "reason": "Retained for comparability with historical artifacts; it is not the new-job default.",
-        "required_input_class": "single_symbol_ohlcv_plus_signal"
+        "required_input_class": "single_symbol_ohlcv_plus_signal",
+        "status_word": "LEGACY",
+        "engine_facts": {
+          "description": "Create a legacy `%_equity` endpoint.",
+          "method": "wfo",
+          "walk_forward_status": "supported",
+          "method_basis": "walkforward_support_matrix lists target_mode pct_equity as supported: Legacy `%_equity` accounting route.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "legacy",
+            "engine_mode": "pct_equity",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1170-1170",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create a legacy `%_equity` endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "intrabar_bracket",
@@ -387,7 +542,110 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Engine constructor is public; Portal has not admitted typed stop/take-profit intent fields in P04.",
-        "required_input_class": "ohlcv_plus_intrabar_intent_tape"
+        "required_input_class": "ohlcv_plus_intrabar_intent_tape",
+        "status_word": "SUPPORTED",
+        "engine_facts": {
+          "description": "Create the Phase 31C fast Numba intrabar bracket endpoint.",
+          "method": "single_pass",
+          "walk_forward_status": "not_listed",
+          "method_basis": "walkforward_support_matrix does not list intrabar_bracket; the route runs once over its input and has no walk-forward search.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_intrabar",
+            "engine_mode": "intrabar_bracket",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": {
+            "group": "intrabar",
+            "fields": [
+              {
+                "name": "level_mode",
+                "engine_field": "level_mode",
+                "requested_spec_values": [
+                  "hlc_conservative",
+                  "ohlc_path",
+                  "close_only"
+                ],
+                "engine_values": [
+                  "absolute_price",
+                  "price_distance",
+                  "percent_distance"
+                ],
+                "accepted_by_engine": [],
+                "note": "The engine's level_mode says how stop/target levels are expressed (absolute price, price distance, percent distance), not a bar-path rule.",
+                "source": [
+                  {
+                    "path": "quantbt/core/intrabar_reference.py",
+                    "lines": "32-35",
+                    "sha256": "5c6dd10cbbc5803448ea4b0aef43a2ad6c76bc0ac7a75a62839d41988b49b5f5",
+                    "anchor": "class IntrabarLevelMode(str, Enum):"
+                  }
+                ]
+              },
+              {
+                "name": "same_bar_policy",
+                "engine_field": "same_bar_policy",
+                "requested_spec_values": [
+                  "stop_first",
+                  "target_first",
+                  "ambiguity_flag"
+                ],
+                "engine_values": [
+                  "conservative",
+                  "stop_first",
+                  "tp_first",
+                  "ohlc_path",
+                  "olhc_path",
+                  "reject_ambiguous",
+                  "lower_timeframe_required"
+                ],
+                "accepted_by_engine": [
+                  "stop_first"
+                ],
+                "note": "Only values the engine enum lists are accepted; the others are Portal draft vocabulary.",
+                "source": [
+                  {
+                    "path": "quantbt/core/execution_contract.py",
+                    "lines": "44-51",
+                    "sha256": "7ae9868f6922538444860143b86795c9f6e867661950c0182c340b24b8b63fed",
+                    "anchor": "class IntrabarSameBarPolicy(str, Enum):"
+                  }
+                ]
+              },
+              {
+                "name": "tick_size",
+                "engine_field": null,
+                "requested_spec_values": [],
+                "engine_values": [],
+                "accepted_by_engine": [],
+                "note": "Decimal input; the pinned constructor signature publishes no tick_size option list.",
+                "source": [
+                  {
+                    "path": "quantbt/endpoint.py",
+                    "lines": "1241-1241",
+                    "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+                    "anchor": "def intrabar_bracket("
+                  }
+                ]
+              }
+            ]
+          },
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1253-1253",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create the Phase 31C fast Numba intrabar bracket endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "dca_ladder",
@@ -406,7 +664,88 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Portal needs a typed ladder and safety-order evidence contract before admission.",
-        "required_input_class": "ohlcv_plus_ladder_levels"
+        "required_input_class": "ohlcv_plus_ladder_levels",
+        "status_word": "LEGACY",
+        "engine_facts": {
+          "description": "Create a structural DCA/grid ladder endpoint.",
+          "method": "wfo",
+          "walk_forward_status": "supported",
+          "method_basis": "walkforward_support_matrix lists target_mode dca_ladder as supported: Requires high/low data for intrabar ladder fills.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "legacy",
+            "engine_mode": "dca_ladder",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": {
+            "group": "dca",
+            "fields": [
+              {
+                "name": "base_order_usd",
+                "engine_field": "dca_base_notional",
+                "requested_spec_values": [],
+                "engine_values": [],
+                "accepted_by_engine": [],
+                "note": "Numeric input; the engine keyword is dca_base_notional.",
+                "source": [
+                  {
+                    "path": "quantbt/endpoint.py",
+                    "lines": "4535-4546",
+                    "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+                    "anchor": "dca_kwargs = kwargs.pop(\"dca_kwargs\", {})"
+                  }
+                ]
+              },
+              {
+                "name": "safety_orders",
+                "engine_field": "dca_max_safety_orders",
+                "requested_spec_values": [],
+                "engine_values": [],
+                "accepted_by_engine": [],
+                "note": "Numeric input; the engine keyword is dca_max_safety_orders.",
+                "source": [
+                  {
+                    "path": "quantbt/endpoint.py",
+                    "lines": "4535-4546",
+                    "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+                    "anchor": "dca_kwargs = kwargs.pop(\"dca_kwargs\", {})"
+                  }
+                ]
+              },
+              {
+                "name": "step_scale",
+                "engine_field": "dca_step_scale",
+                "requested_spec_values": [],
+                "engine_values": [],
+                "accepted_by_engine": [],
+                "note": "Numeric input; the engine keyword is dca_step_scale.",
+                "source": [
+                  {
+                    "path": "quantbt/endpoint.py",
+                    "lines": "4535-4546",
+                    "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+                    "anchor": "dca_kwargs = kwargs.pop(\"dca_kwargs\", {})"
+                  }
+                ]
+              }
+            ]
+          },
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1394-1394",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create a structural DCA/grid ladder endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "reactive",
@@ -427,7 +766,95 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Reactive is the event_driven strategy facade; no standalone reactive() API is inferred and no strategy callback contract is admitted yet.",
-        "required_input_class": "stateful_strategy_callback"
+        "required_input_class": "stateful_strategy_callback",
+        "status_word": "SUPPORTED",
+        "engine_facts": {
+          "description": "Create the stable public native-event facade.",
+          "method": "single_pass",
+          "walk_forward_status": "not_listed",
+          "method_basis": "walkforward_support_matrix does not list reactive; the route runs once over its input and has no walk-forward search.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_event",
+            "engine_mode": "native_event_strategy",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": {
+            "group": "reactive",
+            "fields": [
+              {
+                "name": "runtime",
+                "engine_field": "reactive_runtime",
+                "requested_spec_values": [
+                  "R0",
+                  "R1",
+                  "R2",
+                  "R3",
+                  "R3B"
+                ],
+                "engine_values": [
+                  "legacy_python_loop",
+                  "numeric_every_bar_v1",
+                  "numeric_sparse_wake_v1",
+                  "numeric_block_intent_v1"
+                ],
+                "accepted_by_engine": [
+                  "R1",
+                  "R2",
+                  "R3"
+                ],
+                "note": "The engine lower-cases and accepts r1/r2/r3 as aliases of its numeric runtimes; R0 and R3B are not runtime values.",
+                "source": [
+                  {
+                    "path": "quantbt/backends/native_event.py",
+                    "lines": "514-544",
+                    "sha256": "4e8d00d81d427580b57eb58cbe1bf32688733068c19bf899c32c847810d274b6",
+                    "anchor": "def _normalize_reactive_runtime(value: Optional[str]) -> str:"
+                  }
+                ]
+              },
+              {
+                "name": "audit_mode",
+                "engine_field": "audit_mode",
+                "requested_spec_values": [
+                  "minimal",
+                  "standard",
+                  "audit"
+                ],
+                "engine_values": [
+                  "native_trace",
+                  "verify_against_oracle",
+                  "dual_run_sampled"
+                ],
+                "accepted_by_engine": [],
+                "note": "The engine audit modes are native_trace, verify_against_oracle and dual_run_sampled.",
+                "source": [
+                  {
+                    "path": "quantbt/backends/native_event.py",
+                    "lines": "559-569",
+                    "sha256": "4e8d00d81d427580b57eb58cbe1bf32688733068c19bf899c32c847810d274b6",
+                    "anchor": "def _normalize_reactive_audit_mode(audit_mode: Optional[str]) -> Optional[str]:"
+                  }
+                ]
+              }
+            ]
+          },
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1424-1424",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create the stable public native-event facade"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "event_driven",
@@ -448,7 +875,36 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Portal has no admitted typed event command/tape request in P04.",
-        "required_input_class": "event_strategy_or_order_commands"
+        "required_input_class": "event_strategy_or_order_commands",
+        "status_word": "SUPPORTED",
+        "engine_facts": {
+          "description": "Create the stable public native-event facade.",
+          "method": "single_pass",
+          "walk_forward_status": "not_listed",
+          "method_basis": "walkforward_support_matrix does not list event_driven; the route runs once over its input and has no walk-forward search.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_event",
+            "engine_mode": "native_event_strategy",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1424-1424",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create the stable public native-event facade"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "native_event_lifecycle",
@@ -468,7 +924,42 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Lifecycle commands require a typed Portal order lifecycle contract and audit surface.",
-        "required_input_class": "event_order_commands"
+        "required_input_class": "event_order_commands",
+        "status_word": "SUPPORTED",
+        "engine_facts": {
+          "description": "Create an explicit native-event v2 lifecycle endpoint.",
+          "method": "tape",
+          "walk_forward_status": "not_listed",
+          "method_basis": "The route executes an explicit native-event v2 command tape; there is no parameter search.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_event",
+            "engine_mode": "orders",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1475-1475",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create an explicit native-event v2 lifecycle endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            },
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1473-1473",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "def native_event_lifecycle(cls, **kwargs) -> \"QuantBTEndpoint\":"
+            }
+          ]
+        }
       },
       {
         "route_id": "orders",
@@ -488,7 +979,42 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Explicit order replay is not equivalent to a typed Portal tape evidence contract.",
-        "required_input_class": "order_intent_tape"
+        "required_input_class": "order_intent_tape",
+        "status_word": "SUPPORTED",
+        "engine_facts": {
+          "description": "Create an explicit order simulation endpoint.",
+          "method": "tape",
+          "walk_forward_status": "not_listed",
+          "method_basis": "The route replays an explicit OrderIntent tape: simulate(data=df, orders=[...]); there is no parameter search.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_event",
+            "engine_mode": "orders",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1407-1407",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create an explicit order simulation endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            },
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1409-1409",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Use `simulate(data=df, orders=[OrderIntent(...), ...])`. Orders are run"
+            }
+          ]
+        }
       },
       {
         "route_id": "fill_replay",
@@ -506,7 +1032,42 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Accounting replay needs source-fill provenance before it can be offered as a Portal run.",
-        "required_input_class": "explicit_fill_tape"
+        "required_input_class": "explicit_fill_tape",
+        "status_word": "SUPPORTED",
+        "engine_facts": {
+          "description": "Create a fast accounting replay endpoint for explicit fills.",
+          "method": "tape",
+          "walk_forward_status": "not_listed",
+          "method_basis": "The route accounts an explicit fill tape; fills are supplied, not generated, so there is no parameter search.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_intrabar",
+            "engine_mode": "fill_replay",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1345-1345",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create a fast accounting replay endpoint for explicit fills"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            },
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1334-1334",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "def fill_replay("
+            }
+          ]
+        }
       },
       {
         "route_id": "basket",
@@ -526,7 +1087,36 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Basket legs and frozen hedge-ratio evidence have no typed Portal schema in P04.",
-        "required_input_class": "multi_leg_basket_spec"
+        "required_input_class": "multi_leg_basket_spec",
+        "status_word": "SUPPORTED",
+        "engine_facts": {
+          "description": "Create a basket/pair endpoint.",
+          "method": "wfo",
+          "walk_forward_status": "supported",
+          "method_basis": "walkforward_support_matrix lists target_mode basket as supported: Requires BasketSpec on the endpoint.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_event",
+            "engine_mode": "basket",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1663-1663",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create a basket/pair endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "arbitrage",
@@ -546,7 +1136,113 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "QuantBT support is type-specific; Portal must first model the executable specification and engine refusal reason.",
-        "required_input_class": "arbitrage_type_and_spec"
+        "required_input_class": "arbitrage_type_and_spec",
+        "status_word": "6/9",
+        "engine_facts": {
+          "description": "Create an arbitrage endpoint.",
+          "method": "wfo",
+          "walk_forward_status": "partial",
+          "method_basis": "walkforward_support_matrix lists target_mode arbitrage as partial: Current supported arbitrage specs only; future specialized engines reserved.",
+          "resolved_backend": {
+            "state": "SPEC_DEPENDENT",
+            "value": null,
+            "engine_mode": null,
+            "reason": "QuantBTEndpoint.arbitrage() needs a typed specification before it resolves a backend; the support matrix lists the backends per specification."
+          },
+          "support_matrix": {
+            "function": "arbitrage_support_matrix",
+            "executable": 6,
+            "total": 9,
+            "rows": [
+              {
+                "spec_id": "BasisArbitrageSpec",
+                "status": "supported",
+                "backends": "native_event,native_vectorized,nautilus",
+                "route": "run_basis_arbitrage",
+                "detail": "target_notional_to_base_qty or target_base_qty; linear contracts only"
+              },
+              {
+                "spec_id": "StatArbPairSpec",
+                "status": "supported",
+                "backends": "native_event,native_vectorized,nautilus",
+                "route": "run_stat_arb_pair_arbitrage",
+                "detail": "target_gross_notional; optional dynamic hedge_ratios"
+              },
+              {
+                "spec_id": "CalendarSpreadSpec",
+                "status": "supported",
+                "backends": "native_event,native_vectorized",
+                "route": "run_package_arbitrage",
+                "detail": "target_notional_to_base_qty or target_base_qty"
+              },
+              {
+                "spec_id": "FundingArbitrageSpec",
+                "status": "supported",
+                "backends": "native_event,native_vectorized",
+                "route": "run_package_arbitrage",
+                "detail": "target_notional_to_base_qty or target_base_qty"
+              },
+              {
+                "spec_id": "SpotPerpCashCarrySpec",
+                "status": "supported",
+                "backends": "native_event,native_vectorized",
+                "route": "run_package_arbitrage",
+                "detail": "target_notional_to_base_qty or target_base_qty"
+              },
+              {
+                "spec_id": "IndexBasketArbSpec",
+                "status": "supported",
+                "backends": "native_event,native_vectorized",
+                "route": "run_package_arbitrage",
+                "detail": "target_gross_notional"
+              },
+              {
+                "spec_id": "CrossExchangeArbSpec",
+                "status": "schema_only",
+                "backends": "none",
+                "route": "needs venue/account split engine",
+                "detail": "not executable yet"
+              },
+              {
+                "spec_id": "TriangularArbSpec",
+                "status": "schema_only",
+                "backends": "none",
+                "route": "needs sequenced path execution engine",
+                "detail": "not executable yet"
+              },
+              {
+                "spec_id": "OptionsVolArbSpec",
+                "status": "specialized_route",
+                "backends": "native_option",
+                "route": "QuantBTEndpoint.options(...) with OptionPackageIntent and Greeks reports",
+                "detail": "option package quantities; Greeks-aware risk belongs to option route"
+              }
+            ],
+            "source": [
+              {
+                "path": "quantbt/endpoint.py",
+                "lines": "1704-1712",
+                "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+                "anchor": "def arbitrage_support_matrix() -> Dict[str, Dict[str, str]]:"
+              }
+            ]
+          },
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1674-1674",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create an arbitrage endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "portfolio",
@@ -566,7 +1262,117 @@
           "admission": "NOT_ADMITTED"
         },
         "reason": "Portfolio exposure and margin require a typed multi-asset request and result schema.",
-        "required_input_class": "portfolio_spec_and_market_matrix"
+        "required_input_class": "portfolio_spec_and_market_matrix",
+        "status_word": "SUPPORTED",
+        "engine_facts": {
+          "description": "Create a multi-symbol portfolio endpoint.",
+          "method": "wfo",
+          "walk_forward_status": "supported",
+          "method_basis": "walkforward_support_matrix lists target_mode portfolio as supported: Multi-symbol portfolio positions stitched across OOS folds.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_portfolio",
+            "engine_mode": "portfolio",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": {
+            "group": "portfolio",
+            "fields": [
+              {
+                "name": "mode",
+                "engine_field": "portfolio_mode",
+                "requested_spec_values": [
+                  "longshort",
+                  "market_neutral",
+                  "directional",
+                  "equal_weight",
+                  "risk_parity",
+                  "beta_neutral"
+                ],
+                "engine_values": [
+                  "longshort",
+                  "market_neutral",
+                  "directional",
+                  "equal_weight",
+                  "risk_parity",
+                  "beta_neutral"
+                ],
+                "accepted_by_engine": [
+                  "longshort",
+                  "market_neutral",
+                  "directional",
+                  "equal_weight",
+                  "risk_parity",
+                  "beta_neutral"
+                ],
+                "note": "Every requested-spec portfolio mode is an engine PortfolioMode value.",
+                "source": [
+                  {
+                    "path": "quantbt/core/portfolio.py",
+                    "lines": "21-27",
+                    "sha256": "6b4a9ed8a08206e74dbfc6cb9b6fb6d0c2de629d061b5e36572cba9eee24c8f4",
+                    "anchor": "class PortfolioMode(str, Enum):"
+                  }
+                ]
+              },
+              {
+                "name": "sizing",
+                "engine_field": "sizing",
+                "requested_spec_values": [
+                  "equal_weight",
+                  "risk_parity",
+                  "vol_target",
+                  "kelly_fraction",
+                  "fixed_notional",
+                  "atr_risk",
+                  "min_variance",
+                  "score_weighted"
+                ],
+                "engine_values": [
+                  "signal_notional",
+                  "signal",
+                  "notional",
+                  "unit",
+                  "%_equity",
+                  "target_weight",
+                  "target_notional",
+                  "target_units",
+                  "fixed_notional",
+                  "gross_exposure",
+                  "net_exposure",
+                  "dca_ladder"
+                ],
+                "accepted_by_engine": [
+                  "fixed_notional"
+                ],
+                "note": "The engine sizes by target unit (notional, weight, units, exposure); allocation schemes such as risk_parity are not sizing modes.",
+                "source": [
+                  {
+                    "path": "quantbt/core/portfolio.py",
+                    "lines": "30-42",
+                    "sha256": "6b4a9ed8a08206e74dbfc6cb9b6fb6d0c2de629d061b5e36572cba9eee24c8f4",
+                    "anchor": "class PortfolioSizingMode(str, Enum):"
+                  }
+                ]
+              }
+            ]
+          },
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1907-1907",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create a multi-symbol portfolio endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "nautilus_dca_grid",
@@ -585,7 +1391,57 @@
           "admission": "DEFERRED"
         },
         "reason": "P04 records the public validation route but deliberately does not admit an external adapter workload.",
-        "required_input_class": "nautilus_dca_grid_spec"
+        "required_input_class": "nautilus_dca_grid_spec",
+        "status_word": "DEFERRED",
+        "engine_facts": {
+          "description": "Create a Nautilus DCA/grid structured-order validation endpoint.",
+          "method": "single_pass",
+          "walk_forward_status": "not_listed",
+          "method_basis": "walkforward_support_matrix does not list nautilus_dca_grid; the route runs once over its input and has no walk-forward search.",
+          "resolved_backend": {
+            "state": "SPEC_DEPENDENT",
+            "value": null,
+            "engine_mode": null,
+            "reason": "QuantBTEndpoint.nautilus_dca_grid() needs a typed specification before it resolves a backend; the support matrix lists the backends per specification."
+          },
+          "support_matrix": {
+            "function": "nautilus_support_matrix",
+            "executable": 0,
+            "total": 1,
+            "rows": [
+              {
+                "spec_id": "dca_grid",
+                "status": "experimental",
+                "backends": "nautilus",
+                "route": "QuantBTEndpoint.nautilus_dca_grid(...)",
+                "detail": "base order, safety limit orders, TP/SL package"
+              }
+            ],
+            "source": [
+              {
+                "path": "quantbt/endpoint.py",
+                "lines": "1860-1866",
+                "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+                "anchor": "\"dca_grid\": {"
+              }
+            ]
+          },
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1577-1577",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create a Nautilus DCA/grid structured-order validation endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       },
       {
         "route_id": "options",
@@ -604,7 +1460,36 @@
           "admission": "DEFERRED"
         },
         "reason": "The engine supports options; Portal has no approved option-chain/package/margin input contract in this release.",
-        "required_input_class": "option_chain_instruments_and_packages"
+        "required_input_class": "option_chain_instruments_and_packages",
+        "status_word": "DEFERRED",
+        "engine_facts": {
+          "description": "Create a native option simulation endpoint.",
+          "method": "single_pass",
+          "walk_forward_status": "not_listed",
+          "method_basis": "walkforward_support_matrix does not list options; the route runs once over its input and has no walk-forward search.",
+          "resolved_backend": {
+            "state": "RESOLVED",
+            "value": "native_option",
+            "engine_mode": "options",
+            "reason": null
+          },
+          "support_matrix": null,
+          "route_params": null,
+          "source": [
+            {
+              "path": "quantbt/endpoint.py",
+              "lines": "1532-1532",
+              "sha256": "45ede55d0d66dd3a30089584b92199a455acca83e8f0418df3305874c28929a6",
+              "anchor": "Create a native option simulation endpoint"
+            },
+            {
+              "path": "quantbt/walkforward.py",
+              "lines": "874-874",
+              "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+              "anchor": "def walkforward_support_matrix(as_dataframe: bool = True):"
+            }
+          ]
+        }
       }
     ],
     "modes": [
@@ -613,23 +1498,10 @@
         "display_name": "Decay robustness",
         "valid_schedules": [
           "global",
-          "per_fold_decay"
+          "per_fold_decay",
+          "per_fold_causal"
         ],
-        "invalid_schedules": [
-          {
-            "schedule": "per_fold_causal",
-            "admission": "NOT_ADMITTED",
-            "reason": "QuantBT 1.1.1 supports causal Mode 1 only with robust_decay, inner_split_frequency, inner_window_mode and inner_train_window. The current Portal requested-spec and preflight cannot carry and validate those fields; this pair is descriptive, not a runnable Portal admission.",
-            "source": [
-              {
-                "path": "quantbt/walkforward.py",
-                "lines": "532-548",
-                "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
-                "anchor": "causal Mode 1 requires inner_split_frequency, inner_window_mode,"
-              }
-            ]
-          }
-        ],
+        "invalid_schedules": [],
         "default_schedule": "global",
         "objective_summary": "Ranks OOS stability against IS-to-OOS decay.",
         "suspect": "A high average OOS score with broad decay dispersion requires review.",
@@ -652,8 +1524,10 @@
               "causality_claim": "retrospective_global_calibration",
               "causality_schedule_v2": "retrospective_global_v2",
               "oos_use": "USED",
+              "oos_use_state": "RETROSPECTIVE",
               "oos_use_condition": "With the release-default candidate_selection_metric robust_decay. The engine records NOT_USED for plateau/IS-only/full-sample metrics.",
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -686,8 +1560,10 @@
               "causality_claim": "fold_local_decay_calibration",
               "causality_schedule_v2": "engine_enforced_per_fold_v2",
               "oos_use": "USED",
+              "oos_use_state": "SELECTION_INPUT",
               "oos_use_condition": null,
               "params_semantics": "last_completed_fold_selected_params",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -704,6 +1580,44 @@
                   "lines": "1250-1287",
                   "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
                   "anchor": "chronological_validation_claim = \"strict_outer_oos_after_frozen_selection\""
+                },
+                {
+                  "path": "quantbt/core/wfo_contracts.py",
+                  "lines": "158-178",
+                  "sha256": "890d73813da6c5e5f464ccb6379e3fda7d6d4957ad645e54428c91956d83f9cf",
+                  "anchor": "def resolve_causality_schedule_v2("
+                }
+              ]
+            },
+            {
+              "schedule": "per_fold_causal",
+              "validation_claim": "strict_nested_fold_local_retraining",
+              "chronological_validation_claim": "strict_outer_oos_after_frozen_selection",
+              "causality_claim": "strict_nested_fold_local_retraining",
+              "causality_schedule_v2": "engine_enforced_nested_v2",
+              "oos_use": "NOT_USED",
+              "oos_use_state": "WITHHELD_UNTIL_S4",
+              "oos_use_condition": null,
+              "params_semantics": "last_completed_fold_selected_params",
+              "required_request_fields": [
+                "walk_forward.inner"
+              ],
+              "cert_cap": {
+                "state": "NOT_PUBLISHED",
+                "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
+                "source": {
+                  "path": "quantbt/core/certification.py",
+                  "lines": "164-195",
+                  "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+                  "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+                }
+              },
+              "source": [
+                {
+                  "path": "quantbt/walkforward.py",
+                  "lines": "1256-1266",
+                  "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                  "anchor": "elif schedule == \"per_fold_causal\":"
                 },
                 {
                   "path": "quantbt/core/wfo_contracts.py",
@@ -760,6 +1674,69 @@
               }
             ],
             "note": null,
+            "terms": [
+              {
+                "symbol": "d_k = is_sharpe_k - oos_sharpe_k",
+                "meaning": "Per-fold decay after the trade-frequency penalty; d < 0 means the fold's OOS Sharpe beat its IS Sharpe.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2096-2103",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "d = is_sharpe - oos_sharpe"
+                  }
+                ]
+              },
+              {
+                "symbol": "mean_is_sharpe",
+                "meaning": "Mean train (IS) Sharpe across folds; the Optuna search objective for this stage.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2128-2128",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "mean_is = float(np.mean(is_scores)) if is_scores else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "mean_oos_sharpe",
+                "meaning": "Mean outer-fold OOS Sharpe; the base that the decay penalties discount.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2127-2127",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "mean_oos = float(np.mean(oos_scores)) if oos_scores else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "std_decay",
+                "meaning": "Sample standard deviation (ddof=1) of the per-fold decay; exactly 0 with a single fold.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2130-2130",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "std_decay = float(np.std(decay, ddof=1)) if len(decay) > 1 else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "max(0, mean_decay)",
+                "meaning": "Only a positive mean decay (IS beat OOS on average) is penalised; OOS outperformance is not rewarded.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2132-2137",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "- float(decay_gamma) * max(0.0, mean_decay)"
+                  }
+                ]
+              }
+            ],
+            "weights": [],
             "source": [
               {
                 "path": "quantbt/core/research_audit_artifact.py",
@@ -860,8 +1837,10 @@
               "causality_claim": "retrospective_global_calibration",
               "causality_schedule_v2": "retrospective_global_v2",
               "oos_use": "NOT_USED",
+              "oos_use_state": "REPORT_ONLY",
               "oos_use_condition": null,
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -929,6 +1908,134 @@
               }
             ],
             "note": null,
+            "terms": [
+              {
+                "symbol": "synthetic_oos_sharpe",
+                "meaning": "Mean of the bootstrap Sharpe replicates of the fold's own train returns, minus the trade penalty; no held-out bar is evaluated.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2225-2231",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "synthetic_sharpe = synthetic_mean - penalty"
+                  }
+                ]
+              },
+              {
+                "symbol": "d = is_sharpe - synthetic_sharpe",
+                "meaning": "Decay from the original IS Sharpe to the synthetic Sharpe; only a positive mean is penalised.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2232-2232",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "d = float(is_sharpe - synthetic_sharpe)"
+                  }
+                ]
+              },
+              {
+                "symbol": "mean_synthetic_oos_std",
+                "meaning": "Mean across folds of the replicate standard deviation; a wide spread under a high mean marks a lucky tail.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2276-2276",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "mean_synthetic_std = float(np.mean(synthetic_stds)) if synthetic_stds else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "mean_oos_sharpe",
+                "meaning": "Mean outer-fold OOS Sharpe; the base that the decay penalties discount.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2127-2127",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "mean_oos = float(np.mean(oos_scores)) if oos_scores else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "std_decay",
+                "meaning": "Sample standard deviation (ddof=1) of the per-fold decay; exactly 0 with a single fold.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2130-2130",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "std_decay = float(np.std(decay, ddof=1)) if len(decay) > 1 else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "max(0, mean_decay)",
+                "meaning": "Only a positive mean decay (IS beat OOS on average) is penalised; OOS outperformance is not rewarded.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2132-2137",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "- float(decay_gamma) * max(0.0, mean_decay)"
+                  }
+                ]
+              }
+            ],
+            "weights": [
+              {
+                "name": "sbb_decay_lambda",
+                "release_default": "0.5",
+                "role": "Penalty on a positive mean decay from IS to synthetic Sharpe.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2279-2282",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "- float(self.config.sbb_std_penalty) * mean_synthetic_std"
+                  }
+                ]
+              },
+              {
+                "name": "sbb_std_penalty",
+                "release_default": "0.1",
+                "role": "Penalty on the mean replicate standard deviation.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2279-2282",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "- float(self.config.sbb_std_penalty) * mean_synthetic_std"
+                  }
+                ]
+              },
+              {
+                "name": "sbb_samples",
+                "release_default": "256",
+                "role": "Bootstrap replicates per fold.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2210-2210",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "n_samples=int(self.config.sbb_samples),"
+                  }
+                ]
+              },
+              {
+                "name": "sbb_block_length",
+                "release_default": "20",
+                "role": "Stationary-bootstrap block length in bars.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2211-2211",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "block_length=int(self.config.sbb_block_length),"
+                  }
+                ]
+              }
+            ],
             "source": [
               {
                 "path": "quantbt/core/research_audit_artifact.py",
@@ -1030,8 +2137,10 @@
               "causality_claim": "retrospective_global_calibration",
               "causality_schedule_v2": "retrospective_global_v2",
               "oos_use": "USED",
+              "oos_use_state": "RETROSPECTIVE",
               "oos_use_condition": "With the release-default candidate_selection_metric robust_decay. The engine records NOT_USED for plateau/IS-only/full-sample metrics.",
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -1104,6 +2213,133 @@
               }
             ],
             "note": "May replace the deployed candidate with a recorded plateau/medoid selection; its geometry is in selection_metadata.",
+            "terms": [
+              {
+                "symbol": "d_k = is_sharpe_k - oos_sharpe_k",
+                "meaning": "Per-fold decay after the trade-frequency penalty; d < 0 means the fold's OOS Sharpe beat its IS Sharpe.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2096-2103",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "d = is_sharpe - oos_sharpe"
+                  }
+                ]
+              },
+              {
+                "symbol": "mean_is_sharpe",
+                "meaning": "Mean train (IS) Sharpe across folds; the Optuna search objective for this stage.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2128-2128",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "mean_is = float(np.mean(is_scores)) if is_scores else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "mean_oos_sharpe",
+                "meaning": "Mean outer-fold OOS Sharpe; the base that the decay penalties discount.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2127-2127",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "mean_oos = float(np.mean(oos_scores)) if oos_scores else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "std_decay",
+                "meaning": "Sample standard deviation (ddof=1) of the per-fold decay; exactly 0 with a single fold.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2130-2130",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "std_decay = float(np.std(decay, ddof=1)) if len(decay) > 1 else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "max(0, mean_decay)",
+                "meaning": "Only a positive mean decay (IS beat OOS on average) is penalised; OOS outperformance is not rewarded.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2132-2137",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "- float(decay_gamma) * max(0.0, mean_decay)"
+                  }
+                ]
+              },
+              {
+                "symbol": "top_n = max(ceil(n * flat_top_fraction), flat_min_samples)",
+                "meaning": "Only the best-ranked trials enter the flat-minima clustering.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "3834-3835",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "top_n = max(1, int(np.ceil(len(ranked) * float(config.flat_top_fraction))))"
+                  }
+                ]
+              },
+              {
+                "symbol": "largest cluster, medoid",
+                "meaning": "The largest DBSCAN cluster (radius flat_eps in normalized parameter space) wins; its medoid is selected instead of the sharp peak.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "3871-3881",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "key = (len(member_idx), float(np.mean(member_objectives)), float(np.max(member_objectives)))"
+                  }
+                ]
+              }
+            ],
+            "weights": [
+              {
+                "name": "flat_top_fraction",
+                "release_default": "0.1",
+                "role": "Fraction of ranked trials that enters clustering.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "3834-3853",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "top_n = max(1, int(np.ceil(len(ranked) * float(config.flat_top_fraction))))"
+                  }
+                ]
+              },
+              {
+                "name": "flat_eps",
+                "release_default": "0.15",
+                "role": "DBSCAN radius in normalized parameter space.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "3834-3853",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "top_n = max(1, int(np.ceil(len(ranked) * float(config.flat_top_fraction))))"
+                  }
+                ]
+              },
+              {
+                "name": "flat_min_samples",
+                "release_default": "3",
+                "role": "Minimum cluster size and minimum clustered trials.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "3834-3853",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "top_n = max(1, int(np.ceil(len(ranked) * float(config.flat_top_fraction))))"
+                  }
+                ]
+              }
+            ],
             "source": [
               {
                 "path": "quantbt/core/research_audit_artifact.py",
@@ -1192,8 +2428,10 @@
               "causality_claim": "retrospective_global_calibration",
               "causality_schedule_v2": "retrospective_global_v2",
               "oos_use": "NOT_USED",
+              "oos_use_state": "REPORT_ONLY",
               "oos_use_condition": null,
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -1226,8 +2464,10 @@
               "causality_claim": "strict_fold_local_retraining",
               "causality_schedule_v2": "engine_enforced_per_fold_v2",
               "oos_use": "NOT_USED",
+              "oos_use_state": "WITHHELD_UNTIL_S4",
               "oos_use_condition": null,
               "params_semantics": "last_completed_fold_selected_params",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -1269,6 +2509,201 @@
             ],
             "coefficients": [],
             "note": "Temporal/plateau selection terms are retained verbatim in selection_metadata; they do not inspect an external OOS tape.",
+            "terms": [
+              {
+                "symbol": "mean_is_sharpe",
+                "meaning": "Mean train (IS) Sharpe across folds; the Optuna search objective for this stage.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2128-2128",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "mean_is = float(np.mean(is_scores)) if is_scores else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "temporal_score = median + q25_weight * q25 - dispersion_penalty * MAD",
+                "meaning": "Robustness of a trial across the IS subperiod shards: median shard Sharpe, rewarded by its lower quartile, penalised by its median absolute deviation.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4399-4402",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "score = median + float(q25_weight) * q25 - float(dispersion_penalty) * mad"
+                  }
+                ]
+              },
+              {
+                "symbol": "plateau_score = q + plateau_median_weight * median - plateau_std_penalty * std + plateau_size_bonus * log1p(n)",
+                "meaning": "Robustness of a dense parameter cluster: its plateau_quantile objective, its median, its dispersion and its size.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "symbol": "final = temporal_weight * temporal_score + plateau_weight * plateau_score",
+                "meaning": "The cluster with the highest weighted sum is selected; the bootstrap and complexity penalties are 0 in this release.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4151-4156",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "float(config.temporal_weight) * float(temporal_stats[\"temporal_score\"])"
+                  }
+                ]
+              }
+            ],
+            "weights": [
+              {
+                "name": "is_subperiods",
+                "release_default": "6",
+                "role": "Number of IS shards the temporal score is measured on.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4399-4402",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "score = median + float(q25_weight) * q25 - float(dispersion_penalty) * mad"
+                  }
+                ]
+              },
+              {
+                "name": "q25_weight",
+                "release_default": "0.3",
+                "role": "Weight of the shard lower quartile in the temporal score.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4399-4402",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "score = median + float(q25_weight) * q25 - float(dispersion_penalty) * mad"
+                  }
+                ]
+              },
+              {
+                "name": "dispersion_penalty",
+                "release_default": "0.5",
+                "role": "Penalty on the shard median absolute deviation.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4399-4402",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "score = median + float(q25_weight) * q25 - float(dispersion_penalty) * mad"
+                  }
+                ]
+              },
+              {
+                "name": "temporal_weight",
+                "release_default": "0.65",
+                "role": "Weight of the temporal score in the final selection score.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4151-4156",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "float(config.temporal_weight) * float(temporal_stats[\"temporal_score\"])"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_weight",
+                "release_default": "0.35",
+                "role": "Weight of the plateau score in the final selection score.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4151-4156",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "float(config.temporal_weight) * float(temporal_stats[\"temporal_score\"])"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_quantile",
+                "release_default": "0.25",
+                "role": "Quantile of the cluster objectives used as the plateau base.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_median_weight",
+                "release_default": "0.25",
+                "role": "Weight of the cluster median objective.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_std_penalty",
+                "release_default": "0.5",
+                "role": "Penalty on the cluster objective dispersion.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_size_bonus",
+                "release_default": "0.01",
+                "role": "Bonus per log1p(cluster size).",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "name": "flat_eps",
+                "release_default": "0.15",
+                "role": "DBSCAN radius in normalized parameter space.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4099-4102",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "labels, cluster_method = _dbscan_cluster_labels("
+                  }
+                ]
+              },
+              {
+                "name": "flat_min_samples",
+                "release_default": "3",
+                "role": "Minimum cluster size.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4099-4102",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "labels, cluster_method = _dbscan_cluster_labels("
+                  }
+                ]
+              }
+            ],
             "source": [
               {
                 "path": "quantbt/core/research_audit_artifact.py",
@@ -1369,8 +2804,10 @@
               "causality_claim": "retrospective_global_calibration",
               "causality_schedule_v2": "retrospective_global_v2",
               "oos_use": "NOT_USED",
+              "oos_use_state": "NOT_APPLICABLE",
               "oos_use_condition": null,
               "params_semantics": "single_global_parameter_set",
+              "required_request_fields": [],
               "cert_cap": {
                 "state": "NOT_PUBLISHED",
                 "reason": "QuantBT 1.1.1 certifies an execution route and its result metadata, not an optimization mode or schedule; no per-mode certification cap exists in the pinned source.",
@@ -1415,6 +2852,213 @@
             ],
             "coefficients": [],
             "note": "Temporal/plateau selection terms are retained verbatim in selection_metadata; they do not inspect an external OOS tape.",
+            "terms": [
+              {
+                "symbol": "train = test = full sample",
+                "meaning": "The whole supplied history is one calibration fold; no window is withheld, so no term reads out-of-sample data.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2324-2339",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "if self.config.optimization_mode == \"mode_5_full_robust\":"
+                  }
+                ]
+              },
+              {
+                "symbol": "mean_is_sharpe",
+                "meaning": "Mean train (IS) Sharpe across folds; the Optuna search objective for this stage.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "2128-2128",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "mean_is = float(np.mean(is_scores)) if is_scores else 0.0"
+                  }
+                ]
+              },
+              {
+                "symbol": "temporal_score = median + q25_weight * q25 - dispersion_penalty * MAD",
+                "meaning": "Robustness of a trial across the IS subperiod shards: median shard Sharpe, rewarded by its lower quartile, penalised by its median absolute deviation.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4399-4402",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "score = median + float(q25_weight) * q25 - float(dispersion_penalty) * mad"
+                  }
+                ]
+              },
+              {
+                "symbol": "plateau_score = q + plateau_median_weight * median - plateau_std_penalty * std + plateau_size_bonus * log1p(n)",
+                "meaning": "Robustness of a dense parameter cluster: its plateau_quantile objective, its median, its dispersion and its size.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "symbol": "final = temporal_weight * temporal_score + plateau_weight * plateau_score",
+                "meaning": "The cluster with the highest weighted sum is selected; the bootstrap and complexity penalties are 0 in this release.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4151-4156",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "float(config.temporal_weight) * float(temporal_stats[\"temporal_score\"])"
+                  }
+                ]
+              }
+            ],
+            "weights": [
+              {
+                "name": "is_subperiods",
+                "release_default": "6",
+                "role": "Number of IS shards the temporal score is measured on.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4399-4402",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "score = median + float(q25_weight) * q25 - float(dispersion_penalty) * mad"
+                  }
+                ]
+              },
+              {
+                "name": "q25_weight",
+                "release_default": "0.3",
+                "role": "Weight of the shard lower quartile in the temporal score.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4399-4402",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "score = median + float(q25_weight) * q25 - float(dispersion_penalty) * mad"
+                  }
+                ]
+              },
+              {
+                "name": "dispersion_penalty",
+                "release_default": "0.5",
+                "role": "Penalty on the shard median absolute deviation.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4399-4402",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "score = median + float(q25_weight) * q25 - float(dispersion_penalty) * mad"
+                  }
+                ]
+              },
+              {
+                "name": "temporal_weight",
+                "release_default": "0.65",
+                "role": "Weight of the temporal score in the final selection score.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4151-4156",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "float(config.temporal_weight) * float(temporal_stats[\"temporal_score\"])"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_weight",
+                "release_default": "0.35",
+                "role": "Weight of the plateau score in the final selection score.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4151-4156",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "float(config.temporal_weight) * float(temporal_stats[\"temporal_score\"])"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_quantile",
+                "release_default": "0.25",
+                "role": "Quantile of the cluster objectives used as the plateau base.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_median_weight",
+                "release_default": "0.25",
+                "role": "Weight of the cluster median objective.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_std_penalty",
+                "release_default": "0.5",
+                "role": "Penalty on the cluster objective dispersion.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "name": "plateau_size_bonus",
+                "release_default": "0.01",
+                "role": "Bonus per log1p(cluster size).",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4136-4142",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "+ float(config.plateau_median_weight) * median"
+                  }
+                ]
+              },
+              {
+                "name": "flat_eps",
+                "release_default": "0.15",
+                "role": "DBSCAN radius in normalized parameter space.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4099-4102",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "labels, cluster_method = _dbscan_cluster_labels("
+                  }
+                ]
+              },
+              {
+                "name": "flat_min_samples",
+                "release_default": "3",
+                "role": "Minimum cluster size.",
+                "source": [
+                  {
+                    "path": "quantbt/walkforward.py",
+                    "lines": "4099-4102",
+                    "sha256": "b3da15189cb87d5e6f0080123aeb7f245b4991d61354112049030335c8f3b256",
+                    "anchor": "labels, cluster_method = _dbscan_cluster_labels("
+                  }
+                ]
+              }
+            ],
             "source": [
               {
                 "path": "quantbt/core/research_audit_artifact.py",
@@ -1466,43 +3110,190 @@
         "contract_id": "close_target_v2",
         "engine_certification": "L2",
         "numeric_guarantee": "Signal changes anchor target units at the current price.",
-        "never_claims": "Never claims intrabar stop or take-profit fill semantics."
+        "never_claims": "Never claims intrabar stop or take-profit fill semantics.",
+        "qualifier": {
+          "level_name": "ENGINE_CAUSAL",
+          "level_description": "engine_owned_causal_execution_with_oracle_or_kernel_parity",
+          "result_metadata_derivation": "ENGINE_DERIVES_SAME_LEVEL",
+          "result_metadata_level": 2,
+          "result_metadata_status": "close_target_certified",
+          "source": [
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "19-33",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "LEVEL_DESCRIPTIONS = {"
+            },
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "164-195",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+            }
+          ]
+        }
       },
       {
         "contract_id": "intrabar_bracket_v1",
         "engine_certification": "L2",
         "numeric_guarantee": "Bracket intent uses explicit OHLC/intrabar contract fields.",
-        "never_claims": "Never claims venue-exact fill ordering beyond the supplied contract."
+        "never_claims": "Never claims venue-exact fill ordering beyond the supplied contract.",
+        "qualifier": {
+          "level_name": "ENGINE_CAUSAL",
+          "level_description": "engine_owned_causal_execution_with_oracle_or_kernel_parity",
+          "result_metadata_derivation": "ENGINE_DERIVES_SAME_LEVEL",
+          "result_metadata_level": 2,
+          "result_metadata_status": "engine_causal_certified",
+          "source": [
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "19-33",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "LEVEL_DESCRIPTIONS = {"
+            },
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "164-195",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+            }
+          ]
+        }
       },
       {
         "contract_id": "fill_replay",
         "engine_certification": "L1",
         "numeric_guarantee": "Replays supplied accounting fills with the selected accounting backend.",
-        "never_claims": "Never claims signal quality or origin of supplied fills."
+        "never_claims": "Never claims signal quality or origin of supplied fills.",
+        "qualifier": {
+          "level_name": "ACCOUNTING_REPLAY",
+          "level_description": "explicit_fills_accounted_but_fill_generation_not_certified",
+          "result_metadata_derivation": "ENGINE_DERIVES_SAME_LEVEL",
+          "result_metadata_level": 1,
+          "result_metadata_status": "accounting_certified",
+          "source": [
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "19-33",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "LEVEL_DESCRIPTIONS = {"
+            },
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "164-195",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+            }
+          ]
+        }
       },
       {
         "contract_id": "event_lifecycle",
         "engine_certification": "L2",
         "numeric_guarantee": "Models typed event lifecycle commands and resulting fills.",
-        "never_claims": "Never claims broker acknowledgement or external execution."
+        "never_claims": "Never claims broker acknowledgement or external execution.",
+        "qualifier": {
+          "level_name": "ENGINE_CAUSAL",
+          "level_description": "engine_owned_causal_execution_with_oracle_or_kernel_parity",
+          "result_metadata_derivation": "ENGINE_DERIVES_OTHER_LEVEL",
+          "result_metadata_level": 0,
+          "result_metadata_status": "uncertified_or_unknown",
+          "source": [
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "19-33",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "LEVEL_DESCRIPTIONS = {"
+            },
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "164-195",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+            }
+          ]
+        }
       },
       {
         "contract_id": "reactive",
         "engine_certification": "L3",
         "numeric_guarantee": "Executes the event-driven strategy facade under its selected profile.",
-        "never_claims": "Never claims an invented reactive() route or global callback ordering."
+        "never_claims": "Never claims an invented reactive() route or global callback ordering.",
+        "qualifier": {
+          "level_name": "CROSS_BACKEND",
+          "level_description": "native_engine_matches_native_event_on_known_scenarios",
+          "result_metadata_derivation": "NOT_DERIVABLE",
+          "result_metadata_level": null,
+          "result_metadata_status": null,
+          "source": [
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "19-33",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "LEVEL_DESCRIPTIONS = {"
+            },
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "164-195",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+            }
+          ]
+        }
       },
       {
         "contract_id": "native_portfolio",
         "engine_certification": "L2",
         "numeric_guarantee": "Computes the declared multi-asset portfolio contract.",
-        "never_claims": "Never claims a Portfolio manager admission or a broker margin guarantee."
+        "never_claims": "Never claims a Portfolio manager admission or a broker margin guarantee.",
+        "qualifier": {
+          "level_name": "ENGINE_CAUSAL",
+          "level_description": "engine_owned_causal_execution_with_oracle_or_kernel_parity",
+          "result_metadata_derivation": "NOT_DERIVABLE",
+          "result_metadata_level": null,
+          "result_metadata_status": null,
+          "source": [
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "19-33",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "LEVEL_DESCRIPTIONS = {"
+            },
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "164-195",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+            }
+          ]
+        }
       },
       {
         "contract_id": "nautilus",
         "engine_certification": "L4",
         "numeric_guarantee": "Validates the declared Nautilus DCA-grid adapter input.",
-        "never_claims": "Never claims cross-engine parity until a typed comparison evidence lane exists."
+        "never_claims": "Never claims cross-engine parity until a typed comparison evidence lane exists.",
+        "qualifier": {
+          "level_name": "EXTERNAL_VALIDATION",
+          "level_description": "external_or_lower_timeframe_validation_available",
+          "result_metadata_derivation": "ENGINE_DERIVES_SAME_LEVEL",
+          "result_metadata_level": 4,
+          "result_metadata_status": "external_validation_route",
+          "source": [
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "19-33",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "LEVEL_DESCRIPTIONS = {"
+            },
+            {
+              "path": "quantbt/core/certification.py",
+              "lines": "164-195",
+              "sha256": "9b1e9ff44f70850165fb48cc035887d688a5ef55989ac9899f12c23a8781ec35",
+              "anchor": "def certify_result_metadata(metadata: Dict) -> Dict:"
+            }
+          ]
+        }
       }
     ],
     "evidence_contract": {
@@ -1520,5 +3311,5 @@
     }
   },
   "historical_identity": null,
-  "etag": "W/\"research-atlas-9e7cf041bdf5092f61179fc3\""
+  "etag": "W/\"research-atlas-41b0a84240ff493e04b15bdd\""
 }

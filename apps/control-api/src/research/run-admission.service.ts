@@ -66,13 +66,27 @@ export class ResearchRunAdmissionService {
     scope: ResearchScope,
     preflightToken: string,
   ): Promise<boolean> {
+    return (await this.admissionFacts(user, scope, preflightToken)).allowed;
+  }
+
+  /**
+   * CG-P08-03: the same predicate, with the typed reason when it says no.
+   * Only the predicate's own code and sentence are exposed; a failure to
+   * even load the manifest stays an opaque "no" exactly as before.
+   */
+  async admissionFacts(
+    user: PortalUser,
+    scope: ResearchScope,
+    preflightToken: string,
+  ): Promise<{ allowed: boolean; code: ResearchRunCreateError["code"] | null; message: string | null }> {
     try {
       const manifest = await this.repository.loadPreflightManifest(scope, preflightToken);
-      return (await this.evaluate(user, scope, manifest)).allowed;
+      const result = await this.evaluate(user, scope, manifest);
+      return { allowed: result.allowed, code: result.code, message: result.message };
     } catch {
       // P08 owns detailed preflight errors. A capability indicator must not
       // become a second oracle for token ownership, data state or internals.
-      return false;
+      return { allowed: false, code: null, message: null };
     }
   }
 
@@ -141,6 +155,15 @@ export class ResearchRunAdmissionService {
         eligibility.alphaId !== P04_DELTA_ALPHA_ID ||
         eligibility.alphaVersionId !== P04_DELTA_ALPHA_VERSION_ID) {
       return denied("RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE", "No installed durable executor is bound to this active AlphaVersion.");
+    }
+    // W4 CG-P02-02: v2 temporal guards, rolling width and inner folds are
+    // validated at preflight, but no installed executor consumes them. Refuse
+    // here instead of letting either profile silently run a v1 plan.
+    if (requestedSpec.schema_version !== "research.requested-spec.v1") {
+      return denied(
+        "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
+        "No installed executor runs requested-spec v2 temporal guards, rolling width or inner folds yet; preflight validates them only.",
+      );
     }
     // W1 profile selection. An `advanced` request is the only shape the WFO
     // profile can own, and only while its flag is on; every other request

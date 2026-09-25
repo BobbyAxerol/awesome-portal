@@ -108,10 +108,43 @@ describe("P09 published Research foundation contract", () => {
       historical_identity: { release_id: "er_quantbt_108", facts_state: "NOT_PUBLISHED" } });
     const current = fixture("research-foundation.atlas-current.valid.json");
     expect(current).toMatchObject({ selected_release_kind: "CURRENT", historical_identity: null,
-      atlas: { manifest_revision: 5, modes: expect.any(Array), routes: expect.any(Array) } });
+      atlas: { manifest_revision: 7, modes: expect.any(Array), routes: expect.any(Array) } });
     expect(current.atlas.modes).toHaveLength(5);
     expect(current.atlas.routes).toHaveLength(14);
     expect(current.atlas.claims).toHaveLength(7);
+  });
+
+  it("W4 CG-P04-04/06/07: publishes OOS states, route engine facts, claim qualifiers, terms and weights", () => {
+    const current = JSON.parse(readFileSync(join(ROOT, "fixtures", "research-foundation.atlas-current.valid.json"), "utf8")) as Record<string, any>;
+    const atlas = current.atlas;
+    const states = atlas.modes.flatMap((mode: any) => mode.facts.schedules.map((fact: any) => `${mode.mode_id}|${fact.schedule}|${fact.oos_use_state}`));
+    expect(states).toEqual(expect.arrayContaining([
+      "mode_1_decay|per_fold_decay|SELECTION_INPUT",
+      "mode_1_decay|global|RETROSPECTIVE",
+      "mode_2_sbb|global|REPORT_ONLY",
+      "mode_4_is_only_robust|per_fold_causal|WITHHELD_UNTIL_S4",
+      "mode_5_full_robust|global|NOT_APPLICABLE",
+    ]));
+    for (const route of atlas.routes) {
+      expect(route.engine_facts.description.length).toBeGreaterThan(0);
+      expect(["wfo", "tape", "single_pass"]).toContain(route.engine_facts.method);
+      expect(route.status_word).toMatch(/^[A-Z0-9/]{1,16}$/);
+    }
+    const byId = Object.fromEntries(atlas.routes.map((route: any) => [route.route_id, route]));
+    expect(byId.signal_notional.status_word).toBe("DEFAULT");
+    expect(byId.options.status_word).toBe("DEFERRED");
+    expect(byId.arbitrage.engine_facts.support_matrix).toMatchObject({ function: "arbitrage_support_matrix", executable: 6, total: 9 });
+    expect(byId.arbitrage.status_word).toBe("6/9");
+    expect(byId.fill_replay.engine_facts.method).toBe("tape");
+    expect(byId.portfolio.engine_facts.route_params.group).toBe("portfolio");
+    for (const claim of atlas.claims) expect(claim.qualifier.level_description).toMatch(/^[a-z_]+$/);
+    const weights = atlas.modes.filter((mode: any) => mode.mode_id !== "mode_1_decay")
+      .map((mode: any) => mode.facts.objective.weights.length);
+    expect(weights.every((count: number) => count > 0)).toBe(true);
+    const generated = readFileSync(generatedPath, "utf8");
+    for (const needle of ["AtlasRouteEngineFacts", "AtlasSupportMatrix", "AtlasRouteParams", "WITHHELD_UNTIL_S4", "ENGINE_DERIVES_OTHER_LEVEL"]) {
+      expect(generated).toContain(needle);
+    }
   });
 
   it("does not publish a private adapter, raw data, worker or executable engine surface", () => {

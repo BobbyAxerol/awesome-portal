@@ -5,29 +5,68 @@
     "version": "1.0.0",
     "description": "P10 same-origin Research New Run producer. The browser submits only one canonical requested specification and an opaque P08 preflight token. Control API re-evaluates admission, persists the durable intent, and sends a signed private compatibility request to Portal. Browser clients never receive source paths, snapshot rows, worker attempts, lease epochs, HMAC principals, broker details, or direct Execution/CLI authority."
   },
-  "servers": [{ "url": "/" }],
-  "security": [{ "portalSession": [] }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
   "paths": {
     "/api/v1/research/runs": {
       "post": {
         "operationId": "researchRunCreateV1",
         "summary": "Create or recover one durable P10 New Run intent",
-        "parameters": [{ "$ref": "#/components/parameters/Csrf" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Csrf"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/RunCreateRequest" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunCreateRequest"
+              }
+            }
           }
         },
         "responses": {
-          "202": { "description": "The immutable intent was persisted and accepted by the Portal compatibility ingress", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RunCreateResponse" } } } },
-          "400": { "$ref": "#/components/responses/Problem" },
-          "401": { "$ref": "#/components/responses/Problem" },
-          "403": { "$ref": "#/components/responses/Problem" },
-          "404": { "$ref": "#/components/responses/Problem" },
-          "409": { "$ref": "#/components/responses/Problem" },
-          "502": { "$ref": "#/components/responses/Problem" },
-          "503": { "$ref": "#/components/responses/Problem" }
+          "202": {
+            "description": "The immutable intent was persisted and accepted by the Portal compatibility ingress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "502": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -36,118 +75,312 @@
         "operationId": "researchP04DeltaBindingInstallV1",
         "summary": "ADMIN-only installation or verification of the one compiled P04 Delta binding",
         "description": "This operation accepts no code, dependency, path, source digest or adapter selection. The server installs only its protected Delta-RSI binding and is idempotent for the exact immutable descriptor.",
-        "parameters": [{ "$ref": "#/components/parameters/Csrf" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Csrf"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/P04DeltaBindingInstallRequest" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/P04DeltaBindingInstallRequest"
+              }
+            }
           }
         },
         "responses": {
-          "200": { "description": "P04 binding installed or exact replay verified", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/P04DeltaBinding" } } } },
-          "400": { "$ref": "#/components/responses/Problem" },
-          "401": { "$ref": "#/components/responses/Problem" },
-          "403": { "$ref": "#/components/responses/Problem" },
-          "404": { "$ref": "#/components/responses/Problem" },
-          "409": { "$ref": "#/components/responses/Problem" },
-          "503": { "$ref": "#/components/responses/Problem" }
+          "200": {
+            "description": "P04 binding installed or exact replay verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/P04DeltaBinding"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     }
   },
   "components": {
     "securitySchemes": {
-      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
     },
     "parameters": {
-      "Csrf": { "name": "x-csrf-token", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } }
+      "Csrf": {
+        "name": "x-csrf-token",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
     },
     "responses": {
       "Problem": {
         "description": "Typed same-origin refusal. No worker lease, broker, source path, HMD row, secret, internal principal, or private upstream detail is disclosed.",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
       }
     },
     "schemas": {
-      "WorkspaceId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
-      "OpaqueIntentId": { "type": "string", "minLength": 3, "maxLength": 191, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,191}$" },
-      "PreflightToken": { "type": "string", "minLength": 6, "maxLength": 160, "pattern": "^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$" },
-      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-      "RequestedSpec": { "$ref": "../schemas/research-requested-spec.v1.schema.json" },
+      "WorkspaceId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]{1,128}$"
+      },
+      "OpaqueIntentId": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 191,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,191}$"
+      },
+      "PreflightToken": {
+        "type": "string",
+        "minLength": 6,
+        "maxLength": 160,
+        "pattern": "^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+      },
+      "Digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "RequestedSpec": {
+        "description": "Same P02 requested spec as preflight (v1 or v2). P10 admission refuses v2 with RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE: no installed executor runs its fields yet.",
+        "oneOf": [
+          {
+            "$ref": "../schemas/research-requested-spec.v1.schema.json"
+          },
+          {
+            "$ref": "../schemas/research-requested-spec.v2.schema.json"
+          }
+        ]
+      },
       "RunCreateRequest": {
-        "type": "object", "additionalProperties": false,
-        "required": ["schema_version", "client_intent_id", "preflight_token", "requested_spec"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "client_intent_id",
+          "preflight_token",
+          "requested_spec"
+        ],
         "properties": {
-          "schema_version": { "const": "research.run-create.v1" },
-          "workspace_id": { "$ref": "#/components/schemas/WorkspaceId" },
-          "client_intent_id": { "$ref": "#/components/schemas/OpaqueIntentId" },
-          "preflight_token": { "$ref": "#/components/schemas/PreflightToken" },
-          "requested_spec": { "$ref": "#/components/schemas/RequestedSpec" },
-          "intent_kind": { "enum": ["NEW", "CLONE_FOR_EXPERIMENT", "REPRODUCE_EXISTING", "UPGRADE_ENGINE_EXPERIMENT"], "default": "NEW" }
+          "schema_version": {
+            "const": "research.run-create.v1"
+          },
+          "workspace_id": {
+            "$ref": "#/components/schemas/WorkspaceId"
+          },
+          "client_intent_id": {
+            "$ref": "#/components/schemas/OpaqueIntentId"
+          },
+          "preflight_token": {
+            "$ref": "#/components/schemas/PreflightToken"
+          },
+          "requested_spec": {
+            "$ref": "#/components/schemas/RequestedSpec"
+          },
+          "intent_kind": {
+            "enum": [
+              "NEW",
+              "CLONE_FOR_EXPERIMENT",
+              "REPRODUCE_EXISTING",
+              "UPGRADE_ENGINE_EXPERIMENT"
+            ],
+            "default": "NEW"
+          }
         }
       },
       "RunCreateResponse": {
-        "type": "object", "additionalProperties": false,
-        "required": ["schema_version", "run_id", "status", "replayed", "requested_spec_digest", "effective_spec_digest", "dataset_binding_digest", "manifest_digest", "legacy"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "run_id",
+          "status",
+          "replayed",
+          "requested_spec_digest",
+          "effective_spec_digest",
+          "dataset_binding_digest",
+          "manifest_digest",
+          "legacy"
+        ],
         "properties": {
-          "schema_version": { "const": "research.run-create.v1" },
-          "run_id": { "type": "string", "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
-          "status": { "const": "QUEUED" },
-          "replayed": { "type": "boolean" },
-          "requested_spec_digest": { "$ref": "#/components/schemas/Digest" },
-          "effective_spec_digest": { "$ref": "#/components/schemas/Digest" },
-          "dataset_binding_digest": { "$ref": "#/components/schemas/Digest" },
-          "manifest_digest": { "$ref": "#/components/schemas/Digest" },
+          "schema_version": {
+            "const": "research.run-create.v1"
+          },
+          "run_id": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "status": {
+            "const": "QUEUED"
+          },
+          "replayed": {
+            "type": "boolean"
+          },
+          "requested_spec_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "effective_spec_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "dataset_binding_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "manifest_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
           "legacy": {
-            "type": "object", "additionalProperties": false,
-            "required": ["strategy_id", "dataset_id", "protocol"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "strategy_id",
+              "dataset_id",
+              "protocol"
+            ],
             "properties": {
-              "strategy_id": { "type": "string", "minLength": 1, "maxLength": 191 },
-              "dataset_id": { "type": "string", "minLength": 1, "maxLength": 191 },
-              "protocol": { "type": "string", "minLength": 1, "maxLength": 191 }
+              "strategy_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              "dataset_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              "protocol": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              }
             }
           }
         }
       },
       "P04DeltaBindingInstallRequest": {
-        "type": "object", "additionalProperties": false,
-        "properties": { "workspace_id": { "$ref": "#/components/schemas/WorkspaceId" } }
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "$ref": "#/components/schemas/WorkspaceId"
+          }
+        }
       },
       "P04DeltaBinding": {
-        "type": "object", "additionalProperties": false,
-        "required": ["schema_version", "alpha_id", "alpha_version_id", "execution_adapter_id", "adapter_contract_digest", "alpha_revision", "replayed"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "alpha_id",
+          "alpha_version_id",
+          "execution_adapter_id",
+          "adapter_contract_digest",
+          "alpha_revision",
+          "replayed"
+        ],
         "properties": {
-          "schema_version": { "const": "research.p04-delta-binding.v1" },
-          "alpha_id": { "const": "delta-rsi-polynomial-alpha" },
-          "alpha_version_id": { "const": "av_delta_rsi_polynomial_alpha_1_0_0" },
-          "execution_adapter_id": { "const": "p04.delta-rsi.v1" },
-          "adapter_contract_digest": { "$ref": "#/components/schemas/Digest" },
-          "alpha_revision": { "type": "integer", "minimum": 1 },
-          "replayed": { "type": "boolean" }
+          "schema_version": {
+            "const": "research.p04-delta-binding.v1"
+          },
+          "alpha_id": {
+            "const": "delta-rsi-polynomial-alpha"
+          },
+          "alpha_version_id": {
+            "const": "av_delta_rsi_polynomial_alpha_1_0_0"
+          },
+          "execution_adapter_id": {
+            "const": "p04.delta-rsi.v1"
+          },
+          "adapter_contract_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "alpha_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "replayed": {
+            "type": "boolean"
+          }
         }
       },
       "Problem": {
-        "type": "object", "additionalProperties": false,
-        "required": ["error", "request_id"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
         "properties": {
           "error": {
-            "type": "object", "additionalProperties": false,
-            "required": ["code", "message"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
             "properties": {
               "code": {
                 "enum": [
-                  "SESSION_REQUIRED", "REQUEST_REJECTED",
-                  "RESEARCH_RUN_CREATE_INVALID", "RESEARCH_RUN_CREATE_FORBIDDEN",
-                  "RESEARCH_RUN_PREFLIGHT_NOT_READY", "RESEARCH_RUN_PREFLIGHT_STALE",
-                  "RESEARCH_RUN_ALPHA_NOT_ACTIVE", "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
-                  "RESEARCH_RUN_PRODUCER_UNAVAILABLE", "RESEARCH_RUN_TRANSPORT_UNKNOWN",
-                  "RESEARCH_RUN_UPSTREAM_REJECTED", "RESEARCH_RUN_NOT_FOUND"
+                  "SESSION_REQUIRED",
+                  "REQUEST_REJECTED",
+                  "RESEARCH_RUN_CREATE_INVALID",
+                  "RESEARCH_RUN_CREATE_FORBIDDEN",
+                  "RESEARCH_RUN_PREFLIGHT_NOT_READY",
+                  "RESEARCH_RUN_PREFLIGHT_STALE",
+                  "RESEARCH_RUN_ALPHA_NOT_ACTIVE",
+                  "RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE",
+                  "RESEARCH_RUN_PRODUCER_UNAVAILABLE",
+                  "RESEARCH_RUN_TRANSPORT_UNKNOWN",
+                  "RESEARCH_RUN_UPSTREAM_REJECTED",
+                  "RESEARCH_RUN_NOT_FOUND"
                 ]
               },
-              "message": { "type": "string", "maxLength": 1024 }
+              "message": {
+                "type": "string",
+                "maxLength": 1024
+              }
             }
           },
-          "request_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
         }
       }
     }

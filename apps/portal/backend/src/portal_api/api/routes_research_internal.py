@@ -19,8 +19,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from portal_api.auth.internal_principal import InternalPrincipalError, require_internal_principal
 from portal_api.services.research_alpha_analyzer import MAX_SOURCE_BYTES, analyze_alpha_source
 from portal_api.services.durable_runs import AttemptRegistry, DurableRunError
+from portal_api.services.research_dataset_catalog import (
+    ResearchDatasetCatalogError,
+    build_research_dataset_catalog,
+)
 from portal_api.services.research_preflight_snapshot import (
     ResearchPreflightSnapshotError,
+    refusal_detail,
 )
 
 router = APIRouter(prefix="/internal/research", include_in_schema=False)
@@ -43,6 +48,9 @@ class PreflightSnapshotRequest(BaseModel):
     required_columns: tuple[str, ...] = Field(default=("open", "high", "low", "close", "volume"), min_length=1, max_length=16)
     warmup_bars: int = Field(default=0, ge=0, le=100_000)
     requires_funding: bool = False
+    # CG-P08-05: swept dimensions counted by Control API from the immutable
+    # AlphaVersion declaration and the overrides; the ceiling is the release's.
+    swept_dimensions: int = Field(default=0, ge=0, le=128)
 
 
 class ProgressCancellationRequest(BaseModel):
@@ -88,6 +96,23 @@ async def read_engine_atlas(request: Request) -> dict[str, object]:
     return request.app.state.research_engine_catalog.public_document().model_dump(mode="json")
 
 
+@router.get("/datasets")
+async def read_research_dataset_catalog(request: Request) -> dict[str, object]:
+    """CG-P08-04: the bounded research dataset catalog, for Control API only.
+
+    Names and month partitions from the approved reader's storage layout; no
+    data file is opened, no path or price is returned.
+    """
+    try:
+        require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    try:
+        return build_research_dataset_catalog(request.app.state.market_data_provider)
+    except ResearchDatasetCatalogError as exc:
+        raise HTTPException(status_code=503, detail="historical dataset catalog is unavailable") from exc
+
+
 @router.post("/preflight-snapshots")
 async def create_preflight_snapshot(
     request: Request,
@@ -109,7 +134,9 @@ async def create_preflight_snapshot(
     except ResearchPreflightSnapshotError as exc:
         # Control API maps this fixed private vocabulary to its same-origin
         # typed problem codes. No raw market data, source path or stack leaks.
-        raise HTTPException(status_code=409, detail={"code": exc.code}) from exc
+        # CG-P08-03 adds the failed gate, the requested-spec field path and a
+        # bounded authored/engine sentence; still no data, path or stack.
+        raise HTTPException(status_code=409, detail=refusal_detail(exc, body.requested_spec)) from exc
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail="invalid preflight snapshot contract") from exc
 

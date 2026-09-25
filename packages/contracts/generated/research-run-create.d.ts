@@ -49,14 +49,15 @@ export interface components {
         OpaqueIntentId: string;
         PreflightToken: string;
         Digest: string;
-        RequestedSpec: components["schemas"]["research-requested-spec.v1.schema"];
+        /** @description Same P02 requested spec as preflight (v1 or v2). P10 admission refuses v2 with RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE: no installed executor runs its fields yet. */
+        RequestedSpec: components["schemas"]["research-requested-spec.v1.schema"] | components["schemas"]["research-requested-spec.v2.schema"];
         RunCreateRequest: {
             /** @constant */
             schema_version: "research.run-create.v1";
             workspace_id?: components["schemas"]["WorkspaceId"];
             client_intent_id: components["schemas"]["OpaqueIntentId"];
             preflight_token: components["schemas"]["PreflightToken"];
-            requested_spec: components["schemas"]["research-requested-spec.v1.schema"];
+            requested_spec: components["schemas"]["RequestedSpec"];
             /**
              * @default NEW
              * @enum {unknown}
@@ -172,6 +173,117 @@ export interface components {
                 split_mode: string;
                 frequency: string;
                 window_mode: string;
+            };
+            optimization_mode: string;
+            optimization_schedule: string;
+            parameter_space_overrides: ({
+                name: string;
+                /** @constant */
+                kind: "sweep";
+                low: string | number | boolean;
+                high: string | number | boolean;
+            } | {
+                name: string;
+                /** @constant */
+                kind: "pin";
+                value: string | number | boolean;
+            })[];
+            optuna_trials: number;
+            early_stopping: null | number;
+            random_seed: null | number;
+            optimization_config: {
+                [key: string]: string | number | boolean;
+            };
+            client: {
+                engine_release_id: string;
+                config_digest: string;
+            };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        /**
+         * Research requested specification v2
+         * @description CG-P02-02: v1 plus requested-spec fields for rolling train width, temporal guards (label horizon, purge, embargo) and causal Mode 1 inner folds on an advanced walk-forward. Additive and versioned: every v1 document is unchanged. P08 validates each field against the pinned QuantBT engine and refuses what it cannot build with a typed reason and field path.
+         */
+        "research-requested-spec.v2.schema": {
+            /** @constant */
+            schema_version: "research.requested-spec.v2";
+            alpha_binding: null | {
+                alpha_id: string;
+                alpha_version_id: string;
+            };
+            not_publishable: boolean;
+            strategy_id: string;
+            /** @enum {unknown} */
+            execution_route: "signal_notional" | "pct_equity" | "intrabar_bracket" | "dca_ladder" | "reactive" | "event_driven" | "native_event_lifecycle" | "orders" | "fill_replay" | "basket" | "arbitrage" | "portfolio" | "nautilus_dca_grid" | "options";
+            route_params: {
+                intrabar?: {
+                    /** @enum {unknown} */
+                    level_mode: "hlc_conservative" | "ohlc_path" | "close_only";
+                    /** @enum {unknown} */
+                    same_bar_policy: "stop_first" | "target_first" | "ambiguity_flag";
+                    tick_size: string;
+                };
+                portfolio?: {
+                    /** @enum {unknown} */
+                    mode: "longshort" | "market_neutral" | "directional" | "equal_weight" | "risk_parity" | "beta_neutral";
+                    /** @enum {unknown} */
+                    sizing: "equal_weight" | "risk_parity" | "vol_target" | "kelly_fraction" | "fixed_notional" | "atr_risk" | "min_variance" | "score_weighted";
+                };
+                reactive?: {
+                    /** @enum {unknown} */
+                    runtime: "R0" | "R1" | "R2" | "R3" | "R3B";
+                    /** @enum {unknown} */
+                    audit_mode: "minimal" | "standard" | "audit";
+                };
+                dca?: {
+                    base_order_usd: string;
+                    safety_orders: number;
+                    step_scale: string;
+                };
+            };
+            data: {
+                dataset_id: string;
+                symbol: string;
+                timeframe: string;
+            };
+            /** @enum {unknown} */
+            protocol: "three_window_decay" | "advanced";
+            windows?: {
+                is: {
+                    start: string;
+                    end_exclusive: string;
+                };
+                oos: {
+                    start: string;
+                    end_exclusive: string;
+                };
+                holdout: {
+                    start: string;
+                    end_exclusive: string;
+                };
+            };
+            walk_forward?: {
+                start: string;
+                end_exclusive: string;
+                split_mode: string;
+                frequency: string;
+                window_mode: string;
+                /** @description Rolling train width (required for rolling, refused for expanding). */
+                train_window?: string;
+                /** @description Bars removed from each train tail for label horizon before OOS. */
+                label_horizon_bars?: number;
+                /** @description Bars purged from each train tail before the label horizon. */
+                purge_bars?: number;
+                /** @description Bars skipped after each OOS fold before the next OOS starts. */
+                embargo_bars?: number;
+                /** @description Nested inner folds; only mode_1_decay with per_fold_causal. */
+                inner?: {
+                    /** @enum {unknown} */
+                    split_frequency: "single" | "yearly" | "semi_yearly" | "quarterly" | "monthly" | "weekly";
+                    /** @enum {unknown} */
+                    window_mode: "expanding" | "rolling";
+                    train_window: string;
+                    min_folds?: number;
+                };
             };
             optimization_mode: string;
             optimization_schedule: string;

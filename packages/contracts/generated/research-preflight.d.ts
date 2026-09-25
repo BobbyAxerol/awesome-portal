@@ -38,14 +38,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the research dataset catalog (Screen 02 data step)
+         * @description CG-P08-04. Same-origin and read-only; the private P08 adapter lists names and month partitions of the approved historical source. It never opens a data file.
+         */
+        get: operations["researchDatasetCatalogGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        RequestedSpec: components["schemas"]["research-requested-spec.v1.schema"];
+        /** @description P02 requested spec. v1 is the frozen P02 contract; v2 (CG-P02-02) adds rolling train width, temporal guards and causal Mode 1 inner folds on an advanced walk-forward. P08 validates every v2 field against the pinned engine; P10 runs neither v2 field yet. */
+        RequestedSpec: components["schemas"]["research-requested-spec.v1.schema"] | components["schemas"]["research-requested-spec.v2.schema"];
         CreateRequest: {
             workspace_id?: string;
-            requested_spec: components["schemas"]["research-requested-spec.v1.schema"];
+            requested_spec: components["schemas"]["RequestedSpec"];
         };
         Digest: string;
         UtcMilliseconds: number;
@@ -92,6 +113,8 @@ export interface components {
             provenance: {
                 [key: string]: string | number | boolean;
             };
+            gap_scan?: components["schemas"]["GapScan"];
+            holdout_seal?: components["schemas"]["HoldoutSeal"];
         };
         Capability: {
             engine_release_id: string;
@@ -115,6 +138,14 @@ export interface components {
             outer_oos: components["schemas"]["UtcRange"];
             /** @constant */
             state: "BOUNDARY_FIXED_NOT_EVALUATED";
+            /** @description CG-P02-02: engine-built label-horizon, purge and embargo spans (requested-spec v2 plans only). */
+            guards?: {
+                label_horizon: components["schemas"]["UtcRange"] | null;
+                purge: components["schemas"]["UtcRange"] | null;
+                embargo: components["schemas"]["UtcRange"] | null;
+            };
+            /** @description CG-P02-02: nested inner folds the engine built inside this outer IS. */
+            inner_fold_count?: number;
         };
         SealedHoldout: components["schemas"]["UtcRange"] & {
             /** @constant */
@@ -135,11 +166,33 @@ export interface components {
             protocol: "advanced_walk_forward";
             /** @enum {unknown} */
             frequency: "single" | "yearly" | "semi_yearly" | "quarterly" | "monthly" | "weekly";
-            /** @constant */
-            window_mode: "expanding";
+            /**
+             * @description Rolling appears only on an engine-built requested-spec v2 plan with a train width (CG-P08-02).
+             * @enum {unknown}
+             */
+            window_mode: "expanding" | "rolling";
             folds: components["schemas"]["Fold"][];
             sealed_holdout: null;
             topology_digest: components["schemas"]["Digest"];
+            /**
+             * @description Present exactly when the engine's own fold planner built this plan (requested-spec v2).
+             * @constant
+             */
+            plan_source?: "quantbt.walkforward.WalkForwardEngine.build_folds";
+            train_window?: string | null;
+            temporal_guards?: {
+                label_horizon_bars: number;
+                purge_bars: number;
+                embargo_bars: number;
+            };
+            inner_validation?: {
+                /** @enum {unknown} */
+                split_frequency: "single" | "yearly" | "semi_yearly" | "quarterly" | "monthly" | "weekly";
+                /** @enum {unknown} */
+                window_mode: "expanding" | "rolling";
+                train_window: string;
+                min_folds: number;
+            } | null;
         };
         Topology: components["schemas"]["ThreeWindowTopology"] | components["schemas"]["AdvancedTopology"];
         DatasetBinding: {
@@ -177,6 +230,14 @@ export interface components {
             /** @constant */
             admission_state: "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING";
             disclosure: string;
+            /** @description CG-P08-05: the ceilings this preflight was checked against; sources are published on the Atlas release (preflight_limits). */
+            ceilings?: {
+                trial_ceiling: number;
+                sweep_dimension_ceiling: number;
+                swept_dimensions: number;
+                outer_fold_ceiling: number;
+                estimated_cpu_seconds_ceiling: number;
+            };
         };
         EffectiveDataBinding: {
             snapshot_id: string;
@@ -234,14 +295,133 @@ export interface components {
             topology: components["schemas"]["Topology"];
             resource_estimate: components["schemas"]["ResourceEstimate"];
             capability: components["schemas"]["Capability"];
+            issued_at_utc_ms?: components["schemas"]["UtcMilliseconds"];
+            gates?: components["schemas"]["PreflightGate"][];
+            run_admission?: components["schemas"]["RunAdmission"];
         };
         Problem: {
             error: {
                 /** @enum {unknown} */
-                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_PREFLIGHT_INVALID" | "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE" | "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE" | "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE" | "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN" | "RESEARCH_PREFLIGHT_RELEASE_STALE" | "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID" | "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED" | "RESEARCH_PREFLIGHT_RESOURCE_REFUSED" | "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE" | "RESEARCH_PREFLIGHT_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REJECTED" | "RESEARCH_PREFLIGHT_NOT_FOUND" | "RESEARCH_PREFLIGHT_EXPIRED" | "RESEARCH_PREFLIGHT_STALE";
+                code: "SESSION_REQUIRED" | "REQUEST_REJECTED" | "RESEARCH_PREFLIGHT_INVALID" | "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE" | "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE" | "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE" | "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN" | "RESEARCH_PREFLIGHT_RELEASE_STALE" | "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED" | "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID" | "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED" | "RESEARCH_PREFLIGHT_RESOURCE_REFUSED" | "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE" | "RESEARCH_PREFLIGHT_UNAVAILABLE" | "RESEARCH_PREFLIGHT_REJECTED" | "RESEARCH_PREFLIGHT_NOT_FOUND" | "RESEARCH_PREFLIGHT_EXPIRED" | "RESEARCH_PREFLIGHT_STALE";
                 message: string;
             };
             request_id: string;
+            /** @description CG-P08-03: the failed gate and requested-spec field path of a 409 refusal, or every invalid field path of a 400. */
+            details?: {
+                gate?: string;
+                field_path?: components["schemas"]["FieldPath"];
+                field_paths?: components["schemas"]["FieldPath"][];
+            };
+        };
+        /** @description CG-P08-06: per-window missing-bar scan of the sealed snapshot's timestamps (never prices). The sealed holdout is not scanned per window. Severity per gap run is not published by the source; a window verdict is WATCH when it misses any bar and CRITICAL above the snapshot quality profile's max_gap_ratio. */
+        GapScan: {
+            /** @enum {unknown} */
+            state: "SCANNED" | "NOT_PUBLISHED";
+            reason: string | null;
+            max_gap_ratio?: number;
+            classification?: string;
+            windows: {
+                window: string;
+                start_utc_ms: components["schemas"]["UtcMilliseconds"];
+                end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+                /** @enum {unknown} */
+                state: "SCANNED" | "SEALED";
+                bars: number | null;
+                expected_bars: number | null;
+                missing_bars: number | null;
+                gap_runs: number | null;
+                verdict: ("PASS" | "WATCH" | "CRITICAL") | null;
+                items: {
+                    start_utc_ms: components["schemas"]["UtcMilliseconds"];
+                    missing_bars: number;
+                }[];
+                items_omitted: number;
+                note: string | null;
+            }[];
+        };
+        /** @description CG-P08-06 (DR-01): the read-only holdout seal record P08 can prove, or NOT_DECLARED for an advanced walk-forward. Nothing reads sealed values; unlock authority is DR-01 (OWNER_SCOPE_REQUIRED); no certificate cap is published (CG-P04-05). The sealing actor is the preflight's authenticated caller (manifests are actor-scoped) and the time is issued_at_utc_ms. */
+        HoldoutSeal: {
+            /** @constant */
+            schema_version: "research.holdout-seal.v1";
+            seal_digest: components["schemas"]["Digest"];
+            digest_basis: string;
+            read_log: {
+                /** @constant */
+                state: "NO_READER";
+                reads: unknown[];
+                reason: string;
+            };
+            unlock: {
+                /** @constant */
+                state: "OWNER_SCOPE_REQUIRED";
+                reason: string;
+            };
+            cap: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                reason: string;
+            };
+        } | {
+            /** @constant */
+            schema_version: "research.holdout-seal.v1";
+            /** @constant */
+            state: "NOT_DECLARED";
+            reason: string;
+        };
+        /** @description CG-P08-03: one server check this immutable manifest passed, projected from the stored documents. NOT_RECORDED marks a gate the manifest predates; it is never shown as PASS. */
+        PreflightGate: {
+            gate: string;
+            /** @enum {unknown} */
+            state: "PASS" | "NOT_APPLICABLE" | "NOT_RECORDED";
+            field_path: components["schemas"]["FieldPath"];
+            message: string;
+        };
+        /** @description Requested-spec key path (never a value), e.g. ["walk_forward", "train_window"]; Screen 02 maps it to the owning wizard step. */
+        FieldPath: string[];
+        /** @description CG-P08-03: the P10 predicate behind may_create_run, with its typed reason and field path when it is false. A manifest the predicate cannot load stays an opaque false with null code. */
+        RunAdmission: {
+            may_create_run: boolean;
+            code: string | null;
+            message: string | null;
+            field_path: components["schemas"]["FieldPath"];
+        };
+        /** @description CG-P08-04: read-only, bounded research dataset catalog for Screen 02. Datasets, timeframes, availability and, where the approved reader's storage layout is mounted, symbols with month-partition coverage. No path, row or price; exact bar availability is decided at preflight. */
+        DatasetCatalog: {
+            /** @constant */
+            schema_version: "research.dataset-catalog.v1";
+            coverage_rule: string;
+            datasets: {
+                dataset_id: string;
+                venue: string;
+                /** @enum {unknown} */
+                availability: "available" | "unavailable";
+                unavailable_reason: string | null;
+                source_class: string;
+                usage_scopes: string[];
+                excluded_scopes: string[];
+                source_timezone: string;
+                /** @enum {unknown} */
+                calendar_policy: "CRYPTO_24_7" | "SOURCE_DECLARED";
+                timeframes: string[];
+                symbols: {
+                    /** @enum {unknown} */
+                    state: "PUBLISHED" | "NOT_PUBLISHED";
+                    reason: string | null;
+                    total: number | null;
+                    truncated: boolean;
+                    items: {
+                        symbol: string;
+                        contract_kind: ("PERPETUAL" | "QUARTERLY") | null;
+                        coverage: {
+                            first_month: string;
+                            last_month: string;
+                            months: number;
+                            /** @constant */
+                            granularity: "MONTH_PARTITION";
+                        } | null;
+                    }[];
+                };
+            }[];
         };
         /**
          * Research requested specification v1
@@ -311,6 +491,117 @@ export interface components {
                 split_mode: string;
                 frequency: string;
                 window_mode: string;
+            };
+            optimization_mode: string;
+            optimization_schedule: string;
+            parameter_space_overrides: ({
+                name: string;
+                /** @constant */
+                kind: "sweep";
+                low: string | number | boolean;
+                high: string | number | boolean;
+            } | {
+                name: string;
+                /** @constant */
+                kind: "pin";
+                value: string | number | boolean;
+            })[];
+            optuna_trials: number;
+            early_stopping: null | number;
+            random_seed: null | number;
+            optimization_config: {
+                [key: string]: string | number | boolean;
+            };
+            client: {
+                engine_release_id: string;
+                config_digest: string;
+            };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        /**
+         * Research requested specification v2
+         * @description CG-P02-02: v1 plus requested-spec fields for rolling train width, temporal guards (label horizon, purge, embargo) and causal Mode 1 inner folds on an advanced walk-forward. Additive and versioned: every v1 document is unchanged. P08 validates each field against the pinned QuantBT engine and refuses what it cannot build with a typed reason and field path.
+         */
+        "research-requested-spec.v2.schema": {
+            /** @constant */
+            schema_version: "research.requested-spec.v2";
+            alpha_binding: null | {
+                alpha_id: string;
+                alpha_version_id: string;
+            };
+            not_publishable: boolean;
+            strategy_id: string;
+            /** @enum {unknown} */
+            execution_route: "signal_notional" | "pct_equity" | "intrabar_bracket" | "dca_ladder" | "reactive" | "event_driven" | "native_event_lifecycle" | "orders" | "fill_replay" | "basket" | "arbitrage" | "portfolio" | "nautilus_dca_grid" | "options";
+            route_params: {
+                intrabar?: {
+                    /** @enum {unknown} */
+                    level_mode: "hlc_conservative" | "ohlc_path" | "close_only";
+                    /** @enum {unknown} */
+                    same_bar_policy: "stop_first" | "target_first" | "ambiguity_flag";
+                    tick_size: string;
+                };
+                portfolio?: {
+                    /** @enum {unknown} */
+                    mode: "longshort" | "market_neutral" | "directional" | "equal_weight" | "risk_parity" | "beta_neutral";
+                    /** @enum {unknown} */
+                    sizing: "equal_weight" | "risk_parity" | "vol_target" | "kelly_fraction" | "fixed_notional" | "atr_risk" | "min_variance" | "score_weighted";
+                };
+                reactive?: {
+                    /** @enum {unknown} */
+                    runtime: "R0" | "R1" | "R2" | "R3" | "R3B";
+                    /** @enum {unknown} */
+                    audit_mode: "minimal" | "standard" | "audit";
+                };
+                dca?: {
+                    base_order_usd: string;
+                    safety_orders: number;
+                    step_scale: string;
+                };
+            };
+            data: {
+                dataset_id: string;
+                symbol: string;
+                timeframe: string;
+            };
+            /** @enum {unknown} */
+            protocol: "three_window_decay" | "advanced";
+            windows?: {
+                is: {
+                    start: string;
+                    end_exclusive: string;
+                };
+                oos: {
+                    start: string;
+                    end_exclusive: string;
+                };
+                holdout: {
+                    start: string;
+                    end_exclusive: string;
+                };
+            };
+            walk_forward?: {
+                start: string;
+                end_exclusive: string;
+                split_mode: string;
+                frequency: string;
+                window_mode: string;
+                /** @description Rolling train width (required for rolling, refused for expanding). */
+                train_window?: string;
+                /** @description Bars removed from each train tail for label horizon before OOS. */
+                label_horizon_bars?: number;
+                /** @description Bars purged from each train tail before the label horizon. */
+                purge_bars?: number;
+                /** @description Bars skipped after each OOS fold before the next OOS starts. */
+                embargo_bars?: number;
+                /** @description Nested inner folds; only mode_1_decay with per_fold_causal. */
+                inner?: {
+                    /** @enum {unknown} */
+                    split_frequency: "single" | "yearly" | "semi_yearly" | "quarterly" | "monthly" | "weekly";
+                    /** @enum {unknown} */
+                    window_mode: "expanding" | "rolling";
+                    train_window: string;
+                    min_folds?: number;
+                };
             };
             optimization_mode: string;
             optimization_schedule: string;
@@ -419,6 +710,33 @@ export interface operations {
             401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchDatasetCatalogGetV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bounded catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetCatalog"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };

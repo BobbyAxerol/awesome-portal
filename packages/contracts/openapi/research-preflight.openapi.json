@@ -5,24 +5,68 @@
     "version": "1.0.0",
     "description": "P08 same-origin immutable data-snapshot and effective-spec preflight. The browser receives bounded metadata only: no HMD rows, snapshot path, private adapter URL, principal, source credential, sealed-holdout values or worker admission. This contract does not submit or execute a run."
   },
-  "servers": [{ "url": "/" }],
-  "security": [{ "portalSession": [] }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
   "paths": {
     "/api/v1/research/preflights": {
       "post": {
         "operationId": "researchPreflightCreateV1",
         "summary": "Create one actor-scoped immutable preflight manifest",
-        "parameters": [{ "$ref": "#/components/parameters/Csrf" }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateRequest" } } } },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Csrf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "A new immutable manifest token and metadata-only effective specification", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchPreflightV1" } } } },
-          "400": { "$ref": "#/components/responses/Problem" },
-          "401": { "$ref": "#/components/responses/Problem" },
-          "403": { "$ref": "#/components/responses/Problem" },
-          "404": { "$ref": "#/components/responses/Problem" },
-          "409": { "$ref": "#/components/responses/Problem" },
-          "502": { "$ref": "#/components/responses/Problem" },
-          "503": { "$ref": "#/components/responses/Problem" }
+          "201": {
+            "description": "A new immutable manifest token and metadata-only effective specification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchPreflightV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "502": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -31,135 +75,1810 @@
         "operationId": "researchPreflightGetV1",
         "summary": "Read the exact live actor-scoped preflight manifest metadata",
         "parameters": [
-          { "$ref": "#/components/parameters/PreflightToken" },
-          { "$ref": "#/components/parameters/WorkspaceId" }
+          {
+            "$ref": "#/components/parameters/PreflightToken"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
         ],
         "responses": {
-          "200": { "description": "The exact immutable manifest metadata", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResearchPreflightV1" } } } },
-          "400": { "$ref": "#/components/responses/Problem" },
-          "401": { "$ref": "#/components/responses/Problem" },
-          "404": { "$ref": "#/components/responses/Problem" },
-          "409": { "$ref": "#/components/responses/Problem" },
-          "503": { "$ref": "#/components/responses/Problem" }
+          "200": {
+            "description": "The exact immutable manifest metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchPreflightV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/research/datasets": {
+      "get": {
+        "operationId": "researchDatasetCatalogGetV1",
+        "summary": "Read the research dataset catalog (Screen 02 data step)",
+        "description": "CG-P08-04. Same-origin and read-only; the private P08 adapter lists names and month partitions of the approved historical source. It never opens a data file.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The bounded catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetCatalog"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "502": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     }
   },
   "components": {
-    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
     "parameters": {
-      "Csrf": { "name": "x-csrf-token", "in": "header", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 512 } },
-      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" } },
-      "PreflightToken": { "name": "preflight_token", "in": "path", "required": true, "schema": { "type": "string", "minLength": 6, "maxLength": 160, "pattern": "^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$" } }
-    },
-    "responses": {
-      "Problem": { "description": "Typed same-origin failure. No raw market data, source path, private transport, credential or worker state is disclosed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
-    },
-    "schemas": {
-      "RequestedSpec": { "$ref": "../schemas/research-requested-spec.v1.schema.json" },
-      "CreateRequest": {
-        "type": "object", "additionalProperties": false, "required": ["requested_spec"],
-        "properties": {
-          "workspace_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]{1,128}$" },
-          "requested_spec": { "$ref": "#/components/schemas/RequestedSpec" }
+      "Csrf": {
+        "name": "x-csrf-token",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
         }
       },
-      "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-      "UtcMilliseconds": { "type": "integer", "minimum": 0 },
-      "UtcRange": {
-        "type": "object", "additionalProperties": false,
-        "required": ["start_utc", "end_exclusive_utc", "start_utc_ms", "end_exclusive_utc_ms"],
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9._-]{1,128}$"
+        }
+      },
+      "PreflightToken": {
+        "name": "preflight_token",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 160,
+          "pattern": "^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed same-origin failure. No raw market data, source path, private transport, credential or worker state is disclosed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RequestedSpec": {
+        "description": "P02 requested spec. v1 is the frozen P02 contract; v2 (CG-P02-02) adds rolling train width, temporal guards and causal Mode 1 inner folds on an advanced walk-forward. P08 validates every v2 field against the pinned engine; P10 runs neither v2 field yet.",
+        "oneOf": [
+          {
+            "$ref": "../schemas/research-requested-spec.v1.schema.json"
+          },
+          {
+            "$ref": "../schemas/research-requested-spec.v2.schema.json"
+          }
+        ]
+      },
+      "CreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requested_spec"
+        ],
         "properties": {
-          "start_utc": { "type": "string", "minLength": 1, "maxLength": 64 },
-          "end_exclusive_utc": { "type": "string", "minLength": 1, "maxLength": 64 },
-          "start_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
-          "end_exclusive_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
-          "bars": { "type": "integer", "minimum": 0 }
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._-]{1,128}$"
+          },
+          "requested_spec": {
+            "$ref": "#/components/schemas/RequestedSpec"
+          }
+        }
+      },
+      "Digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "UtcMilliseconds": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "UtcRange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start_utc",
+          "end_exclusive_utc",
+          "start_utc_ms",
+          "end_exclusive_utc_ms"
+        ],
+        "properties": {
+          "start_utc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "end_exclusive_utc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "start_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "end_exclusive_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 0
+          }
         }
       },
       "Warmup": {
         "allOf": [
-          { "$ref": "#/components/schemas/UtcRange" },
-          { "type": "object", "additionalProperties": false, "required": ["requested_bars", "state"], "properties": { "requested_bars": { "type": "integer", "minimum": 0 }, "state": { "const": "BOUNDARY_ONLY_NOT_FIT" } } }
+          {
+            "$ref": "#/components/schemas/UtcRange"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requested_bars",
+              "state"
+            ],
+            "properties": {
+              "requested_bars": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "state": {
+                "const": "BOUNDARY_ONLY_NOT_FIT"
+              }
+            }
+          }
         ]
       },
       "Quality": {
-        "type": "object", "additionalProperties": false,
-        "required": ["rows", "gaps", "duplicates", "gap_ratio", "passed", "reason_codes", "missing_bar_count", "state"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rows",
+          "gaps",
+          "duplicates",
+          "gap_ratio",
+          "passed",
+          "reason_codes",
+          "missing_bar_count",
+          "state"
+        ],
         "properties": {
-          "rows": { "type": "integer", "minimum": 1 }, "gaps": { "type": "integer", "minimum": 0 }, "duplicates": { "type": "integer", "minimum": 0 }, "gap_ratio": { "type": "number", "minimum": 0 },
-          "passed": { "const": true }, "reason_codes": { "type": "array", "maxItems": 16, "items": { "type": "string", "maxLength": 96 } }, "missing_bar_count": { "type": "integer", "minimum": 0 }, "state": { "const": "SNAPSHOT_INTEGRITY_ONLY" }
+          "rows": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "gaps": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "duplicates": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gap_ratio": {
+            "type": "number",
+            "minimum": 0
+          },
+          "passed": {
+            "const": true
+          },
+          "reason_codes": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "maxLength": 96
+            }
+          },
+          "missing_bar_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "state": {
+            "const": "SNAPSHOT_INTEGRITY_ONLY"
+          }
         }
       },
       "Snapshot": {
-        "type": "object", "additionalProperties": false,
-        "required": ["snapshot_id", "snapshot_content_hash", "market_content_hash", "source_manifest_digest", "row_count", "byte_count", "query", "logical_range", "warmup", "timezone", "calendar_policy", "closed_bar_policy", "columns", "quality", "provenance"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "snapshot_id",
+          "snapshot_content_hash",
+          "market_content_hash",
+          "source_manifest_digest",
+          "row_count",
+          "byte_count",
+          "query",
+          "logical_range",
+          "warmup",
+          "timezone",
+          "calendar_policy",
+          "closed_bar_policy",
+          "columns",
+          "quality",
+          "provenance"
+        ],
         "properties": {
-          "snapshot_id": { "type": "string", "pattern": "^dss_[0-9a-f]{32}$" }, "snapshot_content_hash": { "$ref": "#/components/schemas/Digest" }, "market_content_hash": { "$ref": "#/components/schemas/Digest" }, "source_manifest_digest": { "$ref": "#/components/schemas/Digest" },
-          "row_count": { "type": "integer", "minimum": 1 }, "byte_count": { "type": "integer", "minimum": 1 }, "query": { "$ref": "#/components/schemas/UtcRange" }, "logical_range": { "$ref": "#/components/schemas/UtcRange" }, "warmup": { "$ref": "#/components/schemas/Warmup" },
-          "timezone": { "type": "string", "minLength": 1, "maxLength": 128 }, "calendar_policy": { "type": "string", "minLength": 1, "maxLength": 128 }, "closed_bar_policy": { "const": "CLOSED_BARS_ONLY" },
-          "columns": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 64 } }, "quality": { "$ref": "#/components/schemas/Quality" },
-          "provenance": { "type": "object", "propertyNames": { "enum": ["source_class", "usage_scope", "reader_distribution", "reader_version", "reader_wheel_sha256", "loader_contract", "manifest_digest", "environment_id", "release_commit", "release_tag", "dataset_release_id", "adapter_version"] }, "additionalProperties": { "type": ["string", "number", "boolean"] } }
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^dss_[0-9a-f]{32}$"
+          },
+          "snapshot_content_hash": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "market_content_hash": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "source_manifest_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "row_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "byte_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "query": {
+            "$ref": "#/components/schemas/UtcRange"
+          },
+          "logical_range": {
+            "$ref": "#/components/schemas/UtcRange"
+          },
+          "warmup": {
+            "$ref": "#/components/schemas/Warmup"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "calendar_policy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "closed_bar_policy": {
+            "const": "CLOSED_BARS_ONLY"
+          },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality"
+          },
+          "provenance": {
+            "type": "object",
+            "propertyNames": {
+              "enum": [
+                "source_class",
+                "usage_scope",
+                "reader_distribution",
+                "reader_version",
+                "reader_wheel_sha256",
+                "loader_contract",
+                "manifest_digest",
+                "environment_id",
+                "release_commit",
+                "release_tag",
+                "dataset_release_id",
+                "adapter_version"
+              ]
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          },
+          "gap_scan": {
+            "$ref": "#/components/schemas/GapScan"
+          },
+          "holdout_seal": {
+            "$ref": "#/components/schemas/HoldoutSeal"
+          }
         }
       },
       "Capability": {
-        "type": "object", "additionalProperties": false,
-        "required": ["engine_release_id", "engine_catalog_digest", "execution_route", "required_input_class", "route_axes", "preflight_admission", "optimization_mode", "optimization_schedule"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "engine_release_id",
+          "engine_catalog_digest",
+          "execution_route",
+          "required_input_class",
+          "route_axes",
+          "preflight_admission",
+          "optimization_mode",
+          "optimization_schedule"
+        ],
         "properties": {
-          "engine_release_id": { "type": "string" }, "engine_catalog_digest": { "$ref": "#/components/schemas/Digest" },
-          "execution_route": { "type": "string" }, "required_input_class": { "type": "string" },
-          "route_axes": { "type": "object", "additionalProperties": false, "required": ["engine", "integration", "evidence", "admission"], "properties": { "engine": { "type": "string" }, "integration": { "type": "string" }, "evidence": { "type": "string" }, "admission": { "type": "string" } } },
-          "preflight_admission": { "const": "PREFLIGHT_ONLY" }, "optimization_mode": { "type": "string" }, "optimization_schedule": { "type": "string" }
+          "engine_release_id": {
+            "type": "string"
+          },
+          "engine_catalog_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "execution_route": {
+            "type": "string"
+          },
+          "required_input_class": {
+            "type": "string"
+          },
+          "route_axes": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "engine",
+              "integration",
+              "evidence",
+              "admission"
+            ],
+            "properties": {
+              "engine": {
+                "type": "string"
+              },
+              "integration": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "string"
+              },
+              "admission": {
+                "type": "string"
+              }
+            }
+          },
+          "preflight_admission": {
+            "const": "PREFLIGHT_ONLY"
+          },
+          "optimization_mode": {
+            "type": "string"
+          },
+          "optimization_schedule": {
+            "type": "string"
+          }
         }
       },
       "Fold": {
-        "type": "object", "additionalProperties": false, "required": ["fold_id", "train", "outer_oos", "state"],
-        "properties": { "fold_id": { "type": "string", "pattern": "^fold_[0-9]{3}$" }, "train": { "$ref": "#/components/schemas/UtcRange" }, "outer_oos": { "$ref": "#/components/schemas/UtcRange" }, "state": { "const": "BOUNDARY_FIXED_NOT_EVALUATED" } }
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fold_id",
+          "train",
+          "outer_oos",
+          "state"
+        ],
+        "properties": {
+          "fold_id": {
+            "type": "string",
+            "pattern": "^fold_[0-9]{3}$"
+          },
+          "train": {
+            "$ref": "#/components/schemas/UtcRange"
+          },
+          "outer_oos": {
+            "$ref": "#/components/schemas/UtcRange"
+          },
+          "state": {
+            "const": "BOUNDARY_FIXED_NOT_EVALUATED"
+          },
+          "guards": {
+            "description": "CG-P02-02: engine-built label-horizon, purge and embargo spans (requested-spec v2 plans only).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "label_horizon",
+              "purge",
+              "embargo"
+            ],
+            "properties": {
+              "label_horizon": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcRange"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "purge": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcRange"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "embargo": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcRange"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "inner_fold_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 256,
+            "description": "CG-P02-02: nested inner folds the engine built inside this outer IS."
+          }
+        }
       },
       "SealedHoldout": {
         "allOf": [
-          { "$ref": "#/components/schemas/UtcRange" },
-          { "type": "object", "additionalProperties": false, "required": ["snapshot_read_state", "evaluation_state", "disclosure"], "properties": { "snapshot_read_state": { "const": "OPAQUE_SNAPSHOT_ONLY" }, "evaluation_state": { "const": "NOT_EVALUATED" }, "disclosure": { "type": "string", "minLength": 1, "maxLength": 512 } } }
+          {
+            "$ref": "#/components/schemas/UtcRange"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "snapshot_read_state",
+              "evaluation_state",
+              "disclosure"
+            ],
+            "properties": {
+              "snapshot_read_state": {
+                "const": "OPAQUE_SNAPSHOT_ONLY"
+              },
+              "evaluation_state": {
+                "const": "NOT_EVALUATED"
+              },
+              "disclosure": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          }
         ]
       },
       "ThreeWindowTopology": {
-        "type": "object", "additionalProperties": false, "required": ["protocol", "folds", "sealed_holdout", "topology_digest"],
-        "properties": { "protocol": { "const": "three_window_decay" }, "folds": { "type": "array", "minItems": 1, "maxItems": 128, "items": { "$ref": "#/components/schemas/Fold" } }, "sealed_holdout": { "$ref": "#/components/schemas/SealedHoldout" }, "topology_digest": { "$ref": "#/components/schemas/Digest" } }
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "protocol",
+          "folds",
+          "sealed_holdout",
+          "topology_digest"
+        ],
+        "properties": {
+          "protocol": {
+            "const": "three_window_decay"
+          },
+          "folds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/components/schemas/Fold"
+            }
+          },
+          "sealed_holdout": {
+            "$ref": "#/components/schemas/SealedHoldout"
+          },
+          "topology_digest": {
+            "$ref": "#/components/schemas/Digest"
+          }
+        }
       },
       "AdvancedTopology": {
-        "type": "object", "additionalProperties": false, "required": ["protocol", "frequency", "window_mode", "folds", "sealed_holdout", "topology_digest"],
-        "properties": { "protocol": { "const": "advanced_walk_forward" }, "frequency": { "enum": ["single", "yearly", "semi_yearly", "quarterly", "monthly", "weekly"] }, "window_mode": { "const": "expanding" }, "folds": { "type": "array", "minItems": 1, "maxItems": 128, "items": { "$ref": "#/components/schemas/Fold" } }, "sealed_holdout": { "type": "null" }, "topology_digest": { "$ref": "#/components/schemas/Digest" } }
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "protocol",
+          "frequency",
+          "window_mode",
+          "folds",
+          "sealed_holdout",
+          "topology_digest"
+        ],
+        "properties": {
+          "protocol": {
+            "const": "advanced_walk_forward"
+          },
+          "frequency": {
+            "enum": [
+              "single",
+              "yearly",
+              "semi_yearly",
+              "quarterly",
+              "monthly",
+              "weekly"
+            ]
+          },
+          "window_mode": {
+            "enum": [
+              "expanding",
+              "rolling"
+            ],
+            "description": "Rolling appears only on an engine-built requested-spec v2 plan with a train width (CG-P08-02)."
+          },
+          "folds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/components/schemas/Fold"
+            }
+          },
+          "sealed_holdout": {
+            "type": "null"
+          },
+          "topology_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "plan_source": {
+            "const": "quantbt.walkforward.WalkForwardEngine.build_folds",
+            "description": "Present exactly when the engine's own fold planner built this plan (requested-spec v2)."
+          },
+          "train_window": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,4}(D|h)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "temporal_guards": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "label_horizon_bars",
+              "purge_bars",
+              "embargo_bars"
+            ],
+            "properties": {
+              "label_horizon_bars": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "purge_bars": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "embargo_bars": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              }
+            }
+          },
+          "inner_validation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "split_frequency",
+                  "window_mode",
+                  "train_window",
+                  "min_folds"
+                ],
+                "properties": {
+                  "split_frequency": {
+                    "enum": [
+                      "single",
+                      "yearly",
+                      "semi_yearly",
+                      "quarterly",
+                      "monthly",
+                      "weekly"
+                    ]
+                  },
+                  "window_mode": {
+                    "enum": [
+                      "expanding",
+                      "rolling"
+                    ]
+                  },
+                  "train_window": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]{0,4}(D|h)$"
+                  },
+                  "min_folds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 64
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
       },
-      "Topology": { "oneOf": [{ "$ref": "#/components/schemas/ThreeWindowTopology" }, { "$ref": "#/components/schemas/AdvancedTopology" }] },
+      "Topology": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ThreeWindowTopology"
+          },
+          {
+            "$ref": "#/components/schemas/AdvancedTopology"
+          }
+        ]
+      },
       "DatasetBinding": {
-        "type": "object", "additionalProperties": false, "required": ["schema_version", "snapshot_id", "snapshot_content_hash", "market_content_hash", "source_manifest_digest", "dataset_id", "symbol", "timeframe", "range_start_utc_ms", "range_end_exclusive_utc_ms", "timezone", "calendar_policy", "closed_bar_policy"],
-        "properties": { "schema_version": { "const": "research.dataset-binding.v1" }, "snapshot_id": { "type": "string", "pattern": "^dss_[0-9a-f]{32}$" }, "snapshot_content_hash": { "$ref": "#/components/schemas/Digest" }, "market_content_hash": { "$ref": "#/components/schemas/Digest" }, "source_manifest_digest": { "$ref": "#/components/schemas/Digest" }, "dataset_id": { "type": "string", "maxLength": 191 }, "symbol": { "type": "string", "minLength": 1, "maxLength": 64 }, "timeframe": { "type": "string", "maxLength": 191 }, "range_start_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "range_end_exclusive_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "timezone": { "type": "string", "minLength": 1, "maxLength": 128 }, "calendar_policy": { "type": "string", "minLength": 1, "maxLength": 128 }, "closed_bar_policy": { "const": "CLOSED_BARS_ONLY" } }
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "market_content_hash",
+          "source_manifest_digest",
+          "dataset_id",
+          "symbol",
+          "timeframe",
+          "range_start_utc_ms",
+          "range_end_exclusive_utc_ms",
+          "timezone",
+          "calendar_policy",
+          "closed_bar_policy"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.dataset-binding.v1"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^dss_[0-9a-f]{32}$"
+          },
+          "snapshot_content_hash": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "market_content_hash": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "source_manifest_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "dataset_id": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "timeframe": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "range_start_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "range_end_exclusive_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "calendar_policy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "closed_bar_policy": {
+            "const": "CLOSED_BARS_ONLY"
+          }
+        }
       },
       "ResourceEstimate": {
-        "type": "object", "additionalProperties": false, "required": ["schema_version", "scope", "trial_count", "seed_count", "outer_fold_count", "evaluation_count", "raw_frame_bytes", "snapshot_bytes", "estimated_memory_bytes", "estimated_scratch_bytes", "estimated_cpu_seconds", "admission_state", "disclosure"],
-        "properties": { "schema_version": { "const": "research.resource-estimate.v1" }, "scope": { "const": "per_study_per_fold_per_seed; no product-wide trial claim is implied" }, "trial_count": { "type": "integer", "minimum": 1 }, "seed_count": { "const": 1 }, "outer_fold_count": { "type": "integer", "minimum": 1, "maximum": 128 }, "evaluation_count": { "type": "integer", "minimum": 1 }, "raw_frame_bytes": { "type": "integer", "minimum": 0 }, "snapshot_bytes": { "type": "integer", "minimum": 1 }, "estimated_memory_bytes": { "type": "integer", "minimum": 1 }, "estimated_scratch_bytes": { "type": "integer", "minimum": 1 }, "estimated_cpu_seconds": { "type": "integer", "minimum": 1 }, "admission_state": { "const": "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING" }, "disclosure": { "type": "string", "minLength": 1, "maxLength": 512 } }
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "scope",
+          "trial_count",
+          "seed_count",
+          "outer_fold_count",
+          "evaluation_count",
+          "raw_frame_bytes",
+          "snapshot_bytes",
+          "estimated_memory_bytes",
+          "estimated_scratch_bytes",
+          "estimated_cpu_seconds",
+          "admission_state",
+          "disclosure"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.resource-estimate.v1"
+          },
+          "scope": {
+            "const": "per_study_per_fold_per_seed; no product-wide trial claim is implied"
+          },
+          "trial_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "seed_count": {
+            "const": 1
+          },
+          "outer_fold_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 128
+          },
+          "evaluation_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "raw_frame_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshot_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "estimated_memory_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "estimated_scratch_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "estimated_cpu_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "admission_state": {
+            "const": "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING"
+          },
+          "disclosure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "ceilings": {
+            "description": "CG-P08-05: the ceilings this preflight was checked against; sources are published on the Atlas release (preflight_limits).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "trial_ceiling",
+              "sweep_dimension_ceiling",
+              "swept_dimensions",
+              "outer_fold_ceiling",
+              "estimated_cpu_seconds_ceiling"
+            ],
+            "properties": {
+              "trial_ceiling": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "sweep_dimension_ceiling": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "swept_dimensions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outer_fold_ceiling": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "estimated_cpu_seconds_ceiling": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
       },
       "EffectiveDataBinding": {
-        "type": "object", "additionalProperties": false, "required": ["snapshot_id", "snapshot_content_hash", "market_content_hash", "source_manifest_digest", "timezone", "calendar_policy", "closed_bar_policy", "columns", "warmup_bars", "range_start_utc_ms", "range_end_exclusive_utc_ms"],
-        "properties": { "snapshot_id": { "type": "string", "pattern": "^dss_[0-9a-f]{32}$" }, "snapshot_content_hash": { "$ref": "#/components/schemas/Digest" }, "market_content_hash": { "$ref": "#/components/schemas/Digest" }, "source_manifest_digest": { "$ref": "#/components/schemas/Digest" }, "timezone": { "type": "string", "minLength": 1, "maxLength": 128 }, "calendar_policy": { "type": "string", "minLength": 1, "maxLength": 128 }, "closed_bar_policy": { "const": "CLOSED_BARS_ONLY" }, "columns": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 64 } }, "warmup_bars": { "type": "integer", "minimum": 0 }, "range_start_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "range_end_exclusive_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" } }
-      },
-      "Optimization": { "type": "object", "additionalProperties": false, "required": ["mode", "schedule", "trial_count", "early_stopping", "random_seed", "scope"], "properties": { "mode": { "type": "string", "maxLength": 191 }, "schedule": { "type": "string", "maxLength": 191 }, "trial_count": { "type": "integer", "minimum": 1 }, "early_stopping": { "type": ["integer", "null"], "minimum": 1 }, "random_seed": { "type": ["integer", "null"], "minimum": 0 }, "scope": { "const": "per_study_per_fold_per_seed" } } },
-      "Intent": { "type": "object", "additionalProperties": false, "required": ["kind", "reproduction_semantics", "upgrade_semantics"], "properties": { "kind": { "const": "NEW" }, "reproduction_semantics": { "type": "string", "minLength": 1, "maxLength": 512 }, "upgrade_semantics": { "type": "string", "minLength": 1, "maxLength": 512 } } },
-      "EffectiveSpec": { "type": "object", "additionalProperties": false, "required": ["schema_version", "requested_spec_digest", "engine", "data_binding", "topology", "optimization", "intent"], "properties": { "schema_version": { "const": "research.effective-spec.v1" }, "requested_spec_digest": { "$ref": "#/components/schemas/Digest" }, "engine": { "$ref": "#/components/schemas/Capability" }, "data_binding": { "$ref": "#/components/schemas/EffectiveDataBinding" }, "topology": { "$ref": "#/components/schemas/Topology" }, "optimization": { "$ref": "#/components/schemas/Optimization" }, "intent": { "$ref": "#/components/schemas/Intent" } } },
-      "ResearchPreflightV1": {
-        "type": "object", "additionalProperties": false,
-        "required": ["schema_version", "preflight_token", "expires_at_utc_ms", "may_create_run", "requested_spec_digest", "effective_spec_digest", "dataset_binding_digest", "manifest_digest", "effective_spec", "dataset_binding", "snapshot", "topology", "resource_estimate", "capability"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "snapshot_id",
+          "snapshot_content_hash",
+          "market_content_hash",
+          "source_manifest_digest",
+          "timezone",
+          "calendar_policy",
+          "closed_bar_policy",
+          "columns",
+          "warmup_bars",
+          "range_start_utc_ms",
+          "range_end_exclusive_utc_ms"
+        ],
         "properties": {
-          "schema_version": { "const": "research.preflight.v1" }, "preflight_token": { "$ref": "#/components/parameters/PreflightToken/schema" }, "expires_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }, "may_create_run": { "type": "boolean", "description": "Caller-specific server admission for creating a run from this preflight. P08 is preflight-only and currently returns false for every caller; P10 may return true only when its create route enforces the identical server-side predicate. It is never inferred by the browser from token, lifecycle or role." },
-          "requested_spec_digest": { "$ref": "#/components/schemas/Digest" }, "effective_spec_digest": { "$ref": "#/components/schemas/Digest" }, "dataset_binding_digest": { "$ref": "#/components/schemas/Digest" }, "manifest_digest": { "$ref": "#/components/schemas/Digest" },
-          "effective_spec": { "$ref": "#/components/schemas/EffectiveSpec" }, "dataset_binding": { "$ref": "#/components/schemas/DatasetBinding" }, "snapshot": { "$ref": "#/components/schemas/Snapshot" }, "topology": { "$ref": "#/components/schemas/Topology" }, "resource_estimate": { "$ref": "#/components/schemas/ResourceEstimate" }, "capability": { "$ref": "#/components/schemas/Capability" }
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^dss_[0-9a-f]{32}$"
+          },
+          "snapshot_content_hash": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "market_content_hash": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "source_manifest_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "calendar_policy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "closed_bar_policy": {
+            "const": "CLOSED_BARS_ONLY"
+          },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "warmup_bars": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "range_start_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "range_end_exclusive_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          }
+        }
+      },
+      "Optimization": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode",
+          "schedule",
+          "trial_count",
+          "early_stopping",
+          "random_seed",
+          "scope"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "schedule": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "trial_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "early_stopping": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "random_seed": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "scope": {
+            "const": "per_study_per_fold_per_seed"
+          }
+        }
+      },
+      "Intent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "reproduction_semantics",
+          "upgrade_semantics"
+        ],
+        "properties": {
+          "kind": {
+            "const": "NEW"
+          },
+          "reproduction_semantics": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "upgrade_semantics": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "EffectiveSpec": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "requested_spec_digest",
+          "engine",
+          "data_binding",
+          "topology",
+          "optimization",
+          "intent"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.effective-spec.v1"
+          },
+          "requested_spec_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "engine": {
+            "$ref": "#/components/schemas/Capability"
+          },
+          "data_binding": {
+            "$ref": "#/components/schemas/EffectiveDataBinding"
+          },
+          "topology": {
+            "$ref": "#/components/schemas/Topology"
+          },
+          "optimization": {
+            "$ref": "#/components/schemas/Optimization"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/Intent"
+          }
+        }
+      },
+      "ResearchPreflightV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "preflight_token",
+          "expires_at_utc_ms",
+          "may_create_run",
+          "requested_spec_digest",
+          "effective_spec_digest",
+          "dataset_binding_digest",
+          "manifest_digest",
+          "effective_spec",
+          "dataset_binding",
+          "snapshot",
+          "topology",
+          "resource_estimate",
+          "capability"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.preflight.v1"
+          },
+          "preflight_token": {
+            "$ref": "#/components/parameters/PreflightToken/schema"
+          },
+          "expires_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "may_create_run": {
+            "type": "boolean",
+            "description": "Caller-specific server admission for creating a run from this preflight. P08 is preflight-only and currently returns false for every caller; P10 may return true only when its create route enforces the identical server-side predicate. It is never inferred by the browser from token, lifecycle or role."
+          },
+          "requested_spec_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "effective_spec_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "dataset_binding_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "manifest_digest": {
+            "$ref": "#/components/schemas/Digest"
+          },
+          "effective_spec": {
+            "$ref": "#/components/schemas/EffectiveSpec"
+          },
+          "dataset_binding": {
+            "$ref": "#/components/schemas/DatasetBinding"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/Snapshot"
+          },
+          "topology": {
+            "$ref": "#/components/schemas/Topology"
+          },
+          "resource_estimate": {
+            "$ref": "#/components/schemas/ResourceEstimate"
+          },
+          "capability": {
+            "$ref": "#/components/schemas/Capability"
+          },
+          "issued_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "gates": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "$ref": "#/components/schemas/PreflightGate"
+            }
+          },
+          "run_admission": {
+            "$ref": "#/components/schemas/RunAdmission"
+          }
         }
       },
       "Problem": {
-        "type": "object", "additionalProperties": false, "required": ["error", "request_id"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
         "properties": {
-          "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "enum": ["SESSION_REQUIRED", "REQUEST_REJECTED", "RESEARCH_PREFLIGHT_INVALID", "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE", "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE", "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE", "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE", "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED", "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN", "RESEARCH_PREFLIGHT_RELEASE_STALE", "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID", "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED", "RESEARCH_PREFLIGHT_RESOURCE_REFUSED", "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE", "RESEARCH_PREFLIGHT_UNAVAILABLE", "RESEARCH_PREFLIGHT_REJECTED", "RESEARCH_PREFLIGHT_NOT_FOUND", "RESEARCH_PREFLIGHT_EXPIRED", "RESEARCH_PREFLIGHT_STALE"] }, "message": { "type": "string", "maxLength": 1024 } } },
-          "request_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "enum": [
+                  "SESSION_REQUIRED",
+                  "REQUEST_REJECTED",
+                  "RESEARCH_PREFLIGHT_INVALID",
+                  "RESEARCH_PREFLIGHT_DATA_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED",
+                  "RESEARCH_PREFLIGHT_ROUTE_UNKNOWN",
+                  "RESEARCH_PREFLIGHT_RELEASE_STALE",
+                  "RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED",
+                  "RESEARCH_PREFLIGHT_TOPOLOGY_INVALID",
+                  "RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED",
+                  "RESEARCH_PREFLIGHT_RESOURCE_REFUSED",
+                  "RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE",
+                  "RESEARCH_PREFLIGHT_UNAVAILABLE",
+                  "RESEARCH_PREFLIGHT_REJECTED",
+                  "RESEARCH_PREFLIGHT_NOT_FOUND",
+                  "RESEARCH_PREFLIGHT_EXPIRED",
+                  "RESEARCH_PREFLIGHT_STALE"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "details": {
+            "description": "CG-P08-03: the failed gate and requested-spec field path of a 409 refusal, or every invalid field path of a 400.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gate": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{1,63}$"
+              },
+              "field_path": {
+                "$ref": "#/components/schemas/FieldPath"
+              },
+              "field_paths": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "$ref": "#/components/schemas/FieldPath"
+                }
+              }
+            }
+          }
+        }
+      },
+      "GapScan": {
+        "description": "CG-P08-06: per-window missing-bar scan of the sealed snapshot's timestamps (never prices). The sealed holdout is not scanned per window. Severity per gap run is not published by the source; a window verdict is WATCH when it misses any bar and CRITICAL above the snapshot quality profile's max_gap_ratio.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reason",
+          "windows"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "SCANNED",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_gap_ratio": {
+            "type": "number",
+            "minimum": 0
+          },
+          "classification": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "windows": {
+            "type": "array",
+            "maxItems": 129,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "window",
+                "start_utc_ms",
+                "end_exclusive_utc_ms",
+                "state",
+                "bars",
+                "expected_bars",
+                "missing_bars",
+                "gap_runs",
+                "verdict",
+                "items",
+                "items_omitted",
+                "note"
+              ],
+              "properties": {
+                "window": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "start_utc_ms": {
+                  "$ref": "#/components/schemas/UtcMilliseconds"
+                },
+                "end_exclusive_utc_ms": {
+                  "$ref": "#/components/schemas/UtcMilliseconds"
+                },
+                "state": {
+                  "enum": [
+                    "SCANNED",
+                    "SEALED"
+                  ]
+                },
+                "bars": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "expected_bars": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "missing_bars": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "gap_runs": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "verdict": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "PASS",
+                        "WATCH",
+                        "CRITICAL"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "items": {
+                  "type": "array",
+                  "maxItems": 4,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "start_utc_ms",
+                      "missing_bars"
+                    ],
+                    "properties": {
+                      "start_utc_ms": {
+                        "$ref": "#/components/schemas/UtcMilliseconds"
+                      },
+                      "missing_bars": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                },
+                "items_omitted": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "note": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "HoldoutSeal": {
+        "description": "CG-P08-06 (DR-01): the read-only holdout seal record P08 can prove, or NOT_DECLARED for an advanced walk-forward. Nothing reads sealed values; unlock authority is DR-01 (OWNER_SCOPE_REQUIRED); no certificate cap is published (CG-P04-05). The sealing actor is the preflight's authenticated caller (manifests are actor-scoped) and the time is issued_at_utc_ms.",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "seal_digest",
+              "digest_basis",
+              "read_log",
+              "unlock",
+              "cap"
+            ],
+            "properties": {
+              "schema_version": {
+                "const": "research.holdout-seal.v1"
+              },
+              "seal_digest": {
+                "$ref": "#/components/schemas/Digest"
+              },
+              "digest_basis": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "read_log": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reads",
+                  "reason"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "NO_READER"
+                  },
+                  "reads": {
+                    "type": "array",
+                    "maxItems": 0
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                }
+              },
+              "unlock": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "OWNER_SCOPE_REQUIRED"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                }
+              },
+              "cap": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "state",
+              "reason"
+            ],
+            "properties": {
+              "schema_version": {
+                "const": "research.holdout-seal.v1"
+              },
+              "state": {
+                "const": "NOT_DECLARED"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
+            }
+          }
+        ]
+      },
+      "PreflightGate": {
+        "description": "CG-P08-03: one server check this immutable manifest passed, projected from the stored documents. NOT_RECORDED marks a gate the manifest predates; it is never shown as PASS.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gate",
+          "state",
+          "field_path",
+          "message"
+        ],
+        "properties": {
+          "gate": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$"
+          },
+          "state": {
+            "enum": [
+              "PASS",
+              "NOT_APPLICABLE",
+              "NOT_RECORDED"
+            ]
+          },
+          "field_path": {
+            "$ref": "#/components/schemas/FieldPath"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          }
+        }
+      },
+      "FieldPath": {
+        "description": "Requested-spec key path (never a value), e.g. [\"walk_forward\", \"train_window\"]; Screen 02 maps it to the owning wizard step.",
+        "type": "array",
+        "maxItems": 6,
+        "items": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_]{1,64}$"
+        }
+      },
+      "RunAdmission": {
+        "description": "CG-P08-03: the P10 predicate behind may_create_run, with its typed reason and field path when it is false. A manifest the predicate cannot load stays an opaque false with null code.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "may_create_run",
+          "code",
+          "message",
+          "field_path"
+        ],
+        "properties": {
+          "may_create_run": {
+            "type": "boolean"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^RESEARCH_RUN_[A-Z_]{1,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "field_path": {
+            "$ref": "#/components/schemas/FieldPath"
+          }
+        }
+      },
+      "DatasetCatalog": {
+        "description": "CG-P08-04: read-only, bounded research dataset catalog for Screen 02. Datasets, timeframes, availability and, where the approved reader's storage layout is mounted, symbols with month-partition coverage. No path, row or price; exact bar availability is decided at preflight.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "datasets",
+          "coverage_rule"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.dataset-catalog.v1"
+          },
+          "coverage_rule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          },
+          "datasets": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "dataset_id",
+                "venue",
+                "availability",
+                "unavailable_reason",
+                "source_class",
+                "usage_scopes",
+                "excluded_scopes",
+                "source_timezone",
+                "calendar_policy",
+                "timeframes",
+                "symbols"
+              ],
+              "properties": {
+                "dataset_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                },
+                "venue": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "availability": {
+                  "enum": [
+                    "available",
+                    "unavailable"
+                  ]
+                },
+                "unavailable_reason": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 400
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "source_class": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "usage_scopes": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "excluded_scopes": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "source_timezone": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "calendar_policy": {
+                  "enum": [
+                    "CRYPTO_24_7",
+                    "SOURCE_DECLARED"
+                  ]
+                },
+                "timeframes": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*(?:min|m|h|D|d)$"
+                  }
+                },
+                "symbols": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "state",
+                    "reason",
+                    "items",
+                    "total",
+                    "truncated"
+                  ],
+                  "properties": {
+                    "state": {
+                      "enum": [
+                        "PUBLISHED",
+                        "NOT_PUBLISHED"
+                      ]
+                    },
+                    "reason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "maxItems": 256,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "symbol",
+                          "contract_kind",
+                          "coverage"
+                        ],
+                        "properties": {
+                          "symbol": {
+                            "type": "string",
+                            "pattern": "^[A-Z0-9][A-Z0-9_-]{1,31}$"
+                          },
+                          "contract_kind": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "PERPETUAL",
+                                  "QUARTERLY"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "coverage": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "first_month",
+                                  "last_month",
+                                  "months",
+                                  "granularity"
+                                ],
+                                "properties": {
+                                  "first_month": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}$"
+                                  },
+                                  "last_month": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}$"
+                                  },
+                                  "months": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1200
+                                  },
+                                  "granularity": {
+                                    "const": "MONTH_PARTITION"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

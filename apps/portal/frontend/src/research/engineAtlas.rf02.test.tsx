@@ -148,16 +148,38 @@ describe("Q4 / D-4 and the release facts panel", () => {
     expect(rule.textContent).toContain("Click the schedule chips below and watch the claim change.");
   });
 
-  it("names only mode × schedule pairs the release admits (DQ-10)", () => {
+  it("names only mode × schedule pairs the release admits (DQ-10, HiFi copy restored in W4)", () => {
     view("modes");
     const text = (document.querySelector("[data-rule-one]") as HTMLElement).textContent ?? "";
     const mode1 = DOC.modes.find((mode) => mode.mode_id === "mode_1_decay")!;
     const valid = mode1.facts!.schedules.map((fact) => fact.schedule);
-    for (const schedule of ["per_fold_decay", "global"]) {
+    // Every pair the sentence names is a valid pair in the manifest it renders.
+    for (const schedule of ["per_fold_causal", "per_fold_decay"]) {
       expect(text).toContain(schedule);
       expect(valid).toContain(schedule);
     }
-    expect(text).not.toContain("per_fold_causal");
+  });
+
+  it("W4 CG-P04-04/06/07: OOS state chips, route engine facts, qualifiers, terms and weights", () => {
+    view("modes");
+    expect(document.querySelector('[data-mode="mode_1_decay"] [data-oos-state]')?.textContent).toBe("OOS: retrospective");
+    fireEvent.click(document.querySelector('[data-mode="mode_1_decay"] [data-schedule="per_fold_causal"]') as HTMLElement);
+    expect(document.querySelector('[data-mode="mode_1_decay"] [data-oos-state]')?.textContent).toBe("OOS: withheld until Stage 4");
+    expect(document.querySelector('[data-mode="mode_1_decay"] [data-required-fields]')?.textContent).toContain("walk_forward.inner");
+    expect(document.querySelector('[data-mode="mode_5_full_robust"] [data-oos-state]')?.textContent).toBe("no held-out window — train = test");
+    expect(document.querySelectorAll('[data-mode="mode_4_is_only_robust"] [data-objective-weight]').length).toBeGreaterThan(5);
+    expect(document.querySelector('[data-mode="mode_1_decay"] [data-objective-term-table]')?.textContent).toContain("std_decay");
+    cleanup();
+    view("routes");
+    expect(document.querySelector('[data-route="arbitrage"] [data-status-word]')?.textContent).toBe("6/9");
+    expect(document.querySelectorAll('[data-route="arbitrage"] [data-support-row]')).toHaveLength(9);
+    expect(document.querySelector('[data-route="options"] [data-status-word]')?.textContent).toBe("DEFERRED");
+    expect(document.querySelector('[data-route="fill_replay"] [data-route-method]')?.getAttribute("data-route-method")).toBe("tape");
+    expect(document.querySelector('[data-route="signal_notional"] [data-declare-route]')?.getAttribute("href")).toBe("/research/quantbt/runs/new?step=route&route=signal_notional");
+    expect(document.querySelector('[data-route="arbitrage"] [data-declare-route]')).toBeNull();
+    cleanup();
+    view("claims");
+    expect(document.querySelector('[data-contract="event_lifecycle"] [data-claim-qualifier]')?.getAttribute("data-claim-qualifier")).toBe("ENGINE_DERIVES_OTHER_LEVEL");
   });
 
   it("publishes the release facts a researcher needs before declaring a run", () => {
@@ -167,7 +189,8 @@ describe("Q4 / D-4 and the release facts panel", () => {
     expect(facts.textContent).toContain("p10.fixed-qualification.v1");
     expect(facts.textContent).toContain(DOC.current_release.config_digest!);
     expect(facts.querySelectorAll("[data-default-group]")).toHaveLength(4);
-    expect(facts.querySelector("[data-walk-forward-options]")?.textContent).toContain("rolling (not admitted)");
+    expect(facts.querySelector("[data-walk-forward-options]")?.textContent).toContain("expanding/rolling");
+    expect(facts.querySelector("[data-preflight-limits]")?.textContent).toContain("sweep dims 8");
   });
 
   it("selects a route into the hash from its row", () => {

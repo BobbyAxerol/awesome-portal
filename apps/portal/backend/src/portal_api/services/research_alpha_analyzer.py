@@ -21,6 +21,7 @@ import hashlib
 import json
 import math
 import re
+import time
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -79,6 +80,9 @@ class AlphaSourceAnalysis:
     declared_contract: dict[str, object]
     mirror: tuple[dict[str, object], ...]
     gate_facts: GateFacts
+    # CG-P07-04: wall time of each analyser check in microseconds. Measured,
+    # therefore nondeterministic, therefore excluded from analysis_digest.
+    gate_timings_us: dict[str, int] | None = None
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -89,6 +93,7 @@ class AlphaSourceAnalysis:
             "declared_contract": self.declared_contract,
             "mirror": list(self.mirror),
             "gate_facts": self.gate_facts.as_dict(),
+            "gate_timings_us": dict(self.gate_timings_us or {}),
         }
 
 
@@ -102,37 +107,51 @@ def analyze_alpha_source(source_text: str, original_filename: str) -> AlphaSourc
     _require_source_input(source_text, original_filename)
     source_bytes = source_text.encode("utf-8")
     source_digest = hashlib.sha256(source_bytes).hexdigest()
+    timings: dict[str, int] = {}
+
+    def timed(name: str, check):
+        started = time.perf_counter_ns()
+        try:
+            return check()
+        finally:
+            timings[name] = max(0, (time.perf_counter_ns() - started) // 1_000)
 
     try:
-        tree = ast.parse(source_text, filename=original_filename, mode="exec")
+        tree = timed("parse", lambda: ast.parse(source_text, filename=original_filename, mode="exec"))
     except SyntaxError:
-        return _analysis_from_failure(
+        failed = _analysis_from_failure(
             source_digest,
             "Source syntax is invalid; gates cannot run until the file parses.",
         )
+        return _with_timings(failed, timings)
 
     shape_error = _bounded_tree_error(tree)
     if shape_error is not None:
-        return _analysis_from_failure(source_digest, shape_error)
+        return _with_timings(_analysis_from_failure(source_digest, shape_error), timings)
 
-    contract, contract_error, entrypoint_node, entrypoint_error = _extract_module_contract(tree)
-    contract_ok, normalized_contract, contract_message = _validate_contract(contract, contract_error)
-    entrypoint_ok, entrypoint_message = _restricted_definition_check(
+    def contract_check():
+        extracted = _extract_module_contract(tree)
+        return extracted, _validate_contract(extracted[0], extracted[1])
+
+    (contract, contract_error, entrypoint_node, entrypoint_error), (contract_ok, normalized_contract, contract_message) = timed(
+        "contract_complete", contract_check
+    )
+    entrypoint_ok, entrypoint_message = timed("entrypoint_restricted_definition_load", lambda: _restricted_definition_check(
         tree,
         normalized_contract.get("entrypoint"),
         entrypoint_node,
         entrypoint_error,
-    )
-    parameter_ok, parameter_message = _validate_parameter_space(
+    ))
+    parameter_ok, parameter_message = timed("parameter_space_sane", lambda: _validate_parameter_space(
         normalized_contract.get("parameter_space")
-    )
-    determinism_ok, determinism_message = _validate_determinism(
+    ))
+    determinism_ok, determinism_message = timed("determinism_declared", lambda: _validate_determinism(
         normalized_contract.get("determinism")
-    )
-    data_ok, data_message = _validate_data_contract(
+    ))
+    data_ok, data_message = timed("data_contract_known", lambda: _validate_data_contract(
         normalized_contract.get("required_columns"), normalized_contract.get("timeframes")
-    )
-    lookahead_ok, lookahead_message = _static_lookahead_scan(tree)
+    ))
+    lookahead_ok, lookahead_message = timed("no_lookahead_static_scan", lambda: _static_lookahead_scan(tree))
     facts = GateFacts(
         contract_complete=contract_ok,
         contract_message=contract_message,
@@ -147,7 +166,7 @@ def analyze_alpha_source(source_text: str, original_filename: str) -> AlphaSourc
         no_lookahead_static_scan=lookahead_ok,
         no_lookahead_message=lookahead_message,
     )
-    mirror = _mirror(normalized_contract)
+    mirror = _mirror(normalized_contract, facts, source_digest)
     analysis_digest = _analysis_digest(
         source_digest=source_digest,
         parse_ok=True,
@@ -162,6 +181,19 @@ def analyze_alpha_source(source_text: str, original_filename: str) -> AlphaSourc
         declared_contract=normalized_contract,
         mirror=mirror,
         gate_facts=facts,
+        gate_timings_us=timings,
+    )
+
+
+def _with_timings(analysis: AlphaSourceAnalysis, timings: dict[str, int]) -> AlphaSourceAnalysis:
+    return AlphaSourceAnalysis(
+        source_digest=analysis.source_digest,
+        analysis_digest=analysis.analysis_digest,
+        parse_ok=analysis.parse_ok,
+        declared_contract=analysis.declared_contract,
+        mirror=analysis.mirror,
+        gate_facts=analysis.gate_facts,
+        gate_timings_us=timings,
     )
 
 
@@ -410,31 +442,103 @@ def _static_lookahead_scan(tree: ast.AST) -> tuple[bool, str]:
     return True, "Static scan found no configured future-data heuristic. This is not a runtime causality certificate."
 
 
-def _mirror(contract: dict[str, object]) -> tuple[dict[str, object], ...]:
-    fields = (
-        ("version", contract.get("version")),
-        ("entrypoint", contract.get("entrypoint")),
-        ("timeframes", contract.get("timeframes")),
-        ("required_columns", contract.get("required_columns")),
-        ("warmup_bars", contract.get("warmup_bars")),
-        ("determinism.seed_required", contract.get("determinism", {}).get("seed_required") if isinstance(contract.get("determinism"), dict) else None),
-        ("parameter_space", contract.get("parameter_space")),
-        ("version_note", contract.get("version_note")),
+NOT_IN_V1_NOTE = (
+    "Not part of the v1 single-file contract (DQ-05); nothing is inferred for it."
+)
+
+
+def _mirror(
+    contract: dict[str, object],
+    facts: GateFacts | None = None,
+    source_digest: str | None = None,
+) -> tuple[dict[str, object], ...]:
+    """CG-P07-03: the HiFi's 14-field mirror, within what v1 can prove (DQ-05).
+
+    Each row says where its value came from (``state``), which gate checks it
+    (``gate``) and that gate's verdict (``check``). Fields the v1 literal
+    contract cannot carry are listed as ``not_in_contract`` — visible, never
+    filled with a guess. ``strategy_id``/``display_name`` are assigned at
+    registration (DQ-07), so parse reports them as server-assigned.
+    """
+
+    def verdict(gate_passed: bool | None, present: bool) -> str:
+        if not present:
+            return "GATED"
+        if gate_passed is None:
+            return "VERIFY"
+        return "PASS" if gate_passed else "FAIL"
+
+    determinism = contract.get("determinism") if isinstance(contract.get("determinism"), dict) else None
+    seed_required = determinism.get("seed_required") if determinism else None
+    parsed_rows = (
+        ("version", contract.get("version"), "contract-complete", facts.contract_complete if facts else None,
+         "Semantic version; a new version is a new immutable AlphaVersion."),
+        ("entrypoint", contract.get("entrypoint"), "entrypoint-importable",
+         facts.entrypoint_restricted_definition_load if facts else None,
+         "One plain function, defined in a restricted namespace and never called."),
+        ("timeframes", contract.get("timeframes"), "data-contract-known", facts.data_contract_known if facts else None,
+         "Declared bar intervals; New Run offers only these."),
+        ("required_columns", contract.get("required_columns"), "data-contract-known",
+         facts.data_contract_known if facts else None, "Must be a subset of the published OHLCV candle columns."),
+        ("warmup_bars", contract.get("warmup_bars"), "contract-complete", facts.contract_complete if facts else None,
+         "Bars before the first window; preflight checks the source has them."),
+        ("determinism.seed_required", seed_required, "determinism-declared",
+         facts.determinism_declared if facts else None, "Declared true or false; a required seed is enforced at preflight."),
+        ("parameter_space", contract.get("parameter_space"), "parameter-space-sane",
+         facts.parameter_space_sane if facts else None, "The maximal surface; New Run pins or sweeps within it."),
+        ("version_note", contract.get("version_note"), None, None,
+         "Optional free text; no gate reads it."),
     )
-    return tuple(
+    rows: list[dict[str, object]] = [
         {
+            "field": "strategy_id",
+            "state": "server_assigned",
+            "check": "NOT_APPLICABLE",
+            "gate": None,
+            "note": "Assigned at registration as the alpha_id (DQ-07); never read from the file.",
+        },
+        {
+            "field": "display_name",
+            "state": "server_assigned",
+            "check": "NOT_APPLICABLE",
+            "gate": None,
+            "note": "Assigned at registration; the v1 file does not declare it.",
+        },
+    ]
+    for name, value, gate, gate_passed, note in parsed_rows:
+        present = value is not None
+        rows.append({
             "field": name,
-            "state": "parsed" if value is not None else "missing",
-            **({"value": value} if value is not None else {}),
-            "check": "VERIFY" if value is not None else "GATED",
-            "note": (
-                "Literal declaration parsed from the submitted source; validation is reported by the ordered gates."
-                if value is not None else
-                "This field is not declared in the submitted source; no value has been inferred."
-            ),
-        }
-        for name, value in fields
-    )
+            "state": "parsed" if present else "missing",
+            **({"value": value} if present else {}),
+            "check": verdict(gate_passed, present) if gate is not None else ("VERIFY" if present else "GATED"),
+            "gate": gate,
+            "note": note if present else "This field is not declared in the submitted source; no value has been inferred.",
+        })
+    rows.insert(4, {
+        "field": "default_timeframe",
+        "state": "not_in_contract",
+        "check": "NOT_APPLICABLE",
+        "gate": None,
+        "note": "v1 declares a timeframe list, not a default; New Run makes the reader choose.",
+    })
+    rows.append({
+        "field": "artifact.digest",
+        "state": "server_computed" if source_digest else "missing",
+        **({"value": f"sha256:{source_digest}"} if source_digest else {}),
+        "check": "PASS" if source_digest else "GATED",
+        "gate": None,
+        "note": "SHA-256 of the exact submitted bytes, computed by the server; gate 3 checks it is not already registered.",
+    })
+    for name in ("structural_contract", "supported_endpoint_ids", "execution_contracts", "output_contract"):
+        rows.append({
+            "field": name,
+            "state": "not_in_contract",
+            "check": "NOT_APPLICABLE",
+            "gate": None,
+            "note": NOT_IN_V1_NOTE,
+        })
+    return tuple(rows)
 
 
 def _analysis_from_failure(source_digest: str, message: str) -> AlphaSourceAnalysis:

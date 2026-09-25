@@ -73,12 +73,78 @@ const CapabilityAxesSchema = z.object({
   admission: z.enum(["P04_BASELINE_ONLY", "NOT_ADMITTED", "DEFERRED"]),
 }).strict();
 
+/** RF02-B1: where a mode fact is stated in the pinned engine package. */
+const SourceLocatorSchema = z.object({
+  path: z.string().regex(/^quantbt\/[A-Za-z0-9_./-]{1,200}\.py$/),
+  lines: z.string().regex(/^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$/),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  anchor: z.string().min(1).max(200),
+}).strict();
+const SourcesSchema = z.array(SourceLocatorSchema).min(1).max(4);
+const ShortSourcesSchema = z.array(SourceLocatorSchema).min(1).max(2);
+const FactToken = z.string().regex(/^[a-z][a-z0-9_]{1,79}$/);
+
+/**
+ * CG-P04-07: the engine's own meaning of a certification level and whether
+ * `certify_result_metadata` derives the same level for this contract.
+ */
+const ClaimQualifierSchema = z.object({
+  level_name: z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/),
+  level_description: z.string().regex(/^[a-z][a-z0-9_]{1,119}$/),
+  result_metadata_derivation: z.enum(["ENGINE_DERIVES_SAME_LEVEL", "ENGINE_DERIVES_OTHER_LEVEL", "NOT_DERIVABLE"]),
+  result_metadata_level: z.number().int().min(0).max(4).nullable(),
+  result_metadata_status: z.string().regex(/^[a-z][a-z0-9_]{1,79}$/).nullable(),
+  source: SourcesSchema,
+}).strict();
+
 /** Exact P04 manifest claim. It has no execution authority. */
 const ClaimDescriptorSchema = z.object({
   contract_id: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/),
   engine_certification: z.string().regex(/^[A-Z][A-Z0-9_-]{1,63}$/),
   numeric_guarantee: z.string().min(1).max(400),
   never_claims: z.string().min(1).max(500),
+  /** CG-P04-07, additive. */
+  qualifier: ClaimQualifierSchema.nullable().optional(),
+}).strict();
+
+/** CG-P04-06: route facts read from the pinned wheel, each with a locator. */
+const RouteEngineFactsSchema = z.object({
+  description: z.string().min(1).max(300),
+  method: z.enum(["wfo", "tape", "single_pass"]),
+  walk_forward_status: z.enum(["supported", "partial", "not_listed"]),
+  method_basis: z.string().min(1).max(300),
+  resolved_backend: z.object({
+    state: z.enum(["RESOLVED", "SPEC_DEPENDENT"]),
+    value: z.string().max(80).nullable(),
+    engine_mode: z.string().max(80).nullable(),
+    reason: z.string().max(300).nullable(),
+  }).strict(),
+  support_matrix: z.object({
+    function: z.enum(["arbitrage_support_matrix", "nautilus_support_matrix"]),
+    executable: z.number().int().min(0).max(32),
+    total: z.number().int().min(1).max(32),
+    rows: z.array(z.object({
+      spec_id: z.string().min(1).max(80),
+      status: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/),
+      backends: z.string().min(1).max(120),
+      route: z.string().min(1).max(200),
+      detail: z.string().min(1).max(200),
+    }).strict()).min(1).max(32),
+    source: ShortSourcesSchema,
+  }).strict().nullable(),
+  route_params: z.object({
+    group: z.enum(["intrabar", "portfolio", "reactive", "dca"]),
+    fields: z.array(z.object({
+      name: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/),
+      engine_field: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/).nullable(),
+      requested_spec_values: z.array(z.string().min(1).max(64)).max(16),
+      engine_values: z.array(z.string().min(1).max(64)).max(16),
+      accepted_by_engine: z.array(z.string().min(1).max(64)).max(16),
+      note: z.string().min(1).max(300),
+      source: ShortSourcesSchema,
+    }).strict()).min(1).max(8),
+  }).strict().nullable(),
+  source: SourcesSchema,
 }).strict();
 
 /** P04's declared evidence envelope; P09 neither writes it nor starts work. */
@@ -102,17 +168,11 @@ const AtlasRouteSchema = z.object({
   axes: CapabilityAxesSchema,
   reason: z.string().min(1).max(1024),
   required_input_class: z.string().min(1).max(191),
+  /** CG-P04-06, additive: derived server-side from the facts below. */
+  status_word: z.string().regex(/^[A-Z0-9/]{1,16}$/).nullable().optional(),
+  engine_facts: RouteEngineFactsSchema.nullable().optional(),
 }).strict();
 
-/** RF02-B1: where a mode fact is stated in the pinned engine package. */
-const SourceLocatorSchema = z.object({
-  path: z.string().regex(/^quantbt\/[A-Za-z0-9_./-]{1,200}\.py$/),
-  lines: z.string().regex(/^[1-9][0-9]{0,5}-[1-9][0-9]{0,5}$/),
-  sha256: z.string().regex(/^[0-9a-f]{64}$/),
-  anchor: z.string().min(1).max(200),
-}).strict();
-const SourcesSchema = z.array(SourceLocatorSchema).min(1).max(4);
-const FactToken = z.string().regex(/^[a-z][a-z0-9_]{1,79}$/);
 const NotPublishedFactSchema = z.object({
   state: z.literal("NOT_PUBLISHED"),
   reason: z.string().min(1).max(400),
@@ -127,8 +187,12 @@ const ScheduleFactSchema = z.object({
     "retrospective_global_v2", "trusted_strategy_global_v2", "engine_enforced_per_fold_v2", "engine_enforced_nested_v2",
   ]),
   oos_use: z.enum(["USED", "NOT_USED"]),
+  /** CG-P04-04, additive: four OOS states plus n/a for the full-sample mode. */
+  oos_use_state: z.enum(["SELECTION_INPUT", "WITHHELD_UNTIL_S4", "RETROSPECTIVE", "REPORT_ONLY", "NOT_APPLICABLE"]).nullable().optional(),
   oos_use_condition: z.string().min(1).max(300).nullable().optional(),
   params_semantics: FactToken,
+  /** CG-P02-02, additive: requested-spec fields this pair needs at preflight. */
+  required_request_fields: z.array(z.string().regex(/^[a-z][a-z0-9_.]{1,79}$/)).max(4).optional(),
   cert_cap: NotPublishedFactSchema,
   source: SourcesSchema,
 }).strict();
@@ -147,6 +211,18 @@ const ObjectiveFactSchema = z.object({
     note: z.string().min(1).max(200).nullable().optional(),
   }).strict()).max(8),
   note: z.string().min(1).max(300).nullable().optional(),
+  /** CG-P04-07, additive: term meanings and mode 2-5 release-default weights. */
+  terms: z.array(z.object({
+    symbol: z.string().min(1).max(160),
+    meaning: z.string().min(1).max(300),
+    source: ShortSourcesSchema,
+  }).strict()).max(12).optional(),
+  weights: z.array(z.object({
+    name: z.string().regex(/^[a-z][a-z0-9_]{1,63}$/),
+    release_default: z.string().regex(/^-?[0-9]+(\.[0-9]+)?$/),
+    role: z.string().min(1).max(200),
+    source: ShortSourcesSchema,
+  }).strict()).max(16).optional(),
   source: SourcesSchema,
 }).strict();
 const ReadsFactSchema = z.object({
@@ -226,8 +302,41 @@ const WalkForwardOptionValueSchema = z.object({
   admission: z.enum(["ADMITTED", "NOT_ADMITTED"]),
   reason: z.string().min(1).max(400).nullable().optional(),
 }).strict();
+const PreflightLimitSchema = z.object({
+  value: z.number().int().min(1).max(1_000_000),
+  value_source: z.enum(["PORTAL_POLICY", "P08_PREFLIGHT_BOUND"]),
+  basis: z.string().min(1).max(300),
+}).strict();
+
 const AtlasWalkForwardOptionsSchema = z.object({
-  schema_version: z.literal("research.walk-forward-options.v1"),
+  schema_version: z.enum(["research.walk-forward-options.v1", "research.walk-forward-options.v2"]),
+  /** CG-P08-02 / CG-P02-02, v2 only: the requested-spec v2 rules. */
+  train_window: z.object({
+    requested_spec_field: z.literal("walk_forward.train_window"),
+    pattern: z.string().min(1).max(80),
+    required_when: z.literal("window_mode=rolling"),
+    rule: z.string().min(1).max(400),
+    source: SourcesSchema,
+  }).strict().nullable().optional(),
+  temporal_guards: z.object({
+    fields: z.array(z.enum(["label_horizon_bars", "purge_bars", "embargo_bars"])).length(3),
+    minimum: z.literal(0),
+    maximum: z.number().int().min(1).max(100_000),
+    release_default: z.literal(0),
+    rule: z.string().min(1).max(400),
+    source: SourcesSchema,
+  }).strict().nullable().optional(),
+  inner_folds: z.object({
+    applies_to: z.literal("mode_1_decay×per_fold_causal"),
+    requested_spec_field: z.literal("walk_forward.inner"),
+    split_frequency: z.array(z.string().regex(/^[a-z][a-z0-9_]{1,31}$/)).min(1).max(8),
+    window_mode: z.array(z.string().regex(/^[a-z][a-z0-9_]{1,31}$/)).min(1).max(4),
+    train_window_pattern: z.string().min(1).max(80),
+    min_folds_release_default: z.number().int().min(1).max(64),
+    min_folds_maximum: z.number().int().min(1).max(64),
+    rule: z.string().min(1).max(400),
+    source: SourcesSchema,
+  }).strict().nullable().optional(),
   frequency: z.array(WalkForwardOptionValueSchema).min(1).max(8),
   frequency_default: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
   window_mode: z.array(WalkForwardOptionValueSchema).min(1).max(4),
@@ -249,6 +358,13 @@ export const ResearchEngineAtlasPrivateSchema = z.object({
     optimizer_defaults: AtlasOptimizerDefaultsSchema,
     submission_constraints: AtlasSubmissionConstraintsSchema,
     walk_forward_options: AtlasWalkForwardOptionsSchema.nullable().optional(),
+    /** CG-P08-05, additive: the ceilings P08 enforces, each naming its source. */
+    preflight_limits: z.object({
+      schema_version: z.literal("research.preflight-limits.v1"),
+      sweep_dimension_ceiling: PreflightLimitSchema,
+      outer_fold_ceiling: PreflightLimitSchema,
+      estimated_cpu_seconds_ceiling: PreflightLimitSchema,
+    }).strict().nullable().optional(),
     config_digest: z.string().regex(/^[0-9a-f]{64}$/).nullable().optional(),
   }).strict(),
   historical_releases: z.array(z.object({
