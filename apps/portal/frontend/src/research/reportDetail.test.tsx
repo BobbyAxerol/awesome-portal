@@ -502,15 +502,19 @@ describe("S09 Run Report — the sheet", () => {
     expect(document.documentElement.hasAttribute(PRINT_SHEET_ATTRIBUTE)).toBe(false);
   });
 
-  it("S09-U10 links back to Stage 5 of the Hub and keeps Screen 11 refused", async () => {
+  it("S09-U10 links back to Stage 5 of the Hub and forward to Screen 11 (P21)", async () => {
     server();
     renderRoute();
     await screen.findByText("claim passport — sealed source facts, quoted verbatim");
     const back = screen.getByRole("link", { name: "← Hub · Stage 5 Claim" });
     expect(back.getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${RUN}/evidence#stage=claim`));
-    const release = document.querySelector('[data-action-unrouted="release-candidate"]')!;
-    expect(release.tagName).toBe("SPAN");
-    expect(release.getAttribute("title")).toContain("no published route");
+    const release = document.querySelector('[data-action="release-candidate"]')!;
+    expect(release.tagName).toBe("A");
+    expect(release.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/release-candidate`);
+    const promotion = document.querySelector('[data-action="promotion-release-candidate"]')!;
+    expect(promotion.getAttribute("href")).toBe(`/research/quantbt/runs/${RUN}/release-candidate`);
+    expect(promotion.closest(".no-print")).not.toBeNull();
+    expect(document.querySelector("[data-action-unrouted]")).toBeNull();
   });
 
   it("S09-U11 offers only the published formats; Parquet and Archive are disabled with their reason", async () => {
@@ -1031,6 +1035,7 @@ describe("S09 Run Report — pure parts and source rules", () => {
     expect(execute).toMatch(/to=\{`\/research\/quantbt\/runs\/\$\{run\}\/report`\}\s+className="mono"\s+style=\{\{ color: "var\(--accent\)" \}\}\s+data-next="run-report"/);
     const hub = readFileSync(join(process.cwd(), "src", "research", "EvidenceFlow.tsx"), "utf8");
     expect(hub).toContain('data-action="generate-report"');
-    expect(hub).toContain('<UnroutedAction label="release candidate →" screen="11" phase="P21" />');
+    expect(hub).toContain('data-action="release-candidate"');
+    expect(hub).not.toContain('<UnroutedAction label="release candidate →"');
   });
 });

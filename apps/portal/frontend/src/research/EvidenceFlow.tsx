@@ -19,6 +19,7 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
+import { releaseCandidateHref } from "./releaseCandidateClient";
 import { usePresentation } from "../app/presentation";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import {
@@ -3445,41 +3446,6 @@ function StagePreviewTab({
   );
 }
 
-/**
- * A hook whose screen is not built: drawn in the HiFi's button style (primary
- * or outline), refused, and titled with the phase that builds it.
- */
-function UnroutedAction({
-  label,
-  screen,
-  phase,
-  primary = false,
-}: {
-  label: string;
-  screen: string;
-  phase: string;
-  primary?: boolean;
-}) {
-  return (
-    <span
-      data-action-unrouted={label}
-      data-primary={primary || undefined}
-      aria-disabled="true"
-      title={`Screen ${screen} is not built yet (${phase}), so this action would go nowhere.`}
-      className={`mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em] ${primary ? "font-semibold" : ""}`}
-      style={{
-        color: primary ? "var(--accent-contrast)" : "var(--accent)",
-        borderColor: "var(--accent)",
-        background: primary ? "var(--accent)" : "transparent",
-        opacity: 0.55,
-        cursor: "not-allowed",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
 /** The HiFi's two gated hooks under NEXT, disabled with SOON. */
 function SoonHook({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -3629,7 +3595,15 @@ function ClaimTab({ hub }: { hub: EvidenceHub }) {
             >
               generate run report →
             </Link>
-            <UnroutedAction label="release candidate →" screen="11" phase="P21" />
+            {/* P21 · Screen 11 composes and locally seals the candidate for this run. */}
+            <Link
+              to={releaseCandidateHref(hub.run_id)}
+              data-action="release-candidate"
+              className="mono rounded-[6px] border px-3 py-1 text-[10px] uppercase tracking-[.05em]"
+              style={{ color: "var(--accent)", borderColor: "var(--accent)", background: "transparent" }}
+            >
+              release candidate →
+            </Link>
           </span>
         </div>
         <SoonHook label="Send to Approval Gate">

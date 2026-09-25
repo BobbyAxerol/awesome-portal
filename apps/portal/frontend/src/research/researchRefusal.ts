@@ -105,6 +105,15 @@ const SURFACE_CODES: Record<string, Kind> = {
   RESEARCH_CURRENT_SOURCE_UNAVAILABLE: "UNAVAILABLE",
   RESEARCH_CURRENT_SOURCE_INVALID: "INVALID",
   RESEARCH_CURRENT_SOURCE_CURSOR_EXPIRED: "CONFLICT",
+  /* P21 Screen 11. CONFLICT is a lost draft/source CAS fence: the screen reads
+     the composition again and keeps what the reader typed. NOT_PUBLISHABLE is
+     the server's 422 "cannot be locally sealed" — terminal for that request. */
+  RESEARCH_RELEASE_CANDIDATE_FORBIDDEN: "FORBIDDEN",
+  RESEARCH_RELEASE_CANDIDATE_NOT_FOUND: "NOT_FOUND",
+  RESEARCH_RELEASE_CANDIDATE_CONFLICT: "CONFLICT",
+  RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE: "UNAVAILABLE",
+  RESEARCH_RELEASE_CANDIDATE_INVALID: "INVALID",
+  RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE: "INVALID",
 };
 
 /** Every surface code this mapper classifies, for exhaustiveness tests. */

@@ -1253,12 +1253,14 @@ describe("RF-06 FE-S04-13 — the HiFi layout", () => {
     for (const shell of shells) expect(shell.textContent).toContain("not published");
   });
 
-  it("links the built report but keeps release candidate refused until P21", () => {
+  it("links the built report and the P21 release candidate composer", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
     const report = container.querySelector('[data-action="generate-report"]');
     expect(report?.tagName).toBe("A");
     expect(report?.getAttribute("href")).toContain("/report");
-    expect(container.querySelector("[data-action-unrouted='release candidate →']")?.getAttribute("title")).toContain("P21");
+    const rc = container.querySelector('[data-action="release-candidate"]');
+    expect(rc?.tagName).toBe("A");
+    expect(rc?.getAttribute("href")).toMatch(/\/release-candidate$/);
   });
 });
 
@@ -1420,13 +1422,14 @@ describe("RF-06 fidelity — summary panels", () => {
 });
 
 describe("RF-06 fidelity — claim tab next card", () => {
-  it("draws linked report as primary and still refuses release candidate", () => {
+  it("draws linked report as primary and the release candidate as the outline action", () => {
     const { container } = view({ cursor: { ...DEFAULT_CURSOR, stage: "claim" } });
     const report = container.querySelector('[data-action="generate-report"]') as HTMLElement;
     expect(report.tagName).toBe("A");
     expect(report.style.background).toBe("var(--accent)");
-    const rc = container.querySelector("[data-action-unrouted='release candidate →']") as HTMLElement;
-    expect(rc.getAttribute("data-primary")).toBeNull();
+    const rc = container.querySelector('[data-action="release-candidate"]') as HTMLElement;
+    expect(rc.tagName).toBe("A");
+    expect(rc.style.background).toBe("transparent");
     expect(container.querySelectorAll("[data-soon-hook] button[disabled]")).toHaveLength(2);
   });
 });
