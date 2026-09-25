@@ -23,6 +23,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
+import { BoundWarningNote } from "./BoundWarning";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
@@ -419,10 +420,6 @@ function axisFill(label: string): string {
 
 /* --------------------------------------------------------- frozen profile */
 
-/** Short reading words, one per published bound state; the full phrase sits in the title. */
-const BOUND_WORDS: Record<FrozenParameter["bound_state"], string> = {
-  WITHIN_DECLARED_RANGE: "in range",
-};
 
 function FrozenParameters({ parameters, blocked }: { parameters: readonly FrozenParameter[]; blocked: boolean }) {
   if (blocked) {
@@ -513,15 +510,9 @@ function FrozenParameters({ parameters, blocked }: { parameters: readonly Frozen
               >
                 {parameter.frozen_value}
               </td>
-              <td
-                className="mono py-2 pl-3 text-[9.5px] leading-[1.4]"
-                style={{ color: "var(--ink-faint)" }}
-                data-bound-state={parameter.bound_state}
-                title={`${parameter.position_percent}% of the declared range · ${parameter.bound_state
-                  .toLowerCase()
-                  .replace(/_/g, " ")}`}
-              >
-                {parameter.position_percent}% · {BOUND_WORDS[parameter.bound_state]}
+              {/* DR-02: the same server definition and renderer as Search S06. */}
+              <td className="py-2 pl-3 text-[9.5px] leading-[1.4]" data-bound-state={parameter.bound_state}>
+                <BoundWarningNote warning={parameter.bound_warning} positionPercent={parameter.position_percent} />
               </td>
             </tr>
           ))}

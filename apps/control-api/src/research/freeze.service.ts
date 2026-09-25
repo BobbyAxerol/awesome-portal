@@ -1,15 +1,17 @@
 /** P16 source-as-is Freeze / integrity projection and same-origin BFF. */
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import {
-  P04_DELTA_ADAPTER_CONTRACT_DIGEST,
-  P04_DELTA_BINDING,
-  P04_DELTA_FIXED_PARAMETERS,
-} from "./p04-delta.binding";
+  DEFAULT_PARAMETER_BINDING_REGISTRY,
+  declaredParameterRows,
+  RESEARCH_PARAMETER_BINDINGS,
+  ResearchParameterBindingRegistry,
+  type HistoricalParameterBinding,
+} from "./parameter-binding.registry";
 import { sha256ResearchJson } from "./preflight.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
@@ -44,6 +46,7 @@ const NO_DIAGNOSTIC_GRID = "P04_FIXED_PROFILE_DOES_NOT_PUBLISH_EVALUATED_WHAT_IF
 const NO_DIAGNOSTIC_ADMISSION = "P04_FIXED_PROFILE_DOES_NOT_ACCEPT_DIAGNOSTIC_PARAMETER_OVERRIDES";
 const NO_SIBLING_DRAFT = "P04_FIXED_PROFILE_DOES_NOT_ACCEPT_SIBLING_PARAMETER_DRAFTS";
 const NO_ARTIFACT_BYTES = "P04_SOURCE_ARTIFACT_BYTES_NOT_PUBLISHED_TO_PORTAL";
+const HISTORICAL_BINDING_NOT_REGISTERED = "P16_HISTORICAL_PARAMETER_BINDING_NOT_REGISTERED";
 const WFO_PROFILE_NOT_P04_FREEZE = "P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE";
 
 function availability(state: AvailabilityState, reasonCode: string | null): Availability {
@@ -71,37 +74,27 @@ function parseProjection(value: unknown): StoredSplitProjection | null {
   return source.success ? { schema_version: "research.split-projection.v1", source: source.data } : null;
 }
 
-function exactDecimal(value: number): string {
-  if (!Number.isFinite(value)) {
-    throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Freeze parameter profile is incompatible.", 503);
+/**
+ * A10b: the frozen table is the run's own historical binding — looked up by
+ * the exact adapter digest its immutable producer row names — never the
+ * constants compiled into this release.
+ */
+function historicalParameters(binding: HistoricalParameterBinding) {
+  const rows = declaredParameterRows(binding.parameterSpace, binding.fixedParameters);
+  if (rows === null) {
+    throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Frozen parameter is outside its declaration.", 503);
   }
-  return String(value);
-}
-
-function staticParameters() {
-  const declared = P04_DELTA_BINDING.declaredContract.parameter_space;
-  return Object.entries(P04_DELTA_FIXED_PARAMETERS).map(([name, rawValue]) => {
-    const range = declared[name as keyof typeof declared];
-    if (!range) {
-      throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Freeze parameter declaration is incompatible.", 503);
-    }
-    const value = Number(rawValue);
-    const span = range.maximum - range.minimum;
-    const position = span > 0 ? Math.round(((value - range.minimum) / span) * 10_000) / 100 : 0;
-    if (!Number.isFinite(position) || position < 0 || position > 100 || value < range.minimum || value > range.maximum) {
-      throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Frozen parameter is outside its declaration.", 503);
-    }
-    return {
-      name,
-      kind: "NUMERIC" as const,
-      minimum: exactDecimal(range.minimum),
-      maximum: exactDecimal(range.maximum),
-      step: exactDecimal(range.step),
-      frozen_value: exactDecimal(value),
-      position_percent: position,
-      bound_state: "WITHIN_DECLARED_RANGE" as const,
-    };
-  });
+  return rows.map((row) => ({
+    name: row.name,
+    kind: "NUMERIC" as const,
+    minimum: row.minimum,
+    maximum: row.maximum,
+    step: row.step,
+    frozen_value: row.value,
+    position_percent: row.position_percent,
+    bound_state: "WITHIN_DECLARED_RANGE" as const,
+    bound_warning: row.bound_warning,
+  }));
 }
 
 function rowAvailability(row: SplitHubRow): Availability {
@@ -124,6 +117,8 @@ export class ResearchFreezeService {
   constructor(
     private readonly split: ResearchSplitRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(RESEARCH_PARAMETER_BINDINGS)
+    private readonly bindings: ResearchParameterBindingRegistry = DEFAULT_PARAMETER_BINDING_REGISTRY,
   ) {}
 
   async detail(
@@ -202,8 +197,9 @@ export class ResearchFreezeService {
     if (!projection || row.kind !== "DURABLE") return this.absentDetail(row, fallback, requestedFold);
 
     const source = projection.source;
-    const expectedBundleDigest = sha256ResearchJson(P04_DELTA_FIXED_PARAMETERS);
-    const checks = this.checks(row, source, expectedBundleDigest);
+    // A10b: the run's own historical binding, by its exact adapter digest.
+    const binding = this.bindings.byAdapterDigest(row.adapterContractDigest);
+    const checks = this.checks(row, source, binding);
     const integrity = this.integrity(checks, source);
     // The P14 receipt can still be inspected when the installed P04 binding
     // differs, but this release must not project its static parameters over a
@@ -307,7 +303,7 @@ export class ResearchFreezeService {
         },
         // An observed bundle digest remains useful evidence, but static
         // values from this release are not evidence for a mismatched bundle.
-        frozen_parameters: bindingMatches ? staticParameters() : [],
+        frozen_parameters: bindingMatches && binding ? historicalParameters(binding) : [],
         integrity,
         what_if: {
           state: "NOT_APPLICABLE",
@@ -350,7 +346,7 @@ export class ResearchFreezeService {
   private checks(
     row: SplitHubRow,
     source: ResearchSplitSource,
-    expectedBundleDigest: string,
+    binding: HistoricalParameterBinding | null,
   ) {
     const check = (
       key: "P04_ADAPTER_CONTRACT" | "P10_MANIFEST_BINDING" | "P04_FIXED_PARAMETER_BUNDLE",
@@ -364,14 +360,18 @@ export class ResearchFreezeService {
         expected_digest: expected,
         observed_digest: observed,
         availability: state === "NOT_PUBLISHED"
-          ? availability("NOT_PUBLISHED", `P16_${key}_NOT_PUBLISHED`)
+          ? availability("NOT_PUBLISHED", binding === null && key !== "P10_MANIFEST_BINDING"
+            ? HISTORICAL_BINDING_NOT_REGISTERED
+            : `P16_${key}_NOT_PUBLISHED`)
           : availability("AVAILABLE", null),
       };
     };
     return [
-      check("P04_ADAPTER_CONTRACT", P04_DELTA_ADAPTER_CONTRACT_DIGEST, row.adapterContractDigest),
+      // Expected = the registered historical binding for this exact digest.
+      // A release that installs a newer binding does not change this answer.
+      check("P04_ADAPTER_CONTRACT", binding?.adapterContractDigest ?? this.bindings.newestAdapterDigest(), row.adapterContractDigest),
       check("P10_MANIFEST_BINDING", row.manifestDigest, source.source.manifest_digest),
-      check("P04_FIXED_PARAMETER_BUNDLE", expectedBundleDigest, source.protocol.selection.parameter_bundle_digest),
+      check("P04_FIXED_PARAMETER_BUNDLE", binding?.fixedBundleDigest ?? null, source.protocol.selection.parameter_bundle_digest),
     ];
   }
 

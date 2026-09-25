@@ -143,6 +143,7 @@ function detail(overrides: Record<string, unknown> = {}): FreezeDetail {
           frozen_value: "14",
           position_percent: 25.7,
           bound_state: "WITHIN_DECLARED_RANGE",
+          bound_warning: { definition_id: "research.bound-warning.v1", copy_version: "research.bound-warning-copy.v1", reference_space: "DECLARED_RANGE", state: "INTERIOR", side: null, reason_code: null },
         },
       ],
       integrity: {
@@ -760,9 +761,11 @@ describe("Screen 07 composition — the hi-fi panels carry only published facts"
     expect(row?.children).toHaveLength(5);
     expect(row?.querySelector("[data-frozen-value='rsi_len']")?.textContent).toBe("14");
     // The reading and the tick are the server's own placement, printed and positioned — never recomputed.
-    const reading = row?.querySelector("[data-bound-state]");
-    expect(reading?.textContent).toBe("25.7% · in range");
-    expect(reading?.getAttribute("title")).toBe("25.7% of the declared range · within declared range");
+    // DR-02: the reading is the shared server definition through the shared renderer.
+    const reading = row?.querySelector("[data-bound-warning]");
+    expect(reading?.textContent).toBe("25.7% · interior");
+    expect(reading?.getAttribute("data-bound-definition")).toBe("research.bound-warning.v1");
+    expect(reading?.getAttribute("title")).toContain("25.7% of the declared range");
     expect((row?.querySelector("[data-frozen-position='rsi_len']") as HTMLElement).style.left).toBe(
       "calc(25.7% - 1.5px)",
     );

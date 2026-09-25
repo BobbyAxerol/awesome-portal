@@ -9,6 +9,8 @@
 
 import { z } from "zod";
 
+import { BoundWarningSchema } from "./bound-warning";
+
 export const ResearchFreezeRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
@@ -50,6 +52,8 @@ const ParameterSchema = z.object({
   frozen_value: ExactDecimalSchema,
   position_percent: z.number().finite().min(0).max(100),
   bound_state: z.literal("WITHIN_DECLARED_RANGE"),
+  /** DR-02: the shared Search/Freeze bound-warning definition, server-owned. */
+  bound_warning: BoundWarningSchema,
 }).strict();
 
 const WindowSchema = z.object({

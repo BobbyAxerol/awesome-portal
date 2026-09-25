@@ -125,7 +125,8 @@
         "step": "1",
         "frozen_value": "14",
         "position_percent": 25.7,
-        "bound_state": "WITHIN_DECLARED_RANGE"
+        "bound_state": "WITHIN_DECLARED_RANGE",
+        "bound_warning": { "definition_id": "research.bound-warning.v1", "copy_version": "research.bound-warning-copy.v1", "reference_space": "DECLARED_RANGE", "state": "INTERIOR", "side": null, "reason_code": null }
       },
       {
         "name": "atr_mult",
@@ -135,7 +136,8 @@
         "step": "0.25",
         "frozen_value": "2.00",
         "position_percent": 42.9,
-        "bound_state": "WITHIN_DECLARED_RANGE"
+        "bound_state": "WITHIN_DECLARED_RANGE",
+        "bound_warning": { "definition_id": "research.bound-warning.v1", "copy_version": "research.bound-warning-copy.v1", "reference_space": "DECLARED_RANGE", "state": "INTERIOR", "side": null, "reason_code": null }
       },
       {
         "name": "entry_z",
@@ -145,7 +147,8 @@
         "step": "0.10",
         "frozen_value": "1.60",
         "position_percent": 33.3,
-        "bound_state": "WITHIN_DECLARED_RANGE"
+        "bound_state": "WITHIN_DECLARED_RANGE",
+        "bound_warning": { "definition_id": "research.bound-warning.v1", "copy_version": "research.bound-warning-copy.v1", "reference_space": "DECLARED_RANGE", "state": "INTERIOR", "side": null, "reason_code": null }
       }
     ],
     "integrity": {
