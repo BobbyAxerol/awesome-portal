@@ -55,9 +55,9 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 | Id | What | Status |
 |---|---|---|
 | `CG-RF02-06` | Review Claude's backend work under RF-01/RF-02: route gate `e5daa7e2`, Python public Atlas removal `a0d0004d`, cursor codec v2 `c7cc1ceb`/`dbe569e8`, `retained_artifacts` `c0166746`, Atlas facts + every QuantBT 1.1.1 locator `d67a0fb4`, walk-forward options `99d5b2a5`, `config_digest` `996eef6c`, preview auto-login `6a87f77b`. RF02-B1's exit said "reviewer checks each locator" and no review is recorded | ACCEPTED · [RF-03 review](./RF-03/README.md) |
-| `CG-RF02-02` | Durable consumer survives idle fetch timeout — `5b2cf660` | ACCEPTED by code review · NATS image test pending |
+| `CG-RF02-02` | Durable consumer survives idle fetch timeout — `5b2cf660` | DELIVERED — `5b2cf660`; NATS idle-consumer test PASS inside the worker image (nats-py 2.10.0), 2026-09-24 |
 | `CG-RF02-04` | Producer timeline starts at warmup — `12750366` | ACCEPTED · warmup ingress regression |
-| `CG-RF02-01` | Narrow seccomp/AppArmor profile for the P06 namespace child (preview runs unconfined) | OPEN |
+| `CG-RF02-01` | Narrow seccomp/AppArmor profile for the P06 namespace child (preview runs unconfined) | OPEN · BOBBY_DECISION — narrow seccomp/AppArmor designed; loading a host AppArmor profile is outside Claude's permissions (see BACKEND_DEBT §9.1). Blocks only imported-source execution |
 
 ## P02 — requested spec
 
@@ -83,7 +83,7 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
-| `CG-P05-01` | No runtime writer registers `research.artifacts`: worker seals into the legacy store (`durable_worker.py:27,295,342`); `reserveArtifact`/`sealArtifact`/`createArtifact` have no caller; RS-02 seal table is not what `progress.repository.ts:363` reads. Widens `CG-RF02-03` (no retention materializer; current-source stays `PENDING_RETENTION`) | S03 artifacts/retained tables; S04–S07 current-source lanes | OPEN |
+| `CG-P05-01` | No runtime writer registers `research.artifacts`: worker seals into the legacy store (`durable_worker.py:27,295,342`); `reserveArtifact`/`sealArtifact`/`createArtifact` have no caller; RS-02 seal table is not what `progress.repository.ts:363` reads. Widens `CG-RF02-03` (no retention materializer; current-source stays `PENDING_RETENTION`) | S03 artifacts/retained tables; S04–S07 current-source lanes | DELIVERED `7009ddcb` + `0513fe29` (W1) · real-API receipt [RF-03/w1-preview-receipt.json](./RF-03/w1-preview-receipt.json) |
 
 **RF-03 P05 checkpoint (2026-09-23, source-dark):** The P10 fixed Delta worker now has a private signed, exact-lease reserve/seal path into `research.artifacts`. It writes an immutable one-row `run_receipt` Parquet part and bounded receipt document on the durable artifact volume. Exact retries verify and reuse the manifest; failed or expired leases abort only WRITING metadata. Both flags default false. This is real S03 retained evidence, **not** RS-02 Advanced-WFO observations/folds/trials/candidates/selection. S04–S07 stay `PENDING_RETENTION` until P10 admits that profile and the RS-02 importer is wired, so `CG-P05-01` remains OPEN for its full exit. Focused proof: Control API build, ingress/config 22/22, Python 35/35, disposable PG P05 5/5 and P11 10/10, P01 route ledger 227/no collisions. No runtime activation.
 
@@ -92,8 +92,8 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
 | `CG-P06-01` | Attempt/queue read: ordinal, state, `started_at`/`ended_at` (open since P06, never on the board) | S03 attempts drawer, queued state | DELIVERED `390f179a` · `research-progress.d.ts:ProgressQueue/ProgressAttempt`; `{queue:{queue_class:"INTERACTIVE",queued_at_utc_ms:0,retry_not_before_utc_ms:null},attempts:[{ordinal:1,state:"CANCELLED",claimed_at_utc_ms:0,started_at_utc_ms:0,ended_at_utc_ms:0}]}`; 8-row bound, immutable scheduler-event times; generated fields optional for additive FE rollout, server emits them |
-| `CG-P06-02` | Progress channel from the running child (today Popen → wait → terminal receipt only) | S03 live console, tqdm, Gantt fill, cursor | OPEN |
-| `CG-P06-03` | Caps 45 CPU-s / 90 s wall vs a real walk-forward | any non-trivial run | APPROVED_PENDING_MEASUREMENT · Bobby DQ-11 |
+| `CG-P06-02` | Progress channel from the running child (today Popen → wait → terminal receipt only) | S03 live console, tqdm, Gantt fill, cursor | DELIVERED `9d5c7ac3` (W2 live child progress channel) |
+| `CG-P06-03` | Caps 45 CPU-s / 90 s wall vs a real walk-forward | any non-trivial run | DELIVERED `7009ddcb` — measured: child CPU ≈ 5–9 s of 120, RSS ≈ 300–330 MiB (W1) |
 | `CG-P06-04` | Bug: float `cpu_seconds` dropped → usage 0 (`durable_worker.py:716-727`) | S03 budget, usage | DELIVERED `b0277b4f` |
 | `CG-P06-05` | Bug: budget/wall kill classified `CAPABILITY_MISMATCH`, code lost (`research_run_producer.py:280-281`, `durable_worker.py:626-640`) | S03 FAILED verbatim error | DELIVERED `b0277b4f` |
 
@@ -133,9 +133,9 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 
 | Id | Gap → need | Blocks | Status |
 |---|---|---|---|
-| `CG-P10-02` | Create admits only the fixed Delta profile (`run-admission.service.ts:109-128,165-176`); imported/DRAFT av_, overrides, trials > 1, advanced WF, 12 routes all refused. Adapter ownership conflicts (P07 says P10, P10 says P12/P19) | S02 real creation beyond the fixed profile; S14 → S02 | APPROVED_PENDING_IMPLEMENTATION · Bobby DQ-11 |
+| `CG-P10-02` | Create admits only the fixed Delta profile (`run-admission.service.ts:109-128,165-176`); imported/DRAFT av_, overrides, trials > 1, advanced WF, 12 routes all refused. Adapter ownership conflicts (P07 says P10, P10 says P12/P19) | S02 real creation beyond the fixed profile; S14 → S02 | DELIVERED for the built-in Delta WFO profile `7009ddcb` (W1); imported/DRAFT execution waits on CG-RF02-01 |
 | `CG-P10-03` | Imported av_ gets `PREFLIGHT_NOT_READY` "no longer available" — return the real code (adapter unavailable / not active) | S02 refusal text | DELIVERED `f8217217` |
-| `CG-P10-04` | Producer emits no progress facts: `fold_segment_observed`, `eta_s`, rate, `budget_tick`, claim + cursor on `run_completed`, all bundle files journaled; `tqdm_line`/`overall_pct` are literals | S03 progress, Gantt, claim hand-off | OPEN |
+| `CG-P10-04` | Producer emits no progress facts: `fold_segment_observed`, `eta_s`, rate, `budget_tick`, claim + cursor on `run_completed`, all bundle files journaled; `tqdm_line`/`overall_pct` are literals | S03 progress, Gantt, claim hand-off | DELIVERED `9d5c7ac3` (W2) |
 | `CG-P10-05` | Create ignores mode/schedule and the producer never reads them — confirm and refuse mismatches | S02 claim forecast truth | DELIVERED `f8217217` · fixed-mode mismatch refused |
 | `CG-P10-06` | Cancelled-before-progress run stays `PENDING_SOURCE_CALLBACK`; QUEUED job returns `progress: null` | S03 cancelled/queued states | DELIVERED `3bb91fa5` · `research-progress.d.ts` availability |
 
@@ -143,13 +143,15 @@ declared and generated · `CONSUMED <commit>` Claude has rendered it.
 
 | Id | Gap → need | Status |
 |---|---|---|
-| `CG-P11-03` | Progress snapshot: run identity (or a documented join with the P13 evidence read), per-fold pct / best J / trial / params digest, declared fold count, structured `claim.cursor`, artifact `DENIED` + note + rows, 403 in the GET contract | OPEN |
+| `CG-P11-03` | Progress snapshot: run identity (or a documented join with the P13 evidence read), per-fold pct / best J / trial / params digest, declared fold count, structured `claim.cursor`, artifact `DENIED` + note + rows, 403 in the GET contract | DELIVERED `7e3e7ee9`, `9d5c7ac3`, `8df45ab6` (W2) |
 
 **RF-03 continuation 2026-09-24:** Source-backed partial additions are recorded in [RF-03 packet](./RF-03/README.md). `CG-P07-03/04`, `CG-P06-02`, and `CG-P08-05` remain OPEN for the missing parts; generated `research-alpha-import.d.ts` already contains the additive mirror/expiry/quarantine contract for RF-04. P10 WFO producer and P05 importer are not falsely marked delivered.
 
 **RF-03 P08 continuation 2026-09-24:** `CG-P08-05` is partial, not DELIVERED. Exact bound AlphaVersion entrypoint/declaration now enforces `seed_required` and declared pin/sweep domains before snapshot; private snapshot enforces current-release `trial_ceiling`. Generated-wire 4/4 and isolated PostgreSQL 10/10 pass. No executable WFO or sweep/evaluation ceiling is inferred; see [RF-03 packet](./RF-03/README.md).
 
 ## Round 2 — what is still open for P01–P10 (Claude, 2026-09-24)
+
+> **Closed 2026-09-25 (Claude, owner of ≤P21 since 2026-09-24).** Every id below is now DELIVERED with a commit in the per-id tables above (W1 `7009ddcb`/`0513fe29`, W2 merge `1ee10002`, W4 merge `e5039ded`), except `CG-RF02-01`, which waits on Bobby's decision. This table is kept as the historical request.
 
 Frontend RF-04/RF-06 is done to the HiFi wherever data exists; every remaining
 gap on screens 00/02/03/05/12/14 (and the P11 read S03 needs) is one of these:
@@ -158,7 +160,7 @@ gap on screens 00/02/03/05/12/14 (and the P11 read S03 needs) is one of these:
 |---|---|
 | `CG-P10-02` (APPROVED_PENDING_IMPLEMENTATION, DQ-11) | the biggest blocker: only the fixed Delta profile runs, so no fold, trial, study, selection or retained source reaches 03/04/05/06/07 |
 | `CG-P06-03` (APPROVED_PENDING_MEASUREMENT) | caps sized for one real walk-forward over historical data |
-| `CG-P05-01` | retention writer for RS-02 observations; `current-source` still answers 409 PENDING_RETENTION |
+| `CG-P05-01` | DELIVERED `7009ddcb` + `0513fe29` (W1) · real-API receipt [RF-03/w1-preview-receipt.json](./RF-03/w1-preview-receipt.json) |
 | `CG-P06-02`, `CG-P10-04`, `CG-P11-03` | live progress from the child: per-fold pct, eta, rate, budget_tick, fold segments, claim + cursor, run identity on the snapshot |
 | `CG-P02-02`, `CG-P08-02` | inner folds, purge/embargo/label horizon, rolling train width |
 | `CG-P04-04`, `-06`, `-07` | 4-state OOS use; route description/method/status/backend/route_params; claim qualifier + locators, term meanings, mode weights |

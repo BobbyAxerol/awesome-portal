@@ -53,7 +53,16 @@ describe("RF01-F4 — one mapper behind the five historical names", () => {
     expect(toResearchRefusal(api(500, "RESEARCH_SEARCH_NOT_FOUND")).state).toBe("terminal");
     expect(toResearchRefusal(api(400, "RESEARCH_EVIDENCE_UNAVAILABLE")).state).toBe("unavailable");
     expect(toResearchRefusal(api(503, "RESEARCH_FREEZE_INVALID")).state).toBe("terminal");
-    expect(RESEARCH_SURFACE_CODES).toHaveLength(34);
+    expect(RESEARCH_SURFACE_CODES).toHaveLength(40);
+  });
+
+  it("classifies the six P21 Release Candidate codes (W5c)", () => {
+    expect(toResearchRefusal(api(409, "RESEARCH_RELEASE_CANDIDATE_CONFLICT")).state).toBe("stale");
+    expect(toResearchRefusal(api(422, "RESEARCH_RELEASE_CANDIDATE_NOT_PUBLISHABLE")).state).toBe("terminal");
+    expect(toResearchRefusal(api(503, "RESEARCH_RELEASE_CANDIDATE_UNAVAILABLE")).state).toBe("unavailable");
+    expect(toResearchRefusal(api(403, "RESEARCH_RELEASE_CANDIDATE_FORBIDDEN")).state).toBe("denied");
+    expect(toResearchRefusal(api(404, "RESEARCH_RELEASE_CANDIDATE_NOT_FOUND")).notFound).toBe(true);
+    expect(toResearchRefusal(api(400, "RESEARCH_RELEASE_CANDIDATE_INVALID")).state).toBe("terminal");
   });
 
   it("says a retained source that does not exist yet is pending, never that it changed", () => {

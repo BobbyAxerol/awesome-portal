@@ -12,5 +12,38 @@
     "P13 does not own fold/holdout, search/selection, replay, report or artifact fields.",
     "Screen-04 frontend browser/product acceptance is Claude-owned and remains pending while the feature is dark."
   ],
-  "rollback": "Disable FEATURE_RESEARCH_EVIDENCE through signed deployment; retain immutable evidence."
+  "rollback": "Disable FEATURE_RESEARCH_EVIDENCE through signed deployment; retain immutable evidence.",
+  "closed_debt": [
+    {
+      "id": "CG-P13-05",
+      "what": "full-resolution retained evidence series with extrema-preserving envelope",
+      "commit": "b621c5af"
+    },
+    {
+      "id": "CG-P13-07",
+      "what": "claim strip facts from QuantBT source_contract",
+      "commit": "b621c5af"
+    },
+    {
+      "id": "CG-P13-08",
+      "what": "per-fold verdict research.fold-verdict.v1",
+      "commit": "b621c5af"
+    },
+    {
+      "id": "CG-P13-11",
+      "what": "hub facts (RF-05 Claude share)",
+      "commit": "b1f76bd3"
+    }
+  ],
+  "open_owner_decisions": [
+    {
+      "id": "P13-T11",
+      "what": "DR-02 shared warning definition Search/Freeze"
+    },
+    {
+      "id": "P13-T12",
+      "what": "Reveal (P17-FE-DG-02)"
+    }
+  ],
+  "reviewed": "2026-09-25 · Claude (A12/GX correction: registers previously claimed zero debt while Astra A09–A12 were open)"
 }

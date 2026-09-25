@@ -12,5 +12,23 @@
     "Physical Parquet row-group I/O is NOT_ATTESTED even though semantic child-tape exclusion is proven.",
     "Screen-05 frontend browser/product acceptance is Claude-owned and remains pending while the feature is dark."
   ],
-  "rollback": "Disable FEATURE_RESEARCH_SPLIT through signed deployment; retain immutable source/projection facts."
+  "rollback": "Disable FEATURE_RESEARCH_SPLIT through signed deployment; retain immutable source/projection facts.",
+  "closed_debt": [
+    {
+      "id": "CG-P14-02",
+      "what": "fold anatomy: warmup/label horizon/purge/embargo/validation/cutoff; inner folds NOT_APPLICABLE for global",
+      "commit": "b621c5af"
+    }
+  ],
+  "decided": [
+    {
+      "id": "P14-T01/T02",
+      "what": "causal path not admitted by the W1 global profile; tests assert refusal"
+    },
+    {
+      "id": "P14-T06/T13",
+      "what": "DR-01 holdout unlock authority does not exist"
+    }
+  ],
+  "reviewed": "2026-09-25 · Claude (A12/GX correction: registers previously claimed zero debt while Astra A09–A12 were open)"
 }

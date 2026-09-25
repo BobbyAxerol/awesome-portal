@@ -3,8 +3,11 @@
   "phase": "RS-03",
   "in_scope_backend_debt": [],
   "frontend_acceptance_pending": [
-    "Claude must wire only generated RS-02 named operations into the rich S04-S08 compositions.",
-    "Claude must inspect HiFi and product in a browser at 1280px and 660px, then return route-specific browser receipts."
+    {
+      "id": "W3b",
+      "what": "Screens 04-08 read the retained lane for WFO runs (no P04-lane reasons on a WFO run)",
+      "owner": "Claude"
+    }
   ],
   "explicit_source_truth_boundaries": [
     "No raw P05 source-artifact bytes or physical holdout I/O are published by a GET.",
@@ -12,5 +15,7 @@
     "Objective decomposition, prune reason, importance, orders, fills, candles and broker state are not fabricated."
   ],
   "next_owner": "Claude for RS-03 rich consumer/browser acceptance; Bobby for combined P18 entry decision.",
-  "rollback": "Keep FEATURE_RESEARCH_CURRENT_SOURCE disabled or use the compatible pre-RS02 reader; retain immutable imported rows and seals."
+  "rollback": "Keep FEATURE_RESEARCH_CURRENT_SOURCE disabled or use the compatible pre-RS02 reader; retain immutable imported rows and seals.",
+  "a12_mapping": "RS-03/A12_GATE_ID_MAPPING_CLAUDE_2026-09-24.md",
+  "reviewed": "2026-09-25 · Claude (A12/GX correction: registers previously claimed zero debt while Astra A09–A12 were open)"
 }

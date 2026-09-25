@@ -10,5 +10,19 @@
     "Authoritative execution orders, fills, candles and broker state are not published."
   ],
   "next_owner": "Claude RS-03 consumer/browser acceptance and Bobby for a separate scoped activation decision",
-  "rollback": "Keep FEATURE_RESEARCH_CURRENT_SOURCE disabled or select the compatible pre-RS02 reader; retain immutable imported rows and seals."
+  "rollback": "Keep FEATURE_RESEARCH_CURRENT_SOURCE disabled or select the compatible pre-RS02 reader; retain immutable imported rows and seals.",
+  "closed_debt": [
+    {
+      "id": "CG-P05-01",
+      "what": "worker to Control API RS-02 ingest + seal; current-source reads SEALED for WFO runs",
+      "commit": "7009ddcb, 0513fe29"
+    },
+    {
+      "id": "split-read-slot",
+      "what": "no-seal lane reads its own P10 binding",
+      "commit": "10a490e3"
+    }
+  ],
+  "receipt": "RF-03/w1-preview-receipt.json",
+  "reviewed": "2026-09-25 · Claude (A12/GX correction: registers previously claimed zero debt while Astra A09–A12 were open)"
 }
