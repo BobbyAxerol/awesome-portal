@@ -57,6 +57,7 @@ import { hubDelegates, readsRetainedLane, type RetainedSlot, type VerifySlot } f
 import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
 import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 import {
   protocolLabel,
   retainedReadiness,
@@ -835,6 +836,16 @@ function RetainedRows({ freeze }: { freeze: CurrentSourceFreeze }) {
 const RETAINED_REASON_SENTENCES: Record<string, string> = {
   P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES:
     "The source bytes were verified when the run was imported; a read never reopens the private artifact, so no byte-level check is shown here.",
+  SELECTION_SAW_EVERY_OUTER_FOLD:
+    "One θ* was selected after every outer fold's OOS window had been read, so no fold's OOS is held out from the selection.",
+  P10_DELTA_WFO_PROFILE_DOES_NOT_ADMIT_PER_FOLD_CAUSAL_SCHEDULE:
+    "A per-fold causal schedule is not admitted by the Delta walk-forward profile, so no per-fold causal verdict is evaluated.",
+  QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS:
+    "QuantBT publishes no freeze or OOS-read timestamps on this route, so no wall-clock tick is drawn.",
+  RS02_SEAL_PREDATES_P17_CHILD_AUDIT:
+    "This run was retained before QuantBT's child audit was kept, so the child that generated each fold's OOS bars cannot be named.",
+  FROZEN_PARAMETERS_NOT_EXACT_NUMERIC_JSON:
+    "The frozen parameters are not all exact numbers, so QuantBT's candidate identity cannot be recomputed.",
   RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET:
     "A read never enqueues an evaluation, so no neighbourhood around θ* is re-scored and no ΔJ exists to show.",
   SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS:
@@ -1249,8 +1260,140 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
   );
 }
 
+const FOLD_VERDICT_WORDS: Record<FoldOrderingRow["verdict"], string> = {
+  NOT_CAUSAL_GLOBAL_SELECTION: "not causal · global selection",
+  NOT_EVALUATED: "not evaluated",
+  NOT_PUBLISHED: "not published",
+};
+
+const BOUNDARY_WORDS: Record<FoldOrderingRow["data_time"]["boundary"], string> = {
+  IS_ENDS_BEFORE_OOS: "IS ends before OOS",
+  IS_OVERLAPS_OOS: "IS overlaps OOS",
+  NOT_PUBLISHED: "window not published",
+};
+
+const CHILD_WORDS: Record<FoldOrderingRow["oos_generation_child"]["state"], string> = {
+  MATCH: "OOS child = frozen θ*",
+  MISMATCH: "OOS child ≠ frozen θ*",
+  NOT_RETAINED: "child audit not retained",
+  NOT_PUBLISHED: "no OOS generation child",
+  NOT_COMPUTABLE: "θ* identity not computable",
+};
+
+/** A bar on the data-time axis only: IS then OOS, placed on the span of the returned folds. */
+function DataTimeBar({ fold, span }: { fold: FoldOrderingRow; span: { lo: number; hi: number } | null }) {
+  const place = (start: number | null | undefined, end: number | null | undefined) => {
+    if (span === null || start == null || end == null || span.hi <= span.lo) return null;
+    const left = ((start - span.lo) / (span.hi - span.lo)) * 100;
+    const width = Math.max(((end - start) / (span.hi - span.lo)) * 100, 0.5);
+    return { left: `${left.toFixed(2)}%`, width: `${width.toFixed(2)}%` };
+  };
+  const is = place(fold.data_time.is.start_utc_ms, fold.data_time.is.end_utc_ms);
+  const oos = place(fold.data_time.oos.start_utc_ms, fold.data_time.oos.end_utc_ms);
+  return (
+    <span className="relative block h-[12px] min-w-[120px] flex-1 rounded-[3px]" style={{ background: "var(--paper-sunken)" }} aria-hidden>
+      {is ? <span className="absolute inset-y-0 rounded-[3px]" data-segment="is" style={{ ...is, background: "var(--accent-soft)", border: "1px solid var(--accent)" }} /> : null}
+      {oos ? <span className="absolute inset-y-0 rounded-[3px]" data-segment="oos" style={{ ...oos, background: "var(--warn-bg)", border: "1px solid var(--warn)" }} /> : null}
+    </span>
+  );
+}
+
+/**
+ * W5a P16-T02/T11 — hi-fi F1 on the retained lane, per fold: DATA TIME (each
+ * fold's own IS/OOS boundary and the server's causal verdict) and WALL CLOCK
+ * (a typed absence: QuantBT publishes no freeze clocks). Two axes, never one.
+ */
+function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
+  const times = ordering.folds.flatMap((fold) => [
+    fold.data_time.is.start_utc_ms, fold.data_time.is.end_utc_ms, fold.data_time.oos.start_utc_ms, fold.data_time.oos.end_utc_ms,
+  ]).filter((value): value is number => typeof value === "number");
+  const span = times.length > 1 ? { lo: Math.min(...times), hi: Math.max(...times) } : null;
+  const global = ordering.selection_scope === "GLOBAL";
+  const badge = global ? "⚠ NOT CAUSAL · GLOBAL SELECTION" : ordering.selection_scope === "PER_FOLD" ? "PER-FOLD · NOT EVALUATED" : "ORDERING NOT PUBLISHED";
+  return (
+    <div className="flex flex-col gap-2" data-fold-ordering={ordering.selection_scope} data-axes={ordering.axes.join(" ")}>
+      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1" data-ordering-verdict>
+        <span className="mono rounded-[3px] border px-2 py-[1px] text-[10px] font-bold" style={{ borderColor: "var(--warn)", color: "var(--warn)" }} data-ordering-badge>
+          {badge}
+        </span>
+        {ordering.source_claims.chronological_claim ? (
+          <span className="mono text-[10px]" data-source-claim title="QuantBT walk_forward.chronological_validation_claim">
+            {ordering.source_claims.chronological_claim}
+          </span>
+        ) : null}
+        {ordering.source_claims.causality_claim ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title="QuantBT walk_forward.causality_claim">
+            {ordering.source_claims.causality_claim}
+          </span>
+        ) : null}
+        {ordering.source_claims.oos_used_for_selection === true ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>oos_used_for_selection = true</span>
+        ) : null}
+      </span>
+      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        F1 · two axes — deliberately separate, not the same units
+      </span>
+      <div className="flex flex-col gap-1" data-axis="DATA_TIME">
+        <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
+          data time — which bars each fold read · {ordering.counts.folds} {ordering.counts.folds === 1 ? "fold" : "folds"}
+        </span>
+        <ol className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
+          {ordering.folds.map((fold) => (
+            <li
+              key={fold.fold_id}
+              className="flex flex-wrap items-center gap-x-2 gap-y-0.5"
+              data-fold-row={fold.fold_id}
+              data-boundary={fold.data_time.boundary}
+              data-fold-verdict={fold.verdict}
+              data-oos-child={fold.oos_generation_child.state}
+            >
+              <span className="mono w-[52px] flex-none text-[10px]" style={{ color: "var(--ink-soft)" }}>fold {fold.fold_id}</span>
+              <DataTimeBar fold={fold} span={span} />
+              <span
+                className="mono text-[9.5px]"
+                style={{ color: fold.data_time.boundary === "IS_OVERLAPS_OOS" ? "var(--bad)" : "var(--ink-faint)" }}
+                data-boundary-words
+                title={fold.data_time.boundary === "NOT_PUBLISHED"
+                  ? fold.data_time.reason_code ?? undefined
+                  : `IS → ${formatUtc(fold.data_time.is.end_utc_ms) ?? "?"} · OOS ${formatUtc(fold.data_time.oos.start_utc_ms) ?? "?"} → ${formatUtc(fold.data_time.oos.end_utc_ms) ?? "?"}`}
+              >
+                {BOUNDARY_WORDS[fold.data_time.boundary]}
+              </span>
+              <span className="mono text-[9.5px]" style={{ color: "var(--warn)" }} title={fold.reason_code} data-verdict-words>
+                {FOLD_VERDICT_WORDS[fold.verdict]}
+              </span>
+              <span
+                className="mono text-[9.5px]"
+                data-child-words
+                style={{
+                  color: fold.oos_generation_child.state === "MATCH" ? "var(--good)" : fold.oos_generation_child.state === "MISMATCH" ? "var(--bad)" : "var(--ink-faint)",
+                }}
+                title={fold.oos_generation_child.reason_code
+                  ?? (fold.oos_generation_child.candidate_id ? `QuantBT candidate ${fold.oos_generation_child.candidate_id} · child #${fold.oos_generation_child.audit_ordinal}` : undefined)}
+              >
+                {CHILD_WORDS[fold.oos_generation_child.state]}
+                {fold.oos_generation_child.candidate_id ? ` · ${fold.oos_generation_child.candidate_id.slice(0, 8)}` : ""}
+              </span>
+            </li>
+          ))}
+        </ol>
+        <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-ordering-reason>
+          {reasonText(ordering.folds[0]?.reason_code) ?? ordering.folds[0]?.reason_code ?? "No retained fold."}
+          {global ? " Report evidence only — never a deployment claim." : ""}
+        </span>
+      </div>
+      <div className="flex flex-col gap-1 border-t border-dashed pt-2" style={{ borderColor: "var(--line-strong)" }} data-axis="WALL_CLOCK">
+        <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
+          wall clock — when the events happened
+        </span>
+        <TypedAbsence what="wall clock ordering" state={ordering.wall_clock.state} code={ordering.wall_clock.reason_code} />
+      </div>
+    </div>
+  );
+}
+
 /** Hi-fi F1 on the retained lane: what the requested window says, and what no source clock says. */
-function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
+function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null; ordering?: FoldOrdering | null }) {
   const window = walkForwardOf(identity?.requested ?? null);
   const label = protocolLabel(window, identity?.progress?.run?.protocol ?? null);
   const folds: FoldEntry[] = identity?.progress?.progress?.folds ?? [];
@@ -1260,13 +1403,12 @@ function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
     <section
       className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
       data-panel="ordering"
-      data-ordering-state="NOT_PUBLISHED"
+      data-ordering-state={ordering ? ordering.selection_scope : "NOT_PUBLISHED"}
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
       <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         ordering
       </h3>
-      <TypedAbsence what="wall clock ordering" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" />
       <div className="flex flex-col gap-1" data-data-time="REQUESTED_WINDOW">
         <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           data time · requested walk-forward window
@@ -1292,10 +1434,16 @@ function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
             requested window not published
           </span>
         )}
-        {segmentGap ? (
+        {/* A W5a server publishes each fold's IS/OOS windows below; the older gap no longer applies. */}
+        {segmentGap && !ordering ? (
           <TypedAbsence what="per-fold IS/OOS segments" state={segmentGap.state} code={segmentGap.reason_code} />
         ) : null}
       </div>
+      {ordering ? (
+        <FoldOrderingAxes ordering={ordering} />
+      ) : (
+        <TypedAbsence what="wall clock ordering" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" />
+      )}
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-two-clocks>
         {TWO_CLOCKS_NOTE}
       </p>
@@ -1321,7 +1469,7 @@ function RetainedFreezeBody({
   const known = identity.state === "ready" ? identity.identity : null;
   return (
     <div className="flex flex-col gap-3" data-lane="retained">
-      <RetainedOrdering identity={known} />
+      <RetainedOrdering identity={known} ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <RetainedFrozenTable freeze={freeze} identity={known} />
         <RetainedIntegrity freeze={freeze} verify={verify} onVerify={onVerify} />

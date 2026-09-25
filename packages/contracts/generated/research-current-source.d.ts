@@ -577,6 +577,82 @@ export interface components {
             grid_key: components["schemas"]["Digest"];
             job: components["schemas"]["WhatIfJob"] | null;
         };
+        FoldOrderingRow: {
+            fold_id: string;
+            source_ordinal: number;
+            data_time: {
+                is: {
+                    start_utc_ms: number | null;
+                    end_utc_ms: number | null;
+                };
+                oos: {
+                    start_utc_ms: number | null;
+                    end_utc_ms: number | null;
+                };
+                /** @enum {unknown} */
+                boundary: "IS_ENDS_BEFORE_OOS" | "IS_OVERLAPS_OOS" | "NOT_PUBLISHED";
+                reason_code: string | null;
+            };
+            /**
+             * @description Never PASS: a global study selected one θ* after reading every outer fold.
+             * @enum {unknown}
+             */
+            verdict: "NOT_CAUSAL_GLOBAL_SELECTION" | "NOT_EVALUATED" | "NOT_PUBLISHED";
+            reason_code: string;
+            oos_generation_child: {
+                /** @enum {unknown} */
+                state: "MATCH" | "MISMATCH" | "NOT_RETAINED" | "NOT_PUBLISHED" | "NOT_COMPUTABLE";
+                reason_code: string | null;
+                audit_ordinal: number | null;
+                candidate_id: string | null;
+            };
+        };
+        /** @description W5a P16-T02/T11: per-fold ordering on two axes (data time, wall clock); the per-fold causal verdict from QuantBT's own claims; the out-of-sample generation child compared with the frozen selection by QuantBT's candidate identity. */
+        FoldOrdering: {
+            /** @constant */
+            schema_version: "research.freeze-fold-ordering.v1";
+            axes: [
+                "DATA_TIME",
+                "WALL_CLOCK"
+            ];
+            /** @enum {unknown} */
+            selection_scope: "GLOBAL" | "PER_FOLD" | "NOT_PUBLISHED";
+            optimization_schedule: string | null;
+            source_claims: {
+                chronological_claim: string | null;
+                causality_claim: string | null;
+                oos_used_for_selection: boolean | null;
+            };
+            wall_clock: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                reason_code: string;
+            };
+            frozen_candidate: {
+                /** @constant */
+                identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1";
+                candidate_id: string | null;
+                reason_code: string | null;
+            };
+            counts: {
+                folds: number;
+                not_causal_global_selection: number;
+                not_evaluated: number;
+                not_published: number;
+                oos_child_match: number;
+                oos_child_mismatch: number;
+            };
+            folds: components["schemas"]["FoldOrderingRow"][];
+        };
+        /** @description The sealed θ* as Screen 07 reads it (not the Screen 06 selection roles). */
+        FrozenSelection: {
+            selected_trial_id: string | null;
+            objective: components["schemas"]["Decimal"] | null;
+            parameters: {
+                [key: string]: components["schemas"]["Decimal"];
+            };
+            availability: components["schemas"]["Availability"];
+        };
         Freeze: components["schemas"]["Common"] & {
             /** @constant */
             schema_version: "research.current-source-freeze.v1";
@@ -594,8 +670,9 @@ export interface components {
             };
             source_artifact_bytes: components["schemas"]["Fact"];
             byte_verification: components["schemas"]["ArtifactByteVerification"];
-            frozen_selection: components["schemas"]["Selection"];
+            frozen_selection: components["schemas"]["FrozenSelection"];
             what_if: components["schemas"]["WhatIf"];
+            fold_ordering: components["schemas"]["FoldOrdering"];
         };
         Observation: {
             source_ordinal: number;

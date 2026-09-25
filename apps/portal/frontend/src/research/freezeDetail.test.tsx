@@ -1022,3 +1022,109 @@ describe("W3b — Freeze on the retained WFO lane", () => {
     expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
   });
 });
+
+/* -------------------------------------------------------------------------
+ * W5a · P16-T02 / P16-T11 — per-fold ordering on two axes (guide IDs)
+ * ---------------------------------------------------------------------- */
+
+function foldOrderingFixture(overrides: { second?: Partial<Record<string, unknown>> } = {}) {
+  const fold = (id: string, ordinal: number, isEnd: number, oosStart: number, oosEnd: number) => ({
+    fold_id: id,
+    source_ordinal: ordinal,
+    data_time: {
+      is: { start_utc_ms: 1780272000000, end_utc_ms: isEnd },
+      oos: { start_utc_ms: oosStart, end_utc_ms: oosEnd },
+      boundary: "IS_ENDS_BEFORE_OOS",
+      reason_code: null,
+    },
+    verdict: "NOT_CAUSAL_GLOBAL_SELECTION",
+    reason_code: "SELECTION_SAW_EVERY_OUTER_FOLD",
+    oos_generation_child: { state: "MATCH", reason_code: null, audit_ordinal: 10 + ordinal, candidate_id: "2671e27b827ab2701d52e6ce" },
+  });
+  return {
+    schema_version: "research.freeze-fold-ordering.v1",
+    axes: ["DATA_TIME", "WALL_CLOCK"],
+    selection_scope: "GLOBAL",
+    optimization_schedule: "global",
+    source_claims: {
+      chronological_claim: "not_causal_multi_fold_global_calibration",
+      causality_claim: "retrospective_global_calibration",
+      oos_used_for_selection: true,
+    },
+    wall_clock: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS" },
+    frozen_candidate: { identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1", candidate_id: "2671e27b827ab2701d52e6ce", reason_code: null },
+    counts: { folds: 2, not_causal_global_selection: 2, not_evaluated: 0, not_published: 0, oos_child_match: 2, oos_child_mismatch: 0 },
+    folds: [
+      fold("0", 0, 1782860400000, 1782864000000, 1783465200000),
+      { ...fold("1", 1, 1783465200000, 1783468800000, 1784070000000), ...overrides.second },
+    ],
+  };
+}
+
+function delegatedView(ordering: unknown) {
+  const hub = { ...detail(), availability: { state: "NOT_APPLICABLE", reason_code: "RS02_RETAINED_LANE_OWNS_THIS_RUN" } } as FreezeDetail;
+  const lane = { ...retainedFreeze(), fold_ordering: ordering } as unknown as CurrentSourceFreeze;
+  return view({ detail: hub, retained: { state: "ready", freeze: lane } });
+}
+
+describe("W5a · P16-T02 — the causal boundary per fold, on two axes", () => {
+  it("draws DATA TIME and WALL CLOCK as two separate axes, with one row per retained fold", () => {
+    const { container } = delegatedView(foldOrderingFixture());
+    const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
+    expect(panel.getAttribute("data-ordering-state")).toBe("GLOBAL");
+    expect(panel.querySelector("[data-fold-ordering]")?.getAttribute("data-axes")).toBe("DATA_TIME WALL_CLOCK");
+    expect(panel.querySelectorAll("[data-axis]")).toHaveLength(2);
+    const rows = [...panel.querySelectorAll("[data-axis='DATA_TIME'] [data-fold-row]")];
+    expect(rows.map((row) => row.getAttribute("data-fold-row"))).toEqual(["0", "1"]);
+    for (const row of rows) {
+      expect(row.getAttribute("data-boundary")).toBe("IS_ENDS_BEFORE_OOS");
+      expect(row.querySelector("[data-verdict-words]")?.textContent).toBe("not causal · global selection");
+      expect(row.querySelectorAll("[data-segment]")).toHaveLength(2);
+    }
+    // The wall-clock axis is a typed absence, never a drawn tick.
+    const clock = panel.querySelector("[data-axis='WALL_CLOCK']") as HTMLElement;
+    expect(clock.querySelector("[data-absence-state='NOT_PUBLISHED']")?.getAttribute("data-reason")).toBe(
+      "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS",
+    );
+    expect(clock.querySelector("[data-segment]")).toBeNull();
+  });
+
+  it("names the engine's own claim, never a PASS", () => {
+    const { container } = delegatedView(foldOrderingFixture());
+    const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
+    expect(panel.querySelector("[data-ordering-badge]")?.textContent).toBe("⚠ NOT CAUSAL · GLOBAL SELECTION");
+    expect(panel.querySelector("[data-source-claim]")?.textContent).toBe("not_causal_multi_fold_global_calibration");
+    expect(panel.querySelector("[data-ordering-reason]")?.textContent).toContain("every outer fold's OOS window had been read");
+    expect(panel.textContent).not.toMatch(/\bPASS\b|causal ✓/);
+  });
+
+  it("marks only the fold whose IS overlaps its OOS", () => {
+    const second = foldOrderingFixture().folds[1]!;
+    const { container } = delegatedView(foldOrderingFixture({ second: { data_time: { ...second.data_time, boundary: "IS_OVERLAPS_OOS" } } }));
+    const words = [...container.querySelectorAll("[data-fold-row] [data-boundary-words]")].map((node) => node.textContent);
+    expect(words).toEqual(["IS ends before OOS", "IS overlaps OOS"]);
+  });
+
+  it("an older server without the block keeps the typed wall-clock absence", () => {
+    const { container } = delegatedView(undefined);
+    const panel = container.querySelector("[data-panel='ordering']") as HTMLElement;
+    expect(panel.getAttribute("data-ordering-state")).toBe("NOT_PUBLISHED");
+    expect(panel.querySelector("[data-fold-ordering]")).toBeNull();
+    expect(panel.querySelector("[data-reason='UI_RETAINED_LANE_HAS_NO_FIELD']")).toBeTruthy();
+  });
+});
+
+describe("W5a · P16-T11 — the OOS generation child is the frozen θ*", () => {
+  it("prints the server's per-fold comparison, a mismatch in red on that fold only", () => {
+    const { container } = delegatedView(foldOrderingFixture({
+      second: { oos_generation_child: { state: "MISMATCH", reason_code: null, audit_ordinal: 11, candidate_id: "baf7c707c2436a55bb012a15" } },
+    }));
+    const children = [...container.querySelectorAll("[data-fold-row]")].map((row) => [
+      row.getAttribute("data-oos-child"), row.querySelector("[data-child-words]")?.textContent,
+    ]);
+    expect(children).toEqual([
+      ["MATCH", "OOS child = frozen θ* · 2671e27b"],
+      ["MISMATCH", "OOS child ≠ frozen θ* · baf7c707"],
+    ]);
+  });
+});

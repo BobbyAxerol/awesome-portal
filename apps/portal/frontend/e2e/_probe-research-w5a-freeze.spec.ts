@@ -48,6 +48,38 @@ async function overflow(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
+/** W5a P16-T02/T11 overlay: the block a W5a server serves (the preview predates it). */
+function foldOrdering() {
+  const fold = (id: string, ordinal: number, isEnd: number, oosStart: number, oosEnd: number) => ({
+    fold_id: id,
+    source_ordinal: ordinal,
+    data_time: {
+      is: { start_utc_ms: 1780272000000, end_utc_ms: isEnd },
+      oos: { start_utc_ms: oosStart, end_utc_ms: oosEnd },
+      boundary: "IS_ENDS_BEFORE_OOS",
+      reason_code: null,
+    },
+    verdict: "NOT_CAUSAL_GLOBAL_SELECTION",
+    reason_code: "SELECTION_SAW_EVERY_OUTER_FOLD",
+    oos_generation_child: { state: "MATCH", reason_code: null, audit_ordinal: 10 + ordinal, candidate_id: "2671e27b827ab2701d52e6ce" },
+  });
+  return {
+    schema_version: "research.freeze-fold-ordering.v1",
+    axes: ["DATA_TIME", "WALL_CLOCK"],
+    selection_scope: "GLOBAL",
+    optimization_schedule: "global",
+    source_claims: {
+      chronological_claim: "not_causal_multi_fold_global_calibration",
+      causality_claim: "retrospective_global_calibration",
+      oos_used_for_selection: true,
+    },
+    wall_clock: { state: "NOT_PUBLISHED", reason_code: "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS" },
+    frozen_candidate: { identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1", candidate_id: "2671e27b827ab2701d52e6ce", reason_code: null },
+    counts: { folds: 2, not_causal_global_selection: 2, not_evaluated: 0, not_published: 0, oos_child_match: 2, oos_child_mismatch: 0 },
+    folds: [fold("0", 0, 1782860400000, 1782864000000, 1783465200000), fold("1", 1, 1783465200000, 1783468800000, 1784070000000)],
+  };
+}
+
 function liveWhatIf(runId: string) {
   const rvol = ["1", "1", "1", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"];
   const sl = ["1.9", "2", "2.1", "2.2", "2.3", "2.4", "2.5", "2.5", "2.5"];
@@ -117,7 +149,7 @@ for (const [name, width] of [["1440", 1440], ["660", 660]] as const) {
       const response = await route.fetch();
       if (response.status() !== 200) return route.fulfill({ response });
       const body = await response.json();
-      await route.fulfill({ response, json: { ...body, what_if: liveWhatIf(WFO) } });
+      await route.fulfill({ response, json: { ...body, what_if: liveWhatIf(WFO), fold_ordering: foldOrdering() } });
     });
     let evaluatePosts = 0;
     await page.route(/\/what-if\/evaluate/, async (route) => {
@@ -127,6 +159,10 @@ for (const [name, width] of [["1440", 1440], ["660", 660]] as const) {
     await page.goto(`/research/quantbt/runs/${WFO}/freeze`);
     const card = page.locator("[data-panel='what-if']");
     await expect(card).toHaveAttribute("data-what-if", "AVAILABLE", { timeout: 20_000 });
+    const ordering = page.locator("[data-panel='ordering']");
+    await expect(ordering).toHaveAttribute("data-ordering-state", "GLOBAL");
+    await ordering.screenshot({ path: `${OUT}/overlay-ordering-${name}.png` });
+    log[`ordering-${name}`] = { text: await ordering.innerText(), overflow_px: await overflow(page) };
     await card.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${OUT}/overlay-whatif-${name}.png`, fullPage: true });
     const sliders = card.locator("input[type='range']");

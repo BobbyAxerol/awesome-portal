@@ -57,6 +57,9 @@ export const BYTE_STATE_WORDS: Record<ArtifactBytes["state"], string> = {
 };
 
 export type CurrentSourceFreeze = SourceSchemas["Freeze"];
+/** W5a P16-T02/T11: per-fold ordering on two axes, derived by the server. */
+export type FoldOrdering = SourceSchemas["FoldOrdering"];
+export type FoldOrderingRow = SourceSchemas["FoldOrderingRow"];
 /** A10c: the Screen-07 what-if sandbox, as the retained lane serves it. */
 export type WhatIf = SourceSchemas["WhatIf"];
 export type WhatIfCell = SourceSchemas["WhatIfCell"];

@@ -68,6 +68,7 @@ import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
 import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
 import { inertWhatIf, ResearchWhatIfService, type WhatIfBasis } from "./whatif.service";
+import { foldOrdering } from "./fold-ordering";
 import type { WhatIf } from "./whatif.contract";
 import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
 import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
@@ -556,6 +557,24 @@ export class ResearchCurrentSourceService {
     // A10c: exact existing evaluations around θ*; nothing is evaluated here.
     const whatIf = await this.whatIfFor(scope, await this.basisFrom(scope, runId, seal, summary, byteVerification, signal));
     const common = this.common("freeze", seal);
+    // P16-T02/T11: per-fold ordering from the sealed FOLD rows (immutable
+    // under the seal revision, so it cannot move the ETag on its own).
+    const ordering = foldOrdering(
+      (await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map((row) => {
+        const fold = asFold(row);
+        return {
+          sourceOrdinal: row.sourceOrdinal,
+          foldId: fold.fold_id,
+          trainStartUtcMs: fold.train_start_utc_ms,
+          trainEndUtcMs: fold.train_end_utc_ms,
+          testStartUtcMs: fold.test_start_utc_ms,
+          testEndUtcMs: fold.test_end_utc_ms,
+          childAudit: fold.child_audit?.records,
+        };
+      }),
+      summary.source_facts,
+      summary.selection.parameters,
+    );
     // The ETag must move when a new receipt, a job state or a sealed grid
     // lands, or a 304 would hide it.
     const freezeRevision = `rs02_freeze_${sha256ResearchJson({
@@ -593,6 +612,7 @@ export class ResearchCurrentSourceService {
         availability: available(),
       },
       what_if: whatIf,
+      fold_ordering: ordering,
     };
     return this.valid(ResearchCurrentSourceFreezeResponseSchema, value);
   }

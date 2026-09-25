@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
 import { WhatIfSchema } from "./whatif.contract";
+import { FoldOrderingSchema } from "./fold-ordering";
 
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
@@ -722,6 +723,12 @@ export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
    * a GET never enqueues or evaluates anything.
    */
   what_if: WhatIfSchema,
+  /**
+   * W5a P16-T02/T11: per-fold ordering on two axes (data time, wall clock),
+   * the per-fold causal verdict from QuantBT's own claims, and the
+   * out-of-sample generation child checked against the frozen selection.
+   */
+  fold_ordering: FoldOrderingSchema,
 }).strict();
 
 export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
