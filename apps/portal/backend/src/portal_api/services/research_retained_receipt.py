@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -27,6 +28,7 @@ from portal_api.services.research_artifacts import (
     ArtifactSchemaRegistry,
     ArtifactTableSchema,
     ResearchArtifactStore,
+    _sequence_transport_value,
 )
 from portal_api.services.research_progress_relay import _service_principal
 
@@ -171,8 +173,8 @@ class ResearchRetainedReceiptClient:
                 "part_digest": part["sha256"],
                 "row_count": part["rows"],
                 "byte_count": part["bytes"],
-                "sequence_min": part.get("sequence_min"),
-                "sequence_max": part.get("sequence_max"),
+                "sequence_min": _sequence_transport_value(part.get("sequence_min")),
+                "sequence_max": _sequence_transport_value(part.get("sequence_max")),
             }
             for table in manifest["tables"] for part in table["parts"]
         ]
@@ -183,6 +185,17 @@ class ResearchRetainedReceiptClient:
             "total_rows": manifest["totals"]["rows"],
             "total_bytes": manifest["totals"]["bytes"],
             "parts": parts,
+            # The run_receipt JSON document is manifest-bound and its bytes
+            # are in totals.bytes; Control API checks totals = parts + documents.
+            "documents": [
+                {
+                    "name": document["name"],
+                    "relative_path": document["relative_path"],
+                    "document_digest": document["sha256"],
+                    "byte_count": document["bytes"],
+                }
+                for document in manifest.get("documents", [])
+            ],
         })
         if result.get("schema_version") != "research.artifact-seal.v1" or result.get("sealed") is not True:
             raise ResearchRetainedReceiptError("P05 seal acknowledgement is incompatible")
@@ -205,6 +218,12 @@ class ResearchRetainedReceiptClient:
                 if response.status != 200:
                     raise ResearchRetainedReceiptError("P05 private authority rejected the operation")
                 raw = response.read(8193)
+        except urllib.error.HTTPError as exc:
+            # A refusal is not an outage: name the operation and the Problem
+            # code (never the message or body) so the terminal event says why.
+            raise ResearchRetainedReceiptError(
+                f"P05 {operation} was refused ({exc.code}{_problem_code(exc)})"
+            ) from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise ResearchRetainedReceiptError("P05 private authority is unavailable") from exc
         if len(raw) > 8192:
@@ -217,5 +236,14 @@ class ResearchRetainedReceiptClient:
             raise ResearchRetainedReceiptError("P05 private acknowledgement is invalid")
         return result
 
+
+
+def _problem_code(exc: urllib.error.HTTPError) -> str:
+    try:
+        decoded = json.loads(exc.read(2048).decode("utf-8"))
+    except Exception:  # an unreadable body must not mask the refusal itself
+        return ""
+    code = decoded.get("error", {}).get("code") if isinstance(decoded, dict) else None
+    return f" {code}" if isinstance(code, str) and re.fullmatch(r"[A-Z0-9_]{1,96}", code) else ""
 
 __all__ = ["ResearchRetainedReceiptClient", "ResearchRetainedReceiptError"]

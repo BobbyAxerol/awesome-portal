@@ -107,3 +107,37 @@ def test_p05_retention_requires_explicit_private_binding(monkeypatch):
     monkeypatch.delenv("CONTROL_API_INTERNAL_URL", raising=False)
     with pytest.raises(ResearchRetainedReceiptError):
         ResearchRetainedReceiptClient.from_environment()
+
+
+def test_p05_receipt_seal_body_satisfies_the_control_api_seal_contract(tmp_path: Path, monkeypatch):
+    """Preview finding (2026-09-25): every retained P04 run failed with
+    `P05 seal was refused (400 RESEARCH_INVALID_INPUT)`. The manifest binds a
+    `run_receipt` JSON document whose bytes are in totals.bytes, and part
+    sequence bounds must travel as strings — the local fake accepted both."""
+    client = ResearchRetainedReceiptClient(endpoint="http://control-api:4000", secret="p05-test-principal-secret")
+    calls = []
+
+    def private_post(operation, body):
+        calls.append((operation, body))
+        if operation == "reserve":
+            return {"schema_version": "research.artifact-reservation.v1", "artifact_id": body["artifact_id"],
+                    "artifact_revision": 1, "state": "WRITING", "replayed": False}
+        return {"schema_version": "research.artifact-seal.v1", "sealed": True, "replayed": False}
+
+    monkeypatch.setattr(client, "_post", private_post)
+    client.retain(
+        request=_request(),
+        receipt={"schema_version": "research.p10.delta-qualification-receipt.v1", "engine": {"bars": 500}},
+        artifact_root=tmp_path,
+        fence_validator=lambda fence: True,
+    )
+    seal = calls[1][1]
+    documents = seal.get("documents")
+    assert documents, "the run_receipt document must be named in the seal"
+    assert [document["name"] for document in documents] == ["run_receipt"]
+    assert all(document["relative_path"] == f"documents/{document['name']}.json" for document in documents)
+    assert seal["total_bytes"] == sum(part["byte_count"] for part in seal["parts"]) + sum(d["byte_count"] for d in documents)
+    assert seal["total_rows"] == sum(part["row_count"] for part in seal["parts"])
+    for part in seal["parts"]:
+        for bound in ("sequence_min", "sequence_max"):
+            assert part[bound] is None or isinstance(part[bound], str)
