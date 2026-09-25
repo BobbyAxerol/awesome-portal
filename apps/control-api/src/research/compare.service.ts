@@ -174,7 +174,12 @@ function sourceBindingReady(row: CompareRunRow, split: ResearchSplitSource | nul
     || row.current_dataset_binding_digest === null || row.current_source_transform_digest === null
     || row.manifest_digest === null || row.requested_spec_digest === null
     || row.effective_spec_digest === null || row.dataset_binding_digest === null) return false;
-  return row.current_manifest_digest === row.manifest_digest
+  // CG-P20-12: `manifest_digest` (run_producers) is the preflight dataset/spec
+  // manifest and binds to the P14 receipt below; `current_manifest_digest` is
+  // the sealed P05 artifact's own manifest and binds to that SEALED artifact
+  // row. They are two identities and are never required to be equal.
+  return row.current_artifact_sealed === true
+    && /^[0-9a-f]{64}$/.test(row.current_manifest_digest)
     && row.current_requested_spec_digest === row.requested_spec_digest
     && row.current_effective_spec_digest === row.effective_spec_digest
     && row.current_dataset_binding_digest === row.dataset_binding_digest

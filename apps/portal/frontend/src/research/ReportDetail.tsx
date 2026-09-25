@@ -44,6 +44,7 @@ import {
   type ReportFolds,
 } from "./reportClient";
 import { equitySvg } from "./reportEquity";
+import { releaseCandidateHref } from "./releaseCandidateClient";
 import type { ReportController } from "./useReport";
 import type { ReportExportController } from "./useReportExport";
 import { iso } from "./utcMinute";
@@ -71,7 +72,6 @@ export const PASSPORT_NOTE =
 
 export const CERTIFICATION_ABSENT = "The report contract publishes no certification grade for this run.";
 
-export const RELEASE_UNROUTED = "Screen 11 Release Candidate & Publish has no published route yet.";
 
 export const FOLD_COLUMNS_ABSENT =
   "params, IS, OOS, Δ decay and contribution are not columns the report publishes, so they are not drawn.";
@@ -368,14 +368,10 @@ function NoPrintBar({
         ← Hub · Stage 5 Claim
       </Link>
       <span style={{ color: "var(--ink-faint)" }}>·</span>
-      {/* Screen 11 has no route yet; a link would go nowhere. */}
-      <span
-        data-action-unrouted="release-candidate"
-        title={RELEASE_UNROUTED}
-        style={{ color: "var(--ink-faint)", opacity: 0.6, cursor: "not-allowed" }}
-      >
+      {/* P21: Screen 11 composes and locally seals the candidate for this run. */}
+      <Link to={releaseCandidateHref(runId)} data-action="release-candidate">
         Release Candidate &amp; Publish
-      </span>
+      </Link>
       <span style={{ color: "var(--ink-faint)" }}>/</span>
       <span>Run Report</span>
       <span className="flex flex-wrap items-center gap-1.5">
@@ -828,7 +824,7 @@ function Artifacts({ core }: { core: FrozenCore }) {
   );
 }
 
-function Promotion({ core }: { core: FrozenCore }) {
+function Promotion({ core, runId }: { core: FrozenCore; runId: string }) {
   return (
     <section data-panel="promotion" aria-label="promotion state">
       <h2 className="rr-t2">Promotion state</h2>
@@ -836,6 +832,12 @@ function Promotion({ core }: { core: FrozenCore }) {
         {core.promotion.line}
       </p>
       <AvailabilityAbsent what="promotion" availability={core.promotion.availability} />
+      {/* Spec 11 §1 inbound "09 promotion line"; the printed sheet keeps only the line. */}
+      <p className="rr-note no-print">
+        <Link to={releaseCandidateHref(runId)} data-action="promotion-release-candidate">
+          compose the release candidate for this run →
+        </Link>
+      </p>
     </section>
   );
 }
@@ -1086,7 +1088,7 @@ export function ReportScreen({ runId, cursor, controller, exporter }: ReportScre
             </div>
             <Warnings core={core} />
             <div className="rr-pp rr-keep" data-promotion-provenance>
-              <Promotion core={core} />
+              <Promotion core={core} runId={runId} />
               <Provenance core={core} />
             </div>
           </>

@@ -73,6 +73,7 @@ const ReportRoute = lazyNamed(() => import("../../research/ReportRoute"), "Repor
 const CompareRoute = lazyNamed(() => import("../../research/CompareRoute"), "CompareRoute");
 const CompareResolverRoute = lazyNamed(() => import("../../research/CompareRoute"), "CompareResolverRoute");
 const LineageRoute = lazyNamed(() => import("../../research/LineageRoute"), "LineageRoute");
+const ReleaseCandidateRoute = lazyNamed(() => import("../../research/ReleaseCandidateRoute"), "ReleaseCandidateRoute");
 
 function RunStatusBadge({ status }: { status: string | null }) {
   if (!status) return null;
@@ -239,7 +240,7 @@ function LegacyTabRedirect() {
 
 /** The Research Loop screens mounted through P20. */
 const RESEARCH_SCREEN =
-  /\/research\/quantbt\/(journey|atlas|alpha-import|alphas\/[^/]+\/(lineage|compare)|compare|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report)|runs)\/?$/;
+  /\/research\/quantbt\/(journey|atlas|alpha-import|alphas\/[^/]+\/(lineage|compare)|compare|runs\/new|runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report|release-candidate)|runs)\/?$/;
 
 /** Research screens that draw their own HiFi frame (padding, max width): 01, 03, 04, 05, 06. */
 const OWN_FRAME_SCREEN = /\/research\/quantbt\/(runs|runs\/(?!new\/?$)[^/]+\/(progress|evidence|split|search))\/?$/;
@@ -280,7 +281,7 @@ export function QuantBTModule() {
     /* Screen 03 reads a P11 run through its own contract. The legacy passport
        fetch would ask `/api/runs/{id}` for a run that legacy store never had,
        which is the same defect one level down. */
-    if (/\/runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report)(\/|$)/.test(location.pathname)) return null;
+    if (/\/runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report|release-candidate)(\/|$)/.test(location.pathname)) return null;
     return segment;
   }, [location.pathname]);
 
@@ -414,6 +415,8 @@ export function QuantBTModule() {
         <Route path="runs/:runId/execute" element={<ExecuteRoute />} />
         {/* P18 · Screen 09. */}
         <Route path="runs/:runId/report" element={<ReportRoute />} />
+        {/* P21 · Screen 11, the local-seal composer. P22 publication is not here. */}
+        <Route path="runs/:runId/release-candidate" element={<ReleaseCandidateRoute />} />
         {/* Screen 14's canonical route, resolved as `FD-P09-02`: under QuantBT
           * rather than under the still-COMMISSIONED ALPHA_POOL feature.
           * Legacy `imports` below is untouched. */}

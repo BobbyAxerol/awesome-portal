@@ -28,6 +28,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router-dom";
 
+import { releaseCandidateHref } from "./releaseCandidateClient";
 import { compareHref } from "./compareClient";
 import { ResearchPanel } from "./ResearchPanel";
 import {
@@ -75,7 +76,8 @@ export const PICK_ABSENT = "source did not publish a promotion pick — nothing 
 
 export const NOT_IN_CONTRACT = "not a field of the lineage contract";
 
-export const RC_UNROUTED = "Screen 11 Release Candidate & Publish has no published route yet.";
+/** Screen 11 composes from a run; without a published pick run there is no run to open it for. */
+export const RC_NO_RUN = "No published promotion pick names a run, so there is no run to compose a release candidate from.";
 
 /** The contract gap behind the probe toggle and the band's probe chip. */
 export const PROBES_REASON_CODE = "CG-P19-03";
@@ -747,9 +749,16 @@ function PickRow({
           ) : null}
           {pick.source_digest ? <span title={pick.source_digest}>{` · ${short(pick.source_digest)}`}</span> : null}
           {" → "}
-          <span className="ln-unrouted" title={`rc_ is not a field of the lineage contract; ${RC_UNROUTED}`} data-pick-rc>
-            rc_
-          </span>
+          {pick.run_id ? (
+            /* P21: the pick's run composes its release candidate on Screen 11. */
+            <Link to={releaseCandidateHref(pick.run_id)} title="compose or read this run's release candidate (Screen 11)" data-pick-rc>
+              rc_
+            </Link>
+          ) : (
+            <span className="ln-unrouted" title={`rc_ is not a field of the lineage contract; ${RC_NO_RUN}`} data-pick-rc>
+              rc_
+            </span>
+          )}
         </span>
         <span className="ln-faint ln-long" data-pick-source>
           source {pick.source_contract_rev ?? "revision not published"}
@@ -792,6 +801,11 @@ function RootCard({
 }) {
   const { alpha } = lineage;
   const active = bands.filter((version) => version.lifecycle_state === "ACTIVE");
+  /* Screen 11 composes from a run: the active version's published promotion pick names it. */
+  const pickRun =
+    active
+      .map((version) => version.promotion_pick)
+      .find((pick) => pick !== null && pick.state === "PUBLISHED" && pick.run_id !== null)?.run_id ?? null;
   return (
     <section className="ln-card0" data-panel="root" aria-label="alpha root and version ledger">
       <div className="h">
@@ -810,9 +824,15 @@ function RootCard({
           <Link to={`${RUNS_ROOT}/new`} data-action="new-run">
             new run →
           </Link>
-          <span className="ln-unrouted" title={RC_UNROUTED} aria-label={`rc & publish — ${RC_UNROUTED}`} data-action-unrouted="release-candidate">
-            rc &amp; publish →
-          </span>
+          {pickRun ? (
+            <Link to={releaseCandidateHref(pickRun)} data-action="release-candidate" title="Screen 11 for the active version's promotion pick run">
+              rc &amp; publish →
+            </Link>
+          ) : (
+            <span className="ln-unrouted" title={RC_NO_RUN} aria-label={`rc & publish — ${RC_NO_RUN}`} data-action-unrouted="release-candidate">
+              rc &amp; publish →
+            </span>
+          )}
         </span>
         {/* P20: Screen 13 reads inside this Alpha; kept beside, not inside, the hi-fi's three links. */}
         <span className="ln-compare">

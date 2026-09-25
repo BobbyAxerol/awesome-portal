@@ -632,11 +632,11 @@ describe("S10 Attempt Lineage — the screen", () => {
     expect(pick.querySelector("[data-pick-run]")?.getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/evidence");
     expect(pick.querySelector("[data-pick-source]")?.textContent).toContain("governance.promotion.v1");
     expect(pick.querySelector("[data-pick-source]")?.textContent).toContain("as of 2026-07-25");
-    /* Hi-fi line "att · run · … → rc_": rc is not in the contract, so rc_ is an unrouted span with its reason. */
+    /* Hi-fi line "att · run · … → rc_": W5c — the pick's run opens Screen 11 (P21). */
     expect(pick.querySelector(".v")?.textContent).toBe(`att_03 · run_att_03 · ${hex("9").slice(0, 12)}… → rc_`);
     const rc = pick.querySelector("[data-pick-rc]") as HTMLElement;
-    expect(rc.tagName).toBe("SPAN");
-    expect(rc.getAttribute("title")).toContain(NOT_IN_CONTRACT);
+    expect(rc.tagName).toBe("A");
+    expect(rc.getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/release-candidate");
     /* The pick row sits where the hi-fi puts it: last in the root card, after "untried". */
     expect(panel("root").lastElementChild).toBe(pick);
     /* The superseded version's own published pick is not hidden: its row names it. */
@@ -835,8 +835,11 @@ describe("S10 Attempt Lineage — the screen", () => {
     /* outcome ×2 bands, exercised ×2 bands, untried ×1 */
     expect(within(root).getAllByText(NOT_IN_CONTRACT).length).toBe(5);
     expect(root.querySelectorAll("[data-outcome] [data-absent=outcome]")).toHaveLength(2);
-    const rc = root.querySelector('[data-action-unrouted="release-candidate"]') as HTMLElement;
-    expect(rc.tagName).toBe("SPAN");
+    /* W5c: the active version's published pick names a run, so "rc & publish →" opens Screen 11 for it. */
+    const rc = root.querySelector('[data-action="release-candidate"]') as HTMLElement;
+    expect(rc.tagName).toBe("A");
+    expect(rc.getAttribute("href")).toBe("/research/quantbt/runs/run_att_03/release-candidate");
+    expect(root.querySelector('[data-action-unrouted="release-candidate"]')).toBeNull();
     expect(root.querySelector('[data-action="runs"]')?.getAttribute("href")).toBe(`/research/quantbt/runs?group=1&alpha=${ALPHA}`);
     expect(root.querySelector('[data-action="declare-at-new-run"]')?.getAttribute("href")).toBe("/research/quantbt/runs/new");
     expect(panel("selected").querySelector('[data-row-key="certification · OOS · decay"]')?.textContent).toBe(NOT_IN_CONTRACT);

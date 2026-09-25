@@ -72,6 +72,7 @@ function row(runId: string, overrides: Partial<CompareRunRow> = {}): CompareRunR
     split_projection: { schema_version: "research.split-projection.v1", source: split() },
     current_artifact_revision: 1,
     current_manifest_digest: digest("b"),
+    current_artifact_sealed: true,
     current_requested_spec_digest: digest("d"),
     current_effective_spec_digest: digest("e"),
     current_dataset_binding_digest: digest("f"),
@@ -179,6 +180,47 @@ describe("P20 bounded Compare persisted truth", () => {
     });
     expect(response.result.pair.runs[0].original_metrics[0]).toMatchObject({ scope: "P13_OOS_EQUITY_SERIES", value: "0.1" });
     expect(response.result.pair.common_window.metrics[2]).toMatchObject({ key: "TRADE_COUNT", availability: { state: "NOT_APPLICABLE" } });
+  });
+
+  /*
+   * CG-P20-12 (W5c). `run_producers.manifest_digest` is the preflight
+   * (dataset/spec) manifest; `current_source_seals_v1.manifest_digest` is the
+   * sealed P05 artifact's own manifest. On a real WFO run they always differ,
+   * so requiring them equal made every WFO pair "not source-bound". Each is
+   * now bound to its own identity: the preflight manifest to the P14 receipt,
+   * the retained seal to the SEALED artifact row at the same revision.
+   */
+  it("CG-P20-12 binds the retained seal to its own sealed artifact, not to the preflight manifest", async () => {
+    const wfo = (runId: string, overrides: Partial<CompareRunRow> = {}) =>
+      row(runId, { current_manifest_digest: digest(runId.endsWith("left") ? "c" : "7"), current_artifact_sealed: true, ...overrides });
+    const bound = subject(snapshot([wfo("run-p20-left"), wfo("run-p20-right")]));
+    const ok = await bound.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    expect(ok.result).toMatchObject({ mode: "pair", state: "AVAILABLE" });
+    expect(bound.repository.pairRaw).toHaveBeenCalledTimes(1);
+
+    for (const broken of [
+      { current_artifact_sealed: false },
+      { current_artifact_sealed: null },
+      { current_manifest_digest: "not-a-digest" },
+    ] as Partial<CompareRunRow>[]) {
+      const refused = subject(snapshot([wfo("run-p20-left", broken), wfo("run-p20-right")]));
+      const answer = await refused.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+      expect(answer.result).toMatchObject({ mode: "pair", state: "PARTIAL" });
+      expect(JSON.stringify(answer.result)).toContain("P20_CURRENT_SOURCE_SEAL_DOES_NOT_MATCH_P14_AND_RUN_BINDINGS");
+      expect(refused.repository.pairRaw).not.toHaveBeenCalled();
+    }
+
+    /* The preflight manifest is still bound to the P14 receipt. */
+    const splitMismatch = subject(snapshot([wfo("run-p20-left", { manifest_digest: digest("8") }), wfo("run-p20-right")]));
+    const mismatch = await splitMismatch.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    expect(mismatch.result).toMatchObject({ mode: "pair", state: "PARTIAL" });
+    expect(splitMismatch.repository.pairRaw).not.toHaveBeenCalled();
+
+    /* A run with no retained seal (the P04 fixed qualification) stays unbound, as before. */
+    const p04 = subject(snapshot([row("run-p20-left", { current_artifact_revision: null, current_manifest_digest: null, current_artifact_sealed: null }), wfo("run-p20-right")]));
+    const unbound = await p04.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    expect(unbound.result).toMatchObject({ mode: "pair", state: "PARTIAL" });
+    expect(p04.repository.pairRaw).not.toHaveBeenCalled();
   });
 
   it("P20-T05/T11 never substitutes zero for insufficient, zero-variance or no-overlap correlation", async () => {

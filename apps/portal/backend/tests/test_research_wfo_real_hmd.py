@@ -278,6 +278,40 @@ def test_w1_real_hmd_delta_wfo_child_within_half_the_cap(tmp_path: Path) -> None
             "expected": dr["expected"],
         }, sort_keys=True))
 
+    # W5b (P17): the child's own account ledger, bar by bar, on real HMD.
+    from test_current_source_w5b_replay import _assert_replay_ledger
+
+    rows_by_kind: dict[str, list[dict]] = {}
+    for batch in batches:
+        rows_by_kind.setdefault(batch.table_kind, []).extend(dict(row) for row in batch.rows)
+    replay = _assert_replay_ledger(ArtifactRepository(source_root), run_id, exported, rows_by_kind)
+    print("W5B_REAL_HMD_REPLAY " + json.dumps(replay, sort_keys=True))
+    replay_export = os.getenv("PORTAL_W5B_REPLAY_EXPORT_DIR")
+    if replay_export:
+        # Opt-in hand-off to the Control API replay spec
+        # (apps/control-api/test/research-w5b-replay.spec.ts): every retained
+        # row the worker would POST, with the seal facts, from the real child.
+        Path(replay_export).mkdir(parents=True, exist_ok=True)
+        (Path(replay_export) / "research-w5b-real-replay.fixture.json").write_text(json.dumps({
+            "_provenance": (
+                "W5b real-HMD export (apps/portal/backend/tests/test_research_wfo_real_hmd.py with "
+                "PORTAL_W5B_REPLAY_EXPORT_DIR): BTCUSDT 1h 2026-06-01..07-15, first OOS 2026-07-01, weekly "
+                "expanding, QuantBT 1.1.1 Delta signal-notional WFO through the P06 child, 3 trials, seed 42."
+            ),
+            "run_id": run_id,
+            "manifest_digest": exported.receipt.manifest_digest,
+            "source_transform_digest": exported.receipt.source_transform_digest,
+            "table_rows": {
+                "OBSERVATION": exported.receipt.table_rows["observations"],
+                "FOLD": exported.receipt.table_rows["folds"],
+                "TRIAL": exported.receipt.table_rows["trials"],
+                "CANDIDATE": exported.receipt.table_rows["candidates"],
+                "SELECTION": exported.receipt.table_rows["selection"],
+            },
+            "summary": exported.receipt.summary,
+            "rows": rows_by_kind,
+        }, sort_keys=True, separators=(",", ":")))
+
     assert result.n_folds >= 2
     assert result.trial_rows == 3
     assert exported.receipt.table_rows["folds"] >= 2

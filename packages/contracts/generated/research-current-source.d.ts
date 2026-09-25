@@ -122,6 +122,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/quantbt/runs/{runId}/current-source/replay/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description W5b: target transitions settled at the close with the account fee, keyset over the original bar ordinal. Private/no-store; never fills, never a trade pairing. */
+        get: operations["researchCurrentSourceReplayTransitionsGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/quantbt/runs/{runId}/current-source/replay/child-audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description P17-T14: one fold's child audit from the sealed local FOLD row; no compute, no source read. */
+        get: operations["researchCurrentSourceReplayChildAuditGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -573,6 +607,7 @@ export interface components {
             accepted_position: components["schemas"]["Decimal"];
             drawdown_fraction: components["schemas"]["Decimal"];
             signal_target: components["schemas"]["Decimal"] | null;
+            bar: components["schemas"]["ReplayBar"] | null;
             playback_cursor: components["schemas"]["OpaqueCursor"];
         };
         Replay: components["schemas"]["Common"] & {
@@ -589,6 +624,7 @@ export interface components {
                     at_utc_ms: components["schemas"]["UtcMs"] | null;
                     accepted_position: components["schemas"]["Decimal"] | null;
                     equity: components["schemas"]["Decimal"] | null;
+                    bar: components["schemas"]["ReplayBar"] | null;
                     /** @enum {string} */
                     semantics: "NO_SELECTED_PLAYHEAD" | "RESEARCH_MODEL_SAMPLE_NOT_BROKER_EXECUTION_STATE";
                     availability: components["schemas"]["Availability"];
@@ -600,7 +636,20 @@ export interface components {
                 orders: components["schemas"]["Fact"];
                 fills: components["schemas"]["Fact"];
                 candles: components["schemas"]["Fact"];
+                transitions: components["schemas"]["Fact"];
+                fees: components["schemas"]["Fact"];
+                funding: components["schemas"]["Fact"];
+                fold_capital: components["schemas"]["Fact"];
+                trades: components["schemas"]["Fact"];
+                partial_fills: components["schemas"]["Fact"];
+                oco: components["schemas"]["Fact"];
+                multi_leg: components["schemas"]["Fact"];
+                sl_tp: components["schemas"]["Fact"];
+                mae_mfe: components["schemas"]["Fact"];
+                execution_events: components["schemas"]["Fact"];
+                child_audit: components["schemas"]["Fact"];
             };
+            execution: components["schemas"]["ReplayExecution"];
         };
         /** @description RF-05 CG-P13-09: the run's immutable P10 adapter binding is the P04 fixed qualification, which can never be sealed into the RS-02 Advanced-WFO lane. Nothing is pending; do not retry. */
         LaneNotApplicable: {
@@ -620,7 +669,7 @@ export interface components {
                 /** @constant */
                 state: "NOT_APPLICABLE";
                 /** @enum {unknown} */
-                operation: "evidence" | "evidence_series" | "split" | "search" | "freeze" | "replay";
+                operation: "evidence" | "evidence_series" | "split" | "search" | "freeze" | "replay" | "replay_transitions" | "replay_child_audit";
                 /** @constant */
                 run_profile: "P04_FIXED_QUALIFICATION";
                 run_adapter_contract_digest: components["schemas"]["Digest"];
@@ -639,6 +688,7 @@ export interface components {
         LaneState: "PENDING_SOURCE" | "PENDING_RETENTION" | "NOT_RETAINED_LEGACY" | "NOT_RETAINED_TERMINAL";
         Problem: {
             error: {
+                /** @description A ProblemCode on these routes; the session guard may answer 401 with its own code. */
                 code: string;
                 message: string;
             };
@@ -840,6 +890,220 @@ export interface components {
             /** @enum {string} */
             objective_kind: "IS_MEAN_SHARPE" | "MODE_1_DECAY_J" | "NOT_PUBLISHED";
         };
+        /**
+         * @description CG-P17-02: every `error.code` a retained current-source read can return. 409 CONFLICT carries `details.lane_state`; SEQUENCE_GAP (503, W5b) is a retained relation read back with a hole — never retried into an invented row.
+         * @enum {unknown}
+         */
+        ProblemCode: "RESEARCH_CURRENT_SOURCE_INVALID" | "RESEARCH_CURRENT_SOURCE_FORBIDDEN" | "RESEARCH_CURRENT_SOURCE_NOT_FOUND" | "RESEARCH_CURRENT_SOURCE_CONFLICT" | "RESEARCH_CURRENT_SOURCE_CURSOR_EXPIRED" | "RESEARCH_CURRENT_SOURCE_UNAVAILABLE" | "RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP";
+        /** @description W5b: one bar of the final account. `transition` is a change of the engine's accepted position; on close_target_v2 it is settled at the close and is never a fill. */
+        ReplayBar: {
+            candle: {
+                open: components["schemas"]["Decimal"];
+                high: components["schemas"]["Decimal"];
+                low: components["schemas"]["Decimal"];
+                close: components["schemas"]["Decimal"];
+                volume: components["schemas"]["Decimal"] | null;
+            } | null;
+            fee: components["schemas"]["Decimal"] | null;
+            turnover: components["schemas"]["Decimal"] | null;
+            funding: components["schemas"]["Decimal"] | null;
+            rejected_orders: number | null;
+            position_before: components["schemas"]["Decimal"] | null;
+            transition: boolean;
+            fold_id: string | null;
+            checkpoint: {
+                cumulative_fee: components["schemas"]["Decimal"] | null;
+                cumulative_turnover: components["schemas"]["Decimal"] | null;
+                cumulative_funding: components["schemas"]["Decimal"] | null;
+                transition_count: number;
+                rejected_orders: number | null;
+            };
+        };
+        FoldSegment: {
+            fold_id: string;
+            first_ordinal: number;
+            last_ordinal: number;
+            bars: number;
+            /** @enum {string} */
+            start_basis: "PREVIOUS_OBSERVATION" | "FIRST_WINDOW_OBSERVATION";
+            start_equity: components["schemas"]["Decimal"];
+            end_equity: components["schemas"]["Decimal"];
+            start_position: components["schemas"]["Decimal"] | null;
+            end_position: components["schemas"]["Decimal"];
+            transitions: number;
+            fee: components["schemas"]["Decimal"] | null;
+            turnover: components["schemas"]["Decimal"] | null;
+            start_cursor: components["schemas"]["OpaqueCursor"];
+        };
+        /** @description W5b: what the signal-notional route really produced, retained at seal time. */
+        ReplayExecution: {
+            /** @constant */
+            schema_version: "research.current-source-replay-execution.v1";
+            /** @enum {string} */
+            state: "AVAILABLE" | "NOT_RETAINED_LEGACY";
+            reason_code: string | null;
+            route: {
+                engine_id: string | null;
+                signal_phase: string | null;
+                fill_phase: string | null;
+                accounting_certified: boolean | null;
+                fill_price_policy: string | null;
+                target_intent_kind: string | null;
+                intrabar_exit_model: string | null;
+                same_bar_policy: string | null;
+                allow_partial_fill: boolean | null;
+                oms_mode: string | null;
+                margin_mode: string | null;
+                report_level: string | null;
+                fee_rate_oneway: components["schemas"]["Decimal"] | null;
+                slippage_bps: components["schemas"]["Decimal"] | null;
+                use_funding: boolean | null;
+            };
+            counts: {
+                bars: number | null;
+                orders_published: number | null;
+                fills_published: number | null;
+                trades_published: number | null;
+                transitions: number | null;
+                bars_with_turnover: number | null;
+                rejected_orders: number | null;
+            };
+            totals: {
+                fee: components["schemas"]["Decimal"] | null;
+                turnover: components["schemas"]["Decimal"] | null;
+                funding: components["schemas"]["Decimal"] | null;
+            };
+            fold_capital: {
+                policy: string | null;
+                account_execution: string | null;
+                boundary_position_policy: string | null;
+                /**
+                 * @description CONTINUOUS: one stitched account (fold k starts at fold k-1's end equity). RESET_PER_FOLD: each fold is its own account and must not be compounded.
+                 * @enum {string}
+                 */
+                equity_continuity: "CONTINUOUS_ACROSS_FOLDS" | "RESET_PER_FOLD" | "NOT_ASSERTED";
+                reason_code: string | null;
+                segments: components["schemas"]["FoldSegment"][];
+                boundary_events: {
+                    previous_fold_id: string | null;
+                    fold_id: string | null;
+                    boundary_utc_ms: components["schemas"]["UtcMs"] | null;
+                    next_test_start_utc_ms: components["schemas"]["UtcMs"] | null;
+                    gap_bars: number | null;
+                    policy: string | null;
+                }[];
+            };
+            candle_overview: {
+                source_bar_count: number;
+                emitted_bucket_count: number;
+                bucket_bars: number;
+                /** @enum {string} */
+                sampling: "FULL" | "OHLC_BUCKET_V1";
+                envelope: {
+                    max_high: components["schemas"]["Decimal"];
+                    max_high_at_utc_ms: components["schemas"]["UtcMs"];
+                    min_low: components["schemas"]["Decimal"];
+                    min_low_at_utc_ms: components["schemas"]["UtcMs"];
+                };
+                values: {
+                    first_ordinal: number;
+                    last_ordinal: number;
+                    open_utc_ms: components["schemas"]["UtcMs"];
+                    close_utc_ms: components["schemas"]["UtcMs"];
+                    open: components["schemas"]["Decimal"];
+                    high: components["schemas"]["Decimal"];
+                    low: components["schemas"]["Decimal"];
+                    close: components["schemas"]["Decimal"];
+                    volume: components["schemas"]["Decimal"] | null;
+                    transitions: number;
+                }[];
+            } | null;
+            child_audit: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                policy: string | null;
+                records_dropped_by_source: number | null;
+                source_record_count: number | null;
+                source_run_fingerprint: string | null;
+            };
+            sequence: {
+                /** @constant */
+                order: "SOURCE_TABLE_ORDINAL_ASC";
+                /** @constant */
+                density: "DENSE_SEALED_ORDINALS";
+                /** @constant */
+                gap_policy: "REFUSE_RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP";
+                /** @constant */
+                cross_stream_order: "NOT_ASSERTED";
+            };
+        };
+        TransitionRow: {
+            /** @description Original bar ordinal; sparse across transitions, never renumbered. */
+            source_ordinal: number;
+            /** Format: date-time */
+            source_index_utc: string;
+            at_utc_ms: components["schemas"]["UtcMs"];
+            transition_number: number;
+            fold_id: string | null;
+            /** @enum {string} */
+            kind: "ENTRY" | "EXIT" | "FLIP" | "RESIZE";
+            /** @enum {string} */
+            side_after: "LONG" | "SHORT" | "FLAT";
+            position_before: components["schemas"]["Decimal"] | null;
+            position_after: components["schemas"]["Decimal"];
+            close: components["schemas"]["Decimal"] | null;
+            turnover: components["schemas"]["Decimal"] | null;
+            fee: components["schemas"]["Decimal"] | null;
+            equity: components["schemas"]["Decimal"];
+            playback_cursor: components["schemas"]["OpaqueCursor"];
+        };
+        ReplayTransitions: components["schemas"]["Common"] & {
+            /** @constant */
+            schema_version: "research.current-source-replay-transitions.v1";
+            /** @constant */
+            semantics: "TARGET_TRANSITION_SETTLED_AT_CLOSE_NOT_A_FILL";
+            availability_reason: string | null;
+            source_transition_count: number | null;
+            rows: components["schemas"]["TransitionRow"][];
+            page: components["schemas"]["Page"];
+        };
+        ChildAuditRecord: {
+            /** @description Row in QuantBT's own strategy_lifecycle_table: the original child-audit id. */
+            audit_ordinal: number;
+            candidate_id: string | null;
+            fold_id: string;
+            seed: number | null;
+            context: string | null;
+            lifecycle_kind: string | null;
+            policy: string | null;
+            certified_isolation: boolean | null;
+            spawned: boolean | null;
+            reset_called: boolean | null;
+            warmup_called: boolean | null;
+            warmup_bars: number | null;
+            closed: boolean | null;
+            state_before: string | null;
+            cutoff_utc_ms: components["schemas"]["UtcMs"] | null;
+            train_start_utc_ms: components["schemas"]["UtcMs"] | null;
+            train_end_utc_ms: components["schemas"]["UtcMs"] | null;
+            test_start_utc_ms: components["schemas"]["UtcMs"] | null;
+            test_end_utc_ms: components["schemas"]["UtcMs"] | null;
+            strategy_fingerprint: string | null;
+            market_fingerprint: string | null;
+        };
+        ReplayChildAudit: components["schemas"]["Common"] & {
+            /** @constant */
+            schema_version: "research.current-source-replay-child-audit.v1";
+            fold_id: string;
+            reason_code: string | null;
+            policy: string | null;
+            records_dropped_by_source: number | null;
+            source_run_fingerprint: string | null;
+            source_record_count: number | null;
+            truncated: boolean;
+            records: components["schemas"]["ChildAuditRecord"][];
+        };
     };
     responses: {
         /** @description Typed refusal with no source path, table selector, artifact locator, lease, raw market slice or credential. */
@@ -909,6 +1173,25 @@ export interface components {
                 "application/json": components["schemas"]["Replay"] | components["schemas"]["LaneNotApplicable"];
             };
         };
+        /** @description W5b close-target transition ledger */
+        ReplayTransitions: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ReplayTransitions"] | components["schemas"]["LaneNotApplicable"];
+            };
+        };
+        /** @description P17-T14 one fold's QuantBT strategy-isolation records */
+        ReplayChildAudit: {
+            headers: {
+                ETag: components["headers"]["Etag"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ReplayChildAudit"] | components["schemas"]["LaneNotApplicable"];
+            };
+        };
     };
     parameters: {
         RunId: components["schemas"]["RunId"];
@@ -924,6 +1207,9 @@ export interface components {
         IfNoneMatch: string;
         /** @description W3: keep ledger rows whose published fold scope covers this retained fold id; cursors bind the filter. */
         Fold: string;
+        TransitionsLimit: number;
+        /** @description P17-T14: a retained fold id (the split's fold_id). */
+        ChildAuditFold: string;
     };
     requestBodies: never;
     headers: {
@@ -1144,6 +1430,64 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: components["responses"]["Replay"];
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchCurrentSourceReplayTransitionsGetV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                cursor?: components["parameters"]["Cursor"];
+                before?: components["parameters"]["Before"];
+                limit?: components["parameters"]["TransitionsLimit"];
+            };
+            header?: never;
+            path: {
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReplayTransitions"];
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchCurrentSourceReplayChildAuditGetV1: {
+        parameters: {
+            query: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                /** @description P17-T14: a retained fold id (the split's fold_id). */
+                fold: components["parameters"]["ChildAuditFold"];
+            };
+            header?: {
+                "If-None-Match"?: components["parameters"]["IfNoneMatch"];
+            };
+            path: {
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReplayChildAudit"];
+            /** @description Exact immutable revision unchanged */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];

@@ -42,6 +42,13 @@ export type CurrentSourceLaneNotApplicable = SourceSchemas["LaneNotApplicable"];
 export type CurrentSourceObservation = SourceSchemas["Observation"];
 export type CurrentSourceFact = SourceSchemas["Fact"];
 export type RetainedCapabilityKey = keyof CurrentSourceReplay["route_capabilities"];
+/** W5b: the retained bar ledger (candles, target transitions, fold capital). */
+export type FoldSegment = SourceSchemas["FoldSegment"];
+export type TransitionRow = SourceSchemas["TransitionRow"];
+export type ReplayTransitions = SourceSchemas["ReplayTransitions"];
+/** P17-T14: one fold's QuantBT strategy-isolation records. */
+export type ReplayChildAudit = SourceSchemas["ReplayChildAudit"];
+export type ChildAuditRecord = SourceSchemas["ChildAuditRecord"];
 
 const RUNS = "/api/v1/quantbt/runs";
 
@@ -127,6 +134,7 @@ export const replayApi = {
     options: {
       workspaceId?: string;
       signal?: AbortSignal;
+      limit?: number;
       navigation?: Exclude<ReplayNavigation, { kind: "at_ordinal" }>;
     } = {},
   ) =>
@@ -134,6 +142,34 @@ export const replayApi = {
       `${RUNS}/${encodeURIComponent(runId)}/current-source/replay${replayQuery(options.navigation ?? { kind: "first" }, options)}`,
       options.signal,
     ),
+
+  /**
+   * `researchCurrentSourceReplayTransitionsGetV1` (W5b) — the close-target
+   * transition ledger, one page by the ledger's own opaque cursor.
+   */
+  currentSourceTransitions: (
+    runId: string,
+    options: {
+      workspaceId?: string;
+      signal?: AbortSignal;
+      limit?: number;
+      navigation?: { kind: "first" } | { kind: "cursor"; token: string } | { kind: "before"; token: string };
+    } = {},
+  ) =>
+    call<ReplayTransitions | CurrentSourceLaneNotApplicable>(
+      `${RUNS}/${encodeURIComponent(runId)}/current-source/replay/transitions${replayQuery(options.navigation ?? { kind: "first" }, options)}`,
+      options.signal,
+    ),
+
+  /** `researchCurrentSourceReplayChildAuditGetV1` (P17-T14) — one fold's child audit. */
+  currentSourceChildAudit: (runId: string, fold: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) => {
+    const params = new URLSearchParams({ fold });
+    if (options.workspaceId) params.set("workspace_id", options.workspaceId);
+    return call<ReplayChildAudit | CurrentSourceLaneNotApplicable>(
+      `${RUNS}/${encodeURIComponent(runId)}/current-source/replay/child-audit?${params.toString()}`,
+      options.signal,
+    );
+  },
 } as const;
 
 /* -------------------------------------------------------------------------
@@ -245,6 +281,19 @@ export const RETAINED_CAPABILITY_LABEL: Record<RetainedCapabilityKey, string> = 
   orders: "orders",
   fills: "fills",
   candles: "candles",
+  /* W5b: the bar ledger's facts. */
+  transitions: "target transitions",
+  fees: "fees",
+  funding: "funding",
+  fold_capital: "fold capital",
+  trades: "trades",
+  partial_fills: "partial fills",
+  oco: "OCO",
+  multi_leg: "multi-leg",
+  sl_tp: "SL/TP",
+  mae_mfe: "MAE × MFE",
+  execution_events: "execution events",
+  child_audit: "child audit",
 };
 
 /**

@@ -7,7 +7,10 @@ export class ResearchCurrentSourceError extends Error {
       | "RESEARCH_CURRENT_SOURCE_NOT_FOUND"
       | "RESEARCH_CURRENT_SOURCE_CONFLICT"
       | "RESEARCH_CURRENT_SOURCE_CURSOR_EXPIRED"
-      | "RESEARCH_CURRENT_SOURCE_UNAVAILABLE",
+      | "RESEARCH_CURRENT_SOURCE_UNAVAILABLE"
+      // W5b (P17-T04): a retained relation read back with a hole in its
+      // dense sealed ordinals. Never retried into a fabricated row.
+      | "RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP",
     message: string,
     readonly status: 400 | 403 | 404 | 409 | 503,
     /**

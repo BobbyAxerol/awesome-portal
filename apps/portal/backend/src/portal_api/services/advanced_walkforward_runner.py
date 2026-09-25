@@ -227,6 +227,7 @@ class AdvancedWalkForwardRunner:
         result = endpoint.result
         series = _stitched_series(active_market.frame, result)
         self._artifacts.write_frame(run_id, "series/stitched.parquet", series)
+        self._write_account_ledger(run_id, active_market.frame, result, wf)
         non_finite: list[str] = []
         clean_metrics = _sanitize({"stitched": metrics}, non_finite=non_finite)
         warnings = [f"non-finite metric field: {path}" for path in non_finite]
@@ -421,6 +422,119 @@ class AdvancedWalkForwardRunner:
                     "final_account": account,
                 }),
             ),
+        )
+
+    def _write_account_ledger(
+        self,
+        run_id: str,
+        market_frame: pd.DataFrame,
+        result: Any,
+        wf: Mapping[str, Any],
+    ) -> None:
+        """Retain the final account's per-bar cost/turnover series (W5b, P17).
+
+        ``BacktestResultV2`` publishes ``fees``, ``funding`` and the
+        ``diagnostics`` frame (turnover, rejected orders, reject code) for
+        every bar of the stitched account, plus order/fill/trade tuples. On the
+        ``close_target_v2`` route those tuples are empty — the engine rebalances
+        a target at the bar close and emits no order or fill object — so this
+        artifact records the counts it saw instead of inventing records.
+
+        Two additive, versioned files; ``series/stitched.parquet`` keeps its
+        exact v1 shape. Nothing here is derived: every column is a QuantBT
+        series reindexed to the analysed market bars.
+        """
+
+        index = market_frame.index
+        ledger = pd.DataFrame(index=index)
+
+        def series(value: Any) -> pd.Series | None:
+            return value if isinstance(value, pd.Series) and len(value) else None
+
+        fees = series(getattr(result, "fees", None))
+        funding = series(getattr(result, "funding", None))
+        diagnostics = getattr(result, "diagnostics", None)
+        if fees is not None:
+            ledger["fee"] = fees.reindex(index).astype(float)
+        if funding is not None:
+            ledger["funding"] = funding.reindex(index).astype(float)
+        if isinstance(diagnostics, pd.DataFrame) and not diagnostics.empty:
+            for column in ("turnover", "rejected_orders", "reject_code"):
+                if column in diagnostics.columns:
+                    ledger[column] = diagnostics[column].reindex(index)
+        if not len(ledger.columns):
+            return
+        self._artifacts.write_frame(run_id, "series/account_ledger.v1.parquet", ledger)
+
+        # P17-T14: QuantBT's own strategy-isolation audit, one row per child
+        # strategy instance (candidate × fold × context), verbatim. Written
+        # only when the engine published it; nothing is derived here.
+        lifecycle = wf.get("strategy_lifecycle_table")
+        if isinstance(lifecycle, pd.DataFrame) and not lifecycle.empty:
+            self._artifacts.write_frame(run_id, "wfo/strategy_lifecycle.v1.parquet", lifecycle.reset_index(drop=True))
+            self._artifacts.write_json(
+                run_id,
+                "wfo/strategy_lifecycle_contract.v1.json",
+                with_portal_provenance("strategy_lifecycle_contract.v1.json", canonicalize({
+                    "schema_version": "portal.wfo-strategy-lifecycle-contract.v1",
+                    "source": "QuantBT walk_forward strategy_lifecycle_table",
+                    "policy": _sanitize(wf.get("strategy_lifecycle_policy")),
+                    "records_dropped": _sanitize(wf.get("strategy_lifecycle_records_dropped")),
+                    "rows": int(len(lifecycle)),
+                })),
+            )
+
+        metadata = getattr(result, "metadata", None)
+        metadata = metadata if isinstance(metadata, Mapping) else {}
+        run_config = metadata.get("run_config") if isinstance(metadata.get("run_config"), Mapping) else {}
+        execution = run_config.get("execution") if isinstance(run_config.get("execution"), Mapping) else {}
+        account = run_config.get("account") if isinstance(run_config.get("account"), Mapping) else {}
+        plan = wf.get("account_execution_plan")
+        boundary_events = []
+        if isinstance(plan, Mapping) and isinstance(plan.get("boundary_events"), (list, tuple)):
+            for event in plan["boundary_events"]:
+                if isinstance(event, Mapping):
+                    boundary_events.append(_sanitize({
+                        key: event.get(key)
+                        for key in (
+                            "previous_fold_id", "fold_id", "boundary_timestamp",
+                            "next_test_start", "gap_bars", "policy", "event",
+                        )
+                        if key in event
+                    }))
+        contract = {
+            "schema_version": "portal.wfo-account-contract.v1",
+            "source": "QuantBT walk_forward final account result (BacktestResultV2) and account_execution_plan",
+            # What the result object actually carried, counted — not assumed.
+            "orders_published": len(getattr(result, "orders", ()) or ()),
+            "fills_published": len(getattr(result, "fills", ()) or ()),
+            "trades_published": len(getattr(result, "trades", ()) or ()),
+            "account_execution_plan": None if not isinstance(plan, Mapping) else _sanitize({
+                "schema": plan.get("schema"),
+                "policy": plan.get("policy"),
+                "execution_mode": plan.get("execution_mode"),
+                "boundary_events": boundary_events,
+            }),
+        }
+        for key in (
+            "orders_count", "fills_count", "target_intent_kind", "first_bar_target_policy",
+            "intrabar_exit_model", "slippage_bps", "fee_rate_oneway", "use_funding",
+        ):
+            if key in metadata:
+                contract[key] = _sanitize(metadata.get(key))
+        for key in ("fill_price_policy", "same_bar_policy", "allow_partial_fill"):
+            if key in execution:
+                contract[key] = _sanitize(execution.get(key))
+        for key in ("oms_mode", "margin_mode"):
+            if key in account:
+                contract[key] = _sanitize(account.get(key))
+        for key in ("report_level", "portfolio_mode"):
+            if key in run_config:
+                contract[key] = _sanitize(run_config.get(key))
+        self._artifacts.write_json(
+            run_id,
+            "wfo/account_contract.v1.json",
+            with_portal_provenance("account_contract.v1.json", canonicalize(contract)),
         )
 
     def _write_compatible_fold_tables(self, run_id: str, table: pd.DataFrame) -> None:

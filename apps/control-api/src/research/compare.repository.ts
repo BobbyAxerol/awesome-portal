@@ -49,6 +49,8 @@ export interface CompareRunRow {
   split_projection: JsonColumn;
   current_artifact_revision: string | number | null;
   current_manifest_digest: string | null;
+  /** CG-P20-12: the retained seal names the SEALED P05 artifact at its own revision. */
+  current_artifact_sealed: boolean | null;
   current_requested_spec_digest: string | null;
   current_effective_spec_digest: string | null;
   current_dataset_binding_digest: string | null;
@@ -363,6 +365,16 @@ export class ResearchCompareRepository {
                 split.projection_revision AS split_revision, split.projection AS split_projection,
                 current_source.artifact_revision AS current_artifact_revision,
                 current_source.manifest_digest AS current_manifest_digest,
+                -- CG-P20-12: the retained seal's manifest is the sealed P05
+                -- artifact's own identity, never the preflight manifest.
+                CASE WHEN current_source.artifact_revision IS NULL THEN NULL ELSE EXISTS (
+                  SELECT 1 FROM research.artifacts sealed_artifact
+                   WHERE sealed_artifact.workspace_id = attempt.workspace_id
+                     AND sealed_artifact.run_id = primary_run.run_id
+                     AND sealed_artifact.artifact_revision = current_source.artifact_revision
+                     AND sealed_artifact.manifest_digest = current_source.manifest_digest
+                     AND sealed_artifact.state = 'SEALED'
+                ) END AS current_artifact_sealed,
                 current_source.requested_spec_digest AS current_requested_spec_digest,
                 current_source.effective_spec_digest AS current_effective_spec_digest,
                 current_source.dataset_binding_digest AS current_dataset_binding_digest,
@@ -392,7 +404,7 @@ export class ResearchCompareRepository {
              SELECT snapshot
                FROM research.run_progress_snapshots progress
               WHERE progress.workspace_id = attempt.workspace_id AND progress.run_id = primary_run.run_id
-              ORDER BY progress.updated_at DESC
+              ORDER BY progress.received_at DESC
               LIMIT 1
            ) snapshot ON TRUE
            LEFT JOIN LATERAL (
