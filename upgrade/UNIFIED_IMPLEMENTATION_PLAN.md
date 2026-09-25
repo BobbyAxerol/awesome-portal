@@ -5756,6 +5756,100 @@ normalization escapes/non-JSON/oversized responses. Harness 6/6 passes; the
 uncapped shared preview fails strict mode as expected. W06/fault/restore/
 upgrade and browser evidence are still required for P23 qualification.
 
+<a id="p23-thanhvuong-qualification-note-2026-09-25"></a>
+#### P23 Thanhvuong qualification note (2026-09-25)
+
+**Trạng thái:** `QUALIFICATION-PARTIAL-CONTRIBUTOR (fixture + disposable-PG lanes) / thanhvuong / STACK_LANES_BLOCKED · REQUIRES_BOBBY_DECISION (B-P23-01)`.
+
+- **Phạm vi:** theo D3 (`0fa3c385`), P22+ là việc của Codex. Quyết định Bobby 2026-09-25 (`1ff3f2d4`) không nhắc P23. Bản này do Thanhvuong (Claude) làm theo chỉ đạo của Vuong ("tiếp tục làm P23 theo các rules cũ"), trên nhánh contributor `feat/thanhvuong/research-p17-p21`, đã push lên `primus-origin`, không PR, không merge. P23 là qualification phase: deliverable là evidence đo được + runner đã commit, không có product code, migration, flag hay service. Contributor chạy được:
+  - cell PostgreSQL dùng một lần (`scripts/control-api-test.sh`, rootless Docker, network `--internal`, không host port);
+  - gate static/unit/build;
+  - fixture lane trên preview riêng `127.0.0.1:4417`.
+
+  Contributor không có stack Research (portal-api + control-api + PG + NATS + MinIO + quant-worker-py), lane Python backend hay dev host. Baseline `primus-origin/docs/research-loop-plan` là `1ff3f2d4` lúc plan và `33c46b84` lúc đóng packet (27 commit W5a–W6a, trong đó có đổi locator của VD-P23-01/03 và S01). Merge-base `a5455848`. P21 + P22 + P23 của nhánh này chưa merge.
+- **Goal:** đo và ghi trung thực phần qualification P23 mà một contributor chạy được. Mọi test cần stack đều `BLOCKED` kèm lý do và request, không mô phỏng, không `NOT_APPLICABLE`.
+- **Đã giao:**
+  - `35d0c861` (tree `5d5ffc88`, trên `29feefb8`): test(research): P23 contributor qualification runner for the Research screens (fixture lane), 9 file +2492/−0.
+    - Config `apps/portal/frontend/playwright.research-qualification.config.ts`: bắt buộc có `RESEARCH_QUAL_BASE_URL` + `P23_SHOT_DIR`, không `webServer`, `workers: 1`.
+    - `e2e/research-qualification/`: `_probe-p23-{matrix,load,interaction,cycles,stale}.spec.ts` (78 test), `harness.ts`, `stubs.ts` (builder typed `satisfies` theo contract sinh ra), `tsconfig.json`.
+    - Runner nằm ngoài visual baseline (`testIgnore` `**/_probe*.spec.ts`) và ngoài config research-probe (`--list` 348/8 · 82/2 · 78/5, không chồng nhau).
+  - Packet 5 file + handoff (docs, 2 commit; xem git log).
+- **Evidence (A2 tại `29feefb8`; B tại `35d0c861`):**
+  - `persistence-vs-api` PASS: cell PG thật 117/117 file · 834/834 test, exit 0.
+    - Drill `pg_dump → pg_restore` so signature 56 relation (chỉ DB, không byte artifact).
+    - `research-release-candidate-publication-migration.spec.ts` PASS trên PG fresh (migration 063), nên đóng `S11-P22-MIGRATION-056-UNPROVEN`.
+    - PASS: auth 16, mutation-security 7, governance-token 3, a4-owner-access 33, local-read-authority 4, research-bounded-read 3, và 13 research controller spec (34 test).
+  - Gate static/unit/build:
+    - contracts 177/177; snapshot 198 file khớp.
+    - control-api build 0. Typecheck: 0 errors in src / 0 in branch-changed files; 80 inherited test-only errors incl. 9 in 2 baseline research specs.
+    - FE: tsc 0; build 0; vitest 173 file · 3153 pass · 2 fail · 1 skip ở cả 2 lần chạy. Hai fail là `r2Ledger` (`CG-P22-C`) và `PortalShell` (`S01-RUNLIBRARY-PAGE-GUARD`; chạy riêng 18/18 cả hai lần).
+    - Planning: typecheck 0, test 17/17 · 99/99, build 0.
+  - GX: protected diff rỗng (`e3b0c44298fc1c14`), kernel checksum khớp (`d44dad89a66db88c`), rootless, không sudo.
+  - EXECUTION_REGRESSION trên preview contributor (không phải browser-real): `chromium` flag off 220/248, `chromium-preview` flag on 79/100 (16 skip theo thiết kế).
+    - Mọi test không chụp ảnh đều PASS.
+    - 28 + 5 = 33 ô `toHaveScreenshot` FAIL so với baseline bất biến. Rerun giống hệt, chưa chẩn đoán nguyên nhân (`S06-VISUAL-BASELINE-HOST-DRIFT`).
+  - Planning e2e 2/2 PASS. Research probe P09 82/82 PASS (fixture) khi đặt `RESEARCH_SHOT_DIR`; lần đầu 33 EACCES trên `/tmp/research-shots` của bobby.
+  - Runner P23 47/78:
+    - matrix `FAIL (attributed VD-P23-01..03)` 30/60, 123 dòng lỗi; nửa layout/history PASS (fixture) ở 180/180 ô;
+    - stale 8/9, 1 FAIL (VD-P23-04);
+    - load 1/1, interaction 7/7 (15/15 dòng trong budget), cycles 1/1 (+14,2 %);
+    - rerun giống hệt, 0 flaky.
+  - Client cost (fixture, contributor host): load p50 3431–6376 ms, p95 5877–7074 ms (s04 34132 ms do 3 mẫu `no-finish-event`, mẫu thật lớn nhất 7080 ms), heap max 38,2 MB, DOM max 1051, writes 0.
+  - Resource (contributor host; không phải cgroup stack Research; gate 5 GB **chưa đo**):
+    - cell: node max 674,0 MiB, PG max 816,0 MiB (gồm tmpfs), wall 8:47;
+    - peak RSS build 0,77 GB (control-api) / 1,03 GB (FE) / 0,43 GB (Planning); test 0,16 / 0,46 / 0,20 GB;
+    - browser RSS max 6124 MB (một chromium, 20 context, tổng RSS là cận trên), plateau ≈ 1,0 GB.
+  - Digest ở [test results](./research_loop/evidence/P23/thanhvuong-test-results.json).
+- **Test IDs:**
+  - `P23-T01` PARTIAL (nửa client; API p95 + 5 GB chưa đo).
+  - `T02` PARTIAL (bản tương tự phía browser, heap +14,2 %; phía service chưa đo).
+  - `T03` BLOCKED. `T04` BLOCKED.
+  - `T05` PARTIAL (nửa FE FAIL đã quy trách nhiệm): API/DB PASS; nửa FE: writes 0 PASS, prose/401/403=404 FAIL (VD-P23-01/02/03); file/export/cache chưa đo.
+  - `T06` PARTIAL (drill DB). `T07` BLOCKED. `T08` BLOCKED.
+  - `T09` PARTIAL: non-screenshot regression PASS flag-off/on; 33 screenshot cells FAIL (S06).
+  - `T10` FAIL (2 attributed unit + 33 visual-baseline, S06).
+  - `T11` PARTIAL (writes 0, GET có giới hạn; 5 GB chưa đo). `T12` BLOCKED. `T13` BLOCKED. `T14` BLOCKED.
+  - `T15` PARTIAL/FAIL: deep link/history/cursor PASS (fixture, 180/180 ô); rò chéo run FAIL trên 04 (VD-P23-04), 09/11 PASS; cold cache chưa đo.
+  - `V11-P23-DR` BLOCKED.
+  - `V11-P23-BR` PASS (fixture receipt: lane visual-fixture, URL 127.0.0.1:4417, build 35d0c861, dist digest 68ee0a01d1053b61, 45 shots, assertions listed). Đây không phải browser-real PASS.
+  - `V11-P23-GX` PASS có debt mở (no-debt check fail theo thiết kế).
+  - Lanes: delta-real-data BLOCKED, direct-vs-portal BLOCKED, persistence-vs-api PASS, api-vs-ui BLOCKED, visual-fixture FAIL (attributed VD-P23-01..04; research probe 82/82 và nửa layout/history PASS fixture), browser-real NOT_RUN, dev-host-review NOT_RUN.
+  - Workload: W00 PARTIAL, W01–W05 BLOCKED, W06–W09 PARTIAL, W10 BLOCKED.
+- **Not run / Blocked:**
+  - lane Python backend (`CG-P23-05`);
+  - delta-real-data / direct-vs-portal / api-vs-ui / browser-real / dev-host-review;
+  - phép đo aggregate 5,000,000,000 bytes và mọi test cần stack (`CG-P23-01…04`);
+  - chẩn đoán 33 ô ảnh lệch;
+  - axe.
+- **VD / CG / debt:**
+  - P23 không có màn riêng. Runner đo được:
+    - `VD-P23-01` (P1): prose server hiện trên 9 màn, 81 ô. Đã biết từ P16, chưa sửa, nay có số đo.
+    - `VD-P23-02` (P1): 401 hiển thị thành denied.
+    - `VD-P23-03` (P1): 403 ≠ 404. Lệch với receipt P21 §A5.
+    - `VD-P23-04` (P2): hub 04 giữ nội dung run A.
+    - `VD-P23-05` (P3): chỉ là quan sát code.
+  - Quyết định: ghi lại, **không sửa trong P23**.
+  - `CG-P23-01…05` + `CG-P22-C` (mang sang) ở [backend requests](./research_loop/evidence/P23/thanhvuong-backend-requests.md).
+  - Debt mở: `S01-RUNLIBRARY-PAGE-GUARD`, `S02-RESEARCH-REFUSAL-PROSE`, `S03-RESEARCH-401-SESSION-STATE`, `S04-F04-403-404-DISTINGUISHABLE`, `S05-EVIDENCE-HUB-RUN-KEY`, `S06-VISUAL-BASELINE-HOST-DRIFT`.
+  - Đã đóng: `S11-P22-MIGRATION-056-UNPROVEN`.
+  - Downstream `P23-FE-DG-01…09` ở [debt register](./research_loop/evidence/P23/thanhvuong-debt-register.json).
+- **Bobby quyết:**
+  - `B-P23-01`: nhận hay bỏ bản P23 contributor làm ngoài D3.
+  - `B-P23-02`: dựng stack cô lập, hoặc tự chạy các lane bị chặn bằng runner + cell script.
+  - `B-P23-03`: giữ ngưỡng client tạm (8000 DOM nodes / 200 MB heap, `execution-journeys.spec.ts:771–772`) hay dùng ngưỡng §16.3.
+  - `B-P23-04`: sửa FE defect `S01` + VD-P23-01..05 (`S02`–`S05`) trong `fix/*` của contributor (cần quyền đụng snapshot baseline) hay giao Codex.
+  - `B-P23-05`: tích hợp baseline P21 + P22 + P23 (D1: Codex merge), rồi đo lại trên cây đã tích hợp.
+  - `B-P23-06`: chạy `chromium` / `chromium-preview` trên host baseline với `35d0c861`.
+- **Exit gate chưa đạt:**
+  - Chưa đo (không có stack): ngưỡng §16 với workload thật, aggregate 5 GB, restore chứng minh mọi artifact được publish tham chiếu, outage/disk/upgrade/cold cache.
+  - Chưa về 0 fail: FE vitest (2), runner (31), EXECUTION_REGRESSION (33 ô ảnh).
+  - Không claim `VERIFIED` / `CERTIFIED`. Fixture PASS không cộng vào real PASS.
+- **Rollback/handoff:**
+  - Không có runtime nào để gỡ. Rollback = không merge, hoặc revert docs → runner theo [rollback](./research_loop/evidence/P23/thanhvuong-rollback.md).
+  - Cell tự dọn container/network/mktemp và giữ lại 2 image trong rootless store. Preview 4417 của B đã kill theo PID; temp config đã chép `.copy` rồi xoá.
+  - Không bao giờ `drop_caches`, restart service dùng chung hay revoke approval.
+  - Receipt: [thanhvuong-frontend-receipt.md](./research_loop/evidence/P23/thanhvuong-frontend-receipt.md). Handoff P24: [frontend-handoff-claude.md](./research_loop/evidence/P23/frontend-handoff-claude.md).
+
 <a id="rl-p24"></a>
 ### P24 — Full product acceptance, handoff và release rehearsal
 
