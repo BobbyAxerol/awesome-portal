@@ -25,7 +25,7 @@
  *    is a typed absence with its reason, never an invented value.
  */
 
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { Fragment, useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router-dom";
 
 import { releaseCandidateHref } from "./releaseCandidateClient";
@@ -411,7 +411,7 @@ const LINEAGE_CSS = `
 .ln-btnlink.soft { border-color: var(--line); color: var(--ink-soft); }
 .ln-dtable { display: flex; flex-direction: column; }
 .ln-drow { display: flex; gap: 10px; font-family: var(--font-mono); font-size: 10.5px; border-bottom: 1px solid var(--line-soft); padding: 3px 0; min-width: 0; }
-.ln-drow .k { width: 150px; flex: none; color: var(--ink-soft); overflow-wrap: anywhere; }
+.ln-drow .k { width: 150px; flex: none; color: var(--ink-soft); overflow-wrap: normal; word-break: normal; }
 .ln-drow .a { flex: 1 1 0; color: var(--bad); text-decoration: line-through; overflow-wrap: anywhere; min-width: 0; }
 .ln-drow .arrow { flex: none; color: var(--ink-faint); }
 .ln-drow .b2 { flex: 1 1 0; color: var(--good); overflow-wrap: anywhere; min-width: 0; }
@@ -1701,7 +1701,7 @@ function DiffPanel({ attempt }: { attempt: LineageAttempt | null }) {
           <div className="ln-dtable">
             {gates ? (
               <span className="ln-drow" data-gates="true" data-diff-row={gates.path}>
-                <span className="k">{gates.path}</span>
+                <span className="k">{breakablePath(gates.path)}</span>
                 <span className="a">
                   <SideValue value={gates.before} />
                 </span>
@@ -1713,7 +1713,7 @@ function DiffPanel({ attempt }: { attempt: LineageAttempt | null }) {
             ) : null}
             {regular.map((change) => (
               <span key={change.path} className="ln-drow" data-diff-row={change.path} data-diff-kind={change.kind}>
-                <span className="k">{change.path}</span>
+                <span className="k">{breakablePath(change.path)}</span>
                 <span className="a">
                   <SideValue value={change.before} />
                 </span>
@@ -1967,6 +1967,21 @@ export interface LineageScreenProps {
   initialAttempt?: string | null;
   /** Told when the reader selects an attempt; the route mirrors it with `replace`. */
   onSelectAttempt?: (attemptId: string) => void;
+}
+
+/**
+ * S10-DIFF-KEY-WRAP: a config path wraps only after its own separators
+ * (`parameter_space.len_atr1.high` → `parameter_space.` / `len_atr1.` / `high`),
+ * never mid-word.
+ */
+function breakablePath(path: string) {
+  const parts = path.split(/(?<=[._])/);
+  return parts.map((part, index) => (
+    <Fragment key={index}>
+      {part}
+      {index < parts.length - 1 ? <wbr /> : null}
+    </Fragment>
+  ));
 }
 
 export function LineageScreen({ alphaId, controller, initialAv = null, initialAttempt = null, onSelectAttempt }: LineageScreenProps) {
