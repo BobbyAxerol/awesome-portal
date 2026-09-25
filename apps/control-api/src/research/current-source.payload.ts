@@ -183,6 +183,53 @@ export const CurrentSourceFactsSchema = z.object({
 }).strict();
 
 /**
+ * P17-T14 · QuantBT's strategy-isolation audit for one fold: one record per
+ * child strategy instance, verbatim, with its original ids (row in QuantBT's
+ * `strategy_lifecycle_table`, candidate id, fold id, seed). Mirrors
+ * `_attach_child_audit()` in the exporter; absent before W5b.
+ */
+const FactFingerprintSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/);
+export const CurrentSourceChildAuditRecordSchema = z.object({
+  audit_ordinal: FactCountSchema,
+  candidate_id: FactTokenSchema.nullable(),
+  fold_id: FactTokenSchema,
+  seed: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
+  context: z.string().min(1).max(96).regex(/^[A-Za-z0-9 _.:-]+$/).nullable(),
+  lifecycle_kind: FactTokenSchema.nullable(),
+  policy: FactTokenSchema.nullable(),
+  certified_isolation: z.boolean().nullable(),
+  spawned: z.boolean().nullable(),
+  reset_called: z.boolean().nullable(),
+  warmup_called: z.boolean().nullable(),
+  warmup_bars: FactCountSchema.nullable(),
+  closed: z.boolean().nullable(),
+  state_before: FactTokenSchema.nullable(),
+  cutoff_utc_ms: FactUtcMsSchema.nullable(),
+  train_start_utc_ms: FactUtcMsSchema.nullable(),
+  train_end_utc_ms: FactUtcMsSchema.nullable(),
+  test_start_utc_ms: FactUtcMsSchema.nullable(),
+  test_end_utc_ms: FactUtcMsSchema.nullable(),
+  strategy_fingerprint: FactFingerprintSchema.nullable(),
+  market_fingerprint: FactFingerprintSchema.nullable(),
+}).strict();
+
+export const CurrentSourceFoldChildAuditSchema = z.object({
+  schema_version: z.literal("research.current-source-fold-child-audit.v1"),
+  source_record_count: FactCountSchema,
+  truncated: z.boolean(),
+  records: z.array(CurrentSourceChildAuditRecordSchema).max(64),
+}).strict();
+
+export const CurrentSourceChildAuditSummarySchema = z.object({
+  schema_version: z.literal("research.current-source-child-audit-summary.v1"),
+  policy: FactTokenSchema.nullable(),
+  records_dropped_by_source: FactCountSchema.nullable(),
+  source_record_count: FactCountSchema,
+  unmatched_record_count: FactCountSchema,
+  source_run_fingerprint: FactFingerprintSchema.nullable(),
+}).strict();
+
+/**
  * W5b (P17) · one retained bar of the signal-notional final account: the
  * candle the engine consumed, the account's own fee/turnover/funding and a
  * running checkpoint. Mirrors `_attach_bar_ledger()` in the exporter. Absent
@@ -298,8 +345,11 @@ export const CurrentSourceReplaySummarySchema = z.object({
     }).strict(),
     values: z.array(OverviewCandleSchema).max(160),
   }).strict().nullable(),
+  // P17-T14: absent on a W5b seal whose source tree had no lifecycle table.
+  child_audit: CurrentSourceChildAuditSummarySchema.optional(),
 }).strict();
 
+export type CurrentSourceChildAuditRecord = z.infer<typeof CurrentSourceChildAuditRecordSchema>;
 export type CurrentSourceBar = z.infer<typeof CurrentSourceBarSchema>;
 export type CurrentSourceReplaySummary = z.infer<typeof CurrentSourceReplaySummarySchema>;
 
@@ -389,6 +439,8 @@ export const CurrentSourceFoldPayloadSchema = z.object({
   test_start_utc_ms: z.number().int().nonnegative().nullable(),
   test_end_utc_ms: z.number().int().nonnegative().nullable(),
   fold_facts: CurrentSourceFoldFactsSchema.optional(),
+  // P17-T14: QuantBT's strategy-isolation records for this fold.
+  child_audit: CurrentSourceFoldChildAuditSchema.optional(),
 }).strict();
 
 export const CurrentSourceTrialPayloadSchema = z.object({

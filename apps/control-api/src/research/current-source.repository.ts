@@ -601,6 +601,36 @@ export class ResearchCurrentSourceRepository {
   }
 
   /**
+   * P17-T14 · one retained row by its original source id (the table's unique
+   * key), e.g. a fold's child-audit block. One indexed row, never a scan.
+   */
+  async rowBySourceId(
+    scope: ResearchScope,
+    runId: string,
+    artifactRevision: number,
+    tableKind: CurrentSourceTableKind,
+    sourceId: string,
+    signal?: AbortSignal,
+  ): Promise<CurrentSourceStoredRow | null> {
+    return this.withScopedRead(scope, async (client) => {
+      const result = await client.query<SourceRowQueryRow>(
+        `SELECT source_ordinal, source_id, occurred_at_utc_ms, payload
+           FROM research.current_source_rows_v1
+          WHERE workspace_id = $1 AND run_id = $2 AND artifact_revision = $3 AND table_kind = $4 AND source_id = $5`,
+        [scope.workspaceId, runId, artifactRevision, tableKind, sourceId],
+      );
+      const row = result.rows[0];
+      if (!row) return null;
+      return {
+        sourceOrdinal: asSafeNonNegative(row.source_ordinal, "row ordinal"),
+        sourceId: row.source_id,
+        occurredAtUtcMs: row.occurred_at_utc_ms === null ? null : asSafeNonNegative(row.occurred_at_utc_ms, "row timestamp"),
+        payload: asJsonRecord(row.payload, "row payload"),
+      };
+    }, signal);
+  }
+
+  /**
    * W5b (P17) · the observation rows whose retained bar block records a
    * target transition, keyset-paged over the ORIGINAL observation ordinal.
    * The ordinals are sparse by nature ({10, 12, 90}); next/previous land on

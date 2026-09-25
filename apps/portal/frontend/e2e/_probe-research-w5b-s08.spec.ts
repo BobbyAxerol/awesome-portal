@@ -17,6 +17,7 @@
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 const HOME = `${process.env.HOME}/.config/portal-research-preview`;
@@ -28,6 +29,7 @@ const RUN = (JSON.parse(readFileSync(`${HOME}/seeded-wfo-run.json`, "utf8")) as 
 const FIXTURES = join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures");
 const FOLD0 = readFileSync(join(FIXTURES, "research-current-source.replay.fold0.valid.json"), "utf8");
 const LEDGER = readFileSync(join(FIXTURES, "research-current-source.replay-transitions.valid.json"), "utf8");
+const AUDIT0 = readFileSync(join(FIXTURES, "research-current-source.replay-child-audit.fold0.valid.json"), "utf8");
 
 test.use({ baseURL: BASE, extraHTTPHeaders: { "x-dev-access-email": "claude-preview@azdag.com" } });
 
@@ -67,12 +69,24 @@ for (const [label, width] of [["1440", 1440], ["660", 660]] as const) {
     const noise = watch(page);
     await signIn(page);
     await page.route("**/current-source/replay/transitions**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: LEDGER }));
+    await page.route("**/current-source/replay/child-audit**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: AUDIT0 }));
     await page.route(/\/current-source\/replay(\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: FOLD0 }));
     await page.goto(`/research/quantbt/runs/${RUN}/execute`);
     await expect(page.locator("[data-chart='replay-candles']")).toHaveAttribute("data-chart-status", "ready", { timeout: 20_000 });
     await expect(page.locator("[data-transitions='ready']")).toBeVisible();
     await expect(page.locator("[data-marker]")).toHaveCount(4);
+    await expect(page.locator("[data-child-audit='0']")).toBeVisible();
     await page.waitForTimeout(800);
+
+    /* S08 T21: axe on the screen (serious/critical block; D-B1 ink-faint contrast is the one approved exception). */
+    const axe = await new AxeBuilder({ page }).include("[data-screen='execute-replay']").analyze();
+    const summary = axe.violations.map((item) => `${item.impact}:${item.id}:${item.nodes.length}`);
+    console.log(`W5B_S08_AXE ${label} ${JSON.stringify(summary)}`);
+    const blocking = axe.violations
+      .filter((item) => item.impact === "serious" || item.impact === "critical")
+      .flatMap((item) => item.nodes.map((node) => ({ id: item.id, target: node.target, color: (node.any[0]?.data as { fgColor?: string } | undefined)?.fgColor })))
+      .filter((node) => !(node.id === "color-contrast" && node.color === "#939db0"));
+    expect(blocking).toEqual([]);
     await page.screenshot({ path: `${OUT}/ledger-${label}.png`, fullPage: true });
     await page.locator("[aria-label='next transition']").click();
     await page.locator("[data-action='causal-reveal']").click();

@@ -46,6 +46,9 @@ export type RetainedCapabilityKey = keyof CurrentSourceReplay["route_capabilitie
 export type FoldSegment = SourceSchemas["FoldSegment"];
 export type TransitionRow = SourceSchemas["TransitionRow"];
 export type ReplayTransitions = SourceSchemas["ReplayTransitions"];
+/** P17-T14: one fold's QuantBT strategy-isolation records. */
+export type ReplayChildAudit = SourceSchemas["ReplayChildAudit"];
+export type ChildAuditRecord = SourceSchemas["ChildAuditRecord"];
 
 const RUNS = "/api/v1/quantbt/runs";
 
@@ -157,6 +160,16 @@ export const replayApi = {
       `${RUNS}/${encodeURIComponent(runId)}/current-source/replay/transitions${replayQuery(options.navigation ?? { kind: "first" }, options)}`,
       options.signal,
     ),
+
+  /** `researchCurrentSourceReplayChildAuditGetV1` (P17-T14) — one fold's child audit. */
+  currentSourceChildAudit: (runId: string, fold: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) => {
+    const params = new URLSearchParams({ fold });
+    if (options.workspaceId) params.set("workspace_id", options.workspaceId);
+    return call<ReplayChildAudit | CurrentSourceLaneNotApplicable>(
+      `${RUNS}/${encodeURIComponent(runId)}/current-source/replay/child-audit?${params.toString()}`,
+      options.signal,
+    );
+  },
 } as const;
 
 /* -------------------------------------------------------------------------
@@ -280,6 +293,7 @@ export const RETAINED_CAPABILITY_LABEL: Record<RetainedCapabilityKey, string> = 
   sl_tp: "SL/TP",
   mae_mfe: "MAE × MFE",
   execution_events: "execution events",
+  child_audit: "child audit",
 };
 
 /**

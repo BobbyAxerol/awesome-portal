@@ -169,7 +169,43 @@ def _assert_replay_ledger(source: ArtifactRepository, run_id: str, exported, row
     assert overview["values"][0]["first_ordinal"] == 0
     assert overview["values"][-1]["last_ordinal"] == len(bars) - 1
     assert len(json.dumps(exported.receipt.summary, sort_keys=True).encode("utf-8")) <= 65_536
-    return {"transitions": transitions, "fee": str(fee_sum), "segments": segments}
+
+    # P17-T14: QuantBT's strategy-isolation records, retained verbatim per
+    # fold with their original ids (row in QuantBT's table, candidate, fold, seed).
+    lifecycle = pd.read_parquet(run_dir / "wfo" / "strategy_lifecycle.v1.parquet")
+    child = summary["child_audit"]
+    assert child["schema_version"] == "research.current-source-child-audit-summary.v1"
+    assert child["policy"] == "isolated_v1"
+    assert child["records_dropped_by_source"] == 0
+    assert child["source_record_count"] == len(lifecycle)
+    assert child["unmatched_record_count"] == 0
+    assert child["source_run_fingerprint"] == lifecycle["run_id"].iloc[0]
+    retained = []
+    for fold_row in rows["FOLD"]:
+        block = fold_row["payload"]["child_audit"]
+        assert block["schema_version"] == "research.current-source-fold-child-audit.v1"
+        assert block["truncated"] is False and block["source_record_count"] == len(block["records"])
+        assert len(json.dumps(fold_row["payload"]).encode("utf-8")) < 65_536
+        for record in block["records"]:
+            assert record["fold_id"] == fold_row["sourceId"]
+            retained.append(record)
+    assert sorted(record["audit_ordinal"] for record in retained) == list(range(len(lifecycle)))
+    for record in retained:
+        source = lifecycle.iloc[record["audit_ordinal"]]
+        assert record["candidate_id"] == source["candidate_id"]
+        assert record["fold_id"] == str(source["fold_id"])
+        assert record["seed"] == int(source["seed"])
+        assert record["context"] == source["context"]
+        assert record["certified_isolation"] is bool(source["certified_isolation"])
+        assert record["policy"] == source["policy"]
+        assert record["test_start_utc_ms"] == int(pd.Timestamp(source["test_start"]).value // 1_000_000)
+    # Every fold has exactly one out-of-sample generation child — the one that
+    # produced the replayed bars — and it trades the selected parameters.
+    for segment in segments:
+        generation = [r for r in retained if r["fold_id"] == segment["fold_id"] and r["context"] == "out-of-sample generation"]
+        assert len(generation) == 1
+        assert generation[0]["test_start_utc_ms"] == rows["OBSERVATION"][segment["first_ordinal"]]["payload"]["at_utc_ms"]
+    return {"transitions": transitions, "fee": str(fee_sum), "segments": segments, "child_audit_records": len(retained)}
 
 
 def test_signal_notional_replay_ledger_is_the_engine_account_bar_by_bar(golden) -> None:

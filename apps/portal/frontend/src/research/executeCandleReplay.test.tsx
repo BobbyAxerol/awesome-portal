@@ -20,7 +20,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CLOSE_TARGET_NOTICE, REVEAL_HIDDEN, paddedRange, windowMarkers } from "./ExecuteCandleReplay";
 import { ExecuteRoute } from "./ExecuteRoute";
-import type { CurrentSourceReplay, ReplayTransitions } from "./replayClient";
+import type { CurrentSourceReplay, ReplayChildAudit, ReplayTransitions } from "./replayClient";
 import { forgetRunIdentities } from "./retainedLane";
 
 vi.mock("lightweight-charts", () => {
@@ -54,6 +54,7 @@ const load = <T,>(name: string) => JSON.parse(readFileSync(join(FIXTURES, name),
 const FOLD0 = load<CurrentSourceReplay>("research-current-source.replay.fold0.valid.json");
 const LEDGER = load<ReplayTransitions>("research-current-source.replay-transitions.valid.json");
 const LEGACY = load<CurrentSourceReplay>("research-current-source.replay.legacy-seal.valid.json");
+const AUDIT0 = load<ReplayChildAudit>("research-current-source.replay-child-audit.fold0.valid.json");
 const W3B = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3bRealWfo.fixture.json"), "utf8")) as { progress: unknown; requested_spec: unknown };
 const W3 = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as { evidence: unknown };
 const RUN = FOLD0.run_id;
@@ -74,6 +75,7 @@ function fetchFor(replayBody: CurrentSourceReplay = FOLD0) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const path = new URL(String(input), "http://x").pathname;
     if (path.endsWith("/current-source/replay/transitions")) return jsonResponse(LEDGER);
+    if (path.endsWith("/current-source/replay/child-audit")) return jsonResponse(AUDIT0);
     if (path.endsWith("/current-source/replay")) return jsonResponse(replayBody);
     if (path.endsWith("/current-source/evidence")) return jsonResponse(W3.evidence);
     if (path.endsWith("/execute/replay")) return jsonResponse(HUB);
@@ -155,6 +157,32 @@ describe("P17-T01 · candles + markers, and the route's own absences", () => {
     expect(anatomy.querySelector("[data-link='order'][data-na='true']")?.textContent).toContain("emits no order records (0 published)");
     expect(anatomy.querySelector("[data-link='fill'][data-na='true']")?.textContent).toContain("0 fill records");
     expect(anatomy.querySelector("[data-link='account']")?.textContent).toContain("2,000.00");
+  });
+});
+
+describe("P17-T14 · child audit on Screen 08", () => {
+  it("reads fold 0's child audit once, lists QuantBT's records with original ids and marks the generating child", async () => {
+    const { container, fetchMock } = await settled();
+    await waitFor(() => expect(container.querySelector("[data-child-audit='0']")).toBeTruthy());
+    const reads = urls(fetchMock).filter((url) => url.includes("/current-source/replay/child-audit"));
+    expect(reads).toEqual([`/api/v1/quantbt/runs/${RUN}/current-source/replay/child-audit?fold=0`]);
+    const rows = [...container.querySelectorAll("[data-audit-row]")];
+    expect(rows.map((row) => Number(row.getAttribute("data-audit-row")))).toEqual(AUDIT0.records.map((record) => record.audit_ordinal));
+    const generation = container.querySelectorAll("[data-audit-generation='true']");
+    expect(generation).toHaveLength(1);
+    const record = AUDIT0.records.find((entry) => entry.context === "out-of-sample generation")!;
+    expect(generation[0]!.textContent).toContain(String(record.seed));
+    expect(container.querySelector("[data-child-audit-caption]")?.textContent).toContain("policy isolated_v1");
+    /* The anatomy's child link names the generating child's original ids. */
+    fireEvent.click(within(container.querySelector("[data-transition-row='727']") as HTMLElement).getByRole("button"));
+    const child = container.querySelector("[data-anatomy='727'] [data-link='child']")!;
+    expect(child.getAttribute("data-na")).toBe("false");
+    expect(child.textContent).toContain(`audit #${record.audit_ordinal}`);
+    expect(child.textContent).toContain(`seed ${record.seed}`);
+    /* Stepping the transport never re-reads it. */
+    const before = fetchMock.mock.calls.length;
+    for (let step = 0; step < 20; step += 1) fireEvent.click(container.querySelector("[aria-label='step forward']")!);
+    expect(fetchMock.mock.calls.length).toBe(before);
   });
 });
 

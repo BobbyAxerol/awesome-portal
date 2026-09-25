@@ -119,6 +119,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/quantbt/runs/{runId}/current-source/replay/child-audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description P17-T14: one fold's child audit from the sealed local FOLD row; no compute, no source read. */
+        get: operations["researchCurrentSourceReplayChildAuditGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -473,6 +490,7 @@ export interface components {
                 sl_tp: components["schemas"]["Fact"];
                 mae_mfe: components["schemas"]["Fact"];
                 execution_events: components["schemas"]["Fact"];
+                child_audit: components["schemas"]["Fact"];
             };
             execution: components["schemas"]["ReplayExecution"];
         };
@@ -494,7 +512,7 @@ export interface components {
                 /** @constant */
                 state: "NOT_APPLICABLE";
                 /** @enum {unknown} */
-                operation: "evidence" | "evidence_series" | "split" | "search" | "freeze" | "replay" | "replay_transitions";
+                operation: "evidence" | "evidence_series" | "split" | "search" | "freeze" | "replay" | "replay_transitions" | "replay_child_audit";
                 /** @constant */
                 run_profile: "P04_FIXED_QUALIFICATION";
                 run_adapter_contract_digest: components["schemas"]["Digest"];
@@ -843,6 +861,15 @@ export interface components {
                     transitions: number;
                 }[];
             } | null;
+            child_audit: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "NOT_PUBLISHED";
+                reason_code: string | null;
+                policy: string | null;
+                records_dropped_by_source: number | null;
+                source_record_count: number | null;
+                source_run_fingerprint: string | null;
+            };
             sequence: {
                 /** @constant */
                 order: "SOURCE_TABLE_ORDINAL_ASC";
@@ -883,6 +910,42 @@ export interface components {
             source_transition_count: number | null;
             rows: components["schemas"]["TransitionRow"][];
             page: components["schemas"]["Page"];
+        };
+        ChildAuditRecord: {
+            /** @description Row in QuantBT's own strategy_lifecycle_table: the original child-audit id. */
+            audit_ordinal: number;
+            candidate_id: string | null;
+            fold_id: string;
+            seed: number | null;
+            context: string | null;
+            lifecycle_kind: string | null;
+            policy: string | null;
+            certified_isolation: boolean | null;
+            spawned: boolean | null;
+            reset_called: boolean | null;
+            warmup_called: boolean | null;
+            warmup_bars: number | null;
+            closed: boolean | null;
+            state_before: string | null;
+            cutoff_utc_ms: components["schemas"]["UtcMs"] | null;
+            train_start_utc_ms: components["schemas"]["UtcMs"] | null;
+            train_end_utc_ms: components["schemas"]["UtcMs"] | null;
+            test_start_utc_ms: components["schemas"]["UtcMs"] | null;
+            test_end_utc_ms: components["schemas"]["UtcMs"] | null;
+            strategy_fingerprint: string | null;
+            market_fingerprint: string | null;
+        };
+        ReplayChildAudit: components["schemas"]["Common"] & {
+            /** @constant */
+            schema_version: "research.current-source-replay-child-audit.v1";
+            fold_id: string;
+            reason_code: string | null;
+            policy: string | null;
+            records_dropped_by_source: number | null;
+            source_run_fingerprint: string | null;
+            source_record_count: number | null;
+            truncated: boolean;
+            records: components["schemas"]["ChildAuditRecord"][];
         };
     };
     responses: {
@@ -962,6 +1025,16 @@ export interface components {
                 "application/json": components["schemas"]["ReplayTransitions"] | components["schemas"]["LaneNotApplicable"];
             };
         };
+        /** @description P17-T14 one fold's QuantBT strategy-isolation records */
+        ReplayChildAudit: {
+            headers: {
+                ETag: components["headers"]["Etag"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ReplayChildAudit"] | components["schemas"]["LaneNotApplicable"];
+            };
+        };
     };
     parameters: {
         RunId: components["schemas"]["RunId"];
@@ -976,6 +1049,8 @@ export interface components {
         /** @description W3: keep ledger rows whose published fold scope covers this retained fold id; cursors bind the filter. */
         Fold: string;
         TransitionsLimit: number;
+        /** @description P17-T14: a retained fold id (the split's fold_id). */
+        ChildAuditFold: string;
     };
     requestBodies: never;
     headers: {
@@ -1183,6 +1258,39 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: components["responses"]["ReplayTransitions"];
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchCurrentSourceReplayChildAuditGetV1: {
+        parameters: {
+            query: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                /** @description P17-T14: a retained fold id (the split's fold_id). */
+                fold: components["parameters"]["ChildAuditFold"];
+            };
+            header?: {
+                "If-None-Match"?: components["parameters"]["IfNoneMatch"];
+            };
+            path: {
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReplayChildAudit"];
+            /** @description Exact immutable revision unchanged */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];

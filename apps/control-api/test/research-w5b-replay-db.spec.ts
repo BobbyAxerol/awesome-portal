@@ -21,6 +21,7 @@ import { AuthService } from "../src/auth/auth.service";
 import {
   ResearchCurrentSourceReplayResponseSchema,
   ResearchCurrentSourceReplayTransitionsResponseSchema,
+  ResearchCurrentSourceReplayChildAuditResponseSchema,
 } from "../src/research/current-source.contract";
 import {
   currentSourceBatchDigest,
@@ -182,6 +183,18 @@ describe("W5b · P17 replay ledger on PostgreSQL", () => {
     expect(body.replay.state_at_cursor.bar).toMatchObject({ transition: true, fold_id: "0", checkpoint: { transition_count: 1 } });
     expect(body.execution.fold_capital.segments.map((segment: { fold_id: string }) => segment.fold_id)).toEqual(["0", "1"]);
     expect(Buffer.byteLength(JSON.stringify(body), "utf8")).toBeLessThan(1_048_576);
+  });
+
+  it("P17-T14: serves one fold's child audit by its original fold id, with an ETag", async () => {
+    const response = await get(`/api/v1/quantbt/runs/${runId}/current-source/replay/child-audit?fold=1`);
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(ResearchCurrentSourceReplayChildAuditResponseSchema.safeParse(body).success).toBe(true);
+    expect(response.headers.etag).toBe(body.etag);
+    expect(body.records.length).toBeGreaterThan(0);
+    expect(body.records.every((record: { fold_id: string }) => record.fold_id === "1")).toBe(true);
+    const missing = await get(`/api/v1/quantbt/runs/${runId}/current-source/replay/child-audit?fold=99`);
+    expect(missing.statusCode).toBe(404);
   });
 
   it("refuses to seal an ordinal gap {0, 1, 3}; ordinal 2 is never fabricated", async () => {

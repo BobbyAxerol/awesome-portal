@@ -19,11 +19,14 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ResearchCurrentSourceReplayResponseSchema,
   ResearchCurrentSourceReplayTransitionsResponseSchema,
+  ResearchCurrentSourceReplayChildAuditResponseSchema,
+  ResearchCurrentSourceChildAuditQuerySchema,
   ResearchCurrentSourceTransitionsQuerySchema,
   ResearchCurrentSourcePageQuerySchema,
   type ResearchCurrentSourceNotApplicableResponse,
   type ResearchCurrentSourceReplayResponse,
   type ResearchCurrentSourceReplayTransitionsResponse,
+  type ResearchCurrentSourceReplayChildAuditResponse,
 } from "../src/research/current-source.contract";
 import { ResearchCurrentSourceError } from "../src/research/current-source.error";
 import { CurrentSourceSummarySchema, currentSourceRowMatchesKind } from "../src/research/current-source.payload";
@@ -105,6 +108,8 @@ function memory(seal: CurrentSourceSealRow, tables: Partial<Record<Kind, Current
     rows: vi.fn(async (_scope: unknown, _runId: string, _revision: number, kind: Kind, selection: Parameters<typeof window>[1]) => window(sorted(kind), selection)),
     transitions: vi.fn(async (_scope: unknown, _runId: string, _revision: number, selection: Parameters<typeof window>[1]) =>
       window(sorted("OBSERVATION").filter(isTransition), selection)),
+    rowBySourceId: vi.fn(async (_scope: unknown, _runId: string, _revision: number, kind: Kind, sourceId: string) =>
+      (tables[kind] ?? []).find((row) => row.sourceId === sourceId) ?? null),
     observationSeries: vi.fn(),
     verifyRetainedImport: vi.fn(),
   };
@@ -237,10 +242,60 @@ describe("P17-T03/T14 · fold capital is QuantBT's convention, fold switch keeps
     expect(value.execution.fold_capital).toMatchObject({ policy: "reset_flat", equity_continuity: "RESET_PER_FOLD" });
     const unknown = structuredClone(real.summary);
     unknown.replay.fold_capital.policy = null;
-    (unknown as { source_facts: { execution: { fold_account_policy: string | null } } }).source_facts.execution.fold_account_policy = null;
+    (unknown as unknown as { source_facts: { execution: { fold_account_policy: string | null } } }).source_facts.execution.fold_account_policy = null;
     const missing = await replay(memory(sealRow(unknown, real.table_rows), real.rows).service);
     expect(missing.execution.fold_capital).toMatchObject({ policy: null, equity_continuity: "NOT_ASSERTED", reason_code: "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FOLD_ACCOUNT_POLICY" });
     expect(missing.route_capabilities.fold_capital.state).toBe("NOT_PUBLISHED");
+  });
+});
+
+const childAuditValidator = openApiValidator("research-current-source.openapi.json", "ReplayChildAudit");
+async function childAudit(service: ResearchCurrentSourceService, fold: string) {
+  const value = sealed<ResearchCurrentSourceReplayChildAuditResponse>(
+    await service.replayChildAudit(scope, real.run_id, ResearchCurrentSourceChildAuditQuerySchema.parse({ fold })),
+  );
+  expect(ResearchCurrentSourceReplayChildAuditResponseSchema.safeParse(value).success).toBe(true);
+  childAuditValidator.assert(value);
+  return value;
+}
+
+describe("P17-T14 · child audit keeps QuantBT's isolation records and original ids", () => {
+  it("each fold's sub-read returns its records verbatim, in QuantBT's order, with the run-level facts", async () => {
+    const { service, repository } = memory(realSeal, real.rows);
+    const value = await replay(service);
+    expect(value.route_capabilities.child_audit.state).toBe("AVAILABLE");
+    expect(value.execution.child_audit).toMatchObject({ state: "AVAILABLE", policy: "isolated_v1", records_dropped_by_source: 0, source_record_count: 12 });
+    const seen: number[] = [];
+    for (const segment of value.execution.fold_capital.segments) {
+      const audit = await childAudit(service, segment.fold_id);
+      const retained = (real.rows.FOLD.find((row) => row.sourceId === segment.fold_id)!.payload.child_audit as { records: unknown[] }).records;
+      expect(audit.records).toEqual(retained);
+      expect(audit.records.every((record) => record.fold_id === segment.fold_id && record.certified_isolation === true)).toBe(true);
+      expect(audit.source_run_fingerprint).toBe(value.execution.child_audit.source_run_fingerprint);
+      /* The child that generated this fold's replayed bars: one, on the fold's first test bar. */
+      const generation = audit.records.filter((record) => record.context === "out-of-sample generation");
+      expect(generation).toHaveLength(1);
+      expect(generation[0]!.test_start_utc_ms).toBe(real.rows.OBSERVATION[segment.first_ordinal]!.occurredAtUtcMs);
+      seen.push(...audit.records.map((record) => record.audit_ordinal));
+    }
+    expect([...seen].sort((a, b) => a - b)).toEqual(Array.from({ length: 12 }, (_, index) => index));
+    /* A fold switch + audit read touches only sealed local rows: no compute, no run-state read. */
+    expect(repository.runState).not.toHaveBeenCalled();
+    expect(repository.rowBySourceId).toHaveBeenCalledTimes(2);
+  });
+
+  it("an unknown fold is a 404; a seal without the table is a typed absence", async () => {
+    const { service } = memory(realSeal, real.rows);
+    await expect(service.replayChildAudit(scope, real.run_id, ResearchCurrentSourceChildAuditQuerySchema.parse({ fold: "99" })))
+      .rejects.toMatchObject({ code: "RESEARCH_CURRENT_SOURCE_NOT_FOUND", status: 404 });
+    const summary = structuredClone(real.summary);
+    delete (summary.replay as Record<string, unknown>).child_audit;
+    const older = memory(sealRow(summary, real.table_rows), real.rows).service;
+    const replayed = await replay(older);
+    expect(replayed.route_capabilities.child_audit).toMatchObject({ state: "NOT_PUBLISHED", reason_code: "RS02_SEAL_PREDATES_P17_CHILD_AUDIT" });
+    expect(replayed.execution.child_audit.state).toBe("NOT_PUBLISHED");
+    const audit = await childAudit(older, "0");
+    expect(audit).toMatchObject({ availability: { state: "NOT_RETAINED_LEGACY" }, records: [], reason_code: "RS02_SEAL_PREDATES_P17_CHILD_AUDIT" });
   });
 });
 
@@ -407,7 +462,7 @@ describe("P17-T08 · no certificate without evidence", () => {
     const { service } = memory(realSeal, real.rows);
     const value = await replay(service);
     expect(JSON.stringify(value)).not.toMatch(/certif(icate|ied_badge)/i);
-    const shape = ResearchCurrentSourceReplayResponseSchema.innerType?.() ?? ResearchCurrentSourceReplayResponseSchema;
+    const shape = ResearchCurrentSourceReplayResponseSchema as unknown;
     expect(JSON.stringify(Object.keys((shape as { shape?: Record<string, unknown> }).shape ?? {}))).not.toContain("certificate");
     // `accounting_certified` is QuantBT's own execution-contract flag, carried verbatim.
     expect(value.execution.route.accounting_certified).toBe(true);
@@ -439,6 +494,7 @@ describe("CG-P17-01 · published replay fixtures", () => {
     replay: "research-current-source.replay.fold0.valid.json",
     transitions: "research-current-source.replay-transitions.valid.json",
     legacy: "research-current-source.replay.legacy-seal.valid.json",
+    childAudit: "research-current-source.replay-child-audit.fold0.valid.json",
   } as const;
 
   it("writes (opt-in) and validates the committed fixtures", async () => {
@@ -449,7 +505,8 @@ describe("CG-P17-01 · published replay fixtures", () => {
       const ledger = await transitions(service, { limit: 50 });
       const legacyRows = real.rows.OBSERVATION.map((row) => ({ ...row, payload: Object.fromEntries(Object.entries(row.payload).filter(([key]) => key !== "bar")) }));
       const legacy = await replay(memory(sealRow(w3.summary, { ...w3.table_rows }), { ...w3.rows, OBSERVATION: legacyRows }).service, { limit: 24 });
-      for (const [name, body] of [[files.replay, fold0], [files.transitions, ledger], [files.legacy, legacy]] as const) {
+      const audit = await childAudit(service, "0");
+      for (const [name, body] of [[files.replay, fold0], [files.transitions, ledger], [files.legacy, legacy], [files.childAudit, audit]] as const) {
         writeFileSync(join(root, name), `${JSON.stringify(body)}\n`);
       }
     }
@@ -462,5 +519,7 @@ describe("CG-P17-01 · published replay fixtures", () => {
     transitionsValidator.assert(read(files.transitions));
     expect(read(files.replay).replay.rows[0].source_ordinal).toBe(720);
     expect(read(files.legacy).execution.state).toBe("NOT_RETAINED_LEGACY");
+    expect(ResearchCurrentSourceReplayChildAuditResponseSchema.safeParse(read(files.childAudit)).success).toBe(true);
+    childAuditValidator.assert(read(files.childAudit));
   });
 });

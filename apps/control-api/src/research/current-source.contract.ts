@@ -267,6 +267,15 @@ export const ResearchCurrentSourceReplayExecutionSchema = z.object({
       transitions: CountSchema,
     }).strict()).max(160),
   }).strict().nullable(),
+  /** P17-T14: run-level child-audit facts; the records are a per-fold sub-read. */
+  child_audit: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    policy: TokenSchema.nullable(),
+    records_dropped_by_source: CountSchema.nullable(),
+    source_record_count: CountSchema.nullable(),
+    source_run_fingerprint: TokenSchema.nullable(),
+  }).strict(),
   sequence: z.object({
     order: z.literal("SOURCE_TABLE_ORDINAL_ASC"),
     density: z.literal("DENSE_SEALED_ORDINALS"),
@@ -746,6 +755,8 @@ export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({
     sl_tp: ResearchCurrentSourceFactSchema,
     mae_mfe: ResearchCurrentSourceFactSchema,
     execution_events: ResearchCurrentSourceFactSchema,
+    /** P17-T14: QuantBT's strategy-isolation records (child audit), per fold. */
+    child_audit: ResearchCurrentSourceFactSchema,
   }).strict(),
   /** W5b (P17): the route's retained execution facts and fold capital. */
   execution: ResearchCurrentSourceReplayExecutionSchema,
@@ -797,6 +808,64 @@ export const ResearchCurrentSourceReplayTransitionsResponseSchema = CommonSchema
   }
 });
 
+const ChildAuditRecordSchema = z.object({
+  /** The record's row in QuantBT's own `strategy_lifecycle_table` (original child-audit id). */
+  audit_ordinal: CountSchema,
+  candidate_id: TokenSchema.nullable(),
+  fold_id: TokenSchema,
+  seed: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
+  /** QuantBT's own words for why the child ran (e.g. `out-of-sample generation`). */
+  context: z.string().min(1).max(96).regex(/^[A-Za-z0-9 _.:-]+$/).nullable(),
+  lifecycle_kind: TokenSchema.nullable(),
+  policy: TokenSchema.nullable(),
+  certified_isolation: z.boolean().nullable(),
+  spawned: z.boolean().nullable(),
+  reset_called: z.boolean().nullable(),
+  warmup_called: z.boolean().nullable(),
+  warmup_bars: CountSchema.nullable(),
+  closed: z.boolean().nullable(),
+  state_before: TokenSchema.nullable(),
+  cutoff_utc_ms: UtcMsSchema.nullable(),
+  train_start_utc_ms: UtcMsSchema.nullable(),
+  train_end_utc_ms: UtcMsSchema.nullable(),
+  test_start_utc_ms: UtcMsSchema.nullable(),
+  test_end_utc_ms: UtcMsSchema.nullable(),
+  strategy_fingerprint: TokenSchema.nullable(),
+  market_fingerprint: TokenSchema.nullable(),
+}).strict();
+
+export const ResearchCurrentSourceChildAuditQuerySchema = ResearchCurrentSourceReadQuerySchema.extend({
+  fold: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
+}).strict();
+
+/**
+ * P17-T14 · one fold's child audit: QuantBT's strategy-isolation records for
+ * the child strategy instances it created for that fold, in QuantBT's order,
+ * with their original ids. Bounded (≤ 64 records per fold, `truncated`
+ * says when QuantBT published more).
+ */
+export const ResearchCurrentSourceReplayChildAuditResponseSchema = CommonSchema.extend({
+  schema_version: z.literal("research.current-source-replay-child-audit.v1"),
+  fold_id: TokenSchema,
+  reason_code: ReasonCodeSchema.nullable(),
+  policy: TokenSchema.nullable(),
+  records_dropped_by_source: CountSchema.nullable(),
+  source_run_fingerprint: TokenSchema.nullable(),
+  source_record_count: CountSchema.nullable(),
+  truncated: z.boolean(),
+  records: z.array(ChildAuditRecordSchema).max(64),
+}).strict().superRefine((value, context) => {
+  if (value.availability.state !== "AVAILABLE" && value.records.length !== 0) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "an unavailable child audit must carry no records" });
+  }
+  for (let index = 1; index < value.records.length; index += 1) {
+    if (value.records[index]!.audit_ordinal <= value.records[index - 1]!.audit_ordinal) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "child audit records must keep QuantBT's order" });
+      break;
+    }
+  }
+});
+
 export const ResearchCurrentSourceTransitionsQuerySchema = ResearchCurrentSourceReadQuerySchema.extend({
   cursor: OpaqueCursorSchema.optional(),
   before: OpaqueCursorSchema.optional(),
@@ -815,7 +884,7 @@ export const ResearchCurrentSourceTransitionsQuerySchema = ResearchCurrentSource
  * `details.lane_state` names the state (see `ResearchCurrentSourceLaneState`).
  */
 export const ResearchCurrentSourceOperationSchema = z.enum([
-  "evidence", "evidence_series", "split", "search", "freeze", "replay", "replay_transitions",
+  "evidence", "evidence_series", "split", "search", "freeze", "replay", "replay_transitions", "replay_child_audit",
 ]);
 
 export const ResearchCurrentSourceNotApplicableResponseSchema = z.object({
@@ -864,3 +933,5 @@ export type ResearchCurrentSourceReplayResponse = z.infer<typeof ResearchCurrent
 export type ResearchCurrentSourceReplayTransitionsResponse = z.infer<typeof ResearchCurrentSourceReplayTransitionsResponseSchema>;
 export type ResearchCurrentSourceTransitionsQuery = z.infer<typeof ResearchCurrentSourceTransitionsQuerySchema>;
 export type ResearchCurrentSourceReplayExecution = z.infer<typeof ResearchCurrentSourceReplayExecutionSchema>;
+export type ResearchCurrentSourceReplayChildAuditResponse = z.infer<typeof ResearchCurrentSourceReplayChildAuditResponseSchema>;
+export type ResearchCurrentSourceChildAuditQuery = z.infer<typeof ResearchCurrentSourceChildAuditQuerySchema>;

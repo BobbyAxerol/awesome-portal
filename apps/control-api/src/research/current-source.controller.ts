@@ -12,6 +12,7 @@ import {
   ResearchCurrentSourceRunIdSchema,
   ResearchCurrentSourceSearchQuerySchema,
   ResearchCurrentSourceTransitionsQuerySchema,
+  ResearchCurrentSourceChildAuditQuerySchema,
 } from "./current-source.contract";
 import { ResearchCurrentSourceError } from "./current-source.error";
 import { ResearchCurrentSourceService } from "./current-source.service";
@@ -92,6 +93,15 @@ export class ResearchCurrentSourceController {
     const scope = await this.scope(request, query.workspace_id);
     reply.header("cache-control", "private, no-store");
     return reply.send(await this.abortable(request, (signal) => this.service.replayTransitions(scope, runId, query, signal)));
+  }
+
+  /** P17-T14: one fold's QuantBT strategy-isolation records (child audit). */
+  @Get(":runId/current-source/replay/child-audit")
+  async replayChildAudit(@Req() request: CurrentSourceRequest, @Res() reply: FastifyReply, @Param("runId") rawRunId: string, @Query() rawQuery: unknown) {
+    const runId = this.runId(rawRunId);
+    const query = this.parse(ResearchCurrentSourceChildAuditQuerySchema, rawQuery);
+    const scope = await this.scope(request, query.workspace_id);
+    return this.conditional(reply, request, await this.abortable(request, (signal) => this.service.replayChildAudit(scope, runId, query, signal)));
   }
 
   private runId(raw: string): string {

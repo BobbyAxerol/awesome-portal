@@ -31,10 +31,11 @@ import {
   type CurrentSourceReplay,
   type FoldSegment,
   type TransitionRow,
+  type ChildAuditRecord,
 } from "./replayClient";
 import { ReplayTransport, SPEEDS, useTransport } from "./replayTransport";
 import { retainedReadiness } from "./retainedLane";
-import type { ReplayController, RetainedReplaySlot, TransitionsSlot } from "./useReplay";
+import type { ChildAuditSlot, ReplayController, RetainedReplaySlot, TransitionsSlot } from "./useReplay";
 import { iso } from "./utcMinute";
 
 /* --------------------------------------------------------------- verbatim */
@@ -79,9 +80,10 @@ function Card({ title, aside, children, ...rest }: { title: string; aside?: Reac
       {...rest}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        {/* h2 under the page's h1 (axe heading-order). */}
+        <h2 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           {title}
-        </h3>
+        </h2>
         {aside}
       </div>
       {children}
@@ -673,7 +675,92 @@ function TransitionLedger({
 }
 
 /** Trade anatomy on the close-target schema: every link the route has, and the ones it does not. */
-function Anatomy({ replay, selected }: { replay: CurrentSourceReplay; selected: TransitionRow | null }) {
+/** The child strategy instance that generated a fold's replayed bars (QuantBT's own record). */
+function generationOf(slot: ChildAuditSlot | undefined, fold: string | null): ChildAuditRecord | null {
+  if (!slot || slot.state !== "ready" || fold === null || slot.fold !== fold) return null;
+  return slot.audit.records.find((record) => record.context === "out-of-sample generation") ?? null;
+}
+
+const short = (value: string | null | undefined, n = 10) => (value ? `${value.slice(0, n)}…` : "not published");
+
+/**
+ * P17-T14 · QuantBT's strategy-isolation audit for the fold on screen: one row
+ * per child strategy instance, with its original ids (row in QuantBT's table,
+ * candidate id, seed). The row that generated the replayed bars is marked.
+ */
+function ChildAuditCard({ replay, slot, fold }: { replay: CurrentSourceReplay; slot: ChildAuditSlot | undefined; fold: string | null }) {
+  const summary = replay.execution.child_audit;
+  const fact = replay.route_capabilities.child_audit;
+  return (
+    <Card title="child audit — strategy isolation, per fold" data-panel="child-audit" aside={<FactLine label="child audit" fact={fact} name="child_audit" />}>
+      {summary.state !== "AVAILABLE" ? (
+        <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>This seal carries no child-audit records.</p>
+      ) : fold === null ? (
+        <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>The bars on screen are in-sample; child audit is read per OOS fold.</p>
+      ) : !slot || slot.state === "idle" || slot.state === "loading" || slot.fold !== fold ? (
+        <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-child-audit="loading">reading fold {fold}'s child audit…</p>
+      ) : slot.state === "refused" ? (
+        <p className="text-[11px]" style={{ color: "var(--ink-soft)" }} data-child-audit="refused">{slot.message}</p>
+      ) : (
+        <div className="flex flex-col gap-1" data-child-audit={slot.fold}>
+          <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+            Each row is a strategy instance QuantBT created for fold {slot.fold}, as QuantBT recorded it. The marked row generated
+            the out-of-sample bars replayed above.
+          </p>
+          {/* Keyboard users can scroll this table sideways at narrow widths (axe scrollable-region-focusable). */}
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={`child audit records of fold ${slot.fold}`}>
+            <table className="w-full min-w-[520px] border-collapse">
+              <thead>
+                <tr className="mono text-left text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+                  <th className="py-1 pr-3 font-normal">audit #</th>
+                  <th className="py-1 pr-3 font-normal">context</th>
+                  <th className="py-1 pr-3 font-normal">candidate</th>
+                  <th className="py-1 pr-3 font-normal">seed</th>
+                  <th className="py-1 pr-3 font-normal">isolation</th>
+                  <th className="py-1 font-normal">window (UTC)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {slot.audit.records.map((record) => {
+                  const generation = record.context === "out-of-sample generation";
+                  return (
+                    <tr
+                      key={record.audit_ordinal}
+                      className="mono text-[10px]"
+                      data-audit-row={record.audit_ordinal}
+                      data-audit-generation={String(generation)}
+                      style={{ background: generation ? "var(--paper-sunken)" : undefined, borderBottom: "1px solid var(--line-soft)" }}
+                    >
+                      <td className="py-[3px] pr-3">{record.audit_ordinal}</td>
+                      <td className="py-[3px] pr-3" style={{ fontWeight: generation ? 600 : undefined }}>{record.context ?? "not published"}</td>
+                      <td className="py-[3px] pr-3" title={record.candidate_id ?? undefined}>{short(record.candidate_id, 8)}</td>
+                      <td className="py-[3px] pr-3">{record.seed ?? "not published"}</td>
+                      <td className="py-[3px] pr-3">
+                        {record.policy ?? "not published"}
+                        {record.certified_isolation === true ? " · certified" : record.certified_isolation === false ? " · not certified" : ""}
+                      </td>
+                      <td className="whitespace-nowrap py-[3px]">
+                        {record.test_start_utc_ms !== null ? iso(record.test_start_utc_ms) : "—"} → {record.test_end_utc_ms !== null ? iso(record.test_end_utc_ms) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-child-audit-caption>
+            {slot.audit.records.length} of {slot.audit.source_record_count ?? "an unpublished number of"} records for this fold
+            {slot.audit.truncated ? " (capped at 64)" : ""} · run total {summary.source_record_count ?? "—"} · policy {summary.policy ?? "not published"} ·
+            dropped by QuantBT {summary.records_dropped_by_source ?? "not published"} · run fingerprint {short(summary.source_run_fingerprint, 12)}
+          </span>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function Anatomy({ replay, selected, childAudit }: { replay: CurrentSourceReplay; selected: TransitionRow | null; childAudit?: ChildAuditSlot }) {
+  const child = generationOf(childAudit, selected?.fold_id ?? null);
   const route = replay.execution.route;
   const counts = replay.execution.counts;
   const links: Array<{ key: string; value: ReactNode; na?: boolean }> = selected
@@ -696,6 +783,15 @@ function Anatomy({ replay, selected }: { replay: CurrentSourceReplay; selected: 
           key: "fill",
           na: true,
           value: `not_applicable — accounting settles at the ${route.fill_price_policy ?? "close"} (${words(route.fill_phase ?? "same close")}); ${counts.fills_published ?? "?"} fill records`,
+        },
+        {
+          key: "child",
+          na: child === null,
+          value: child
+            ? `audit #${child.audit_ordinal} · ${child.context} · candidate ${short(child.candidate_id, 8)} · seed ${child.seed ?? "?"} · ${child.policy ?? "isolation not published"}${child.certified_isolation ? " certified" : ""}`
+            : replay.execution.child_audit.state === "AVAILABLE"
+              ? "reading this fold's child audit…"
+              : `not published — ${replay.route_capabilities.child_audit.reason_code ?? "no child audit on this seal"}`,
         },
         {
           key: "account",
@@ -816,6 +912,13 @@ export function CandleReplayBody({
 
   const playRow = rows[snap.index];
   const activeFold = playRow?.bar?.fold_id ?? rows.find((row) => row.bar?.fold_id)?.bar?.fold_id ?? null;
+  /* P17-T14: one child-audit read per fold window, never per tick. */
+  const windowFold = rows.find((row) => row.bar?.fold_id)?.bar?.fold_id ?? null;
+  const childAuditAvailable = execution.child_audit?.state === "AVAILABLE";
+  const readChildAudit = controller.readChildAudit;
+  useEffect(() => {
+    if (childAuditAvailable && windowFold !== null) readChildAudit?.(windowFold);
+  }, [childAuditAvailable, windowFold, readChildAudit]);
   const foldIndex = segments.findIndex((segment) => segment.fold_id === activeFold);
 
   const goFold = (segment: FoldSegment) => controller.retainedFold?.(segment);
@@ -1025,7 +1128,8 @@ export function CandleReplayBody({
               />
             ) : null}
           </Card>
-          <Anatomy replay={replay} selected={selected} />
+          <Anatomy replay={replay} selected={selected} childAudit={controller.childAudit} />
+          <ChildAuditCard replay={replay} slot={controller.childAudit} fold={windowFold} />
         </div>
         <div className="flex min-w-0 flex-col gap-3">
           <Card title="trade blotter" data-absent-panel="trade-blotter">

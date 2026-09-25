@@ -466,6 +466,24 @@ class AdvancedWalkForwardRunner:
             return
         self._artifacts.write_frame(run_id, "series/account_ledger.v1.parquet", ledger)
 
+        # P17-T14: QuantBT's own strategy-isolation audit, one row per child
+        # strategy instance (candidate × fold × context), verbatim. Written
+        # only when the engine published it; nothing is derived here.
+        lifecycle = wf.get("strategy_lifecycle_table")
+        if isinstance(lifecycle, pd.DataFrame) and not lifecycle.empty:
+            self._artifacts.write_frame(run_id, "wfo/strategy_lifecycle.v1.parquet", lifecycle.reset_index(drop=True))
+            self._artifacts.write_json(
+                run_id,
+                "wfo/strategy_lifecycle_contract.v1.json",
+                with_portal_provenance("strategy_lifecycle_contract.v1.json", canonicalize({
+                    "schema_version": "portal.wfo-strategy-lifecycle-contract.v1",
+                    "source": "QuantBT walk_forward strategy_lifecycle_table",
+                    "policy": _sanitize(wf.get("strategy_lifecycle_policy")),
+                    "records_dropped": _sanitize(wf.get("strategy_lifecycle_records_dropped")),
+                    "rows": int(len(lifecycle)),
+                })),
+            )
+
         metadata = getattr(result, "metadata", None)
         metadata = metadata if isinstance(metadata, Mapping) else {}
         run_config = metadata.get("run_config") if isinstance(metadata.get("run_config"), Mapping) else {}

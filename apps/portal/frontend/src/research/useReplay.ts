@@ -24,6 +24,7 @@ import {
   type CurrentSourceReplay,
   type FoldSegment,
   type ReplayTransitions,
+  type ReplayChildAudit,
   type Replay,
   type ReplayNavigation,
   type ReplayRefusal,
@@ -103,7 +104,16 @@ export interface ReplayController {
   /** W5b: the close-target transition ledger, read once the lane carries a bar ledger. */
   transitions?: TransitionsSlot;
   transitionsPage?: (direction: "next" | "previous") => void;
+  /** P17-T14: the child audit of one fold, read once per fold on request. */
+  childAudit?: ChildAuditSlot;
+  readChildAudit?: (fold: string) => void;
 }
+
+export type ChildAuditSlot =
+  | { state: "idle" }
+  | { state: "loading"; fold: string }
+  | { state: "ready"; fold: string; audit: ReplayChildAudit }
+  | { state: "refused"; fold: string; message: string };
 
 export type TransitionsSlot =
   | { state: "idle" }
@@ -301,6 +311,29 @@ export function useReplay(
       });
     return () => controller.abort();
   }, [transitionsNavigation, runId, workspaceId]);
+  const [childAudit, setChildAudit] = useState<ChildAuditSlot>({ state: "idle" });
+  const [childAuditFold, setChildAuditFold] = useState<string | null>(null);
+  const readChildAudit = useCallback((fold: string) => setChildAuditFold(fold), []);
+  useEffect(() => {
+    if (childAuditFold === null) return;
+    const controller = new AbortController();
+    setChildAudit({ state: "loading", fold: childAuditFold });
+    replayApi
+      .currentSourceChildAudit(runId, childAuditFold, { workspaceId, signal: controller.signal })
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        if ((body as { schema_version?: string }).schema_version !== "research.current-source-replay-child-audit.v1") {
+          setChildAudit({ state: "refused", fold: childAuditFold, message: "The child audit does not apply to this run." });
+          return;
+        }
+        setChildAudit({ state: "ready", fold: childAuditFold, audit: body as ReplayChildAudit });
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) setChildAudit({ state: "refused", fold: childAuditFold, message: toReplayRefusal(error, "retained").message });
+      });
+    return () => controller.abort();
+  }, [childAuditFold, runId, workspaceId]);
+
   const transitionsPage = useCallback((direction: "next" | "previous") => {
     if (transitions.state !== "ready") return;
     const token = direction === "next" ? transitions.ledger.page.next_cursor : transitions.ledger.page.prev_cursor;
@@ -354,6 +387,8 @@ export function useReplay(
     retainedSeek,
     transitions,
     transitionsPage,
+    childAudit,
+    readChildAudit,
   };
 }
 

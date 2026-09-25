@@ -14,6 +14,7 @@ import {
   ResearchCurrentSourceFreezeResponseSchema,
   ResearchCurrentSourceReplayResponseSchema,
   ResearchCurrentSourceReplayTransitionsResponseSchema,
+  ResearchCurrentSourceReplayChildAuditResponseSchema,
   ResearchCurrentSourceSearchResponseSchema,
   ResearchCurrentSourceSplitResponseSchema,
   ResearchCurrentSourceNotApplicableResponseSchema,
@@ -24,6 +25,8 @@ import {
   type ResearchCurrentSourcePageQuery,
   type ResearchCurrentSourceReplayResponse,
   type ResearchCurrentSourceReplayTransitionsResponse,
+  type ResearchCurrentSourceReplayChildAuditResponse,
+  type ResearchCurrentSourceChildAuditQuery,
   type ResearchCurrentSourceTransitionsQuery,
   type ResearchCurrentSourceSearchQuery,
   type ResearchCurrentSourceSearchResponse,
@@ -147,6 +150,8 @@ function asCandidate(row: CurrentSourceStoredRow) {
 
 /** W5b · the reason every W5b fact carries on a seal retained before the bar ledger. */
 const SEAL_PREDATES_BAR_LEDGER = "RS02_SEAL_PREDATES_W5B_REPLAY_BAR_LEDGER";
+/** P17-T14 · a W5b seal whose source tree had no strategy lifecycle table. */
+const SEAL_PREDATES_CHILD_AUDIT = "RS02_SEAL_PREDATES_P17_CHILD_AUDIT";
 
 /**
  * P17-T04 · a replay window is a contiguous run of dense sealed ordinals. A
@@ -234,6 +239,7 @@ function replayCapabilities(ledger: CurrentSourceReplaySummary | null, facts: Cu
       sl_tp: legacy,
       mae_mfe: legacy,
       execution_events: legacy,
+      child_audit: legacy,
     };
   }
   const contract = ledger.account_contract;
@@ -269,6 +275,7 @@ function replayCapabilities(ledger: CurrentSourceReplaySummary | null, facts: Cu
       : sourceGap("QUANTBT_ROUTE_EMITTED_NO_ORDER_RECORDS"),
     mae_mfe: sourceGap("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS"),
     execution_events: sourceGap("QUANTBT_CLOSE_TARGET_ROUTE_PUBLISHES_TRANSITIONS_NOT_AN_EVENT_TAPE"),
+    child_audit: ledger.child_audit ? fact("AVAILABLE", null) : sourceGap(SEAL_PREDATES_CHILD_AUDIT),
   };
 }
 
@@ -722,6 +729,56 @@ export class ResearchCurrentSourceService {
     });
   }
 
+  /**
+   * P17-T14 · one fold's child audit: the retained FOLD row read by its
+   * original fold id (one indexed row), its QuantBT isolation records in
+   * QuantBT's own order. No compute; nothing is inferred from positions.
+   */
+  async replayChildAudit(
+    scope: ResearchScope,
+    runId: string,
+    query: ResearchCurrentSourceChildAuditQuery,
+    signal?: AbortSignal,
+  ): Promise<ResearchCurrentSourceReplayChildAuditResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "replay_child_audit", signal);
+    if (!isSeal(seal)) return seal;
+    const summary = parseSummary(seal).replay?.child_audit ?? null;
+    const common = this.common("replay", seal);
+    const absent = (reason: string) => this.valid(ResearchCurrentSourceReplayChildAuditResponseSchema, {
+      schema_version: "research.current-source-replay-child-audit.v1",
+      ...common,
+      availability: { state: "NOT_RETAINED_LEGACY", reason_code: reason },
+      fold_id: query.fold,
+      reason_code: reason,
+      policy: null,
+      records_dropped_by_source: null,
+      source_run_fingerprint: null,
+      source_record_count: null,
+      truncated: false,
+      records: [],
+    });
+    if (summary === null) {
+      return absent(parseSummary(seal).replay ? SEAL_PREDATES_CHILD_AUDIT : SEAL_PREDATES_BAR_LEDGER);
+    }
+    const row = await this.repository.rowBySourceId(scope, runId, seal.artifactRevision, "FOLD", query.fold, signal);
+    if (!row) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_NOT_FOUND", "This run has no retained fold with that id.", 404);
+    const fold = asFold(row);
+    const block = fold.child_audit;
+    if (!block) return absent(SEAL_PREDATES_CHILD_AUDIT);
+    return this.valid(ResearchCurrentSourceReplayChildAuditResponseSchema, {
+      schema_version: "research.current-source-replay-child-audit.v1",
+      ...common,
+      fold_id: fold.fold_id,
+      reason_code: null,
+      policy: summary.policy,
+      records_dropped_by_source: summary.records_dropped_by_source,
+      source_run_fingerprint: summary.source_run_fingerprint,
+      source_record_count: block.source_record_count,
+      truncated: block.truncated,
+      records: block.records,
+    });
+  }
+
   private replayExecution(
     workspaceId: string,
     runId: string,
@@ -781,6 +838,21 @@ export class ResearchCurrentSourceService {
         boundary_events: capital?.boundary_events ?? [],
       },
       candle_overview: ledger?.candle_overview ?? null,
+      child_audit: ledger?.child_audit ? {
+        state: "AVAILABLE" as const,
+        reason_code: null,
+        policy: ledger.child_audit.policy,
+        records_dropped_by_source: ledger.child_audit.records_dropped_by_source,
+        source_record_count: ledger.child_audit.source_record_count,
+        source_run_fingerprint: ledger.child_audit.source_run_fingerprint,
+      } : {
+        state: "NOT_PUBLISHED" as const,
+        reason_code: ledger ? SEAL_PREDATES_CHILD_AUDIT : SEAL_PREDATES_BAR_LEDGER,
+        policy: null,
+        records_dropped_by_source: null,
+        source_record_count: null,
+        source_run_fingerprint: null,
+      },
       sequence: {
         order: "SOURCE_TABLE_ORDINAL_ASC" as const,
         density: "DENSE_SEALED_ORDINALS" as const,

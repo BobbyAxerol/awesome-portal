@@ -5,7 +5,7 @@
     "portal_producer": "portal-api"
   },
   "file_digests": {
-    "advanced_walkforward_runner": "sha256:1fb60b4f7470ba45b4d01eb85a37d0347b53a5fc7cca7d36a4494a43c86c221b",
+    "advanced_walkforward_runner": "sha256:892bf40c7a5204dc5494052f942cbfa7d365c89a4d91cb90887555a48129f90a",
     "compose": "sha256:c28c3a8cf8e49e9f87f2aaa9907fffabcff73b992c4696491ee343346806af0d",
     "compose_production": "sha256:17086d0744ff90fe5cc2ab964e92024a56b6652707ff3a4d20ce91839157cb79",
     "constraints_portal": "sha256:bd6172132133a7c332c068b1f8799a4794b0277313d71a462343864d772c905d",
@@ -41,7 +41,7 @@
     "research_run_evidence_schema": "sha256:ac1213412f91adbfb3f76c12dc12c6943fc979e83e75b1a5de9909e7fb01b730",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "85c1b11337543c42cf097ec3c75604b1e56fceaf",
+  "frozen_at_commit": "897fb48de0a11ea2bcfb99f8b89f654fd39a70ec",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,

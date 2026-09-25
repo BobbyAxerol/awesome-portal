@@ -62,6 +62,8 @@ MAXIMUM_PARAMETER_FIELDS: Final = 24
 RETURN_DISTRIBUTION_BUCKETS: Final = 12
 # W5b: whole-run OHLC overview buckets kept in the seal summary (< 64 KiB total).
 MAXIMUM_CANDLE_OVERVIEW_BUCKETS: Final = 160
+# P17-T14: QuantBT isolation records kept per fold (a fold row stays < 64 KiB).
+MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD: Final = 64
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _CURRENT_SOURCE_PROFILES: Final = {
     CURRENT_SOURCE_PROFILE_ID: (CURRENT_SOURCE_ADAPTER_ID, CURRENT_SOURCE_TARGET_MODE),
@@ -351,6 +353,10 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
         facts = _retained_facts(row, "fold_facts")
         if facts is not None:
             payload["fold_facts"] = facts
+        # P17-T14: the fold's child-audit block, only on a W5b source tree.
+        child_audit = _retained_facts(row, "child_audit")
+        if child_audit is not None:
+            payload["child_audit"] = child_audit
     elif table_kind == "trials":
         source_id = row.get("trial_id")
         at_utc_ms = None
@@ -614,6 +620,11 @@ class CurrentSourceArtifactAdapter:
         account_ledger = self._optional_frame(raw_dir / "series" / "account_ledger.v1.parquet", "account ledger")
         account_contract = self._optional_json(raw_dir / "wfo" / "account_contract.v1.json", "account contract")
         replay_summary = None
+        lifecycle = self._optional_frame(raw_dir / "wfo" / "strategy_lifecycle.v1.parquet", "strategy lifecycle")
+        lifecycle_contract = self._optional_json(raw_dir / "wfo" / "strategy_lifecycle_contract.v1.json", "strategy lifecycle contract")
+        child_audit_summary = None
+        if lifecycle is not None and account_ledger is not None:
+            child_audit_summary = self._attach_child_audit(folds, lifecycle=lifecycle, contract=lifecycle_contract)
         if account_ledger is not None:
             replay_summary = self._attach_bar_ledger(
                 observations,
@@ -646,6 +657,7 @@ class CurrentSourceArtifactAdapter:
                     ("source_contract", source_contract),
                     ("selected_fold_metrics", fold_metrics),
                     ("account_contract", account_contract if account_ledger is not None else None),
+                    ("strategy_lifecycle_contract", lifecycle_contract if child_audit_summary is not None else None),
                 )
                 if value is not None
             },
@@ -668,6 +680,8 @@ class CurrentSourceArtifactAdapter:
         )
         if replay_summary is not None:
             summary["replay"] = replay_summary
+            if child_audit_summary is not None:
+                summary["replay"]["child_audit"] = child_audit_summary
         if len(json.dumps(canonicalize(summary), ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")) > 65_536:
             raise CurrentSourceArtifactError(
                 "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE",
@@ -1123,6 +1137,81 @@ class CurrentSourceArtifactAdapter:
             },
             has_candle=has_candle,
         )
+
+    def _attach_child_audit(
+        self,
+        folds: list[dict[str, Any]],
+        *,
+        lifecycle: pd.DataFrame,
+        contract: Mapping[str, Any] | None,
+    ) -> dict[str, Any]:
+        """Add QuantBT's strategy-isolation records to each fold payload (P17-T14).
+
+        One record per child strategy instance QuantBT created for that fold:
+        in-sample search per candidate, in-sample and out-of-sample scoring of
+        the selected candidate, and the out-of-sample generation that produced
+        the replayed bars. ``audit_ordinal`` is the record's row in QuantBT's
+        own table — the original child-audit id together with the candidate id,
+        fold id and seed QuantBT gave it. No record is invented or reordered.
+        """
+
+        fold_ids = {fold["fold_id"] for fold in folds}
+        by_fold: dict[str, list[dict[str, Any]]] = {fold_id: [] for fold_id in fold_ids}
+        unmatched = 0
+        fingerprints: set[str] = set()
+        for ordinal, (_, raw) in enumerate(lifecycle.iterrows()):
+            record = {str(column): self._json_value(value) for column, value in raw.to_dict().items()}
+            fold_id = None if record.get("fold_id") is None else str(record.get("fold_id"))
+            if fold_id not in by_fold:
+                unmatched += 1
+                continue
+            run_fingerprint = self._fact_token(record.get("run_id"))
+            if run_fingerprint:
+                fingerprints.add(run_fingerprint)
+            context = record.get("context")
+            by_fold[fold_id].append({
+                "audit_ordinal": ordinal,
+                "candidate_id": self._fact_token(record.get("candidate_id")),
+                "fold_id": fold_id,
+                "seed": self._fact_int(record.get("seed")),
+                "context": context if isinstance(context, str) and 0 < len(context) <= 96 else None,
+                "lifecycle_kind": self._fact_token(record.get("lifecycle_kind")),
+                "policy": self._fact_token(record.get("policy")),
+                "certified_isolation": self._fact_bool(record.get("certified_isolation")),
+                "spawned": self._fact_bool(record.get("spawned")),
+                "reset_called": self._fact_bool(record.get("reset_called")),
+                "warmup_called": self._fact_bool(record.get("warmup_called")),
+                "warmup_bars": self._fact_int(record.get("warmup_bars")),
+                "closed": self._fact_bool(record.get("closed")),
+                "state_before": self._fact_token(record.get("state_before")),
+                "cutoff_utc_ms": self._nullable_utc_ms(record.get("cutoff"), "lifecycle cutoff"),
+                "train_start_utc_ms": self._nullable_utc_ms(record.get("train_start"), "lifecycle train start"),
+                "train_end_utc_ms": self._nullable_utc_ms(record.get("train_end"), "lifecycle train end"),
+                "test_start_utc_ms": self._nullable_utc_ms(record.get("test_start"), "lifecycle test start"),
+                "test_end_utc_ms": self._nullable_utc_ms(record.get("test_end"), "lifecycle test end"),
+                "strategy_fingerprint": self._fact_token(record.get("strategy_fingerprint")),
+                "market_fingerprint": self._fact_token(record.get("market_fingerprint")),
+            })
+        for fold in folds:
+            records = by_fold[fold["fold_id"]]
+            block = {
+                "schema_version": "research.current-source-fold-child-audit.v1",
+                "source_record_count": len(records),
+                "truncated": len(records) > MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD,
+                "records": records[:MAXIMUM_CHILD_AUDIT_RECORDS_PER_FOLD],
+            }
+            record = json.loads(fold["payload_json"])
+            record["child_audit"] = block
+            fold["payload_json"] = self._canonical_json(record)
+        contract = contract or {}
+        return {
+            "schema_version": "research.current-source-child-audit-summary.v1",
+            "policy": self._fact_token(contract.get("policy")),
+            "records_dropped_by_source": self._fact_int(contract.get("records_dropped")),
+            "source_record_count": len(lifecycle),
+            "unmatched_record_count": unmatched,
+            "source_run_fingerprint": next(iter(fingerprints)) if len(fingerprints) == 1 else None,
+        }
 
     def _replay_summary(
         self,

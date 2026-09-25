@@ -71,6 +71,7 @@ TRACKED = (
     "fixtures/research-current-source.replay.fold0.valid.json",
     "fixtures/research-current-source.replay.legacy-seal.valid.json",
     "fixtures/research-current-source.replay-transitions.valid.json",
+    "fixtures/research-current-source.replay-child-audit.fold0.valid.json",
     "fixtures/command.valid.json",
     "fixtures/event.valid.json",
     "fixtures/keyset-page.valid.json",
