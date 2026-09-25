@@ -1,26 +1,31 @@
 /**
  * Screen 03 · the Stage log tab (FE-S03-06, HiFi release-v1.1).
  *
- * One row per reported fold, in the HiFi's column grid. The progress read
- * publishes each fold's start, end and state; it does not publish the study's
- * trial count, best J₁, selected trial or params digest. Those cells are
- * shells that say so (DQ-14) — a dash would read as "zero" or "none", and a
- * value copied from the HiFi would be a study nobody ran.
+ * One row per reported fold, in the HiFi's column grid. Start, end and state
+ * come from the fold row; objective, selected trial and params digest from
+ * the fold's published `selection` (CG-P11-03). A global study selects one
+ * bundle for every fold, so its objective is the study's, labelled so; a
+ * fixed profile ran no search and has no objective at all. A fold whose
+ * selection is not published keeps a shell that says so (DQ-14).
  */
 
 import type { CSSProperties } from "react";
 
-import type { ProgressSnapshot } from "./progressClient";
+import { NOT_PUBLISHED_SELECTION, type ProgressSnapshot } from "./progressClient";
+import { formatMetric, shortDigest } from "./researchFormat";
 import { NotPublished } from "./RunMetaStrip";
 
 const MONO = "var(--font-mono)";
 
 /** Why the selection columns are empty, said once per cell tooltip. */
 export const LEDGER_NOT_PUBLISHED_REASON =
-  "The progress read publishes each fold's start, end and state only — not its trial count, best J₁, selected trial or params digest.";
+  "The source has not published this fold's selection (objective, selected trial, params digest).";
 
 export const LEDGER_FOOT =
-  "ledger — one row per reported fold · trials, best J₁, selection and params digest are not published by the progress read";
+  "ledger — one row per reported fold · objective, selection and params digest as the source published them";
+
+/** A global study's objective is study-wide; a fixed profile has none. */
+export const GLOBAL_OBJECTIVE_NOTE = "One global study selected this bundle for every fold; the objective is study-wide.";
 
 /** `HH:MM:SSZ` from a server timestamp; never the local clock. */
 export function utcClock(ms: number | null): string | null {
@@ -50,9 +55,11 @@ export interface StageLedgerProps {
   /** Latest published trial per fold, shown only on a running fold. */
   foldTrials: Readonly<Record<number, number>>;
   cursor: number | null;
+  /** The study's trial counter, shown on a global-study fold. */
+  studyTrials?: { done: number; declared: number } | null;
 }
 
-export function StageLedger({ folds, foldTrials, cursor }: StageLedgerProps) {
+export function StageLedger({ folds, foldTrials, cursor, studyTrials = null }: StageLedgerProps) {
   const missing = <NotPublished reason={LEDGER_NOT_PUBLISHED_REASON} what="n/p" />;
   return (
     <div
@@ -95,6 +102,16 @@ export function StageLedger({ folds, foldTrials, cursor }: StageLedgerProps) {
           const current = cursor === fold.fold;
           const tone = fold.state === "DONE" ? "var(--good)" : fold.state === "FAILED" ? "var(--bad)" : "var(--accent)";
           const trial = foldTrials[fold.fold];
+          const selection = fold.selection ?? NOT_PUBLISHED_SELECTION;
+          const available = selection.state === "AVAILABLE";
+          const global = available && selection.scope === "GLOBAL_STUDY";
+          const trialsCell = running && trial !== undefined
+            ? `latest ${trial.toLocaleString("en-US")}`
+            : global && studyTrials
+              ? `${studyTrials.done.toLocaleString("en-US")} · global`
+              : available && selection.scope === "FIXED_PROFILE"
+                ? "1 · fixed"
+                : null;
           return (
             <div
               key={fold.fold}
@@ -119,17 +136,36 @@ export function StageLedger({ folds, foldTrials, cursor }: StageLedgerProps) {
               <span role="cell" style={{ ...cell(1), color: "var(--ink-soft)" }}>
                 {utcClock(fold.started_at_utc_ms) ?? <NotPublished what="n/p" />}
               </span>
-              <span role="cell" style={cell(2)}>
-                {running && trial !== undefined ? `latest ${trial.toLocaleString("en-US")}` : missing}
+              <span role="cell" style={cell(2)} data-ledger-trials={fold.fold}>
+                {trialsCell ?? missing}
               </span>
-              <span role="cell" style={cell(3)}>
-                {missing}
+              <span
+                role="cell"
+                style={{ ...cell(3), color: "var(--good)" }}
+                data-ledger-objective={fold.fold}
+                title={global ? `${selection.objective ?? ""} · ${GLOBAL_OBJECTIVE_NOTE}` : selection.objective ?? undefined}
+              >
+                {!available ? (
+                  missing
+                ) : selection.objective === null ? (
+                  <NotPublished reason="A fixed profile ran no search, so it has no objective." what="no search" />
+                ) : (
+                  <>
+                    {formatMetric(selection.objective, "ratio") ?? selection.objective}
+                    {global ? <span style={{ color: "var(--ink-faint)" }}> g</span> : null}
+                  </>
+                )}
               </span>
-              <span role="cell" style={cell(4)}>
-                {missing}
+              <span role="cell" style={cell(4)} data-ledger-selected={fold.fold}>
+                {available && selection.trial !== null ? `#${selection.trial.toLocaleString("en-US")}` : missing}
               </span>
-              <span role="cell" style={cell(5)}>
-                {missing}
+              <span
+                role="cell"
+                style={{ ...cell(5), color: "var(--accent)" }}
+                data-ledger-digest={fold.fold}
+                title={selection.params_digest ?? undefined}
+              >
+                {available && selection.params_digest !== null ? `prm_${shortDigest(selection.params_digest, 6)}` : missing}
               </span>
               <span role="cell" style={{ ...cell(6), color: "var(--ink-soft)" }}>
                 {utcClock(fold.completed_at_utc_ms) ?? (

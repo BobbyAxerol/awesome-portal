@@ -11,7 +11,8 @@ export class ResearchProgressError extends Error {
       | "RESEARCH_PROGRESS_STALE_LEASE"
       | "RESEARCH_PROGRESS_CONFLICT"
       | "RESEARCH_PROGRESS_CANCEL_PENDING"
-      | "RESEARCH_PROGRESS_CANCEL_NOT_ALLOWED",
+      | "RESEARCH_PROGRESS_CANCEL_NOT_ALLOWED"
+      | "RESEARCH_RUN_REQUESTED_SPEC_NOT_RETAINED",
     message: string,
     readonly status: 400 | 403 | 404 | 409 | 503,
   ) {

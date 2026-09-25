@@ -223,3 +223,11 @@ dùng chung với production, nơi `FEATURE_RESEARCH_RUN_PRODUCER` đang tắt; 
 Đã đóng: `CG-P05-01`, `CG-P10-02` (Delta built-in), `CG-P06-03`, `CG-P11-05`, `CG-P11-04` (DOC_STALE → DELIVERED `5bc77b9b`).
 Mở tiếp theo: W2 (P11 màn 03: `CG-P11-03/-07/-08/-09`, `CG-P06-02`/`CG-P10-04`) và W3 (P13–P15 trên dữ liệu WFO thật).
 Việc riêng còn treo: `test_m0_freeze` đỏ sẵn trên HEAD — sửa bằng commit riêng; Codex dùng migration 063 trong dải 060–069 của Claude.
+
+### 9.1 Cập nhật 2026-09-24 (tối)
+
+- Codex dừng theo lệnh Bobby. Phần P22 dở dang được cất nguyên vẹn ở nhánh `codex/p22-wip-2026-09-24` (`442e9f6a`, 22 file, so từng byte, có trên origin) rồi dọn khỏi checkout dùng chung — gate route inventory hết đỏ. Claude bỏ qua migration 063, dùng từ 064; P22 khi làm tiếp phải đổi 063 → ≥070 và làm trong worktree riêng.
+- `test_m0_freeze`: re-pin manifest, xanh — `6b834705`.
+- `CG-RF02-02`: **DELIVERED** — `test_rf02_nats_consume_loop_survives_an_idle_queue` PASS trong chính image worker (`nats-py` 2.10.0, pytest cài tạm trong container dùng một lần); worker preview nhận run sau các quãng rảnh trong suốt phiên W1.
+- `CG-RF02-01`: **chờ Bobby**. Profile hẹp đã thiết kế (seccomp moby v28.0.0 + đúng `unshare/mount/umount2/setns`; AppArmor `docker-default` chỉ thêm mount proc/tmpfs/rprivate `/`; `systempaths` vẫn phải unconfined vì kernel chặn `--mount-proc` khi `/proc` bị che). Việc nạp profile lên host bị hệ thống quyền của Claude chặn. Chỉ chặn thực thi alpha import; Delta built-in không phụ thuộc.
+- A12: [mapping gate ID](./RS-03/A12_GATE_ID_MAPPING_CLAUDE_2026-09-24.md) — 83 gate (68 gốc + 15 V11): 19 COVERED, 2 DECIDED, 62 GAP. Gap P13–P15 và V11-DR giao W3; P16/P17 (A10, replay) là đợt W5 sau RF-05.

@@ -41,7 +41,6 @@ import {
 import { researchState, type ResearchState } from "./state";
 import { refusalState } from "./researchRefusal";
 import { decodeInspectionCursor } from "./inspectionCursor";
-import { NOT_MODIFIED, evidenceApi, type EvidenceHub } from "./evidenceClient";
 
 /** Whether a status means the run can still produce events. */
 export function isLive(status: ProgressRead["current"]["effective_status"]): boolean {
@@ -53,17 +52,6 @@ export const HIDDEN_STREAM_GRACE_MS = 60_000;
 
 /** How the screen is currently being fed. */
 export type Transport = "stream" | "poll" | "closed";
-
-/**
- * The run's identity, read once from the P13 Hub (FE-S03-03).
- *
- * Read only: nothing here is inferred from the progress read. A run whose Hub
- * is refused keeps the strip and says why, instead of dropping it.
- */
-export type RunMetaRead =
-  | { state: "loading" }
-  | { state: "ready"; hub: EvidenceHub }
-  | { state: "refused"; reason: string };
 
 /**
  * One event applied to the last snapshot, when the frame carries none
@@ -121,17 +109,24 @@ export function patchSnapshot(prev: ProgressSnapshot, event: ProgressEvent): Pro
         ...prev.overall,
         pct: payload.overall_pct === undefined ? prev.overall.pct : Math.max(prev.overall.pct, payload.overall_pct),
         tqdm_line: payload.tqdm_line ?? prev.overall.tqdm_line,
+        trials_done: Math.max(prev.overall.trials_done, payload.trial),
+        eta_s: payload.eta_s === undefined ? prev.overall.eta_s : payload.eta_s,
       };
-      if (!prev.folds.some((f) => f.fold === payload.fold)) upsertFold(payload.fold, (f) => f);
+      /* A global-study trial names no fold and opens no fold row. */
+      const fold = payload.fold;
+      if (fold !== undefined && !prev.folds.some((f) => f.fold === fold)) upsertFold(fold, (f) => f);
       break;
     }
-    case "fold_completed":
+    case "fold_completed": {
+      const selection = event.payload.selection;
       upsertFold(event.payload.fold, (f) => ({
         ...f,
         state: "DONE",
         completed_at_utc_ms: f.completed_at_utc_ms ?? at,
+        ...(selection ? { selection: { state: "AVAILABLE" as const, ...selection, reason_code: null } } : {}),
       }));
       break;
+    }
     case "artifact_writing":
       upsertArtifact(event.payload.name, (a) => (a.state === "SEALED" ? a : { ...a, state: "WRITING" }));
       break;
@@ -194,8 +189,6 @@ export interface RunProgressController {
   /** False when every retained line older than the window is already loaded. */
   canLoadOlder: boolean;
 
-  /** Run identity from the P13 Hub, for the meta strip. */
-  meta: RunMetaRead;
   /** The latest trial each fold published, from typed trial events and console lines. */
   foldTrials: Readonly<Record<number, number>>;
 
@@ -217,7 +210,6 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   const [pinnedFold, setPinnedFold] = useState<number | null>(() =>
     typeof window === "undefined" ? null : foldFromHash(window.location.hash),
   );
-  const [meta, setMeta] = useState<RunMetaRead>({ state: "loading" });
   const [eventTrials, setEventTrials] = useState<Readonly<Record<number, number>>>({});
   /* The earliest `after_seq` this view has asked the console for. */
   const [oldestAfter, setOldestAfter] = useState<number | null>(null);
@@ -235,6 +227,9 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
 
   /** Highest sequence applied. Older frames are dropped, never re-applied. */
   const appliedSeq = useRef<number>(0);
+  /** Set when a stream frame carried a full read: the next poll-floor tick
+      is then already covered and skipped (CG-P11-08). No clock is read. */
+  const streamReadSinceTick = useRef(false);
   const source = useRef<EventSource | null>(null);
 
   /* Visible for the stream's purposes. Spec 03: a hidden tab keeps its stream
@@ -327,13 +322,15 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
    * stream here rather than waiting for a later reconciliation.
    */
   const applyEvent = useCallback(
-    (event: ProgressEvent, snapshot: ProgressSnapshot | null) => {
+    (event: ProgressEvent, snapshot: ProgressSnapshot | null, frameRead: ProgressRead | null = null, readOmitted = false) => {
       if (event.sequence <= appliedSeq.current) return;
       appliedSeq.current = event.sequence;
 
       if (event.event_type === "trial_completed") {
         const { fold, trial } = event.payload;
-        setEventTrials((previous) => (previous[fold] === trial ? previous : { ...previous, [fold]: trial }));
+        if (fold !== undefined) {
+          setEventTrials((previous) => (previous[fold] === trial ? previous : { ...previous, [fold]: trial }));
+        }
       }
 
       if (event.event_type === "trial_completed" && event.payload.console) {
@@ -344,32 +341,46 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
             occurred_at_utc_ms: event.occurred_at_utc_ms,
             tone: observation.tone,
             text: observation.text,
-            fold: observation.fold ?? event.payload.fold,
+            fold: observation.fold ?? event.payload.fold ?? null,
             trial: observation.trial ?? event.payload.trial,
           },
         ]);
       }
 
-      /* The server's snapshot wins when the frame carries one; otherwise the
-         event's own published fields patch the last one (DQ-13). */
-      setRead((previous) => {
-        if (!previous || !previous.progress) return snapshot && previous ? { ...previous, progress: snapshot } : previous;
-        const progress = snapshot
-          ? {
-              ...snapshot,
-              overall: { ...snapshot.overall, pct: Math.max(previous.progress.overall.pct, snapshot.overall.pct) },
-            }
-          : patchSnapshot(previous.progress, event);
-        return { ...previous, progress };
-      });
+      /* CG-P11-08 (DQ-13): a live frame carries the viewer's whole current read
+         — `current`, `availability`, attempts and the snapshot — so nothing is
+         refetched per event. Without one (replayed history, an older server)
+         the snapshot or the event's own published fields patch the last read. */
+      if (frameRead !== null) {
+        streamReadSinceTick.current = true;
+        setRead((previous) => {
+          const merged = mergeRead(previous, frameRead);
+          /* The source snapshot advances only when its relay catches up, so
+             the read may predate this very event: patch it with the event. */
+          if (!merged.progress || merged.progress.latest_sequence >= event.sequence) return merged;
+          return { ...merged, progress: patchSnapshot(merged.progress, event) };
+        });
+      } else {
+        setRead((previous) => {
+          if (!previous || !previous.progress) return snapshot && previous ? { ...previous, progress: snapshot } : previous;
+          const progress = snapshot
+            ? {
+                ...snapshot,
+                overall: { ...snapshot.overall, pct: Math.max(previous.progress.overall.pct, snapshot.overall.pct) },
+              }
+            : patchSnapshot(previous.progress, event);
+          return { ...previous, progress };
+        });
+      }
 
-      if (event.event_type === "run_completed" || event.event_type === "run_failed") {
+      const terminal = event.event_type === "run_completed" || event.event_type === "run_failed";
+      if (terminal) {
         closeStream();
         setTransport("closed");
-        /* The snapshot is authoritative for the terminal state; the event only
-           told us to stop listening. */
-        void refresh();
       }
+      /* One GET only when the server could not carry the read: a terminal
+         event from an older server, or a read over the frame budget. */
+      if (readOmitted || (terminal && frameRead === null)) void refresh();
     },
     [appendLines, closeStream, refresh],
   );
@@ -404,6 +415,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
       if (frame.kind === "heartbeat") return;
       if (frame.kind === "snapshot") {
         /* The server opens every stream with the current read. */
+        streamReadSinceTick.current = true;
         setRead(frame.read);
         if (frame.read.progress) {
           appliedSeq.current = Math.max(appliedSeq.current, frame.read.progress.latest_sequence);
@@ -418,7 +430,7 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
         if (frame.frame.event_type === "research.progress.gap") void refresh();
         return;
       }
-      applyEvent(frame.event, frame.snapshot);
+      applyEvent(frame.event, frame.snapshot, frame.read, frame.readOmitted);
     };
     /* Named frames reach only named listeners; `onmessage` stays for an
        unnamed frame so a server that drops the name still lands here. */
@@ -478,7 +490,15 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   useEffect(() => {
     if (!live) return;
     if (refusal !== null && !refusal.mayRetry) return;
-    const id = window.setInterval(() => void refresh(), POLL_FLOOR_MS);
+    const id = window.setInterval(() => {
+      /* The floor never stops, but a tick a stream frame already covered is
+         not a second read of the same state. */
+      if (streamReadSinceTick.current) {
+        streamReadSinceTick.current = false;
+        return;
+      }
+      void refresh();
+    }, POLL_FLOOR_MS);
     return () => window.clearInterval(id);
   }, [live, refresh, refusal]);
 
@@ -543,27 +563,6 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
   /* Nothing older exists once the view has read from the retention floor. */
   const floorSequence = read?.progress?.retention_floor_sequence ?? 0;
   const canLoadOlder = oldestAfter !== null && oldestAfter > Math.max(0, floorSequence - 1);
-
-  /* ------------------------------------------------------------------ meta */
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setMeta({ state: "loading" });
-    evidenceApi
-      .hub(runId, { workspaceId, signal: controller.signal })
-      .then((hub) => {
-        if (hub === NOT_MODIFIED || hub?.schema_version !== "research.evidence-hub.v1") {
-          setMeta({ state: "refused", reason: "The evidence read did not return a run identity." });
-          return;
-        }
-        setMeta({ state: "ready", hub });
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        setMeta({ state: "refused", reason: toProgressRefusal(error).message });
-      });
-    return () => controller.abort();
-  }, [runId, workspaceId]);
 
   /* ---------------------------------------------------------------- cancel */
 
@@ -653,7 +652,6 @@ export function useRunProgress(runId: string, workspaceId?: string): RunProgress
     linesDropped,
     loadOlder,
     canLoadOlder,
-    meta,
     foldTrials,
     transport,
     foldCursor,

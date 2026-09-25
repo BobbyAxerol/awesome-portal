@@ -46,10 +46,20 @@ def test_rf03_cpu_float_and_typed_resource_failure_remain_visible() -> None:
     usage = DurableQuantWorker._p11_usage({
         "research_receipt": {"resource": {"peak_rss_bytes": 1000, "cpu_seconds": 1.25}},
     })
-    assert usage == {"peak_rss_bytes": 1000, "cpu_seconds": 2, "scratch_bytes": 0, "fd_peak": 0}
+    # CG-P11-09: the child has no scratch or descriptor probe, so those are
+    # unmeasured (None) rather than a zero that reads as a measurement.
+    assert usage == {"peak_rss_bytes": 1000, "cpu_seconds": 2, "scratch_bytes": None, "fd_peak": None}
     assert DurableQuantWorker._p11_usage({
         "research_receipt": {"resource": {"cpu_seconds": float("nan")}},
-    })["cpu_seconds"] == 0
+    })["cpu_seconds"] is None
+    # A zero RSS delta means the parent could not see the child, not 0 bytes.
+    assert DurableQuantWorker._p11_usage({
+        "research_receipt": {"resource": {"cpu_seconds": 3.0, "peak_rss_bytes": 0}},
+    }) == {"peak_rss_bytes": None, "cpu_seconds": 3, "scratch_bytes": None, "fd_peak": None}
+    # No child ran (cancelled before start, worker shutdown): nothing measured.
+    assert DurableQuantWorker._p11_usage({}) == {
+        "peak_rss_bytes": None, "cpu_seconds": None, "scratch_bytes": None, "fd_peak": None,
+    }
     assert DurableQuantWorker._classify(
         ResearchRunProducerError("bounded child exceeded its budget", code="RESOURCE_EXCEEDED")
     ) == "RESOURCE_EXCEEDED"

@@ -17,7 +17,12 @@ import {
 import { ResearchProgressError } from "./progress.error";
 import { ResearchProgressFanout, type ResearchProgressEnvelope } from "./progress.fanout";
 import { ResearchProgressPortalClient } from "./progress.portal-client";
-import { ResearchProgressRepository, type ProgressIngressScope, type ProgressRunRead } from "./progress.repository";
+import {
+  ResearchProgressRepository,
+  type ProgressIngressScope,
+  type ProgressRunIdentity,
+  type ProgressRunRead,
+} from "./progress.repository";
 import { ResearchMetadataRepository } from "./repository";
 import { ResearchEvidenceService } from "./evidence.service";
 import { ResearchSplitService } from "./split.service";
@@ -30,12 +35,42 @@ const P04_FIXED_CHILD_CPU_SECONDS = 45;
 const ACTIVE_JOB_STATES = new Set(["QUEUED", "CLAIMED", "RUNNING"]);
 const TERMINAL_JOB_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"]);
 
+/** CG-P11-03: run identity from the P10 producer row and its immutable P08 manifest. */
+export interface ResearchProgressRunIdentity {
+  alpha: { alpha_id: string; alpha_name: string | null; alpha_version_id: string };
+  execution_profile_id: string;
+  protocol: string | null;
+  mode: string | null;
+  schedule: string | null;
+  instrument: { symbol: string | null; timeframe: string | null };
+  execution_route: string | null;
+  engine_release_id: string | null;
+  config_digest: string | null;
+  requested_spec_digest: string;
+  created_at_utc_ms: number;
+  declared_folds:
+    | { state: "DECLARED"; count: number; reason_code: null }
+    | { state: "NOT_PUBLISHED"; count: null; reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" };
+}
+
+/** CG-P11-03: a declared artifact this viewer may not read. Never a link. */
+export interface ResearchProgressDeniedArtifact {
+  name: "sealed holdout";
+  state: "DENIED";
+  reason_code: "P08_SEALED_HOLDOUT_UNLOCK_NOT_INSTALLED";
+  rows: string | null;
+  range: { start_utc_ms: number; end_exclusive_utc_ms: number } | null;
+  reader_href: null;
+}
+
 export interface ResearchProgressReadResponse {
   schema_version: "research.progress-read.v1";
   run_id: string;
+  run: ResearchProgressRunIdentity | null;
   queue: {
     queue_class: "INTERACTIVE" | "HEAVY" | "BACKGROUND";
     queued_at_utc_ms: number;
+    /** CG-P11-06: set only while the job is in RETRY_WAIT; a stale column never leaks. */
     retry_not_before_utc_ms: number | null;
   };
   attempts: Array<{
@@ -43,7 +78,10 @@ export interface ResearchProgressReadResponse {
     state: "CLAIMED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "LOST_LEASE" | "CANCELLED";
     claimed_at_utc_ms: number;
     started_at_utc_ms: number | null;
+    /** For LOST_LEASE: when the scheduler recorded the loss, not when the lease lapsed. */
     ended_at_utc_ms: number | null;
+    /** CG-P11-06: when a LOST_LEASE attempt's lease actually lapsed; null otherwise. */
+    lease_expired_at_utc_ms: number | null;
   }>;
   availability: "AVAILABLE" | "QUEUED_NO_SOURCE" | "CANCELLED_BEFORE_SOURCE" | "PENDING_SOURCE_CALLBACK";
   current: {
@@ -57,7 +95,15 @@ export interface ResearchProgressReadResponse {
     last_received_at_utc_ms: number | null;
     may_cancel: boolean;
     may_retry: false;
-    retry_reason: "P12_OWNED_NO_P11_RETRY_ROUTE";
+    /**
+     * CG-P11-07: there is no automatic or in-place retry. The one action is a
+     * new run seeded from this run's requested spec
+     * (`GET /api/v1/research/runs/{runId}/requested-spec`, then a NEW create).
+     */
+    retry_reason: "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC";
+    new_run_from:
+      | { state: "AVAILABLE"; reason_code: null }
+      | { state: "NOT_AVAILABLE"; reason_code: "RUN_REQUESTED_SPEC_NOT_RETAINED" };
   };
   progress: ResearchProgressPublicSnapshot | null;
   /**
@@ -74,11 +120,28 @@ export interface ResearchProgressReadResponse {
     sealed_at_utc_ms: number | null;
     reader_href: null;
   }>;
+  /** CG-P11-03: declared-but-withheld artifacts (the P08 sealed holdout). */
+  denied_artifacts: ResearchProgressDeniedArtifact[];
 }
 
 export interface ResearchProgressPublicEnvelope {
   event: ResearchProgressPublicEvent;
   snapshot: ResearchProgressPublicSnapshot | null;
+  /** CG-P11-08: this viewer's current read, or null when it could not be materialised. */
+  read: ResearchProgressReadResponse | null;
+}
+
+/** CG-P11-07: the immutable requested spec a new run may start from. */
+export interface ResearchRunRequestedSpecResponse {
+  schema_version: "research.run-requested-spec.v1";
+  run_id: string;
+  requested_spec: Record<string, unknown>;
+  requested_spec_digest: string;
+  alpha_id: string;
+  alpha_version_id: string;
+  execution_profile_id: string;
+  created_at_utc_ms: number;
+  clone: { intent_kind: "NEW"; requires_fresh_preflight: true };
 }
 
 export interface ResearchProgressConsoleResponse {
@@ -148,7 +211,13 @@ export class ResearchProgressService {
     // or fanout failure.  The immutable journal sequence makes the repeated
     // notification idempotent for SSE consumers.
     if (persisted.inserted || isTerminal) {
-      this.fanout.publish(input.run_id, { event: persisted.event, snapshot: persisted.snapshot });
+      // CG-P11-08 (DQ-13): one read per committed event, shared by every
+      // viewer, so the stream carries `current`/`availability` too. A failed
+      // read never withholds the already-durable event.
+      const run = await this.progress
+        .readRun({ workspaceId: ingressScope.workspaceId, actorUserId: ingressScope.actorUserId }, input.run_id)
+        .catch(() => null);
+      this.fanout.publish(input.run_id, { event: persisted.event, snapshot: persisted.snapshot, run });
     }
     return { accepted: true, latest_sequence: input.snapshot.latest_sequence };
   }
@@ -266,23 +335,57 @@ export class ResearchProgressService {
     }
   }
 
-  subscribe(runId: string, listener: (event: ResearchProgressPublicEnvelope) => void): () => void {
+  subscribe(
+    user: PortalUser,
+    runId: string,
+    listener: (event: ResearchProgressPublicEnvelope) => void,
+  ): () => void {
     this.requireEnabled();
     return this.fanout.subscribe(runId, (envelope: ResearchProgressEnvelope) => listener({
       event: toPublicResearchProgressEvent(envelope.event),
       snapshot: envelope.snapshot ? toPublicResearchProgressSnapshot(envelope.snapshot) : null,
+      read: envelope.run ? this.readResponse(user, envelope.run) : null,
     }));
+  }
+
+  /** CG-P11-07: read-only clone seed. A new run is still a NEW, freshly preflighted intent. */
+  async requestedSpec(scope: ResearchScope, runId: string): Promise<ResearchRunRequestedSpecResponse> {
+    if (this.config.FEATURE_RESEARCH_RUN_PRODUCER !== "true") {
+      throw new ResearchProgressError(
+        "RESEARCH_PROGRESS_UNAVAILABLE",
+        "Research run creation is not enabled in this environment.",
+        503,
+      );
+    }
+    const spec = await this.progress.requestedSpec(scope, runId);
+    return {
+      schema_version: "research.run-requested-spec.v1",
+      run_id: spec.runId,
+      requested_spec: spec.requestedSpec,
+      requested_spec_digest: spec.requestedSpecDigest,
+      alpha_id: spec.alphaId,
+      alpha_version_id: spec.alphaVersionId,
+      execution_profile_id: spec.executionProfileId,
+      created_at_utc_ms: spec.createdAt.valueOf(),
+      clone: { intent_kind: "NEW", requires_fresh_preflight: true },
+    };
   }
 
   private readResponse(user: PortalUser, current: ProgressRunRead): ResearchProgressReadResponse {
     const effectiveStatus = this.effectiveStatus(current);
+    const identity = current.identity ?? null;
     return {
       schema_version: "research.progress-read.v1",
       run_id: current.runId,
+      run: identity ? this.runIdentity(identity) : null,
       queue: {
         queue_class: current.queueClass,
         queued_at_utc_ms: current.queuedAt.valueOf(),
-        retry_not_before_utc_ms: current.retryNotBefore?.valueOf() ?? null,
+        // The column is only meaningful while the scheduler waits to retry. A
+        // cancelled/terminal/running job must not advertise a retry instant.
+        retry_not_before_utc_ms: current.jobState === "RETRY_WAIT"
+          ? current.retryNotBefore?.valueOf() ?? null
+          : null,
       },
       attempts: current.attempts.map((attempt) => ({
         ordinal: attempt.ordinal,
@@ -290,6 +393,9 @@ export class ResearchProgressService {
         claimed_at_utc_ms: attempt.claimedAt.valueOf(),
         started_at_utc_ms: attempt.startedAt?.valueOf() ?? null,
         ended_at_utc_ms: attempt.endedAt?.valueOf() ?? null,
+        lease_expired_at_utc_ms: attempt.state === "LOST_LEASE"
+          ? attempt.leaseExpiresAt?.valueOf() ?? null
+          : null,
       })),
       availability: current.progress ? "AVAILABLE"
         : current.jobState === "CANCELLED" ? "CANCELLED_BEFORE_SOURCE"
@@ -307,7 +413,10 @@ export class ResearchProgressService {
         last_received_at_utc_ms: current.receivedAt?.valueOf() ?? null,
         may_cancel: user.role === "ADMIN" && ACTIVE_JOB_STATES.has(current.jobState),
         may_retry: false,
-        retry_reason: "P12_OWNED_NO_P11_RETRY_ROUTE",
+        retry_reason: "FAIL_CLOSED_NEW_RUN_FROM_REQUESTED_SPEC",
+        new_run_from: identity?.requestedSpecRetained
+          ? { state: "AVAILABLE", reason_code: null }
+          : { state: "NOT_AVAILABLE", reason_code: "RUN_REQUESTED_SPEC_NOT_RETAINED" },
       },
       progress: current.progress ? toPublicResearchProgressSnapshot(current.progress) : null,
       retained_artifacts: current.retainedArtifacts.map((artifact) => ({
@@ -318,6 +427,42 @@ export class ResearchProgressService {
         sealed_at_utc_ms: artifact.sealedAt?.valueOf() ?? null,
         reader_href: null,
       })),
+      denied_artifacts: identity?.sealedHoldout
+        ? [{
+            name: "sealed holdout",
+            state: "DENIED",
+            reason_code: "P08_SEALED_HOLDOUT_UNLOCK_NOT_INSTALLED",
+            rows: identity.sealedHoldout.bars === null ? null : String(identity.sealedHoldout.bars),
+            range: {
+              start_utc_ms: identity.sealedHoldout.startUtcMs,
+              end_exclusive_utc_ms: identity.sealedHoldout.endExclusiveUtcMs,
+            },
+            reader_href: null,
+          }]
+        : [],
+    };
+  }
+
+  private runIdentity(identity: ProgressRunIdentity): ResearchProgressRunIdentity {
+    return {
+      alpha: {
+        alpha_id: identity.alphaId,
+        alpha_name: identity.alphaName,
+        alpha_version_id: identity.alphaVersionId,
+      },
+      execution_profile_id: identity.executionProfileId,
+      protocol: identity.protocol,
+      mode: identity.mode,
+      schedule: identity.schedule,
+      instrument: { symbol: identity.symbol, timeframe: identity.timeframe },
+      execution_route: identity.executionRoute,
+      engine_release_id: identity.engineReleaseId,
+      config_digest: identity.configDigest,
+      requested_spec_digest: identity.requestedSpecDigest,
+      created_at_utc_ms: identity.createdAt.valueOf(),
+      declared_folds: identity.declaredFoldCount === null
+        ? { state: "NOT_PUBLISHED", count: null, reason_code: "P08_TOPOLOGY_DID_NOT_DECLARE_FOLDS" }
+        : { state: "DECLARED", count: identity.declaredFoldCount, reason_code: null },
     };
   }
 
@@ -404,8 +549,10 @@ export class ResearchProgressService {
       throw new ResearchProgressError("RESEARCH_PROGRESS_SOURCE_REJECTED", "Research terminal progress is missing measured usage.", 409);
     }
     const record = candidate as Record<string, unknown>;
-    const value = (key: string): number => {
+    const value = (key: string): number | null => {
       const item = record[key];
+      // CG-P11-09: an explicit null is an unmeasured quantity, kept as null.
+      if (item === null) return null;
       if (typeof item !== "number" || !Number.isSafeInteger(item) || item < 0) {
         throw new ResearchProgressError("RESEARCH_PROGRESS_SOURCE_REJECTED", "Research terminal progress usage is invalid.", 409);
       }

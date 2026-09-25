@@ -60,6 +60,19 @@ export const ResearchCurrentSourcePageQuerySchema = ResearchCurrentSourceReadQue
   }
 });
 
+/** W3: the search ledger page query also accepts a fold filter. */
+export const ResearchCurrentSourceSearchQuerySchema = ResearchCurrentSourceReadQuerySchema.extend({
+  cursor: OpaqueCursorSchema.optional(),
+  before: OpaqueCursorSchema.optional(),
+  at: OpaqueCursorSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+  fold: SourceIdentifierSchema.optional(),
+}).strict().superRefine((value, context) => {
+  if ([value.cursor, value.before, value.at].filter((entry) => entry !== undefined).length > 1) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["cursor"], message: "cursor, before and at are mutually exclusive" });
+  }
+});
+
 export const ResearchCurrentSourceEvidenceSeriesQuerySchema = ResearchCurrentSourceReadQuerySchema.extend({
   kind: z.enum(["EQUITY", "RETURNS", "POSITIONS", "MONTHLY_RETURNS", "ROLLING_RETURNS_20", "RETURN_DISTRIBUTION"]),
 }).strict();
@@ -122,6 +135,91 @@ const PageSchema = z.object({
   order: z.literal("SOURCE_TABLE_ORDINAL_ASC"),
 }).strict();
 
+/**
+ * W3 · a single named source fact with its verbatim value. `value` is the
+ * engine's own token (or boolean), never a display sentence; a fact the
+ * source did not publish keeps `value: null` with a typed reason.
+ */
+const FactTokenValueSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/);
+const ClaimFactSchema = z.object({
+  value: z.union([FactTokenValueSchema, z.boolean()]).nullable(),
+  source_key: z.string().regex(/^[a-z][a-z0-9_.]{2,95}$/),
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  availability: ResearchCurrentSourceAvailabilitySchema,
+}).strict();
+
+const ClaimStripSchema = z.object({
+  schema_version: z.literal("research.current-source-claim-strip.v1"),
+  validation_claim: ClaimFactSchema,
+  chronological_claim: ClaimFactSchema,
+  causality_claim: ClaimFactSchema,
+  oos_used_for_selection: ClaimFactSchema,
+  holdout: ClaimFactSchema,
+  execution_contract: ClaimFactSchema.extend({
+    signal_phase: FactTokenValueSchema.nullable(),
+    fill_phase: FactTokenValueSchema.nullable(),
+    accounting_certified: z.boolean().nullable(),
+    execution_clock: FactTokenValueSchema.nullable(),
+  }).strict(),
+  runtime_authority: ClaimFactSchema.extend({
+    final_account_runtime: FactTokenValueSchema.nullable(),
+    scoring_backend: FactTokenValueSchema.nullable(),
+    native_prepared_wfo_policy: FactTokenValueSchema.nullable(),
+    promotion_reason: ResearchCurrentSourceFactSchema,
+  }).strict(),
+}).strict();
+
+const FoldVerdictRowSchema = z.object({
+  source_ordinal: z.number().int().nonnegative().max(255),
+  fold_id: SourceIdentifierSchema,
+  test_start_utc_ms: UtcMsSchema.nullable(),
+  test_end_utc_ms: UtcMsSchema.nullable(),
+  oos_sharpe: DecimalSchema.nullable(),
+  is_sharpe: DecimalSchema.nullable(),
+  decay: DecimalSchema.nullable(),
+  oos_trades: DecimalSchema.nullable(),
+  max_drawdown_fraction: DecimalSchema.nullable(),
+  return_fraction: DecimalSchema.nullable(),
+  worst_return_fraction: DecimalSchema.nullable(),
+  worst_at_utc_ms: UtcMsSchema.nullable(),
+  observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
+  verdict: z.enum(["PASS", "WARN", "DRAG", "NOT_EVALUATED"]),
+  failed_criteria: z.array(z.enum(["OOS_SHARPE", "DECAY", "MAX_DRAWDOWN"])).max(3),
+  drag_target: z.enum(["search", "execute"]).nullable(),
+  reason_code: ReasonCodeSchema.nullable(),
+}).strict();
+
+const VerdictThresholdSchema = z.object({
+  oos_sharpe_min: DecimalSchema,
+  decay_max: DecimalSchema,
+  max_drawdown_min: DecimalSchema,
+}).strict();
+
+const FoldVerdictsSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  availability: ResearchCurrentSourceAvailabilitySchema,
+  rule: z.object({
+    version: z.literal("research.fold-verdict.v1"),
+    pass: VerdictThresholdSchema,
+    warn: VerdictThresholdSchema,
+    score_basis: z.literal("QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1"),
+    path_basis: z.literal("RETAINED_STITCHED_OBSERVATIONS_V1"),
+  }).strict(),
+  order: z.literal("WORST_FIRST"),
+  counts: z.object({
+    folds: z.number().int().nonnegative().max(256),
+    pass: z.number().int().nonnegative().max(256),
+    warn: z.number().int().nonnegative().max(256),
+    drag: z.number().int().nonnegative().max(256),
+    not_evaluated: z.number().int().nonnegative().max(256),
+  }).strict(),
+  mean_oos_sharpe: DecimalSchema.nullable(),
+  mean_decay: DecimalSchema.nullable(),
+  rows: z.array(FoldVerdictRowSchema).max(256),
+}).strict();
+
 export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
   schema_version: z.literal("research.current-source-evidence.v1"),
   passport: z.object({
@@ -148,6 +246,10 @@ export const ResearchCurrentSourceEvidenceResponseSchema = CommonSchema.extend({
     audited_fills: ResearchCurrentSourceFactSchema,
     benchmark: ResearchCurrentSourceFactSchema,
   }).strict(),
+  /** W3 · CG-P13-07 (A11): the claim strip, verbatim QuantBT facts. */
+  claim: ClaimStripSchema,
+  /** W3 · CG-P13-08 (A09): per-fold verdict rows under a versioned server rule. */
+  fold_verdicts: FoldVerdictsSchema,
 }).strict();
 
 export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.extend({
@@ -155,8 +257,27 @@ export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.ex
   kind: z.enum(["EQUITY", "RETURNS", "POSITIONS", "MONTHLY_RETURNS", "ROLLING_RETURNS_20", "RETURN_DISTRIBUTION"]),
   source_sample: z.object({
     source_observation_count: z.number().int().nonnegative().max(2_000_000),
-    emitted_point_count: z.number().int().nonnegative().max(192),
-    sampling: z.enum(["FULL", "RETENTION_STRIDE_V1", "TAIL_WINDOW_V1", "EXTREMA_BUCKET_V1", "FULL_RETURN_HISTOGRAM_V2", "NOT_APPLICABLE"]),
+    emitted_point_count: z.number().int().nonnegative().max(2_000),
+    sampling: z.enum(["FULL", "RETENTION_STRIDE_V1", "TAIL_WINDOW_V1", "EXTREMA_BUCKET_V1", "OBSERVATION_EXTREMA_BUCKET_V2", "FULL_RETURN_HISTOGRAM_V2", "NOT_APPLICABLE"]),
+    /**
+     * W3 · CG-P13-05 (A02): the observation kinds (EQUITY/RETURNS/POSITIONS)
+     * describe their whole retained relation here — first/last point, the
+     * equity and drawdown extrema — whether or not the emitted points were
+     * downsampled. Null for the derived kinds.
+     */
+    envelope: z.object({
+      first_at_utc_ms: UtcMsSchema,
+      last_at_utc_ms: UtcMsSchema,
+      first_equity: DecimalSchema,
+      last_equity: DecimalSchema,
+      min_equity: DecimalSchema,
+      min_equity_at_utc_ms: UtcMsSchema,
+      max_equity: DecimalSchema,
+      max_equity_at_utc_ms: UtcMsSchema,
+      min_drawdown_fraction: DecimalSchema,
+      min_drawdown_at_utc_ms: UtcMsSchema,
+      extrema_emitted: z.boolean(),
+    }).strict().nullable(),
   }).strict(),
   values: z.array(z.union([
     z.object({
@@ -175,7 +296,7 @@ export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.ex
       upper_inclusive: z.enum(["true", "false"]),
       count: z.string().regex(/^[0-9]+$/),
     }).strict(),
-  ])).max(192),
+  ])).max(2_000),
 }).strict().superRefine((value, context) => {
   if (value.source_sample.emitted_point_count !== value.values.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "current-source emitted point count is inconsistent" });
@@ -198,6 +319,29 @@ export const ResearchCurrentSourceEvidenceSeriesResponseSchema = CommonSchema.ex
   }
 });
 
+const FoldWindowFactSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  bars: z.number().int().nonnegative().max(2_000_000).nullable(),
+  start_utc_ms: UtcMsSchema.nullable(),
+  end_utc_ms: UtcMsSchema.nullable(),
+}).strict();
+
+/** W3 · CG-P14-02 (A03/A09): QuantBT's own per-fold data-use windows. */
+const FoldAnatomySchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  train_bars: z.number().int().nonnegative().max(2_000_000).nullable(),
+  test_bars: z.number().int().nonnegative().max(2_000_000).nullable(),
+  warmup: FoldWindowFactSchema,
+  label_horizon: FoldWindowFactSchema,
+  purge: FoldWindowFactSchema,
+  embargo: FoldWindowFactSchema,
+  validation: FoldWindowFactSchema,
+  cutoff_utc_ms: UtcMsSchema.nullable(),
+  account_policy: FactTokenValueSchema.nullable(),
+}).strict();
+
 const FoldSchema = z.object({
   source_ordinal: z.number().int().nonnegative().max(255),
   fold_id: SourceIdentifierSchema,
@@ -205,6 +349,22 @@ const FoldSchema = z.object({
   train_end_utc_ms: UtcMsSchema.nullable(),
   test_start_utc_ms: UtcMsSchema.nullable(),
   test_end_utc_ms: UtcMsSchema.nullable(),
+  anatomy: FoldAnatomySchema,
+  /** W3: QuantBT's per-fold score of the selected parameters (S05 fold table). */
+  score: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    is_sharpe: DecimalSchema.nullable(),
+    oos_sharpe: DecimalSchema.nullable(),
+    decay: DecimalSchema.nullable(),
+    oos_trades: DecimalSchema.nullable(),
+  }).strict(),
+}).strict();
+
+const GuardFactSchema = z.object({
+  value: z.union([z.number().int().nonnegative().max(2_000_000), FactTokenValueSchema, z.boolean()]).nullable(),
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
+  reason_code: ReasonCodeSchema.nullable(),
 }).strict();
 
 export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
@@ -221,14 +381,67 @@ export const ResearchCurrentSourceSplitResponseSchema = CommonSchema.extend({
     embargo: ResearchCurrentSourceFactSchema,
     strict_outer_oos_selection: ResearchCurrentSourceFactSchema,
   }).strict(),
+  /** W3 · run-level temporal guards QuantBT applied to every outer fold. */
+  guards: z.object({
+    label_horizon_bars: GuardFactSchema,
+    purge_bars: GuardFactSchema,
+    embargo_bars: GuardFactSchema,
+    warmup_policy: GuardFactSchema,
+    warmup_bars: GuardFactSchema,
+    inner_folds: GuardFactSchema,
+    oos_used_for_selection: GuardFactSchema,
+  }).strict(),
+}).strict();
+
+const TrialMetricSchema = z.object({
+  value: DecimalSchema.nullable(),
+  reason_code: ReasonCodeSchema.nullable(),
+}).strict();
+
+/** W3 · CG-P15-03/04: what one ledger row is, measured and scoped. */
+const TrialFactsSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  stage: FactTokenValueSchema.nullable(),
+  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
+  fold_scope: z.object({
+    kind: z.enum(["FOLD", "ALL_OUTER_FOLDS", "NOT_PUBLISHED"]),
+    fold_id: FactTokenValueSchema.nullable(),
+    reason_code: ReasonCodeSchema.nullable(),
+  }).strict(),
+  source_trial_id: FactTokenValueSchema.nullable(),
+  pruned: z.boolean().nullable(),
+  oos_seen_by_optuna: z.boolean().nullable(),
+  metrics: z.object({
+    mean_is_sharpe: TrialMetricSchema,
+    mean_oos_sharpe: TrialMetricSchema,
+    mean_decay: TrialMetricSchema,
+    std_decay: TrialMetricSchema,
+    temporal_score: TrialMetricSchema,
+  }).strict(),
+  constraints: ResearchCurrentSourceFactSchema,
+  feasible: ResearchCurrentSourceFactSchema,
+  objective_components: z.object({
+    state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+    reason_code: ReasonCodeSchema.nullable(),
+    formula: ReasonCodeSchema.nullable(),
+    terms: z.array(z.object({
+      term: FactTokenValueSchema,
+      weight: DecimalSchema,
+      value: DecimalSchema,
+      contribution: DecimalSchema,
+    }).strict()).max(8),
+  }).strict(),
 }).strict();
 
 const TrialSchema = z.object({
   source_ordinal: z.number().int().nonnegative().max(2_000_000),
   trial_id: SourceIdentifierSchema,
-  state: z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/),
+  /** W3: typed. The compact QuantBT ledger publishes `pruned`, not an Optuna state column. */
+  state: z.enum(["COMPLETE", "PRUNED", "FAIL", "RUNNING", "WAITING"]),
   objective: DecimalSchema.nullable(),
   parameters: ParameterMapSchema,
+  facts: TrialFactsSchema,
   playback_cursor: OpaqueCursorSchema,
 }).strict();
 
@@ -237,6 +450,15 @@ const CandidateSchema = z.object({
   candidate_id: SourceIdentifierSchema,
   objective: DecimalSchema.nullable(),
   parameters: ParameterMapSchema,
+  facts: TrialFactsSchema,
+}).strict();
+
+const SelectionRoleSchema = z.object({
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"]),
+  reason_code: ReasonCodeSchema.nullable(),
+  trial_id: SourceIdentifierSchema.nullable(),
+  objective: DecimalSchema.nullable(),
+  objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
 }).strict();
 
 export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
@@ -247,6 +469,33 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     objective: DecimalSchema.nullable(),
     parameters: ParameterMapSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,
+    /** W3 · CG-P15-03: raw IS best vs the selected candidate vs a centroid. */
+    objective_kind: z.enum(["IS_MEAN_SHARPE", "MODE_1_DECAY_J", "NOT_PUBLISHED"]),
+    roles: z.object({
+      raw_best_is: SelectionRoleSchema,
+      selected: SelectionRoleSchema,
+      centroid: SelectionRoleSchema,
+      raw_best_is_equals_selected: z.boolean().nullable(),
+      candidate_source_trial_ids: z.array(SourceIdentifierSchema).max(64),
+    }).strict(),
+  }).strict(),
+  /** W3: how the source searched (scope of trials, studies, ledger mode). */
+  search_contract: z.object({
+    optimization_mode: FactTokenValueSchema.nullable(),
+    optimization_schedule: FactTokenValueSchema.nullable(),
+    n_studies: z.number().int().nonnegative().max(1_000_000).nullable(),
+    optuna_trials_scope: FactTokenValueSchema.nullable(),
+    optuna_trials_per_study: z.number().int().nonnegative().max(1_000_000).nullable(),
+    trial_ledger_mode: FactTokenValueSchema.nullable(),
+    candidate_selection_metric: FactTokenValueSchema.nullable(),
+    top_is_fraction: DecimalSchema.nullable(),
+    top_is_k: z.number().int().nonnegative().max(1_000_000).nullable(),
+    /** The S06 claim row, the same verbatim QuantBT tokens as the S04 claim strip. */
+    validation_claim: FactTokenValueSchema.nullable(),
+    chronological_claim: FactTokenValueSchema.nullable(),
+    oos_used_for_selection: z.boolean().nullable(),
+    scoring_backend: FactTokenValueSchema.nullable(),
+    availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
   ledger: z.object({
     source_trial_count: z.number().int().min(2).max(64),
@@ -254,6 +503,12 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     trials: z.array(TrialSchema).max(200),
     page: PageSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,
+    /** W3: `?fold=` keeps rows whose published fold scope covers that fold. */
+    fold_filter: z.object({
+      fold_id: SourceIdentifierSchema.nullable(),
+      rule: z.literal("TRIAL_FOLD_SCOPE_COVERS_FOLD"),
+      matched_rows: z.number().int().nonnegative().max(64),
+    }).strict(),
   }).strict(),
   candidates: z.object({
     source_candidate_count: z.number().int().min(1).max(64),
@@ -265,6 +520,18 @@ export const ResearchCurrentSourceSearchResponseSchema = CommonSchema.extend({
     objective_components: ResearchCurrentSourceFactSchema,
     prune_reasons: ResearchCurrentSourceFactSchema,
     importance: ResearchCurrentSourceFactSchema,
+    /** W3 · CG-P15-04: what the capability probe found in the retained source. */
+    probe: z.object({
+      schema_version: z.literal("research.current-source-search-probe.v1"),
+      objective_rows: z.number().int().nonnegative().max(128),
+      objective_rows_recomposed: z.number().int().nonnegative().max(128),
+      pruned_trial_count: z.number().int().nonnegative().max(64).nullable(),
+      decay_lambda: DecimalSchema.nullable(),
+      decay_gamma: DecimalSchema.nullable(),
+      sampler: ResearchCurrentSourceFactSchema,
+      warm_start: ResearchCurrentSourceFactSchema,
+      dedupe: ResearchCurrentSourceFactSchema,
+    }).strict(),
   }).strict(),
 }).strict();
 
@@ -366,6 +633,7 @@ export type ResearchCurrentSourceLaneState = z.infer<typeof ResearchCurrentSourc
 
 export type ResearchCurrentSourceReadQuery = z.infer<typeof ResearchCurrentSourceReadQuerySchema>;
 export type ResearchCurrentSourcePageQuery = z.infer<typeof ResearchCurrentSourcePageQuerySchema>;
+export type ResearchCurrentSourceSearchQuery = z.infer<typeof ResearchCurrentSourceSearchQuerySchema>;
 export type ResearchCurrentSourceEvidenceResponse = z.infer<typeof ResearchCurrentSourceEvidenceResponseSchema>;
 export type ResearchCurrentSourceEvidenceSeriesResponse = z.infer<typeof ResearchCurrentSourceEvidenceSeriesResponseSchema>;
 export type ResearchCurrentSourceSplitResponse = z.infer<typeof ResearchCurrentSourceSplitResponseSchema>;

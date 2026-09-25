@@ -27,8 +27,14 @@ import {
   isAvailable,
   unavailableReason,
   type Availability,
+  type CurrentSourceClaimFact,
+  type CurrentSourceClaimStrip,
   type CurrentSourceEvidence,
+  type CurrentSourceEvidenceSeries,
+  type CurrentSourceFoldVerdicts,
   type CurrentSourceNotApplicable,
+  type EquityPoint,
+  type FoldBoundary,
   type EvidenceHub,
   type EvidenceRefusal,
   type EvidenceSeries,
@@ -48,7 +54,7 @@ import {
 } from "./evidenceCursor";
 import { CURRENT_SOURCE_LANE_COPY, reasonCodeSentence, refusalDetail } from "./researchRefusal";
 import { formatMetric, shortDigest } from "./researchFormat";
-import type { PassportSlot, SeriesSlot } from "./useEvidence";
+import type { PassportSlot, RetainedSeriesSlot, SeriesSlot } from "./useEvidence";
 import type { ResearchState } from "./state";
 
 /* The chart chunk. Five entry points, one module, fetched once. */
@@ -396,10 +402,13 @@ function ClaimPassport({
   hub,
   state,
   onJump,
+  retained = null,
 }: {
   hub: EvidenceHub | null;
   state: ResearchState;
   onJump: (stage: EvidenceStage) => void;
+  /** W3: the sealed retained WFO run's claim strip; null on the P04 lane. */
+  retained?: CurrentSourceClaimStrip | null;
 }) {
   const claim = hub?.claim ?? null;
   const certificate = claim?.methodology_certificate ?? null;
@@ -465,11 +474,13 @@ function ClaimPassport({
           )}
         </PassportField>
 
-        {UNPUBLISHED_CLAIM_FIELDS.map((name, index) => (
+        {retained ? <RetainedClaimFields claim={retained} onJump={onJump} /> : null}
+
+        {retained ? null : UNPUBLISHED_CLAIM_FIELDS.map((name, index) => (
           <AbsentClaimField key={name} name={name} bar={index === 0} />
         ))}
 
-        {contract !== null && isAvailable(contract.availability) && contract.value !== null ? (
+        {retained ? null : contract !== null && isAvailable(contract.availability) && contract.value !== null ? (
           <PassportField name="execution_contract">
             <button
               type="button"
@@ -488,7 +499,7 @@ function ClaimPassport({
           </PassportField>
         )}
 
-        <AbsentClaimField name="runtime authority" />
+        {retained ? null : <AbsentClaimField name="runtime authority" />}
 
         <PassportField name="certification">
           {issued && certificate ? (
@@ -2103,6 +2114,461 @@ function RetainedPassport({ evidence }: { evidence: CurrentSourceEvidence }) {
   );
 }
 
+/* ------------------------------------------------- retained WFO lane (W3) */
+
+/**
+ * W3 · CG-P13-07 (A11): the claim cells a sealed retained WFO run answers,
+ * verbatim QuantBT tokens in the HiFi order. A cell whose fact the source did
+ * not publish keeps its place with the reason (spec 04 §22: never hide the
+ * chip); `holdout` on the Delta WFO profile is a declaration (no holdout
+ * segment), not a gap, and reads `n/a`.
+ */
+function RetainedClaimFields({
+  claim,
+  onJump,
+}: {
+  claim: CurrentSourceClaimStrip;
+  onJump: (stage: EvidenceStage) => void;
+}) {
+  const cell = (
+    name: string,
+    fact: CurrentSourceClaimFact,
+    stage: EvidenceStage,
+    bar = false,
+    detail?: string | null,
+  ) => {
+    if (fact.value === null) {
+      return (
+        <PassportField key={name} name={name} bar={bar} data-withheld={fact.state} data-claim-source={fact.source_key}>
+          {fact.state === "NOT_APPLICABLE" ? (
+            <span
+              className="mono text-[12px]"
+              style={{ color: "var(--ink-soft)" }}
+              title={reasonTitle(fact.availability.state === "AVAILABLE" ? { state: "NOT_APPLICABLE", reason_code: fact.reason_code } as Availability : fact.availability as Availability)}
+              data-claim-na
+            >
+              n/a
+            </span>
+          ) : (
+            <Withheld availability={fact.availability as Availability} />
+          )}
+        </PassportField>
+      );
+    }
+    const text = String(fact.value);
+    return (
+      <PassportField key={name} name={name} bar={bar} data-claim-value={text} data-claim-source={fact.source_key}>
+        <button
+          type="button"
+          className="mono text-left text-[12px]"
+          style={{ color: "var(--ink)" }}
+          aria-label={`${name} ${text} — jump to source`}
+          title={`QuantBT ${fact.source_key}${detail ? ` · ${detail}` : ""}`}
+          onClick={() => onJump(stage)}
+        >
+          {text}
+          {detail ? (
+            <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
+              {" "}
+              · {detail}
+            </span>
+          ) : null}
+        </button>
+      </PassportField>
+    );
+  };
+  const contract = claim.execution_contract;
+  const runtime = claim.runtime_authority;
+  return (
+    <>
+      {cell("validation_claim", claim.validation_claim, "claim", true)}
+      {cell("chronological_claim", claim.chronological_claim, "split")}
+      {cell("oos_used_for_selection", claim.oos_used_for_selection, "search")}
+      {cell("holdout_state", claim.holdout, "split")}
+      {cell("causality_claim", claim.causality_claim, "claim")}
+      {cell(
+        "execution_contract",
+        contract,
+        "execute",
+        false,
+        contract.signal_phase && contract.fill_phase ? `${contract.signal_phase} → ${contract.fill_phase}` : null,
+      )}
+      {cell("runtime authority", runtime, "execute", false, runtime.final_account_runtime)}
+    </>
+  );
+}
+
+/** Verdict chip colours (HiFi `chipColors`): PASS green, WARN gold, DRAG filled red. */
+const VERDICT_TONE: Record<string, string> = {
+  PASS: "var(--good)",
+  WARN: "var(--accent-2)",
+  DRAG: "var(--bad)",
+  NOT_EVALUATED: "var(--ink-faint)",
+};
+
+function signedRatio(value: string | null): string | null {
+  const shown = formatRatio(value);
+  if (shown === null || value === null) return null;
+  return value.trim().startsWith("-") ? shown : `+${shown}`;
+}
+
+/** `−0.38%` — the fraction as a percentage, the screen's minus. */
+function percentOf(value: string | null): string | null {
+  return formatMetric(value, "fraction");
+}
+
+/**
+ * W3 · CG-P13-08 (A09): the HiFi per-fold verdict table on the retained WFO
+ * lane. Every number is QuantBT's (S_OOS, decay, trades) or a retained-path
+ * derivation named in the rule footer (max DD, fold return, worst bar); the
+ * verdict is the server's rule output — no threshold lives in this file.
+ * Rows are worst first as served; "by fold" only reorders them.
+ */
+function RetainedVerdictTable({
+  verdicts,
+  runId,
+  cursor,
+  onFold,
+}: {
+  verdicts: CurrentSourceFoldVerdicts;
+  runId: string;
+  cursor: EvidenceCursor;
+  onFold: (fold: number) => void;
+}) {
+  const [order, setOrder] = useState<"worst" | "fold">("worst");
+  const rows = order === "worst" ? verdicts.rows : [...verdicts.rows].sort((a, b) => a.source_ordinal - b.source_ordinal);
+  const { counts, rule } = verdicts;
+  const runPath = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
+  const meanOos = formatRatio(verdicts.mean_oos_sharpe);
+  const meanDecay = signedRatio(verdicts.mean_decay);
+  const dragging = verdicts.rows.filter((row) => row.verdict === "DRAG");
+
+  return (
+    <section
+      className="overflow-x-auto rounded-[6px] border"
+      data-retained-verdicts={verdicts.state}
+      style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: "var(--line)" }}>
+        <span className="inline-flex flex-wrap items-center gap-2.5">
+          <PanelLabel>per-fold verdict — which fold carries the run, which fold drags it</PanelLabel>
+          <span className="mono text-[9px]" style={{ color: "var(--ink-soft)" }} data-verdict-summary>
+            {counts.drag} DRAG · {counts.warn} WARN · {counts.pass} PASS
+            {counts.not_evaluated > 0 ? ` · ${counts.not_evaluated} not evaluated` : ""}
+            {meanOos !== null ? (
+              <span title={`${verdicts.mean_oos_sharpe} · mean S_OOS of the selected parameters`} data-verdict-fact="mean_oos_sharpe">
+                {" "}
+                — OOS {meanOos}
+              </span>
+            ) : null}
+            {meanDecay !== null ? (
+              <span title={`${verdicts.mean_decay} · mean decay of the selected parameters`} data-verdict-fact="mean_decay">
+                , decay {meanDecay}
+              </span>
+            ) : null}
+          </span>
+        </span>
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          {(
+            [
+              ["fold", "by fold"],
+              ["worst", "worst first"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={order === key}
+              data-verdict-sort={key}
+              onClick={() => setOrder(key)}
+              className="mono rounded-full border px-[9px] py-px text-[9px]"
+              style={{
+                borderColor: order === key ? "var(--accent)" : "var(--line)",
+                background: order === key ? "var(--accent-soft)" : "var(--paper-raised)",
+                color: order === key ? "var(--accent)" : "var(--ink-soft)",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+            {rule.version} · click a row to move the cursor
+          </span>
+        </span>
+      </div>
+      <table className="w-full min-w-[980px] border-collapse text-[12px]">
+        <thead>
+          <tr>
+            {VERDICT_COLUMNS.map(([label, align]) => (
+              <th
+                key={label}
+                scope="col"
+                className="border-b px-3 py-[7px] text-[10px] font-medium uppercase tracking-[.07em]"
+                style={{ color: "var(--ink-faint)", borderColor: "var(--line)", textAlign: align, minWidth: label === "OOS sharpe" ? 150 : undefined }}
+              >
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const fold = row.source_ordinal + 1;
+            const current = cursor.fold === fold;
+            const tone = VERDICT_TONE[row.verdict] ?? "var(--ink-faint)";
+            const oos = row.oos_sharpe === null ? null : Number(row.oos_sharpe);
+            const decay = row.decay === null ? null : Number(row.decay);
+            const width = oos === null ? 0 : Math.max(0, Math.min(100, (oos / 1.5) * 100));
+            const contribution = row.return_fraction === null ? null : Number(row.return_fraction);
+            const withheld = (why: string) => (
+              <span className="text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={why}>
+                not published
+              </span>
+            );
+            const reason = row.reason_code ?? "RETAINED_FOLD_FACT_NOT_PUBLISHED";
+            return (
+              <tr
+                key={row.fold_id}
+                data-verdict-row={row.fold_id}
+                data-verdict={row.verdict}
+                data-current={current}
+                aria-selected={current}
+                tabIndex={0}
+                onClick={() => onFold(fold)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onFold(fold);
+                  }
+                }}
+                className="cursor-pointer"
+                style={{
+                  borderTop: "1px solid var(--line-soft)",
+                  background: current ? "var(--accent-soft)" : "transparent",
+                  boxShadow: `inset 2px 0 0 ${current ? "var(--accent)" : "transparent"}`,
+                }}
+              >
+                <td className="mono px-3 py-1.5" title={`retained source fold id ${row.fold_id}`}>
+                  {foldId(fold)}
+                </td>
+                <td className="px-3 py-1.5">
+                  <span className="flex items-center gap-2">
+                    <span className="relative h-2 flex-1 border" style={{ background: "var(--paper-sunken)", borderColor: "var(--line-soft)" }}>
+                      <span
+                        className="absolute bottom-0 left-0 top-0"
+                        data-oos-bar={Math.round(width)}
+                        style={{ width: `${width}%`, background: row.verdict === "DRAG" ? "var(--bad)" : "var(--role-oos)" }}
+                      />
+                    </span>
+                    <span className="mono w-[44px] text-right" title={row.oos_sharpe ?? reason} data-exact={row.oos_sharpe ?? undefined}>
+                      {formatRatio(row.oos_sharpe) ?? withheld(reason)}
+                    </span>
+                  </span>
+                </td>
+                <td
+                  className="mono px-3 py-1.5 text-right"
+                  style={{ color: decay !== null && decay > 0.3 ? "var(--bad)" : "var(--ink)" }}
+                  title={row.decay ?? reason}
+                >
+                  {signedRatio(row.decay) ?? withheld(reason)}
+                </td>
+                <td className="mono px-3 py-1.5 text-right" title={row.oos_trades ?? reason}>
+                  {formatMetric(row.oos_trades, "count") ?? withheld(reason)}
+                </td>
+                <td className="mono px-3 py-1.5 text-right" style={{ color: "var(--bad)" }} title={row.max_drawdown_fraction ?? reason}>
+                  {percentOf(row.max_drawdown_fraction) ?? withheld(reason)}
+                </td>
+                <td
+                  className="mono px-3 py-1.5 text-right"
+                  style={{ color: contribution !== null && contribution < 0.02 ? "var(--accent-2)" : "var(--good)" }}
+                  title={row.return_fraction !== null ? `${row.return_fraction} · fold return over its test window, from retained equity (compounds, not additive points)` : reason}
+                >
+                  {percentOf(row.return_fraction) ?? withheld(reason)}
+                </td>
+                <td className="px-3 py-1.5 text-[11px]" style={{ color: "var(--ink-soft)" }} title={row.worst_return_fraction ?? reason}>
+                  {row.worst_return_fraction !== null && row.worst_at_utc_ms !== null
+                    ? `${percentOf(row.worst_return_fraction)} single bar · ${utcZ(row.worst_at_utc_ms)}`
+                    : withheld(reason)}
+                </td>
+                <td className="px-3 py-1.5">
+                  <span
+                    className="mono rounded-full border px-2 py-px text-[9px] font-bold tracking-[.06em]"
+                    data-verdict-chip={row.verdict}
+                    title={
+                      row.verdict === "NOT_EVALUATED"
+                        ? reasonTitle({ state: "NOT_PUBLISHED", reason_code: row.reason_code } as Availability)
+                        : row.failed_criteria.length > 0
+                          ? `misses ${row.failed_criteria.join(", ").toLowerCase().replace(/_/g, " ")} under ${rule.version}`
+                          : `meets every ${rule.version} bound`
+                    }
+                    style={{
+                      borderColor: tone,
+                      color: row.verdict === "DRAG" ? "var(--paper-raised)" : tone,
+                      background: row.verdict === "DRAG" ? tone : "transparent",
+                    }}
+                  >
+                    {row.verdict === "NOT_EVALUATED" ? "not evaluated" : row.verdict}
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-3 py-1.5" onClick={(event) => event.stopPropagation()}>
+                  <Link
+                    to={deepDiveHref(`${runPath}/search`, { ...cursor, fold, stage: "search" })}
+                    className="mono text-[10px]"
+                    style={{ color: row.drag_target === "search" ? "var(--bad)" : "var(--accent)" }}
+                    data-verdict-open="search"
+                  >
+                    search
+                  </Link>{" "}
+                  <span style={{ color: "var(--line)" }}>·</span>{" "}
+                  <Link
+                    to={deepDiveHref(`${runPath}/execute`, { ...cursor, fold, stage: "execute" })}
+                    className="mono text-[10px]"
+                    style={{ color: row.drag_target === "execute" ? "var(--bad)" : "var(--accent)" }}
+                    data-verdict-open="replay"
+                  >
+                    replay
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={VERDICT_COLUMNS.length} className="px-3 py-1.5 text-[11px]" style={{ color: "var(--ink-soft)" }}>
+                <Withheld availability={verdicts.availability as Availability} what="per-fold metrics" />
+              </td>
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
+      <div
+        className="border-t px-3 py-[7px] text-[10.5px] leading-[1.5]"
+        style={{ borderColor: "var(--line-soft)", color: "var(--ink-soft)" }}
+        data-verdict-foot
+      >
+        {dragging.length > 0
+          ? `${dragging.map((row) => foldId(row.source_ordinal + 1)).join(", ")} ${dragging.length === 1 ? "drags" : "drag"}${
+              dragging.some((row) => row.drag_target === "search") ? " — decay is a cause, so open search to see how the parameters were picked" : ""
+            }. `
+          : ""}
+        S_OOS, decay and trades are QuantBT&apos;s per-fold score of the selected parameters; max dd, contribution
+        and the worst bar are read from the retained equity inside each test window. Rule {rule.version}: PASS needs
+        S_OOS ≥ {rule.pass.oos_sharpe_min}, decay ≤ {rule.pass.decay_max} and max dd ≥ {percentOf(rule.pass.max_drawdown_min)};
+        one criterion inside S_OOS ≥ {rule.warn.oos_sharpe_min} / decay ≤ {rule.warn.decay_max} / max dd ≥{" "}
+        {percentOf(rule.warn.max_drawdown_min)} is WARN; anything else is DRAG. The server applies the rule — this
+        table only renders it.
+      </div>
+    </section>
+  );
+}
+
+/**
+ * W3 · CG-P13-05 (A02): the retained equity relation's caption. It says how
+ * many of the retained observations are drawn, and — whatever was drawn —
+ * where the whole relation's extrema are, so a sample never hides a trough.
+ */
+function RetainedSampleLine({ series }: { series: CurrentSourceEvidenceSeries }) {
+  const sample = series.source_sample;
+  const envelope = sample.envelope;
+  const full = sample.sampling === "FULL";
+  return (
+    <span className="mono text-[10px]" style={{ color: "var(--ink-faint)" }} data-retained-sampling={sample.sampling}>
+      {full
+        ? `all ${formatMetric(sample.source_observation_count, "count")} retained observations`
+        : `${formatMetric(sample.emitted_point_count, "count")} of ${formatMetric(sample.source_observation_count, "count")} retained observations · extrema kept`}
+      {envelope ? (
+        <span data-envelope title={`min equity ${envelope.min_equity} at ${utcZ(envelope.min_equity_at_utc_ms)} · max equity ${envelope.max_equity} at ${utcZ(envelope.max_equity_at_utc_ms)} · deepest drawdown ${envelope.min_drawdown_fraction} at ${utcZ(envelope.min_drawdown_at_utc_ms)}`}>
+          {" "}
+          · range {formatMetric(envelope.min_equity, "currency")} – {formatMetric(envelope.max_equity, "currency")} · deepest
+          drawdown {percentOf(envelope.min_drawdown_fraction)} at {utcZ(envelope.min_drawdown_at_utc_ms)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function RetainedEquityPanels({
+  slot,
+  onNeeded,
+  boundaries,
+}: {
+  slot: RetainedSeriesSlot;
+  onNeeded: () => void;
+  boundaries: FoldBoundary[];
+}) {
+  useEffect(() => {
+    onNeeded();
+  }, [onNeeded]);
+  const ready = slot.state === "ready" ? slot.series : null;
+  const points = ready ? (ready.values as EquityPoint[]) : null;
+  const state = (body: (points: EquityPoint[]) => ReactNode) =>
+    slot.state === "refused" ? (
+      <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
+        <RefusalNote refusal={slot.refusal} />
+      </p>
+    ) : points === null ? (
+      <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
+        reading…
+      </p>
+    ) : points.length === 0 ? (
+      <p className="text-[11px]" style={{ color: "var(--ink-soft)" }}>
+        no series in artifact — see manifest
+      </p>
+    ) : (
+      body(points)
+    );
+  return (
+    <>
+      <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-retained-series="EQUITY" data-series-state={slot.state}>
+        <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
+          <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
+            EChart 1
+          </span>
+          <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+            Equity — stitched OOS account
+          </span>
+          {ready ? <RetainedSampleLine series={ready} /> : null}
+        </figcaption>
+        {state((drawn) => (
+          <ChartFrame height={380}>
+            <EquityChart points={drawn} boundaries={boundaries} />
+          </ChartFrame>
+        ))}
+        {ready ? (
+          <div className="mono mt-2 flex flex-wrap gap-x-4 text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-retained-provenance>
+            <span>source retained current-source · {ready.provenance.profile_id}</span>
+            <span>units currency · UTC</span>
+            <span title={ready.provenance.retained_import_digest}>retained import {shortDigest(ready.provenance.retained_import_digest, 12)}…</span>
+          </div>
+        ) : null}
+      </figure>
+      <figure className="m-0 min-w-0 rounded-[8px] border p-4" style={PANEL_STYLE} data-retained-series="UNDERWATER" data-series-state={slot.state}>
+        <figcaption className="mb-3 flex flex-wrap items-baseline gap-2">
+          <span className="mono text-[11px]" style={{ color: "var(--accent-2)" }} data-chart-no>
+            EChart 2
+          </span>
+          <span className="text-[15px]" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+            Underwater — drawdown derived from equity
+          </span>
+        </figcaption>
+        {state((drawn) => (
+          <ChartFrame height={180}>
+            <DrawdownChart points={drawn} boundaries={boundaries} />
+          </ChartFrame>
+        ))}
+        <div className="mt-2 text-[12px] leading-[1.4]" style={{ color: "var(--ink-faint)" }}>
+          Drawdown is a restatement of the equity series above, not a separate metric the engine computes.{" "}
+          <span data-fold-boundaries={boundaries.length}>
+            {boundaries.length > 0
+              ? "Dashed lines mark where each fold's test window starts, from the retained fold plan."
+              : "Fold boundaries are not marked: no fold start was published."}
+          </span>
+        </div>
+      </figure>
+    </>
+  );
+}
+
 /* ------------------------------------------------------------------ tabs */
 
 function TabHeading({ title, subtitle }: { title: string; subtitle: string }) {
@@ -2384,17 +2850,38 @@ function BehaviorCard() {
 
 function SummaryTab({
   hub,
+  runId,
+  cursor,
+  onFold,
   series,
   ensureSeries,
   passport,
   ensurePassport,
+  retainedSeries,
+  ensureRetainedSeries,
 }: {
   hub: EvidenceHub;
+  runId: string;
+  cursor: EvidenceCursor;
+  onFold: (fold: number) => void;
   series: ReadonlyMap<SeriesKind, SeriesSlot>;
   ensureSeries: (kind: SeriesKind) => void;
   passport: PassportSlot;
   ensurePassport: () => void;
+  retainedSeries: RetainedSeriesSlot;
+  ensureRetainedSeries: () => void;
 }) {
+  /* W3: a sealed retained WFO run answers the equity, underwater and verdict
+     panels from its retained lane; every other run keeps the Hub's. */
+  const retained = passport.state === "ready" ? passport.evidence : null;
+  /* Optional: a pre-W3 responder sends the passport without these blocks. */
+  const verdicts = (retained as Partial<CurrentSourceEvidence> | null)?.fold_verdicts ?? null;
+  const boundaries: FoldBoundary[] = verdicts
+    ? [...verdicts.rows]
+        .sort((left, right) => left.source_ordinal - right.source_ordinal)
+        .filter((row) => row.test_start_utc_ms !== null)
+        .map((row) => ({ at_utc_ms: row.test_start_utc_ms as number, label: foldId(row.source_ordinal + 1) }))
+    : [];
   const linkFor = (kind: SeriesKind) => hub.series.find((entry) => entry.kind === kind);
   const performance = hub.oos_performance ?? null;
   /* One grid, HiFi row first. A registry-v3 key appears only when the Hub
@@ -2425,6 +2912,12 @@ function SummaryTab({
         {unordered}
       </div>
 
+      {retained ? (
+        <RetainedEquityPanels slot={retainedSeries} onNeeded={ensureRetainedSeries} boundaries={boundaries} />
+      ) : null}
+
+      {retained ? null : (
+      <>
       <SeriesPanel
         kind="EQUITY_OOS"
         chartNo={1}
@@ -2485,8 +2978,14 @@ function SummaryTab({
           </ChartFrame>
         )}
       </SeriesPanel>
+      </>
+      )}
 
-      <VerdictTable hub={hub} />
+      {verdicts ? (
+        <RetainedVerdictTable verdicts={verdicts} runId={runId} cursor={cursor} onFold={onFold} />
+      ) : (
+        <VerdictTable hub={hub} />
+      )}
 
       <div className="flex flex-wrap gap-3.5">
         <RollingFigure hub={hub} series={series} ensureSeries={ensureSeries} />
@@ -2550,7 +3049,8 @@ function SummaryTab({
       </SeriesPanel>
 
       <p className="text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-sampling-note>
-        {SAMPLING_NOTE} Every series is capped at {SERIES_POINT_CAP} points by the contract.
+        {SAMPLING_NOTE} Every Hub series is capped at {SERIES_POINT_CAP} points by the contract
+        {retained ? "; the retained equity above draws every retained observation up to 2,000 and names its extrema past that." : "."}
       </p>
 
       <PassportPanel slot={passport} onNeeded={ensurePassport} skip={passportSkip} />
@@ -3107,6 +3607,9 @@ function useTopbarCrumb(label: string | null) {
   }, [label, setEntityLabel]);
 }
 
+const IDLE_RETAINED: RetainedSeriesSlot = { state: "idle" };
+const NOOP = () => {};
+
 export interface EvidenceFlowProps {
   runId: string;
   hub: EvidenceHub | null;
@@ -3121,6 +3624,9 @@ export interface EvidenceFlowProps {
   ensureSeries: (kind: SeriesKind) => void;
   passport: PassportSlot;
   ensurePassport: () => void;
+  /** W3: the retained lane's equity relation. Optional for callers without the lane. */
+  retainedSeries?: RetainedSeriesSlot;
+  ensureRetainedSeries?: () => void;
   onReread: () => void;
 }
 
@@ -3137,8 +3643,17 @@ export function EvidenceFlow({
   ensureSeries,
   passport,
   ensurePassport,
+  retainedSeries = IDLE_RETAINED,
+  ensureRetainedSeries = NOOP,
   onReread,
 }: EvidenceFlowProps) {
+  /* W3: the lane is read as soon as the Hub says the run is not in progress,
+     so the claim strip above every tab can show a retained run's claims. */
+  const passportSkip = hub ? passportSkipOf(hub) : { key: "NO_HUB", sentence: "" };
+  useEffect(() => {
+    if (passportSkip === null) ensurePassport();
+  }, [passportSkip === null, ensurePassport]); // eslint-disable-line react-hooks/exhaustive-deps
+  const retainedClaim = passport.state === "ready" ? (passport.evidence as Partial<CurrentSourceEvidence>).claim ?? null : null;
   const [datasetOpen, setDatasetOpen] = useState(false);
   const datasetTrigger = useRef<HTMLButtonElement>(null);
   const datasetWasOpen = useRef(false);
@@ -3199,7 +3714,7 @@ export function EvidenceFlow({
       />
       {hub && datasetOpen ? <DatasetPanel hub={hub} id={datasetPanelId} onClose={closeDataset} /> : null}
 
-      <ClaimPassport hub={hub} state={state} onJump={onStage} />
+      <ClaimPassport hub={hub} state={state} onJump={onStage} retained={retainedClaim} />
 
       {hub ? <SealNotice runId={runId} hub={hub} /> : null}
 
@@ -3270,10 +3785,15 @@ export function EvidenceFlow({
           >
             <SummaryTab
               hub={hub}
+              runId={runId}
+              cursor={cursor}
+              onFold={onFold}
               series={series}
               ensureSeries={ensureSeries}
               passport={passport}
               ensurePassport={ensurePassport}
+              retainedSeries={retainedSeries}
+              ensureRetainedSeries={ensureRetainedSeries}
             />
           </div>
         ) : null}

@@ -343,6 +343,9 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
             "test_start_utc_ms": row.get("test_start_utc_ms"),
             "test_end_utc_ms": row.get("test_end_utc_ms"),
         }
+        facts = _retained_facts(row, "fold_facts")
+        if facts is not None:
+            payload["fold_facts"] = facts
     elif table_kind == "trials":
         source_id = row.get("trial_id")
         at_utc_ms = None
@@ -352,6 +355,9 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
             "objective": row.get("objective"),
             "parameters": _decimal_object(row.get("parameters_json"), "trial parameters"),
         }
+        facts = _retained_facts(row, "trial_facts")
+        if facts is not None:
+            payload["trial_facts"] = facts
     elif table_kind == "candidates":
         source_id = row.get("candidate_id")
         at_utc_ms = None
@@ -360,6 +366,9 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
             "objective": row.get("objective"),
             "parameters": _decimal_object(row.get("parameters_json"), "candidate parameters"),
         }
+        facts = _retained_facts(row, "trial_facts")
+        if facts is not None:
+            payload["trial_facts"] = facts
     elif table_kind == "selection":
         source_id = row.get("selection_role")
         at_utc_ms = None
@@ -381,6 +390,25 @@ def _portal_retention_row(table_kind: str, row: Mapping[str, Any]) -> Mapping[st
         "occurredAtUtcMs": at_utc_ms,
         "payload": payload,
     }
+
+
+def _retained_facts(row: Mapping[str, Any], key: str) -> Mapping[str, Any] | None:
+    """The declared W3 facts block of a retained row, or None for an older artifact.
+
+    Only this named, exporter-built block leaves P05; the raw source record
+    around it (`payload_json`) never becomes a Portal import field.
+    """
+
+    raw = row.get("payload_json")
+    if not isinstance(raw, str):
+        return None
+    record = _json_object(raw, "retained row payload")
+    facts = record.get(key)
+    if facts is None:
+        return None
+    if not isinstance(facts, Mapping):
+        raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", f"The retained {key} block must be an object.")
+    return dict(facts)
 
 
 def _json_object(value: object, label: str) -> Mapping[str, Any]:
@@ -541,9 +569,26 @@ class CurrentSourceArtifactAdapter:
         selection = self._read_json(raw_dir / "selection" / "selected_params.json", "selection")
 
         observations = self._observation_rows(raw_dir / "series" / "stitched.parquet")
+        # W3: optional QuantBT fact documents written by the runner since
+        # CG-P13-07/08. An older source tree simply lacks them; every fact
+        # derived from them then stays a typed absence downstream.
+        source_contract = self._optional_json(raw_dir / "wfo" / "source_contract.v1.json", "source contract")
+        fold_metrics = self._optional_json(raw_dir / "wfo" / "selected_fold_metrics.v1.json", "selected fold metrics")
+        fold_extension = self._optional_frame(raw_dir / "wfo" / "folds_extension.v1.parquet", "fold extension")
         folds = self._frame_rows(raw_dir / "wfo" / "folds.parquet", kind="folds")
-        trials = self._frame_rows(raw_dir / "wfo" / "trials.parquet", kind="trials")
-        candidates = self._frame_rows(raw_dir / "wfo" / "candidates.parquet", kind="candidates")
+        self._attach_fold_facts(
+            folds,
+            extension=fold_extension,
+            fold_metrics=fold_metrics,
+            observations=observations,
+        )
+        trials = self._frame_rows(raw_dir / "wfo" / "trials.parquet", kind="trials", source_contract=source_contract)
+        candidates = self._frame_rows(
+            raw_dir / "wfo" / "candidates.parquet",
+            kind="candidates",
+            source_contract=source_contract,
+            objective_terms=self._objective_terms(config),
+        )
         selection_rows = [self._selection_row(selection)]
         self._assert_admitted_output_bounds(
             observations=observations,
@@ -561,6 +606,12 @@ class CurrentSourceArtifactAdapter:
             folds=folds,
             trials=trials,
             candidates=candidates,
+            # Only when present, so an older source tree keeps its digest.
+            **{
+                key: value
+                for key, value in (("source_contract", source_contract), ("selected_fold_metrics", fold_metrics))
+                if value is not None
+            },
         )
         registry = current_source_schema_registry()
         summary = self._summary(
@@ -569,6 +620,14 @@ class CurrentSourceArtifactAdapter:
             trials=trials,
             candidates=candidates,
             selection=selection_rows[0],
+            source_facts=self._source_facts(
+                source_contract=source_contract,
+                fold_metrics=fold_metrics,
+                config=config,
+                trials=trials,
+                candidates=candidates,
+                selection=selection_rows[0],
+            ),
         )
         if len(json.dumps(canonicalize(summary), ensure_ascii=True, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")) > 65_536:
             raise CurrentSourceArtifactError(
@@ -603,6 +662,10 @@ class CurrentSourceArtifactAdapter:
                     "benchmark": "SOURCE_UNSUPPORTED_CONFIRMED",
                 },
             })
+            if source_contract is not None:
+                writer.write_small_document("source_contract", self._document(source_contract))
+            if fold_metrics is not None:
+                writer.write_small_document("source_selected_fold_metrics", self._document(fold_metrics))
             writer.write_small_document("current_source_summary", self._document(summary))
             candidate = writer.seal()
         except BaseException:
@@ -738,13 +801,28 @@ class CurrentSourceArtifactAdapter:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", "The current WFO stitched series is empty.")
         return rows
 
-    def _frame_rows(self, path: Path, *, kind: str) -> list[dict[str, Any]]:
+    def _frame_rows(
+        self,
+        path: Path,
+        *,
+        kind: str,
+        source_contract: Mapping[str, Any] | None = None,
+        objective_terms: Mapping[str, Decimal] | None = None,
+    ) -> list[dict[str, Any]]:
         frame = self._read_frame(path, kind)
         if frame.empty:
             raise CurrentSourceArtifactError("RESEARCH_CURRENT_SOURCE_ARTIFACT_INVALID", f"The current WFO {kind} table is empty.")
         rows: list[dict[str, Any]] = []
         for ordinal, (_, raw) in enumerate(frame.iterrows()):
             record = {str(column): self._json_value(value) for column, value in raw.to_dict().items()}
+            if kind in {"trials", "candidates"}:
+                # The runner flattens nested trial columns into `*_json` text
+                # (`_flatten_frame`). Read both spellings, so a real ledger's
+                # parameters and stage metadata are never silently dropped.
+                if not isinstance(record.get("params"), Mapping) and isinstance(record.get("params_json"), str):
+                    record["params"] = dict(_json_object(record["params_json"], f"{kind} parameters"))
+                if not isinstance(record.get("selection_metadata"), Mapping) and isinstance(record.get("selection_metadata_json"), str):
+                    record["selection_metadata"] = dict(_json_object(record["selection_metadata_json"], f"{kind} selection metadata"))
             if kind == "folds":
                 fold_id = self._identifier(record.get("fold_id"), f"{kind} fold id", ordinal)
                 rows.append({
@@ -760,6 +838,7 @@ class CurrentSourceArtifactAdapter:
                 trial_id = self._identifier(record.get("trial_id"), f"{kind} id", ordinal)
                 params = record.get("params") if isinstance(record.get("params"), Mapping) else {}
                 normalized_params = _decimal_object(params, f"{kind} parameters")
+                record["trial_facts"] = self._trial_facts(record, source_contract=source_contract, objective_terms=None)
                 rows.append({
                     "source_ordinal": ordinal,
                     "trial_id": trial_id,
@@ -772,6 +851,7 @@ class CurrentSourceArtifactAdapter:
                 candidate_id = self._identifier(self._first(record, "candidate_id", "trial_id", "id"), f"{kind} id", ordinal)
                 params = record.get("params") if isinstance(record.get("params"), Mapping) else {}
                 normalized_params = _decimal_object(params, f"{kind} parameters")
+                record["trial_facts"] = self._trial_facts(record, source_contract=source_contract, objective_terms=objective_terms)
                 rows.append({
                     "source_ordinal": ordinal,
                     "candidate_id": candidate_id,
@@ -797,6 +877,416 @@ class CurrentSourceArtifactAdapter:
             "payload_json": self._canonical_json(dict(selection)),
         }
 
+    # ------------------------------------------------------------ W3 facts
+
+    def _optional_json(self, path: Path, label: str) -> dict[str, Any] | None:
+        if not path.exists():
+            return None
+        return self._read_json(path, label)
+
+    def _optional_frame(self, path: Path, label: str) -> pd.DataFrame | None:
+        if not path.exists():
+            return None
+        return self._read_frame(path, label)
+
+    @staticmethod
+    def _fact_token(value: object) -> str | None:
+        """A verbatim QuantBT enum-like string, or None when it is not one."""
+
+        if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}", value):
+            return value
+        return None
+
+    @staticmethod
+    def _fact_bool(value: object) -> bool | None:
+        return value if isinstance(value, bool) else None
+
+    @staticmethod
+    def _fact_int(value: object) -> int | None:
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int) and value >= 0:
+            return value
+        if isinstance(value, float) and math.isfinite(value) and value.is_integer() and value >= 0:
+            return int(value)
+        return None
+
+    def _fact_decimal(self, value: object, label: str) -> str | None:
+        if value is None or isinstance(value, bool):
+            return None
+        if isinstance(value, float) and not math.isfinite(value):
+            return None
+        try:
+            return self._nullable_decimal(value, label)
+        except CurrentSourceArtifactError:
+            return None
+
+    def _attach_fold_facts(
+        self,
+        folds: list[dict[str, Any]],
+        *,
+        extension: pd.DataFrame | None,
+        fold_metrics: Mapping[str, Any] | None,
+        observations: list[dict[str, Any]],
+    ) -> None:
+        """Add one bounded `fold_facts` object to each retained fold payload.
+
+        * `guards` — QuantBT 1.1.1's own per-fold warm-up / label-horizon /
+          purge / embargo / validation windows (`folds_extension.v1.parquet`).
+        * `oos_score` — QuantBT's per-fold score for the selected parameters
+          (`best_trial.fold_metrics`): S_IS, S_OOS, decay, trade counts.
+        * `oos_path` — computed once here from the retained stitched
+          observations inside the fold's test window: fold return, maximum
+          drawdown and the worst bar. It is labelled as a derivation.
+        """
+
+        extension_by_id: dict[str, dict[str, Any]] = {}
+        if extension is not None:
+            for _, raw in extension.iterrows():
+                record = {str(column): self._json_value(value) for column, value in raw.to_dict().items()}
+                extension_by_id[str(record.get("fold_id"))] = record
+        metrics_by_id: dict[str, Mapping[str, Any]] = {}
+        if fold_metrics is not None and isinstance(fold_metrics.get("fold_metrics"), list):
+            for row in fold_metrics["fold_metrics"]:
+                if isinstance(row, Mapping):
+                    metrics_by_id[str(row.get("fold_id"))] = row
+        for fold in folds:
+            record = json.loads(fold["payload_json"])
+            fold_id = fold["fold_id"]
+            facts: dict[str, Any] = {
+                "schema_version": "research.current-source-fold-facts.v1",
+                "train_bars": self._fact_int(record.get("train_bars")),
+                "test_bars": self._fact_int(record.get("test_bars")),
+                "guards": self._fold_guards(extension_by_id.get(fold_id)) if extension is not None else None,
+                "oos_score": self._fold_score(metrics_by_id.get(fold_id)) if fold_metrics is not None else None,
+                "oos_path": self._fold_path(
+                    observations,
+                    start_ms=fold["test_start_utc_ms"],
+                    end_ms=fold["test_end_utc_ms"],
+                ),
+            }
+            record["fold_facts"] = facts
+            fold["payload_json"] = self._canonical_json(record)
+
+    def _fold_guards(self, record: Mapping[str, Any] | None) -> dict[str, Any] | None:
+        if record is None:
+            return None
+
+        def window(name: str) -> dict[str, Any]:
+            return {
+                "bars": self._fact_int(record.get(f"{name}_bars")),
+                "start_utc_ms": self._nullable_utc_ms(record.get(f"{name}_start"), f"{name} start"),
+                "end_utc_ms": self._nullable_utc_ms(record.get(f"{name}_end"), f"{name} end"),
+            }
+
+        return {
+            "warmup": window("warmup"),
+            "label_horizon": window("label_horizon"),
+            "purge": window("purge"),
+            "embargo": window("embargo"),
+            "validation": window("validation"),
+            "cutoff_utc_ms": self._nullable_utc_ms(record.get("cutoff_timestamp"), "fold cutoff"),
+            "account_policy": self._fact_token(record.get("account_policy")),
+        }
+
+    def _fold_score(self, row: Mapping[str, Any] | None) -> dict[str, Any] | None:
+        if row is None:
+            return None
+        keys = (
+            "is_sharpe", "oos_sharpe", "is_sharpe_raw", "oos_sharpe_raw", "decay",
+            "is_trade_count", "oos_trade_count", "is_required_trades", "oos_required_trades",
+            "is_trade_penalty", "oos_trade_penalty",
+        )
+        score = {key: self._fact_decimal(row.get(key), f"fold {key}") for key in keys}
+        score["basis"] = "QUANTBT_SELECTED_TRIAL_FOLD_METRICS_V1"
+        return score
+
+    def _fold_path(self, observations: list[dict[str, Any]], *, start_ms: int | None, end_ms: int | None) -> dict[str, Any] | None:
+        if start_ms is None or end_ms is None:
+            return None
+        before: dict[str, Any] | None = None
+        inside: list[dict[str, Any]] = []
+        for row in observations:
+            at = row["at_utc_ms"]
+            if at < start_ms:
+                before = row
+            elif at <= end_ms:
+                inside.append(row)
+            else:
+                break
+        if not inside:
+            return None
+        start_equity = Decimal(str((before or inside[0])["equity"]))
+        if start_equity == 0:
+            return None
+        peak = start_equity
+        max_drawdown = Decimal("0")
+        worst = inside[0]
+        for row in inside:
+            equity = Decimal(str(row["equity"]))
+            peak = max(peak, equity)
+            if peak != 0:
+                max_drawdown = min(max_drawdown, (equity / peak) - Decimal("1"))
+            if Decimal(str(row["return_fraction"])) < Decimal(str(worst["return_fraction"])):
+                worst = row
+        end_equity = Decimal(str(inside[-1]["equity"]))
+        return {
+            "basis": "RETAINED_STITCHED_OBSERVATIONS_V1",
+            "observation_count": len(inside),
+            "start_basis": "PREVIOUS_OBSERVATION" if before is not None else "FIRST_WINDOW_OBSERVATION",
+            "start_equity": self._decimal(start_equity, "fold start equity"),
+            "end_equity": self._decimal(end_equity, "fold end equity"),
+            "return_fraction": self._decimal((end_equity / start_equity) - Decimal("1"), "fold return"),
+            "max_drawdown_fraction": self._decimal(max_drawdown, "fold max drawdown"),
+            "worst_return_fraction": self._decimal(worst["return_fraction"], "fold worst return"),
+            "worst_at_utc_ms": worst["at_utc_ms"],
+        }
+
+    def _objective_terms(self, config: Mapping[str, Any]) -> dict[str, Decimal] | None:
+        """λ/γ of QuantBT's Mode 1 candidate objective, from the source config only."""
+
+        calibration = config.get("calibration")
+        optimization = calibration.get("optimization") if isinstance(calibration, Mapping) else None
+        if not isinstance(optimization, Mapping):
+            return None
+        terms: dict[str, Decimal] = {}
+        for name in ("decay_lambda", "decay_gamma"):
+            candidate = optimization.get(f"candidate_{name}")
+            value = candidate if candidate is not None else optimization.get(name)
+            decimal = self._fact_decimal(value, name)
+            if decimal is None:
+                return None
+            terms[name] = Decimal(decimal)
+        return terms
+
+    def _trial_facts(
+        self,
+        record: Mapping[str, Any],
+        *,
+        source_contract: Mapping[str, Any] | None,
+        objective_terms: Mapping[str, Decimal] | None,
+    ) -> dict[str, Any]:
+        """Declared per-trial facts; OOS numbers only when the stage evaluated OOS.
+
+        QuantBT's Stage-A `is_search` rows carry `mean_oos_sharpe = 0.0` and
+        `mean_decay = 0.0` as placeholders (the IS search never looks at OOS),
+        and `temporal_*` fall back to the IS mean when `temporal_count == 0`.
+        Publishing those as numbers would turn "not evaluated" into 0, so they
+        become typed absences here.
+        """
+
+        metadata = record.get("selection_metadata") if isinstance(record.get("selection_metadata"), Mapping) else {}
+        stage = self._fact_token(metadata.get("stage"))
+        schedule_fold = metadata.get("schedule_fold_id", record.get("schedule_fold_id"))
+        study = metadata.get("study_id", record.get("study_id"))
+        walk_forward = source_contract.get("walk_forward") if isinstance(source_contract, Mapping) else None
+        trials_scope = walk_forward.get("optuna_trials_scope") if isinstance(walk_forward, Mapping) else None
+        if schedule_fold is not None and self._fact_token(str(schedule_fold)):
+            fold_scope = {"kind": "FOLD", "fold_id": str(schedule_fold), "reason_code": None}
+        elif trials_scope == "global":
+            fold_scope = {"kind": "ALL_OUTER_FOLDS", "fold_id": None, "reason_code": None}
+        else:
+            fold_scope = {"kind": "NOT_PUBLISHED", "fold_id": None, "reason_code": "QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_A_FOLD_SCOPE"}
+        oos_evaluated = stage is not None and stage != "is_search"
+        temporal_count = self._fact_decimal(metadata.get("temporal_count", record.get("temporal_count")), "temporal count")
+        temporal_scored = temporal_count is not None and Decimal(temporal_count) > 0
+        metrics = {
+            "mean_is_sharpe": self._fact_decimal(record.get("mean_is_sharpe"), "mean IS Sharpe"),
+            "mean_oos_sharpe": self._fact_decimal(record.get("mean_oos_sharpe"), "mean OOS Sharpe") if oos_evaluated else None,
+            "mean_decay": self._fact_decimal(record.get("mean_decay"), "mean decay") if oos_evaluated else None,
+            "std_decay": self._fact_decimal(record.get("std_decay"), "decay dispersion") if oos_evaluated else None,
+            "oos_reason_code": None if oos_evaluated else (
+                "QUANTBT_IS_SEARCH_STAGE_DOES_NOT_EVALUATE_OOS" if stage == "is_search" else "QUANTBT_TRIAL_ROW_DID_NOT_PUBLISH_ITS_STAGE"
+            ),
+            "temporal_score": self._fact_decimal(record.get("temporal_score"), "temporal score") if temporal_scored else None,
+            "temporal_q25": self._fact_decimal(record.get("temporal_q25"), "temporal q25") if temporal_scored else None,
+            "temporal_count": temporal_count,
+            "temporal_reason_code": None if temporal_scored else "QUANTBT_TEMPORAL_SUBPERIODS_NOT_SCORED",
+        }
+        # What the row's `objective` measures. A Stage-A trial and the selected
+        # candidate can share a trial id yet carry different objectives
+        # (W1 receipt: trial 0 = IS mean Sharpe −1.44; selection = Mode 1 J −9.81).
+        objective_kind = {
+            "is_search": "IS_MEAN_SHARPE",
+            "oos_candidate_selection": "MODE_1_DECAY_J",
+        }.get(stage or "", "NOT_PUBLISHED")
+        return {
+            "schema_version": "research.current-source-trial-facts.v1",
+            "stage": stage,
+            "objective_kind": objective_kind,
+            "fold_scope": fold_scope,
+            "study_id": None if study is None else self._fact_token(str(study)),
+            "source_trial_id": None if metadata.get("source_trial_id") is None else self._fact_token(str(metadata.get("source_trial_id"))),
+            "pruned": self._fact_bool(record.get("pruned")),
+            "oos_seen_by_optuna": self._fact_bool(metadata.get("oos_seen_by_optuna")),
+            "metrics": metrics,
+            "objective_components": self._objective_components(record, stage=stage, objective_terms=objective_terms),
+        }
+
+    def _objective_components(
+        self,
+        record: Mapping[str, Any],
+        *,
+        stage: str | None,
+        objective_terms: Mapping[str, Decimal] | None,
+    ) -> dict[str, Any]:
+        """CG-P15-04 capability probe: recompose the objective from its published terms.
+
+        The components are published only when QuantBT's documented Mode 1
+        formula, fed with the numbers QuantBT itself retained, reproduces the
+        retained objective. Otherwise the breakdown is a typed absence.
+        """
+
+        objective = self._fact_decimal(record.get("objective"), "objective")
+        if objective is None:
+            return {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_TRIAL_ROW_HAS_NO_OBJECTIVE", "formula": None, "terms": []}
+        target = Decimal(objective)
+        tolerance = Decimal("1e-9") * max(Decimal("1"), abs(target))
+        if stage == "is_search":
+            mean_is = self._fact_decimal(record.get("mean_is_sharpe"), "mean IS Sharpe")
+            if mean_is is not None and abs(Decimal(mean_is) - target) <= tolerance:
+                return {
+                    "state": "AVAILABLE",
+                    "reason_code": None,
+                    "formula": "MODE_1_IS_SEARCH_OBJECTIVE_EQUALS_MEAN_IS_SHARPE",
+                    "terms": [{"term": "mean_is_sharpe", "weight": "1", "value": mean_is, "contribution": mean_is}],
+                }
+            return {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_OBJECTIVE_DID_NOT_RECOMPOSE_FROM_PUBLISHED_TERMS", "formula": None, "terms": []}
+        if stage == "oos_candidate_selection" and objective_terms is not None:
+            mean_oos = self._fact_decimal(record.get("mean_oos_sharpe"), "mean OOS Sharpe")
+            std_decay = self._fact_decimal(record.get("std_decay"), "decay dispersion")
+            mean_decay = self._fact_decimal(record.get("mean_decay"), "mean decay")
+            if mean_oos is not None and std_decay is not None and mean_decay is not None:
+                decay_lambda = objective_terms["decay_lambda"]
+                decay_gamma = objective_terms["decay_gamma"]
+                positive_decay = max(Decimal("0"), Decimal(mean_decay))
+                parts = [
+                    ("mean_oos_sharpe", Decimal("1"), Decimal(mean_oos)),
+                    ("std_decay", -decay_lambda, Decimal(std_decay)),
+                    ("positive_mean_decay", -decay_gamma, positive_decay),
+                ]
+                recomposed = sum((weight * value for _, weight, value in parts), Decimal("0"))
+                if abs(recomposed - target) <= tolerance:
+                    return {
+                        "state": "AVAILABLE",
+                        "reason_code": None,
+                        "formula": "MODE_1_DECAY_OOS_MEAN_MINUS_LAMBDA_STD_MINUS_GAMMA_POSITIVE_DECAY",
+                        "terms": [
+                            {
+                                "term": name,
+                                "weight": self._decimal(weight, f"{name} weight"),
+                                "value": self._decimal(value, f"{name} value"),
+                                "contribution": self._decimal(weight * value, f"{name} contribution"),
+                            }
+                            for name, weight, value in parts
+                        ],
+                    }
+            return {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_OBJECTIVE_DID_NOT_RECOMPOSE_FROM_PUBLISHED_TERMS", "formula": None, "terms": []}
+        return {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_STAGE_HAS_NO_DOCUMENTED_OBJECTIVE_FORMULA", "formula": None, "terms": []}
+
+    def _source_facts(
+        self,
+        *,
+        source_contract: Mapping[str, Any] | None,
+        fold_metrics: Mapping[str, Any] | None,
+        config: Mapping[str, Any],
+        trials: list[dict[str, Any]],
+        candidates: list[dict[str, Any]],
+        selection: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        """One bounded, versioned block of run-level QuantBT facts for the seal summary."""
+
+        if source_contract is None:
+            return None
+        walk_forward = source_contract.get("walk_forward") if isinstance(source_contract.get("walk_forward"), Mapping) else {}
+        account = source_contract.get("final_account") if isinstance(source_contract.get("final_account"), Mapping) else {}
+        contract = account.get("execution_contract") if isinstance(account.get("execution_contract"), Mapping) else {}
+        native = walk_forward.get("native_prepared_wfo") if isinstance(walk_forward.get("native_prepared_wfo"), Mapping) else {}
+        inner = walk_forward.get("inner_validation")
+        terms = self._objective_terms(config)
+
+        def facts_of(row: Mapping[str, Any]) -> Mapping[str, Any]:
+            payload = json.loads(row["payload_json"])
+            return payload.get("trial_facts") if isinstance(payload.get("trial_facts"), Mapping) else {}
+
+        searched = [row for row in trials if facts_of(row).get("stage") == "is_search" and row.get("objective") is not None]
+        raw_best = max(searched, key=lambda row: Decimal(str(row["objective"])), default=None)
+        probes = [facts_of(row).get("objective_components", {}) for row in [*trials, *candidates]]
+        verified = sum(1 for probe in probes if probe.get("state") == "AVAILABLE")
+        pruned = [row for row in trials if facts_of(row).get("pruned") is True]
+        return {
+            "schema_version": "research.current-source-facts.v1",
+            "claims": {
+                "validation_claim": self._fact_token(walk_forward.get("validation_claim")),
+                "causality_claim": self._fact_token(walk_forward.get("causality_claim")),
+                "chronological_validation_claim": self._fact_token(walk_forward.get("chronological_validation_claim")),
+                "oos_used_for_selection": self._fact_bool(walk_forward.get("oos_used_for_selection")),
+                "full_sample_used_for_selection": self._fact_bool(walk_forward.get("full_sample_used_for_selection")),
+                "params_semantics": self._fact_token(walk_forward.get("params_semantics")),
+                "causality_schedule": self._fact_token(walk_forward.get("causality_schedule_v2")),
+                "signal_causality_scope": self._fact_token(walk_forward.get("signal_causality_scope")),
+            },
+            "temporal_guards": {
+                "label_horizon_bars": self._fact_int(walk_forward.get("label_horizon_bars")),
+                "purge_bars": self._fact_int(walk_forward.get("purge_bars")),
+                "embargo_bars": self._fact_int(walk_forward.get("embargo_bars")),
+                "warmup_policy": self._fact_token(walk_forward.get("warmup_policy")),
+                "warmup_bars": self._fact_int(walk_forward.get("warmup_bars")),
+                "inner_validation": None if not isinstance(inner, Mapping) else {
+                    "selection_scope": self._fact_token(inner.get("selection_scope")),
+                    "inner_split_frequency": self._fact_token(inner.get("inner_split_frequency")),
+                    "inner_window_mode": self._fact_token(inner.get("inner_window_mode")),
+                    "inner_min_folds": self._fact_int(inner.get("inner_min_folds")),
+                },
+                "inner_validation_published": "inner_validation" in walk_forward,
+            },
+            "search": {
+                "optimization_mode": self._fact_token(walk_forward.get("optimization_mode")),
+                "optimization_schedule": self._fact_token(walk_forward.get("optimization_schedule")),
+                "n_studies": self._fact_int(walk_forward.get("n_studies")),
+                "optuna_trials_scope": self._fact_token(walk_forward.get("optuna_trials_scope")),
+                "optuna_trials_per_study": self._fact_int(walk_forward.get("optuna_trials_configured_per_study")),
+                "trial_ledger_mode": self._fact_token(walk_forward.get("trial_ledger_mode")),
+                "candidate_selection_metric": self._fact_token(walk_forward.get("candidate_selection_metric")),
+                "top_is_fraction": self._fact_decimal(walk_forward.get("top_is_fraction"), "top IS fraction"),
+                "top_is_k": self._fact_int(walk_forward.get("top_is_k")),
+                "decay_lambda": None if terms is None else self._decimal(terms["decay_lambda"], "decay lambda"),
+                "decay_gamma": None if terms is None else self._decimal(terms["decay_gamma"], "decay gamma"),
+                "raw_best_is_trial_id": None if raw_best is None else raw_best["trial_id"],
+                "raw_best_is_objective": None if raw_best is None else raw_best["objective"],
+                "selected_trial_id": selection.get("trial_id"),
+                "candidate_source_trial_ids": sorted({
+                    str(facts_of(row).get("source_trial_id"))
+                    for row in candidates
+                    if facts_of(row).get("source_trial_id") is not None
+                }),
+                "pruned_trial_count": len(pruned),
+                "objective_probe": {
+                    "rows": len(probes),
+                    "verified_rows": verified,
+                },
+            },
+            "execution": {
+                "engine_id": self._fact_token(contract.get("engine_id") or account.get("engine_id")),
+                "signal_phase": self._fact_token(contract.get("signal_phase") or account.get("signal_phase")),
+                "fill_phase": self._fact_token(contract.get("fill_phase") or account.get("fill_phase")),
+                "accounting_certified": self._fact_bool(contract.get("accounting_certified")),
+                "final_account_backend": self._fact_token(account.get("backend")),
+                "final_account_runtime": self._fact_token(account.get("target_runtime")),
+                "scoring_backend": self._fact_token(walk_forward.get("scoring_backend")),
+                "native_prepared_wfo_policy": self._fact_token(native.get("resolved_policy")),
+                "execution_clock": self._fact_token(native.get("execution_clock")),
+                "account_execution": self._fact_token(walk_forward.get("account_execution")),
+                "fold_account_policy": self._fact_token(walk_forward.get("fold_account_policy")),
+                "fold_boundary_position_policy": self._fact_token(walk_forward.get("fold_boundary_position_policy")),
+            },
+            "selected_fold_metrics": {
+                "state": "AVAILABLE" if fold_metrics is not None else "NOT_PUBLISHED",
+                "reason_code": None if fold_metrics is not None else "QUANTBT_BEST_TRIAL_DID_NOT_RETAIN_FOLD_METRICS",
+                "trial_id": None if fold_metrics is None else self._nullable_identifier(fold_metrics.get("trial_id")),
+            },
+        }
+
     @staticmethod
     def _summary(
         *,
@@ -805,6 +1295,7 @@ class CurrentSourceArtifactAdapter:
         trials: list[dict[str, Any]],
         candidates: list[dict[str, Any]],
         selection: Mapping[str, Any],
+        source_facts: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Build a compact, source-derived seal document for TS BFF mapping.
 
@@ -833,7 +1324,35 @@ class CurrentSourceArtifactAdapter:
                 "The retained selection parameter bundle is invalid.",
             )
         parameters = _decimal_object(raw_parameters, "selection parameters")
-        return {
+        guards = source_facts.get("temporal_guards") if isinstance(source_facts, Mapping) else None
+        claims = source_facts.get("claims") if isinstance(source_facts, Mapping) else None
+
+        def guard_fact(value: object, reason: str) -> dict[str, Any]:
+            # AVAILABLE only when QuantBT published the configured guard for
+            # this run (W3); the exact value lives in `source_facts`.
+            if value is not None:
+                return {"state": "AVAILABLE", "reason_code": None}
+            return {"state": "NOT_PUBLISHED", "reason_code": reason}
+
+        data_use = {
+            "warmup": guard_fact(
+                None if not isinstance(guards, Mapping) else guards.get("warmup_policy"),
+                "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_WARMUP_CONVENTION",
+            ),
+            "purge": guard_fact(
+                None if not isinstance(guards, Mapping) else guards.get("purge_bars"),
+                "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PURGE_CONVENTION",
+            ),
+            "embargo": guard_fact(
+                None if not isinstance(guards, Mapping) else guards.get("embargo_bars"),
+                "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EMBARGO_CONVENTION",
+            ),
+            "strict_outer_oos_selection": guard_fact(
+                None if not isinstance(claims, Mapping) else claims.get("oos_used_for_selection"),
+                "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_EVIDENCE",
+            ),
+        }
+        body: dict[str, Any] = {
             "schema_version": "research.current-source-summary.v1",
             "metrics": {
                 "initial_equity": CurrentSourceArtifactAdapter._decimal(initial, "initial equity"),
@@ -846,16 +1365,9 @@ class CurrentSourceArtifactAdapter:
                 "objective": selection.get("objective"),
                 "parameters": parameters,
             },
-            "data_use": {
-                # These are source facts only when their exact semantics are
-                # published. Current QuantBT WFO rows prove chronology but do
-                # not yet attest a warmup/purge/embargo convention or strict
-                # outer-OOS selection rule, so preserve typed absences.
-                "warmup": {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_WARMUP_CONVENTION"},
-                "purge": {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PURGE_CONVENTION"},
-                "embargo": {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EMBARGO_CONVENTION"},
-                "strict_outer_oos_selection": {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_EVIDENCE"},
-            },
+            # Source facts only when QuantBT published their exact semantics
+            # (W3 `source_facts`); otherwise the typed absences stay.
+            "data_use": data_use,
             "derived": CurrentSourceArtifactAdapter._derived_series(observations),
             "counts": {
                 "folds": len(folds),
@@ -863,6 +1375,9 @@ class CurrentSourceArtifactAdapter:
                 "candidates": len(candidates),
             },
         }
+        if source_facts is not None:
+            body["source_facts"] = dict(source_facts)
+        return body
 
     @staticmethod
     def _derived_series(observations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1121,6 +1636,10 @@ class CurrentSourceArtifactAdapter:
         candidate = CurrentSourceArtifactAdapter._first(record, "state", "status", "trial_state")
         if isinstance(candidate, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}", candidate):
             return candidate
+        # QuantBT's compact ledger has no Optuna state column but does publish
+        # `pruned`; a pruned row must never read as COMPLETE (W3, CG-P15-03).
+        if record.get("pruned") is True:
+            return "PRUNED"
         return "COMPLETE"
 
     @staticmethod

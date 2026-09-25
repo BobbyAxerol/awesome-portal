@@ -16,11 +16,13 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
+import time
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation, ROUND_CEILING
+from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_HALF_EVEN
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +33,7 @@ from pydantic import ValidationError
 
 from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_CPU_SECONDS,
+    DELTA_WFO_OPTUNA_TRIALS,
     DELTA_WFO_PROFILE_DIGEST,
     DELTA_WFO_PROFILE_ID,
 )
@@ -123,6 +126,97 @@ def _sha256_canonical_json(value: object) -> str:
     except (TypeError, ValueError) as exc:
         raise ResearchRunProducerError("P14 source fact is not serializable") from exc
     return hashlib.sha256(encoded).hexdigest()
+
+
+def parameter_bundle_digest(parameters: dict[str, Any]) -> str:
+    """sha256 of a parameter bundle's canonical JSON (the P14 digest rule).
+
+    Screen 03's hand-off cursor and every fold selection carry this digest,
+    so a fixed P04 bundle matches its P14 ``parameter_bundle_digest``.
+    """
+
+    return _sha256_canonical_json(dict(parameters))
+
+
+def _short_objective(value: str | None) -> str:
+    """Three decimals for the tqdm line; the exact value stays on the event."""
+
+    if value is None:
+        return "—"
+    return format(Decimal(value).quantize(Decimal("0.001"), rounding=ROUND_HALF_EVEN), "f")
+
+
+class LiveStudyProgress:
+    """Map the P06 child's live Optuna records onto P11 events (CG-P06-02).
+
+    Every number here is a source observation: the trial number, state and
+    objective come from the child's Optuna callback and CPU seconds from the
+    child's own rusage. The ETA is the remaining search time at the observed
+    trial rate, published only while trials remain; nothing is estimated for
+    the retention and seal steps after the study. A repeated or out-of-range
+    trial is ignored, never re-counted.
+    """
+
+    def __init__(
+        self,
+        progress: Any,
+        *,
+        trials_declared: int,
+        cpu_cap_seconds: int,
+        clock: Any = time.monotonic,
+    ) -> None:
+        self._progress = progress
+        self._declared = trials_declared
+        self._cpu_cap = cpu_cap_seconds
+        self._clock = clock
+        self._started = clock()
+        self._last_trial = 0
+        self._pruned = 0
+        self._last_budget_pct = -1
+
+    @property
+    def trials_observed(self) -> int:
+        return self._last_trial
+
+    def __call__(self, record: dict[str, Any]) -> None:
+        trial = record.get("trial")
+        if not isinstance(trial, int) or isinstance(trial, bool) or trial <= self._last_trial or trial > self._declared:
+            return
+        state = record.get("state")
+        if state not in {"COMPLETE", "PRUNED", "INFEASIBLE", "FAILED"}:
+            return
+        objective = record.get("objective")
+        best = record.get("best_objective")
+        self._last_trial = trial
+        if state != "COMPLETE":
+            self._pruned += 1
+        elapsed = max(0.0, self._clock() - self._started)
+        remaining = self._declared - trial
+        eta = math.ceil(elapsed / trial * remaining) if remaining > 0 and trial > 0 else None
+        tone = {"COMPLETE": "COMPLETE", "PRUNED": "INFO", "INFEASIBLE": "WARN", "FAILED": "ERROR"}[state]
+        self._progress("trial_completed", {
+            "study": "GLOBAL",
+            "trial": trial,
+            "state": state,
+            "objective": objective,
+            "best_objective": best,
+            "eta_s": eta,
+            "tqdm_line": (
+                f"global study · trial {trial}/{self._declared} · best J\u2081 {_short_objective(best)}"
+                f" · pruned {self._pruned}/{trial}"
+            ),
+            "console": {
+                "tone": tone,
+                "text": f"global trial {trial} J\u2081={_short_objective(objective)} state={state}",
+                "trial": trial,
+            },
+        })
+        cpu = record.get("cpu_seconds")
+        if isinstance(cpu, (int, float)) and not isinstance(cpu, bool) and math.isfinite(cpu) and cpu >= 0:
+            tick = _cpu_budget_tick_payload(min(float(cpu), float(self._cpu_cap)), self._cpu_cap)
+            if tick["pct"] != self._last_budget_pct:
+                self._last_budget_pct = tick["pct"]
+                self._progress("budget_tick", tick)
 
 
 def _cpu_budget_tick_payload(used_cpu_seconds: float, cpu_cap_seconds: int) -> dict[str, Any]:
@@ -333,12 +427,15 @@ class ResearchRunProducerExecutor:
                 child.cpu_seconds,
                 child.enforced_limits.get("cpu_seconds", 0),
             ))
+            # A fixed profile has no search: one fold, one trial, no
+            # objective. The percentage is derived by the journal from these
+            # facts, not supplied here.
             progress("trial_completed", {
                 "fold": 1,
                 "trial": 1,
                 "state": "COMPLETE",
-                "overall_pct": 80,
-                "tqdm_line": "fixed P04 qualification completed · trial 1/1",
+                "eta_s": None,
+                "tqdm_line": "fixed profile · fold 1/1 · trial 1/1 · no search",
                 "console": {
                     "tone": "COMPLETE",
                     "text": "fixed P04 qualification completed",
@@ -346,7 +443,15 @@ class ResearchRunProducerExecutor:
                     "trial": 1,
                 },
             })
-            progress("fold_completed", {"fold": 1})
+            progress("fold_completed", {
+                "fold": 1,
+                "selection": {
+                    "scope": "FIXED_PROFILE",
+                    "trial": 1,
+                    "objective": None,
+                    "params_digest": parameter_bundle_digest(dict(research.p04_parameters)),
+                },
+            })
             progress("stage_completed", {"stage": "S4"})
         except ResearchSupervisorError as exc:
             raise ResearchRunProducerError(
@@ -461,7 +566,10 @@ class ResearchRunProducerExecutor:
         the validated tree to ``engine_root/.p10-wfo-source/<run_id>`` for the
         worker's P05/RS-02 retention.  It publishes no P13 evidence and no P14
         split receipt (both are P04-shaped hubs), and it does not claim any
-        trial/fold: those are emitted by the worker from the retained tables.
+        fold: folds are emitted by the worker from the retained tables. Trials
+        are observed live from the child's Optuna callback through the P06
+        progress channel (``LiveStudyProgress``) and reconciled by the worker
+        against the retained TRIAL rows.
         """
 
         if not delta_wfo_enabled():
@@ -534,10 +642,12 @@ class ResearchRunProducerExecutor:
             progress("stage_started", {"stage": "S4"})
             cpu_cap = min(self.wfo_child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
             progress("budget_tick", _cpu_budget_tick_payload(0, cpu_cap))
+            live = LiveStudyProgress(progress, trials_declared=DELTA_WFO_OPTUNA_TRIALS, cpu_cap_seconds=cpu_cap)
             child = self.supervisor.run_delta_wfo(
                 receipt,
                 limits=self.wfo_child_limits,
                 on_child_alive=(lambda: progress("heartbeat", {})),
+                on_child_progress=live,
             )
             try:
                 progress("budget_tick", _cpu_budget_tick_payload(min(child.cpu_seconds, cpu_cap), cpu_cap))

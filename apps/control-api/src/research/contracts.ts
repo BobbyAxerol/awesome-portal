@@ -570,11 +570,15 @@ export interface ResearchDurableJobClaim {
   cancellationVersion: number;
 }
 
+/**
+ * Measured worker usage. `null` means the source had no probe for that
+ * quantity (CG-P11-09); it is persisted as JSON null, never as zero.
+ */
 export interface ResearchWorkerUsage {
-  peakRssBytes: number;
-  cpuSeconds: number;
-  scratchBytes: number;
-  fdPeak: number;
+  peakRssBytes: number | null;
+  cpuSeconds: number | null;
+  scratchBytes: number | null;
+  fdPeak: number | null;
 }
 
 export interface ResearchJobOutboxMessage {
