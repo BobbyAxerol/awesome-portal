@@ -607,7 +607,9 @@ for (const [name, width, height] of W6B_VIEWPORTS) {
       const api = (await response.json()) as any;
       test.skip(!api.presentation_rule, "the answering server predates lineage contract 1.1.0");
       const etag = response.headers()["etag"];
-      expect(etag).toBe(api.etag);
+      // Behind the portal-web nginx (gzip) the validator arrives weak (W/"…");
+      // the server accepts a weak If-None-Match, so compare the opaque value.
+      expect(etag?.replace(/^W\//, "")).toBe(api.etag);
       const revalidated = await page.request.get(`/api/v1/research/alphas/${ALPHA}/lineage`, { headers: { "if-none-match": etag! } });
       expect(revalidated.status(), "CG-P19-02 revalidation").toBe(304);
 

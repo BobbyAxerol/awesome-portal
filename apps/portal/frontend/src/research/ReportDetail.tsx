@@ -93,6 +93,13 @@ export const FOLD_COLUMNS_ABSENT =
   "params, IS, OOS, Δ decay and contribution are not columns the report publishes, so they are not drawn.";
 
 /** A number for display, with its exact server string kept one hover away (DQ-08). */
+
+/** A drawdown axis label: the sealed fraction as a percentage; exactly 0 reads 0.00%, never +0.00%. */
+function drawdownLabel(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  return Number(value) === 0 ? "0.00%" : formatMetric(value, "fraction");
+}
+
 function Num({ value, unit, what }: { value: string; unit: string; what?: string }) {
   const shown = formatMetric(value, unit) ?? value;
   return (
@@ -645,7 +652,12 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
   const drawn = geometry !== null && geometry.drawn > 0 ? geometry : null;
   /* The y gutter fits the longest server string printed on either axis. */
   const gutterChars = drawn
-    ? Math.max(4, ...drawn.yLabels.map((label) => label.text.length), (drawn.drawdownTop ?? "").length, (drawn.deepest?.text ?? "").length)
+    ? Math.max(
+        4,
+        ...drawn.yLabels.map((label) => (formatMetric(label.text, "currency") ?? label.text).length),
+        (drawdownLabel(drawn.drawdownTop) ?? drawn.drawdownTop ?? "").length,
+        (drawdownLabel(drawn.deepest?.text) ?? drawn.deepest?.text ?? "").length,
+      )
     : 4;
   const gutter = { "--rr-gutter": `calc(${gutterChars}ch + 10px)` } as CSSProperties;
   return (
@@ -693,8 +705,8 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
               </svg>
               <div aria-hidden="true">
                 {drawn.yLabels.map((label) => (
-                  <span key={label.text} className="rr-lbl y" style={{ top: `${label.pct}%` }} data-y-label>
-                    {label.text}
+                  <span key={label.text} className="rr-lbl y" style={{ top: `${label.pct}%` }} data-y-label title={label.text}>
+                    {formatMetric(label.text, "currency") ?? label.text}
                   </span>
                 ))}
                 {drawn.xLabels.map((label, index) => (
@@ -724,18 +736,18 @@ function EquityFigure({ equity, folds, equityIs }: { equity: ReportEquity; folds
               </svg>
               <div aria-hidden="true">
                 {drawn.drawdownTop !== null ? (
-                  <span className="rr-lbl y" style={{ top: "0%" }} data-dd-top>
-                    {drawn.drawdownTop}
+                  <span className="rr-lbl y" style={{ top: "0%" }} data-dd-top title={drawn.drawdownTop}>
+                    {drawdownLabel(drawn.drawdownTop) ?? drawn.drawdownTop}
                   </span>
                 ) : null}
                 {drawn.deepest ? (
                   <>
-                    <span className="rr-lbl y" style={{ top: `${drawn.deepest.yPct}%` }} data-dd-axis>
-                      {drawn.deepest.text}
+                    <span className="rr-lbl y" style={{ top: `${drawn.deepest.yPct}%` }} data-dd-axis title={drawn.deepest.text}>
+                      {drawdownLabel(drawn.deepest.text) ?? drawn.deepest.text}
                     </span>
                     <span className="rr-dd-mark" style={{ left: `${drawn.deepest.xPct}%`, top: `${drawn.deepest.yPct}%` }} />
-                    <span className="rr-dd-marklbl" style={{ left: `${drawn.deepest.xPct}%`, top: `${drawn.deepest.yPct}%` }} data-dd-deepest>
-                      {drawn.deepest.text} fraction
+                    <span className="rr-dd-marklbl" style={{ left: `${drawn.deepest.xPct}%`, top: `${drawn.deepest.yPct}%` }} data-dd-deepest title={`${drawn.deepest.text} (fraction)`}>
+                      deepest {drawdownLabel(drawn.deepest.text) ?? drawn.deepest.text}
                     </span>
                   </>
                 ) : null}
