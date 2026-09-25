@@ -13,6 +13,9 @@ import {
   type HistoricalParameterBinding,
 } from "./parameter-binding.registry";
 import { sha256ResearchJson } from "./preflight.service";
+import { bytesBlockChain, notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
+import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
+import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
 import {
@@ -119,6 +122,8 @@ export class ResearchFreezeService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Optional() @Inject(RESEARCH_PARAMETER_BINDINGS)
     private readonly bindings: ResearchParameterBindingRegistry = DEFAULT_PARAMETER_BINDING_REGISTRY,
+    @Optional() @Inject(ResearchArtifactVerifyService)
+    private readonly bytes?: ResearchArtifactVerifyService,
   ) {}
 
   async detail(
@@ -128,7 +133,9 @@ export class ResearchFreezeService {
   ): Promise<ResearchFreezeResponse> {
     this.requireEnabled();
     const row = await this.row(scope, runId);
-    const response = this.mapDetail(row, query.fold ?? null);
+    // A10a: the newest durable byte receipt; a GET never re-reads bytes.
+    const bytes = await this.latestBytes(scope, runId);
+    const response = this.mapDetail(row, query.fold ?? null, bytes);
     const parsed = ResearchFreezeResponseSchema.safeParse(response);
     if (!parsed.success) {
       throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Freeze response is incompatible.", 503);
@@ -141,21 +148,31 @@ export class ResearchFreezeService {
     runId: string,
     query: { fold?: number },
   ): Promise<ResearchFreezeVerificationResponse> {
+    this.requireEnabled();
+    // A10a: the explicit action re-reads the sealed P05 bytes FIRST and
+    // persists its receipt; the snapshot below is then read against it.
+    const bytes = await this.verifyBytes(scope, runId);
     const detail = await this.detail(scope, runId, query);
-    const result = detail.freeze.integrity.state === "PARTIAL"
-      ? "PARTIAL_MATCH"
-      : detail.freeze.integrity.state === "BLOCKED"
-        ? "BLOCKED"
+    const hub = detail.freeze.integrity.state;
+    const bytesMatch = bytes.state === "MATCH";
+    const result = bytesBlockChain(bytes) || hub === "BLOCKED"
+      ? "BLOCKED"
+      : hub === "PARTIAL" || bytesMatch
+        ? "PARTIAL_MATCH"
         : "NOT_PUBLISHED";
+    const verificationScope = bytesMatch
+      ? hub === "PARTIAL" ? "PORTAL_RETAINED_DIGEST_BINDING_AND_P05_ARTIFACT_BYTES" : "P05_ARTIFACT_BYTES_ONLY"
+      : detail.freeze.integrity.verification_scope;
     const response = {
       schema_version: "research.freeze-verification.v1" as const,
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
       run_id: detail.run_id,
       freeze_revision: detail.revision,
-      verified_at_utc_ms: detail.as_of_utc_ms,
+      verified_at_utc_ms: bytes.verified_at_utc_ms ?? detail.as_of_utc_ms,
       result,
-      verification_scope: detail.freeze.integrity.verification_scope,
+      verification_scope: verificationScope,
       integrity: detail.freeze.integrity,
+      artifact_bytes: bytes,
     };
     const parsed = ResearchFreezeVerificationResponseSchema.safeParse(response);
     if (!parsed.success) {
@@ -182,25 +199,56 @@ export class ResearchFreezeService {
     }
   }
 
-  private mapDetail(row: SplitHubRow, requestedFold: number | null): unknown {
+  private async latestBytes(scope: ResearchScope, runId: string): Promise<ArtifactByteVerification> {
+    if (!this.bytes) return notYet("NOT_ENABLED", BYTE_VERIFY_NOT_ENABLED);
+    try {
+      return await this.bytes.latest(scope, runId);
+    } catch (error) {
+      if (error instanceof ArtifactVerifyStoreError && error.code === "FORBIDDEN") {
+        throw new ResearchFreezeError("RESEARCH_FREEZE_FORBIDDEN", "Access denied.", 403);
+      }
+      throw error;
+    }
+  }
+
+  private async verifyBytes(scope: ResearchScope, runId: string): Promise<ArtifactByteVerification> {
+    if (!this.bytes) return notYet("NOT_ENABLED", BYTE_VERIFY_NOT_ENABLED);
+    // The run must exist in this workspace before any private read happens.
+    await this.row(scope, runId);
+    try {
+      return await this.bytes.verify(scope, runId);
+    } catch (error) {
+      if (error instanceof ArtifactVerifyStoreError && error.code === "FORBIDDEN") {
+        throw new ResearchFreezeError("RESEARCH_FREEZE_FORBIDDEN", "Access denied.", 403);
+      }
+      throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Artifact verification is temporarily unavailable.", 503);
+    }
+  }
+
+  private mapDetail(row: SplitHubRow, requestedFold: number | null, bytes: ArtifactByteVerification): unknown {
     if (row.kind === "DURABLE" && (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) !== P04_FIXED_QUALIFICATION_PROFILE_ID) {
       // W1: a Delta WFO run shares the P04 executor digest but has no P04
       // fixed-parameter bundle to verify; its freeze truth is the retained
       // RS-02 current-source lane. Answer the existing typed absence.
-      return this.absentDetail(row, availability("NOT_APPLICABLE", WFO_PROFILE_NOT_P04_FREEZE), requestedFold);
+      return this.absentDetail(row, availability("NOT_APPLICABLE", WFO_PROFILE_NOT_P04_FREEZE), requestedFold, bytes);
     }
     const fallback = rowAvailability(row);
     const projection = row.projection ? parseProjection(row.projection) : null;
     if (row.projection && !projection) {
       throw new ResearchFreezeError("RESEARCH_FREEZE_UNAVAILABLE", "Stored Freeze source is incompatible.", 503);
     }
-    if (!projection || row.kind !== "DURABLE") return this.absentDetail(row, fallback, requestedFold);
+    if (!projection || row.kind !== "DURABLE") return this.absentDetail(row, fallback, requestedFold, bytes);
 
     const source = projection.source;
     // A10b: the run's own historical binding, by its exact adapter digest.
     const binding = this.bindings.byAdapterDigest(row.adapterContractDigest);
     const checks = this.checks(row, source, binding);
-    const integrity = this.integrity(checks, source);
+    const bindingIntegrity = this.integrity(checks, source);
+    // A10a: a durable receipt that found corrupt or missing sealed bytes
+    // BLOCKS the chain — it never warns, and never rebaselines the binding.
+    const integrity = bytesBlockChain(bytes) && bindingIntegrity.state !== "NOT_PUBLISHED"
+      ? { ...bindingIntegrity, state: "BLOCKED" as const }
+      : bindingIntegrity;
     // The P14 receipt can still be inspected when the installed P04 binding
     // differs, but this release must not project its static parameters over a
     // different immutable bundle. A blocked verifier therefore preserves
@@ -223,6 +271,7 @@ export class ResearchFreezeService {
       source_manifest_digest: source.source.manifest_digest,
       source_parameter_bundle_digest: source.protocol.selection.parameter_bundle_digest,
       checks,
+      artifact_bytes: { receipt_id: bytes.receipt_id, state: bytes.state },
     })}`;
     return {
       schema_version: "research.freeze-detail.v1",
@@ -340,6 +389,7 @@ export class ResearchFreezeService {
         diagnostic_admission: noDiagnosticAdmission,
         sibling_draft: noSibling,
       },
+      artifact_bytes: bytes,
     };
   }
 
@@ -393,7 +443,12 @@ export class ResearchFreezeService {
     };
   }
 
-  private absentDetail(row: SplitHubRow, fallback: Availability, requestedFold: number | null): unknown {
+  private absentDetail(
+    row: SplitHubRow,
+    fallback: Availability,
+    requestedFold: number | null,
+    bytes: ArtifactByteVerification,
+  ): unknown {
     const unavailable = unavailableGap(fallback, "P16_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED");
     return {
       schema_version: "research.freeze-detail.v1",
@@ -447,6 +502,7 @@ export class ResearchFreezeService {
         source_artifact_bytes: unavailable, what_if_grid: unavailable, diagnostic_admission: unavailable,
         sibling_draft: unavailable,
       },
+      artifact_bytes: bytes,
     };
   }
 

@@ -37,6 +37,24 @@ export type FrozenParameter = FreezeSchemas["Parameter"];
 export type IntegrityCheck = FreezeSchemas["IntegrityCheck"];
 export type Integrity = FreezeSchemas["Integrity"];
 export type FreezeWindow = FreezeSchemas["Window"];
+/** A10a: one durable byte-verification receipt (or a typed "not yet"). */
+export type ArtifactBytes = FreezeSchemas["ArtifactByteVerification"];
+
+/** The server's rule, restated once: corrupt or missing sealed bytes BLOCK. */
+export function bytesBlock(bytes: Pick<ArtifactBytes, "state"> | null | undefined): boolean {
+  return bytes?.state === "MISMATCH" || bytes?.state === "MISSING";
+}
+
+/** Words for each receipt state; none of them is a pass unless the state is MATCH. */
+export const BYTE_STATE_WORDS: Record<ArtifactBytes["state"], string> = {
+  MATCH: "bytes match the seal",
+  MISMATCH: "bytes differ from the seal",
+  MISSING: "bytes missing from the store",
+  NOT_VERIFIED: "not verified yet",
+  NOT_RETAINED: "no sealed artifact",
+  UNAVAILABLE: "verifier unavailable",
+  NOT_ENABLED: "byte verification off",
+};
 
 export type CurrentSourceFreeze = SourceSchemas["Freeze"];
 /** RF-05 CG-P13-09: the typed 200 for a run whose profile the retained lane never holds. */

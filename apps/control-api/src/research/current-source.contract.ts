@@ -10,6 +10,8 @@
 
 import { z } from "zod";
 
+import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
+
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
@@ -548,6 +550,8 @@ export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
   source_artifact_bytes: ResearchCurrentSourceFactSchema,
+  /** A10a: the newest durable byte-verification receipt for this run's sealed P05 artifact. */
+  byte_verification: ArtifactByteVerificationSchema,
   frozen_selection: z.object({
     selected_trial_id: SourceIdentifierSchema.nullable(),
     objective: DecimalSchema.nullable(),

@@ -126,7 +126,14 @@
         "frozen_value": "14",
         "position_percent": 25.7,
         "bound_state": "WITHIN_DECLARED_RANGE",
-        "bound_warning": { "definition_id": "research.bound-warning.v1", "copy_version": "research.bound-warning-copy.v1", "reference_space": "DECLARED_RANGE", "state": "INTERIOR", "side": null, "reason_code": null }
+        "bound_warning": {
+          "definition_id": "research.bound-warning.v1",
+          "copy_version": "research.bound-warning-copy.v1",
+          "reference_space": "DECLARED_RANGE",
+          "state": "INTERIOR",
+          "side": null,
+          "reason_code": null
+        }
       },
       {
         "name": "atr_mult",
@@ -137,7 +144,14 @@
         "frozen_value": "2.00",
         "position_percent": 42.9,
         "bound_state": "WITHIN_DECLARED_RANGE",
-        "bound_warning": { "definition_id": "research.bound-warning.v1", "copy_version": "research.bound-warning-copy.v1", "reference_space": "DECLARED_RANGE", "state": "INTERIOR", "side": null, "reason_code": null }
+        "bound_warning": {
+          "definition_id": "research.bound-warning.v1",
+          "copy_version": "research.bound-warning-copy.v1",
+          "reference_space": "DECLARED_RANGE",
+          "state": "INTERIOR",
+          "side": null,
+          "reason_code": null
+        }
       },
       {
         "name": "entry_z",
@@ -148,7 +162,14 @@
         "frozen_value": "1.60",
         "position_percent": 33.3,
         "bound_state": "WITHIN_DECLARED_RANGE",
-        "bound_warning": { "definition_id": "research.bound-warning.v1", "copy_version": "research.bound-warning-copy.v1", "reference_space": "DECLARED_RANGE", "state": "INTERIOR", "side": null, "reason_code": null }
+        "bound_warning": {
+          "definition_id": "research.bound-warning.v1",
+          "copy_version": "research.bound-warning-copy.v1",
+          "reference_space": "DECLARED_RANGE",
+          "state": "INTERIOR",
+          "side": null,
+          "reason_code": null
+        }
       }
     ],
     "integrity": {
@@ -254,5 +275,20 @@
         "reason_code": "P04_HAS_NO_SELECTION_ARTIFACT"
       }
     }
+  },
+  "artifact_bytes": {
+    "schema_version": "research.artifact-byte-verification.v1",
+    "state": "NOT_VERIFIED",
+    "reason_code": "P16_ARTIFACT_BYTES_NOT_VERIFIED_YET",
+    "verification_scope": "P05_SEALED_MANIFEST_PARTS_AND_DOCUMENTS",
+    "receipt_id": null,
+    "verified_at_utc_ms": null,
+    "artifact_revision": null,
+    "expected_manifest_digest": null,
+    "observed_manifest_digest": null,
+    "parts_checked": 0,
+    "parts_mismatched": 0,
+    "documents_checked": 0,
+    "mismatches": []
   }
 }

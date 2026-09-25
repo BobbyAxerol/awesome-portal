@@ -23,6 +23,7 @@ from portal_api.services.research_dataset_catalog import (
     ResearchDatasetCatalogError,
     build_research_dataset_catalog,
 )
+from portal_api.services.research_artifacts import ResearchArtifactError, observe_sealed_artifact_bytes
 from portal_api.services.research_preflight_snapshot import (
     ResearchPreflightSnapshotError,
     refusal_detail,
@@ -51,6 +52,24 @@ class PreflightSnapshotRequest(BaseModel):
     # CG-P08-05: swept dimensions counted by Control API from the immutable
     # AlphaVersion declaration and the overrides; the ceiling is the release's.
     swept_dimensions: int = Field(default=0, ge=0, le=128)
+
+
+class ArtifactByteObservationRequest(BaseModel):
+    """A10a: Control API names the artifact and the part paths it sealed."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    artifact_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$")
+    part_paths: tuple[str, ...] = Field(min_length=1, max_length=256)
+
+
+def retained_artifact_root() -> Path:
+    """The P05 retained store the durable worker writes (``durable-store/research-retained``)."""
+
+    explicit = os.getenv("PORTAL_RESEARCH_RETAINED_ROOT", "").strip()
+    if explicit:
+        return Path(explicit)
+    return Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs")) / "durable-store" / "research-retained"
 
 
 class ProgressCancellationRequest(BaseModel):
@@ -139,6 +158,34 @@ async def create_preflight_snapshot(
         raise HTTPException(status_code=409, detail=refusal_detail(exc, body.requested_spec)) from exc
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail="invalid preflight snapshot contract") from exc
+
+
+@router.post("/artifacts/observe")
+async def observe_retained_artifact_bytes(
+    request: Request,
+    body: ArtifactByteObservationRequest,
+) -> dict[str, object]:
+    """A10a: re-read one sealed P05 artifact's bytes for the Control API verifier.
+
+    Read-only: it hashes the manifest and the named parts and returns the
+    observed digests. It never writes, repairs, moves or quarantines a file;
+    the verdict, the receipt and any lifecycle downgrade belong to the
+    Control API, which compares against the digests it stored at seal time.
+    """
+    try:
+        principal = require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    if principal.role != "ADMIN" or "research_artifact_verify" not in principal.authn_methods:
+        raise HTTPException(status_code=403, detail="private artifact observation is not authorized")
+    try:
+        return observe_sealed_artifact_bytes(
+            retained_artifact_root(),
+            artifact_id=body.artifact_id,
+            part_paths=body.part_paths,
+        )
+    except ResearchArtifactError as exc:
+        raise HTTPException(status_code=400, detail="invalid artifact observation contract") from exc
 
 
 @router.post("/progress/{run_id}/cancel")

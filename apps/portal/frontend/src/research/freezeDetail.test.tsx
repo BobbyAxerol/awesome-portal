@@ -24,6 +24,7 @@ import {
   BLOCKED_NOTE,
   PARTIAL_SCOPE_NOTE,
   isFreezeLaneNotApplicable, toFreezeRefusal,
+  type ArtifactBytes,
   type CurrentSourceFreeze,
   type FreezeDetail,
 } from "./freezeClient";
@@ -204,8 +205,31 @@ function detail(overrides: Record<string, unknown> = {}): FreezeDetail {
     source_absences: {
       artifact_bytes: gap("P10_ARTIFACT_BYTES_NOT_ATTESTED", "NOT_ATTESTED"),
     },
+    artifact_bytes: bytes("NOT_VERIFIED"),
     ...overrides,
   } as unknown as FreezeDetail;
+}
+
+/** A10a receipt fixtures, in the server's own vocabulary. */
+function bytes(state: ArtifactBytes["state"], mismatch = false): ArtifactBytes {
+  const receipt = state === "MATCH" || state === "MISMATCH" || state === "MISSING";
+  return {
+    schema_version: "research.artifact-byte-verification.v1",
+    state,
+    reason_code: state === "MATCH" ? null : `P16_${state}`,
+    verification_scope: "P05_SEALED_MANIFEST_PARTS_AND_DOCUMENTS",
+    receipt_id: receipt ? `rabv_${"1".repeat(32)}` : null,
+    verified_at_utc_ms: receipt ? T0 + 902 * DAY : null,
+    artifact_revision: 1,
+    expected_manifest_digest: "1".repeat(64),
+    observed_manifest_digest: receipt ? "1".repeat(64) : null,
+    parts_checked: receipt ? 5 : 0,
+    parts_mismatched: mismatch ? 1 : 0,
+    documents_checked: receipt ? 2 : 0,
+    mismatches: mismatch
+      ? [{ kind: "PART", table_kind: "trials", ordinal: 1, expected_digest: "a".repeat(64), observed_digest: "e".repeat(64) }]
+      : [],
+  };
 }
 
 function blockedDetail(): FreezeDetail {
@@ -394,6 +418,86 @@ describe("P16-T02 — a blocked freeze shows the mismatch and nothing else", () 
 });
 
 /* -------------------------------------------------------------------------
+ * A10a — the byte receipt (P16-T03/T04/T10, UI half)
+ * ---------------------------------------------------------------------- */
+
+describe("A10a — sealed bytes: a receipt, never a timer", () => {
+  it("a read before any verify says 'not verified yet', never a match", () => {
+    const { container } = view();
+    const receipt = container.querySelector("[data-byte-receipt]");
+    expect(receipt?.getAttribute("data-byte-receipt")).toBe("NOT_VERIFIED");
+    expect(receipt?.textContent).toContain("not verified yet");
+    expect(container.querySelector("[data-blocked-banner]")).toBeNull();
+  });
+
+  it("P16-T03: a MISMATCH receipt shows the red BLOCKED banner and both digests of the bad part", () => {
+    const { container } = view({ detail: detail({ artifact_bytes: bytes("MISMATCH", true) }) });
+    const banner = container.querySelector("[data-blocked-banner]");
+    expect(banner?.getAttribute("role")).toBe("alert");
+    expect(banner?.textContent).toContain("BLOCKED — digest drift");
+    expect(banner?.textContent).toContain("nothing downstream of this screen may be trusted");
+    const mismatch = container.querySelector("[data-byte-mismatch='PART']");
+    expect(mismatch?.textContent).toContain("part trials #1");
+    expect(mismatch?.textContent).toContain("≠ observed");
+  });
+
+  it("P16-T10: a held verify cannot turn into a PASS by the clock, and a failed one never does", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    try {
+      let reject: (reason: unknown) => void = () => undefined;
+      const pending = new Promise<Response>((_resolve, fail) => { reject = fail; });
+      vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+        if ((init?.method ?? "GET").toUpperCase() === "POST") return pending;
+        return { ok: true, status: 200, statusText: "200", headers: new Headers(), json: async () => detail() } as unknown as Response;
+      }));
+      const { result } = renderHook(() => useFreeze("R-WFO-118", null));
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(result.current.detail).not.toBeNull();
+      act(() => result.current.runVerify());
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+      expect(result.current.verify.state).toBe("verifying");
+      const held = view({ detail: result.current.detail, verify: result.current.verify });
+      expect(held.container.querySelector("[data-verify-pending]")).not.toBeNull();
+      expect(held.container.textContent).not.toContain("bytes match the seal");
+      expect(held.container.querySelector("[data-verify-result]")).toBeNull();
+      held.unmount();
+      await act(async () => {
+        reject(new TypeError("network down"));
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      expect(result.current.verify.state).toBe("refused");
+      const failed = view({ detail: result.current.detail, verify: result.current.verify });
+      expect(failed.container.textContent).not.toContain("bytes match the seal");
+      expect(failed.container.querySelector("[data-verify-refusal]")).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the verify answer's own receipt wins over the read's older one", () => {
+    const { container } = view({
+      detail: detail({ artifact_bytes: bytes("MATCH") }),
+      verify: {
+        state: "done",
+        verification: {
+          schema_version: "research.freeze-verification.v1",
+          read_authority: "PORTAL_PERSISTED_RESEARCH",
+          run_id: "R-WFO-118",
+          freeze_revision: "p16r1_31bb90",
+          verified_at_utc_ms: T0 + 903 * DAY,
+          result: "BLOCKED",
+          verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+          integrity: detail().freeze.integrity,
+          artifact_bytes: bytes("MISMATCH", true),
+        },
+      },
+    });
+    expect(container.querySelector("[data-byte-receipt]")?.getAttribute("data-byte-receipt")).toBe("MISMATCH");
+    expect(container.querySelector("[data-blocked-banner]")).not.toBeNull();
+  });
+});
+
+/* -------------------------------------------------------------------------
  * P16-T03 — the one POST
  * ---------------------------------------------------------------------- */
 
@@ -450,6 +554,7 @@ describe("P16-T03 — one write, from one click", () => {
           result: "PARTIAL_MATCH",
           verification_scope: "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
           integrity: detail().freeze.integrity,
+          artifact_bytes: bytes("NOT_ENABLED"),
         },
       },
     });

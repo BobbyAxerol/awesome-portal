@@ -76,6 +76,7 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
   const [verify, setVerify] = useState<VerifySlot>({ state: "idle" });
   const [retained, setRetained] = useState<RetainedSlot>({ state: "idle" });
   const [generation, setGeneration] = useState(0);
+  const [retainedGeneration, setRetainedGeneration] = useState(0);
 
   const detailRef = useRef<FreezeDetail | null>(null);
   detailRef.current = detail;
@@ -112,8 +113,11 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
         setVerify({ state: "done", verification: answer });
         /* Re-read the snapshot only after the typed result: the verification
            speaks for itself, and the detail is what the rest of the screen
-           renders. */
+           renders. A10a: the retained lane carries the newest byte receipt
+           too, so it is asked again — after, never before, the answer. */
         setGeneration((n) => n + 1);
+        retainedAsked.current = false;
+        setRetainedGeneration((n) => n + 1);
       })
       .catch((error: unknown) => setVerify({ state: "refused", refusal: toFreezeRefusal(error) }))
       .finally(() => {
@@ -124,7 +128,8 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
   const ensureRetained = useCallback(() => {
     if (retainedAsked.current) return;
     retainedAsked.current = true;
-    setRetained({ state: "loading" });
+    /* A re-read after a verify keeps the answer on screen until the new one lands. */
+    setRetained((previous) => (previous.state === "ready" ? previous : { state: "loading" }));
     freezeApi
       .currentSource(runId, { workspaceId })
       .then((answer) => {
@@ -150,7 +155,7 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
   const delegates = hubDelegates(detail);
   useEffect(() => {
     if (delegates) ensureRetained();
-  }, [delegates, ensureRetained]);
+  }, [delegates, ensureRetained, retainedGeneration]);
 
   const laneRetained = readsRetainedLane(detail, retained);
   const state: ResearchState = readsRetainedLane(detail, retained)

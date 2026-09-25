@@ -133,6 +133,17 @@ const EnvSchema = z.object({
   // Requires the producer, progress, retained-artifact and current-source
   // lanes, because a WFO run is complete only once its artifact is sealed.
   FEATURE_RESEARCH_WFO_PROFILE: z.enum(["true", "false"]).default("false"),
+  // W5a · A10a: an explicit P16 verify re-reads the sealed P05 artifact's
+  // bytes through the private Portal observer and appends one immutable,
+  // bounded receipt. It never rewrites an expected digest, never repairs a
+  // file and never runs on a GET. Needs Freeze, retained artifacts and the
+  // private principal.
+  FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY: z.enum(["true", "false"]).default("false"),
+  // W5a · A10c: the Screen-07 what-if grid for a sealed Delta WFO run. The
+  // read serves exact existing evaluations only; the one explicit "evaluate
+  // grid" action admits one bounded diagnostic Research job through P10/P06.
+  // Nothing is evaluated on a GET, on mount or on a slider move.
+  FEATURE_RESEARCH_WHATIF: z.enum(["true", "false"]).default("false"),
   // P18 is a persisted Report/Export projection.  It is independently dark
   // until the source readers, the additive migration and the generated
   // consumer contract are accepted together.  Enabling it never starts
@@ -481,6 +492,25 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     ].filter(([, value]) => value !== "true").map(([name]) => name);
     if (missing.length > 0) {
       throw new Error(`FEATURE_RESEARCH_WFO_PROFILE=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_FREEZE", config.FEATURE_RESEARCH_FREEZE],
+      ["FEATURE_RESEARCH_RETAINED_ARTIFACTS", config.FEATURE_RESEARCH_RETAINED_ARTIFACTS],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (!config.INTERNAL_PRINCIPAL_SECRET) missing.push("INTERNAL_PRINCIPAL_SECRET");
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_WHATIF === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_WFO_PROFILE", config.FEATURE_RESEARCH_WFO_PROFILE],
+      ["FEATURE_RESEARCH_FREEZE", config.FEATURE_RESEARCH_FREEZE],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_WHATIF=true requires: ${missing.join(", ")}`);
     }
   }
   if (config.FEATURE_RESEARCH_REPLAY === "true" && config.FEATURE_RESEARCH_EVIDENCE !== "true") {

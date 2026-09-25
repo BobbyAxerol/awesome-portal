@@ -381,6 +381,33 @@ export interface components {
                 availability: components["schemas"]["Availability"];
             };
         };
+        ArtifactByteMismatch: {
+            /** @enum {unknown} */
+            kind: "MANIFEST" | "PART" | "DOCUMENT";
+            table_kind: string | null;
+            ordinal: number;
+            expected_digest: components["schemas"]["Digest"];
+            observed_digest: components["schemas"]["Digest"] | null;
+        };
+        /** @description A10a: the newest durable byte-verification receipt for this run's sealed P05 artifact (written only by the explicit P16 POST verify). MISMATCH or MISSING BLOCKS the frozen chain. */
+        ArtifactByteVerification: {
+            /** @constant */
+            schema_version: "research.artifact-byte-verification.v1";
+            /** @enum {unknown} */
+            state: "MATCH" | "MISMATCH" | "MISSING" | "NOT_VERIFIED" | "NOT_RETAINED" | "UNAVAILABLE" | "NOT_ENABLED";
+            reason_code: string | null;
+            /** @constant */
+            verification_scope: "P05_SEALED_MANIFEST_PARTS_AND_DOCUMENTS";
+            receipt_id: string | null;
+            verified_at_utc_ms: number | null;
+            artifact_revision: number | null;
+            expected_manifest_digest: components["schemas"]["Digest"] | null;
+            observed_manifest_digest: components["schemas"]["Digest"] | null;
+            parts_checked: number;
+            parts_mismatched: number;
+            documents_checked: number;
+            mismatches: components["schemas"]["ArtifactByteMismatch"][];
+        };
         Freeze: components["schemas"]["Common"] & {
             /** @constant */
             schema_version: "research.current-source-freeze.v1";
@@ -397,6 +424,7 @@ export interface components {
                 availability: components["schemas"]["Availability"];
             };
             source_artifact_bytes: components["schemas"]["Fact"];
+            byte_verification: components["schemas"]["ArtifactByteVerification"];
             frozen_selection: components["schemas"]["Selection"];
             what_if: {
                 /** @constant */

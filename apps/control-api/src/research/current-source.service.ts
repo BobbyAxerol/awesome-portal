@@ -1,7 +1,7 @@
 /** RS-02 retained-current-source named BFF projection service. */
 
 import { Buffer } from "node:buffer";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { z } from "zod";
 
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -57,6 +57,9 @@ import {
 import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } from "./delta-wfo.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
+import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
+import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
+import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
 
 /** RF-05 CG-P13-09: the P04 fixed qualification can never be sealed into the RS-02 lane. */
 const P04_FIXED_PROFILE_NOT_RETAINABLE_REASON = "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION";
@@ -197,6 +200,8 @@ export class ResearchCurrentSourceService {
   constructor(
     private readonly repository: ResearchCurrentSourceRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ResearchArtifactVerifyService)
+    private readonly bytes?: ResearchArtifactVerifyService,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -402,9 +407,20 @@ export class ResearchCurrentSourceService {
     const summary = parseSummary(seal);
     const observedImportDigest = await this.repository.verifyRetainedImport(scope, seal, signal);
     const integrityState = observedImportDigest === seal.retainedImportDigest ? "MATCH" as const : "MISMATCH" as const;
+    // A10a: the newest durable byte receipt (a GET never re-reads bytes).
+    const byteVerification = await this.latestBytes(scope, runId);
+    const common = this.common("freeze", seal);
+    // The ETag must move when a new receipt lands, or a 304 would hide it.
+    const freezeRevision = `rs02_freeze_${sha256ResearchJson({
+      base: common.revision,
+      byte_receipt: byteVerification.receipt_id,
+      byte_state: byteVerification.state,
+    })}`;
     const value = {
       schema_version: "research.current-source-freeze.v1" as const,
-      ...this.common("freeze", seal),
+      ...common,
+      revision: freezeRevision,
+      etag: `"${freezeRevision}"`,
       integrity: {
         state: integrityState,
         expected_manifest_digest: seal.manifestDigest,
@@ -416,6 +432,7 @@ export class ResearchCurrentSourceService {
         availability: available(),
       },
       source_artifact_bytes: sourceGap("P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES"),
+      byte_verification: byteVerification,
       frozen_selection: {
         selected_trial_id: summary.selection.trial_id,
         objective: summary.selection.objective,
@@ -560,6 +577,18 @@ export class ResearchCurrentSourceService {
         reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON,
       },
     });
+  }
+
+  private async latestBytes(scope: ResearchScope, runId: string): Promise<ArtifactByteVerification> {
+    if (!this.bytes) return notYet("NOT_ENABLED", BYTE_VERIFY_NOT_ENABLED);
+    try {
+      return await this.bytes.latest(scope, runId);
+    } catch (error) {
+      if (error instanceof ArtifactVerifyStoreError && error.code === "FORBIDDEN") {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_FORBIDDEN", "Access denied.", 403);
+      }
+      throw error;
+    }
   }
 
   private common(kind: string, seal: CurrentSourceSealRow) {

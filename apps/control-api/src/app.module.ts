@@ -142,6 +142,9 @@ import { ResearchSearchController } from "./research/search.controller";
 import { ResearchSearchService } from "./research/search.service";
 import { ResearchFreezeController } from "./research/freeze.controller";
 import { ResearchFreezeService } from "./research/freeze.service";
+import { ResearchArtifactVerifyClient } from "./research/artifact-verify.client";
+import { ResearchArtifactVerifyRepository } from "./research/artifact-verify.repository";
+import { ResearchArtifactVerifyService } from "./research/artifact-verify.service";
 import { ResearchReplayController } from "./research/replay.controller";
 import { ResearchReplayService } from "./research/replay.service";
 import { ResearchCurrentSourceController } from "./research/current-source.controller";
@@ -293,6 +296,10 @@ export class AppModule {
         ResearchSplitService,
         ResearchSearchService,
         ResearchFreezeService,
+        // W5a · A10a: explicit byte verification; dark behind its own flag.
+        ResearchArtifactVerifyClient,
+        ResearchArtifactVerifyRepository,
+        ResearchArtifactVerifyService,
         ResearchReplayService,
         // RS-02 has no source/runtime side effect at module registration.
         // Its private importer and browser reads remain feature-dark until a

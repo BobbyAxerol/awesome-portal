@@ -39,8 +39,25 @@ describe("P16 published Research Freeze contract", () => {
 
     expect(verification.required).toContain("verification_scope");
     expect(verification.properties?.verification_scope?.enum).toEqual([
-      "PORTAL_RETAINED_DIGEST_BINDING_ONLY", "NONE",
+      "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+      "PORTAL_RETAINED_DIGEST_BINDING_AND_P05_ARTIFACT_BYTES",
+      "P05_ARTIFACT_BYTES_ONLY",
+      "NONE",
     ]);
+    // A10a: the explicit verify carries its own durable byte receipt.
+    expect(verification.required).toContain("artifact_bytes");
+  });
+
+  it("A10a publishes a typed byte receipt that can never claim MATCH without one", () => {
+    const document = JSON.parse(readFileSync(openApiPath, "utf8")) as {
+      components: { schemas: Record<string, { required?: string[]; properties?: Record<string, { enum?: string[] }> }> };
+    };
+    const receipt = document.components.schemas.ArtifactByteVerification!;
+    expect(receipt.properties?.state?.enum).toEqual([
+      "MATCH", "MISMATCH", "MISSING", "NOT_VERIFIED", "NOT_RETAINED", "UNAVAILABLE", "NOT_ENABLED",
+    ]);
+    expect(receipt.required).toEqual(expect.arrayContaining(["receipt_id", "expected_manifest_digest", "observed_manifest_digest"]));
+    expect(document.components.schemas.FreezeDetail!.required).toContain("artifact_bytes");
   });
 
   it("does not publish source/worker/artifact, cursor or diagnostic authority as a field or route parameter", () => {

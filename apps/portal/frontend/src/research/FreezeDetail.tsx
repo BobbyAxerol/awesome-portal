@@ -29,6 +29,9 @@ import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
 import {
   BLOCKED_NOTE,
+  BYTE_STATE_WORDS,
+  bytesBlock,
+  type ArtifactBytes,
   FREEZE_GAP_WORDS,
   FREEZE_WITHHELD_WORDS,
   INTEGRITY_KEYS,
@@ -153,10 +156,12 @@ function iso(at: number): string {
  */
 function IntegrityPanel({
   integrity,
+  bytes,
   verify,
   onVerify,
 }: {
   integrity: Integrity;
+  bytes: ArtifactBytes | null | undefined;
   verify: VerifySlot;
   onVerify: () => void;
 }) {
@@ -234,8 +239,22 @@ function IntegrityPanel({
         * source artifact's bytes were never attested here.
         */}
       <Gap gap={integrity.source_artifact_bytes} what="source artifact bytes" />
+      {(verify.state === "done" ? verify.verification.artifact_bytes : bytes) ? (
+        <ByteReceipt bytes={(verify.state === "done" ? verify.verification.artifact_bytes : bytes) as ArtifactBytes} />
+      ) : null}
 
-      {/* Present before the answer lands, so a screen reader announces it. */}
+      <VerifyLive verify={verify} />
+    </section>
+  );
+}
+
+/**
+ * The verification's own answer, announced when it lands. Nothing here moves
+ * on a timer: while the POST is in flight it says so and nothing else, and a
+ * refusal is a refusal — neither can ever read as a match (P16-T10).
+ */
+function VerifyLive({ verify }: { verify: VerifySlot }) {
+  return (
       <div role="status" aria-live="polite" data-verify-live>
         {verify.state === "done" ? (
           <div className="flex flex-col gap-0.5" data-verify-result={verify.verification.result}>
@@ -259,9 +278,12 @@ function IntegrityPanel({
           <p className="text-[11px]" style={{ color: "var(--bad)" }} data-verify-refusal>
             <RefusalNote refusal={verify.refusal} />
           </p>
+        ) : verify.state === "verifying" ? (
+          <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-verify-pending>
+            re-reading the sealed bytes — no result until the server answers
+          </p>
         ) : null}
       </div>
-    </section>
   );
 }
 
@@ -288,6 +310,117 @@ function CheckRow({ check }: { check: IntegrityCheck }) {
         observed {check.observed_digest ?? "not published"}
       </span>
     </>
+  );
+}
+
+/* ------------------------------------------------------ A10a · byte receipt */
+
+/**
+ * The durable byte receipt. A MATCH is the only green, and it is printed with
+ * both manifest digests and the part count it covers; every other state is
+ * its own word. A GET never produces a receipt — only "verify now" does — so
+ * NOT_VERIFIED is the honest first state, not a failure.
+ */
+export function ByteReceipt({ bytes }: { bytes: ArtifactBytes }) {
+  const blocked = bytesBlock(bytes);
+  const matched = bytes.state === "MATCH";
+  const tone = matched ? "var(--good)" : blocked ? "var(--bad)" : "var(--ink-faint)";
+  return (
+    <div
+      className="flex flex-col gap-1 border-t pt-2"
+      style={{ borderColor: "var(--line-soft)" }}
+      data-byte-receipt={bytes.state}
+      data-receipt-id={bytes.receipt_id ?? ""}
+    >
+      <span className="flex flex-wrap items-baseline gap-2">
+        <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          artifact bytes
+        </span>
+        <Chip data-byte-state={bytes.state} tone={tone} border={matched || blocked ? tone : "var(--line)"}>
+          {BYTE_STATE_WORDS[bytes.state]}
+        </Chip>
+        {bytes.verified_at_utc_ms !== null ? (
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-byte-verified-at>
+            re-read {formatUtc(bytes.verified_at_utc_ms) ?? "not published"}
+          </span>
+        ) : null}
+        {bytes.parts_checked > 0 ? (
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-byte-parts>
+            {bytes.parts_checked} parts · {bytes.documents_checked} documents · {bytes.parts_mismatched} differ
+          </span>
+        ) : null}
+      </span>
+      {bytes.expected_manifest_digest !== null ? (
+        <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+            sealed manifest
+          </span>
+          <Digest value={bytes.expected_manifest_digest} data-byte-expected />
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+            · observed
+          </span>
+          <Digest value={bytes.observed_manifest_digest} data-byte-observed />
+        </span>
+      ) : null}
+      {bytes.mismatches.length > 0 ? (
+        <ul className="flex flex-col gap-0.5" data-byte-mismatches={bytes.mismatches.length}>
+          {bytes.mismatches.map((mismatch) => (
+            <li
+              key={`${mismatch.kind}-${mismatch.table_kind ?? ""}-${mismatch.ordinal}`}
+              className="mono flex flex-wrap items-baseline gap-x-1.5 text-[9px]"
+              style={{ color: "var(--bad)" }}
+              data-byte-mismatch={mismatch.kind}
+            >
+              <span>
+                {mismatch.kind.toLowerCase()}
+                {mismatch.table_kind ? ` ${mismatch.table_kind}` : ""} #{mismatch.ordinal}
+              </span>
+              <span>sealed</span>
+              <Digest value={mismatch.expected_digest} />
+              <span>≠ observed</span>
+              <Digest value={mismatch.observed_digest} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-byte-note>
+        {BYTE_NOTES[bytes.state]}
+      </span>
+    </div>
+  );
+}
+
+const BYTE_NOTES: Record<ArtifactBytes["state"], string> = {
+  MATCH:
+    "Every sealed part and document was re-read and hashes to the digest stored when the artifact was sealed. This covers bytes only — not causal order and not a selection.",
+  MISMATCH:
+    "Re-read bytes do not hash to the sealed digests. The expected digests are kept as sealed; nothing is rebaselined, and the freeze stays BLOCKED until the original bytes return.",
+  MISSING:
+    "Part of the sealed artifact is missing from the retained store. The freeze stays BLOCKED until those bytes are back.",
+  NOT_VERIFIED: "No verification has been requested for these bytes. A read never re-opens them; verify now does.",
+  NOT_RETAINED: "This run sealed no P05 artifact, so there are no bytes to re-read.",
+  UNAVAILABLE: "The private verifier could not be reached. Nothing was read, recorded or claimed.",
+  NOT_ENABLED: "Artifact byte verification is not enabled in this environment.",
+};
+
+/** Spec 07 §2.3 + §14: a thin red banner while sealed bytes BLOCK the run. */
+function BlockedBanner({ bytes }: { bytes: ArtifactBytes }) {
+  const first = bytes.mismatches[0];
+  return (
+    <div
+      role="alert"
+      className="rounded-[6px] border px-3.5 py-2 text-[11.5px] leading-[1.5]"
+      style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)", color: "var(--bad)" }}
+      data-blocked-banner={bytes.state}
+    >
+      <span className="mono font-semibold">BLOCKED — digest drift</span>
+      {first ? (
+        <span className="mono">
+          {" "}· sealed {shortDigest(first.expected_digest)} ≠ observed {shortDigest(first.observed_digest) ?? "missing"}
+        </span>
+      ) : null}{" "}
+      — the run is BLOCKED from promotion until re-verified; nothing downstream of this screen may be trusted.
+    </div>
   );
 }
 
@@ -838,7 +971,15 @@ function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity:
 }
 
 /** Hi-fi F3 on the retained lane: the receipt RS-02 publishes, pair by pair. */
-function RetainedIntegrity({ freeze }: { freeze: RetainedFreeze }) {
+function RetainedIntegrity({
+  freeze,
+  verify,
+  onVerify,
+}: {
+  freeze: RetainedFreeze;
+  verify: VerifySlot;
+  onVerify: () => void;
+}) {
   const { integrity } = freeze;
   const matched = integrity.state === "MATCH";
   const tone = matched ? "var(--good)" : "var(--bad)";
@@ -877,6 +1018,21 @@ function RetainedIntegrity({ freeze }: { freeze: RetainedFreeze }) {
         <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-retained-scope-code>
           {integrity.verification_scope.toLowerCase().replace(/_/g, " ")}
         </span>
+        {/* Spec 07 §2.3: "verify now" — disabled while verifying, never optimistic. */}
+        <button
+          type="button"
+          className="btn-ghost mono ml-auto text-[10px]"
+          data-action="verify"
+          onClick={onVerify}
+          disabled={verify.state === "verifying"}
+          title={
+            verify.state === "verifying"
+              ? "a verification is already in flight"
+              : "re-read the sealed artifact bytes and record a receipt"
+          }
+        >
+          {verify.state === "verifying" ? "verifying…" : "verify now"}
+        </button>
       </div>
 
       <ul className="flex flex-col">
@@ -917,12 +1073,20 @@ function RetainedIntegrity({ freeze }: { freeze: RetainedFreeze }) {
         </span>
       </div>
 
-      <TypedAbsence
-        what="source artifact bytes"
-        state={freeze.source_artifact_bytes.state}
-        code={freeze.source_artifact_bytes.reason_code ?? freeze.source_artifact_bytes.availability.reason_code}
-        data-source-bytes={freeze.source_artifact_bytes.state}
-      />
+      {/* A server older than A10a publishes no receipt: keep its typed absence. */}
+      {(verify.state === "done" ? verify.verification.artifact_bytes : freeze.byte_verification) ? (
+        <ByteReceipt
+          bytes={(verify.state === "done" ? verify.verification.artifact_bytes : freeze.byte_verification) as ArtifactBytes}
+        />
+      ) : (
+        <TypedAbsence
+          what="source artifact bytes"
+          state={freeze.source_artifact_bytes.state}
+          code={freeze.source_artifact_bytes.reason_code ?? freeze.source_artifact_bytes.availability.reason_code}
+          data-source-bytes={freeze.source_artifact_bytes.state}
+        />
+      )}
+      <VerifyLive verify={verify} />
 
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope>
         A match here means the retained manifest, its row counts and its batch receipt agree with what
@@ -1181,14 +1345,24 @@ function RetainedWhatIf({ freeze }: { freeze: RetainedFreeze }) {
   );
 }
 
-function RetainedFreezeBody({ freeze, identity }: { freeze: RetainedFreeze; identity: RunIdentitySlot }) {
+function RetainedFreezeBody({
+  freeze,
+  identity,
+  verify,
+  onVerify,
+}: {
+  freeze: RetainedFreeze;
+  identity: RunIdentitySlot;
+  verify: VerifySlot;
+  onVerify: () => void;
+}) {
   const known = identity.state === "ready" ? identity.identity : null;
   return (
     <div className="flex flex-col gap-3" data-lane="retained">
       <RetainedOrdering identity={known} />
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <RetainedFrozenTable freeze={freeze} identity={known} />
-        <RetainedIntegrity freeze={freeze} />
+        <RetainedIntegrity freeze={freeze} verify={verify} onVerify={onVerify} />
       </div>
       <RetainedWhatIf freeze={freeze} />
     </div>
@@ -1230,6 +1404,15 @@ export function FreezeScreen({
   const handedOff = hubDelegates(detail) && retained.state !== "not-applicable";
   const freeze = lane === null && !handedOff ? detail?.freeze : undefined;
   const blocked = freeze?.integrity.state === "BLOCKED";
+  /* A10a: the newest byte answer — this verify's own, else the read's receipt. */
+  const bytes: ArtifactBytes | null =
+    (verify.state === "done"
+      ? verify.verification.artifact_bytes
+      : lane !== null
+        ? lane.byte_verification
+        : detail && !handedOff
+          ? detail.artifact_bytes
+          : null) ?? null;
 
   return (
     <div className="flex flex-col gap-3" data-screen="freeze-detail" data-run={runId}>
@@ -1268,6 +1451,8 @@ export function FreezeScreen({
           next: S4 Execute →
         </Link>
       </nav>
+
+      {bytes && bytesBlock(bytes) ? <BlockedBanner bytes={bytes} /> : null}
 
       <div className="flex flex-col gap-1">
         <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
@@ -1419,7 +1604,7 @@ export function FreezeScreen({
               </section>
 
               <div className="flex min-w-0 flex-col gap-3">
-                <IntegrityPanel integrity={freeze.integrity} verify={verify} onVerify={onVerify} />
+                <IntegrityPanel integrity={freeze.integrity} bytes={detail.artifact_bytes} verify={verify} onVerify={onVerify} />
                 <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
               </div>
             </div>
@@ -1505,7 +1690,7 @@ export function FreezeScreen({
             ) : null}
           </div>
         ) : lane !== null ? (
-          <RetainedFreezeBody freeze={lane} identity={identity} />
+          <RetainedFreezeBody freeze={lane} identity={identity} verify={verify} onVerify={onVerify} />
         ) : null}
       </ResearchPanel>
 
