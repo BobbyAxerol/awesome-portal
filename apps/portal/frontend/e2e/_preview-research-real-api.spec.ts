@@ -235,10 +235,17 @@ for (const [name, width, height] of VIEWPORTS) {
       if (screenId === "S08") {
         const replay = await read("replay");
         await expect(page.locator("[data-route-id]").first()).toContainText("signal_notional");
-        await expect(page.locator("[data-sample-ledger='retained']")).toBeVisible();
+        // A seal retained after W5b carries the replay ledger (candles + per-bar
+        // account facts): the screen replays candles. An older seal keeps the
+        // retained sample ledger.
+        if (replay.execution) {
+          expect(await page.locator("[data-candle-row]").count(), "S08 replays the retained candles").toBeGreaterThan(0);
+        } else {
+          await expect(page.locator("[data-sample-ledger='retained']")).toBeVisible();
+        }
         for (const key of ["orders", "fills", "candles"] as const) {
-          const reason = replay.route_capabilities[key].reason_code as string;
-          expect(html, `S08 ${key} carries the retained reason`).toContain(reason);
+          const capability = replay.route_capabilities[key] as { state?: string; reason_code?: string | null };
+          if (capability.reason_code) expect(html, `S08 ${key} carries the retained reason`).toContain(capability.reason_code);
         }
       }
 

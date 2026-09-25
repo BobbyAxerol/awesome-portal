@@ -268,7 +268,8 @@ const COMPARE_CSS = `
 .cp-card { border: 1px solid var(--line); border-radius: 8px; background: var(--paper-raised); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .cp-card > .t, .cp-tcard > .t { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin: 0; font-size: 10px; text-transform: uppercase;
   letter-spacing: .07em; font-weight: 500; color: var(--ink-faint); }
-.cp-tcard { border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); min-width: 0; display: flex; flex-direction: column; }
+.cp-tcard { border: 1px solid var(--line); border-radius: 6px; background: var(--paper-raised); min-width: 0; max-width: 100%; display: flex; flex-direction: column; }
+.cp-tcard > .body { min-width: 0; max-width: 100%; }
 .cp-tcard > .t { padding: 8px 12px; border-bottom: 1px solid var(--line); }
 .cp-tcard > .body { padding: 10px 12px; }
 .cp-tcard > .foot { padding: 6px 12px; border-top: 1px solid var(--line-soft); font-size: 10px; color: var(--ink-faint); }
@@ -365,7 +366,9 @@ const COMPARE_CSS = `
   background: var(--paper-raised); color: var(--ink); cursor: pointer; }
 @media (max-width: 900px) {
   .cp-grid { flex-direction: column; align-items: stretch; }
-  .cp-diffcard, .cp-trajcard, .cp-deltacard, .cp-corr { flex: 1 1 auto; }
+  /* Stacked: each card takes the column width and a wide table (≈30 attempts)
+     scrolls inside its own .cp-scroll body instead of widening the page. */
+  .cp-diffcard, .cp-trajcard, .cp-deltacard, .cp-corr { flex: 1 1 auto; width: 100%; }
   .cp-ladder { flex-direction: column; }
   .cp-arrow { align-self: flex-start; transform: rotate(90deg); }
 }
