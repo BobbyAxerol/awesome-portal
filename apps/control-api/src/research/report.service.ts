@@ -7,15 +7,19 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
-import { ResearchEvidenceSeriesKindSchema, type ResearchEvidenceHubResponse } from "./evidence.contract";
+import { ResearchCurrentSourcePageQuerySchema, type ResearchCurrentSourceNotApplicableResponse } from "./current-source.contract";
+import { ResearchCurrentSourceError } from "./current-source.error";
+import { ResearchCurrentSourceService } from "./current-source.service";
+import { ResearchEvidenceSeriesKindSchema } from "./evidence.contract";
 import { ResearchEvidenceService } from "./evidence.service";
 import { ResearchFreezeService } from "./freeze.service";
 import { canonicalResearchJson } from "./preflight.service";
 import { ResearchReplayService } from "./replay.service";
+import { AVAILABLE, NOT_PUBLISHED, fixedProfileCore, retainedCore, type Availability } from "./report-core-v2";
 import {
   ResearchReportDetailResponseSchema,
   ResearchReportExportStatusSchema,
-  ResearchReportFrozenCoreSchema,
+  ResearchReportFrozenCoreV2Schema,
   type ResearchReportDetailResponse,
   type ResearchReportExportFormat,
   type ResearchReportExportStatus,
@@ -31,27 +35,8 @@ import {
 import { ResearchSearchService } from "./search.service";
 import { ResearchSplitService } from "./split.service";
 
-type Availability = {
-  state: "AVAILABLE" | "NOT_PUBLISHED" | "PENDING_SOURCE_CALLBACK" | "LEGACY_METADATA_ONLY" | "NOT_APPLICABLE";
-  reason_code: string | null;
-};
-
-const NOT_PUBLISHED = (reasonCode: string): Availability => ({ state: "NOT_PUBLISHED", reason_code: reasonCode });
-const AVAILABLE: Availability = { state: "AVAILABLE", reason_code: null };
-
-function sourceFact(
-  value: string | null,
-  availability: Availability,
-  unavailableReason: string,
-): { state: "AVAILABLE" | "NOT_PUBLISHED"; text: string | null; reason_code: string | null; availability: Availability } {
-  return value !== null && availability.state === "AVAILABLE"
-    ? { state: "AVAILABLE", text: value, reason_code: null, availability }
-    : { state: "NOT_PUBLISHED", text: null, reason_code: availability.reason_code ?? unavailableReason, availability: availability.state === "AVAILABLE" ? NOT_PUBLISHED(unavailableReason) : availability };
-}
-
-function reportAvailability(value: Availability): Availability {
-  return value;
-}
+/** Which sealed read model a report is assembled from; the run's P10 profile decides. */
+export type ResearchReportLane = "P04_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE";
 
 function csvCell(value: string | null): string {
   const raw = value ?? "";
@@ -63,8 +48,9 @@ function csvCell(value: string | null): string {
 
 /**
  * Report assembly runs only during the idempotent terminal callback path or a
- * separately invoked recovery job. It reads P13--P17 persisted projections;
- * it never calls QuantBT, an artifact path, the source DB, or a live worker.
+ * separately invoked recovery job. It reads P13--P17 persisted projections
+ * (P04) or the retained current-source projections (Delta WFO); it never
+ * calls QuantBT, an artifact path, the source DB, or a live worker.
  */
 @Injectable()
 export class ResearchReportService {
@@ -75,6 +61,7 @@ export class ResearchReportService {
     private readonly search: ResearchSearchService,
     private readonly freeze: ResearchFreezeService,
     private readonly replay: ResearchReplayService,
+    private readonly currentSource: ResearchCurrentSourceService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
@@ -82,14 +69,78 @@ export class ResearchReportService {
    * Terminal-sidecar hook. A failed/currently incomplete source has no
    * fabricated report; the original terminal journal remains safely retryable.
    */
-  async materializeTerminal(scope: ResearchScope, input: { run_id: string; event: { event_type: string } }): Promise<boolean> {
+  async materializeTerminal(
+    scope: ResearchScope,
+    input: { run_id: string; event: { event_type: string } },
+    lane: ResearchReportLane = "P04_FIXED_PROFILE",
+  ): Promise<boolean> {
     if (this.config.FEATURE_RESEARCH_REPORTS !== "true" || input.event.event_type !== "run_completed") return false;
-    await this.materialize(scope, input.run_id);
+    if (lane === "RS02_RETAINED_CURRENT_SOURCE" && this.config.FEATURE_RESEARCH_CURRENT_SOURCE !== "true") return false;
+    await this.materialize(scope, input.run_id, lane);
     return true;
   }
 
-  async materialize(scope: ResearchScope, runId: string): Promise<ResearchReportDetailResponse> {
+  async materialize(scope: ResearchScope, runId: string, lane: ResearchReportLane = "P04_FIXED_PROFILE"): Promise<ResearchReportDetailResponse> {
     this.requireEnabled();
+    const core = lane === "RS02_RETAINED_CURRENT_SOURCE"
+      ? await this.retainedCore(scope, runId)
+      : await this.fixedProfileCore(scope, runId);
+    const parsed = ResearchReportFrozenCoreV2Schema.safeParse(core);
+    if (!parsed.success) {
+      const error = new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Report assembly is incompatible with sealed source facts.", 503);
+      (error as Error & { cause?: unknown }).cause = parsed.error;
+      throw error;
+    }
+    const stored = await this.repository.seal(scope, runId, parsed.data);
+    return this.detail(stored);
+  }
+
+  /**
+   * W6a · the Delta WFO lane. Every read is the retained current-source
+   * projection Screens 04–08 already serve; the P13 hub contributes only its
+   * stage timeline and the P10/P08 run identity. A run whose retained seal is
+   * absent is not ready — never a report of the P04 hubs it never had.
+   */
+  private async retainedCore(scope: ResearchScope, runId: string): Promise<unknown> {
+    if (this.config.FEATURE_RESEARCH_CURRENT_SOURCE !== "true") {
+      throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Retained current-source reads are not enabled in this deployment.", 503);
+    }
+    const page = ResearchCurrentSourcePageQuerySchema.parse({ limit: 1 });
+    const [evidence, split, search, freeze, replay, equity] = await Promise.all([
+      this.currentSource.evidence(scope, runId),
+      this.currentSource.split(scope, runId),
+      this.currentSource.search(scope, runId, page),
+      this.currentSource.freeze(scope, runId),
+      this.currentSource.replay(scope, runId, page),
+      this.currentSource.evidenceSeries(scope, runId, "EQUITY"),
+    ]).catch((error: unknown) => {
+      if (error instanceof ResearchCurrentSourceError && error.status === 409) {
+        throw new ResearchReportError("RESEARCH_REPORT_NOT_READY", "Report source facts are not sealed yet.", 409);
+      }
+      throw error;
+    });
+    const sealed = <T>(value: T | ResearchCurrentSourceNotApplicableResponse): T => {
+      if ((value as { schema_version?: string }).schema_version === "research.current-source-not-applicable.v1") {
+        throw new ResearchReportError("RESEARCH_REPORT_NOT_READY", "This run has no retained current-source lane.", 409);
+      }
+      return value as T;
+    };
+    const hubBundle = await this.evidence.bundle(scope, runId, []);
+    const evidenceRead = sealed(evidence);
+    const parts = await this.repository.sealedArtifactParts(scope, runId, null);
+    return retainedCore({
+      hub: hubBundle.hub,
+      evidence: evidenceRead,
+      split: sealed(split),
+      search: sealed(search),
+      freeze: sealed(freeze),
+      replay: sealed(replay),
+      equity: sealed(equity),
+      parts,
+    });
+  }
+
+  private async fixedProfileCore(scope: ResearchScope, runId: string): Promise<unknown> {
     const [evidenceBundle, split, search, freeze, replay] = await Promise.all([
       this.evidence.bundle(scope, runId, [ResearchEvidenceSeriesKindSchema.enum.EQUITY_OOS]),
       this.split.detail(scope, runId),
@@ -109,15 +160,34 @@ export class ResearchReportService {
     if (Object.values(revisions).some((value) => value === null)) {
       throw new ResearchReportError("RESEARCH_REPORT_NOT_READY", "Report source facts are not sealed yet.", 409);
     }
-    const core = this.buildCore(evidenceBundle.hub, equity, split, search, freeze, replay, revisions as {
-      evidence_revision: string; split_revision: string; search_revision: string; freeze_revision: string; replay_revision: string;
+    const points = equity.availability.state === "AVAILABLE"
+      ? equity.values.map((value) => {
+        const point = value as { at_utc_ms?: unknown; equity?: unknown; drawdown_fraction?: unknown };
+        if (typeof point.at_utc_ms !== "number" || typeof point.equity !== "string" || typeof point.drawdown_fraction !== "string") {
+          throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Evidence equity point is incompatible.", 503);
+        }
+        return { at_utc_ms: point.at_utc_ms, equity: point.equity, drawdown_fraction: point.drawdown_fraction };
+      }) : [];
+    return fixedProfileCore({
+      hub: evidenceBundle.hub,
+      equity: {
+        availability: equity.availability as Availability,
+        source_sample: equity.source_sample as { source_observation_count: number | null; emitted_point_count: number; sampling: string | null },
+        points,
+      },
+      split: { revision: split.revision!, availability: split.availability as Availability, protocolKind: split.protocol.kind },
+      search: {
+        revision: search.revision!,
+        sourceProfileState: search.source_profile.state,
+        sourceProfileAvailability: search.source_profile.availability as Availability,
+      },
+      freeze: {
+        revision: freeze.revision!,
+        integrityState: freeze.freeze.integrity.state,
+        integrityAvailability: freeze.freeze.integrity.availability as Availability,
+      },
+      replay: { revision: replay.revision!, routeState: replay.route.state },
     });
-    const parsed = ResearchReportFrozenCoreSchema.safeParse(core);
-    if (!parsed.success) {
-      throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Report assembly is incompatible with sealed source facts.", 503);
-    }
-    const stored = await this.repository.seal(scope, runId, parsed.data);
-    return this.detail(stored);
   }
 
   async read(scope: ResearchScope, runId: string): Promise<ResearchReportDetailResponse> {
@@ -167,127 +237,6 @@ export class ResearchReportService {
       if (error instanceof ResearchReportError) throw error;
       throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Report export transformer failed.", 503);
     }
-  }
-
-  private buildCore(
-    hub: ResearchEvidenceHubResponse,
-    equity: { availability: Availability; source_sample: { source_observation_count: number | null; emitted_point_count: number; sampling: string | null }; values: unknown[] },
-    split: Awaited<ReturnType<ResearchSplitService["detail"]>>,
-    search: Awaited<ReturnType<ResearchSearchService["detail"]>>,
-    freeze: Awaited<ReturnType<ResearchFreezeService["detail"]>>,
-    replay: Awaited<ReturnType<ResearchReplayService["detail"]>>,
-    revisions: { evidence_revision: string; split_revision: string; search_revision: string; freeze_revision: string; replay_revision: string },
-  ): unknown {
-    const sourceAvailability = hub.availability as Availability;
-    const sourceCore = hub.core;
-    const metric = (key: string) => hub.metrics.find((item) => item.key === key)!;
-    const metricValue = (key: string) => metric(key)?.value ?? null;
-    const metricAvailability = (key: string) => (metric(key)?.availability ?? NOT_PUBLISHED("P18_METRIC_NOT_PUBLISHED")) as Availability;
-    const foldAvailability = split.availability as Availability;
-    const noFold = NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
-    const absent = (reasonCode: string) => sourceFact(null, NOT_PUBLISHED(reasonCode), reasonCode);
-    const equityPoints = equity.availability.state === "AVAILABLE"
-      ? equity.values.map((value) => {
-        const point = value as { at_utc_ms?: unknown; equity?: unknown; drawdown_fraction?: unknown };
-        if (typeof point.at_utc_ms !== "number" || typeof point.equity !== "string" || typeof point.drawdown_fraction !== "string") {
-          throw new ResearchReportError("RESEARCH_REPORT_UNAVAILABLE", "Evidence equity point is incompatible.", 503);
-        }
-        return { at_utc_ms: point.at_utc_ms, equity: point.equity, drawdown_fraction: point.drawdown_fraction };
-      }) : [];
-    return {
-      schema_version: "research.report-frozen-core.v1",
-      report_source: "P13_P17_FIXED_PROFILE",
-      source_revisions: revisions,
-      source_digests: {
-        source_transform_digest: sourceCore.source_transform_digest,
-        requested_spec_digest: sourceCore.requested_spec_digest,
-        effective_spec_digest: sourceCore.effective_spec_digest,
-        dataset_binding_digest: sourceCore.dataset_binding_digest,
-        manifest_digest: sourceCore.manifest_digest,
-      },
-      passport: [
-        sourceFact(sourceCore.source_adapter_id, sourceAvailability, "P18_SOURCE_ADAPTER_NOT_PUBLISHED"),
-        sourceFact(sourceCore.engine_version, sourceAvailability, "P18_ENGINE_VERSION_NOT_PUBLISHED"),
-        sourceFact(sourceCore.input_scope, sourceAvailability, "P18_INPUT_SCOPE_NOT_PUBLISHED"),
-        sourceFact(split.protocol.kind, foldAvailability, "P18_SPLIT_PROTOCOL_NOT_PUBLISHED"),
-        sourceFact(search.source_profile.state === "FIXED_PROFILE_NO_SEARCH" ? search.source_profile.state : null, search.source_profile.availability as Availability, "P18_SOURCE_PROFILE_NOT_PUBLISHED"),
-        sourceFact(freeze.freeze.integrity.state, freeze.freeze.integrity.availability as Availability, "P18_INTEGRITY_NOT_PUBLISHED"),
-      ],
-      identity: [
-        { key: "run_id", label: "Run ID", value: hub.run_id, availability: AVAILABLE },
-        { key: "source_adapter", label: "Source adapter", value: sourceCore.source_adapter_id, availability: sourceAvailability },
-        { key: "engine_version", label: "Engine version", value: sourceCore.engine_version, availability: sourceAvailability },
-        { key: "input_scope", label: "Input scope", value: sourceCore.input_scope, availability: sourceAvailability },
-        { key: "dataset_id", label: "Dataset", value: sourceCore.data.dataset_id, availability: sourceAvailability },
-        { key: "symbol", label: "Symbol", value: sourceCore.data.symbol, availability: sourceAvailability },
-        { key: "timeframe", label: "Timeframe", value: sourceCore.data.timeframe, availability: sourceAvailability },
-        { key: "evidence_revision", label: "Evidence revision", value: revisions.evidence_revision, availability: AVAILABLE },
-        { key: "split_revision", label: "Split revision", value: revisions.split_revision, availability: AVAILABLE },
-        { key: "search_revision", label: "Search revision", value: revisions.search_revision, availability: AVAILABLE },
-        { key: "freeze_revision", label: "Freeze revision", value: revisions.freeze_revision, availability: AVAILABLE },
-        { key: "replay_revision", label: "Replay revision", value: revisions.replay_revision, availability: AVAILABLE },
-      ],
-      metrics: hub.metrics.map((item) => ({
-        key: item.key, label: item.label, unit: item.unit, scope: item.scope,
-        origin: item.origin, definition_id: item.definition_id, value: item.value,
-        availability: reportAvailability(item.availability as Availability),
-      })),
-      headline: [
-        { key: "OOS_SHARPE", label: "OOS Sharpe", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE") },
-        { key: "DECAY_MEAN", label: "Decay mean", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_DECAY_MEAN") },
-        { key: "MAX_DRAWDOWN", label: "Max drawdown", value: metricValue("MAX_DRAWDOWN_FRACTION"), availability: metricAvailability("MAX_DRAWDOWN_FRACTION") },
-        { key: "TRADES", label: "Trades", value: metricValue("TRADE_COUNT"), availability: metricAvailability("TRADE_COUNT") },
-        { key: "WIN_RATE", label: "Win rate", value: null, availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_WIN_RATE") },
-        { key: "FUNDING", label: "Funding", value: metricValue("FUNDING_TOTAL"), availability: metricAvailability("FUNDING_TOTAL") },
-      ],
-      headline_footnote: "All values retain the scope and availability stated by the sealed Evidence Hub; missing optimizer and execution facts are not inferred.",
-      equity: {
-        state: equity.availability.state === "AVAILABLE" ? "AVAILABLE" : "NOT_PUBLISHED",
-        source_observation_count: equity.source_sample.source_observation_count,
-        emitted_point_count: equity.source_sample.emitted_point_count,
-        sampling: equity.availability.state === "AVAILABLE" && (equity.source_sample.sampling === "FULL" || equity.source_sample.sampling === "EXTREMA_BUCKET_V1") ? equity.source_sample.sampling : null,
-        points: equityPoints,
-        availability: equity.availability,
-      },
-      folds: {
-        state: "NOT_PUBLISHED",
-        reason_code: noFold.reason_code,
-        rows: [],
-        availability: noFold,
-      },
-      stages: hub.stages,
-      artifacts: [
-        // The P04/P13–P17 current profile publishes identifying digests, not
-        // retrievable artifact bytes. A digest remains in source_digests; it
-        // must not be relabelled as a sealed downloadable artifact here.
-        { key: "RUN_SPEC", digest: null, state: "NOT_PUBLISHED", availability: NOT_PUBLISHED("P18_REQUESTED_SPEC_BYTES_NOT_PUBLISHED") },
-        { key: "SELECTION_TRACE", digest: null, state: "NOT_PUBLISHED", availability: NOT_PUBLISHED("P04_FIXED_PROFILE_HAS_NO_SELECTION_TRACE") },
-        { key: "FOLD_PLAN", digest: null, state: "NOT_PUBLISHED", availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_FOLD_PLAN") },
-        { key: "FILL_LEDGER", digest: null, state: "NOT_PUBLISHED", availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS") },
-        { key: "METRICS_SUMMARY", digest: null, state: "NOT_PUBLISHED", availability: NOT_PUBLISHED("P13_EVIDENCE_PROJECTION_IS_NOT_ARTIFACT_FILE") },
-        { key: "CLAIM", digest: null, state: "NOT_PUBLISHED", availability: NOT_PUBLISHED("P13_CLAIM_IS_NOT_AN_ARTIFACT_DIGEST") },
-        { key: "BUNDLE", digest: null, state: "NOT_PUBLISHED", availability: NOT_PUBLISHED("P18_MANIFEST_BYTES_NOT_PUBLISHED") },
-      ],
-      warnings: hub.warnings,
-      promotion: {
-        state: "NOT_PUBLISHED",
-        line: "Promotion/governance approval is not published by the current P04 source.",
-        availability: NOT_PUBLISHED("P04_SOURCE_DID_NOT_PUBLISH_PROMOTION_APPROVAL"),
-      },
-      provenance: {
-        line: `P18 report sealed from ${revisions.evidence_revision}, ${revisions.split_revision}, ${revisions.search_revision}, ${revisions.freeze_revision} and ${revisions.replay_revision}; replay remains retrospective equity only (${replay.route.state}).`,
-        metric_registry_version: hub.metric_registry_version,
-        data_signature: sourceCore.dataset_binding_digest,
-        read_model_revision: "research.report-read-model.v1",
-        verdict_rule_revision: "research.report-verdict-rule.v1",
-      },
-      source_absences: {
-        ...Object.fromEntries(Object.entries(hub.source_absences).map(([key, availability]) => [key, absent((availability as Availability).reason_code ?? "P18_SOURCE_FACT_NOT_PUBLISHED")])),
-        per_fold_rows: absent("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS"),
-        approval_annotation: absent("P18_APPROVAL_ANNOTATION_NOT_PUBLISHED"),
-        replay_execution_state: absent("P04_SOURCE_DID_NOT_PUBLISH_EXECUTION_STATE_SNAPSHOTS"),
-      },
-    };
   }
 
   private detail(stored: StoredResearchReport): ResearchReportDetailResponse {
@@ -379,6 +328,23 @@ export class ResearchReportService {
     }
     for (const item of payload.frozen_core.headline) {
       lines.push(["headline", item.key, item.label, item.value, item.availability.state, item.availability.reason_code].map(csvCell).join(","));
+    }
+    const core = payload.frozen_core;
+    if (core.schema_version === "research.report-frozen-core.v2") {
+      // v2 only: a v1 export stays byte-identical to what it always produced.
+      for (const item of core.passport) {
+        lines.push(["passport", item.key, item.label, item.text, item.state, item.reason_code].map(csvCell).join(","));
+      }
+      for (const row of core.folds.rows) {
+        for (const [key, label, value] of [
+          ["is_sharpe", "IS Sharpe", row.is_sharpe], ["oos_sharpe", "OOS Sharpe", row.oos_sharpe],
+          ["decay", "Decay", row.decay], ["contribution_fraction", "Contribution", row.contribution_fraction],
+          ["max_drawdown_fraction", "Max drawdown", row.max_drawdown_fraction], ["oos_trades", "OOS trades", row.oos_trades],
+        ] as const) {
+          lines.push([`fold:${row.fold_id}`, key, label, value.value, value.availability.state, value.availability.reason_code].map(csvCell).join(","));
+        }
+        lines.push([`fold:${row.fold_id}`, "verdict", "Verdict", row.verdict, "AVAILABLE", null].map(csvCell).join(","));
+      }
     }
     lines.push(["annotation", "approval_annotation", "Approval annotation", payload.approval_annotation.text, payload.approval_annotation.state, payload.approval_annotation.state === "AVAILABLE" ? null : "P18_APPROVAL_ANNOTATION_NOT_PUBLISHED"].map(csvCell).join(","));
     return `${lines.join("\r\n")}\r\n`;

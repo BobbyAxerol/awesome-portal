@@ -1,6 +1,11 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
+import { ResearchReportDetailResponseSchema } from "../src/research/report.contract";
 import { ResearchReportService } from "../src/research/report.service";
+import { openApiValidator } from "./research-rf05-openapi";
 import type { ClaimedResearchReportExport, StoredResearchReport } from "../src/research/report.repository";
 import { sha256ResearchJson } from "../src/research/preflight.service";
 
@@ -26,6 +31,16 @@ function hubFixture() {
       source_adapter_id: "p04.delta-rsi.v1", engine_version: "1.1.1", input_scope: "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
       source_transform_digest: digest("b"), requested_spec_digest: digest("c"), effective_spec_digest: digest("d"), dataset_binding_digest: digest("e"), manifest_digest: digest("f"),
       data: { dataset_id: "delta-rsi", symbol: "BTCUSDT", timeframe: "1h", oos_observation_count: 3 },
+      run_identity: {
+        status: { value: "READY", availability: availability() },
+        binding: { alpha_id: "delta-rsi-polynomial-alpha", alpha_name: "Delta-RSI Polynomial Alpha", alpha_version_id: "av_delta_rsi_polynomial_alpha_1_0_0", availability: availability() },
+        created_at_utc_ms: { value: 1_727_000_000_000, availability: availability() },
+        mode: { value: "fixed_profile", availability: availability() },
+        schedule: { value: "none", availability: availability() },
+        route: { id: { value: "signal_notional", availability: availability() }, contract: { value: null, availability: availability("NOT_PUBLISHED", "P13_ROUTE_CONTRACT_NOT_PUBLISHED") } },
+        config_digest: { value: digest("7"), availability: availability() },
+        seed: { value: 42, availability: availability() },
+      },
     },
     metrics: [
       metric("INITIAL_EQUITY", "Initial equity", "CURRENCY", "OOS", "ENGINE_DIRECT", "100"),
@@ -89,8 +104,9 @@ function subject() {
     }),
     read: vi.fn().mockImplementation(async () => stored ?? null),
     requestExport: vi.fn(), readExport: vi.fn(), download: vi.fn(), claimOne: vi.fn(), completeClaim: vi.fn(), failClaim: vi.fn(),
+    sealedArtifactParts: vi.fn().mockResolvedValue(null),
   };
-  const service = new ResearchReportService(repository as never, readers.evidence as never, readers.split as never, readers.search as never, readers.freeze as never, readers.replay as never, enabledConfig() as never);
+  const service = new ResearchReportService(repository as never, readers.evidence as never, readers.split as never, readers.search as never, readers.freeze as never, readers.replay as never, {} as never, enabledConfig() as never);
   return { service, repository, readers, get stored() { return stored; } };
 }
 
@@ -104,6 +120,19 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     expect(report.frozen_core.headline.find((item) => item.key === "OOS_SHARPE")).toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED" } });
     expect(report.frozen_core.equity.points).toHaveLength(3);
     expect(report.frozen_core.folds).toMatchObject({ state: "NOT_PUBLISHED", rows: [] });
+    // W6a: every new seal is v2; the P04 lane keeps its hubs and adds typed v2 facts.
+    const core = report.frozen_core;
+    if (core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected a v2 core");
+    expect(core.report_source).toBe("P13_P17_FIXED_PROFILE");
+    expect(core.title).toMatchObject({ text: "Delta-RSI Polynomial Alpha on BTCUSDT · 1h", availability: { state: "AVAILABLE" } });
+    expect(core.certification).toMatchObject({ state: "NOT_PUBLISHED", grade: null, reason_code: "P18_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE" });
+    expect(core.passport.map((item) => item.key)).toEqual(["source_adapter", "engine_version", "input_scope", "split_protocol", "source_profile", "integrity"]);
+    expect(core.identity.map((item) => item.key).slice(0, 5)).toEqual(["run_id", "alpha", "alpha_version", "binding", "strategy"]);
+    expect(core.identity.find((item) => item.key === "random_seed")).toMatchObject({ value: "42" });
+    expect(core.equity_is).toMatchObject({ state: "NOT_PUBLISHED", emitted_point_count: null, availability: { reason_code: "P04_SOURCE_DID_NOT_PUBLISH_IS_EQUITY_SERIES" } });
+    expect(core.stages.find((item) => item.key === "S3")!.check).toMatchObject({ result: "CAVEAT", source_key: "p16.freeze.integrity" });
+    expect(core.stages.find((item) => item.key === "S1")!.check).toMatchObject({ result: "NOT_PUBLISHED" });
+    for (const artifact of core.artifacts) expect(artifact.download.state).toBe("NOT_PUBLISHED");
     for (const [key, reasonCode] of [
       ["RUN_SPEC", "P18_REQUESTED_SPEC_BYTES_NOT_PUBLISHED"],
       ["METRICS_SUMMARY", "P13_EVIDENCE_PROJECTION_IS_NOT_ARTIFACT_FILE"],
@@ -162,9 +191,20 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     expect(output.filename).not.toMatch(/[\\/]/);
   });
 
+  it("CG-P18-09 writes (opt-in) and validates the P04 fixed-profile fixture", async () => {
+    const file = resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures", "research-report.p04-fixed-profile.valid.json");
+    if (process.env.W6A_WRITE_FIXTURES === "1") {
+      writeFileSync(file, `${JSON.stringify(await subject().service.materialize(scope, "run_p18"))}\n`);
+    }
+    const body = JSON.parse(readFileSync(file, "utf8"));
+    expect(ResearchReportDetailResponseSchema.safeParse(body).success).toBe(true);
+    openApiValidator("research-report.openapi.json", "ReportDetail").assert(body);
+    expect(body.frozen_core).toMatchObject({ schema_version: "research.report-frozen-core.v2", report_source: "P13_P17_FIXED_PROFILE" });
+  });
+
   it("fails closed while the independently admitted P18 reader is dark", async () => {
     const readers = sourceReaders();
-    const service = new ResearchReportService({} as never, readers.evidence as never, readers.split as never, readers.search as never, readers.freeze as never, readers.replay as never, { ...enabledConfig(), FEATURE_RESEARCH_REPORTS: "false" } as never);
+    const service = new ResearchReportService({} as never, readers.evidence as never, readers.split as never, readers.search as never, readers.freeze as never, readers.replay as never, {} as never, { ...enabledConfig(), FEATURE_RESEARCH_REPORTS: "false" } as never);
     await expect(service.read(scope, "run_p18")).rejects.toMatchObject({ code: "RESEARCH_REPORT_UNAVAILABLE", status: 503 });
   });
 });

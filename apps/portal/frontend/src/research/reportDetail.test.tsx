@@ -385,9 +385,14 @@ describe("S09 Run Report — the sheet", () => {
     server();
     renderRoute();
     await screen.findByText("claim passport — sealed source facts, quoted verbatim");
-    expect(panel("headline").querySelector('[data-headline="MAX_DRAWDOWN"] [data-headline-value]')?.textContent).toBe("-0.02");
-    expect(panel("headline").querySelector('[data-headline="TRADES"] [data-headline-value]')?.textContent).toBe("3");
-    expect(panel("metrics").querySelector('[data-metric="NET_RETURN_FRACTION"]')?.textContent).toContain("0.1");
+    /* DQ-08 (W6a): a value is displayed by its unit and keeps the server's exact string beside it. */
+    const drawdown = panel("headline").querySelector('[data-headline="MAX_DRAWDOWN"] [data-headline-value]')!;
+    expect(drawdown.getAttribute("data-headline-value")).toBe("-0.02");
+    expect(drawdown.querySelector("[data-exact]")?.getAttribute("title")).toBe("-0.02");
+    expect(drawdown.textContent).toBe("−2.00%");
+    expect(panel("headline").querySelector('[data-headline="TRADES"] [data-exact]')?.textContent).toBe("3");
+    expect(panel("metrics").querySelector('[data-metric="NET_RETURN_FRACTION"] [data-metric-value]')?.getAttribute("data-metric-value")).toBe("0.1");
+    expect(panel("metrics").querySelector('[data-metric="NET_RETURN_FRACTION"]')?.textContent).toContain("+10.00%");
     expect(panel("provenance").querySelector("[data-data-signature]")?.textContent).toBe("e".repeat(64));
     expect(panel("provenance").querySelector('[data-source-digest="manifest_digest"]')?.textContent).toContain("f".repeat(64));
     expect(panel("header").textContent).toContain(REV);
@@ -857,6 +862,9 @@ describe("S09 Run Report — reading", () => {
     const conflict = toReportRefusal(new PortalApiError("409", 409, "RESEARCH_REPORT_NOT_READY", "req"), "export");
     expect(conflict).toMatchObject({ state: "stale", mayRetry: false, terminal: false, message: REPORT_REFUSAL_COPY.export[409] });
     expect(toReportRefusal(new TypeError("offline"), "report")).toMatchObject({ state: "failed-retryable", mayRetry: true });
+    /* CG-P18-10: the read never declares 409; an unexpected one is not mistaken for "not sealed yet". */
+    expect("409" in REPORT_REFUSAL_COPY.report).toBe(false);
+    expect(toReportRefusal(new PortalApiError("409", 409, "X", "req"), "report")).toMatchObject({ state: "terminal", message: REPORT_REFUSAL_COPY.report.other });
   });
 
   it("S09-U16 a 503 retry reads again with the held ETag only when asked", async () => {
@@ -1021,7 +1029,7 @@ describe("S09 Run Report — pure parts and source rules", () => {
     expect(exportDownloadHref(null)).toBeNull();
   });
 
-  it("S09-U25 no S09 file formats a number on the client", () => {
+  it("S09-U25 no S09 file formats a number on its own: display units come only from researchFormat (DQ-08)", () => {
     for (const name of ["ReportDetail.tsx", "ReportRoute.tsx", "reportClient.ts", "reportEquity.ts", "useReport.ts", "useReportExport.ts", "utcMinute.ts"]) {
       const source = readFileSync(join(process.cwd(), "src", "research", name), "utf8");
       expect(source, name).not.toMatch(/toFixed|Intl\.|toLocaleString/);
@@ -1037,5 +1045,106 @@ describe("S09 Run Report — pure parts and source rules", () => {
     expect(hub).toContain('data-action="generate-report"');
     expect(hub).toContain('data-action="release-candidate"');
     expect(hub).not.toContain('<UnroutedAction label="release candidate →"');
+  });
+});
+
+/*
+ * W6a · frozen core v2 (CG-P18-01…11). These tests load the canonical
+ * fixtures the control-api publishes from the real retained WFO seal
+ * (CG-P18-09) instead of building a body here (CLAUDE.md §7.8).
+ */
+const FIXTURES = join(process.cwd(), "..", "..", "..", "packages", "contracts", "fixtures");
+const fixture = (name: string) => JSON.parse(readFileSync(join(FIXTURES, name), "utf8")) as ReportDetail;
+
+describe("S09 Run Report — v2 core on the canonical fixtures (W6a)", () => {
+  async function open(name: string) {
+    const body = fixture(name);
+    server({ detail: [{ status: 200, body }] });
+    renderRoute(body.run_id);
+    await screen.findAllByText(/per-fold verdict/i);
+    await act(async () => {});
+    return body as unknown as { run_id: string; frozen_core: Record<string, any> };
+  }
+
+  it("S09-U41 CG-P18-03/02 the title is the report's own and the certification box names its typed absence", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    const title = document.querySelector("[data-report-title]")!;
+    expect(title.textContent).toBe(body.frozen_core.title.text);
+    expect(title.getAttribute("data-title-source")).toBe("report");
+    expect(panel("header").querySelector("[data-cert]")?.getAttribute("data-cert-state")).toBe("NOT_PUBLISHED");
+    expect(panel("header").querySelector("[data-cert] [data-reason-code]")?.textContent).toBe(body.frozen_core.certification.reason_code);
+  });
+
+  it("S09-U42 CG-P18-01 the passport labels each engine fact by its key, verbatim", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    expect(panel("passport").querySelector("h2")?.textContent).toBe("Claim passport — issued by the engine, quoted verbatim");
+    const facts = [...panel("passport").querySelectorAll("[data-passport-key]")];
+    expect(facts.map((fact) => fact.getAttribute("data-passport-key"))).toEqual(body.frozen_core.passport.map((fact: { key: string }) => fact.key));
+    expect(facts[0]!.querySelector(".k")?.textContent).toBe("validation_claim");
+    expect(facts[0]!.querySelector(".v")?.textContent).toBe("walk_forward_oos");
+    expect(facts[3]!.getAttribute("data-fact-state")).toBe("NOT_APPLICABLE");
+    expect(panel("passport").textContent).not.toContain("numbered rather than named");
+  });
+
+  it("S09-U43 CG-P18-04/08 the fold table has the hi-fi's eight columns and each cell keeps its exact value", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    const table = panel("folds").querySelector("table")!;
+    expect(table.getAttribute("data-fold-columns")).toBe("8");
+    expect([...table.querySelectorAll("th")].map((th) => th.textContent)).toEqual(["fold", "OOS window (UTC)", "params", "IS", "OOS", "Δ decay", "contribution", "verdict"]);
+    const rows = body.frozen_core.folds.rows as Array<{ fold_id: string; oos_sharpe: { value: string }; decay: { value: string }; contribution_fraction: { value: string }; verdict: string }>;
+    expect(table.querySelectorAll("[data-fold]")).toHaveLength(rows.length);
+    for (const row of rows) {
+      const tr = table.querySelector(`[data-fold="${row.fold_id}"]`)!;
+      expect(tr.querySelector("[data-fold-oos]")?.getAttribute("data-fold-oos")).toBe(row.oos_sharpe.value);
+      expect(tr.querySelector("[data-fold-decay]")?.getAttribute("data-fold-decay")).toBe(row.decay.value);
+      expect(tr.querySelector("[data-fold-contribution]")?.getAttribute("data-fold-contribution")).toBe(row.contribution_fraction.value);
+      expect(tr.querySelector("[data-v]")?.textContent).toBe(row.verdict);
+      expect(tr.querySelector("[data-fold-params] [title]")?.getAttribute("title")).toBe(body.frozen_core.folds.params_handoff.text);
+    }
+    expect(panel("equity").querySelector("[data-equity-caption]")?.textContent).toContain(`params handoff at each boundary: ${body.frozen_core.folds.params_handoff.text}`);
+  });
+
+  it("S09-U44 CG-P18-05 each stage shows its sourced check, never a pass from progress alone", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    for (const stage of body.frozen_core.stages as Array<{ key: string; check: { result: string; text: string | null; source_key: string | null } }>) {
+      const row = panel("stages").querySelector(`[data-stage="${stage.key}"]`)!;
+      expect(row.getAttribute("data-stage-check")).toBe(stage.check.result);
+      if (stage.check.text) expect(row.querySelector(".desc")?.textContent).toContain(stage.check.text);
+      if (stage.check.source_key) expect(row.querySelector(".desc")?.textContent).toContain(stage.check.source_key);
+    }
+    expect(panel("stages").querySelector('[data-stage="S3"] .st')?.textContent).toBe("pass");
+  });
+
+  it("S09-U45 CG-P18-06 the figure draws the IS account dashed before the stitched OOS", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    expect(panel("equity").querySelector("[data-equity-title]")?.textContent).toBe("Equity — IS account vs stitched OOS (2 folds, frozen params each)");
+    expect(panel("equity").querySelector("[data-equity-is-path]")).not.toBeNull();
+    expect(panel("equity").querySelector("[data-equity-oos-path]")).not.toBeNull();
+    expect(panel("equity").querySelector('[data-legend="is"]')?.getAttribute("data-legend-state")).toBe("published");
+    expect(panel("equity").querySelector("[data-equity-counts]")?.textContent).toContain(`OOS emitted ${body.frozen_core.equity.emitted_point_count} of ${body.frozen_core.equity.source_observation_count} source observations`);
+  });
+
+  it("S09-U46 CG-P18-07 sealed artifacts show their in-artifact filename and digest; nothing is a download", async () => {
+    const body = await open("research-report.wfo-retained.valid.json");
+    const fold = body.frozen_core.artifacts.find((artifact: { key: string }) => artifact.key === "FOLD_PLAN");
+    const cell = panel("artifacts").querySelector('[data-artifact="FOLD_PLAN"]')!;
+    expect(cell.querySelector("[data-artifact-filename]")?.getAttribute("data-artifact-filename")).toBe(fold.filename);
+    expect(cell.querySelector("[data-exact]")?.getAttribute("data-exact")).toBe(fold.digest);
+    expect(panel("artifacts").querySelectorAll("a")).toHaveLength(0);
+    expect(panel("artifacts").textContent).toContain(fold.download.reason_code);
+  });
+
+  it("S09-U47 CG-P18-11 a scratch run says NOT_PUBLISHABLE in its identity and keeps the generic title", async () => {
+    await open("research-report.wfo-scratch.valid.json");
+    expect(panel("identity").querySelector('[data-identity="binding"] dd')?.textContent).toBe("scratch — NOT_PUBLISHABLE");
+    expect(document.querySelector("[data-report-title]")?.getAttribute("data-title-source")).toBe("generic");
+  });
+
+  it("S09-U48 a P04 v2 report keeps its hub facts, names each passport fact and withholds folds in the 8-column frame", async () => {
+    await open("research-report.p04-fixed-profile.valid.json");
+    expect(panel("passport").querySelector("h2")?.textContent).toBe("claim passport — sealed source facts, quoted verbatim");
+    expect(panel("passport").querySelector('[data-passport-key="split_protocol"] .k')?.textContent).toBe("Split protocol");
+    expect(panel("folds").querySelector("[data-folds-absent]")?.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_REPORT_ROWS");
+    expect(panel("equity").querySelector('[data-legend="is"]')?.textContent).toContain("P04_SOURCE_DID_NOT_PUBLISH_IS_EQUITY_SERIES");
   });
 });

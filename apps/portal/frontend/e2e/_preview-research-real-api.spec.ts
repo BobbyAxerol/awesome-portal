@@ -68,6 +68,18 @@ function observe(page: Page): Observed {
   return observed;
 }
 
+/**
+ * W6a: read the API from inside the page. Behind a dev proxy that carries the
+ * stack's public (https) Origin, the session cookie is Secure: the browser
+ * sends it to http://127.0.0.1, Playwright's request context does not.
+ */
+async function pageGet(page: Page, path: string): Promise<{ status: number; body: any }> {
+  return page.evaluate(async (url) => {
+    const response = await fetch(url, { credentials: "same-origin" });
+    return { status: response.status, body: await response.json() };
+  }, path);
+}
+
 async function signIn(page: Page) {
   const response = await page.request.post("/api/auth/login", {
     data: { username: "claude-preview", credential: PASSWORD },
@@ -448,17 +460,37 @@ for (const [name, width, height] of VIEWPORTS) {
       const observed = observe(page);
       await page.setViewportSize({ width, height });
       await signIn(page);
-      const response = await page.request.get(`/api/v1/quantbt/runs/${run}/report`);
-      const api = (await response.json()) as any;
       await page.goto(`/research/quantbt/runs/${run}/report`);
+      const read = await pageGet(page, `/api/v1/quantbt/runs/${run}/report`);
+      const response = { status: () => read.status };
+      const api = read.body;
       const root = page.locator("[data-screen='run-report']");
       await expect(root).toBeVisible({ timeout: 20_000 });
       await page.waitForLoadState("networkidle");
       if (response.status() === 200) {
         await expect(root).toHaveAttribute("data-report-revision", api.report_revision);
         await expect(root.locator("[data-promotion-line]")).toHaveText(api.frozen_core.promotion.line);
+        /* W6a: a headline is displayed by unit (DQ-08); the exact server string rides data-headline-value. */
         for (const cell of api.frozen_core.headline) {
-          if (cell.value !== null) await expect(root.locator(`[data-headline='${cell.key}']`)).toContainText(cell.value);
+          if (cell.value !== null) await expect(root.locator(`[data-headline='${cell.key}'] [data-headline-value]`)).toHaveAttribute("data-headline-value", cell.value);
+          else await expect(root.locator(`[data-headline='${cell.key}'] [data-headline-withheld]`)).toContainText(cell.availability.reason_code ?? cell.availability.state);
+        }
+        for (const field of api.frozen_core.identity) {
+          if (field.value !== null) await expect(root.locator(`[data-identity='${field.key}'] dd`)).toHaveText(field.value);
+        }
+        await expect(root.locator("[data-passport-fact]")).toHaveCount(api.frozen_core.passport.length);
+        if (api.frozen_core.schema_version === "research.report-frozen-core.v2") {
+          const core = api.frozen_core;
+          if (core.title.text) await expect(root.locator("[data-report-title]")).toHaveText(core.title.text);
+          await expect(root.locator("[data-cert] [data-reason-code]")).toHaveText(core.certification.reason_code);
+          for (const [index, fact] of core.passport.entries()) {
+            await expect(root.locator(`[data-passport-fact='${index + 1}']`)).toHaveAttribute("data-passport-key", fact.key);
+          }
+          await expect(root.locator("[data-fold]")).toHaveCount(core.folds.rows.length);
+          for (const row of core.folds.rows) {
+            if (row.oos_sharpe.value !== null) await expect(root.locator(`[data-fold='${row.fold_id}'] [data-fold-oos]`)).toHaveAttribute("data-fold-oos", row.oos_sharpe.value);
+          }
+          for (const stage of core.stages) await expect(root.locator(`[data-stage='${stage.key}']`)).toHaveAttribute("data-stage-check", stage.check.result);
         }
         await expect(root.locator("[data-action='release-candidate']")).toHaveAttribute("href", `/research/quantbt/runs/${run}/release-candidate`);
       } else {
@@ -495,16 +527,33 @@ for (const [name, width, height] of VIEWPORTS) {
     const observed = observe(page);
     await page.setViewportSize({ width, height });
     await signIn(page);
-    const response = await page.request.get(`/api/v1/research/alphas/${ALPHA}/compare?mode=attempts`);
     await page.goto(`/research/quantbt/alphas/${ALPHA}/compare`);
+    const read = await pageGet(page, `/api/v1/research/alphas/${ALPHA}/compare?mode=attempts`);
+    const response = { status: () => read.status, json: async () => read.body };
     const root = page.locator("[data-screen='compare']");
     await expect(root).toBeVisible({ timeout: 20_000 });
     await page.waitForLoadState("networkidle");
     if (response.status() === 200) {
       const api = (await response.json()) as any;
       await expect(root).toHaveAttribute("data-compare-state", /available|partial/);
-      for (const run of (api.attempts ?? api.runs ?? []).map((item: any) => item.run_id ?? item.primary_run?.run_id).filter(Boolean).slice(0, 3)) {
+      const result = api.result;
+      for (const run of (result.attempts ?? []).map((item: any) => item.run_id).slice(0, 3)) {
         await expect(root.locator(`[data-rc-link='${run}']`).first()).toHaveAttribute("href", `/research/quantbt/runs/${run}/release-candidate`);
+      }
+      /* W6a: every CG-P20 field the ladder, fold chart and diff show equals the API. */
+      for (const run of result.attempts ?? []) {
+        const card = root.locator(`[data-ladder-run='${run.run_id}']`);
+        const sharpe = run.original_metrics.find((metric: any) => metric.key === "OOS_SHARPE");
+        if (sharpe?.availability.state === "AVAILABLE") await expect(card.locator("[data-oos-sharpe]")).toHaveAttribute("data-oos-sharpe", sharpe.value);
+        if (run.schedule.availability.state === "AVAILABLE") await expect(card.locator("[data-schedule]")).toHaveText(`sched ${run.schedule.mode} × ${run.schedule.schedule}`);
+        if (run.alpha_version_lifecycle.value) await expect(card).toHaveAttribute("data-lifecycle", run.alpha_version_lifecycle.value);
+        await expect(card.locator("[data-cert-absent]")).toContainText(run.certification.reason_code);
+      }
+      const bars = (result.fold_series ?? []).filter((item: any) => item.state === "AVAILABLE").flatMap((item: any) => item.folds.filter((fold: any) => fold.oos_sharpe !== null).map((fold: any) => [item.run_id, fold]));
+      await expect(root.locator("[data-fold-bar]")).toHaveCount(bars.length);
+      for (const [runId, fold] of bars) await expect(root.locator(`[data-fold-bar='${runId}:${fold.fold_id}']`)).toHaveAttribute("data-exact", fold.oos_sharpe);
+      if (result.config_diff?.availability.state === "AVAILABLE") {
+        await expect(root.locator("[data-config-diff-path]")).toHaveCount(result.config_diff.paths.length);
       }
     } else {
       /* Until the preview carries the W5c compare fix, the real answer is 503; the screen must say so, not collapse. */

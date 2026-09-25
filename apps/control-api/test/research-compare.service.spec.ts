@@ -118,6 +118,7 @@ function subject(value = snapshot()) {
     snapshot: vi.fn().mockResolvedValue(value),
     cached: vi.fn().mockResolvedValue(null),
     persistCache: vi.fn().mockResolvedValue(undefined),
+    retainedEquity: vi.fn().mockResolvedValue([]),
     pairRaw: vi.fn().mockResolvedValue(raw()),
     pairOverlay: vi.fn().mockResolvedValue([
       { atUtcMs: 1_704_672_000_000, leftEquity: "100", rightEquity: "100" },

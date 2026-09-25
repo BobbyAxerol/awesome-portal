@@ -30,8 +30,8 @@
         }
       },
       "binding": {
-        "alpha_id": "alpha_momentum_btc",
-        "alpha_name": "alpha_momentum_btc",
+        "alpha_id": "alpha-momentum-btc",
+        "alpha_name": "alpha-momentum-btc",
         "alpha_version_id": "av_0_9_3",
         "av": "av_0_9_3",
         "digest": "sha256:aa91b3ce77"
@@ -195,8 +195,8 @@
         }
       },
       "binding": {
-        "alpha_id": "alpha_momentum_btc",
-        "alpha_name": "alpha_momentum_btc",
+        "alpha_id": "alpha-momentum-btc",
+        "alpha_name": "alpha-momentum-btc",
         "alpha_version_id": "av_0_9_3",
         "av": "av_0_9_3",
         "digest": "sha256:aa91b3ce77"
@@ -360,8 +360,8 @@
         }
       },
       "binding": {
-        "alpha_id": "alpha_momentum_btc",
-        "alpha_name": "alpha_momentum_btc",
+        "alpha_id": "alpha-momentum-btc",
+        "alpha_name": "alpha-momentum-btc",
         "alpha_version_id": "av_0_9_3",
         "av": "av_0_9_3",
         "digest": "sha256:aa91b3ce77"
@@ -682,8 +682,8 @@
   "filter_catalog": {
     "alphas": [
       {
-        "alpha_id": "alpha_momentum_btc",
-        "alpha_name": "alpha_momentum_btc"
+        "alpha_id": "alpha-momentum-btc",
+        "alpha_name": "alpha-momentum-btc"
       }
     ],
     "modes": [

@@ -35,8 +35,8 @@
         }
       },
       "binding": {
-        "alpha_id": "alpha_momentum_btc",
-        "alpha_name": "alpha_momentum_btc",
+        "alpha_id": "alpha-momentum-btc",
+        "alpha_name": "alpha-momentum-btc",
         "alpha_version_id": "av_0_9_3",
         "availability": {
           "state": "AVAILABLE",

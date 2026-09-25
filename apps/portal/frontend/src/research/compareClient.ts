@@ -50,6 +50,24 @@ export type CommonWindow = CompareSchemas["CommonWindow"];
 export type CommonMetric = CommonWindow["metrics"][number];
 export type Correlation = CompareSchemas["Correlation"];
 export type Overlay = CompareSchemas["Overlay"];
+/** W6a · CG-P20-04 per-fold OOS Sharpe of one attempt. */
+export type FoldSeries = CompareSchemas["FoldSeries"];
+/** W6a · CG-P20-05 allow-listed config keys that differ across the attempts. */
+export type ConfigDiff = CompareSchemas["ConfigDiff"];
+
+/** Display unit of each original metric, for `researchFormat.formatMetric` (DQ-08). */
+export const COMPARE_METRIC_UNIT: Record<CompareMetric["key"], "fraction" | "count" | "ratio"> = {
+  NET_RETURN_FRACTION: "fraction",
+  MAX_DRAWDOWN_FRACTION: "fraction",
+  TRADE_COUNT: "count",
+  OOS_SHARPE: "ratio",
+  DECAY: "ratio",
+};
+
+/** The Δ direction the contract fixes (CG-P20-09), as the column header reads it. */
+export const DELTA_DIRECTION_LABEL: Record<CommonWindow["delta_definition"], string> = {
+  RIGHT_MINUS_LEFT: "B − A · contract invariant",
+};
 
 export { NOT_MODIFIED };
 export type { Fresh };

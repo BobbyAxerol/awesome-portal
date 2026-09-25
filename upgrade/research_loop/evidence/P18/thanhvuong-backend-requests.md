@@ -267,17 +267,19 @@ văn; frontend không cấp ID mới cho chúng ngoài `CG-P18-*` ở trên.
 
 ## 4. Trạng thái
 
+**W6a 2026-09-25:** mọi `CG-P18-*` đã trả lời — xem [W6A_P18_P20_CLAUDE_2026-09-25.md](./W6A_P18_P20_CLAUDE_2026-09-25.md).
+
 | ID | Chủ | Trạng thái 2026-09-23 |
 |---|---|---|
-| CG-P18-01 | Codex | OPEN |
-| CG-P18-02 | Codex | OPEN (kèm B2) |
-| CG-P18-03 | Codex | OPEN (kèm B2) |
-| CG-P18-04 | Codex | OPEN |
-| CG-P18-05 | Codex | OPEN |
-| CG-P18-06 | Codex | OPEN |
-| CG-P18-07 | Codex | OPEN |
-| CG-P18-08 | Codex | OPEN (gộp được vào 04) |
-| CG-P18-09 | Codex | OPEN |
-| CG-P18-10 | Codex | OPEN |
-| CG-P18-11 | Codex | OPEN (thêm ở audit 2026-09-23) |
-| B1–B6 | Bobby | chờ quyết |
+| CG-P18-01 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — v2 `passport[].key/label` (WFO: engine claim strip; P04: hub facts) · [W6A_P18_P20_CLAUDE_2026-09-25.md](./W6A_P18_P20_CLAUDE_2026-09-25.md) §2 |
+| CG-P18-02 | Codex → Claude (W6a) | DECIDED `c54e6b1f` — typed `frozen_core.certification` = NOT_PUBLISHED `P18_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE`; box keeps its place (W6A-D03, closes B2 cert) |
+| CG-P18-03 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — `frozen_core.title` + identity `strategy` (closes B2 title) |
+| CG-P18-04 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — `FoldRowV2` params/IS/OOS/decay/contribution (WFO); P04 stays typed NOT_PUBLISHED |
+| CG-P18-05 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — `stages[].check` {result, text, source_key} (W6A-D05) |
+| CG-P18-06 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — `equity_is` = retained final-account path before the first outer test (W6A-D06); P04 typed absence |
+| CG-P18-07 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — `artifacts[].filename/digest/part_count` from sealed P05 parts; `download` typed NOT_PUBLISHED (W6A-D07) |
+| CG-P18-08 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — `folds.params_handoff` (GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD) + per-row params |
+| CG-P18-09 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — fixtures `research-report.{wfo-retained,wfo-scratch,p04-fixed-profile,export-jobs,problems}.valid.json`, validated vs Zod + OpenAPI |
+| CG-P18-10 | Codex → Claude (W6a) | DECIDED `c54e6b1f` — GET never 409; OpenAPI description says unsealed → 404; FE read lane drops the 409 branch (W6A-D08) |
+| CG-P18-11 | Codex → Claude (W6a) | DELIVERED `c54e6b1f` — identity 23 keys incl. alpha, alpha_version, binding (scratch — NOT_PUBLISHABLE), protocol, route, runtime, optimization, selected params, seed, config digest |
+| B1–B6 | Bobby | B2 closed by CG-P18-02/03 (W6a); B1 integrated upstream; B3–B6 unchanged |
