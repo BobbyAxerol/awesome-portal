@@ -13,6 +13,8 @@ import {
   ResearchCurrentSourceEvidenceSeriesResponseSchema,
   ResearchCurrentSourceFreezeResponseSchema,
   ResearchCurrentSourceReplayResponseSchema,
+  ResearchCurrentSourceReplayTransitionsResponseSchema,
+  ResearchCurrentSourceReplayChildAuditResponseSchema,
   ResearchCurrentSourceSearchResponseSchema,
   ResearchCurrentSourceSplitResponseSchema,
   ResearchCurrentSourceNotApplicableResponseSchema,
@@ -22,6 +24,10 @@ import {
   type ResearchCurrentSourceEvidenceSeriesResponse,
   type ResearchCurrentSourcePageQuery,
   type ResearchCurrentSourceReplayResponse,
+  type ResearchCurrentSourceReplayTransitionsResponse,
+  type ResearchCurrentSourceReplayChildAuditResponse,
+  type ResearchCurrentSourceChildAuditQuery,
+  type ResearchCurrentSourceTransitionsQuery,
   type ResearchCurrentSourceSearchQuery,
   type ResearchCurrentSourceSearchResponse,
   type ResearchCurrentSourceSplitResponse,
@@ -53,6 +59,9 @@ import {
   CurrentSourceObservationPayloadSchema as ObservationPayloadSchema,
   CurrentSourceSummarySchema as SummarySchema,
   CurrentSourceTrialPayloadSchema as TrialPayloadSchema,
+  type CurrentSourceBar,
+  type CurrentSourceFacts,
+  type CurrentSourceReplaySummary,
 } from "./current-source.payload";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } from "./delta-wfo.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
@@ -137,6 +146,137 @@ function asCandidate(row: CurrentSourceStoredRow) {
     throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained candidate row is incompatible.", 503);
   }
   return parsed.data;
+}
+
+/** W5b · the reason every W5b fact carries on a seal retained before the bar ledger. */
+const SEAL_PREDATES_BAR_LEDGER = "RS02_SEAL_PREDATES_W5B_REPLAY_BAR_LEDGER";
+/** P17-T14 · a W5b seal whose source tree had no strategy lifecycle table. */
+const SEAL_PREDATES_CHILD_AUDIT = "RS02_SEAL_PREDATES_P17_CHILD_AUDIT";
+
+/**
+ * P17-T04 · a replay window is a contiguous run of dense sealed ordinals. A
+ * hole (a row lost after the seal) is refused with a typed code instead of
+ * being played through as if the missing bar never existed.
+ */
+function assertDenseWindow(rows: readonly CurrentSourceStoredRow[], sealedCount: number): void {
+  for (let index = 0; index < rows.length; index += 1) {
+    const ordinal = rows[index]!.sourceOrdinal;
+    if (ordinal >= sealedCount || (index > 0 && ordinal !== rows[index - 1]!.sourceOrdinal + 1)) {
+      throw new ResearchCurrentSourceError(
+        "RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP",
+        "A retained replay window is missing a sealed observation; no row is invented to close the gap.",
+        503,
+      );
+    }
+  }
+}
+
+function replayBar(bar: CurrentSourceBar | undefined) {
+  if (!bar) return null;
+  return {
+    candle: bar.candle,
+    fee: bar.fee,
+    turnover: bar.turnover,
+    funding: bar.funding,
+    rejected_orders: bar.rejected_orders,
+    position_before: bar.position_before,
+    transition: bar.transition,
+    fold_id: bar.fold_id,
+    checkpoint: bar.checkpoint,
+  };
+}
+
+function signOf(value: string | null): -1 | 0 | 1 {
+  if (value === null) return 0;
+  const numeric = Number(value);
+  return numeric > 0 ? 1 : numeric < 0 ? -1 : 0;
+}
+
+function sideOf(value: string): "LONG" | "SHORT" | "FLAT" {
+  const sign = signOf(value);
+  return sign > 0 ? "LONG" : sign < 0 ? "SHORT" : "FLAT";
+}
+
+/** A target transition named by the sign change it makes; never a trade pairing. */
+function transitionKind(before: string | null, after: string): "ENTRY" | "EXIT" | "FLIP" | "RESIZE" {
+  const from = signOf(before);
+  const to = signOf(after);
+  if (from === 0) return "ENTRY";
+  if (to === 0) return "EXIT";
+  return from !== to ? "FLIP" : "RESIZE";
+}
+
+function equityContinuity(policy: string | null): "CONTINUOUS_ACROSS_FOLDS" | "RESET_PER_FOLD" | "NOT_ASSERTED" {
+  // QuantBT `FoldAccountPolicyV1`: carry_position and close_at_boundary run
+  // one stitched account; reset_flat runs a fresh account per fold.
+  if (policy === "carry_position" || policy === "close_at_boundary") return "CONTINUOUS_ACROSS_FOLDS";
+  if (policy === "reset_flat") return "RESET_PER_FOLD";
+  return "NOT_ASSERTED";
+}
+
+/**
+ * W5b · what the signal-notional route publishes, fact by fact. A record
+ * QuantBT counted as zero is NOT_PUBLISHED with that count as its reason; a
+ * capability the run's own configuration turns off is NOT_APPLICABLE.
+ */
+function replayCapabilities(ledger: CurrentSourceReplaySummary | null, facts: CurrentSourceFacts | null) {
+  if (ledger === null) {
+    const legacy = sourceGap(SEAL_PREDATES_BAR_LEDGER);
+    return {
+      model_positions: fact("AVAILABLE", null),
+      returns: fact("AVAILABLE", null),
+      orders: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER"),
+      fills: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS"),
+      candles: legacy,
+      transitions: legacy,
+      fees: legacy,
+      funding: legacy,
+      fold_capital: legacy,
+      trades: legacy,
+      partial_fills: legacy,
+      oco: legacy,
+      multi_leg: legacy,
+      sl_tp: legacy,
+      mae_mfe: legacy,
+      execution_events: legacy,
+      child_audit: legacy,
+    };
+  }
+  const contract = ledger.account_contract;
+  const counted = (count: number | null, zero: string, retained: string) =>
+    count === 0 ? sourceGap(zero) : sourceGap(count === null ? zero : retained);
+  const engine = facts?.execution.engine_id ?? null;
+  return {
+    model_positions: fact("AVAILABLE", null),
+    returns: fact("AVAILABLE", null),
+    orders: counted(contract.orders_published, "QUANTBT_ROUTE_EMITTED_NO_ORDER_RECORDS", "RS02_ORDER_RECORDS_NOT_RETAINED"),
+    fills: counted(contract.fills_published, "QUANTBT_ROUTE_EMITTED_NO_FILL_RECORDS", "RS02_FILL_RECORDS_NOT_RETAINED"),
+    trades: counted(contract.trades_published, "QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS", "RS02_TRADE_RECORDS_NOT_RETAINED"),
+    candles: ledger.candle_overview ? fact("AVAILABLE", null) : sourceGap("QUANTBT_STITCHED_SERIES_HAS_NO_OHLC"),
+    transitions: fact("AVAILABLE", null),
+    fees: ledger.totals.fee === null ? sourceGap("QUANTBT_FINAL_ACCOUNT_DID_NOT_PUBLISH_FEES") : fact("AVAILABLE", null),
+    funding: contract.use_funding === false
+      ? fact("NOT_APPLICABLE", "QUANTBT_RUN_CONFIG_USE_FUNDING_FALSE")
+      : ledger.totals.funding === null ? sourceGap("QUANTBT_FINAL_ACCOUNT_DID_NOT_PUBLISH_FUNDING") : fact("AVAILABLE", null),
+    fold_capital: ledger.fold_capital.policy === null
+      ? sourceGap("QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FOLD_ACCOUNT_POLICY")
+      : fact("AVAILABLE", null),
+    partial_fills: contract.allow_partial_fill === false
+      ? fact("NOT_APPLICABLE", "QUANTBT_EXECUTION_ALLOW_PARTIAL_FILL_FALSE")
+      : sourceGap("QUANTBT_ROUTE_EMITTED_NO_FILL_RECORDS"),
+    oco: engine === "close_target_v2"
+      ? fact("NOT_APPLICABLE", "QUANTBT_CLOSE_TARGET_V2_HAS_NO_CONTINGENT_ORDERS")
+      : sourceGap("QUANTBT_ROUTE_EMITTED_NO_ORDER_RECORDS"),
+    multi_leg: contract.oms_mode === "netting"
+      ? fact("NOT_APPLICABLE", "QUANTBT_SINGLE_SYMBOL_NETTING_ACCOUNT_HAS_NO_LEGS")
+      : sourceGap("QUANTBT_ROUTE_EMITTED_NO_ORDER_RECORDS"),
+    sl_tp: contract.intrabar_exit_model === "none"
+      ? fact("NOT_APPLICABLE", "QUANTBT_INTRABAR_EXIT_MODEL_NONE")
+      : sourceGap("QUANTBT_ROUTE_EMITTED_NO_ORDER_RECORDS"),
+    mae_mfe: sourceGap("QUANTBT_ROUTE_EMITTED_NO_TRADE_RECORDS"),
+    execution_events: sourceGap("QUANTBT_CLOSE_TARGET_ROUTE_PUBLISHES_TRANSITIONS_NOT_AN_EVENT_TAPE"),
+    child_audit: ledger.child_audit ? fact("AVAILABLE", null) : sourceGap(SEAL_PREDATES_CHILD_AUDIT),
+  };
 }
 
 const TYPED_TRIAL_STATES = ["COMPLETE", "PRUNED", "FAIL", "RUNNING", "WAITING"] as const;
@@ -441,9 +581,12 @@ export class ResearchCurrentSourceService {
     if (!isSeal(seal)) return seal;
     const currentRevision = revision("replay", seal);
     const page = await this.readPage(scope, runId, seal, "OBSERVATION", query, currentRevision, "research.current-source.replay.v1", signal);
+    assertDenseWindow(page.rows, seal.tableRows.OBSERVATION);
     const selectedOrdinal = this.selectedOrdinal(scope.workspaceId, runId, currentRevision, "OBSERVATION", query);
     const selected = selectedOrdinal === null ? null : page.rows.find((row) => row.sourceOrdinal === selectedOrdinal) ?? null;
     const selectedObservation = selected ? asObservation(selected) : null;
+    const summary = parseSummary(seal);
+    const ledger = summary.replay ?? null;
     const value = {
       schema_version: "research.current-source-replay.v1" as const,
       ...this.common("replay", seal),
@@ -453,7 +596,14 @@ export class ResearchCurrentSourceService {
           const observation = asObservation(row);
           return {
             source_ordinal: row.sourceOrdinal,
-            ...observation,
+            source_index_utc: observation.source_index_utc,
+            at_utc_ms: observation.at_utc_ms,
+            equity: observation.equity,
+            return_fraction: observation.return_fraction,
+            accepted_position: observation.accepted_position,
+            drawdown_fraction: observation.drawdown_fraction,
+            signal_target: observation.signal_target,
+            bar: replayBar(observation.bar),
             playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "OBSERVATION", row.sourceOrdinal),
           };
         }),
@@ -464,6 +614,7 @@ export class ResearchCurrentSourceService {
           at_utc_ms: selectedObservation.at_utc_ms,
           accepted_position: selectedObservation.accepted_position,
           equity: selectedObservation.equity,
+          bar: replayBar(selectedObservation.bar),
           semantics: "RESEARCH_MODEL_SAMPLE_NOT_BROKER_EXECUTION_STATE" as const,
           availability: available(),
         } : {
@@ -472,19 +623,243 @@ export class ResearchCurrentSourceService {
           at_utc_ms: null,
           accepted_position: null,
           equity: null,
+          bar: null,
           semantics: "NO_SELECTED_PLAYHEAD" as const,
           availability: available(),
         },
       },
-      route_capabilities: {
-        model_positions: fact("AVAILABLE", null),
-        returns: fact("AVAILABLE", null),
-        orders: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER"),
-        fills: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS"),
-        candles: sourceGap("QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_REPLAY_CANDLES"),
-      },
+      route_capabilities: replayCapabilities(ledger, summary.source_facts ?? null),
+      execution: this.replayExecution(scope.workspaceId, runId, currentRevision, ledger, summary.source_facts ?? null),
     };
     return this.valid(ResearchCurrentSourceReplayResponseSchema, value);
+  }
+
+  /**
+   * W5b (P17) · the close-target transition ledger. Keyset over the original
+   * observation ordinal of each transition bar; every row seeks the replay
+   * relation with the same playback cursor the replay rows carry.
+   */
+  async replayTransitions(
+    scope: ResearchScope,
+    runId: string,
+    query: ResearchCurrentSourceTransitionsQuery,
+    signal?: AbortSignal,
+  ): Promise<ResearchCurrentSourceReplayTransitionsResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "replay_transitions", signal);
+    if (!isSeal(seal)) return seal;
+    const ledger = parseSummary(seal).replay ?? null;
+    const operation = "research.current-source.replay-transitions.v1";
+    const currentRevision = revision("replay", seal);
+    const resourceId = `${operation}:${runId}:${currentRevision}:OBSERVATION`;
+    const fingerprint = queryFingerprint({ resourceId, limit: query.limit, filters: [], sort: [] });
+    const common = { ...this.common("replay", seal) };
+    const emptyPage = {
+      limit: query.limit, next_cursor: null, prev_cursor: null, has_more: false, has_previous: false,
+      order: "SOURCE_TABLE_ORDINAL_ASC" as const,
+    };
+    if (ledger === null) {
+      return this.valid(ResearchCurrentSourceReplayTransitionsResponseSchema, {
+        schema_version: "research.current-source-replay-transitions.v1",
+        ...common,
+        availability: { state: "NOT_RETAINED_LEGACY", reason_code: SEAL_PREDATES_BAR_LEDGER },
+        semantics: "TARGET_TRANSITION_SETTLED_AT_CLOSE_NOT_A_FILL",
+        availability_reason: SEAL_PREDATES_BAR_LEDGER,
+        source_transition_count: null,
+        rows: [],
+        page: emptyPage,
+      });
+    }
+    let afterOrdinal: number | undefined;
+    let beforeOrdinal: number | undefined;
+    if (query.cursor) afterOrdinal = this.decodeCursor(scope.workspaceId, resourceId, fingerprint, "after", query.cursor);
+    if (query.before) beforeOrdinal = this.decodeCursor(scope.workspaceId, resourceId, fingerprint, "before", query.before);
+    const page = await this.repository.transitions(scope, runId, seal.artifactRevision, {
+      ...(afterOrdinal === undefined ? {} : { afterOrdinal }),
+      ...(beforeOrdinal === undefined ? {} : { beforeOrdinal }),
+      limit: query.limit,
+    }, signal);
+    if (page.totalRows !== ledger.totals.transitions) {
+      throw new ResearchCurrentSourceError(
+        "RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP",
+        "Retained transition rows do not match the sealed transition count; no row is invented to close the gap.",
+        503,
+      );
+    }
+    const rows = page.rows.map((row) => {
+      const observation = asObservation(row);
+      const bar = observation.bar;
+      if (!bar || !bar.transition) {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_UNAVAILABLE", "Retained transition row is incompatible.", 503);
+      }
+      const after = observation.accepted_position;
+      return {
+        source_ordinal: row.sourceOrdinal,
+        source_index_utc: observation.source_index_utc,
+        at_utc_ms: observation.at_utc_ms,
+        transition_number: bar.checkpoint.transition_count,
+        fold_id: bar.fold_id,
+        kind: transitionKind(bar.position_before, after),
+        side_after: sideOf(after),
+        position_before: bar.position_before,
+        position_after: after,
+        close: bar.candle?.close ?? null,
+        turnover: bar.turnover,
+        fee: bar.fee,
+        equity: observation.equity,
+        playback_cursor: this.playbackCursor(scope.workspaceId, runId, currentRevision, "OBSERVATION", row.sourceOrdinal),
+      };
+    });
+    const first = page.rows[0]?.sourceOrdinal;
+    const last = page.rows.at(-1)?.sourceOrdinal;
+    return this.valid(ResearchCurrentSourceReplayTransitionsResponseSchema, {
+      schema_version: "research.current-source-replay-transitions.v1",
+      ...common,
+      semantics: "TARGET_TRANSITION_SETTLED_AT_CLOSE_NOT_A_FILL",
+      availability_reason: null,
+      source_transition_count: ledger.totals.transitions,
+      rows,
+      page: {
+        limit: query.limit,
+        next_cursor: page.hasMore && last !== undefined ? this.encodeCursor(scope.workspaceId, resourceId, fingerprint, "after", last) : null,
+        prev_cursor: page.hasPrevious && first !== undefined ? this.encodeCursor(scope.workspaceId, resourceId, fingerprint, "before", first) : null,
+        has_more: page.hasMore,
+        has_previous: page.hasPrevious,
+        order: "SOURCE_TABLE_ORDINAL_ASC" as const,
+      },
+    });
+  }
+
+  /**
+   * P17-T14 · one fold's child audit: the retained FOLD row read by its
+   * original fold id (one indexed row), its QuantBT isolation records in
+   * QuantBT's own order. No compute; nothing is inferred from positions.
+   */
+  async replayChildAudit(
+    scope: ResearchScope,
+    runId: string,
+    query: ResearchCurrentSourceChildAuditQuery,
+    signal?: AbortSignal,
+  ): Promise<ResearchCurrentSourceReplayChildAuditResponse | ResearchCurrentSourceNotApplicableResponse> {
+    const seal = await this.requireSeal(scope, runId, "replay_child_audit", signal);
+    if (!isSeal(seal)) return seal;
+    const summary = parseSummary(seal).replay?.child_audit ?? null;
+    const common = this.common("replay", seal);
+    const absent = (reason: string) => this.valid(ResearchCurrentSourceReplayChildAuditResponseSchema, {
+      schema_version: "research.current-source-replay-child-audit.v1",
+      ...common,
+      availability: { state: "NOT_RETAINED_LEGACY", reason_code: reason },
+      fold_id: query.fold,
+      reason_code: reason,
+      policy: null,
+      records_dropped_by_source: null,
+      source_run_fingerprint: null,
+      source_record_count: null,
+      truncated: false,
+      records: [],
+    });
+    if (summary === null) {
+      return absent(parseSummary(seal).replay ? SEAL_PREDATES_CHILD_AUDIT : SEAL_PREDATES_BAR_LEDGER);
+    }
+    const row = await this.repository.rowBySourceId(scope, runId, seal.artifactRevision, "FOLD", query.fold, signal);
+    if (!row) throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_NOT_FOUND", "This run has no retained fold with that id.", 404);
+    const fold = asFold(row);
+    const block = fold.child_audit;
+    if (!block) return absent(SEAL_PREDATES_CHILD_AUDIT);
+    return this.valid(ResearchCurrentSourceReplayChildAuditResponseSchema, {
+      schema_version: "research.current-source-replay-child-audit.v1",
+      ...common,
+      fold_id: fold.fold_id,
+      reason_code: null,
+      policy: summary.policy,
+      records_dropped_by_source: summary.records_dropped_by_source,
+      source_run_fingerprint: summary.source_run_fingerprint,
+      source_record_count: block.source_record_count,
+      truncated: block.truncated,
+      records: block.records,
+    });
+  }
+
+  private replayExecution(
+    workspaceId: string,
+    runId: string,
+    currentRevision: string,
+    ledger: CurrentSourceReplaySummary | null,
+    facts: CurrentSourceFacts | null,
+  ) {
+    const execution = facts?.execution ?? null;
+    const contract = ledger?.account_contract ?? null;
+    const capital = ledger?.fold_capital ?? null;
+    const policy = capital?.policy ?? execution?.fold_account_policy ?? null;
+    return {
+      schema_version: "research.current-source-replay-execution.v1" as const,
+      state: ledger ? "AVAILABLE" as const : "NOT_RETAINED_LEGACY" as const,
+      reason_code: ledger ? null : SEAL_PREDATES_BAR_LEDGER,
+      route: {
+        engine_id: execution?.engine_id ?? null,
+        signal_phase: execution?.signal_phase ?? null,
+        fill_phase: execution?.fill_phase ?? null,
+        accounting_certified: execution?.accounting_certified ?? null,
+        fill_price_policy: contract?.fill_price_policy ?? null,
+        target_intent_kind: contract?.target_intent_kind ?? null,
+        intrabar_exit_model: contract?.intrabar_exit_model ?? null,
+        same_bar_policy: contract?.same_bar_policy ?? null,
+        allow_partial_fill: contract?.allow_partial_fill ?? null,
+        oms_mode: contract?.oms_mode ?? null,
+        margin_mode: contract?.margin_mode ?? null,
+        report_level: contract?.report_level ?? null,
+        fee_rate_oneway: contract?.fee_rate_oneway ?? null,
+        slippage_bps: contract?.slippage_bps ?? null,
+        use_funding: contract?.use_funding ?? null,
+      },
+      counts: {
+        bars: ledger?.totals.bars ?? null,
+        orders_published: contract?.orders_published ?? null,
+        fills_published: contract?.fills_published ?? null,
+        trades_published: contract?.trades_published ?? null,
+        transitions: ledger?.totals.transitions ?? null,
+        bars_with_turnover: ledger?.totals.bars_with_turnover ?? null,
+        rejected_orders: ledger?.totals.rejected_orders ?? null,
+      },
+      totals: {
+        fee: ledger?.totals.fee ?? null,
+        turnover: ledger?.totals.turnover ?? null,
+        funding: ledger?.totals.funding ?? null,
+      },
+      fold_capital: {
+        policy,
+        account_execution: capital?.account_execution ?? execution?.account_execution ?? null,
+        boundary_position_policy: capital?.boundary_position_policy ?? execution?.fold_boundary_position_policy ?? null,
+        equity_continuity: equityContinuity(policy),
+        reason_code: policy === null ? "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FOLD_ACCOUNT_POLICY" : null,
+        segments: (ledger?.fold_segments ?? []).map((segment) => ({
+          ...segment,
+          start_cursor: this.playbackCursor(workspaceId, runId, currentRevision, "OBSERVATION", segment.first_ordinal),
+        })),
+        boundary_events: capital?.boundary_events ?? [],
+      },
+      candle_overview: ledger?.candle_overview ?? null,
+      child_audit: ledger?.child_audit ? {
+        state: "AVAILABLE" as const,
+        reason_code: null,
+        policy: ledger.child_audit.policy,
+        records_dropped_by_source: ledger.child_audit.records_dropped_by_source,
+        source_record_count: ledger.child_audit.source_record_count,
+        source_run_fingerprint: ledger.child_audit.source_run_fingerprint,
+      } : {
+        state: "NOT_PUBLISHED" as const,
+        reason_code: ledger ? SEAL_PREDATES_CHILD_AUDIT : SEAL_PREDATES_BAR_LEDGER,
+        policy: null,
+        records_dropped_by_source: null,
+        source_record_count: null,
+        source_run_fingerprint: null,
+      },
+      sequence: {
+        order: "SOURCE_TABLE_ORDINAL_ASC" as const,
+        density: "DENSE_SEALED_ORDINALS" as const,
+        gap_policy: "REFUSE_RESEARCH_CURRENT_SOURCE_SEQUENCE_GAP" as const,
+        cross_stream_order: "NOT_ASSERTED" as const,
+      },
+    };
   }
 
   private async requireSeal(

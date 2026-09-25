@@ -100,8 +100,8 @@ DB/artifact/Parquet.
 
 | ID | Chủ | Trạng thái 2026-09-23 |
 |---|---|---|
-| CG-P17-01 | Codex | OPEN |
-| CG-P17-02 | Codex | OPEN (RF-02 đã làm rõ nghĩa 409; mã vẫn chưa vào contract) |
-| CG-P17-03 | Codex | OPEN |
+| CG-P17-01 | Codex → Claude (W5b) | ANSWERED 2026-09-25 — `packages/contracts/fixtures/research-current-source.replay*.valid.json` (real-HMD seal), see [W5B_REPLAY_CLAUDE_2026-09-25.md §6](./W5B_REPLAY_CLAUDE_2026-09-25.md) |
+| CG-P17-02 | Codex → Claude (W5b) | ANSWERED 2026-09-25 — lane state from RF-05; `ProblemCode` enum in research-current-source OpenAPI 1.4.0 |
+| CG-P17-03 | Codex → Claude (W5b) | ANSWERED 2026-09-25 for the retained lane (no bucketing in the replay relation; overview carries its own counts); hub semantics unchanged |
 | P17-B ×8 | Codex / source | `SOURCE_CAPABILITY_BLOCKED` |
 | B1–B5 | Bobby | chờ quyết |

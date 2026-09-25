@@ -247,6 +247,8 @@ def test_retained_rows_expose_only_declared_fact_blocks(wfo) -> None:
     for row in rows["FOLD"]:
         assert set(row["payload"]) == {
             "fold_id", "train_start_utc_ms", "train_end_utc_ms", "test_start_utc_ms", "test_end_utc_ms", "fold_facts",
+            # W5b / P17-T14: QuantBT's declared strategy-isolation block.
+            "child_audit",
         }
     for kind in ("TRIAL", "CANDIDATE"):
         for row in rows[kind]:

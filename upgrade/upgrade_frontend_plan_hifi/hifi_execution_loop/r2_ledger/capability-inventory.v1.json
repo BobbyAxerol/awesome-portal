@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-21",
- "route_count": 183,
+ "route_count": 185,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -1864,6 +1864,26 @@
    "evidence": "RS-02 named Replay drill-down returns retained research-model observations and opaque relation-bound playheads, private/no-store. It never fabricates broker orders, fills or candles and does not claim execution state.",
    "owner": "codex",
    "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/replay/transitions",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "W5b P17 close-target transition ledger for Screen 08: retained bars whose accepted position changed, keyset over the original bar ordinal (sparse, never renumbered), with the account's own fee and a replay seek cursor; private/no-store. Target transitions settled at the close, never fills or a trade pairing; reads only the sealed local relation and starts no compute.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/replay/child-audit",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "P17-T14 child audit for Screen 08: one fold's QuantBT strategy-isolation records (strategy_lifecycle_table rows, <= 64) read from the sealed local FOLD row by its original fold id, with the original audit ordinal, candidate id and seed; ETag, private. Reads no source bytes and starts no compute.",
+   "owner": "claude",
+   "test_owner": "claude"
   }
  ],
  "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",
