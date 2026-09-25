@@ -91,12 +91,15 @@ export class ResearchRunCreateService {
     const manifest = accepted.manifest!;
     const requested = accepted.requestedSpec!;
     const alpha = accepted.alpha!;
+    // The lineage fork joins the command identity only when present, so every
+    // pre-W5a command (and the P04/W1 golden digests) keeps its exact bytes.
     const commandDigest = digest({
       schema_version: input.schema_version,
       client_intent_id: input.client_intent_id,
       preflight_token: input.preflight_token,
       requested_spec: requested,
       intent_kind: input.intent_kind,
+      ...(input.lineage ? { lineage: input.lineage } : {}),
     });
     const runId = stableId("rrun", commandDigest);
     const attemptId = stableId("ratt", commandDigest);
@@ -243,6 +246,9 @@ export class ResearchRunCreateService {
         queueClass: "INTERACTIVE",
         resourceClass: wfo ? DELTA_WFO_RESOURCE_CLASS : "p10-delta-rsi-v1",
         attemptLimit: 2,
+        ...(input.lineage
+          ? { sibling: { parentRunId: input.lineage.parent_run_id, whatIfCellId: input.lineage.what_if_cell_id } }
+          : {}),
       });
     } catch (error) {
       throw this.mapMetadataError(error);

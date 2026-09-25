@@ -2114,12 +2114,12 @@ export interface components {
              * @default p04.fixed-qualification.v1
              * @enum {string}
              */
-            execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+            execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1";
             /**
              * Intent Kind
-             * @constant
+             * @enum {string}
              */
-            intent_kind: "NEW";
+            intent_kind: "NEW" | "DIAGNOSTIC";
             /** Manifest Digest */
             manifest_digest: string;
             /** P04 Parameters */
@@ -2143,6 +2143,7 @@ export interface components {
             snapshot_content_hash: string;
             /** Snapshot Id */
             snapshot_id: string;
+            whatif?: components["schemas"]["WhatIfJob"] | null;
             /** Work Digest */
             work_digest: string;
         };
@@ -2435,6 +2436,35 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * WhatIfEvaluation
+         * @description One admitted what-if configuration: the full exact parameter map.
+         */
+        WhatIfEvaluation: {
+            /** Evaluation Key */
+            evaluation_key: string;
+            /** Parameters */
+            parameters: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * WhatIfJob
+         * @description W5a A10c: the bounded evaluation list of one what-if diagnostic job.
+         */
+        WhatIfJob: {
+            /** Evaluations */
+            evaluations: components["schemas"]["WhatIfEvaluation"][];
+            /** Grid Key */
+            grid_key: string;
+            /** Parent Run Id */
+            parent_run_id: string;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "research.whatif-job.v1";
         };
         /** WindowSummary */
         WindowSummary: {

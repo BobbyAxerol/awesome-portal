@@ -164,6 +164,8 @@ describe("RS-02 retained current-source named read models", () => {
         if (kind === "OBSERVATION") return page(observations, 3);
         if (kind === "TRIAL") return page(trials, 2);
         if (kind === "CANDIDATE") return page(candidates, 1);
+        // W5a P16-T02: the freeze read derives its per-fold ordering from FOLD.
+        if (kind === "FOLD") return page(folds, 2);
         throw new Error(`unexpected ${kind}`);
       }),
       observationSeries: vi.fn().mockResolvedValue({ rows: observations, sampling: "FULL", extremaEmitted: true }),

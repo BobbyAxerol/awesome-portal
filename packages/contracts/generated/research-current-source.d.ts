@@ -85,6 +85,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/quantbt/runs/{runId}/current-source/freeze/what-if/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admit one bounded what-if diagnostic job (≤81 unique evaluations) for the grid the reader saw
+         * @description Explicit, origin/CSRF-protected action. Deduplicated by grid key: a second click replays the in-flight job. Never runs on a GET, a mount or a slider move. Refused with 409 when the sealed bytes do not verify, the grid changed, or another diagnostic for the run is in flight.
+         */
+        post: operations["researchCurrentSourceWhatIfEvaluatePostV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/quantbt/runs/{runId}/current-source/replay": {
         parameters: {
             query?: never;
@@ -415,6 +435,224 @@ export interface components {
                 availability: components["schemas"]["Availability"];
             };
         };
+        ArtifactByteMismatch: {
+            /** @enum {unknown} */
+            kind: "MANIFEST" | "PART" | "DOCUMENT";
+            table_kind: string | null;
+            ordinal: number;
+            expected_digest: components["schemas"]["Digest"];
+            observed_digest: components["schemas"]["Digest"] | null;
+        };
+        /** @description A10a: the newest durable byte-verification receipt for this run's sealed P05 artifact (written only by the explicit P16 POST verify). MISMATCH or MISSING BLOCKS the frozen chain. */
+        ArtifactByteVerification: {
+            /** @constant */
+            schema_version: "research.artifact-byte-verification.v1";
+            /** @enum {unknown} */
+            state: "MATCH" | "MISMATCH" | "MISSING" | "NOT_VERIFIED" | "NOT_RETAINED" | "UNAVAILABLE" | "NOT_ENABLED";
+            reason_code: string | null;
+            /** @constant */
+            verification_scope: "P05_SEALED_MANIFEST_PARTS_AND_DOCUMENTS";
+            receipt_id: string | null;
+            verified_at_utc_ms: number | null;
+            artifact_revision: number | null;
+            expected_manifest_digest: components["schemas"]["Digest"] | null;
+            observed_manifest_digest: components["schemas"]["Digest"] | null;
+            parts_checked: number;
+            parts_mismatched: number;
+            documents_checked: number;
+            mismatches: components["schemas"]["ArtifactByteMismatch"][];
+        };
+        WhatIfSlider: {
+            parameter: string;
+            /** @enum {unknown} */
+            hifi_name: "entry_z" | "atr_mult";
+            minimum: components["schemas"]["Decimal"];
+            maximum: components["schemas"]["Decimal"];
+            step: components["schemas"]["Decimal"];
+            base: components["schemas"]["Decimal"];
+            /** @constant */
+            radius_steps: 4;
+            values: components["schemas"]["Decimal"][];
+            clamped: boolean[];
+        };
+        /** @description One node of the 9×9 grid. EVALUATED only from an exact existing evaluation with the same key (retained parent trial or sealed diagnostic grid); MISSING/QUEUED/NOT_DEFINED carry no number and are never 0 or interpolated. */
+        WhatIfCell: {
+            cell_id: string;
+            x_index: number;
+            y_index: number;
+            parameters: {
+                [key: string]: components["schemas"]["Decimal"];
+            };
+            evaluation_key: components["schemas"]["Digest"];
+            canonical_cell_id: string;
+            clamped: boolean;
+            is_base: boolean;
+            /** @enum {unknown} */
+            state: "EVALUATED" | "NOT_DEFINED" | "QUEUED" | "MISSING";
+            objective: components["schemas"]["Decimal"] | null;
+            delta_j: components["schemas"]["Decimal"] | null;
+            source: ("PARENT_TRIAL" | "DIAGNOSTIC_GRID") | null;
+            source_ref: string | null;
+        };
+        WhatIfJob: {
+            run_id: components["schemas"]["RunId"];
+            /** @enum {unknown} */
+            state: "QUEUED" | "RUNNING" | "SEALING" | "READY" | "FAILED" | "CANCELLED" | "RECOVERY_REQUIRED" | "DRAFT";
+            evaluations: number;
+            grid_key: components["schemas"]["Digest"];
+            requested_at_utc_ms: components["schemas"]["UtcMs"];
+            sealed: boolean;
+            progress_href: string;
+        };
+        /** @description W5a A10c Screen-07 what-if sandbox for a sealed Delta WFO run. A GET serves exact existing evaluations only and never enqueues or evaluates; the explicit POST evaluate admits one bounded diagnostic job. ΔJ is preview only. */
+        WhatIf: {
+            /** @constant */
+            schema_version: "research.freeze-what-if.v1";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_ENABLED" | "NOT_PUBLISHED";
+            reason_code: string | null;
+            definition: {
+                /** @constant */
+                profile_id: "p16.delta-whatif-grid.v1";
+                profile_digest: components["schemas"]["Digest"];
+                /** @constant */
+                objective_kind: "MODE_1_DECAY_J";
+                /** @constant */
+                objective_scope: "GLOBAL_STUDY_IS_FOLDS";
+                random_seed: number;
+                engine_release_id: string;
+                dataset_binding_digest: components["schemas"]["Digest"];
+                /** @constant */
+                preview_only: true;
+                /** @constant */
+                interpolation: "NONE_SNAP_TO_NODE";
+            } | null;
+            sliders: components["schemas"]["WhatIfSlider"][];
+            grid: {
+                /** @constant */
+                size: 9;
+                grid_key: components["schemas"]["Digest"];
+                base_objective: components["schemas"]["Decimal"] | null;
+                base_source: ("PARENT_TRIAL" | "DIAGNOSTIC_GRID") | null;
+                unique_evaluations: number;
+                cells: components["schemas"]["WhatIfCell"][];
+            } | null;
+            coverage: {
+                evaluated_cells: number;
+                /** @constant */
+                total_cells: 81;
+                evaluated_unique: number;
+                unique_evaluations: number;
+                label: string;
+            } | null;
+            job: components["schemas"]["WhatIfJob"] | null;
+            actions: {
+                evaluate_grid: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "IN_FLIGHT" | "NOTHING_TO_EVALUATE" | "BLOCKED" | "NOT_ENABLED" | "NOT_APPLICABLE";
+                    may_submit: boolean;
+                    reason_code: string | null;
+                    missing_evaluations: number;
+                };
+                sibling_draft: {
+                    /** @enum {unknown} */
+                    state: "AVAILABLE" | "BLOCKED" | "NOT_APPLICABLE";
+                    may_create: boolean;
+                    reason_code: string | null;
+                    href_template: string | null;
+                };
+            };
+        };
+        WhatIfEvaluateRequest: {
+            /** @constant */
+            schema_version: "research.whatif-evaluate.v1";
+            grid_key: components["schemas"]["Digest"];
+        };
+        WhatIfEvaluateResult: {
+            /** @constant */
+            schema_version: "research.whatif-evaluate-result.v1";
+            run_id: components["schemas"]["RunId"];
+            /** @enum {unknown} */
+            outcome: "ADMITTED" | "REPLAYED" | "NOTHING_TO_EVALUATE";
+            grid_key: components["schemas"]["Digest"];
+            job: components["schemas"]["WhatIfJob"] | null;
+        };
+        FoldOrderingRow: {
+            fold_id: string;
+            source_ordinal: number;
+            data_time: {
+                is: {
+                    start_utc_ms: number | null;
+                    end_utc_ms: number | null;
+                };
+                oos: {
+                    start_utc_ms: number | null;
+                    end_utc_ms: number | null;
+                };
+                /** @enum {unknown} */
+                boundary: "IS_ENDS_BEFORE_OOS" | "IS_OVERLAPS_OOS" | "NOT_PUBLISHED";
+                reason_code: string | null;
+            };
+            /**
+             * @description Never PASS: a global study selected one θ* after reading every outer fold.
+             * @enum {unknown}
+             */
+            verdict: "NOT_CAUSAL_GLOBAL_SELECTION" | "NOT_EVALUATED" | "NOT_PUBLISHED";
+            reason_code: string;
+            oos_generation_child: {
+                /** @enum {unknown} */
+                state: "MATCH" | "MISMATCH" | "NOT_RETAINED" | "NOT_PUBLISHED" | "NOT_COMPUTABLE";
+                reason_code: string | null;
+                audit_ordinal: number | null;
+                candidate_id: string | null;
+            };
+        };
+        /** @description W5a P16-T02/T11: per-fold ordering on two axes (data time, wall clock); the per-fold causal verdict from QuantBT's own claims; the out-of-sample generation child compared with the frozen selection by QuantBT's candidate identity. */
+        FoldOrdering: {
+            /** @constant */
+            schema_version: "research.freeze-fold-ordering.v1";
+            axes: [
+                "DATA_TIME",
+                "WALL_CLOCK"
+            ];
+            /** @enum {unknown} */
+            selection_scope: "GLOBAL" | "PER_FOLD" | "NOT_PUBLISHED";
+            optimization_schedule: string | null;
+            source_claims: {
+                chronological_claim: string | null;
+                causality_claim: string | null;
+                oos_used_for_selection: boolean | null;
+            };
+            wall_clock: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                reason_code: string;
+            };
+            frozen_candidate: {
+                /** @constant */
+                identity_rule: "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1";
+                candidate_id: string | null;
+                reason_code: string | null;
+            };
+            counts: {
+                folds: number;
+                not_causal_global_selection: number;
+                not_evaluated: number;
+                not_published: number;
+                oos_child_match: number;
+                oos_child_mismatch: number;
+            };
+            folds: components["schemas"]["FoldOrderingRow"][];
+        };
+        /** @description The sealed θ* as Screen 07 reads it (not the Screen 06 selection roles). */
+        FrozenSelection: {
+            selected_trial_id: string | null;
+            objective: components["schemas"]["Decimal"] | null;
+            parameters: {
+                [key: string]: components["schemas"]["Decimal"];
+            };
+            availability: components["schemas"]["Availability"];
+        };
         Freeze: components["schemas"]["Common"] & {
             /** @constant */
             schema_version: "research.current-source-freeze.v1";
@@ -431,14 +669,10 @@ export interface components {
                 availability: components["schemas"]["Availability"];
             };
             source_artifact_bytes: components["schemas"]["Fact"];
-            frozen_selection: components["schemas"]["Selection"];
-            what_if: {
-                /** @constant */
-                state: "NOT_PUBLISHED";
-                /** @constant */
-                reason_code: "RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET";
-                availability: components["schemas"]["Availability"];
-            };
+            byte_verification: components["schemas"]["ArtifactByteVerification"];
+            frozen_selection: components["schemas"]["FrozenSelection"];
+            what_if: components["schemas"]["WhatIf"];
+            fold_ordering: components["schemas"]["FoldOrdering"];
         };
         Observation: {
             source_ordinal: number;
@@ -1039,6 +1273,8 @@ export interface components {
     parameters: {
         RunId: components["schemas"]["RunId"];
         WorkspaceId: components["schemas"]["WorkspaceId"];
+        /** @description Same-origin CSRF proof for the explicit what-if action. */
+        PortalCsrf: string;
         SeriesKind: components["schemas"]["SeriesKind"];
         Cursor: components["schemas"]["OpaqueCursor"];
         Before: components["schemas"]["OpaqueCursor"];
@@ -1211,6 +1447,44 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchCurrentSourceWhatIfEvaluatePostV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header: {
+                /** @description Same-origin CSRF proof for the explicit what-if action. */
+                "x-portal-csrf": components["parameters"]["PortalCsrf"];
+            };
+            path: {
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatIfEvaluateRequest"];
+            };
+        };
+        responses: {
+            /** @description Admitted, replayed, or nothing to evaluate */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatIfEvaluateResult"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };

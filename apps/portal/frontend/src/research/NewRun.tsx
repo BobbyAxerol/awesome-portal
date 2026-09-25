@@ -1500,6 +1500,15 @@ function ReviewRail({
 
 /* ----------------------------------------------------------------- screen */
 
+/** W5a: a Screen-07 what-if fork (`?from=&fork=`), resolved against the server's grid. */
+export interface ForkSource {
+  runId: string;
+  cellId: string;
+  state: "loading" | "ready" | "missing";
+  parameters: Record<string, string> | null;
+  reason: string | null;
+}
+
 export interface NewRunProps {
   draft: RunDraft;
   patch: (change: Partial<RunDraft>) => void;
@@ -1527,6 +1536,8 @@ export interface NewRunProps {
   catalogReason?: string | null;
   /** CG-P11-07 `?from=`: the run this draft was copied from, and the read's state. */
   cloneSource?: { runId: string; state: ResearchState; copiedAt?: number | null } | null;
+  /** W5a: the Screen-07 what-if node this draft forks, read from the server's grid. */
+  forkSource?: ForkSource | null;
 
   mayCreateRun: boolean;
   canSubmit: boolean;
@@ -1563,6 +1574,7 @@ export function NewRun(props: NewRunProps) {
     catalog = null,
     catalogReason = null,
     cloneSource = null,
+    forkSource = null,
   } = props;
   const sweepCeiling = limits.sweepCeiling === undefined ? SWEEP_CEILING : limits.sweepCeiling;
   const v2 = usesSpecV2(draft);
@@ -1657,6 +1669,37 @@ export function NewRun(props: NewRunProps) {
             <span style={{ color: "var(--ink-soft)" }}>Reading the declaration of {cloneSource.runId}…</span>
           ) : (
             <span style={{ color: "var(--bad)" }}>{cloneSource.state.reason}</span>
+          )}
+        </div>
+      ) : null}
+
+      {forkSource ? (
+        <div
+          role="status"
+          className="flex flex-wrap items-baseline gap-2 rounded-[6px] border border-dashed px-3 py-2 text-[11px]"
+          style={{ borderColor: forkSource.state === "missing" ? "var(--bad)" : "var(--warn)", background: "var(--paper-raised)" }}
+          data-fork-source={forkSource.runId}
+          data-fork-cell={forkSource.cellId}
+          data-fork-state={forkSource.state}
+        >
+          <span className="mono text-[9px] font-bold uppercase tracking-[.07em]" style={{ color: "var(--warn)" }}>
+            sibling of
+          </span>
+          <a className="mono" href={`/research/quantbt/runs/${encodeURIComponent(forkSource.runId)}/freeze`}>{forkSource.runId}</a>
+          <span className="mono" style={{ color: "var(--ink-faint)" }}>· what-if {forkSource.cellId}</span>
+          {forkSource.state === "ready" && forkSource.parameters ? (
+            <>
+              <span className="mono" data-fork-pins>
+                {Object.entries(forkSource.parameters).map(([name, value]) => `${name} ${value}`).join(" · ")}
+              </span>
+              <span style={{ color: "var(--ink-soft)" }}>
+                forked from {forkSource.runId} · what-if — a new intent with its own preflight and config_hash, lineage-linked to that run. The frozen run is untouched.
+              </span>
+            </>
+          ) : forkSource.state === "loading" ? (
+            <span style={{ color: "var(--ink-soft)" }}>Reading that run's what-if grid…</span>
+          ) : (
+            <span style={{ color: "var(--bad)" }}>{forkSource.reason}</span>
           )}
         </div>
       ) : null}

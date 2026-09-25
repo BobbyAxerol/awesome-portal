@@ -10,6 +10,10 @@
 
 import { z } from "zod";
 
+import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
+import { WhatIfSchema } from "./whatif.contract";
+import { FoldOrderingSchema } from "./fold-ordering";
+
 export const ResearchCurrentSourceRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
@@ -706,17 +710,25 @@ export const ResearchCurrentSourceFreezeResponseSchema = CommonSchema.extend({
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
   source_artifact_bytes: ResearchCurrentSourceFactSchema,
+  /** A10a: the newest durable byte-verification receipt for this run's sealed P05 artifact. */
+  byte_verification: ArtifactByteVerificationSchema,
   frozen_selection: z.object({
     selected_trial_id: SourceIdentifierSchema.nullable(),
     objective: DecimalSchema.nullable(),
     parameters: ParameterMapSchema,
     availability: ResearchCurrentSourceAvailabilitySchema,
   }).strict(),
-  what_if: z.object({
-    state: z.literal("NOT_PUBLISHED"),
-    reason_code: z.literal("RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET"),
-    availability: ResearchCurrentSourceAvailabilitySchema,
-  }).strict(),
+  /**
+   * W5a A10c: the Screen-07 what-if sandbox. Exact existing evaluations only;
+   * a GET never enqueues or evaluates anything.
+   */
+  what_if: WhatIfSchema,
+  /**
+   * W5a P16-T02/T11: per-fold ordering on two axes (data time, wall clock),
+   * the per-fold causal verdict from QuantBT's own claims, and the
+   * out-of-sample generation child checked against the frozen selection.
+   */
+  fold_ordering: FoldOrderingSchema,
 }).strict();
 
 export const ResearchCurrentSourceReplayResponseSchema = CommonSchema.extend({

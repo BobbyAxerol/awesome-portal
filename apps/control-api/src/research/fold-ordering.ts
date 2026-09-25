@@ -1,0 +1,233 @@
+/**
+ * W5a · P16-T02 / P16-T11 — the per-fold ordering block of the Screen-07
+ * freeze read.
+ *
+ * Two axes, never one (HiFi 07 F1):
+ *  - DATA TIME: each retained fold's own IS/OOS windows, checked per fold
+ *    (the fold's IS ends before its OOS starts, or the fact is typed absent);
+ *  - WALL CLOCK: QuantBT publishes no freeze/read clocks on this route, so it
+ *    is a typed absence — never a drawn tick.
+ *
+ * The per-fold causal verdict is derived from QuantBT's own claim facts, never
+ * entered and never a PASS a global study cannot earn: a global schedule
+ * selects one θ* after reading every outer fold, so every fold is
+ * `NOT_CAUSAL_GLOBAL_SELECTION` with the engine's chronological claim as the
+ * reason. A `per_fold_causal` schedule is not admitted by the P10 Delta WFO
+ * profile; if one ever appears it is `NOT_EVALUATED` with that typed reason.
+ *
+ * P16-T11: per fold, the out-of-sample generation child of QuantBT's child
+ * audit (W5b, P17-T14) is compared with the frozen selection by QuantBT's own
+ * candidate identity (`walkforward._strategy_candidate_id`: sha256 of the
+ * sorted compact JSON parameter map, first 24 hex). Nothing is re-selected.
+ */
+
+import { createHash } from "node:crypto";
+import { z } from "zod";
+
+import type { CurrentSourceFacts } from "./current-source.payload";
+
+export const FOLD_ORDERING_RULE = "research.freeze-fold-ordering.v1" as const;
+export const QUANTBT_CANDIDATE_IDENTITY_RULE = "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1" as const;
+
+export const FOLD_ORDERING_REASONS = {
+  sealPredatesFacts: "RS02_SEAL_PREDATES_W3_SOURCE_FACTS_V1",
+  globalSelection: "SELECTION_SAW_EVERY_OUTER_FOLD",
+  perFoldNotAdmitted: "P10_DELTA_WFO_PROFILE_DOES_NOT_ADMIT_PER_FOLD_CAUSAL_SCHEDULE",
+  scheduleNotPublished: "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_OPTIMIZATION_SCHEDULE",
+  scheduleUnknown: "OPTIMIZATION_SCHEDULE_NOT_IN_FOLD_ORDERING_RULE",
+  windowNotPublished: "QUANTBT_FOLD_WINDOW_NOT_PUBLISHED",
+  wallClock: "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS",
+  childAuditNotRetained: "RS02_SEAL_PREDATES_P17_CHILD_AUDIT",
+  noGenerationChild: "QUANTBT_CHILD_AUDIT_HAS_NO_OUT_OF_SAMPLE_GENERATION_RECORD",
+  identityNotComputable: "FROZEN_PARAMETERS_NOT_EXACT_NUMERIC_JSON",
+} as const;
+
+const Reason = z.string().regex(/^[A-Z][A-Z0-9_]{2,159}$/);
+const Token = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/);
+const UtcMs = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const CandidateId = z.string().regex(/^[0-9a-f]{24}$/);
+
+const WindowSchema = z.object({
+  start_utc_ms: UtcMs.nullable(),
+  end_utc_ms: UtcMs.nullable(),
+}).strict();
+
+export const FoldOrderingRowSchema = z.object({
+  fold_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/),
+  source_ordinal: z.number().int().nonnegative(),
+  data_time: z.object({
+    is: WindowSchema,
+    oos: WindowSchema,
+    /** This fold's own boundary: its IS ends strictly before its OOS starts. */
+    boundary: z.enum(["IS_ENDS_BEFORE_OOS", "IS_OVERLAPS_OOS", "NOT_PUBLISHED"]),
+    reason_code: Reason.nullable(),
+  }).strict(),
+  verdict: z.enum(["NOT_CAUSAL_GLOBAL_SELECTION", "NOT_EVALUATED", "NOT_PUBLISHED"]),
+  reason_code: Reason,
+  oos_generation_child: z.object({
+    state: z.enum(["MATCH", "MISMATCH", "NOT_RETAINED", "NOT_PUBLISHED", "NOT_COMPUTABLE"]),
+    reason_code: Reason.nullable(),
+    audit_ordinal: z.number().int().nonnegative().nullable(),
+    candidate_id: CandidateId.nullable(),
+  }).strict(),
+}).strict();
+
+export const FoldOrderingSchema = z.object({
+  schema_version: z.literal(FOLD_ORDERING_RULE),
+  axes: z.tuple([z.literal("DATA_TIME"), z.literal("WALL_CLOCK")]),
+  selection_scope: z.enum(["GLOBAL", "PER_FOLD", "NOT_PUBLISHED"]),
+  optimization_schedule: Token.nullable(),
+  source_claims: z.object({
+    chronological_claim: Token.nullable(),
+    causality_claim: Token.nullable(),
+    oos_used_for_selection: z.boolean().nullable(),
+  }).strict(),
+  wall_clock: z.object({
+    state: z.literal("NOT_PUBLISHED"),
+    reason_code: Reason,
+  }).strict(),
+  frozen_candidate: z.object({
+    identity_rule: z.literal(QUANTBT_CANDIDATE_IDENTITY_RULE),
+    candidate_id: CandidateId.nullable(),
+    reason_code: Reason.nullable(),
+  }).strict(),
+  counts: z.object({
+    folds: z.number().int().nonnegative(),
+    not_causal_global_selection: z.number().int().nonnegative(),
+    not_evaluated: z.number().int().nonnegative(),
+    not_published: z.number().int().nonnegative(),
+    oos_child_match: z.number().int().nonnegative(),
+    oos_child_mismatch: z.number().int().nonnegative(),
+  }).strict(),
+  folds: z.array(FoldOrderingRowSchema).max(256),
+}).strict();
+
+export type FoldOrdering = z.infer<typeof FoldOrderingSchema>;
+
+export interface FoldOrderingInput {
+  sourceOrdinal: number;
+  foldId: string;
+  trainStartUtcMs: number | null;
+  trainEndUtcMs: number | null;
+  testStartUtcMs: number | null;
+  testEndUtcMs: number | null;
+  /** Child-audit records (W5b); undefined when the seal predates P17-T14. */
+  childAudit: ReadonlyArray<{ audit_ordinal: number; candidate_id: string | null; context: string | null }> | undefined;
+}
+
+const EXACT_JSON_NUMBER = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+
+/**
+ * QuantBT's candidate identity for a parameter map it produced. The retained
+ * map holds the engine's own decimal text, which is exactly the JSON number
+ * Python's `json.dumps` wrote; a non-numeric value cannot be re-typed and
+ * answers null (typed NOT_COMPUTABLE), never a guess.
+ */
+export function quantbtCandidateId(parameters: Readonly<Record<string, string>>): string | null {
+  const names = Object.keys(parameters).sort();
+  if (names.length === 0) return null;
+  const parts: string[] = [];
+  for (const name of names) {
+    const value = parameters[name]!;
+    if (!EXACT_JSON_NUMBER.test(value)) return null;
+    parts.push(`${JSON.stringify(name)}:${value}`);
+  }
+  return createHash("sha256").update(`{${parts.join(",")}}`, "utf8").digest("hex").slice(0, 24);
+}
+
+function scopeOf(facts: CurrentSourceFacts | undefined): {
+  scope: FoldOrdering["selection_scope"];
+  verdict: FoldOrdering["folds"][number]["verdict"];
+  reason: string;
+} {
+  if (!facts) return { scope: "NOT_PUBLISHED", verdict: "NOT_PUBLISHED", reason: FOLD_ORDERING_REASONS.sealPredatesFacts };
+  const schedule = facts.search.optimization_schedule;
+  if (schedule === null) return { scope: "NOT_PUBLISHED", verdict: "NOT_PUBLISHED", reason: FOLD_ORDERING_REASONS.scheduleNotPublished };
+  if (schedule === "global") {
+    return { scope: "GLOBAL", verdict: "NOT_CAUSAL_GLOBAL_SELECTION", reason: FOLD_ORDERING_REASONS.globalSelection };
+  }
+  if (schedule === "per_fold_causal") {
+    return { scope: "PER_FOLD", verdict: "NOT_EVALUATED", reason: FOLD_ORDERING_REASONS.perFoldNotAdmitted };
+  }
+  return { scope: "NOT_PUBLISHED", verdict: "NOT_EVALUATED", reason: FOLD_ORDERING_REASONS.scheduleUnknown };
+}
+
+function boundaryOf(input: FoldOrderingInput): FoldOrdering["folds"][number]["data_time"] {
+  const is = { start_utc_ms: input.trainStartUtcMs, end_utc_ms: input.trainEndUtcMs };
+  const oos = { start_utc_ms: input.testStartUtcMs, end_utc_ms: input.testEndUtcMs };
+  if (input.trainEndUtcMs === null || input.testStartUtcMs === null) {
+    return { is, oos, boundary: "NOT_PUBLISHED", reason_code: FOLD_ORDERING_REASONS.windowNotPublished };
+  }
+  return {
+    is,
+    oos,
+    boundary: input.trainEndUtcMs < input.testStartUtcMs ? "IS_ENDS_BEFORE_OOS" : "IS_OVERLAPS_OOS",
+    reason_code: null,
+  };
+}
+
+function childOf(input: FoldOrderingInput, frozen: string | null): FoldOrdering["folds"][number]["oos_generation_child"] {
+  if (input.childAudit === undefined) {
+    return { state: "NOT_RETAINED", reason_code: FOLD_ORDERING_REASONS.childAuditNotRetained, audit_ordinal: null, candidate_id: null };
+  }
+  const generation = input.childAudit.filter((record) => record.context === "out-of-sample generation");
+  if (generation.length !== 1 || generation[0]!.candidate_id === null || !/^[0-9a-f]{24}$/.test(generation[0]!.candidate_id)) {
+    return { state: "NOT_PUBLISHED", reason_code: FOLD_ORDERING_REASONS.noGenerationChild, audit_ordinal: null, candidate_id: null };
+  }
+  const child = generation[0]!;
+  if (frozen === null) {
+    return { state: "NOT_COMPUTABLE", reason_code: FOLD_ORDERING_REASONS.identityNotComputable, audit_ordinal: child.audit_ordinal, candidate_id: child.candidate_id };
+  }
+  return {
+    state: child.candidate_id === frozen ? "MATCH" : "MISMATCH",
+    reason_code: null,
+    audit_ordinal: child.audit_ordinal,
+    candidate_id: child.candidate_id,
+  };
+}
+
+export function foldOrdering(
+  folds: readonly FoldOrderingInput[],
+  facts: CurrentSourceFacts | undefined,
+  frozenParameters: Readonly<Record<string, string>>,
+): FoldOrdering {
+  const { scope, verdict, reason } = scopeOf(facts);
+  const frozen = quantbtCandidateId(frozenParameters);
+  const rows = [...folds]
+    .sort((a, b) => a.sourceOrdinal - b.sourceOrdinal)
+    .map((fold) => ({
+      fold_id: fold.foldId,
+      source_ordinal: fold.sourceOrdinal,
+      data_time: boundaryOf(fold),
+      verdict,
+      reason_code: reason,
+      oos_generation_child: childOf(fold, frozen),
+    }));
+  const count = (predicate: (row: (typeof rows)[number]) => boolean) => rows.filter(predicate).length;
+  return {
+    schema_version: FOLD_ORDERING_RULE,
+    axes: ["DATA_TIME", "WALL_CLOCK"],
+    selection_scope: scope,
+    optimization_schedule: facts?.search.optimization_schedule ?? null,
+    source_claims: {
+      chronological_claim: facts?.claims.chronological_validation_claim ?? null,
+      causality_claim: facts?.claims.causality_claim ?? null,
+      oos_used_for_selection: facts?.claims.oos_used_for_selection ?? null,
+    },
+    wall_clock: { state: "NOT_PUBLISHED", reason_code: FOLD_ORDERING_REASONS.wallClock },
+    frozen_candidate: {
+      identity_rule: QUANTBT_CANDIDATE_IDENTITY_RULE,
+      candidate_id: frozen,
+      reason_code: frozen === null ? FOLD_ORDERING_REASONS.identityNotComputable : null,
+    },
+    counts: {
+      folds: rows.length,
+      not_causal_global_selection: count((row) => row.verdict === "NOT_CAUSAL_GLOBAL_SELECTION"),
+      not_evaluated: count((row) => row.verdict === "NOT_EVALUATED"),
+      not_published: count((row) => row.verdict === "NOT_PUBLISHED"),
+      oos_child_match: count((row) => row.oos_generation_child.state === "MATCH"),
+      oos_child_mismatch: count((row) => row.oos_generation_child.state === "MISMATCH"),
+    },
+    folds: rows,
+  };
+}

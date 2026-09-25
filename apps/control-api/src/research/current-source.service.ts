@@ -1,7 +1,7 @@
 /** RS-02 retained-current-source named BFF projection service. */
 
 import { Buffer } from "node:buffer";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { z } from "zod";
 
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -66,6 +66,12 @@ import {
 import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } from "./delta-wfo.profile";
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
+import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
+import { inertWhatIf, ResearchWhatIfService, type WhatIfBasis } from "./whatif.service";
+import { foldOrdering } from "./fold-ordering";
+import type { WhatIf } from "./whatif.contract";
+import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
+import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
 
 /** RF-05 CG-P13-09: the P04 fixed qualification can never be sealed into the RS-02 lane. */
 const P04_FIXED_PROFILE_NOT_RETAINABLE_REASON = "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION";
@@ -337,6 +343,10 @@ export class ResearchCurrentSourceService {
   constructor(
     private readonly repository: ResearchCurrentSourceRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ResearchArtifactVerifyService)
+    private readonly bytes?: ResearchArtifactVerifyService,
+    @Optional() @Inject(ResearchWhatIfService)
+    private readonly whatIf?: ResearchWhatIfService,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -542,9 +552,47 @@ export class ResearchCurrentSourceService {
     const summary = parseSummary(seal);
     const observedImportDigest = await this.repository.verifyRetainedImport(scope, seal, signal);
     const integrityState = observedImportDigest === seal.retainedImportDigest ? "MATCH" as const : "MISMATCH" as const;
+    // A10a: the newest durable byte receipt (a GET never re-reads bytes).
+    const byteVerification = await this.latestBytes(scope, runId);
+    // A10c: exact existing evaluations around θ*; nothing is evaluated here.
+    const whatIf = await this.whatIfFor(scope, await this.basisFrom(scope, runId, seal, summary, byteVerification, signal));
+    const common = this.common("freeze", seal);
+    // P16-T02/T11: per-fold ordering from the sealed FOLD rows (immutable
+    // under the seal revision, so it cannot move the ETag on its own).
+    const ordering = foldOrdering(
+      (await this.boundedRows(scope, runId, seal, "FOLD", 256, signal)).map((row) => {
+        const fold = asFold(row);
+        return {
+          sourceOrdinal: row.sourceOrdinal,
+          foldId: fold.fold_id,
+          trainStartUtcMs: fold.train_start_utc_ms,
+          trainEndUtcMs: fold.train_end_utc_ms,
+          testStartUtcMs: fold.test_start_utc_ms,
+          testEndUtcMs: fold.test_end_utc_ms,
+          childAudit: fold.child_audit?.records,
+        };
+      }),
+      summary.source_facts,
+      summary.selection.parameters,
+    );
+    // The ETag must move when a new receipt, a job state or a sealed grid
+    // lands, or a 304 would hide it.
+    const freezeRevision = `rs02_freeze_${sha256ResearchJson({
+      base: common.revision,
+      byte_receipt: byteVerification.receipt_id,
+      byte_state: byteVerification.state,
+      what_if: {
+        state: whatIf.state,
+        coverage: whatIf.coverage?.label ?? null,
+        job: whatIf.job ? { run_id: whatIf.job.run_id, state: whatIf.job.state, sealed: whatIf.job.sealed } : null,
+        evaluate: whatIf.actions.evaluate_grid.state,
+      },
+    })}`;
     const value = {
       schema_version: "research.current-source-freeze.v1" as const,
-      ...this.common("freeze", seal),
+      ...common,
+      revision: freezeRevision,
+      etag: `"${freezeRevision}"`,
       integrity: {
         state: integrityState,
         expected_manifest_digest: seal.manifestDigest,
@@ -556,19 +604,59 @@ export class ResearchCurrentSourceService {
         availability: available(),
       },
       source_artifact_bytes: sourceGap("P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES"),
+      byte_verification: byteVerification,
       frozen_selection: {
         selected_trial_id: summary.selection.trial_id,
         objective: summary.selection.objective,
         parameters: summary.selection.parameters,
         availability: available(),
       },
-      what_if: {
-        state: "NOT_PUBLISHED" as const,
-        reason_code: "RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET" as const,
-        availability: { state: "NOT_PUBLISHED" as const, reason_code: "RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET" },
-      },
+      what_if: whatIf,
+      fold_ordering: ordering,
     };
     return this.valid(ResearchCurrentSourceFreezeResponseSchema, value);
+  }
+
+  /**
+   * A10c: the facts the what-if lane is built from — the sealed θ*, the
+   * retained parent trials and the newest byte receipt. Read-only; used by
+   * the freeze GET and by the explicit evaluate action alike.
+   */
+  async whatIfBasis(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<WhatIfBasis> {
+    const seal = await this.requireSeal(scope, runId, "freeze", signal);
+    if (!isSeal(seal)) {
+      throw new ResearchCurrentSourceError(
+        "RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "This run froze a fixed profile — no evaluated neighbourhood exists.",
+        409,
+      );
+    }
+    return this.basisFrom(scope, runId, seal, parseSummary(seal), await this.latestBytes(scope, runId), signal);
+  }
+
+  private async basisFrom(
+    scope: ResearchScope,
+    runId: string,
+    seal: CurrentSourceSealRow,
+    summary: ReturnType<typeof parseSummary>,
+    bytes: ArtifactByteVerification,
+    signal?: AbortSignal,
+  ): Promise<WhatIfBasis> {
+    const trials = (await this.boundedRows(scope, runId, seal, "TRIAL", MAXIMUM_TRIAL_ROWS, signal)).map((row) => {
+      const trial = asTrial(row);
+      return {
+        trialId: trial.trial_id,
+        state: trial.state,
+        objective: trial.objective,
+        parameters: trial.parameters,
+      };
+    });
+    return { runId, frozen: summary.selection.parameters, trials, bytes };
+  }
+
+  private async whatIfFor(scope: ResearchScope, basis: WhatIfBasis): Promise<WhatIf> {
+    if (this.whatIf) return this.whatIf.read(scope, basis);
+    return inertWhatIf(basis.runId);
   }
 
   async replay(
@@ -935,6 +1023,18 @@ export class ResearchCurrentSourceService {
         reason_code: P04_FIXED_PROFILE_NOT_RETAINABLE_REASON,
       },
     });
+  }
+
+  private async latestBytes(scope: ResearchScope, runId: string): Promise<ArtifactByteVerification> {
+    if (!this.bytes) return notYet("NOT_ENABLED", BYTE_VERIFY_NOT_ENABLED);
+    try {
+      return await this.bytes.latest(scope, runId);
+    } catch (error) {
+      if (error instanceof ArtifactVerifyStoreError && error.code === "FORBIDDEN") {
+        throw new ResearchCurrentSourceError("RESEARCH_CURRENT_SOURCE_FORBIDDEN", "Access denied.", 403);
+      }
+      throw error;
+    }
   }
 
   private common(kind: string, seal: CurrentSourceSealRow) {

@@ -3547,13 +3547,17 @@
             "default": "p04.fixed-qualification.v1",
             "enum": [
               "p04.fixed-qualification.v1",
-              "p10.delta-signal-notional-wfo.v1"
+              "p10.delta-signal-notional-wfo.v1",
+              "p16.delta-whatif-grid.v1"
             ],
             "title": "Execution Profile Id",
             "type": "string"
           },
           "intent_kind": {
-            "const": "NEW",
+            "enum": [
+              "NEW",
+              "DIAGNOSTIC"
+            ],
             "title": "Intent Kind",
             "type": "string"
           },
@@ -3617,6 +3621,16 @@
             "pattern": "^dss_[0-9a-f]{32}$",
             "title": "Snapshot Id",
             "type": "string"
+          },
+          "whatif": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WhatIfJob"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "work_digest": {
             "pattern": "^[0-9a-f]{64}$",
@@ -4302,6 +4316,71 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WhatIfEvaluation": {
+        "additionalProperties": false,
+        "description": "One admitted what-if configuration: the full exact parameter map.",
+        "properties": {
+          "evaluation_key": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Evaluation Key",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 24,
+            "minProperties": 1,
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "evaluation_key",
+          "parameters"
+        ],
+        "title": "WhatIfEvaluation",
+        "type": "object"
+      },
+      "WhatIfJob": {
+        "additionalProperties": false,
+        "description": "W5a A10c: the bounded evaluation list of one what-if diagnostic job.",
+        "properties": {
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/WhatIfEvaluation"
+            },
+            "maxItems": 81,
+            "minItems": 1,
+            "title": "Evaluations",
+            "type": "array"
+          },
+          "grid_key": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Grid Key",
+            "type": "string"
+          },
+          "parent_run_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Parent Run Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "research.whatif-job.v1",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "parent_run_id",
+          "grid_key",
+          "evaluations"
+        ],
+        "title": "WhatIfJob",
         "type": "object"
       },
       "WindowSummary": {

@@ -19,6 +19,9 @@ import { ResearchProgressRepository } from "./progress.repository";
 import { ResearchProgressIngressSchema } from "./progress.contract";
 import { ResearchProgressError } from "./progress.error";
 import { ResearchProgressService } from "./progress.service";
+import { ResearchWhatIfGridSealIngressSchema } from "./whatif.contract";
+import { WHATIF_PROFILE_ID } from "./whatif.profile";
+import { ResearchWhatIfRepository } from "./whatif.repository";
 
 @Controller("/internal/research/progress")
 export class ResearchProgressIngressController {
@@ -28,6 +31,7 @@ export class ResearchProgressIngressController {
     @Inject(ResearchProgressRepository) private readonly progress: ResearchProgressRepository,
     @Inject(ResearchMetadataRepository) private readonly metadata: ResearchMetadataRepository,
     @Inject(ResearchCurrentSourceIngestService) private readonly currentSource: ResearchCurrentSourceIngestService,
+    @Inject(ResearchWhatIfRepository) private readonly whatIf: ResearchWhatIfRepository,
   ) {}
 
   @Post("events")
@@ -143,6 +147,35 @@ export class ResearchProgressIngressController {
     }
     const lease = await this.progress.resolveIngress(parsed.data);
     return this.currentSource.seal(lease, parsed.data);
+  }
+
+  /**
+   * W5a A10c: the immutable WHATIF_GRID relation of one what-if diagnostic
+   * run, after its P05 artifact is sealed. The lease is the diagnostic run's
+   * own; the frozen parent run is never written.
+   */
+  @Post("artifacts/what-if/seal")
+  @HttpCode(200)
+  async sealWhatIfGrid(@Req() request: FastifyRequest, @Body() body: unknown) {
+    this.assertWorkerPrincipal(request);
+    this.assertArtifactRetentionEnabled();
+    if (this.config.FEATURE_RESEARCH_WHATIF !== "true") {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_UNAVAILABLE", "Research what-if diagnostics are not enabled.", 503);
+    }
+    this.assertBoundedBody(body);
+    const parsed = ResearchWhatIfGridSealIngressSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research what-if grid seal is invalid.", 400);
+    }
+    const lease = await this.progress.resolveIngress(parsed.data);
+    if (lease.executionProfileId !== WHATIF_PROFILE_ID) {
+      throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Only a what-if diagnostic run may seal a what-if grid.", 409);
+    }
+    const result = await this.whatIf.sealGrid(
+      { workspaceId: lease.workspaceId, actorUserId: lease.actorUserId },
+      parsed.data,
+    );
+    return { schema_version: "research.whatif-grid-sealed.v1", sealed: true, replayed: result.replayed };
   }
 
   private assertCurrentSourceIngestEnabled(): void {

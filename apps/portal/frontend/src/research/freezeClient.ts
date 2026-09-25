@@ -37,8 +37,43 @@ export type FrozenParameter = FreezeSchemas["Parameter"];
 export type IntegrityCheck = FreezeSchemas["IntegrityCheck"];
 export type Integrity = FreezeSchemas["Integrity"];
 export type FreezeWindow = FreezeSchemas["Window"];
+/** A10a: one durable byte-verification receipt (or a typed "not yet"). */
+export type ArtifactBytes = FreezeSchemas["ArtifactByteVerification"];
+
+/** The server's rule, restated once: corrupt or missing sealed bytes BLOCK. */
+export function bytesBlock(bytes: Pick<ArtifactBytes, "state"> | null | undefined): boolean {
+  return bytes?.state === "MISMATCH" || bytes?.state === "MISSING";
+}
+
+/** Words for each receipt state; none of them is a pass unless the state is MATCH. */
+export const BYTE_STATE_WORDS: Record<ArtifactBytes["state"], string> = {
+  MATCH: "bytes match the seal",
+  MISMATCH: "bytes differ from the seal",
+  MISSING: "bytes missing from the store",
+  NOT_VERIFIED: "not verified yet",
+  NOT_RETAINED: "no sealed artifact",
+  UNAVAILABLE: "verifier unavailable",
+  NOT_ENABLED: "byte verification off",
+};
 
 export type CurrentSourceFreeze = SourceSchemas["Freeze"];
+/** W5a P16-T02/T11: per-fold ordering on two axes, derived by the server. */
+export type FoldOrdering = SourceSchemas["FoldOrdering"];
+export type FoldOrderingRow = SourceSchemas["FoldOrderingRow"];
+/** A10c: the Screen-07 what-if sandbox, as the retained lane serves it. */
+export type WhatIf = SourceSchemas["WhatIf"];
+export type WhatIfCell = SourceSchemas["WhatIfCell"];
+export type WhatIfEvaluateResult = SourceSchemas["WhatIfEvaluateResult"];
+
+/** The one explicit what-if action, as the screen tracks it. */
+export type WhatIfEvaluateSlot =
+  | { state: "idle" }
+  | { state: "submitting" }
+  | { state: "done"; result: WhatIfEvaluateResult }
+  | { state: "refused"; refusal: FreezeRefusal };
+
+/** Job states during which the grid is still filling. */
+export const WHATIF_ACTIVE_JOB_STATES: ReadonlySet<string> = new Set(["DRAFT", "QUEUED", "RUNNING", "SEALING"]);
 /** RF-05 CG-P13-09: the typed 200 for a run whose profile the retained lane never holds. */
 export type CurrentSourceNotApplicable = SourceSchemas["LaneNotApplicable"];
 
@@ -123,10 +158,25 @@ export const freezeApi = {
     ),
 
   /** `researchCurrentSourceFreezeGetV1` */
-  currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
+  currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal; etag?: string | null } = {}) =>
     call<CurrentSourceFreeze | CurrentSourceNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/freeze${query({ workspaceId: options.workspaceId })}`,
-      { signal: options.signal },
+      { signal: options.signal, etag: options.etag },
+    ),
+
+  /**
+   * `researchCurrentSourceWhatIfEvaluatePostV1` — the one explicit "evaluate
+   * grid" click. It names the grid the reader saw; a different current grid
+   * is the server's 409, never a silent re-target.
+   */
+  evaluateWhatIf: (runId: string, gridKey: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
+    call<WhatIfEvaluateResult>(
+      `${RUNS}/${encodeURIComponent(runId)}/current-source/freeze/what-if/evaluate${query({ workspaceId: options.workspaceId })}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ schema_version: "research.whatif-evaluate.v1", grid_key: gridKey }),
+        signal: options.signal,
+      },
     ),
 } as const;
 
