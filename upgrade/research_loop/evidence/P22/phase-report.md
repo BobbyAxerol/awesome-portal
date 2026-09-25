@@ -62,3 +62,22 @@ remain UNKNOWN for the original actor/key. Disposable-PG Governance regression,
 P22 migration and targeted service/controller tests pass; see the current
 commit's test log. This hardens the backend but does not turn the missing real
 final-audit/R1/browser receipt into a PASS.
+
+
+## Thanhvuong selective-integration review — 2026-09-25
+
+The contributor packet and fixture receipt are imported under `thanhvuong-*.md`
+for auditability. The contributor's alternate publication implementation is
+**not adopted**: it exposes `publish/reconcile` and `mirror` routes and a
+`1723680000056` migration that collides with an existing migration. The current
+canonical P22 contract is the two-route, actor-bound implementation above
+(`publication` GET + explicit `publish` POST), with the current membership,
+transaction and exact-pin guards. No duplicate route, migration, flag or
+provider is introduced.
+
+The contributor S11 UI is likewise not copied wholesale. It targets the older
+three-route schema and would replace the current P21 composition. The current
+rich composition remains authoritative; a future P22 browser slice may adapt
+the same visual ideas only after a real preview receipt proves the canonical
+two-route contract. This review therefore records `ALREADY_PRESENT` or
+`REJECTED_INCOMPATIBLE`, not a silent merge or deletion.

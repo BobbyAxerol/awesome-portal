@@ -70,3 +70,21 @@ one-shot overlap, normalized-path escape and >2 MiB body refusal. The full
 P23-T01…T15 matrix above is unchanged: no 20-user/W06, fault/restore, new
 engine or browser receipt was run in a capped isolated cell, so the phase
 remains NOT_QUALIFIED.
+
+
+## Thanhvuong selective-integration review — 2026-09-25
+
+The contributor's nine-file Playwright qualification runner is **not adopted**.
+Its fixtures target an older generated schema (for example `Mirror`, PUBLISHED
+composition fields and pre-RS-02 artifact/lineage shapes), and its standalone
+typecheck fails against the current contracts. Keeping it would add CI debt or
+require unapproved casts/rewrite of the current evidence fixtures. The runner
+remains available in the imported contributor commit for audit/rework, while
+its failures and open debt remain those recorded in the imported
+`thanhvuong-*.md` packets.
+
+The contributor's alternate Python Atlas route is **rejected as incompatible**:
+the current source intentionally retired the public Python route and serves the
+Atlas through the Control API/internal boundary. No direct browser-to-Python or
+second Atlas authority is added. P23 remains NOT_QUALIFIED until the canonical
+isolated stack produces the real workload, fault/restore and browser receipts.

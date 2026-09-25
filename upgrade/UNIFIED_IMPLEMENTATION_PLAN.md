@@ -5845,3 +5845,23 @@ agent theo entry/gates trong plan này.
 - Không tạo container/job/test account/build cache trong bước soạn plan; cleanup
   runtime `NO_ACTION_NEEDED`. Pre-commit verification nếu chạy được ghi riêng ở handoff,
   không đổi trạng thái 24 phase từ `PLANNED`.
+
+
+### Selective Thanhvuong P22/P23 integration checkpoint — 2026-09-25
+
+The contributor branch was reviewed against the canonical `docs/research-loop-plan`
+head and was **not merged wholesale**. Only the contributor P22/P23 evidence packets are retained; the proposed
+fixture runner was reviewed and rejected because its generated shapes are stale. The
+current Codex P22 backend (two named routes, actor-bound intent, SERIALIZABLE
+R1 membership and exact pin checks) and the current P21 rich S11 composition remain
+the authorities.
+
+Thanhvuong's alternate P22 three-route publication/mirror implementation and its
+colliding migration are recorded as `REJECTED_INCOMPATIBLE`; the alternate Python
+Atlas route is also rejected because the public Python route was intentionally
+retired in favour of the Control API/internal boundary. No duplicate route,
+migration, flag, provider, database, runtime or source connection was introduced.
+The imported P23 Playwright lane is explicitly `FIXTURE_ONLY`, optional, and does
+not qualify real API, cgroup, DR or browser-real acceptance. P22/P23 product gates
+remain exactly as their canonical packets state: pending real preview/browser and
+resource/DR receipts. P24 is untouched.

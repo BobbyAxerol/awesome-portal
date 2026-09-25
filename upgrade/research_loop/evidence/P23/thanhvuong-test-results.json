@@ -1,0 +1,1219 @@
+{
+  "schema_version": "research.p23-thanhvuong-test-results.v1",
+  "phase": "P23",
+  "owner": "Thanhvuong (Claude; contributor outside D3 — qualification evidence + FE fixture-lane runner)",
+  "date": "2026-09-25",
+  "status": "QUALIFICATION-PARTIAL-CONTRIBUTOR (fixture + disposable-PG lanes) / thanhvuong / STACK_LANES_BLOCKED · REQUIRES_BOBBY_DECISION (B-P23-01)",
+  "tree": "5d5ffc889b5be9c7e76d84d548a51edf2853e721",
+  "head": "35d0c86176ca96dcb396e85329f9367d9600db17",
+  "workspace": {
+    "user": "thanhvuong",
+    "branch": "feat/thanhvuong/research-p17-p21",
+    "remote": "primus-origin",
+    "base": "35d0c86176ca96dcb396e85329f9367d9600db17",
+    "a2_measured_head": "29feefb80a2dacf7a00dda47fecef8ce535879af",
+    "a2_measured_tree": "ac354a27aa6675d5965d6c760c009fcd55c778cc",
+    "b_measured_head": "35d0c86176ca96dcb396e85329f9367d9600db17",
+    "code_commits": [
+      {
+        "sha": "35d0c86176ca96dcb396e85329f9367d9600db17",
+        "tree": "5d5ffc889b5be9c7e76d84d548a51edf2853e721",
+        "parent": "29feefb80a2dacf7a00dda47fecef8ce535879af",
+        "subject": "test(research): P23 contributor qualification runner for the Research screens (fixture lane)",
+        "author": "Vuong <thanhvuong11052003@gmail.com>, trailer Co-Authored-By: Claude Fable 5.1",
+        "numstat": "9 files +2492/-0",
+        "files": {
+          "apps/portal/frontend/playwright.research-qualification.config.ts": "+48",
+          "apps/portal/frontend/e2e/research-qualification/tsconfig.json": "+10",
+          "apps/portal/frontend/e2e/research-qualification/stubs.ts": "+1160",
+          "apps/portal/frontend/e2e/research-qualification/harness.ts": "+249",
+          "apps/portal/frontend/e2e/research-qualification/_probe-p23-matrix.spec.ts": "+251",
+          "apps/portal/frontend/e2e/research-qualification/_probe-p23-load.spec.ts": "+169",
+          "apps/portal/frontend/e2e/research-qualification/_probe-p23-interaction.spec.ts": "+311",
+          "apps/portal/frontend/e2e/research-qualification/_probe-p23-cycles.spec.ts": "+87",
+          "apps/portal/frontend/e2e/research-qualification/_probe-p23-stale.spec.ts": "+207"
+        }
+      }
+    ],
+    "docs_commits": [
+      "docs(research): P23 Thanhvuong qualification packet (5 files, contains this file; a commit cannot record its own SHA; see git log)",
+      "docs(research): P23 §13 row, qualification note and contributor handoff (child of docs commit 1; see git log)"
+    ],
+    "branch_only_diff_vs_merge_base": "45 files +12099/-147 (apps 28, packages 4, upgrade 13), 0 under apps/portal/backend (three-dot a5455848..29feefb8, gx-branch-vs-baseline.txt bd424c2c2f08832a)",
+    "untracked_at_a2_end": [
+      "apps/portal/frontend/e2e/research-qualification/",
+      "apps/portal/frontend/playwright.research-qualification.config.ts"
+    ],
+    "untracked_at_a2_end_note": "package A1 runner (not A2); committed by Fable as 35d0c861 after audit-A1",
+    "pushes": [
+      "one push after docs commit 2: feat/thanhvuong/research-p17-p21 to primus-origin (remote before the push = 29feefb8, so the push carries 35d0c861 + 2 docs commits); local == remote verified after git fetch; the verification lines are in ~/tv-shots/p23/final/C2-report.md, not in this file (it is committed before the push)"
+    ],
+    "base_note": "workspace.base = runner commit 35d0c861 (fable-notes Q10); the docs commits are its children; the runner commit itself sits on 29feefb8 (P22 docs head)",
+    "b_measured_tree": "5d5ffc889b5be9c7e76d84d548a51edf2853e721"
+  },
+  "baseline": {
+    "ref": "primus-origin/docs/research-loop-plan",
+    "at_plan": "1ff3f2d4",
+    "at_packet": "33c46b842de164067e37d8325f1064d0daa91e4a",
+    "merge_base_with_branch": "a5455848",
+    "commits_since_p22_packet": [
+      "ad7491cf P06 worker seccomp/AppArmor (CG-RF02-01)",
+      "1ff3f2d4 DECISIONS_BOBBY_2026-09-25.md"
+    ],
+    "touches_p23_release_candidate_contracts_or_evidence_p21_p22": "false at plan (1ff3f2d4); see movement_after_plan for 33c46b84",
+    "evidence_p23_on_baseline": false,
+    "bobby_decisions_2026_09_25_mention_p23": false,
+    "two_dot_diff_informational": "422 files +19769/-84057 (mostly 135 baseline-only commits since the merge-base)",
+    "merged": false,
+    "at_packet_note": "observed after git fetch at package C2 start; C2-brief expected 1ff3f2d4 — the baseline moved",
+    "movement_after_plan": {
+      "range": "1ff3f2d4..33c46b84",
+      "commits": 27,
+      "shortstat": "196 files +22922/-1011",
+      "tip": "33c46b84 merge(research): W6a — P18 report v2 on both lanes, P20 compare fields, Screens 09/13",
+      "unified_changed": false,
+      "unified_p23_row_on_baseline": "PLANNED / unassigned / —",
+      "evidence_p23_on_baseline": false,
+      "touches_evidence_p21": "adds upgrade/research_loop/evidence/P21/W5C_S11_CLAUDE_2026-09-25.md (baseline W5c Screen 11 composer)",
+      "touches_runner_locators": "apps/portal/frontend/src/research: 47 files changed on baseline, incl. freezeClient.ts (+52/-2), reportClient.ts (+54/-9), runLibraryClient.ts (+3/-2), RunLibrary.tsx (+11/-12), and a baseline-own ReleaseCandidateDetail.tsx (+1119) / releaseCandidateClient.ts (+348); foundationClient/alphaImportClient/progressClient/evidenceClient/useEvidence/splitClient/searchClient/state/EvidenceFlowRoute unchanged",
+      "consequence": "every P23 number is measured at 35d0c861 (branch), not on the baseline; VD-P23-01/03, S01 and the runner stubs must be re-measured on the integrated tree (B-P23-05). Not diagnosed further by package C2"
+    }
+  },
+  "plan_count_corrections": [
+    {
+      "what": "control-api spec files",
+      "plan": "122 (47 research)",
+      "actual": "117 test/**/*.spec.ts (45 research*); all 117 executed",
+      "source": "A2-report §2; audit-A2 A2-2"
+    },
+    {
+      "what": "research probe (committed P09 probe) test count",
+      "plan": "8 + 76 (as in P22 brief)",
+      "actual": "82 = 8 fixtures + 74 product (A1 list, B run, P22 pw-tvp21-on-p22.log agree)",
+      "source": "B-report gate 4a"
+    }
+  ],
+  "lanes": {
+    "delta-real-data": {
+      "status": "BLOCKED",
+      "evidence": "none",
+      "reason": "no Research stack / Delta compute for contributors (CG-P23-01)"
+    },
+    "direct-vs-portal": {
+      "status": "BLOCKED",
+      "evidence": "none",
+      "reason": "no real storage behind a Portal stack (CG-P23-01)"
+    },
+    "persistence-vs-api": {
+      "status": "PASS",
+      "evidence": "disposable real PostgreSQL cell (scripts/control-api-test.sh): 117/117 files, 834/834 tests, restore drill final line, exit 0; cell.log 1a8633f3b15c8ac2, cell-files.md 52e759bfa378b61c",
+      "scope": "control-api on a disposable PG in a rootless --internal cell; not the Research stack"
+    },
+    "api-vs-ui": {
+      "status": "BLOCKED",
+      "evidence": "none",
+      "reason": "needs the stack; fixture-lane stubs are not api-vs-ui"
+    },
+    "visual-fixture": {
+      "status": "FAIL (attributed VD-P23-01..04) — halves reported separately, never netted",
+      "halves": {
+        "research_probe_committed_P09": "PASS (fixture) 82/82 (8 fixtures + 74 product), pw-research-probe-shotdir.log 055254841fdae356; run 1 49/82 = 33 EACCES on /tmp/research-shots (bobby-owned, environment), pw-research-probe.log f8b685f1f0aea36a",
+        "p23_runner_matrix_findings": "FAIL (attributed VD-P23-01..03): 30/60 tests, 123 error lines (VD-P23-01 81, VD-P23-02 30, VD-P23-03 12), rerun identical",
+        "p23_runner_matrix_layout_history": "PASS (fixture): overflow/shell/bare placeholder/first Tab/deep link/back/forward/reload/cursor/console/writes produced no error line in 180/180 cells",
+        "p23_runner_stale": "FAIL (attributed VD-P23-04): 8/9, s04 retained, rerun identical",
+        "p23_runner_load_interaction_cycles": "PASS (fixture): load 1/1, interaction 7/7 (15/15 rows), cycles 1/1 (+14.2 %)"
+      },
+      "evidence": "pw-p23.log 25c18c7845ae945e; pw-p23-rerun-matrix.log f1060e6aa772df8d; pw-p23-rerun-stale.log fa031c2e3c8ef1e5; playwright-report.json cfc1e4a836fe19b8",
+      "scope": "own vite preview 127.0.0.1:4417 serving the flag-off build of 35d0c861 (dist digest 68ee0a01d1053b61), same-origin page.route stubs, client cost only"
+    },
+    "browser-real": {
+      "status": "NOT_RUN",
+      "evidence": "none",
+      "reason": "no real Research stack behind a gateway; only a fixture-lane receipt exists (V11-P23-BR is a fixture receipt, never 'browser-real PASS')"
+    },
+    "dev-host-review": {
+      "status": "NOT_RUN",
+      "evidence": "none",
+      "reason": "the Guide lane is a live dev host smoke after staging activation (Guide :2723); no dev host / staging activation exists for contributors (same as P22). GX evidence lives under guide_tests V11-P23-GX, not under this lane"
+    }
+  },
+  "gates": [
+    {
+      "gate": "cell: /usr/bin/time -v bash scripts/control-api-test.sh (repo root, script unmodified, wrapper run-cell.sh)",
+      "lane": "persistence-vs-api",
+      "result": "PASS",
+      "exit": 0,
+      "files": 117,
+      "files_passed": 117,
+      "tests": 834,
+      "passed": 834,
+      "failed": 0,
+      "skipped": 0,
+      "duration_vitest": "442.21 s",
+      "wall": "8:47.34",
+      "final_line": "Control API security/query/governance tests and PostgreSQL restore drill passed.",
+      "log_sha256_prefix": "1a8633f3b15c8ac2",
+      "clean_log_sha256_prefix": "0fdcada8b732036a",
+      "time_log_sha256_prefix": "acfceae210401631",
+      "per_file_table_sha256_prefix": "52e759bfa378b61c",
+      "wrapper_sha256_prefix": "8fd235d9abc33928"
+    },
+    {
+      "gate": "cell: research-release-candidate-publication-migration.spec.ts (migration 063 fresh on PG)",
+      "lane": "persistence-vs-api",
+      "result": "PASS",
+      "tests": 1,
+      "duration": "2171 ms",
+      "closes": "S11-P22-MIGRATION-056-UNPROVEN",
+      "log_sha256_prefix": "1a8633f3b15c8ac2"
+    },
+    {
+      "gate": "cell: other migration specs (release-candidate, rs01, rs02, compare, lineage, report, migration-recovery)",
+      "lane": "persistence-vs-api",
+      "result": "PASS",
+      "tests": 13,
+      "breakdown": {
+        "research-release-candidate-migration": 1,
+        "research-rs01-migration": 1,
+        "research-rs02-migration": 2,
+        "research-compare-migration": 2,
+        "research-lineage-migration": 2,
+        "research-report-migration": 3,
+        "migration-recovery": 2
+      },
+      "log_sha256_prefix": "52e759bfa378b61c"
+    },
+    {
+      "gate": "cell: security/isolation specs on real PG",
+      "lane": "persistence-vs-api",
+      "result": "PASS",
+      "breakdown": {
+        "auth": 16,
+        "mutation-security": 7,
+        "governance-token": 3,
+        "a4-owner-access": 33,
+        "local-read-authority": 4,
+        "research-bounded-read": 3
+      },
+      "research_controller_specs": {
+        "research-release-candidate-publication.controller": 5,
+        "research-current-source.controller": 4,
+        "research-progress.controller": 2,
+        "research-freeze.controller": 3,
+        "research-compare.controller": 3,
+        "research-release-candidate.controller": 3,
+        "research-report.controller": 2,
+        "research-evidence.controller": 2,
+        "research-replay.controller": 2,
+        "research-run-library.controller": 2,
+        "research-search.controller": 2,
+        "research-lineage.controller": 2,
+        "research-split.controller": 2
+      },
+      "research_controller_count_note": "13 research controller spec files, 34 tests (A2-report §2 is authoritative; fable-notes Q1)",
+      "log_sha256_prefix": "52e759bfa378b61c",
+      "research_controller_files": 13,
+      "research_controller_tests": 34
+    },
+    {
+      "gate": "cell: pg_dump -> createdb portal_control_restore -> pg_restore --exit-on-error -> 56-relation signature compare",
+      "lane": "persistence-vs-api",
+      "result": "PASS",
+      "scope": "DB relation-count signature only; no artifact bytes; signature values not printed by the script; evidence = final line + exit 0",
+      "log_sha256_prefix": "1a8633f3b15c8ac2"
+    },
+    {
+      "gate": "packages/contracts npm test",
+      "result": "PASS",
+      "exit": 0,
+      "files": 14,
+      "passed": 177,
+      "log_sha256_prefix": "c2773fa9232897ef",
+      "time_sha256_prefix": "e4356b52a26396f8"
+    },
+    {
+      "gate": "packages/contracts python3 tooling/snapshot.py --check",
+      "result": "PASS",
+      "exit": 0,
+      "note": "contracts-snapshot.json matches all 198 tracked files",
+      "log_sha256_prefix": "92e2c08c5a19bae5"
+    },
+    {
+      "gate": "apps/control-api npm run build",
+      "result": "PASS",
+      "exit": 0,
+      "log_sha256_prefix": "c088c0dc82ea4305"
+    },
+    {
+      "gate": "apps/control-api npm run typecheck",
+      "result": "FAIL_PREEXISTING",
+      "exit": 2,
+      "errors": 80,
+      "note": "0 errors in src / 0 in branch-changed files; 80 inherited test-only errors incl. 9 in 2 baseline research specs (research-compare.service.spec.ts x8 TS2345, research-replay.service.spec.ts x1 TS2322; unchanged since a5455848)",
+      "log_sha256_prefix": "1da219695bda6984"
+    },
+    {
+      "gate": "apps/portal/frontend npx tsc -b --noEmit",
+      "result": "PASS",
+      "exit": 0,
+      "errors": 0,
+      "log_sha256_prefix": "93ff7811a209e2a8"
+    },
+    {
+      "gate": "apps/portal/frontend npm run build",
+      "result": "PASS",
+      "exit": 0,
+      "duration": "11.52 s (vite)",
+      "dist": "9.9M before and after (fe-dist-before/after f55821759c71ef6b)",
+      "assets": 306,
+      "chunk_warning": [
+        "theme-rGMznbzU.js 741.77 kB",
+        "chunk-KEIR6QF5-BICK3FdT.js 662.09 kB",
+        "QuantBTModule-D1R5TSR0.js 566.85 kB",
+        "screenContracts-Dxm3jnuK.js 538.11 kB"
+      ],
+      "log_sha256_prefix": "ee1ce428991d77e7"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run (run 1)",
+      "lane": "api-vs-ui-unit (typed bodies, not the api-vs-ui lane)",
+      "result": "FAIL_KNOWN",
+      "exit": 1,
+      "files": 173,
+      "files_failed": 2,
+      "files_passed": 171,
+      "tests": 3156,
+      "passed": 3153,
+      "failed": 2,
+      "skipped": 1,
+      "failures": [
+        "src/execution/r2Ledger.test.ts > R2-0 · capability inventory > covers exactly the routes the controllers publish (CG-P22-C)",
+        "src/app/PortalShell.test.tsx > embedding (U04/U05) > mounts QuantBT under its canonical route with no nested topbar (S01-RUNLIBRARY-PAGE-GUARD)"
+      ],
+      "log_sha256_prefix": "419a6db02f42b441",
+      "stderr_sha256_prefix": "12daeae4ad2ff190",
+      "clean_log_sha256_prefix": "133d9c9fe2a8814e"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run (run 2)",
+      "result": "FAIL_KNOWN",
+      "exit": 1,
+      "files": 173,
+      "files_failed": 2,
+      "passed": 3153,
+      "failed": 2,
+      "skipped": 1,
+      "note": "same 2 failures",
+      "log_sha256_prefix": "6180b15ce04782e7"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run src/app/PortalShell.test.tsx (isolated x2)",
+      "result": "PASS",
+      "exit": 0,
+      "passed": "18/18 each run",
+      "log_sha256_prefix": [
+        "4f81739ee783ac89",
+        "77ba56c7f51772a0"
+      ]
+    },
+    {
+      "gate": "features/roadmap-task-board/frontend npm run typecheck",
+      "result": "PASS",
+      "exit": 0,
+      "errors": 0,
+      "log_sha256_prefix": "c732e4c362b45141"
+    },
+    {
+      "gate": "features/roadmap-task-board/frontend npm test",
+      "result": "PASS",
+      "exit": 0,
+      "files": 17,
+      "passed": 99,
+      "log_sha256_prefix": "30f22d4767ebe8a7"
+    },
+    {
+      "gate": "features/roadmap-task-board/frontend npm run build",
+      "result": "PASS",
+      "exit": 0,
+      "duration": "2.23 s",
+      "dist": "4.0M (git-ignored, new)",
+      "chunk_warning": [
+        "chunk-KEIR6QF5-BICK3FdT.js 662.09 kB"
+      ],
+      "log_sha256_prefix": "b7219117581d6651"
+    },
+    {
+      "gate": "GX: git diff --stat a5455848 HEAD -- apps/control-api/src/{governance,facade,repos,execution,auth} apps/portal/strategy apps/portal/backend",
+      "result": "PASS",
+      "note": "empty (0 bytes)",
+      "log_sha256_prefix": "e3b0c44298fc1c14"
+    },
+    {
+      "gate": "GX: sha256sum apps/portal/strategy/main.py == PROTECTED_SHA256",
+      "result": "PASS",
+      "note": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
+      "log_sha256_prefix": "d44dad89a66db88c"
+    },
+    {
+      "gate": "GX: listeners ss -ltnp before vs after (A2)",
+      "result": "PASS",
+      "note": "no listener from A2; new 127.0.0.1:4417 = package A1 vite preview; 5217/55464 owned by another user",
+      "log_sha256_prefix": [
+        "44c2856de67dbbb7",
+        "2092b0f8701f1ef0"
+      ]
+    },
+    {
+      "gate": "GX: rootless Docker, no sudo",
+      "result": "PASS",
+      "note": "SecurityOptions name=rootless; script sudo fallback not reached",
+      "log_sha256_prefix": "e65110cfae331b77"
+    },
+    {
+      "gate": "git status --short at A2 start / end",
+      "result": "PASS",
+      "note": "start empty; end = 2 untracked A1 runner paths only (not A2)",
+      "log_sha256_prefix": [
+        "e65110cfae331b77",
+        "777223902d15f3dc"
+      ]
+    },
+    {
+      "gate": "B0: HEAD + clean tree at B start",
+      "result": "PASS",
+      "note": "HEAD 35d0c86176ca96dcb396e85329f9367d9600db17; status clean apart from the previous B agent's leftover temp config (resumed run)",
+      "log_sha256_prefix": "495bda976e3b44a8"
+    },
+    {
+      "gate": "B1a: FE build flag off (VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=true VITE_EXECUTION_PREVIEW_ENABLED=false npm run build)",
+      "result": "PASS",
+      "exit": 0,
+      "dist_digest": "68ee0a01d1053b61",
+      "note": "chunk-size warning only; reused from the previous B agent after the dist digest was recomputed and matched",
+      "log_sha256_prefix": "cd3990d0126c6f92"
+    },
+    {
+      "gate": "B1b: EXECUTION_REGRESSION chromium project (flag off) on 4417, temp config, updateSnapshots none, retries 0",
+      "lane": "EXECUTION_REGRESSION (contributor preview; not browser-real)",
+      "result": "FAIL (visual baseline mismatch on contributor host, deterministic, cause NOT diagnosed)",
+      "exit": 1,
+      "files": 5,
+      "tests": 248,
+      "passed": 220,
+      "failed": 28,
+      "skipped": 0,
+      "flaky": 0,
+      "duration": "12.0 min, 4 workers",
+      "failure_class": "all 28 are toHaveScreenshot mismatches vs Bobby's immutable *-chromium-linux.png baselines (last changed 7441c572, 2026-09-17), ratio 0.01–0.05, several 1–2 px height drift, largest phase-2-gate-r1 @ laptop 973x4205 -> 973x4159 (0.05); every non-screenshot test passed",
+      "debt": "S06-VISUAL-BASELINE-HOST-DRIFT",
+      "bobby_decision": "B-P23-06",
+      "log_sha256_prefix": "d4fd43c2fd68a40e"
+    },
+    {
+      "gate": "B1b rerun of the 28 failed (1 worker)",
+      "result": "FAIL, identical (28/28, same pixel counts)",
+      "log_sha256_prefix": "1c583f7fc5142dfb"
+    },
+    {
+      "gate": "B2a: FE build flag on (VITE_EXECUTION_PREVIEW_ENABLED=true VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=true npx vite build --outDir dist-preview)",
+      "result": "PASS",
+      "exit": 0,
+      "duration": "8.03 s",
+      "dist_preview_digest": "cd3006f4b7d4ba3f",
+      "log_sha256_prefix": "dd1b057260270df3"
+    },
+    {
+      "gate": "B2b: EXECUTION_REGRESSION chromium-preview project (flag on) on 4417",
+      "lane": "EXECUTION_REGRESSION (contributor preview; not browser-real)",
+      "result": "FAIL (visual baseline mismatch on contributor host, deterministic, cause NOT diagnosed)",
+      "exit": 1,
+      "files": 3,
+      "tests": 100,
+      "passed": 79,
+      "failed": 5,
+      "skipped": 16,
+      "skipped_reason": "el-v2-evidence-shots.spec.ts test.skip unless EL_V2_SHOTS=1 (by design)",
+      "flaky": 0,
+      "duration": "4.3 min",
+      "failure_class": "all 5 are toHaveScreenshot mismatches vs *-chromium-preview-linux.png (EL-V2-04 exit-review-EX-771 0.02; EL-V2-05 r1-AP-201, r2-AP-352; EL-V2-07 incident-inc_fixture_44, gov-waivers 0.01)",
+      "debt": "S06-VISUAL-BASELINE-HOST-DRIFT",
+      "bobby_decision": "B-P23-06",
+      "log_sha256_prefix": "c397389c0bc7d8eb"
+    },
+    {
+      "gate": "B2b rerun of the 5 failed (1 worker)",
+      "result": "FAIL, identical (5/5)",
+      "log_sha256_prefix": "58877e030117715e"
+    },
+    {
+      "gate": "B3a: Planning build (tsc -b && vite build)",
+      "result": "PASS",
+      "exit": 0,
+      "log_sha256_prefix": "bf580155164fa8ee"
+    },
+    {
+      "gate": "B3b: Planning e2e on 4417 (temp config)",
+      "result": "PASS",
+      "exit": 0,
+      "files": 1,
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "log_sha256_prefix": "541af0d285ba80d1"
+    },
+    {
+      "gate": "B4a run 1: committed research probe (temp copy of playwright.research-probe.config.ts, baseURL 4417)",
+      "lane": "visual-fixture",
+      "result": "FAIL (environment, not product)",
+      "exit": 1,
+      "tests": 82,
+      "passed": 49,
+      "failed": 33,
+      "note": "all 33 = EACCES writing /tmp/research-shots (owned by bobby); nothing written there",
+      "log_sha256_prefix": "f8b685f1f0aea36a"
+    },
+    {
+      "gate": "B4a run 2: same, RESEARCH_SHOT_DIR=~/tv-shots/p23/final/research-probe-shots",
+      "lane": "visual-fixture",
+      "result": "PASS (fixture)",
+      "exit": 0,
+      "files": 2,
+      "tests": 82,
+      "passed": 82,
+      "failed": 0,
+      "breakdown": {
+        "fixtures": 8,
+        "product": 74
+      },
+      "duration": "1.2 min",
+      "log_sha256_prefix": "055254841fdae356"
+    },
+    {
+      "gate": "B4b: P23 qualification runner (RESEARCH_QUAL_BASE_URL=http://127.0.0.1:4417 P23_SHOT_DIR=~/tv-shots/p23/final/shots, playwright.research-qualification.config.ts --workers=1)",
+      "lane": "visual-fixture",
+      "result": "FAIL (attributed VD-P23-01..04)",
+      "exit": 1,
+      "files": 5,
+      "tests": 78,
+      "passed": 47,
+      "failed": 31,
+      "flaky": 0,
+      "skipped": 0,
+      "duration": "12.7 min",
+      "per_spec": {
+        "_probe-p23-matrix": "30/60 (FAIL attributed VD-P23-01..03)",
+        "_probe-p23-load": "1/1",
+        "_probe-p23-interaction": "7/7",
+        "_probe-p23-cycles": "1/1",
+        "_probe-p23-stale": "8/9 (FAIL attributed VD-P23-04)"
+      },
+      "matrix_error_lines": {
+        "total": 123,
+        "VD-P23-01 server prose rendered on screen": 81,
+        "VD-P23-02 session-expired copy on screen": 30,
+        "VD-P23-03 404 copy equals 403 copy (F-04)": 12,
+        "identical_to_A1_after_sort": true
+      },
+      "report_json_sha256_prefix": "cfc1e4a836fe19b8",
+      "load_samples_sha256_prefix": "2a9bad27eda1c525",
+      "cycles_sha256_prefix": "a77bace5437ba7d9",
+      "interaction_sha256_prefix": "c7a603a5f58c65b8",
+      "stale_sha256_prefix": "4b10bc90871e7297",
+      "errors_txt_sha256_prefix": "740ce3360848ebb0",
+      "log_sha256_prefix": "25c18c7845ae945e"
+    },
+    {
+      "gate": "B4b rerun: matrix spec alone",
+      "result": "FAIL, identical (30/60, same 123 error lines)",
+      "report_json_sha256_prefix": "b063568ffb620bf2",
+      "log_sha256_prefix": "f1060e6aa772df8d"
+    },
+    {
+      "gate": "B4b rerun: stale spec alone",
+      "result": "FAIL, identical (8/9, s04 retained); stale.json byte-identical",
+      "report_json_sha256_prefix": "c8d13487d5f80ec2",
+      "stale_sha256_prefix": "4b10bc90871e7297",
+      "log_sha256_prefix": "fa031c2e3c8ef1e5"
+    },
+    {
+      "gate": "B5: runner isolation from the immutable visual baseline (--list only)",
+      "result": "PASS",
+      "note": "main playwright.config.ts 348 tests / 8 files, 0 research-qualification and 0 p23 entries; research-probe 82 / 2, 0 p23; qualification 78 / 5; spec-file overlap main vs qualification = 0",
+      "log_sha256_prefix": [
+        "2901eb16cadd149c",
+        "204ef2832d43e4de",
+        "a1f1720020ebbb48"
+      ]
+    },
+    {
+      "gate": "B6: browser RSS sampler during B4b",
+      "result": "MEASURED (not a gate)",
+      "note": "151 samples / 5 s; max 6124 MB (28 procs) during 20-context load; plateau ≈ 1.0 GB; one chromium, 20 contexts, summed RSS upper bound, contributor host",
+      "log_sha256_prefix": "e402c8326874ad2e"
+    },
+    {
+      "gate": "B7: cleanup",
+      "result": "PASS",
+      "note": "4 temp configs copied (digests match) then deleted; dist-preview removed; git status --short empty; 4417 free; 4317–4320 still listening untouched; hashes.txt 593 files / 328 PNG",
+      "log_sha256_prefix": "4be4de7f3153efd9",
+      "hashes_txt_sha256_prefix": "e7445206683dc877"
+    }
+  ],
+  "guide_tests": [
+    {
+      "id": "P23-T01",
+      "guide_title": "Mixed load20users trong aggregate5GB.",
+      "lane": "visual-fixture (client half)",
+      "status": "PARTIAL",
+      "half_run": "20 concurrent contexts (distinct identities qual-user-01…20) walking 01→03→04→06→08→09→11 on the fixture lane (_probe-p23-load): 140/140 rendered, writes 0, p50 3431–6376 ms, p95 5877–7074 ms (s04 34132 ms inflated by 3 no-finish-event samples, max real 7080 ms), heap max 38.2 MB, DOM max 1051 — client cost on a contributor host under other load",
+      "half_not_run": "API p95 gate and aggregate 5 GB NOT measured (CG-P23-01)",
+      "evidence": "load-samples.json 2a9bad27eda1c525; pw-p23.log 25c18c7845ae945e"
+    },
+    {
+      "id": "P23-T02",
+      "guide_title": "Repeated jobs không tăng memory vô hạn sau warmup.",
+      "lane": "visual-fixture (browser analog)",
+      "status": "PARTIAL",
+      "half_run": "browser-side 30 cycles 04→08→06 with forced GC (_probe-p23-cycles): baseline 5.6 MiB, first-5 mean 8.39 MiB, last-5 mean 9.59 MiB, max 10.23 MiB, growth +14.2 % (WITHIN_25_PERCENT), DOM flat",
+      "half_not_run": "service-side repeated jobs / RSS / FD NOT run (needs the stack, CG-P23-01)",
+      "evidence": "cycles.json a77bace5437ba7d9",
+      "note": "cell container memory is not cited here (fable-notes Q7); it is in resources.cell_containers only"
+    },
+    {
+      "id": "P23-T03",
+      "guide_title": "Disk high-water/full có behavior bounded.",
+      "lane": "—",
+      "status": "BLOCKED",
+      "reason": "stack (CG-P23-01)"
+    },
+    {
+      "id": "P23-T04",
+      "guide_title": "Process/DB/NATS outages được recovery.",
+      "lane": "—",
+      "status": "BLOCKED",
+      "reason": "stack (CG-P23-01); migration-recovery.spec.ts PASS in the cell is informational only, not an outage drill"
+    },
+    {
+      "id": "P23-T05",
+      "guide_title": "IDOR/cache/files/exports tenant isolation.",
+      "lane": "persistence-vs-api + visual-fixture",
+      "status": "PARTIAL (FE half FAIL-attributed)",
+      "half_run": "API/DB half PASS in the disposable PG cell: auth 16, mutation-security 7, governance-token 3, a4-owner-access 33, local-read-authority 4, research-bounded-read 3, 13 research controller specs (34 tests)",
+      "fe_half": "matrix denied/expired cells: writes 0 PASS, but 403=404 copy FAIL (VD-P23-03, 12 lines), session-expired FAIL (VD-P23-02, 30 lines), server prose FAIL (VD-P23-01, 81 lines) — FAIL (fixture, attributed)",
+      "half_not_run": "files/exports/cache isolation NOT (CG-P23-02)",
+      "evidence": "cell.log 1a8633f3b15c8ac2; cell-files.md 52e759bfa378b61c; pw-p23.log 25c18c7845ae945e; matrix-stale-errors.txt 740ce3360848ebb0"
+    },
+    {
+      "id": "P23-T06",
+      "guide_title": "Corrupt part và restore có hash verification.",
+      "lane": "persistence-vs-api",
+      "status": "PARTIAL",
+      "half_run": "pg_dump/pg_restore 56-relation signature drill PASS (DB only; signature values not printed by the script)",
+      "half_not_run": "corrupt part / artifact half NOT (CG-P23-03)",
+      "evidence": "cell.log 1a8633f3b15c8ac2"
+    },
+    {
+      "id": "P23-T07",
+      "guide_title": "Engine upgrade/default rollback/in-flight pinning đúng.",
+      "lane": "—",
+      "status": "BLOCKED",
+      "reason": "stack (CG-P23-01)"
+    },
+    {
+      "id": "P23-T08",
+      "guide_title": "Cold-cache measurement không ảnh hưởng shared execution host.",
+      "lane": "—",
+      "status": "BLOCKED",
+      "reason": "needs an execution host (:8090 is Bobby's) + stack (CG-P23-04); never drop_caches on the shared host"
+    },
+    {
+      "id": "P23-T09",
+      "guide_title": "Research load không thay execution behavior hoặc quyền.",
+      "lane": "static + EXECUTION_REGRESSION (contributor preview)",
+      "status": "PARTIAL: non-screenshot regression PASS flag-off/on; 33 screenshot cells FAIL (S06)",
+      "half_run": "static: protected diff a5455848..HEAD empty (e3b0c44298fc1c14), kernel checksum match (d44dad89a66db88c); EXECUTION_REGRESSION chromium flag off 220/248 + chromium-preview flag on 79/100 (16 skipped by design): every non-screenshot test passed, 28 + 5 = 33 toHaveScreenshot cells FAIL on the contributor host (S06-VISUAL-BASELINE-HOST-DRIFT, B-P23-06)",
+      "half_not_run": "dynamic coupling under Research load NOT measured (CG-P23-04)",
+      "evidence": "pw-exec-off.log d4fd43c2fd68a40e; pw-exec-on.log c397389c0bc7d8eb"
+    },
+    {
+      "id": "P23-T10",
+      "guide_title": "Toàn bộ required regression suites chạy và có raw results.",
+      "lane": "static/unit + visual-fixture/EXECUTION_REGRESSION on the contributor preview (NOT browser-real)",
+      "status": "FAIL (2 attributed unit + 33 visual-baseline, S06)",
+      "detail": "unit: r2Ledger (CG-P22-C) + PortalShell (S01-RUNLIBRARY-PAGE-GUARD); visual: 28 chromium + 5 chromium-preview toHaveScreenshot cells (S06-VISUAL-BASELINE-HOST-DRIFT, B-P23-06)",
+      "other_gates": "A2: cell 117/117 · 834/834, contracts 177/177, snapshot 198, control-api build 0, FE tsc 0, FE build 0, Planning typecheck/test/build 0; control-api typecheck FAIL_PREEXISTING (0 errors in src / 0 in branch-changed files; 80 inherited test-only errors incl. 9 in 2 baseline research specs). B: Planning build + e2e 2/2 PASS, research probe 82/82 PASS (fixture); raw-result digests in gates",
+      "not_run": "Python backend lane (CG-P23-05)"
+    },
+    {
+      "id": "P23-T11",
+      "guide_title": "20users inspection/slider/far-seek đồng thời không tạo implicit heavy jobs; aggregate5GB vẫn đo đúng.",
+      "lane": "visual-fixture",
+      "status": "PARTIAL",
+      "half_run": "fixture lane asserts writes = 0 and bounded GETs per action: interaction 15/15 rows within budget (_probe-p23-interaction), load 20 contexts writes 0 (_probe-p23-load)",
+      "half_not_run": "aggregate 5 GB NOT measured (CG-P23-01)",
+      "evidence": "interaction.json c7a603a5f58c65b8; load-samples.json 2a9bad27eda1c525"
+    },
+    {
+      "id": "P23-T12",
+      "guide_title": "Audit/what-if/verify/export cạnh primary đều qua quotas/backpressure; no API-process bypass.",
+      "lane": "—",
+      "status": "BLOCKED",
+      "reason": "stack (CG-P23-01); research-bounded-read.spec.ts (RS-01 admission) in the cell = unit evidence only"
+    },
+    {
+      "id": "P23-T13",
+      "guide_title": "Upgrade new route/default không auto-enable unsupported mapper hoặc làm reproduce đổi semantics.",
+      "lane": "—",
+      "status": "BLOCKED",
+      "reason": "stack (CG-P23-01)",
+      "reused_verified_reference": "REUSED_VERIFIED reference only: S12 capability-reason unit tests from P09 (informational, not this test)"
+    },
+    {
+      "id": "P23-T14",
+      "guide_title": "Restore/GC giữ exposure, final-audit child target, selection/null-trial và publication source pins.",
+      "lane": "—",
+      "status": "BLOCKED",
+      "reason": "the DB signature drill (P23-T06) is a prerequisite, not pin-content verification (CG-P23-03)"
+    },
+    {
+      "id": "P23-T15",
+      "guide_title": "Browser reveal/cursor/deep-link tests pass cùng cold-cache workload; no future-state or cross-run leakage.",
+      "lane": "visual-fixture",
+      "status": "PARTIAL/FAIL",
+      "half_run": "deep-link/back/forward/reload/cursor PASS (fixture, 180/180 cells, _probe-p23-matrix); cross-run leakage FAIL on 04 (VD-P23-04: A1 3/3, B 2/2 = run + rerun), 09/11 PASS (_probe-p23-stale 8/9)",
+      "half_not_run": "cold-cache workload NOT (CG-P23-01)",
+      "evidence": "stale.json 4b10bc90871e7297; pw-p23-rerun-stale.log fa031c2e3c8ef1e5"
+    },
+    {
+      "id": "V11-P23-DR",
+      "lane": "delta-real-data",
+      "status": "BLOCKED",
+      "reason": "no stack"
+    },
+    {
+      "id": "V11-P23-BR",
+      "lane": "visual-fixture",
+      "status": "PASS (fixture receipt: lane visual-fixture, URL 127.0.0.1:4417, build 35d0c861, dist digest 68ee0a01d1053b61, 45 shots, assertions listed)",
+      "note": "fixture lane receipt — never 'browser-real PASS'",
+      "evidence": "B-report 6095bdf044542e4a; shots digests in the receipt §6"
+    },
+    {
+      "id": "V11-P23-GX",
+      "lane": "static GX (the dev-host-review lane is NOT claimed)",
+      "status": "PASS with open debt",
+      "note": "no-debt check fails by design: open debt exists (S01…S06, CG-P22-C, CG-P23-01…05)",
+      "evidence": "gx-protected-diff e3b0c44298fc1c14, gx-kernel d44dad89a66db88c"
+    }
+  ],
+  "workload_matrix": [
+    {
+      "id": "W00",
+      "workload": "technical fixture 2k–5k bars, deterministic signal",
+      "status": "PARTIAL",
+      "reason": "engine/backend fixture lane NOT_RUN (python lane needs .venv, CG-P23-05); FE fixture-lane screens for the same contract shapes PASS (fixture): research probe 82/82, matrix healthy state 15/15 screens × 3 widths"
+    },
+    {
+      "id": "W01",
+      "workload": "one real alpha, real data snapshot, ~50 trials",
+      "status": "BLOCKED",
+      "reason": "needs Research stack (CG-P23-01)"
+    },
+    {
+      "id": "W02",
+      "workload": "WFO valid schedule, 20–40 folds real data",
+      "status": "BLOCKED",
+      "reason": "stack"
+    },
+    {
+      "id": "W03",
+      "workload": "reactive/event strategy runtime/retention",
+      "status": "BLOCKED",
+      "reason": "stack"
+    },
+    {
+      "id": "W04",
+      "workload": "portfolio/package multi-symbol variants",
+      "status": "BLOCKED",
+      "reason": "stack"
+    },
+    {
+      "id": "W05",
+      "workload": "storage-only 100k trials / 1M replay rows",
+      "status": "BLOCKED",
+      "reason": "stack + seeded ledger"
+    },
+    {
+      "id": "W06",
+      "workload": "20 authenticated users reads + heavy queue at 5 GB",
+      "status": "PARTIAL",
+      "reason": "client half only: 20 contexts fixture lane (_probe-p23-load); API p95/queue/5 GB NOT measured"
+    },
+    {
+      "id": "W07",
+      "workload": "slow export + long seek + compute + projection",
+      "status": "PARTIAL",
+      "reason": "seek request budgets asserted in fixture lane (_probe-p23-interaction); export/compute backpressure NOT"
+    },
+    {
+      "id": "W08",
+      "workload": "repeated complete/fail/cancel cycles, RSS/FD growth",
+      "status": "PARTIAL",
+      "reason": "browser-side 30-cycle heap sample only (_probe-p23-cycles); service RSS/FD NOT"
+    },
+    {
+      "id": "W09",
+      "workload": "crash/storage/DB-NATS faults + restore + historical read",
+      "status": "PARTIAL",
+      "reason": "pg_dump/pg_restore 56-relation signature drill in disposable cell; NATS/artifact faults NOT"
+    },
+    {
+      "id": "W10",
+      "workload": "engine additive-field fixture + newer build, old artifacts unchanged",
+      "status": "BLOCKED",
+      "reason": "needs a validated newer engine build + stack (CG-P23-01)"
+    }
+  ],
+  "resources": {
+    "label": "contributor host; not the Research stack cgroup; 5 GB gate NOT measured",
+    "host": {
+      "nproc": 8,
+      "mem_total_mib": 32092,
+      "swap_mib": 0,
+      "free_m_used_available_before_mib": "12525 / 17926",
+      "free_m_used_available_after_mib": "14155 / 16288",
+      "free_m_during_cell_mib": "used 11864–14743, available 15053–18565 (45 samples)",
+      "df_tmp_before": "338G used / 283G avail (55 %)",
+      "df_tmp_after": "339G used / 282G avail (55 %)",
+      "load_avg_note": "FE/Planning steps overlapped A1 preview/browser work (load avg 12–14 on 8 cores)",
+      "evidence": {
+        "env-before.txt": "e65110cfae331b77",
+        "env-after.txt": "777223902d15f3dc",
+        "df-tmp-before.txt": "74caf34fc9639e5f",
+        "df-tmp-after.txt": "a50549c4a25cf924"
+      }
+    },
+    "cell_containers": {
+      "label": "contributor host; not the Research stack cgroup; 5 GB gate NOT measured",
+      "sampler": "docker stats --no-stream every 10 s, containers control-api-test-*",
+      "control-api-test-node-2047887": {
+        "max_mem": "674.0 MiB @ 07:44:44Z (tsc build phase)",
+        "max_cpu": "202.2 %",
+        "samples": 39
+      },
+      "control-api-test-postgres-2047887": {
+        "max_mem": "816.0 MiB @ 07:47:08Z (includes the 2 GiB-cap tmpfs data dir charged to the container cgroup)",
+        "max_cpu": "100.4 %",
+        "samples": 40
+      },
+      "not_sampled": "unnamed npm ci prep container (--rm, outside the name filter)",
+      "evidence": "cell-stats.csv 79e2a89dc1d5951e"
+    },
+    "time_v_peak_rss_kb": {
+      "label": "contributor host; not the Research stack cgroup; 5 GB gate NOT measured; time -v peak = largest single process in the tree, not the sum",
+      "build": {
+        "control-api npm run build": 769728,
+        "FE npm run build": 1025912,
+        "Planning npm run build": 430032
+      },
+      "test": {
+        "contracts npm test": 163472,
+        "FE npx vitest run": 462612,
+        "FE npx vitest run (rerun)": 416156,
+        "Planning npm test": 204928
+      },
+      "static": {
+        "contracts snapshot.py --check": 15868,
+        "control-api npm run typecheck": 820772,
+        "FE npx tsc -b --noEmit": 1070436,
+        "Planning npm run typecheck": 253904
+      },
+      "cell_wrapper": {
+        "bash scripts/control-api-test.sh": 44412,
+        "note": "wrapper + docker CLI only, not the cell; cell memory = cell_containers"
+      },
+      "wall": {
+        "cell": "8:47.34",
+        "contracts test": "0:03.45",
+        "snapshot": "0:00.05",
+        "ca build": "0:18.23",
+        "ca typecheck": "0:23.75",
+        "FE tsc": "0:57.41",
+        "FE build": "1:34.96",
+        "FE vitest": "2:24.38",
+        "FE vitest rerun": "1:45.02",
+        "Planning typecheck": "0:06.13",
+        "Planning test": "0:12.24",
+        "Planning build": "0:07.93"
+      }
+    },
+    "browser_rss": {
+      "label": "one chromium, 20 contexts, summed RSS upper bound, contributor host; not a cgroup, fixture lane, not a gate",
+      "sampler": "B rss-sampler.sh, 151 samples every 5 s, 15:23:57Z–15:36:39Z, own-uid chrome/chromium/headless_shell/chrome-headless/node",
+      "max": "6124 MB (6 270 716 kB, 28 processes) at 15:25:34Z during the 20-context load",
+      "plateau": "median ≈ 1.0 GB in each third (1010 / 996 / 996 MB); peaks 1106 / 1132 MB during matrix and stale",
+      "literal_ps_C_column_max": "3650 MB (misses chrome-headless, includes other users' node; reference only)",
+      "harness_rss_from_load_samples": "before 313 MB (6 procs) → 20 contexts open 2033 MB (26) → after the walk 5166 MB (26)",
+      "a1_first_run": "309 → 1980 → 4308 MB (A1, same method, first run)",
+      "host_free_m": "used 12 237–15 641 MB, available min 14 757 MB of 32 092 MB",
+      "evidence": "browser-rss.csv e402c8326874ad2e"
+    },
+    "client_cost": {
+      "label": "fixture lane client cost only on a contributor host under other load, not API latency; never compare with the §16.3 API p95 gate",
+      "load_p50_ms": {
+        "01": 6376,
+        "03": 6018,
+        "04": 5996,
+        "06": 5508,
+        "08": 6350,
+        "09": 6127,
+        "11": 3431
+      },
+      "load_p95_ms": {
+        "01": 6490,
+        "03": 6315,
+        "04": 34132,
+        "06": 5877,
+        "08": 6505,
+        "09": 7074,
+        "11": 6561
+      },
+      "load_p95_note": "s04 p95 inflated by 3 no-finish-event samples (qual-user-01 32946 ms, -06 34158 ms, -03 34132 ms; 30000 ms harness wait on GET /api/runs); excluding them the max sample is 7080 ms",
+      "heap_max_mb": 38.2,
+      "dom_max": 1051,
+      "rendered": "140/140",
+      "writes": 0,
+      "interaction": "15/15 rows within budget",
+      "cycles_growth_pct": 14.2,
+      "cycles_finding": "WITHIN_25_PERCENT",
+      "a1_first_run": "p50 about 1–1.7 s lower on most screens (e.g. 01 5688, 04 4272), p95 ≤ 6.1 s, cycles +14.0 %; same findings",
+      "provisional_thresholds": "DOM ≤ 8000, heap ≤ 200 MB from apps/portal/frontend/e2e/execution-journeys.spec.ts:771–772 (B-P23-03)"
+    }
+  },
+  "resource_cleanup": {
+    "form": "RS-01 research.rs01-resource-cleanup.v1",
+    "schema_version": "research.p23-thanhvuong-resource-cleanup.v1",
+    "phase": "P23",
+    "resources_created": [
+      "containers control-api-test-node-2047887 and control-api-test-postgres-2047887 (scripts/control-api-test.sh), removed by EXIT trap",
+      "network control-api-test-net-2047887 (--internal, no host port), removed by EXIT trap",
+      "unnamed npm ci prep container (--rm), self-removed",
+      "script mktemp -d directory (deps + staged work copy), removed by EXIT trap",
+      "PostgreSQL data in a 2 GiB tmpfs inside the PG container, gone with the container",
+      "images postgres@sha256:44c4ee98…eac6 (420 MB) and node@sha256:c610fcdf…3aa32 (232 MB) pulled by digest — RETAINED_IMAGES",
+      "A2 docker stats sampler, killed by PID"
+    ],
+    "retained": [
+      {
+        "kind": "RETAINED_IMAGES",
+        "what": "postgres@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6 (420 MB), node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 (232 MB)",
+        "where": "rootless image store /home/thanhvuong/.local/share/docker",
+        "reason": "the script does not remove images; reused on rerun; no docker rmi, no prune (forbidden)"
+      }
+    ],
+    "post_run_verification": "docker ps -a empty; docker network ls = bridge/host/none (cleanup-after.txt 3e25f93476923680); find /tmp -maxdepth 1 -name 'tmp.*' -user thanhvuong empty; tmp.* count 43 -> 42 -> 44 changes are other users' dirs (bobby 08:02:45, root 08:05:31); no lingering docker stats / run-cell process",
+    "cleanup_action": "NO_BROAD_PRUNE_REQUIRED",
+    "package_b": {
+      "preview_pids_killed": "by explicit PID, never pkill: leftover gate 1 2730172/2730171/2730092; gate 2 4181108/4181107/4181092; gate 3 18303/18302/18203; gate 4 20871/20870/20815; RSS sampler 34415 exited on its stop file",
+      "port_4417_free": true,
+      "ports_4317_4320": "not touched, still listening (4/4)",
+      "temp_configs_copied_and_deleted": true,
+      "dist_preview_removed": "yes (ignored, 9.8 MB, did not exist before gate 2)",
+      "dist_flag_off_retained": "apps/portal/frontend/dist (ignored) remains as built in gate 1; Planning dist (ignored) rebuilt in gate 3",
+      "stray_file": "/tmp/p23b-list-unused/playwright-report.json moved to ~/tv-shots/p23/final/list-qual-report.json, directory removed",
+      "nothing_written_to": "/tmp/research-shots (bobby-owned)",
+      "git_status_empty": true,
+      "git_stash_entries": 0,
+      "hashes_txt": "~/tv-shots/p23/final/hashes.txt e7445206683dc877 (593 files, 328 PNG)",
+      "evidence": "temp-configs.txt 4be4de7f3153efd9"
+    },
+    "not_touched": [
+      "Bobby previews 4317–4320",
+      "listeners 8080/8081/8090/18081 and 55432",
+      "/home/bobby",
+      "shared services (no restart, no drop_caches)",
+      "dev/stable/production databases",
+      "runtime containers, volumes and images other than the script's own",
+      "ledger upgrade/upgrade_frontend_plan_hifi/**",
+      "visual baseline snapshots",
+      "Execution shared pool policy"
+    ]
+  },
+  "not_run": [
+    {
+      "gate": "Python backend lane apps/portal/scripts/test_backend.sh",
+      "reason": "needs a provisioned apps/portal/.venv with quantbt 1.1.1 (CG-P23-05); contributor installs nothing"
+    },
+    {
+      "gate": "V11-P23-DR / delta-real-data",
+      "reason": "no Research stack (CG-P23-01)"
+    },
+    {
+      "gate": "direct-vs-portal",
+      "reason": "no Research stack (CG-P23-01)"
+    },
+    {
+      "gate": "api-vs-ui",
+      "reason": "no Research stack; fixture stubs are not api-vs-ui"
+    },
+    {
+      "gate": "browser-real",
+      "reason": "no real stack behind a gateway; only a fixture-lane receipt"
+    },
+    {
+      "gate": "live dev-host smoke",
+      "reason": "no staging activation / dev host for contributors"
+    },
+    {
+      "gate": "P23-T03/T04/T07/T08/T12/T13 and the stack halves of T01/T02/T05/T06/T09/T11/T14/T15",
+      "reason": "see guide_tests; CG-P23-01…04"
+    },
+    {
+      "gate": "aggregate 5,000,000,000-byte measurement",
+      "reason": "no Research stack cgroup; every resource number is contributor-host scope"
+    },
+    {
+      "gate": "cell npm ci prep container memory",
+      "reason": "unnamed --rm container outside the sampler filter"
+    },
+    {
+      "gate": "Planning e2e in package A2",
+      "reason": "needs a port; owned by package B on 4417 — B ran it: 2/2 PASS (pw-planning.log 541af0d285ba80d1)"
+    },
+    {
+      "gate": "axe",
+      "reason": "axe-core not in the lock file (S11-AXE, carried)"
+    },
+    {
+      "gate": "dev-host-review lane",
+      "reason": "no live dev host / staging activation for contributors (Guide :2723)"
+    },
+    {
+      "gate": "diagnosis of the 33 EXECUTION_REGRESSION screenshot diffs",
+      "reason": "needs the baseline host / owner (B-P23-06); host font/rasteriser drift is a hypothesis, not evidence"
+    },
+    {
+      "gate": "regenerating or modifying any visual baseline",
+      "reason": "forbidden for contributors (updateSnapshots none)"
+    },
+    {
+      "gate": "FE vitest in package B",
+      "reason": "B scope = browser lanes; the PortalShell/r2Ledger history rests on the A2 runs"
+    }
+  ],
+  "temp_files": [
+    {
+      "path": "~/tv-shots/p23/a2/run-cell.sh",
+      "what": "A2 measurement wrapper (time -v + docker stats sampler), outside the repo",
+      "sha256_prefix": "8fd235d9abc33928",
+      "committed": false
+    },
+    {
+      "path": "apps/portal/frontend/playwright.p23-exec-off.config.ts -> ~/tv-shots/p23/final/playwright.p23-exec-off.config.ts.copy",
+      "sha256_prefix": "4dbd206bead39fc8",
+      "committed": false,
+      "removed_after_run": true,
+      "copy_digest_matches": true
+    },
+    {
+      "path": "apps/portal/frontend/playwright.p23-exec-on.config.ts -> ~/tv-shots/p23/final/playwright.p23-exec-on.config.ts.copy",
+      "sha256_prefix": "8ab39907a3a63355",
+      "committed": false,
+      "removed_after_run": true,
+      "copy_digest_matches": true
+    },
+    {
+      "path": "features/roadmap-task-board/frontend/playwright.p23-planning.config.ts -> ~/tv-shots/p23/final/playwright.p23-planning.config.ts.copy",
+      "sha256_prefix": "27b4af8f40121776",
+      "committed": false,
+      "removed_after_run": true,
+      "copy_digest_matches": true
+    },
+    {
+      "path": "apps/portal/frontend/playwright.p23-research-probe.config.ts -> ~/tv-shots/p23/final/playwright.p23-research-probe.config.ts.copy",
+      "sha256_prefix": "eaa92961d890ff97",
+      "committed": false,
+      "removed_after_run": true,
+      "copy_digest_matches": true
+    }
+  ],
+  "flaky": {
+    "flaky_tests": [],
+    "summary": "0 flakes in every lane (A2 and B); every failure reproduced on a rerun",
+    "rerun_identical": [
+      {
+        "what": "EXECUTION_REGRESSION chromium 28 failed",
+        "rerun": "1 worker, 28/28 identical pixel counts",
+        "log": "1c583f7fc5142dfb"
+      },
+      {
+        "what": "EXECUTION_REGRESSION chromium-preview 5 failed",
+        "rerun": "1 worker, 5/5 identical",
+        "log": "58877e030117715e"
+      },
+      {
+        "what": "P23 matrix 30 failed",
+        "rerun": "solo, 30/60, same 123 error lines (also = A1's after sort)",
+        "log": "f1060e6aa772df8d"
+      },
+      {
+        "what": "P23 stale 1 failed (s04 retained)",
+        "rerun": "solo, 8/9, stale.json byte-identical",
+        "log": "fa031c2e3c8ef1e5"
+      }
+    ],
+    "reclassified_not_flake": [
+      {
+        "test": "src/app/PortalShell.test.tsx > embedding (U04/U05) > mounts QuantBT under its canonical route with no nested topbar",
+        "history": [
+          {
+            "when": "P22 package A2",
+            "result": "recorded 'flaky at baseline' (P22 thanhvuong-test-results.json:627)"
+          },
+          {
+            "when": "P22 package B",
+            "result": "PASS"
+          },
+          {
+            "when": "P23 A2 full vitest run 1",
+            "result": "FAIL",
+            "log": "419a6db02f42b441"
+          },
+          {
+            "when": "P23 A2 full vitest run 2",
+            "result": "FAIL",
+            "log": "6180b15ce04782e7"
+          },
+          {
+            "when": "P23 A2 isolated run 1",
+            "result": "PASS 18/18",
+            "log": "4f81739ee783ac89"
+          },
+          {
+            "when": "P23 A2 isolated run 2",
+            "result": "PASS 18/18",
+            "log": "77ba56c7f51772a0"
+          },
+          {
+            "when": "P23 package B",
+            "result": "not run (B scope = browser lanes)"
+          }
+        ],
+        "classification": "not a flake: deterministic under full-suite load/order (catch-all stub [] -> RunLibrary.tsx:784 TypeError); full suite 2/2 FAIL vs isolated 2/2 PASS; debt S01-RUNLIBRARY-PAGE-GUARD"
+      }
+    ]
+  },
+  "evidence_store": {
+    "location": "~/tv-shots/p23/a2/ (A2), ~/tv-shots/p23/a1/ (A1 first run), ~/tv-shots/p23/final/ (B, final head 35d0c861); not committed",
+    "hash_manifest": "~/tv-shots/p23/final/hashes.txt e7445206683dc877 (593 files, 328 PNG)",
+    "a2_logs": {
+      "head.txt": "cf9ccee1f99908ff",
+      "env-before.txt": "e65110cfae331b77",
+      "env-after.txt": "777223902d15f3dc",
+      "ss-before.txt": "44c2856de67dbbb7",
+      "ss-after.txt": "2092b0f8701f1ef0",
+      "run-cell.sh": "8fd235d9abc33928",
+      "cell.log": "1a8633f3b15c8ac2",
+      "cell.clean.log": "0fdcada8b732036a",
+      "cell.time.log": "acfceae210401631",
+      "cell-files.md": "52e759bfa378b61c",
+      "cell-stats.csv": "79e2a89dc1d5951e",
+      "cell.start": "efa571a3aca1742d",
+      "cell.end": "9c4ea6f8220415ba",
+      "cell.exit": "9a271f2a916b0b6e",
+      "cleanup-after.txt": "3e25f93476923680",
+      "tmpcount-before.txt": "0e55092af0746630",
+      "tmpcount-after.txt": "084c799cd551dd1d",
+      "df-tmp-before.txt": "74caf34fc9639e5f",
+      "df-tmp-after.txt": "a50549c4a25cf924",
+      "contracts-test.log": "c2773fa9232897ef",
+      "contracts-test.time": "e4356b52a26396f8",
+      "contracts-snapshot.log": "92e2c08c5a19bae5",
+      "contracts-snapshot.time": "69194739a36fc586",
+      "ca-build.log": "c088c0dc82ea4305",
+      "ca-build.time": "9bb9c2e02eea9705",
+      "ca-typecheck.log": "1da219695bda6984",
+      "ca-typecheck.time": "e6ec500b2ebcb199",
+      "fe-tsc.log": "93ff7811a209e2a8",
+      "fe-tsc.time": "9711ad84c9d3eb01",
+      "fe-build.log": "ee1ce428991d77e7",
+      "fe-build.time": "ea68ac86087b50fc",
+      "fe-dist-before.txt": "f55821759c71ef6b",
+      "fe-dist-after.txt": "f55821759c71ef6b",
+      "fe-vitest.log": "419a6db02f42b441",
+      "fe-vitest.time": "757f6b0ffb4b44f2",
+      "fe-vitest.clean.log": "133d9c9fe2a8814e",
+      "fe-vitest.stderr.clean.log": "12daeae4ad2ff190",
+      "fe-vitest-rerun.log": "6180b15ce04782e7",
+      "fe-vitest-rerun.time": "68657e86e7ab96cf",
+      "fe-vitest-portalshell-rerun1.log": "4f81739ee783ac89",
+      "fe-vitest-portalshell-rerun2.log": "77ba56c7f51772a0",
+      "planning-typecheck.log": "c732e4c362b45141",
+      "planning-typecheck.time": "98d3cae02896d0e7",
+      "planning-test.log": "30f22d4767ebe8a7",
+      "planning-test.time": "aec66f2265835b8a",
+      "planning-build.log": "b7219117581d6651",
+      "planning-build.time": "c1164ad7c9657a7e",
+      "gx-protected-diff.txt": "e3b0c44298fc1c14",
+      "gx-kernel.txt": "d44dad89a66db88c",
+      "gx-branch-vs-baseline.txt": "bd424c2c2f08832a"
+    },
+    "b_logs": {
+      "head.txt": "495bda976e3b44a8",
+      "fe-build-flagoff.log": "cd3990d0126c6f92",
+      "fe-build-flagon.log": "dd1b057260270df3",
+      "dist-flagoff.digest": "2fe32bae99ba491e",
+      "dist-preview-flagon.digest": "58ae2ecd188ab51d",
+      "dist-check-gate4.txt": "3559aa4d30640b16",
+      "pw-exec-off.log": "d4fd43c2fd68a40e",
+      "pw-exec-off-rerun-failed.log": "1c583f7fc5142dfb",
+      "pw-exec-on.log": "c397389c0bc7d8eb",
+      "pw-exec-on-rerun-failed.log": "58877e030117715e",
+      "plan-build.log": "bf580155164fa8ee",
+      "pw-planning.log": "541af0d285ba80d1",
+      "pw-research-probe.log": "f8b685f1f0aea36a",
+      "pw-research-probe-shotdir.log": "055254841fdae356",
+      "pw-p23.log": "25c18c7845ae945e",
+      "pw-p23-rerun-matrix.log": "f1060e6aa772df8d",
+      "pw-p23-rerun-stale.log": "fa031c2e3c8ef1e5",
+      "shots/playwright-report.json": "cfc1e4a836fe19b8",
+      "shots/load-samples.json": "2a9bad27eda1c525",
+      "shots/cycles.json": "a77bace5437ba7d9",
+      "shots/interaction.json": "c7a603a5f58c65b8",
+      "shots/stale.json": "4b10bc90871e7297",
+      "rerun-matrix/playwright-report.json": "b063568ffb620bf2",
+      "rerun-stale/playwright-report.json": "c8d13487d5f80ec2",
+      "rerun-stale/stale.json": "4b10bc90871e7297",
+      "matrix-stale-errors.txt": "740ce3360848ebb0",
+      "p23-failing-specs.txt": "b0f2cb046ffdf80d",
+      "list-main.log": "2901eb16cadd149c",
+      "list-research-probe.log": "204ef2832d43e4de",
+      "list-qual.log": "a1f1720020ebbb48",
+      "list-qual-report.json": "bdd7f197a77acd0f",
+      "browser-rss.csv": "e402c8326874ad2e",
+      "temp-configs.txt": "4be4de7f3153efd9",
+      "pids-exec-off.txt": "3cb0d0bff7212502",
+      "pids-exec-on.txt": "58ce4964ee6bcf3c",
+      "pids-planning.txt": "d69286b16210f6db",
+      "pids-research.txt": "41c14b119c117c03",
+      "preview-*.log (4, identical vite banner)": "9291f11129fb0f1f",
+      "git-status-after-{exec-on,planning,research}.txt": "0d4381774877a844",
+      "scripts/gate2.sh": "29cc576c04e1e0cb",
+      "scripts/gate3.sh": "f1415d55264d6a7a",
+      "scripts/gate4.sh": "97d63ec56b314b75",
+      "scripts/rss-sampler.sh": "2c01770f4f0b6f45",
+      "hashes.txt": "e7445206683dc877"
+    },
+    "reports": {
+      "A1-report.md": "139cf0425895cb41",
+      "audit-A1.md": "81b8a20a73995703",
+      "A2-report.md": "7ca3c1b21b19b205",
+      "audit-A2.md": "03a50ebcd3728ab4",
+      "B-report.md": "6095bdf044542e4a",
+      "C1-report.md": "555aa188ab82984f",
+      "fable-notes-for-C.md": "50d58fb5ae17b84d",
+      "PLAN.md": "6eaa103d990f48b8"
+    }
+  },
+  "head_note": "head/tree = runner code commit 35d0c861 measured by package B; the two docs commits of package C2 sit on top and change only upgrade/** docs (a commit cannot record its own SHA; see git log)",
+  "guide_tests_note": "titles printed as in the Guide (:2756–2770); statuses exactly as fable-notes-for-C.md (T02/T03/T08/T12/T13/T14 re-mapped from the C1 draft; T09/T10 from the B section)"
+}

@@ -1,0 +1,429 @@
+{
+  "phase": "P23",
+  "owner": "Thanhvuong (Claude; contributor outside D3 — qualification evidence + FE fixture-lane runner, no product code)",
+  "date": "2026-09-25",
+  "tree": "5d5ffc889b5be9c7e76d84d548a51edf2853e721",
+  "head": "35d0c86176ca96dcb396e85329f9367d9600db17",
+  "measured_head_a2": "29feefb80a2dacf7a00dda47fecef8ce535879af",
+  "measured_tree_a2": "ac354a27aa6675d5965d6c760c009fcd55c778cc",
+  "open_implementation_debt": [
+    {
+      "id": "S01-RUNLIBRARY-PAGE-GUARD",
+      "audit": "A2 finding 4; Fable audit A2-7",
+      "what": "src/app/PortalShell.test.tsx > embedding (U04/U05) > mounts QuantBT under its canonical route with no nested topbar fails in full vitest and passes isolated. Root cause: the test's catch-all fetch stub returns [] and RunLibrary.tsx:784 reads response.page.filtered_rows -> uncaught TypeError -> the module unmounts -> .portal-topbar count 0 (expected 1). Deterministic under load/order, so 'flake' understates it.",
+      "history": "P22: recorded as 'PortalShell RunLibrary filtered_rows flaky at baseline' (P22 thanhvuong-test-results.json:627), passed in P22 package B. P23 A2: full suite FAIL 2/2 runs, isolated PASS 2/2 runs (18/18 each). P23 B: not run (B scope = browser lanes; FE vitest evidence rests on A2)",
+      "owner": "Bobby / Codex (baseline-owned files: RunLibrary.tsx:782-786 from d62c5e9cf, PortalShell.test.tsx; unchanged by branch-only commits)",
+      "state": "OPEN — REQUIRES_BOBBY_DECISION (B-P23-04)",
+      "not_fixed_because": "P23 forbids src edits; a RunLibrary guard or a run-library-shaped stub would widen scope into baseline-owned files",
+      "proposed_fix": "RunLibrary guards a missing page, or the PortalShell stub returns a run-library-shaped body for /research/... reads (proposal only)",
+      "evidence": "fe-vitest.stderr.clean.log 12daeae4ad2ff190; fe-vitest.log 419a6db02f42b441; fe-vitest-rerun.log 6180b15ce04782e7; fe-vitest-portalshell-rerun1.log 4f81739ee783ac89; fe-vitest-portalshell-rerun2.log 77ba56c7f51772a0",
+      "bobby_decision": "B-P23-04"
+    },
+    {
+      "id": "S02-RESEARCH-REFUSAL-PROSE",
+      "vd": "VD-P23-01",
+      "severity": "P1",
+      "audit": "A1 finding; Fable audit A1-4 (confirmed in source)",
+      "what": "8 Research clients copy the server body.error.message into the refusal state and the screen renders it on denied/unavailable/expired: screens 00,12,14,01,03,04,05,06,07; 81 matrix cells (27 denied, 27 unavailable, 27 expired); sentinel zq_P23_SERVER_PROSE_SENTINEL visible",
+      "locators": [
+        "foundationClient.ts:141",
+        "alphaImportClient.ts:72",
+        "runLibraryClient.ts:110",
+        "progressClient.ts:95",
+        "evidenceClient.ts:109 (+:243, useEvidence.ts:187)",
+        "splitClient.ts:62",
+        "searchClient.ts:72",
+        "freezeClient.ts:81"
+      ],
+      "history": "known since P16 (evidence/P16/thanhvuong-review-addendum.md §4 item 9, 'open question chưa có ID', same freezeClient.ts:81 locator), unfixed, now measured and given an id; s08/09/10/11/13 use fixed copy and pass",
+      "owner": "Bobby decides: contributor fix/* (needs snapshot-baseline permission) or Codex",
+      "state": "OPEN — REQUIRES_BOBBY_DECISION (B-P23-04)",
+      "evidence": "pw-p23.log 25c18c7845ae945e; pw-p23-rerun-matrix.log f1060e6aa772df8d; matrix-stale-errors.txt 740ce3360848ebb0 (81 lines)",
+      "bobby_decision": "B-P23-04",
+      "p16_reference": "P16 open question 9 (evidence/P16/thanhvuong-review-addendum.md §4 item 9, line 174)"
+    },
+    {
+      "id": "S03-RESEARCH-401-SESSION-STATE",
+      "vd": "VD-P23-02",
+      "severity": "P1",
+      "audit": "A1 finding; Fable audit A1-5",
+      "what": "401 is folded into denied: no session-expired state or copy on screens 00,12,02,14,01,03,04,05,06,07 (30 matrix lines); writes = 0 in every expired cell",
+      "locators": [
+        "evidenceClient.ts:240",
+        "state.ts:98",
+        "same fold in the other clients"
+      ],
+      "owner": "Bobby decides (as S02)",
+      "state": "OPEN — REQUIRES_BOBBY_DECISION (B-P23-04)",
+      "evidence": "pw-p23.log 25c18c7845ae945e; matrix-stale-errors.txt 740ce3360848ebb0 (30 lines)",
+      "bobby_decision": "B-P23-04"
+    },
+    {
+      "id": "S04-F04-403-404-DISTINGUISHABLE",
+      "vd": "VD-P23-03",
+      "severity": "P1",
+      "audit": "A1 finding; Fable audit A1-6",
+      "what": "403 and 404 render distinguishably (F-04): s01/s03 badge ⊘ DENIED vs ∅ EMPTY; s09 reportClient.ts:237–238; s11 ReleaseCandidateDetail.tsx:1101–1103 prints refusal.code from releaseCandidateClient.ts:399 (12 matrix lines)",
+      "discrepancy": "P21 receipt claimed F-04 for Screen 11 (evidence/P21/thanhvuong-frontend-receipt.md:497 A5 row; F-04 G10 row :266): the copy is neutral but the printed refusal.code leaks the distinction",
+      "owner": "Bobby decides (as S02)",
+      "state": "OPEN — REQUIRES_BOBBY_DECISION (B-P23-04)",
+      "evidence": "pw-p23.log 25c18c7845ae945e; matrix-stale-errors.txt 740ce3360848ebb0 (12 lines)",
+      "bobby_decision": "B-P23-04"
+    },
+    {
+      "id": "S05-EVIDENCE-HUB-RUN-KEY",
+      "vd": "VD-P23-04 + VD-P23-05",
+      "severity": "P2 (VD-04) / P3 (VD-05)",
+      "audit": "A1 finding; Fable audit A1-7",
+      "what": "Screen 04 evidence hub keeps run A content under the run B URL while B loads (EvidenceFlowRoute.tsx:17–20 not keyed by runId; useEvidence.ts:176–182 resets series/passport, not hub); nothing leaks after settle; 09/11 clean. VD-P23-05: the hub read sends run A's ETag on run B's first read (useEvidence.ts:86) — code observation, not measured",
+      "owner": "Bobby decides (as S02)",
+      "state": "OPEN — REQUIRES_BOBBY_DECISION (B-P23-04)",
+      "evidence": "stale.json 4b10bc90871e7297; pw-p23-rerun-stale.log fa031c2e3c8ef1e5 (A1 3/3, B 2/2 retained)",
+      "bobby_decision": "B-P23-04"
+    },
+    {
+      "id": "S06-VISUAL-BASELINE-HOST-DRIFT",
+      "severity": "not classified (cause NOT diagnosed)",
+      "audit": "package B gates 1b/2b; fable-notes B section",
+      "what": "EXECUTION_REGRESSION on the contributor preview: chromium (flag off) 28/248 and chromium-preview (flag on) 5/100 FAIL, all toHaveScreenshot mismatches vs Bobby's immutable baselines (last changed 7441c572, 2026-09-17), ratio 0.01–0.05, largest phase-2-gate-r1 @ laptop 973x4205 -> 973x4159; every non-screenshot test passed; deterministic (1-worker reruns identical). First time this lane ran on the contributor host. Diffs also hit suites this branch never touched (execution fixtures, planning-reports): host font/rasteriser drift is a hypothesis, not evidence",
+      "owner": "Bobby",
+      "state": "OPEN — REQUIRES_BOBBY_DECISION (B-P23-06)",
+      "not_fixed_because": "contributors never regenerate or edit visual baselines (updateSnapshots none); diagnosis needs the baseline host",
+      "evidence": "pw-exec-off.log d4fd43c2fd68a40e; pw-exec-off-rerun-failed.log 1c583f7fc5142dfb; pw-exec-on.log c397389c0bc7d8eb; pw-exec-on-rerun-failed.log 58877e030117715e",
+      "bobby_decision": "B-P23-06"
+    }
+  ],
+  "resolved_in_phase": [
+    {
+      "id": "S11-P22-MIGRATION-056-UNPROVEN",
+      "what": "migration research-release-candidate-publication-v1 + research-release-candidate-publication-migration.spec.ts had never executed (P22: no reachable PostgreSQL). The id keeps its P22 name; it refers to the file now numbered 063 (1723680000063_research-release-candidate-publication-v1.sql, renamed at 93501c00).",
+      "found_by": "P22 package A1/B (deferred)",
+      "status": "RESOLVED",
+      "evidence": "scripts/control-api-test.sh on a disposable real PostgreSQL (rootless Docker, --internal network, tmpfs PG): research-release-candidate-publication-migration.spec.ts PASS (1 test, 2171 ms) on fresh PG; full cell 117/117 files, 834/834 tests, exit 0; cell.log 1a8633f3b15c8ac2, cell-files.md 52e759bfa378b61c",
+      "scope_of_proof": "fresh apply of 063 in a disposable cell at head 29feefb8; not an upgrade on a populated database, not a deploy"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "P23-T03",
+      "what": "disk high-water/full bounded behaviour",
+      "reason": "needs the Research stack + quota/scratch (CG-P23-01)",
+      "owner": "Bobby",
+      "state": "BLOCKED"
+    },
+    {
+      "id": "P23-T04",
+      "what": "process/DB/NATS outage recovery",
+      "reason": "needs the Research stack (CG-P23-01); the cell never restarts PG",
+      "owner": "Bobby",
+      "state": "BLOCKED"
+    },
+    {
+      "id": "P23-T07",
+      "what": "engine upgrade / default rollback / in-flight pinning",
+      "reason": "no canary worker, no validated newer engine build (CG-P23-01)",
+      "owner": "Bobby + Codex",
+      "state": "BLOCKED"
+    },
+    {
+      "id": "P23-T08",
+      "what": "cold-cache measurement isolated from the shared execution host",
+      "reason": "needs an execution host (:8090 is Bobby's) + stack (CG-P23-04); drop_caches on the shared host is forbidden",
+      "owner": "Bobby",
+      "state": "BLOCKED"
+    },
+    {
+      "id": "P23-T12",
+      "what": "audit/what-if/verify/export quotas and backpressure beside the primary",
+      "reason": "needs the Research stack (CG-P23-01); research-bounded-read.spec.ts in the cell is RS-01 unit evidence only",
+      "owner": "Bobby + Codex",
+      "state": "BLOCKED"
+    },
+    {
+      "id": "P23-T13",
+      "what": "Upgrade new route/default không auto-enable unsupported mapper hoặc làm reproduce đổi semantics (Guide title); REUSED_VERIFIED reference only: S12 capability-reason unit tests from P09 (informational)",
+      "reason": "needs the Research stack (CG-P23-01)",
+      "owner": "Bobby + Codex",
+      "state": "BLOCKED"
+    },
+    {
+      "id": "V11-P23-DR",
+      "what": "delta-real-data",
+      "reason": "no Delta compute without the stack (CG-P23-01)",
+      "owner": "Bobby + Codex",
+      "state": "BLOCKED"
+    },
+    {
+      "id": "PYTHON-BACKEND-LANE",
+      "what": "apps/portal/scripts/test_backend.sh (part of P23-T10 and W00)",
+      "reason": "needs a provisioned apps/portal/.venv with quantbt 1.1.1 (CG-P23-05); contributor installs nothing",
+      "owner": "Bobby",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "V11-P23-BR browser-real half",
+      "what": "browser-real lane on a rebuilt committed artifact behind the real gateway",
+      "reason": "no real stack; P23 has only the fixture receipt (visual-fixture, 127.0.0.1:4417, dist 68ee0a01d1053b61)",
+      "owner": "Bobby",
+      "state": "NOT_RUN"
+    }
+  ],
+  "deferred_note": "deferred entries are keyed by existing Guide test ids / lane names, not new debt ids; PYTHON-BACKEND-LANE is a lane label, not a debt id",
+  "backend_requests": [
+    {
+      "id": "CG-P23-01",
+      "owner": "Bobby (provisioning)",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P23-01",
+      "what": "isolated Research qualification stack for contributors (compose project, loopback port allocation, env file, image build receipt, cgroup scope for the 5 GB measurement)"
+    },
+    {
+      "id": "CG-P23-02",
+      "owner": "Codex + stack",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P23-02",
+      "what": "export/file/artifact isolation tests (P23-T05 second half)"
+    },
+    {
+      "id": "CG-P23-03",
+      "owner": "Codex + stack",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P23-03",
+      "what": "corrupt-part + artifact restore drill with hash verification and pin preservation (P23-T06/T14 artifact half)"
+    },
+    {
+      "id": "CG-P23-04",
+      "owner": "Codex + Bobby",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P23-04",
+      "what": "execution-load coupling measurement (P23-T09 dynamic half); :8090 is Bobby's"
+    },
+    {
+      "id": "CG-P23-05",
+      "owner": "Bobby (provisioning)",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P23-05",
+      "what": "Python backend regression lane: provisioned .venv with quantbt 1.1.1"
+    },
+    {
+      "id": "CG-P22-C",
+      "owner": "Bobby / Codex",
+      "state": "OPEN (carried from P22, REQUIRES_BOBBY_DECISION)",
+      "receipt": "P22 thanhvuong-backend-requests.md §1 CG-P22-C; P23 thanhvuong-backend-requests.md §1",
+      "what": "add the 3 P22 routes to r2_ledger/capability-inventory.v1.json; r2Ledger.test.ts still fails in P23 (both A2 full runs)"
+    }
+  ],
+  "not_opened": [
+    {
+      "what": "backend request for S01-RUNLIBRARY-PAGE-GUARD",
+      "reason": "FE/test robustness debt in baseline-owned files; the run-library contract is unchanged"
+    },
+    {
+      "what": "FE build chunk-size warnings (4 chunks > 500 kB; Planning 1 chunk)",
+      "reason": "pre-existing; not a correctness/security/durability debt; no measured budget breach claimed"
+    },
+    {
+      "what": "control-api typecheck 80 test-only errors",
+      "reason": "inherited: 0 in src, 0 in files this branch changed; 9 in 2 baseline research specs (research-compare.service.spec.ts x8, research-replay.service.spec.ts x1), already inside the P22 count of 80"
+    },
+    {
+      "what": "new contract/endpoint for the FE runner",
+      "reason": "the runner uses the declared same-origin fixture-lane stub only"
+    },
+    {
+      "what": "backend request for S02–S05 (VD-P23-01..05)",
+      "reason": "FE refusal-mapping/state defects; the refusal contract already carries status + code + request_id"
+    },
+    {
+      "what": "backend request for S06-VISUAL-BASELINE-HOST-DRIFT",
+      "reason": "visual-baseline host question for Bobby (B-P23-06), not a contract gap"
+    }
+  ],
+  "open_debt": [],
+  "recorded_visual_decisions_not_blocking": [
+    {
+      "id": "VD-P23-01",
+      "severity": "P1",
+      "blocking": true,
+      "blocking_scope": "blocks the P23 no-debt exit (and P24 'zero failed tests'), not the runner: the runner is committed and fails these cells by design until fixed",
+      "what": "server error.message rendered on refusal: screens 00,12,14,01,03,04,05,06,07; 81 matrix cells (27 denied, 27 unavailable, 27 expired)",
+      "note": "known since P16 (review addendum §4 item 9, 'open question chưa có ID'), unfixed, now measured; s08/09/10/11/13 use fixed copy and pass",
+      "debt": "S02-RESEARCH-REFUSAL-PROSE",
+      "owner": "Bobby (B-P23-04)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "pw-p23.log 25c18c7845ae945e; matrix-stale-errors.txt 740ce3360848ebb0"
+    },
+    {
+      "id": "VD-P23-02",
+      "severity": "P1",
+      "blocking": true,
+      "blocking_scope": "blocks the P23 no-debt exit (and P24 'zero failed tests'), not the runner: the runner is committed and fails these cells by design until fixed",
+      "what": "401 rendered as denied, no session-expired state: screens 00,12,02,14,01,03,04,05,06,07 (30 lines); writes 0 in every expired cell",
+      "debt": "S03-RESEARCH-401-SESSION-STATE",
+      "owner": "Bobby (B-P23-04)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "matrix-stale-errors.txt 740ce3360848ebb0"
+    },
+    {
+      "id": "VD-P23-03",
+      "severity": "P1",
+      "blocking": true,
+      "blocking_scope": "blocks the P23 no-debt exit (and P24 'zero failed tests'), not the runner: the runner is committed and fails these cells by design until fixed",
+      "what": "403 and 404 distinguishable (F-04): 01/03 badge, 09 reportClient.ts:237–238, 11 ReleaseCandidateDetail.tsx:1101–1103 prints refusal.code (12 lines)",
+      "note": "discrepancy vs P21 receipt §A5 (evidence/P21/thanhvuong-frontend-receipt.md:497; F-04 G10 row :266)",
+      "debt": "S04-F04-403-404-DISTINGUISHABLE",
+      "owner": "Bobby (B-P23-04)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "matrix-stale-errors.txt 740ce3360848ebb0"
+    },
+    {
+      "id": "VD-P23-04",
+      "severity": "P2",
+      "blocking": false,
+      "blocking_note": "not P1, but the stale test fails by design until fixed and counts under P24 'zero failed tests' (P23-FE-DG-06)",
+      "what": "evidence hub keeps run A content under run B URL while B loads (04); nothing leaks after settle; 09/11 clean",
+      "debt": "S05-EVIDENCE-HUB-RUN-KEY",
+      "owner": "Bobby (B-P23-04)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "stale.json 4b10bc90871e7297; pw-p23-rerun-stale.log fa031c2e3c8ef1e5"
+    },
+    {
+      "id": "VD-P23-05",
+      "severity": "P3",
+      "blocking": false,
+      "what": "hub read sends run A's ETag on run B's first read (useEvidence.ts:86); code observation, not measured; pairs with VD-P23-04",
+      "debt": "S05-EVIDENCE-HUB-RUN-KEY",
+      "owner": "Bobby (B-P23-04)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "source only (audit-A1 A1-7)"
+    }
+  ],
+  "visual_decisions_note": "P23 has no screen of its own (rule 9: hi-fi check by screenshot inventory + the runner matrix). VD-P23-01..05 are recorded under recorded_visual_decisions_not_blocking (key name kept from P22); blocking: true on the three P1s means they block the P23 no-debt exit, not the runner. open_debt is empty because every VD maps to an implementation debt id (S02–S05) in open_implementation_debt. Decision: record, NOT fixed in P23 — the fix spans 8 clients + state.ts + 2 screens + unit tests, and the denied copy of shipped screens may sit in Bobby's immutable visual baseline e2e/visual.spec.ts-snapshots/auth-access-denied-research-*.png. Proposed order for a later fix/*: 01+02 (one refusal mapper: status -> typed state + neutral copy + request_id, message dropped), then 03, then 04+05",
+  "explicit_downstream_gates": [
+    {
+      "id": "P23-FE-DG-01",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "accept or discard the contributor P23 partial qualification done outside D3 (B-P23-01) before P24 consumes any of its evidence",
+      "p24_link": "P24 exit gate 'owner receives full evidence'; V11-P24-GX phase report",
+      "guide_line": "Guide :2795 (P24 exit gate, owner receives full evidence) / :2842"
+    },
+    {
+      "id": "P23-FE-DG-02",
+      "owner": "Bobby (+ Codex)",
+      "state": "OPEN",
+      "what": "isolated Research qualification stack with a cgroup scope (CG-P23-01), or Bobby runs the blocked lanes himself with the committed runner + cell script (B-P23-02); P23-T01/T03/T04/T07/T08/T12/T13 and V11-P23-DR must have real results before P24",
+      "p24_link": "P24-T10 (5 GB mixed-load evidence traceable to source/build/workload), P24-T05 (historical run after engine upgrade), V11-P24-DR",
+      "guide_line": "Guide P24-T10 :2833, P24-T05 :2828, V11-P24-DR :2791"
+    },
+    {
+      "id": "P23-FE-DG-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "what": "artifact corrupt-part/restore drill with hash verification and pin preservation (CG-P23-03) plus file/export isolation (CG-P23-02)",
+      "p24_link": "P24-T07 (restore then browse with workers off); P24 rollback runbook 'keep schema readers and artifact refs'",
+      "guide_line": "Guide P24-T07 :2830; :2844 'keep schema readers and artifact refs'"
+    },
+    {
+      "id": "P23-FE-DG-04",
+      "owner": "Codex + Bobby",
+      "state": "OPEN",
+      "what": "execution-load coupling measured on an isolated stack (CG-P23-04)",
+      "p24_link": "P24-T08 / P24-T14 (protected execution unchanged across the journey)",
+      "guide_line": "Guide P24-T08 :2831 / P24-T14 :2837"
+    },
+    {
+      "id": "P23-FE-DG-05",
+      "owner": "Bobby",
+      "state": "OPEN",
+      "what": "Python backend lane runnable (CG-P23-05) so the full required backend gate set has raw results",
+      "p24_link": "Unified #rl-p24 Tests BE 'full required backend/contract/Rust/Python/ControlAPI/PG'",
+      "guide_line": "Unified #rl-p24 Tests BE bullet (line 5633)"
+    },
+    {
+      "id": "P23-FE-DG-06",
+      "owner": "Bobby / Codex",
+      "state": "OPEN",
+      "what": "zero failed tests before P24: close CG-P22-C (ledger r2), S01-RUNLIBRARY-PAGE-GUARD, the runner failures S02–S05 (VD-P23-01..04, B-P23-04) and the 33 visual-baseline cells S06-VISUAL-BASELINE-HOST-DRIFT (B-P23-06)",
+      "p24_link": "V1.1 P24 exit gate 'zero failed/skipped-required tests'",
+      "guide_line": "Guide :2795 'zero failed/skipped-required tests'"
+    },
+    {
+      "id": "P23-FE-DG-07",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "confirm the provisional client thresholds (8000 DOM nodes / 200 MB heap from execution-journeys) or set §16.3-derived targets (B-P23-03)",
+      "p24_link": "P24-T09 / P24-T13 browser + resource coverage",
+      "guide_line": "Guide P24-T13 :2836"
+    },
+    {
+      "id": "P23-FE-DG-08",
+      "owner": "Bobby (D1: Codex merges)",
+      "state": "AWAITING_DECISION",
+      "what": "baseline integration of P21 + P22 + P23 from feat/thanhvuong/research-p17-p21 (B-P23-05)",
+      "p24_link": "V1.1 P24 'browser suite against rebuilt committed artifact and dev hostname'; P24 owner reproduces exact commit",
+      "guide_line": "Unified #rl-p24 To-do FE bullet (line 5632) + Guide :2795"
+    },
+    {
+      "id": "P23-FE-DG-09",
+      "owner": "Bobby",
+      "state": "OPEN",
+      "what": "browser-real and dev-host lanes on a rebuilt committed artifact behind the real gateway (P23 has only a fixture-lane receipt)",
+      "p24_link": "V11-P24-BR; Unified #rl-p24 'full actual no-stub journey'",
+      "guide_line": "Guide V11-P24-BR :2792; Unified #rl-p24 To-do FE (line 5632)"
+    }
+  ],
+  "explicit_downstream_gates_note": "key name kept from P22 for schema continuity (fable-notes Q8); every P23-FE-DG id cites the Guide P24 line or Unified #rl-p24 bullet it traces to (guide_line)",
+  "bobby_decisions": [
+    {
+      "id": "B-P23-01",
+      "what": "accept/discard the contributor partial P23 qualification (outside D3)"
+    },
+    {
+      "id": "B-P23-02",
+      "what": "provision the isolated stack (CG-P23-01) or run the blocked lanes himself with the committed runner + scripts/control-api-test.sh"
+    },
+    {
+      "id": "B-P23-03",
+      "what": "budgets: client-side heap/DOM/latency numbers are measured; thresholds (8000 DOM nodes / 200 MB heap from execution-journeys) are provisional — confirm or replace with §16.3-derived targets (source apps/portal/frontend/e2e/execution-journeys.spec.ts:771–772)"
+    },
+    {
+      "id": "B-P23-04",
+      "what": "FE defects: S01-RUNLIBRARY-PAGE-GUARD + VD-P23-01..05 (S02-RESEARCH-REFUSAL-PROSE, S03-RESEARCH-401-SESSION-STATE, S04-F04-403-404-DISTINGUISHABLE, S05-EVIDENCE-HUB-RUN-KEY): fix in a contributor fix/* (needs snapshot-baseline permission) or Codex — Bobby decides"
+    },
+    {
+      "id": "B-P23-05",
+      "what": "baseline integration of P21 + P22 + P23 (D1: Codex merges)"
+    },
+    {
+      "id": "B-P23-06",
+      "what": "run the chromium / chromium-preview Playwright projects on the baseline host against 35d0c861 to separate host drift from branch drift (S06-VISUAL-BASELINE-HOST-DRIFT); contributors never regenerate baselines"
+    }
+  ],
+  "scope_notes": [
+    "P23 is a qualification phase: deliverable = measured evidence + a committed FE runner, not product code; no migration, flag, service or src/ change",
+    "P23 by Thanhvuong is outside D3 (D3 0fa3c385: P22+ is Codex); Bobby decisions 2026-09-25 (1ff3f2d4) say nothing about P23; every P23 artefact is REQUIRES_BOBBY_DECISION (B-P23-01)",
+    "contributor could run: disposable PostgreSQL cell (scripts/control-api-test.sh, rootless Docker, --internal network, no host port), static/unit/build gates, fixture lane on own preview 127.0.0.1:4417; could not run: the Research stack (portal-api + control-api + PG + NATS + MinIO + quant-worker-py), Python backend lane, dev host",
+    "every resource number is 'contributor host; not the Research stack cgroup; 5 GB gate NOT measured'",
+    "fixture PASS is never summed with real PASS; no lane is called VERIFIED or CERTIFIED",
+    "PLAN §1 count corrected: control-api has 117 spec files (45 research), not 122/47",
+    "restore drill = DB relation-count signature over 56 relations only; no artifact bytes; signature values not printed",
+    "P22 open debt/VD/CG are unchanged by P23 and stay in evidence/P22/thanhvuong-debt-register.json; only S11-P22-MIGRATION-056-UNPROVEN moves (resolved here)",
+    "V11-P23-GX no-debt check fails by design: open debt exists (S01…S06, CG-P22-C, CG-P23-01…05)",
+    "PLAN research probe count corrected: 82 = 8 fixtures + 74 product (not 8 + 76)",
+    "baseline docs/research-loop-plan moved to 33c46b84 at package C2 (27 commits after 1ff3f2d4, incl. changes to freezeClient.ts, reportClient.ts, runLibraryClient.ts, RunLibrary.tsx and a baseline-own ReleaseCandidateDetail.tsx): S01 and VD-P23-01/03 must be re-measured on the integrated tree (B-P23-05)"
+  ],
+  "known_flake_note": "PortalShell/RunLibrary filtered_rows: P22 'flaky at baseline', P23 A2 2/2 full-suite fail vs 2/2 isolated pass -> reclassified as deterministic-under-load debt S01-RUNLIBRARY-PAGE-GUARD. Package B did not run vitest (browser lanes only). B: 0 flaky tests; all 28+5 visual and 30+1 runner failures reproduced identically on rerun",
+  "rule_for_later_phases": {
+    "source": "Bobby 2026-09-24 (Unified P19 note); applied P20–P22; applied in P23",
+    "rules": [
+      "the frontend never picks a deviation on its own: record VD-PXX-NN and REQUIRES_BOBBY_DECISION",
+      "D3 (0fa3c385): Claude works up to P21; P22+ is Codex; P23 by Thanhvuong was done outside D3 at Vuong's request",
+      "stack-dependent tests are BLOCKED with a typed reason and a request, never NOT_APPLICABLE and never simulated",
+      "never drop_caches or restart shared/Bobby services; rollback touches Research versions/concurrency only, never execution config or approvals"
+    ],
+    "p23_debt_for_P24": "see Unified P23 note and evidence/P23/frontend-handoff-claude.md"
+  },
+  "audit_note": "Fable audit A2 (audit-A2.md 03a50ebcd3728ab4 on A2-report.md 7ca3c1b21b19b205, head 29feefb8): PASS, no rerun; S11-P22-MIGRATION-056-UNPROVEN RESOLVED_IN_PHASE; S01-RUNLIBRARY-PAGE-GUARD opened. Fable audit A1 (audit-A1.md 81b8a20a73995703 on A1-report.md 139cf0425895cb41): PASS, runner committed as delivered as 35d0c861; VD-P23-01..05 confirmed in source, debt S02–S05 opened. Package B (B-report.md 6095bdf044542e4a, head 35d0c861): numbers adopted by fable-notes-for-C.md 50d58fb5ae17b84d; S06-VISUAL-BASELINE-HOST-DRIFT + B-P23-06 added; P23-T10 = FAIL (2 attributed unit + 33 visual-baseline, S06)",
+  "head_note": "head/tree = runner commit 35d0c861 measured by package B; the two C2 docs commits only add upgrade/** docs on top (see git log)"
+}
