@@ -42,16 +42,20 @@ services:
       - ./deploy/research-preview/bootstrap-users.preview.yaml:/opt/control-api/bootstrap-users.yaml:ro
 
   # P06 runs the Delta child in its own user/net/mount/pid namespaces
-  # (`unshare -Urnmpf`). Docker's default seccomp profile refuses to create a
-  # user namespace inside a container, so the child fails with "unshare:
-  # Operation not permitted", and the docker-default AppArmor profile then
-  # refuses the mount-propagation change, and Docker's masked /proc paths stop
-  # `--mount-proc`. PREVIEW ONLY: the worker gets unconfined seccomp, AppArmor
-  # and system paths so the namespace sandbox P06 relies on can exist at all.
-  # A production activation needs a reviewed narrow profile instead — recorded
-  # in the RF-02 packet as a request, not decided here.
+  # (`unshare -Urnmpf --mount-proc`) with a private tmpfs scratch. CG-RF02-01
+  # (Bobby approved 2026-09-25): instead of unconfined, the worker gets
+  #   - seccomp: moby v28.0.0 default + unshare/mount/umount2/setns and the
+  #     fsopen/fsconfig/fsmount/move_mount API util-linux mount uses;
+  #   - AppArmor `portal-research-child`: docker-default with only proc on
+  #     /proc, tmpfs and a private propagation change allowed (no bind, no
+  #     remount). Load on the host first:
+  #       sudo apparmor_parser -r -W deploy/research-preview/apparmor-research-child
+  #   - systempaths=unconfined stays: the kernel refuses --mount-proc while
+  #     Docker's masked /proc paths overmount /proc.
+  # Proven in the worker image: sandbox OK, bind mount refused, a mount
+  # outside the child's own namespace refused.
   quant-worker-py:
     security_opt:
-      - seccomp=unconfined
-      - apparmor=unconfined
+      - seccomp=./deploy/research-preview/seccomp-research-child.json
+      - apparmor=portal-research-child
       - systempaths=unconfined
