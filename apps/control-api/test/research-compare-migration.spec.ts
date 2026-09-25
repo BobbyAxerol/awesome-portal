@@ -147,4 +147,19 @@ describe("P20 disposable PostgreSQL cache and exact-correlation proof", () => {
       await database.end();
     }
   });
+
+  /* W5c: the Alpha snapshot statement had never reached a database; on the
+     preview it named `progress.updated_at` and every read answered 503. */
+  it("plans and runs the Alpha-scoped snapshot statement against the real schema", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    try {
+      const workspaceId = "ws_p20";
+      const userId = "usr_p20";
+      const repository = new ResearchCompareRepository(database);
+      const snapshot = await repository.snapshot({ workspaceId, actorUserId: userId }, "alpha-p20");
+      expect(snapshot).toMatchObject({ runs: [], totalAttempts: 0, hasMore: false });
+    } finally {
+      await database.end();
+    }
+  });
 });

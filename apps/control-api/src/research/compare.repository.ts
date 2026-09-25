@@ -392,7 +392,7 @@ export class ResearchCompareRepository {
              SELECT snapshot
                FROM research.run_progress_snapshots progress
               WHERE progress.workspace_id = attempt.workspace_id AND progress.run_id = primary_run.run_id
-              ORDER BY progress.updated_at DESC
+              ORDER BY progress.received_at DESC
               LIMIT 1
            ) snapshot ON TRUE
            LEFT JOIN LATERAL (

@@ -206,6 +206,53 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     expect(mismatched.actions.may_seal).toBe(false);
   });
 
+  /*
+   * W5c · found on the preview's real WFO run. `run_producers.manifest_digest`
+   * is the preflight (dataset/spec) manifest; `current_source_seals_v1.
+   * manifest_digest` is the sealed P05 artifact's own manifest. They are two
+   * identities, so their inequality is not an integrity failure. The retained
+   * artifact stays pinned through its CURRENT_SOURCE import digest.
+   */
+  it("W5c keeps the retained artifact manifest apart from the preflight manifest", async () => {
+    const wfo = source({ currentSource: { ...source().currentSource, manifestDigest: digest("retained-artifact-manifest") } });
+    const draft = persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(wfo) });
+    const result = await subject(wfo, draft).service.detail(scope, wfo.runId);
+    expect(result.availability).toEqual({ state: "AVAILABLE", reason_code: null });
+    expect(result.fields.find((item) => item.key === "manifest_digest")).toMatchObject({ value: digest("c"), availability: { state: "AVAILABLE" } });
+    expect(result.actions).toMatchObject({ may_seal: true, seal_blocked_reason: null });
+
+    /* A report that disagrees with the preflight manifest is still a mismatch. */
+    const mismatched = source({ report: { ...source().report, frozenCore: reportCore({ source_digests: { ...reportCore().source_digests, manifest_digest: digest("other") } }) } });
+    const mismatchedResult = await subject(mismatched, persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(mismatched) })).service.detail(scope, mismatched.runId);
+    expect(mismatchedResult.availability).toEqual({ state: "PARTIAL", reason_code: "P21_REFERENCED_SOURCE_INTEGRITY_FAILED" });
+
+    /* A malformed retained manifest is an integrity failure, never an absence. */
+    const malformed = source({ currentSource: { ...source().currentSource, manifestDigest: "not-a-digest" } });
+    const malformedResult = await subject(malformed, persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(malformed) })).service.detail(scope, malformed.runId);
+    expect(malformedResult.actions).toMatchObject({ may_seal: false, seal_blocked_reason: "P21_REFERENCED_SOURCE_INTEGRITY_FAILED" });
+  });
+
+  /* W5c · each evidence row names a screen this build serves (no `/replay`, no `/research/alphas/…`). */
+  it("W5c links every evidence row to a served Research screen", async () => {
+    const sourceValue = source();
+    const result = await subject(sourceValue, persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(sourceValue) })).service.detail(scope, sourceValue.runId);
+    const run = "/research/quantbt/runs/run-p21-audit";
+    expect(Object.fromEntries(result.pack.map((item) => [item.key, item.source.href]))).toEqual({
+      ALPHA_VERSION_PASSPORT: null,
+      ENGINE_CAPABILITY_BACKEND: "/research/quantbt/atlas",
+      DATASET_UNIVERSE_SNAPSHOTS: `${run}/split`,
+      METHODOLOGY_CLAIM: `${run}/evidence`,
+      SELECTED_PARAMS_LINEAGE: `${run}/search`,
+      FINAL_AUDIT_REPLAY: `${run}/execute`,
+      METRICS_SEMANTICS: `${run}/report`,
+      EXECUTION_ASSUMPTIONS: `${run}/split`,
+      ROBUSTNESS_PARAM_STABILITY_REGIME: "/research/quantbt/alphas/alpha-p21/compare",
+      KNOWN_LIMITATIONS_WAIVERS: null,
+      REPRODUCIBILITY_PARITY_CHECKSUMS: `${run}/freeze`,
+      PROPOSED_USE_RESTRICTIONS: null,
+    });
+  });
+
   it("fails closed while the separately admitted P21 feature is dark", async () => {
     const sourceValue = source();
     const { repository } = subject(sourceValue, persistedDraft({ sourceFingerprint: releaseCandidateSourceFingerprint(sourceValue) }));

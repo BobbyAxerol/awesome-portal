@@ -319,13 +319,17 @@ export class ResearchReleaseCandidateService {
       source.currentSource.sourceTransformDigest,
       stringAt(reportCore, ["source_digests", "source_transform_digest"]),
     );
+    // `run_producers.manifest_digest` is the preflight (dataset/spec) manifest;
+    // `current_source.manifest_digest` is the sealed P05 artifact's own
+    // manifest. They are two identities and are never cross-compared (W5c: on
+    // a real WFO run they always differ). The retained artifact stays pinned
+    // through its CURRENT_SOURCE import digest, and a malformed one is an
+    // integrity failure in `sourceIntegrity`.
     const manifest = this.sameDigest(
-      source.producer.manifestDigest, source.currentSource.manifestDigest,
+      source.producer.manifestDigest,
       stringAt(reportCore, ["source_digests", "manifest_digest"]),
     );
-    // `current_source.manifest_digest` is a source artifact identity, not a
-    // dataset-binding digest. Do not cross-compare it to dataset binding; it
-    // remains a separately pinned relation below.
+    // Nor is `current_source.manifest_digest` a dataset-binding digest.
     const strictDatasetDigest = this.sameDigest(source.datasetBindingDigest, stringAt(reportCore, ["source_digests", "dataset_binding_digest"]));
     const parameterBundle = digest(source.selection.parameterBundleDigest)
       ?? digest(stringAt(source.split.projection, ["source", "protocol", "selection", "parameter_bundle_digest"]));
@@ -360,18 +364,20 @@ export class ResearchReleaseCandidateService {
   }
 
   private packItems(source: ReleaseCandidateSource, draft: ReleaseCandidateDraft, values: ReturnType<ResearchReleaseCandidateService["values"]>): PackItem[] {
-    const alphaHref = source.alpha.alphaId ? `/research/alphas/${source.alpha.alphaId}` : null;
+    // Every href names a screen this build serves (W5c). The Alpha 360°
+    // passport is outside it, so that row carries no link rather than a dead one.
+    const alphaHref = null;
     const runHref = `/research/quantbt/runs/${source.runId}`;
     const alphaPassport = values.alphaReady
       ? complete("ALPHA_VERSION_PASSPORT", 1, "Alpha Version passport", { label: "Alpha 360°", href: alphaHref }, values.alphaCodeDigest, "Exact Alpha version identity is retained.")
       : missing("ALPHA_VERSION_PASSPORT", 1, "Alpha Version passport", { label: "Alpha 360°", href: alphaHref }, "P21_ALPHA_PASSPORT_INCOMPLETE", "The run has no complete immutable Alpha version passport.");
     const engine = values.adapterContractDigest;
     const engineItem = engine && source.engineReleaseId
-      ? complete("ENGINE_CAPABILITY_BACKEND", 2, "Engine/capability/backend", { label: "Engine Atlas", href: "/research/quantbt" }, engine, "Pinned adapter contract and engine release are retained.")
-      : missing("ENGINE_CAPABILITY_BACKEND", 2, "Engine/capability/backend", { label: "Engine Atlas", href: "/research/quantbt" }, "P21_ADAPTER_CONTRACT_NOT_PUBLISHED", "Engine or adapter identity is incomplete.");
+      ? complete("ENGINE_CAPABILITY_BACKEND", 2, "Engine/capability/backend", { label: "Engine Atlas", href: "/research/quantbt/atlas" }, engine, "Pinned adapter contract and engine release are retained.")
+      : missing("ENGINE_CAPABILITY_BACKEND", 2, "Engine/capability/backend", { label: "Engine Atlas", href: "/research/quantbt/atlas" }, "P21_ADAPTER_CONTRACT_NOT_PUBLISHED", "Engine or adapter identity is incomplete.");
     const data = values.strictDatasetDigest && values.manifest
-      ? complete("DATASET_UNIVERSE_SNAPSHOTS", 3, "Dataset & universe snapshots", { label: "Data snapshots", href: runHref }, values.strictDatasetDigest, "Dataset binding and exact manifest identities agree across retained source facts.")
-      : missing("DATASET_UNIVERSE_SNAPSHOTS", 3, "Dataset & universe snapshots", { label: "Data snapshots", href: runHref }, "P21_DATASET_BINDING_IDENTITY_MISMATCH", "A required dataset/manifest identity is absent or inconsistent.");
+      ? complete("DATASET_UNIVERSE_SNAPSHOTS", 3, "Dataset & universe snapshots", { label: "Data snapshots", href: `${runHref}/split` }, values.strictDatasetDigest, "Dataset binding and exact manifest identities agree across retained source facts.")
+      : missing("DATASET_UNIVERSE_SNAPSHOTS", 3, "Dataset & universe snapshots", { label: "Data snapshots", href: `${runHref}/split` }, "P21_DATASET_BINDING_IDENTITY_MISMATCH", "A required dataset/manifest identity is absent or inconsistent.");
     const issuedMethodology = source.methodology.claimText !== null
       && source.methodology.certificateState === "ISSUED"
       && source.methodology.certificateGrade !== null
@@ -394,8 +400,8 @@ export class ResearchReleaseCandidateService {
       ? complete("SELECTED_PARAMS_LINEAGE", 5, "Selected params lineage", { label: "Search & diagnostics", href: `${runHref}/search` }, values.parameterBundle, source.selection.selectedTrialId ? "Selected trial and parameter bundle are retained." : "Persisted centroid/composite selection has no selected trial; its own parameter digest remains the provenance target.")
       : missing("SELECTED_PARAMS_LINEAGE", 5, "Selected params lineage", { label: "Search & diagnostics", href: `${runHref}/search` }, "P21_SELECTION_PARAMETER_BUNDLE_NOT_PUBLISHED", "No persisted selection target can be substituted from a fixed profile or fold-last result.");
     const audit = values.finalAudit && source.evidence.revision && source.split.revision
-      ? complete("FINAL_AUDIT_REPLAY", 6, "Final audit replay", { label: "Replay", href: `${runHref}/replay` }, source.evidence.projectionDigest, "Exact READY AUDIT_OF_SELECTION run has retained evidence and chronology revisions.")
-      : missing("FINAL_AUDIT_REPLAY", 6, "Final audit replay", { label: "Replay", href: `${runHref}/replay` }, "P21_FINAL_AUDIT_RUN_NOT_PUBLISHED", "A primary/diagnostic/reused child is never promoted into a final audit target.");
+      ? complete("FINAL_AUDIT_REPLAY", 6, "Final audit replay", { label: "Replay", href: `${runHref}/execute` }, source.evidence.projectionDigest, "Exact READY AUDIT_OF_SELECTION run has retained evidence and chronology revisions.")
+      : missing("FINAL_AUDIT_REPLAY", 6, "Final audit replay", { label: "Replay", href: `${runHref}/execute` }, "P21_FINAL_AUDIT_RUN_NOT_PUBLISHED", "A primary/diagnostic/reused child is never promoted into a final audit target.");
     const metrics = source.evidence.revision && source.evidence.projectionDigest && source.evidence.readiness === "COMPLETE"
       ? complete("METRICS_SEMANTICS", 7, "Metrics semantics", { label: "Run report", href: `${runHref}/report` }, source.evidence.projectionDigest, "Immutable evidence projection is complete.")
       : missing("METRICS_SEMANTICS", 7, "Metrics semantics", { label: "Run report", href: `${runHref}/report` }, "P21_METRICS_PROJECTION_NOT_COMPLETE", "Metrics projection is absent or not complete.");
@@ -404,8 +410,8 @@ export class ResearchReleaseCandidateService {
       ? complete("EXECUTION_ASSUMPTIONS", 8, "Execution assumptions", { label: "Split & chronology", href: `${runHref}/split` }, values.adapterContractDigest, "Declared adapter route is an assumption only; this pack makes no deployment decision.")
       : missing("EXECUTION_ASSUMPTIONS", 8, "Execution assumptions", { label: "Split & chronology", href: `${runHref}/split` }, "P21_EXECUTION_ASSUMPTIONS_NOT_PUBLISHED", "No source-bound execution assumption declaration is available.");
     const robustness = source.evidence.revision
-      ? degraded("ROBUSTNESS_PARAM_STABILITY_REGIME", 9, "Robustness/param stability/regime", { label: "Compare", href: source.alpha.alphaId ? `/research/alphas/${source.alpha.alphaId}/compare` : null }, source.evidence.projectionDigest, "Current source publishes bounded evidence but not a complete stability/regime certificate; the degraded state travels unchanged.")
-      : missing("ROBUSTNESS_PARAM_STABILITY_REGIME", 9, "Robustness/param stability/regime", { label: "Compare", href: source.alpha.alphaId ? `/research/alphas/${source.alpha.alphaId}/compare` : null }, "P21_EVIDENCE_REVISION_NOT_PUBLISHED", "No retained evidence revision exists to support even a degraded declaration.");
+      ? degraded("ROBUSTNESS_PARAM_STABILITY_REGIME", 9, "Robustness/param stability/regime", { label: "Compare", href: source.alpha.alphaId ? `/research/quantbt/alphas/${encodeURIComponent(source.alpha.alphaId)}/compare` : null }, source.evidence.projectionDigest, "Current source publishes bounded evidence but not a complete stability/regime certificate; the degraded state travels unchanged.")
+      : missing("ROBUSTNESS_PARAM_STABILITY_REGIME", 9, "Robustness/param stability/regime", { label: "Compare", href: source.alpha.alphaId ? `/research/quantbt/alphas/${encodeURIComponent(source.alpha.alphaId)}/compare` : null }, "P21_EVIDENCE_REVISION_NOT_PUBLISHED", "No retained evidence revision exists to support even a degraded declaration.");
     const limitations = input("KNOWN_LIMITATIONS_WAIVERS", 10, "Known limitations & waivers", draft.knownLimitations, "Researcher-signed declaration; it cannot hide a missing mandatory item.");
     const reproducibility = values.manifest && values.sourceTransform && source.report.frozenCoreDigest
       ? complete("REPRODUCIBILITY_PARITY_CHECKSUMS", 11, "Reproducibility/parity checksums", { label: "Freeze & integrity", href: `${runHref}/freeze` }, source.report.frozenCoreDigest, "Retained manifest, transform and sealed Report checksum are all explicitly pinned.")
@@ -416,6 +422,7 @@ export class ResearchReleaseCandidateService {
 
   private sourceIntegrity(source: ReleaseCandidateSource, values: ReturnType<ResearchReleaseCandidateService["values"]>): boolean {
     if (!values.exactSource || values.manifest === null || values.sourceTransform === null || values.strictDatasetDigest === null) return false;
+    if (source.currentSource.manifestDigest !== null && digest(source.currentSource.manifestDigest) === null) return false;
     return !source.artifacts.some((artifact) => artifact.state === "CORRUPT" || artifact.state === "MISSING");
   }
 
