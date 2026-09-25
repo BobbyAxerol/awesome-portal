@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read the latest sealed immutable report core for a run */
+        /**
+         * Read the latest sealed immutable report core for a run
+         * @description Never 409: a run whose report is not sealed yet (or never will be) answers 404 RESEARCH_REPORT_NOT_FOUND. Only export creation/download can answer 409.
+         */
         get: operations["researchReportDetailGetV1"];
         put?: never;
         post?: never;
@@ -201,7 +204,7 @@ export interface components {
             maximum_bytes: number;
             unavailable_formats: components["schemas"]["UnavailableExportFormat"][];
         };
-        FrozenCore: {
+        FrozenCoreV1: {
             /** @constant */
             schema_version: "research.report-frozen-core.v1";
             /** @constant */
@@ -236,6 +239,200 @@ export interface components {
                 [key: string]: components["schemas"]["ReportFact"];
             };
         };
+        EquityPoint: {
+            at_utc_ms: components["schemas"]["UtcMilliseconds"];
+            equity: components["schemas"]["ExactDecimal"];
+            drawdown_fraction: components["schemas"]["ExactDecimal"];
+        };
+        ReportFactV2: {
+            key: string;
+            label: string;
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_ASSERTED" | "NOT_APPLICABLE";
+            text: string | null;
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            availability: components["schemas"]["Availability"];
+        };
+        MetricV2: {
+            key: string;
+            label: string;
+            /** @enum {unknown} */
+            unit: "CURRENCY" | "FRACTION" | "COUNT" | "RATIO";
+            /** @enum {unknown} */
+            scope: "OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "NOT_PUBLISHED" | "OOS_MEAN_OF_FOLDS" | "OOS_SUM_OF_FOLDS";
+            /** @enum {unknown} */
+            origin: "ENGINE_DIRECT" | "SOURCE_DERIVED" | "NOT_PUBLISHED";
+            definition_id: string;
+            value: components["schemas"]["ExactDecimal"] | null;
+            availability: components["schemas"]["Availability"];
+        };
+        HeadlineV2: {
+            /** @enum {unknown} */
+            key: "OOS_SHARPE" | "DECAY_MEAN" | "MAX_DRAWDOWN" | "TRADES" | "WIN_RATE" | "FUNDING";
+            label: string;
+            value: components["schemas"]["ExactDecimal"] | null;
+            availability: components["schemas"]["Availability"];
+            /** @enum {unknown} */
+            scope: "OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "NOT_PUBLISHED" | "OOS_MEAN_OF_FOLDS" | "OOS_SUM_OF_FOLDS";
+        };
+        EquityV2: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED";
+            /** @enum {unknown} */
+            scope: "P13_OOS_EQUITY" | "RS02_STITCHED_OUTER_TEST_WINDOWS" | "RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST" | "NOT_PUBLISHED";
+            source_observation_count: number | null;
+            emitted_point_count: number | null;
+            sampling: ("FULL" | "EXTREMA_BUCKET_V1" | "OBSERVATION_EXTREMA_BUCKET_V2") | null;
+            points: components["schemas"]["EquityPoint"][];
+            availability: components["schemas"]["Availability"];
+        };
+        FoldFact: {
+            value: components["schemas"]["ExactDecimal"] | null;
+            availability: components["schemas"]["Availability"];
+        };
+        FoldRowV2: {
+            fold_id: string;
+            source_ordinal: number;
+            test_start_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            test_last_bar_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            /** @enum {unknown} */
+            verdict: "PASS" | "WARN" | "DRAG" | "NOT_EVALUATED";
+            failed_criteria: ("OOS_SHARPE" | "DECAY" | "MAX_DRAWDOWN")[];
+            drag_target: string | null;
+            params: {
+                text: string | null;
+                availability: components["schemas"]["Availability"];
+            };
+            is_sharpe: components["schemas"]["FoldFact"];
+            oos_sharpe: components["schemas"]["FoldFact"];
+            decay: components["schemas"]["FoldFact"];
+            contribution_fraction: components["schemas"]["FoldFact"];
+            max_drawdown_fraction: components["schemas"]["FoldFact"];
+            oos_trades: components["schemas"]["FoldFact"];
+        };
+        FoldsV2: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            rule: {
+                /** @constant */
+                version: "research.fold-verdict.v1";
+                pass: {
+                    oos_sharpe_min: components["schemas"]["ExactDecimal"];
+                    decay_max: components["schemas"]["ExactDecimal"];
+                    max_drawdown_min: components["schemas"]["ExactDecimal"];
+                };
+                warn: {
+                    oos_sharpe_min: components["schemas"]["ExactDecimal"];
+                    decay_max: components["schemas"]["ExactDecimal"];
+                    max_drawdown_min: components["schemas"]["ExactDecimal"];
+                };
+            } | null;
+            /** @constant */
+            order: "SOURCE_ORDINAL_ASC";
+            params_handoff: {
+                /** @enum {unknown} */
+                scope: "GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD" | "NOT_PUBLISHED";
+                text: string | null;
+                availability: components["schemas"]["Availability"];
+            };
+            rows: components["schemas"]["FoldRowV2"][];
+            availability: components["schemas"]["Availability"];
+        };
+        StageCheck: {
+            /** @enum {unknown} */
+            result: "PASS" | "CAVEAT" | "FAIL" | "NOT_PUBLISHED" | "NOT_APPLICABLE";
+            text: string | null;
+            source_key: string | null;
+            availability: components["schemas"]["Availability"];
+        };
+        StageV2: {
+            /** @enum {unknown} */
+            key: "S1" | "S2" | "S3" | "S4" | "S5";
+            /** @enum {unknown} */
+            state: "PENDING" | "RUNNING" | "DONE";
+            started_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            completed_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+            check: components["schemas"]["StageCheck"];
+        };
+        ArtifactV2: {
+            /** @enum {unknown} */
+            key: "RUN_SPEC" | "SELECTION_TRACE" | "FOLD_PLAN" | "FILL_LEDGER" | "METRICS_SUMMARY" | "CLAIM" | "BUNDLE" | "SEARCH_TRACE" | "CANDIDATES" | "OBSERVATIONS";
+            filename: string | null;
+            digest: components["schemas"]["Digest"] | null;
+            /** @enum {unknown} */
+            state: "SEALED" | "NOT_PUBLISHED" | "NOT_APPLICABLE" | "ABORTED";
+            part_count: number | null;
+            download: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                reason_code: components["schemas"]["ReasonCode"];
+            };
+            availability: components["schemas"]["Availability"];
+        };
+        ReportTitle: {
+            text: string | null;
+            strategy: string | null;
+            symbol: string | null;
+            timeframe: string | null;
+            availability: components["schemas"]["Availability"];
+        };
+        Certification: {
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            grade: null;
+            reason_code: components["schemas"]["ReasonCode"];
+            availability: components["schemas"]["Availability"];
+        };
+        FrozenCoreV2: {
+            /** @constant */
+            schema_version: "research.report-frozen-core.v2";
+            /** @enum {unknown} */
+            report_source: "P13_P17_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE";
+            source_revisions: {
+                evidence_revision: string;
+                split_revision: string;
+                search_revision: string;
+                freeze_revision: string;
+                replay_revision: string;
+            };
+            source_digests: {
+                source_transform_digest: components["schemas"]["Digest"] | null;
+                requested_spec_digest: components["schemas"]["Digest"] | null;
+                effective_spec_digest: components["schemas"]["Digest"] | null;
+                dataset_binding_digest: components["schemas"]["Digest"] | null;
+                manifest_digest: components["schemas"]["Digest"] | null;
+            };
+            title: components["schemas"]["ReportTitle"];
+            certification: components["schemas"]["Certification"];
+            passport: components["schemas"]["ReportFactV2"][];
+            identity: components["schemas"]["IdentityField"][];
+            metrics: components["schemas"]["MetricV2"][];
+            headline: components["schemas"]["HeadlineV2"][];
+            headline_footnote: string;
+            equity: components["schemas"]["EquityV2"];
+            equity_is: components["schemas"]["EquityV2"];
+            folds: components["schemas"]["FoldsV2"];
+            stages: components["schemas"]["StageV2"][];
+            artifacts: components["schemas"]["ArtifactV2"][];
+            warnings: components["schemas"]["Warning"][];
+            promotion: components["schemas"]["Promotion"];
+            provenance: {
+                line: string;
+                /** @enum {unknown} */
+                metric_registry_version: "research.metric-registry.v1" | "research.metric-registry.v2" | "research.current-source-metrics.v1";
+                data_signature: components["schemas"]["Digest"] | null;
+                /** @constant */
+                read_model_revision: "research.report-read-model.v2";
+                /** @enum {unknown} */
+                verdict_rule_revision: "research.report-verdict-rule.v1" | "research.fold-verdict.v1";
+            };
+            source_absences: {
+                [key: string]: components["schemas"]["ReportFact"];
+            };
+        };
+        /** @description A sealed core is served under the schema it was sealed with. v1 cores stay byte-identical; every report sealed after W6a is v2 (P04 fixed profile or the retained Delta WFO lane). */
+        FrozenCore: components["schemas"]["FrozenCoreV1"] | components["schemas"]["FrozenCoreV2"];
         Annotation: {
             /** @enum {unknown} */
             state: "NOT_PUBLISHED" | "AVAILABLE";

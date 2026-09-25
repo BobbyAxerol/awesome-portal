@@ -26,11 +26,15 @@ import {
   type ComparePairRawInput,
   type ComparePairRawStats,
   type CompareRunRow,
+  type CompareRetainedEquityPoint,
   type CompareSnapshot,
   ResearchCompareRepository,
 } from "./compare.repository";
+import { CurrentSourceSummarySchema } from "./current-source.payload";
+import { RS02_DELTA_WFO_GLOBAL_PROFILE_ID, RS02_SIGNAL_NOTIONAL_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchRequestedSpecSchema } from "./preflight.contract";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
+import { extremaPreservingSample } from "./run-library.service";
 
 type Availability = {
   state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL" | "NOT_APPLICABLE";
@@ -72,14 +76,54 @@ const EquitySeriesSchema = z.array(z.object({
 const RUN_STATES = new Set(["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"]);
 const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
 
+type Lane = "P04_FIXED_PROFILE" | "RS02_RETAINED_CURRENT_SOURCE" | "NOT_PUBLISHED";
+
+/** W6a: the retained Delta WFO facts Compare reads for one run. */
+interface Retained {
+  summary: z.infer<typeof CurrentSourceSummarySchema>;
+  folds: RetainedFold[];
+  sourceFoldCount: number | null;
+  meanOosSharpe: string | null;
+  meanDecay: string | null;
+}
+
+interface RetainedFold {
+  source_ordinal: number;
+  fold_id: string;
+  test_start_utc_ms: number | null;
+  test_end_utc_ms: number | null;
+  test_bars: number | null;
+  oos_sharpe: string | null;
+  oos_trade_count: string | null;
+}
+
 interface Candidate {
   row: CompareRunRow;
   run: ResearchCompareRun;
   requested: RequestedSpec | null;
   split: ResearchSplitSource | null;
+  retained: Retained | null;
   outerOos: { startUtcMs: number; endExclusiveUtcMs: number; bars: number } | null;
   sourceBindingReady: boolean;
 }
+
+const RetainedFoldSchema = z.object({
+  source_ordinal: z.number().int().nonnegative().max(4_096),
+  fold_id: z.string().min(1).max(160),
+  test_start_utc_ms: z.number().int().nonnegative().nullable(),
+  test_end_utc_ms: z.number().int().nonnegative().nullable(),
+  test_bars: z.number().int().nonnegative().nullable(),
+  oos_sharpe: z.string().regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(96).nullable(),
+  oos_trade_count: z.string().regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(96).nullable(),
+}).strict();
+
+const CERTIFICATION_NOT_PUBLISHED = {
+  state: "NOT_PUBLISHED" as const,
+  grade: null,
+  reason_code: "P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE",
+  availability: { state: "NOT_PUBLISHED" as const, reason_code: "P20_NO_SOURCE_PUBLISHES_A_CERTIFICATION_GRADE" },
+};
+const LIFECYCLES = new Set(["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"]);
 
 function available(): Availability { return { state: "AVAILABLE", reason_code: null }; }
 function absent(reasonCode: string): Availability { return { state: "NOT_PUBLISHED", reason_code: reasonCode }; }
@@ -126,6 +170,49 @@ function asStoredSplit(value: unknown): ResearchSplitSource | null {
 function asRequestedSpec(value: unknown): RequestedSpec | null {
   const parsed = ResearchRequestedSpecSchema.safeParse(record(value));
   return parsed.success ? parsed.data : null;
+}
+
+function asRetained(row: CompareRunRow): Retained | null {
+  if (row.current_profile_id !== RS02_DELTA_WFO_GLOBAL_PROFILE_ID && row.current_profile_id !== RS02_SIGNAL_NOTIONAL_PROFILE_ID) return null;
+  const summary = CurrentSourceSummarySchema.safeParse(record(row.current_source_summary));
+  if (!summary.success) return null;
+  const rawFolds = typeof row.current_source_folds === "string" ? (() => { try { return JSON.parse(row.current_source_folds as string); } catch { return null; } })() : row.current_source_folds;
+  const folds = z.array(RetainedFoldSchema).max(33).safeParse(rawFolds ?? []);
+  if (!folds.success) return null;
+  const tableRows = record(row.current_source_table_rows);
+  const foldCount = typeof tableRows?.FOLD === "number" && Number.isSafeInteger(tableRows.FOLD) ? tableRows.FOLD : null;
+  return {
+    summary: summary.data,
+    folds: folds.data,
+    sourceFoldCount: foldCount,
+    meanOosSharpe: exactDecimal(row.current_selected_mean_oos_sharpe),
+    meanDecay: exactDecimal(row.current_selected_mean_decay),
+  };
+}
+
+/** The retained outer-test span: first test bar to the last one, inclusive. */
+function retainedOuterOos(retained: Retained | null): Candidate["outerOos"] {
+  if (!retained || retained.folds.length === 0 || retained.sourceFoldCount !== retained.folds.length) return null;
+  const windows = retained.folds.map((fold) => [fold.test_start_utc_ms, fold.test_end_utc_ms, fold.test_bars] as const);
+  if (windows.some(([start, end, bars]) => start === null || end === null || bars === null)) return null;
+  return {
+    startUtcMs: Math.min(...windows.map(([start]) => start!)),
+    endExclusiveUtcMs: Math.max(...windows.map(([, end]) => end!)) + 1,
+    bars: windows.reduce((total, [, , bars]) => total + bars!, 0),
+  };
+}
+
+function retainedBindingReady(row: CompareRunRow): boolean {
+  return row.current_artifact_sealed === true
+    && row.current_manifest_digest !== null && /^[0-9a-f]{64}$/.test(row.current_manifest_digest)
+    && row.requested_spec_digest !== null && row.current_requested_spec_digest === row.requested_spec_digest
+    && row.effective_spec_digest !== null && row.current_effective_spec_digest === row.effective_spec_digest
+    && row.dataset_binding_digest !== null && row.current_dataset_binding_digest === row.dataset_binding_digest;
+}
+
+function sumIntegers(values: Array<string | null>): string | null {
+  if (values.length === 0 || values.some((value) => value === null || !/^(?:0|[1-9][0-9]*)$/.test(value))) return null;
+  return values.reduce((total, value) => total + BigInt(value!), 0n).toString();
 }
 
 function asEvidence(value: unknown) {
@@ -187,10 +274,31 @@ function sourceBindingReady(row: CompareRunRow, split: ResearchSplitSource | nul
     && split.source.source_transform_digest === row.current_source_transform_digest;
 }
 
-function claim(row: CompareRunRow, split: ResearchSplitSource | null) {
+function claim(row: CompareRunRow, split: ResearchSplitSource | null, retained: Retained | null) {
   const snapshot = record(row.progress_snapshot);
   const sourceClaim = record(snapshot?.claim);
   const sourceText = sourceClaim?.state === "ISSUED" ? boundedText(sourceClaim.text) : null;
+  if (retained) {
+    // W6a: QuantBT itself attests `walk_forward.validation_claim` on the
+    // retained lane. It never attests a strict or selection-adjusted OOS
+    // claim there (oos_used_for_selection is published beside it), so the
+    // family stays the conservative compatibility tier, now source-attested.
+    const claims = retained.summary.source_facts?.claims;
+    if (claims?.validation_claim === "walk_forward_oos") {
+      const text = [
+        `validation_claim=${claims.validation_claim}`,
+        claims.chronological_validation_claim ? `chronological_claim=${claims.chronological_validation_claim}` : null,
+        claims.oos_used_for_selection === null ? null : `oos_used_for_selection=${String(claims.oos_used_for_selection)}`,
+      ].filter((item): item is string => item !== null).join(" · ");
+      return {
+        family: "WALK_FORWARD_OOS_COMPATIBILITY" as const,
+        rank: 3,
+        origin: "SOURCE_ATTESTED" as const,
+        text: sourceText ?? text,
+        availability: available(),
+      };
+    }
+  }
   // Current P04 does not attest strict/selection-adjusted claims. Its P14
   // receipt does attest a fixed-profile, outer-OOS observation protocol. That
   // supports only the conservative compatibility tier below.
@@ -212,6 +320,20 @@ function claim(row: CompareRunRow, split: ResearchSplitSource | null) {
     text: sourceText,
     availability: absent("P20_STRUCTURED_CLAIM_FAMILY_NOT_PUBLISHED"),
   };
+}
+
+function retainedMetrics(retained: Retained) {
+  const metric = (key: "NET_RETURN_FRACTION" | "MAX_DRAWDOWN_FRACTION" | "TRADE_COUNT" | "OOS_SHARPE" | "DECAY", definition: string, scope: string, value: string | null, reason: string) =>
+    ({ key, definition_id: `research.compare.metric.v1.${definition}`, scope, value, availability: value === null ? absent(reason) : available() });
+  return [
+    metric("NET_RETURN_FRACTION", "original-net-return", "RS02_RETAINED_FINAL_ACCOUNT", exactDecimal(retained.summary.metrics.net_return_fraction), "P20_RS02_NET_RETURN_NOT_RETAINED"),
+    metric("MAX_DRAWDOWN_FRACTION", "original-max-drawdown", "RS02_RETAINED_FINAL_ACCOUNT", exactDecimal(retained.summary.metrics.max_drawdown_fraction), "P20_RS02_MAX_DRAWDOWN_NOT_RETAINED"),
+    metric("TRADE_COUNT", "rs02-oos-trade-count", "RS02_OOS_SUM_OF_FOLDS",
+      retained.sourceFoldCount === retained.folds.length ? sumIntegers(retained.folds.map((fold) => fold.oos_trade_count)) : null,
+      "P20_RS02_FOLD_TRADE_COUNTS_NOT_RETAINED"),
+    metric("OOS_SHARPE", "oos-sharpe", "RS02_OOS_MEAN_OF_FOLDS", retained.meanOosSharpe, "P20_SOURCE_DID_NOT_PUBLISH_OOS_SHARPE"),
+    metric("DECAY", "decay", "RS02_OOS_MEAN_OF_FOLDS", retained.meanDecay, "P20_SOURCE_DID_NOT_PUBLISH_DECAY"),
+  ];
 }
 
 function originalMetrics(row: CompareRunRow) {
@@ -263,6 +385,12 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
   }
   const requested = asRequestedSpec(row.requested_spec);
   const split = asStoredSplit(row.split_projection);
+  const retained = asRetained(row);
+  const lane: Lane = retained ? "RS02_RETAINED_CURRENT_SOURCE"
+    : split !== null || row.evidence_projection !== null ? "P04_FIXED_PROFILE" : "NOT_PUBLISHED";
+  const lifecycle = row.alpha_version_lifecycle !== null && LIFECYCLES.has(row.alpha_version_lifecycle)
+    ? { value: row.alpha_version_lifecycle as "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED", availability: available() }
+    : { value: null, availability: absent("P20_ALPHA_VERSION_LIFECYCLE_NOT_AVAILABLE") };
   const run: ResearchCompareRun = {
     run_id: row.run_id,
     attempt_id: row.attempt_id,
@@ -271,8 +399,14 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
     run_state: row.run_state as ResearchCompareRun["run_state"],
     created_at_utc_ms: utcMs(row.run_created_at, "run timestamp"),
     comparison_contract_key: comparisonKey(requested),
-    claim: claim(row, split),
-    original_metrics: originalMetrics(row),
+    claim: claim(row, split, retained),
+    original_metrics: retained ? retainedMetrics(retained) : originalMetrics(row),
+    lane,
+    schedule: requested
+      ? { mode: requested.optimization_mode ?? null, schedule: requested.optimization_schedule ?? null, availability: requested.optimization_mode && requested.optimization_schedule ? available() : absent("P20_REQUESTED_SPEC_HAS_NO_OPTIMIZATION_SCHEDULE") }
+      : { mode: null, schedule: null, availability: absent("P20_REQUESTED_SPEC_NOT_AVAILABLE") },
+    certification: CERTIFICATION_NOT_PUBLISHED,
+    alpha_version_lifecycle: lifecycle,
     provenance: {
       requested_spec_digest: row.requested_spec_digest,
       effective_spec_digest: row.effective_spec_digest,
@@ -283,16 +417,18 @@ function buildCandidate(row: CompareRunRow): Candidate | null {
       current_source_revision: row.current_artifact_revision === null ? null : String(row.current_artifact_revision),
     },
   };
-  return { row, run, requested, split, outerOos: outerOos(split), sourceBindingReady: sourceBindingReady(row, split) };
+  return retained
+    ? { row, run, requested, split: null, retained, outerOos: retainedOuterOos(retained), sourceBindingReady: retainedBindingReady(row) }
+    : { row, run, requested, split, retained: null, outerOos: outerOos(split), sourceBindingReady: sourceBindingReady(row, split) };
 }
 
 function rank(candidate: Candidate): number {
   return candidate.run.claim.rank ?? Number.MAX_SAFE_INTEGER;
 }
 
-function originalNetReturn(candidate: Candidate): string | null {
-  const metric = candidate.run.original_metrics.find((item) => item.key === "NET_RETURN_FRACTION");
-  return metric?.value ?? null;
+function originalMetric(candidate: Candidate, key: "NET_RETURN_FRACTION" | "OOS_SHARPE"): string | null {
+  const metric = candidate.run.original_metrics.find((item) => item.key === key);
+  return metric?.availability.state === "AVAILABLE" ? metric.value : null;
 }
 
 function compareDecimalDescending(left: string | null, right: string | null): number {
@@ -316,25 +452,78 @@ function sortCandidates(candidates: Candidate[]): Candidate[] {
   return [...candidates].sort((left, right) => {
     const rankDifference = rank(left) - rank(right);
     if (rankDifference !== 0) return rankDifference;
-    const metricDifference = compareDecimalDescending(originalNetReturn(left), originalNetReturn(right));
+    // CG-P20-11 (spec 13 §5): OOS Sharpe first inside a claim tier; the
+    // original net return breaks the tie when a source published no OOS
+    // Sharpe (every P04 run), so a missing number never outranks a real one.
+    const oosDifference = compareDecimalDescending(originalMetric(left, "OOS_SHARPE"), originalMetric(right, "OOS_SHARPE"));
+    if (oosDifference !== 0) return oosDifference;
+    const metricDifference = compareDecimalDescending(originalMetric(left, "NET_RETURN_FRACTION"), originalMetric(right, "NET_RETURN_FRACTION"));
     if (metricDifference !== 0) return metricDifference;
     const creationDifference = left.run.created_at_utc_ms - right.run.created_at_utc_ms;
     return creationDifference || left.run.run_id.localeCompare(right.run.run_id);
   });
 }
 
+type IntentPath = "alpha_version" | "parameter_space_overrides" | "random_seed" | "optimization_mode" | "optimization_schedule" | "engine_config_digest";
+const INTENT_PATHS: IntentPath[] = ["alpha_version", "parameter_space_overrides", "random_seed", "optimization_mode", "optimization_schedule", "engine_config_digest"];
+
+/** The allow-listed config value of one run (P19 semantic diff / P20 intentional differences). */
+function intentValue(candidate: Candidate, path: IntentPath): string | null {
+  const requested = candidate.requested;
+  switch (path) {
+    case "alpha_version": return canonicalDisplay(requested?.alpha_binding?.alpha_version_id ?? candidate.run.alpha_version_id);
+    case "parameter_space_overrides": return canonicalDisplay(requested?.parameter_space_overrides);
+    case "random_seed": return canonicalDisplay(requested?.random_seed);
+    case "optimization_mode": return canonicalDisplay(requested?.optimization_mode);
+    case "optimization_schedule": return canonicalDisplay(requested?.optimization_schedule);
+    default: return canonicalDisplay(requested?.client.config_digest);
+  }
+}
+
 function intentDifferences(left: Candidate, right: Candidate) {
-  const pairs: Array<["alpha_version" | "parameter_space_overrides" | "random_seed" | "optimization_mode" | "optimization_schedule" | "engine_config_digest", unknown, unknown]> = [
-    ["alpha_version", left.requested?.alpha_binding?.alpha_version_id ?? left.run.alpha_version_id, right.requested?.alpha_binding?.alpha_version_id ?? right.run.alpha_version_id],
-    ["parameter_space_overrides", left.requested?.parameter_space_overrides, right.requested?.parameter_space_overrides],
-    ["random_seed", left.requested?.random_seed, right.requested?.random_seed],
-    ["optimization_mode", left.requested?.optimization_mode, right.requested?.optimization_mode],
-    ["optimization_schedule", left.requested?.optimization_schedule, right.requested?.optimization_schedule],
-    ["engine_config_digest", left.requested?.client.config_digest, right.requested?.client.config_digest],
-  ];
-  return pairs
-    .map(([path, before, after]) => ({ path, before: canonicalDisplay(before), after: canonicalDisplay(after) }))
+  return INTENT_PATHS
+    .map((path) => ({ path, before: intentValue(left, path), after: intentValue(right, path) }))
     .filter((item) => item.before !== item.after);
+}
+
+/** CG-P20-05: the keys that changed anywhere across the attempts, each with every attempt's value. */
+function configDiff(candidates: Candidate[]) {
+  if (candidates.length < 2) {
+    return { paths: [], availability: notApplicable("P20_CONFIG_DIFF_NEEDS_TWO_ATTEMPTS") };
+  }
+  if (candidates.some((candidate) => candidate.requested === null)) {
+    return { paths: [], availability: absent("P20_REQUESTED_SPEC_NOT_AVAILABLE") };
+  }
+  const paths = INTENT_PATHS.map((path) => ({
+    path,
+    values: candidates.map((candidate) => ({ run_id: candidate.run.run_id, value: intentValue(candidate, path) })),
+  })).filter((item) => new Set(item.values.map((value) => value.value)).size > 1);
+  return { paths, availability: available() };
+}
+
+/** CG-P20-04: per-fold OOS Sharpe as retained; a P04 run has no per-fold facts. */
+function foldSeries(candidate: Candidate) {
+  const retained = candidate.retained;
+  if (!retained) {
+    return {
+      run_id: candidate.run.run_id, state: "NOT_PUBLISHED" as const, source_fold_count: null, truncated: false, folds: [],
+      availability: absent(candidate.run.lane === "P04_FIXED_PROFILE" ? "P20_P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_OOS_SHARPE" : "P20_RUN_HAS_NO_RETAINED_FOLD_FACTS"),
+    };
+  }
+  const shown = retained.folds.slice(0, 32);
+  return {
+    run_id: candidate.run.run_id,
+    state: "AVAILABLE" as const,
+    source_fold_count: retained.sourceFoldCount,
+    truncated: retained.folds.length > 32 || (retained.sourceFoldCount !== null && retained.sourceFoldCount > shown.length),
+    folds: shown.map((fold) => ({
+      fold_id: fold.fold_id,
+      source_ordinal: fold.source_ordinal,
+      oos_sharpe: exactDecimal(fold.oos_sharpe),
+      availability: exactDecimal(fold.oos_sharpe) === null ? absent("QUANTBT_DID_NOT_RETAIN_SELECTED_TRIAL_FOLD_METRICS") : available(),
+    })),
+    availability: available(),
+  };
 }
 
 function weakerClaim(left: Candidate, right: Candidate) {
@@ -357,19 +546,31 @@ function unavailableCommon(reasonCode: string) {
     definition_id: "research.compare-common-window.v1" as const,
     left_source_observation_count: null,
     right_source_observation_count: null,
-    matched_observation_count: 0,
-    start_utc_ms: null,
-    end_utc_ms: null,
+    matched_observation_count: null as number | null,
+    start_utc_ms: null as number | null,
+    end_utc_ms: null as number | null,
+    delta_definition: "RIGHT_MINUS_LEFT" as const,
     metrics: [
       { key: "NET_RETURN_FRACTION" as const, definition_id: "research.compare.metric.v1.common-window-net-return", left_value: null, right_value: null, delta: null, availability: absence },
       { key: "MAX_DRAWDOWN_FRACTION" as const, definition_id: "research.compare.metric.v1.common-window-max-drawdown", left_value: null, right_value: null, delta: null, availability: absence },
-      { key: "TRADE_COUNT" as const, definition_id: "research.compare.metric.v1.common-window-trade-count", left_value: null, right_value: null, delta: null, availability: notApplicable("P20_COMMON_WINDOW_DOES_NOT_DEFINE_TRADE_COUNT") },
+      ...UNDEFINED_COMMON_METRICS,
     ],
     availability: absence,
   };
 }
 
-function unavailableCorrelation(reasonCode: string, n = 0, start: number | null = null, end: number | null = null) {
+/**
+ * CG-P20-06: the common window defines no trade count, no Sharpe and no win
+ * rate. A Sharpe would need the source's annualization; a win rate needs
+ * audited round-trip trades, which no current source publishes.
+ */
+const UNDEFINED_COMMON_METRICS = [
+  { key: "TRADE_COUNT" as const, definition_id: "research.compare.metric.v1.common-window-trade-count", left_value: null, right_value: null, delta: null, availability: notApplicable("P20_COMMON_WINDOW_DOES_NOT_DEFINE_TRADE_COUNT") },
+  { key: "OOS_SHARPE" as const, definition_id: "research.compare.metric.v1.common-window-oos-sharpe", left_value: null, right_value: null, delta: null, availability: notApplicable("P20_COMMON_WINDOW_SHARPE_NEEDS_SOURCE_ANNUALIZATION") },
+  { key: "WIN_RATE_FRACTION" as const, definition_id: "research.compare.metric.v1.common-window-win-rate", left_value: null, right_value: null, delta: null, availability: notApplicable("P20_SOURCE_PUBLISHES_NO_AUDITED_ROUND_TRIPS_FOR_WIN_RATE") },
+];
+
+function unavailableCorrelation(reasonCode: string, n: number | null = null, start: number | null = null, end: number | null = null) {
   return {
     state: "NOT_PUBLISHED" as const,
     source_label: "NOT_PUBLISHED" as const,
@@ -389,7 +590,7 @@ function unavailableOverlay(reasonCode: string) {
     state: "NOT_PUBLISHED" as const,
     sampling: "NOT_APPLICABLE" as const,
     source_observation_count: null,
-    emitted_point_count: 0,
+    emitted_point_count: null,
     points: [],
     availability: absent(reasonCode),
   };
@@ -430,7 +631,7 @@ function commonFromRaw(raw: ComparePairRawStats) {
     && raw.rightSourceCount === raw.rightValidEquityCount;
   if (!quality) return { common: unavailableCommon("P20_RAW_OBSERVATION_FACTS_INCOMPATIBLE"), correlation: unavailableCorrelation("P20_RAW_OBSERVATION_FACTS_INCOMPATIBLE") };
   if (raw.matchedCount === 0 || raw.startUtcMs === null || raw.endUtcMs === null) {
-    return { common: unavailableCommon("P20_NO_COMMON_RAW_RETURN_WINDOW"), correlation: unavailableCorrelation("P20_NO_COMMON_RAW_RETURN_WINDOW") };
+    return { common: { ...unavailableCommon("P20_NO_COMMON_RAW_RETURN_WINDOW"), left_source_observation_count: raw.leftSourceCount, right_source_observation_count: raw.rightSourceCount, matched_observation_count: raw.matchedCount }, correlation: unavailableCorrelation("P20_NO_COMMON_RAW_RETURN_WINDOW", raw.matchedCount) };
   }
   const leftReturn = exactDecimal(raw.leftCommonReturnFraction);
   const rightReturn = exactDecimal(raw.rightCommonReturnFraction);
@@ -447,10 +648,11 @@ function commonFromRaw(raw: ComparePairRawStats) {
     matched_observation_count: raw.matchedCount,
     start_utc_ms: raw.startUtcMs,
     end_utc_ms: raw.endUtcMs,
+    delta_definition: "RIGHT_MINUS_LEFT" as const,
     metrics: [
       { key: "NET_RETURN_FRACTION" as const, definition_id: "research.compare.metric.v1.common-window-net-return", left_value: leftReturn, right_value: rightReturn, delta: subtractDecimal(leftReturn, rightReturn), availability: available() },
       { key: "MAX_DRAWDOWN_FRACTION" as const, definition_id: "research.compare.metric.v1.common-window-max-drawdown", left_value: leftDrawdown, right_value: rightDrawdown, delta: subtractDecimal(leftDrawdown, rightDrawdown), availability: available() },
-      { key: "TRADE_COUNT" as const, definition_id: "research.compare.metric.v1.common-window-trade-count", left_value: null, right_value: null, delta: null, availability: notApplicable("P20_COMMON_WINDOW_DOES_NOT_DEFINE_TRADE_COUNT") },
+      ...UNDEFINED_COMMON_METRICS,
     ],
     availability: available(),
   };
@@ -489,7 +691,7 @@ function chart(candidate: Candidate) {
       state: "NOT_PUBLISHED" as const,
       sampling: "NOT_APPLICABLE" as const,
       source_observation_count: null,
-      emitted_point_count: 0,
+      emitted_point_count: null,
       points: [],
       availability: absent("P20_P13_EQUITY_SERIES_NOT_AVAILABLE"),
     };
@@ -498,7 +700,7 @@ function chart(candidate: Candidate) {
     if (values.data[index]!.at_utc_ms <= values.data[index - 1]!.at_utc_ms) {
       return {
         state: "NOT_PUBLISHED" as const, sampling: "NOT_APPLICABLE" as const,
-        source_observation_count: null, emitted_point_count: 0, points: [],
+        source_observation_count: null, emitted_point_count: null, points: [],
         availability: absent("P20_P13_EQUITY_SERIES_CHRONOLOGY_INCOMPATIBLE"),
       };
     }
@@ -509,6 +711,28 @@ function chart(candidate: Candidate) {
     source_observation_count: sourceCount,
     emitted_point_count: values.data.length,
     points: values.data.map((point) => ({ at_utc_ms: point.at_utc_ms, equity: point.equity })),
+    availability: available(),
+  };
+}
+
+/** W6a · a retained WFO run's small multiple, from the repository's extrema buckets. */
+function retainedChart(points: CompareRetainedEquityPoint[] | undefined) {
+  if (!points || points.length === 0) {
+    return {
+      state: "NOT_PUBLISHED" as const, sampling: "NOT_APPLICABLE" as const,
+      source_observation_count: null, emitted_point_count: null, points: [],
+      availability: absent("P20_RS02_RETAINED_OBSERVATIONS_NOT_AVAILABLE"),
+    };
+  }
+  const sourceCount = points[0]!.sourceCount;
+  const sample = extremaPreservingSample(points, (point) => Number(point.equity), 192);
+  const full = !sample.sampled && points.length === sourceCount;
+  return {
+    state: "AVAILABLE" as const,
+    sampling: full ? "FULL" as const : "EXTREMA_BUCKET_V1" as const,
+    source_observation_count: sourceCount,
+    emitted_point_count: sample.points.length,
+    points: sample.points.map((point) => ({ at_utc_ms: point.atUtcMs, equity: point.equity })),
     availability: available(),
   };
 }
@@ -559,7 +783,7 @@ export class ResearchCompareService {
     const response = query.mode === "attempts"
       ? this.attempts(snapshot, candidates)
       : query.mode === "markets"
-        ? this.markets(snapshot, candidates)
+        ? await this.markets(scope, snapshot, candidates)
         : await this.pairForScope(scope, requested[0]!, requested[1]!);
     const body = this.finalize(snapshot, alphaId, response, candidates);
     await this.repository.persistCache(scope, {
@@ -579,7 +803,10 @@ export class ResearchCompareService {
     const incomplete = snapshot.hasMore || candidates.length !== snapshot.totalAttempts;
     return {
       mode: "attempts" as const,
+      order: "CLAIM_RANK_ASC_OOS_SHARPE_DESC_NET_RETURN_DESC" as const,
       attempts: sorted.map((item) => item.run),
+      fold_series: sorted.map(foldSeries),
+      config_diff: configDiff(sorted),
       coverage: {
         state: incomplete ? "PARTIAL" as const : "COMPLETE" as const,
         total_attempts: snapshot.totalAttempts,
@@ -594,13 +821,20 @@ export class ResearchCompareService {
     };
   }
 
-  private markets(snapshot: CompareSnapshot, candidates: Candidate[]) {
+  private async markets(scope: ResearchScope, snapshot: CompareSnapshot, candidates: Candidate[]) {
     const sorted = sortCandidates(candidates);
+    const retainedRuns = sorted
+      .filter((item) => item.retained !== null && item.sourceBindingReady && Number.isSafeInteger(Number(item.row.current_artifact_revision)))
+      .map((item) => ({ runId: item.run.run_id, artifactRevision: Number(item.row.current_artifact_revision) }));
+    const retainedPoints = new Map<string, CompareRetainedEquityPoint[]>();
+    for (const point of await this.repository.retainedEquity(scope, retainedRuns)) {
+      retainedPoints.set(point.runId, [...(retainedPoints.get(point.runId) ?? []), point]);
+    }
     const incomplete = snapshot.hasMore || candidates.length !== snapshot.totalAttempts;
     return {
       mode: "markets" as const,
       caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie." as const,
-      cards: sorted.map((item) => ({ run: item.run, chart: chart(item) })),
+      cards: sorted.map((item) => ({ run: item.run, chart: item.retained ? retainedChart(retainedPoints.get(item.run.run_id)) : chart(item) })),
       coverage: {
         state: incomplete ? "PARTIAL" as const : "COMPLETE" as const,
         total_attempts: snapshot.totalAttempts,

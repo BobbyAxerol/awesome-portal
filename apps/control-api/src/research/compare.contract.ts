@@ -90,6 +90,27 @@ const MetricSchema = z.object({
   availability: ResearchCompareAvailabilitySchema,
 }).strict();
 
+/** CG-P20-02 · the requested P08 optimization mode and schedule of a run. */
+const RunScheduleSchema = z.object({
+  mode: z.string().min(1).max(160).nullable(),
+  schedule: z.string().min(1).max(160).nullable(),
+  availability: ResearchCompareAvailabilitySchema,
+}).strict();
+
+/** CG-P20-03 · no source or Portal policy publishes a certification grade (same answer as CG-P18-02/CG-P19-05). */
+const RunCertificationSchema = z.object({
+  state: z.literal("NOT_PUBLISHED"),
+  grade: z.null(),
+  reason_code: ReasonCodeSchema,
+  availability: ResearchCompareAvailabilitySchema,
+}).strict();
+
+/** CG-P20-08 · the alpha version's registered lifecycle, as P19 lineage reads it. */
+const RunLifecycleSchema = z.object({
+  value: z.enum(["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"]).nullable(),
+  availability: ResearchCompareAvailabilitySchema,
+}).strict();
+
 const IntentDifferenceSchema = z.object({
   path: z.enum(["alpha_version", "parameter_space_overrides", "random_seed", "optimization_mode", "optimization_schedule", "engine_config_digest"]),
   before: z.string().max(512).nullable(),
@@ -106,6 +127,11 @@ const RunSchema = z.object({
   comparison_contract_key: ComparisonContractKeySchema,
   claim: ClaimSchema,
   original_metrics: z.array(MetricSchema).length(5),
+  /** W6a: which sealed read model this run's facts come from. */
+  lane: z.enum(["P04_FIXED_PROFILE", "RS02_RETAINED_CURRENT_SOURCE", "NOT_PUBLISHED"]),
+  schedule: RunScheduleSchema,
+  certification: RunCertificationSchema,
+  alpha_version_lifecycle: RunLifecycleSchema,
   provenance: z.object({
     requested_spec_digest: DigestSchema.nullable(),
     effective_spec_digest: DigestSchema.nullable(),
@@ -121,7 +147,8 @@ const SampledOverlaySchema = z.object({
   state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
   sampling: z.enum(["FULL", "RETENTION_STRIDE_V1", "EXTREMA_BUCKET_V1", "TAIL_WINDOW_V1", "NOT_APPLICABLE"]),
   source_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
-  emitted_point_count: z.number().int().nonnegative().max(192),
+  /** CG-P20-10: a block that is not published carries no count. */
+  emitted_point_count: z.number().int().nonnegative().max(192).nullable(),
   points: z.array(z.object({
     at_utc_ms: UtcMsSchema,
     left_equity: ExactDecimalSchema,
@@ -131,7 +158,8 @@ const SampledOverlaySchema = z.object({
 }).strict();
 
 const CommonWindowMetricSchema = z.object({
-  key: z.enum(["NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT"]),
+  /** CG-P20-06 appended OOS_SHARPE and WIN_RATE_FRACTION, both typed NOT_APPLICABLE on this window. */
+  key: z.enum(["NET_RETURN_FRACTION", "MAX_DRAWDOWN_FRACTION", "TRADE_COUNT", "OOS_SHARPE", "WIN_RATE_FRACTION"]),
   definition_id: z.string().min(1).max(160),
   left_value: ExactDecimalSchema.nullable(),
   right_value: ExactDecimalSchema.nullable(),
@@ -145,7 +173,8 @@ const CorrelationSchema = z.object({
   formula_id: z.literal("pearson-product-moment-correlation"),
   formula_version: z.literal("p20.raw-return-v1"),
   value: ExactDecimalSchema.nullable(),
-  n: z.number().int().nonnegative().max(2_000_000),
+  /** CG-P20-10: the matched count when a raw read happened (even if rho is not derivable), else null. */
+  n: z.number().int().nonnegative().max(2_000_000).nullable(),
   common_window_start_utc_ms: UtcMsSchema.nullable(),
   common_window_end_utc_ms: UtcMsSchema.nullable(),
   missing_policy: z.literal("INNER_JOIN_EXACT_TIMESTAMP_NO_FORWARD_FILL"),
@@ -157,16 +186,47 @@ const CommonWindowSchema = z.object({
   definition_id: z.literal("research.compare-common-window.v1"),
   left_source_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
   right_source_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
-  matched_observation_count: z.number().int().nonnegative().max(2_000_000),
+  /** CG-P20-10: the matched count when a raw read happened, else null. */
+  matched_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
   start_utc_ms: UtcMsSchema.nullable(),
   end_utc_ms: UtcMsSchema.nullable(),
-  metrics: z.array(CommonWindowMetricSchema).length(3),
+  /** CG-P20-09: every `delta` is right - left (B - A), a contract invariant. */
+  delta_definition: z.literal("RIGHT_MINUS_LEFT"),
+  metrics: z.array(CommonWindowMetricSchema).length(5),
+  availability: ResearchCompareAvailabilitySchema,
+}).strict();
+
+/** CG-P20-04 · per-fold OOS Sharpe of each attempt, as retained (at most 32 folds per attempt). */
+const FoldSeriesSchema = z.object({
+  run_id: ResearchCompareRunIdSchema,
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
+  source_fold_count: z.number().int().nonnegative().max(4_096).nullable(),
+  truncated: z.boolean(),
+  folds: z.array(z.object({
+    fold_id: z.string().min(1).max(160),
+    source_ordinal: z.number().int().nonnegative().max(4_096),
+    oos_sharpe: ExactDecimalSchema.nullable(),
+    availability: ResearchCompareAvailabilitySchema,
+  }).strict()).max(32),
+  availability: ResearchCompareAvailabilitySchema,
+}).strict();
+
+/** CG-P20-05 · the allow-listed config keys (the pair's intentional differences) that differ anywhere across the attempts. */
+const ConfigDiffSchema = z.object({
+  paths: z.array(z.object({
+    path: IntentDifferenceSchema.shape.path,
+    values: z.array(z.object({ run_id: ResearchCompareRunIdSchema, value: z.string().max(512).nullable() }).strict()).max(128),
+  }).strict()).max(6),
   availability: ResearchCompareAvailabilitySchema,
 }).strict();
 
 const AttemptsModeSchema = z.object({
   mode: z.literal("attempts"),
+  /** CG-P20-11 · the server's inspection order; the browser never re-sorts. */
+  order: z.literal("CLAIM_RANK_ASC_OOS_SHARPE_DESC_NET_RETURN_DESC"),
   attempts: z.array(RunSchema).max(128),
+  fold_series: z.array(FoldSeriesSchema).max(128),
+  config_diff: ConfigDiffSchema,
   coverage: z.object({
     state: z.enum(["COMPLETE", "PARTIAL"]),
     total_attempts: z.number().int().nonnegative(),
@@ -188,7 +248,7 @@ const MarketsModeSchema = z.object({
       state: z.enum(["AVAILABLE", "NOT_PUBLISHED"]),
       sampling: z.enum(["FULL", "RETENTION_STRIDE_V1", "EXTREMA_BUCKET_V1", "TAIL_WINDOW_V1", "NOT_APPLICABLE"]),
       source_observation_count: z.number().int().nonnegative().max(2_000_000).nullable(),
-      emitted_point_count: z.number().int().nonnegative().max(192),
+      emitted_point_count: z.number().int().nonnegative().max(192).nullable(),
       points: z.array(z.object({ at_utc_ms: UtcMsSchema, equity: ExactDecimalSchema }).strict()).max(192),
       availability: ResearchCompareAvailabilitySchema,
     }).strict(),

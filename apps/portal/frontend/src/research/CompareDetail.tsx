@@ -70,9 +70,15 @@ import {
   type PairComparable,
   type PairRefused,
   type PairResult,
+  COMPARE_METRIC_UNIT,
+  DELTA_DIRECTION_LABEL,
+  type ConfigDiff,
+  type FoldSeries,
 } from "./compareClient";
 import { LineageLink, lineageHref } from "./LineageLink";
+import { foldBars } from "./compareFoldBars";
 import { equitySvg, type AxisLabel } from "./reportEquity";
+import { formatMetric } from "./researchFormat";
 import type { ResearchState } from "./state";
 import type { CompareController } from "./useCompare";
 import { iso } from "./utcMinute";
@@ -220,11 +226,22 @@ const COMPARE_CSS = `
 .cp-lcard { flex: 1 1 200px; min-width: min(200px, 100%); display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: 8px;
   background: var(--paper-raised); padding: 11px 14px; box-shadow: var(--shadow-e1); }
 .cp-lcard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+/* CG-P20-08: the ACTIVE version's card is drawn heavier, as the hi-fi does; the pill names the lifecycle. */
+.cp-lcard[data-lifecycle="ACTIVE"] { border: 2px solid var(--ink); }
+.cp-life { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; padding: 0 5px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink-soft); }
+.cp-life[data-life="ACTIVE"] { border-color: var(--good); color: var(--good); }
+.cp-life[data-life="SUPERSEDED"] { color: var(--ink-faint); }
+.cp-plot[data-size="fold"] { height: 220px; }
+.cp-foldbar { fill-opacity: .85; }
+.cp-foldbar[data-sign="neg"] { fill-opacity: .55; }
+.cp-foldzero { stroke: var(--ink); stroke-width: 1; }
+.cp-foldlegend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); }
+.cp-difftable td, .cp-difftable th { font-family: var(--font-mono); font-size: 10.5px; padding: 3px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
 .cp-att { font-family: var(--font-mono); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
 .cp-arrow { align-self: center; font-family: var(--font-mono); font-size: 11px; color: var(--accent-2); flex: none; }
 .cp-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
 .cp-bignum { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
-.cp-note { font-size: 10px; color: var(--ink-soft); line-height: 1.45; }
+.cp-note { font-size: 10px; color: var(--ink-soft); line-height: 1.45; overflow-wrap: anywhere; min-width: 0; }
 .cp-st { font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; border-radius: 999px; padding: 1px 7px; border: 1px solid var(--ink-faint);
   color: var(--ink-faint); background: transparent; flex: none; }
 .cp-st[data-state="READY"] { border-color: var(--good); color: var(--good); }
@@ -394,9 +411,10 @@ function NotInContract({ what, gap }: { what: string; gap: string }) {
 function MetricValue({ metric, what }: { metric: CompareMetric | undefined; what: string }) {
   if (!metric) return <Absent what={what} state="not returned" reason="metric absent from original_metrics" />;
   if (metric.value !== null && metric.availability.state === "AVAILABLE") {
+    /* DQ-08: displayed by unit; the server's exact string stays in the title and data-exact. */
     return (
-      <span className="cp-mono" data-metric={metric.key} data-definition={metric.definition_id}>
-        {metric.value}
+      <span className="cp-mono" data-metric={metric.key} data-definition={metric.definition_id} data-exact={metric.value} title={`${metric.value} · ${metric.scope}`}>
+        {formatMetric(metric.value, COMPARE_METRIC_UNIT[metric.key]) ?? metric.value}
       </span>
     );
   }
@@ -453,16 +471,36 @@ function RunLine({ run }: { run: CompareRun }) {
       {" · "}
       {run.alpha_version_label}
       {" · "}
-      <NotInContract what="sched" gap={CONTRACT_GAPS.schedule} />
+      {/* CG-P20-02: the requested P08 mode × schedule. */}
+      {run.schedule.availability.state === "AVAILABLE" && run.schedule.mode !== null && run.schedule.schedule !== null ? (
+        <span data-schedule>
+          sched {run.schedule.mode} × {run.schedule.schedule}
+        </span>
+      ) : (
+        <AvailabilityAbsent availability={run.schedule.availability} what="sched" />
+      )}
     </span>
   );
 }
 
-function CertAbsent() {
+/** CG-P20-03 (W6a decision): a typed absence the contract carries, never a grade the screen invents. */
+function CertAbsent({ run }: { run: CompareRun }) {
   return (
-    <span className="cp-cert" data-cert-absent>
-      <NotInContract what="cert" gap={CONTRACT_GAPS.cert} />
+    <span className="cp-cert" data-cert-absent data-cert-state={run.certification.state}>
+      <Absent what="cert" state="not published" reason={run.certification.reason_code} />
     </span>
+  );
+}
+
+/** CG-P20-08: the alpha version's lifecycle, as the server published it. */
+function Lifecycle({ run }: { run: CompareRun }) {
+  const life = run.alpha_version_lifecycle;
+  return life.value !== null && life.availability.state === "AVAILABLE" ? (
+    <span className="cp-life" data-life={life.value}>
+      {life.value}
+    </span>
+  ) : (
+    <AvailabilityAbsent availability={life.availability} what="lifecycle" />
   );
 }
 
@@ -609,7 +647,7 @@ function MiniChart({ chart }: { chart: MarketChart }) {
           viewBox={`0 0 ${plot.width} ${plot.height}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label={`equity, ${chart.emitted_point_count} retained points`}
+          aria-label={`equity, ${chart.emitted_point_count ?? chart.points.length} retained points`}
         >
           <line className="cp-axis" x1={0} x2={plot.width} y1={plot.height} y2={plot.height} />
           <path className="cp-mini-fill" d={plot.fill} />
@@ -621,8 +659,9 @@ function MiniChart({ chart }: { chart: MarketChart }) {
   );
 }
 
-function samplingLine(sampling: string, emitted: number, source: number | null): string {
-  return `sampling ${sampling} · emitted ${emitted} of ${source === null ? "source count not published" : `${source} source observations`} · UTC`;
+function samplingLine(sampling: string, emitted: number | null, source: number | null): string {
+  /* CG-P20-10: a published block always carries its count; an absent one is never printed here. */
+  return `sampling ${sampling} · emitted ${emitted ?? "count not published"} of ${source === null ? "source count not published" : `${source} source observations`} · UTC`;
 }
 
 /* ----------------------------------------------------------------- blocks */
@@ -755,10 +794,13 @@ function Rules() {
 
 function LadderCard({ run }: { run: CompareRun }) {
   return (
-    <article className="cp-lcard" data-ladder-run={run.run_id} data-attempt={run.attempt_id}>
+    <article className="cp-lcard" data-ladder-run={run.run_id} data-attempt={run.attempt_id} data-lifecycle={run.alpha_version_lifecycle.value ?? undefined} data-lane={run.lane}>
       <div className="top">
         <span className="cp-att">{run.attempt_id}</span>
-        <RunState state={run.run_state} />
+        <span className="flex items-baseline gap-1.5">
+          <Lifecycle run={run} />
+          <RunState state={run.run_state} />
+        </span>
       </div>
       <RunLine run={run} />
       <ClaimChip claim={run.claim} />
@@ -766,8 +808,8 @@ function LadderCard({ run }: { run: CompareRun }) {
         {(() => {
           const sharpe = metricOf(run, "OOS_SHARPE");
           return sharpe && sharpe.value !== null && sharpe.availability.state === "AVAILABLE" ? (
-            <span className="cp-bignum" data-oos-sharpe>
-              {sharpe.value}
+            <span className="cp-bignum" data-oos-sharpe={sharpe.value} title={`${sharpe.value} · ${sharpe.scope}`}>
+              {formatMetric(sharpe.value, "ratio") ?? sharpe.value}
             </span>
           ) : (
             <span data-oos-sharpe-absent>
@@ -775,7 +817,7 @@ function LadderCard({ run }: { run: CompareRun }) {
             </span>
           );
         })()}
-        <CertAbsent />
+        <CertAbsent run={run} />
       </div>
       <ClaimNote claim={run.claim} />
     </article>
@@ -787,7 +829,9 @@ function Ladder({ result }: { result: AttemptResult }) {
     <section data-panel="ladder" aria-label="claim ladder">
       <h3 className="cp-ladderhead">
         <span data-ladder-header>{LADDER_HEADER}</span>
-        <span className="cp-faint">server order, read right to left · {result.attempts.length} returned</span>
+        <span className="cp-faint" data-ladder-order-key={result.order}>
+          server order ({result.order.toLowerCase().replace(/_/g, " ")}), read right to left · {result.attempts.length} returned
+        </span>
       </h3>
       {result.attempts.length === 0 ? (
         <span className="cp-faint" data-no-attempts>
@@ -829,28 +873,140 @@ function LadderStep({ run, last }: { run: CompareRun; last: boolean }) {
   );
 }
 
-function FoldChart() {
+/** CG-P20-04: grouped bars, one group per fold, one bar per attempt in the server's order. */
+function FoldChart({ result }: { result: AttemptResult }) {
+  const published = result.fold_series.filter((item: FoldSeries) => item.state === "AVAILABLE" && item.folds.length > 0);
+  const geometry = foldBars(published.map((item) => ({ runId: item.run_id, folds: item.folds })));
+  const absent = result.fold_series.filter((item: FoldSeries) => item.state !== "AVAILABLE");
+  const truncated = published.filter((item) => item.truncated);
+  const tone = (index: number) => (index % 2 === 0 ? "var(--accent)" : "var(--accent-2)");
   return (
-    <figure className="cp-fig" data-panel="fold-chart" aria-label="OOS Sharpe per fold">
+    <figure className="cp-fig" data-panel="fold-chart" aria-label="OOS Sharpe per fold" data-fold-series={published.length}>
       <figcaption>
         <span className="cp-figtitle">{FOLD_CHART_TITLE}</span>
+        {geometry ? (
+          <span className="cp-figmeta" data-fold-meta>
+            {published.length} {published.length === 1 ? "attempt" : "attempts"} · {geometry.groups.length} folds · retained per-fold QuantBT metric
+            {truncated.length > 0 ? ` · first 32 folds of ${truncated.map((item) => item.source_fold_count ?? "?").join(", ")}` : ""}
+          </span>
+        ) : null}
       </figcaption>
-      <div className="cp-frame" data-size="fold" data-fold-chart-absent>
-        <NotInContract what="per-fold OOS sharpe" gap={CONTRACT_GAPS.perFold} />
-      </div>
+      {geometry ? (
+        <>
+          <div
+            className="cp-plot"
+            data-size="fold"
+            data-fold-bars
+            style={{ "--cp-gutter": `calc(${Math.max(4, ...geometry.yLabels.map((label) => label.text.length))}ch + 10px)` } as CSSProperties}
+          >
+            <div className="cp-plot-area">
+              <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" role="img" aria-label={`OOS Sharpe per fold for ${published.length} attempts`}>
+                {geometry.bars.map((bar) => (
+                  <rect
+                    key={`${bar.runId}:${bar.foldId}`}
+                    className="cp-foldbar"
+                    x={bar.x}
+                    y={bar.y}
+                    width={bar.width}
+                    height={bar.height}
+                    data-sign={bar.sign}
+                    data-fold-bar={`${bar.runId}:${bar.foldId}`}
+                    data-exact={bar.value}
+                    style={{ fill: tone(published.findIndex((item) => item.run_id === bar.runId)) }}
+                  >
+                    <title>{`${bar.runId} · fold ${bar.foldId} · OOS Sharpe ${bar.value}`}</title>
+                  </rect>
+                ))}
+                <line className="cp-foldzero" x1={0} x2={geometry.width} y1={geometry.zeroPct * 10} y2={geometry.zeroPct * 10} />
+              </svg>
+              <div aria-hidden="true">
+                {geometry.yLabels.map((label) => (
+                  <span key={label.text} className="cp-lbl y" style={{ top: `${label.pct}%` }} data-y-label>
+                    {label.text}
+                  </span>
+                ))}
+                <span className="cp-lbl y" style={{ top: `${geometry.zeroPct}%` }}>
+                  0
+                </span>
+                {geometry.groups.map((group) => (
+                  <span key={group.ordinal} className="cp-lbl x" style={{ left: `${group.pct}%` }} data-fold-group={group.label}>
+                    fold {group.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="cp-foldlegend" data-fold-legend>
+            {published.map((item, index) => (
+              <span key={item.run_id}>
+                <span style={{ display: "inline-block", width: 9, height: 9, marginRight: 4, background: tone(index) }} aria-hidden="true" />
+                {item.run_id}
+              </span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="cp-frame" data-size="fold" data-fold-chart-absent>
+          {absent.length > 0 ? (
+            <AvailabilityAbsent availability={absent[0]!.availability} what="per-fold OOS sharpe" />
+          ) : (
+            <Absent what="per-fold OOS sharpe" state="not published" reason="no attempt returned a retained fold row" />
+          )}
+        </div>
+      )}
+      {geometry && absent.length > 0 ? (
+        <p className="cp-faint" data-fold-absent-runs>
+          {absent.length} {absent.length === 1 ? "attempt has" : "attempts have"} no per-fold rows: {reasonOf(absent[0]!.availability)}
+        </p>
+      ) : null}
     </figure>
   );
 }
 
-function DiffCard({ alphaId }: { alphaId: string | null }) {
+/** CG-P20-05: the allow-listed keys that differ anywhere, one column per attempt in the server's order. */
+function DiffCard({ alphaId, diff, runs }: { alphaId: string | null; diff: ConfigDiff; runs: readonly CompareRun[] }) {
   return (
-    <section className="cp-tcard cp-diffcard" data-panel="diff" aria-label="config diff">
+    <section className="cp-tcard cp-diffcard" data-panel="diff" aria-label="config diff" data-config-diff={diff.availability.state}>
       <h3 className="t">
         <span>{DIFF_TITLE}</span>
-        <span className="cp-faint">attempts mode publishes no config diff</span>
+        <span className="cp-faint">{diff.availability.state === "AVAILABLE" ? `${diff.paths.length} ${diff.paths.length === 1 ? "key" : "keys"}` : COMPARE_WITHHELD_WORDS[diff.availability.state]}</span>
       </h3>
-      <div className="body">
-        <NotInContract what="config diff" gap={CONTRACT_GAPS.attemptDiff} />
+      <div className="body cp-scroll">
+        {diff.availability.state !== "AVAILABLE" ? (
+          <AvailabilityAbsent availability={diff.availability} what="config diff" />
+        ) : diff.paths.length === 0 ? (
+          <span className="cp-faint" data-config-diff-none>
+            no allow-listed config key differs across these attempts
+          </span>
+        ) : (
+          <table className="cp-difftable">
+            <thead>
+              <tr>
+                <th scope="col">key</th>
+                {runs.map((run) => (
+                  <th key={run.run_id} scope="col">
+                    {run.attempt_id}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {diff.paths.map((path) => (
+                <tr key={path.path} data-config-diff-path={path.path}>
+                  <th scope="row">{path.path}</th>
+                  {runs.map((run) => {
+                    const value = path.values.find((entry) => entry.run_id === run.run_id)?.value ?? null;
+                    return (
+                      <td key={run.run_id} className="cp-long" data-config-value={run.run_id}>
+                        {value ?? <span className="cp-absent">not set</span>}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
       <div className="foot">
         {DIFF_FOOTER}{" "}
@@ -888,9 +1044,9 @@ function AttemptsBody({ result, alphaId }: { result: AttemptResult; alphaId: str
     <>
       <Rule tone="gold">{ATTEMPTS_RULE}</Rule>
       <Ladder result={result} />
-      <FoldChart />
+      <FoldChart result={result} />
       <div className="cp-grid">
-        <DiffCard alphaId={alphaId} />
+        <DiffCard alphaId={alphaId} diff={result.config_diff} runs={result.attempts} />
         <TrajectoryCard result={result} />
       </div>
     </>
@@ -939,7 +1095,7 @@ function MarketTile({ card }: { card: MarketCard }) {
             <MetricValue metric={metricOf(run, "MAX_DRAWDOWN_FRACTION")} what="max drawdown" />
           </span>
         </span>
-        <CertAbsent />
+        <CertAbsent run={run} />
       </div>
       <ClaimChip claim={run.claim} />
       <ClaimNote claim={run.claim} />
@@ -1125,9 +1281,11 @@ function commonOf(result: PairComparable, key: CommonMetric["key"]): CommonMetri
   return result.pair.common_window.metrics.find((metric) => metric.key === key);
 }
 
-function SideValue({ value, availability, what }: { value: string | null; availability: CompareAvailability; what: string }) {
+function SideValue({ value, availability, what, unit }: { value: string | null; availability: CompareAvailability; what: string; unit: string }) {
   return value !== null && availability.state === "AVAILABLE" ? (
-    <span className="cp-mono">{value}</span>
+    <span className="cp-mono" data-exact={value} title={value}>
+      {formatMetric(value, unit) ?? value}
+    </span>
   ) : (
     <AvailabilityAbsent availability={availability} what={what} />
   );
@@ -1149,9 +1307,12 @@ function commonRow(result: PairComparable, id: CommonMetric["key"], label: strin
     const absent = <Absent what={label} state="not returned" reason="metric absent from common_window" />;
     return { id, label, scope: "common window", left: absent, right: absent, delta: absent, sign: null };
   }
+  const unit = id === "TRADE_COUNT" ? "count" : id === "OOS_SHARPE" ? "ratio" : "fraction";
   const delta =
     metric.delta !== null && metric.availability.state === "AVAILABLE" ? (
-      <span data-delta-value>{metric.delta}</span>
+      <span data-delta-value={metric.delta} title={metric.delta}>
+        {formatMetric(metric.delta, unit) ?? metric.delta}
+      </span>
     ) : (
       <AvailabilityAbsent availability={metric.availability} what="Δ" />
     );
@@ -1159,8 +1320,8 @@ function commonRow(result: PairComparable, id: CommonMetric["key"], label: strin
     id,
     label,
     scope: metric.definition_id,
-    left: <SideValue value={metric.left_value} availability={metric.availability} what="A" />,
-    right: <SideValue value={metric.right_value} availability={metric.availability} what="B" />,
+    left: <SideValue value={metric.left_value} availability={metric.availability} what="A" unit={unit} />,
+    right: <SideValue value={metric.right_value} availability={metric.availability} what="B" unit={unit} />,
     delta,
     sign: metric.delta !== null && metric.availability.state === "AVAILABLE" ? deltaSign(metric.delta) : null,
   };
@@ -1184,6 +1345,8 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
   const tradesLeft = left ? metricOf(left, "TRADE_COUNT") : undefined;
   const tradesRight = right ? metricOf(right, "TRADE_COUNT") : undefined;
   const tradeCommon = commonOf(result, "TRADE_COUNT");
+  const sharpeCommon = commonOf(result, "OOS_SHARPE");
+  const winCommon = commonOf(result, "WIN_RATE_FRACTION");
   const weaker = result.pair.weaker_claim;
   return [
     {
@@ -1192,7 +1355,12 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
       scope: sharpeLeft?.scope ?? "original",
       left: <MetricValue metric={sharpeLeft} what="A" />,
       right: <MetricValue metric={sharpeRight} what="B" />,
-      delta: <Absent what="Δ" state="not published" reason="the common window publishes no OOS sharpe Δ" />,
+      /* CG-P20-06: the common window types its Sharpe NOT_APPLICABLE with the server's reason. */
+      delta: sharpeCommon ? (
+        <AvailabilityAbsent availability={sharpeCommon.availability} what="Δ" />
+      ) : (
+        <Absent what="Δ" state="not returned" reason="metric absent from common_window" />
+      ),
       sign: null,
     },
     commonRow(result, "NET_RETURN_FRACTION", "total return (OOS)"),
@@ -1210,15 +1378,25 @@ function deltaRows(result: PairComparable): DeltaRowView[] {
       ),
       sign: null,
     },
-    {
-      id: "WIN_RATE",
-      label: "win rate",
-      scope: "not in contract",
-      left: <NotInContract what="A" gap={CONTRACT_GAPS.winRate} />,
-      right: <NotInContract what="B" gap={CONTRACT_GAPS.winRate} />,
-      delta: <NotInContract what="Δ" gap={CONTRACT_GAPS.winRate} />,
-      sign: null,
-    },
+    winCommon
+      ? {
+          id: "WIN_RATE",
+          label: "win rate",
+          scope: winCommon.definition_id,
+          left: <AvailabilityAbsent availability={winCommon.availability} what="A" />,
+          right: <AvailabilityAbsent availability={winCommon.availability} what="B" />,
+          delta: <AvailabilityAbsent availability={winCommon.availability} what="Δ" />,
+          sign: null,
+        }
+      : {
+          id: "WIN_RATE",
+          label: "win rate",
+          scope: "not in contract",
+          left: <NotInContract what="A" gap={CONTRACT_GAPS.winRate} />,
+          right: <NotInContract what="B" gap={CONTRACT_GAPS.winRate} />,
+          delta: <NotInContract what="Δ" gap={CONTRACT_GAPS.winRate} />,
+          sign: null,
+        },
     {
       id: "CLAIM",
       label: "claim class",
@@ -1256,7 +1434,9 @@ function DeltaTable({ result }: { result: PairComparable }) {
                 {right?.run_id ?? "B"}
               </th>
               <th scope="col">
-                Δ<span className="scope" data-delta-direction>B − A · as published</span>
+                Δ<span className="scope" data-delta-direction={window.delta_definition}>
+                  {DELTA_DIRECTION_LABEL[window.delta_definition] ?? "B − A · as published"}
+                </span>
               </th>
             </tr>
           </thead>
@@ -1280,7 +1460,7 @@ function DeltaTable({ result }: { result: PairComparable }) {
       <div className="foot" data-common-window={window.state}>
         {window.state === "AVAILABLE" ? (
           <>
-            {window.definition_id} · matched <span className="num">{window.matched_observation_count}</span> · A source{" "}
+            {window.definition_id} · matched <span className="num">{window.matched_observation_count ?? "not published"}</span> · A source{" "}
             <span className="num">{window.left_source_observation_count ?? "not published"}</span> · B source{" "}
             <span className="num">{window.right_source_observation_count ?? "not published"}</span> ·{" "}
             <span className="num">
@@ -1325,7 +1505,7 @@ function CorrelationCard({ correlation }: { correlation: Correlation }) {
       <span className="cp-faint" data-correlation-meta>
         {derived ? (
           <>
-            n <span className="num">{correlation.n}</span> · <span className="num">{window}</span> · {correlation.missing_policy}
+            n <span className="num">{correlation.n ?? "not published"}</span> · <span className="num">{window}</span> · {correlation.missing_policy}
           </>
         ) : (
           <>{correlation.missing_policy}</>
@@ -1509,7 +1689,14 @@ function PendingBody({
         </h3>
         <Pending what="attempts" state={state} />
       </section>
-      <FoldChart />
+      <figure className="cp-fig" data-panel="fold-chart" data-panel-state={state} aria-label="OOS Sharpe per fold">
+        <figcaption>
+          <span className="cp-figtitle">{FOLD_CHART_TITLE}</span>
+        </figcaption>
+        <div className="cp-frame" data-size="fold">
+          <Pending what="per-fold OOS sharpe" state={state} />
+        </div>
+      </figure>
       <div className="cp-grid">
         <section className="cp-tcard cp-diffcard" data-panel="diff" data-panel-state={state}>
           <h3 className="t">

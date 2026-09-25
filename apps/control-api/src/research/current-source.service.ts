@@ -439,7 +439,10 @@ export class ResearchCurrentSourceService {
       fold_plan: {
         state: "AVAILABLE" as const,
         folds: page.rows.map((row) => {
-          const { fold_facts: foldFacts, ...fold } = asFold(row);
+          // W6a: the W5b child-audit block is served by its own bounded read
+          // (replay/child-audit); a W5b-retained fold row must not leak it
+          // into the strict split DTO (which then answered 503).
+          const { fold_facts: foldFacts, child_audit: _childAudit, ...fold } = asFold(row);
           return { source_ordinal: row.sourceOrdinal, ...fold, anatomy: foldAnatomy(foldFacts), score: foldScore(foldFacts) };
         }),
         chronology: "SOURCE_OBSERVED_ADVANCED_WFO" as const,

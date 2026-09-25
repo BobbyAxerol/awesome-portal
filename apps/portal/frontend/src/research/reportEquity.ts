@@ -36,8 +36,10 @@ export interface EquityGeometry {
   /** The plot box of both paths (viewBox `0 0 width height`). */
   width: number;
   height: number;
-  /** Empty when nothing can be drawn. */
+  /** Empty when nothing can be drawn. With a split, only the vertices at or after it. */
   line: string;
+  /** CG-P18-06: with a split, the IS segment's vertices before it (drawn dashed); else empty. */
+  lineBefore: string;
   fill: string;
   /** The underwater strip, in its own box of the same size. */
   underwater: string;
@@ -76,11 +78,13 @@ function pct(value: number): number {
 export function equitySvg(
   points: readonly ReportEquityPoint[],
   boundaries: readonly EquityBoundary[] = [],
+  options: { splitAtUtcMs?: number | null } = {},
 ): EquityGeometry {
   const base: EquityGeometry = {
     width: BOX,
     height: BOX,
     line: "",
+    lineBefore: "",
     fill: "",
     underwater: "",
     underwaterLine: "",
@@ -131,8 +135,14 @@ export function equitySvg(
   const xs = (point: (typeof parsed)[number]) => (single ? 0 : x(point.t));
   const lastX = single ? BOX : x(t1);
   const vertices = single ? [at(0, y(first.e)), at(BOX, y(first.e))] : parsed.map((point) => at(xs(point), y(point.e)));
-  const line = `M${vertices.join(" L")}`;
-  const fill = `${line} L${at(lastX, BOX)} L${at(0, BOX)} Z`;
+  const whole = `M${vertices.join(" L")}`;
+  const fill = `${whole} L${at(lastX, BOX)} L${at(0, BOX)} Z`;
+  /* The IS/OOS split draws two paths over one axis; the OOS path starts at the
+     last IS vertex so the two read as one account, never as a gap. */
+  const split = options.splitAtUtcMs ?? null;
+  const cut = split === null || single ? -1 : parsed.findIndex((point) => point.t >= split);
+  const line = cut > 0 ? `M${vertices.slice(cut - 1).join(" L")}` : whole;
+  const lineBefore = cut > 0 ? `M${vertices.slice(0, cut).join(" L")}` : "";
 
   const uy = (d: number) => (deep.d > 0 ? (d / deep.d) * BOX * UNDERWATER_DEPTH : 0);
   const underVertices = single ? [at(0, uy(first.d)), at(BOX, uy(first.d))] : parsed.map((point) => at(xs(point), uy(point.d)));
@@ -160,6 +170,7 @@ export function equitySvg(
   return {
     ...base,
     line,
+    lineBefore,
     fill,
     underwater,
     underwaterLine,

@@ -217,6 +217,103 @@ describe("P20 disposable PostgreSQL cache and exact-correlation proof", () => {
       const snapshot = await repository.snapshot({ workspaceId, actorUserId: userId }, alphaId);
       const sealed = Object.fromEntries(snapshot!.runs.map((row) => [row.run_id, row.current_artifact_sealed]));
       expect(sealed).toEqual({ "run-p20-bound": true, "run-p20-drift": false, "run-p20-unsealed": null });
+      // W6a: the version lifecycle and the retained seal's profile/summary ride the same bounded read.
+      const bound = snapshot!.runs.find((row) => row.run_id === "run-p20-bound")!;
+      expect(bound).toMatchObject({ alpha_version_lifecycle: "ACTIVE", current_profile_id: "rs02.delta-wfo-global.v1" });
+      expect(snapshot!.runs.find((row) => row.run_id === "run-p20-unsealed")).toMatchObject({ current_profile_id: null, current_source_folds: null });
+    } finally {
+      await database.end();
+    }
+  });
+
+  it("W6a: reads retained fold rows (bounded to 33), the selected candidate's metrics and an extrema-bucket equity sample", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    const client = await database.connect();
+    const workspaceId = "ws_w6a";
+    const userId = "usr_w6a";
+    const alphaId = "alpha-w6a";
+    const versionId = "av-w6a";
+    const runId = "run-w6a-wfo";
+    const manifest = "e".repeat(64);
+    try {
+      await client.query("SET session_replication_role = replica");
+      await client.query(`INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'OWNER')`, [workspaceId, userId]);
+      await client.query(`INSERT INTO research.alphas (workspace_id, alpha_id, name, owner_user_id, execution_subject_id)
+        VALUES ($1, $2, 'W6a Alpha', $3, 'research.w6a')`, [workspaceId, alphaId, userId]);
+      await client.query(`INSERT INTO research.alpha_versions
+        (workspace_id, alpha_version_id, alpha_id, code_digest, entrypoint, dependency_ref, declared_contract, lifecycle_state, registered_by_user_id)
+        VALUES ($1, $2, $3, $4, 'strategy:main', 'quantbt@1.1.1', '{"version":"1.0.0"}'::jsonb, 'SUPERSEDED', $5)`,
+      [workspaceId, versionId, alphaId, digest, userId]);
+      await client.query(`INSERT INTO research.attempts
+        (workspace_id, attempt_id, alpha_version_id, client_intent_id, request_payload_digest, intent_kind, state, created_by_user_id)
+        VALUES ($1, 'att-w6a', $2, 'intent-w6a', $3, 'NEW', 'READY', $4)`, [workspaceId, versionId, digest, userId]);
+      await client.query(`INSERT INTO research.runs
+        (workspace_id, run_id, attempt_id, run_kind, relationship_kind, logical_run_key, request_spec_digest, effective_spec_digest,
+         engine_release_id, dataset_binding_digest, state, submitted_by_user_id)
+        VALUES ($1, $2, 'att-w6a', 'PRIMARY', 'PRIMARY', 'primary', $3, $3, 'quantbt-1.1.1', $3, 'READY', $4)`,
+      [workspaceId, runId, digest, userId]);
+      await client.query(`INSERT INTO research.artifacts
+        (workspace_id, artifact_id, run_id, table_kind, schema_version, manifest_digest, state, retention_class,
+         storage_locator, artifact_revision, worker_attempt_id, lease_epoch, manifest_schema_version, total_rows, total_bytes, sealed_at)
+        VALUES ($1, 'rart_w6a', $2, 'research_bundle', 'research.artifact-manifest.v1', $3, 'SEALED',
+                'RESEARCH_EVIDENCE', 'artifacts/rart_w6a', 1, 'rwa_w6a', 1, 'research.artifact-manifest.v1', 1, 100, now())`,
+      [workspaceId, runId, manifest]);
+      await client.query(`INSERT INTO research.current_source_seals_v1
+        (workspace_id, run_id, artifact_revision, source_adapter_id, profile_id, manifest_digest,
+         source_transform_digest, requested_spec_digest, effective_spec_digest, dataset_binding_digest,
+         retained_import_digest, table_rows, total_rows, summary)
+        VALUES ($1, $2, 1, 'rs02.quantbt-signal-notional-wfo.v1', 'rs02.delta-signal-notional-wfo.v1', $3, $4, $4, $4, $4, $4,
+                '{"OBSERVATION":400,"FOLD":40,"TRIAL":2,"CANDIDATE":2,"SELECTION":1}'::jsonb, 445,
+                '{"selection":{"trial_id":"7","objective":"-1.5"}}'::jsonb)`,
+      [workspaceId, runId, manifest, digest]);
+      for (let ordinal = 0; ordinal < 40; ordinal += 1) {
+        await client.query(`INSERT INTO research.current_source_rows_v1
+          (workspace_id, run_id, artifact_revision, table_kind, source_ordinal, source_id, occurred_at_utc_ms, payload)
+          VALUES ($1, $2, 1, 'FOLD', $3::integer, $4::text, NULL, jsonb_build_object('fold_id', $4::text, 'test_start_utc_ms', $5::bigint,
+                  'test_end_utc_ms', $5::bigint + 3600000, 'fold_facts', jsonb_build_object('test_bars', 2,
+                  'oos_score', jsonb_build_object('oos_sharpe', ($3::integer - 20)::text || '.5', 'oos_trade_count', '3'))))`,
+        [workspaceId, runId, ordinal, String(ordinal), 1_780_000_000_000 + ordinal * 7_200_000]);
+      }
+      for (const [ordinal, trial, objective, sharpe] of [[0, "3", "-2", "-9"], [1, "7", "-1.5", "0.75"]] as const) {
+        await client.query(`INSERT INTO research.current_source_rows_v1
+          (workspace_id, run_id, artifact_revision, table_kind, source_ordinal, source_id, occurred_at_utc_ms, payload)
+          VALUES ($1, $2, 1, 'CANDIDATE', $3::integer, $4::text, NULL, jsonb_build_object('candidate_id', $4::text, 'objective', $5::text,
+                  'trial_facts', jsonb_build_object('source_trial_id', $6::text, 'metrics', jsonb_build_object('mean_oos_sharpe', $7::text, 'mean_decay', '0.25'))))`,
+        [workspaceId, runId, ordinal, `cand-${ordinal}`, objective, trial, sharpe]);
+      }
+      for (let ordinal = 0; ordinal < 400; ordinal += 1) {
+        const equity = ordinal === 123 ? "5" : ordinal === 321 ? "900" : String(100 + (ordinal % 7));
+        await client.query(`INSERT INTO research.current_source_rows_v1
+          (workspace_id, run_id, artifact_revision, table_kind, source_ordinal, source_id, occurred_at_utc_ms, payload)
+          VALUES ($1, $2, 1, 'OBSERVATION', $3::integer, $4::text, $5::bigint, jsonb_build_object('equity', $6::text, 'return_fraction', '0'))`,
+        [workspaceId, runId, ordinal, `obs-${ordinal}`, 1_780_000_000_000 + ordinal * 3_600_000, equity]);
+      }
+      await client.query("SET session_replication_role = origin");
+    } finally {
+      client.release();
+    }
+    try {
+      const repository = new ResearchCompareRepository(database);
+      const scope = { workspaceId, actorUserId: userId };
+      const snapshot = await repository.snapshot(scope, alphaId);
+      const row = snapshot!.runs[0]!;
+      expect(row).toMatchObject({
+        alpha_version_lifecycle: "SUPERSEDED",
+        current_profile_id: "rs02.delta-signal-notional-wfo.v1",
+        current_selected_mean_oos_sharpe: "0.75",
+        current_selected_mean_decay: "0.25",
+      });
+      const folds = row.current_source_folds as unknown as Array<{ source_ordinal: number; oos_sharpe: string; test_bars: number }>;
+      expect(folds).toHaveLength(33);
+      expect(folds[0]).toMatchObject({ source_ordinal: 0, oos_sharpe: "-20.5", test_bars: 2 });
+      const points = await repository.retainedEquity(scope, [{ runId, artifactRevision: 1 }]);
+      expect(points.length).toBeLessThanOrEqual(4 * 95);
+      expect(points.every((point) => point.sourceCount === 400)).toBe(true);
+      expect(points.map((point) => point.equity)).toEqual(expect.arrayContaining(["5", "900"]));
+      expect(points[0]!.atUtcMs).toBe(1_780_000_000_000);
+      expect(points.at(-1)!.atUtcMs).toBe(1_780_000_000_000 + 399 * 3_600_000);
+      await expect(repository.retainedEquity({ workspaceId, actorUserId: "stranger" }, [{ runId, artifactRevision: 1 }]))
+        .rejects.toMatchObject({ code: "RESEARCH_COMPARE_FORBIDDEN" });
     } finally {
       await database.end();
     }

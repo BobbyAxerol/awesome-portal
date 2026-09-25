@@ -32,23 +32,52 @@ type ReportSchemas = ReportComponents["schemas"];
 
 export type ReportDetail = ReportSchemas["ReportDetail"];
 export type FrozenCore = ReportSchemas["FrozenCore"];
+export type FrozenCoreV1 = ReportSchemas["FrozenCoreV1"];
+/** W6a: every report sealed after CG-P18-01…11 is v2 (both lanes); a v1 core stays readable. */
+export type FrozenCoreV2 = ReportSchemas["FrozenCoreV2"];
 export type ReportFact = ReportSchemas["ReportFact"];
+export type ReportFactV2 = ReportSchemas["ReportFactV2"];
+export type FoldRowV2 = ReportSchemas["FoldRowV2"];
+export type StageCheck = ReportSchemas["StageCheck"];
 export type ReportAvailability = ReportSchemas["Availability"];
 export type IdentityField = ReportSchemas["IdentityField"];
 export type ReportMetric = ReportSchemas["Metric"];
 export type Headline = ReportSchemas["Headline"];
-export type ReportEquity = ReportSchemas["Equity"];
-export type ReportEquityPoint = ReportEquity["points"][number];
-export type ReportFolds = ReportSchemas["Folds"];
+export type ReportEquity = ReportSchemas["Equity"] | ReportSchemas["EquityV2"];
+export type ReportEquityPoint = ReportSchemas["EquityPoint"];
+export type ReportFolds = ReportSchemas["Folds"] | ReportSchemas["FoldsV2"];
 export type FoldRow = ReportSchemas["FoldRow"];
-export type ReportStage = ReportSchemas["Stage"];
-export type ReportArtifact = ReportSchemas["Artifact"];
+export type ReportStage = ReportSchemas["Stage"] | ReportSchemas["StageV2"];
+export type ReportArtifact = ReportSchemas["Artifact"] | ReportSchemas["ArtifactV2"];
 export type ReportWarning = ReportSchemas["Warning"];
 export type Annotation = ReportSchemas["Annotation"];
 export type ExportCapabilities = ReportSchemas["ExportCapabilities"];
 export type ExportFormat = ReportSchemas["ExportCreate"]["format"];
 export type UnavailableExportFormat = ReportSchemas["UnavailableExportFormat"];
 export type ExportJob = ReportSchemas["ExportJob"];
+
+/** The v2 core, or null for a report sealed before W6a (it keeps its v1 shape). */
+export function coreV2(core: FrozenCore): FrozenCoreV2 | null {
+  return core.schema_version === "research.report-frozen-core.v2" ? core : null;
+}
+
+/** Display unit of a report metric, for `researchFormat.formatMetric`. */
+export const REPORT_UNIT: Record<string, "currency" | "fraction" | "count" | "ratio"> = {
+  CURRENCY: "currency",
+  FRACTION: "fraction",
+  COUNT: "count",
+  RATIO: "ratio",
+};
+
+/** Headline tiles carry no unit of their own; the key decides it. */
+export const HEADLINE_UNIT: Record<Headline["key"], "currency" | "fraction" | "count" | "ratio"> = {
+  OOS_SHARPE: "ratio",
+  DECAY_MEAN: "ratio",
+  MAX_DRAWDOWN: "fraction",
+  TRADES: "count",
+  WIN_RATE: "fraction",
+  FUNDING: "currency",
+};
 
 export { NOT_MODIFIED };
 export type { Fresh };
@@ -200,6 +229,18 @@ export const ARTIFACT_LABEL: Record<ReportArtifact["key"], string> = {
   METRICS_SUMMARY: "metrics_summary",
   CLAIM: "claim",
   BUNDLE: "bundle",
+  SEARCH_TRACE: "search_trace",
+  CANDIDATES: "candidates",
+  OBSERVATIONS: "observations",
+};
+
+/** CG-P18-05: a stage check result, as words. */
+export const STAGE_CHECK_WORDS: Record<StageCheck["result"], string> = {
+  PASS: "pass",
+  CAVEAT: "caveat",
+  FAIL: "fail",
+  NOT_PUBLISHED: "not published",
+  NOT_APPLICABLE: "not applicable",
 };
 
 /** Spec 09 §2.8's stage names, keyed by the contract's own enum. */
@@ -235,8 +276,8 @@ export const REPORT_REFUSAL_COPY = {
     400: "This report request is not valid. Reopen the report from the run.",
     401: "Your session has ended. Sign in again to read this report.",
     403: REPLAY_REFUSAL_COPY[403],
+    /* CG-P18-10: the read never answers 409 — an unsealed run is a 404. */
     404: "No report was found for this run in your current workspace.",
-    409: "The report is not sealed yet. Nothing on this screen was changed.",
     503: "The report is unavailable right now. Nothing on this screen was changed.",
     other: "The report could not be read.",
   },
@@ -278,17 +319,19 @@ export function toReportRefusal(error: unknown, lane: ReportLane = "report"): Re
   }
   const { status } = error;
   const denied = status === 401 || status === 403;
-  const known = status === 400 || status === 401 || status === 403 || status === 404 || status === 409 || status === 503;
+  /* A 409 is declared only on the export lane (CG-P18-10); on the read it is an undeclared answer. */
+  const conflict = status === 409 && lane === "export";
+  const known = status === 400 || status === 401 || status === 403 || status === 404 || conflict || status === 503;
   return {
     code: error.code,
-    message: known ? copy[status] : copy.other,
+    message: known ? (copy as Record<number, string>)[status]! : copy.other,
     status,
     requestId: error.requestId,
     state: denied
       ? "denied"
       : status === 404
         ? "empty"
-        : status === 409
+        : conflict
           ? "stale"
           : status >= 500
             ? "unavailable"
@@ -307,6 +350,8 @@ export function reportAbsences(report: ReportDetail): string[] {
   const core = report.frozen_core;
   const absent: string[] = [];
   if (core.equity.state !== "AVAILABLE") absent.push("equity series");
+  const v2 = coreV2(core);
+  if (v2 && v2.equity_is.state !== "AVAILABLE") absent.push("IS equity segment");
   if (core.folds.state !== "AVAILABLE") absent.push("per-fold rows");
   if (core.headline.some((cell) => cell.value === null)) absent.push("headline values");
   if (core.artifacts.some((artifact) => artifact.state !== "SEALED")) absent.push("artifact digests");
