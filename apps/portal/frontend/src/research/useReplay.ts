@@ -22,6 +22,8 @@ import {
   isRetainedReplay,
   type CurrentSourceLaneNotApplicable,
   type CurrentSourceReplay,
+  type FoldSegment,
+  type ReplayTransitions,
   type Replay,
   type ReplayNavigation,
   type ReplayRefusal,
@@ -94,14 +96,30 @@ export interface ReplayController {
   retainedPreviousWindow?: () => void;
   retainedPin?: (playbackCursor: string) => void;
   retainedContext?: RetainedContext;
+  /** W5b: read one fold's test window from its first bar (the lane's own cursor). */
+  retainedFold?: (segment: FoldSegment) => void;
+  /** W5b: read the window starting at a bar outside the loaded one (e.g. a transition row). */
+  retainedSeek?: (playbackCursor: string) => void;
+  /** W5b: the close-target transition ledger, read once the lane carries a bar ledger. */
+  transitions?: TransitionsSlot;
+  transitionsPage?: (direction: "next" | "previous") => void;
 }
+
+export type TransitionsSlot =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "ready"; ledger: ReplayTransitions; inFlight?: boolean }
+  | { state: "refused"; message: string };
+
+/** The largest window the retained lane serves; a fold longer than this pages. */
+export const RETAINED_WINDOW_MAX = 200;
 
 export function useReplay(
   runId: string,
   deepLinkOrdinal: number | null,
-  options: { workspaceId?: string; limit?: number } = {},
+  options: { workspaceId?: string; limit?: number; arrivalFold?: number | null } = {},
 ): ReplayController {
-  const { workspaceId } = options;
+  const { workspaceId, arrivalFold } = options;
   const limit = Math.min(options.limit ?? REPLAY_LIMIT_MAX, REPLAY_LIMIT_MAX);
   const [replay, setReplay] = useState<Replay | null>(null);
   const [refusal, setRefusal] = useState<ReplayRefusal | null>(null);
@@ -178,12 +196,12 @@ export function useReplay(
 
   /* ---- the retained lane: first window on request, then its own tokens ---- */
 
-  const [retainedIntent, setRetainedIntent] = useState<{ navigation: RetainedNavigation } | null>(null);
+  const [retainedIntent, setRetainedIntent] = useState<{ navigation: RetainedNavigation; limit?: number; arrival?: boolean } | null>(null);
 
   const ensureRetained = useCallback(() => {
     if (retainedAsked.current) return;
     retainedAsked.current = true;
-    setRetainedIntent({ navigation: { kind: "first" } });
+    setRetainedIntent({ navigation: { kind: "first" }, arrival: true });
   }, []);
 
   useEffect(() => {
@@ -191,7 +209,12 @@ export function useReplay(
     const controller = new AbortController();
     let recovering = false;
     const send = (navigation: RetainedNavigation) =>
-      replayApi.currentSource(runId, { workspaceId, navigation, signal: controller.signal });
+      replayApi.currentSource(runId, {
+        workspaceId,
+        navigation,
+        signal: controller.signal,
+        ...(retainedIntent.limit ? { limit: retainedIntent.limit } : {}),
+      });
     setRetained((prev) => (prev.state === "ready" ? { ...prev, inFlight: true } : { state: "loading" }));
     send(retainedIntent.navigation)
       .catch((error: unknown) => {
@@ -203,6 +226,19 @@ export function useReplay(
       .then((answer) => {
         if (controller.signal.aborted) return;
         setRetained({ state: "ready", replay: answer, inFlight: false, pageRefusal: null, recovered: recovering });
+        /* W5b arrival: the first retained window is in-sample bars (flat, no
+           position). A run with a bar ledger opens on a fold's test window —
+           the one the hash names, else the first — with one more read. */
+        if (retainedIntent.arrival && isRetainedReplay(answer)) {
+          const segments = answer.execution?.state === "AVAILABLE" ? answer.execution.fold_capital.segments : [];
+          const target = segments[Math.min(Math.max(0, (arrivalFold ?? 1) - 1), segments.length - 1)];
+          if (target) {
+            setRetainedIntent({
+              navigation: { kind: "at", token: target.start_cursor },
+              limit: Math.min(RETAINED_WINDOW_MAX, target.bars),
+            });
+          }
+        }
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -214,18 +250,62 @@ export function useReplay(
         );
       });
     return () => controller.abort();
-  }, [retainedIntent, runId, workspaceId]);
+  }, [retainedIntent, runId, workspaceId, arrivalFold]);
 
   const retainedPage = retained.state === "ready" && isRetainedReplay(retained.replay) ? retained.replay.replay.page : null;
+  const windowLimit = retainedIntent?.limit;
   const retainedNextWindow = useCallback(() => {
-    if (retainedPage?.next_cursor) setRetainedIntent({ navigation: { kind: "cursor", token: retainedPage.next_cursor } });
-  }, [retainedPage?.next_cursor]);
+    if (retainedPage?.next_cursor) setRetainedIntent({ navigation: { kind: "cursor", token: retainedPage.next_cursor }, limit: windowLimit });
+  }, [retainedPage?.next_cursor, windowLimit]);
   const retainedPreviousWindow = useCallback(() => {
-    if (retainedPage?.prev_cursor) setRetainedIntent({ navigation: { kind: "before", token: retainedPage.prev_cursor } });
-  }, [retainedPage?.prev_cursor]);
+    if (retainedPage?.prev_cursor) setRetainedIntent({ navigation: { kind: "before", token: retainedPage.prev_cursor }, limit: windowLimit });
+  }, [retainedPage?.prev_cursor, windowLimit]);
   const retainedPin = useCallback((playbackCursor: string) => {
-    setRetainedIntent({ navigation: { kind: "at", token: playbackCursor } });
+    setRetainedIntent({ navigation: { kind: "at", token: playbackCursor }, limit: windowLimit });
+  }, [windowLimit]);
+  const retainedFold = useCallback((segment: FoldSegment) => {
+    setRetainedIntent({ navigation: { kind: "at", token: segment.start_cursor }, limit: Math.min(RETAINED_WINDOW_MAX, segment.bars) });
   }, []);
+  const retainedSeek = useCallback((playbackCursor: string) => {
+    setRetainedIntent({ navigation: { kind: "at", token: playbackCursor }, limit: windowLimit });
+  }, [windowLimit]);
+
+  /* ---- W5b: the transition ledger, once the lane carries a bar ledger ---- */
+
+  const ledgerAvailable =
+    retained.state === "ready" && isRetainedReplay(retained.replay) && retained.replay.execution?.state === "AVAILABLE";
+  const [transitions, setTransitions] = useState<TransitionsSlot>({ state: "idle" });
+  const [transitionsNavigation, setTransitionsNavigation] = useState<
+    { kind: "first" } | { kind: "cursor"; token: string } | { kind: "before"; token: string } | null
+  >(null);
+  useEffect(() => {
+    if (ledgerAvailable && transitionsNavigation === null) setTransitionsNavigation({ kind: "first" });
+  }, [ledgerAvailable, transitionsNavigation]);
+  useEffect(() => {
+    if (transitionsNavigation === null) return;
+    const controller = new AbortController();
+    setTransitions((prev) => (prev.state === "ready" ? { ...prev, inFlight: true } : { state: "loading" }));
+    replayApi
+      .currentSourceTransitions(runId, { workspaceId, navigation: transitionsNavigation, limit: 50, signal: controller.signal })
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        if ((body as { schema_version?: string }).schema_version !== "research.current-source-replay-transitions.v1") {
+          setTransitions({ state: "refused", message: "The transition ledger does not apply to this run." });
+          return;
+        }
+        setTransitions({ state: "ready", ledger: body as ReplayTransitions, inFlight: false });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setTransitions({ state: "refused", message: toReplayRefusal(error, "retained").message });
+      });
+    return () => controller.abort();
+  }, [transitionsNavigation, runId, workspaceId]);
+  const transitionsPage = useCallback((direction: "next" | "previous") => {
+    if (transitions.state !== "ready") return;
+    const token = direction === "next" ? transitions.ledger.page.next_cursor : transitions.ledger.page.prev_cursor;
+    if (token) setTransitionsNavigation(direction === "next" ? { kind: "cursor", token } : { kind: "before", token });
+  }, [transitions]);
 
   /* The hub published no replay for this run: ask the retained lane once, so
      a walk-forward run is read from the lane that holds it. A P04 run whose
@@ -270,6 +350,10 @@ export function useReplay(
     retainedPreviousWindow,
     retainedPin,
     retainedContext: { identity, claim },
+    retainedFold,
+    retainedSeek,
+    transitions,
+    transitionsPage,
   };
 }
 
