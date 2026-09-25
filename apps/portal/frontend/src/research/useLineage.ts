@@ -3,19 +3,21 @@
  * the reader asks.
  *
  * A lineage snapshot is persisted research history: the hook never polls it,
- * never refetches on focus and never refetches on a re-render. The contract
- * declares no ETag, so there is no held copy and no revalidation either; a
- * retry is a plain second read. `limit` defaults to the contract's ceiling so
- * one request covers the whole bounded graph — when it does not, the answer
- * says `PARTIAL` and the screen shows that boundary rather than reading on.
+ * never refetches on focus and never refetches on a re-render. Contract 1.1.0
+ * (CG-P19-02) publishes an ETag: the client keeps one copy per exact request,
+ * so coming back to the screen is a `304`, not the graph again. `limit`
+ * defaults to the contract's ceiling; a longer history answers with its
+ * NEWEST page and an opaque `older_cursor`, and "load older" reads the next
+ * older page with it (CG-P19-09) — never a boundary the browser made up.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   LINEAGE_LIMIT_MAX,
   lineageApi,
   lineageState,
+  mergeOlder,
   toLineageRefusal,
   type Lineage,
   type LineageRefusal,
@@ -29,8 +31,14 @@ export interface LineageController {
   inFlight: boolean;
   /** Every request this controller has sent, for the screen's own receipt. */
   requestCount: number;
+  /** How many of those were answered `304` from the held copy. */
+  revalidatedCount: number;
   /** Read again. */
   retry: () => void;
+  /** Read the next older page with the server's cursor; absent when there is none. */
+  loadOlder: (() => void) | null;
+  /** The older-page read in flight, or its refusal. */
+  older: { inFlight: boolean; refusal: LineageRefusal | null };
 }
 
 export function useLineage(
@@ -42,7 +50,10 @@ export function useLineage(
   const [refusal, setRefusal] = useState<LineageRefusal | null>(null);
   const [inFlight, setInFlight] = useState(true);
   const [requestCount, setRequestCount] = useState(0);
+  const [revalidatedCount, setRevalidatedCount] = useState(0);
   const [generation, setGeneration] = useState(0);
+  const [older, setOlder] = useState<{ inFlight: boolean; refusal: LineageRefusal | null }>({ inFlight: false, refusal: null });
+  const olderAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -52,8 +63,10 @@ export function useLineage(
       .get(alphaId, { workspaceId, limit, signal: controller.signal })
       .then((answer) => {
         if (controller.signal.aborted) return;
-        setLineage(answer);
+        if (answer.revalidated) setRevalidatedCount((n) => n + 1);
+        setLineage(answer.lineage);
         setRefusal(null);
+        setOlder({ inFlight: false, refusal: null });
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -65,8 +78,35 @@ export function useLineage(
       .finally(() => {
         if (!controller.signal.aborted) setInFlight(false);
       });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      olderAbort.current?.abort();
+    };
   }, [alphaId, generation, limit, workspaceId]);
+
+  const cursor = lineage?.coverage.older_cursor ?? null;
+  const loadOlder = useCallback(() => {
+    if (!cursor || !lineage) return;
+    olderAbort.current?.abort();
+    const controller = new AbortController();
+    olderAbort.current = controller;
+    const newest = lineage;
+    setOlder({ inFlight: true, refusal: null });
+    setRequestCount((n) => n + 1);
+    lineageApi
+      .get(alphaId, { workspaceId, limit, cursor, signal: controller.signal })
+      .then((answer) => {
+        if (controller.signal.aborted) return;
+        if (answer.revalidated) setRevalidatedCount((n) => n + 1);
+        setLineage(mergeOlder(newest, answer.lineage));
+        setOlder({ inFlight: false, refusal: null });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        /* The page in hand stays; only the older read says why it stopped. */
+        setOlder({ inFlight: false, refusal: toLineageRefusal(error) });
+      });
+  }, [alphaId, cursor, limit, lineage, workspaceId]);
 
   const keeps = refusal !== null && lineage !== null && !refusal.terminal;
   const state: ResearchState = refusal
@@ -83,6 +123,9 @@ export function useLineage(
     state,
     inFlight,
     requestCount,
+    revalidatedCount,
     retry: useCallback(() => setGeneration((n) => n + 1), []),
+    loadOlder: cursor && !inFlight ? loadOlder : null,
+    older,
   };
 }

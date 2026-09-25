@@ -35,6 +35,7 @@ import {
   LINEAGE_REASON,
   LINEAGE_WITHHELD_WORDS,
   absenceReason,
+  lineageHasPresentation,
   type ChildRun,
   type Exposure,
   type Lineage,
@@ -42,10 +43,14 @@ import {
   type LineageAttemptState,
   type LineageAvailability,
   type LineageVersion,
+  type ParamRange,
   type PromotionPick,
+  type ReleaseCandidateRef,
+  type RunMetricFact,
   type SemanticChange,
   type SemanticDiff,
 } from "./lineageClient";
+import { formatMetric } from "./researchFormat";
 import type { ResearchState } from "./state";
 import type { LineageController } from "./useLineage";
 import { iso } from "./utcMinute";
@@ -79,9 +84,32 @@ export const NOT_IN_CONTRACT = "not a field of the lineage contract";
 /** Screen 11 composes from a run; without a published pick run there is no run to open it for. */
 export const RC_NO_RUN = "No published promotion pick names a run, so there is no run to compose a release candidate from.";
 
-/** The contract gap behind the probe toggle and the band's probe chip. */
-export const PROBES_REASON_CODE = "CG-P19-03";
-export const PROBES_REASON = `probe classification not published by the lineage contract (${PROBES_REASON_CODE})`;
+/**
+ * Only an older server (contract < 1.1.0) leaves the probe toggle without a
+ * classification; 1.1.0 publishes `presentation_kind` (CG-P19-03, W6b).
+ */
+export const PROBES_REASON_CODE = LINEAGE_REASON.serverPredatesW6b;
+export const PROBES_REASON = `probe classification not published by this server (${PROBES_REASON_CODE})`;
+
+/** DR-03 (W6b): who may publish a pick, printed beside its absence. */
+export const PICK_AUTHORITY = "a pick is published only by a governed approval of a sealed release candidate (P22)";
+
+/** CG-P19-14 standing words, one per server state. */
+export const PROMOTION_WORDS: Record<LineageAttempt["promotion_state"], string> = {
+  PICKED: "promotion pick",
+  NOT_PICKED: "not the pick",
+  AWAITING_PICK: "awaiting a published pick",
+  CLOSED: "promotion closed",
+};
+
+/** CG-P19-03 reasons, as a reader says them. */
+export const PRESENTATION_WORDS: Record<LineageAttempt["presentation_reasons"][number], string> = {
+  PROMOTION_PICK: "promotion pick",
+  RELEASE_CANDIDATE: "has a release candidate",
+  VERSION_FIRST_ATTEMPT: "first attempt of its version",
+  GATES_RESET: "version change — gates reset",
+  MATERIAL_CHANGES: "changes two or more declared keys",
+};
 
 /** The GATES RESET chip's suffix, spec 10 §2.3. */
 export const GATES_RESET = "GATES RESET";
@@ -303,7 +331,7 @@ const LINEAGE_CSS = `
 .ln-untried { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; padding: 7px 14px; border-top: 1px solid var(--line-soft); }
 .ln-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 9px 14px; background: var(--accent-2-soft); border-top: 1px solid var(--accent-2); min-width: 0; }
 .ln-pick .t { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .06em; color: var(--accent-2);
-  border: 1px solid var(--accent-2); border-radius: 3px; padding: 1px 6px; flex: none; }
+  border: 1px solid var(--accent-2); border-radius: 3px; padding: 1px 6px; flex: none; background: var(--paper-raised); }
 .ln-pick .v { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink); min-width: 0; }
 .ln-pick[data-pick-state="NOT_PUBLISHED"] .v { color: var(--ink-soft); }
 .ln-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 2px 8px; }
@@ -347,13 +375,13 @@ const LINEAGE_CSS = `
 .ln-diff[data-gates="true"] { border: 1px solid var(--bad); color: var(--bad); background: var(--bad-bg); border-radius: 3px; padding: 0 5px; flex: none; }
 .ln-note { font-size: 11px; color: var(--ink-soft); line-height: 1.5; margin: 3px 0 0; }
 .ln-st { font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; letter-spacing: .06em; border-radius: 999px; padding: 1px 8px;
-  border: 1px solid var(--ink-faint); color: var(--ink-faint); background: transparent; }
+  border: 1px solid var(--ink-faint); color: var(--ink-faint); background: var(--paper-raised); }
 .ln-st[data-status="ACTIVE"] { border-color: var(--good); color: var(--good); }
 .ln-st[data-status="ABANDONED"] { border-color: var(--bad); color: var(--bad); }
 .ln-st[data-status="DRAFT"] { border-color: var(--accent-2); color: var(--accent-2); }
 .ln-st[data-fill="true"][data-status="ACTIVE"] { background: var(--good); color: var(--accent-contrast); }
 .ln-raw { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: .04em; color: var(--ink-soft); border: 1px dashed var(--line-strong); border-radius: 3px; padding: 0 5px; }
-.ln-cert { font-family: var(--font-mono); font-size: 9px; font-weight: 700; border: 1px dashed var(--line); color: var(--ink-faint); border-radius: 3px; padding: 0 6px; }
+.ln-cert { font-family: var(--font-mono); font-size: 9px; font-weight: 700; border: 1px dashed var(--line); color: var(--ink-faint); border-radius: 3px; padding: 0 6px; background: var(--paper-raised); }
 .ln-av { font-family: var(--font-mono); font-size: 9.5px; border: 1px solid var(--line-strong); border-radius: 999px; padding: 0 7px; color: var(--ink-faint); background: var(--paper-raised); }
 .ln-av[data-s="ACTIVE"] { border-color: var(--good); color: var(--good); }
 .ln-outside { font-family: var(--font-mono); font-size: 9px; border: 1px dashed var(--line-strong); color: var(--ink-faint); border-radius: 3px; padding: 0 5px; flex: none; }
@@ -391,7 +419,8 @@ const LINEAGE_CSS = `
 .ln-nullside { font-style: italic; color: var(--ink-faint); text-decoration: none; }
 .ln-dnote { font-size: 10px; color: var(--ink-faint); line-height: 1.5; margin: 0; }
 .ln-rule { border: 1px solid var(--accent-2); border-radius: 8px; background: var(--accent-2-soft); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
-.ln-rule .t { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--accent-2); margin: 0; }
+.ln-rule .t { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--accent-2); margin: 0;
+  align-self: flex-start; background: var(--paper-raised); border-radius: 3px; padding: 0 6px; }
 .ln-rule p { font-size: 11px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
 .ln-foot { display: flex; flex-direction: column; gap: 3px; border-top: 1px solid var(--line); padding-top: 8px; }
 .ln-foot .t { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin: 0; font-weight: 400; }
@@ -403,6 +432,25 @@ const LINEAGE_CSS = `
 .ln-reason { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); word-break: break-all; }
 .ln-btn { font-family: var(--font-mono); font-size: 10.5px; line-height: 22px; padding: 0 8px; border: 1px solid var(--line);
   border-radius: 6px; background: var(--paper-raised); color: var(--ink); cursor: pointer; }
+.ln-btn:disabled { cursor: progress; opacity: .6; }
+/* W6b: hi-fi rc chip (9px bold, pill, pale gold ground) — draft gold, approved green. */
+.ln-rc { font-family: var(--font-mono); font-size: 9px; font-weight: 700; border: 1px solid var(--accent-2); border-radius: 999px; padding: 0 7px;
+  color: var(--accent-2); background: var(--paper-raised); }
+.ln-rc[data-approval="APPROVED"] { border-color: var(--good); color: var(--good); }
+.ln-cert[data-grade] { border-style: solid; }
+.ln-cert[data-grade="A"], .ln-cert[data-grade="B"] { border-color: var(--accent-2); color: var(--accent-2); }
+.ln-metrics { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-soft); margin-top: 2px; }
+.ln-metrics .v { color: var(--ink); }
+.ln-picked { font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; letter-spacing: .06em; color: var(--accent-2); border: 1px solid var(--accent-2); border-radius: 3px; padding: 0 5px; background: var(--paper-raised); }
+.ln-exer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; font-size: 10.5px; color: var(--ink-soft); line-height: 1.5; min-width: 0; }
+.ln-exer .m { font-family: var(--font-mono); font-size: 10px; overflow-wrap: anywhere; }
+.ln-out { font-family: var(--font-mono); font-size: 9.5px; }
+.ln-out[data-tone="ACTIVE"] { color: var(--good); }
+.ln-out[data-tone="SUPERSEDED"], .ln-out[data-tone="ABANDONED"] { color: var(--ink-faint); }
+.ln-untried-list { font-family: var(--font-mono); font-size: 10px; color: var(--ink-soft); overflow-wrap: anywhere; }
+.ln-chip.probe[aria-pressed="true"] { border-style: solid; border-color: var(--accent-2); color: var(--accent-2); background: var(--paper-raised); }
+.ln-toggle[aria-pressed="true"] { border-style: solid; border-color: var(--accent-2); color: var(--accent-2); background: var(--paper-raised); }
+.ln-older { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 `;
 
 /* ------------------------------------------------------------------ parts */
@@ -432,11 +480,6 @@ function Absent({ what, state, reason }: { what?: string; state: string; reason:
 
 function AvailabilityAbsent({ availability, what }: { availability: LineageAvailability; what?: string }) {
   return <Absent what={what} state={LINEAGE_WITHHELD_WORDS[availability.state]} reason={absenceReason(availability)} />;
-}
-
-/** A hi-fi cell the lineage contract has no field for: its label, "not published", and why. */
-function NotInContract({ what }: { what: string }) {
-  return <Absent what={what} state="not published" reason={NOT_IN_CONTRACT} />;
 }
 
 /** The hi-fi status chip; the raw contract state follows when it says something the status does not. */
@@ -592,6 +635,86 @@ function ExposureLine({ exposure }: { exposure: Exposure }) {
   );
 }
 
+/* ------------------------------------------------------------ W6b facts */
+
+/** `rc_ (draft)` / `rc_01J… · NOT_APPROVED`: the run's persisted P21 relation, as the Run Library states it. */
+export function rcLabel(rc: ReleaseCandidateRef): string {
+  if (rc.kind === "ACTOR_DRAFT") return "rc_ (draft)";
+  return `${rc.release_candidate_id ?? "rc_"} · ${rc.approval_state ?? "approval not published"}`;
+}
+
+/** The hi-fi rc chip; a link to Screen 11 for the run that owns it. */
+function RcChip({ rc }: { rc: ReleaseCandidateRef }) {
+  const title =
+    rc.kind === "ACTOR_DRAFT"
+      ? "your release-candidate draft for this run (Screen 11)"
+      : `sealed locally${rc.sealed_at_utc_ms !== null ? ` ${iso(rc.sealed_at_utc_ms)}` : ""} · delivery ${rc.delivery_state ?? "not published"} · approval ${rc.approval_state ?? "not published"}`;
+  return (
+    <Link to={releaseCandidateHref(rc.run_id)} className="ln-rc" data-rc={rc.kind} data-approval={rc.approval_state ?? undefined} title={title}>
+      {rcLabel(rc)}
+    </Link>
+  );
+}
+
+/** Hi-fi `cert B`; without an issued grade the chip says so and carries the reason. */
+function CertChip({ attempt }: { attempt: LineageAttempt }) {
+  const certificate = attempt.run_facts.certificate;
+  if (certificate.grade !== null) {
+    return (
+      <span className="ln-cert" data-grade={certificate.grade} title="methodology certificate the source issued">
+        cert {certificate.grade}
+      </span>
+    );
+  }
+  return (
+    <span className="ln-cert" data-cert-absent title={`certification — ${absenceReason(certificate.availability)}`}>
+      cert not published
+    </span>
+  );
+}
+
+/** A retained ratio: three decimals for the eye, the exact server string in the title, never a zero from null. */
+function MetricValue({ label, fact }: { label: string; fact: RunMetricFact }) {
+  const shown = formatMetric(fact.value, "ratio");
+  if (fact.value === null || shown === null) {
+    return (
+      <span data-metric={label} data-metric-state={fact.availability.state} title={absenceReason(fact.availability)}>
+        {label} <span className="ln-absent">{LINEAGE_WITHHELD_WORDS[fact.availability.state]}</span>
+      </span>
+    );
+  }
+  const basis = fact.scope === "SELECTED_TRIAL_MEAN_ACROSS_FOLDS" ? " (selected trial, mean of folds)" : "";
+  return (
+    <span data-metric={label} data-metric-value={fact.value} title={`${fact.value} · ${fact.definition_id ?? "definition not published"} · ${fact.source ?? ""}`}>
+      {label} <span className="v">{shown}</span>
+      {basis}
+    </span>
+  );
+}
+
+/** Spec §2.3 row 4: the mini metrics, server values only. */
+function MetricsLine({ attempt }: { attempt: LineageAttempt }) {
+  return (
+    <span className="ln-metrics" data-metrics={attempt.attempt_id}>
+      <MetricValue label="OOS" fact={attempt.run_facts.oos_sharpe} />
+      <MetricValue label="decay" fact={attempt.run_facts.decay} />
+    </span>
+  );
+}
+
+/** `6p · 5 swept · 1 pinned` (hi-fi) from the server's count. */
+function spaceText(space: LineageAttempt["spec_label"]["space"]): string | null {
+  return space ? `${space.parameters}p · ${space.swept} swept · ${space.pinned} pinned` : null;
+}
+
+/** One parameter range as the hi-fi writes it: `window 12–72`, `fee_bps 4 (pinned)`. */
+export function rangeText(range: ParamRange): string {
+  const span = range.low !== null && range.high !== null ? (range.low === range.high ? range.low : `${range.low}–${range.high}`) : null;
+  const values = range.values.length ? `{ ${range.values.join(" · ")} }` : null;
+  const body = [span, values].filter(Boolean).join(" ") || "value not published";
+  return `${range.name} ${body}${range.kind === "PIN" ? " (pinned)" : ""}`;
+}
+
 function versionTitle(state: LineageVersion["lifecycle_state"] | null): string {
   if (state === "ACTIVE") return "active code artifact";
   if (state === "SUPERSEDED") return "superseded code artifact — attempt stays readable, promotion closed";
@@ -626,6 +749,70 @@ function Header({ alphaId, lineage }: { alphaId: string; lineage: Lineage | null
   );
 }
 
+
+/** Hi-fi band outcome cell: the server's `research.lineage-version-outcome.v1` line, or its typed absence. */
+function VersionOutcome({ version }: { version: LineageVersion }) {
+  const { outcome, supersession } = version;
+  return (
+    <span className="ln-outcome-cell" data-outcome={outcome.availability.state}>
+      {outcome.text !== null ? (
+        <span className="ln-out" data-tone={version.lifecycle_state} title={`${outcome.rule}${outcome.availability.state === "PARTIAL" ? ` · ${absenceReason(outcome.availability)}` : ""}`}>
+          {outcome.text}
+          {outcome.availability.state === "PARTIAL" ? " (returned attempts)" : ""}
+        </span>
+      ) : (
+        <AvailabilityAbsent what="outcome" availability={outcome.availability} />
+      )}
+      {supersession.state === "RECORDED" ? (
+        <span className="ln-faint" data-superseded-by={supersession.superseded_by_version_id ?? ""}>
+          {" · superseded by "}
+          {supersession.superseded_by_label}
+        </span>
+      ) : version.lifecycle_state === "SUPERSEDED" ? (
+        <span className="ln-reason" data-superseded-by="" title="the successor version was registered before predecessors were recorded">
+          {" · successor not recorded "}({supersession.reason_code})
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** Hi-fi `exercised` row: route, modes, ranges — every attempt of the version, server-aggregated. */
+function Exercised({ version }: { version: LineageVersion }) {
+  const exercised = version.exercised;
+  if (exercised.availability.state === "NOT_PUBLISHED" && exercised.routes.length === 0) {
+    return (
+      <div className="ln-bandrow" data-exercised={exercised.availability.state}>
+        <span className="ln-lbl">exercised</span>
+        <AvailabilityAbsent what="exercised" availability={exercised.availability} />
+      </div>
+    );
+  }
+  return (
+    <div className="ln-bandrow" data-exercised={exercised.availability.state}>
+      <span className="ln-lbl">exercised</span>
+      <span className="ln-exer">
+        <span className="m" data-exercised-routes>
+          {exercised.routes.join(" · ")}
+        </span>
+        <span className="m" data-exercised-modes>
+          {exercised.modes.join(" · ")}
+        </span>
+        {exercised.param_ranges.length ? (
+          <span className="m" data-exercised-params>
+            {exercised.param_ranges.map(rangeText).join(" · ")}
+          </span>
+        ) : null}
+        <span className="ln-faint" data-exercised-count title="attempts whose persisted requested spec was read">
+          {String(exercised.attempts_considered)} attempts read
+          {exercised.attempts_without_manifest > 0 ? ` · ${String(exercised.attempts_without_manifest)} without a persisted spec` : ""}
+        </span>
+        {exercised.availability.state === "PARTIAL" ? <span className="ln-reason">{absenceReason(exercised.availability)}</span> : null}
+      </span>
+    </div>
+  );
+}
+
 function VersionBand({
   version,
   attempts,
@@ -633,6 +820,9 @@ function VersionBand({
   selectedId,
   bandSelected,
   onChip,
+  presentationKnown,
+  showProbes,
+  onToggleProbes,
 }: {
   version: LineageVersion;
   attempts: readonly LineageAttempt[];
@@ -640,8 +830,14 @@ function VersionBand({
   selectedId: string | null;
   bandSelected: boolean;
   onChip: (attemptId: string) => void;
+  presentationKnown: boolean;
+  showProbes: boolean;
+  onToggleProbes: () => void;
 }) {
   const pick = version.promotion_pick;
+  /* Hi-fi: the band names its storied attempts; its probes are one "+N probes" chip. */
+  const storied = presentationKnown ? attempts.filter((attempt) => attempt.presentation_kind === "STORIED") : attempts;
+  const probes = presentationKnown ? attempts.length - storied.length : null;
   return (
     <div
       className="ln-band"
@@ -663,9 +859,7 @@ function VersionBand({
             promotion pick {pick.attempt_id}
           </span>
         ) : null}
-        <span className="ln-outcome-cell" data-outcome>
-          <NotInContract what="outcome" />
-        </span>
+        <VersionOutcome version={version} />
         {version.lifecycle_state === "ACTIVE" ? (
           <Link to="/research/quantbt/alpha-import" className="ln-faint" data-action="import-new-version">
             import new version →
@@ -680,8 +874,9 @@ function VersionBand({
               no returned attempt in this version
             </span>
           ) : (
-            attempts.map((attempt) => {
+            storied.map((attempt) => {
               const status = statusOf(attempt);
+              const rc = attempt.release_candidate;
               return (
                 <button
                   key={attempt.attempt_id}
@@ -690,28 +885,70 @@ function VersionBand({
                   data-chip={attempt.attempt_id}
                   data-state={attempt.state}
                   data-status={status ?? undefined}
+                  data-rc={rc ? rc.kind : undefined}
                   aria-label={chipLabel(attempt.attempt_id, status, attempt.state)}
-                  title={`${attempt.attempt_id} · ${attempt.primary_run.run_id ?? "no run"} · ${attempt.state}`}
+                  title={`${attempt.attempt_id} · ${attempt.primary_run.run_id ?? "no run"} · ${attempt.state}${rc ? ` · ${rcLabel(rc)}` : ""}`}
                   aria-current={selectedId === attempt.attempt_id ? "true" : undefined}
                   onClick={() => onChip(attempt.attempt_id)}
                 >
                   {attempt.attempt_id}
+                  {rc ? " ●" : ""}
                 </button>
               );
             })
           )}
-          <button type="button" className="ln-chip probe" data-probe-chip disabled title={PROBES_REASON} aria-label={`probes of ${version.label} — ${PROBES_REASON}`}>
-            + probes
-          </button>
+          {probes === null ? (
+            <button type="button" className="ln-chip probe" data-probe-chip disabled title={PROBES_REASON} aria-label={`probes of ${version.label} — ${PROBES_REASON}`}>
+              + probes
+            </button>
+          ) : probes > 0 ? (
+            <button
+              type="button"
+              className="ln-chip probe"
+              data-probe-chip={probes}
+              aria-pressed={showProbes}
+              title="config sweeps — toggle below the ledger"
+              onClick={onToggleProbes}
+            >
+              +{String(probes)} probes
+            </button>
+          ) : null}
         </div>
       </div>
-      <div className="ln-bandrow">
-        <span className="ln-lbl">exercised</span>
-        <span className="ln-pill" data-exercised>
-          routes · modes · param ranges
+      <Exercised version={version} />
+    </div>
+  );
+}
+
+/** Hi-fi `untried` row: Engine Atlas routes the active version never declared, then the way to declare one. */
+function Untried({ version }: { version: LineageVersion | null }) {
+  const untried = version?.untried ?? null;
+  return (
+    <div className="ln-untried" data-untried={untried?.availability.state ?? "NONE"}>
+      <span className="ln-lbl">untried</span>
+      {untried === null ? (
+        <span className="ln-faint">no active version to compare against</span>
+      ) : untried.routes.length > 0 ? (
+        <span className="ln-untried-list" data-untried-routes>
+          {untried.routes.map((route, index) => (
+            <span key={route.route_id} title={route.status_word ? `Engine Atlas: ${route.status_word}` : undefined} data-untried-route={route.route_id}>
+              {index > 0 ? " · " : ""}
+              {route.route_id}
+            </span>
+          ))}
         </span>
-        <NotInContract what="exercised" />
-      </div>
+      ) : untried.availability.state === "AVAILABLE" ? (
+        <span className="ln-faint">every Atlas route has been declared</span>
+      ) : (
+        <AvailabilityAbsent what="untried" availability={untried.availability} />
+      )}
+      {untried && untried.availability.state === "PARTIAL" ? <span className="ln-reason">{absenceReason(untried.availability)}</span> : null}
+      <span className="ln-faint">
+        {" — "}
+        <Link to={`${RUNS_ROOT}/new`} data-action="declare-at-new-run">
+          declare at New Run →
+        </Link>
+      </span>
     </div>
   );
 }
@@ -749,16 +986,16 @@ function PickRow({
           ) : null}
           {pick.source_digest ? <span title={pick.source_digest}>{` · ${short(pick.source_digest)}`}</span> : null}
           {" → "}
-          {pick.run_id ? (
-            /* P21: the pick's run composes its release candidate on Screen 11. */
-            <Link to={releaseCandidateHref(pick.run_id)} title="compose or read this run's release candidate (Screen 11)" data-pick-rc>
-              rc_
-            </Link>
-          ) : (
-            <span className="ln-unrouted" title={`rc_ is not a field of the lineage contract; ${RC_NO_RUN}`} data-pick-rc>
-              rc_
+          {pick.release_candidate ? (
+            <span data-pick-rc={pick.release_candidate.kind}>
+              <RcChip rc={pick.release_candidate} />
             </span>
-          )}
+          ) : pick.run_id ? (
+            /* P21: the pick's run composes its release candidate on Screen 11. */
+            <Link to={releaseCandidateHref(pick.run_id)} title={`compose or read this run's release candidate (Screen 11) — ${absenceReason(pick.release_candidate_availability)}`} data-pick-rc="NONE">
+              {pick.release_candidate_availability.reason_code === "P21_NO_PERSISTED_RELEASE_CANDIDATE" ? "rc_ not composed" : "rc_"}
+            </Link>
+          ) : null}
         </span>
         <span className="ln-faint ln-long" data-pick-source>
           source {pick.source_contract_rev ?? "revision not published"}
@@ -774,6 +1011,9 @@ function PickRow({
       <span className="ln-reason" data-reason-code>
         {pick?.availability.reason_code ?? LINEAGE_REASON.promotionPickAbsent}
       </span>
+      <span className="ln-faint" data-pick-authority={pick?.source_authority.state ?? "NOT_CONNECTED"}>
+        {PICK_AUTHORITY}
+      </span>
     </div>
   );
 }
@@ -788,6 +1028,9 @@ function RootCard({
   returnedIds,
   onChip,
   bandsRef,
+  presentationKnown,
+  showProbes,
+  onToggleProbes,
 }: {
   lineage: Lineage;
   bands: readonly LineageVersion[];
@@ -798,6 +1041,9 @@ function RootCard({
   returnedIds: ReadonlySet<string>;
   onChip: (attemptId: string) => void;
   bandsRef: RefObject<HTMLDivElement>;
+  presentationKnown: boolean;
+  showProbes: boolean;
+  onToggleProbes: () => void;
 }) {
   const { alpha } = lineage;
   const active = bands.filter((version) => version.lifecycle_state === "ACTIVE");
@@ -858,20 +1104,14 @@ function RootCard({
               selectedId={selectedId}
               bandSelected={selectedBand === version.alpha_version_id}
               onChip={onChip}
+              presentationKnown={presentationKnown}
+              showProbes={showProbes}
+              onToggleProbes={onToggleProbes}
             />
           ))
         )}
       </div>
-      <div className="ln-untried">
-        <span className="ln-lbl">untried</span>
-        <span className="ln-faint">
-          <NotInContract what="untried" />
-          {" — "}
-          <Link to={`${RUNS_ROOT}/new`} data-action="declare-at-new-run">
-            declare at New Run →
-          </Link>
-        </span>
-      </div>
+      <Untried version={active[0] ?? null} />
       {active.length === 0 ? (
         <PickRow version={null} returnedIds={returnedIds} onSelect={onChip} />
       ) : (
@@ -881,19 +1121,35 @@ function RootCard({
   );
 }
 
-function ProbesToggle() {
+function ProbesToggle({ known, count, pressed, onToggle }: { known: boolean; count: number; pressed: boolean; onToggle?: () => void }) {
+  if (!known || !onToggle) {
+    return (
+      <button
+        type="button"
+        className="ln-toggle"
+        data-action="toggle-probes"
+        data-reason-code={PROBES_REASON_CODE}
+        aria-pressed={false}
+        disabled
+        title={known ? undefined : PROBES_REASON}
+        aria-label={known ? "show probe attempts" : `show probe attempts — ${PROBES_REASON}`}
+      >
+        show probe attempts
+      </button>
+    );
+  }
   return (
     <button
       type="button"
       className="ln-toggle"
       data-action="toggle-probes"
-      data-reason-code={PROBES_REASON_CODE}
-      aria-pressed={false}
-      disabled
-      title={PROBES_REASON}
-      aria-label={`show probe attempts — ${PROBES_REASON}`}
+      data-probes={count}
+      aria-pressed={pressed}
+      disabled={count === 0}
+      title={count === 0 ? "every returned attempt is storied" : "probes are counted in every total whether shown or not"}
+      onClick={onToggle}
     >
-      show probe attempts
+      {pressed ? "hide" : "show"} {String(count)} probe attempts
     </button>
   );
 }
@@ -903,11 +1159,17 @@ function Filters({
   onToggle,
   shown,
   lineage,
+  presentationKnown,
+  showProbes,
+  onToggleProbes,
 }: {
   active: ReadonlySet<LineageStatus>;
   onToggle: (status: LineageStatus) => void;
   shown: number;
   lineage: Lineage;
+  presentationKnown: boolean;
+  showProbes: boolean;
+  onToggleProbes: () => void;
 }) {
   return (
     <div className="ln-filters" data-panel="filters" role="group" aria-label="attempt filters">
@@ -923,13 +1185,14 @@ function Filters({
           {status.toLowerCase()}
         </button>
       ))}
-      <ProbesToggle />
+      <ProbesToggle known={presentationKnown} count={lineage.counts.probe_returned ?? 0} pressed={showProbes} onToggle={onToggleProbes} />
       <span className="ln-count" data-counter aria-live="polite">
         {counterText(shown, lineage.counts.returned_attempts, lineage.counts.total_attempts)}
       </span>
     </div>
   );
 }
+
 
 function NodeDetail({ attempt }: { attempt: LineageAttempt }) {
   const run = attempt.primary_run;
@@ -947,9 +1210,28 @@ function NodeDetail({ attempt }: { attempt: LineageAttempt }) {
         {" · "}
         <span data-technical-retries>technical retries: {String(run.technical_retry_count)} (not attempts)</span>
       </span>
+      {run.execution_profile_id ? (
+        <span className="ln-faint" data-profile={run.execution_profile_id}>
+          execution profile {run.execution_profile_id}
+        </span>
+      ) : null}
       <ChildRuns attempt={attempt} />
       <ExposureLine exposure={attempt.exposure} />
     </div>
+  );
+}
+
+/**
+ * The card's one sentence (spec §2.3 row 4): the attempt's own reason, else
+ * the source's claim sentence — verbatim. ABANDONED/FAILED reasons keep their
+ * existing line; this adds the claim sentence only.
+ */
+function OutcomeLine({ attempt }: { attempt: LineageAttempt }) {
+  if (attempt.outcome.source !== "SOURCE_CLAIM_SENTENCE" || attempt.outcome.text === null) return null;
+  return (
+    <span className="ln-note" data-outcome-line="SOURCE_CLAIM_SENTENCE" title={`claim ${attempt.run_facts.claim.state ?? "state not published"}`}>
+      {attempt.outcome.text}
+    </span>
   );
 }
 
@@ -970,7 +1252,17 @@ function Rail({ depth, status }: { depth: number; status: LineageStatus | null }
   );
 }
 
+/**
+ * Hi-fi spec line: the server's allow-listed `route · mode × schedule` and the
+ * declared space after overrides (CG-P19-08). Without a persisted manifest it
+ * falls back to the identity the lineage does carry — intent and signature.
+ */
 function specLine(attempt: LineageAttempt): string {
+  const label = attempt.spec_label;
+  if (label.text) {
+    const space = spaceText(label.space);
+    return space ? `${label.text}  ·  ${space}` : label.text;
+  }
   return `${attempt.intent_kind} · space ${attempt.space_signature ? short(attempt.space_signature) : "signature not published"}`;
 }
 
@@ -1016,12 +1308,16 @@ function AttemptCard({ node, status, versionState, selected, expanded, onToggle 
           <span className="ln-faint" style={{ fontSize: "10px" }}>
             {iso(attempt.created_at_utc_ms)}
           </span>
-          <span className="ln-cert" data-cert-absent title={`certification — ${NOT_IN_CONTRACT}`}>
-            cert not published
-          </span>
+          <CertChip attempt={attempt} />
           <span className="ln-av" data-s={versionState ?? undefined} title={versionTitle(versionState)}>
             {attempt.alpha_version_label}
           </span>
+          {attempt.release_candidate ? <RcChip rc={attempt.release_candidate} /> : null}
+          {attempt.promotion_state === "PICKED" ? (
+            <span className="ln-picked" data-picked title={PICK_AUTHORITY}>
+              PROMOTION PICK
+            </span>
+          ) : null}
           {attempt.parent_state === "OUTSIDE_RETURNED_GRAPH" ? (
             <span className="ln-outside" data-parent-outside>
               parent outside returned graph
@@ -1041,6 +1337,8 @@ function AttemptCard({ node, status, versionState, selected, expanded, onToggle 
           </span>
         </span>
         <ReasonLine attempt={attempt} />
+        <OutcomeLine attempt={attempt} />
+        <MetricsLine attempt={attempt} />
         {expanded ? <NodeDetail attempt={attempt} /> : null}
       </div>
     </div>
@@ -1076,11 +1374,10 @@ function AttemptRow({ node, status, selected, expanded, onToggle }: NodeProps) {
             </span>
             <StatusChips status={status} state={attempt.state} />
             <span className="ln-rowspec">{specLine(attempt)}</span>
-            <span className="ln-cert" data-cert-absent>
-              cert not published
-            </span>
+            <CertChip attempt={attempt} />
             <span className="ln-rowwhen">{iso(attempt.created_at_utc_ms)}</span>
           </button>
+          {attempt.release_candidate ? <RcChip rc={attempt.release_candidate} /> : null}
           <GatesChip diff={attempt.semantic_diff} />
         </div>
         {expanded ? (
@@ -1089,6 +1386,8 @@ function AttemptRow({ node, status, selected, expanded, onToggle }: NodeProps) {
               <DiffChips diff={attempt.semantic_diff} />
             </span>
             <ReasonLine attempt={attempt} className="ln-spec" />
+            <OutcomeLine attempt={attempt} />
+            <MetricsLine attempt={attempt} />
             {run.run_id ? (
               <Link className="ln-faint" to={evidenceHref(run.run_id)} data-run-link={run.run_id}>
                 {run.run_id} →
@@ -1117,6 +1416,7 @@ function Tree({
   scrollRef,
   scrollTop,
   onScroll,
+  older,
 }: {
   lineage: Lineage;
   visible: readonly TreeNode[];
@@ -1128,6 +1428,7 @@ function Tree({
   scrollRef: RefObject<HTMLDivElement>;
   scrollTop: number;
   onScroll: (top: number) => void;
+  older?: { load: (() => void) | null; inFlight: boolean; refusal: string | null };
 }) {
   const virtual = visible.length > VIRTUAL_THRESHOLD;
   const heights = virtual
@@ -1149,10 +1450,35 @@ function Tree({
   return (
     <section className="ln-tree" data-panel="tree" aria-label="attempts, oldest first" data-coverage={coverage.state}>
       {bounded ? (
-        <div className="ln-bound" data-bounded role="note">
-          Bounded history: {String(counts.returned_attempts)} of {String(counts.total_attempts)} attempts were returned.
-          The returned prefix is not the complete history.{" "}
+        <div className="ln-bound" data-bounded role="note" data-window={coverage.window}>
+          Bounded history: {String(counts.returned_attempts)} of {String(counts.total_attempts)} attempts were returned
+          {coverage.window === "NEWEST" ? " — the newest ones" : ""}. They are not the complete history.{" "}
           <span className="ln-reason">{coverage.reason_code ?? LINEAGE_REASON.boundedGraph}</span>
+          {older ? (
+            <span className="ln-older">
+              {older.load || older.inFlight ? (
+                <button
+                  type="button"
+                  className="ln-btn"
+                  data-action="load-older"
+                  disabled={older.inFlight || !older.load}
+                  title={older.inFlight ? "the older page is being read" : "read the next older page with the server's cursor"}
+                  onClick={older.load ?? undefined}
+                >
+                  {older.inFlight ? "reading older attempts…" : "load older attempts"}
+                </button>
+              ) : (
+                <span className="ln-faint" data-older-none>
+                  no older page offered by the server
+                </span>
+              )}
+              {older.refusal ? (
+                <span className="ln-reason" data-older-refusal>
+                  {older.refusal}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
         </div>
       ) : null}
       {visible.length === 0 ? (
@@ -1186,7 +1512,14 @@ function Tree({
               })}
             </div>
           ) : (
-            visible.map((node) => <AttemptCard key={node.attempt.attempt_id} {...props(node)} />)
+            /* Hi-fi: storied attempts are full cards, probes compact rows. */
+            visible.map((node) =>
+              node.attempt.presentation_kind === "PROBE" ? (
+                <AttemptRow key={node.attempt.attempt_id} {...props(node)} />
+              ) : (
+                <AttemptCard key={node.attempt.attempt_id} {...props(node)} />
+              ),
+            )
           )}
         </div>
       )}
@@ -1203,7 +1536,19 @@ function Row({ k, children }: { k: string; children: ReactNode }) {
   );
 }
 
-function Selected({ attempt, status }: { attempt: LineageAttempt | null; status: LineageStatus | null }) {
+function Selected({
+  attempt,
+  status,
+  version,
+  alphaId,
+  parentRunId,
+}: {
+  attempt: LineageAttempt | null;
+  status: LineageStatus | null;
+  version: LineageVersion | null;
+  alphaId: string;
+  parentRunId: string | null;
+}) {
   if (attempt === null) {
     return (
       <section className="ln-block" data-panel="selected" aria-label="selected attempt">
@@ -1213,6 +1558,8 @@ function Selected({ attempt, status }: { attempt: LineageAttempt | null; status:
     );
   }
   const run = attempt.primary_run;
+  const facts = attempt.run_facts;
+  const claim = facts.claim;
   return (
     <section className="ln-block" data-panel="selected" aria-label="selected attempt" data-selected-attempt={attempt.attempt_id}>
       <h3 className="t">
@@ -1229,10 +1576,55 @@ function Selected({ attempt, status }: { attempt: LineageAttempt | null; status:
               ? attempt.parent_attempt_id
               : `${attempt.parent_attempt_id ?? ""} (outside returned graph)`}
         </Row>
+        <Row k="mode × schedule">
+          {attempt.spec_label.text ?? <AvailabilityAbsent availability={attempt.spec_label.availability} />}
+        </Row>
+        <Row k="claim">
+          {claim.state !== null ? (
+            <span data-claim-state={claim.state} title={claim.text ?? undefined}>
+              {claim.state}
+            </span>
+          ) : (
+            <AvailabilityAbsent availability={claim.availability} />
+          )}
+        </Row>
+        <Row k="OOS sharpe">
+          <MetricValue label="" fact={facts.oos_sharpe} />
+        </Row>
+        <Row k="decay">
+          <MetricValue label="" fact={facts.decay} />
+        </Row>
+        <Row k="cert">
+          {facts.certificate.grade !== null ? `${facts.certificate.grade}` : <AvailabilityAbsent availability={facts.certificate.availability} />}
+        </Row>
+        <Row k="promotion">
+          <span data-promotion-state={attempt.promotion_state ?? "NOT_PUBLISHED"} title={attempt.promotion_reason_code ?? undefined}>
+            {attempt.promotion_state ? PROMOTION_WORDS[attempt.promotion_state] : "not published"}
+          </span>
+        </Row>
+        <Row k="release candidate">
+          {attempt.release_candidate ? <RcChip rc={attempt.release_candidate} /> : <AvailabilityAbsent availability={attempt.release_candidate_availability} />}
+        </Row>
+        {version?.lifecycle_state === "SUPERSEDED" ? (
+          <Row k="why superseded">
+            {version.supersession.state === "RECORDED" ? (
+              `code re-import → ${version.supersession.superseded_by_label ?? ""}`
+            ) : (
+              <span className="ln-absent">successor not recorded ({version.supersession.reason_code})</span>
+            )}
+          </Row>
+        ) : null}
+        <Row k="presentation">
+          <span data-presentation={attempt.presentation_kind} title={attempt.presentation_reasons.map((reason) => PRESENTATION_WORDS[reason]).join(" · ") || "no storied reason: a probe"}>
+            {attempt.presentation_kind.toLowerCase()}
+            {attempt.presentation_reasons.length ? ` — ${attempt.presentation_reasons.map((reason) => PRESENTATION_WORDS[reason]).join(", ")}` : ""}
+          </span>
+        </Row>
         <Row k="intent">{attempt.intent_kind}</Row>
         <Row k="alpha version">{attempt.alpha_version_label}</Row>
         <Row k="primary run">{run.run_id ?? <span className="ln-absent">no primary run recorded</span>}</Row>
         <Row k="run state">{run.state ?? <span className="ln-absent">not published</span>}</Row>
+        <Row k="execution profile">{run.execution_profile_id ?? <span className="ln-absent">not published</span>}</Row>
         <Row k="engine release">{run.engine_release_id ?? <span className="ln-absent">not published</span>}</Row>
         <Row k="effective spec">
           {run.effective_spec_digest ? <span title={run.effective_spec_digest}>{short(run.effective_spec_digest)}</span> : <span className="ln-absent">not published</span>}
@@ -1246,13 +1638,15 @@ function Selected({ attempt, status }: { attempt: LineageAttempt | null; status:
         </Row>
         <Row k="created">{iso(attempt.created_at_utc_ms)}</Row>
         <Row k="updated">{iso(attempt.updated_at_utc_ms)}</Row>
-        <Row k="certification · OOS · decay">
-          <span className="ln-absent">{NOT_IN_CONTRACT}</span>
-        </Row>
       </dl>
-      <span className="ln-verdict" data-verdict>
-        <ReasonLine attempt={attempt} className="ln-verdict" />
-        {attempt.reason === null && attempt.state !== "ABANDONED" ? <NotInContract what="verdict" /> : null}
+      <span className="ln-verdict" data-verdict={attempt.outcome.source ?? "NONE"}>
+        {attempt.state === "ABANDONED" || attempt.state === "FAILED" ? (
+          <ReasonLine attempt={attempt} className="ln-verdict" />
+        ) : attempt.outcome.text !== null ? (
+          attempt.outcome.text
+        ) : (
+          <AvailabilityAbsent what="verdict" availability={attempt.outcome.availability} />
+        )}
       </span>
       <ExposureLine exposure={attempt.exposure} />
       {run.run_id ? (
@@ -1263,6 +1657,20 @@ function Selected({ attempt, status }: { attempt: LineageAttempt | null; status:
           <Link className="ln-btnlink soft" to={reportHref(run.run_id)} data-action="run-report">
             run report
           </Link>
+          <Link className="ln-btnlink soft" to={`${RUNS_ROOT}/${encodeURIComponent(run.run_id)}/freeze`} data-action="open-freeze">
+            freeze
+          </Link>
+          <Link className="ln-btnlink soft" to={releaseCandidateHref(run.run_id)} data-action="open-release-candidate">
+            release candidate
+          </Link>
+          <Link className="ln-btnlink soft" to={`${RUNS_ROOT}/new?from=${encodeURIComponent(run.run_id)}`} data-action="clone-at-new-run" title="copy this run's declaration into a new draft on Screen 02 (a new attempt, never an edit)">
+            clone →
+          </Link>
+          {parentRunId ? (
+            <Link className="ln-btnlink soft" to={compareHref(alphaId, { mode: "pair", runs: [parentRunId, run.run_id] })} data-action="compare-with-parent">
+              compare with parent →
+            </Link>
+          ) : null}
         </span>
       ) : null}
     </section>
@@ -1327,8 +1735,18 @@ function DiffPanel({ attempt }: { attempt: LineageAttempt | null }) {
   );
 }
 
-function PromotionRule() {
+/**
+ * Hi-fi rule, verbatim, then the server's standing of the returned attempts
+ * (CG-P19-14): how many are picked, waiting for a pick, or closed. "The
+ * ACTIVE attempt" is the one a published pick names — never inferred here.
+ */
+function PromotionRule({ lineage }: { lineage?: Lineage | null }) {
   const [head, tail] = PROMOTION_RULE.split("ACTIVE");
+  const standing = lineage
+    ? (["PICKED", "AWAITING_PICK", "NOT_PICKED", "CLOSED"] as const)
+        .map((state) => [state, lineage.attempts.filter((attempt) => attempt.promotion_state === state).length] as const)
+        .filter(([, count]) => count > 0)
+    : [];
   return (
     <section className="ln-rule" data-panel="promotion-rule" aria-label="promotion rule">
       <h3 className="t">promotion rule</h3>
@@ -1337,6 +1755,14 @@ function PromotionRule() {
         <span className="ln-mono">ACTIVE</span>
         {tail}
       </p>
+      {lineage ? (
+        <p className="ln-mono" data-promotion-standing style={{ fontSize: "10px" }}>
+          {standing.length
+            ? standing.map(([state, count]) => `${PROMOTION_WORDS[state]} ${String(count)}`).join(" · ")
+            : "promotion standing not published by this server"}
+          {lineage.attempts.some((attempt) => attempt.promotion_state === "PICKED") ? "" : ` — ${PICK_AUTHORITY}`}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -1359,10 +1785,14 @@ const COUNT_LABELS: [keyof Lineage["counts"], string][] = [
   ["abandoned_attempts", "abandoned"],
   ["child_runs", "child runs"],
   ["technical_retries", "technical retries (not attempts)"],
+  ["storied_returned", "storied (returned)"],
+  ["probe_returned", "probes (returned)"],
 ];
 
 function Counts({ lineage }: { lineage: Lineage }) {
   const { counts, coverage } = lineage;
+  /* CG-P19-13: the server's definition of each count, and its Run Library twin. */
+  const definitions = new Map((lineage.counts_definitions?.rows ?? []).map((row) => [row.key, row]));
   return (
     <section className="ln-block" data-panel="counts" aria-label="attempt counts and coverage">
       <h3 className="t">
@@ -1372,17 +1802,32 @@ function Counts({ lineage }: { lineage: Lineage }) {
         </span>
       </h3>
       <div className="ln-counts">
-        {COUNT_LABELS.map(([key, label]) => (
-          <span key={key} className="c" data-count={key}>
-            <span>{label}</span>
-            <span className="n">{String(counts[key])}</span>
-          </span>
-        ))}
+        {COUNT_LABELS.map(([key, label]) => {
+          const value = counts[key];
+          const definition = definitions.get(key);
+          return (
+            <span
+              key={key}
+              className="c"
+              data-count={key}
+              title={definition ? `${definition.includes}${definition.run_library_equivalent ? ` — Run Library: ${definition.run_library_equivalent}` : ""}` : undefined}
+            >
+              <span>{label}</span>
+              {typeof value === "number" ? <span className="n">{String(value)}</span> : <span className="ln-absent">not published</span>}
+            </span>
+          );
+        })}
       </div>
       <span className="ln-faint" data-coverage-line={coverage.state}>
         coverage {coverage.state}
         {coverage.reason_code ? ` · ${coverage.reason_code}` : ""}
         {coverage.oldest_returned_created_at_utc_ms !== null ? ` · oldest returned ${iso(coverage.oldest_returned_created_at_utc_ms)}` : ""}
+      </span>
+      <span className="ln-faint" data-counts-definitions={lineage.counts_definitions?.version ?? "NOT_PUBLISHED"}>
+        {lineage.counts_definitions ? `${lineage.counts_definitions.version} — hover a count for its definition · ` : "count definitions not published by this server · "}
+        <Link to={`${RUNS_ROOT}?group=1&alpha=${encodeURIComponent(lineage.alpha.alpha_id)}`} data-action="reconcile-run-library">
+          reconcile in the Run Library →
+        </Link>
       </span>
     </section>
   );
@@ -1459,7 +1904,7 @@ function PendingFrame({ state }: { state: ResearchState["state"] }) {
                 {status.toLowerCase()}
               </button>
             ))}
-            <ProbesToggle />
+            <ProbesToggle known count={0} pressed={false} />
             <span className="ln-count" data-counter-pending={state}>
               counter — {state === "loading" ? "waiting for the lineage" : "withheld"}
             </span>
@@ -1571,7 +2016,9 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
     },
     [statusOf],
   );
-  const visible = useMemo(() => tree.filter((node) => matches(node.attempt, filters)), [filters, matches, tree]);
+  /* CG-P19-03: probes are the server's classification; hidden until asked for (hi-fi), and always counted. */
+  const presentationKnown = lineage ? lineageHasPresentation(lineage) : false;
+  const [probesChoice, setProbesChoice] = useState<boolean | null>(null);
 
   /* Cards stay compact as in the hi-fi (spec line + reason); run detail opens
      on demand, and the selected attempt's fields live in the right column. */
@@ -1585,12 +2032,21 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       initialAttempt && returnedIds.has(initialAttempt)
         ? initialAttempt
         : version
-          ? (tree.find((node) => node.attempt.alpha_version_id === version.alpha_version_id)?.attempt.attempt_id ?? null)
+          ? (tree.find((node) => node.attempt.alpha_version_id === version.alpha_version_id && node.attempt.presentation_kind !== "PROBE")?.attempt.attempt_id ?? null)
           : null;
     return { attempt, band: version?.alpha_version_id ?? null };
   }, [initialAttempt, initialAv, lineage, returnedIds, tree]);
 
-  const selectedId = chosen ?? fromLink.attempt ?? tree[0]?.attempt.attempt_id ?? null;
+  /* A deep link to a probe opens the probes (spec T04); otherwise the reader's choice, hidden by default. */
+  const linkedProbe = fromLink.attempt !== null && byId.get(fromLink.attempt)?.presentation_kind === "PROBE";
+  const showProbes = !presentationKnown || (probesChoice ?? linkedProbe);
+  const onToggleProbes = useCallback(() => setProbesChoice((current) => !(current ?? linkedProbe)), [linkedProbe]);
+  const visible = useMemo(
+    () => tree.filter((node) => matches(node.attempt, filters) && (showProbes || node.attempt.presentation_kind !== "PROBE")),
+    [filters, matches, showProbes, tree],
+  );
+
+  const selectedId = chosen ?? fromLink.attempt ?? visible[0]?.attempt.attempt_id ?? tree[0]?.attempt.attempt_id ?? null;
   const selectedBand = band ?? fromLink.band;
   const selected = selectedId ? (byId.get(selectedId) ?? null) : null;
 
@@ -1660,6 +2116,7 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
       select(attemptId);
       const attempt = byId.get(attemptId);
       if (attempt && !matches(attempt, filters)) setFilters(new Set());
+      if (attempt?.presentation_kind === "PROBE") setProbesChoice(true);
       setExpanded((current) => {
         const base = new Set(current ?? openSet);
         base.add(attemptId);
@@ -1717,8 +2174,19 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
                 returnedIds={returnedIds}
                 onChip={onChip}
                 bandsRef={bandsRef}
+                presentationKnown={presentationKnown}
+                showProbes={showProbes}
+                onToggleProbes={onToggleProbes}
               />
-              <Filters active={filters} onToggle={onFilter} shown={visible.length} lineage={lineage} />
+              <Filters
+                active={filters}
+                onToggle={onFilter}
+                shown={visible.length}
+                lineage={lineage}
+                presentationKnown={presentationKnown}
+                showProbes={showProbes}
+                onToggleProbes={onToggleProbes}
+              />
               <Tree
                 lineage={lineage}
                 visible={visible}
@@ -1730,12 +2198,27 @@ export function LineageScreen({ alphaId, controller, initialAv = null, initialAt
                 scrollRef={scrollRef}
                 scrollTop={scrollTop}
                 onScroll={setScrollTop}
+                older={{
+                  load: controller.loadOlder ?? null,
+                  inFlight: controller.older?.inFlight ?? false,
+                  refusal: controller.older?.refusal?.message ?? null,
+                }}
               />
             </div>
             <aside className="ln-right" aria-label="selected attempt detail">
-              <Selected attempt={selected} status={selected ? statusOf(selected) : null} />
+              <Selected
+                attempt={selected}
+                status={selected ? statusOf(selected) : null}
+                version={selected ? (versionById.get(selected.alpha_version_id) ?? null) : null}
+                alphaId={alphaId}
+                parentRunId={
+                  selected?.parent_state === "RETURNED" && selected.parent_attempt_id
+                    ? (byId.get(selected.parent_attempt_id)?.primary_run.run_id ?? null)
+                    : null
+                }
+              />
               <DiffPanel attempt={selected} />
-              <PromotionRule />
+              <PromotionRule lineage={lineage} />
             </aside>
           </div>
           <Counts lineage={lineage} />

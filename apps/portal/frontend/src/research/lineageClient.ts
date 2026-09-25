@@ -8,10 +8,12 @@
  *    exact counts, the coverage boundary and a typed absence for every fact
  *    the source did not publish.
  *
- * The contract declares no ETag and no `304`, so this module sends no
- * validator and keeps no copy. It has no cursor either: when the graph is
- * larger than the bound the answer says so (`P19_BOUNDED_GRAPH_LIMIT_REACHED`)
- * and the screen shows the boundary instead of reading on.
+ * Contract 1.1.0 (W6b) publishes a private weak ETag and a `304`
+ * (CG-P19-02): this module keeps one copy per exact request and resends its
+ * validator, so coming back to Screen 10 costs a `304`, not the graph again.
+ * A bounded history (`P19_BOUNDED_GRAPH_LIMIT_REACHED`) is the NEWEST page;
+ * older attempts are read only with the opaque `older_cursor` the server
+ * issued (CG-P19-09) — the browser never builds a boundary.
  *
  * Nothing here orders, compares or picks an attempt. A promotion pick is a
  * source fact or a typed absence, never a browser decision.
@@ -38,14 +40,24 @@ export type ChildRunsCoverage = LineageSchemas["ChildRunsCoverage"];
 export type Exposure = LineageSchemas["Exposure"];
 export type LineageCounts = Lineage["counts"];
 export type LineageCoverage = Lineage["coverage"];
+export type ReleaseCandidateRef = LineageSchemas["ReleaseCandidateRef"];
+export type RunFacts = LineageSchemas["RunFacts"];
+export type RunMetricFact = LineageSchemas["RunMetricFact"];
+export type ParamRange = LineageSchemas["ParamRange"];
+export type PresentationReason = LineageSchemas["PresentationReason"];
+export type PromotionState = LineageAttempt["promotion_state"];
 
 const ALPHAS = "/api/v1/research/alphas";
 
 /** The contract's own ceiling for one graph, and the hook's default. */
 export const LINEAGE_LIMIT_MAX = 128;
 
-export function lineageHref(alphaId: string): string {
-  return "/research/quantbt/alphas/" + encodeURIComponent(alphaId) + "/lineage";
+export function lineageHref(alphaId: string, options: { attempt?: string | null; av?: string | null } = {}): string {
+  const params = new URLSearchParams();
+  if (options.av) params.set("av", options.av);
+  if (options.attempt) params.set("attempt", options.attempt);
+  const query = params.toString();
+  return "/research/quantbt/alphas/" + encodeURIComponent(alphaId) + "/lineage" + (query ? `?${query}` : "");
 }
 
 /** Reason codes the P19 service publishes (`lineage.service.ts`). */
@@ -57,44 +69,212 @@ export const LINEAGE_REASON = {
   diffManifestAbsent: "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE_FOR_PARENT_DIFF",
   exposureAbsent: "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT",
   noActiveVersion: "P19_ALPHA_HAS_NO_ACTIVE_VERSION",
+  /** A server older than contract 1.1.0 did not send this field at all. */
+  serverPredatesW6b: "P19_SERVER_PREDATES_LINEAGE_CONTRACT_1_1",
 } as const;
 
-function lineageQuery(options: { workspaceId?: string; limit?: number }): string {
+interface LineageRequest {
+  workspaceId?: string;
+  limit?: number;
+  /** Only a `coverage.older_cursor` this route issued. */
+  cursor?: string | null;
+}
+
+function lineageQuery(options: LineageRequest): string {
   const params = new URLSearchParams();
   if (options.workspaceId) params.set("workspace_id", options.workspaceId);
   if (typeof options.limit === "number") params.set("limit", String(options.limit));
+  if (options.cursor) params.set("cursor", options.cursor);
   const serialized = params.toString();
   return serialized ? `?${serialized}` : "";
 }
 
-async function call<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(path, { credentials: "same-origin", signal });
-  if (!response.ok) {
-    let code: string | null = null;
-    let requestId: string | null = response.headers.get("x-request-id");
-    try {
-      const problem = (await response.json()) as Partial<LineageSchemas["Problem"]>;
-      code = problem?.error?.code ?? null;
-      requestId = problem?.request_id ?? requestId;
-    } catch {
-      /* non-JSON error body: the status is still typed */
-    }
-    /* The server's prose is never rendered: the screen speaks from
-       `LINEAGE_REFUSAL_COPY`, keyed by status. */
-    throw new PortalApiError(`${response.status} ${response.statusText}`, response.status, code, requestId);
-  }
-  return (await response.json()) as T;
+/* -------------------------------------------------------------------------
+ * A server that predates contract 1.1.0
+ * ---------------------------------------------------------------------- */
+
+const PRE_W6B: LineageAvailability = { state: "NOT_PUBLISHED", reason_code: LINEAGE_REASON.serverPredatesW6b };
+
+/**
+ * Contract 1.1.0 only added fields. When an older server answers, each missing
+ * field becomes its typed absence here — never a zero, never a guessed value —
+ * so the screen renders one shape. A field the server did send is untouched.
+ */
+export function normalizeLineage(raw: Lineage): Lineage {
+  const metric = { value: null, source: null, scope: null, definition_id: null, availability: PRE_W6B };
+  const versions = raw.alpha.versions.map((version) => ({
+    ...version,
+    promotion_pick: {
+      ...version.promotion_pick,
+      source_authority: version.promotion_pick.source_authority ?? {
+        owner: "P22_RELEASE_CANDIDATE_APPROVAL" as const,
+        state: version.promotion_pick.state === "PUBLISHED" ? ("CONNECTED" as const) : ("NOT_CONNECTED" as const),
+      },
+      release_candidate: version.promotion_pick.release_candidate ?? null,
+      release_candidate_availability: version.promotion_pick.release_candidate_availability ?? PRE_W6B,
+    },
+    outcome: version.outcome ?? { text: null, rule: "research.lineage-version-outcome.v1" as const, availability: PRE_W6B },
+    supersession: version.supersession ?? {
+      state: "NOT_RECORDED" as const,
+      superseded_by_version_id: null,
+      superseded_by_label: null,
+      reason_code: LINEAGE_REASON.serverPredatesW6b,
+    },
+    exercised: version.exercised ?? {
+      routes: [], modes: [], param_ranges: [], attempts_considered: 0, attempts_without_manifest: 0, availability: PRE_W6B,
+    },
+    untried: version.untried ?? { routes: [], availability: PRE_W6B },
+    presentation: version.presentation ?? null,
+  }));
+  const attempts = raw.attempts.map((attempt) => ({
+    ...attempt,
+    primary_run: { ...attempt.primary_run, execution_profile_id: attempt.primary_run.execution_profile_id ?? null },
+    presentation_kind: attempt.presentation_kind ?? ("STORIED" as const),
+    presentation_reasons: attempt.presentation_reasons ?? [],
+    promotion_state: attempt.promotion_state ?? null,
+    promotion_reason_code: attempt.promotion_reason_code ?? LINEAGE_REASON.serverPredatesW6b,
+    spec_label: attempt.spec_label ?? { text: null, space: null, availability: PRE_W6B },
+    release_candidate: attempt.release_candidate ?? null,
+    release_candidate_availability: attempt.release_candidate_availability ?? PRE_W6B,
+    run_facts: attempt.run_facts ?? {
+      certificate: { grade: null, availability: PRE_W6B },
+      claim: { state: null, text: null, availability: PRE_W6B },
+      oos_sharpe: metric,
+      decay: metric,
+    },
+    outcome: attempt.outcome ?? { text: null, source: null, availability: PRE_W6B },
+  }));
+  return {
+    ...raw,
+    alpha: { ...raw.alpha, versions: versions as unknown as LineageVersion[] },
+    attempts: attempts as unknown as LineageAttempt[],
+    coverage: {
+      ...raw.coverage,
+      window: raw.coverage.window ?? "NEWEST",
+      older_cursor: raw.coverage.older_cursor ?? null,
+    },
+  };
 }
 
-export function lineagePath(alphaId: string, options: { workspaceId?: string; limit?: number } = {}): string {
+/** Whether the answering server publishes the 1.1.0 facts (probe/storied split in particular). */
+export function lineageHasPresentation(lineage: Lineage): boolean {
+  return lineage.presentation_rule !== undefined && lineage.presentation_rule !== null;
+}
+
+/* -------------------------------------------------------------------------
+ * Transport with one held copy per exact request (CG-P19-02)
+ * ---------------------------------------------------------------------- */
+
+interface Held {
+  etag: string;
+  lineage: Lineage;
+}
+
+/** Most recent answers first; a handful is enough for back/forward between Alphas. */
+const HELD_LIMIT = 12;
+const held = new Map<string, Held>();
+
+function hold(path: string, etag: string | null, lineage: Lineage) {
+  if (!etag) return;
+  held.delete(path);
+  held.set(path, { etag, lineage });
+  while (held.size > HELD_LIMIT) held.delete(held.keys().next().value as string);
+}
+
+/** Tests only: forget every held copy. */
+export function resetLineageCache(): void {
+  held.clear();
+}
+
+async function problem(response: Response): Promise<PortalApiError> {
+  let code: string | null = null;
+  let requestId: string | null = response.headers.get("x-request-id");
+  try {
+    const body = (await response.json()) as Partial<LineageSchemas["Problem"]>;
+    code = body?.error?.code ?? null;
+    requestId = body?.request_id ?? requestId;
+  } catch {
+    /* non-JSON error body: the status is still typed */
+  }
+  /* The server's prose is never rendered: the screen speaks from
+     `LINEAGE_REFUSAL_COPY`, keyed by status. */
+  return new PortalApiError(`${response.status} ${response.statusText}`, response.status, code, requestId);
+}
+
+export interface LineageAnswer {
+  lineage: Lineage;
+  /** True when the server answered `304` and the held copy is still current. */
+  revalidated: boolean;
+}
+
+async function read(path: string, signal?: AbortSignal): Promise<LineageAnswer> {
+  const copy = held.get(path) ?? null;
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    signal,
+    headers: copy ? { "If-None-Match": copy.etag } : undefined,
+  });
+  if (response.status === 304) {
+    if (copy) return { lineage: copy.lineage, revalidated: true };
+    /* The copy was dropped between the request and the answer: ask once more, unconditionally. */
+    const retry = await fetch(path, { credentials: "same-origin", signal, cache: "reload" });
+    if (!retry.ok) throw await problem(retry);
+    const lineage = normalizeLineage((await retry.json()) as Lineage);
+    hold(path, retry.headers.get("ETag") ?? lineage.etag ?? null, lineage);
+    return { lineage, revalidated: false };
+  }
+  if (!response.ok) {
+    held.delete(path);
+    throw await problem(response);
+  }
+  const lineage = normalizeLineage((await response.json()) as Lineage);
+  hold(path, response.headers.get("ETag") ?? lineage.etag ?? null, lineage);
+  return { lineage, revalidated: false };
+}
+
+export function lineagePath(alphaId: string, options: LineageRequest = {}): string {
   return `${ALPHAS}/${encodeURIComponent(alphaId)}/lineage${lineageQuery(options)}`;
 }
 
 export const lineageApi = {
-  /** `researchAttemptLineageGetV1` */
-  get: (alphaId: string, options: { workspaceId?: string; limit?: number; signal?: AbortSignal } = {}) =>
-    call<Lineage>(lineagePath(alphaId, options), options.signal),
+  /** `researchAttemptLineageGetV1`; resends the held validator for the same exact request. */
+  get: (alphaId: string, options: LineageRequest & { signal?: AbortSignal } = {}) =>
+    read(lineagePath(alphaId, options), options.signal),
 } as const;
+
+/* -------------------------------------------------------------------------
+ * Older pages (CG-P19-09)
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The newest page with an older page in front of it. Attempts are concatenated
+ * as the server returned them (both pages are chronological, the older page
+ * strictly older); nothing is re-sorted. Counts stay the server's, with
+ * `returned_attempts` and the storied/probe split taken from the attempts in
+ * hand. Coverage is COMPLETE only when the server's total is now in hand.
+ */
+export function mergeOlder(newest: Lineage, older: Lineage): Lineage {
+  const seen = new Set(newest.attempts.map((attempt) => attempt.attempt_id));
+  const attempts = [...older.attempts.filter((attempt) => !seen.has(attempt.attempt_id)), ...newest.attempts];
+  const all = attempts.length >= newest.counts.total_attempts;
+  return {
+    ...newest,
+    attempts,
+    counts: {
+      ...newest.counts,
+      returned_attempts: attempts.length,
+      storied_returned: attempts.filter((attempt) => attempt.presentation_kind === "STORIED").length,
+      probe_returned: attempts.filter((attempt) => attempt.presentation_kind === "PROBE").length,
+    },
+    coverage: {
+      ...newest.coverage,
+      state: all ? "COMPLETE" : "PARTIAL",
+      reason_code: all ? null : newest.coverage.reason_code,
+      oldest_returned_created_at_utc_ms: attempts[0]?.created_at_utc_ms ?? null,
+      older_cursor: all ? null : older.coverage.older_cursor,
+    },
+  };
+}
 
 /* -------------------------------------------------------------------------
  * Words
@@ -104,6 +284,7 @@ export const LINEAGE_WITHHELD_WORDS: Record<LineageAvailability["state"], string
   AVAILABLE: "available",
   NOT_PUBLISHED: "not published",
   PARTIAL: "partial",
+  NOT_APPLICABLE: "not applicable",
 };
 
 /** The reason an absence carries, most specific first. */
