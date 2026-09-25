@@ -75,79 +75,90 @@
     {
       "id": "CG-P18-01",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-01",
-      "what": "passport key/label"
+      "what": "passport key/label",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-02",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DECIDED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-02",
-      "what": "certification grade"
+      "what": "certification grade",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-03",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-03",
-      "what": "run-specific title (strategy)"
+      "what": "run-specific title (strategy)",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-04",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-04",
-      "what": "per-fold columns"
+      "what": "per-fold columns",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-05",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-05",
-      "what": "per-stage result"
+      "what": "per-stage result",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-06",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-06",
-      "what": "IS equity series"
+      "what": "IS equity series",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-07",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-07",
-      "what": "artifact filename/bytes"
+      "what": "artifact filename/bytes",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-08",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-08",
-      "what": "params-handoff caption (can fold into 04)"
+      "what": "params-handoff caption (can fold into 04)",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-09",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-09",
-      "what": "canonical P18 fixture"
+      "what": "canonical P18 fixture",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-10",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DECIDED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-10",
-      "what": "409 on GET report not declared in OpenAPI"
+      "what": "409 on GET report not declared in OpenAPI",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     },
     {
       "id": "CG-P18-11",
       "owner": "Codex",
-      "state": "OPEN",
+      "state": "DELIVERED",
       "receipt": "thanhvuong-backend-requests.md §1 CG-P18-11",
-      "what": "identity rows of spec §16.3 + scratch binding (spec T05); added in the 2026-09-23 audit"
+      "what": "identity rows of spec §16.3 + scratch binding (spec T05); added in the 2026-09-23 audit",
+      "closed_by": "c54e6b1f (W6a, 2026-09-25)"
     }
   ],
   "source_capability_blocked": [],
