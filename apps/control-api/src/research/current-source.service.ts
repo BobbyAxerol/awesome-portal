@@ -58,6 +58,8 @@ import { P04_FIXED_QUALIFICATION_PROFILE_ID, RS02_DELTA_WFO_GLOBAL_PROFILE_ID } 
 import { P04_DELTA_ADAPTER_CONTRACT_DIGEST } from "./p04-delta.binding";
 import { sha256ResearchJson } from "./preflight.service";
 import { notYet, type ArtifactByteVerification } from "./artifact-verify.contract";
+import { inertWhatIf, ResearchWhatIfService, type WhatIfBasis } from "./whatif.service";
+import type { WhatIf } from "./whatif.contract";
 import { ArtifactVerifyStoreError } from "./artifact-verify.repository";
 import { BYTE_VERIFY_NOT_ENABLED, ResearchArtifactVerifyService } from "./artifact-verify.service";
 
@@ -202,6 +204,8 @@ export class ResearchCurrentSourceService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Optional() @Inject(ResearchArtifactVerifyService)
     private readonly bytes?: ResearchArtifactVerifyService,
+    @Optional() @Inject(ResearchWhatIfService)
+    private readonly whatIf?: ResearchWhatIfService,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -409,12 +413,21 @@ export class ResearchCurrentSourceService {
     const integrityState = observedImportDigest === seal.retainedImportDigest ? "MATCH" as const : "MISMATCH" as const;
     // A10a: the newest durable byte receipt (a GET never re-reads bytes).
     const byteVerification = await this.latestBytes(scope, runId);
+    // A10c: exact existing evaluations around θ*; nothing is evaluated here.
+    const whatIf = await this.whatIfFor(scope, await this.basisFrom(scope, runId, seal, summary, byteVerification, signal));
     const common = this.common("freeze", seal);
-    // The ETag must move when a new receipt lands, or a 304 would hide it.
+    // The ETag must move when a new receipt, a job state or a sealed grid
+    // lands, or a 304 would hide it.
     const freezeRevision = `rs02_freeze_${sha256ResearchJson({
       base: common.revision,
       byte_receipt: byteVerification.receipt_id,
       byte_state: byteVerification.state,
+      what_if: {
+        state: whatIf.state,
+        coverage: whatIf.coverage?.label ?? null,
+        job: whatIf.job ? { run_id: whatIf.job.run_id, state: whatIf.job.state, sealed: whatIf.job.sealed } : null,
+        evaluate: whatIf.actions.evaluate_grid.state,
+      },
     })}`;
     const value = {
       schema_version: "research.current-source-freeze.v1" as const,
@@ -439,13 +452,51 @@ export class ResearchCurrentSourceService {
         parameters: summary.selection.parameters,
         availability: available(),
       },
-      what_if: {
-        state: "NOT_PUBLISHED" as const,
-        reason_code: "RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET" as const,
-        availability: { state: "NOT_PUBLISHED" as const, reason_code: "RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET" },
-      },
+      what_if: whatIf,
     };
     return this.valid(ResearchCurrentSourceFreezeResponseSchema, value);
+  }
+
+  /**
+   * A10c: the facts the what-if lane is built from — the sealed θ*, the
+   * retained parent trials and the newest byte receipt. Read-only; used by
+   * the freeze GET and by the explicit evaluate action alike.
+   */
+  async whatIfBasis(scope: ResearchScope, runId: string, signal?: AbortSignal): Promise<WhatIfBasis> {
+    const seal = await this.requireSeal(scope, runId, "freeze", signal);
+    if (!isSeal(seal)) {
+      throw new ResearchCurrentSourceError(
+        "RESEARCH_CURRENT_SOURCE_CONFLICT",
+        "This run froze a fixed profile — no evaluated neighbourhood exists.",
+        409,
+      );
+    }
+    return this.basisFrom(scope, runId, seal, parseSummary(seal), await this.latestBytes(scope, runId), signal);
+  }
+
+  private async basisFrom(
+    scope: ResearchScope,
+    runId: string,
+    seal: CurrentSourceSealRow,
+    summary: ReturnType<typeof parseSummary>,
+    bytes: ArtifactByteVerification,
+    signal?: AbortSignal,
+  ): Promise<WhatIfBasis> {
+    const trials = (await this.boundedRows(scope, runId, seal, "TRIAL", MAXIMUM_TRIAL_ROWS, signal)).map((row) => {
+      const trial = asTrial(row);
+      return {
+        trialId: trial.trial_id,
+        state: trial.state,
+        objective: trial.objective,
+        parameters: trial.parameters,
+      };
+    });
+    return { runId, frozen: summary.selection.parameters, trials, bytes };
+  }
+
+  private async whatIfFor(scope: ResearchScope, basis: WhatIfBasis): Promise<WhatIf> {
+    if (this.whatIf) return this.whatIf.read(scope, basis);
+    return inertWhatIf(basis.runId);
   }
 
   async replay(

@@ -38,6 +38,7 @@ from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_PROFILE_ID,
 )
 from portal_api.domain.research_run_producer import ResearchRunProducerRequest
+from portal_api.domain.research_whatif_profile import WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
 from portal_api.services.research_supervisor import (
@@ -65,6 +66,12 @@ def delta_wfo_enabled() -> bool:
         return os.getenv(name, "false").strip().lower() == "true"
 
     return flag("PORTAL_FEATURE_RESEARCH_WFO_PROFILE") and flag("PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS")
+
+
+def whatif_enabled() -> bool:
+    """W5a A10c flag: the what-if diagnostic rides on the WFO lane."""
+
+    return delta_wfo_enabled() and os.getenv("PORTAL_FEATURE_RESEARCH_WHATIF", "false").strip().lower() == "true"
 
 
 class ResearchRunProducerError(RuntimeError):
@@ -333,7 +340,7 @@ class ResearchRunProducerExecutor:
             if progress_journal is not None:
                 progress_journal.emit(event_type, payload)
 
-        if request.research.is_delta_wfo:
+        if request.research.is_delta_wfo or request.research.is_whatif:
             return self._execute_delta_wfo_sync(request, artifact_root, progress)
 
         research = request.research
@@ -579,7 +586,18 @@ class ResearchRunProducerExecutor:
                 code="CAPABILITY_MISMATCH",
             )
         research = request.research
-        if research.execution_profile_digest != DELTA_WFO_PROFILE_DIGEST:
+        whatif = research.whatif if research.is_whatif else None
+        if research.is_whatif:
+            # W5a A10c: the diagnostic re-runs its parent's exact study with
+            # its admitted evaluations enqueued; nothing else changes.
+            if not whatif_enabled() or whatif is None:
+                raise ResearchRunProducerError(
+                    "P16 what-if diagnostic is not enabled (PORTAL_FEATURE_RESEARCH_WHATIF)",
+                    code="CAPABILITY_MISMATCH",
+                )
+            if research.execution_profile_digest != WHATIF_PROFILE_DIGEST:
+                raise ResearchRunProducerError("P16 what-if profile digest no longer matches", code="CAPABILITY_MISMATCH")
+        elif research.execution_profile_digest != DELTA_WFO_PROFILE_DIGEST:
             raise ResearchRunProducerError("P10 Delta WFO profile digest no longer matches", code="CAPABILITY_MISMATCH")
         progress("stage_started", {"stage": "S1"})
         try:
@@ -628,13 +646,19 @@ class ResearchRunProducerExecutor:
                 lease_epoch=request.lease_epoch,
                 market_path=tape_path,
                 artifact_root=artifact_root,
-                execution_profile_id=DELTA_WFO_PROFILE_ID,
-                execution_profile_digest=DELTA_WFO_PROFILE_DIGEST,
+                execution_profile_id=WHATIF_PROFILE_ID if whatif is not None else DELTA_WFO_PROFILE_ID,
+                execution_profile_digest=WHATIF_PROFILE_DIGEST if whatif is not None else DELTA_WFO_PROFILE_DIGEST,
                 dataset_id=str(data.get("dataset_id")),
                 symbol=str(data.get("symbol")),
                 data_start_utc_ms=int(span_start.value // 1_000_000),
                 data_end_exclusive_utc_ms=int(span_end.value // 1_000_000),
                 first_oos_utc_ms=int(first_oos.value // 1_000_000),
+                task="P16_DELTA_WHATIF_GRID" if whatif is not None else "P10_DELTA_WFO",
+                whatif_grid_key=whatif.grid_key if whatif is not None else None,
+                whatif_evaluations=tuple(
+                    {"evaluation_key": entry.evaluation_key, "parameters": dict(entry.parameters)}
+                    for entry in whatif.evaluations
+                ) if whatif is not None else (),
             )
             progress("stage_completed", {"stage": "S2"})
             progress("stage_started", {"stage": "S3"})
@@ -642,7 +666,8 @@ class ResearchRunProducerExecutor:
             progress("stage_started", {"stage": "S4"})
             cpu_cap = min(self.wfo_child_limits.cpu_seconds, DELTA_WFO_CPU_SECONDS)
             progress("budget_tick", _cpu_budget_tick_payload(0, cpu_cap))
-            live = LiveStudyProgress(progress, trials_declared=DELTA_WFO_OPTUNA_TRIALS, cpu_cap_seconds=cpu_cap)
+            declared_trials = len(whatif.evaluations) if whatif is not None else DELTA_WFO_OPTUNA_TRIALS
+            live = LiveStudyProgress(progress, trials_declared=declared_trials, cpu_cap_seconds=cpu_cap)
             child = self.supervisor.run_delta_wfo(
                 receipt,
                 limits=self.wfo_child_limits,
@@ -725,6 +750,12 @@ class ResearchRunProducerExecutor:
                 "enforced_limits": child.enforced_limits,
             },
         }
+        if whatif is not None:
+            receipt_document["whatif"] = {
+                "parent_run_id": whatif.parent_run_id,
+                "grid_key": whatif.grid_key,
+                "evaluations": len(whatif.evaluations),
+            }
         receipt_path = engine_directory / "research" / "p10-receipt.json"
         receipt_path.write_text(
             json.dumps(canonicalize(receipt_document), sort_keys=True, indent=2) + "\n",

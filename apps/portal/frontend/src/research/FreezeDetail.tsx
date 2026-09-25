@@ -5,25 +5,29 @@
  * a what-if grid re-scores the neighbourhood. What the source publishes is
  * narrower and the screen says so in the same breath as every green mark:
  *
- *  - a **match is a retained-binding match**. The contract states its own
- *    scope — `PORTAL_RETAINED_DIGEST_BINDING_ONLY` — and this screen never
- *    prints "chain intact", never colours the artifact bytes green, and never
- *    lets `PARTIAL` read as whole.
- *  - **`BLOCKED` empties the table on purpose.** A frozen table filled from a
- *    local default when a binding mismatched would be the worst lie on the
- *    surface: it would look like this run's parameters.
- *  - **what-if is unavailable, so there is no slider.** Not a disabled one: a
- *    control that looks adjustable implies a question the source can answer.
+ *  - a **match is only as wide as its scope**. The verify answer states it —
+ *    retained bindings, and (A10a) the sealed P05 bytes when a durable
+ *    receipt says they re-hash to the seal. The screen never prints "chain
+ *    intact" and never lets `PARTIAL` read as whole.
+ *  - **`BLOCKED` empties the table on purpose.** A binding mismatch or a
+ *    corrupt/missing byte receipt BLOCKS — it never warns — and a frozen
+ *    table filled from anywhere else would not be this run's.
+ *  - **what-if is a fork, not an edit** (A10c). Sliders move over the
+ *    server's nine nodes only; a missing cell is a word, never 0; the one
+ *    diagnostic job starts from "evaluate grid" and nothing else; "create
+ *    sibling attempt" opens Screen 02 with a copied draft. A fixed run keeps
+ *    the card with every control disabled and the server's reason (A11).
  *
- * One POST exists on this screen and it fires from a click, with the
- * same-origin CSRF proof. Nothing on mount, no fold change and no re-render
- * ever sends it.
+ * Two POSTs exist on this screen — verify and evaluate grid — and each fires
+ * from its own click with the same-origin CSRF proof. Nothing on mount, no
+ * fold change, no slider move and no re-render ever sends either.
  */
 
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import { BoundWarningNote } from "./BoundWarning";
+import { isWhatIf, WhatIfCard } from "./WhatIfCard";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
@@ -32,6 +36,7 @@ import {
   BYTE_STATE_WORDS,
   bytesBlock,
   type ArtifactBytes,
+  type WhatIfEvaluateSlot,
   FREEZE_GAP_WORDS,
   FREEZE_WITHHELD_WORDS,
   INTEGRITY_KEYS,
@@ -72,10 +77,10 @@ import type { ProgressRead } from "./progressClient";
  * screen can actually prove.
  */
 export const FREEZE_SUBTITLE =
-  "What was frozen, and what that freeze can honestly be checked against. Every match below is a match between digests Portal retained — the source artifact's own bytes were never opened here.";
+  "What was frozen, and what that freeze can honestly be checked against. Every match below names what it was checked against — retained digests, and the sealed artifact bytes only where a verify receipt says so.";
 
 export const FREEZE_RULES_FOOTER =
-  "A verification on this screen re-reads retained bindings; it never re-runs the engine, opens an artifact or evaluates a parameter. Where the source publishes no ordering, no selection artifact and no what-if grid, the panels say which kind of absence that is rather than showing an empty chart or a control that cannot act.";
+  "A digest mismatch BLOCKS — it never warns. Verify re-reads the retained bindings and the sealed artifact bytes against the digests stored at seal time; it never re-runs the engine or rewrites an expected digest. What-if is a fork, not an edit: evaluating the grid runs one separate diagnostic job, and frozen artifacts are write-once. Where the source publishes no ordering or no selection artifact, the panels say which kind of absence that is rather than drawing a verdict.";
 
 /** Spec 07 §2.2, verbatim — and the reason the two axes are never merged. */
 export const TWO_CLOCKS_NOTE =
@@ -840,9 +845,7 @@ function reasonText(code: string | null | undefined): string | null {
   return reasonCodeSentence(code) ?? (code ? RETAINED_REASON_SENTENCES[code] ?? null : null);
 }
 
-/** Spec 07 §2.5, verbatim. */
-export const WHAT_IF_RULE =
-  "a what-if never writes onto frozen params — commit creates a SIBLING ATTEMPT with its own config_hash, lineage-linked to this one.";
+export { WHAT_IF_RULE } from "./WhatIfCard";
 
 const OBJECTIVE_WORDS: Record<string, string> = {
   MODE_1_DECAY_J: "J",
@@ -1300,61 +1303,20 @@ function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
   );
 }
 
-/** Hi-fi F5 on the retained lane: the card keeps its place, typed and inert. */
-function RetainedWhatIf({ freeze }: { freeze: RetainedFreeze }) {
-  const code = freeze.what_if.reason_code;
-  return (
-    <section
-      className="flex flex-col gap-2 rounded-[10px] border border-dashed px-4 py-3.5"
-      data-panel="what-if"
-      data-what-if={freeze.what_if.state}
-      data-reason={code}
-      style={{ borderColor: "var(--warn)", background: "var(--paper-raised)" }}
-    >
-      <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-          what-if
-        </h3>
-        <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
-          {freeze.what_if.state.toLowerCase().replace(/_/g, " ")}
-        </span>
-        <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }}>
-          {code}
-        </span>
-      </div>
-      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-        {reasonText(code)} The what-if sandbox (A10c) is not built, so no slider and no ΔJ preview is drawn.
-      </p>
-      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule>
-        {WHAT_IF_RULE}
-      </p>
-      <div>
-        <button
-          type="button"
-          className="btn-ghost mono text-[10px]"
-          data-action="create-sibling"
-          disabled
-          aria-disabled="true"
-          style={{ opacity: 0.5, cursor: "not-allowed" }}
-          title={`${code} — the what-if sandbox (A10c) is not built`}
-        >
-          create sibling attempt →
-        </button>
-      </div>
-    </section>
-  );
-}
-
 function RetainedFreezeBody({
   freeze,
   identity,
   verify,
   onVerify,
+  evaluate,
+  onEvaluate,
 }: {
   freeze: RetainedFreeze;
   identity: RunIdentitySlot;
   verify: VerifySlot;
   onVerify: () => void;
+  evaluate: WhatIfEvaluateSlot;
+  onEvaluate: (gridKey: string) => void;
 }) {
   const known = identity.state === "ready" ? identity.identity : null;
   return (
@@ -1364,7 +1326,12 @@ function RetainedFreezeBody({
         <RetainedFrozenTable freeze={freeze} identity={known} />
         <RetainedIntegrity freeze={freeze} verify={verify} onVerify={onVerify} />
       </div>
-      <RetainedWhatIf freeze={freeze} />
+      <WhatIfCard
+        whatIf={isWhatIf(freeze.what_if) ? freeze.what_if : null}
+        inert={{ state: String((freeze.what_if as { state?: unknown } | undefined)?.state ?? "NOT_PUBLISHED"), reason_code: ((freeze.what_if as { reason_code?: string | null } | undefined)?.reason_code) ?? null }}
+        evaluate={evaluate}
+        onEvaluate={onEvaluate}
+      />
     </div>
   );
 }
@@ -1383,6 +1350,9 @@ export interface FreezeScreenProps {
   onReread: () => void;
   /** W3b: the run identity a retained answer is read against (schedule, folds, readiness). */
   identity?: RunIdentitySlot;
+  /** A10c: the one explicit "evaluate grid" action (retained WFO lane only). */
+  whatIfEvaluate?: WhatIfEvaluateSlot;
+  onWhatIfEvaluate?: (gridKey: string) => void;
 }
 
 export function FreezeScreen({
@@ -1396,6 +1366,8 @@ export function FreezeScreen({
   ensureRetained,
   onReread,
   identity = { state: "idle" },
+  whatIfEvaluate = { state: "idle" },
+  onWhatIfEvaluate = () => undefined,
 }: FreezeScreenProps) {
   /* W3b: the hub delegated this run and the retained lane answered — read it from there. */
   const lane = readsRetainedLane(detail, retained) ? retained.freeze : null;
@@ -1609,52 +1581,8 @@ export function FreezeScreen({
               </div>
             </div>
 
-            <section
-              className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
-              data-panel="what-if"
-              data-what-if={freeze.what_if.state}
-              style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
-            >
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-                  what-if
-                </h3>
-                <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} title={freeze.what_if.reason_code}>
-                  {freeze.what_if.state.toLowerCase().replace(/_/g, " ")}
-                </span>
-              </div>
-              {/*
-                * No slider, no grid, not even a disabled one. A control that
-                * looks adjustable implies a question this source can answer,
-                * and `may_submit` / `may_create` are both pinned false.
-                */}
-              <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                No grid is drawn and no control is offered. Re-scoring a neighbourhood needs an
-                objective definition and an evaluation the source does not publish, and a slider that
-                cannot move is still a promise that it could.
-              </p>
-              <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-whatif-grid={freeze.what_if.grid.state}>
-                  grid — {freeze.what_if.grid.state.toLowerCase().replace(/_/g, " ")}
-                </span>
-                <span
-                  className="mono text-[9px]"
-                  style={{ color: "var(--ink-faint)" }}
-                  data-action-evaluate={freeze.what_if.actions.diagnostic_evaluate.state}
-                  data-may-submit={String(freeze.what_if.actions.diagnostic_evaluate.may_submit)}
-                >
-                  diagnostic evaluate — {freeze.what_if.actions.diagnostic_evaluate.state.toLowerCase().replace(/_/g, " ")}
-                </span>
-                <span
-                  className="mono text-[9px]"
-                  style={{ color: "var(--ink-faint)" }}
-                  data-action-sibling={freeze.what_if.actions.sibling_draft.state}
-                  data-may-create={String(freeze.what_if.actions.sibling_draft.may_create)}
-                >
-                  sibling draft — {freeze.what_if.actions.sibling_draft.state.toLowerCase().replace(/_/g, " ")}
-                </span>
-              </div>
-            </section>
+            {/* A10c/A11: the fixed hub keeps the what-if card, every control disabled with its reason. */}
+            <WhatIfCard whatIf={null} inert={{ state: freeze.what_if.state, reason_code: freeze.what_if.reason_code }} />
 
             <section
               className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
@@ -1690,7 +1618,14 @@ export function FreezeScreen({
             ) : null}
           </div>
         ) : lane !== null ? (
-          <RetainedFreezeBody freeze={lane} identity={identity} verify={verify} onVerify={onVerify} />
+          <RetainedFreezeBody
+            freeze={lane}
+            identity={identity}
+            verify={verify}
+            onVerify={onVerify}
+            evaluate={whatIfEvaluate}
+            onEvaluate={onWhatIfEvaluate}
+          />
         ) : null}
       </ResearchPanel>
 

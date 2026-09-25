@@ -57,6 +57,20 @@ export const BYTE_STATE_WORDS: Record<ArtifactBytes["state"], string> = {
 };
 
 export type CurrentSourceFreeze = SourceSchemas["Freeze"];
+/** A10c: the Screen-07 what-if sandbox, as the retained lane serves it. */
+export type WhatIf = SourceSchemas["WhatIf"];
+export type WhatIfCell = SourceSchemas["WhatIfCell"];
+export type WhatIfEvaluateResult = SourceSchemas["WhatIfEvaluateResult"];
+
+/** The one explicit what-if action, as the screen tracks it. */
+export type WhatIfEvaluateSlot =
+  | { state: "idle" }
+  | { state: "submitting" }
+  | { state: "done"; result: WhatIfEvaluateResult }
+  | { state: "refused"; refusal: FreezeRefusal };
+
+/** Job states during which the grid is still filling. */
+export const WHATIF_ACTIVE_JOB_STATES: ReadonlySet<string> = new Set(["DRAFT", "QUEUED", "RUNNING", "SEALING"]);
 /** RF-05 CG-P13-09: the typed 200 for a run whose profile the retained lane never holds. */
 export type CurrentSourceNotApplicable = SourceSchemas["LaneNotApplicable"];
 
@@ -141,10 +155,25 @@ export const freezeApi = {
     ),
 
   /** `researchCurrentSourceFreezeGetV1` */
-  currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
+  currentSource: (runId: string, options: { workspaceId?: string; signal?: AbortSignal; etag?: string | null } = {}) =>
     call<CurrentSourceFreeze | CurrentSourceNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/freeze${query({ workspaceId: options.workspaceId })}`,
-      { signal: options.signal },
+      { signal: options.signal, etag: options.etag },
+    ),
+
+  /**
+   * `researchCurrentSourceWhatIfEvaluatePostV1` — the one explicit "evaluate
+   * grid" click. It names the grid the reader saw; a different current grid
+   * is the server's 409, never a silent re-target.
+   */
+  evaluateWhatIf: (runId: string, gridKey: string, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
+    call<WhatIfEvaluateResult>(
+      `${RUNS}/${encodeURIComponent(runId)}/current-source/freeze/what-if/evaluate${query({ workspaceId: options.workspaceId })}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ schema_version: "research.whatif-evaluate.v1", grid_key: gridKey }),
+        signal: options.signal,
+      },
     ),
 } as const;
 

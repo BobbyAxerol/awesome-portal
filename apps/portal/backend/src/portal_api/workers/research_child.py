@@ -52,7 +52,7 @@ _MAX_ROLLING_EVIDENCE_POINTS = 16
 _MAX_MONTHLY_EVIDENCE_POINTS = 32
 _MAX_DISTRIBUTION_BUCKETS = 12
 _MAX_EVIDENCE_RECEIPT_BYTES = 24 * 1024
-_ALLOWED_TASKS = frozenset({"P04_DELTA_SMOKE", "P10_DELTA_WFO"})
+_ALLOWED_TASKS = frozenset({"P04_DELTA_SMOKE", "P10_DELTA_WFO", "P16_DELTA_WHATIF_GRID"})
 
 
 def _finite_decimal(value: object, *, label: str) -> Decimal:
@@ -633,6 +633,32 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
     carries the admitted span, first OOS boundary and dataset labels.
     """
 
+    from portal_api.domain.research_delta_wfo_profile import (
+        DELTA_WFO_PROFILE,
+        DELTA_WFO_PROFILE_DIGEST,
+        DELTA_WFO_PROFILE_ID,
+        delta_wfo_profile_digest,
+    )
+
+    if receipt.get("execution_profile_id") != DELTA_WFO_PROFILE_ID:
+        raise ValueError("P10 WFO child receipt names an uninstalled execution profile")
+    if (
+        receipt.get("execution_profile_digest") != DELTA_WFO_PROFILE_DIGEST
+        or delta_wfo_profile_digest(DELTA_WFO_PROFILE) != DELTA_WFO_PROFILE_DIGEST
+    ):
+        raise ValueError("P10 WFO child profile digest does not match the installed profile")
+    return _run_delta_wfo_study(receipt, output_root, optuna_trials=int(DELTA_WFO_PROFILE["optuna_trials"]))
+
+
+def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_trials: int) -> dict[str, Any]:
+    """The locked W1 Delta WFO study, with a caller-verified trial count.
+
+    Both the WFO profile (3 sampled trials) and the P16 what-if profile
+    (1..81 enqueued trials) run this exact request: same data, same folds,
+    same mode_1_decay/global objective, same seed. The caller has already
+    verified its own pinned profile digest.
+    """
+
     import pandas as pd
 
     from portal_api.adapters.market_data import DatasetDescriptor, prepare_market_data
@@ -647,23 +673,13 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
         ParameterSpec,
         PortalRunRequest,
     )
-    from portal_api.domain.research_delta_wfo_profile import (
-        DELTA_WFO_PROFILE,
-        DELTA_WFO_PROFILE_DIGEST,
-        DELTA_WFO_PROFILE_ID,
-        delta_wfo_profile_digest,
-    )
+    from portal_api.domain.research_delta_wfo_profile import DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_DIGEST
     from portal_api.repositories.artifacts import ArtifactRepository
     from portal_api.services.advanced_walkforward_runner import AdvancedWalkForwardRunner
     from strategy.specification import DELTA_RSI_SPECIFICATION
 
-    if receipt.get("execution_profile_id") != DELTA_WFO_PROFILE_ID:
-        raise ValueError("P10 WFO child receipt names an uninstalled execution profile")
-    if (
-        receipt.get("execution_profile_digest") != DELTA_WFO_PROFILE_DIGEST
-        or delta_wfo_profile_digest(DELTA_WFO_PROFILE) != DELTA_WFO_PROFILE_DIGEST
-    ):
-        raise ValueError("P10 WFO child profile digest does not match the installed profile")
+    if isinstance(optuna_trials, bool) or not 1 <= optuna_trials <= 81:
+        raise ValueError("P10 WFO study trial count is outside its admitted bound")
     profile = DELTA_WFO_PROFILE
     run_id = receipt.get("run_id")
     dataset_id = receipt.get("dataset_id")
@@ -717,7 +733,7 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
             optimization_mode=OptimizationMode(profile["optimization_mode"]),
             optimization_schedule=OptimizationSchedule(profile["optimization_schedule"]),
             fold_boundary_position_policy="carry",
-            optuna_trials=profile["optuna_trials"],
+            optuna_trials=optuna_trials,
             optuna_early_stopping=None,
             random_seed=profile["random_seed"],
             optimization=OptimizationConfig(min_trades_per_year=50.0, trade_penalty_factor=0.5),
@@ -741,7 +757,7 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
         raise ValueError(f"P10 WFO produced {n_folds} folds outside the admitted {bounds['min']}..{bounds['max']}")
     trials_path = output_root / run_id / "wfo" / "trials.parquet"
     trial_rows = len(pd.read_parquet(trials_path)) if trials_path.is_file() else 0
-    if trial_rows != profile["optuna_trials"]:
+    if trial_rows != optuna_trials:
         raise ValueError("P10 WFO did not publish exactly the admitted trial count")
     return {
         "task": "P10_DELTA_WFO",
@@ -755,6 +771,140 @@ def _run_p10_delta_wfo(receipt: dict[str, Any], output_root: Path) -> dict[str, 
     }
 
 
+def _engine_value(value: str, *, kind: type) -> int | float:
+    """An exact decimal parameter as the declared engine type (int or float)."""
+
+    exact = Decimal(value)
+    if kind is int:
+        if exact != exact.to_integral_value():
+            raise ValueError("an integer parameter received a fractional what-if value")
+        return int(exact)
+    return float(exact)
+
+
+def _parameter_identity(parameters: dict[str, Any]) -> tuple[tuple[str, str], ...]:
+    """Canonical exact text for a parameter map (floats through their shortest repr)."""
+
+    def text(value: Any) -> str:
+        exact = Decimal(str(value)) if not isinstance(value, Decimal) else value
+        normalized = exact.normalize()
+        rendered = format(normalized, "f")
+        return "0" if rendered in {"-0", "0"} else rendered
+
+    return tuple(sorted((name, text(value)) for name, value in parameters.items()))
+
+
+def _run_p16_delta_whatif(receipt: dict[str, Any], output_root: Path) -> dict[str, Any]:
+    """W5a A10c: evaluate 1..81 exact configurations with QuantBT's own objective.
+
+    The request is the parent WFO run's (same data span, same folds, same
+    mode_1_decay/global objective, same seed). Each admitted configuration is
+    enqueued as a fixed Optuna trial, so every value is scored by QuantBT's
+    ``evaluate_params_is`` exactly as the parent's own trials were — the
+    child adds no scorer and no interpolation. The results are one bounded
+    ``whatif_results.json`` beside the engine output.
+    """
+
+    import optuna
+    import pandas as pd
+
+    from portal_api.domain.research_whatif_profile import (
+        WHATIF_MAX_EVALUATIONS,
+        WHATIF_PROFILE,
+        WHATIF_PROFILE_DIGEST,
+        WHATIF_PROFILE_ID,
+        whatif_profile_digest,
+    )
+    from strategy.specification import DELTA_RSI_SPECIFICATION
+
+    if receipt.get("execution_profile_id") != WHATIF_PROFILE_ID:
+        raise ValueError("P16 what-if child receipt names an uninstalled execution profile")
+    if (
+        receipt.get("execution_profile_digest") != WHATIF_PROFILE_DIGEST
+        or whatif_profile_digest(WHATIF_PROFILE) != WHATIF_PROFILE_DIGEST
+    ):
+        raise ValueError("P16 what-if child profile digest does not match the installed profile")
+    grid_key = receipt.get("whatif_grid_key")
+    evaluations = receipt.get("whatif_evaluations")
+    if not isinstance(grid_key, str) or len(grid_key) != 64:
+        raise ValueError("P16 what-if child receipt carries no grid key")
+    if not isinstance(evaluations, list) or not 1 <= len(evaluations) <= WHATIF_MAX_EVALUATIONS:
+        raise ValueError("P16 what-if child receipt must carry 1..81 evaluations")
+    declared = DELTA_RSI_SPECIFICATION.parameter_space
+    enqueued: list[tuple[str, dict[str, int | float]]] = []
+    seen: set[str] = set()
+    for entry in evaluations:
+        if not isinstance(entry, dict):
+            raise ValueError("P16 what-if evaluation is invalid")
+        key = entry.get("evaluation_key")
+        parameters = entry.get("parameters")
+        if not isinstance(key, str) or len(key) != 64 or key in seen or not isinstance(parameters, dict):
+            raise ValueError("P16 what-if evaluation identity is invalid")
+        if set(parameters) != set(declared):
+            raise ValueError("P16 what-if evaluation must name every declared Delta parameter")
+        typed: dict[str, int | float] = {}
+        for name, value in parameters.items():
+            low, high, _step = declared[name]
+            if not isinstance(value, str):
+                raise ValueError("P16 what-if parameter values are exact decimal text")
+            typed[name] = _engine_value(value, kind=int if isinstance(low, int) and isinstance(high, int) else float)
+            if not low <= typed[name] <= high:
+                raise ValueError("P16 what-if evaluation leaves its declared range")
+        seen.add(key)
+        enqueued.append((key, typed))
+
+    original_create_study = optuna.create_study
+
+    def create_study(*args: Any, **kwargs: Any) -> Any:
+        # QuantBT creates its own study; the admitted configurations are
+        # enqueued first so each trial evaluates exactly one of them.
+        study = original_create_study(*args, **kwargs)
+        for _key, parameters in enqueued:
+            study.enqueue_trial(dict(parameters), skip_if_exists=False)
+        return study
+
+    optuna.create_study = create_study
+    try:
+        summary = _run_delta_wfo_study(receipt, output_root, optuna_trials=len(enqueued))
+    finally:
+        optuna.create_study = original_create_study
+
+    run_id = str(receipt["run_id"])
+    trials = pd.read_parquet(output_root / run_id / "wfo" / "trials.parquet")
+    by_identity: dict[tuple[tuple[str, str], ...], dict[str, Any]] = {}
+    for record in trials.to_dict(orient="records"):
+        by_identity.setdefault(_parameter_identity(json.loads(record["params_json"])), record)
+    results: list[dict[str, Any]] = []
+    for key, parameters in enqueued:
+        record = by_identity.get(_parameter_identity(parameters))
+        if record is None:
+            raise ValueError("P16 what-if engine did not evaluate an admitted configuration")
+        objective = record.get("objective")
+        defined = (
+            not bool(record.get("pruned"))
+            and isinstance(objective, (int, float))
+            and not isinstance(objective, bool)
+            and math.isfinite(float(objective))
+        )
+        results.append({
+            "evaluation_key": key,
+            "trial_id": str(int(record["trial_id"])),
+            "state": "COMPLETE" if defined else "PRUNED",
+            "objective": _decimal_text(objective, label="what-if objective") if defined else None,
+        })
+    document = {"schema_version": "research.whatif-results.v1", "grid_key": grid_key, "results": results}
+    (output_root / run_id / "whatif_results.json").write_text(
+        json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        **summary,
+        "task": "P16_DELTA_WHATIF_GRID",
+        "execution_profile_digest": WHATIF_PROFILE_DIGEST,
+        "whatif_results": len(results),
+    }
+
+
 def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None) -> dict[str, Any]:
     _assert_clean_environment()
     if receipt.get("schema_version") != "research.p06.child-receipt.v1":
@@ -764,6 +914,8 @@ def execute_receipt(receipt: dict[str, Any], *, receipt_dir: Path | None = None)
         raise ValueError("P06 child task is not allowlisted")
     if task == "P10_DELTA_WFO":
         result = _run_p10_delta_wfo(receipt, _wfo_output_root(receipt, receipt_dir))
+    elif task == "P16_DELTA_WHATIF_GRID":
+        result = _run_p16_delta_whatif(receipt, _wfo_output_root(receipt, receipt_dir))
     else:
         result = _run_p04_delta_smoke(receipt)
     result.update(

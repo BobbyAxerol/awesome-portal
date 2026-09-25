@@ -20,8 +20,8 @@
     "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
     "nginx_portal_conf": "sha256:2bb4527a0e7bf681667f84fc423ff0682ad392223f44b6c7b0f7617d76ba3eff",
     "openapi_planning_snapshot": "sha256:1566dcdff7c3cc72debdeb392566ad6bd36d029babb23db7ed220c7d5633d605",
-    "openapi_portal": "sha256:99ae4d5b9b299c34152b6801dddf08cb06641c36a1b854866a82e09ed2fbad47",
-    "openapi_portal_snapshot": "sha256:99ae4d5b9b299c34152b6801dddf08cb06641c36a1b854866a82e09ed2fbad47",
+    "openapi_portal": "sha256:d6ffe60d9f52ca7b5e72084213fbb7dedd9ff53ebc4e4c915f6c7344079996e9",
+    "openapi_portal_snapshot": "sha256:d6ffe60d9f52ca7b5e72084213fbb7dedd9ff53ebc4e4c915f6c7344079996e9",
     "planning_frontend_lock": "sha256:ac4c28d02e411ae40c7c9eb0a80871adf9a179c12ad0bb33930a37797e083ac7",
     "planning_frontend_package": "sha256:50296a506bfa3c5786e7bc5845655b10c0a7d222cfcfabd58a0ada28d2024268",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
@@ -41,7 +41,7 @@
     "research_run_evidence_schema": "sha256:ac1213412f91adbfb3f76c12dc12c6943fc979e83e75b1a5de9909e7fb01b730",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "b8c5a0d81e0541bf8dfb00fdddcee95154c9325f",
+  "frozen_at_commit": "91ba9639df172fb13f529ae90c21fa513fef7440",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,

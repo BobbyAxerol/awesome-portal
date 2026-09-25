@@ -10,6 +10,7 @@ raw candle row, credential or generic Python entrypoint.
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
@@ -23,6 +24,7 @@ from .research_delta_wfo_profile import (
     DELTA_WFO_PROFILE_ID,
     P04_FIXED_QUALIFICATION_PROFILE_ID,
 )
+from .research_whatif_profile import WHATIF_MAX_EVALUATIONS, WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 
 
 _IDENTIFIER = r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
@@ -30,6 +32,8 @@ _OPAQUE = r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
 _DIGEST = r"^[0-9a-f]{64}$"
 _PREFLIGHT = r"^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
 _SNAPSHOT = r"^dss_[0-9a-f]{32}$"
+_PARAMETER_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
+_EXACT_DECIMAL = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$")
 
 _P04_DELTA_FIXED_PARAMETERS: dict[str, int | float] = {
     "window": 32,
@@ -43,12 +47,44 @@ _P04_DELTA_FIXED_PARAMETERS: dict[str, int | float] = {
 }
 
 
+class WhatIfEvaluation(PortalModel):
+    """One admitted what-if configuration: the full exact parameter map."""
+
+    evaluation_key: str = Field(pattern=_DIGEST)
+    parameters: Annotated[dict[str, str], Field(min_length=1, max_length=24)]
+
+    @model_validator(mode="after")
+    def validate_exact_decimals(self) -> "WhatIfEvaluation":
+        for name, value in self.parameters.items():
+            if not _PARAMETER_NAME.fullmatch(name) or not _EXACT_DECIMAL.fullmatch(value):
+                raise ValueError("a what-if evaluation carries exact decimal parameters only")
+        return self
+
+
+class WhatIfJob(PortalModel):
+    """W5a A10c: the bounded evaluation list of one what-if diagnostic job."""
+
+    schema_version: Literal["research.whatif-job.v1"]
+    parent_run_id: str = Field(pattern=_OPAQUE, max_length=160)
+    grid_key: str = Field(pattern=_DIGEST)
+    evaluations: Annotated[list[WhatIfEvaluation], Field(min_length=1, max_length=WHATIF_MAX_EVALUATIONS)]
+
+    @model_validator(mode="after")
+    def validate_unique_keys(self) -> "WhatIfJob":
+        keys = [entry.evaluation_key for entry in self.evaluations]
+        if len(set(keys)) != len(keys):
+            raise ValueError("a what-if job evaluates each key exactly once")
+        return self
+
+
 class ResearchRunProducerEnvelope(PortalModel):
     """The server-owned P08/P10 immutable facts needed by the worker."""
 
     schema_version: Literal["research.run-producer.v1"]
     client_intent_id: str = Field(pattern=_IDENTIFIER, min_length=3, max_length=191)
-    intent_kind: Literal["NEW"]
+    # W5a A10c: DIAGNOSTIC exists only as the what-if profile (Control API
+    # pins the pair in PostgreSQL); every other request stays NEW.
+    intent_kind: Literal["NEW", "DIAGNOSTIC"]
     preflight_token: str = Field(pattern=_PREFLIGHT, max_length=191)
     requested_spec: dict[str, Any] = Field(min_length=1, max_length=64)
     requested_spec_digest: str = Field(pattern=_DIGEST)
@@ -65,15 +101,20 @@ class ResearchRunProducerEnvelope(PortalModel):
     # never carries these two fields (see the serializer below), so the P04
     # durable request, its spec digest and the child receipt stay byte-equal.
     execution_profile_id: Literal[
-        "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1"
+        "p04.fixed-qualification.v1", "p10.delta-signal-notional-wfo.v1", "p16.delta-whatif-grid.v1"
     ] = P04_FIXED_QUALIFICATION_PROFILE_ID
     execution_profile_digest: str | None = Field(default=None, pattern=_DIGEST)
     p04_parameters: Annotated[dict[str, int | float], Field(min_length=8, max_length=8)] | None = None
     work_digest: str = Field(pattern=_DIGEST)
+    whatif: WhatIfJob | None = None
 
     @property
     def is_delta_wfo(self) -> bool:
         return self.execution_profile_id == DELTA_WFO_PROFILE_ID
+
+    @property
+    def is_whatif(self) -> bool:
+        return self.execution_profile_id == WHATIF_PROFILE_ID
 
     @model_serializer(mode="wrap")
     def _serialize_without_p04_profile_fields(self, handler: Any) -> dict[str, Any]:
@@ -83,6 +124,8 @@ class ResearchRunProducerEnvelope(PortalModel):
             data.pop("execution_profile_digest", None)
         if self.p04_parameters is None:
             data.pop("p04_parameters", None)
+        if self.whatif is None:
+            data.pop("whatif", None)
         return data
 
     @model_validator(mode="after")
@@ -102,6 +145,17 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("requested_spec AlphaVersion does not match the immutable producer binding")
         if self.requested_spec.get("strategy_id") != self.alpha_id:
             raise ValueError("requested_spec strategy_id does not match the immutable Alpha identity")
+        if self.execution_profile_id == WHATIF_PROFILE_ID:
+            # The what-if diagnostic re-runs its parent's exact WFO request:
+            # same spec, same data, same seed; only its evaluations differ.
+            if self.intent_kind != "DIAGNOSTIC" or self.whatif is None:
+                raise ValueError("the what-if profile is a DIAGNOSTIC intent carrying its evaluations")
+            if self.execution_profile_digest != WHATIF_PROFILE_DIGEST:
+                raise ValueError("the what-if execution profile digest does not match the installed profile")
+            self._validate_delta_wfo_spec()
+            return self
+        if self.intent_kind != "NEW" or self.whatif is not None:
+            raise ValueError("only the what-if profile is a DIAGNOSTIC intent with evaluations")
         if self.execution_profile_id == DELTA_WFO_PROFILE_ID:
             self._validate_delta_wfo_profile()
             return self
@@ -127,10 +181,15 @@ class ResearchRunProducerEnvelope(PortalModel):
     def _validate_delta_wfo_profile(self) -> None:
         """Accept only the exact W1 §1.1 Delta signal-notional WFO profile."""
 
-        profile = DELTA_WFO_PROFILE
-        spec = self.requested_spec
         if self.execution_profile_digest != DELTA_WFO_PROFILE_DIGEST:
             raise ValueError("the Delta WFO execution profile digest does not match the installed profile")
+        self._validate_delta_wfo_spec()
+
+    def _validate_delta_wfo_spec(self) -> None:
+        """The locked W1 requested-spec shape (shared by the WFO and what-if profiles)."""
+
+        profile = DELTA_WFO_PROFILE
+        spec = self.requested_spec
         if self.p04_parameters is not None:
             raise ValueError("the Delta WFO profile searches its parameters and carries no P04 parameter map")
         if self.execution_adapter_id != profile["adapter_id"] or self.adapter_contract_digest != profile["adapter_contract_digest"]:
@@ -218,4 +277,4 @@ class ResearchRunProducerRequest(PortalModel):
         return self
 
 
-__all__ = ["ResearchRunProducerEnvelope", "ResearchRunProducerRequest"]
+__all__ = ["ResearchRunProducerEnvelope", "ResearchRunProducerRequest", "WhatIfEvaluation", "WhatIfJob"]

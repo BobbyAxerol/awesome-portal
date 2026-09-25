@@ -73,6 +73,13 @@ _PROFILE_COPY = {
         "not_issued": "The Delta walk-forward study sealed its artifacts but did not issue a release claim.",
         "claimed": "worker claimed durable P10 walk-forward study",
     },
+    # W5a A10c: a diagnostic evaluates a grid for its parent; it never
+    # selects, freezes or claims anything of its own.
+    "DELTA_WHATIF": {
+        "forecast": "The what-if diagnostic does not issue a claim; it seals one evaluation grid for its parent run.",
+        "not_issued": "The what-if diagnostic sealed its evaluation grid; a diagnostic never issues a release claim.",
+        "claimed": "worker claimed durable P16 what-if diagnostic",
+    },
 }
 
 

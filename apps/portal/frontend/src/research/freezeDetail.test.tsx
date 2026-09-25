@@ -587,16 +587,22 @@ describe("P16-T03 — one write, from one click", () => {
  * P16-T04 — what-if, ordering and inspection
  * ---------------------------------------------------------------------- */
 
-describe("P16-T04 — an unavailable question gets no control", () => {
-  it("offers no slider, no grid and no submit — not even disabled ones", () => {
+describe("P16-T04 — an unavailable question keeps its card, with nothing that can act", () => {
+  it("A11: the what-if card keeps its place; every slider and action is disabled with the server's reason", () => {
     const { container } = view();
-    expect(container.querySelector("input[type='range']")).toBeNull();
-    expect(container.querySelector("[data-whatif-grid='NOT_APPLICABLE']")).toBeTruthy();
-    expect(container.querySelector("[data-may-submit='false']")).toBeTruthy();
-    expect(container.querySelector("[data-may-create='false']")).toBeTruthy();
-    // The only button on the screen is the explicit verification.
-    const buttons = [...container.querySelectorAll("button")].map((node) => node.getAttribute("data-action"));
-    expect(buttons.filter((action) => action !== null)).toEqual(["verify"]);
+    const card = container.querySelector("[data-panel='what-if']");
+    expect(card?.getAttribute("data-what-if")).toBe(detail().freeze.what_if.state);
+    const ranges = [...container.querySelectorAll<HTMLInputElement>("input[type='range']")];
+    expect(ranges).toHaveLength(2);
+    expect(ranges.every((range) => range.disabled)).toBe(true);
+    expect(card?.querySelector("[data-what-if-reason]")).not.toBeNull();
+    // The only ENABLED button on the screen is the explicit verification.
+    const enabled = [...container.querySelectorAll<HTMLButtonElement>("button")]
+      .filter((node) => !node.disabled)
+      .map((node) => node.getAttribute("data-action"));
+    expect(enabled.filter((action) => action !== null)).toEqual(["verify"]);
+    // No number stands in for an evaluation that does not exist.
+    expect(card?.textContent).not.toMatch(/ΔJ\s*[−+-]?\d/);
   });
 
   it("renders the data windows without turning them into a verdict", () => {
@@ -887,9 +893,10 @@ describe("Screen 07 composition — the hi-fi panels carry only published facts"
     expect(card?.textContent).not.toMatch(/✓|\bBOUND\b/);
   });
 
-  it("adds no control: the verification is still the only action", () => {
+  it("adds no live control: the verification is still the only enabled action", () => {
     const { container } = view();
-    const actions = [...container.querySelectorAll("button")]
+    const actions = [...container.querySelectorAll<HTMLButtonElement>("button")]
+      .filter((node) => !node.disabled)
       .map((node) => node.getAttribute("data-action"))
       .filter((action) => action !== null);
     expect(actions).toEqual(["verify"]);
@@ -1001,7 +1008,8 @@ describe("W3b — Freeze on the retained WFO lane", () => {
     expect(whatIf?.getAttribute("data-reason")).toBe("RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET");
     expect(whatIf?.textContent).toContain("RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET");
     expect(container.textContent).not.toMatch(/ΔJ\s*[=:]?\s*[−+-]?\d/);
-    expect(whatIf?.querySelector("input[type='range']")).toBeNull();
+    // An older server's bare absence keeps the card with disabled controls (A11).
+    expect([...(whatIf?.querySelectorAll<HTMLInputElement>("input[type='range']") ?? [])].every((range) => range.disabled)).toBe(true);
   });
 
   it("readiness READY, and no P04-hub reason although the hub answered P16 NOT_APPLICABLE", async () => {

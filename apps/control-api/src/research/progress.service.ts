@@ -28,6 +28,7 @@ import { ResearchEvidenceService } from "./evidence.service";
 import { ResearchSplitService } from "./split.service";
 import { ResearchReportService } from "./report.service";
 import { DELTA_WFO_PROFILE, DELTA_WFO_PROFILE_ID } from "./delta-wfo.profile";
+import { WHATIF_PROFILE, WHATIF_PROFILE_ID } from "./whatif.profile";
 
 /** The installed P04 fixed-qualification child CPU limit (P10 job cost). */
 const P04_FIXED_CHILD_CPU_SECONDS = 45;
@@ -201,7 +202,9 @@ export class ResearchProgressService {
     // lane instead and never has those sidecars, so assembling here would
     // refuse its terminal event forever (seen on the W1 preview with REPORTS
     // on). Its report is P18 work over current-source, not this sidecar.
-    if (ingressScope.executionProfileId !== DELTA_WFO_PROFILE_ID) {
+    // A W5a what-if diagnostic has no report either: it seals one WHATIF_GRID
+    // relation for its parent and nothing P04-shaped.
+    if (ingressScope.executionProfileId !== DELTA_WFO_PROFILE_ID && ingressScope.executionProfileId !== WHATIF_PROFILE_ID) {
       await this.reports.materializeTerminal(ingressScope, input);
     }
     await this.applyLifecycle(ingressScope, input);
@@ -524,11 +527,14 @@ export class ResearchProgressService {
    * the retained RS-02 lane, not a fixed-qualification receipt).
    */
   private assertProfileBoundIngress(scope: ProgressIngressScope, input: ResearchProgressIngress): void {
-    const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID;
+    const whatIf = scope.executionProfileId === WHATIF_PROFILE_ID;
+    const wfo = scope.executionProfileId === DELTA_WFO_PROFILE_ID || whatIf;
     const usage = input.event.payload.usage;
     if (usage && typeof usage === "object" && !Array.isArray(usage)) {
       const cpu = (usage as Record<string, unknown>).cpu_seconds;
-      const cap = wfo ? DELTA_WFO_PROFILE.child_limits.cpu_seconds : P04_FIXED_CHILD_CPU_SECONDS;
+      const cap = whatIf
+        ? WHATIF_PROFILE.child_limits.cpu_seconds
+        : wfo ? DELTA_WFO_PROFILE.child_limits.cpu_seconds : P04_FIXED_CHILD_CPU_SECONDS;
       if (typeof cpu === "number" && cpu > cap) {
         throw new ResearchProgressError("RESEARCH_PROGRESS_INVALID", "Research progress usage exceeds the run profile's child limit.", 400);
       }

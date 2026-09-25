@@ -10,8 +10,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { usePollTick } from "../execution/useRevision";
 import {
   NOT_MODIFIED,
+  WHATIF_ACTIVE_JOB_STATES,
   freezeApi,
   toFreezeRefusal,
   isFreezeLaneNotApplicable,
@@ -20,6 +22,7 @@ import {
   type FreezeDetail,
   type FreezeRefusal,
   type FreezeVerification,
+  type WhatIfEvaluateSlot,
 } from "./freezeClient";
 import { researchState, type ResearchState } from "./state";
 import { laneStateOfError, refusalState, type CurrentSourceLaneState } from "./researchRefusal";
@@ -48,6 +51,9 @@ export interface FreezeController {
   retained: RetainedSlot;
   ensureRetained: () => void;
   reread: () => void;
+  /** A10c: the one explicit "evaluate grid" action and its answer. */
+  evaluate: WhatIfEvaluateSlot;
+  runEvaluate: (gridKey: string) => void;
   /**
    * W3b: the hub declined this run (its freeze is NOT_APPLICABLE, e.g.
    * `P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE`) and the
@@ -82,6 +88,9 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
   detailRef.current = detail;
   const verifying = useRef(false);
   const retainedAsked = useRef(false);
+  const evaluating = useRef(false);
+  const retainedEtag = useRef<string | null>(null);
+  const [evaluate, setEvaluate] = useState<WhatIfEvaluateSlot>({ state: "idle" });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -131,9 +140,10 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
     /* A re-read after a verify keeps the answer on screen until the new one lands. */
     setRetained((previous) => (previous.state === "ready" ? previous : { state: "loading" }));
     freezeApi
-      .currentSource(runId, { workspaceId })
+      .currentSource(runId, { workspaceId, etag: retainedEtag.current })
       .then((answer) => {
         if (answer === NOT_MODIFIED) return;
+        retainedEtag.current = isFreezeLaneNotApplicable(answer) ? null : answer.etag ?? null;
         setRetained(
           isFreezeLaneNotApplicable(answer) ? { state: "not-applicable", answer } : { state: "ready", freeze: answer },
         );
@@ -145,9 +155,35 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
 
   useEffect(() => {
     retainedAsked.current = false;
+    retainedEtag.current = null;
     setRetained({ state: "idle" });
     setVerify({ state: "idle" });
+    setEvaluate({ state: "idle" });
   }, [runId]);
+
+  /*
+   * A10c: the explicit "evaluate grid" click and nothing else. A mount, a
+   * slider move or a refresh never reaches this; a second click while the
+   * first is in flight is dropped here, and a click on an in-flight grid is
+   * the server's REPLAYED answer, not a second job.
+   */
+  const runEvaluate = useCallback((gridKey: string) => {
+    if (evaluating.current) return;
+    evaluating.current = true;
+    setEvaluate({ state: "submitting" });
+    freezeApi
+      .evaluateWhatIf(runId, gridKey, { workspaceId })
+      .then((answer) => {
+        if (answer === NOT_MODIFIED) return;
+        setEvaluate({ state: "done", result: answer });
+        retainedAsked.current = false;
+        setRetainedGeneration((n) => n + 1);
+      })
+      .catch((error: unknown) => setEvaluate({ state: "refused", refusal: toFreezeRefusal(error) }))
+      .finally(() => {
+        evaluating.current = false;
+      });
+  }, [runId, workspaceId]);
 
   /* A hub that delegates the run is not an answer yet: ask the lane it named.
      A P04 run (hub AVAILABLE) still asks the retained lane only when its
@@ -156,6 +192,20 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
   useEffect(() => {
     if (delegates) ensureRetained();
   }, [delegates, ensureRetained, retainedGeneration]);
+
+  /*
+   * While a diagnostic job fills the grid, re-read the lane on a slow tick so
+   * coverage advances without a click. Re-reading is not motion; the ETag
+   * makes an unchanged answer a 304.
+   */
+  const jobActive = retained.state === "ready"
+    && WHATIF_ACTIVE_JOB_STATES.has(retained.freeze.what_if?.job?.state ?? "");
+  const pollTick = usePollTick(5_000, jobActive);
+  useEffect(() => {
+    if (pollTick === 0 || !jobActive) return;
+    retainedAsked.current = false;
+    setRetainedGeneration((n) => n + 1);
+  }, [pollTick, jobActive]);
 
   const laneRetained = readsRetainedLane(detail, retained);
   const state: ResearchState = readsRetainedLane(detail, retained)
@@ -188,6 +238,8 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
     retained,
     ensureRetained,
     reread: useCallback(() => setGeneration((n) => n + 1), []),
+    evaluate,
+    runEvaluate,
     laneRetained,
   };
 }

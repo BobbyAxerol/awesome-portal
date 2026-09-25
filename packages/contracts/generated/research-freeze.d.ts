@@ -30,7 +30,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Explicitly re-read retained Freeze bindings without persisting a receipt or submitting work */
+        /** Explicitly re-read retained Freeze bindings and, when enabled, re-hash the sealed P05 artifact bytes into one immutable receipt; never submits work */
         post: operations["researchFreezeVerifyPostV1"];
         delete?: never;
         options?: never;

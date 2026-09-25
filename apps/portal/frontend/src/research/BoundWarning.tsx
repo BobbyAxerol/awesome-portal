@@ -67,10 +67,23 @@ export function BoundWarningNote({
   positionPercent,
   className = "",
 }: {
-  warning: BoundWarningValue;
+  /** Absent from a server that predates DR-02: the placement alone is printed, never a guessed warning. */
+  warning: BoundWarningValue | null | undefined;
   positionPercent?: number;
   className?: string;
 }) {
+  if (!warning) {
+    return (
+      <span
+        className={`mono ${className}`}
+        style={{ color: "var(--ink-faint)" }}
+        title="this server publishes no bound warning (research.bound-warning.v1); only the placement is shown"
+        data-bound-warning="NOT_PUBLISHED"
+      >
+        {positionPercent === undefined ? "" : `${positionPercent}% · `}warning not published
+      </span>
+    );
+  }
   const flagged = warning.state === "AT_BOUND" || warning.state === "NEAR_BOUND";
   return (
     <span

@@ -11,7 +11,16 @@ import { Pool } from "pg";
 
 import { ResearchArtifactVerifyRepository } from "../src/research/artifact-verify.repository";
 import { compareArtifactBytes } from "../src/research/artifact-verify.service";
+import { notYet } from "../src/research/artifact-verify.contract";
+import { ResearchP04DeltaBindingService } from "../src/research/p04-delta-binding.service";
+import { ResearchMetadataRepository } from "../src/research/repository";
+import { ResearchRunAdmissionService } from "../src/research/run-admission.service";
+import { ResearchRunCreateService } from "../src/research/run-create.service";
+import { buildWhatIfGrid } from "../src/research/whatif.grid";
+import { ResearchWhatIfRepository } from "../src/research/whatif.repository";
+import { ResearchWhatIfService } from "../src/research/whatif.service";
 import { migrateTestDatabase } from "./harness";
+import { flagConfig, manifestFor, w1Admin, wfoRequested } from "./research-w1-wfo.fixture";
 
 const baseUrl = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
 const databaseName = `portal_w5a_${randomUUID().replaceAll("-", "")}`;
@@ -109,6 +118,120 @@ describe("W5a migration 064 · A10a byte receipts on PostgreSQL", () => {
     const restored = await repository.record(scope, { runId: "rrun_w5a", artifactId: "rart_w5a", artifactRevision: 1, expectedManifestDigest: MANIFEST, ...good });
     expect(restored.state).toBe("MATCH");
     expect((await repository.latest(scope, "rrun_w5a"))?.state).toBe("MATCH");
+  });
+
+  it("A10c on PostgreSQL: one DIAGNOSTIC job per grid key; the frozen parent is never written; a sealed grid fills its cells", async () => {
+    const owner = { ...w1Admin, userId: "usr_w5a" };
+    const repository = new ResearchMetadataRepository(database);
+    await new ResearchP04DeltaBindingService(repository).install(owner, scope);
+    const spec = wfoRequested();
+    const manifest = manifestFor(spec, { token: "rpft_w5a_parent" });
+    await repository.storePreflightManifest(scope, { ...manifest, expiresAt: new Date(Date.now() + 60_000) }, 4);
+    const calls: Array<Record<string, unknown>> = [];
+    const proxy = {
+      handleWrite: async (input: Record<string, unknown>) => {
+        calls.push(input);
+        const body = JSON.parse(String(input.body)) as { run_id: string };
+        return { status: 202, body: { run_id: body.run_id }, idempotencyKey: input.idempotencyKey, replayed: false };
+      },
+    };
+    const config = { ...flagConfig(true), FEATURE_RESEARCH_WHATIF: "true" } as never;
+    const created = await new ResearchRunCreateService(repository, new ResearchRunAdmissionService(repository, config), proxy as never, config)
+      .create(owner, scope, {
+        schema_version: "research.run-create.v1", client_intent_id: "w5a-parent-intent",
+        preflight_token: "rpft_w5a_parent", requested_spec: spec, intent_kind: "NEW",
+      }, "w5a-parent");
+    const parentRunId = created.run_id;
+    const snapshotParent = async () => (await database.query(
+      `SELECT run.state AS run_state, run.state_version, attempt.state AS attempt_state, producer.work_digest,
+              producer.dispatch_state, producer.legacy_request::text AS legacy
+         FROM research.runs run
+         JOIN research.attempts attempt ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
+         JOIN research.run_producers producer ON producer.workspace_id = run.workspace_id AND producer.run_id = run.run_id
+        WHERE run.workspace_id = 'ws_w5a' AND run.run_id = $1`, [parentRunId])).rows[0];
+    const before = await snapshotParent();
+
+    const theta = { window: "34", rsi_l: "30", signalLength: "16", len_atr1: "14", len_atr2: "30", rvol: "1.2", len_vol: "8", slpercent: "2.3" };
+    const basis = {
+      runId: parentRunId,
+      frozen: theta,
+      trials: [{ trialId: "0", state: "COMPLETE", objective: "-1.4435308120735202", parameters: theta }],
+      bytes: notYet("NOT_VERIFIED", "P16_ARTIFACT_BYTES_NOT_VERIFIED_YET"),
+    };
+    const whatIfRepository = new ResearchWhatIfRepository(database);
+    const whatIf = new ResearchWhatIfService(whatIfRepository, repository, proxy as never, config);
+    const read = await whatIf.read(scope, basis);
+    expect(read.coverage).toMatchObject({ evaluated_cells: 1, unique_evaluations: 49 });
+    const gridKey = read.grid!.grid_key;
+    const first = await whatIf.evaluate(owner, scope, basis, gridKey, "w5a-eval-1");
+    expect(first).toMatchObject({ outcome: "ADMITTED", job: { evaluations: 48, state: "RUNNING" } });
+    const again = await whatIf.evaluate(owner, scope, basis, gridKey, "w5a-eval-2");
+    expect(again).toMatchObject({ outcome: "REPLAYED", job: { run_id: first.job!.run_id } });
+    expect(calls.filter((call) => String(call.idempotencyKey).startsWith("research-whatif:"))).toHaveLength(1);
+
+    const diagnostic = (await database.query(
+      `SELECT run.run_kind, run.relationship_kind, run.parent_run_id, attempt.intent_kind, attempt.parent_attempt_id,
+              parent.attempt_id AS parent_attempt, job.job_kind, job.queue_class, producer.execution_profile_id,
+              producer.intent_kind AS producer_intent, producer.actor_user_id
+         FROM research.runs run
+         JOIN research.attempts attempt ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
+         JOIN research.runs parent ON parent.workspace_id = run.workspace_id AND parent.run_id = run.parent_run_id
+         JOIN research.jobs job ON job.workspace_id = run.workspace_id AND job.run_id = run.run_id
+         JOIN research.run_producers producer ON producer.workspace_id = run.workspace_id AND producer.run_id = run.run_id
+        WHERE run.workspace_id = 'ws_w5a' AND run.run_id = $1`, [first.job!.run_id])).rows[0];
+    expect(diagnostic).toMatchObject({
+      run_kind: "DIAGNOSTIC", relationship_kind: "DIAGNOSTIC_OF_RUN", parent_run_id: parentRunId,
+      intent_kind: "DIAGNOSTIC", job_kind: "DIAGNOSTIC", queue_class: "BACKGROUND",
+      execution_profile_id: "p16.delta-whatif-grid.v1", producer_intent: "DIAGNOSTIC",
+    });
+    expect(diagnostic.parent_attempt_id).toBe(diagnostic.parent_attempt);
+    // The frozen parent: same run/attempt state, same producer bytes.
+    expect(await snapshotParent()).toEqual(before);
+    // The DB refuses a DIAGNOSTIC intent that is not the what-if profile, and vice versa.
+    await expect(database.query(
+      `UPDATE research.run_producers SET intent_kind = 'NEW' WHERE workspace_id = 'ws_w5a' AND run_id = $1`, [first.job!.run_id],
+    )).rejects.toBeTruthy();
+
+    // The worker seals its P05 artifact, then the WHATIF_GRID relation.
+    const grid = buildWhatIfGrid(parentRunId, theta, {
+      rvol: { minimum: "1", maximum: "2.5", step: "0.1" }, slpercent: { minimum: "0.7", maximum: "2.5", step: "0.1" },
+    }, { dataset_binding_digest: manifest.datasetBindingDigest, requested_spec_digest: manifest.requestedSpecDigest, engine_release_id: "er_quantbt_111", random_seed: 42 });
+    expect(grid.grid_key).toBe(gridKey);
+    const admitted = (await database.query(`SELECT evaluations FROM research.whatif_jobs_v1 WHERE diagnostic_run_id = $1`, [first.job!.run_id])).rows[0].evaluations as { evaluation_key: string }[];
+    const client = await database.connect();
+    try {
+      await client.query("SET session_replication_role = replica");
+      await client.query(`INSERT INTO research.artifacts
+        (workspace_id, artifact_id, run_id, table_kind, schema_version, manifest_digest, state, retention_class,
+         storage_locator, artifact_revision, worker_attempt_id, lease_epoch, manifest_schema_version, total_rows, total_bytes, sealed_at)
+        VALUES ('ws_w5a', 'rart_w5a_diag', $1, 'research_bundle', 'research.artifact-manifest.v1', $2, 'SEALED',
+                'RESEARCH_EVIDENCE', 'artifacts/rart_w5a_diag', 1, 'rwa_w5a_diag', 1, 'research.artifact-manifest.v1', 48, 4800, now())`,
+      [first.job!.run_id, MANIFEST]);
+      await client.query("SET session_replication_role = origin");
+    } finally {
+      client.release();
+    }
+    const results = admitted.map((entry, index) => ({
+      evaluation_key: entry.evaluation_key, trial_id: String(index),
+      state: index === 0 ? "PRUNED" as const : "COMPLETE" as const, objective: index === 0 ? null : `-1.${index}`,
+    }));
+    const seal = {
+      schema_version: "research.whatif-grid-seal.v1" as const, workspace_id: "ws_w5a", run_id: first.job!.run_id,
+      job_id: "unused", worker_attempt_id: "unused", lease_epoch: 1, artifact_id: "rart_w5a_diag", artifact_revision: 1,
+      manifest_digest: MANIFEST, grid_key: gridKey, results,
+    };
+    await expect(whatIfRepository.sealGrid({ workspaceId: "ws_w5a", actorUserId: "usr_w5a" }, { ...seal, results: results.slice(1) }))
+      .rejects.toMatchObject({ code: "RESEARCH_WHATIF_CONFLICT" });
+    await expect(whatIfRepository.sealGrid({ workspaceId: "ws_w5a", actorUserId: "usr_w5a" }, seal)).resolves.toEqual({ replayed: false });
+    await expect(whatIfRepository.sealGrid({ workspaceId: "ws_w5a", actorUserId: "usr_w5a" }, seal)).resolves.toEqual({ replayed: true });
+    await expect(database.query(`UPDATE research.whatif_grids_v1 SET result_count = 1`)).rejects.toMatchObject({ code: "55000" });
+
+    const after = await whatIf.read(scope, basis);
+    expect(after.coverage?.evaluated_unique).toBe(48); // θ* + 47 COMPLETE; the PRUNED one stays NOT_DEFINED
+    expect(after.grid!.cells.some((cell) => cell.state === "NOT_DEFINED")).toBe(true);
+    expect(after.grid!.cells.filter((cell) => cell.state === "MISSING")).toHaveLength(0);
+    expect(after.job).toMatchObject({ run_id: first.job!.run_id, sealed: true });
+    expect(await snapshotParent()).toEqual(before);
   });
 
   it("refuses a receipt that names a different expectation, a MATCH without matching digests, and any mutation", async () => {

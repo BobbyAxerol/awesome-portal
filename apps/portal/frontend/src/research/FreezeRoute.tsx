@@ -36,6 +36,8 @@ export function FreezeRoute() {
         ensureRetained={freeze.ensureRetained}
         onReread={freeze.reread}
         identity={identity}
+        whatIfEvaluate={freeze.evaluate}
+        onWhatIfEvaluate={freeze.runEvaluate}
       />
     </>
   );

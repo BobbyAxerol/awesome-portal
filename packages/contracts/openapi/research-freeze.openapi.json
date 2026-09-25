@@ -32,7 +32,7 @@
     "/api/v1/quantbt/runs/{runId}/freeze/verify": {
       "post": {
         "operationId": "researchFreezeVerifyPostV1",
-        "summary": "Explicitly re-read retained Freeze bindings without persisting a receipt or submitting work",
+        "summary": "Explicitly re-read retained Freeze bindings and, when enabled, re-hash the sealed P05 artifact bytes into one immutable receipt; never submits work",
         "parameters": [
           { "$ref": "#/components/parameters/RunId" },
           { "$ref": "#/components/parameters/WorkspaceId" },

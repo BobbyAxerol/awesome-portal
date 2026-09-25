@@ -41,6 +41,7 @@ import {
   type ResearchRunRelationship,
   type ResearchScope,
   type ResearchTrialInput,
+  type ResearchWhatIfIntentInput,
   type ResearchWorkerUsage,
   ResearchMetadataError,
 } from "./contracts";
@@ -49,6 +50,7 @@ import {
   DELTA_WFO_PROFILE_ID,
   P04_FIXED_QUALIFICATION_PROFILE_ID,
 } from "./delta-wfo.profile";
+import { WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID } from "./whatif.profile";
 
 type ScopedClient = PoolClient;
 
@@ -200,7 +202,7 @@ interface RunProducerRow {
   worker_attempt_id: string | null;
   lease_epoch: string | number | null;
   portal_receipt: Record<string, unknown> | string | null;
-  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+  execution_profile_id: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1";
   execution_profile_digest: string | null;
 }
 
@@ -1651,6 +1653,165 @@ export class ResearchMetadataRepository {
         dispatch_state: producer.dispatchState,
       });
       return { producer, replayed: true };
+    });
+  }
+
+  /**
+   * W5a · A10c: one explicit what-if diagnostic, deduplicated by grid key.
+   *
+   * The diagnostic is its own DIAGNOSTIC attempt (parent_attempt_id = the
+   * frozen run's attempt) with one DIAGNOSTIC_OF_RUN run and one DIAGNOSTIC
+   * job, so the P06 claim/finish transitions move only the diagnostic's own
+   * rows — never the frozen run, its attempt or its passport. The producer
+   * row reuses the parent's immutable preflight binding (FK to the parent
+   * actor's manifest); the requester is recorded on the run, job and audit.
+   */
+  async createOrReplayWhatIfIntent(
+    scope: ResearchScope,
+    input: ResearchWhatIfIntentInput,
+  ): Promise<{ producer: ResearchRunProducerRecord; replayed: boolean }> {
+    this.assertScope(scope);
+    for (const [value, label] of [
+      [input.runId, "runId"], [input.attemptId, "attemptId"], [input.jobId, "jobId"],
+      [input.commandId, "commandId"], [input.parentRunId, "parentRunId"], [input.parentAttemptId, "parentAttemptId"],
+    ] as const) requireOpaqueId(value, label);
+    requireDigest(input.gridKey, "gridKey");
+    requireDigest(input.workDigest, "workDigest");
+    if (input.evaluations.length < 1 || input.evaluations.length > 81) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "A what-if job carries 1..81 evaluations.", 400);
+    }
+    return this.withScopedWrite(scope, async (client) => {
+      const parent = await client.query<{ attempt_id: string; state: string }>(
+        `SELECT attempt_id, state FROM research.runs
+          WHERE workspace_id = $1 AND run_id = $2
+          FOR UPDATE`,
+        [scope.workspaceId, input.parentRunId],
+      );
+      if (!parent.rows[0] || parent.rows[0].attempt_id !== input.parentAttemptId) {
+        throw new ResearchMetadataError("RESEARCH_RUN_NOT_FOUND", "The frozen parent run was not found.", 404);
+      }
+      const existing = await client.query<RunProducerRow>(
+        `SELECT run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                requested_spec_digest, effective_spec_digest,
+                dataset_binding_digest, manifest_digest, snapshot_id,
+                snapshot_content_hash, work_digest, legacy_request,
+                dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                execution_profile_id, execution_profile_digest
+           FROM research.run_producers
+          WHERE workspace_id = $1 AND client_intent_id = $2`,
+        [scope.workspaceId, input.clientIntentId],
+      );
+      if (existing.rows[0]) {
+        const producer = rowToRunProducer(existing.rows[0]);
+        if (producer.workDigest !== input.workDigest) {
+          throw new ResearchMetadataError("RESEARCH_IDEMPOTENCY_PAYLOAD_CONFLICT", "That what-if intent is bound to a different grid.", 409);
+        }
+        await this.audit(client, scope, "RESEARCH_WHATIF_DIAGNOSTIC_REPLAYED", "run", producer.runId, {
+          parent_run_id: input.parentRunId, grid_key: input.gridKey,
+        });
+        return { producer, replayed: true };
+      }
+      const busy = await client.query(
+        `SELECT 1
+           FROM research.whatif_jobs_v1 job
+           JOIN research.runs run ON run.workspace_id = job.workspace_id AND run.run_id = job.diagnostic_run_id
+          WHERE job.workspace_id = $1 AND job.parent_run_id = $2
+            AND run.state IN ('DRAFT', 'QUEUED', 'RUNNING', 'SEALING')
+          LIMIT 1`,
+        [scope.workspaceId, input.parentRunId],
+      );
+      if ((busy.rowCount ?? 0) > 0) {
+        throw new ResearchMetadataError("RESEARCH_WHATIF_IN_FLIGHT", "Another what-if diagnostic for this run is still running; one at a time.", 409);
+      }
+      await client.query(
+        `INSERT INTO research.attempts
+           (workspace_id, attempt_id, alpha_version_id, parent_attempt_id,
+            client_intent_id, request_payload_digest, intent_kind, reason,
+            space_signature, state, created_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, 'DIAGNOSTIC', 'P16 what-if grid diagnostic', NULL, 'DRAFT', $7)`,
+        [scope.workspaceId, input.attemptId, input.alphaVersionId, input.parentAttemptId,
+          input.clientIntentId, input.workDigest, scope.actorUserId],
+      );
+      await client.query(
+        `INSERT INTO research.runs
+           (workspace_id, run_id, attempt_id, run_kind, relationship_kind,
+            logical_run_key, parent_run_id, request_spec_digest, effective_spec_digest,
+            engine_release_id, dataset_binding_digest, state, submitted_by_user_id)
+         VALUES ($1, $2, $3, 'DIAGNOSTIC', 'DIAGNOSTIC_OF_RUN', $4, $5, $6, $7, $8, $9, 'QUEUED', $10)`,
+        [scope.workspaceId, input.runId, input.attemptId, input.logicalRunKey, input.parentRunId,
+          input.requestedSpecDigest, input.effectiveSpecDigest, input.engineReleaseId,
+          input.datasetBindingDigest, scope.actorUserId],
+      );
+      await client.query(
+        `INSERT INTO research.jobs
+           (workspace_id, job_id, run_id, command_id, logical_work_key, work_digest,
+            job_kind, readiness_class, queue_class, cost_estimate, resource_class,
+            attempt_limit, state, requested_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6,
+                 'DIAGNOSTIC', 'OPTIONAL', 'BACKGROUND', $7::jsonb, $8, 1, 'QUEUED', $9)`,
+        [scope.workspaceId, input.jobId, input.runId, input.commandId, input.logicalRunKey, input.workDigest,
+          JSON.stringify(this.jobCostDatabaseShape(input.cost)), input.resourceClass, scope.actorUserId],
+      );
+      const producer = await client.query<RunProducerRow>(
+        `INSERT INTO research.run_producers
+           (workspace_id, run_id, attempt_id, job_id, actor_user_id, client_intent_id,
+            intent_kind, preflight_token, alpha_id, alpha_version_id,
+            execution_adapter_id, adapter_contract_digest,
+            requested_spec_digest, effective_spec_digest, dataset_binding_digest,
+            manifest_digest, snapshot_id, snapshot_content_hash, work_digest,
+            legacy_request, execution_profile_id, execution_profile_digest)
+         VALUES ($1, $2, $3, $4, $5, $6,
+                 'DIAGNOSTIC', $7, $8, $9, $10, $11,
+                 $12, $13, $14, $15, $16, $17, $18, $19::jsonb, $20, $21)
+         RETURNING run_id, attempt_id, job_id, client_intent_id, alpha_id,
+                   alpha_version_id, execution_adapter_id, adapter_contract_digest,
+                   requested_spec_digest, effective_spec_digest,
+                   dataset_binding_digest, manifest_digest, snapshot_id,
+                   snapshot_content_hash, work_digest, legacy_request,
+                   dispatch_state, worker_attempt_id, lease_epoch, portal_receipt,
+                   execution_profile_id, execution_profile_digest`,
+        [scope.workspaceId, input.runId, input.attemptId, input.jobId, input.parentActorUserId,
+          input.clientIntentId, input.preflightToken, input.alphaId, input.alphaVersionId,
+          input.executionAdapterId, input.adapterContractDigest, input.requestedSpecDigest,
+          input.effectiveSpecDigest, input.datasetBindingDigest, input.manifestDigest, input.snapshotId,
+          input.snapshotContentHash, input.workDigest, JSON.stringify(input.legacyRequest),
+          WHATIF_PROFILE_ID, WHATIF_PROFILE_DIGEST],
+      );
+      const row = producer.rows[0];
+      if (!row) throw new ResearchMetadataError("RESEARCH_CONCURRENT_TRANSACTION", "What-if producer was not recorded.", 503);
+      await client.query(
+        `INSERT INTO research.whatif_jobs_v1
+           (workspace_id, diagnostic_run_id, parent_run_id, grid_key, profile_digest,
+            evaluations, evaluation_count, requested_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)`,
+        [scope.workspaceId, input.runId, input.parentRunId, input.gridKey, WHATIF_PROFILE_DIGEST,
+          JSON.stringify(input.evaluations), input.evaluations.length, scope.actorUserId],
+      );
+      await client.query(
+        `UPDATE research.attempts SET state = 'QUEUED', updated_at = now()
+          WHERE workspace_id = $1 AND attempt_id = $2`,
+        [scope.workspaceId, input.attemptId],
+      );
+      await this.enqueueOutboxEvent(client, scope, {
+        jobId: input.jobId,
+        eventType: "RESEARCH_JOB_QUEUED",
+        deliveryGeneration: 1,
+        payload: this.outboxPayload(input.jobId, input.runId, "BACKGROUND", input.logicalRunKey, input.workDigest),
+      });
+      await this.recordJobEvent(client, scope, input.jobId, null, "JOB_QUEUED", {
+        queue_class: "BACKGROUND",
+        logical_work_key: input.logicalRunKey,
+        work_digest: input.workDigest,
+        producer: "research.whatif-diagnostic.v1",
+      });
+      await this.audit(client, scope, "RESEARCH_WHATIF_DIAGNOSTIC_REQUESTED", "run", input.runId, {
+        parent_run_id: input.parentRunId,
+        grid_key: input.gridKey,
+        evaluations: input.evaluations.length,
+        job_id: input.jobId,
+      });
+      return { producer: rowToRunProducer(row), replayed: false };
     });
   }
 
