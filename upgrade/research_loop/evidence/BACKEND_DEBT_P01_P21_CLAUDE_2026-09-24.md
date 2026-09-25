@@ -231,3 +231,22 @@ Việc riêng còn treo: `test_m0_freeze` đỏ sẵn trên HEAD — sửa bằn
 - `CG-RF02-02`: **DELIVERED** — `test_rf02_nats_consume_loop_survives_an_idle_queue` PASS trong chính image worker (`nats-py` 2.10.0, pytest cài tạm trong container dùng một lần); worker preview nhận run sau các quãng rảnh trong suốt phiên W1.
 - `CG-RF02-01`: **chờ Bobby**. Profile hẹp đã thiết kế (seccomp moby v28.0.0 + đúng `unshare/mount/umount2/setns`; AppArmor `docker-default` chỉ thêm mount proc/tmpfs/rprivate `/`; `systempaths` vẫn phải unconfined vì kernel chặn `--mount-proc` khi `/proc` bị che). Việc nạp profile lên host bị hệ thống quyền của Claude chặn. Chỉ chặn thực thi alpha import; Delta built-in không phụ thuộc.
 - A12: [mapping gate ID](./RS-03/A12_GATE_ID_MAPPING_CLAUDE_2026-09-24.md) — 83 gate (68 gốc + 15 V11): 19 COVERED, 2 DECIDED, 62 GAP. Gap P13–P15 và V11-DR giao W3; P16/P17 (A10, replay) là đợt W5 sau RF-05.
+
+## 10. Đóng RF-03 / RF-05 — 2026-09-25
+
+| Luồng | Kết quả | Merge / commit |
+|---|---|---|
+| W2 P11 + màn 03 | `CG-P11-03/06/07/08/09`, `CG-P06-02`, `CG-P10-04` DELIVERED | `1ee10002` |
+| W3 P13–P15 + màn 04/05/06 | `CG-P13-05/07/08`, `CG-P14-02`, `CG-P15-03/04` DELIVERED; V11 DR khớp tuyệt đối | `2d186397` |
+| W4 P02/P04/P07/P08 + màn 02/12/14 | `CG-P02-02`, `CG-P04-04/06/07`, `CG-P07-03/04`, `CG-P08-02…06` DELIVERED | `e5039ded` |
+| W3b màn 04–08 cho run WFO | 14 lỗi hiển thị thấy trên ảnh chụp thật đã sửa | `28da9470` |
+| Receipt P04 retained | Đường `d820d5ce` chưa từng chạy thật: seal thiếu documents + sequence dạng số → sửa | `4626448d` |
+| Ledger R2 | 3 route Research thiếu từ W1/W2 | `881eea44` |
+| M0 freeze | re-pin (đỏ sẵn trên HEAD) | `6b834705` |
+
+**Receipt cuối:** preview build từ `4626448d`, lane real-API **28/28** (16 P04 + 12 WFO S03–S08 ở 1280/660, mỗi màn WFO so với số API trả), run mới WFO `rrun_f558293c…` và P04 `rrun_f037e314…` đều COMPLETED/READY, ảnh chụp đã xem.
+
+**Còn lại, có chủ:**
+- `CG-RF02-01` — Bobby quyết (nạp profile AppArmor lên host); chỉ chặn chạy alpha import.
+- Owner decisions DR-02 (cảnh báo chung Search/Freeze) và Reveal — Bobby.
+- W5 (≤P21, chưa nằm trong RF-03/RF-05): P16 A10a/b/c (verify byte, binding lịch sử, what-if 81 ô), P17 A09 replay + A12 gap P17, màn 11 (P21 composer), receipt real-API cho 09/10/13.

@@ -2,7 +2,20 @@
   "schema_version": "research.phase-debt-register.v1",
   "phase": "P17",
   "audit_status": "RS01_REPLAY_CORRECTNESS_REMEDIATED; ORIGINAL_PHASE_ACCEPTANCE_PENDING_RS02_RS03",
-  "in_scope_backend_debt": [],
+  "in_scope_backend_debt": [
+    {
+      "id": "A09/P17-B",
+      "what": "route-discriminated orders/fills/positions/candles/checkpoints where the source publishes them",
+      "owner": "Claude",
+      "wave": "W5"
+    },
+    {
+      "id": "A12-P17",
+      "what": "T01-T14 mapping gaps (capital convention, sparse sequence, same-timestamp rows, gap refusal); 24 vs 25 test count",
+      "owner": "Claude",
+      "wave": "W5"
+    }
+  ],
   "rs01_repairs": [
     "A05/A06/A08: one revision-pinned bundle, no-store replay HTTP, typed cursor-expiry recovery and scoped cancellable admission are implemented."
   ],
@@ -11,5 +24,6 @@
     "Current P04 publishes no execution ledger, source event order, OCO/partial-fill/multi-leg/funding/candle/MAE-MFE facts, fold capital convention or child-audit replay provenance.",
     "Screen-08 browser/product receipt remains Claude-owned while FEATURE_RESEARCH_REPLAY=false."
   ],
-  "rollback": "Disable FEATURE_RESEARCH_REPLAY through signed deployment; retain immutable P13 evidence and add no cleanup action."
+  "rollback": "Disable FEATURE_RESEARCH_REPLAY through signed deployment; retain immutable P13 evidence and add no cleanup action.",
+  "reviewed": "2026-09-25 · Claude (A12/GX correction: registers previously claimed zero debt while Astra A09–A12 were open)"
 }

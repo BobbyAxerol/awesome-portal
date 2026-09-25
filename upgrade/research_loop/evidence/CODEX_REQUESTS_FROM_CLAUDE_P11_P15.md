@@ -47,12 +47,12 @@ Then:
 
 | Id | Gap → need | Evidence | Blocks | Status |
 |---|---|---|---|---|
-| `CG-P11-04` | Budget is the literal `{used:"0",cap:null,pct:0}`; no producer emits `budget_tick`; P06 enforces a cap that is never published; `run_completed.usage.cpu_seconds=7` is not reflected | `research_progress.py:660,834-842`; live progress | S03 budget bar (shows 0 for an 8-s run) | OPEN |
-| `CG-P11-05` | Preview never enables `FEATURE_RESEARCH_RETAINED_ARTIFACTS`, so the P05 `run_receipt` (`d820d5ce`) never reaches S03; say whether the preview may enable it | `scripts/research-preview/preview.sh:73-81`; `deploy/compose.research-progress.yaml:13,56` | S03 retained tables | OPEN |
-| `CG-P11-06` | Run cancelled before source keeps `terminal_materialization: PENDING` forever (enum has `NOT_REQUIRED`); attempt `LOST_LEASE` ends ~18 min after claim; `retry_not_before` set on a cancelled run — confirm semantics | `progress.service.ts:50`; live cancelled progress | S03 cancelled state | OPEN |
-| `CG-P11-07` | `retry_reason: P12_OWNED_NO_P11_RETRY_ROUTE` names an owner with no route; spec 03 wants "new run with same draft (?from={id})" → needs a requested-spec read for clone | `progress.service.ts:56,298`; spec 03 §184 | S03 failed-state action | OPEN |
-| `CG-P11-08` | Stream shape: snapshot only on heartbeat/terminal frames and the read-level `current`/`availability` never re-sent. Attach a snapshot (or read delta) to each event | live SSE trace (23 frames) | S03 live rail/%/artifacts/status | DQ-13 |
-| `CG-P11-09` | `run_completed.payload` carries `evidence_digest`, `split_digest` not declared in `ProgressCompletedPayload`; `usage.peak_rss_bytes=0`, `fd_peak=0` are unmeasured values reported as 0 (should be null / typed) | live SSE; `research-progress.openapi.json` | contract truth | OPEN |
+| `CG-P11-04` | Budget is the literal `{used:"0",cap:null,pct:0}`; no producer emits `budget_tick`; P06 enforces a cap that is never published; `run_completed.usage.cpu_seconds=7` is not reflected | `research_progress.py:660,834-842`; live progress | S03 budget bar (shows 0 for an 8-s run) | DELIVERED `5bc77b9b` |
+| `CG-P11-05` | Preview never enables `FEATURE_RESEARCH_RETAINED_ARTIFACTS`, so the P05 `run_receipt` (`d820d5ce`) never reaches S03; say whether the preview may enable it | `scripts/research-preview/preview.sh:73-81`; `deploy/compose.research-progress.yaml:13,56` | S03 retained tables | DELIVERED `dba47502` — preview enables RETAINED_ARTIFACTS |
+| `CG-P11-06` | Run cancelled before source keeps `terminal_materialization: PENDING` forever (enum has `NOT_REQUIRED`); attempt `LOST_LEASE` ends ~18 min after claim; `retry_not_before` set on a cancelled run — confirm semantics | `progress.service.ts:50`; live cancelled progress | S03 cancelled state | DELIVERED `7e3e7ee9` (W2; sweep cadence unchanged, now visible) |
+| `CG-P11-07` | `retry_reason: P12_OWNED_NO_P11_RETRY_ROUTE` names an owner with no route; spec 03 wants "new run with same draft (?from={id})" → needs a requested-spec read for clone | `progress.service.ts:56,298`; spec 03 §184 | S03 failed-state action | DELIVERED `7e3e7ee9`, `8df45ab6`, Screen 02 `?from=` `d957b087` |
+| `CG-P11-08` | Stream shape: snapshot only on heartbeat/terminal frames and the read-level `current`/`availability` never re-sent. Attach a snapshot (or read delta) to each event | live SSE trace (23 frames) | S03 live rail/%/artifacts/status | DELIVERED `7e3e7ee9`, `8df45ab6` (DQ-13 applied) |
+| `CG-P11-09` | `run_completed.payload` carries `evidence_digest`, `split_digest` not declared in `ProgressCompletedPayload`; `usage.peak_rss_bytes=0`, `fd_peak=0` are unmeasured values reported as 0 (should be null / typed) | live SSE; `research-progress.openapi.json` | contract truth | DELIVERED `7e3e7ee9`, `9d5c7ac3` |
 
 ## P12 — run library (Screen 01)
 
@@ -74,10 +74,10 @@ Then:
 |---|---|---|---|---|
 | `CG-P13-03` | Metric registry has 8 keys; no OOS Sharpe/Sortino/CAGR/profit factor/hit rate/decay though the engine computes them (Astra A09) | `evidence-metric-registry.ts:15`; `quantbt/portfolio.py:534-546` | S04 tiles, verdict header; S01 stats | DELIVERED `b1f76bd3` (Claude) · CONSUMED RF-06 wave C |
 | `CG-P13-04` | Only `ROLLING_RETURNS_20`; spec wants rolling Sharpe(63) and beta vs BTC (A09) | spec 04 §68 | S04 rolling row | DELIVERED `b1f76bd3` (Claude) · CONSUMED RF-06 wave C |
-| `CG-P13-05` | Chart caps 32/16/32/12 (live 25 of 744 equity points, 15 of 724 rolling); A02 wanted full resolution retained in P05 — confirm the intended envelope | `research_child.py:48-51`; RS-01 report | S04 equity/underwater | OPEN |
+| `CG-P13-05` | Chart caps 32/16/32/12 (live 25 of 744 equity points, 15 of 724 rolling); A02 wanted full resolution retained in P05 — confirm the intended envelope | `research_child.py:48-51`; RS-01 report | S04 equity/underwater | DELIVERED `b621c5af` (W3) |
 | `CG-P13-06` | `MONTHLY_RETURNS` `AVAILABLE`/`FULL` with 0 values for a one-month OOS; give a typed reason or a month-boundary base | `research_child.py:195-232` | S04 monthly heat | DELIVERED `b1f76bd3` (Claude) · CONSUMED RF-06 wave C |
-| `CG-P13-07` | Claim-strip facts (`validation_claim`, `chronological_claim`, `oos_used_for_selection`, execution contract, runtime authority); `route.contract` NOT_PUBLISHED | spec 04 §31-41 | S04 claim strip | OPEN |
-| `CG-P13-08` | Per-fold verdict facts (S_OOS, decay, trades, maxDD, contrib, worst moment, verdict) — engine `fold_metrics` has most | `research-current-source.d.ts:191-198`; `walkforward.py:2104-2120` | S04 per-fold table | OPEN |
+| `CG-P13-07` | Claim-strip facts (`validation_claim`, `chronological_claim`, `oos_used_for_selection`, execution contract, runtime authority); `route.contract` NOT_PUBLISHED | spec 04 §31-41 | S04 claim strip | DELIVERED `b621c5af` (W3) |
+| `CG-P13-08` | Per-fold verdict facts (S_OOS, decay, trades, maxDD, contrib, worst moment, verdict) — engine `fold_metrics` has most | `research-current-source.d.ts:191-198`; `walkforward.py:2104-2120` | S04 per-fold table | DELIVERED `b621c5af`, `29c607c8` (W3) |
 | `CG-P13-09` | One refusal code for PENDING_RETENTION / NOT_RETAINED_LEGACY / not retainable (fixed profile); state only in message text. Give a typed state, and a non-409 typed answer for a run whose profile can never be retained (the 409 also logs a console error every visit) | `current-source.service.ts:438-453` | S04/S05/S06 retained panels | DELIVERED `c0021ba5` (Claude) · CONSUMED RF-06 wave C |
 | `CG-P13-10` | Hub `run_identity.status` READY vs COMPLETED elsewhere, no published mapping | `evidence.contract.ts:122` | S04 status pill | DELIVERED `b1f76bd3` (Claude) · CONSUMED RF-06 wave C |
 | `CG-P13-11` | Hub `revision` identical for two runs with different manifest/effective-spec digests — `seriesMatchesHub()` cannot catch a wrong-run series (Astra A04) | live hubs `rrun_80d3…`, `rrun_3111…`; `evidence.service.ts buildWrite` | S04 integrity | DELIVERED `b1f76bd3` (Claude) · CONSUMED RF-06 wave C |
@@ -88,7 +88,7 @@ Then:
 
 | Id | Gap → need | Evidence | Blocks | Status |
 |---|---|---|---|---|
-| `CG-P14-02` | RS-02 `Fold` lacks warmup / label horizon / purge / embargo / inner folds though the engine fold payload has them | `research-current-source.d.ts:191-198,275-280`; `walkforward.py:173,224,240-250` | S05 fold anatomy, S04 split tab | OPEN |
+| `CG-P14-02` | RS-02 `Fold` lacks warmup / label horizon / purge / embargo / inner folds though the engine fold payload has them | `research-current-source.d.ts:191-198,275-280`; `walkforward.py:173,224,240-250` | S05 fold anatomy, S04 split tab | DELIVERED `b621c5af` (W3) |
 | `CG-P14-03` | Three-window run labels purge/embargo/inner folds NOT_PUBLISHED; the request cannot carry them, so NOT_APPLICABLE is the true state; `holdout.bars: null` without a reason | live split | S05 protocol/holdout | DELIVERED `c0021ba5` (Claude) · CONSUMED RF-06 wave C |
 | `CG-P14-04` | `as_of_utc_ms` is read time (changes between GETs under one ETag); make it projection time or rename | live split (two GETs 1.5 s apart) | S05/S06 as-of | DELIVERED `c0021ba5` (Claude) · CONSUMED RF-06 wave C |
 | `CG-P14-05` | No timeframe / bar interval fact on the split DTO | spec 05 §14 | S05 "span · 1h bars" | DELIVERED `c0021ba5` (Claude) · CONSUMED RF-06 wave C |
@@ -99,8 +99,8 @@ Then:
 | Id | Gap → need | Evidence | Blocks | Status |
 |---|---|---|---|---|
 | `CG-P15-02` | Search ETag ignores `fold`: `?fold=3` with fold 1's ETag → 304 while bodies differ in `requested_fold` (Astra A06 residual) | live, curl | S06 fold inspection | DELIVERED `c0021ba5` (Claude) · CONSUMED RF-06 wave C |
-| `CG-P15-03` | RS-02 search lacks trial→fold/stage link, typed `Trial.state`, per-trial metrics/constraints/feasible, raw best vs selected vs centroid, fold filter/jump | `research-current-source.d.ts:199-224,619-625` | S06 Stage A/B, funnel, ledger | OPEN |
-| `CG-P15-04` | objective components / prune reasons / importance labelled NOT_PUBLISHED without a capability probe though `OptimizationResult` carries state, metrics, constraints, selection metadata | `optimization/result.py:49-80`; RS-02 debt register | S06 diagnostics | OPEN |
+| `CG-P15-03` | RS-02 search lacks trial→fold/stage link, typed `Trial.state`, per-trial metrics/constraints/feasible, raw best vs selected vs centroid, fold filter/jump | `research-current-source.d.ts:199-224,619-625` | S06 Stage A/B, funnel, ledger | DELIVERED `b621c5af` (W3; constraints/feasible typed NOT_PUBLISHED — source drops per-fold rows) |
+| `CG-P15-04` | objective components / prune reasons / importance labelled NOT_PUBLISHED without a capability probe though `OptimizationResult` carries state, metrics, constraints, selection metadata | `optimization/result.py:49-80`; RS-02 debt register | S06 diagnostics | DELIVERED `b621c5af` (W3) |
 | `CG-P15-05` | Claim-row facts for a declared-not-executed request (validation, chronological, OOS column state, scoring backend) — typed absence if N/A | spec 06 §2 | S06 claim row | DELIVERED `c0021ba5` (Claude) · CONSUMED RF-06 wave C |
 
 ## Hygiene

@@ -9,5 +9,33 @@
     "P14 strict outer-OOS selection remains NOT_ASSERTED; P15 does not turn it into a selected/failed claim.",
     "Screen-06 frontend browser/product acceptance is Claude-owned and remains pending while FEATURE_RESEARCH_SEARCH is false."
   ],
-  "rollback": "Disable FEATURE_RESEARCH_SEARCH through signed deployment; retain all P10/P14 immutable facts."
+  "rollback": "Disable FEATURE_RESEARCH_SEARCH through signed deployment; retain all P10/P14 immutable facts.",
+  "closed_debt": [
+    {
+      "id": "CG-P15-02",
+      "what": "search fold-bound ETag",
+      "commit": "c0021ba5"
+    },
+    {
+      "id": "CG-P15-03",
+      "what": "trial ledger: typed state, per-row facts, raw best vs selected vs centroid, fold filter, keyset",
+      "commit": "b621c5af"
+    },
+    {
+      "id": "CG-P15-04",
+      "what": "diagnostics capability probe; objective components published only when they recompose",
+      "commit": "b621c5af"
+    },
+    {
+      "id": "W1-receipt-a/b",
+      "what": "trial parameters no longer empty; objective_kind labels IS Sharpe vs Mode 1 J",
+      "commit": "b621c5af"
+    }
+  ],
+  "source_capability_absences": [
+    "P15-T04 constraints/feasible (QuantBT compact ledger drops per-fold rows)",
+    "P15-T05 prune/dedupe reasons",
+    "P15-T08 sampler/warm-start/baseline trace"
+  ],
+  "reviewed": "2026-09-25 · Claude (A12/GX correction: registers previously claimed zero debt while Astra A09–A12 were open)"
 }
