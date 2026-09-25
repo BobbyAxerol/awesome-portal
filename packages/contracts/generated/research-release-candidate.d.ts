@@ -152,10 +152,8 @@ export interface components {
             may_seal: boolean;
             seal_blocked_reason: components["schemas"]["ReasonCode"] | null;
             publish: {
-                /** @constant */
-                enabled: false;
-                /** @constant */
-                blocked_reason: "P22_PUBLICATION_NOT_COMMISSIONED";
+                enabled: boolean;
+                blocked_reason: components["schemas"]["ReasonCode"] | null;
             };
         };
         /** @description Strict P21 bounded composer including display facts that must never be inferred by a browser. */
@@ -288,10 +286,8 @@ export interface components {
                 may_seal: boolean;
                 seal_blocked_reason: components["schemas"]["ReasonCode"] | null;
                 publish: {
-                    /** @constant */
-                    enabled: false;
-                    /** @constant */
-                    blocked_reason: "P22_PUBLICATION_NOT_COMMISSIONED";
+                    enabled: boolean;
+                    blocked_reason: components["schemas"]["ReasonCode"] | null;
                 };
             };
             mirror: null;

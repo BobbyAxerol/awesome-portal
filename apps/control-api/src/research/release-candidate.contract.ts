@@ -190,7 +190,7 @@ export const ResearchReleaseCandidateComposeResponseSchema = z.object({
     may_edit_draft: z.boolean(),
     may_seal: z.boolean(),
     seal_blocked_reason: ReasonCodeSchema.nullable(),
-    publish: z.object({ enabled: z.literal(false), blocked_reason: z.literal("P22_PUBLICATION_NOT_COMMISSIONED") }).strict(),
+    publish: z.object({ enabled: z.boolean(), blocked_reason: ReasonCodeSchema.nullable() }).strict(),
   }).strict(),
   mirror: z.null(),
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), AvailabilitySchema),

@@ -55,7 +55,7 @@ describe("P21 Release Candidate contract invariants", () => {
       pack: packKeys.map((key, index) => ({ key, n: index + 1, item: "x", status: "COMPLETE", digest: "a".repeat(64), source: { label: "x", href: null }, note: "x", availability: { state: "AVAILABLE", reason_code: null } })),
       pack_counts: { complete: 12, degraded: 0, input: 0, missing: 0 },
       local_seal: { state: "UNSEALED", release_candidate_id: null, pack_digest: null, sealed_at_utc_ms: null, delivery_state: null, approval_state: null, availability: { state: "NOT_PUBLISHED", reason_code: "P21_LOCAL_SEAL_NOT_CREATED" } },
-      actions: { may_edit_draft: true, may_seal: false, seal_blocked_reason: "P21_REQUIRED_EVIDENCE_MISSING", publish: { enabled: false, blocked_reason: "P22_PUBLICATION_NOT_COMMISSIONED" } },
+      actions: { may_edit_draft: true, may_seal: false, seal_blocked_reason: "P21_REQUIRED_EVIDENCE_MISSING", publish: { enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED" } },
       mirror: null, source_absences: {},
     };
     expect(ResearchReleaseCandidateComposeResponseSchema.safeParse(base).success).toBe(true);

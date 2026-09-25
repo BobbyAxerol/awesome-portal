@@ -123,7 +123,7 @@ describe("P21 Release Candidate composer and local immutable pack", () => {
     expect(result.pack.map((item) => item.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect(result.pack.find((item) => item.key === "SELECTED_PARAMS_LINEAGE")).toMatchObject({ status: "COMPLETE", note: expect.stringContaining("centroid") });
     expect(result.pack.find((item) => item.key === "ROBUSTNESS_PARAM_STABILITY_REGIME")).toMatchObject({ status: "DEGRADED" });
-    expect(result.actions).toMatchObject({ may_seal: true, publish: { enabled: false, blocked_reason: "P22_PUBLICATION_NOT_COMMISSIONED" } });
+    expect(result.actions).toMatchObject({ may_seal: true, publish: { enabled: false, blocked_reason: "P22_LOCAL_SEAL_REQUIRED" } });
     expect(result.published_comparison).toEqual({
       last_release_candidate_id: null,
       availability: { state: "NOT_PUBLISHED", reason_code: "P22_PUBLISHED_COMPARISON_NOT_COMMISSIONED" },

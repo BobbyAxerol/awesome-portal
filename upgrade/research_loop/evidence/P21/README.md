@@ -65,6 +65,11 @@ or update delivery/approval lifecycle. A client must retain the rich S11
 layout but label that P22 section as a ghost / not commissioned state; it must
 not fabricate `PUBLISHED`, an R1 row, SLA, approval, or a `CHANGED` taxonomy.
 
+P22 addendum (2026-09-25): the `actions.publish` ghost above describes the
+P21-only checkpoint. The P22 backend contract now offers a local-seal
+affordance and a separate source-checked publication GET/POST; see [P22](../P22/README.md).
+No browser or real-preview publication receipt is claimed here.
+
 ## Feature, bounds and rollback
 
 - Default is dark: `CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATES=false`.

@@ -294,7 +294,11 @@ export class ResearchReleaseCandidateService {
         may_edit_draft: true,
         may_seal: sealBlockedReason === null,
         seal_blocked_reason: sealBlockedReason,
-        publish: { enabled: false as const, blocked_reason: "P22_PUBLICATION_NOT_COMMISSIONED" as const },
+        publish: {
+          enabled: localSeal.state === "SEALED_LOCAL" && localSeal.availability.state === "AVAILABLE",
+          blocked_reason: localSeal.state === "SEALED_LOCAL" && localSeal.availability.state === "AVAILABLE"
+            ? null : "P22_LOCAL_SEAL_REQUIRED",
+        },
       },
       mirror: null,
       source_absences: {

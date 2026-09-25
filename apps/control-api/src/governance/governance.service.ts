@@ -68,6 +68,7 @@ interface CreateApprovalInput {
   evidenceRunId: string;
   methodologyClaimId: string;
   summary: string;
+  expectedArtifactSha256?: string;
 }
 
 function canonical(value: unknown): string {
@@ -297,6 +298,42 @@ export class GovernanceService {
     if (denial) throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
   }
 
+  /**
+   * Internal P22 read of the same RunSync-backed evidence R1 create uses.
+   */
+  async publicationEvidence(user: PortalUser, workspaceId: string, runId: string, refresh = false) {
+    if (refresh) await this.runSync?.refresh(user, workspaceId, runId);
+    const run = await this.repository.approvalEvidenceRun(workspaceId, runId);
+    return run ? {
+      run_id: run.runId, alpha_id: run.alphaId, status: run.status,
+      artifact_sha256: run.artifactSha256, artifact_schema_version: run.artifactSchemaVersion,
+      methodology_claim_ids: run.methodologyClaimIds, captured_at: run.capturedAt.toISOString(),
+    } : null;
+  }
+
+  /**
+   * A publisher can reconcile their own R1 receipt without R1 review rights.
+   * Return only a boolean; the full mirror still uses detail() authorization.
+   */
+  async verifyPublicationPin(
+    user: PortalUser,
+    workspaceId: string,
+    approvalId: string,
+    expected: { alphaId: string; runId: string; sha256: string; schemaVersion: string; evidenceSetHash: string },
+  ): Promise<boolean> {
+    const snapshot = await this.repository.detail(workspaceId, approvalId);
+    if (!snapshot || snapshot.approval.gate !== "R1" || snapshot.approval.requesterUserId !== user.userId
+      || snapshot.approval.subjectId !== expected.alphaId
+      || snapshot.approval.evidenceSetHash !== expected.evidenceSetHash
+      || computeEvidenceManifestHash(snapshot.evidence) !== expected.evidenceSetHash
+      || snapshot.evidence.length !== 1) return false;
+    const pin = snapshot.evidence[0]!;
+    return pin.kind === "ALPHA_ARTIFACT" && pin.artifactId === expected.runId
+      && pin.sha256 === expected.sha256 && pin.schemaVersion === expected.schemaVersion
+      && pin.sourceAuthority === "RESEARCH" && pin.sourceReference === expected.runId
+      && pin.verification === "SERVER_PINNED";
+  }
+
   async createApproval(user: PortalUser, input: CreateApprovalInput, requestId: string) {
     const payloadHash = digest({
       gate: "R1",
@@ -333,6 +370,9 @@ export class GovernanceService {
     const run = await this.repository.approvalEvidenceRun(input.workspaceId, input.evidenceRunId);
     if (!run) {
       throw new GovernanceError("EVIDENCE_RUN_NOT_FOUND", "Evidence run was not found.", 422);
+    }
+    if (input.expectedArtifactSha256 && run.artifactSha256 !== input.expectedArtifactSha256) {
+      throw new GovernanceError("EVIDENCE_ARTIFACT_CHANGED", "Pinned research artifact changed before R1 creation.", 409);
     }
     if (
       run.alphaId !== input.alphaId ||
