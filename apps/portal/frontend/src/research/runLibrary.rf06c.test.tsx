@@ -491,12 +491,12 @@ describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P
     ]);
     const chip = document.querySelector("[data-rc]") as HTMLElement;
     expect(chip.textContent).toBe("rc_2026_08_c · APPROVED");
-    expect(chip.getAttribute("role")).toBe("link");
-    expect(chip.getAttribute("aria-disabled")).toBe("true");
+    /* W5c: Screen 11 exists (P21), so the chip is the hi-fi's <a> into it. */
+    expect(chip.tagName).toBe("A");
+    expect(chip.getAttribute("href")).toMatch(/^\/research\/quantbt\/runs\/[^/]+\/release-candidate#pack=rc_2026_08_c$/);
     expect(chip.getAttribute("data-phase")).toBe("P21");
-    expect(chip.closest("a")).toBeNull();
-    expect(chip.getAttribute("title")).toContain("published rc from this run's params · approved");
-    expect(chip.getAttribute("title")).toContain("phase P21 delivers it");
+    expect(chip.getAttribute("title")).toContain("sealed rc from this run's params · approved");
+    expect(chip.getAttribute("title")).toContain("open its sealed pack on Screen 11");
     expect(chip.style.color).toBe("var(--good)");
   });
 
@@ -511,6 +511,7 @@ describe("rc chip — the persisted P21 relation, disabled until Screen 11 (CG-P
     expect(chip.textContent).toBe("rc_ (draft) · DRAFT");
     expect(chip.style.color).toBe("var(--accent-2)");
     expect(chip.getAttribute("title")).toMatch(/^release candidate being composed from this run/);
+    expect(chip.getAttribute("href")).toMatch(/\/release-candidate$/);
   });
 
   it("keeps a long sealed id whole in title and short on the chip", () => {

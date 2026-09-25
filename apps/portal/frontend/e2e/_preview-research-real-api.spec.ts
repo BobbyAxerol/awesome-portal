@@ -244,3 +244,275 @@ for (const [name, width, height] of VIEWPORTS) {
     });
   }
 }
+
+/**
+ * W5c · Screens 09, 10, 11 and 13 on real reads (P18–P21).
+ *
+ * Run against a Vite dev server of *this* tree proxied to the preview API
+ * (`vite.research-preview.config.ts`), because the preview serves an older
+ * bundle. Every assertion compares what the page shows with what the real API
+ * served for the same run in the same session. The S11 write flow — the one
+ * part the preview must not be written to — is the only double: it is named
+ * `DOUBLE` and intercepts only the PATCH, the POST, the pack read and the one
+ * composition read that follows the doubled seal.
+ */
+const RC_RUNS: ReadonlyArray<readonly [string, string]> = [["P04", RUN], ...(WFO_RUN ? [["WFO", WFO_RUN] as const] : [])];
+const ALPHA = "delta-rsi-polynomial-alpha";
+const STATUS_TEXT: Record<string, string> = { "403": "Forbidden", "404": "Not Found", "409": "Conflict", "503": "Service Unavailable" };
+
+/** A refused read the screen must name in words; only then is its Chrome resource error accepted. */
+function explainedNoise(observed: Observed, allowed: Record<string, RegExp>, text: string): string[] {
+  /* `UNTYPED` is the observer losing a race with navigation for the body; the test already read that refusal's code through the API. */
+  for (const code of new Set(observed.refusalCodes.filter((value) => value !== "UNTYPED"))) {
+    expect(code in allowed, `unexpected refusal ${code}`).toBe(true);
+    expect(text, `the screen does not say what ${code} means`).toMatch(allowed[code]!);
+  }
+  const statuses = observed.failures.map((failure) => failure.split(" ").pop()!);
+  return observed.noise.filter(
+    (line) => !statuses.some((status) => line === `error: Failed to load resource: the server responded with a status of ${status} (${STATUS_TEXT[status]})`),
+  );
+}
+
+type AxeViolation = { id: string; impact: string; nodes: { target: string[]; any: { data?: { fgColor?: string } }[] }[] };
+
+async function axeBlocking(page: Page, selector: string) {
+  await page.addScriptTag({ path: `${process.cwd()}/node_modules/axe-core/axe.min.js` });
+  const violations = (await page.evaluate(async (scope) => {
+    const axe = (window as unknown as { axe: { run: (context: unknown, options: unknown) => Promise<{ violations: unknown[] }> } }).axe;
+    const result = await axe.run({ include: [[scope]] }, { resultTypes: ["violations"] });
+    return result.violations;
+  }, selector)) as AxeViolation[];
+  return violations
+    .filter((item) => item.impact === "serious" || item.impact === "critical")
+    .flatMap((item) => item.nodes.map((node) => ({ id: item.id, target: node.target.join(" "), color: node.any[0]?.data?.fgColor })))
+    /* D-B1: the shared --ink-faint contrast is a separately approved token change (RF-04); nothing else is ignored. */
+    .filter((node) => !(node.id === "color-contrast" && node.color === "#939db0"));
+}
+
+async function finish(page: Page, name: string, observed: Observed, extra: Record<string, unknown> = {}) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
+  writeFileSync(
+    `${OUT}/${name}.json`,
+    JSON.stringify({ name, overflow, requests: [...new Set(observed.requests)], failures: observed.failures, refusalCodes: observed.refusalCodes, noise: observed.noise, ...extra }, null, 2),
+    { mode: 0o600 },
+  );
+  for (const request of observed.requests) expect(request, `${name} reached a private route`).not.toMatch(/\/internal\//);
+  expect(overflow, `${name} horizontal overflow`).toBeLessThanOrEqual(1);
+}
+
+/** What a reader sees in a region: its text without injected stylesheets (and, for S11, without the mirror's verbatim outcome vocabulary). */
+async function visibleText(page: Page, selector: string): Promise<string> {
+  return page.locator(selector).evaluate((node) => {
+    const copy = node.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll("style, [data-mirror-ghost] .meta").forEach((element) => element.remove());
+    return copy.textContent ?? "";
+  });
+}
+
+for (const [name, width, height] of VIEWPORTS) {
+  for (const [label, run] of RC_RUNS) {
+    test(`W5c S11 ${label} composition on real reads at ${name}`, async ({ page }) => {
+      const observed = observe(page);
+      await page.setViewportSize({ width, height });
+      await signIn(page);
+      const api = (await (await page.request.get(`/api/v1/quantbt/runs/${run}/release-candidate`)).json()) as any;
+      await page.goto(`/research/quantbt/runs/${run}/release-candidate`);
+      const root = page.locator("[data-screen='release-candidate']");
+      await expect(root.locator("[data-pack-row]")).toHaveCount(12, { timeout: 20_000 });
+      await page.waitForLoadState("networkidle");
+
+      /* 17 lines, in the server's order, each value exactly the server's (a null prints `null`). */
+      await expect(root.locator("[data-yaml-key]")).toHaveCount(17);
+      const lines = await root.locator("[data-yaml-key]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-yaml-key"), node.getAttribute("data-yaml-value")]));
+      expect(lines).toEqual(api.yaml.map((field: any) => [field.key, field.value ?? ""]));
+      /* 12 rows, statuses and counter as served. */
+      const rows = await root.locator("[data-pack-row]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-pack-row"), node.getAttribute("data-status")]));
+      expect(rows).toEqual(api.pack.map((item: any) => [item.key, item.status]));
+      const counts = api.pack_counts;
+      await expect(root.locator("[data-pack-counts]")).toHaveText(`${counts.complete} COMPLETE · ${counts.degraded} DEGRADED · ${counts.input} INPUT · ${counts.missing} MISSING`);
+      /* Rail tones, the server's seal reason, the typed publish ghost, the state chip. */
+      const tones = await root.locator("[data-rail-key]").evaluateAll((nodes) => nodes.map((node) => [node.getAttribute("data-rail-key"), node.getAttribute("data-tone")]));
+      expect(tones).toEqual(api.rail.map((node: any) => [node.key, node.tone]));
+      await expect(root.locator("[data-seal-blocked]")).toHaveAttribute("data-seal-blocked", api.actions.seal_blocked_reason ?? "LOCAL");
+      await expect(root.locator("[data-action='local-seal']")).toHaveAttribute("aria-disabled", "true");
+      await expect(root.locator("[data-publish-ghost]")).toHaveAttribute("data-blocked-reason", api.actions.publish.blocked_reason);
+      await expect(root.locator("[data-mirror-ghost] a, [data-mirror-ghost] button")).toHaveCount(0);
+      await expect(root.locator("[data-rc-state]")).toHaveText(api.run.binding === null ? "NOT_PUBLISHABLE" : api.state);
+      const visible = await visibleText(page, "[data-screen='release-candidate']");
+      expect(visible, "no fabricated governance state").not.toMatch(/\bPUBLISHED\b(?!_)|\bPENDING\b|\bAPPROVED\b(?!_)/);
+      if (api.availability.state === "PARTIAL") {
+        await expect(root.locator("[data-rc-state-panel]")).toHaveAttribute("data-rc-state-panel", "partial");
+      }
+      /* 660px: the evidence table scrolls inside its own frame, never the page. */
+      const pack = await root.locator(".rc-pack").evaluate((node) => ({ scroll: node.scrollWidth, client: node.clientWidth }));
+      if (width < 960) expect(pack.scroll).toBeGreaterThan(pack.client);
+      expect(await axeBlocking(page, "[data-screen='release-candidate']")).toEqual([]);
+
+      await finish(page, `W5c-S11-${label}-${name}`, observed, { run, api_availability: api.availability, api_counts: counts });
+      expect(observed.failures, "S11 failed reads").toEqual([]);
+      expect(observed.noise, `S11 console:\n${observed.noise.join("\n")}`).toEqual([]);
+    });
+  }
+
+  test(`W5c S11 DOUBLE declarations, 409 and local seal in a real browser at ${name}`, async ({ page }) => {
+    const observed = observe(page);
+    await page.setViewportSize({ width, height });
+    await signIn(page);
+    const real = (await (await page.request.get(`/api/v1/quantbt/runs/${RUN}/release-candidate`)).json()) as any;
+    const rcId = "rc_01K5W5CSEA1ED0000000000000";
+    const saved = JSON.parse(JSON.stringify(real));
+    for (const item of saved.pack) {
+      if (item.status === "MISSING") Object.assign(item, { status: "COMPLETE", digest: "6".repeat(64), availability: { state: "AVAILABLE", reason_code: null } });
+    }
+    Object.assign(saved, {
+      pack_counts: { complete: 9, degraded: 1, input: 2, missing: 0 },
+      draft: { draft_id: "rcd_01K5W5CDRAFT0000000000000", revision: 1, source_fingerprint: real.source_fingerprint, known_limitations: "Single venue depth.", proposed_use_restrictions: "Paper first.", state: "PERSISTED", updated_at_utc_ms: real.as_of_utc_ms },
+      actions: { ...real.actions, may_seal: true, seal_blocked_reason: null },
+    });
+    const sealedBody = JSON.parse(JSON.stringify(saved));
+    sealedBody.local_seal = { state: "SEALED_LOCAL", release_candidate_id: rcId, pack_digest: "5".repeat(64), sealed_at_utc_ms: real.as_of_utc_ms, delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED", availability: { state: "AVAILABLE", reason_code: null } };
+    sealedBody.rail = sealedBody.rail.map((node: any) => (node.key === "release_candidate" ? { ...node, value: rcId, detail: "sealed locally — not delivered", tone: "green" } : node));
+    let patches = 0;
+    let sealedYet = false;
+    const writes: string[] = [];
+    await page.route(`**/api/v1/quantbt/runs/${RUN}/release-candidate/draft`, async (route) => {
+      patches += 1;
+      writes.push(`PATCH ${route.request().postData()}`);
+      if (patches === 1) {
+        return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: { code: "RESEARCH_RELEASE_CANDIDATE_CONFLICT", message: "Release Candidate draft changed; reload it." }, request_id: "double" }) });
+      }
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(saved) });
+    });
+    await page.route(`**/api/v1/quantbt/runs/${RUN}/release-candidate/seal`, async (route) => {
+      writes.push(`POST ${route.request().postData()}`);
+      sealedYet = true;
+      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ schema_version: "research.release-candidate-local-seal.v1", release_candidate_id: rcId, run_id: RUN, pack_digest: "5".repeat(64), sealed_at_utc_ms: real.as_of_utc_ms, delivery_state: "NOT_DELIVERED", approval_state: "NOT_APPROVED" }) });
+    });
+    await page.route(`**/api/v1/quantbt/runs/${RUN}/release-candidate`, async (route) => (sealedYet ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sealedBody) }) : route.continue()));
+    await page.route(`**/api/v1/research/release-candidates/${rcId}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          schema_version: "research.release-candidate-pack.v1",
+          read_authority: "PORTAL_PERSISTED_RESEARCH",
+          release_candidate_id: rcId,
+          run_id: RUN,
+          pack_digest: "5".repeat(64),
+          sealed_at_utc_ms: real.as_of_utc_ms,
+          frozen_core: {
+            fields: saved.fields.map((field: any) => (field.key === "release_candidate_id" ? { ...field, value: rcId, tone: "ink" } : field)),
+            pack: saved.pack,
+            source_fingerprint: saved.source_fingerprint,
+            draft: { known_limitations: "Single venue depth.", proposed_use_restrictions: "Paper first." },
+          },
+          delivery: sealedBody.local_seal,
+        }),
+      }),
+    );
+
+    await page.goto(`/research/quantbt/runs/${RUN}/release-candidate`);
+    const root = page.locator("[data-screen='release-candidate']");
+    await expect(root.locator("[data-pack-row]")).toHaveCount(12, { timeout: 20_000 });
+    /* Edit a declaration from its row; the first save meets a 409 and keeps the text. */
+    await root.locator("[data-pack-row='KNOWN_LIMITATIONS_WAIVERS'] [data-action='edit-declaration']").click();
+    const box = root.locator("[data-declaration-input='known_limitations']");
+    await expect(box).toBeFocused();
+    await box.fill("Single venue depth.");
+    await root.locator("[data-action='save-declarations']").click();
+    await expect(root.locator("[data-mutation-state='conflict']")).toContainText("evidence changed since composing — review the pack");
+    await expect(box).toHaveValue("Single venue depth.");
+    await page.screenshot({ path: `${OUT}/W5c-S11-DOUBLE-409-${name}.png`, fullPage: true });
+    /* The second save succeeds; the seal asks for confirmation, then shows the immutable pack. */
+    await root.locator("[data-action='save-declarations']").click();
+    await expect(root.locator("[data-draft-revision]")).toHaveAttribute("data-draft-revision", "1");
+    await root.locator("[data-action='local-seal']").click();
+    await expect(root.locator("[data-seal-confirm]")).toBeVisible();
+    await root.locator("[data-action='confirm-local-seal']").click();
+    await expect(root.locator("[data-sealed]")).toHaveAttribute("data-sealed", rcId);
+    await expect(root.locator("[data-sealed-pack] [data-frozen-field]")).toHaveCount(17);
+    await expect(root.locator("[data-rc-seal-state]")).toHaveText("SEALED_LOCAL");
+    await expect(root.locator("[data-rc-state]")).toHaveText("DRAFT");
+    expect(writes.map((line) => line.split(" ")[0])).toEqual(["PATCH", "PATCH", "POST"]);
+    expect(JSON.parse(writes[0]!.slice(6))).toEqual({ expected_revision: real.draft.revision, expected_source_fingerprint: real.source_fingerprint, known_limitations: "Single venue depth.", proposed_use_restrictions: null });
+    expect(JSON.parse(writes[2]!.slice(5))).toEqual({ draft_id: saved.draft.draft_id, expected_draft_revision: 1, expected_source_fingerprint: real.source_fingerprint });
+    expect(await axeBlocking(page, "[data-screen='release-candidate']")).toEqual([]);
+    await finish(page, `W5c-S11-DOUBLE-sealed-${name}`, observed, { doubled: ["PATCH draft", "POST seal", "GET pack", "GET compose after the doubled seal"], writes });
+    const noise = observed.noise.filter((line) => line !== "error: Failed to load resource: the server responded with a status of 409 (Conflict)");
+    expect(noise, `S11 DOUBLE console:\n${observed.noise.join("\n")}`).toEqual([]);
+  });
+
+  for (const [label, run] of RC_RUNS) {
+    test(`W5c S09 ${label} report on real reads at ${name}`, async ({ page }) => {
+      const observed = observe(page);
+      await page.setViewportSize({ width, height });
+      await signIn(page);
+      const response = await page.request.get(`/api/v1/quantbt/runs/${run}/report`);
+      const api = (await response.json()) as any;
+      await page.goto(`/research/quantbt/runs/${run}/report`);
+      const root = page.locator("[data-screen='run-report']");
+      await expect(root).toBeVisible({ timeout: 20_000 });
+      await page.waitForLoadState("networkidle");
+      if (response.status() === 200) {
+        await expect(root).toHaveAttribute("data-report-revision", api.report_revision);
+        await expect(root.locator("[data-promotion-line]")).toHaveText(api.frozen_core.promotion.line);
+        for (const cell of api.frozen_core.headline) {
+          if (cell.value !== null) await expect(root.locator(`[data-headline='${cell.key}']`)).toContainText(cell.value);
+        }
+        await expect(root.locator("[data-action='release-candidate']")).toHaveAttribute("href", `/research/quantbt/runs/${run}/release-candidate`);
+      } else {
+        expect(api.error.code).toBe("RESEARCH_REPORT_NOT_FOUND");
+        await expect(root.locator("[data-report-notice]")).toHaveAttribute("data-report-notice", "empty");
+      }
+      await finish(page, `W5c-S09-${label}-${name}`, observed, { run, api_status: response.status() });
+      const noise = explainedNoise(observed, { RESEARCH_REPORT_NOT_FOUND: /No report was found for this run/ }, await root.innerText());
+      expect(noise, `S09 console:\n${observed.noise.join("\n")}`).toEqual([]);
+    });
+  }
+
+  test(`W5c S10 lineage on real reads at ${name}`, async ({ page }) => {
+    const observed = observe(page);
+    await page.setViewportSize({ width, height });
+    await signIn(page);
+    const api = (await (await page.request.get(`/api/v1/research/alphas/${ALPHA}/lineage`)).json()) as any;
+    await page.goto(`/research/quantbt/alphas/${ALPHA}/lineage`);
+    const root = page.locator("[data-screen='attempt-lineage']");
+    await expect(root).toHaveAttribute("data-lineage-state", /available|partial/, { timeout: 20_000 });
+    await page.waitForLoadState("networkidle");
+    await expect(root).toContainText(`of ${api.counts.returned_attempts} attempts`);
+    await expect(root).toContainText(api.alpha.versions.find((version: any) => version.alpha_version_id === api.alpha.active_version_id).label);
+    /* Screen 11 composes from a run; without a published pick naming one, "rc & publish →" says why. */
+    const picked = api.alpha.versions.some((version: any) => version.lifecycle_state === "ACTIVE" && version.promotion_pick?.state === "PUBLISHED" && version.promotion_pick.run_id);
+    if (picked) await expect(root.locator("[data-action='release-candidate']")).toHaveCount(1);
+    else await expect(root.locator("[data-action-unrouted='release-candidate']")).toHaveAttribute("title", /No published promotion pick names a run/);
+    await finish(page, `W5c-S10-${name}`, observed, { total_attempts: api.counts.total_attempts, picked });
+    expect(observed.failures, "S10 failed reads").toEqual([]);
+    expect(observed.noise, `S10 console:\n${observed.noise.join("\n")}`).toEqual([]);
+  });
+
+  test(`W5c S13 compare on real reads at ${name}`, async ({ page }) => {
+    const observed = observe(page);
+    await page.setViewportSize({ width, height });
+    await signIn(page);
+    const response = await page.request.get(`/api/v1/research/alphas/${ALPHA}/compare?mode=attempts`);
+    await page.goto(`/research/quantbt/alphas/${ALPHA}/compare`);
+    const root = page.locator("[data-screen='compare']");
+    await expect(root).toBeVisible({ timeout: 20_000 });
+    await page.waitForLoadState("networkidle");
+    if (response.status() === 200) {
+      const api = (await response.json()) as any;
+      await expect(root).toHaveAttribute("data-compare-state", /available|partial/);
+      for (const run of (api.attempts ?? api.runs ?? []).map((item: any) => item.run_id ?? item.primary_run?.run_id).filter(Boolean).slice(0, 3)) {
+        await expect(root.locator(`[data-rc-link='${run}']`).first()).toHaveAttribute("href", `/research/quantbt/runs/${run}/release-candidate`);
+      }
+    } else {
+      /* Until the preview carries the W5c compare fix, the real answer is 503; the screen must say so, not collapse. */
+      expect(response.status()).toBe(503);
+      await expect(root).toHaveAttribute("data-compare-state", "unavailable");
+    }
+    await finish(page, `W5c-S13-${name}`, observed, { api_status: response.status() });
+    const noise = explainedNoise(observed, { RESEARCH_COMPARE_UNAVAILABLE: /unavailable|did not answer/i }, await root.innerText());
+    expect(noise, `S13 console:\n${observed.noise.join("\n")}`).toEqual([]);
+  });
+}

@@ -41,6 +41,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Link } from "react-router-dom";
 
+import { releaseCandidateHref } from "./releaseCandidateClient";
 import { ResearchPanel } from "./ResearchPanel";
 import {
   CLAIM_RANK_MAP,
@@ -443,6 +444,11 @@ function RunLine({ run }: { run: CompareRun }) {
     <span className="cp-faint" data-run-line>
       <Link to={evidenceHref(run.run_id)} data-run-link={run.run_id}>
         {run.run_id}
+      </Link>
+      {" · "}
+      {/* Spec 13 §1 outbound 11: this run's release candidate (P21). */}
+      <Link to={releaseCandidateHref(run.run_id)} data-rc-link={run.run_id} title="compose or read this run's release candidate (Screen 11)">
+        rc_
       </Link>
       {" · "}
       {run.alpha_version_label}

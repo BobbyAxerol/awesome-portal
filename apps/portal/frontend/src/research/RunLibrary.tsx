@@ -48,6 +48,7 @@ import {
 } from "./runLibraryClient";
 import { compareEntryHref } from "./compareClient";
 import { lineageHref } from "./lineageClient";
+import { releaseCandidateHref } from "./releaseCandidateClient";
 import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
 import { ResearchPanel } from "./ResearchPanel";
 import { clearedFilters, isLiveStatus, type LibraryFilters, type SelectedRun, type SparklineRead } from "./useRunLibrary";
@@ -887,12 +888,11 @@ const RC_ID_CHARS = 14;
  * `rc_… · {approval state}`, the viewer's own draft `rc_ (draft) · DRAFT`.
  */
 export function rcChipFace(rc: ReleaseCandidateRef): { text: string; state: string; title: string; fullId: string | null } {
-  const deferred = `The Release Candidate screen (11) is not built yet; phase ${RC_PHASE} delivers it.`;
   if (rc.kind === "ACTOR_DRAFT") {
     return {
       text: "rc_ (draft) · DRAFT",
       state: "DRAFT",
-      title: `release candidate being composed from this run — ${deferred}`,
+      title: "release candidate being composed from this run — open Screen 11 to continue the draft",
       fullId: rc.draft_id,
     };
   }
@@ -902,20 +902,19 @@ export function rcChipFace(rc: ReleaseCandidateRef): { text: string; state: stri
   return {
     text: `${shortId} · ${rc.approval_state ?? "approval not published"}`,
     state,
-    title: `${id ?? "sealed release candidate"} — published rc from this run's params · ${state.toLowerCase().replace("_", " ")} — ${deferred}`,
+    title: `${id ?? "sealed release candidate"} — sealed rc from this run's params · ${state.toLowerCase().replace("_", " ")} — open its sealed pack on Screen 11`,
     fullId: id,
   };
 }
 
-function RcChip({ rc }: { rc: ReleaseCandidateRef }) {
+function RcChip({ rc, runId }: { rc: ReleaseCandidateRef; runId: string }) {
   const face = rcChipFace(rc);
   const tone = RC_TONE[face.state] ?? "var(--ink-faint)";
-  /* Hi-fi: an <a> to Screen 11. Screen 11 is not built, so the chip is a
-     link that says where it would go and does not go there. */
+  /* Hi-fi: an <a> to Screen 11 (P21). A sealed pack opens beside the
+     composition through `#pack=`; the viewer's draft opens the composer. */
   return (
-    <span
-      role="link"
-      aria-disabled="true"
+    <Link
+      to={releaseCandidateHref(runId, { pack: rc.kind === "LOCAL_SEAL" ? rc.release_candidate_id : null })}
       data-rc={face.fullId ?? rc.kind}
       data-rc-kind={rc.kind}
       data-rc-state={face.state}
@@ -931,11 +930,11 @@ function RcChip({ rc }: { rc: ReleaseCandidateRef }) {
         padding: "1px 8px",
         background: "var(--paper-raised)",
         whiteSpace: "nowrap",
-        cursor: "not-allowed",
+        textDecoration: "none",
       }}
     >
       {face.text}
-    </span>
+    </Link>
   );
 }
 
@@ -1150,7 +1149,7 @@ function RunCard({
         )}
 
         {/* Spec 01 §4.4: a null rc reserves no chip and no space. */}
-        {item.rc !== null ? <RcChip rc={item.rc} /> : null}
+        {item.rc !== null ? <RcChip rc={item.rc} runId={item.run_id} /> : null}
 
         <span
           data-certificate={cert ?? "none"}

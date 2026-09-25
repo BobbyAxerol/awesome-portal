@@ -158,8 +158,9 @@ export const COMPARE_DEFERRED =
   "same ComparisonContractKey — comparable. The Compare screen (13) is not built yet; phase P20 delivers it.";
 
 /**
- * Screen 11 Release Candidate is not built; phase P21 delivers it. The rc chip
- * shows the persisted P21 relation but never navigates (RF-06 wave C).
+ * Screen 11 Release Candidate is P21's. The rc chip shows the persisted P21
+ * relation and opens Screen 11 for its run (W5c; RF-06 wave C drew it inert
+ * while the route did not exist).
  */
 export const RC_PHASE = "P21";
 

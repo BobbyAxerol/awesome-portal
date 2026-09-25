@@ -147,4 +147,78 @@ describe("P20 disposable PostgreSQL cache and exact-correlation proof", () => {
       await database.end();
     }
   });
+
+  /* W5c: the Alpha snapshot statement had never reached a database; on the
+     preview it named `progress.updated_at` and every read answered 503. */
+  it("plans and runs the Alpha-scoped snapshot statement against the real schema", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    try {
+      const workspaceId = "ws_p20";
+      const userId = "usr_p20";
+      const repository = new ResearchCompareRepository(database);
+      const snapshot = await repository.snapshot({ workspaceId, actorUserId: userId }, "alpha-p20");
+      expect(snapshot).toMatchObject({ runs: [], totalAttempts: 0, hasMore: false });
+    } finally {
+      await database.end();
+    }
+  });
+
+  /* CG-P20-12: the retained seal binds to its own SEALED artifact row, never to the preflight manifest. */
+  it("CG-P20-12 reads whether each run's retained seal names its own sealed P05 artifact", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    const client = await database.connect();
+    const workspaceId = "ws_p20";
+    const userId = "usr_p20";
+    const alphaId = "alpha-p20-cg12";
+    const versionId = "av-p20-cg12";
+    const artifactManifest = "c".repeat(64);
+    try {
+      /* Identity rows only; foreign keys and custody triggers are not what this proves. */
+      await client.query("SET session_replication_role = replica");
+      await client.query(`INSERT INTO research.alphas (workspace_id, alpha_id, name, owner_user_id, execution_subject_id)
+        VALUES ($1, $2, 'P20 CG-12 Alpha', $3, 'research.p20.cg12')`, [workspaceId, alphaId, userId]);
+      await client.query(`INSERT INTO research.alpha_versions
+        (workspace_id, alpha_version_id, alpha_id, code_digest, entrypoint, dependency_ref, declared_contract, lifecycle_state, registered_by_user_id)
+        VALUES ($1, $2, $3, $4, 'strategy:main', 'quantbt@1.1.1', '{"version":"1.0.0"}'::jsonb, 'ACTIVE', $5)`,
+      [workspaceId, versionId, alphaId, digest, userId]);
+      for (const [suffix, sealManifest] of [["bound", artifactManifest], ["drift", "d".repeat(64)], ["unsealed", null]] as const) {
+        const attemptId = `att-p20-${suffix}`;
+        const runId = `run-p20-${suffix}`;
+        await client.query(`INSERT INTO research.attempts
+          (workspace_id, attempt_id, alpha_version_id, client_intent_id, request_payload_digest, intent_kind, state, created_by_user_id)
+          VALUES ($1, $2, $3, $4, $5, 'NEW', 'READY', $6)`, [workspaceId, attemptId, versionId, `intent-p20-${suffix}`, digest, userId]);
+        await client.query(`INSERT INTO research.runs
+          (workspace_id, run_id, attempt_id, run_kind, relationship_kind, logical_run_key, request_spec_digest, effective_spec_digest,
+           engine_release_id, dataset_binding_digest, state, submitted_by_user_id)
+          VALUES ($1, $2, $3, 'PRIMARY', 'PRIMARY', 'primary', $4, $4, 'quantbt-1.1.1', $4, 'READY', $5)`,
+        [workspaceId, runId, attemptId, digest, userId]);
+        await client.query(`INSERT INTO research.artifacts
+          (workspace_id, artifact_id, run_id, table_kind, schema_version, manifest_digest, state, retention_class,
+           storage_locator, artifact_revision, worker_attempt_id, lease_epoch, manifest_schema_version, total_rows, total_bytes, sealed_at)
+          VALUES ($1, 'rart_' || $2, $2, 'research_bundle', 'research.artifact-manifest.v1', $3, 'SEALED',
+                  'RESEARCH_EVIDENCE', 'artifacts/rart_' || $2, 1, 'rwa_' || $2, 1, 'research.artifact-manifest.v1', 1, 100, now())`,
+        [workspaceId, runId, artifactManifest]);
+        if (sealManifest !== null) {
+          await client.query(`INSERT INTO research.current_source_seals_v1
+            (workspace_id, run_id, artifact_revision, source_adapter_id, profile_id, manifest_digest,
+             source_transform_digest, requested_spec_digest, effective_spec_digest, dataset_binding_digest,
+             retained_import_digest, table_rows, total_rows, summary)
+            VALUES ($1, $2, 1, 'rs02.quantbt-advanced-wfo.v1', 'rs02.delta-wfo-global.v1', $3, $4, $4, $4, $4, $4,
+                    '{"OBSERVATION":1,"FOLD":2,"TRIAL":2,"CANDIDATE":1,"SELECTION":1}'::jsonb, 7, '{}'::jsonb)`,
+          [workspaceId, runId, sealManifest, digest]);
+        }
+      }
+      await client.query("SET session_replication_role = origin");
+    } finally {
+      client.release();
+    }
+    try {
+      const repository = new ResearchCompareRepository(database);
+      const snapshot = await repository.snapshot({ workspaceId, actorUserId: userId }, alphaId);
+      const sealed = Object.fromEntries(snapshot!.runs.map((row) => [row.run_id, row.current_artifact_sealed]));
+      expect(sealed).toEqual({ "run-p20-bound": true, "run-p20-drift": false, "run-p20-unsealed": null });
+    } finally {
+      await database.end();
+    }
+  });
 });
