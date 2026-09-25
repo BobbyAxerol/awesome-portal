@@ -224,9 +224,9 @@ export class ResearchRunLibraryRepository {
       pageParams.push(query.limit + 1);
 
       const rows = await client.query<RunLibraryRow>(
-        `${this.selectColumns()}
+        `${ResearchRunLibraryRepository.selectColumns()}
            FROM ${filter.fromSql}
-           ${this.pageJoins()}
+           ${ResearchRunLibraryRepository.pageJoins()}
           WHERE ${filter.whereSql}${keyset}
           ORDER BY ${order}
           LIMIT $${pageParams.length}`,
@@ -430,7 +430,8 @@ export class ResearchRunLibraryRepository {
    * The P13 projection is passed through without re-validating its private
    * schema so that additive metric keys (CG-P13-03) flow to the service.
    */
-  private pageJoins(): string {
+  /** Shared with the P19 lineage reader (W6b CG-P19-05), which reads the same rows in its own snapshot. */
+  static pageJoins(): string {
     return `LEFT JOIN LATERAL (
              SELECT projection.projection_revision,
                     (projection.projection - 'series_identity' - 'source') AS projection,
@@ -477,7 +478,7 @@ export class ResearchRunLibraryRepository {
            ) rc_draft ON true`;
   }
 
-  private selectColumns(): string {
+  static selectColumns(): string {
     return `SELECT library.workspace_id, library.run_id, library.attempt_id, library.source_kind,
               library.run_kind, library.relationship_kind, library.logical_run_key, library.parent_run_id,
               library.created_at, library.updated_at, library.effective_status, library.intent_kind,

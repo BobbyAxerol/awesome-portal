@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Read one bounded, source-backed Alpha attempt lineage
-         * @description The graph is chronological and bounded to 128 attempts. When a history exceeds the bound, coverage is explicitly PARTIAL with P19_BOUNDED_GRAPH_LIMIT_REACHED; consumers must not present its returned prefix as complete. Each returned attempt also bounds child runs and declares P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT when needed. promotion_pick is PUBLISHED only from an immutable source-attested fact. A missing pick is typed NOT_PUBLISHED with P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK and must never be replaced by best/newest/ACTIVE logic in the browser.
+         * @description The graph is returned in chronological order and bounded to 128 attempts. When a history exceeds the bound, the first page is the NEWEST `limit` attempts and coverage is explicitly PARTIAL with P19_BOUNDED_GRAPH_LIMIT_REACHED; consumers must not present a returned page as complete, and read older attempts only through coverage.older_cursor. Each returned attempt also bounds child runs and declares P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT when needed. promotion_pick is PUBLISHED only from an immutable source-attested fact. A missing pick is typed NOT_PUBLISHED with P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK and must never be replaced by best/newest/ACTIVE logic in the browser. The answer carries a private weak ETag; If-None-Match with it returns 304.
          */
         get: operations["researchAttemptLineageGetV1"];
         put?: never;
@@ -43,8 +43,52 @@ export interface components {
         };
         Availability: {
             /** @enum {unknown} */
-            state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL";
+            state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL" | "NOT_APPLICABLE";
             reason_code: components["schemas"]["ReasonCode"] | null;
+        };
+        ExactDecimal: string;
+        /** @description W6b CG-P19-04: a run's persisted P21 relation by the Run Library rule (a Portal-local sealed pack wins over the viewer's own draft). A reference only; it grants no delivery or approval authority. */
+        ReleaseCandidateRef: {
+            /** @enum {unknown} */
+            kind: "LOCAL_SEAL" | "ACTOR_DRAFT";
+            release_candidate_id: string | null;
+            draft_id: string | null;
+            run_id: components["schemas"]["OpaqueId"];
+            delivery_state: ("NOT_DELIVERED" | "PENDING" | "DELIVERED" | "UNKNOWN") | null;
+            approval_state: ("NOT_APPROVED" | "PENDING" | "APPROVED" | "REJECTED" | "UNKNOWN") | null;
+            sealed_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+        };
+        /** @description W6b CG-P19-05: one retained per-run value with its own source and scope. A null value is a typed absence, never a zero. */
+        RunMetricFact: {
+            value: components["schemas"]["ExactDecimal"] | null;
+            source: ("P13_EVIDENCE_PROJECTION" | "RS02_RETAINED_SELECTED_TRIAL") | null;
+            scope: ("OOS" | "IS_PLUS_OOS" | "CHILD_TAPE" | "SELECTED_TRIAL_MEAN_ACROSS_FOLDS") | null;
+            definition_id: string | null;
+            availability: components["schemas"]["Availability"];
+        };
+        /** @description W6b CG-P19-05: the primary run's certificate, claim, OOS Sharpe and decay exactly as Screen 01 maps them; a Delta WFO run without a P13 projection falls back to its retained RS-02 selected trial. */
+        RunFacts: {
+            certificate: {
+                grade: ("A" | "B" | "C" | "D") | null;
+                availability: components["schemas"]["Availability"];
+            };
+            claim: {
+                state: ("FORECAST" | "NOT_ISSUED" | "ISSUED") | null;
+                text: string | null;
+                availability: components["schemas"]["Availability"];
+            };
+            oos_sharpe: components["schemas"]["RunMetricFact"];
+            decay: components["schemas"]["RunMetricFact"];
+        };
+        /** @enum {unknown} */
+        PresentationReason: "PROMOTION_PICK" | "RELEASE_CANDIDATE" | "VERSION_FIRST_ATTEMPT" | "GATES_RESET" | "MATERIAL_CHANGES";
+        ParamRange: {
+            name: string;
+            /** @enum {unknown} */
+            kind: "SWEEP" | "PIN";
+            low: string | null;
+            high: string | null;
+            values: string[];
         };
         PromotionPick: {
             /** @enum {unknown} */
@@ -55,6 +99,15 @@ export interface components {
             source_digest: components["schemas"]["Digest"] | null;
             source_as_of_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
             availability: components["schemas"]["Availability"];
+            /** @description W6b DR-03: the only authority that may publish a pick is a governed approval of a sealed release candidate (P22). NOT_CONNECTED keeps the pick NOT_PUBLISHED. */
+            source_authority: {
+                /** @constant */
+                owner: "P22_RELEASE_CANDIDATE_APPROVAL";
+                /** @enum {unknown} */
+                state: "CONNECTED" | "NOT_CONNECTED";
+            };
+            release_candidate: components["schemas"]["ReleaseCandidateRef"] | null;
+            release_candidate_availability: components["schemas"]["Availability"];
         };
         AlphaVersion: {
             alpha_version_id: components["schemas"]["OpaqueId"];
@@ -65,6 +118,44 @@ export interface components {
             lifecycle_state: "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
             registered_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             promotion_pick: components["schemas"]["PromotionPick"];
+            /** @description W6b CG-P19-07: one line composed by research.lineage-version-outcome.v1 from the returned attempts' certificate grades, rc relations and pick; never a ranking of runs. */
+            outcome: {
+                text: string | null;
+                /** @constant */
+                rule: "research.lineage-version-outcome.v1";
+                availability: components["schemas"]["Availability"];
+            };
+            /** @description W6b CG-P19-07: the registered successor that names this version as its predecessor (RF-03). */
+            supersession: {
+                /** @enum {unknown} */
+                state: "RECORDED" | "NOT_RECORDED" | "NOT_APPLICABLE";
+                superseded_by_version_id: components["schemas"]["OpaqueId"] | null;
+                superseded_by_label: string | null;
+                reason_code: components["schemas"]["ReasonCode"] | null;
+            };
+            /** @description W6b CG-P19-06: the union of what every attempt of this version declared (not only returned attempts), from persisted requested specs and the version's declared parameter space. */
+            exercised: {
+                routes: string[];
+                modes: string[];
+                param_ranges: components["schemas"]["ParamRange"][];
+                attempts_considered: number;
+                attempts_without_manifest: number;
+                availability: components["schemas"]["Availability"];
+            };
+            /** @description W6b CG-P19-06: Engine Atlas routes (not DEFERRED) that no attempt of this version declared. */
+            untried: {
+                routes: {
+                    route_id: string;
+                    status_word: string | null;
+                }[];
+                availability: components["schemas"]["Availability"];
+            };
+            presentation: {
+                storied: number;
+                probe: number;
+                /** @constant */
+                basis: "RETURNED_ATTEMPTS";
+            };
         };
         SemanticChange: {
             path: string;
@@ -121,6 +212,8 @@ export interface components {
             created_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             updated_at_utc_ms: components["schemas"]["UtcMilliseconds"];
             primary_run: {
+                /** @description W6b: the run's immutable execution profile (p04.fixed-qualification.v1 / p10.delta-signal-notional-wfo.v1). */
+                execution_profile_id: string | null;
                 run_id: components["schemas"]["OpaqueId"] | null;
                 state: ("DRAFT" | "QUEUED" | "RUNNING" | "SEALING" | "READY" | "FAILED" | "CANCELLED" | "RECOVERY_REQUIRED") | null;
                 effective_spec_digest: components["schemas"]["Digest"] | null;
@@ -132,6 +225,37 @@ export interface components {
             child_runs_coverage: components["schemas"]["ChildRunsCoverage"];
             semantic_diff: components["schemas"]["SemanticDiff"];
             exposure: components["schemas"]["Exposure"];
+            /**
+             * @description W6b CG-P19-03: server classification by research.lineage-presentation.v1.
+             * @enum {unknown}
+             */
+            presentation_kind: "STORIED" | "PROBE";
+            presentation_reasons: components["schemas"]["PresentationReason"][];
+            /**
+             * @description W6b CG-P19-14: from the version's published pick and lifecycle facts only; never a metric ranking.
+             * @enum {unknown}
+             */
+            promotion_state: "PICKED" | "NOT_PICKED" | "AWAITING_PICK" | "CLOSED";
+            promotion_reason_code: components["schemas"]["ReasonCode"] | null;
+            /** @description W6b CG-P19-08: `route · mode × schedule` from allow-listed requested-spec keys, and the declared parameter space after this attempt's overrides. */
+            spec_label: {
+                text: string | null;
+                space: {
+                    parameters: number;
+                    swept: number;
+                    pinned: number;
+                } | null;
+                availability: components["schemas"]["Availability"];
+            };
+            release_candidate: components["schemas"]["ReleaseCandidateRef"] | null;
+            release_candidate_availability: components["schemas"]["Availability"];
+            run_facts: components["schemas"]["RunFacts"];
+            /** @description W6b CG-P19-07: the attempt's own recorded reason, else the source claim sentence, verbatim. */
+            outcome: {
+                text: string | null;
+                source: ("ATTEMPT_REASON" | "SOURCE_CLAIM_SENTENCE") | null;
+                availability: components["schemas"]["Availability"];
+            };
         };
         AttemptLineageResponse: {
             /** @constant */
@@ -148,6 +272,8 @@ export interface components {
             };
             attempts: components["schemas"]["AttemptNode"][];
             counts: {
+                storied_returned: number;
+                probe_returned: number;
                 total_attempts: number;
                 returned_attempts: number;
                 draft_attempts: number;
@@ -157,17 +283,47 @@ export interface components {
                 child_runs: number;
                 technical_retries: number;
             };
+            /** @description W6b CG-P19-13: what each count includes and the Run Library figure it reconciles with for the same Alpha. */
+            counts_definitions: {
+                /** @constant */
+                version: "research.lineage-counts.v1";
+                rows: {
+                    /** @enum {unknown} */
+                    key: "total_attempts" | "returned_attempts" | "draft_attempts" | "submitted_attempts" | "failed_attempts" | "abandoned_attempts" | "child_runs" | "technical_retries" | "storied_returned" | "probe_returned";
+                    includes: string;
+                    run_library_equivalent: string | null;
+                }[];
+            };
+            /** @description W6b CG-P19-03: the storied/probe rule travels with the answer so the browser holds none. */
+            presentation_rule: {
+                /** @constant */
+                version: "research.lineage-presentation.v1";
+                storied_when: components["schemas"]["PresentationReason"][];
+                /** @constant */
+                material_change_threshold: 2;
+            };
             coverage: {
                 /** @enum {unknown} */
                 state: "COMPLETE" | "PARTIAL";
                 reason_code: components["schemas"]["ReasonCode"] | null;
                 oldest_returned_created_at_utc_ms: components["schemas"]["UtcMilliseconds"] | null;
+                /**
+                 * @description W6b CG-P19-09: a bounded first page is the newest attempts; an older page was read through a cursor.
+                 * @enum {unknown}
+                 */
+                window: "NEWEST" | "OLDER_PAGE";
+                /** @description Opaque, server-signed; pass back as `cursor` to read strictly older attempts. */
+                older_cursor: string | null;
             };
             source_absences: {
                 promotion_pick: components["schemas"]["Availability"];
                 historical_semantic_diff: components["schemas"]["Availability"];
             };
             as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
+            /** @description W6b CG-P19-02: digest of every fact except as_of_utc_ms. */
+            lineage_revision: string;
+            /** @description The validator also sent as the ETag header. */
+            etag: string;
         };
     };
     responses: {
@@ -185,6 +341,9 @@ export interface components {
         AlphaId: components["schemas"]["AlphaId"];
         WorkspaceId: components["schemas"]["WorkspaceId"];
         LineageLimit: number;
+        /** @description Only a coverage.older_cursor this route issued, for the same workspace, Alpha and limit. Opaque; a browser never builds one. */
+        LineageCursor: string;
+        IfNoneMatch: string;
     };
     requestBodies: never;
     headers: never;
@@ -197,8 +356,12 @@ export interface operations {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
                 limit?: components["parameters"]["LineageLimit"];
+                /** @description Only a coverage.older_cursor this route issued, for the same workspace, Alpha and limit. Opaque; a browser never builds one. */
+                cursor?: components["parameters"]["LineageCursor"];
             };
-            header?: never;
+            header?: {
+                "If-None-Match"?: components["parameters"]["IfNoneMatch"];
+            };
             path: {
                 alphaId: components["parameters"]["AlphaId"];
             };
@@ -209,11 +372,22 @@ export interface operations {
             /** @description One bounded persisted lineage snapshot. */
             200: {
                 headers: {
+                    /** @description The body's `etag`; revalidate with If-None-Match (weak comparison). */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["AttemptLineageResponse"];
                 };
+            };
+            /** @description The held lineage (same lineage_revision) is still current. No body. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];

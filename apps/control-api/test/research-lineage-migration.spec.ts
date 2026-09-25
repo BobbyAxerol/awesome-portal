@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 
 import { ResearchLineageRepository } from "../src/research/lineage.repository";
+import { ResearchRunLibraryQuerySchema } from "../src/research/run-library.contract";
+import { ResearchRunLibraryRepository } from "../src/research/run-library.repository";
 import { migrateTestDatabase } from "./harness";
 
 const baseUrl = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
@@ -142,6 +144,73 @@ describe("P19 disposable PostgreSQL migration and retained-lineage proof", () =>
       }).toEqual({ total_attempts: 1, failed_attempts: 1, technical_retries: 1 });
       expect(result?.childRuns).toHaveLength(33);
       expect(result?.childRuns.every((value) => value.relationship_kind !== "PRIMARY")).toBe(true);
+    } finally {
+      await database.end();
+    }
+  });
+
+  it("W6b CG-P19-09/13/05 pages newest-first windows and reconciles counts with the Run Library", async () => {
+    const database = new Pool({ connectionString: databaseUrlFor(databaseName) });
+    try {
+      const row = await seed(database, "-w6b");
+      // Four more attempts, one minute apart after the seeded FAILED one: two
+      // READY with PRIMARY runs, one DRAFT (no run), one ABANDONED with a run.
+      const extra: Array<[string, string, string | null]> = [
+        ["att-w6b-2", "READY", "run-w6b-2"],
+        ["att-w6b-3", "DRAFT", null],
+        ["att-w6b-4", "ABANDONED", "run-w6b-4"],
+        ["att-w6b-5", "READY", "run-w6b-5"],
+      ];
+      await database.query("UPDATE research.attempts SET created_at = '2026-09-22T00:00:00.000001Z' WHERE workspace_id = $1 AND attempt_id = $2", [row.workspaceId, row.attemptId]);
+      for (const [index, [attemptId, state, runId]] of extra.entries()) {
+        await database.query(`INSERT INTO research.attempts
+          (workspace_id, attempt_id, alpha_version_id, client_intent_id, request_payload_digest,
+           intent_kind, state, created_by_user_id, created_at)
+          VALUES ($1, $2, $3, $4, $5, 'NEW', $6, $7, $8)`,
+        [row.workspaceId, attemptId, row.versionId, `intent-${attemptId}`, digest, state, row.userId, `2026-09-22T00:0${index + 1}:00.000001Z`]);
+        if (runId) {
+          await database.query(`INSERT INTO research.runs
+            (workspace_id, run_id, attempt_id, run_kind, relationship_kind, logical_run_key,
+             request_spec_digest, effective_spec_digest, engine_release_id, dataset_binding_digest,
+             state, submitted_by_user_id)
+            VALUES ($1, $2, $3, 'PRIMARY', 'PRIMARY', 'primary', $4, $4, 'quantbt-1.1.1', $4, $5, $6)`,
+          [row.workspaceId, runId, attemptId, digest, state === "READY" ? "READY" : "CANCELLED", row.userId]);
+        }
+      }
+      const scope = { workspaceId: row.workspaceId, actorUserId: row.userId };
+      const repository = new ResearchLineageRepository(database);
+      const newest = await repository.read(scope, row.alphaId, 2);
+      expect(newest?.attempts.map((attempt) => attempt.attempt_id)).toEqual(["att-w6b-4", "att-w6b-5"]);
+      expect(newest?.hasMore).toBe(true);
+      expect(newest?.window).toBe("NEWEST");
+      expect(newest?.attempts[0]?.created_at_cursor).toBe("2026-09-22T00:03:00.000001Z");
+      expect(newest?.libraryRows?.map((library) => library.run_id).sort()).toEqual(["run-w6b-4", "run-w6b-5"]);
+      // No persisted preflight manifest: every attempt is one "without manifest" group.
+      expect(newest?.exercised).toEqual([expect.objectContaining({ alpha_version_id: row.versionId, execution_route: null })]);
+      expect(Number(newest?.exercised?.[0]?.attempts)).toBe(5);
+      expect(newest?.versions[0]?.first_attempt_id).toBe(row.attemptId);
+
+      const second = await repository.read(scope, row.alphaId, 2, { createdAt: newest!.attempts[0]!.created_at_cursor!, attemptId: "att-w6b-4" });
+      expect(second?.attempts.map((attempt) => attempt.attempt_id)).toEqual(["att-w6b-2", "att-w6b-3"]);
+      expect(second?.hasMore).toBe(true);
+      expect(second?.window).toBe("OLDER_PAGE");
+      const last = await repository.read(scope, row.alphaId, 2, { createdAt: second!.attempts[0]!.created_at_cursor!, attemptId: "att-w6b-2" });
+      expect(last?.attempts.map((attempt) => attempt.attempt_id)).toEqual([row.attemptId]);
+      expect(last?.hasMore).toBe(false);
+
+      // CG-P19-13: the definitions the response carries, checked against the
+      // Run Library's own counters for the same Alpha and snapshot data.
+      const library = await new ResearchRunLibraryRepository(database).list(
+        scope, ResearchRunLibraryQuerySchema.parse({ alpha: row.alphaId, limit: "50" }), null,
+      );
+      const counts = newest!.counts;
+      expect(Number(counts.total_attempts)).toBe(5);
+      expect(Number(counts.draft_attempts)).toBe(1);
+      expect(Number(counts.submitted_attempts)).toBe(library.counters.logicalRuns);
+      expect(Number(counts.total_attempts)).toBe(library.counters.logicalRuns + Number(counts.draft_attempts));
+      expect(Number(counts.failed_attempts)).toBe(library.claimLedger.failed);
+      expect(Number(counts.child_runs)).toBe(library.counters.workerChildren);
+      expect(Number(counts.technical_retries)).toBe(library.counters.technicalRetries);
     } finally {
       await database.end();
     }

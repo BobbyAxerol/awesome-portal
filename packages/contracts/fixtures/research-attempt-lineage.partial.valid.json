@@ -1,0 +1,763 @@
+{
+  "schema_version": "research.attempt-lineage.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "alpha": {
+    "alpha_id": "alpha-p19",
+    "name": "P19 Alpha",
+    "active_version_id": "av-p19-1",
+    "active_version_state": "ACTIVE",
+    "active_version_availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "versions": [
+      {
+        "alpha_version_id": "av-p19-1",
+        "label": "av_0_9_1",
+        "code_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "entrypoint": "strategy:main",
+        "lifecycle_state": "ACTIVE",
+        "registered_at_utc_ms": 1789948800000,
+        "promotion_pick": {
+          "state": "NOT_PUBLISHED",
+          "attempt_id": null,
+          "run_id": null,
+          "source_contract_rev": null,
+          "source_digest": null,
+          "source_as_of_utc_ms": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
+          "source_authority": {
+            "owner": "P22_RELEASE_CANDIDATE_APPROVAL",
+            "state": "NOT_CONNECTED"
+          },
+          "release_candidate": null,
+          "release_candidate_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          }
+        },
+        "outcome": {
+          "text": "cert not issued · no rc · no pick published",
+          "rule": "research.lineage-version-outcome.v1",
+          "availability": {
+            "state": "PARTIAL",
+            "reason_code": "P19_BOUNDED_GRAPH_LIMIT_REACHED"
+          }
+        },
+        "supersession": {
+          "state": "NOT_APPLICABLE",
+          "superseded_by_version_id": null,
+          "superseded_by_label": null,
+          "reason_code": "P19_VERSION_NOT_SUPERSEDED"
+        },
+        "exercised": {
+          "routes": [],
+          "modes": [],
+          "param_ranges": [],
+          "attempts_considered": 0,
+          "attempts_without_manifest": 140,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE"
+          }
+        },
+        "untried": {
+          "routes": [],
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_ENGINE_ATLAS_NOT_READABLE"
+          }
+        },
+        "presentation": {
+          "storied": 0,
+          "probe": 3,
+          "basis": "RETURNED_ATTEMPTS"
+        }
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "attempt_id": "att_p041",
+      "parent_attempt_id": "att_p012",
+      "parent_state": "OUTSIDE_RETURNED_GRAPH",
+      "alpha_version_id": "av-p19-1",
+      "alpha_version_label": "av_0_9_1",
+      "state": "READY",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035260000,
+      "updated_at_utc_ms": 1790038860000,
+      "primary_run": {
+        "run_id": "run-att_p041",
+        "state": "READY",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 0,
+        "execution_profile_id": "p04.fixed-qualification.v1"
+      },
+      "child_runs": [],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "PARENT_OUTSIDE_RETURNED_GRAPH",
+        "changes": [],
+        "gates_reset": false,
+        "availability": {
+          "state": "PARTIAL",
+          "reason_code": "P19_PARENT_OUTSIDE_BOUNDED_GRAPH"
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "PROBE",
+      "presentation_reasons": [],
+      "promotion_state": "AWAITING_PICK",
+      "promotion_reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK",
+      "spec_label": {
+        "text": null,
+        "space": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE"
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "claim": {
+          "state": null,
+          "text": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "oos_sharpe": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        }
+      },
+      "outcome": {
+        "text": null,
+        "source": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+        }
+      }
+    },
+    {
+      "attempt_id": "att_p042",
+      "parent_attempt_id": "att_p041",
+      "parent_state": "RETURNED",
+      "alpha_version_id": "av-p19-1",
+      "alpha_version_label": "av_0_9_1",
+      "state": "READY",
+      "intent_kind": "CLONE_FOR_EXPERIMENT",
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035320000,
+      "updated_at_utc_ms": 1790038920000,
+      "primary_run": {
+        "run_id": "run-att_p042",
+        "state": "READY",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 0,
+        "execution_profile_id": "p04.fixed-qualification.v1"
+      },
+      "child_runs": [
+        {
+          "run_id": "run-att_p042-diag-00",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046000000
+        },
+        {
+          "run_id": "run-att_p042-diag-01",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046060000
+        },
+        {
+          "run_id": "run-att_p042-diag-02",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046120000
+        },
+        {
+          "run_id": "run-att_p042-diag-03",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046180000
+        },
+        {
+          "run_id": "run-att_p042-diag-04",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046240000
+        },
+        {
+          "run_id": "run-att_p042-diag-05",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046300000
+        },
+        {
+          "run_id": "run-att_p042-diag-06",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046360000
+        },
+        {
+          "run_id": "run-att_p042-diag-07",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046420000
+        },
+        {
+          "run_id": "run-att_p042-diag-08",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046480000
+        },
+        {
+          "run_id": "run-att_p042-diag-09",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046540000
+        },
+        {
+          "run_id": "run-att_p042-diag-10",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046600000
+        },
+        {
+          "run_id": "run-att_p042-diag-11",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046660000
+        },
+        {
+          "run_id": "run-att_p042-diag-12",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046720000
+        },
+        {
+          "run_id": "run-att_p042-diag-13",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046780000
+        },
+        {
+          "run_id": "run-att_p042-diag-14",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046840000
+        },
+        {
+          "run_id": "run-att_p042-diag-15",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046900000
+        },
+        {
+          "run_id": "run-att_p042-diag-16",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790046960000
+        },
+        {
+          "run_id": "run-att_p042-diag-17",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047020000
+        },
+        {
+          "run_id": "run-att_p042-diag-18",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047080000
+        },
+        {
+          "run_id": "run-att_p042-diag-19",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047140000
+        },
+        {
+          "run_id": "run-att_p042-diag-20",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047200000
+        },
+        {
+          "run_id": "run-att_p042-diag-21",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047260000
+        },
+        {
+          "run_id": "run-att_p042-diag-22",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047320000
+        },
+        {
+          "run_id": "run-att_p042-diag-23",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047380000
+        },
+        {
+          "run_id": "run-att_p042-diag-24",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047440000
+        },
+        {
+          "run_id": "run-att_p042-diag-25",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047500000
+        },
+        {
+          "run_id": "run-att_p042-diag-26",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047560000
+        },
+        {
+          "run_id": "run-att_p042-diag-27",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047620000
+        },
+        {
+          "run_id": "run-att_p042-diag-28",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047680000
+        },
+        {
+          "run_id": "run-att_p042-diag-29",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047740000
+        },
+        {
+          "run_id": "run-att_p042-diag-30",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047800000
+        },
+        {
+          "run_id": "run-att_p042-diag-31",
+          "run_kind": "DIAGNOSTIC",
+          "relationship_kind": "DIAGNOSTIC_OF_RUN",
+          "parent_run_id": "run-att_p042",
+          "state": "READY",
+          "created_at_utc_ms": 1790047860000
+        }
+      ],
+      "child_runs_coverage": {
+        "state": "PARTIAL",
+        "reason_code": "P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT"
+      },
+      "semantic_diff": {
+        "state": "NOT_PUBLISHED",
+        "changes": [],
+        "gates_reset": false,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE_FOR_PARENT_DIFF"
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "PROBE",
+      "presentation_reasons": [],
+      "promotion_state": "AWAITING_PICK",
+      "promotion_reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK",
+      "spec_label": {
+        "text": null,
+        "space": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE"
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "claim": {
+          "state": null,
+          "text": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "oos_sharpe": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        }
+      },
+      "outcome": {
+        "text": null,
+        "source": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+        }
+      }
+    },
+    {
+      "attempt_id": "att_p043",
+      "parent_attempt_id": null,
+      "parent_state": "ROOT",
+      "alpha_version_id": "av-p19-1",
+      "alpha_version_label": "av_0_9_1",
+      "state": "FAILED",
+      "intent_kind": "NEW",
+      "reason": null,
+      "space_signature": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "created_at_utc_ms": 1790035380000,
+      "updated_at_utc_ms": 1790038980000,
+      "primary_run": {
+        "run_id": "run-att_p043",
+        "state": "FAILED",
+        "effective_spec_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "engine_release_id": "quantbt-1.1.1",
+        "dataset_binding_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "technical_retry_count": 0,
+        "execution_profile_id": "p04.fixed-qualification.v1"
+      },
+      "child_runs": [],
+      "child_runs_coverage": {
+        "state": "COMPLETE",
+        "reason_code": null
+      },
+      "semantic_diff": {
+        "state": "ROOT",
+        "changes": [],
+        "gates_reset": false,
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        }
+      },
+      "exposure": {
+        "state": "NOT_PUBLISHED",
+        "count": 0,
+        "roles": [],
+        "latest_source_as_of_utc_ms": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"
+        }
+      },
+      "presentation_kind": "PROBE",
+      "presentation_reasons": [],
+      "promotion_state": "CLOSED",
+      "promotion_reason_code": "P19_ATTEMPT_STATE_CANNOT_PROMOTE",
+      "spec_label": {
+        "text": null,
+        "space": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE"
+        }
+      },
+      "release_candidate": null,
+      "release_candidate_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+      },
+      "run_facts": {
+        "certificate": {
+          "grade": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "claim": {
+          "state": null,
+          "text": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "oos_sharpe": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        },
+        "decay": {
+          "value": null,
+          "source": null,
+          "scope": null,
+          "definition_id": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+          }
+        }
+      },
+      "outcome": {
+        "text": null,
+        "source": null,
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P19_RUN_LIBRARY_ROW_NOT_READABLE"
+        }
+      }
+    }
+  ],
+  "counts": {
+    "total_attempts": 140,
+    "returned_attempts": 3,
+    "draft_attempts": 0,
+    "submitted_attempts": 140,
+    "failed_attempts": 9,
+    "abandoned_attempts": 4,
+    "child_runs": 33,
+    "technical_retries": 2,
+    "storied_returned": 0,
+    "probe_returned": 3
+  },
+  "counts_definitions": {
+    "version": "research.lineage-counts.v1",
+    "rows": [
+      {
+        "key": "total_attempts",
+        "includes": "Every logical research attempt of every version of this Alpha in the workspace: draft, submitted, failed and abandoned alike. Worker retries and child runs are not attempts.",
+        "run_library_equivalent": "counters.logical_runs for ?alpha=<id> plus draft_attempts, when every submitted attempt has its PRIMARY run"
+      },
+      {
+        "key": "returned_attempts",
+        "includes": "Attempts in this bounded page (at most `limit`); equal to total_attempts only when coverage is COMPLETE.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "draft_attempts",
+        "includes": "Attempts in state DRAFT (autosaved intent, never submitted).",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "submitted_attempts",
+        "includes": "Attempts in any state other than DRAFT.",
+        "run_library_equivalent": "counters.logical_runs for ?alpha=<id> (its PRIMARY rows), when every submitted attempt has its PRIMARY run"
+      },
+      {
+        "key": "failed_attempts",
+        "includes": "Attempts whose lifecycle state is FAILED.",
+        "run_library_equivalent": "claim_ledger.failed for ?alpha=<id> (FAILED runs), when each FAILED attempt's PRIMARY run is FAILED"
+      },
+      {
+        "key": "abandoned_attempts",
+        "includes": "Attempts whose lifecycle state is ABANDONED; kept on record, never deleted.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "child_runs",
+        "includes": "Non-PRIMARY runs of these attempts (audit, diagnostic, reproduction, export, verify, projection).",
+        "run_library_equivalent": "counters.worker_children for ?alpha=<id>"
+      },
+      {
+        "key": "technical_retries",
+        "includes": "Worker re-leases of the same durable job beyond the first; never an attempt or a node.",
+        "run_library_equivalent": "counters.technical_retries for ?alpha=<id>"
+      },
+      {
+        "key": "storied_returned",
+        "includes": "Returned attempts classified STORIED by research.lineage-presentation.v1.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "probe_returned",
+        "includes": "Returned attempts classified PROBE by research.lineage-presentation.v1.",
+        "run_library_equivalent": null
+      }
+    ]
+  },
+  "presentation_rule": {
+    "version": "research.lineage-presentation.v1",
+    "storied_when": [
+      "PROMOTION_PICK",
+      "RELEASE_CANDIDATE",
+      "VERSION_FIRST_ATTEMPT",
+      "GATES_RESET",
+      "MATERIAL_CHANGES"
+    ],
+    "material_change_threshold": 2
+  },
+  "coverage": {
+    "state": "PARTIAL",
+    "reason_code": "P19_BOUNDED_GRAPH_LIMIT_REACHED",
+    "oldest_returned_created_at_utc_ms": 1790035260000,
+    "window": "OLDER_PAGE",
+    "older_cursor": null
+  },
+  "source_absences": {
+    "promotion_pick": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+    },
+    "historical_semantic_diff": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE_FOR_PARENT_DIFF"
+    }
+  },
+  "as_of_utc_ms": 1790035200000,
+  "lineage_revision": "p19r2_3b665fe3bf12eddb7ab8b059a43d6fc598d1c3fc4831758016e79f49377eb735",
+  "etag": "\"p19r2_3b665fe3bf12eddb7ab8b059a43d6fc598d1c3fc4831758016e79f49377eb735\""
+}

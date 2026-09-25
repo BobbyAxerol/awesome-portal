@@ -21,14 +21,72 @@ export const ResearchAttemptLineageQuerySchema = z.object({
   // connection or browser render hostage.  The response always declares an
   // exact total and a typed PARTIAL boundary if it cannot include all nodes.
   limit: z.coerce.number().int().min(1).max(128).default(128),
+  /**
+   * W6b CG-P19-09: an opaque, server-signed boundary this route issued in
+   * `coverage.older_cursor`.  It pages strictly older attempts of the same
+   * Alpha/workspace/limit; a browser cannot name a timestamp or an attempt.
+   */
+  cursor: z.string().min(1).max(4096).optional(),
 }).strict();
 
 export type ResearchAttemptLineageQuery = z.infer<typeof ResearchAttemptLineageQuerySchema>;
 
 export const ResearchLineageAvailabilitySchema = z.object({
-  state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "PARTIAL"]),
+  state: z.enum(["AVAILABLE", "NOT_PUBLISHED", "PARTIAL", "NOT_APPLICABLE"]),
   reason_code: z.string().min(1).max(160).nullable(),
 }).strict();
+
+const ExactDecimalSchema = z.string().regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/).max(96);
+
+/**
+ * W6b CG-P19-04: the persisted P21 relation of one run, by the Run Library's
+ * rule (a Portal-local sealed pack wins over the viewer's own draft).  It is a
+ * reference only: no pack payload, no delivery/approval authority.
+ */
+export const ResearchLineageReleaseCandidateRefSchema = z.object({
+  kind: z.enum(["LOCAL_SEAL", "ACTOR_DRAFT"]),
+  release_candidate_id: z.string().regex(/^rc_[0-9A-HJKMNP-TV-Z]{26}$/).nullable(),
+  draft_id: z.string().regex(/^rcd_[0-9A-HJKMNP-TV-Z]{26}$/).nullable(),
+  run_id: OpaqueIdSchema,
+  delivery_state: z.enum(["NOT_DELIVERED", "PENDING", "DELIVERED", "UNKNOWN"]).nullable(),
+  approval_state: z.enum(["NOT_APPROVED", "PENDING", "APPROVED", "REJECTED", "UNKNOWN"]).nullable(),
+  sealed_at_utc_ms: UtcMsSchema.nullable(),
+}).strict();
+
+/** W6b CG-P19-05: one retained per-run metric with its own source and scope. */
+const RunMetricFactSchema = z.object({
+  value: ExactDecimalSchema.nullable(),
+  source: z.enum(["P13_EVIDENCE_PROJECTION", "RS02_RETAINED_SELECTED_TRIAL"]).nullable(),
+  scope: z.enum(["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "SELECTED_TRIAL_MEAN_ACROSS_FOLDS"]).nullable(),
+  definition_id: z.string().regex(/^research\.[a-z0-9_.-]{3,120}$/).nullable(),
+  availability: ResearchLineageAvailabilitySchema,
+}).strict();
+
+const RunFactsSchema = z.object({
+  /** The Run Library/Screen-04 certificate: a grade only when the source issued one. */
+  certificate: z.object({
+    grade: z.enum(["A", "B", "C", "D"]).nullable(),
+    availability: ResearchLineageAvailabilitySchema,
+  }).strict(),
+  /** The persisted Stage-5 claim state and its source sentence, verbatim. */
+  claim: z.object({
+    state: z.enum(["FORECAST", "NOT_ISSUED", "ISSUED"]).nullable(),
+    text: z.string().min(1).max(1_024).nullable(),
+    availability: ResearchLineageAvailabilitySchema,
+  }).strict(),
+  oos_sharpe: RunMetricFactSchema,
+  decay: RunMetricFactSchema,
+}).strict();
+
+export const LINEAGE_PRESENTATION_REASONS = [
+  "PROMOTION_PICK", "RELEASE_CANDIDATE", "VERSION_FIRST_ATTEMPT", "GATES_RESET", "MATERIAL_CHANGES",
+] as const;
+const PresentationReasonSchema = z.enum(LINEAGE_PRESENTATION_REASONS);
+
+export const LINEAGE_COUNT_KEYS = [
+  "total_attempts", "returned_attempts", "draft_attempts", "submitted_attempts", "failed_attempts",
+  "abandoned_attempts", "child_runs", "technical_retries", "storied_returned", "probe_returned",
+] as const;
 
 const AlphaVersionStateSchema = z.enum(["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"]);
 const AttemptStateSchema = z.enum([
@@ -51,6 +109,26 @@ const PromotionPickSchema = z.object({
   source_digest: DigestSchema.nullable(),
   source_as_of_utc_ms: UtcMsSchema.nullable(),
   availability: ResearchLineageAvailabilitySchema,
+  /**
+   * W6b DR-03: the only authority that may publish a pick is a governed
+   * approval of a sealed release candidate (P22).  Until that writer is
+   * connected the pick stays NOT_PUBLISHED; this names what it waits for.
+   */
+  source_authority: z.object({
+    owner: z.literal("P22_RELEASE_CANDIDATE_APPROVAL"),
+    state: z.enum(["CONNECTED", "NOT_CONNECTED"]),
+  }).strict(),
+  /** W6b CG-P19-04: the pick run's own P21 relation, when a pick is published. */
+  release_candidate: ResearchLineageReleaseCandidateRefSchema.nullable(),
+  release_candidate_availability: ResearchLineageAvailabilitySchema,
+}).strict();
+
+const ParamRangeSchema = z.object({
+  name: z.string().regex(/^[A-Za-z][A-Za-z0-9_.:-]{0,190}$/),
+  kind: z.enum(["SWEEP", "PIN"]),
+  low: z.string().max(96).nullable(),
+  high: z.string().max(96).nullable(),
+  values: z.array(z.string().max(96)).max(16),
 }).strict();
 
 const VersionSchema = z.object({
@@ -61,6 +139,48 @@ const VersionSchema = z.object({
   lifecycle_state: AlphaVersionStateSchema,
   registered_at_utc_ms: UtcMsSchema,
   promotion_pick: PromotionPickSchema,
+  /**
+   * W6b CG-P19-07: one server-composed line from this version's persisted
+   * facts (`research.lineage-version-outcome.v1`); never a ranking of runs.
+   */
+  outcome: z.object({
+    text: z.string().min(1).max(240).nullable(),
+    rule: z.literal("research.lineage-version-outcome.v1"),
+    availability: ResearchLineageAvailabilitySchema,
+  }).strict(),
+  /** W6b CG-P19-07: the registered successor that superseded this version (RF-03 fact). */
+  supersession: z.object({
+    state: z.enum(["RECORDED", "NOT_RECORDED", "NOT_APPLICABLE"]),
+    superseded_by_version_id: OpaqueIdSchema.nullable(),
+    superseded_by_label: z.string().min(1).max(160).nullable(),
+    reason_code: z.string().min(1).max(160).nullable(),
+  }).strict(),
+  /**
+   * W6b CG-P19-06: what this version's attempts actually declared, aggregated
+   * server-side over every attempt of the version (not only returned ones).
+   */
+  exercised: z.object({
+    routes: z.array(z.string().min(1).max(64)).max(16),
+    modes: z.array(z.string().min(1).max(160)).max(32),
+    param_ranges: z.array(ParamRangeSchema).max(24),
+    attempts_considered: z.number().int().nonnegative(),
+    attempts_without_manifest: z.number().int().nonnegative(),
+    availability: ResearchLineageAvailabilitySchema,
+  }).strict(),
+  /** W6b CG-P19-06: Engine Atlas routes that no attempt of this version declared. */
+  untried: z.object({
+    routes: z.array(z.object({
+      route_id: z.string().min(1).max(64),
+      status_word: z.string().max(16).nullable(),
+    }).strict()).max(32),
+    availability: ResearchLineageAvailabilitySchema,
+  }).strict(),
+  /** W6b CG-P19-03: storied/probe split of this version's returned attempts. */
+  presentation: z.object({
+    storied: z.number().int().nonnegative(),
+    probe: z.number().int().nonnegative(),
+    basis: z.literal("RETURNED_ATTEMPTS"),
+  }).strict(),
 }).strict();
 
 const SemanticChangeSchema = z.object({
@@ -128,11 +248,40 @@ export const ResearchAttemptLineageNodeSchema = z.object({
     engine_release_id: z.string().min(1).max(256).nullable(),
     dataset_binding_digest: DigestSchema.nullable(),
     technical_retry_count: z.number().int().nonnegative(),
+    /** W6b: the run's immutable execution profile (P04 fixed qualification / P10 Delta WFO). */
+    execution_profile_id: z.string().min(1).max(160).nullable(),
   }).strict(),
   child_runs: z.array(ChildRunSchema).max(32),
   child_runs_coverage: ChildRunsCoverageSchema,
   semantic_diff: SemanticDiffSchema,
   exposure: ExposureSchema,
+  /** W6b CG-P19-03: server classification by `research.lineage-presentation.v1`. */
+  presentation_kind: z.enum(["STORIED", "PROBE"]),
+  presentation_reasons: z.array(PresentationReasonSchema).max(5),
+  /** W6b CG-P19-14: promotion standing from persisted facts; never a metric ranking. */
+  promotion_state: z.enum(["PICKED", "NOT_PICKED", "AWAITING_PICK", "CLOSED"]),
+  promotion_reason_code: z.string().min(1).max(160).nullable(),
+  /** W6b CG-P19-08: an allow-listed spec line built from the persisted requested spec. */
+  spec_label: z.object({
+    text: z.string().min(1).max(240).nullable(),
+    space: z.object({
+      parameters: z.number().int().nonnegative(),
+      swept: z.number().int().nonnegative(),
+      pinned: z.number().int().nonnegative(),
+    }).strict().nullable(),
+    availability: ResearchLineageAvailabilitySchema,
+  }).strict(),
+  /** W6b CG-P19-04: the primary run's P21 relation. */
+  release_candidate: ResearchLineageReleaseCandidateRefSchema.nullable(),
+  release_candidate_availability: ResearchLineageAvailabilitySchema,
+  /** W6b CG-P19-05: the primary run's retained certificate, claim, OOS Sharpe and decay. */
+  run_facts: RunFactsSchema,
+  /** W6b CG-P19-07: one sentence — the attempt's own recorded reason, else the source claim sentence. */
+  outcome: z.object({
+    text: z.string().min(1).max(1_024).nullable(),
+    source: z.enum(["ATTEMPT_REASON", "SOURCE_CLAIM_SENTENCE"]).nullable(),
+    availability: ResearchLineageAvailabilitySchema,
+  }).strict(),
 }).strict();
 
 export const ResearchAttemptLineageResponseSchema = z.object({
@@ -159,17 +308,48 @@ export const ResearchAttemptLineageResponseSchema = z.object({
     abandoned_attempts: z.number().int().nonnegative(),
     child_runs: z.number().int().nonnegative(),
     technical_retries: z.number().int().nonnegative(),
+    /** W6b CG-P19-03: the storied/probe split of the returned attempts only. */
+    storied_returned: z.number().int().nonnegative(),
+    probe_returned: z.number().int().nonnegative(),
+  }).strict(),
+  /**
+   * W6b CG-P19-13: what each count includes, and the Run Library figure it
+   * reconciles with for the same Alpha (`research.lineage-counts.v1`).
+   */
+  counts_definitions: z.object({
+    version: z.literal("research.lineage-counts.v1"),
+    rows: z.array(z.object({
+      key: z.enum(LINEAGE_COUNT_KEYS),
+      includes: z.string().min(1).max(320),
+      run_library_equivalent: z.string().min(1).max(240).nullable(),
+    }).strict()).length(10),
+  }).strict(),
+  /** W6b CG-P19-03: the storied/probe rule travels with the answer; the browser holds none. */
+  presentation_rule: z.object({
+    version: z.literal("research.lineage-presentation.v1"),
+    storied_when: z.array(PresentationReasonSchema).length(5),
+    material_change_threshold: z.literal(2),
   }).strict(),
   coverage: z.object({
     state: z.enum(["COMPLETE", "PARTIAL"]),
     reason_code: z.string().min(1).max(160).nullable(),
     oldest_returned_created_at_utc_ms: UtcMsSchema.nullable(),
+    /**
+     * W6b CG-P19-09: a bounded first page is the NEWEST `limit` attempts, kept
+     * in chronological order, so the latest work is always visible; an older
+     * page is read only through the server-issued `older_cursor`.
+     */
+    window: z.enum(["NEWEST", "OLDER_PAGE"]),
+    older_cursor: z.string().min(1).max(4096).nullable(),
   }).strict(),
   source_absences: z.object({
     promotion_pick: ResearchLineageAvailabilitySchema,
     historical_semantic_diff: ResearchLineageAvailabilitySchema,
   }).strict(),
   as_of_utc_ms: UtcMsSchema,
+  /** W6b CG-P19-02: digest of everything above except `as_of_utc_ms`; `etag` is its validator. */
+  lineage_revision: z.string().regex(/^p19r2_[0-9a-f]{64}$/),
+  etag: z.string().regex(/^"p19r2_[0-9a-f]{64}"$/),
 }).strict();
 
 export type ResearchAttemptLineageResponse = z.infer<typeof ResearchAttemptLineageResponseSchema>;

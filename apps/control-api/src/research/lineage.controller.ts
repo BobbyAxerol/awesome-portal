@@ -1,11 +1,12 @@
 /** P19 same-origin, read-only Screen-10 Attempt Lineage route. */
 
-import { Controller, Get, Param, Query, Req, UseGuards } from "@nestjs/common";
-import type { FastifyRequest } from "fastify";
+import { Controller, Get, Param, Query, Req, Res, UseGuards } from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
+import { sendRevalidatable } from "./etag";
 import { ResearchAttemptLineageQuerySchema } from "./lineage.contract";
 import { ResearchLineageError } from "./lineage.error";
 import { ResearchLineageService } from "./lineage.service";
@@ -18,7 +19,9 @@ interface LineageRequest extends FastifyRequest {
 /**
  * Browser receives a named Alpha Lineage operation only.  It cannot submit a
  * graph edge, source fact, promotion pick, raw config payload, relation name,
- * cursor, worker identity, or source transport input through this surface.
+ * worker identity, or source transport input through this surface.  The only
+ * paging input is the opaque older-page cursor this same route issued
+ * (W6b CG-P19-09); answers revalidate with a private weak ETag (CG-P19-02).
  */
 @UseGuards(SessionGuard)
 @Controller("/api/v1/research/alphas")
@@ -31,6 +34,7 @@ export class ResearchLineageController {
   @Get(":alphaId/lineage")
   async read(
     @Req() request: LineageRequest,
+    @Res() reply: FastifyReply,
     @Param("alphaId") alphaId: string,
     @Query() rawQuery: unknown,
   ) {
@@ -38,11 +42,13 @@ export class ResearchLineageController {
     const query = ResearchAttemptLineageQuerySchema.safeParse(rawQuery);
     if (!query.success) this.invalid();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    return this.service.read(
+    const body = await this.service.read(
       { workspaceId, actorUserId: request.portalUser.userId },
       alphaId,
       { ...query.data, workspace_id: workspaceId },
+      request.portalUser,
     );
+    return sendRevalidatable(reply, request, body);
   }
 
   private invalid(): never {
