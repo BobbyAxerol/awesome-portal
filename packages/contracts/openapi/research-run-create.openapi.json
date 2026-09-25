@@ -220,6 +220,17 @@
               "UPGRADE_ENGINE_EXPERIMENT"
             ],
             "default": "NEW"
+          },
+          "lineage": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "W5a · P19: a sibling attempt forked from a Screen-07 what-if node. The run is a NEW intent with its own preflight and config_hash; the server links its attempt to the frozen run's attempt as SIBLING_OF.",
+            "required": ["relation", "parent_run_id", "what_if_cell_id"],
+            "properties": {
+              "relation": { "const": "SIBLING_OF" },
+              "parent_run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+              "what_if_cell_id": { "type": "string", "pattern": "^x[0-8]y[0-8]$" }
+            }
           }
         }
       },

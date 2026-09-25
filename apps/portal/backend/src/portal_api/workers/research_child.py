@@ -680,6 +680,17 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
 
     if isinstance(optuna_trials, bool) or not 1 <= optuna_trials <= 81:
         raise ValueError("P10 WFO study trial count is outside its admitted bound")
+    raw_pins = receipt.get("pinned_parameters") or {}
+    if not isinstance(raw_pins, dict) or not set(raw_pins) <= {"rvol", "slpercent"}:
+        raise ValueError("P10 WFO child pins only the what-if axes")
+    pins: dict[str, float] = {}
+    for name, value in raw_pins.items():
+        low, high, _step = DELTA_RSI_SPECIFICATION.parameter_space[name]
+        if not isinstance(value, str):
+            raise ValueError("P10 WFO pins are exact decimal text")
+        pins[name] = float(Decimal(value))
+        if not low <= pins[name] <= high:
+            raise ValueError("P10 WFO pin leaves its declared range")
     profile = DELTA_WFO_PROFILE
     run_id = receipt.get("run_id")
     dataset_id = receipt.get("dataset_id")
@@ -707,7 +718,8 @@ def _run_delta_wfo_study(receipt: dict[str, Any], output_root: Path, *, optuna_t
         timeframe=profile["timeframe"],
         protocol="advanced_walk_forward",
         parameter_space=ParameterSpaceConfig({
-            key: ParameterSpec(
+            # W5a: a what-if sibling pins its two axes; everything else is searched.
+            key: ParameterSpec(kind="fixed", value=pins[key]) if key in pins else ParameterSpec(
                 kind="float_range" if isinstance(low, float) else "int_range",
                 low=low,
                 high=high,

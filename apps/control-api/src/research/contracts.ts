@@ -383,6 +383,12 @@ export interface ResearchRunProducerInput {
   queueClass: ResearchQueueClass;
   resourceClass: string;
   attemptLimit: number;
+  /**
+   * W5a · P19: a Screen-07 what-if fork. The new attempt is a
+   * CLONE_FOR_EXPERIMENT child of the frozen run's attempt with relation
+   * SIBLING_OF; the producer intent itself stays a NEW run.
+   */
+  sibling?: { parentRunId: string; whatIfCellId: string };
 }
 
 /** W5a A10c: one explicit what-if diagnostic intent (see createOrReplayWhatIfIntent). */

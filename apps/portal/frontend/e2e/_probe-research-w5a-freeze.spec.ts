@@ -145,6 +145,15 @@ for (const [name, width] of [["1440", 1440], ["660", 660]] as const) {
     };
     await card.locator("[data-action='create-sibling']").click();
     await expect(page).toHaveURL(new RegExp(`/research/quantbt/runs/new\\?from=${WFO}&fork=x6y4`));
+    /* Screen 02 re-reads the node from the server grid (same overlay) and pins it. */
+    const fork = page.locator("[data-fork-source]");
+    await expect(fork).toHaveAttribute("data-fork-state", "ready", { timeout: 20_000 });
+    await page.screenshot({ path: `${OUT}/fork-newrun-${name}.png`, fullPage: true });
+    log[`fork-${name}`] = {
+      pins: await fork.locator("[data-fork-pins]").textContent(),
+      banner: await fork.innerText(),
+      posts_after_fork: seen.posts, noise: seen.noise, overflow_px: await overflow(page),
+    };
   });
 }
 

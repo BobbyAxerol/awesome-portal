@@ -208,8 +208,7 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("the Delta WFO profile accepts only mode_1_decay/global")
         if spec.get("early_stopping") is not None:
             raise ValueError("the Delta WFO profile does not admit early stopping")
-        if spec.get("parameter_space_overrides") not in ([], None):
-            raise ValueError("the Delta WFO profile searches the installed Delta parameter space only")
+        _validate_sibling_pins(spec.get("parameter_space_overrides"))
         data = spec.get("data")
         if not isinstance(data, dict) or data.get("timeframe") != profile["timeframe"]:
             raise ValueError("the Delta WFO profile accepts only the 1h timeframe")
@@ -228,6 +227,51 @@ class ResearchRunProducerEnvelope(PortalModel):
             raise ValueError("the Delta WFO first OOS boundary must lie strictly inside the walk-forward span")
         if (end - start).total_seconds() > DELTA_WFO_MAX_SPAN_DAYS * 86_400:
             raise ValueError("the Delta WFO span exceeds the admitted 92 days")
+
+
+# W5a A10c: a sibling attempt forked from the Screen-07 what-if pins the two
+# what-if axes at one grid node and searches the rest of the declared space.
+_SIBLING_PIN_AXES: dict[str, tuple[str, str, str]] = {
+    "rvol": ("1", "2.5", "0.1"),
+    "slpercent": ("0.7", "2.5", "0.1"),
+}
+
+
+def _validate_sibling_pins(overrides: object) -> None:
+    if overrides in ([], None):
+        return
+    if not isinstance(overrides, list) or len(overrides) > len(_SIBLING_PIN_AXES):
+        raise ValueError("the Delta WFO profile searches the installed Delta parameter space only")
+    seen: set[str] = set()
+    for entry in overrides:
+        if not isinstance(entry, dict) or entry.get("kind") != "pin" or set(entry) != {"name", "kind", "value"}:
+            raise ValueError("the Delta WFO profile searches the installed Delta parameter space only")
+        name = entry.get("name")
+        if name not in _SIBLING_PIN_AXES or name in seen:
+            raise ValueError("the Delta WFO profile admits pins only on its what-if axes (rvol, slpercent)")
+        seen.add(name)
+        value = entry.get("value")
+        if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+            raise ValueError("a Delta WFO pin is an exact decimal")
+        from decimal import Decimal, InvalidOperation
+
+        try:
+            exact = Decimal(str(value))
+        except InvalidOperation as exc:
+            raise ValueError("a Delta WFO pin is an exact decimal") from exc
+        low, high, step = (Decimal(item) for item in _SIBLING_PIN_AXES[name])
+        if not low <= exact <= high or (exact - low) % step != 0:
+            raise ValueError("a Delta WFO pin must lie on its declared step inside its declared range")
+
+
+def sibling_pins(requested_spec: dict[str, Any]) -> dict[str, float]:
+    """The admitted what-if pins of a WFO request (empty for a plain WFO run)."""
+
+    pins: dict[str, float] = {}
+    for entry in requested_spec.get("parameter_space_overrides") or []:
+        if isinstance(entry, dict) and entry.get("kind") == "pin" and entry.get("name") in _SIBLING_PIN_AXES:
+            pins[str(entry["name"])] = float(str(entry["value"]))
+    return pins
 
 
 def _utc_instant(value: object, label: str) -> datetime:

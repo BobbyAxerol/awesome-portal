@@ -232,6 +232,35 @@ describe("W5a migration 064 · A10a byte receipts on PostgreSQL", () => {
     expect(after.grid!.cells.filter((cell) => cell.state === "MISSING")).toHaveLength(0);
     expect(after.job).toMatchObject({ run_id: first.job!.run_id, sealed: true });
     expect(await snapshotParent()).toEqual(before);
+
+    // P16-T08: "create sibling attempt →" at x6y4 is a NEW intent (own
+    // preflight, own config_hash) whose attempt is SIBLING_OF the parent.
+    const siblingSpec = wfoRequested({ parameter_space_overrides: [
+      { name: "rvol", kind: "pin", value: 1.4 }, { name: "slpercent", kind: "pin", value: 2.3 },
+    ] });
+    const siblingManifest = manifestFor(siblingSpec, { token: "rpft_w5a_sibling" });
+    await repository.storePreflightManifest(scope, { ...siblingManifest, expiresAt: new Date(Date.now() + 60_000) }, 4);
+    const sibling = await new ResearchRunCreateService(repository, new ResearchRunAdmissionService(repository, config), proxy as never, config)
+      .create(owner, scope, {
+        schema_version: "research.run-create.v1", client_intent_id: "w5a-sibling-intent",
+        preflight_token: "rpft_w5a_sibling", requested_spec: siblingSpec, intent_kind: "NEW",
+        lineage: { relation: "SIBLING_OF", parent_run_id: parentRunId, what_if_cell_id: "x6y4" },
+      }, "w5a-sibling");
+    expect(sibling.run_id).not.toBe(parentRunId);
+    expect(sibling.requested_spec_digest).not.toBe(created.requested_spec_digest);
+    const siblingAttempt = (await database.query(
+      `SELECT attempt.intent_kind, attempt.relation_kind, attempt.parent_attempt_id, attempt.reason, parent.attempt_id AS parent_attempt
+         FROM research.runs run
+         JOIN research.attempts attempt ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
+         JOIN research.runs parent ON parent.workspace_id = run.workspace_id AND parent.run_id = $2
+        WHERE run.workspace_id = 'ws_w5a' AND run.run_id = $1`, [sibling.run_id, parentRunId])).rows[0];
+    expect(siblingAttempt).toMatchObject({ intent_kind: "CLONE_FOR_EXPERIMENT", relation_kind: "SIBLING_OF" });
+    expect(siblingAttempt.parent_attempt_id).toBe(siblingAttempt.parent_attempt);
+    expect(siblingAttempt.reason).toBe(`what-if fork of ${parentRunId} at x6y4`);
+    expect(await snapshotParent()).toEqual(before);
+    // The DB refuses SIBLING_OF without a parent.
+    await expect(database.query(`UPDATE research.attempts SET parent_attempt_id = NULL WHERE workspace_id = 'ws_w5a' AND relation_kind = 'SIBLING_OF'`))
+      .rejects.toBeTruthy();
   });
 
   it("refuses a receipt that names a different expectation, a MATCH without matching digests, and any mutation", async () => {

@@ -915,12 +915,12 @@ function NodeDetail({ attempt }: { attempt: LineageAttempt }) {
   const run = attempt.primary_run;
   return (
     <div className="ln-detail" data-detail={attempt.attempt_id}>
-      <span className="ln-spec" data-parent-line>
+      <span className="ln-spec" data-parent-line data-relation={attempt.relation_to_parent ?? ""}>
         {attempt.parent_state === "ROOT"
           ? "root — no parent"
-          : attempt.parent_state === "RETURNED"
-            ? `parent ${attempt.parent_attempt_id ?? ""}`
-            : `parent ${attempt.parent_attempt_id ?? ""} — outside the returned graph`}
+          : `${attempt.relation_to_parent === "SIBLING_OF" ? "sibling of" : "parent"} ${attempt.parent_attempt_id ?? ""}${
+            attempt.relation_to_parent === "SIBLING_OF" ? " — a what-if fork with its own config_hash" : ""
+          }${attempt.parent_state === "RETURNED" ? "" : " — outside the returned graph"}`}
       </span>
       <span className="ln-faint" data-run-line>
         {run.run_id ? `primary run ${run.run_id} · ${run.state ?? "state not published"}` : "no primary run recorded"}

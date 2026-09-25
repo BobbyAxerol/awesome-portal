@@ -1507,20 +1507,47 @@ export class ResearchMetadataRepository {
   ): Promise<{ producer: ResearchRunProducerRecord; replayed: boolean }> {
     this.assertScope(scope);
     this.assertRunProducerInput(input);
+    if (input.sibling) {
+      requireOpaqueId(input.sibling.parentRunId, "sibling.parentRunId");
+      if (!/^x[0-8]y[0-8]$/.test(input.sibling.whatIfCellId)) {
+        throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "sibling.whatIfCellId is invalid.", 400);
+      }
+    }
     return this.withScopedWrite(scope, async (client) => {
+      // W5a · P19: a what-if sibling links to the frozen run's own attempt.
+      let parentAttemptId: string | null = null;
+      if (input.sibling) {
+        const parent = await client.query<{ attempt_id: string; alpha_version_id: string | null }>(
+          `SELECT run.attempt_id, attempt.alpha_version_id
+             FROM research.runs run
+             JOIN research.attempts attempt
+               ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
+            WHERE run.workspace_id = $1 AND run.run_id = $2 AND run.relationship_kind = 'PRIMARY'`,
+          [scope.workspaceId, input.sibling.parentRunId],
+        );
+        const row = parent.rows[0];
+        if (!row) throw new ResearchMetadataError("RESEARCH_RUN_NOT_FOUND", "The frozen run a sibling forks from was not found.", 404);
+        if (row.alpha_version_id !== input.alphaVersionId) {
+          throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "A sibling attempt must bind the same AlphaVersion as its parent.", 400);
+        }
+        parentAttemptId = row.attempt_id;
+      }
       const attempt = await client.query<ExistingAttemptRow>(
         `INSERT INTO research.attempts
            (workspace_id, attempt_id, alpha_version_id, parent_attempt_id,
             client_intent_id, request_payload_digest, intent_kind, reason,
-            space_signature, state, created_by_user_id)
-         VALUES ($1, $2, $3, NULL, $4, $5, $6, NULL, NULL, 'DRAFT', $7)
+            space_signature, state, created_by_user_id, relation_kind)
+         VALUES ($1, $2, $3, $8, $4, $5, $6, $9, NULL, 'DRAFT', $7, $10)
          ON CONFLICT (workspace_id, client_intent_id) DO NOTHING
          RETURNING workspace_id, attempt_id, client_intent_id, draft_revision,
                    state, alpha_version_id, request_payload_digest`,
         [
           scope.workspaceId, input.attemptId, input.alphaVersionId,
-          input.clientIntentId, input.requestPayloadDigest, input.intentKind,
-          scope.actorUserId,
+          input.clientIntentId, input.requestPayloadDigest,
+          input.sibling ? "CLONE_FOR_EXPERIMENT" : input.intentKind,
+          scope.actorUserId, parentAttemptId,
+          input.sibling ? `what-if fork of ${input.sibling.parentRunId} at ${input.sibling.whatIfCellId}` : null,
+          input.sibling ? "SIBLING_OF" : null,
         ],
       );
 

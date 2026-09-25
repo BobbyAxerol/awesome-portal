@@ -10,6 +10,7 @@ and nothing selects, folds or interpolates.
 from __future__ import annotations
 
 import copy
+import os
 import json
 from pathlib import Path
 
@@ -320,3 +321,132 @@ async def test_worker_refuses_whatif_while_its_flag_is_dark(tmp_path: Path, monk
     attempt = registry.attempt("rrun_w5a_dark", "rwa_w5a_dark")
     assert attempt is not None and attempt.status == "FAILED"
     assert not (tmp_path / "child-scratch").exists() or not any((tmp_path / "child-scratch").rglob("result.json"))
+
+
+@pytest.mark.skipif(
+    os.getenv("PORTAL_RUN_HMD_REAL_SMOKE") != "1",
+    reason="external-data-unavailable: opt in with PORTAL_RUN_HMD_REAL_SMOKE=1",
+)
+def test_real_hmd_whatif_grid_through_the_confined_child(tmp_path: Path) -> None:
+    """W5a A10c real data: the W1 BTCUSDT span, the full clamped 9x9 grid in one job.
+
+    Measures CPU/wall against the 120 s / 240 s child caps, proves θ*
+    re-scores to the parent's own trial objective, and that every admitted
+    evaluation is answered exactly once.
+    """
+
+    import pandas as pd
+
+    from portal_api.adapters.market_data import (
+        CRYPTO_BINANCE_DATASET_ID,
+        HistoricalMarketDataProvider,
+        MarketDataQuery,
+        load_historical_data_runtime,
+    )
+    from portal_api.domain.research_delta_wfo_profile import DELTA_WFO_PROFILE_DIGEST, DELTA_WFO_PROFILE_ID
+    from portal_api.services.research_supervisor import DELTA_WFO_CHILD_LIMITS
+
+    start, split, end = (pd.Timestamp(value) for value in ("2026-06-01T00:00:00Z", "2026-07-01T00:00:00Z", "2026-07-15T00:00:00Z"))
+    ms = lambda value: int(value.value // 1_000_000)  # noqa: E731
+    runtime = load_historical_data_runtime(Path(os.environ["HISTORICAL_MARKET_DATA_ROOT"]))
+    market = HistoricalMarketDataProvider(runtime=runtime, engine="duckdb").load(MarketDataQuery(
+        dataset_id=CRYPTO_BINANCE_DATASET_ID, symbol="BTCUSDT", timeframe="1h", start=start, end_exclusive=end,
+    ))
+    market_root = tmp_path / "market"
+    market_root.mkdir(mode=0o700)
+    tape = market_root / "btcusdt_1h.parquet"
+    market.frame.to_parquet(tape)
+    os.chmod(tape, 0o600)
+    supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=market_root)
+    common = dict(
+        lease_epoch=1, market_path=tape, artifact_root=tmp_path / "p05", dataset_id=CRYPTO_BINANCE_DATASET_ID, symbol="BTCUSDT",
+        data_start_utc_ms=ms(start), data_end_exclusive_utc_ms=ms(end), first_oos_utc_ms=ms(split),
+    )
+    parent = supervisor.run_delta_wfo(DeltaWfoChildReceipt(
+        job_id="w5a-real-parent", run_id="w5a-real-parent", worker_attempt_id="w5a-real-parent-a",
+        execution_profile_id=DELTA_WFO_PROFILE_ID, execution_profile_digest=DELTA_WFO_PROFILE_DIGEST, **common,
+    ), limits=DELTA_WFO_CHILD_LIMITS)
+    trials = pd.read_parquet(parent.output_root / "w5a-real-parent" / "wfo" / "trials.parquet")
+    selected = json.loads((parent.output_root / "w5a-real-parent" / "selection" / "selected_params.json").read_text())
+    theta = {name: _text(value) for name, value in selected["params"].items()}
+    parent_by_params = {
+        tuple(sorted((k, _text(v)) for k, v in json.loads(row["params_json"]).items())): _text(row["objective"])
+        for row in trials.to_dict(orient="records")
+    }
+    theta_objective = parent_by_params[tuple(sorted(theta.items()))]
+
+    # The Control API grid: θ* ± 4 declared steps (0.1) on rvol and slpercent, clamped.
+    from decimal import Decimal
+
+    def axis(value: str, low: str, high: str) -> list[str]:
+        base = Decimal(value)
+        return [_text(min(max(base + Decimal(k) * Decimal("0.1"), Decimal(low)), Decimal(high))) for k in range(-4, 5)]
+
+    configs: list[dict[str, str]] = []
+    for sl in axis(theta["slpercent"], "0.7", "2.5"):
+        for rv in axis(theta["rvol"], "1", "2.5"):
+            config = {**theta, "rvol": rv, "slpercent": sl}
+            if config not in configs:
+                configs.append(config)
+    evaluations = tuple({"evaluation_key": _key(index + 1), "parameters": config} for index, config in enumerate(configs))
+    result = supervisor.run_delta_wfo(DeltaWfoChildReceipt(
+        job_id="w5a-real-grid", run_id="w5a-real-grid", worker_attempt_id="w5a-real-grid-a",
+        execution_profile_id=WHATIF_PROFILE_ID, execution_profile_digest=WHATIF_PROFILE_DIGEST,
+        task="P16_DELTA_WHATIF_GRID", whatif_grid_key="9" * 64, whatif_evaluations=evaluations, **common,
+    ), limits=DELTA_WFO_CHILD_LIMITS)
+    document = json.loads((result.output_root / "w5a-real-grid" / "whatif_results.json").read_text())
+    by_key = {entry["evaluation_key"]: entry for entry in document["results"]}
+    assert set(by_key) == {entry["evaluation_key"] for entry in evaluations}
+    theta_key = next(entry["evaluation_key"] for entry in evaluations if entry["parameters"] == theta)
+    assert by_key[theta_key]["objective"] == theta_objective
+    measured = {
+        "theta": theta, "theta_objective": theta_objective, "unique_evaluations": len(evaluations),
+        "complete": sum(entry["state"] == "COMPLETE" for entry in by_key.values()),
+        "pruned": sum(entry["state"] != "COMPLETE" for entry in by_key.values()),
+        "grid_child_cpu_seconds": round(result.cpu_seconds, 3), "grid_child_wall_seconds": round(result.elapsed_seconds, 3),
+        "grid_child_peak_rss_bytes": result.peak_rss_bytes, "parent_child_cpu_seconds": round(parent.cpu_seconds, 3),
+        "bars": result.bars, "n_folds": result.n_folds,
+        "objective_range": [str(min(Decimal(e["objective"]) for e in by_key.values() if e["objective"])), str(max(Decimal(e["objective"]) for e in by_key.values() if e["objective"]))],
+    }
+    print("\nW5A_REAL_HMD_WHATIF " + json.dumps(measured, sort_keys=True))
+    assert result.cpu_seconds < 120 and result.elapsed_seconds < 240
+
+
+def test_sibling_pins_are_admitted_only_on_the_whatif_axes() -> None:
+    """P16-T08/T14: a what-if sibling pins rvol/slpercent on-step; nothing else may be overridden."""
+
+    def with_overrides(overrides: list[dict]) -> dict:
+        payload = wfo_request()
+        payload["research"]["requested_spec"]["parameter_space_overrides"] = overrides
+        return payload
+
+    ResearchRunProducerRequest.model_validate(with_overrides([
+        {"name": "rvol", "kind": "pin", "value": 1.4}, {"name": "slpercent", "kind": "pin", "value": 2.3},
+    ]))
+    for overrides, message in (
+        ([{"name": "window", "kind": "pin", "value": 30}], "what-if axes"),
+        ([{"name": "rvol", "kind": "pin", "value": 1.45}], "declared step"),
+        ([{"name": "rvol", "kind": "sweep", "low": 1.1, "high": 1.3}], "parameter space only"),
+    ):
+        with pytest.raises(ValidationError, match=message):
+            ResearchRunProducerRequest.model_validate(with_overrides(overrides))
+
+
+def test_real_child_honours_sibling_pins(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from dataclasses import replace
+
+    import pandas as pd
+
+    monkeypatch.setenv("DATABASE_URL", "postgres://must-not-reach-child")
+    supervisor = IsolatedResearchSupervisor(tmp_path / "scratch", allowed_market_root=MARKET_PATH.parent)
+    base = _golden_wfo_receipt(tmp_path, "sibling")
+    result = supervisor.run_delta_wfo(replace(base, pinned_parameters=(("rvol", "1.4"), ("slpercent", "2.3"))))
+    trials = pd.read_parquet(result.output_root / "w1-run-sibling" / "wfo" / "trials.parquet")
+    for record in trials.to_dict(orient="records"):
+        params = json.loads(record["params_json"])
+        assert _text(params["rvol"]) == "1.4" and _text(params["slpercent"]) == "2.3"
+    with pytest.raises(ResearchSupervisorError, match="pinned"):
+        replace(
+            base, task="P16_DELTA_WHATIF_GRID", pinned_parameters=(("rvol", "1.4"),), whatif_grid_key="9" * 64,
+            whatif_evaluations=({"evaluation_key": _key(1), "parameters": {}},),
+        ).as_payload(output_root=tmp_path)

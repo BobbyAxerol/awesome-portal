@@ -46,6 +46,7 @@ export interface LineageAttemptRow {
   alpha_version_label: string;
   state: string;
   intent_kind: string;
+  relation_kind?: string | null;
   reason: string | null;
   space_signature: string | null;
   created_at: Date;
@@ -159,7 +160,7 @@ export class ResearchLineageRepository {
                 attempt.alpha_version_id,
                 COALESCE('av_' || replace(version.declared_contract->>'version', '.', '_'), version.alpha_version_id)
                   AS alpha_version_label,
-                attempt.state, attempt.intent_kind, attempt.reason, attempt.space_signature,
+                attempt.state, attempt.intent_kind, attempt.reason, attempt.space_signature, attempt.relation_kind,
                 attempt.created_at, attempt.updated_at,
                 primary_run.run_id AS primary_run_id,
                 primary_run.state AS primary_run_state,

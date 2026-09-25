@@ -321,10 +321,10 @@ function LiveWhatIf({
                     background:
                       entry.state === "EVALUATED"
                         ? entry.is_base
-                          ? "color-mix(in srgb, var(--accent) 45%, transparent)"
+                          ? "var(--accent-soft)"
                           : entry.delta_j !== null && entry.delta_j.startsWith("-")
-                            ? "color-mix(in srgb, var(--bad) 40%, transparent)"
-                            : "color-mix(in srgb, var(--good) 40%, transparent)"
+                            ? "var(--bad-bg)"
+                            : "var(--good-bg)"
                         : entry.state === "NOT_DEFINED"
                           ? "var(--paper-sunken)"
                           : entry.state === "QUEUED"

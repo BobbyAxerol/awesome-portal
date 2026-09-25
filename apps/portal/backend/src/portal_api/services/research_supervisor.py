@@ -146,6 +146,8 @@ class DeltaWfoChildReceipt:
     # W5a A10c: the same confined child runs the what-if diagnostic. Its
     # admitted evaluations travel ID-and-value only (no path, no source).
     task: str = "P10_DELTA_WFO"
+    # W5a: a what-if sibling's two pinned axes (exact decimal text).
+    pinned_parameters: tuple[tuple[str, str], ...] = ()
     whatif_grid_key: str | None = None
     whatif_evaluations: tuple[dict[str, Any], ...] = ()
 
@@ -170,6 +172,10 @@ class DeltaWfoChildReceipt:
             "data_end_exclusive_utc_ms": self.data_end_exclusive_utc_ms,
             "first_oos_utc_ms": self.first_oos_utc_ms,
         }
+        if self.pinned_parameters:
+            if self.task != "P10_DELTA_WFO":
+                raise ResearchSupervisorError("P06 only a WFO study may carry pinned parameters")
+            payload["pinned_parameters"] = dict(self.pinned_parameters)
         if self.task == "P16_DELTA_WHATIF_GRID":
             if not self.whatif_grid_key or not 1 <= len(self.whatif_evaluations) <= 81:
                 raise ResearchSupervisorError("P06 what-if child receipt carries no bounded evaluation list")

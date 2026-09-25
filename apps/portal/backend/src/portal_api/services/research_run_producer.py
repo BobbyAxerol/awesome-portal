@@ -37,7 +37,7 @@ from portal_api.domain.research_delta_wfo_profile import (
     DELTA_WFO_PROFILE_DIGEST,
     DELTA_WFO_PROFILE_ID,
 )
-from portal_api.domain.research_run_producer import ResearchRunProducerRequest
+from portal_api.domain.research_run_producer import ResearchRunProducerRequest, sibling_pins
 from portal_api.domain.research_whatif_profile import WHATIF_PROFILE_DIGEST, WHATIF_PROFILE_ID
 from portal_api.serialization import canonicalize
 from portal_api.services.data_catalog import DataCatalogError, SnapshotStore
@@ -654,6 +654,12 @@ class ResearchRunProducerExecutor:
                 data_end_exclusive_utc_ms=int(span_end.value // 1_000_000),
                 first_oos_utc_ms=int(first_oos.value // 1_000_000),
                 task="P16_DELTA_WHATIF_GRID" if whatif is not None else "P10_DELTA_WFO",
+                # A what-if diagnostic scores full configurations, so it never
+                # carries its parent's pins; a sibling WFO run does.
+                pinned_parameters=() if whatif is not None else tuple(
+                    (name, format(Decimal(str(value)).normalize(), "f"))
+                    for name, value in sorted(sibling_pins(research.requested_spec).items())
+                ),
                 whatif_grid_key=whatif.grid_key if whatif is not None else None,
                 whatif_evaluations=tuple(
                     {"evaluation_key": entry.evaluation_key, "parameters": dict(entry.parameters)}

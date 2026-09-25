@@ -232,6 +232,19 @@ REVOKE ALL ON research.whatif_grids_v1 FROM PUBLIC;
 GRANT SELECT, INSERT ON research.whatif_jobs_v1 TO portal_research_runtime;
 GRANT SELECT, INSERT ON research.whatif_grids_v1 TO portal_research_runtime;
 
+-- P19 · a sibling attempt forked from a what-if node: its own intent and
+-- config_hash, lineage-linked to the frozen run's attempt. Only a
+-- CLONE_FOR_EXPERIMENT with a parent may carry the relation.
+ALTER TABLE research.attempts
+  ADD COLUMN relation_kind text NULL,
+  ADD CONSTRAINT attempts_relation_kind_check
+    CHECK (relation_kind IS NULL
+           OR (relation_kind = 'SIBLING_OF' AND parent_attempt_id IS NOT NULL
+               AND intent_kind = 'CLONE_FOR_EXPERIMENT'));
+
+COMMENT ON COLUMN research.attempts.relation_kind IS
+  'W5a: SIBLING_OF when this attempt was forked from a Screen-07 what-if node of its parent attempt''s run.';
+
 COMMENT ON TABLE research.whatif_jobs_v1 IS
   'W5a A10c: one explicit Screen-07 what-if diagnostic job (≤81 unique evaluation keys) for a frozen WFO run.';
 COMMENT ON TABLE research.whatif_grids_v1 IS

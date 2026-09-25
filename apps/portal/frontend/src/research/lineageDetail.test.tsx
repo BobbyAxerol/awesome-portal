@@ -133,6 +133,7 @@ function attempt(
     alpha_version_label: "av_0_9_2",
     state: "READY",
     intent_kind: "NEW",
+    relation_to_parent: null,
     reason: null,
     space_signature: hex("c"),
     created_at_utc_ms: T0 + minute * MIN,
@@ -594,6 +595,21 @@ describe("S10 Attempt Lineage — the screen", () => {
       "+ more child runs not returned (P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT)",
     );
     expect(screenState()).toBe("partial");
+  });
+
+  it("W5a · P19 names a what-if fork 'sibling of' its parent, never 'parent'", async () => {
+    const attempts = sixAttempts();
+    attempts[1] = { ...attempts[1], relation_to_parent: "SIBLING_OF" };
+    server([{ status: 200, body: lineage({ attempts }) }]);
+    renderRoute();
+    await ready();
+    openNode("att_02", "att_03");
+    const sibling = node("att_02").querySelector("[data-parent-line]") as HTMLElement;
+    expect(sibling.getAttribute("data-relation")).toBe("SIBLING_OF");
+    expect(sibling.textContent).toBe("sibling of att_01 — a what-if fork with its own config_hash");
+    const plain = node("att_03").querySelector("[data-parent-line]") as HTMLElement;
+    expect(plain.getAttribute("data-relation")).toBe("");
+    expect(plain.textContent).toBe("parent att_02");
   });
 
   it("S10-U15 shows technical retries as a secondary fact that never becomes an attempt", async () => {
