@@ -1,11 +1,18 @@
 /** P19 server-normalized Attempt Lineage projection. */
 
-import { Inject, Injectable } from "@nestjs/common";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, querySigningKeys } from "../config";
+import type { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
+import { projectResearchAlphaVersionDeclaration, type ResearchAlphaVersionDeclaration } from "./alpha-version-declaration";
 import type { ResearchScope } from "./contracts";
+import { CurrentSourceDecimalSchema } from "./current-source.payload";
+import { ResearchFoundationAtlasClient } from "./foundation.client";
 import {
+  LINEAGE_COUNT_KEYS,
+  LINEAGE_PRESENTATION_REASONS,
   ResearchAttemptLineageResponseSchema,
   ResearchAttemptLineageNodeSchema,
   type ResearchAttemptLineageQuery,
@@ -14,14 +21,55 @@ import {
 import { ResearchLineageError } from "./lineage.error";
 import {
   type LineageAttemptRow,
+  type LineageBoundary,
   type LineageChildRunRow,
+  type LineageExercisedRow,
   type LineageSnapshot,
+  type LineageVersionRow,
   ResearchLineageRepository,
 } from "./lineage.repository";
-import { ResearchRequestedSpecSchema } from "./preflight.contract";
-import { sha256ResearchJson } from "./preflight.service";
+import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./preflight.contract";
+import { canonicalResearchJson, sha256ResearchJson } from "./preflight.service";
+import type { ResearchRunLibraryItem } from "./run-library.contract";
+import { ResearchRunLibraryService } from "./run-library.service";
 
-type Availability = { state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL"; reason_code: string | null };
+type Availability = {
+  state: "AVAILABLE" | "NOT_PUBLISHED" | "PARTIAL" | "NOT_APPLICABLE";
+  reason_code: string | null;
+};
+type PresentationReason = (typeof LINEAGE_PRESENTATION_REASONS)[number];
+type Version = ResearchAttemptLineageResponse["alpha"]["versions"][number];
+type RcRef = NonNullable<Node["release_candidate"]>;
+type MetricFact = Node["run_facts"]["oos_sharpe"];
+
+/** Keys a researcher declares; effective/derived echoes of the same change are not counted twice. */
+const MATERIAL_KEYS = new Set([
+  "strategy_id", "execution_route", "protocol", "data.dataset_id", "data.symbol", "data.timeframe",
+  "optimization_mode", "optimization_schedule", "optuna_trials", "early_stopping", "random_seed",
+  "parameter_space_overrides", "optimization_config", "route_params", "engine.requested_release", "engine.config_digest",
+]);
+const MATERIAL_CHANGE_THRESHOLD = 2 as const;
+const GRADE_ORDER = ["A", "B", "C", "D"] as const;
+const CURSOR_PREFIX = "lc1";
+const EXACT_DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+const CURSOR_TIMESTAMP = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$/;
+
+/** CG-P19-13: each count, what it includes, and its Run Library reconciliation. */
+const COUNTS_DEFINITIONS: ResearchAttemptLineageResponse["counts_definitions"] = {
+  version: "research.lineage-counts.v1",
+  rows: [
+    { key: "total_attempts", includes: "Every logical research attempt of every version of this Alpha in the workspace: draft, submitted, failed and abandoned alike. Worker retries and child runs are not attempts.", run_library_equivalent: "counters.logical_runs for ?alpha=<id> plus draft_attempts, when every submitted attempt has its PRIMARY run" },
+    { key: "returned_attempts", includes: "Attempts in this bounded page (at most `limit`); equal to total_attempts only when coverage is COMPLETE.", run_library_equivalent: null },
+    { key: "draft_attempts", includes: "Attempts in state DRAFT (autosaved intent, never submitted).", run_library_equivalent: null },
+    { key: "submitted_attempts", includes: "Attempts in any state other than DRAFT.", run_library_equivalent: "counters.logical_runs for ?alpha=<id> (its PRIMARY rows), when every submitted attempt has its PRIMARY run" },
+    { key: "failed_attempts", includes: "Attempts whose lifecycle state is FAILED.", run_library_equivalent: "claim_ledger.failed for ?alpha=<id> (FAILED runs), when each FAILED attempt's PRIMARY run is FAILED" },
+    { key: "abandoned_attempts", includes: "Attempts whose lifecycle state is ABANDONED; kept on record, never deleted.", run_library_equivalent: null },
+    { key: "child_runs", includes: "Non-PRIMARY runs of these attempts (audit, diagnostic, reproduction, export, verify, projection).", run_library_equivalent: "counters.worker_children for ?alpha=<id>" },
+    { key: "technical_retries", includes: "Worker re-leases of the same durable job beyond the first; never an attempt or a node.", run_library_equivalent: "counters.technical_retries for ?alpha=<id>" },
+    { key: "storied_returned", includes: "Returned attempts classified STORIED by research.lineage-presentation.v1.", run_library_equivalent: null },
+    { key: "probe_returned", includes: "Returned attempts classified PROBE by research.lineage-presentation.v1.", run_library_equivalent: null },
+  ],
+};
 type Node = import("zod").z.infer<typeof ResearchAttemptLineageNodeSchema>;
 type FactKind = "CONFIG" | "DATA" | "ENGINE" | "ALPHA_VERSION";
 type VersionLifecycleState = "DRAFT" | "ACTIVE" | "SUPERSEDED" | "ABANDONED";
@@ -194,27 +242,233 @@ function versionLabel(row: { alpha_version_id: string; declared_contract: unknow
   return version ? `av_${version.replaceAll(".", "_")}` : row.alpha_version_id;
 }
 
+function requestedSpec(row: LineageAttemptRow): ResearchRequestedSpec | null {
+  const raw = record(row.requested_spec);
+  const parsed = raw ? ResearchRequestedSpecSchema.safeParse(raw) : null;
+  return parsed?.success ? parsed.data : null;
+}
+
+function declaration(row: LineageVersionRow): ResearchAlphaVersionDeclaration | null {
+  const contract = record(row.declared_contract);
+  if (!contract) return null;
+  try {
+    return projectResearchAlphaVersionDeclaration(contract, row.entrypoint);
+  } catch {
+    return null;
+  }
+}
+
+/** Run Library availability words map onto the lineage vocabulary; the reason is kept verbatim. */
+function fromLibrary(availability: { state: string; reason_code: string | null }): Availability {
+  if (availability.state === "AVAILABLE") return available();
+  return absent(availability.reason_code ?? "P19_RUN_LIBRARY_FACT_NOT_PUBLISHED");
+}
+
+function scalarText(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "string" && value.length <= 96) return value;
+  if (typeof value === "boolean") return String(value);
+  return null;
+}
+
+/** Spec 10 §2.3 line: `route · mode × schedule`, allow-listed keys only. */
+function specText(spec: ResearchRequestedSpec): string {
+  return `${spec.execution_route} · ${spec.optimization_mode} × ${spec.optimization_schedule}`;
+}
+
+/**
+ * `6p · 5 swept · 1 pinned`: the version's declared parameter space after
+ * this attempt's overrides.  Declared `fixed` and overridden `pin` are pinned.
+ */
+function specSpace(spec: ResearchRequestedSpec, declared: ResearchAlphaVersionDeclaration | null) {
+  if (!declared) return null;
+  const names = Object.keys(declared.parameter_space);
+  const pins = new Set(spec.parameter_space_overrides.filter((row) => row.kind === "pin").map((row) => row.name));
+  const pinned = names.filter((name) => declared.parameter_space[name]!.kind === "fixed" || pins.has(name)).length;
+  return { parameters: names.length, swept: names.length - pinned, pinned };
+}
+
+interface RangeAccumulator {
+  kind: "SWEEP" | "PIN";
+  low: number | null;
+  high: number | null;
+  values: Set<string>;
+}
+
+function accumulate(ranges: Map<string, RangeAccumulator>, name: string, kind: "SWEEP" | "PIN", low: unknown, high: unknown) {
+  const current = ranges.get(name) ?? { kind, low: null, high: null, values: new Set<string>() };
+  if (kind === "SWEEP") current.kind = "SWEEP";
+  for (const value of [low, high]) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      current.low = current.low === null ? value : Math.min(current.low, value);
+      current.high = current.high === null ? value : Math.max(current.high, value);
+    } else {
+      const text = scalarText(value);
+      if (text !== null) current.values.add(text);
+    }
+  }
+  ranges.set(name, current);
+}
+
+/** CG-P19-06: union of what every attempt of one version declared. */
+function exercisedFor(
+  rows: readonly LineageExercisedRow[],
+  declared: ResearchAlphaVersionDeclaration | null,
+  bounded: boolean,
+): Version["exercised"] {
+  const routes = new Set<string>();
+  const modes = new Set<string>();
+  const ranges = new Map<string, RangeAccumulator>();
+  let considered = 0;
+  let withoutManifest = 0;
+  let overflow = bounded;
+  for (const row of rows) {
+    const attempts = count(row.attempts, "exercised attempt count");
+    if (row.execution_route === null || row.optimization_mode === null || row.optimization_schedule === null) {
+      withoutManifest += attempts;
+      continue;
+    }
+    considered += attempts;
+    routes.add(row.execution_route);
+    modes.add(`${row.optimization_mode} × ${row.optimization_schedule}`);
+    const overrides = Array.isArray(row.parameter_space_overrides) ? row.parameter_space_overrides : [];
+    const overridden = new Set<string>();
+    for (const entry of overrides) {
+      const item = entry && typeof entry === "object" ? entry as Record<string, unknown> : null;
+      if (!item || typeof item.name !== "string") continue;
+      overridden.add(item.name);
+      if (item.kind === "sweep") accumulate(ranges, item.name, "SWEEP", item.low, item.high);
+      else if (item.kind === "pin") accumulate(ranges, item.name, "PIN", item.value, item.value);
+    }
+    for (const [name, parameter] of Object.entries(declared?.parameter_space ?? {})) {
+      if (overridden.has(name)) continue;
+      if (parameter.kind === "fixed") accumulate(ranges, name, "PIN", parameter.value, parameter.value);
+      else if (parameter.kind === "categorical") for (const value of parameter.values) accumulate(ranges, name, "SWEEP", value, value);
+      else accumulate(ranges, name, "SWEEP", parameter.low, parameter.high);
+    }
+  }
+  const sortedRoutes = [...routes].sort();
+  const sortedModes = [...modes].sort();
+  const sortedRanges = [...ranges.entries()].sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+  if (sortedRoutes.length > 16 || sortedModes.length > 32 || sortedRanges.length > 24) overflow = true;
+  const paramRanges = sortedRanges.slice(0, 24).map(([name, range]) => {
+    const values = [...range.values].sort();
+    if (values.length > 16) overflow = true;
+    return {
+      name,
+      kind: range.kind,
+      low: range.low === null ? null : String(range.low),
+      high: range.high === null ? null : String(range.high),
+      values: values.slice(0, 16),
+    };
+  });
+  const availability = considered === 0
+    ? absent(withoutManifest > 0 ? "P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE" : "P19_VERSION_HAS_NO_ATTEMPT")
+    : overflow
+      ? partial("P19_EXERCISED_DECLARATIONS_BOUNDED")
+      : withoutManifest > 0
+        ? partial("P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE")
+        : available();
+  return {
+    routes: sortedRoutes.slice(0, 16),
+    modes: sortedModes.slice(0, 32),
+    param_ranges: paramRanges,
+    attempts_considered: considered,
+    attempts_without_manifest: withoutManifest,
+    availability,
+  };
+}
+
+function rcRef(item: ResearchRunLibraryItem | undefined): RcRef | null {
+  if (!item?.rc) return null;
+  return {
+    kind: item.rc.kind,
+    release_candidate_id: item.rc.release_candidate_id,
+    draft_id: item.rc.draft_id,
+    run_id: item.run_id,
+    delivery_state: item.rc.delivery_state,
+    approval_state: item.rc.approval_state,
+    sealed_at_utc_ms: item.rc.sealed_at_utc_ms,
+  };
+}
+
+function rcFor(
+  runId: string | null,
+  item: ResearchRunLibraryItem | undefined,
+  wired: boolean,
+): { ref: RcRef | null; availability: Availability } {
+  if (runId === null) return { ref: null, availability: notApplicable("P19_ATTEMPT_HAS_NO_PRIMARY_RUN") };
+  if (!item) return { ref: null, availability: absent(wired ? "P19_RUN_LIBRARY_ROW_NOT_READABLE" : "P19_RUN_LIBRARY_READER_NOT_WIRED") };
+  return { ref: rcRef(item), availability: fromLibrary(item.rc_availability) };
+}
+
+function metricFromLibrary(
+  item: ResearchRunLibraryItem,
+  role: "OOS_SHARPE" | "DECAY",
+): MetricFact | { value: null; reason: string } {
+  const cell = item.stats.find((stat) => stat.role === role);
+  if (!cell) return { value: null, reason: "P19_RUN_LIBRARY_PUBLISHES_NO_PERFORMANCE_CELL_FOR_STATUS" };
+  if (cell.availability.state === "AVAILABLE" && cell.value !== null && EXACT_DECIMAL.test(cell.value)) {
+    return {
+      value: cell.value,
+      source: "P13_EVIDENCE_PROJECTION",
+      scope: cell.scope,
+      definition_id: cell.definition_id,
+      availability: available(),
+    };
+  }
+  return { value: null, reason: cell.availability.reason_code ?? "P13_SOURCE_EVIDENCE_NOT_PUBLISHED" };
+}
+
+function notApplicable(reason: string): Availability {
+  return { state: "NOT_APPLICABLE", reason_code: reason };
+}
+
 @Injectable()
 export class ResearchLineageService {
   constructor(
     private readonly repository: ResearchLineageRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    // W6b: the Screen-01 mapping and the Engine Atlas are optional so a
+    // deployment (or a focused test) without them degrades to typed absences.
+    @Optional() private readonly runLibrary?: ResearchRunLibraryService,
+    @Optional() private readonly atlas?: ResearchFoundationAtlasClient,
   ) {}
 
   async read(
     scope: ResearchScope,
     alphaId: string,
     query: ResearchAttemptLineageQuery,
+    user?: PortalUser,
   ): Promise<ResearchAttemptLineageResponse> {
     this.requireEnabled();
-    const snapshot = await this.repository.read(scope, alphaId, query.limit);
+    const boundary = query.cursor ? this.decodeCursor(query.cursor, scope.workspaceId, alphaId, query.limit) : null;
+    const snapshot = boundary
+      ? await this.repository.read(scope, alphaId, query.limit, boundary)
+      : await this.repository.read(scope, alphaId, query.limit);
     if (!snapshot) {
       throw new ResearchLineageError("RESEARCH_LINEAGE_NOT_FOUND", "Research Alpha was not found.", 404);
     }
-    return this.map(snapshot);
+    const atlasRoutes = await this.atlasRoutes(user);
+    return this.map(snapshot, { workspaceId: scope.workspaceId, alphaId, limit: query.limit }, atlasRoutes);
   }
 
-  private map(snapshot: LineageSnapshot): ResearchAttemptLineageResponse {
+  /** Engine Atlas routes for `untried`; an unreadable Atlas is a typed absence, never a failed lineage. */
+  private async atlasRoutes(user: PortalUser | undefined): Promise<Array<{ route_id: string; status_word: string | null }> | null> {
+    if (!this.atlas || !user) return null;
+    try {
+      const atlas = await this.atlas.read(user);
+      return atlas.routes.map((route) => ({ route_id: route.route_id, status_word: route.status_word ?? null }));
+    } catch {
+      return null;
+    }
+  }
+
+  private map(
+    snapshot: LineageSnapshot,
+    page: { workspaceId: string; alphaId: string; limit: number },
+    atlasRoutes: Array<{ route_id: string; status_word: string | null }> | null,
+  ): ResearchAttemptLineageResponse {
     const ids = new Set(snapshot.attempts.map((row) => row.attempt_id));
     const versionIds = new Set(snapshot.versions.map((row) => row.alpha_version_id));
     const children = new Map<string, LineageChildRunRow[]>();
@@ -226,6 +480,25 @@ export class ResearchLineageService {
 
     this.assertGraph(snapshot, ids, versionIds);
     const byId = new Map(snapshot.attempts.map((row) => [row.attempt_id, row]));
+    const versionRows = new Map(snapshot.versions.map((row) => [row.alpha_version_id, row]));
+    const labels = new Map(snapshot.versions.map((row) => [row.alpha_version_id, versionLabel(row)]));
+    const declarations = new Map(snapshot.versions.map((row) => [row.alpha_version_id, declaration(row)]));
+    const library = new Map<string, ResearchRunLibraryItem>();
+    if (this.runLibrary) {
+      for (const row of snapshot.libraryRows ?? []) {
+        try {
+          library.set(row.run_id, this.runLibrary.mapRow(row));
+        } catch {
+          // An incompatible Library row stays a typed absence for its cells;
+          // the lineage graph itself is still exact.
+        }
+      }
+    }
+    const retained = new Map<string, Record<string, unknown>>();
+    for (const row of snapshot.retainedMetrics ?? []) {
+      const metrics = record(row.metrics);
+      if (metrics) retained.set(row.run_id, metrics);
+    }
     const semanticAbsence = snapshot.attempts.some((row) => {
       if (row.parent_attempt_id === null) return false;
       const parent = byId.get(row.parent_attempt_id);
@@ -281,6 +554,12 @@ export class ResearchLineageService {
       if (row.primary_run_state !== null && !RUN_STATES.has(row.primary_run_state)) {
         throw new ResearchLineageError("RESEARCH_LINEAGE_UNAVAILABLE", "Attempt Lineage primary run lifecycle is incompatible.", 503);
       }
+      const item = row.primary_run_id ? library.get(row.primary_run_id) : undefined;
+      const rc = rcFor(row.primary_run_id, item, this.runLibrary !== undefined);
+      const spec = requestedSpec(row);
+      const space = spec ? specSpace(spec, declarations.get(row.alpha_version_id) ?? null) : null;
+      const runFacts = this.runFacts(row, item, row.primary_run_id ? retained.get(row.primary_run_id) : undefined);
+      const reason = boundedText(row.reason, "reason");
       return {
         attempt_id: row.attempt_id,
         parent_attempt_id: row.parent_attempt_id,
@@ -291,7 +570,7 @@ export class ResearchLineageService {
         intent_kind: row.intent_kind as Node["intent_kind"],
         // W5a · P19: a Screen-07 what-if fork names its relation explicitly.
         relation_to_parent: row.relation_kind === "SIBLING_OF" ? "SIBLING_OF" as const : null,
-        reason: boundedText(row.reason, "reason"),
+        reason,
         space_signature: row.space_signature,
         created_at_utc_ms: requiredUtcMs(row.created_at, "attempt creation timestamp"),
         updated_at_utc_ms: requiredUtcMs(row.updated_at, "attempt update timestamp"),
@@ -302,6 +581,7 @@ export class ResearchLineageService {
           engine_release_id: row.engine_release_id,
           dataset_binding_digest: row.dataset_binding_digest,
           technical_retry_count: count(row.technical_retry_count, "technical retry count"),
+          execution_profile_id: row.primary_run_id ? (row.execution_profile_id ?? null) : null,
         },
         child_runs: childRuns,
         child_runs_coverage: {
@@ -316,10 +596,36 @@ export class ResearchLineageService {
           latest_source_as_of_utc_ms: utcMs(row.latest_source_as_of, "exposure source timestamp"),
           availability: exposureCount > 0 ? available() : absent("P19_NO_EXPOSURE_FACT_PUBLISHED_FOR_ATTEMPT"),
         },
+        // Filled below, once every node's facts are known.
+        presentation_kind: "PROBE" as const,
+        presentation_reasons: [] as PresentationReason[],
+        promotion_state: "AWAITING_PICK" as const,
+        promotion_reason_code: null,
+        spec_label: spec
+          ? {
+            text: specText(spec),
+            space,
+            availability: space ? available() : partial("P19_ALPHA_DECLARATION_PARAMETER_SPACE_NOT_READABLE"),
+          }
+          : { text: null, space: null, availability: absent("P19_PERSISTED_PREFLIGHT_MANIFEST_NOT_AVAILABLE") },
+        release_candidate: rc.ref,
+        release_candidate_availability: rc.availability,
+        run_facts: runFacts,
+        outcome: reason !== null
+          ? { text: reason, source: "ATTEMPT_REASON" as const, availability: available() }
+          : runFacts.claim.text !== null && runFacts.claim.availability.state === "AVAILABLE"
+            ? { text: runFacts.claim.text, source: "SOURCE_CLAIM_SENTENCE" as const, availability: available() }
+            : {
+              text: null,
+              source: null,
+              availability: row.primary_run_id === null
+                ? notApplicable("P19_ATTEMPT_HAS_NO_PRIMARY_RUN")
+                : absent(runFacts.claim.availability.reason_code ?? "P19_NO_OUTCOME_SENTENCE_PUBLISHED"),
+            },
       };
     });
 
-    const versions = snapshot.versions.map((row) => {
+    const versions: Version[] = snapshot.versions.map((row) => {
       if (!VERSION_STATES.has(row.lifecycle_state)) {
         throw new ResearchLineageError("RESEARCH_LINEAGE_UNAVAILABLE", "Attempt Lineage Alpha version lifecycle is incompatible.", 503);
       }
@@ -329,9 +635,13 @@ export class ResearchLineageService {
       if (!published && !absentFields) {
         throw new ResearchLineageError("RESEARCH_LINEAGE_UNAVAILABLE", "Attempt Lineage promotion fact is incomplete.", 503);
       }
+      const pickRc = published
+        ? rcFor(row.promotion_run_id, library.get(row.promotion_run_id!), this.runLibrary !== undefined)
+        : { ref: null, availability: notApplicable("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK") };
+      const sourceAuthority = { owner: "P22_RELEASE_CANDIDATE_APPROVAL" as const, state: published ? "CONNECTED" as const : "NOT_CONNECTED" as const };
       return {
         alpha_version_id: row.alpha_version_id,
-        label: versionLabel(row),
+        label: labels.get(row.alpha_version_id)!,
         code_digest: row.code_digest,
         entrypoint: row.entrypoint,
         lifecycle_state: row.lifecycle_state as VersionLifecycleState,
@@ -345,6 +655,9 @@ export class ResearchLineageService {
             source_digest: row.promotion_source_digest,
             source_as_of_utc_ms: requiredUtcMs(row.promotion_source_as_of!, "promotion source timestamp"),
             availability: available(),
+            source_authority: sourceAuthority,
+            release_candidate: pickRc.ref,
+            release_candidate_availability: pickRc.availability,
           }
           : {
             state: "NOT_PUBLISHED" as const,
@@ -354,15 +667,65 @@ export class ResearchLineageService {
             source_digest: null,
             source_as_of_utc_ms: null,
             availability: absent("P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"),
+            source_authority: sourceAuthority,
+            release_candidate: null,
+            release_candidate_availability: pickRc.availability,
           },
+        // Composed after the attempts are classified.
+        outcome: { text: null, rule: "research.lineage-version-outcome.v1" as const, availability: absent("P19_VERSION_HAS_NO_RETURNED_ATTEMPT") },
+        supersession: this.supersession(row, snapshot.versions, labels),
+        exercised: exercisedFor(
+          (snapshot.exercised ?? []).filter((group) => group.alpha_version_id === row.alpha_version_id),
+          declarations.get(row.alpha_version_id) ?? null,
+          snapshot.exercisedBounded === true,
+        ),
+        untried: { routes: [], availability: absent("P19_ENGINE_ATLAS_NOT_READABLE") },
+        presentation: { storied: 0, probe: 0, basis: "RETURNED_ATTEMPTS" as const },
       };
     });
+    const versionById = new Map(versions.map((version) => [version.alpha_version_id, version]));
+
+    // CG-P19-03 / CG-P19-14: classification and promotion standing need the
+    // node's own diff/rc and its version's pick; both are persisted facts.
+    for (const node of attempts) {
+      const version = versionById.get(node.alpha_version_id);
+      const versionRow = versionRows.get(node.alpha_version_id);
+      const pick = version?.promotion_pick;
+      const reasons: PresentationReason[] = [];
+      if (pick?.state === "PUBLISHED" && pick.attempt_id === node.attempt_id) reasons.push("PROMOTION_PICK");
+      if (node.release_candidate !== null) reasons.push("RELEASE_CANDIDATE");
+      if (versionRow?.first_attempt_id === node.attempt_id) reasons.push("VERSION_FIRST_ATTEMPT");
+      if (node.semantic_diff.gates_reset) reasons.push("GATES_RESET");
+      const material = node.semantic_diff.state === "AVAILABLE"
+        ? node.semantic_diff.changes.filter((change) => MATERIAL_KEYS.has(change.path)).length
+        : 0;
+      if (material >= MATERIAL_CHANGE_THRESHOLD) reasons.push("MATERIAL_CHANGES");
+      node.presentation_reasons = reasons;
+      node.presentation_kind = reasons.length > 0 ? "STORIED" : "PROBE";
+      const standing = this.promotion(node, version);
+      node.promotion_state = standing.state;
+      node.promotion_reason_code = standing.reason;
+    }
+    for (const version of versions) {
+      const own = attempts.filter((node) => node.alpha_version_id === version.alpha_version_id);
+      version.presentation = {
+        storied: own.filter((node) => node.presentation_kind === "STORIED").length,
+        probe: own.filter((node) => node.presentation_kind === "PROBE").length,
+        basis: "RETURNED_ATTEMPTS",
+      };
+      version.outcome = this.versionOutcome(version, own, snapshot.hasMore || snapshot.window === "OLDER_PAGE");
+      version.untried = this.untried(version, atlasRoutes);
+    }
 
     const totalAttempts = count(snapshot.counts.total_attempts, "total attempt count");
     if (totalAttempts < attempts.length) {
       throw new ResearchLineageError("RESEARCH_LINEAGE_UNAVAILABLE", "Attempt Lineage count boundary is incompatible.", 503);
     }
-    const response = {
+    const oldest = snapshot.attempts[0];
+    const olderCursor = snapshot.hasMore && oldest?.created_at_cursor
+      ? this.encodeCursor(page, oldest.created_at_cursor, oldest.attempt_id)
+      : null;
+    const body = {
       schema_version: "research.attempt-lineage.v1" as const,
       read_authority: "PORTAL_PERSISTED_RESEARCH" as const,
       alpha: {
@@ -385,23 +748,215 @@ export class ResearchLineageService {
         abandoned_attempts: count(snapshot.counts.abandoned_attempts, "abandoned attempt count"),
         child_runs: count(snapshot.counts.child_runs, "child run count"),
         technical_retries: count(snapshot.counts.technical_retries, "total technical retry count"),
+        storied_returned: attempts.filter((node) => node.presentation_kind === "STORIED").length,
+        probe_returned: attempts.filter((node) => node.presentation_kind === "PROBE").length,
+      },
+      counts_definitions: COUNTS_DEFINITIONS,
+      presentation_rule: {
+        version: "research.lineage-presentation.v1" as const,
+        storied_when: [...LINEAGE_PRESENTATION_REASONS],
+        material_change_threshold: MATERIAL_CHANGE_THRESHOLD,
       },
       coverage: {
-        state: snapshot.hasMore ? "PARTIAL" as const : "COMPLETE" as const,
-        reason_code: snapshot.hasMore ? "P19_BOUNDED_GRAPH_LIMIT_REACHED" : null,
+        state: snapshot.hasMore || snapshot.window === "OLDER_PAGE" ? "PARTIAL" as const : "COMPLETE" as const,
+        reason_code: snapshot.hasMore || snapshot.window === "OLDER_PAGE" ? "P19_BOUNDED_GRAPH_LIMIT_REACHED" : null,
         oldest_returned_created_at_utc_ms: attempts[0]?.created_at_utc_ms ?? null,
+        window: snapshot.window ?? "NEWEST" as const,
+        older_cursor: olderCursor,
       },
       source_absences: {
         promotion_pick: promotionAbsence,
         historical_semantic_diff: semanticAbsence,
       },
-      as_of_utc_ms: snapshot.asOfUtcMs,
     };
+    // CG-P19-02: the revision covers every fact above; the snapshot time is
+    // provenance, not content, so an unchanged lineage revalidates as 304.
+    const revision = `p19r2_${sha256ResearchJson(body)}`;
+    const response = { ...body, as_of_utc_ms: snapshot.asOfUtcMs, lineage_revision: revision, etag: `"${revision}"` };
     const parsed = ResearchAttemptLineageResponseSchema.safeParse(response);
     if (!parsed.success) {
       throw new ResearchLineageError("RESEARCH_LINEAGE_UNAVAILABLE", "Attempt Lineage could not form a compatible persisted response.", 503);
     }
     return parsed.data;
+  }
+
+  /** CG-P19-05: the Screen-01 cells of the primary run, else the retained RS-02 selected trial. */
+  private runFacts(
+    row: LineageAttemptRow,
+    item: ResearchRunLibraryItem | undefined,
+    retained: Record<string, unknown> | undefined,
+  ): Node["run_facts"] {
+    if (row.primary_run_id === null) {
+      const none = notApplicable("P19_ATTEMPT_HAS_NO_PRIMARY_RUN");
+      const metric = { value: null, source: null, scope: null, definition_id: null, availability: none };
+      return {
+        certificate: { grade: null, availability: none },
+        claim: { state: null, text: null, availability: none },
+        oos_sharpe: metric,
+        decay: metric,
+      };
+    }
+    const unreadable = absent(this.runLibrary ? "P19_RUN_LIBRARY_ROW_NOT_READABLE" : "P19_RUN_LIBRARY_READER_NOT_WIRED");
+    const metric = (role: "OOS_SHARPE" | "DECAY", retainedKey: "mean_oos_sharpe" | "mean_decay", definition: string): MetricFact => {
+      const fromLibraryCell = item ? metricFromLibrary(item, role) : { value: null, reason: unreadable.reason_code! };
+      if (fromLibraryCell.value !== null) return fromLibraryCell as MetricFact;
+      const value = retained?.[retainedKey];
+      if (typeof value === "string" && CurrentSourceDecimalSchema.safeParse(value).success) {
+        return {
+          value,
+          source: "RS02_RETAINED_SELECTED_TRIAL",
+          scope: "SELECTED_TRIAL_MEAN_ACROSS_FOLDS",
+          definition_id: definition,
+          availability: available(),
+        };
+      }
+      return { value: null, source: null, scope: null, definition_id: null, availability: absent((fromLibraryCell as { reason: string }).reason) };
+    };
+    return {
+      certificate: item
+        ? { grade: item.certificate.grade, availability: fromLibrary(item.certificate.availability) }
+        : { grade: null, availability: unreadable },
+      claim: item
+        ? { state: item.claim.state, text: item.claim.text, availability: fromLibrary(item.claim.availability) }
+        : { state: null, text: null, availability: unreadable },
+      oos_sharpe: metric("OOS_SHARPE", "mean_oos_sharpe", "research.current-source.v1.selected-trial-mean-oos-sharpe"),
+      decay: metric("DECAY", "mean_decay", "research.current-source.v1.selected-trial-mean-decay"),
+    };
+  }
+
+  /**
+   * CG-P19-14: a lifecycle/source fact, first match wins — the version's
+   * published pick; a closed version or a terminal attempt; otherwise the
+   * version is waiting for a pick.  Nothing is compared or ranked.
+   */
+  private promotion(node: Node, version: Version | undefined): { state: Node["promotion_state"]; reason: string | null } {
+    const pick = version?.promotion_pick;
+    if (pick?.state === "PUBLISHED") {
+      return pick.attempt_id === node.attempt_id
+        ? { state: "PICKED", reason: null }
+        : { state: "NOT_PICKED", reason: "P19_VERSION_PICK_NAMES_ANOTHER_ATTEMPT" };
+    }
+    if (version && (version.lifecycle_state === "SUPERSEDED" || version.lifecycle_state === "ABANDONED")) {
+      return { state: "CLOSED", reason: "P19_VERSION_NOT_ACTIVE_PROMOTION_CLOSED" };
+    }
+    if (node.state === "ABANDONED" || node.state === "FAILED" || node.state === "CANCELLED") {
+      return { state: "CLOSED", reason: "P19_ATTEMPT_STATE_CANNOT_PROMOTE" };
+    }
+    return { state: "AWAITING_PICK", reason: "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK" };
+  }
+
+  /**
+   * CG-P19-07 `research.lineage-version-outcome.v1`: the highest certificate
+   * grade the source issued on this version's returned attempts (a governance
+   * grade, not a metric), then the rc and pick facts, or "promote closed".
+   */
+  private versionOutcome(version: Version, own: readonly Node[], bounded: boolean): Version["outcome"] {
+    const rule = "research.lineage-version-outcome.v1" as const;
+    if (own.length === 0) return { text: null, rule, availability: absent("P19_VERSION_HAS_NO_RETURNED_ATTEMPT") };
+    const grades = own.map((node) => node.run_facts.certificate.grade).filter((grade): grade is NonNullable<typeof grade> => grade !== null);
+    const best = GRADE_ORDER.find((grade) => grades.includes(grade)) ?? null;
+    const parts = [best ? `best cert ${best}` : "cert not issued"];
+    if (version.lifecycle_state === "SUPERSEDED" || version.lifecycle_state === "ABANDONED") {
+      parts.push("promote closed");
+    } else {
+      const sealed = own.some((node) => node.release_candidate?.kind === "LOCAL_SEAL");
+      const drafted = own.some((node) => node.release_candidate?.kind === "ACTOR_DRAFT");
+      parts.push(sealed ? "rc sealed" : drafted ? "rc_ draft" : "no rc");
+      parts.push(version.promotion_pick.state === "PUBLISHED" && version.promotion_pick.attempt_id
+        ? `pick ${version.promotion_pick.attempt_id}`
+        : "no pick published");
+    }
+    return {
+      text: parts.join(" · ").slice(0, 240),
+      rule,
+      availability: bounded ? partial("P19_BOUNDED_GRAPH_LIMIT_REACHED") : available(),
+    };
+  }
+
+  /** CG-P19-07: the RF-03 successor that names this version as its predecessor. */
+  private supersession(row: LineageVersionRow, all: readonly LineageVersionRow[], labels: ReadonlyMap<string, string>): Version["supersession"] {
+    const successor = all.find((candidate) => candidate.supersedes_alpha_version_id === row.alpha_version_id);
+    if (successor) {
+      return {
+        state: "RECORDED",
+        superseded_by_version_id: successor.alpha_version_id,
+        superseded_by_label: labels.get(successor.alpha_version_id) ?? successor.alpha_version_id,
+        reason_code: null,
+      };
+    }
+    if (row.lifecycle_state === "SUPERSEDED") {
+      return { state: "NOT_RECORDED", superseded_by_version_id: null, superseded_by_label: null, reason_code: "P19_SUPERSESSION_PREDATES_RF03_PREDECESSOR_RECORD" };
+    }
+    return { state: "NOT_APPLICABLE", superseded_by_version_id: null, superseded_by_label: null, reason_code: "P19_VERSION_NOT_SUPERSEDED" };
+  }
+
+  /** CG-P19-06: Atlas routes (not DEFERRED) that no attempt of the version declared. */
+  private untried(version: Version, atlasRoutes: Array<{ route_id: string; status_word: string | null }> | null): Version["untried"] {
+    if (atlasRoutes === null) return { routes: [], availability: absent("P19_ENGINE_ATLAS_NOT_READABLE") };
+    if (version.exercised.availability.state === "NOT_PUBLISHED") {
+      return { routes: [], availability: absent(version.exercised.availability.reason_code ?? "P19_EXERCISED_NOT_PUBLISHED") };
+    }
+    const tried = new Set(version.exercised.routes);
+    const routes = atlasRoutes
+      .filter((route) => route.status_word !== "DEFERRED" && !tried.has(route.route_id))
+      .slice(0, 32);
+    return {
+      routes,
+      availability: version.exercised.availability.state === "PARTIAL"
+        ? partial(version.exercised.availability.reason_code ?? "P19_EXERCISED_DECLARATIONS_BOUNDED")
+        : available(),
+    };
+  }
+
+  /* ---------------------------------------------------------- CG-P19-09 cursor */
+
+  private cursorKey(): { keyId: string; key: string } {
+    const keys = querySigningKeys(this.config);
+    const keyId = this.config.QUERY_CURSOR_ACTIVE_KEY_ID;
+    const key = keys[keyId];
+    if (!key) throw new ResearchLineageError("RESEARCH_LINEAGE_UNAVAILABLE", "Attempt Lineage paging is not configured.", 503);
+    return { keyId, key };
+  }
+
+  private cursorPayload(page: { workspaceId: string; alphaId: string; limit: number }, createdAt: string, attemptId: string): string {
+    return Buffer.from(canonicalResearchJson({ a: page.alphaId, c: createdAt, i: attemptId, l: page.limit, r: "research.attempt-lineage.v1", w: page.workspaceId }), "utf8")
+      .toString("base64url");
+  }
+
+  /**
+   * Deterministic and signed: the same boundary always yields the same token,
+   * so it can sit inside the revalidated body; attempts are append-only, so a
+   * boundary never goes stale.  It binds workspace, Alpha and limit.
+   */
+  private encodeCursor(page: { workspaceId: string; alphaId: string; limit: number }, createdAt: string, attemptId: string): string {
+    const { keyId, key } = this.cursorKey();
+    const payload = this.cursorPayload(page, createdAt, attemptId);
+    const signature = createHmac("sha256", key).update(`${CURSOR_PREFIX}.${keyId}.${payload}`).digest("base64url");
+    return `${CURSOR_PREFIX}.${keyId}.${payload}.${signature}`;
+  }
+
+  private decodeCursor(token: string, workspaceId: string, alphaId: string, limit: number): LineageBoundary {
+    const invalid = () => new ResearchLineageError("RESEARCH_LINEAGE_INVALID", "Attempt Lineage cursor is not valid for this Alpha, workspace or limit.", 400);
+    const [prefix, keyId, payload, signature, ...rest] = token.split(".");
+    if (prefix !== CURSOR_PREFIX || !keyId || !payload || !signature || rest.length > 0) throw invalid();
+    const keys = querySigningKeys(this.config);
+    const key = keys[keyId];
+    if (!key) throw invalid();
+    const wanted = createHmac("sha256", key).update(`${CURSOR_PREFIX}.${keyId}.${payload}`).digest();
+    const actual = Buffer.from(signature, "base64url");
+    if (actual.toString("base64url") !== signature || actual.length !== wanted.length || !timingSafeEqual(actual, wanted)) throw invalid();
+    let decoded: Record<string, unknown>;
+    try {
+      decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Record<string, unknown>;
+    } catch {
+      throw invalid();
+    }
+    if (decoded.r !== "research.attempt-lineage.v1" || decoded.w !== workspaceId || decoded.a !== alphaId || decoded.l !== limit
+        || typeof decoded.c !== "string" || !CURSOR_TIMESTAMP.test(decoded.c)
+        || typeof decoded.i !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/.test(decoded.i)) {
+      throw invalid();
+    }
+    return { createdAt: decoded.c, attemptId: decoded.i };
   }
 
   private assertGraph(snapshot: LineageSnapshot, ids: Set<string>, versionIds: Set<string>): void {

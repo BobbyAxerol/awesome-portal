@@ -1,0 +1,181 @@
+{
+  "schema_version": "research.attempt-lineage.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "alpha": {
+    "alpha_id": "alpha-p19",
+    "name": "P19 Alpha",
+    "active_version_id": "av-p19-1",
+    "active_version_state": "ACTIVE",
+    "active_version_availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "versions": [
+      {
+        "alpha_version_id": "av-p19-1",
+        "label": "av_0_9_1",
+        "code_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "entrypoint": "strategy:main",
+        "lifecycle_state": "ACTIVE",
+        "registered_at_utc_ms": 1789948800000,
+        "promotion_pick": {
+          "state": "NOT_PUBLISHED",
+          "attempt_id": null,
+          "run_id": null,
+          "source_contract_rev": null,
+          "source_digest": null,
+          "source_as_of_utc_ms": null,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          },
+          "source_authority": {
+            "owner": "P22_RELEASE_CANDIDATE_APPROVAL",
+            "state": "NOT_CONNECTED"
+          },
+          "release_candidate": null,
+          "release_candidate_availability": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+          }
+        },
+        "outcome": {
+          "text": null,
+          "rule": "research.lineage-version-outcome.v1",
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_VERSION_HAS_NO_RETURNED_ATTEMPT"
+          }
+        },
+        "supersession": {
+          "state": "NOT_APPLICABLE",
+          "superseded_by_version_id": null,
+          "superseded_by_label": null,
+          "reason_code": "P19_VERSION_NOT_SUPERSEDED"
+        },
+        "exercised": {
+          "routes": [],
+          "modes": [],
+          "param_ranges": [],
+          "attempts_considered": 0,
+          "attempts_without_manifest": 0,
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_VERSION_HAS_NO_ATTEMPT"
+          }
+        },
+        "untried": {
+          "routes": [],
+          "availability": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "P19_VERSION_HAS_NO_ATTEMPT"
+          }
+        },
+        "presentation": {
+          "storied": 0,
+          "probe": 0,
+          "basis": "RETURNED_ATTEMPTS"
+        }
+      }
+    ]
+  },
+  "attempts": [],
+  "counts": {
+    "total_attempts": 0,
+    "returned_attempts": 0,
+    "draft_attempts": 0,
+    "submitted_attempts": 0,
+    "failed_attempts": 0,
+    "abandoned_attempts": 0,
+    "child_runs": 0,
+    "technical_retries": 0,
+    "storied_returned": 0,
+    "probe_returned": 0
+  },
+  "counts_definitions": {
+    "version": "research.lineage-counts.v1",
+    "rows": [
+      {
+        "key": "total_attempts",
+        "includes": "Every logical research attempt of every version of this Alpha in the workspace: draft, submitted, failed and abandoned alike. Worker retries and child runs are not attempts.",
+        "run_library_equivalent": "counters.logical_runs for ?alpha=<id> plus draft_attempts, when every submitted attempt has its PRIMARY run"
+      },
+      {
+        "key": "returned_attempts",
+        "includes": "Attempts in this bounded page (at most `limit`); equal to total_attempts only when coverage is COMPLETE.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "draft_attempts",
+        "includes": "Attempts in state DRAFT (autosaved intent, never submitted).",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "submitted_attempts",
+        "includes": "Attempts in any state other than DRAFT.",
+        "run_library_equivalent": "counters.logical_runs for ?alpha=<id> (its PRIMARY rows), when every submitted attempt has its PRIMARY run"
+      },
+      {
+        "key": "failed_attempts",
+        "includes": "Attempts whose lifecycle state is FAILED.",
+        "run_library_equivalent": "claim_ledger.failed for ?alpha=<id> (FAILED runs), when each FAILED attempt's PRIMARY run is FAILED"
+      },
+      {
+        "key": "abandoned_attempts",
+        "includes": "Attempts whose lifecycle state is ABANDONED; kept on record, never deleted.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "child_runs",
+        "includes": "Non-PRIMARY runs of these attempts (audit, diagnostic, reproduction, export, verify, projection).",
+        "run_library_equivalent": "counters.worker_children for ?alpha=<id>"
+      },
+      {
+        "key": "technical_retries",
+        "includes": "Worker re-leases of the same durable job beyond the first; never an attempt or a node.",
+        "run_library_equivalent": "counters.technical_retries for ?alpha=<id>"
+      },
+      {
+        "key": "storied_returned",
+        "includes": "Returned attempts classified STORIED by research.lineage-presentation.v1.",
+        "run_library_equivalent": null
+      },
+      {
+        "key": "probe_returned",
+        "includes": "Returned attempts classified PROBE by research.lineage-presentation.v1.",
+        "run_library_equivalent": null
+      }
+    ]
+  },
+  "presentation_rule": {
+    "version": "research.lineage-presentation.v1",
+    "storied_when": [
+      "PROMOTION_PICK",
+      "RELEASE_CANDIDATE",
+      "VERSION_FIRST_ATTEMPT",
+      "GATES_RESET",
+      "MATERIAL_CHANGES"
+    ],
+    "material_change_threshold": 2
+  },
+  "coverage": {
+    "state": "COMPLETE",
+    "reason_code": null,
+    "oldest_returned_created_at_utc_ms": null,
+    "window": "NEWEST",
+    "older_cursor": null
+  },
+  "source_absences": {
+    "promotion_pick": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK"
+    },
+    "historical_semantic_diff": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "as_of_utc_ms": 1790035200000,
+  "lineage_revision": "p19r2_abf8d6626745f550c05fdf64703d459b056b34314c28e627f678b63d7b5d5167",
+  "etag": "\"p19r2_abf8d6626745f550c05fdf64703d459b056b34314c28e627f678b63d7b5d5167\""
+}

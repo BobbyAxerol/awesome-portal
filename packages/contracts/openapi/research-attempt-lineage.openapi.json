@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Research Attempt Lineage API",
-    "version": "1.0.0",
-    "description": "P19 same-origin Screen-10 Attempt Lineage. It reads a bounded Portal-persisted Research graph only. It does not submit/fork/reproduce a run, start QuantBT, read worker/artifact/source paths, expose cursors/leases/credentials, reset governance gates, or choose a promotion from metrics, lifecycle state or recency."
+    "version": "1.1.0",
+    "description": "P19 same-origin Screen-10 Attempt Lineage. It reads a bounded Portal-persisted Research graph only. It does not submit/fork/reproduce a run, start QuantBT, read worker/artifact/source paths, expose source cursors/leases/credentials, reset governance gates, or choose a promotion from metrics, lifecycle state or recency. 1.1.0 (W6b, additive): private weak ETag/304, a newest-first bounded window with a server-signed older-page cursor, server storied/probe classification, per-attempt promotion standing, allow-listed spec line, P21 release-candidate references, retained certificate/claim/OOS Sharpe/decay facts, version outcome/supersession/exercised/untried, and count definitions reconciled with the Run Library."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
@@ -12,14 +12,24 @@
       "get": {
         "operationId": "researchAttemptLineageGetV1",
         "summary": "Read one bounded, source-backed Alpha attempt lineage",
-        "description": "The graph is chronological and bounded to 128 attempts. When a history exceeds the bound, coverage is explicitly PARTIAL with P19_BOUNDED_GRAPH_LIMIT_REACHED; consumers must not present its returned prefix as complete. Each returned attempt also bounds child runs and declares P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT when needed. promotion_pick is PUBLISHED only from an immutable source-attested fact. A missing pick is typed NOT_PUBLISHED with P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK and must never be replaced by best/newest/ACTIVE logic in the browser.",
+        "description": "The graph is returned in chronological order and bounded to 128 attempts. When a history exceeds the bound, the first page is the NEWEST `limit` attempts and coverage is explicitly PARTIAL with P19_BOUNDED_GRAPH_LIMIT_REACHED; consumers must not present a returned page as complete, and read older attempts only through coverage.older_cursor. Each returned attempt also bounds child runs and declares P19_CHILD_RUNS_BOUNDED_PER_ATTEMPT when needed. promotion_pick is PUBLISHED only from an immutable source-attested fact. A missing pick is typed NOT_PUBLISHED with P19_SOURCE_DID_NOT_PUBLISH_PROMOTION_PICK and must never be replaced by best/newest/ACTIVE logic in the browser. The answer carries a private weak ETag; If-None-Match with it returns 304.",
         "parameters": [
           { "$ref": "#/components/parameters/AlphaId" },
           { "$ref": "#/components/parameters/WorkspaceId" },
-          { "$ref": "#/components/parameters/LineageLimit" }
+          { "$ref": "#/components/parameters/LineageLimit" },
+          { "$ref": "#/components/parameters/LineageCursor" },
+          { "$ref": "#/components/parameters/IfNoneMatch" }
         ],
         "responses": {
-          "200": { "description": "One bounded persisted lineage snapshot.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AttemptLineageResponse" } } } },
+          "200": {
+            "description": "One bounded persisted lineage snapshot.",
+            "headers": {
+              "ETag": { "description": "The body's `etag`; revalidate with If-None-Match (weak comparison).", "schema": { "type": "string" } },
+              "Cache-Control": { "description": "Always `private, no-cache`.", "schema": { "type": "string" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AttemptLineageResponse" } } }
+          },
+          "304": { "description": "The held lineage (same lineage_revision) is still current. No body." },
           "400": { "$ref": "#/components/responses/Problem" },
           "401": { "$ref": "#/components/responses/Problem" },
           "403": { "$ref": "#/components/responses/Problem" },
@@ -36,7 +46,9 @@
     "parameters": {
       "AlphaId": { "name": "alphaId", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/AlphaId" } },
       "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/WorkspaceId" } },
-      "LineageLimit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 128, "default": 128 } }
+      "LineageLimit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 128, "default": 128 } },
+      "LineageCursor": { "name": "cursor", "in": "query", "required": false, "description": "Only a coverage.older_cursor this route issued, for the same workspace, Alpha and limit. Opaque; a browser never builds one.", "schema": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+      "IfNoneMatch": { "name": "If-None-Match", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 1024 } }
     },
     "responses": {
       "Problem": { "description": "Typed same-origin refusal. It never discloses a relation, raw config payload, source path, worker identity, lease, cursor, delegated credential or promotion policy.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
@@ -54,11 +66,58 @@
       },
       "Availability": {
         "type": "object", "additionalProperties": false, "required": ["state", "reason_code"],
-        "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "PARTIAL"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] } }
+        "properties": { "state": { "enum": ["AVAILABLE", "NOT_PUBLISHED", "PARTIAL", "NOT_APPLICABLE"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] } }
+      },
+      "ExactDecimal": { "type": "string", "maxLength": 96, "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
+      "ReleaseCandidateRef": {
+        "type": "object", "additionalProperties": false,
+        "description": "W6b CG-P19-04: a run's persisted P21 relation by the Run Library rule (a Portal-local sealed pack wins over the viewer's own draft). A reference only; it grants no delivery or approval authority.",
+        "required": ["kind", "release_candidate_id", "draft_id", "run_id", "delivery_state", "approval_state", "sealed_at_utc_ms"],
+        "properties": {
+          "kind": { "enum": ["LOCAL_SEAL", "ACTOR_DRAFT"] },
+          "release_candidate_id": { "anyOf": [{ "type": "string", "pattern": "^rc_[0-9A-HJKMNP-TV-Z]{26}$" }, { "type": "null" }] },
+          "draft_id": { "anyOf": [{ "type": "string", "pattern": "^rcd_[0-9A-HJKMNP-TV-Z]{26}$" }, { "type": "null" }] },
+          "run_id": { "$ref": "#/components/schemas/OpaqueId" },
+          "delivery_state": { "anyOf": [{ "enum": ["NOT_DELIVERED", "PENDING", "DELIVERED", "UNKNOWN"] }, { "type": "null" }] },
+          "approval_state": { "anyOf": [{ "enum": ["NOT_APPROVED", "PENDING", "APPROVED", "REJECTED", "UNKNOWN"] }, { "type": "null" }] },
+          "sealed_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }
+        }
+      },
+      "RunMetricFact": {
+        "type": "object", "additionalProperties": false, "required": ["value", "source", "scope", "definition_id", "availability"],
+        "description": "W6b CG-P19-05: one retained per-run value with its own source and scope. A null value is a typed absence, never a zero.",
+        "properties": {
+          "value": { "anyOf": [{ "$ref": "#/components/schemas/ExactDecimal" }, { "type": "null" }] },
+          "source": { "anyOf": [{ "enum": ["P13_EVIDENCE_PROJECTION", "RS02_RETAINED_SELECTED_TRIAL"] }, { "type": "null" }] },
+          "scope": { "anyOf": [{ "enum": ["OOS", "IS_PLUS_OOS", "CHILD_TAPE", "SELECTED_TRIAL_MEAN_ACROSS_FOLDS"] }, { "type": "null" }] },
+          "definition_id": { "anyOf": [{ "type": "string", "pattern": "^research\\.[a-z0-9_.-]{3,120}$" }, { "type": "null" }] },
+          "availability": { "$ref": "#/components/schemas/Availability" }
+        }
+      },
+      "RunFacts": {
+        "type": "object", "additionalProperties": false, "required": ["certificate", "claim", "oos_sharpe", "decay"],
+        "description": "W6b CG-P19-05: the primary run's certificate, claim, OOS Sharpe and decay exactly as Screen 01 maps them; a Delta WFO run without a P13 projection falls back to its retained RS-02 selected trial.",
+        "properties": {
+          "certificate": { "type": "object", "additionalProperties": false, "required": ["grade", "availability"], "properties": { "grade": { "anyOf": [{ "enum": ["A", "B", "C", "D"] }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+          "claim": { "type": "object", "additionalProperties": false, "required": ["state", "text", "availability"], "properties": { "state": { "anyOf": [{ "enum": ["FORECAST", "NOT_ISSUED", "ISSUED"] }, { "type": "null" }] }, "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 1024 }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } } },
+          "oos_sharpe": { "$ref": "#/components/schemas/RunMetricFact" },
+          "decay": { "$ref": "#/components/schemas/RunMetricFact" }
+        }
+      },
+      "PresentationReason": { "enum": ["PROMOTION_PICK", "RELEASE_CANDIDATE", "VERSION_FIRST_ATTEMPT", "GATES_RESET", "MATERIAL_CHANGES"] },
+      "ParamRange": {
+        "type": "object", "additionalProperties": false, "required": ["name", "kind", "low", "high", "values"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.:-]{0,190}$" },
+          "kind": { "enum": ["SWEEP", "PIN"] },
+          "low": { "anyOf": [{ "type": "string", "maxLength": 96 }, { "type": "null" }] },
+          "high": { "anyOf": [{ "type": "string", "maxLength": 96 }, { "type": "null" }] },
+          "values": { "type": "array", "maxItems": 16, "items": { "type": "string", "maxLength": 96 } }
+        }
       },
       "PromotionPick": {
         "type": "object", "additionalProperties": false,
-        "required": ["state", "attempt_id", "run_id", "source_contract_rev", "source_digest", "source_as_of_utc_ms", "availability"],
+        "required": ["state", "attempt_id", "run_id", "source_contract_rev", "source_digest", "source_as_of_utc_ms", "availability", "source_authority", "release_candidate", "release_candidate_availability"],
         "properties": {
           "state": { "enum": ["PUBLISHED", "NOT_PUBLISHED"] },
           "attempt_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
@@ -66,12 +125,19 @@
           "source_contract_rev": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] },
           "source_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] },
           "source_as_of_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] },
-          "availability": { "$ref": "#/components/schemas/Availability" }
+          "availability": { "$ref": "#/components/schemas/Availability" },
+          "source_authority": {
+            "type": "object", "additionalProperties": false, "required": ["owner", "state"],
+            "description": "W6b DR-03: the only authority that may publish a pick is a governed approval of a sealed release candidate (P22). NOT_CONNECTED keeps the pick NOT_PUBLISHED.",
+            "properties": { "owner": { "const": "P22_RELEASE_CANDIDATE_APPROVAL" }, "state": { "enum": ["CONNECTED", "NOT_CONNECTED"] } }
+          },
+          "release_candidate": { "anyOf": [{ "$ref": "#/components/schemas/ReleaseCandidateRef" }, { "type": "null" }] },
+          "release_candidate_availability": { "$ref": "#/components/schemas/Availability" }
         }
       },
       "AlphaVersion": {
         "type": "object", "additionalProperties": false,
-        "required": ["alpha_version_id", "label", "code_digest", "entrypoint", "lifecycle_state", "registered_at_utc_ms", "promotion_pick"],
+        "required": ["alpha_version_id", "label", "code_digest", "entrypoint", "lifecycle_state", "registered_at_utc_ms", "promotion_pick", "outcome", "supersession", "exercised", "untried", "presentation"],
         "properties": {
           "alpha_version_id": { "$ref": "#/components/schemas/OpaqueId" },
           "label": { "type": "string", "minLength": 1, "maxLength": 160 },
@@ -79,7 +145,46 @@
           "entrypoint": { "type": "string", "minLength": 1, "maxLength": 512 },
           "lifecycle_state": { "enum": ["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] },
           "registered_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
-          "promotion_pick": { "$ref": "#/components/schemas/PromotionPick" }
+          "promotion_pick": { "$ref": "#/components/schemas/PromotionPick" },
+          "outcome": {
+            "type": "object", "additionalProperties": false, "required": ["text", "rule", "availability"],
+            "description": "W6b CG-P19-07: one line composed by research.lineage-version-outcome.v1 from the returned attempts' certificate grades, rc relations and pick; never a ranking of runs.",
+            "properties": { "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 240 }, { "type": "null" }] }, "rule": { "const": "research.lineage-version-outcome.v1" }, "availability": { "$ref": "#/components/schemas/Availability" } }
+          },
+          "supersession": {
+            "type": "object", "additionalProperties": false, "required": ["state", "superseded_by_version_id", "superseded_by_label", "reason_code"],
+            "description": "W6b CG-P19-07: the registered successor that names this version as its predecessor (RF-03).",
+            "properties": {
+              "state": { "enum": ["RECORDED", "NOT_RECORDED", "NOT_APPLICABLE"] },
+              "superseded_by_version_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
+              "superseded_by_label": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }] },
+              "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] }
+            }
+          },
+          "exercised": {
+            "type": "object", "additionalProperties": false, "required": ["routes", "modes", "param_ranges", "attempts_considered", "attempts_without_manifest", "availability"],
+            "description": "W6b CG-P19-06: the union of what every attempt of this version declared (not only returned attempts), from persisted requested specs and the version's declared parameter space.",
+            "properties": {
+              "routes": { "type": "array", "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 64 } },
+              "modes": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 160 } },
+              "param_ranges": { "type": "array", "maxItems": 24, "items": { "$ref": "#/components/schemas/ParamRange" } },
+              "attempts_considered": { "type": "integer", "minimum": 0 },
+              "attempts_without_manifest": { "type": "integer", "minimum": 0 },
+              "availability": { "$ref": "#/components/schemas/Availability" }
+            }
+          },
+          "untried": {
+            "type": "object", "additionalProperties": false, "required": ["routes", "availability"],
+            "description": "W6b CG-P19-06: Engine Atlas routes (not DEFERRED) that no attempt of this version declared.",
+            "properties": {
+              "routes": { "type": "array", "maxItems": 32, "items": { "type": "object", "additionalProperties": false, "required": ["route_id", "status_word"], "properties": { "route_id": { "type": "string", "minLength": 1, "maxLength": 64 }, "status_word": { "anyOf": [{ "type": "string", "maxLength": 16 }, { "type": "null" }] } } } },
+              "availability": { "$ref": "#/components/schemas/Availability" }
+            }
+          },
+          "presentation": {
+            "type": "object", "additionalProperties": false, "required": ["storied", "probe", "basis"],
+            "properties": { "storied": { "type": "integer", "minimum": 0 }, "probe": { "type": "integer", "minimum": 0 }, "basis": { "const": "RETURNED_ATTEMPTS" } }
+          }
         }
       },
       "SemanticChange": {
@@ -130,7 +235,7 @@
       },
       "AttemptNode": {
         "type": "object", "additionalProperties": false,
-        "required": ["attempt_id", "parent_attempt_id", "parent_state", "alpha_version_id", "alpha_version_label", "state", "intent_kind", "relation_to_parent", "reason", "space_signature", "created_at_utc_ms", "updated_at_utc_ms", "primary_run", "child_runs", "child_runs_coverage", "semantic_diff", "exposure"],
+        "required": ["attempt_id", "parent_attempt_id", "parent_state", "alpha_version_id", "alpha_version_label", "state", "intent_kind", "relation_to_parent", "reason", "space_signature", "created_at_utc_ms", "updated_at_utc_ms", "primary_run", "child_runs", "child_runs_coverage", "semantic_diff", "exposure", "presentation_kind", "presentation_reasons", "promotion_state", "promotion_reason_code", "spec_label", "release_candidate", "release_candidate_availability", "run_facts", "outcome"],
         "properties": {
           "attempt_id": { "$ref": "#/components/schemas/OpaqueId" },
           "parent_attempt_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] },
@@ -144,25 +249,65 @@
           "space_signature": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] },
           "created_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
           "updated_at_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
-          "primary_run": { "type": "object", "additionalProperties": false, "required": ["run_id", "state", "effective_spec_digest", "engine_release_id", "dataset_binding_digest", "technical_retry_count"], "properties": { "run_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] }, "state": { "anyOf": [{ "enum": ["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"] }, { "type": "null" }] }, "effective_spec_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "engine_release_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 256 }, { "type": "null" }] }, "dataset_binding_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "technical_retry_count": { "type": "integer", "minimum": 0 } } },
+          "primary_run": { "type": "object", "additionalProperties": false, "required": ["run_id", "state", "effective_spec_digest", "engine_release_id", "dataset_binding_digest", "technical_retry_count", "execution_profile_id"], "properties": { "execution_profile_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 160 }, { "type": "null" }], "description": "W6b: the run's immutable execution profile (p04.fixed-qualification.v1 / p10.delta-signal-notional-wfo.v1)." }, "run_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] }, "state": { "anyOf": [{ "enum": ["DRAFT", "QUEUED", "RUNNING", "SEALING", "READY", "FAILED", "CANCELLED", "RECOVERY_REQUIRED"] }, { "type": "null" }] }, "effective_spec_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "engine_release_id": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 256 }, { "type": "null" }] }, "dataset_binding_digest": { "anyOf": [{ "$ref": "#/components/schemas/Digest" }, { "type": "null" }] }, "technical_retry_count": { "type": "integer", "minimum": 0 } } },
           "child_runs": { "type": "array", "maxItems": 32, "items": { "$ref": "#/components/schemas/ChildRun" } },
           "child_runs_coverage": { "$ref": "#/components/schemas/ChildRunsCoverage" },
           "semantic_diff": { "$ref": "#/components/schemas/SemanticDiff" },
-          "exposure": { "$ref": "#/components/schemas/Exposure" }
+          "exposure": { "$ref": "#/components/schemas/Exposure" },
+          "presentation_kind": { "enum": ["STORIED", "PROBE"], "description": "W6b CG-P19-03: server classification by research.lineage-presentation.v1." },
+          "presentation_reasons": { "type": "array", "maxItems": 5, "items": { "$ref": "#/components/schemas/PresentationReason" } },
+          "promotion_state": { "enum": ["PICKED", "NOT_PICKED", "AWAITING_PICK", "CLOSED"], "description": "W6b CG-P19-14: from the version's published pick and lifecycle facts only; never a metric ranking." },
+          "promotion_reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] },
+          "spec_label": {
+            "type": "object", "additionalProperties": false, "required": ["text", "space", "availability"],
+            "description": "W6b CG-P19-08: `route · mode × schedule` from allow-listed requested-spec keys, and the declared parameter space after this attempt's overrides.",
+            "properties": {
+              "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 240 }, { "type": "null" }] },
+              "space": { "anyOf": [{ "type": "object", "additionalProperties": false, "required": ["parameters", "swept", "pinned"], "properties": { "parameters": { "type": "integer", "minimum": 0 }, "swept": { "type": "integer", "minimum": 0 }, "pinned": { "type": "integer", "minimum": 0 } } }, { "type": "null" }] },
+              "availability": { "$ref": "#/components/schemas/Availability" }
+            }
+          },
+          "release_candidate": { "anyOf": [{ "$ref": "#/components/schemas/ReleaseCandidateRef" }, { "type": "null" }] },
+          "release_candidate_availability": { "$ref": "#/components/schemas/Availability" },
+          "run_facts": { "$ref": "#/components/schemas/RunFacts" },
+          "outcome": {
+            "type": "object", "additionalProperties": false, "required": ["text", "source", "availability"],
+            "description": "W6b CG-P19-07: the attempt's own recorded reason, else the source claim sentence, verbatim.",
+            "properties": { "text": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 1024 }, { "type": "null" }] }, "source": { "anyOf": [{ "enum": ["ATTEMPT_REASON", "SOURCE_CLAIM_SENTENCE"] }, { "type": "null" }] }, "availability": { "$ref": "#/components/schemas/Availability" } }
+          }
         }
       },
       "AttemptLineageResponse": {
         "type": "object", "additionalProperties": false,
-        "required": ["schema_version", "read_authority", "alpha", "attempts", "counts", "coverage", "source_absences", "as_of_utc_ms"],
+        "required": ["schema_version", "read_authority", "alpha", "attempts", "counts", "counts_definitions", "presentation_rule", "coverage", "source_absences", "as_of_utc_ms", "lineage_revision", "etag"],
         "properties": {
           "schema_version": { "const": "research.attempt-lineage.v1" },
           "read_authority": { "const": "PORTAL_PERSISTED_RESEARCH" },
           "alpha": { "type": "object", "additionalProperties": false, "required": ["alpha_id", "name", "active_version_id", "active_version_state", "active_version_availability", "versions"], "properties": { "alpha_id": { "$ref": "#/components/schemas/AlphaId" }, "name": { "type": "string", "minLength": 1, "maxLength": 240 }, "active_version_id": { "anyOf": [{ "$ref": "#/components/schemas/OpaqueId" }, { "type": "null" }] }, "active_version_state": { "anyOf": [{ "enum": ["DRAFT", "ACTIVE", "SUPERSEDED", "ABANDONED"] }, { "type": "null" }] }, "active_version_availability": { "$ref": "#/components/schemas/Availability" }, "versions": { "type": "array", "maxItems": 64, "items": { "$ref": "#/components/schemas/AlphaVersion" } } } },
           "attempts": { "type": "array", "maxItems": 128, "items": { "$ref": "#/components/schemas/AttemptNode" } },
-          "counts": { "type": "object", "additionalProperties": false, "required": ["total_attempts", "returned_attempts", "draft_attempts", "submitted_attempts", "failed_attempts", "abandoned_attempts", "child_runs", "technical_retries"], "properties": { "total_attempts": { "type": "integer", "minimum": 0 }, "returned_attempts": { "type": "integer", "minimum": 0 }, "draft_attempts": { "type": "integer", "minimum": 0 }, "submitted_attempts": { "type": "integer", "minimum": 0 }, "failed_attempts": { "type": "integer", "minimum": 0 }, "abandoned_attempts": { "type": "integer", "minimum": 0 }, "child_runs": { "type": "integer", "minimum": 0 }, "technical_retries": { "type": "integer", "minimum": 0 } } },
-          "coverage": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code", "oldest_returned_created_at_utc_ms"], "properties": { "state": { "enum": ["COMPLETE", "PARTIAL"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] }, "oldest_returned_created_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] } } },
+          "counts": { "type": "object", "additionalProperties": false, "required": ["total_attempts", "returned_attempts", "draft_attempts", "submitted_attempts", "failed_attempts", "abandoned_attempts", "child_runs", "technical_retries", "storied_returned", "probe_returned"], "properties": { "storied_returned": { "type": "integer", "minimum": 0 }, "probe_returned": { "type": "integer", "minimum": 0 }, "total_attempts": { "type": "integer", "minimum": 0 }, "returned_attempts": { "type": "integer", "minimum": 0 }, "draft_attempts": { "type": "integer", "minimum": 0 }, "submitted_attempts": { "type": "integer", "minimum": 0 }, "failed_attempts": { "type": "integer", "minimum": 0 }, "abandoned_attempts": { "type": "integer", "minimum": 0 }, "child_runs": { "type": "integer", "minimum": 0 }, "technical_retries": { "type": "integer", "minimum": 0 } } },
+          "counts_definitions": {
+            "type": "object", "additionalProperties": false, "required": ["version", "rows"],
+            "description": "W6b CG-P19-13: what each count includes and the Run Library figure it reconciles with for the same Alpha.",
+            "properties": {
+              "version": { "const": "research.lineage-counts.v1" },
+              "rows": { "type": "array", "minItems": 10, "maxItems": 10, "items": { "type": "object", "additionalProperties": false, "required": ["key", "includes", "run_library_equivalent"], "properties": { "key": { "enum": ["total_attempts", "returned_attempts", "draft_attempts", "submitted_attempts", "failed_attempts", "abandoned_attempts", "child_runs", "technical_retries", "storied_returned", "probe_returned"] }, "includes": { "type": "string", "minLength": 1, "maxLength": 320 }, "run_library_equivalent": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 240 }, { "type": "null" }] } } } }
+            }
+          },
+          "presentation_rule": {
+            "type": "object", "additionalProperties": false, "required": ["version", "storied_when", "material_change_threshold"],
+            "description": "W6b CG-P19-03: the storied/probe rule travels with the answer so the browser holds none.",
+            "properties": {
+              "version": { "const": "research.lineage-presentation.v1" },
+              "storied_when": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/components/schemas/PresentationReason" } },
+              "material_change_threshold": { "const": 2 }
+            }
+          },
+          "coverage": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code", "oldest_returned_created_at_utc_ms", "window", "older_cursor"], "properties": { "state": { "enum": ["COMPLETE", "PARTIAL"] }, "reason_code": { "anyOf": [{ "$ref": "#/components/schemas/ReasonCode" }, { "type": "null" }] }, "oldest_returned_created_at_utc_ms": { "anyOf": [{ "$ref": "#/components/schemas/UtcMilliseconds" }, { "type": "null" }] }, "window": { "enum": ["NEWEST", "OLDER_PAGE"], "description": "W6b CG-P19-09: a bounded first page is the newest attempts; an older page was read through a cursor." }, "older_cursor": { "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 4096 }, { "type": "null" }], "description": "Opaque, server-signed; pass back as `cursor` to read strictly older attempts." } } },
           "source_absences": { "type": "object", "additionalProperties": false, "required": ["promotion_pick", "historical_semantic_diff"], "properties": { "promotion_pick": { "$ref": "#/components/schemas/Availability" }, "historical_semantic_diff": { "$ref": "#/components/schemas/Availability" } } },
-          "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" }
+          "as_of_utc_ms": { "$ref": "#/components/schemas/UtcMilliseconds" },
+          "lineage_revision": { "type": "string", "pattern": "^p19r2_[0-9a-f]{64}$", "description": "W6b CG-P19-02: digest of every fact except as_of_utc_ms." },
+          "etag": { "type": "string", "pattern": "^\"p19r2_[0-9a-f]{64}\"$", "description": "The validator also sent as the ETag header." }
         }
       }
     }

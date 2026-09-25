@@ -166,6 +166,10 @@ describe("P19 Attempt Lineage persisted truth", () => {
       source_contract_rev: "dr03.v1", source_digest: digest("9"),
       source_as_of_utc_ms: 1_790_035_560_000,
       availability: { state: "AVAILABLE", reason_code: null },
+      // W6b DR-03 / CG-P19-04 additive facts.
+      source_authority: { owner: "P22_RELEASE_CANDIDATE_APPROVAL", state: "CONNECTED" },
+      release_candidate: null,
+      release_candidate_availability: { state: "NOT_PUBLISHED", reason_code: "P19_RUN_LIBRARY_READER_NOT_WIRED" },
     });
     expect(response.source_absences.promotion_pick).toEqual({ state: "AVAILABLE", reason_code: null });
   });
