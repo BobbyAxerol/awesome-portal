@@ -5,29 +5,38 @@
  * a what-if grid re-scores the neighbourhood. What the source publishes is
  * narrower and the screen says so in the same breath as every green mark:
  *
- *  - a **match is a retained-binding match**. The contract states its own
- *    scope — `PORTAL_RETAINED_DIGEST_BINDING_ONLY` — and this screen never
- *    prints "chain intact", never colours the artifact bytes green, and never
- *    lets `PARTIAL` read as whole.
- *  - **`BLOCKED` empties the table on purpose.** A frozen table filled from a
- *    local default when a binding mismatched would be the worst lie on the
- *    surface: it would look like this run's parameters.
- *  - **what-if is unavailable, so there is no slider.** Not a disabled one: a
- *    control that looks adjustable implies a question the source can answer.
+ *  - a **match is only as wide as its scope**. The verify answer states it —
+ *    retained bindings, and (A10a) the sealed P05 bytes when a durable
+ *    receipt says they re-hash to the seal. The screen never prints "chain
+ *    intact" and never lets `PARTIAL` read as whole.
+ *  - **`BLOCKED` empties the table on purpose.** A binding mismatch or a
+ *    corrupt/missing byte receipt BLOCKS — it never warns — and a frozen
+ *    table filled from anywhere else would not be this run's.
+ *  - **what-if is a fork, not an edit** (A10c). Sliders move over the
+ *    server's nine nodes only; a missing cell is a word, never 0; the one
+ *    diagnostic job starts from "evaluate grid" and nothing else; "create
+ *    sibling attempt" opens Screen 02 with a copied draft. A fixed run keeps
+ *    the card with every control disabled and the server's reason (A11).
  *
- * One POST exists on this screen and it fires from a click, with the
- * same-origin CSRF proof. Nothing on mount, no fold change and no re-render
- * ever sends it.
+ * Two POSTs exist on this screen — verify and evaluate grid — and each fires
+ * from its own click with the same-origin CSRF proof. Nothing on mount, no
+ * fold change, no slider move and no re-render ever sends either.
  */
 
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
+import { BoundWarningNote } from "./BoundWarning";
+import { isWhatIf, WhatIfCard } from "./WhatIfCard";
 import { ProvenanceStrip } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
 import { CURRENT_SOURCE_LANE_COPY } from "./researchRefusal";
 import {
   BLOCKED_NOTE,
+  BYTE_STATE_WORDS,
+  bytesBlock,
+  type ArtifactBytes,
+  type WhatIfEvaluateSlot,
   FREEZE_GAP_WORDS,
   FREEZE_WITHHELD_WORDS,
   INTEGRITY_KEYS,
@@ -48,6 +57,7 @@ import { hubDelegates, readsRetainedLane, type RetainedSlot, type VerifySlot } f
 import type { ResearchState } from "./state";
 import { reasonCodeSentence } from "./researchRefusal";
 import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
+import type { FoldOrdering, FoldOrderingRow } from "./freezeClient";
 import {
   protocolLabel,
   retainedReadiness,
@@ -68,10 +78,10 @@ import type { ProgressRead } from "./progressClient";
  * screen can actually prove.
  */
 export const FREEZE_SUBTITLE =
-  "What was frozen, and what that freeze can honestly be checked against. Every match below is a match between digests Portal retained — the source artifact's own bytes were never opened here.";
+  "What was frozen, and what that freeze can honestly be checked against. Every match below names what it was checked against — retained digests, and the sealed artifact bytes only where a verify receipt says so.";
 
 export const FREEZE_RULES_FOOTER =
-  "A verification on this screen re-reads retained bindings; it never re-runs the engine, opens an artifact or evaluates a parameter. Where the source publishes no ordering, no selection artifact and no what-if grid, the panels say which kind of absence that is rather than showing an empty chart or a control that cannot act.";
+  "A digest mismatch BLOCKS — it never warns. Verify re-reads the retained bindings and the sealed artifact bytes against the digests stored at seal time; it never re-runs the engine or rewrites an expected digest. What-if is a fork, not an edit: evaluating the grid runs one separate diagnostic job, and frozen artifacts are write-once. Where the source publishes no ordering or no selection artifact, the panels say which kind of absence that is rather than drawing a verdict.";
 
 /** Spec 07 §2.2, verbatim — and the reason the two axes are never merged. */
 export const TWO_CLOCKS_NOTE =
@@ -152,10 +162,12 @@ function iso(at: number): string {
  */
 function IntegrityPanel({
   integrity,
+  bytes,
   verify,
   onVerify,
 }: {
   integrity: Integrity;
+  bytes: ArtifactBytes | null | undefined;
   verify: VerifySlot;
   onVerify: () => void;
 }) {
@@ -233,8 +245,22 @@ function IntegrityPanel({
         * source artifact's bytes were never attested here.
         */}
       <Gap gap={integrity.source_artifact_bytes} what="source artifact bytes" />
+      {(verify.state === "done" ? verify.verification.artifact_bytes : bytes) ? (
+        <ByteReceipt bytes={(verify.state === "done" ? verify.verification.artifact_bytes : bytes) as ArtifactBytes} />
+      ) : null}
 
-      {/* Present before the answer lands, so a screen reader announces it. */}
+      <VerifyLive verify={verify} />
+    </section>
+  );
+}
+
+/**
+ * The verification's own answer, announced when it lands. Nothing here moves
+ * on a timer: while the POST is in flight it says so and nothing else, and a
+ * refusal is a refusal — neither can ever read as a match (P16-T10).
+ */
+function VerifyLive({ verify }: { verify: VerifySlot }) {
+  return (
       <div role="status" aria-live="polite" data-verify-live>
         {verify.state === "done" ? (
           <div className="flex flex-col gap-0.5" data-verify-result={verify.verification.result}>
@@ -258,9 +284,12 @@ function IntegrityPanel({
           <p className="text-[11px]" style={{ color: "var(--bad)" }} data-verify-refusal>
             <RefusalNote refusal={verify.refusal} />
           </p>
+        ) : verify.state === "verifying" ? (
+          <p className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-verify-pending>
+            re-reading the sealed bytes — no result until the server answers
+          </p>
         ) : null}
       </div>
-    </section>
   );
 }
 
@@ -287,6 +316,117 @@ function CheckRow({ check }: { check: IntegrityCheck }) {
         observed {check.observed_digest ?? "not published"}
       </span>
     </>
+  );
+}
+
+/* ------------------------------------------------------ A10a · byte receipt */
+
+/**
+ * The durable byte receipt. A MATCH is the only green, and it is printed with
+ * both manifest digests and the part count it covers; every other state is
+ * its own word. A GET never produces a receipt — only "verify now" does — so
+ * NOT_VERIFIED is the honest first state, not a failure.
+ */
+export function ByteReceipt({ bytes }: { bytes: ArtifactBytes }) {
+  const blocked = bytesBlock(bytes);
+  const matched = bytes.state === "MATCH";
+  const tone = matched ? "var(--good)" : blocked ? "var(--bad)" : "var(--ink-faint)";
+  return (
+    <div
+      className="flex flex-col gap-1 border-t pt-2"
+      style={{ borderColor: "var(--line-soft)" }}
+      data-byte-receipt={bytes.state}
+      data-receipt-id={bytes.receipt_id ?? ""}
+    >
+      <span className="flex flex-wrap items-baseline gap-2">
+        <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+          artifact bytes
+        </span>
+        <Chip data-byte-state={bytes.state} tone={tone} border={matched || blocked ? tone : "var(--line)"}>
+          {BYTE_STATE_WORDS[bytes.state]}
+        </Chip>
+        {bytes.verified_at_utc_ms !== null ? (
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-byte-verified-at>
+            re-read {formatUtc(bytes.verified_at_utc_ms) ?? "not published"}
+          </span>
+        ) : null}
+        {bytes.parts_checked > 0 ? (
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-byte-parts>
+            {bytes.parts_checked} parts · {bytes.documents_checked} documents · {bytes.parts_mismatched} differ
+          </span>
+        ) : null}
+      </span>
+      {bytes.expected_manifest_digest !== null ? (
+        <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+            sealed manifest
+          </span>
+          <Digest value={bytes.expected_manifest_digest} data-byte-expected />
+          <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+            · observed
+          </span>
+          <Digest value={bytes.observed_manifest_digest} data-byte-observed />
+        </span>
+      ) : null}
+      {bytes.mismatches.length > 0 ? (
+        <ul className="flex flex-col gap-0.5" data-byte-mismatches={bytes.mismatches.length}>
+          {bytes.mismatches.map((mismatch) => (
+            <li
+              key={`${mismatch.kind}-${mismatch.table_kind ?? ""}-${mismatch.ordinal}`}
+              className="mono flex flex-wrap items-baseline gap-x-1.5 text-[9px]"
+              style={{ color: "var(--bad)" }}
+              data-byte-mismatch={mismatch.kind}
+            >
+              <span>
+                {mismatch.kind.toLowerCase()}
+                {mismatch.table_kind ? ` ${mismatch.table_kind}` : ""} #{mismatch.ordinal}
+              </span>
+              <span>sealed</span>
+              <Digest value={mismatch.expected_digest} />
+              <span>≠ observed</span>
+              <Digest value={mismatch.observed_digest} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <span className="text-[10px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-byte-note>
+        {BYTE_NOTES[bytes.state]}
+      </span>
+    </div>
+  );
+}
+
+const BYTE_NOTES: Record<ArtifactBytes["state"], string> = {
+  MATCH:
+    "Every sealed part and document was re-read and hashes to the digest stored when the artifact was sealed. This covers bytes only — not causal order and not a selection.",
+  MISMATCH:
+    "Re-read bytes do not hash to the sealed digests. The expected digests are kept as sealed; nothing is rebaselined, and the freeze stays BLOCKED until the original bytes return.",
+  MISSING:
+    "Part of the sealed artifact is missing from the retained store. The freeze stays BLOCKED until those bytes are back.",
+  NOT_VERIFIED: "No verification has been requested for these bytes. A read never re-opens them; verify now does.",
+  NOT_RETAINED: "This run sealed no P05 artifact, so there are no bytes to re-read.",
+  UNAVAILABLE: "The private verifier could not be reached. Nothing was read, recorded or claimed.",
+  NOT_ENABLED: "Artifact byte verification is not enabled in this environment.",
+};
+
+/** Spec 07 §2.3 + §14: a thin red banner while sealed bytes BLOCK the run. */
+function BlockedBanner({ bytes }: { bytes: ArtifactBytes }) {
+  const first = bytes.mismatches[0];
+  return (
+    <div
+      role="alert"
+      className="rounded-[6px] border px-3.5 py-2 text-[11.5px] leading-[1.5]"
+      style={{ borderColor: "var(--bad)", background: "var(--bad-bg-soft)", color: "var(--bad)" }}
+      data-blocked-banner={bytes.state}
+    >
+      <span className="mono font-semibold">BLOCKED — digest drift</span>
+      {first ? (
+        <span className="mono">
+          {" "}· sealed {shortDigest(first.expected_digest)} ≠ observed {shortDigest(first.observed_digest) ?? "missing"}
+        </span>
+      ) : null}{" "}
+      — the run is BLOCKED from promotion until re-verified; nothing downstream of this screen may be trusted.
+    </div>
   );
 }
 
@@ -419,10 +559,6 @@ function axisFill(label: string): string {
 
 /* --------------------------------------------------------- frozen profile */
 
-/** Short reading words, one per published bound state; the full phrase sits in the title. */
-const BOUND_WORDS: Record<FrozenParameter["bound_state"], string> = {
-  WITHIN_DECLARED_RANGE: "in range",
-};
 
 function FrozenParameters({ parameters, blocked }: { parameters: readonly FrozenParameter[]; blocked: boolean }) {
   if (blocked) {
@@ -513,15 +649,9 @@ function FrozenParameters({ parameters, blocked }: { parameters: readonly Frozen
               >
                 {parameter.frozen_value}
               </td>
-              <td
-                className="mono py-2 pl-3 text-[9.5px] leading-[1.4]"
-                style={{ color: "var(--ink-faint)" }}
-                data-bound-state={parameter.bound_state}
-                title={`${parameter.position_percent}% of the declared range · ${parameter.bound_state
-                  .toLowerCase()
-                  .replace(/_/g, " ")}`}
-              >
-                {parameter.position_percent}% · {BOUND_WORDS[parameter.bound_state]}
+              {/* DR-02: the same server definition and renderer as Search S06. */}
+              <td className="py-2 pl-3 text-[9.5px] leading-[1.4]" data-bound-state={parameter.bound_state}>
+                <BoundWarningNote warning={parameter.bound_warning} positionPercent={parameter.position_percent} />
               </td>
             </tr>
           ))}
@@ -706,6 +836,16 @@ function RetainedRows({ freeze }: { freeze: CurrentSourceFreeze }) {
 const RETAINED_REASON_SENTENCES: Record<string, string> = {
   P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES:
     "The source bytes were verified when the run was imported; a read never reopens the private artifact, so no byte-level check is shown here.",
+  SELECTION_SAW_EVERY_OUTER_FOLD:
+    "One θ* was selected after every outer fold's OOS window had been read, so no fold's OOS is held out from the selection.",
+  P10_DELTA_WFO_PROFILE_DOES_NOT_ADMIT_PER_FOLD_CAUSAL_SCHEDULE:
+    "A per-fold causal schedule is not admitted by the Delta walk-forward profile, so no per-fold causal verdict is evaluated.",
+  QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_FREEZE_OR_OOS_READ_CLOCKS:
+    "QuantBT publishes no freeze or OOS-read timestamps on this route, so no wall-clock tick is drawn.",
+  RS02_SEAL_PREDATES_P17_CHILD_AUDIT:
+    "This run was retained before QuantBT's child audit was kept, so the child that generated each fold's OOS bars cannot be named.",
+  FROZEN_PARAMETERS_NOT_EXACT_NUMERIC_JSON:
+    "The frozen parameters are not all exact numbers, so QuantBT's candidate identity cannot be recomputed.",
   RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET:
     "A read never enqueues an evaluation, so no neighbourhood around θ* is re-scored and no ΔJ exists to show.",
   SOURCE_DID_NOT_PUBLISH_PER_FOLD_SEGMENT_FACTS:
@@ -716,9 +856,7 @@ function reasonText(code: string | null | undefined): string | null {
   return reasonCodeSentence(code) ?? (code ? RETAINED_REASON_SENTENCES[code] ?? null : null);
 }
 
-/** Spec 07 §2.5, verbatim. */
-export const WHAT_IF_RULE =
-  "a what-if never writes onto frozen params — commit creates a SIBLING ATTEMPT with its own config_hash, lineage-linked to this one.";
+export { WHAT_IF_RULE } from "./WhatIfCard";
 
 const OBJECTIVE_WORDS: Record<string, string> = {
   MODE_1_DECAY_J: "J",
@@ -847,7 +985,15 @@ function RetainedStrip({ freeze, identity }: { freeze: RetainedFreeze; identity:
 }
 
 /** Hi-fi F3 on the retained lane: the receipt RS-02 publishes, pair by pair. */
-function RetainedIntegrity({ freeze }: { freeze: RetainedFreeze }) {
+function RetainedIntegrity({
+  freeze,
+  verify,
+  onVerify,
+}: {
+  freeze: RetainedFreeze;
+  verify: VerifySlot;
+  onVerify: () => void;
+}) {
   const { integrity } = freeze;
   const matched = integrity.state === "MATCH";
   const tone = matched ? "var(--good)" : "var(--bad)";
@@ -886,6 +1032,21 @@ function RetainedIntegrity({ freeze }: { freeze: RetainedFreeze }) {
         <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-retained-scope-code>
           {integrity.verification_scope.toLowerCase().replace(/_/g, " ")}
         </span>
+        {/* Spec 07 §2.3: "verify now" — disabled while verifying, never optimistic. */}
+        <button
+          type="button"
+          className="btn-ghost mono ml-auto text-[10px]"
+          data-action="verify"
+          onClick={onVerify}
+          disabled={verify.state === "verifying"}
+          title={
+            verify.state === "verifying"
+              ? "a verification is already in flight"
+              : "re-read the sealed artifact bytes and record a receipt"
+          }
+        >
+          {verify.state === "verifying" ? "verifying…" : "verify now"}
+        </button>
       </div>
 
       <ul className="flex flex-col">
@@ -926,12 +1087,20 @@ function RetainedIntegrity({ freeze }: { freeze: RetainedFreeze }) {
         </span>
       </div>
 
-      <TypedAbsence
-        what="source artifact bytes"
-        state={freeze.source_artifact_bytes.state}
-        code={freeze.source_artifact_bytes.reason_code ?? freeze.source_artifact_bytes.availability.reason_code}
-        data-source-bytes={freeze.source_artifact_bytes.state}
-      />
+      {/* A server older than A10a publishes no receipt: keep its typed absence. */}
+      {(verify.state === "done" ? verify.verification.artifact_bytes : freeze.byte_verification) ? (
+        <ByteReceipt
+          bytes={(verify.state === "done" ? verify.verification.artifact_bytes : freeze.byte_verification) as ArtifactBytes}
+        />
+      ) : (
+        <TypedAbsence
+          what="source artifact bytes"
+          state={freeze.source_artifact_bytes.state}
+          code={freeze.source_artifact_bytes.reason_code ?? freeze.source_artifact_bytes.availability.reason_code}
+          data-source-bytes={freeze.source_artifact_bytes.state}
+        />
+      )}
+      <VerifyLive verify={verify} />
 
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-retained-scope>
         A match here means the retained manifest, its row counts and its batch receipt agree with what
@@ -1091,8 +1260,140 @@ function RetainedFrozenTable({ freeze, identity }: { freeze: RetainedFreeze; ide
   );
 }
 
+const FOLD_VERDICT_WORDS: Record<FoldOrderingRow["verdict"], string> = {
+  NOT_CAUSAL_GLOBAL_SELECTION: "not causal · global selection",
+  NOT_EVALUATED: "not evaluated",
+  NOT_PUBLISHED: "not published",
+};
+
+const BOUNDARY_WORDS: Record<FoldOrderingRow["data_time"]["boundary"], string> = {
+  IS_ENDS_BEFORE_OOS: "IS ends before OOS",
+  IS_OVERLAPS_OOS: "IS overlaps OOS",
+  NOT_PUBLISHED: "window not published",
+};
+
+const CHILD_WORDS: Record<FoldOrderingRow["oos_generation_child"]["state"], string> = {
+  MATCH: "OOS child = frozen θ*",
+  MISMATCH: "OOS child ≠ frozen θ*",
+  NOT_RETAINED: "child audit not retained",
+  NOT_PUBLISHED: "no OOS generation child",
+  NOT_COMPUTABLE: "θ* identity not computable",
+};
+
+/** A bar on the data-time axis only: IS then OOS, placed on the span of the returned folds. */
+function DataTimeBar({ fold, span }: { fold: FoldOrderingRow; span: { lo: number; hi: number } | null }) {
+  const place = (start: number | null | undefined, end: number | null | undefined) => {
+    if (span === null || start == null || end == null || span.hi <= span.lo) return null;
+    const left = ((start - span.lo) / (span.hi - span.lo)) * 100;
+    const width = Math.max(((end - start) / (span.hi - span.lo)) * 100, 0.5);
+    return { left: `${left.toFixed(2)}%`, width: `${width.toFixed(2)}%` };
+  };
+  const is = place(fold.data_time.is.start_utc_ms, fold.data_time.is.end_utc_ms);
+  const oos = place(fold.data_time.oos.start_utc_ms, fold.data_time.oos.end_utc_ms);
+  return (
+    <span className="relative block h-[12px] min-w-[120px] flex-1 rounded-[3px]" style={{ background: "var(--paper-sunken)" }} aria-hidden>
+      {is ? <span className="absolute inset-y-0 rounded-[3px]" data-segment="is" style={{ ...is, background: "var(--accent-soft)", border: "1px solid var(--accent)" }} /> : null}
+      {oos ? <span className="absolute inset-y-0 rounded-[3px]" data-segment="oos" style={{ ...oos, background: "var(--warn-bg)", border: "1px solid var(--warn)" }} /> : null}
+    </span>
+  );
+}
+
+/**
+ * W5a P16-T02/T11 — hi-fi F1 on the retained lane, per fold: DATA TIME (each
+ * fold's own IS/OOS boundary and the server's causal verdict) and WALL CLOCK
+ * (a typed absence: QuantBT publishes no freeze clocks). Two axes, never one.
+ */
+function FoldOrderingAxes({ ordering }: { ordering: FoldOrdering }) {
+  const times = ordering.folds.flatMap((fold) => [
+    fold.data_time.is.start_utc_ms, fold.data_time.is.end_utc_ms, fold.data_time.oos.start_utc_ms, fold.data_time.oos.end_utc_ms,
+  ]).filter((value): value is number => typeof value === "number");
+  const span = times.length > 1 ? { lo: Math.min(...times), hi: Math.max(...times) } : null;
+  const global = ordering.selection_scope === "GLOBAL";
+  const badge = global ? "⚠ NOT CAUSAL · GLOBAL SELECTION" : ordering.selection_scope === "PER_FOLD" ? "PER-FOLD · NOT EVALUATED" : "ORDERING NOT PUBLISHED";
+  return (
+    <div className="flex flex-col gap-2" data-fold-ordering={ordering.selection_scope} data-axes={ordering.axes.join(" ")}>
+      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1" data-ordering-verdict>
+        <span className="mono rounded-[3px] border px-2 py-[1px] text-[10px] font-bold" style={{ borderColor: "var(--warn)", color: "var(--warn)" }} data-ordering-badge>
+          {badge}
+        </span>
+        {ordering.source_claims.chronological_claim ? (
+          <span className="mono text-[10px]" data-source-claim title="QuantBT walk_forward.chronological_validation_claim">
+            {ordering.source_claims.chronological_claim}
+          </span>
+        ) : null}
+        {ordering.source_claims.causality_claim ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title="QuantBT walk_forward.causality_claim">
+            {ordering.source_claims.causality_claim}
+          </span>
+        ) : null}
+        {ordering.source_claims.oos_used_for_selection === true ? (
+          <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }}>oos_used_for_selection = true</span>
+        ) : null}
+      </span>
+      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        F1 · two axes — deliberately separate, not the same units
+      </span>
+      <div className="flex flex-col gap-1" data-axis="DATA_TIME">
+        <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
+          data time — which bars each fold read · {ordering.counts.folds} {ordering.counts.folds === 1 ? "fold" : "folds"}
+        </span>
+        <ol className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
+          {ordering.folds.map((fold) => (
+            <li
+              key={fold.fold_id}
+              className="flex flex-wrap items-center gap-x-2 gap-y-0.5"
+              data-fold-row={fold.fold_id}
+              data-boundary={fold.data_time.boundary}
+              data-fold-verdict={fold.verdict}
+              data-oos-child={fold.oos_generation_child.state}
+            >
+              <span className="mono w-[52px] flex-none text-[10px]" style={{ color: "var(--ink-soft)" }}>fold {fold.fold_id}</span>
+              <DataTimeBar fold={fold} span={span} />
+              <span
+                className="mono text-[9.5px]"
+                style={{ color: fold.data_time.boundary === "IS_OVERLAPS_OOS" ? "var(--bad)" : "var(--ink-faint)" }}
+                data-boundary-words
+                title={fold.data_time.boundary === "NOT_PUBLISHED"
+                  ? fold.data_time.reason_code ?? undefined
+                  : `IS → ${formatUtc(fold.data_time.is.end_utc_ms) ?? "?"} · OOS ${formatUtc(fold.data_time.oos.start_utc_ms) ?? "?"} → ${formatUtc(fold.data_time.oos.end_utc_ms) ?? "?"}`}
+              >
+                {BOUNDARY_WORDS[fold.data_time.boundary]}
+              </span>
+              <span className="mono text-[9.5px]" style={{ color: "var(--warn)" }} title={fold.reason_code} data-verdict-words>
+                {FOLD_VERDICT_WORDS[fold.verdict]}
+              </span>
+              <span
+                className="mono text-[9.5px]"
+                data-child-words
+                style={{
+                  color: fold.oos_generation_child.state === "MATCH" ? "var(--good)" : fold.oos_generation_child.state === "MISMATCH" ? "var(--bad)" : "var(--ink-faint)",
+                }}
+                title={fold.oos_generation_child.reason_code
+                  ?? (fold.oos_generation_child.candidate_id ? `QuantBT candidate ${fold.oos_generation_child.candidate_id} · child #${fold.oos_generation_child.audit_ordinal}` : undefined)}
+              >
+                {CHILD_WORDS[fold.oos_generation_child.state]}
+                {fold.oos_generation_child.candidate_id ? ` · ${fold.oos_generation_child.candidate_id.slice(0, 8)}` : ""}
+              </span>
+            </li>
+          ))}
+        </ol>
+        <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-ordering-reason>
+          {reasonText(ordering.folds[0]?.reason_code) ?? ordering.folds[0]?.reason_code ?? "No retained fold."}
+          {global ? " Report evidence only — never a deployment claim." : ""}
+        </span>
+      </div>
+      <div className="flex flex-col gap-1 border-t border-dashed pt-2" style={{ borderColor: "var(--line-strong)" }} data-axis="WALL_CLOCK">
+        <span className="mono text-[9.5px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--warn)" }}>
+          wall clock — when the events happened
+        </span>
+        <TypedAbsence what="wall clock ordering" state={ordering.wall_clock.state} code={ordering.wall_clock.reason_code} />
+      </div>
+    </div>
+  );
+}
+
 /** Hi-fi F1 on the retained lane: what the requested window says, and what no source clock says. */
-function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
+function RetainedOrdering({ identity, ordering }: { identity: RunIdentity | null; ordering?: FoldOrdering | null }) {
   const window = walkForwardOf(identity?.requested ?? null);
   const label = protocolLabel(window, identity?.progress?.run?.protocol ?? null);
   const folds: FoldEntry[] = identity?.progress?.progress?.folds ?? [];
@@ -1102,13 +1403,12 @@ function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
     <section
       className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
       data-panel="ordering"
-      data-ordering-state="NOT_PUBLISHED"
+      data-ordering-state={ordering ? ordering.selection_scope : "NOT_PUBLISHED"}
       style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
     >
       <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
         ordering
       </h3>
-      <TypedAbsence what="wall clock ordering" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" />
       <div className="flex flex-col gap-1" data-data-time="REQUESTED_WINDOW">
         <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
           data time · requested walk-forward window
@@ -1134,10 +1434,16 @@ function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
             requested window not published
           </span>
         )}
-        {segmentGap ? (
+        {/* A W5a server publishes each fold's IS/OOS windows below; the older gap no longer applies. */}
+        {segmentGap && !ordering ? (
           <TypedAbsence what="per-fold IS/OOS segments" state={segmentGap.state} code={segmentGap.reason_code} />
         ) : null}
       </div>
+      {ordering ? (
+        <FoldOrderingAxes ordering={ordering} />
+      ) : (
+        <TypedAbsence what="wall clock ordering" state="NOT_PUBLISHED" code="UI_RETAINED_LANE_HAS_NO_FIELD" />
+      )}
       <p className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-faint)" }} data-two-clocks>
         {TWO_CLOCKS_NOTE}
       </p>
@@ -1145,61 +1451,35 @@ function RetainedOrdering({ identity }: { identity: RunIdentity | null }) {
   );
 }
 
-/** Hi-fi F5 on the retained lane: the card keeps its place, typed and inert. */
-function RetainedWhatIf({ freeze }: { freeze: RetainedFreeze }) {
-  const code = freeze.what_if.reason_code;
-  return (
-    <section
-      className="flex flex-col gap-2 rounded-[10px] border border-dashed px-4 py-3.5"
-      data-panel="what-if"
-      data-what-if={freeze.what_if.state}
-      data-reason={code}
-      style={{ borderColor: "var(--warn)", background: "var(--paper-raised)" }}
-    >
-      <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-          what-if
-        </h3>
-        <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }}>
-          {freeze.what_if.state.toLowerCase().replace(/_/g, " ")}
-        </span>
-        <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }}>
-          {code}
-        </span>
-      </div>
-      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-        {reasonText(code)} The what-if sandbox (A10c) is not built, so no slider and no ΔJ preview is drawn.
-      </p>
-      <p className="text-[11px] italic leading-[1.5]" style={{ color: "var(--ink-mute)" }} data-what-if-rule>
-        {WHAT_IF_RULE}
-      </p>
-      <div>
-        <button
-          type="button"
-          className="btn-ghost mono text-[10px]"
-          data-action="create-sibling"
-          disabled
-          aria-disabled="true"
-          style={{ opacity: 0.5, cursor: "not-allowed" }}
-          title={`${code} — the what-if sandbox (A10c) is not built`}
-        >
-          create sibling attempt →
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function RetainedFreezeBody({ freeze, identity }: { freeze: RetainedFreeze; identity: RunIdentitySlot }) {
+function RetainedFreezeBody({
+  freeze,
+  identity,
+  verify,
+  onVerify,
+  evaluate,
+  onEvaluate,
+}: {
+  freeze: RetainedFreeze;
+  identity: RunIdentitySlot;
+  verify: VerifySlot;
+  onVerify: () => void;
+  evaluate: WhatIfEvaluateSlot;
+  onEvaluate: (gridKey: string) => void;
+}) {
   const known = identity.state === "ready" ? identity.identity : null;
   return (
     <div className="flex flex-col gap-3" data-lane="retained">
-      <RetainedOrdering identity={known} />
+      <RetainedOrdering identity={known} ordering={(freeze as { fold_ordering?: FoldOrdering }).fold_ordering ?? null} />
       <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <RetainedFrozenTable freeze={freeze} identity={known} />
-        <RetainedIntegrity freeze={freeze} />
+        <RetainedIntegrity freeze={freeze} verify={verify} onVerify={onVerify} />
       </div>
-      <RetainedWhatIf freeze={freeze} />
+      <WhatIfCard
+        whatIf={isWhatIf(freeze.what_if) ? freeze.what_if : null}
+        inert={{ state: String((freeze.what_if as { state?: unknown } | undefined)?.state ?? "NOT_PUBLISHED"), reason_code: ((freeze.what_if as { reason_code?: string | null } | undefined)?.reason_code) ?? null }}
+        evaluate={evaluate}
+        onEvaluate={onEvaluate}
+      />
     </div>
   );
 }
@@ -1218,6 +1498,9 @@ export interface FreezeScreenProps {
   onReread: () => void;
   /** W3b: the run identity a retained answer is read against (schedule, folds, readiness). */
   identity?: RunIdentitySlot;
+  /** A10c: the one explicit "evaluate grid" action (retained WFO lane only). */
+  whatIfEvaluate?: WhatIfEvaluateSlot;
+  onWhatIfEvaluate?: (gridKey: string) => void;
 }
 
 export function FreezeScreen({
@@ -1231,6 +1514,8 @@ export function FreezeScreen({
   ensureRetained,
   onReread,
   identity = { state: "idle" },
+  whatIfEvaluate = { state: "idle" },
+  onWhatIfEvaluate = () => undefined,
 }: FreezeScreenProps) {
   /* W3b: the hub delegated this run and the retained lane answered — read it from there. */
   const lane = readsRetainedLane(detail, retained) ? retained.freeze : null;
@@ -1239,6 +1524,15 @@ export function FreezeScreen({
   const handedOff = hubDelegates(detail) && retained.state !== "not-applicable";
   const freeze = lane === null && !handedOff ? detail?.freeze : undefined;
   const blocked = freeze?.integrity.state === "BLOCKED";
+  /* A10a: the newest byte answer — this verify's own, else the read's receipt. */
+  const bytes: ArtifactBytes | null =
+    (verify.state === "done"
+      ? verify.verification.artifact_bytes
+      : lane !== null
+        ? lane.byte_verification
+        : detail && !handedOff
+          ? detail.artifact_bytes
+          : null) ?? null;
 
   return (
     <div className="flex flex-col gap-3" data-screen="freeze-detail" data-run={runId}>
@@ -1277,6 +1571,8 @@ export function FreezeScreen({
           next: S4 Execute →
         </Link>
       </nav>
+
+      {bytes && bytesBlock(bytes) ? <BlockedBanner bytes={bytes} /> : null}
 
       <div className="flex flex-col gap-1">
         <h1 className="text-[22px] font-light" style={{ fontFamily: "var(--font-display)" }}>
@@ -1428,57 +1724,13 @@ export function FreezeScreen({
               </section>
 
               <div className="flex min-w-0 flex-col gap-3">
-                <IntegrityPanel integrity={freeze.integrity} verify={verify} onVerify={onVerify} />
+                <IntegrityPanel integrity={freeze.integrity} bytes={detail.artifact_bytes} verify={verify} onVerify={onVerify} />
                 <Stage4Binding bundleDigest={freeze.selection.parameter_bundle_digest} />
               </div>
             </div>
 
-            <section
-              className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
-              data-panel="what-if"
-              data-what-if={freeze.what_if.state}
-              style={{ borderColor: "var(--line)", background: "var(--paper-raised)" }}
-            >
-              <div className="flex flex-wrap items-baseline gap-2">
-                <h3 className="mono text-[10px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
-                  what-if
-                </h3>
-                <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} title={freeze.what_if.reason_code}>
-                  {freeze.what_if.state.toLowerCase().replace(/_/g, " ")}
-                </span>
-              </div>
-              {/*
-                * No slider, no grid, not even a disabled one. A control that
-                * looks adjustable implies a question this source can answer,
-                * and `may_submit` / `may_create` are both pinned false.
-                */}
-              <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                No grid is drawn and no control is offered. Re-scoring a neighbourhood needs an
-                objective definition and an evaluation the source does not publish, and a slider that
-                cannot move is still a promise that it could.
-              </p>
-              <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-whatif-grid={freeze.what_if.grid.state}>
-                  grid — {freeze.what_if.grid.state.toLowerCase().replace(/_/g, " ")}
-                </span>
-                <span
-                  className="mono text-[9px]"
-                  style={{ color: "var(--ink-faint)" }}
-                  data-action-evaluate={freeze.what_if.actions.diagnostic_evaluate.state}
-                  data-may-submit={String(freeze.what_if.actions.diagnostic_evaluate.may_submit)}
-                >
-                  diagnostic evaluate — {freeze.what_if.actions.diagnostic_evaluate.state.toLowerCase().replace(/_/g, " ")}
-                </span>
-                <span
-                  className="mono text-[9px]"
-                  style={{ color: "var(--ink-faint)" }}
-                  data-action-sibling={freeze.what_if.actions.sibling_draft.state}
-                  data-may-create={String(freeze.what_if.actions.sibling_draft.may_create)}
-                >
-                  sibling draft — {freeze.what_if.actions.sibling_draft.state.toLowerCase().replace(/_/g, " ")}
-                </span>
-              </div>
-            </section>
+            {/* A10c/A11: the fixed hub keeps the what-if card, every control disabled with its reason. */}
+            <WhatIfCard whatIf={null} inert={{ state: freeze.what_if.state, reason_code: freeze.what_if.reason_code }} />
 
             <section
               className="flex flex-col gap-2 rounded-[8px] border px-4 py-3"
@@ -1514,7 +1766,14 @@ export function FreezeScreen({
             ) : null}
           </div>
         ) : lane !== null ? (
-          <RetainedFreezeBody freeze={lane} identity={identity} />
+          <RetainedFreezeBody
+            freeze={lane}
+            identity={identity}
+            verify={verify}
+            onVerify={onVerify}
+            evaluate={whatIfEvaluate}
+            onEvaluate={onWhatIfEvaluate}
+          />
         ) : null}
       </ResearchPanel>
 

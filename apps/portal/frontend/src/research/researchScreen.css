@@ -99,6 +99,22 @@
   animation: rs-caret var(--rs-motion-duration, 1s) steps(1) infinite;
 }
 
+/* Spec 07 §8 `fz-blink`: the "preview only" badge flashes ONCE (600 ms,
+ * .3 → 1) after a slider move — never a loop, and never under
+ * prefers-reduced-motion (the [data-motion] rule below turns it off). */
+@keyframes rs-blink-once {
+  0% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.research-screen [data-motion="blink-once"] {
+  animation: rs-blink-once 600ms ease-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .research-screen [data-motion] {
     animation: none !important;

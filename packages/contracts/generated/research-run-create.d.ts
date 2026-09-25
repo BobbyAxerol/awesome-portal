@@ -63,6 +63,13 @@ export interface components {
              * @enum {unknown}
              */
             intent_kind: "NEW" | "CLONE_FOR_EXPERIMENT" | "REPRODUCE_EXISTING" | "UPGRADE_ENGINE_EXPERIMENT";
+            /** @description W5a · P19: a sibling attempt forked from a Screen-07 what-if node. The run is a NEW intent with its own preflight and config_hash; the server links its attempt to the frozen run's attempt as SIBLING_OF. */
+            lineage?: {
+                /** @constant */
+                relation: "SIBLING_OF";
+                parent_run_id: string;
+                what_if_cell_id: string;
+            };
         };
         RunCreateResponse: {
             /** @constant */

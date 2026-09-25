@@ -62,10 +62,18 @@ export interface NewRunController {
   recheck: () => void;
 }
 
+/** W5a · P19: a Screen-07 what-if fork this draft was opened from. */
+export interface SiblingLineage {
+  relation: "SIBLING_OF";
+  parent_run_id: string;
+  what_if_cell_id: string;
+}
+
 export function useNewRun(
   initial: RunDraft,
   limits: DraftConstraints,
   workspaceId?: string,
+  lineage?: SiblingLineage | null,
 ): NewRunController {
   const [draft, setDraft] = useState<RunDraft>(initial);
   const [created, setCreated] = useState<RunCreateResponse | null>(null);
@@ -109,6 +117,7 @@ export function useNewRun(
         preflight_token: token,
         requested_spec: requestedSpec,
         intent_kind: "NEW",
+        ...(lineage ? { lineage } : {}),
       })
       .then((response) => {
         setCreated(response);
@@ -122,7 +131,7 @@ export function useNewRun(
            the intent id goes with it, because it belonged to that preview. */
         if (refusal.invalidatesPreflight) intentId.current = null;
       });
-  }, [preflight.preflight, requestedSpec, workspaceId]);
+  }, [preflight.preflight, requestedSpec, workspaceId, lineage]);
 
   const createState: ResearchState = pending
     ? researchState({ kind: "in-flight", hasAcceptedResponse: false })

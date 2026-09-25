@@ -1,15 +1,17 @@
 /** P15 source-as-is Search/ledger/diagnostics projection and BFF. */
 
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import type { ResearchScope } from "./contracts";
 import {
-  P04_DELTA_ADAPTER_CONTRACT_DIGEST,
-  P04_DELTA_BINDING,
-  P04_DELTA_FIXED_PARAMETERS,
-} from "./p04-delta.binding";
+  DEFAULT_PARAMETER_BINDING_REGISTRY,
+  declaredParameterRows,
+  RESEARCH_PARAMETER_BINDINGS,
+  ResearchParameterBindingRegistry,
+  type HistoricalParameterBinding,
+} from "./parameter-binding.registry";
 import { sha256ResearchJson } from "./preflight.service";
 import { P04_FIXED_QUALIFICATION_PROFILE_ID } from "./delta-wfo.profile";
 import { ResearchSplitSourceSchema, type ResearchSplitSource } from "./progress.contract";
@@ -195,12 +197,6 @@ function parseProjection(value: unknown): StoredSplitProjection | null {
   return source.success ? { schema_version: "research.split-projection.v1", source: source.data } : null;
 }
 
-function exactDecimal(value: number): string {
-  if (!Number.isFinite(value)) {
-    throw new ResearchSearchError("RESEARCH_SEARCH_UNAVAILABLE", "Search parameter profile is incompatible.", 503);
-  }
-  return String(value);
-}
 
 function requestedSpecRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -230,30 +226,23 @@ function requestedOptimizer(value: unknown): { mode: string | null; schedule: st
   };
 }
 
-function staticParameters() {
-  const declared = P04_DELTA_BINDING.declaredContract.parameter_space;
-  return Object.entries(P04_DELTA_FIXED_PARAMETERS).map(([name, rawValue]) => {
-    const range = declared[name as keyof typeof declared];
-    if (!range) {
-      throw new ResearchSearchError("RESEARCH_SEARCH_UNAVAILABLE", "Search parameter declaration is incompatible.", 503);
-    }
-    const value = Number(rawValue);
-    const span = range.maximum - range.minimum;
-    const position = span > 0 ? Math.round(((value - range.minimum) / span) * 10_000) / 100 : 0;
-    if (!Number.isFinite(position) || position < 0 || position > 100 || value < range.minimum || value > range.maximum) {
-      throw new ResearchSearchError("RESEARCH_SEARCH_UNAVAILABLE", "Search parameter profile is outside its declaration.", 503);
-    }
-    return {
-      name,
-      kind: "NUMERIC" as const,
-      minimum: exactDecimal(range.minimum),
-      maximum: exactDecimal(range.maximum),
-      step: exactDecimal(range.step),
-      effective_value: exactDecimal(value),
-      position_percent: position,
-      bound_state: "WITHIN_DECLARED_RANGE" as const,
-    };
-  });
+/** A10b + DR-02: the run's historical declaration, with the shared bound warning. */
+function historicalParameters(binding: HistoricalParameterBinding) {
+  const rows = declaredParameterRows(binding.parameterSpace, binding.fixedParameters);
+  if (rows === null) {
+    throw new ResearchSearchError("RESEARCH_SEARCH_UNAVAILABLE", "Search parameter profile is outside its declaration.", 503);
+  }
+  return rows.map((row) => ({
+    name: row.name,
+    kind: "NUMERIC" as const,
+    minimum: row.minimum,
+    maximum: row.maximum,
+    step: row.step,
+    effective_value: row.value,
+    position_percent: row.position_percent,
+    bound_state: "WITHIN_DECLARED_RANGE" as const,
+    bound_warning: row.bound_warning,
+  }));
 }
 
 function rowAvailability(row: SplitHubRow): Availability {
@@ -276,6 +265,8 @@ export class ResearchSearchService {
   constructor(
     private readonly split: ResearchSplitRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(RESEARCH_PARAMETER_BINDINGS)
+    private readonly bindings: ResearchParameterBindingRegistry = DEFAULT_PARAMETER_BINDING_REGISTRY,
   ) {}
 
   async detail(
@@ -315,13 +306,14 @@ export class ResearchSearchService {
     if (!projection || row.kind !== "DURABLE") return this.absentDetail(row, fallback, requestedFold);
 
     const source = projection.source;
-    const expectedBundleDigest = sha256ResearchJson(P04_DELTA_FIXED_PARAMETERS);
+    // A10b: the run's own historical binding, by its exact adapter digest.
+    const binding = this.bindings.byAdapterDigest(row.adapterContractDigest);
     // W1: gate on the immutable execution profile too; the Delta WFO profile
     // shares the P04 executor digest but is not the fixed qualification.
     const compatible = (row.executionProfileId ?? P04_FIXED_QUALIFICATION_PROFILE_ID) === P04_FIXED_QUALIFICATION_PROFILE_ID
-      && row.adapterContractDigest === P04_DELTA_ADAPTER_CONTRACT_DIGEST
+      && binding !== null
       && source.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH"
-      && source.protocol.selection.parameter_bundle_digest === expectedBundleDigest;
+      && source.protocol.selection.parameter_bundle_digest === binding.fixedBundleDigest;
     if (!compatible) {
       // A static P04 declaration may not be projected over an immutable run
       // bound to another adapter/profile. Keep its retained P14 source usable,
@@ -410,7 +402,7 @@ export class ResearchSearchService {
         state: "FIXED_PROFILE_NO_SEARCH",
         adapter_contract_digest: row.adapterContractDigest,
         parameter_bundle_digest: source.protocol.selection.parameter_bundle_digest,
-        parameters: staticParameters(),
+        parameters: historicalParameters(binding as HistoricalParameterBinding),
         strict_outer_oos: strictOos,
         availability: available,
       },

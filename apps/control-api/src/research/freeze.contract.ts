@@ -9,6 +9,9 @@
 
 import { z } from "zod";
 
+import { ArtifactByteVerificationSchema } from "./artifact-verify.contract";
+import { BoundWarningSchema } from "./bound-warning";
+
 export const ResearchFreezeRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/);
@@ -50,6 +53,8 @@ const ParameterSchema = z.object({
   frozen_value: ExactDecimalSchema,
   position_percent: z.number().finite().min(0).max(100),
   bound_state: z.literal("WITHIN_DECLARED_RANGE"),
+  /** DR-02: the shared Search/Freeze bound-warning definition, server-owned. */
+  bound_warning: BoundWarningSchema,
 }).strict();
 
 const WindowSchema = z.object({
@@ -75,6 +80,16 @@ const IntegrityCheckSchema = z.object({
 }).strict();
 
 const VerificationScopeSchema = z.enum(["PORTAL_RETAINED_DIGEST_BINDING_ONLY", "NONE"]);
+/**
+ * A10a: what one explicit verify actually covered. Bytes are added to the
+ * scope only when a durable receipt says every sealed digest matched.
+ */
+const VerifyResponseScopeSchema = z.enum([
+  "PORTAL_RETAINED_DIGEST_BINDING_ONLY",
+  "PORTAL_RETAINED_DIGEST_BINDING_AND_P05_ARTIFACT_BYTES",
+  "P05_ARTIFACT_BYTES_ONLY",
+  "NONE",
+]);
 
 const IntegritySchema = z.object({
   state: z.enum(["PARTIAL", "BLOCKED", "NOT_PUBLISHED"]),
@@ -175,6 +190,8 @@ export const ResearchFreezeResponseSchema = z.object({
   }).strict(),
   freeze: FreezeDetailShape,
   source_absences: z.record(z.string().regex(/^[a-z][a-z0-9_]{2,63}$/), ResearchFreezeSourceGapSchema),
+  /** A10a: the newest durable byte-verification receipt, or a typed "not yet". */
+  artifact_bytes: ArtifactByteVerificationSchema,
 }).strict();
 
 export const ResearchFreezeVerificationResponseSchema = z.object({
@@ -187,8 +204,10 @@ export const ResearchFreezeVerificationResponseSchema = z.object({
   // A verify response is its own user-triggered observation. It must carry
   // the qualification it actually verified, rather than requiring a client
   // to borrow scope from a separately cached detail document.
-  verification_scope: VerificationScopeSchema,
+  verification_scope: VerifyResponseScopeSchema,
   integrity: IntegritySchema,
+  /** A10a: this verify's own byte comparison and receipt. */
+  artifact_bytes: ArtifactByteVerificationSchema,
 }).strict();
 
 export type ResearchFreezeResponse = z.infer<typeof ResearchFreezeResponseSchema>;

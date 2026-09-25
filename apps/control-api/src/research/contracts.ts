@@ -180,7 +180,8 @@ export class ResearchMetadataError extends Error {
       | "RESEARCH_JOB_ADMISSION_REJECTED"
       | "RESEARCH_OUTBOX_NOT_FOUND"
       | "RESEARCH_INVALID_INPUT"
-      | "RESEARCH_CONCURRENT_TRANSACTION",
+      | "RESEARCH_CONCURRENT_TRANSACTION"
+      | "RESEARCH_WHATIF_IN_FLIGHT",
     message: string,
     readonly status: 400 | 403 | 404 | 409 | 503,
   ) {
@@ -382,6 +383,44 @@ export interface ResearchRunProducerInput {
   queueClass: ResearchQueueClass;
   resourceClass: string;
   attemptLimit: number;
+  /**
+   * W5a · P19: a Screen-07 what-if fork. The new attempt is a
+   * CLONE_FOR_EXPERIMENT child of the frozen run's attempt with relation
+   * SIBLING_OF; the producer intent itself stays a NEW run.
+   */
+  sibling?: { parentRunId: string; whatIfCellId: string };
+}
+
+/** W5a A10c: one explicit what-if diagnostic intent (see createOrReplayWhatIfIntent). */
+export interface ResearchWhatIfIntentInput {
+  runId: string;
+  attemptId: string;
+  jobId: string;
+  commandId: string;
+  clientIntentId: string;
+  logicalRunKey: string;
+  parentRunId: string;
+  parentAttemptId: string;
+  /** The parent's producer actor: the immutable preflight binding belongs to them. */
+  parentActorUserId: string;
+  gridKey: string;
+  evaluations: { evaluation_key: string; parameters: Record<string, string> }[];
+  workDigest: string;
+  legacyRequest: Record<string, unknown>;
+  preflightToken: string;
+  alphaId: string;
+  alphaVersionId: string;
+  executionAdapterId: "p04.delta-rsi.v1";
+  adapterContractDigest: string;
+  requestedSpecDigest: string;
+  effectiveSpecDigest: string;
+  datasetBindingDigest: string;
+  manifestDigest: string;
+  snapshotId: string;
+  snapshotContentHash: string;
+  engineReleaseId: string;
+  cost: ResearchJobCost;
+  resourceClass: string;
 }
 
 export interface ResearchRunProducerRecord {
@@ -393,7 +432,7 @@ export interface ResearchRunProducerRecord {
   alphaVersionId: string;
   executionAdapterId: "p04.delta-rsi.v1";
   adapterContractDigest: string;
-  executionProfileId: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1";
+  executionProfileId: "p04.fixed-qualification.v1" | "p10.delta-signal-notional-wfo.v1" | "p16.delta-whatif-grid.v1";
   executionProfileDigest: string | null;
   requestedSpecDigest: string;
   effectiveSpecDigest: string;

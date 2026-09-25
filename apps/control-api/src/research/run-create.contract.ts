@@ -33,6 +33,16 @@ export const ResearchRunCreateRequestSchema = z.object({
   preflight_token: ResearchPreflightTokenSchema,
   requested_spec: ResearchRequestedSpecSchema,
   intent_kind: ResearchRunIntentKindSchema.default("NEW"),
+  /**
+   * W5a · P19: a sibling attempt forked from a Screen-07 what-if node. The run
+   * is still a NEW intent with its own preflight and config_hash; the server
+   * links its attempt to the frozen run's attempt as SIBLING_OF.
+   */
+  lineage: z.object({
+    relation: z.literal("SIBLING_OF"),
+    parent_run_id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/),
+    what_if_cell_id: z.string().regex(/^x[0-8]y[0-8]$/),
+  }).strict().optional(),
 }).strict();
 
 export type ResearchRunCreateRequest = z.infer<typeof ResearchRunCreateRequestSchema>;
