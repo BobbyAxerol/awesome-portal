@@ -65,8 +65,14 @@ import {
 } from "./splitClient";
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import { formatMetric, formatUtc, shortDigest } from "./researchFormat";
-import type { FoldsSlot } from "./useSplit";
+import { retainedSplitOf, type FoldsSlot, type RetainedFact, type RetainedFacts } from "./useSplit";
 import type { ResearchState } from "./state";
+import { protocolLabel, retainedReadiness, walkForwardOf } from "./retainedLane";
+import { reasonCodeSentence } from "./researchRefusal";
+import { LineageLink, lineageHref } from "./LineageLink";
+import type { ProgressRead } from "./progressClient";
+import type { CurrentSourceSearch } from "./searchClient";
+import type { CurrentSourceClaimFact } from "./evidenceClient";
 
 /* --------------------------------------------------------------- verbatim */
 
@@ -96,9 +102,11 @@ export const SPLIT_RULES_FOLD_PLAN =
 /** Kept for callers of the P14 build; the full HiFi footer asserts facts this run may not publish. */
 export const SPLIT_RULES_FOOTER = SPLIT_RULES_BASE;
 
-/** Screens not built yet, named with the phase that owns them (RF-06 brief). */
-const EXECUTE_PHASE = "P17";
-const LINEAGE_PHASE = "P19";
+/**
+ * W3b · the reason this screen prints for a fact the retained lane has no
+ * field for (shared UI code, `researchRefusal.ts`) — never a P04-hub code.
+ */
+const NO_RETAINED_FIELD = "UI_RETAINED_LANE_HAS_NO_FIELD";
 
 /* ------------------------------------------------------------------ parts */
 
@@ -427,6 +435,13 @@ interface DrawnWindow {
   bars: number | null;
   role: string;
   childInput: string;
+  /** W3b: a retained fold-plan span ends on its last bar (inclusive), so it prints closed. */
+  closed?: boolean;
+}
+
+/** `[2026-06-01 ⋯ 2026-07-07]` — a span whose end is the last bar, inclusive. */
+function closedSpan(range: Range): string {
+  return `[${day(range.start_utc_ms)} ⋯ ${day(range.end_exclusive_utc_ms)}]`;
 }
 
 /** HiFi holdout row: gold dashed outline over a soft-gold hatch — never the colour of data something read. */
@@ -456,7 +471,16 @@ function useWidth(initial: number) {
  * percentage that places a span inside the axis. A segment narrower than a
  * hairline is floored to one and flagged.
  */
-function WindowAnatomy({ timeline, windows }: { timeline: Range; windows: DrawnWindow[] }) {
+function WindowAnatomy({
+  timeline,
+  windows,
+  timelineClosed = false,
+}: {
+  timeline: Range;
+  windows: DrawnWindow[];
+  /** W3b: an axis read from the fold plan ends on its last bar, inclusive. */
+  timelineClosed?: boolean;
+}) {
   const placed = useMemo(
     () =>
       windows.map((window) => {
@@ -536,8 +560,10 @@ function WindowAnatomy({ timeline, windows }: { timeline: Range; windows: DrawnW
           style={{ color: "var(--ink-faint)" }}
           title={`${exact(timeline.start_utc_ms)} → ${exact(timeline.end_exclusive_utc_ms)}`}
         >
-          [<span data-timeline-start>{day(timeline.start_utc_ms)}</span>,{" "}
-          <span data-timeline-end>{day(timeline.end_exclusive_utc_ms)}</span>)
+          [<span data-timeline-start>{day(timeline.start_utc_ms)}</span>
+          {timelineClosed ? " ⋯ " : ", "}
+          <span data-timeline-end>{day(timeline.end_exclusive_utc_ms)}</span>
+          {timelineClosed ? "]" : ")"}
         </span>
       </div>
 
@@ -552,9 +578,10 @@ function WindowAnatomy({ timeline, windows }: { timeline: Range; windows: DrawnW
             <span
               className="mono text-[9.5px]"
               style={{ color: "var(--ink-faint)" }}
-              title={`${exact(window.span.start_utc_ms)} → ${exact(window.span.end_exclusive_utc_ms)}`}
+              title={`${exact(window.span.start_utc_ms)} → ${exact(window.span.end_exclusive_utc_ms)}${window.closed ? " (last bar, inclusive)" : " (end exclusive)"}`}
+              data-window-span={window.key}
             >
-              {span(window.span)}
+              {window.closed ? closedSpan(window.span) : span(window.span)}
               {window.bars === null ? "" : ` · ${bars(window.bars)}`}
             </span>
             {window.hairline ? (
@@ -953,27 +980,25 @@ function HoldoutBlock({ detail, timeline }: { detail: SplitDetailDocument; timel
         <span className="flex flex-wrap items-center gap-2" data-holdout-rule="unlock">
           {/*
             * The unlock affordance exists in the HiFi. Its record and authority
-            * are not published and Screen 10, where a sibling attempt would
-            * live, is not built — so it is a disabled label with both reasons,
-            * never a control that can post.
+            * are not published, so it is a disabled label with the server's
+            * reason, never a control that can post. Sibling attempts are
+            * listed on Screen 10 (Attempt Lineage).
             */}
           <span
             data-action-unlock={unlock.state}
-            title={`${unlock.availability.reason_code ?? unlock.state} · sibling attempts open on Screen 10 (${LINEAGE_PHASE}), not built yet`}
+            title={`${unlock.availability.reason_code ?? unlock.state} · sibling attempts are listed on Screen 10 · Attempt Lineage`}
             className="mono rounded-[6px] border px-3 py-[2px] text-[10px] uppercase"
             style={{ color: "var(--ink-faint)", borderColor: "var(--line)", opacity: 0.6, cursor: "not-allowed" }}
             aria-disabled="true"
           >
             unlock holdout → sibling attempt
           </span>
-          <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
-            unlock record{" "}
-            {bound ? (
+          {bound ? (
+            <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
+              unlock record{" "}
               <Absent fact={(holdout as { unlock: AbsentFact }).unlock} what="unlock record" indexKey="holdout_unlock" />
-            ) : null}{" "}
-            · Screen 10
-            ({LINEAGE_PHASE}) not built
-          </span>
+            </span>
+          ) : null}
         </span>
       </div>
     </div>
@@ -1004,6 +1029,228 @@ function HoldoutBars({ fact }: { fact: AbsentFact }) {
   );
 }
 
+/* ------------------------------------------------- W3b · retained WFO lane */
+
+/**
+ * The run as the retained walk-forward lane publishes it, when that lane is
+ * this run's source (`retainedSplitOf`). Every field is read from a server
+ * body: the retained split, the P11 progress read, the admitted requested
+ * spec, the retained search selection and the retained evidence claim. A
+ * field none of them published stays null and its frame says so with the
+ * lane's own reason — never a P04-hub code.
+ */
+export interface LaneView {
+  split: CurrentSourceSplit;
+  identityLoading: boolean;
+  progress: ProgressRead | null;
+  alphaId: string | null;
+  protocol: string | null;
+  schedule: string | null;
+  readiness: "READY" | "NOT_READY" | null;
+  /** The walk-forward span: the requested spec's `[start, end_exclusive)`, else the fold plan's closed bounds. */
+  span: { range: Range; closed: boolean; source: "requested spec" | "fold plan" } | null;
+  is: Range | null;
+  outerOos: Range | null;
+  /** One params digest every fold's GLOBAL_STUDY selection shares, from the progress read. */
+  sharedDigest: string | null;
+  selection: RetainedFact<CurrentSourceSearch["selection"]>;
+  holdout: RetainedFact<CurrentSourceClaimFact>;
+  certificateReason: string | null;
+}
+
+function isoMs(value: string | null): number | null {
+  if (value === null) return null;
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? at : null;
+}
+
+/** The union of the fold plan's train (IS) or test (outer OOS) windows — the source's own ends, inclusive. */
+function unionOf(folds: readonly SourceFoldRow[], which: "train" | "test"): Range | null {
+  const starts = folds.map((fold) => (which === "train" ? fold.train_start_utc_ms : fold.test_start_utc_ms)).filter((v): v is number => v !== null);
+  const ends = folds.map((fold) => (which === "train" ? fold.train_end_utc_ms : fold.test_end_utc_ms)).filter((v): v is number => v !== null);
+  if (starts.length === 0 || ends.length === 0) return null;
+  return { start_utc_ms: Math.min(...starts), end_exclusive_utc_ms: Math.max(...ends) };
+}
+
+export function laneViewOf(
+  detail: SplitDetailDocument | null,
+  folds: FoldsSlot,
+  retained: RetainedFacts | null | undefined,
+): LaneView | null {
+  const split = retainedSplitOf(detail, folds);
+  if (split === null) return null;
+  const identity = retained?.identity ?? { state: "loading" as const };
+  const progress = identity.state === "ready" ? identity.identity.progress : null;
+  const requested = identity.state === "ready" ? identity.identity.requested : null;
+  const window = walkForwardOf(requested);
+  const plan = split.fold_plan.folds;
+  const start = isoMs(window.start);
+  const end = isoMs(window.endExclusive);
+  const is = unionOf(plan, "train");
+  const outerOos = unionOf(plan, "test");
+  const planBounds = is && outerOos
+    ? { start_utc_ms: Math.min(is.start_utc_ms, outerOos.start_utc_ms), end_exclusive_utc_ms: Math.max(is.end_exclusive_utc_ms, outerOos.end_exclusive_utc_ms) }
+    : null;
+  /* Asked once the identity is in hand, so the axis never swaps from one source to another. */
+  const span =
+    identity.state !== "ready"
+      ? null
+      : start !== null && end !== null && end > start
+      ? { range: { start_utc_ms: start, end_exclusive_utc_ms: end }, closed: false, source: "requested spec" as const }
+      : planBounds
+        ? { range: planBounds, closed: true, source: "fold plan" as const }
+        : null;
+  const selections = (progress?.progress?.folds ?? []).map((fold) => fold.selection ?? null);
+  const digests = new Set(selections.map((selection) => (selection?.state === "AVAILABLE" && selection.scope === "GLOBAL_STUDY" ? selection.params_digest : null)));
+  const sharedDigest = selections.length > 0 && digests.size === 1 ? [...digests][0] ?? null : null;
+  const certificate = progress?.progress?.claim?.methodology_certificate ?? null;
+  return {
+    split,
+    identityLoading: identity.state !== "ready",
+    progress,
+    alphaId: progress?.run?.alpha?.alpha_id ?? null,
+    protocol: protocolLabel(window, progress?.run?.protocol ?? null),
+    schedule: progress?.run?.schedule ?? null,
+    readiness: retainedReadiness(progress),
+    span,
+    is,
+    outerOos,
+    sharedDigest,
+    selection: retained?.selection ?? { state: "loading" },
+    holdout: retained?.holdout ?? { state: "loading" },
+    certificateReason: certificate && certificate.state !== "ISSUED" ? certificate.reason_code ?? certificate.state : null,
+  };
+}
+
+/** A lane fact still being read — said once, never drawn as an absence. */
+function Reading({ what }: { what: string }) {
+  return (
+    <span className="mono text-[10px] italic" style={{ color: "var(--ink-faint)" }} data-lane-reading={what}>
+      reading {what}…
+    </span>
+  );
+}
+
+/** A fact the retained lane did not publish: its word and its own code, never a hub code. */
+function LaneAbsent({ reason, what, word = "not published" }: { reason: string; what: string; word?: string }) {
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-lane-absent={what} data-lane-reason={reason}>
+      <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={reasonCodeSentence(reason) ?? reason}>
+        {word}
+      </span>
+      <span className="mono text-[9px] break-all" style={{ color: "var(--ink-faint)" }}>
+        {reason}
+      </span>
+    </span>
+  );
+}
+
+/** `GLOBAL` — QuantBT's schedule token, upper-cased as the HiFi's selection pill. */
+function scheduleWord(schedule: string): string {
+  return schedule.toUpperCase().replace(/[\s-]+/g, "_");
+}
+
+/** θ* as the retained search selected it: trial, objective and every parameter verbatim. */
+function ThetaStar({ lane, compact = false }: { lane: LaneView; compact?: boolean }) {
+  const selection = lane.selection;
+  const digest = lane.sharedDigest;
+  if (selection.state === "loading") return <Reading what="θ*" />;
+  if (selection.state === "absent" || selection.value.state !== "AVAILABLE") {
+    return digest ? (
+      <span className="mono" style={{ color: "var(--accent)" }} data-theta-digest={digest} title={`params digest ${digest}`}>
+        GLOBAL · <Digest value={digest} />
+      </span>
+    ) : (
+      <LaneAbsent reason={selection.state === "absent" ? selection.reason : NO_RETAINED_FIELD} what="θ*" />
+    );
+  }
+  const value = selection.value;
+  const params = Object.entries(value.parameters ?? {});
+  const title = [
+    `selected trial ${value.selected_trial_id ?? "—"} · ${value.objective_kind} ${value.objective ?? "not published"}`,
+    digest ? `params digest ${digest}` : null,
+    ...params.map(([name, v]) => `${name} = ${v}`),
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return (
+    <span className="mono" style={{ color: "var(--accent)" }} title={title} data-theta-star={value.selected_trial_id ?? ""}>
+      GLOBAL · trial {value.selected_trial_id ?? "—"}
+      {compact ? null : (
+        <span style={{ color: "var(--ink-faint)" }}> · {params.length} params</span>
+      )}
+    </span>
+  );
+}
+
+/** The retained holdout fact (current-source evidence `claim.holdout`), stated once with its code. */
+function LaneHoldout({ lane }: { lane: LaneView }) {
+  const fact = lane.holdout;
+  const applicable = !(fact.state === "ready" && fact.value.state === "NOT_APPLICABLE");
+  return (
+    <div className="flex flex-col gap-[6px]" data-holdout="retained">
+      <div className="flex items-baseline gap-2 pt-1">
+        <span className="mono w-[64px] flex-none text-[11px]" style={{ color: "var(--accent-2)" }}>
+          holdout
+        </span>
+        <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-[11px]" style={{ color: "var(--ink-soft)" }}>
+          {fact.state === "loading" ? (
+            <Reading what="the retained claim" />
+          ) : fact.state === "absent" ? (
+            <LaneAbsent reason={fact.reason} what="holdout" word="not read" />
+          ) : fact.value.state === "NOT_APPLICABLE" ? (
+            <span
+              className="inline-flex flex-wrap items-baseline gap-x-1.5"
+              data-holdout-lane="NOT_APPLICABLE"
+              data-holdout-reason={fact.value.reason_code ?? ""}
+              title={`${fact.value.source_key} · ${fact.value.reason_code ?? "NOT_APPLICABLE"}`}
+            >
+              <span className="mono" style={{ color: "var(--ink-soft)" }}>
+                n/a
+              </span>
+              <span>{reasonCodeSentence(fact.value.reason_code) ?? "Not applicable to this run's profile."}</span>
+              <span className="mono text-[9px] break-all" style={{ color: "var(--ink-faint)" }}>
+                {fact.value.reason_code}
+              </span>
+            </span>
+          ) : fact.value.state === "AVAILABLE" ? (
+            <span className="mono" data-holdout-lane="AVAILABLE" title={fact.value.source_key}>
+              {String(fact.value.value)}
+            </span>
+          ) : (
+            <LaneAbsent reason={fact.value.reason_code ?? fact.value.state} what="holdout" />
+          )}
+        </span>
+      </div>
+      <div
+        className="mt-[2px] flex flex-col gap-1 border-l-2 pl-2 text-[11px]"
+        style={{ borderColor: "var(--accent-2)", color: "var(--ink-soft)" }}
+        data-holdout-note
+      >
+        {applicable ? <span data-holdout-rule="no-read">{HOLDOUT_RULE_NO_READ}</span> : (
+          <span data-holdout-rule="none">No holdout segment exists in this profile, so nothing is sealed and nothing can be unlocked.</span>
+        )}
+        <span className="flex flex-wrap items-center gap-2" data-holdout-rule="unlock">
+          <span
+            data-action-unlock={applicable ? "NOT_PUBLISHED" : "NOT_APPLICABLE"}
+            title={applicable ? "the retained lane publishes no unlock action" : "no holdout segment in this profile — there is nothing to unlock"}
+            className="mono rounded-[6px] border px-3 py-[2px] text-[10px] uppercase"
+            style={{ color: "var(--ink-faint)", borderColor: "var(--line)", opacity: 0.6, cursor: "not-allowed" }}
+            aria-disabled="true"
+          >
+            unlock holdout → sibling attempt
+          </span>
+          {lane.alphaId ? (
+            <LineageLink to={lineageHref(lane.alphaId)} className="mono text-[10.5px]" action="lineage">
+              <span style={{ color: "var(--accent)" }}>this alpha's attempts · Attempt Lineage →</span>
+            </LineageLink>
+          ) : null}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- screen */
 
 export interface SplitScreenProps {
@@ -1015,6 +1262,8 @@ export interface SplitScreenProps {
   cursor: EvidenceCursor;
   onFold: (fold: number) => void;
   folds: FoldsSlot;
+  /** W3b: the retained lane's run facts (`useSplit().retained`). */
+  retained?: RetainedFacts | null;
   ensureFolds: () => void;
   onReread: () => void;
 }
@@ -1027,14 +1276,24 @@ export function SplitScreen({
   cursor,
   onFold,
   folds,
+  retained = null,
   ensureFolds,
   onReread,
 }: SplitScreenProps) {
-  const timeline = detail?.timeline ?? null;
+  /* W3b: when the retained WFO lane is this run's source, it answers every frame it covers. */
+  const lane = useMemo(() => laneViewOf(detail, folds, retained), [detail, folds, retained]);
+  const timeline = lane ? (lane.span?.range ?? null) : (detail?.timeline ?? null);
   const runPath = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
 
   const drawn: DrawnWindow[] = useMemo(() => {
     if (!detail) return [];
+    if (lane) {
+      /* Expanding walk-forward: IS is the union of the train windows, outer OOS the union of the test windows. */
+      const out: DrawnWindow[] = [];
+      if (lane.is) out.push({ key: "is", label: "IS — train windows", span: lane.is, bars: null, role: "retained fold plan · train", childInput: "", closed: true });
+      if (lane.outerOos) out.push({ key: "outer_oos", label: "outer OOS — test windows", span: lane.outerOos, bars: null, role: "retained fold plan · test", childInput: "", closed: true });
+      return out;
+    }
     const out: DrawnWindow[] = [];
     const push = (key: string, label: string, window: unknown) => {
       if (!hasRange(window)) return;
@@ -1051,9 +1310,9 @@ export function SplitScreen({
     push("is", "IS — calibration history", detail.windows.is);
     push("outer_oos", "outer OOS — observed", detail.windows.outer_oos);
     return out;
-  }, [detail]);
+  }, [detail, lane]);
 
-  const kind = detail?.protocol.kind ?? null;
+  const kind = lane ? lane.protocol : (detail?.protocol.kind ?? null);
   const fixed = detail?.protocol.selection.state === "FIXED_PROFILE_NO_SEARCH";
   const foldPlanReady = folds.state === "ready";
   /* Optional: a pre-W3 responder sends the split without its guards. */
@@ -1113,7 +1372,11 @@ export function SplitScreen({
         </div>
         {detail ? (
           <div className="flex flex-none flex-col items-end gap-[5px]">
-            <AsOf at={detail.as_of_utc_ms} source="split read" basis={detail.as_of_basis} />
+            {lane ? (
+              <AsOf at={lane.split.as_of_utc_ms} source="retained split" />
+            ) : (
+              <AsOf at={detail.as_of_utc_ms} source="split read" basis={detail.as_of_basis} />
+            )}
             <CopyEvidenceLink />
           </div>
         ) : null}
@@ -1147,6 +1410,8 @@ export function SplitScreen({
                   <Pill on data-protocol={kind}>
                     {kind}
                   </Pill>
+                ) : lane ? (
+                  lane.identityLoading ? <Reading what="the run's protocol" /> : <LaneAbsent reason={NO_RETAINED_FIELD} what="protocol" />
                 ) : (
                   <Withheld availability={detail.availability} what="protocol" />
                 )}
@@ -1154,9 +1419,24 @@ export function SplitScreen({
                 <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                   selection
                 </span>
-                <span data-selection={detail.protocol.selection.state}>
-                  <Pill on={fixed}>{detail.protocol.selection.state}</Pill>
-                </span>
+                {lane ? (
+                  lane.schedule !== null ? (
+                    <span
+                      data-selection={scheduleWord(lane.schedule)}
+                      title={`optimization schedule ${lane.schedule}${lane.sharedDigest ? ` · every fold's selection is the one GLOBAL_STUDY θ* (params ${lane.sharedDigest})` : ""}`}
+                    >
+                      <Pill on>{scheduleWord(lane.schedule)}</Pill>
+                    </span>
+                  ) : lane.identityLoading ? (
+                    <Reading what="the schedule" />
+                  ) : (
+                    <LaneAbsent reason={NO_RETAINED_FIELD} what="selection" />
+                  )
+                ) : (
+                  <span data-selection={detail.protocol.selection.state}>
+                    <Pill on={fixed}>{detail.protocol.selection.state}</Pill>
+                  </span>
+                )}
                 <span className="ml-auto text-[10px]" style={{ color: "var(--ink-faint)" }}>
                   a run's protocol is fixed at submit
                 </span>
@@ -1169,7 +1449,22 @@ export function SplitScreen({
                 {/* HiFi `span · 4h bars`: the bar word is the bound dataset's
                     timeframe (CG-P14-05); dataset, symbol and interval ride in the title. */}
                 <Fact k="span" data-fact="span">
-                  {timeline ? (
+                  {lane ? (
+                    lane.span ? (
+                      <span
+                        title={`${exact(lane.span.range.start_utc_ms)} → ${exact(lane.span.range.end_exclusive_utc_ms)} (${lane.span.closed ? "last bar, inclusive" : "end exclusive"}) · from the ${lane.span.source}\n${datasetTitle(detail.dataset)}`}
+                        data-span-source={lane.span.source}
+                      >
+                        {lane.span.closed ? closedSpan(lane.span.range) : span(lane.span.range)}
+                        <span style={{ color: "var(--ink-faint)" }}>{lane.span.closed ? " · last bar inclusive" : " · end exclusive"}</span>
+                        {barsWord(detail.dataset) ? <span data-bars-word> · {barsWord(detail.dataset)}</span> : null}
+                      </span>
+                    ) : lane.identityLoading ? (
+                      <Reading what="the walk-forward span" />
+                    ) : (
+                      <LaneAbsent reason={NO_RETAINED_FIELD} what="span" />
+                    )
+                  ) : timeline ? (
                     <span
                       title={`${exact(timeline.start_utc_ms)} → ${exact(timeline.end_exclusive_utc_ms)}\n${datasetTitle(detail.dataset)}`}
                       data-dataset={detail.dataset.state === "AVAILABLE" ? detail.dataset.dataset_id : detail.dataset.state}
@@ -1239,11 +1534,29 @@ export function SplitScreen({
                     <span data-strict-outer-oos="OOS_NOT_USED" title="QuantBT oos_used_for_selection = false">
                       OOS not used for selection
                     </span>
+                  ) : lane ? (
+                    <LaneAbsent reason={retainedGuards?.oos_used_for_selection.reason_code ?? NO_RETAINED_FIELD} what="strict outer OOS" />
                   ) : (
                     /* `NOT_ASSERTED` is not a pass and not a failure: no badge. */
                     <Absent fact={detail.protocol.selection.strict_outer_oos} what="strict outer OOS" indexKey="strict_outer_oos" />
                   )}
                 </Fact>
+                {lane ? (
+                  <Fact k="readiness">
+                    {lane.readiness !== null ? (
+                      <span
+                        data-readiness={lane.readiness}
+                        title="The retained lane's seal: terminal materialization READY and the mandatory bundle SEALED (P11 progress read)."
+                      >
+                        {lane.readiness}
+                      </span>
+                    ) : lane.identityLoading ? (
+                      <Reading what="readiness" />
+                    ) : (
+                      <LaneAbsent reason={NO_RETAINED_FIELD} what="readiness" />
+                    )}
+                  </Fact>
+                ) : (
                 <Fact k="readiness">
                   <span
                     data-readiness={detail.readiness}
@@ -1256,6 +1569,12 @@ export function SplitScreen({
                     {detail.readiness}
                   </span>
                 </Fact>
+                )}
+                {lane?.sharedDigest ? (
+                  <Fact k="θ* params">
+                    <Digest value={lane.sharedDigest} data-theta-params-digest />
+                  </Fact>
+                ) : null}
                 {detail.protocol.selection.parameter_bundle_digest !== null ? (
                   <Fact k="parameter bundle">
                     <Digest value={detail.protocol.selection.parameter_bundle_digest} data-bundle-digest />
@@ -1272,12 +1591,27 @@ export function SplitScreen({
                   protocol
                 </span>
                 <span className="text-[11.5px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                  {protocolSentence(detail, foldPlanReady)}
+                  {lane ? laneSentence(lane) : protocolSentence(detail, foldPlanReady)}
                 </span>
               </div>
             </section>
 
-            <ProvenanceStrip provenance={detail.provenance} />
+            <ProvenanceStrip
+              provenance={
+                lane
+                  ? {
+                      /* The retained lane's own provenance; keys it does not carry are not listed. */
+                      source_adapter_id: lane.split.provenance.source_adapter_id,
+                      engine_version: lane.split.provenance.engine_version,
+                      source_transform_digest: lane.split.provenance.source_transform_digest,
+                      requested_spec_digest: lane.split.provenance.requested_spec_digest,
+                      effective_spec_digest: lane.split.provenance.effective_spec_digest,
+                      dataset_binding_digest: lane.split.provenance.dataset_binding_digest,
+                      manifest_digest: lane.split.provenance.source_manifest_digest,
+                    }
+                  : detail.provenance
+              }
+            />
 
             {/* ------------------------------------ S1 · fold construction */}
             <section className={`${CARD} gap-[6px] p-4`} style={RAISED_STYLE} data-card="fold-construction">
@@ -1291,13 +1625,30 @@ export function SplitScreen({
               </div>
 
               {timeline ? (
-                <WindowAnatomy timeline={timeline} windows={drawn} />
+                <WindowAnatomy timeline={timeline} windows={drawn} timelineClosed={lane?.span?.closed ?? false} />
+              ) : lane ? (
+                lane.identityLoading ? <Reading what="the walk-forward span" /> : <LaneAbsent reason={NO_RETAINED_FIELD} what="timeline" />
               ) : (
                 <Withheld availability={detail.availability} what="timeline" />
               )}
 
-              {/* Windows the source declared absent keep their place. */}
-              {hasRange(detail.windows.warmup) && hasRange(detail.windows.is) && hasRange(detail.windows.outer_oos) ? null : (
+              {lane ? (
+                /* The retained lane's warmup is QuantBT's own guard: policy `none`, so no warmup window. */
+                retainedGuards && retainedGuards.warmup_bars.state !== "AVAILABLE" ? (
+                  <div className="flex flex-wrap gap-x-5 gap-y-1.5 pl-[72px]" data-window-absences="retained">
+                    <span className="flex items-baseline gap-1.5" data-absent="warmup">
+                      <span className="mono text-[9px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+                        warmup window
+                      </span>
+                      <GuardValue fact={retainedGuards.warmup_bars} what="warmup_bars" />
+                      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+                        {retainedGuards.warmup_bars.reason_code}
+                      </span>
+                    </span>
+                  </div>
+                ) : null
+              ) : /* Windows the source declared absent keep their place. */
+              hasRange(detail.windows.warmup) && hasRange(detail.windows.is) && hasRange(detail.windows.outer_oos) ? null : (
               <div className="flex flex-wrap gap-x-5 gap-y-1.5 pl-[72px]" data-window-absences>
                 {!hasRange(detail.windows.warmup) ? (
                   <span className="flex items-baseline gap-1.5" data-absent="warmup">
@@ -1324,14 +1675,14 @@ export function SplitScreen({
 
               <FoldAnatomy slot={folds} detail={detail} cursor={cursor} onFold={onFold} onNeeded={ensureFolds} />
 
-              <HoldoutBlock detail={detail} timeline={timeline} />
+              {lane ? <LaneHoldout lane={lane} /> : <HoldoutBlock detail={detail} timeline={timeline} />}
             </section>
 
             {/* ----------------------------------------- S2 · θ* flow */}
-            <ThetaFlow detail={detail} folds={folds} cursor={cursor} onFold={onFold} />
+            <ThetaFlow detail={detail} folds={folds} cursor={cursor} onFold={onFold} lane={lane} />
 
             {/* --------------------------------------------- fold table */}
-            <FoldTable detail={detail} folds={folds} cursor={cursor} onFold={onFold} />
+            <FoldTable detail={detail} folds={folds} cursor={cursor} onFold={onFold} lane={lane} />
 
             {/* ------------------------------------------ three cards */}
             <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-[1.1fr_1fr_1fr]">
@@ -1340,13 +1691,42 @@ export function SplitScreen({
                   <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                     boundary integrity — read from the split, not recomputed
                   </span>
-                  {detail.revision !== null ? (
+                  {(lane ? lane.split.revision : detail.revision) !== null ? (
                     /* HiFi: the digest the checks were read from — here the split read's own revision. */
-                    <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} title={detail.revision} data-integrity-revision>
-                      split rev {shortDigest(detail.revision, 12)}…
+                    <span
+                      className="mono text-[9.5px]"
+                      style={{ color: "var(--ink-faint)" }}
+                      title={(lane ? lane.split.revision : detail.revision) ?? undefined}
+                      data-integrity-revision
+                    >
+                      split rev {shortDigest(lane ? lane.split.revision : detail.revision, 12)}…
                     </span>
                   ) : null}
                 </div>
+                {lane ? (
+                  <>
+                    <IntegrityRow mark="none" label="holdout kept out of the child tape">
+                      {lane.holdout.state === "ready" && lane.holdout.value.state === "NOT_APPLICABLE" ? (
+                        <span data-holdout-exposure="NOT_APPLICABLE" title={lane.holdout.value.reason_code ?? undefined}>
+                          n/a · no holdout segment
+                        </span>
+                      ) : lane.holdout.state === "loading" ? (
+                        <Reading what="the retained claim" />
+                      ) : (
+                        <LaneAbsent
+                          reason={lane.holdout.state === "absent" ? lane.holdout.reason : (lane.holdout.value.reason_code ?? lane.holdout.value.state)}
+                          what="holdout exposure"
+                        />
+                      )}
+                    </IntegrityRow>
+                    <IntegrityRow mark="none" label="gap scan">
+                      <span className="italic" title={reasonCodeSentence(NO_RETAINED_FIELD) ?? NO_RETAINED_FIELD} data-lane-absent="gap scan" data-lane-reason={NO_RETAINED_FIELD}>
+                        no field in the retained lane
+                      </span>
+                    </IntegrityRow>
+                  </>
+                ) : (
+                <>
                 <IntegrityRow
                   mark={
                     hasRange(detail.windows.holdout) &&
@@ -1381,6 +1761,8 @@ export function SplitScreen({
                 <IntegrityRow mark="none" label="gap scan">
                   <Absent fact={detail.protocol.gap_scan} what="gap scan" indexKey="gap_scan" />
                 </IntegrityRow>
+                </>
+                )}
                 <IntegrityRow mark={foldPlanReady ? "pass" : "none"} label="train ∩ test = ∅, every fold">
                   {foldPlanReady ? "retained fold plan" : "needs a fold plan"}
                 </IntegrityRow>
@@ -1391,11 +1773,19 @@ export function SplitScreen({
                   stitched OOS provenance
                 </span>
                 <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                  {hasRange(detail.windows.outer_oos)
-                    ? "The split read publishes one outer OOS window and no stitched series or stitch digest. The series itself is on Evidence Flow."
-                    : "The split read publishes no outer OOS window, so there is no segment to stitch."}
+                  {lane
+                    ? `The retained fold plan publishes ${lane.split.fold_plan.folds.length} test windows, one per fold; the stitched OOS series itself is on Evidence Flow.`
+                    : hasRange(detail.windows.outer_oos)
+                      ? "The split read publishes one outer OOS window and no stitched series or stitch digest. The series itself is on Evidence Flow."
+                      : "The split read publishes no outer OOS window, so there is no segment to stitch."}
                 </p>
-                {hasRange(detail.windows.outer_oos) ? (
+                {lane && lane.split.fold_plan.folds.length > 0 ? (
+                  <span className="flex h-[10px] gap-[2px]" data-stitch-segments={lane.split.fold_plan.folds.length}>
+                    {lane.split.fold_plan.folds.map((fold) => (
+                      <span key={fold.fold_id} className="flex-1 rounded-[2px]" style={{ background: "var(--role-oos)" }} title={`fold ${fold.fold_id} · test window`} />
+                    ))}
+                  </span>
+                ) : !lane && hasRange(detail.windows.outer_oos) ? (
                   <span className="flex h-[10px] gap-[2px]" data-stitch-segments={1}>
                     <span className="flex-1 rounded-[2px]" style={{ background: "var(--role-oos)" }} />
                   </span>
@@ -1410,29 +1800,43 @@ export function SplitScreen({
                   what this stage feeds forward
                 </span>
                 <p className="text-[12px] leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                  {fixed
-                    ? "Stage 2 did not search: this run was qualified against a fixed parameter profile. Stage 3 reads that profile's bundle, and Stage 4 replays the outer OOS window with it."
-                    : foldPlanReady
-                      ? "Stage 2 searches inside each train window with the cutoffs shown above. Stage 3 freezes one θ* per fold at that cutoff. Stage 4 replays each test window with its own frozen digest."
-                      : "The later stages read the windows above; how parameters were chosen is on Stage 2."}
+                  {lane && lane.schedule === "global"
+                    ? "Stage 2 ran one global study across the whole walk-forward. Stage 3 froze its one selected θ*, and Stage 4 trades every fold's test window with those same parameters."
+                    : fixed
+                      ? "Stage 2 did not search: this run was qualified against a fixed parameter profile. Stage 3 reads that profile's bundle, and Stage 4 replays the outer OOS window with it."
+                      : foldPlanReady
+                        ? "Stage 2 searches inside each train window with the cutoffs shown above. Stage 3 freezes one θ* per fold at that cutoff. Stage 4 replays each test window with its own frozen digest."
+                        : "The later stages read the windows above; how parameters were chosen is on Stage 2."}
                 </p>
-                <span
-                  className="mono text-[10px]"
-                  style={{ color: "var(--ink-faint)" }}
-                  title={`Screen 08 is not built yet (${EXECUTE_PHASE})`}
+                {/* Screen 08 (Execute / Replay) exists: the next stage, on this cursor. */}
+                <Link
+                  to={deepDiveHref(`${runPath}/execute`, { ...cursor, stage: "execute" })}
+                  className="mono self-start text-[10px]"
+                  style={{ color: "var(--accent)" }}
                   data-next-execute
-                  aria-disabled="true"
+                  data-action="next-execute"
                 >
-                  next: S4 Execute — not built yet ({EXECUTE_PHASE})
-                </span>
-                <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-cert-cap>
-                  this stage's cert cap — not published
-                </span>
+                  next: S4 Execute →
+                </Link>
+                {lane ? (
+                  lane.certificateReason ? (
+                    <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-cert-cap data-cert-reason={lane.certificateReason}>
+                      methodology certificate — not published{" "}
+                      <span className="text-[9px]">{lane.certificateReason}</span>
+                    </span>
+                  ) : lane.identityLoading ? (
+                    <Reading what="the methodology certificate" />
+                  ) : null
+                ) : (
+                  <span className="mono text-[10.5px]" style={{ color: "var(--ink-faint)" }} data-cert-cap>
+                    this stage's cert cap — not published
+                  </span>
+                )}
               </section>
             </div>
 
-            {/* Absences the frames above do not own — each once, from absence_index. */}
-            {extraAbsences(detail).length > 0 ? (
+            {/* Absences the frames above do not own — each once, from absence_index (the hub's; not on a retained run). */}
+            {!lane && extraAbsences(detail).length > 0 ? (
               <section className="flex flex-wrap gap-x-5 gap-y-1.5 px-1" data-source-absences>
                 {extraAbsences(detail).map(([entry, fact]) => (
                   <span key={entry.key} className="flex items-baseline gap-1.5" title={entry.pointer}>
@@ -1514,6 +1918,24 @@ function protocolSentence(detail: SplitDetailDocument, foldPlanReady: boolean): 
   return parts.join(" ").replace(" .", ".");
 }
 
+/** W3b · the protocol note on a retained WFO run, built only from facts the lane published. */
+function laneSentence(lane: LaneView): string {
+  const folds = lane.split.fold_plan.folds.length;
+  const parts: string[] = [];
+  parts.push(
+    lane.protocol
+      ? `${lane.protocol}: ${folds} outer folds observed in the retained source.`
+      : `${folds} outer folds observed in the retained source.`,
+  );
+  if (lane.schedule === "global") {
+    parts.push("One global study selected θ* for the whole run, so every fold trades the same parameters.");
+  }
+  const oos = lane.split.guards?.oos_used_for_selection;
+  if (oos?.state === "AVAILABLE" && oos.value === true) parts.push("QuantBT reports that OOS was used for selection.");
+  parts.push("The folds below are the retained source's own.");
+  return parts.join(" ");
+}
+
 /**
  * HiFi integrity row: a 16 px bold mono mark — ✓ a published pass, ✕ a
  * published failure, — nothing published either way — then the check and the
@@ -1567,6 +1989,8 @@ interface LaneProps {
   /** Present only when there are folds to move between (HiFi: lanes are controls in walk_forward only). */
   pick?: { number: number; count: number; tabStop: boolean; onFold: (fold: number) => void };
   rest?: Record<string, unknown>;
+  /** W3b: the fold's OOS Sharpe as the retained fold plan published it; undefined keeps the hub's "not in read". */
+  oosSharpe?: { value: string | null; reason: string | null };
 }
 
 /**
@@ -1575,7 +1999,8 @@ interface LaneProps {
  * The HiFi ❖ freeze marker sits at a cutoff; it is drawn only where a freeze
  * was published, and no read publishes one yet — so none is drawn.
  */
-function ThetaLane({ id, track, is, oos, isLabel, digest, active, pick, rest }: LaneProps) {
+function ThetaLane({ id, track, is, oos, isLabel, digest, active, pick, rest, oosSharpe }: LaneProps) {
+  const sharpe = oosSharpe?.value != null ? formatMetric(oosSharpe.value, "ratio") : null;
   const lit = active && pick !== undefined;
   const body = (
     <>
@@ -1624,9 +2049,19 @@ function ThetaLane({ id, track, is, oos, isLabel, digest, active, pick, rest }: 
         {digest}
         <span style={{ color: "var(--accent)" }}>
           trade OOS → S{" "}
-          <span className="italic" style={{ color: "var(--ink-faint)" }} title="the split read publishes no OOS Sharpe — see Evidence Flow">
-            not in read
-          </span>
+          {sharpe !== null ? (
+            <span title={`QuantBT per-fold OOS Sharpe ${oosSharpe?.value}`} data-theta-oos-sharpe={oosSharpe?.value ?? ""}>
+              {sharpe.replace(/^-/, "−")}
+            </span>
+          ) : oosSharpe ? (
+            <span className="italic" style={{ color: "var(--ink-faint)" }} title={oosSharpe.reason ?? "the retained fold plan publishes no OOS Sharpe for this fold"}>
+              not published
+            </span>
+          ) : (
+            <span className="italic" style={{ color: "var(--ink-faint)" }} title="the split read publishes no OOS Sharpe — see Evidence Flow">
+              not in read
+            </span>
+          )}
         </span>
       </span>
     </>
@@ -1665,11 +2100,13 @@ function ThetaFlow({
   folds,
   cursor,
   onFold,
+  lane = null,
 }: {
   detail: SplitDetailDocument;
   folds: FoldsSlot;
   cursor: EvidenceCursor;
   onFold: (fold: number) => void;
+  lane?: LaneView | null;
 }) {
   const timeline = detail.timeline;
   const is = hasRange(detail.windows.is) ? (detail.windows.is as Range) : null;
@@ -1687,7 +2124,20 @@ function ThetaFlow({
           S2 · θ* flow — how IS parameters reach the OOS backtest
         </span>
         <span className="mono flex items-baseline gap-1.5 text-[10px]" style={{ color: "var(--ink-faint)" }} data-theta-meta>
-          θ* per fold <Absent fact={detail.protocol.theta_per_fold} what="θ* per fold" showReason indexKey="theta_per_fold" />
+          θ* per fold{" "}
+          {lane ? (
+            lane.schedule === "global" ? (
+              <span style={{ color: "var(--accent)" }} data-theta-scope="GLOBAL" title="progress read: every fold's selection scope is GLOBAL_STUDY">
+                GLOBAL · one θ* shared by every fold
+              </span>
+            ) : lane.identityLoading ? (
+              <Reading what="the schedule" />
+            ) : (
+              <span data-theta-scope={lane.schedule ?? ""}>{lane.schedule ?? "—"}</span>
+            )
+          ) : (
+            <Absent fact={detail.protocol.theta_per_fold} what="θ* per fold" showReason indexKey="theta_per_fold" />
+          )}
         </span>
       </div>
 
@@ -1705,9 +2155,21 @@ function ThetaFlow({
                 isLabel="IS"
                 active={cursor.fold === index + 1}
                 digest={
-                  <span className="italic" style={{ color: "var(--ink-faint)" }} title={reasonOf(detail.protocol.theta_per_fold)}>
-                    θ* not published
-                  </span>
+                  lane ? (
+                    <ThetaStar lane={lane} compact />
+                  ) : (
+                    <span className="italic" style={{ color: "var(--ink-faint)" }} title={reasonOf(detail.protocol.theta_per_fold)}>
+                      θ* not published
+                    </span>
+                  )
+                }
+                oosSharpe={
+                  lane
+                    ? {
+                        value: (fold as Partial<typeof fold>).score?.oos_sharpe ?? null,
+                        reason: (fold as Partial<typeof fold>).score?.reason_code ?? null,
+                      }
+                    : undefined
                 }
                 pick={{ number: index + 1, count: plan.length, tabStop: tabStop === index + 1, onFold }}
               />
@@ -1736,12 +2198,58 @@ function ThetaFlow({
         />
       ) : null}
 
+      {lane ? <ThetaParams lane={lane} /> : null}
+
       <p className="border-l-2 pl-2 text-[11px] leading-[1.55]" style={{ color: "var(--ink-soft)", borderColor: "var(--accent)" }} data-theta-note>
-        {fixed
-          ? "No search ran, so nothing was frozen at a cutoff: the outer OOS window was traded with the declared fixed profile, whose bundle digest is on the right. Stage 3 verifies that same digest."
-          : "The θ* each fold froze is not published by the split read."}
+        {lane
+          ? lane.schedule === "global"
+            ? "Shared params (global schedule): one study over the whole walk-forward selected θ*, and every fold's test window was traded with it — no fold froze its own θ*."
+            : "Each fold's θ* is the retained search's selection; its parameters are listed above."
+          : fixed
+            ? "No search ran, so nothing was frozen at a cutoff: the outer OOS window was traded with the declared fixed profile, whose bundle digest is on the right. Stage 3 verifies that same digest."
+            : "The θ* each fold froze is not published by the split read."}
       </p>
     </section>
+  );
+}
+
+/** W3b · the one selected θ*: trial, objective and every parameter, verbatim from the retained search. */
+function ThetaParams({ lane }: { lane: LaneView }) {
+  const selection = lane.selection;
+  if (selection.state === "loading") return <Reading what="the retained search selection" />;
+  if (selection.state === "absent" || selection.value.state !== "AVAILABLE") {
+    return (
+      <span className="text-[10.5px]" style={{ color: "var(--ink-faint)" }}>
+        θ* parameters{" "}
+        <LaneAbsent reason={selection.state === "absent" ? selection.reason : NO_RETAINED_FIELD} what="θ* parameters" />
+      </span>
+    );
+  }
+  const value = selection.value;
+  const objective = formatMetric(value.objective, "ratio");
+  return (
+    <div className="flex flex-col gap-[4px] pl-[72px]" data-theta-params>
+      <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
+        θ* · selected trial <span data-theta-trial>{value.selected_trial_id ?? "—"}</span>
+        {objective !== null ? (
+          <span title={`${value.objective_kind} ${value.objective}`}>
+            {" "}· {value.objective_kind} {objective.replace(/^-/, "−")}
+          </span>
+        ) : null}
+        {lane.sharedDigest ? (
+          <span style={{ color: "var(--ink-faint)" }}>
+            {" "}· params <Digest value={lane.sharedDigest} />
+          </span>
+        ) : null}
+      </span>
+      <span className="flex flex-wrap gap-[6px]">
+        {Object.entries(value.parameters ?? {}).map(([name, v]) => (
+          <Chip key={name} data-theta-param={name}>
+            {name} {v}
+          </Chip>
+        ))}
+      </span>
+    </div>
   );
 }
 
@@ -1851,11 +2359,13 @@ function FoldTable({
   folds,
   cursor,
   onFold,
+  lane = null,
 }: {
   detail: SplitDetailDocument;
   folds: FoldsSlot;
   cursor: EvidenceCursor;
   onFold: (fold: number) => void;
+  lane?: LaneView | null;
 }) {
   const is = hasRange(detail.windows.is) ? (detail.windows.is as Range) : null;
   const oos = hasRange(detail.windows.outer_oos) ? (detail.windows.outer_oos as Range) : null;
@@ -1923,7 +2433,18 @@ function FoldTable({
                   <SpanCell range={test} closed />
                   <CountCell value={anatomy?.test_bars ?? null} reason={anatomy?.reason_code ?? null} />
                   {anatomy ? <WindowCell window={anatomy.embargo} /> : embargo}
-                  <AbsentCell reason={reasonOf(detail.protocol.theta_per_fold)} word="θ* not published" right={false} />
+                  {lane ? (
+                    <td className={`${TD} whitespace-nowrap`} data-params-cell>
+                      <ThetaStar lane={lane} compact />
+                      {lane.schedule === "global" ? (
+                        <span className="block text-[9px]" style={{ color: "var(--ink-faint)" }} data-shared-params>
+                          shared params (global schedule)
+                        </span>
+                      ) : null}
+                    </td>
+                  ) : (
+                    <AbsentCell reason={reasonOf(detail.protocol.theta_per_fold)} word="θ* not published" right={false} />
+                  )}
                   <ScoreCell value={score?.is_sharpe ?? null} reason={score?.reason_code ?? metricReason} />
                   <ScoreCell value={score?.oos_sharpe ?? null} reason={score?.reason_code ?? metricReason} />
                   <ScoreCell value={score?.decay ?? null} reason={score?.reason_code ?? metricReason} signed />

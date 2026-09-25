@@ -35,6 +35,7 @@ import {
   type CurrentSourceEvidenceSeries,
   type CurrentSourceNotApplicable,
   type EvidenceHub,
+  type RetainedSeriesKind,
   type EvidenceRefusal,
   type EvidenceSeries,
   type SeriesKind,
@@ -76,6 +77,9 @@ export interface EvidenceController {
   ensurePassport: () => void;
   retainedSeries: RetainedSeriesSlot;
   ensureRetainedSeries: () => void;
+  /** W3b: the retained lane's derived series (distribution, monthly, rolling), asked per panel, once. */
+  retainedKinds: ReadonlyMap<RetainedSeriesKind, RetainedSeriesSlot>;
+  ensureRetainedKind: (kind: RetainedSeriesKind) => void;
   /** Rereads the Hub — the one action a `409` or a transport failure offers. */
   reread: () => void;
 }
@@ -87,6 +91,8 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
   const [passport, setPassport] = useState<PassportSlot>({ state: "idle" });
   const [retainedSeries, setRetainedSeries] = useState<RetainedSeriesSlot>({ state: "idle" });
   const retainedAsked = useRef(false);
+  const [retainedKinds, setRetainedKinds] = useState<ReadonlyMap<RetainedSeriesKind, RetainedSeriesSlot>>(new Map());
+  const retainedKindsAsked = useRef<Set<RetainedSeriesKind>>(new Set());
   const [generation, setGeneration] = useState(0);
 
   /* The Hub in a ref as well as state: a series response has to be checked
@@ -207,12 +213,43 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
       .catch((error: unknown) => setRetainedSeries({ state: "refused", refusal: toEvidenceRefusal(error) }));
   }, [runId, workspaceId]);
 
+  /* W3b: one retained derived series, asked when its panel needs it. */
+  const ensureRetainedKind = useCallback(
+    (kind: RetainedSeriesKind) => {
+      if (retainedKindsAsked.current.has(kind)) return;
+      retainedKindsAsked.current.add(kind);
+      setRetainedKinds((previous) => new Map(previous).set(kind, { state: "loading" }));
+      evidenceApi
+        .currentSourceSeries(runId, kind, { workspaceId })
+        .then((answer) => {
+          if (answer === NOT_MODIFIED || answer.schema_version !== "research.current-source-evidence-series.v1") return;
+          /* A body for another kind is never drawn in this panel: its rows have another shape. */
+          if (answer.kind !== kind) {
+            setRetainedKinds((previous) =>
+              new Map(previous).set(kind, {
+                state: "refused",
+                refusal: toEvidenceRefusal(new Error(`The retained lane answered ${answer.kind} for ${kind}.`)),
+              }),
+            );
+            return;
+          }
+          setRetainedKinds((previous) => new Map(previous).set(kind, { state: "ready", series: answer }));
+        })
+        .catch((error: unknown) =>
+          setRetainedKinds((previous) => new Map(previous).set(kind, { state: "refused", refusal: toEvidenceRefusal(error) })),
+        );
+    },
+    [runId, workspaceId],
+  );
+
   /* A new run is a new question: every lazy answer belongs to the old one. */
   useEffect(() => {
     asked.current = new Set();
     retried.current = new Set();
     passportAsked.current = false;
     retainedAsked.current = false;
+    retainedKindsAsked.current = new Set();
+    setRetainedKinds(new Map());
     setSeries(new Map());
     setPassport({ state: "idle" });
     setRetainedSeries({ state: "idle" });
@@ -226,5 +263,18 @@ export function useEvidence(runId: string, workspaceId?: string): EvidenceContro
           : { kind: "ok", rowCount: hub.metrics.length },
       );
 
-  return { hub, refusal, state, series, ensureSeries, passport, ensurePassport, retainedSeries, ensureRetainedSeries, reread };
+  return {
+    hub,
+    refusal,
+    state,
+    series,
+    ensureSeries,
+    passport,
+    ensurePassport,
+    retainedSeries,
+    ensureRetainedSeries,
+    retainedKinds,
+    ensureRetainedKind,
+    reread,
+  };
 }

@@ -70,6 +70,8 @@ export type CurrentSourceClaimFact = SourceSchemas["ClaimFact"];
 export type CurrentSourceFoldVerdicts = SourceSchemas["FoldVerdicts"];
 export type CurrentSourceFoldVerdictRow = SourceSchemas["FoldVerdictRow"];
 export type CurrentSourceEvidenceSeries = SourceSchemas["EvidenceSeries"];
+/** The retained lane's own series kinds (W3b: EQUITY plus the derived three). */
+export type RetainedSeriesKind = SourceSchemas["SeriesKind"];
 export type CurrentSourceSeriesEnvelope = SourceSchemas["SeriesEnvelope"];
 
 /**
@@ -196,7 +198,7 @@ export const evidenceApi = {
    * observation up to 2000, then an extrema-preserving sample, with the whole
    * relation's envelope. Asked only once the evidence read answered.
    */
-  currentSourceSeries: (runId: string, kind: "EQUITY", options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
+  currentSourceSeries: (runId: string, kind: RetainedSeriesKind, options: { workspaceId?: string; signal?: AbortSignal } = {}) =>
     call<CurrentSourceEvidenceSeries | CurrentSourceNotApplicable>(
       `${RUNS}/${encodeURIComponent(runId)}/current-source/evidence/series${query(options.workspaceId, { kind })}`,
       null,

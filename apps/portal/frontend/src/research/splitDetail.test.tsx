@@ -60,6 +60,7 @@ import {
 import { monthTicks } from "./splitClient";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
+import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 
 afterEach(cleanup);
 
@@ -527,7 +528,9 @@ describe("P14-T03 — the holdout is described, never opened", () => {
     expect(screen.queryByText(HOLDOUT_RULE_UNLOCK)).toBeNull();
     const unlock = container.querySelector("[data-action-unlock]");
     expect(unlock?.getAttribute("aria-disabled")).toBe("true");
-    expect(unlock?.getAttribute("title")).toContain("Screen 10 (P19)");
+    // W3b: Screen 10 exists now — the title names it, and no "not built" copy remains.
+    expect(unlock?.getAttribute("title")).toContain("Screen 10 · Attempt Lineage");
+    expect(container.textContent).not.toMatch(/not built|P19\)/);
   });
 
   it("claims no certificate cap, because none is published here", () => {
@@ -930,10 +933,11 @@ describe("RF-06 FE-S05-05…08 — the HiFi frames stay, as shells", () => {
     for (const card of ["fold-construction", "theta-flow", "fold-table", "boundary-integrity", "stitched-oos", "feeds-forward"]) {
       expect(container.querySelector(`[data-card='${card}']`), card).toBeTruthy();
     }
-    // Screen 08 is not built: named with its phase, not linked.
+    // W3b: Screen 08 exists — the next stage is a real link on this cursor.
     const next = container.querySelector("[data-next-execute]");
-    expect(next?.tagName).toBe("SPAN");
-    expect(next?.textContent).toContain("P17");
+    expect(next?.tagName).toBe("A");
+    expect(next?.getAttribute("href")).toContain("/research/quantbt/runs/R-WFO-118/execute");
+    expect(next?.textContent).not.toMatch(/not built|P17/);
   });
 
   it("prints as-of in UTC minutes and digests shortened, the exact value in the title", () => {
@@ -1286,5 +1290,111 @@ describe("W3 — the fold plan carries QuantBT's own windows, guards and per-fol
     expect(container.querySelector("[data-guard]")).toBeNull();
     expect(container.querySelector("[data-count-cell]")).toBeNull();
     expect(container.querySelector("[data-fold-table-row='1']")?.textContent).not.toMatch(/\b0 bars\b/);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * W3b — Screen 05 on the retained WFO lane (rrun_c860…, real served bodies)
+ * ---------------------------------------------------------------------- */
+
+const W3B = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3bRealWfo.fixture.json"), "utf8")) as {
+  progress: unknown;
+  requested_spec: unknown;
+  hub_split: SplitDetail;
+};
+const W3_ALL = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as {
+  split: CurrentSourceSplit;
+  search: unknown;
+  evidence: unknown;
+};
+const W3B_RUN = W3_ALL.split.run_id;
+
+/** hub reads → hub bodies; current-source/* → the retained bodies; P11 → progress / requested spec. */
+function w3bResponder(splitLane: unknown = W3_ALL.split) {
+  return (url: string): [number, unknown] => {
+    const path = new URL(url, "http://x").pathname;
+    if (path.endsWith("/progress")) return [200, W3B.progress];
+    if (path.endsWith("/requested-spec")) return [200, W3B.requested_spec];
+    if (path.endsWith("/current-source/split")) return [200, splitLane];
+    if (path.endsWith("/current-source/search")) return [200, W3_ALL.search];
+    if (path.endsWith("/current-source/evidence")) return [200, W3_ALL.evidence];
+    if (path.endsWith("/split")) return [200, W3B.hub_split];
+    return [404, { error: { code: "UNEXPECTED" } }];
+  };
+}
+
+describe("W3b — Split on the retained WFO lane", () => {
+  beforeEach(() => {
+    forgetRunIdentities();
+    forgetObservedFolds();
+  });
+
+  async function settledRoute() {
+    stub(w3bResponder());
+    const view = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(view.container.querySelector("[data-readiness]")).toBeTruthy());
+    await waitFor(() => expect(view.container.querySelector("[data-lane-reading]")).toBeNull());
+    await waitFor(() => expect(view.container.querySelector("[data-holdout-lane]")).toBeTruthy());
+    return view;
+  }
+
+  it("states the run's protocol, span, readiness and selection from the retained lane and the P11 identity", async () => {
+    const { container } = await settledRoute();
+    expect(container.querySelector("[data-protocol]")?.textContent).toBe("advanced walk-forward · weekly · expanding");
+    const span = container.querySelector("[data-fact='span'] [data-span-source]");
+    expect(span?.getAttribute("data-span-source")).toBe("requested spec");
+    expect(span?.textContent).toContain("[2026-06-01, 2026-07-15)");
+    expect(span?.textContent).toContain("end exclusive");
+    expect(span?.getAttribute("title")).toContain("2026-07-15T00:00:00.000Z (end exclusive)");
+    expect(container.querySelector("[data-readiness]")?.getAttribute("data-readiness")).toBe("READY");
+    expect(container.querySelector("[data-readiness]")?.textContent).toBe("READY");
+    expect(container.querySelector("[data-selection]")?.getAttribute("data-selection")).toBe("GLOBAL");
+    expect(requested.some((url) => url.includes(`/research/runs/${W3B_RUN}/progress`))).toBe(true);
+    expect(requested.some((url) => url.includes(`/research/runs/${W3B_RUN}/requested-spec`))).toBe(true);
+  });
+
+  it("every fold row's θ* is the one GLOBAL selection, trial 0", async () => {
+    const { container } = await settledRoute();
+    const rows = [...container.querySelectorAll("[data-fold-table-row]")];
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      const theta = row.querySelector("[data-params-cell] [data-theta-star]");
+      expect(theta?.getAttribute("data-theta-star")).toBe("0");
+      expect(theta?.textContent).toBe("GLOBAL · trial 0");
+    }
+  });
+
+  it("the holdout is the evidence claim's own NOT_APPLICABLE fact, with its P10 code", async () => {
+    const { container } = await settledRoute();
+    const holdout = container.querySelector("[data-holdout='retained'] [data-holdout-lane]");
+    expect(holdout?.getAttribute("data-holdout-lane")).toBe("NOT_APPLICABLE");
+    expect(holdout?.getAttribute("data-holdout-reason")).toBe("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
+    expect(holdout?.textContent).toContain("P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT");
+  });
+
+  it("prints no P04-hub reason and no 'not built', though the hub split answered P14 NOT_PUBLISHED", async () => {
+    const { container } = await settledRoute();
+    expect(W3B.hub_split.availability.reason_code).toBe("P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED");
+    expect(container.textContent).not.toMatch(HUB_LANE_REASON);
+    expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
+    expect(container.textContent).not.toContain("not built");
+  });
+
+  it("links on to S4 Execute for this run", async () => {
+    const { container } = await settledRoute();
+    const next = container.querySelector("[data-next-execute]");
+    expect(next?.tagName).toBe("A");
+    expect(next?.textContent).toContain("next: S4 Execute");
+    expect(next?.getAttribute("href")).toMatch(new RegExp(`^/research/quantbt/runs/${W3B_RUN}/execute(#|$)`));
+  });
+
+  it("a P04 run (the retained lane answers not-applicable) keeps the hub's answer and its P14 reason", async () => {
+    stub(w3bResponder(laneAnswer("split")));
+    const { container } = mountRoute("", `/research/quantbt/runs/${W3B_RUN}/split`);
+    await waitFor(() => expect(container.querySelector("[data-fold-lane='not-applicable']")).toBeTruthy());
+    await waitFor(() => expect(container.textContent).toContain("P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED"));
+    expect(container.querySelector("[data-holdout='retained']")).toBeNull();
+    expect(container.querySelector("[data-readiness='READY']")).toBeNull();
+    expect(requested.some((url) => /\/research\/runs\/[^/]+\/(progress|requested-spec)/.test(url))).toBe(false);
   });
 });

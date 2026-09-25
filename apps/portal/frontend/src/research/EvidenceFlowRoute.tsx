@@ -15,11 +15,15 @@ import { EvidenceFlow } from "./EvidenceFlow";
 import { RouteCursorNotice } from "./CursorNotice";
 import { useEvidenceCursor } from "./evidenceCursor";
 import { useEvidence } from "./useEvidence";
+import { isRetainedAnswer, useRunIdentity } from "./retainedLane";
 
 export function EvidenceFlowRoute() {
   const { runId = "" } = useParams<{ runId: string }>();
   const { cursor, setStage, setFold, reset, problems, notes, clampToObserved } = useEvidenceCursor();
   const evidence = useEvidence(runId);
+  /* W3b: a retained answer brings the run's P11 identity with it (readiness, global selection). */
+  const retained = evidence.passport.state === "ready" && isRetainedAnswer(evidence.passport.evidence);
+  const runIdentity = useRunIdentity(runId, undefined, retained);
 
   /* RF-06 FE-S04-06: a linked fold the run never observed is moved to the
      nearest observed one, with a notice — not kept with both steppers dead and
@@ -51,6 +55,9 @@ export function EvidenceFlowRoute() {
         ensurePassport={evidence.ensurePassport}
         retainedSeries={evidence.retainedSeries}
         ensureRetainedSeries={evidence.ensureRetainedSeries}
+        retainedKinds={evidence.retainedKinds}
+        ensureRetainedKind={evidence.ensureRetainedKind}
+        runIdentity={runIdentity}
         onReread={evidence.reread}
       />
     </>

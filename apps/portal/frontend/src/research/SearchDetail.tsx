@@ -26,8 +26,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import { ProvenanceStrip } from "./ProvenanceStrip";
+import { ProvenanceStrip, type ProvenanceFacts } from "./ProvenanceStrip";
 import { RefusalNote, ResearchPanel } from "./ResearchPanel";
+import type { DeclaredParameter } from "./alphaImportClient";
+import { reasonCodeSentence } from "./researchRefusal";
+import { isRetainedAnswer, retainedReadiness, walkForwardOf } from "./retainedLane";
 import {
   DIAGNOSTIC_KEYS,
   SEARCH_GAP_WORDS,
@@ -47,7 +50,7 @@ import {
 import { deepDiveHref, type EvidenceCursor } from "./evidenceCursor";
 import { AsOf, CopyEvidenceLink, Digest, RunNotFound, SCREEN_FRAME } from "./SplitDetail";
 import { LANE_STATE_COPY, laneNotApplicableSentence } from "./splitClient";
-import type { LedgerSlot } from "./useSearch";
+import type { LedgerSlot, RetainedRunFacts } from "./useSearch";
 import type { ResearchState } from "./state";
 
 /* --------------------------------------------------------------- verbatim */
@@ -145,6 +148,7 @@ export const CLAIM_REASON_WORDS: Record<string, string> = {
   P15_DECLARED_OPTIMIZER_NOT_EXECUTED_NO_SCORING_BACKEND: "the declared optimizer did not run",
   P04_FIXED_PROFILE_DOES_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_FACTS: "a fixed profile asserts no OOS selection",
   P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED: "the source receipt is not published",
+  UI_RETAINED_LANE_HAS_NO_FIELD: "the retained lane has no field for it",
 };
 
 /**
@@ -373,6 +377,28 @@ function OosColumnChip({ column }: { column: OosColumn }) {
 }
 
 /**
+ * W3b: the OOS column on a retained run. `oos_used_for_selection: true` in
+ * QuantBT's search contract is the HiFi "selection input" state stated
+ * outright; any other answer is not a column state the lane publishes.
+ */
+function RetainedOosColumn({ used }: { used: boolean | null }) {
+  if (used !== true) return <ClaimAbsence state="NOT_PUBLISHED" reason={RETAINED_NO_FIELD} what="oos column" />;
+  const chip = OOS_COLUMN_CHIP.SELECTION_INPUT;
+  return (
+    <span
+      className="mono self-start rounded-[3px] border px-[6px] text-[11px] font-semibold"
+      style={{ color: chip.tone, borderColor: chip.tone }}
+      title={`${OOS_COLUMN_TITLE.SELECTION_INPUT} · oos_used_for_selection true in QuantBT's search contract`}
+      data-claim-fact="oos column"
+      data-claim-state="RETAINED_SOURCE"
+      data-oos-column="SELECTION_INPUT"
+    >
+      {chip.words}
+    </span>
+  );
+}
+
+/**
  * Scoring backend: a confirmed value, or what the request declared — which is
  * not an executed fact, and is tagged so — or the typed absence.
  */
@@ -410,8 +436,12 @@ function ScoringBackendFact({ backend }: { backend: ScoringBackend }) {
   return <ClaimAbsence state={backend.state} reason={backend.reason_code} what="scoring backend" />;
 }
 
-/** A panel the hi-fi fills from an optimizer, kept as a frame with its reason. */
-function EmptyPanel({ id, title, gap }: { id: string; title: string; gap: SearchSourceGap }) {
+/**
+ * A panel the hi-fi fills from an optimizer, kept as a frame with its reason.
+ * `sentence` (retained runs) adds the reason's sentence where one exists.
+ */
+function EmptyPanel({ id, title, gap, sentence = false }: { id: string; title: string; gap: SearchSourceGap; sentence?: boolean }) {
+  const words = sentence ? reasonCodeSentence(gapReason(gap)) : null;
   return (
     <section className={CARD} style={CARD_STYLE} data-panel={id} data-panel-state={gap.state}>
       <div className="flex flex-wrap items-baseline gap-2">
@@ -422,6 +452,11 @@ function EmptyPanel({ id, title, gap }: { id: string; title: string; gap: Search
           {SEARCH_GAP_WORDS[gap.state]}
         </span>
       </div>
+      {words ? (
+        <span className="text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+          {words}
+        </span>
+      ) : null}
       <span className="mono break-all text-[9px]" style={{ color: "var(--ink-faint)" }} data-gap-reason={id}>
         {gapReason(gap)}
       </span>
@@ -1026,16 +1061,423 @@ function RetainedBestVsSelected({ search }: { search: CurrentSourceSearch }) {
   );
 }
 
+/* ------------------------------------------ retained WFO run facts (W3b) */
+
+/*
+ * The P15 hub read covers P04 fixed-profile runs only. On a Delta walk-forward
+ * run it answers its own lane code (`P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED`),
+ * which describes the hub, not the run. Once the retained lane answered
+ * AVAILABLE, every panel below is filled from it — the search contract, the
+ * probe, the ledger, the candidates, the selection — and a panel it does not
+ * cover prints the retained lane's own typed absence. No hub code is printed.
+ */
+
+type RetainedFact = CurrentSourceSearch["diagnostics"]["importance"];
+
+/** The UI's own code (researchRefusal.ts) for a figure the retained lane carries no field for. */
+export const RETAINED_NO_FIELD = "UI_RETAINED_LANE_HAS_NO_FIELD";
+
+function noField(): SearchSourceGap {
+  return { state: "NOT_PUBLISHED", reason_code: RETAINED_NO_FIELD } as SearchSourceGap;
+}
+
+function factGap(fact: RetainedFact): SearchSourceGap {
+  return { state: fact.state, reason_code: fact.reason_code } as SearchSourceGap;
+}
+
+/** A Stage A/B frame filled from the retained lane: the HiFi frame, the lane's own words. */
+function RetainedPanel({ id, title, state, children }: { id: string; title: string; state: string; children: ReactNode }) {
+  return (
+    <section className={`${CARD} min-w-0`} style={CARD_STYLE} data-panel={id} data-panel-state={state} data-panel-lane="retained">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
+          {title}
+        </h3>
+        <span className="mono text-[9px]" style={{ color: "var(--good)" }} title="read from the retained current-source lane for this run">
+          QUANTBT · retained
+        </span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** The trials in the page the retained lane returned, in source order. */
+function retainedTrials(search: CurrentSourceSearch): RetainedTrial[] {
+  return search.ledger.trials;
+}
+
+/** Parameter names, in the order the selection publishes them (else the first trial's). */
+function retainedParameterNames(search: CurrentSourceSearch): string[] {
+  const selected = Object.keys(search.selection.parameters ?? {});
+  if (selected.length > 0) return selected;
+  return Object.keys(retainedTrials(search)[0]?.parameters ?? {});
+}
+
+/** "3 of 3", or the page the lane returned when it is not the whole ledger. */
+function trialPageWords(search: CurrentSourceSearch): string {
+  return `${search.ledger.returned_rows} of ${search.ledger.source_trial_count}`;
+}
+
+/** Range, step and kind of one declared parameter — printed as the registry serves them. */
+function declaredCells(declared: DeclaredParameter | undefined): { kind: string; range: string; step: string } | null {
+  if (!declared) return null;
+  switch (declared.kind) {
+    case "int_range":
+    case "float_range":
+      return { kind: declared.kind, range: `${declared.low} … ${declared.high}`, step: String(declared.step) };
+    case "categorical":
+      return { kind: declared.kind, range: declared.values.map(String).join(" · "), step: "" };
+    case "fixed":
+      return { kind: declared.kind, range: String(declared.value), step: "" };
+  }
+}
+
+/**
+ * A1 on a retained run: the parameters the retained selection carries, their
+ * declared range from the alpha registry for the version the run was admitted
+ * with (the requested spec overrides nothing), θ* from QuantBT's selection.
+ * No range position is drawn: the lane publishes none and the browser does
+ * not work one out.
+ */
+function RetainedSearchSpace({ search, run }: { search: CurrentSourceSearch; run: RetainedRunFacts | undefined }) {
+  const names = retainedParameterNames(search);
+  const identity = run?.identity.state === "ready" ? run.identity.identity : null;
+  const requestedSpec = (identity?.requested?.requested_spec ?? null) as Record<string, unknown> | null;
+  const overrides = requestedSpec?.parameter_space_overrides;
+  const noOverrides = Array.isArray(overrides) && overrides.length === 0;
+  const declared = run?.declared;
+  const space = declared?.state === "ready" && noOverrides ? declared.space : null;
+  const window = walkForwardOf(identity?.requested ?? null);
+  const probe = search.diagnostics.probe;
+  const contract = search.search_contract;
+  const theta = search.selection.parameters ?? {};
+  const pending = declared?.state === "loading" || run?.identity.state === "loading";
+
+  return (
+    <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} data-panel="search-space" data-panel-lane="retained">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
+          A1 · search space as declared
+        </h3>
+        <span className="mono text-[9.5px]" style={{ color: "var(--ink-faint)" }} data-space-source={space ? "registry" : declared?.state ?? "none"}>
+          {space && declared?.state === "ready"
+            ? `declared by ${declared.alphaVersionId} · no overrides in the requested spec`
+            : pending
+              ? "reading the alpha's declared space…"
+              : null}
+        </span>
+      </div>
+      <div className="flex min-w-0 flex-col" data-parameters={names.length}>
+        <div className="flex border-b pb-[3px] text-[9.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)", borderColor: "var(--line-soft)" }} data-a1-head>
+          {A1_COLUMNS.map((column) => (
+            <span key={column.head} className={`flex-none ${column.right ? "text-right" : ""}`} style={{ width: column.width }} data-align={column.right ? "right" : "left"}>
+              {column.head}
+            </span>
+          ))}
+          <span className="flex-1 pl-[14px]">θ* · selected trial {search.selection.selected_trial_id ?? "—"}</span>
+        </div>
+        {names.map((name) => {
+          const cells = space ? declaredCells(space[name]) : null;
+          return (
+            <div key={name} className="mono flex items-center border-b py-[2px] text-[10.5px]" style={{ borderColor: "var(--paper-sunken)" }} data-parameter={name}>
+              <span className="w-[86px] flex-none">{name}</span>
+              <span className="w-[112px] flex-none" style={{ color: "var(--ink-soft)" }} data-kind={name}>
+                {cells?.kind ?? ""}
+              </span>
+              <span className="w-[96px] flex-none" style={{ color: "var(--ink-soft)" }} data-range={name}>
+                {cells?.range ?? ""}
+              </span>
+              <span className="w-[44px] flex-none text-right" style={{ color: "var(--ink-soft)" }} data-step={name}>
+                {cells?.step ?? ""}
+              </span>
+              <span className="w-[56px] flex-none text-right" title={LEVELS_REASON} data-levels={name} data-levels-state="NOT_PUBLISHED">
+                <span className="sr-only">levels not published</span>
+              </span>
+              <span className="flex-1 pl-[14px]" style={{ color: "var(--good)" }} data-effective={name}>
+                {theta[name] ?? ""}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap gap-x-[22px] gap-y-1 pt-[5px]" data-coverage>
+        {space === null && !pending ? (
+          <span className="inline-flex flex-wrap items-baseline gap-x-1.5" data-gap-fact="ranges" data-gap-state="NOT_PUBLISHED">
+            <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+              kind · range · step
+            </span>
+            <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={RETAINED_NO_FIELD}>
+              not published
+            </span>
+            <span className="text-[9.5px]" style={{ color: "var(--ink-faint)" }}>
+              {noOverrides || identity === null
+                ? reasonCodeSentence(RETAINED_NO_FIELD)
+                : "The requested spec overrides the declared space, and the retained lane does not publish the space it searched."}
+            </span>
+          </span>
+        ) : null}
+        <span className="inline-flex items-baseline gap-x-1.5" data-gap-fact="levels" data-gap-state="NOT_PUBLISHED">
+          <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+            levels
+          </span>
+          <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={`${LEVELS_REASON} · ${RETAINED_NO_FIELD}`}>
+            not published
+          </span>
+        </span>
+        <CoverageFact what="sampler seed" value={window.seed !== null ? `${window.seed} · requested spec` : null} pending={pending} />
+        <CoverageFact
+          what="trials"
+          value={`${window.trials !== null ? `${window.trials} requested · ` : ""}${search.ledger.source_trial_count} retained${contract.n_studies !== null ? ` · ${contract.n_studies} ${contract.n_studies === 1 ? "study" : "studies"}` : ""}`}
+        />
+        <Gap gap={factGap(probe.sampler)} what="sampler trace" />
+        <Gap gap={factGap(probe.warm_start)} what="warm start" />
+        <Gap gap={factGap(probe.dedupe)} what="dedupe" />
+      </div>
+    </section>
+  );
+}
+
+function CoverageFact({ what, value, pending = false }: { what: string; value: string | null; pending?: boolean }) {
+  return (
+    <span className="inline-flex items-baseline gap-x-1.5" data-coverage-fact={what}>
+      <span className="text-[9.5px] uppercase tracking-[.07em]" style={{ color: "var(--ink-faint)" }}>
+        {what}
+      </span>
+      {value !== null ? (
+        <span className="mono text-[10.5px]">{value}</span>
+      ) : (
+        <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} title={pending ? undefined : "the requested spec did not answer"}>
+          {pending ? "reading…" : "not read"}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** A2 on a retained run: the trials are rows of the ledger; no surface projection is served or drawn. */
+function RetainedSurface({ search }: { search: CurrentSourceSearch }) {
+  return (
+    <RetainedPanel id="scatter" title={DIAGNOSTIC_LABEL.scatter} state="IN_LEDGER">
+      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+        {trialPageWords(search)} retained trials, each with its parameters and IS objective, are rows of the trial ledger
+        below. The retained lane publishes no surface projection, and this screen does not draw one from rows.
+      </p>
+      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }} data-gap-reason="scatter">
+        {RETAINED_NO_FIELD}
+      </span>
+    </RetainedPanel>
+  );
+}
+
+/** A3 on a retained run: each trial's own objective in source order, and the probe's pruned count. No best-so-far is computed. */
+function RetainedProgression({ search }: { search: CurrentSourceSearch }) {
+  const trials = retainedTrials(search);
+  const kind = (trials[0] as Partial<RetainedTrial> | undefined)?.facts?.objective_kind;
+  const pruned = search.diagnostics.probe.pruned_trial_count;
+  return (
+    <RetainedPanel id="progression" title={DIAGNOSTIC_LABEL.progression} state="AVAILABLE">
+      <div className="flex flex-wrap gap-x-4 gap-y-1" data-progression>
+        {trials.map((trial) => (
+          <span key={trial.trial_id} className="mono text-[10.5px]" data-progression-trial={trial.trial_id}>
+            <span style={{ color: "var(--ink-faint)" }}>trial {trial.trial_id}</span>{" "}
+            <span title={trial.objective ?? undefined}>{ratio2(trial.objective) ?? <NotPublished title="the retained trial publishes no objective" />}</span>
+          </span>
+        ))}
+      </div>
+      <span className="text-[10px]" style={{ color: "var(--ink-faint)" }} data-progression-note>
+        {kind ? `${OBJECTIVE_KIND_WORDS[kind] ?? kind}, ` : ""}in source order · pruned{" "}
+        <span className="mono" data-pruned-count>
+          {pruned !== null ? `${pruned} of ${search.ledger.source_trial_count}` : "count not published"}
+        </span>{" "}
+        (capability probe)
+      </span>
+    </RetainedPanel>
+  );
+}
+
+/** A4 on a retained run: the values each parameter took, trial by trial, as the ledger publishes them — no bins. */
+function RetainedSampledValues({ search }: { search: CurrentSourceSearch }) {
+  const trials = retainedTrials(search);
+  const theta = search.selection.parameters ?? {};
+  return (
+    <RetainedPanel id="distributions" title="A4 · per-parameter sampled values" state="AVAILABLE">
+      <div className="flex min-w-0 flex-col overflow-x-auto" data-sampled-values>
+        <div className="flex border-b pb-[3px] text-[9.5px] uppercase tracking-[.06em]" style={{ color: "var(--ink-faint)", borderColor: "var(--line-soft)" }}>
+          <span className="w-[86px] flex-none">param</span>
+          <span className="flex-1">sampled, trial {trials.map((trial) => trial.trial_id).join(" · ")}</span>
+          <span className="w-[56px] flex-none text-right">θ*</span>
+        </div>
+        {retainedParameterNames(search).map((name) => (
+          <div key={name} className="mono flex items-baseline border-b py-[2px] text-[10.5px]" style={{ borderColor: "var(--paper-sunken)" }} data-sampled={name}>
+            <span className="w-[86px] flex-none">{name}</span>
+            <span className="flex-1" style={{ color: "var(--ink-soft)" }}>
+              {trials.map((trial) => trial.parameters[name] ?? "—").join(" · ")}
+            </span>
+            <span className="w-[56px] flex-none text-right" style={{ color: "var(--good)" }}>
+              {theta[name] ?? ""}
+            </span>
+          </div>
+        ))}
+      </div>
+      <span className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
+        {trialPageWords(search)} trials, values exactly as the ledger rows publish them.
+      </span>
+    </RetainedPanel>
+  );
+}
+
+/** B4 on a retained run: the selected candidate's own fold scope says whether θ* moves between folds. */
+function RetainedThetaJourney({ search }: { search: CurrentSourceSearch }) {
+  const selected = search.candidates.rows.find(
+    (row) => row.facts?.source_trial_id === search.selection.selected_trial_id && row.objective === search.selection.objective,
+  );
+  const scope = selected?.facts?.fold_scope ?? null;
+  if (scope === null || scope.kind !== "ALL_OUTER_FOLDS") {
+    return <EmptyPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} gap={noField()} sentence />;
+  }
+  return (
+    <RetainedPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} state="ONE_SELECTION_ALL_FOLDS">
+      <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
+        The selected candidate (trial <span className="mono">{search.selection.selected_trial_id}</span>) is scoped to all outer
+        folds, so one θ* serves every fold — there is no per-fold journey to draw.
+      </p>
+      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+        fold_scope {scope.kind} · schedule {search.search_contract.optimization_schedule ?? "not published"}
+      </span>
+    </RetainedPanel>
+  );
+}
+
+/** "What this mode reads" on a retained run: the search contract's own tokens, verbatim. */
+function RetainedModeReads({ search, runId }: { search: CurrentSourceSearch; runId: string }) {
+  const contract = search.search_contract;
+  const probe = search.diagnostics.probe;
+  const tokens: [string, string | null][] = [
+    ["validation_claim", contract.validation_claim],
+    ["chronological_claim", contract.chronological_claim],
+    ["oos_used_for_selection", contract.oos_used_for_selection === null ? null : String(contract.oos_used_for_selection)],
+    ["candidate_selection_metric", contract.candidate_selection_metric],
+    contract.top_is_fraction !== null ? ["top_is_fraction", contract.top_is_fraction] : ["top_is_k", contract.top_is_k === null ? null : String(contract.top_is_k)],
+    ["decay_lambda", probe.decay_lambda],
+    ["decay_gamma", probe.decay_gamma],
+  ];
+  const trial = retainedTrials(search)[0] as Partial<RetainedTrial> | undefined;
+  const candidate = search.candidates.rows[0] as Partial<RetainedCandidate> | undefined;
+  const stageA = trial?.facts?.stage ?? null;
+  const stageB = candidate?.facts?.stage ?? null;
+  const optunaBlind = retainedTrials(search).every((row) => (row as Partial<RetainedTrial>).facts?.oos_seen_by_optuna === false);
+  const mode = contract.optimization_mode;
+  const schedule = contract.optimization_schedule;
+  return (
+    <>
+      {mode !== null && schedule !== null ? (
+        <Link
+          to={atlasModeHref({ mode, schedule } as NonNullable<ClaimRow["mode_reference"]>, runId)}
+          className="mono text-[10.5px]"
+          style={{ color: "var(--accent)" }}
+          data-action="open-atlas-mode"
+        >
+          {mode} · {schedule} in the Engine Atlas →
+        </Link>
+      ) : null}
+      <span className="flex flex-wrap gap-x-3 gap-y-1" data-mode-reads-tokens title="this run's search contract and probe, as QuantBT published them">
+        {tokens.map(([key, value]) => (
+          <span key={key} className="mono text-[10.5px]" data-mode-read={key}>
+            <span style={{ color: "var(--ink-faint)" }}>{key}</span>{" "}
+            {value ?? (
+              <span className="italic" style={{ color: "var(--ink-faint)" }} title={RETAINED_NO_FIELD}>
+                not published
+              </span>
+            )}
+          </span>
+        ))}
+      </span>
+      {stageA !== null && stageB !== null ? (
+        <span className="min-w-[260px] flex-1 text-[10.5px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-mode-reads-stages>
+          Stage A (<span className="mono">{stageA}</span>) scores trials on IS
+          {optunaBlind ? " — no trial's OOS was seen by Optuna" : ""}; Stage B (<span className="mono">{stageB}</span>) re-scores
+          the frozen pool on OOS and ranks it by <span className="mono">{contract.candidate_selection_metric ?? "a metric not published"}</span>.
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/** Readiness on a retained run: the retained seal from the progress read (terminal READY + mandatory SEALED). */
+function RetainedReadinessFact({ run }: { run: RetainedRunFacts | undefined }) {
+  if (run === undefined || run.identity.state === "idle") {
+    return (
+      <span className="italic" style={{ color: "var(--ink-faint)" }} data-readiness="UNREAD" title="the progress read was not asked">
+        not read
+      </span>
+    );
+  }
+  if (run.identity.state === "loading") {
+    return (
+      <span className="italic" style={{ color: "var(--ink-faint)" }} data-readiness="PENDING">
+        reading…
+      </span>
+    );
+  }
+  const readiness = retainedReadiness(run.identity.identity.progress);
+  if (readiness === null) {
+    return (
+      <span className="italic" style={{ color: "var(--ink-faint)" }} data-readiness="UNREAD" title="the progress read did not answer">
+        not read
+      </span>
+    );
+  }
+  return (
+    <span
+      data-readiness={readiness}
+      data-readiness-basis="RETAINED_SEAL"
+      title="The retained seal from the progress read: the attempt materialized READY and sealed its mandatory bundle."
+    >
+      {readiness}
+    </span>
+  );
+}
+
+/** The provenance strip on a retained run: the retained lane's own facts; a field it does not carry is left out, not blanked. */
+function retainedProvenance(search: CurrentSourceSearch, detail: SearchDetailDocument): ProvenanceFacts {
+  const retained = search.provenance;
+  return {
+    source_adapter_id: retained.source_adapter_id,
+    engine_version: retained.engine_version,
+    source_transform_digest: retained.source_transform_digest,
+    requested_spec_digest: retained.requested_spec_digest,
+    effective_spec_digest: retained.effective_spec_digest,
+    dataset_binding_digest: retained.dataset_binding_digest,
+    manifest_digest: retained.source_manifest_digest ?? detail.provenance.manifest_digest,
+  };
+}
+
 /* ------------------------------------------------------------ freeze line */
 
-function FreezeLine({ detail }: { detail: SearchDetailDocument }) {
-  const froze = false; /* No contract field publishes a pool freeze yet (CG-P15-03). */
+function FreezeLine({ detail, retained = null }: { detail: SearchDetailDocument; retained?: CurrentSourceSearch | null }) {
+  const contract = retained?.search_contract ?? null;
+  const pool = contract === null ? null : contract.top_is_fraction !== null ? `top_is_fraction ${contract.top_is_fraction}` : contract.top_is_k !== null ? `top_is_k ${contract.top_is_k}` : null;
+  /* W3b: the retained lane publishes the pool rule and the candidates it froze. */
+  const froze = retained !== null && pool !== null && retained.candidates.source_candidate_count > 0;
   const title = froze
-    ? "Stage A searches, the pool freezes, Stage B selects on what was frozen."
-    : "Stage A searches, the pool freezes, Stage B selects on what was frozen. This run froze no pool because it ran no search.";
+    ? `Stage A searches, the pool freezes (${pool} → ${retained!.candidates.source_candidate_count} candidate${retained!.candidates.source_candidate_count === 1 ? "" : "s"}), Stage B selects on what was frozen.`
+    : retained !== null
+      ? "Stage A searches, the pool freezes, Stage B selects on what was frozen. The retained lane does not publish this run's pool rule."
+      : "Stage A searches, the pool freezes, Stage B selects on what was frozen. This run froze no pool because it ran no search.";
   /* The run's claim matrix (which way information crossed) is not published
-     (CG-P15-05); a fixed profile froze nothing, and says so. */
-  const kind: FreezeArrowKind = detail.source_profile.state === "FIXED_PROFILE_NO_SEARCH" ? "no-freeze" : "unpublished";
+     (CG-P15-05); a fixed profile froze nothing, and says so. On a retained run
+     the search contract's own `oos_used_for_selection` answers it. */
+  const kind: FreezeArrowKind =
+    contract !== null
+      ? contract.oos_used_for_selection === true
+        ? "decay"
+        : contract.oos_used_for_selection === false
+          ? "none"
+          : "unpublished"
+      : detail.source_profile.state === "FIXED_PROFILE_NO_SEARCH"
+        ? "no-freeze"
+        : "unpublished";
   const arrow = freezeArrow(kind);
   const line =
     "h-0 flex-1 border-t-2 border-dashed min-[1100px]:h-auto min-[1100px]:w-0 min-[1100px]:border-l-2 min-[1100px]:border-t-0";
@@ -1051,7 +1493,7 @@ function FreezeLine({ detail }: { detail: SearchDetailDocument }) {
           style={{ color: "var(--accent-2)" }}
           title={title}
         >
-          {FREEZE_LABEL} · {froze ? "FROZEN" : "NONE — NO SEARCH RAN"}
+          {FREEZE_LABEL} · {froze ? "FROZEN" : retained !== null ? "RULE NOT PUBLISHED" : "NONE — NO SEARCH RAN"}
         </span>
         <span
           className="mono whitespace-nowrap rounded-[3px] border px-1.5 py-[3px] text-[10px] font-bold"
@@ -1085,6 +1527,8 @@ export interface SearchScreenProps {
   ledger: LedgerSlot;
   ensureLedger: () => void;
   onReread: () => void;
+  /** W3b: a retained run's identity and declared space (asked only once the retained lane answered). */
+  retainedRun?: RetainedRunFacts;
 }
 
 /** Names the frames on this screen already state; `source_absences` repeats them. */
@@ -1111,18 +1555,26 @@ export function SearchScreen({
   ledger,
   ensureLedger,
   onReread,
+  retainedRun,
 }: SearchScreenProps) {
   const profile = detail?.fixed_profile;
   const parameters = profile?.parameters ?? [];
   const fixed = detail?.source_profile.state === "FIXED_PROFILE_NO_SEARCH";
   const runPath = `/research/quantbt/runs/${encodeURIComponent(runId)}`;
-  const absences = detail ? Object.entries(detail.source_absences).filter(([name]) => !SHOWN_GAPS.has(name)) : [];
+  const hubAbsences = detail ? Object.entries(detail.source_absences).filter(([name]) => !SHOWN_GAPS.has(name)) : [];
   const gapOf = (name: string): SearchSourceGap | null => detail?.source_absences[name] ?? null;
   const metric = detail?.requested_optimizer.candidate_selection_metric;
   /* W3: a sealed retained WFO run answers the claim row, Stage B and two Stage A panels. */
   const retained = ledger.state === "ready" && (ledger.search as Partial<CurrentSourceSearch>).search_contract ? ledger.search : null;
   const retainedClaims =
     retained && retained.search_contract.availability.state === "AVAILABLE" ? retained.search_contract : null;
+  /* W3b: the retained lane answered AVAILABLE — it is the authority for every
+     panel it covers, and the hub's own lane codes are not shown on this run. */
+  const lane = retained && retainedClaims && isRetainedAnswer(retained) ? retained : null;
+  const runMode = lane ? lane.search_contract.optimization_mode : detail?.requested_optimizer.mode ?? null;
+  const runSchedule = lane ? lane.search_contract.optimization_schedule : detail?.requested_optimizer.schedule ?? null;
+  /* The hub's source_absences describe the hub on a retained run; each panel above states the lane's own. */
+  const absences = lane ? [] : hubAbsences;
 
   return (
     <div className={`${SCREEN_FRAME} max-w-[1560px]`} data-screen="search-detail" data-run={runId}>
@@ -1214,10 +1666,10 @@ export function SearchScreen({
                   optimization_mode
                 </span>
                 {/* One run is one mode: the run's own, read-only — never a switcher. */}
-                <span data-requested-optimizer={detail.requested_optimizer.state} className="flex flex-wrap items-center gap-2">
-                  {detail.requested_optimizer.mode !== null ? (
+                <span data-requested-optimizer={lane ? "RETAINED_SOURCE" : detail.requested_optimizer.state} className="flex flex-wrap items-center gap-2">
+                  {runMode !== null ? (
                     <Pill on data-run-mode>
-                      {detail.requested_optimizer.mode}
+                      {runMode}
                     </Pill>
                   ) : (
                     <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} data-run-mode>
@@ -1228,28 +1680,39 @@ export function SearchScreen({
                   <span className={LABEL} style={{ color: "var(--ink-faint)" }}>
                     schedule
                   </span>
-                  {detail.requested_optimizer.schedule !== null ? (
+                  {runSchedule !== null ? (
                     <Pill
                       on
-                      tone={schedulePillTone(detail.requested_optimizer.schedule)}
+                      tone={schedulePillTone(runSchedule)}
                       data-run-schedule
-                      data-pill-tone={schedulePillTone(detail.requested_optimizer.schedule)}
+                      data-pill-tone={schedulePillTone(runSchedule)}
                       title={
-                        schedulePillTone(detail.requested_optimizer.schedule) === "warn"
+                        schedulePillTone(runSchedule) === "warn"
                           ? "only per_fold_causal keeps OOS out of selection — this schedule is shown in the warn style"
                           : undefined
                       }
                     >
-                      {detail.requested_optimizer.schedule}
+                      {runSchedule}
                     </Pill>
                   ) : (
                     <span className="mono text-[10.5px] italic" style={{ color: "var(--ink-faint)" }} data-run-schedule>
                       schedule not published
                     </span>
                   )}
-                  <span className="mono text-[10.5px] italic" style={{ color: "var(--accent-2)" }}>
-                    {detail.requested_optimizer.state.toLowerCase().replace(/_/g, " ")}
-                  </span>
+                  {lane ? (
+                    <span
+                      className="mono text-[10.5px]"
+                      style={{ color: "var(--good)" }}
+                      title="QuantBT's search contract for this run, read from the retained current-source lane"
+                      data-run-mode-source="retained"
+                    >
+                      executed · retained search contract
+                    </span>
+                  ) : (
+                    <span className="mono text-[10.5px] italic" style={{ color: "var(--accent-2)" }}>
+                      {detail.requested_optimizer.state.toLowerCase().replace(/_/g, " ")}
+                    </span>
+                  )}
                 </span>
                 <span className="ml-auto text-[10px]" style={{ color: "var(--ink-faint)" }} data-one-mode>
                   {ONE_MODE_NOTE}
@@ -1261,8 +1724,8 @@ export function SearchScreen({
                 <div
                   className="flex flex-1 flex-wrap gap-x-6 gap-y-2 px-[14px] py-[9px]"
                   data-claim-row
-                  data-claim-basis={detail.claim_row.basis}
-                  title={`claim basis ${detail.claim_row.basis}`}
+                  data-claim-basis={lane ? "RETAINED_SOURCE" : detail.claim_row.basis}
+                  title={lane ? "claims from QuantBT's search contract (retained lane)" : `claim basis ${detail.claim_row.basis}`}
                 >
                   <Claim k="validation_claim" accent>
                     {retainedClaims?.validation_claim ? (
@@ -1286,7 +1749,11 @@ export function SearchScreen({
                     )}
                   </Claim>
                   <Claim k="OOS column state">
-                    <OosColumnChip column={detail.claim_row.oos_column} />
+                    {lane ? (
+                      <RetainedOosColumn used={lane.search_contract.oos_used_for_selection} />
+                    ) : (
+                      <OosColumnChip column={detail.claim_row.oos_column} />
+                    )}
                   </Claim>
                   <Claim k="scoring_backend">
                     {retainedClaims?.scoring_backend ? (
@@ -1315,23 +1782,61 @@ export function SearchScreen({
                     )}
                   </Claim>
                   <Claim k="source profile">
-                    <span data-source-profile={detail.source_profile.state} title={detail.source_profile.reason_code ?? undefined}>
-                      {detail.source_profile.state}
-                    </span>
+                    {lane ? (
+                      <span
+                        className="flex flex-col gap-[1px]"
+                        data-source-profile="RETAINED_SOURCE"
+                        title={`retained profile ${lane.provenance.profile_id} · source adapter ${lane.provenance.source_adapter_id}`}
+                      >
+                        <span data-profile-id>{lane.provenance.profile_id}</span>
+                        <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} data-source-adapter>
+                          {lane.provenance.source_adapter_id}
+                        </span>
+                      </span>
+                    ) : (
+                      <span data-source-profile={detail.source_profile.state} title={detail.source_profile.reason_code ?? undefined}>
+                        {detail.source_profile.state}
+                      </span>
+                    )}
                   </Claim>
-                  <Claim k="selection" data-selection-state={detail.selection.state}>
-                    {detail.selection.state}
+                  <Claim k="selection" data-selection-state={lane ? lane.selection.availability.state : detail.selection.state}>
+                    {lane ? (
+                      <span className="flex flex-col gap-[1px]">
+                        <span>{lane.selection.availability.state}</span>
+                        {lane.selection.selected_trial_id !== null ? (
+                          <span className="text-[9px]" style={{ color: "var(--ink-faint)" }} title={lane.selection.objective ?? undefined} data-selection-summary>
+                            trial {lane.selection.selected_trial_id} · J {ratio2(lane.selection.objective) ?? "not published"} ·{" "}
+                            {lane.selection.objective_kind}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : (
+                      detail.selection.state
+                    )}
                   </Claim>
                   <Claim k="strict outer OOS">
-                    {profile ? <Gap gap={profile.strict_outer_oos} what="strict outer OOS" bare /> : null}
+                    {lane && lane.search_contract?.oos_used_for_selection === true ? (
+                      /* QuantBT publishes oos_used_for_selection = true: the selection read OOS, so it was not strict. */
+                      <span data-strict-outer-oos="false" title="search_contract.oos_used_for_selection = true (QuantBT)">
+                        no · OOS used for selection
+                      </span>
+                    ) : lane ? (
+                      <ClaimAbsence state="NOT_PUBLISHED" reason={RETAINED_NO_FIELD} what="strict outer OOS" />
+                    ) : profile ? (
+                      <Gap gap={profile.strict_outer_oos} what="strict outer OOS" bare />
+                    ) : null}
                   </Claim>
                   <Claim k="readiness">
-                    <span
-                      data-readiness={detail.readiness}
-                      title="The server's own word: a fixed profile is published; the optimizer facts around it are absent by nature."
-                    >
-                      {detail.readiness}
-                    </span>
+                    {lane ? (
+                      <RetainedReadinessFact run={retainedRun} />
+                    ) : (
+                      <span
+                        data-readiness={detail.readiness}
+                        title="The server's own word: a fixed profile is published; the optimizer facts around it are absent by nature."
+                      >
+                        {detail.readiness}
+                      </span>
+                    )}
                   </Claim>
                   {profile && profile.parameter_bundle_digest !== null ? (
                     <Claim k="parameter bundle">
@@ -1360,12 +1865,14 @@ export function SearchScreen({
               <div
                 className="flex flex-wrap items-center gap-[14px] rounded-b-[6px] border-t px-[14px] py-2"
                 style={{ borderColor: "var(--line-soft)", background: "var(--paper-sunken)" }}
-                data-mode-reads={detail.claim_row.mode_reference ? "reference" : "shell"}
+                data-mode-reads={lane ? "retained" : detail.claim_row.mode_reference ? "reference" : "shell"}
               >
                 <span className={`${LABEL} flex-none`} style={{ color: "var(--ink-faint)" }}>
                   what this mode reads
                 </span>
-                {detail.claim_row.mode_reference ? (
+                {lane ? (
+                  <RetainedModeReads search={lane} runId={runId} />
+                ) : detail.claim_row.mode_reference ? (
                   <>
                     <Link
                       to={atlasModeHref(detail.claim_row.mode_reference, runId)}
@@ -1403,7 +1910,7 @@ export function SearchScreen({
               </div>
             </section>
 
-            <ProvenanceStrip provenance={detail.provenance} />
+            <ProvenanceStrip provenance={lane ? retainedProvenance(lane, detail) : detail.provenance} />
 
             {/* ------------------------------------ Stage A · freeze · Stage B */}
             <div
@@ -1420,6 +1927,8 @@ export function SearchScreen({
                   </span>
                 </div>
 
+                {lane ? <RetainedSearchSpace search={lane} run={retainedRun} /> : null}
+                {lane ? null : (
                 <section className={`${CARD} min-w-0 overflow-x-auto`} style={CARD_STYLE} data-panel="search-space">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
@@ -1453,23 +1962,34 @@ export function SearchScreen({
                     {gapOf("study") ? <Gap gap={gapOf("study") as SearchSourceGap} what="trials · grid size" /> : null}
                   </div>
                 </section>
+                )}
 
-                {STAGE_A_DIAGNOSTICS.map((key) => (
-                  <EmptyPanel
-                    key={key}
-                    id={key}
-                    title={DIAGNOSTIC_LABEL[key]}
-                    gap={
-                      retained && (key === "prune_reasons" || key === "importance")
-                        ? /* W3 · CG-P15-04: the retained lane's capability probe answers these two. */
-                          { state: retained.diagnostics[key].state, reason_code: retained.diagnostics[key].reason_code } as SearchSourceGap
-                        : detail.diagnostics[key]
-                    }
-                  />
-                ))}
+                {STAGE_A_DIAGNOSTICS.map((key) => {
+                  if (lane) {
+                    /* W3b: each Stage A frame from the retained lane, or its own typed absence. */
+                    if (key === "scatter") return <RetainedSurface key={key} search={lane} />;
+                    if (key === "progression") return <RetainedProgression key={key} search={lane} />;
+                    if (key === "distributions") return <RetainedSampledValues key={key} search={lane} />;
+                    const gap = key === "prune_reasons" || key === "importance" ? factGap(lane.diagnostics[key]) : noField();
+                    return <EmptyPanel key={key} id={key} title={DIAGNOSTIC_LABEL[key]} gap={gap} sentence />;
+                  }
+                  return (
+                    <EmptyPanel
+                      key={key}
+                      id={key}
+                      title={DIAGNOSTIC_LABEL[key]}
+                      gap={
+                        retained && (key === "prune_reasons" || key === "importance")
+                          ? /* W3 · CG-P15-04: the retained lane's capability probe answers these two. */
+                            ({ state: retained.diagnostics[key].state, reason_code: retained.diagnostics[key].reason_code } as SearchSourceGap)
+                          : detail.diagnostics[key]
+                      }
+                    />
+                  );
+                })}
               </div>
 
-              <FreezeLine detail={detail} />
+              <FreezeLine detail={detail} retained={lane} />
 
               <div className="flex min-w-0 flex-col gap-3" data-stage="B">
                 <div className="flex flex-wrap items-baseline gap-2.5">
@@ -1490,7 +2010,7 @@ export function SearchScreen({
 
                 <section className={CARD} style={CARD_STYLE} data-panel="formula">
                   <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
-                    B2 · the formula of {detail.requested_optimizer.mode ?? "this mode"} — every term
+                    B2 · the formula of {runMode ?? "this mode"} — every term
                   </h3>
                   {retained ? (
                     <RetainedFormula search={retained} />
@@ -1521,8 +2041,32 @@ export function SearchScreen({
                   )}
                 </section>
 
-                <EmptyPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} gap={detail.diagnostics.parameter_frequency} />
+                {lane ? (
+                  <RetainedThetaJourney search={lane} />
+                ) : (
+                  <EmptyPanel id="parameter_frequency" title={DIAGNOSTIC_LABEL.parameter_frequency} gap={detail.diagnostics.parameter_frequency} />
+                )}
 
+                {lane ? (
+                  <section className={CARD} style={CARD_STYLE} data-panel="inspection" data-inspection-state="RETAINED_FOLD_FILTER">
+                    <h3 className={LABEL} style={{ color: "var(--ink-faint)" }}>
+                      fold inspection
+                    </h3>
+                    <p className="text-[11px] leading-[1.5]" style={{ color: "var(--ink-soft)" }} data-inspection-fold={lane.ledger.fold_filter?.fold_id ?? ""}>
+                      The retained ledger was read{" "}
+                      {lane.ledger.fold_filter?.fold_id ? `for fold ${lane.ledger.fold_filter.fold_id}` : "without a fold filter"}:{" "}
+                      <span className="mono">
+                        {lane.ledger.fold_filter?.matched_rows ?? lane.ledger.returned_rows} of {lane.ledger.source_trial_count}
+                      </span>{" "}
+                      trials matched. Every trial and candidate row states its own fold scope in the ledger below.
+                    </p>
+                    {lane.ledger.fold_filter ? (
+                      <span className="mono text-[9px]" style={{ color: "var(--ink-faint)" }}>
+                        {lane.ledger.fold_filter.rule}
+                      </span>
+                    ) : null}
+                  </section>
+                ) : (
                 <section
                   className={CARD}
                   style={CARD_STYLE}
@@ -1542,6 +2086,7 @@ export function SearchScreen({
                   </p>
                   <Withheld availability={detail.inspection.availability} />
                 </section>
+                )}
               </div>
             </div>
 

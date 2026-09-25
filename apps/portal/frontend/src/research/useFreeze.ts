@@ -23,6 +23,7 @@ import {
 } from "./freezeClient";
 import { researchState, type ResearchState } from "./state";
 import { laneStateOfError, refusalState, type CurrentSourceLaneState } from "./researchRefusal";
+import { isRetainedAnswer } from "./retainedLane";
 
 export type VerifySlot =
   | { state: "idle" }
@@ -47,6 +48,26 @@ export interface FreezeController {
   retained: RetainedSlot;
   ensureRetained: () => void;
   reread: () => void;
+  /**
+   * W3b: the hub declined this run (its freeze is NOT_APPLICABLE, e.g.
+   * `P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE`) and the
+   * retained current-source lane answered AVAILABLE — that lane is now the
+   * screen's authority.
+   */
+  laneRetained: boolean;
+}
+
+/** Whether the hub snapshot hands this run to another lane instead of answering it. */
+export function hubDelegates(detail: FreezeDetail | null): boolean {
+  return detail !== null && detail.availability.state === "NOT_APPLICABLE";
+}
+
+/** Whether Screen 07 reads this run from the retained lane (see `laneRetained`). */
+export function readsRetainedLane(
+  detail: FreezeDetail | null,
+  retained: RetainedSlot,
+): retained is { state: "ready"; freeze: CurrentSourceFreeze } {
+  return hubDelegates(detail) && retained.state === "ready" && isRetainedAnswer(retained.freeze);
 }
 
 export function useFreeze(runId: string, fold: number | null, workspaceId?: string): FreezeController {
@@ -123,7 +144,26 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
     setVerify({ state: "idle" });
   }, [runId]);
 
-  const state: ResearchState = refusal
+  /* A hub that delegates the run is not an answer yet: ask the lane it named.
+     A P04 run (hub AVAILABLE) still asks the retained lane only when its
+     custody panel mounts, exactly as before. */
+  const delegates = hubDelegates(detail);
+  useEffect(() => {
+    if (delegates) ensureRetained();
+  }, [delegates, ensureRetained]);
+
+  const laneRetained = readsRetainedLane(detail, retained);
+  const state: ResearchState = readsRetainedLane(detail, retained)
+    ? researchState({
+        kind: "ok",
+        // The frozen selection's parameters are the rows; the integrity check is always one more.
+        rowCount: Object.keys(retained.freeze.frozen_selection.parameters).length + 1,
+      })
+    : delegates && (retained.state === "idle" || retained.state === "loading")
+      ? researchState({ kind: "in-flight", hasAcceptedResponse: false })
+      : delegates && retained.state === "refused"
+        ? refusalState(retained.refusal, false)
+        : refusal
     ? refusalState(refusal, detail !== null)
     : researchState(
         detail === null
@@ -143,5 +183,6 @@ export function useFreeze(runId: string, fold: number | null, workspaceId?: stri
     retained,
     ensureRetained,
     reread: useCallback(() => setGeneration((n) => n + 1), []),
+    laneRetained,
   };
 }

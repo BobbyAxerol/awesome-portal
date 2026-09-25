@@ -14,7 +14,7 @@
  *    slider, which is still a promise that it could move.
  */
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -31,6 +31,8 @@ import { DEFAULT_CURSOR } from "./evidenceCursor";
 import { useFreeze } from "./useFreeze";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
+import { FreezeRoute } from "./FreezeRoute";
+import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 
 /*
  * The CSRF token lives in a `__Host-` cookie, which jsdom will not accept over
@@ -805,5 +807,102 @@ describe("a BLOCKED read is an answer, and the answer is announced", () => {
     expect(live?.getAttribute("role")).toBe("status");
     expect(live?.getAttribute("aria-live")).toBe("polite");
     expect(live?.querySelector("[data-verify-result]")).toBeNull();
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * W3b — Screen 07 on the retained WFO lane (rrun_c860…, real served bodies)
+ * ---------------------------------------------------------------------- */
+
+const W3B_F = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3bRealWfo.fixture.json"), "utf8")) as {
+  freeze: CurrentSourceFreeze;
+  progress: unknown;
+  requested_spec: unknown;
+  hub_freeze: FreezeDetail;
+};
+const W3B_FREEZE_RUN = W3B_F.freeze.run_id;
+
+describe("W3b — Freeze on the retained WFO lane", () => {
+  beforeEach(() => {
+    forgetRunIdentities();
+    stub((url) => {
+      const path = new URL(url, "http://x").pathname;
+      if (path.endsWith("/progress")) return [200, W3B_F.progress];
+      if (path.endsWith("/requested-spec")) return [200, W3B_F.requested_spec];
+      if (path.endsWith("/current-source/freeze")) return [200, W3B_F.freeze];
+      if (path.endsWith("/freeze")) return [200, W3B_F.hub_freeze];
+      return [404, { error: { code: "UNEXPECTED" } }];
+    });
+  });
+
+  async function settled() {
+    const path = `/research/quantbt/runs/${W3B_FREEZE_RUN}/freeze`;
+    globalThis.window.history.replaceState(null, "", path);
+    const view = render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/research/quantbt/runs/:runId/freeze" element={<FreezeRoute />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(view.container.querySelector("[data-freeze-strip='RETAINED']")).toBeTruthy());
+    await waitFor(() => expect(view.container.querySelector("[data-shared-banner]")).toBeTruthy());
+    await waitFor(() => expect(view.container.querySelector("[data-requested-window]")).toBeTruthy());
+    return view;
+  }
+
+  it("draws one frozen θ* row per published parameter (8), under the shared-params (global) banner", async () => {
+    const { container } = await settled();
+    const published = Object.keys(W3B_F.freeze.frozen_selection.parameters);
+    expect(published).toHaveLength(8);
+    const rows = [...container.querySelectorAll("[data-frozen-param]")];
+    expect(rows).toHaveLength(published.length);
+    expect(new Set(rows.map((row) => row.getAttribute("data-frozen-param")))).toEqual(new Set(published));
+    expect(container.querySelector("[data-frozen-table]")?.getAttribute("data-frozen")).toBe("8");
+    expect(container.querySelector("[data-panel='frozen-parameters']")?.getAttribute("data-frozen-scope")).toBe("GLOBAL");
+    expect(container.querySelector("[data-shared-banner]")?.textContent).toMatch(/shared params — global schedule/);
+  });
+
+  it("integrity MATCH for the manifest and retained import digests, over 1,063 retained rows", async () => {
+    const { container } = await settled();
+    const panel = container.querySelector("[data-panel='retained-integrity']");
+    expect(panel?.getAttribute("data-integrity-state")).toBe("MATCH");
+    for (const row of ["manifest", "retained-import"]) {
+      expect(panel?.querySelector(`[data-integrity-row='${row}'] [data-integrity-row-state]`)?.getAttribute("data-integrity-row-state"), row).toBe("MATCH");
+    }
+    expect(panel?.querySelector("[data-expected='manifest']")?.getAttribute("title")).toBe(W3B_F.freeze.integrity.expected_manifest_digest);
+    expect(panel?.querySelector("[data-observed='retained-import']")?.getAttribute("title")).toBe(
+      W3B_F.freeze.integrity.observed_retained_import_digest,
+    );
+    const rows = panel?.querySelector("[data-retained-rows]");
+    expect(rows?.getAttribute("data-retained-rows")).toBe("1063");
+    expect(rows?.textContent).toBe("1,063 retained rows");
+  });
+
+  it("source bytes carry the P05 import-time reason", async () => {
+    const { container } = await settled();
+    const bytes = container.querySelector("[data-absence='source artifact bytes']");
+    expect(bytes?.getAttribute("data-reason")).toBe("P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES");
+    expect(bytes?.textContent).toContain("P05_SOURCE_BYTES_WERE_VERIFIED_AT_IMPORT_BUT_A_GET_NEVER_REOPENS_PRIVATE_ARTIFACT_BYTES");
+  });
+
+  it("what-if names RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET and prints no numeric ΔJ", async () => {
+    const { container } = await settled();
+    const whatIf = container.querySelector("[data-panel='what-if']");
+    expect(whatIf?.getAttribute("data-what-if")).toBe("NOT_PUBLISHED");
+    expect(whatIf?.getAttribute("data-reason")).toBe("RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET");
+    expect(whatIf?.textContent).toContain("RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET");
+    expect(container.textContent).not.toMatch(/ΔJ\s*[=:]?\s*[−+-]?\d/);
+    expect(whatIf?.querySelector("input[type='range']")).toBeNull();
+  });
+
+  it("readiness READY, and no P04-hub reason although the hub answered P16 NOT_APPLICABLE", async () => {
+    const { container } = await settled();
+    const readiness = container.querySelector("[data-freeze-strip] [data-readiness]");
+    expect(readiness?.getAttribute("data-readiness")).toBe("READY");
+    expect(readiness?.textContent).toBe("readiness ready");
+    expect(W3B_F.hub_freeze.availability.reason_code).toBe("P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE");
+    expect(container.textContent).not.toMatch(HUB_LANE_REASON);
+    expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
   });
 });

@@ -150,6 +150,7 @@ const WFO_SCREENS = [
   ["S05", "split", "[data-screen='split-detail']"],
   ["S06", "search", "[data-screen='search-detail']"],
   ["S07", "freeze", "[data-screen='freeze-detail']"],
+  ["S08", "execute", "[data-screen='execute-replay']"],
 ] as const;
 
 for (const [name, width, height] of VIEWPORTS) {
@@ -184,6 +185,49 @@ for (const [name, width, height] of VIEWPORTS) {
         const search = await read("search");
         await expect(page.locator("[data-trial] [data-trial-is]")).toHaveCount(search.ledger.trials.length);
         await expect(page.locator("[data-role-card='selected']")).toContainText(minus(search.selection.objective));
+      }
+      /* W3b: a WFO run reads the retained lane; no P04-hub reason reaches the DOM (text, titles or data attributes). */
+      const html = await page.locator(selector).innerHTML();
+      expect(html, `${screenId} shows a P04-lane reason on a WFO run`).not.toMatch(
+        /P13_SOURCE_EVIDENCE_NOT_PUBLISHED|P14_SOURCE_SPLIT_RECEIPT_NOT_PUBLISHED|P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED|P16_DELTA_WFO_PROFILE_USES_RETAINED_CURRENT_SOURCE_FREEZE|P04_SOURCE_DID_NOT_PUBLISH_[A-Z_]+/,
+      );
+      expect(await page.locator(selector).innerText(), `${screenId} stale "not built" copy`).not.toMatch(/not built yet \(P1[79]\)|\(P19\) not built/);
+      if (screenId === "S04") {
+        const evidence = await read("evidence");
+        await expect(page.locator("[data-metric-value='FINAL_EQUITY']")).toHaveAttribute("data-exact", evidence.passport.final_equity);
+        await expect(page.locator("[data-metric-value='INITIAL_EQUITY']")).toHaveAttribute("data-exact", evidence.passport.initial_equity);
+        await expect(page.locator("[data-not-ready]")).toHaveCount(0);
+        await expect(page.locator("[data-series-panel='MONTHLY_RETURNS'] [data-month]")).toHaveCount(
+          ((await (await page.request.get(`/api/v1/quantbt/runs/${WFO_RUN}/current-source/evidence/series?kind=MONTHLY_RETURNS`)).json()) as any).values.length,
+        );
+        await expect(page.locator("[data-series-panel='RETURN_DISTRIBUTION']")).toHaveAttribute("data-series-state", "ready");
+      }
+      if (screenId === "S05") {
+        const requested = (await (await page.request.get(`/api/v1/research/runs/${WFO_RUN}/requested-spec`)).json()) as any;
+        const wf = requested.requested_spec.walk_forward;
+        await expect(page.locator("[data-protocol]").first()).toContainText(`advanced walk-forward · ${wf.frequency} · ${wf.window_mode}`);
+        await expect(page.locator("[data-readiness]").first()).toContainText("READY");
+        await expect(page.locator("[data-selection]").first()).toContainText("GLOBAL");
+      }
+      if (screenId === "S06") {
+        const search = await read("search");
+        await expect(page.locator("[data-run-mode]").first()).toContainText(search.search_contract.optimization_mode);
+        await expect(page.locator("[data-run-schedule]").first()).toContainText(search.search_contract.optimization_schedule);
+        await expect(page.locator("[data-readiness]").first()).toContainText("READY");
+      }
+      if (screenId === "S07") {
+        const freeze = await read("freeze");
+        await expect(page.locator("[data-frozen-param]")).toHaveCount(Object.keys(freeze.frozen_selection.parameters).length);
+        await expect(page.locator("[data-integrity-state]").first()).toHaveAttribute("data-integrity-state", freeze.integrity.state);
+      }
+      if (screenId === "S08") {
+        const replay = await read("replay");
+        await expect(page.locator("[data-route-id]").first()).toContainText("signal_notional");
+        await expect(page.locator("[data-sample-ledger='retained']")).toBeVisible();
+        for (const key of ["orders", "fills", "candles"] as const) {
+          const reason = replay.route_capabilities[key].reason_code as string;
+          expect(html, `S08 ${key} carries the retained reason`).toContain(reason);
+        }
       }
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

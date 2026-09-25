@@ -42,6 +42,7 @@ import type { LaneNotApplicable } from "./splitClient";
 import { forgetSearchReads, searchState, useSearch } from "./useSearch";
 import { PortalApiError } from "../lib/api";
 import { researchState } from "./state";
+import { HUB_LANE_REASON, forgetRunIdentities } from "./retainedLane";
 
 afterEach(cleanup);
 
@@ -1187,5 +1188,87 @@ describe("W3 — the retained ledger labels what each number measures", () => {
       chip: container.querySelector("[data-selected-trial]")?.getAttribute("data-selected-trial"),
     }).toEqual(before);
     expect(search).toEqual(W3_SEARCH);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * W3b — Screen 06 on the retained WFO lane (rrun_c860…, real served bodies)
+ * ---------------------------------------------------------------------- */
+
+const W3B_S = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3bRealWfo.fixture.json"), "utf8")) as {
+  progress: unknown;
+  requested_spec: unknown;
+  hub_search: SearchDetail;
+};
+const W3_S = JSON.parse(readFileSync(join(process.cwd(), "src", "research", "w3RealWfo.fixture.json"), "utf8")) as {
+  search: CurrentSourceSearch;
+  evidence: unknown;
+};
+const W3B_SEARCH_RUN = W3_S.search.run_id;
+
+describe("W3b — Search on the retained WFO lane", () => {
+  beforeEach(() => {
+    forgetRunIdentities();
+    forgetObservedFolds();
+    stub((url) => {
+      const path = new URL(url, "http://x").pathname;
+      if (path.endsWith("/progress")) return [200, W3B_S.progress];
+      if (path.endsWith("/requested-spec")) return [200, W3B_S.requested_spec];
+      if (path.endsWith("/current-source/search")) return [200, W3_S.search];
+      if (path.endsWith("/current-source/evidence")) return [200, W3_S.evidence];
+      if (path.endsWith("/search")) return [200, W3B_S.hub_search];
+      return [404, { error: { code: "UNEXPECTED" } }];
+    });
+  });
+
+  async function settled() {
+    const view = mountRoute("", `/research/quantbt/runs/${W3B_SEARCH_RUN}/search`);
+    await waitFor(() => expect(view.container.querySelector("[data-readiness='READY']")).toBeTruthy());
+    await waitFor(() => expect(view.container.querySelector("[data-coverage-fact='sampler seed']")?.textContent).toContain("42"));
+    await waitFor(() => expect(view.container.textContent).not.toMatch(/reading…/));
+    return view;
+  }
+
+  it("shows the executed mode and schedule from the retained search contract", async () => {
+    const { container } = await settled();
+    expect(container.querySelector("[data-run-mode]")?.textContent).toBe("mode_1_decay");
+    expect(container.querySelector("[data-run-schedule]")?.textContent).toBe("global");
+    expect(container.querySelector("[data-run-mode-source]")?.getAttribute("data-run-mode-source")).toBe("retained");
+  });
+
+  it("readiness READY (retained seal), source profile, selection AVAILABLE and strict outer OOS 'no'", async () => {
+    const { container } = await settled();
+    const readiness = container.querySelector("[data-readiness]");
+    expect(readiness?.getAttribute("data-readiness")).toBe("READY");
+    expect(readiness?.getAttribute("data-readiness-basis")).toBe("RETAINED_SEAL");
+    expect(readiness?.textContent).toBe("READY");
+    const profile = container.querySelector("[data-source-profile]");
+    expect(profile?.textContent).toContain("rs02.delta-signal-notional-wfo.v1");
+    expect(container.querySelector("[data-selection-state]")?.getAttribute("data-selection-state")).toBe("AVAILABLE");
+    const strict = container.querySelector("[data-strict-outer-oos]");
+    expect(strict?.getAttribute("data-strict-outer-oos")).toBe("false");
+    expect(strict?.textContent).toBe("no · OOS used for selection");
+  });
+
+  it("A1 states the requested sampler seed 42 and the 3 trials", async () => {
+    const { container } = await settled();
+    expect(container.querySelector("[data-coverage-fact='sampler seed']")?.textContent).toMatch(/seed\s*42 · requested spec$/);
+    expect(container.querySelector("[data-coverage-fact='trials']")?.textContent).toMatch(/trials\s*3 requested · 3 retained/);
+  });
+
+  it("the importance absence carries QuantBT's own code", async () => {
+    const { container } = await settled();
+    const panel = container.querySelector("[data-panel='importance']");
+    expect(panel?.getAttribute("data-panel-state")).toBe("NOT_PUBLISHED");
+    expect(panel?.querySelector("[data-gap-reason='importance']")?.textContent).toBe(
+      "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PARAMETER_IMPORTANCE",
+    );
+  });
+
+  it("prints no P04-hub reason anywhere, though the hub search answered P15 NOT_PUBLISHED", async () => {
+    const { container } = await settled();
+    expect(W3B_S.hub_search.availability.reason_code).toBe("P15_CURRENT_P04_SOURCE_RECEIPT_NOT_PUBLISHED");
+    expect(container.textContent).not.toMatch(HUB_LANE_REASON);
+    expect(container.innerHTML).not.toMatch(HUB_LANE_REASON);
   });
 });

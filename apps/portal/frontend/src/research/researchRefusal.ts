@@ -355,6 +355,18 @@ export const REASON_CODE_SENTENCES: Record<string, string> = {
     "This run's adapter published no benchmark series, so no beta against a benchmark can be stated.",
   RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION:
     "This run is bound to the P04 fixed qualification, which the retained lane never holds. Nothing is pending.",
+  /* W3b: the retained WFO lane's own absences (research.current-source-*.v1). */
+  QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_BENCHMARK_SERIES:
+    "QuantBT's advanced walk-forward published no benchmark series, so nothing is measured against a benchmark.",
+  QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_ROUTE_LEDGER:
+    "QuantBT's advanced walk-forward published no route ledger for this run.",
+  QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS:
+    "QuantBT's advanced walk-forward published no audited fills for this run.",
+  UI_RETAINED_LANE_HAS_NO_FIELD:
+    "The retained walk-forward lane has no field for this figure, and this screen does not compute one.",
+  UI_RETAINED_LANE_HAS_NO_SERIES:
+    "The retained walk-forward lane publishes no such series (its series are equity, returns, positions, monthly returns, the 20-observation rolling return and the return distribution).",
+  P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT: "This walk-forward profile declares no holdout segment.",
 };
 
 /** The sentence for a reason code, or null when this module has none. */

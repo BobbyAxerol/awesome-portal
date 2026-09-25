@@ -2,23 +2,37 @@
   "schema_version": "research.split-detail.v1",
   "read_authority": "PORTAL_PERSISTED_RESEARCH",
   "run_id": "R-WFO-118",
-  "revision": "p14r1_55aa10",
-  "etag": "\"p14r1_55aa10\"",
+  "revision": "p14r1_048ac28cf60a8da0f46970ff0a55e7aa51fd4ece1ab3407d16e7a999f901f71e",
+  "etag": "\"p14r1_048ac28cf60a8da0f46970ff0a55e7aa51fd4ece1ab3407d16e7a999f901f71e\"",
   "availability": {
     "state": "AVAILABLE",
     "reason_code": null
   },
   "readiness": "COMPLETE",
   "as_of_utc_ms": 1781827200000,
+  "as_of_basis": "P14_PROJECTION_RECEIVED_AT",
+  "dataset": {
+    "state": "AVAILABLE",
+    "dataset_id": "crypto-binance-1m",
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "bar_interval_ms": 3600000,
+    "provenance": "P08_DATASET_BINDING",
+    "reason_code": null,
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
   "provenance": {
     "source_adapter_id": "p04.delta-rsi.v1",
     "engine_version": "1.1.1",
     "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
-    "source_transform_digest": "sha256:9f2c18d4aa71",
-    "requested_spec_digest": "sha256:88ae0231bc44",
-    "effective_spec_digest": "sha256:88ae0231bc44",
-    "dataset_binding_digest": "sha256:5b31c7d90e12",
-    "manifest_digest": "sha256:c25a1d77b0e4"
+    "source_transform_digest": "dad26d8aa4ea0deade8ede4a75d251a7791fab0e68ef4ca965634e2532a51c35",
+    "requested_spec_digest": "b4c03a6b68e462c82effb4ded7589240159528923d70dc190d4e273fd02ac5ca",
+    "effective_spec_digest": "b4c03a6b68e462c82effb4ded7589240159528923d70dc190d4e273fd02ac5ca",
+    "dataset_binding_digest": "5e50d7c2c795adcd9d5d65865e80a106eba6ed099b7d53191938852d2ccfa3c9",
+    "manifest_digest": "1baf77065ab0bc28862106b2bd285a18a006f1e29f753ae309e575b594f4ac24"
   },
   "timeline": {
     "start_utc_ms": 1704067200000,
@@ -28,7 +42,7 @@
     "kind": "THREE_WINDOW_CURRENT",
     "selection": {
       "state": "FIXED_PROFILE_NO_SEARCH",
-      "parameter_bundle_digest": "sha256:bundle0142ab",
+      "parameter_bundle_digest": "62de20c934cea9a0ef4ad4f8e8aac5df75b0f6b81abbb7e6beb270c992dc6ac1",
       "strict_outer_oos": {
         "state": "NOT_ASSERTED",
         "reason_code": "P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR",
@@ -155,6 +169,14 @@
       "availability": {
         "state": "AVAILABLE",
         "reason_code": null
+      },
+      "bars_absence": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE"
+        }
       }
     }
   },
@@ -168,6 +190,59 @@
       }
     }
   },
+  "absence_authority": "FIELD_LOCAL",
+  "absence_index": [
+    {
+      "key": "strict_outer_oos",
+      "pointer": "/protocol/selection/strict_outer_oos",
+      "state": "NOT_ASSERTED"
+    },
+    {
+      "key": "fold_plan",
+      "pointer": "/protocol/fold_plan",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "inner_folds",
+      "pointer": "/protocol/inner_folds",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "purge",
+      "pointer": "/protocol/purge",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "embargo",
+      "pointer": "/protocol/embargo",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "theta_per_fold",
+      "pointer": "/protocol/theta_per_fold",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "gap_scan",
+      "pointer": "/protocol/gap_scan",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "holdout_seal",
+      "pointer": "/windows/holdout/source_seal",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "holdout_unlock",
+      "pointer": "/windows/holdout/unlock",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "holdout_bars",
+      "pointer": "/windows/holdout/bars_absence",
+      "state": "NOT_PUBLISHED"
+    }
+  ],
   "source_absences": {
     "physical_holdout_io": {
       "state": "NOT_PUBLISHED",

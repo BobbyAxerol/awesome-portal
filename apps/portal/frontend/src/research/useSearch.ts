@@ -30,6 +30,8 @@ import {
 } from "./searchClient";
 import { researchState, type ResearchState } from "./state";
 import { refusalState } from "./researchRefusal";
+import { alphaImportApi, type DeclaredParameter } from "./alphaImportClient";
+import { isHubLaneReason, isRetainedAnswer, useRunIdentity, type RunIdentitySlot } from "./retainedLane";
 
 export type LedgerSlot =
   | { state: "idle" }
@@ -69,9 +71,29 @@ export function forgetSearchReads(): void {
 /** Typed not-applicable answers, per run: final, so a revisit does not ask again. */
 const laneAnswers = new Map<string, LaneNotApplicable>();
 
-export function searchState(detail: SearchDetail | null, refusal: SearchRefusal | null): ResearchState {
+/** The retained lane answered this run AVAILABLE, with its search contract (W3b). */
+export function retainedSearchOf(ledger: LedgerSlot | undefined): CurrentSourceSearch | null {
+  if (ledger?.state !== "ready" || !isRetainedAnswer(ledger.search)) return null;
+  return (ledger.search as Partial<CurrentSourceSearch>).search_contract ? ledger.search : null;
+}
+
+/**
+ * The hub answered with one of its own lane codes (W3b): the P15 read covers
+ * P04 fixed-profile runs only, so its NOT_PUBLISHED describes the hub, not
+ * this run. The retained lane is asked before anything is said about the run.
+ */
+function hubLaneAnswer(detail: SearchDetail): boolean {
+  return isHubLaneReason(detail.availability.reason_code) || isHubLaneReason(detail.source_profile.reason_code);
+}
+
+export function searchState(detail: SearchDetail | null, refusal: SearchRefusal | null, ledger?: LedgerSlot): ResearchState {
   if (refusal) return refusalState(refusal, detail !== null);
   if (detail === null) return researchState({ kind: "in-flight", hasAcceptedResponse: false });
+  /* W3b: a sealed retained WFO run is answered by its own lane, not the hub's NOT_READY. */
+  if (retainedSearchOf(ledger)) return researchState({ kind: "ok", rowCount: 1 });
+  if (hubLaneAnswer(detail) && (ledger?.state === "idle" || ledger?.state === "loading")) {
+    return researchState({ kind: "in-flight", hasAcceptedResponse: false });
+  }
   if (detail.source_profile.state === "PENDING_SOURCE_CALLBACK" || detail.readiness === "NOT_READY") {
     return {
       state: "partial",
@@ -156,12 +178,90 @@ export function useSearch(runId: string, fold: number | null, workspaceId?: stri
 
   const slot: LedgerSlot = ledger.runId !== runId ? { state: "idle" } : ledger.slot;
 
+  /* W3b: when the hub answered with its own lane code, the retained lane is
+     asked at once — the ledger panel is not on screen until it answers. */
+  const askLaneFirst = detail !== null && hubLaneAnswer(detail);
+  useEffect(() => {
+    if (askLaneFirst) ensureLedger();
+  }, [askLaneFirst, ensureLedger]);
+
   return {
     detail,
     refusal: currentRefusal,
-    state: searchState(detail, currentRefusal),
+    state: searchState(detail, currentRefusal, slot),
     ledger: slot,
     ensureLedger,
     reread: useCallback(() => setGeneration((n) => n + 1), []),
   };
+}
+
+/* ------------------------------------------------ retained run facts (W3b) */
+
+/** The declared parameter space of the alpha version the run was admitted with. */
+export type DeclaredSpaceSlot =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "ready"; alphaVersionId: string; space: Readonly<Record<string, DeclaredParameter>> }
+  /** The registry refused, or does not list the version: the ranges stay absent. */
+  | { state: "absent"; alphaVersionId: string | null };
+
+export interface RetainedRunFacts {
+  identity: RunIdentitySlot;
+  declared: DeclaredSpaceSlot;
+}
+
+const declaredSpaces = new Map<string, DeclaredSpaceSlot>();
+
+/** Test seam. */
+export function forgetDeclaredSpaces(): void {
+  declaredSpaces.clear();
+}
+
+/**
+ * A retained run's identity (P11 progress + admitted requested spec) and the
+ * declared parameter space of its bound alpha version — the alpha registry,
+ * the read New Run adopts its space from. Asked only once the retained lane
+ * answered AVAILABLE; a P04 run never asks.
+ */
+export function useRetainedRunFacts(runId: string, workspaceId: string | undefined, ledger: LedgerSlot): RetainedRunFacts {
+  const enabled = retainedSearchOf(ledger) !== null;
+  const identity = useRunIdentity(runId, workspaceId, enabled);
+  const requested = identity.state === "ready" ? identity.identity.requested : null;
+  const alphaId = requested?.alpha_id ?? null;
+  const versionId = requested?.alpha_version_id ?? null;
+  const key = `${workspaceId ?? ""}|${alphaId ?? ""}|${versionId ?? ""}`;
+  const [held, setHeld] = useState<{ key: string; slot: DeclaredSpaceSlot } | null>(null);
+
+  useEffect(() => {
+    if (alphaId === null || versionId === null) return;
+    const known = declaredSpaces.get(key);
+    if (known) {
+      setHeld({ key, slot: known });
+      return;
+    }
+    let live = true;
+    alphaImportApi
+      .registry(workspaceId, alphaId)
+      .then((response) => {
+        const entry = response.entries.find((candidate) => candidate.alpha_version_id === versionId);
+        const slot: DeclaredSpaceSlot = entry
+          ? { state: "ready", alphaVersionId: versionId, space: entry.declaration.parameter_space }
+          : { state: "absent", alphaVersionId: versionId };
+        declaredSpaces.set(key, slot);
+        if (live) setHeld({ key, slot });
+      })
+      .catch(() => {
+        if (live) setHeld({ key, slot: { state: "absent", alphaVersionId: versionId } });
+      });
+    return () => {
+      live = false;
+    };
+  }, [alphaId, key, versionId, workspaceId]);
+
+  let declared: DeclaredSpaceSlot;
+  if (!enabled) declared = { state: "idle" };
+  else if (identity.state !== "ready") declared = { state: "loading" };
+  else if (alphaId === null || versionId === null) declared = { state: "absent", alphaVersionId: versionId };
+  else declared = held?.key === key ? held.slot : { state: "loading" };
+  return { identity, declared };
 }
