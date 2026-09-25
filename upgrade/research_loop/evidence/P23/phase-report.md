@@ -58,3 +58,15 @@ and teardown receipts are taken. P22 remains pending actual Delta→R1 and S11.
    artifact digests/ref graph and ensure Research failure leaves Execution
    unchanged. Then Claude runs browser-real on the same build and records
    visual/DOM/network receipt. Close P23 only with every required status PASS.
+
+## Backend repair addendum
+
+The initial sampler could have accepted a partial stack and only measured
+response headers. Those false-PASS paths are now closed. The strict read-only
+check of the **existing** shared preview correctly exits 1 with
+`UNBOUNDED_CGROUP:quant-worker-py`; its container limits were not altered.
+The resource/read harness passes 6/6 focused tests including missing service,
+one-shot overlap, normalized-path escape and >2 MiB body refusal. The full
+P23-T01…T15 matrix above is unchanged: no 20-user/W06, fault/restore, new
+engine or browser receipt was run in a capped isolated cell, so the phase
+remains NOT_QUALIFIED.

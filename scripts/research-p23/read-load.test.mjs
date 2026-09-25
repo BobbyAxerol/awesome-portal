@@ -17,6 +17,8 @@ test('20 distinct sessions, loopback and GET-only named Research paths are manda
   assert.throws(() => validateManifest({ ...input, users: input.users.map(user => ({ ...user, cookie: 'same cookie' })) }), /SESSION_REUSE/);
   assert.throws(() => validateManifest({ ...input, base_url: 'https://portal.primusspark.com' }), /ISOLATED_P23/);
   assert.throws(() => validateManifest({ ...input, base_url: 'http://127.0.0.1:8095' }), /ISOLATED_P23/);
+  assert.throws(() => validateManifest({ ...input, paths: ['/api/v1/research/../execution/commands'] }), /NAMED_READ/);
+  assert.throws(() => validateManifest({ ...input, paths: ['/api/v1/research/%2e%2e/execution/commands'] }), /NAMED_READ/);
   assert.throws(() => validateManifest({ ...input, paths: ['/api/v1/research/release-candidates/rc_x/publish'] }), /NAMED_READ/);
   assert.throws(() => validateManifest({ ...input, paths: ['/api/v1/execution/commands'] }), /NAMED_READ/);
 });
@@ -39,23 +41,28 @@ test('read load records only status and latency, refusing auth failures', async 
   const calls = [];
   const result = await runReadLoad(input, async (url, init) => {
     calls.push({ url: String(url), method: init.method });
-    if (String(url).endsWith('/api/auth/context')) return {
-      status: 200, json: async () => ({ state: 'AUTHENTICATED', principal: {
-        principalId: `user_${init.headers.cookie.split('-').at(-1)}`,
-      } }),
-    };
-    return { status: 200, body: { cancel: async () => undefined } };
+    if (String(url).endsWith('/api/auth/context')) return new Response(JSON.stringify({
+      state: 'AUTHENTICATED', principal: { principalId: `user_${init.headers.cookie.split('-').at(-1)}` },
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } });
   });
   assert.equal(calls.length, 40);
   assert.ok(calls.every(call => call.method === 'GET'));
   assert.equal(result.passed, true);
   assert.equal(result.by_path[input.paths[0]].requests, 20);
   assert.equal(JSON.stringify(result).includes('private-'), false);
-  const failed = await runReadLoad(input, async (url, init) => String(url).endsWith('/api/auth/context')
-    ? { status: 200, json: async () => ({ state: 'AUTHENTICATED', principal: { principalId: `user_${init.headers.cookie.split('-').at(-1)}` } }) }
-    : { status: 401, body: null });
+  const failed = await runReadLoad(input, async (url, init) => new Response(String(url).endsWith('/api/auth/context')
+    ? JSON.stringify({ state: 'AUTHENTICATED', principal: { principalId: `user_${init.headers.cookie.split('-').at(-1)}` } })
+    : '{}', { status: String(url).endsWith('/api/auth/context') ? 200 : 401, headers: { 'content-type': 'application/json' } }));
   assert.equal(failed.passed, false);
   await assert.rejects(runReadLoad(input, async () => ({ status: 200, json: async () => ({
     state: 'AUTHENTICATED', principal: { principalId: 'bobby' },
   }) })), /IDENTITY_MISMATCH/);
+  assert.equal(result.by_path[input.paths[0]].max_response_bytes, 2);
+  await assert.rejects(runReadLoad(input, async (url, init) => new Response(
+    String(url).endsWith('/api/auth/context')
+      ? JSON.stringify({ state: 'AUTHENTICATED', principal: { principalId: `user_${init.headers.cookie.split('-').at(-1)}` } })
+      : 'x'.repeat(2 * 1024 * 1024 + 1),
+    { headers: { 'content-type': 'application/json' } },
+  )), /NAMED_READ_EXCEEDED_2MIB/);
 });

@@ -14,12 +14,16 @@ export function validateManifest(input) {
   }
   if (new Set(input.users.map(user => user.cookie)).size !== 20) throw new Error('SESSION_REUSE_IS_NOT_20_USERS');
   const url = new URL(input.base_url);
-  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.port !== '8096' || url.pathname !== '/') {
+  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.port !== '8096'
+    || url.pathname !== '/' || url.username || url.password || url.search || url.hash) {
     throw new Error('ISOLATED_P23_URL_REQUIRED');
   }
-  if (!Array.isArray(input.paths) || input.paths.length < 1 || input.paths.length > 12 || input.paths.some(path =>
-    typeof path !== 'string' || !/^\/api\/v1\/research\/[a-z0-9/?=&_%.-]+$/i.test(path)
-    || /(?:publish|create|verify|evaluate|export|cancel|activate)/i.test(path))) {
+  if (!Array.isArray(input.paths) || input.paths.length < 1 || input.paths.length > 12 || input.paths.some(path => {
+    if (typeof path !== 'string' || !/^\/api\/v1\/research\/[a-z0-9/?=&_%.-]+$/i.test(path)) return true;
+    const resolved = new URL(path, url);
+    return !resolved.pathname.startsWith('/api/v1/research/') || resolved.hash !== ''
+      || /(?:publish|create|verify|evaluate|export|cancel|activate)/i.test(resolved.pathname);
+  })) {
     throw new Error('NAMED_READ_PATHS_ONLY');
   }
   return input;
@@ -34,6 +38,22 @@ export function readPrivateManifest(path) {
   const stat = lstatSync(path);
   if (!stat.isFile() || (stat.mode & 0o077) !== 0) throw new Error('PRIVATE_MANIFEST_0600_REQUIRED');
   return validateManifest(JSON.parse(readFileSync(path, 'utf8')));
+}
+
+const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+async function consumeBounded(response) {
+  if (!response.body || !response.headers?.get('content-type')?.toLowerCase().includes('application/json')) {
+    throw new Error('NAMED_READ_JSON_RESPONSE_REQUIRED');
+  }
+  let bytes = 0;
+  for await (const chunk of response.body) {
+    bytes += chunk.byteLength;
+    if (bytes > MAX_RESPONSE_BYTES) {
+      await response.body.cancel().catch(() => undefined);
+      throw new Error('NAMED_READ_EXCEEDED_2MIB');
+    }
+  }
+  return bytes;
 }
 
 export async function runReadLoad(input, fetchFn = fetch) {
@@ -57,15 +77,16 @@ export async function runReadLoad(input, fetchFn = fetch) {
         method: 'GET', redirect: 'manual', headers: { cookie: user.cookie, accept: 'application/json' },
         signal: AbortSignal.timeout(10_000),
       });
-      // The response is bounded; do not collect business rows or cookies in evidence.
-      await response.body?.cancel();
-      samples.push({ path, status: response.status, duration_ms: Math.round(performance.now() - start) });
+      // Measure the complete bounded JSON response, but never retain or print business rows.
+      const bytes = await consumeBounded(response);
+      samples.push({ path, status: response.status, bytes, duration_ms: Math.round(performance.now() - start) });
     }
   }));
   const byPath = Object.fromEntries(manifest.paths.map(path => {
     const data = samples.filter(sample => sample.path === path);
     const durations = data.map(sample => sample.duration_ms).sort((a, b) => a - b);
     return [path, { requests: data.length, p50_ms: percentile(durations, .5), p95_ms: percentile(durations, .95),
+      max_response_bytes: Math.max(...data.map(sample => sample.bytes)),
       statuses: Object.fromEntries([...new Set(data.map(sample => sample.status))].map(status =>
         [status, data.filter(sample => sample.status === status).length])) }];
   }));

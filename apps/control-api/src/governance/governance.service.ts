@@ -335,6 +335,9 @@ export class GovernanceService {
   }
 
   async createApproval(user: PortalUser, input: CreateApprovalInput, requestId: string) {
+    if (!(await this.repository.isWorkspaceMember(input.workspaceId, user.userId))) {
+      throw new GovernanceError("WORKSPACE_ACCESS_DENIED", "Access denied.", 403);
+    }
     const payloadHash = digest({
       gate: "R1",
       alpha_id: input.alphaId,

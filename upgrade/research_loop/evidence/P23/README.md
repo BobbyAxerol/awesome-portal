@@ -46,3 +46,17 @@ V11-P23-DR/BR/GX have actual qualified evidence.
 Rollback: the profile is opt-in. Stop only the isolated P23 project; retain
 its evidence and any immutable source refs. No Research/Execution production
 flag, approval, volume, user or release was touched in this slice.
+
+## Qualification-tool correction — 2026-09-25
+
+The strict cgroup receipt now rejects a missing mandatory Research service,
+counts a running 350 MB migrate/bootstrap one-shot (and rejects both running
+together), and can sample a bounded time series with a peak rather than
+presenting one idle instant as workload evidence. Example:
+`node scripts/research-p23/resource-snapshot.mjs portal-research-p23-qual --require-limits --samples=60 --interval-ms=5000`.
+The 20-principal read sampler measures **complete** JSON responses up to
+2 MiB, not time-to-headers followed by cancel; it refuses path-normalization
+escape, non-JSON and oversized responses without printing rows or cookies.
+Focused tests cover each refusal. The existing shared preview is deliberately
+rejected by the strict gate (`UNBOUNDED_CGROUP:quant-worker-py`), not accepted
+as a 5 GB result. No isolated load, restore or upgrade PASS is claimed.

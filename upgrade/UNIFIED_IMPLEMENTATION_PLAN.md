@@ -3636,6 +3636,11 @@ Không chép trạng thái sống vào Guide hoặc tạo tracker riêng. Detail
 | [P23](#rl-p23) | P11–P22 | mọi màn | 12 | **BACKEND_RESOURCE_HARNESS_READY · FULL_QUALIFICATION_PENDING** — Codex / [P23 packet](./research_loop/evidence/P23/README.md): opt-in isolated 5 GB cgroup profile, pagecache-inclusive sampler and 20-distinct-principal GET-only load runner, focused security/compatibility tests. Shared preview idle has no hard cap and is **not** 5 GB/DR proof. P22 real preview, W01/W02/W06/W09/W10, T01–T15 and Claude browser receipt remain open; no deployment or product acceptance claimed. |
 | [P24](#rl-p24) | P23 | mọi màn | 12 | PLANNED / unassigned / — |
 
+**P22/P23 backend gap audit (2026-09-25):** P22 closes a revoke-between-intent-and-R1
+authorization race and retains one retryable intent after reversible R1 errors;
+P23's strict receipt now refuses missing services and measures complete reads/peak
+memory. [P22 packet](./research_loop/evidence/P22/README.md) · [P23 packet](./research_loop/evidence/P23/README.md). Neither phase is marked product-qualified without its real preview/browser and load/DR receipts.
+
 **Status vocabulary:** `PLANNED → IN_PROGRESS → TECHNICALLY_COMPLETE → DEV_REVIEW_READY`
 (khi có UI) `→ AWAITING_BOBBY_REVIEW → OWNER_ACCEPTED`; `BLOCKED` ghi exact failed/missing gate.
 Bobby quyết scope tiếp; một owner approval đã có không xin lại dưới tên khác.
@@ -5713,17 +5718,25 @@ refine §8) ·
 - **To-do BE:** Publication intent/receipt as Research saga; exact202-seeded run/alpha/claim/frozen wrapper; strict request, scoped actor, idempotency/CAS/unknown-outcome reconcile; no tokens in outbox; actual SLA/expiry/mirror reads.
 - **To-do FE/consumer:** Full11 publish confirm/progress/delivery-unknown/reauth/conflict/retry/receipt links; R1/R2 view navigation existing; conditions/raw status preserved, no inline approval or automatic Paper.
 - **Tests BE:** Real Delta final audit→RunSync→R1 in isolated environment; duplicate/concurrent timeout before/after downstream commit; wrong scope/hash/claims; existing open approval evidence conflict; expired auth no impersonation; protected regressions.
+
 - **Tests FE/browser:** Remaining S11 handoff tests + composer regression; seal≠delivered≠approved; denied/changes/expired/conditional status copy from source; retry no duplicate action; no production mutation network path.
 - **Exit gate:** End-to-end publication through unchanged current code, truthful actual pin scope and authorized recovery; no auth/hash/identity/consumer debt.
 - **Rollback/handoff:** Stop new publish intake, retain receipts and authorized reconciliation, never revoke approvals as rollback. Checkpoint11: P21/P22 + actual API receipt.
 
 **Backend delivery checkpoint (2026-09-25):** The private same-origin P22 GET and CSRF-protected POST are generated as `researchReleaseCandidatePublicationGetV1` / `researchReleaseCandidatePublishV1`. The server validates the current P21 local pack and final-audit mapping against RunSync-backed Governance evidence, persists one actor-bound immutable request before the unchanged R1 create call, verifies exact artifact/evidence-set pins before writing a receipt, and exposes an authorized read-only R1 mirror with raw status/SLA/expiry/conditions. `SEALED_LOCAL`, `PENDING`/`UNKNOWN`, `DELIVERED`, and `APPROVED` remain distinct; no R1/R2 decision, Execution mutation or alternative source authority was introduced. [P22 evidence](./research_loop/evidence/P22/README.md) records focused contract/controller/service, disposable PostgreSQL migration, Governance/RunSync regression, ledger and build gates. **Full P22 exit remains pending** an actual isolated Delta final-audit→RunSync→R1 preview receipt and Claude's S11 browser/HiFi receipt; backend tests are not relabeled as product evidence. Roll back by stopping new intake while retaining requests, receipts and approvals; see [runbook](./research_loop/evidence/P22/rollback.md).
 
+**Backend repair:** R1 creation now rechecks workspace membership before
+replay and locks that row inside its SERIALIZABLE write transaction. Reversible
+R1 denial/serialization/rate-limit outcomes retain the actor-bound UNKNOWN
+intent. Focused and disposable-PG regressions pass; the current shared preview
+has zero sealed RC packs and lacks migration 0063, so real P22 exit is unchanged.
+
 <a id="rl-p23"></a>
 ### P23 — Resource, security, recovery và upgrade qualification
 
 **Đọc chi tiết:** [Guide P23](./research_loop/RESEARCH_LOOP_GUIDE_V1_1_24_PHASES_vi.md#phase-p23); [toàn bộ S00–S14](./research_loop/release-v1.1/docs/SPEC_INDEX.md).
 **Entry:** dependencies/assignment tại [board](#rl-board) đã đạt; [G0–G7](#rl-test-gates) áp dụng.
+
 **Test IDs bắt buộc:** `P23-T01…T15`, `V11-P23-DR/BR/GX` và source tests applicable theo §13.3.
 
 - **Goal:** Chứng minh toàn Research chịu mixed load/failure/upgrade trong budget mà Execution không bị ảnh hưởng.
@@ -5735,6 +5748,13 @@ refine §8) ·
 - **Rollback/handoff:** Research-only fault drills; drain/recover/release switch tested; cleanup isolated stacks. Handoff P24 complete qualification pack, not production activation.
 **Backend P23 checkpoint (2026-09-25):** [Packet](./research_loop/evidence/P23/README.md) and [test matrix](./research_loop/evidence/P23/phase-report.md) record the opt-in 4.6 GB aggregate cgroup profile, pagecache-inclusive measurement, 20 distinct-principal GET-only load instrument and focused regressions. An idle shared-preview reading of `441,843,712` bytes is **not** an acceptance result: its containers have no hard cap, and no W06/heavy/fault/restore/new-engine run was taken. P22 real Delta→R1 and browser receipts are still entry dependencies. Thus backend instrumentation is delivered, but P23 is not closed; no resource/DR/5 GB/product-active claim is made.
 
+
+**Backend repair:** The strict 5 GB instrument rejects absent mandatory
+services and overlapping one-shots; bounded time-series samples capture the
+peak. The 20-principal sampler times complete JSON bodies and refuses path
+normalization escapes/non-JSON/oversized responses. Harness 6/6 passes; the
+uncapped shared preview fails strict mode as expected. W06/fault/restore/
+upgrade and browser evidence are still required for P23 qualification.
 
 <a id="rl-p24"></a>
 ### P24 — Full product acceptance, handoff và release rehearsal

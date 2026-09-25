@@ -2,8 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
-import { computeEvidenceManifestHash } from "../src/governance/governance.service";
-import { EvidenceRecord } from "../src/governance/governance.repository";
+import { computeEvidenceManifestHash, GovernanceService } from "../src/governance/governance.service";
+import { EvidenceRecord, GovernanceRepository } from "../src/governance/governance.repository";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
@@ -118,6 +118,35 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
         governance_approval_requests, outbox_messages, product_audit_events CASCADE`,
     );
   });
+  it("P22-T07 rejects a revoked/nonmember publisher inside the R1 write transaction", async () => {
+    const requestKey = "p22:revoked-member:guard";
+    await expect(ctx.app.get(GovernanceService).createApproval(
+      { userId: "usr_p22_revoked", username: "revoked" } as never,
+      {
+        workspaceId, requestKey, alphaId: "alpha_guard",
+        evidenceRunId: "run_guard", methodologyClaimId: "claim_guard",
+        summary: "Must not create approval after workspace access is revoked.",
+      },
+      "req_p22_revoked",
+    )).rejects.toMatchObject({ code: "WORKSPACE_ACCESS_DENIED", status: 403 });
+    const rows = await ctx.pool.query(
+      "SELECT approval_id FROM governance_approval_requests WHERE workspace_id = $1 AND request_key = $2",
+      [workspaceId, requestKey],
+    );
+    const now = new Date();
+    await expect(ctx.app.get(GovernanceRepository).createR1Approval({
+      approvalId: "apr_revoked_guard", evidenceId: "ev_revoked_guard",
+      auditEventId: "evt_revoked_guard", requestId: "req_revoked_guard",
+      requestKey, payloadHash: "sha256:" + "a".repeat(64),
+      workspaceId, requesterUserId: "usr_p22_revoked", requesterUsername: "revoked",
+      alphaId: "alpha_guard", sourceRunId: "run_guard",
+      methodologyClaimId: "claim_guard", summary: "Must not create approval after revocation.",
+      expectedArtifactSha256: HASH_A, evidenceSetHash: HASH_B,
+      createdAt: now, evidenceCapturedAt: now, slaDueAt: now, expiresAt: now,
+    })).rejects.toMatchObject({ governanceCode: "WORKSPACE_ACCESS_DENIED", status: 403 });
+    expect(rows.rowCount).toBe(0);
+  });
+
 
   async function rawInject(url: string, options: Record<string, unknown> = {}) {
     const headers = { ...((options.headers as Record<string, string>) ?? {}) };

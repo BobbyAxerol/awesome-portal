@@ -479,6 +479,14 @@ export class GovernanceRepository {
       : null;
   }
 
+  async isWorkspaceMember(workspaceId: string, userId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      "SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2",
+      [workspaceId, userId],
+    );
+    return result.rowCount === 1;
+  }
+
   async findCreatedApproval(
     workspaceId: string,
     requesterUserId: string,
@@ -534,6 +542,18 @@ export class GovernanceRepository {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+      // P22 calls this repository through the existing service rather than
+      // through GovernanceController.workspace(). Hold the membership row
+      // through commit so revocation cannot race a downstream R1 write.
+      const member = await client.query(
+        `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 FOR SHARE`,
+        [input.workspaceId, input.requesterUserId],
+      );
+      if (member.rowCount !== 1) {
+        throw Object.assign(new Error("workspace access denied"), {
+          governanceCode: "WORKSPACE_ACCESS_DENIED", status: 403,
+        });
+      }
       const runResult = await client.query<ApprovalEvidenceRunRow>(
         `SELECT run.run_id, run.workspace_id, run.owner_user_id,
                 owner.username AS owner_username, run.status, run.strategy_id,

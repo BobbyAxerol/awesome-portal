@@ -59,3 +59,18 @@ or a production write.
 Rollback: keep the P21 feature dark to stop new intake; retain immutable
 packs, publication intents, verified receipts and R1 approvals. Never delete
 or revoke an approval as a rollback shortcut. See [rollback](./rollback.md).
+
+## Backend gap audit — 2026-09-25
+
+- The unchanged R1 service now checks workspace membership before a replay or
+  evidence read. Its SERIALIZABLE create transaction locks the membership row
+  before inserting the approval. The Research controller check alone could not
+  close the revoke-between-intent-and-R1 race.
+- A reversible 403, serialization conflict, timeout or rate limit leaves the
+  original actor-bound intent UNKNOWN for an authorized retry; it never marks
+  DELIVERED or substitutes a service account.
+- Read-only preview census: 43 run-producer rows and 35 terminal
+  materializations, but **zero** sealed RC packs; migration 0063/publication
+  table is not deployed in that preview image. It cannot yield an actual P22
+  publish receipt until a real final-audit pack and this candidate build are
+  installed in an isolated cell. No shared preview runtime was changed.

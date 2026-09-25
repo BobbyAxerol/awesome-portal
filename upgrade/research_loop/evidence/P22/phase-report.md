@@ -52,3 +52,13 @@ not invent an inline R1 decision or start Paper/Execution.
 
 Backend contract/storage gates are complete. Product/phase exit remains
 `PENDING_REAL_PREVIEW_AND_BROWSER_RECEIPT`, not `PRODUCT_ACTIVE`.
+
+## Backend repair addendum
+
+The R1 membership check now exists both before replay and inside the
+SERIALIZABLE insertion transaction; revocation cannot slip between the P22
+intent and R1 write. P22 transient 403/408/429 and serialization conflicts
+remain UNKNOWN for the original actor/key. Disposable-PG Governance regression,
+P22 migration and targeted service/controller tests pass; see the current
+commit's test log. This hardens the backend but does not turn the missing real
+final-audit/R1/browser receipt into a PASS.

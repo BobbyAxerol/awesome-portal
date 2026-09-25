@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import { GovernanceError } from "../src/governance/governance.service";
 import { canonicalResearchJson } from "../src/research/preflight.service";
 import { ResearchReleaseCandidatePublicationService } from "../src/research/release-candidate-publication.service";
 import type { PublicationIntent } from "../src/research/release-candidate-publication.repository";
@@ -161,6 +162,26 @@ describe("P22 actor-bound publication over existing R1", () => {
     expect(result.state).toBe("UNKNOWN");
     expect(result.approval).toBeNull();
     expect(x.repository.finish).not.toHaveBeenCalled();
+  });
+  it("P22-T05 preserves the original intent after transient R1 serialization or rate limiting", async () => {
+    const x = subject();
+    x.governance.createApproval.mockRejectedValueOnce(
+      new GovernanceError("APPROVAL_CREATE_SERIALIZATION_CONFLICT", "Retry.", 409),
+    );
+    const first = await x.service.publish(scope, user as never, rcId, input, "req_p22");
+    expect(first.state).toBe("UNKNOWN");
+    expect(first.may_publish).toBe(true);
+    expect(x.repository.refused).not.toHaveBeenCalled();
+    x.governance.createApproval.mockRejectedValueOnce(new GovernanceError("RATE_LIMITED", "Retry.", 429));
+    const second = await x.service.publish(scope, user as never, rcId, input, "req_retry");
+    expect(second.state).toBe("UNKNOWN");
+    expect(x.repository.begin).toHaveBeenCalledTimes(1);
+    expect(x.repository.refused).not.toHaveBeenCalled();
+    x.governance.createApproval.mockRejectedValueOnce(new GovernanceError("WORKSPACE_ACCESS_DENIED", "Denied.", 403));
+    const third = await x.service.publish(scope, user as never, rcId, input, "req_reauth");
+    expect(third.state).toBe("UNKNOWN");
+    expect(x.repository.begin).toHaveBeenCalledTimes(1);
+    expect(x.repository.refused).not.toHaveBeenCalled();
   });
 
   it("P22-T03/T04 rejects a different actor or payload for the same durable intent", async () => {

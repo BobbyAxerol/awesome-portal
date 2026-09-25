@@ -31,3 +31,14 @@ test('cgroup accounting includes all rows and refuses unbounded or duplicate ser
   assert.throws(() => evaluateContainers([{ ...rows[0], service: 'execution-edge' }]), /UNEXPECTED_SERVICE/);
   assert.equal(evaluateContainers([{ ...rows[0], currentBytes: 5_000_000_001 }]).within_base_limit, false);
 });
+
+test('strict receipt refuses a missing required service and accounts for the one-shot overlap', () => {
+  assert.throws(() => evaluateContainers(rows.slice(1), { requireLimits: true, requireComplete: true }),
+    /MISSING_REQUIRED_SERVICE:quant-worker-py/);
+  const oneShot = { service: 'control-api-migrate', currentBytes: 200_000_000,
+    limitBytes: 350_000_000, swapLimitBytes: 350_000_000, pids: 64 };
+  const sample = evaluateContainers([...rows, oneShot], { requireLimits: true, requireComplete: true });
+  assert.equal(sample.provisioned_runtime_budget_bytes, 4_950_000_000);
+  assert.throws(() => evaluateContainers([...rows, oneShot, { ...oneShot, service: 'control-api-bootstrap' }]),
+    /CONCURRENT_ONE_SHOTS/);
+});

@@ -193,7 +193,11 @@ export class ResearchReleaseCandidatePublicationService {
       const result = await this.publication(scope, user, id);
       return { ...result, replayed: replayed || created.replayed };
     } catch (error) {
-      const refused = error instanceof GovernanceError && error.status >= 400 && error.status < 500;
+      // A reversible access denial, serialization conflict, timeout or rate
+      // limit is not a final refusal; retain the original actor/key for replay.
+      const retryable = error instanceof GovernanceError
+        && (error.code === "APPROVAL_CREATE_SERIALIZATION_CONFLICT" || [403, 408, 429].includes(error.status));
+      const refused = error instanceof GovernanceError && error.status >= 400 && error.status < 500 && !retryable;
       const code = refused ? "P22_GOVERNANCE_REFUSED" : "P22_DOWNSTREAM_OUTCOME_UNKNOWN";
       await (refused ? this.repository.refused(scope, id, code) : this.repository.unknown(scope, id, code));
       return this.publication(scope, user, id);
